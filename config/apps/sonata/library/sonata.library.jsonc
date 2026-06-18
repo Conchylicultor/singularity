@@ -1,0 +1,33 @@
+// @hash 1befa300d09b
+{
+  "views": [
+    { "name": "Cards", "view": { "type": "gallery" } },
+    {
+      "name": "All",
+      "view": { "type": "table", "sort": { "fieldId": "title", "direction": "asc" } }
+    },
+    {
+      "name": "Longest",
+      "view": { "type": "table", "sort": { "fieldId": "duration", "direction": "desc" } }
+    },
+    {
+      "name": "Composed",
+      "view": {
+        "type": "table",
+        "filter": {
+          "kind": "group",
+          "id": "f-composed",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-composer",
+              "fieldId": "composer",
+              "operatorId": "is-not-empty"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,12 @@
+// @hash 1befa300d09b
+{
+  "views": [
+    {
+      "name": "Recent",
+      "view": {
+        "type": "list",
+        "sort": { "fieldId": "updatedAt", "direction": "desc" }
+      }
+    }
+  ]
+}

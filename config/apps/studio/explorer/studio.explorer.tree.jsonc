@@ -1,0 +1,27 @@
+// @hash 1befa300d09b
+{
+  "views": [
+    { "name": "Tree", "view": { "type": "tree" } },
+    { "name": "Table", "view": { "type": "table" } },
+    {
+      "name": "Load-bearing",
+      "view": {
+        "type": "table",
+        "filter": {
+          "kind": "group",
+          "id": "f-load-bearing",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-load-bearing",
+              "fieldId": "loadBearing",
+              "operatorId": "is",
+              "value": true
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

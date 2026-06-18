@@ -39,16 +39,69 @@ function newId(): string {
 }
 
 /**
+ * A raw config row as authored on disk. Config is the single source of truth and
+ * the authored shape is **terse** — only `{ name, view }` is required; `id` and
+ * `rank` are optional and derived on read (see `normalizeRows`). This lets an
+ * agent hand-write `{ "name": "All", "view": { "type": "table" } }` rows without
+ * inventing ids or fractional ranks.
+ */
+interface RawViewRow {
+  id?: string;
+  rank?: string;
+  name: string;
+  view: VariantValue;
+}
+
+/** Slugify a name into a filename/id-safe token (`"My View" → "my-view"`). */
+function slugify(name: string): string {
+  return name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
+/**
+ * Normalize raw (possibly terse) config rows into fully-formed `ViewConfigRow`s:
+ * derive `id` (explicit `id` ?? slug(name) ?? `view-${index}`) and `rank`
+ * (explicit `rank` ?? a generated `Rank.between` sequence following array order).
+ * Config is the ONLY source — there is no code synthesis. Duplicate derived ids
+ * are disambiguated with an index suffix so each row stays addressable.
+ */
+function normalizeRows(raw: RawViewRow[]): ViewConfigRow[] {
+  const seenIds = new Set<string>();
+  let prevRank: Rank | null = null;
+  return raw.map((row, i) => {
+    let id = row.id ?? slugify(row.name) ?? `view-${i}`;
+    if (id === "") id = `view-${i}`;
+    while (seenIds.has(id)) id = `${id}-${i}`;
+    seenIds.add(id);
+    let rank: string;
+    if (row.rank != null) {
+      rank = row.rank;
+      prevRank = Rank.from(row.rank);
+    } else {
+      const next = Rank.between(prevRank, null);
+      prevRank = next;
+      rank = next.toString();
+    }
+    return { id, rank, name: row.name, view: row.view };
+  });
+}
+
+/**
  * Generic opaque-options config engine. Reads the supplied descriptor
  * (app-scoped), keeps an optimistic mirror, and debounces
  * `setConfig("views", next)`. Mirrors the proven pendingRef / timerRef / flush /
  * scheduleWrite / flush-on-unmount pattern.
  *
- * **Materialize-on-first-edit**: while the config list is empty we *display* the
- * synthesized defaults (passed in), but never write them. The first mutating
- * action seeds the persisted list with those defaults and then applies the
- * mutation — exactly like reorder's "unlisted live contributions materialize on
- * first edit".
+ * **Config is the single source of truth.** There is NO code synthesis of
+ * default view-instances: the displayed instances come *only* from the authored
+ * `config.views` rows. Authored rows may be **terse** (`{ name, view }`); `id`
+ * and `rank` are derived on read (`normalizeRows`). When config has zero rows the
+ * engine returns an empty instance list and the host renders a placeholder. The
+ * build-time `data-view:configs-authored` check is the forcing function that an
+ * agent author the config.
  *
  * The engine treats each row's `view` as an **opaque `VariantValue`** — it never
  * reads or writes `sort`/`filter`. The host layers those on through `viewFor` +
@@ -60,7 +113,6 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   contributions: SealContributions<T>[],
   hasHierarchy: boolean,
   viewOptions: Record<string, unknown> | undefined,
-  defaults: ResolvedViewInstance<T>[],
 ): ViewsConfigHandle {
   // Resolve the descriptor via the supplied map (reference identity against the
   // registered `ConfigV2.WebRegister` descriptor). A missing id means the marker
@@ -84,12 +136,15 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   const config = useConfig(descriptor);
   const setConfig = useSetConfig(descriptor);
 
-  const configRows = (config.views as ViewConfigRow[] | undefined) ?? [];
+  // Raw (possibly terse) rows straight off the config doc. `id`/`rank` are
+  // derived on read so the authored file can stay terse (`{ name, view }`).
+  const configRows = (config.views as RawViewRow[] | undefined) ?? [];
 
-  // Optimistic mirror of the persisted rows. `null` → "not yet materialized";
-  // we display synthesized defaults until the first edit seeds real rows.
-  const [mirror, setMirror] = useState<ViewConfigRow[] | null>(() =>
-    configRows.length > 0 ? configRows : null,
+  // Optimistic mirror of the normalized persisted rows. Config is the single
+  // source — an empty config means **no views** (the host renders a
+  // placeholder), never synthesized defaults.
+  const [mirror, setMirror] = useState<ViewConfigRow[]>(() =>
+    normalizeRows(configRows),
   );
 
   // Freshest setConfig + key for the debounced flush.
@@ -120,17 +175,14 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   );
 
   // Reconcile the mirror from config when external truth advances and we have no
-  // pending write. JSON identity guards against re-render thrash.
+  // pending write. JSON identity guards against re-render thrash. Incoming rows
+  // are normalized (terse → full) — an empty config normalizes to `[]`.
   const configJson = JSON.stringify(configRows);
   useEffect(() => {
     if (pendingRef.current !== null) return;
     setMirror((prev) => {
-      const incoming: ViewConfigRow[] = JSON.parse(configJson);
-      if (incoming.length === 0) {
-        // Config empty → stay un-materialized (display defaults).
-        return prev === null ? prev : null;
-      }
-      return JSON.stringify(prev) === configJson ? prev : incoming;
+      const incoming = normalizeRows(JSON.parse(configJson) as RawViewRow[]);
+      return JSON.stringify(prev) === JSON.stringify(incoming) ? prev : incoming;
     });
     // configRows is derived from configJson; depend on the string only.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -139,45 +191,23 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   // Flush any pending durable write on unmount.
   useEffect(() => () => flush(), [flush]);
 
-  // Synthesize seed rows from the displayed defaults (materialize-on-first-edit).
-  // IDs are **deterministic** (`default:<type>:<index>`) so the un-materialized
-  // displayRows stay referentially stable across renders (no random-id thrash)
-  // and the device-local active-id survives reloads before the first edit. These
-  // ids are unique within the list and persist verbatim on first edit.
-  const defaultsRef = useRef(defaults);
-  defaultsRef.current = defaults;
-  const seedRows = useCallback((): ViewConfigRow[] => {
-    let prevRank: Rank | null = null;
-    return defaultsRef.current.map((d, i) => {
-      const rank = Rank.between(prevRank, null);
-      prevRank = rank;
-      return {
-        id: `default:${d.instance.type}:${i}`,
-        rank: rank.toString(),
-        name: d.instance.name,
-        view: { type: d.instance.type } as VariantValue,
-      };
-    });
-  }, []);
-
-  /** Apply `mutate` against the current rows (materializing from defaults if the
-   *  list is still empty), then optimistically mirror + schedule the write. */
+  /** Apply `mutate` against the current (normalized) rows, then optimistically
+   *  mirror + schedule the write. The first UI edit thus materializes from the
+   *  authored rows (or empty) — never from code. */
   const applyMutation = useCallback(
     (mutate: (rows: ViewConfigRow[]) => ViewConfigRow[]) => {
       setMirror((prev) => {
-        const base = prev ?? seedRows();
-        const next = mutate(base);
+        const next = mutate(prev);
         scheduleWrite(next);
         return next;
       });
     },
-    [scheduleWrite, seedRows],
+    [scheduleWrite],
   );
 
-  // The rows actually displayed: the materialized mirror, else synthesized seed
-  // (display-only, not persisted) so the switcher shows defaults pre-edit. Stable
-  // across renders while un-materialized because seed ids are deterministic.
-  const displayRows = useMemo(() => mirror ?? seedRows(), [mirror, seedRows]);
+  // The rows actually displayed: the normalized mirror (config is the only
+  // source — no synthesized seed).
+  const displayRows = mirror;
 
   // Sort by rank, then resolve each row through the contribution registry.
   const instances = useMemo<ResolvedViewInstance<T>[]>(() => {

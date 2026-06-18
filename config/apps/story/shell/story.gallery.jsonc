@@ -1,0 +1,13 @@
+// @hash 1befa300d09b
+{
+  "views": [
+    { "name": "Gallery", "view": { "type": "gallery" } },
+    {
+      "name": "Recent",
+      "view": {
+        "type": "gallery",
+        "sort": { "fieldId": "updated", "direction": "desc" }
+      }
+    }
+  ]
+}

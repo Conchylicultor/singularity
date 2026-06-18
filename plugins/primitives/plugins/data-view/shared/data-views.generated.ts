@@ -3,26 +3,28 @@
 //
 // Every `defineDataView("<id>")` marker call found in any plugin's web/**
 // source. The data-view primitive registers one config_v2 descriptor per id
-// (under `config/primitives/data-view/<id>.jsonc`) on both runtimes from this
-// manifest.
+// on both runtimes from this manifest. Each entry's `pluginId` is the
+// *defining* plugin's id (its tree path), so the descriptor registers under
+// `config/<pluginId>/<id>.jsonc` — the consuming plugin's tree.
 //
 // The `data-views-in-sync` check fails on drift.
 
 export interface DataViewEntry {
   id: string;
+  pluginId: string;
 }
 
 export const dataViews: DataViewEntry[] = [
-  { id: "agents-list" },
-  { id: "config_v2.settings.nav" },
-  { id: "deploy.servers" },
-  { id: "home.apps" },
-  { id: "pages-sidebar" },
-  { id: "prototypes.gallery" },
-  { id: "sonata.library" },
-  { id: "story.gallery" },
-  { id: "studio.explorer.tree" },
-  { id: "tasks-list" },
-  { id: "tasks-recent" },
-  { id: "tweakcn.community-browser" },
+  { id: "agents-list", pluginId: "conversations.agents" },
+  { id: "config_v2.settings.nav", pluginId: "config_v2.settings" },
+  { id: "deploy.servers", pluginId: "apps.deploy.servers" },
+  { id: "home.apps", pluginId: "apps.home.app-cards" },
+  { id: "pages-sidebar", pluginId: "apps.pages.page-tree" },
+  { id: "prototypes.gallery", pluginId: "apps.prototypes.gallery" },
+  { id: "sonata.library", pluginId: "apps.sonata.library" },
+  { id: "story.gallery", pluginId: "apps.story.shell" },
+  { id: "studio.explorer.tree", pluginId: "apps.studio.explorer" },
+  { id: "tasks-list", pluginId: "tasks.task-list.tree" },
+  { id: "tasks-recent", pluginId: "tasks.task-list.recent" },
+  { id: "tweakcn.community-browser", pluginId: "ui.tweakcn.community-browser" },
 ];

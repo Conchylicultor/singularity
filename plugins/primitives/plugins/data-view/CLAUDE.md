@@ -17,12 +17,11 @@ view independently sorted / searched / filtered.
   view-*type* (the renderer: `type`, `title`, `icon`, `component`, optional
   `configSchema`). The host actually renders **view-instances** — a named,
   individually-configured *use* of a view-type, carrying `{ id, name, type, options }`.
-  In **default mode** the `useResolvedInstances` resolver synthesizes exactly
-  **one default instance per resolved view-type** (`id === type`, `name === title`).
-  In **config mode** the instance list is **config-authored** (N named instances
-  per type, Notion-style — see "View modes" below). The public `views={[…]}`
-  whitelist is still a list of **type** ids; instances reference a type via their
-  `type` field.
+  The instance list is **config-authored** (N named instances per type,
+  Notion-style — see "Config is the single source of truth" below); there is **no
+  code-synthesized default mode**. The public `views={[…]}` whitelist is still a
+  list of **type** ids (it gates the addable-types `+` menu); instances reference
+  a type via their `type` field.
 - `<DataView>` is the host: it resolves available views, builds a unified
   `ViewModel` (active id, per-instance state, instance actions), owns the shared
   chrome (search input → `state.query`, view switcher), and renders the active
@@ -39,10 +38,38 @@ Every `<DataView>` is config-backed — there is **no per-mount mode branch**. A
 consumer declares its surface id with `defineDataView("<id>")` (branded
 `DataViewId`, the type of `DataViewProps.storageKey`), and the data-view
 primitive's own barrels register **one `viewsDescriptor` per id** centrally —
-`ConfigV2.WebRegister` (web) + `ConfigV2.Register` (server), all under the
-`primitives.data-view` plugin — with **zero per-consumer registration
-boilerplate**. This mirrors `reorder` exactly: build-time codegen scrapes the
-markers, the primitive registers the descriptors.
+`ConfigV2.WebRegister` (web) + `ConfigV2.Register` (server) — with **zero
+per-consumer registration boilerplate**. Each descriptor registers under the
+**defining (consuming) plugin's tree**: the codegen manifest carries
+`{ id, pluginId }` per DataView (the `pluginId` is the node whose `web/**` owns
+the `defineDataView` marker), and the registration passes that `pluginId` to
+`ConfigV2.{WebRegister,Register}` so config_v2 derives the path
+`config/<asPath(pluginId)>/<id>.jsonc` (e.g.
+`config/apps/sonata/library/sonata.library.jsonc`). This mirrors `reorder`
+exactly: build-time codegen scrapes the markers, the primitive registers the
+descriptors under each defining plugin.
+
+### Config is the single source of truth (fail by default)
+
+There is **no code synthesis** of default view-instances. The displayed
+instances come **only** from the authored `config.views` rows — when config has
+zero rows the runtime returns an empty instance list and `<DataView>` renders a
+`Placeholder` ("No views configured — author `config/<plugin>/<id>.jsonc`")
+instead of crashing. The build-time **`data-view:configs-authored` check**
+(`plugins/primitives/plugins/data-view/check/index.ts`, the reorder
+`configs-authored` twin) **fails by default** until each DataView has a
+hand-authored `config/<plugin>/<id>.jsonc` — the forcing function that an agent
+compose the views in config rather than relying on a code fallback.
+
+**Terse authored rows.** A config row is authored as just `{ name, view }`; the
+resolver (`normalizeRows` in `view-core`'s `use-views-config.ts`) derives `id`
+(explicit `id` ?? slug(name) ?? `view-${index}`) and `rank` (explicit ?? a
+generated `Rank.between` sequence following array order) on read. The `view` blob
+is `{ type, sort?, filter?, …opts }` — `sort` is a `SortState` (`{ fieldId,
+direction }`) and `filter` is a `FilterGroup` tree; both are host-injected keys
+read via `viewFor`/`updateView`. The origin default stays `{ "views": [] }` with
+a stable hash (independent of the registered view-types), so adding a view-type
+never invalidates committed configs.
 
 - **`defineDataView("id")` marker** (`core/internal/define-data-view.ts`): asserts
   the id grammar `^[a-zA-Z0-9._-]+$` (bans `:` so the id is a filename-safe
@@ -50,15 +77,18 @@ markers, the primitive registers the descriptors.
   guarantee — a consumer cannot pass a raw string, so every id is discoverable.
 - **Codegen** (`framework/tooling/codegen/.../data-views-gen.ts`) scans every
   plugin's `web/**` for `defineDataView(...)` calls (via `findMarkerCalls` over a
-  comment/regex-masked copy) and emits the sorted id list to
-  `shared/data-views.generated.ts`. The `data-views-in-sync` check fails on drift;
-  `./singularity build` regenerates it.
-- **Central registration** (`{web,server}/internal/{descriptors,config-registrations}.ts`):
+  comment/regex-masked copy) and emits the sorted `{ id, pluginId }` list to
+  `shared/data-views.generated.ts` — `pluginId` being the *defining* plugin (the
+  node owning the marker), so the config lands in the consuming plugin's tree. The
+  `data-views-in-sync` check fails on drift; `./singularity build` regenerates it.
+- **Registration** (`{web,server}/internal/{descriptors,config-registrations}.ts`):
   `dataViewDescriptors = new Map(dataViews.map(v => [v.id, viewsDescriptor(v.id)]))`
   builds the reference-stable descriptors once per runtime; the barrels spread one
-  `ConfigV2.{WebRegister,Register}` per id. `useViewsConfig` resolves the
-  descriptor via `dataViewDescriptors.get(storageKey)` (reference identity vs the
-  registration, like `reorderDescriptors.get(slotId)`).
+  `ConfigV2.{WebRegister,Register}` per id, **each passing the entry's own
+  `pluginId`** so the config file lands under `config/<asPath(pluginId)>/`.
+  `useViewsConfig` resolves the descriptor via
+  `dataViewDescriptors.get(storageKey)` (reference identity vs the registration,
+  like `reorderDescriptors.get(slotId)`).
 
 The single model is `useConfigViewModel`: config-authored instances, full
 instance actions (add / rename / duplicate / delete / reorder / options

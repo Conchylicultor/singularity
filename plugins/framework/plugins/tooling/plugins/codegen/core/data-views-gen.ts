@@ -16,9 +16,10 @@ import {
  * Like reorder's reorderable-slots manifest, this is a pure-data bridge from
  * build-time (which can see web-only marker calls) to both runtimes: the
  * data-view barrels read `dataViews` and register one config_v2 descriptor per
- * id under the `primitives.data-view` plugin. Unlike reorder, only the SET of
- * ids is needed (no pluginId — every descriptor registers under data-view), so
- * the manifest is a flat sorted id list.
+ * id. Each entry carries the *defining* plugin's id (the node whose `web/**`
+ * contains the `defineDataView("<id>")` marker), so the descriptor registers
+ * under `config/<pluginId>/<id>.jsonc` — the consuming plugin's tree, exactly as
+ * reorder plants each slot's directive under its defining plugin.
  *
  * The `data-views-in-sync` check fails on drift.
  */
@@ -34,8 +35,9 @@ const MANIFEST_HEADER = [
   "//",
   "// Every `defineDataView(\"<id>\")` marker call found in any plugin's web/**",
   "// source. The data-view primitive registers one config_v2 descriptor per id",
-  "// (under `config/primitives/data-view/<id>.jsonc`) on both runtimes from this",
-  "// manifest.",
+  "// on both runtimes from this manifest. Each entry's `pluginId` is the",
+  "// *defining* plugin's id (its tree path), so the descriptor registers under",
+  "// `config/<pluginId>/<id>.jsonc` — the consuming plugin's tree.",
   "//",
   "// The `data-views-in-sync` check fails on drift.",
 ].join("\n");
@@ -46,15 +48,23 @@ function firstStringArg(argsText: string): string | undefined {
   return m ? (m[1] ?? m[2] ?? m[3]) : undefined;
 }
 
+export interface DataViewEntry {
+  id: string;
+  /** Hierarchy id of the plugin whose web/** owns the `defineDataView` marker. */
+  pluginId: string;
+}
+
 /**
  * Walk the enriched plugin tree (reusing docgen's cached build) and collect
- * every `defineDataView("<id>")` id. Scans each node's `web/**` source via the
- * blessed `findMarkerCalls` scanner (over a comment/regex-masked copy, strings
- * kept so the string-literal id survives), dedupes, and sorts.
+ * every `defineDataView("<id>")` id keyed to its DEFINING plugin (the node whose
+ * `web/**` owns the marker). Scans each node's `web/**` source via the blessed
+ * `findMarkerCalls` scanner (over a comment/regex-masked copy, strings kept so
+ * the string-literal id survives). Deduped by id (FIRST definer wins, stable
+ * since `tree.byDir` iteration is deterministic) and sorted by id.
  */
-export async function collectDataViews(root: string): Promise<string[]> {
+export async function collectDataViews(root: string): Promise<DataViewEntry[]> {
   const tree = await buildEnrichedTree(root);
-  const ids = new Set<string>();
+  const definingPath = new Map<string, string>();
 
   for (const node of tree.byDir.values()) {
     const webDir = join(node.dir, "web");
@@ -74,28 +84,33 @@ export async function collectDataViews(root: string): Promise<string[]> {
         const id = firstStringArg(call.argsText);
         // Skip ids built from template/identifier expressions (not statically
         // resolvable) — same fail-soft as parseSlotCalls.
-        if (id) ids.add(id);
+        if (id && !definingPath.has(id)) definingPath.set(id, node.id);
       }
     }
   }
 
-  return [...ids].sort((a, b) => a.localeCompare(b));
+  return [...definingPath.entries()]
+    .map(([id, pluginId]) => ({ id, pluginId }))
+    .sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function renderManifest(ids: string[]): string {
+function renderManifest(entries: DataViewEntry[]): string {
   const lines: string[] = [];
   lines.push(MANIFEST_HEADER);
   lines.push("");
   lines.push("export interface DataViewEntry {");
   lines.push("  id: string;");
+  lines.push("  pluginId: string;");
   lines.push("}");
   lines.push("");
-  if (ids.length === 0) {
+  if (entries.length === 0) {
     lines.push("export const dataViews: DataViewEntry[] = [];");
   } else {
     lines.push("export const dataViews: DataViewEntry[] = [");
-    for (const id of ids) {
-      lines.push(`  { id: ${JSON.stringify(id)} },`);
+    for (const e of entries) {
+      lines.push(
+        `  { id: ${JSON.stringify(e.id)}, pluginId: ${JSON.stringify(e.pluginId)} },`,
+      );
     }
     lines.push("];");
   }
@@ -110,8 +125,8 @@ export function dataViewsManifestPath(root: string): string {
 
 /** Render the manifest file contents in-memory (used by the in-sync check). */
 export async function renderDataViewsManifest(root: string): Promise<string> {
-  const ids = await collectDataViews(root);
-  return renderManifest(ids);
+  const entries = await collectDataViews(root);
+  return renderManifest(entries);
 }
 
 /** Regenerate `data-views.generated.ts` if it drifted. */

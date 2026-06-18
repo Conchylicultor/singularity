@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { ViewInstance, ViewConfigRow, ViewTypeMeta } from "../../core";
 
@@ -6,44 +5,6 @@ import type { ViewInstance, ViewConfigRow, ViewTypeMeta } from "../../core";
 export interface ResolvedViewInstance<T extends ViewTypeMeta = ViewTypeMeta> {
   instance: ViewInstance;
   viewType: SealContributions<T>;
-}
-
-/**
- * Default-instances resolver. Reproduces the `available` view resolution (drop
- * hierarchical types when no hierarchy; honor the `views` whitelist for
- * inclusion + order, else sort by `order ?? 0` then title) and synthesizes
- * exactly one instance per resolved view-type (`id === type`, `name === title`).
- * Type-agnostic — it knows only the contributions + the
- * `views`/`hierarchy`/`viewOptions` inputs, never `FieldDef`/rows.
- */
-export function useResolvedInstances<T extends ViewTypeMeta>(
-  contributions: SealContributions<T>[],
-  views: string[] | undefined,
-  hasHierarchy: boolean,
-  viewOptions: Record<string, unknown> | undefined,
-): ResolvedViewInstance<T>[] {
-  return useMemo<ResolvedViewInstance<T>[]>(() => {
-    const usable = hasHierarchy
-      ? contributions
-      : contributions.filter((c) => !c.hierarchical);
-    const resolved = views
-      ? views
-          .map((type) => usable.find((c) => c.type === type))
-          .filter((c): c is SealContributions<T> => c !== undefined)
-      : [...usable].sort(
-          (a, b) =>
-            (a.order ?? 0) - (b.order ?? 0) || a.title.localeCompare(b.title),
-        );
-    return resolved.map((viewType) => ({
-      instance: {
-        id: viewType.type,
-        name: viewType.title,
-        type: viewType.type,
-        options: viewOptions?.[viewType.type],
-      },
-      viewType,
-    }));
-  }, [contributions, views, hasHierarchy, viewOptions]);
 }
 
 /**

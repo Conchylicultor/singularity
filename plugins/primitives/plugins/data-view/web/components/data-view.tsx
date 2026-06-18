@@ -8,6 +8,7 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type {
   DataViewProps,
   DataViewRenderProps,
@@ -112,6 +113,10 @@ function DataViewInner<TRow>({
   );
   const hasFilters = filterController.filterableFields.length > 0;
 
+  // Config is the single source of truth: zero authored view-instances → render
+  // an honest placeholder rather than an empty shell. The build-time
+  // `data-view:configs-authored` check is the real forcing function; this keeps
+  // the pane from crashing if a config is authored-but-empty.
   if (!activeInstance) {
     return (
       <Column
@@ -128,6 +133,14 @@ function DataViewInner<TRow>({
             <div className={actions ? undefined : "ml-auto"}>
               <CreatorsControl creators={creators} />
             </div>
+          </div>
+        }
+        body={
+          <div className="p-md">
+            <Placeholder>
+              No views configured — author{" "}
+              <code>config/&lt;plugin&gt;/{props.storageKey}.jsonc</code>
+            </Placeholder>
           </div>
         }
       />

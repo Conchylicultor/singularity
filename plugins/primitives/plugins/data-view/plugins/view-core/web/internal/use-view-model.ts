@@ -3,7 +3,6 @@ import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core"
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { AddableViewType, ViewTypeMeta } from "../../core";
-import { useResolvedInstances } from "./resolve-instances";
 import type { ResolvedViewInstance } from "./resolve-instances";
 import { useViewsConfig } from "./use-views-config";
 import { useActiveViewId } from "./use-active-view";
@@ -72,20 +71,17 @@ export function useViewModel<T extends ViewTypeMeta>(
   viewOptions: Record<string, unknown> | undefined,
   defaultView: string | undefined,
 ): ViewModelCore<T> {
-  // The synthesized defaults seed config materialization (display-only pre-edit).
-  const defaults = useResolvedInstances(
-    contributions,
-    views,
-    hasHierarchy,
-    viewOptions,
-  );
+  // Config is the single source of truth — no synthesized defaults. The instance
+  // list comes only from the authored config rows (terse `{ name, view }`,
+  // normalized on read). `useResolvedInstances` is no longer used here; the
+  // addable-types menu (`available`, below) is derived straight from the
+  // contributions — that is "what view-types exist", not "default instances".
   const cfg = useViewsConfig(
     storageKey,
     descriptorMap,
     contributions,
     hasHierarchy,
     viewOptions,
-    defaults,
   );
   const active = useActiveViewId(storageKey);
 

@@ -1,0 +1,26 @@
+// @hash 1befa300d09b
+{
+  "views": [
+    { "name": "All", "view": { "type": "list" } },
+    {
+      "name": "Online",
+      "view": {
+        "type": "list",
+        "filter": {
+          "kind": "group",
+          "id": "f-online",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "r-status",
+              "fieldId": "status",
+              "operatorId": "is",
+              "value": "online"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}
