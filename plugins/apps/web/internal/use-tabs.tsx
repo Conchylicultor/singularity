@@ -192,38 +192,51 @@ interface BootState {
  * seed a single tab from the current URL's app. Pure store construction only —
  * the live-store wiring side-effect runs separately in a one-time effect.
  */
-function bootTabs(apps: AppList, initialAppId: string): BootState {
+function bootTabs(apps: AppList, seedAppId: string): BootState {
+  // The current URL — not the persisted focus — is authoritative for which
+  // app/pane is focused on load. Resolve it up front (same source of truth as
+  // the cross-app `navigate()`), so a reload or deep link always lands on the
+  // URL's app, never the last-focused app from a previous session.
+  const resolved = resolveAppForPath(window.location.pathname, apps);
+  const urlAppId = resolved?.app.id ?? seedAppId;
+  const urlRoute = resolved ? (parseUrl(resolved.routePath) ?? []) : [];
+
+  // Rebuild every persisted tab as a background tab. Keep-alive must survive a
+  // reload, so no other app's tab is dropped; the focused tab is chosen and made
+  // live from the URL below.
   const persisted = loadPersistedTabs();
-  if (persisted && persisted.tabs.length > 0) {
-    const focusedTabId =
-      persisted.tabs.find((t) => t.tabId === persisted.focusedTabId)?.tabId ??
-      persisted.tabs[0]!.tabId;
-    const tabs = persisted.tabs.map((p) => {
-      if (p.tabId === focusedTabId) {
-        // The focused tab is authoritative from the URL on reload: create it
-        // live and let its live handleLocationChange (run by the mounted
-        // renderer's useSyncPaneRegistry) hydrate the route from the URL.
-        const store = createPaneStore({ live: true });
-        store.setBasePath(appPathFor(p.appId, apps));
-        return {
-          tabId: p.tabId,
-          appId: p.appId,
-          store,
-          placement: p.placement ?? getDefaultPlacement(),
-        };
-      }
-      return rebuildBackgroundTab(p, apps);
+  const tabs: Tab[] = (persisted?.tabs ?? []).map((p) =>
+    rebuildBackgroundTab(p, apps),
+  );
+
+  // Pick which tab the URL focuses: the persisted focused tab when it already
+  // belongs to the URL's app (the normal reload), else the first tab on that
+  // app, else a fresh tab so the URL's app is never silently dropped.
+  let focusIdx = tabs.findIndex(
+    (t) => t.tabId === persisted?.focusedTabId && t.appId === urlAppId,
+  );
+  if (focusIdx < 0) focusIdx = tabs.findIndex((t) => t.appId === urlAppId);
+  if (focusIdx < 0) {
+    tabs.push({
+      tabId: crypto.randomUUID(),
+      appId: urlAppId,
+      store: makeBackgroundStore(urlAppId, apps),
+      placement: getDefaultPlacement(),
     });
-    return { tabs, focusedTabId };
+    focusIdx = tabs.length - 1;
   }
-  // No persisted state — seed one tab from the current URL's app.
-  const tabId = crypto.randomUUID();
-  const store = createPaneStore({ live: true });
-  store.setBasePath(appPathFor(initialAppId, apps));
-  return {
-    tabs: [{ tabId, appId: initialAppId, store, placement: getDefaultPlacement() }],
-    focusedTabId: tabId,
-  };
+
+  // Promote the chosen tab to the live focused tab, hydrating its route from the
+  // address bar (the URL wins over the tab's own persisted route). Seed while
+  // still background so it's an in-memory update with no spurious history entry,
+  // then flip it live.
+  const focused = tabs[focusIdx]!;
+  focused.store.setBasePath(appPathFor(focused.appId, apps));
+  if (urlRoute.length > 0) focused.store.restoreRoute(urlRoute);
+  else focused.store.clearRoute();
+  focused.store.live = true;
+
+  return { tabs, focusedTabId: focused.tabId };
 }
 
 /**
