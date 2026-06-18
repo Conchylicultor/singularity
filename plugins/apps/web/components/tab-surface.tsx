@@ -8,6 +8,10 @@ import {
   useIndexMatch,
   usePaneTitle,
 } from "@plugins/primitives/plugins/pane/web";
+import {
+  SyncStatusProvider,
+  SyncStatusIndicator,
+} from "@plugins/primitives/plugins/sync-status/web";
 import { Apps } from "../slots";
 import { appPathFor, type Tab } from "../internal/tabs-store";
 import { useTabs } from "../internal/use-tabs";
@@ -31,7 +35,14 @@ export function TabSurface({ tab }: { tab: Tab }) {
       surfaceId={tab.tabId}
     >
       <TabTitleReporter tabId={tab.tabId} />
-      {renderIsolated(Apps.App.id, app as unknown as Contribution)}
+      <SyncStatusProvider>
+        {/* `relative` so the indicator's Pin anchors to this surface's corner;
+            `size-full` so the app render still fills the surface. */}
+        <div className="relative size-full">
+          {renderIsolated(Apps.App.id, app as unknown as Contribution)}
+          <SyncStatusIndicator />
+        </div>
+      </SyncStatusProvider>
     </PaneSurfaceProvider>
   );
 }

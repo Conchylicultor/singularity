@@ -23,20 +23,39 @@ a cache-write prediction would race exactly like waiting for the refetch does.
 ## API
 
 ```ts
-const { data, pending, dispatch, inFlight } = useOptimisticResource({
+const { data, pending, dispatch, inFlight, failed, retry } = useOptimisticResource({
   resource,            // ResourceDescriptor<Data, P> from live-state
   params,              // optional resource params
   apply,               // (current: Data, vars: Vars) => Data — PURE predicted next state
   mutate,              // (vars: Vars) => Promise<void> — the network call (resolves on 2xx)
   isConfirmedBy,       // optional (serverData, vars) => boolean — content-based confirmation
   onError,             // optional (err, vars) => void
+  label,               // optional string — names the thing being saved (sync-status error state)
 });
 ```
 
 - `dispatch(vars)` mints an `opId`, appends `{opId, vars, resolved:false}` to the
   ordered pending list, and fires `mutate(vars)`. On resolve the op is marked
-  `resolved`; on reject the op is **removed** (that is the rollback — the cache
-  was never touched) and `onError` is called.
+  `resolved`; on reject the op is **rolled back** (removed from the overlay — the
+  cache was never touched) **and retained** as a failed op in `failed` (with its
+  `vars`), and `onError` is called. The failure is no longer silent: it stays
+  surfaced until retried.
+- `failed` is the list of `{opId, vars}` whose `mutate` rejected. `retry(opId)`
+  drops that entry from `failed` and re-runs the op by calling `dispatch(vars)`
+  again (which re-adds it to the overlay and re-fires `mutate`).
+- **Forced sync-status reporting:** the hook calls `useReportSync` internally
+  (`@plugins/primitives/plugins/sync-status/web`) with
+  `phase = failed.length ? "error" : inFlight.length ? "syncing" : "idle"`, the
+  `label`, a `retry` that re-runs **only this hook's own** failed ops, and an
+  explicit `savedAt` timestamp. `savedAt` is stamped (`Date.now()` into state) by
+  an effect the moment `inFlight.length` transitions from `> 0` to `0` with no
+  failures — the true "all confirmed" moment — and drives the "Saved" cloud under
+  the unified explicit-`savedAt` model (the store no longer infers "saved" from a
+  `syncing → idle` transition). Every optimistic surface therefore lights up the
+  universal `<SyncStatusIndicator/>` (Google-Keep cloud) with no indicator code of
+  its own — and the indicator's Retry button re-sends exactly this hook's
+  failures. Outside a `<SyncStatusProvider>` (unit tests, non-surface mounts) the
+  report is a no-op.
 - **Confirmation** subscribes to the QueryCache for `queryKeyFor(key, params)`.
   On each push, resolved ops are dropped: coarse by default ("a push after my
   mutation resolved confirms me"), or precisely when `isConfirmedBy(serverData,
@@ -58,7 +77,7 @@ tested directly (`overlay.test.ts`); the hook is a thin React shell over it.
 
 - Description: Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay), with coarse and content-based confirmation and automatic rollback on reject.
 - Web:
-  - Uses: `primitives/live-state.queryKeyFor`, `primitives/live-state.useResource`
+  - Uses: `primitives/live-state.queryKeyFor`, `primitives/live-state.useResource`, `primitives/sync-status.useReportSync`
   - Exports: Types: `UseOptimisticResourceArgs`, `UseOptimisticResourceResult`; Values: `OpNoLongerApplies`, `useOptimisticResource`
 - Cross-plugin:
   - Imported by: `config_v2/staging`, `conversations/conversations-view/queue`, `page/editor`

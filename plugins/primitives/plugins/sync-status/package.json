@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-sync-status",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Per-surface forced sync-status indicator primitive: useReportSync reporter + SyncStatusIndicator cloud."
+}

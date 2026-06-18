@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 
 export interface UseEditableFieldOptions<T extends string> {
   value: T;
@@ -11,6 +12,11 @@ export interface UseEditableFieldOptions<T extends string> {
    * so the autosave can't clobber the server's edit.
    */
   frozen?: boolean;
+  /**
+   * Human-readable name of the field being saved. Surfaced by the universal
+   * sync-status indicator in the error state (e.g. "Couldn't save Task title").
+   */
+  label?: string;
 }
 
 export interface EditableField<T extends string> {
@@ -20,15 +26,24 @@ export interface EditableField<T extends string> {
   onBlur: () => void;
   flush: () => Promise<void>;
   isSaving: boolean;
+  /** True when the most recent save rejected; cleared on the next success. */
+  isError: boolean;
+  /** Re-run the save of the current draft (drives the indicator's Retry). */
+  retry: () => void;
 }
 
 export function useEditableField<T extends string>(
   opts: UseEditableFieldOptions<T>,
 ): EditableField<T> {
-  const { value, debounceMs = 500, frozen = false } = opts;
+  const { value, debounceMs = 500, frozen = false, label } = opts;
 
   const [draft, setDraft] = useState<T>(value);
   const [isSaving, setIsSaving] = useState(false);
+  const [isError, setIsError] = useState(false);
+  // Explicit "this field's save completed" timestamp, reported to sync-status.
+  // A persistent state value (unlike the transient isSaving boolean, which a
+  // warm local socket can flip true→false inside one coalesced render).
+  const [savedAt, setSavedAt] = useState<number | null>(null);
 
   const focusedRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -85,8 +100,17 @@ export function useEditableField<T extends string>(
           // Prior save's error is its own problem; don't block this save.
         }
       }
-      await onSaveRef.current(next);
+      try {
+        await onSaveRef.current(next);
+      } catch (err) {
+        // Record the failure for the sync-status indicator, then re-throw so
+        // flush/callers keep their existing error-propagation semantics.
+        setIsError(true);
+        throw err;
+      }
       lastSavedRef.current = next;
+      setIsError(false);
+      setSavedAt(Date.now());
     })();
     savePromiseRef.current = promise;
     setIsSaving(true);
@@ -145,5 +169,19 @@ export function useEditableField<T extends string>(
     void flush();
   }, [flush]);
 
-  return { value: draft, onChange, onFocus, onBlur, flush, isSaving };
+  // Keep the latest draft in a ref so `retry` can stay referentially stable
+  // (the sync-status indicator pulls it imperatively, so churn would thrash).
+  const draftRef = useRef<T>(draft);
+  draftRef.current = draft;
+
+  const retry = useCallback(() => {
+    void runSave(draftRef.current);
+  }, [runSave]);
+
+  // Auto-report to the universal sync-status indicator. Harmless no-op when no
+  // <SyncStatusProvider> is above (unit tests, non-surface mounts).
+  const phase = isError ? "error" : isSaving ? "syncing" : "idle";
+  useReportSync({ phase, label, retry: isError ? retry : undefined, savedAt });
+
+  return { value: draft, onChange, onFocus, onBlur, flush, isSaving, isError, retry };
 }

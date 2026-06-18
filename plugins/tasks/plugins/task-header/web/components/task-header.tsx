@@ -19,6 +19,7 @@ export function TaskHeader({ taskId }: { taskId: string }) {
   const titleField = useEditableField({
     value: task?.title ?? "",
     onSave: (v) => patchTask(taskId, { title: v.trim() || "Untitled" }),
+    label: "Task title",
   });
   useRegisterFlush(titleField.flush);
 
@@ -50,9 +51,6 @@ export function TaskHeader({ taskId }: { taskId: string }) {
           placeholder="Untitled"
           className="text-title flex-1 bg-transparent outline-none placeholder:text-muted-foreground focus:ring-0"
         />
-        <Text as="span" variant="caption" tone="muted" className="pt-xs">
-          {titleField.isSaving ? "Saving…" : "Saved"}
-        </Text>
       </div>
       <div className="flex items-center gap-md">
         <SectionLabel as="span">

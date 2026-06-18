@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { useResource, queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
 import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import {
   confirmPass,
   markResolved,
@@ -28,6 +29,8 @@ export interface UseOptimisticResourceArgs<
    */
   isConfirmedBy?: (serverData: Data, vars: Vars) => boolean;
   onError?: (err: unknown, vars: Vars) => void;
+  /** Names the thing being saved; surfaced in the sync-status error state. */
+  label?: string;
 }
 
 export interface UseOptimisticResourceResult<Data, Vars> {
@@ -38,6 +41,14 @@ export interface UseOptimisticResourceResult<Data, Vars> {
   /** Enqueue an overlay op + fire `mutate`; returns the minted opId. */
   dispatch: (vars: Vars) => string;
   inFlight: ReadonlyArray<{ opId: string; vars: Vars }>;
+  /**
+   * Ops whose `mutate` rejected. The overlay has been rolled back, but the op is
+   * retained here (with its `vars`) so the surface can report an error and offer
+   * a retry. Cleared when the op is retried or re-dispatched.
+   */
+  failed: ReadonlyArray<{ opId: string; vars: Vars }>;
+  /** Drop a failed op and re-run it (re-`dispatch(vars)`). */
+  retry: (opId: string) => void;
 }
 
 export function useOptimisticResource<
@@ -47,12 +58,15 @@ export function useOptimisticResource<
 >(
   args: UseOptimisticResourceArgs<Data, Vars, P>,
 ): UseOptimisticResourceResult<Data, Vars> {
-  const { resource, params, apply, mutate, isConfirmedBy, onError } = args;
+  const { resource, params, apply, mutate, isConfirmedBy, onError, label } = args;
   const queryClient = useQueryClient();
   const result = useResource(resource, params);
   const base = result.pending ? resource.initialData : result.data;
 
   const [pending, setPending] = useState<ReadonlyArray<PendingOp<Vars>>>([]);
+  const [failed, setFailed] = useState<ReadonlyArray<{ opId: string; vars: Vars }>>([]);
+  // Explicit "all in-flight ops confirmed" timestamp, reported to sync-status.
+  const [savedAt, setSavedAt] = useState<number | null>(null);
 
   // Latest-value refs so the QueryCache subscription effect can stay mounted for
   // the resource's lifetime without re-subscribing on every render.
@@ -97,9 +111,12 @@ export function useOptimisticResource<
       void mutate(vars).then(
         () => setPending((prev) => markResolved(prev, opId)),
         (err: unknown) => {
-          // Reject = rollback: removing the op recomputes the overlay without it.
-          // The cache was never mutated, so there is nothing else to undo.
+          // Reject = rollback: removing the op recomputes the overlay without it
+          // (the cache was never mutated, so there is nothing else to undo). The
+          // op is then retained in `failed` so the surface can report the error
+          // and offer a retry, instead of the failure silently vanishing.
           setPending((prev) => removeOp(prev, opId));
+          setFailed((prev) => [...prev, { opId, vars }]);
           if (onError) onError(err, vars);
         },
       );
@@ -108,14 +125,61 @@ export function useOptimisticResource<
     [mutate, onError],
   );
 
+  // Hold dispatch in a ref so `retry` keeps a stable identity even as dispatch's
+  // deps (mutate/onError) churn between renders.
+  const dispatchRef = useRef(dispatch);
+  dispatchRef.current = dispatch;
+
+  const retry = useCallback((opId: string) => {
+    let entry: { opId: string; vars: Vars } | undefined;
+    setFailed((prev) => {
+      entry = prev.find((f) => f.opId === opId);
+      return prev.filter((f) => f.opId !== opId);
+    });
+    if (entry) dispatchRef.current(entry.vars);
+  }, []);
+
+  // Re-run only THIS hook's own failed ops. Held in a ref + stable wrapper so the
+  // identity handed to useReportSync never churns (the indicator pulls it
+  // imperatively), yet it always sees the latest failed list.
+  const failedRef = useRef(failed);
+  failedRef.current = failed;
+  const retryAll = useCallback(() => {
+    failedRef.current.forEach((f) => retry(f.opId));
+  }, [retry]);
+
   const inFlight = useMemo(
     () => pending.map((op) => ({ opId: op.opId, vars: op.vars })),
     [pending],
   );
 
+  // Stamp an explicit "saved" timestamp the moment the last in-flight op clears
+  // with no failures — the true "all confirmed" moment. A persistent state value
+  // (unlike the transient inFlight/failed booleans) the sync-status store can
+  // reliably observe. Track the previous in-flight count in a ref to detect the
+  // >0 → 0 transition.
+  const prevInFlightRef = useRef(inFlight.length);
+  useEffect(() => {
+    if (prevInFlightRef.current > 0 && inFlight.length === 0 && failed.length === 0) {
+      setSavedAt(Date.now());
+    }
+    prevInFlightRef.current = inFlight.length;
+  }, [inFlight.length, failed.length]);
+
+  // Forced sync-status reporting: any optimistic surface lights up the universal
+  // indicator with no indicator code of its own. Retry is wired to retryAll so
+  // the indicator's Retry button re-runs only this hook's failed ops.
+  const phase = failed.length ? "error" : inFlight.length ? "syncing" : "idle";
+  useReportSync({
+    phase,
+    label,
+    retry: failed.length ? retryAll : undefined,
+    savedAt,
+  });
+
   // Stable identity so the result can feed memo deps / combineResources gates.
   return useMemo(
-    () => ({ data, pending: result.pending, dispatch, inFlight }),
-    [data, result.pending, dispatch, inFlight],
+    () => ({ data, pending: result.pending, dispatch, inFlight, failed, retry }),
+    [data, result.pending, dispatch, inFlight, failed, retry],
   );
 }

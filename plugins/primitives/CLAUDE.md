@@ -57,6 +57,7 @@
   - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
   - **`sortable-list`** — Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components.
   - **`surface-id`** — Stable per-surface-instance id context (the tab's tabId): SurfaceIdContext + useSurfaceTabId. A leaf so low-level primitives (shortcuts, scoped-store) can read which surface they're rendered in without importing pane.
+  - **`sync-status`** — Per-surface forced sync-status indicator: optimistic/autosave surfaces report {phase,label,retry} via useReportSync; the universal SyncStatusIndicator (mounted once per surface) renders a Google-Keep-style cloud (saving → saved → error+retry). Scoped per surface via scoped-store; tolerates no Provider.
   - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
   - **`tab-id`** — Stable per-tab id (sessionStorage-backed) for crash/notification attribution.
   - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.

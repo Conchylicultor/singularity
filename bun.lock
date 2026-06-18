@@ -2709,6 +2709,10 @@
       "name": "@singularity/plugin-primitives-surface-id",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/sync-status": {
+      "name": "@singularity/plugin-primitives-sync-status",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/syntax-highlight": {
       "name": "@singularity/plugin-primitives-syntax-highlight",
       "version": "0.0.1",
@@ -4908,6 +4912,8 @@
     "@singularity/plugin-primitives-sortable-list": ["@singularity/plugin-primitives-sortable-list@workspace:plugins/primitives/plugins/sortable-list"],
 
     "@singularity/plugin-primitives-surface-id": ["@singularity/plugin-primitives-surface-id@workspace:plugins/primitives/plugins/surface-id"],
+
+    "@singularity/plugin-primitives-sync-status": ["@singularity/plugin-primitives-sync-status@workspace:plugins/primitives/plugins/sync-status"],
 
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
 
