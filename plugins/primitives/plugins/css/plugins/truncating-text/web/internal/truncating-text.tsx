@@ -33,6 +33,23 @@ export interface TruncatingTextProps
  * makes `truncate` silently no-op and the text wraps when compressed). Drop this
  * in wherever a label sits next to fixed controls in a horizontal chrome row.
  *
+ * ## Truncates regardless of parent display context (`inline-block max-w-full`)
+ *
+ * Tailwind's `truncate` (`overflow:hidden` + `text-overflow:ellipsis`) only
+ * takes effect on a box that establishes a block formatting context — a
+ * block/inline-block element or a flex/grid item (which CSS *blockifies*). A
+ * plain `<span>` is inline, so on an inline element `truncate` silently no-ops
+ * and the text overflows at full width. That bites only OUTSIDE a flex/grid
+ * row — e.g. when this leaf is a *node* child of a plain block `<div>` (such as
+ * `Frame`'s node-slot wrapper, which nests its child in a bare `min-w-0` div).
+ *
+ * The leaf defends against this itself: `inline-block` makes the box always
+ * honor overflow (a flex/grid item blockifies `inline-block` → `block` exactly
+ * as it would `inline`, so the row case is unchanged), and `max-w-full` caps it
+ * at its container so it ellipsizes against the parent instead of overflowing.
+ * The result is a leaf that truncates the same in a flex row, a grid track, or a
+ * bare block parent — eliminating the second silent-no-op mode at the source.
+ *
  * `side="start"` flips the ellipsis to the leading edge via the RTL technique:
  * the host element is laid out `dir="rtl"` (so `text-overflow` clips at the visual
  * start, with `text-left` keeping the visible tail flush-left), while the children
@@ -54,7 +71,10 @@ export function TruncatingText({
     return (
       <Component
         dir="rtl"
-        className={cn("min-w-0 truncate text-left", className)}
+        className={cn(
+          "inline-block max-w-full min-w-0 truncate text-left",
+          className,
+        )}
         title={resolvedTitle}
         {...rest}
       >
@@ -67,7 +87,7 @@ export function TruncatingText({
 
   return (
     <Component
-      className={cn("min-w-0 truncate", className)}
+      className={cn("inline-block max-w-full min-w-0 truncate", className)}
       title={resolvedTitle}
       {...rest}
     >

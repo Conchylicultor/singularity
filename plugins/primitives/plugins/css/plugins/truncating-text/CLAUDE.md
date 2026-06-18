@@ -3,6 +3,32 @@
 Single-line text that truncates instead of wrapping, plus the lint rule that
 keeps single-line *chrome* (toolbars, headers, rows, chips) honest.
 
+## Truncates regardless of parent display context
+
+`truncate` (`overflow:hidden` + `text-overflow:ellipsis`) only takes effect on a
+box that establishes a block formatting context — a block/inline-block element
+or a flex/grid item (CSS *blockifies* those). On a plain inline `<span>` it
+silently no-ops and the text overflows. The leaf used to be a bare
+`<span class="min-w-0 truncate">`, so it truncated as a flex/grid item but
+*silently overflowed* anywhere else — e.g. as a **node child of a plain block
+div** (`Frame`'s node-slot wrapper nests its child in a bare `min-w-0` div). That
+was a second silent-no-op mode, twin to the `min-w-0` footgun this primitive
+exists to kill (it once bit the jsonl-viewer tool-call header).
+
+The fix lives in the leaf: it carries `inline-block max-w-full` in addition to
+`min-w-0 truncate`. `inline-block` makes the box always honor overflow (a
+flex/grid item blockifies `inline-block` → `block` exactly as it would `inline`,
+so the row case is byte-for-byte unchanged); `max-w-full` caps it at its
+container so it ellipsizes against the parent instead of overflowing. Net: the
+leaf truncates the same in a flex row, a grid track, or a bare block parent — so
+consumers never need an `as="div"` block workaround to re-establish truncation.
+A caller `max-w-*` / `w-*` in `className` still wins (composes last via `cn`).
+
+The real-browser proof is `web/internal/truncating-text-geometry.test.ts`
+(`bun:test` + Playwright): it renders the leaf as a node child of a plain block
+div and asserts it stays within the container and ellipsizes, with a
+falsification case (plain `inline`) that overflows — the regression this guards.
+
 ## Single-line is a property of the region, not the leaf
 
 A horizontal chrome region — a toolbar, a card/pane header, a list row, a chip — is

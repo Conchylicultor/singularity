@@ -10,6 +10,10 @@ describe("TruncatingText", () => {
     const el = document.querySelector<HTMLElement>('[data-testid="t"]')!;
     expect(el.classList.contains("min-w-0")).toBe(true);
     expect(el.classList.contains("truncate")).toBe(true);
+    // inline-block + max-w-full make truncation honored regardless of parent
+    // display context (not just as a flex/grid item), capped at the container.
+    expect(el.classList.contains("inline-block")).toBe(true);
+    expect(el.classList.contains("max-w-full")).toBe(true);
     expect(el.hasAttribute("dir")).toBe(false);
     // title auto-derived from string children.
     expect(el.getAttribute("title")).toBe("a/very/long/path.ts");
@@ -28,6 +32,9 @@ describe("TruncatingText", () => {
     expect(el.getAttribute("dir")).toBe("rtl");
     expect(el.classList.contains("truncate")).toBe(true);
     expect(el.classList.contains("text-left")).toBe(true);
+    // same parent-context-independent truncation guarantee as the end side.
+    expect(el.classList.contains("inline-block")).toBe(true);
+    expect(el.classList.contains("max-w-full")).toBe(true);
     // children isolated in an ltr run so the path still reads left-to-right.
     const inner = el.querySelector<HTMLElement>('span[dir="ltr"]')!;
     expect(inner).not.toBeNull();
