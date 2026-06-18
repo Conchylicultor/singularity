@@ -10,10 +10,16 @@ import {
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
+  VirtualRows,
   type DataViewRenderProps,
   type ItemActionsDescriptor,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { ListViewOptions } from "../../core";
+
+/** Above this row count the list windows its rows (VirtualRows finds the nearest
+ *  scroll ancestor); smaller lists keep the plain `.map` — no absolute
+ *  positioning / measurement overhead, exact byte-for-byte legacy markup. */
+const VIRTUALIZE_THRESHOLD = 100;
 
 /**
  * List view: a compact, single-row-per-item dense list. Composes the `Row`
@@ -76,88 +82,111 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     (f) => f.id !== titleField?.id && f.align !== "end",
   );
 
-  return (
-    <div className={cn("flex flex-col", !props.embedded && "p-sm")}>
-      {rows.map((row, i) => {
-        const key = props.rowKey(row, i);
+  // Single source of row markup — shared verbatim by the plain and virtualized
+  // branches so the two render identically.
+  const renderRow = (row: unknown, i: number): ReactNode => {
+    const key = props.rowKey(row, i);
 
-        return (
-          <Row
-            key={key}
-            selected={key === props.selectedRowId}
-            size={options.size ?? "md"}
-            onClick={() => props.onRowActivate?.(row)}
-            icon={options.leading?.(row)}
-            actions={
-              itemActions ? (
-                <itemActions.Row
-                  row={row}
-                  hasChildren={props.hasChildren?.(key) ?? false}
-                />
-              ) : undefined
-            }
-          >
-            {options.renderRow ? (
-              options.renderRow(row)
-            ) : (
-              <>
-                <div className="flex min-w-0 flex-col overflow-hidden">
-                  {titleField ? (
-                    <Text
-                      as="div"
-                      variant="label"
-                      className="truncate text-foreground"
-                    >
+    return (
+      <Row
+        key={key}
+        selected={key === props.selectedRowId}
+        size={options.size ?? "md"}
+        onClick={() => props.onRowActivate?.(row)}
+        icon={options.leading?.(row)}
+        actions={
+          itemActions ? (
+            <itemActions.Row
+              row={row}
+              hasChildren={props.hasChildren?.(key) ?? false}
+            />
+          ) : undefined
+        }
+      >
+        {options.renderRow ? (
+          options.renderRow(row)
+        ) : (
+          <>
+            <div className="flex min-w-0 flex-col overflow-hidden">
+              {titleField ? (
+                <Text
+                  as="div"
+                  variant="label"
+                  className="truncate text-foreground"
+                >
+                  <FieldCell
+                    field={titleField}
+                    row={row}
+                    resolveCell={resolveCell}
+                    resolveEditor={resolveEditor}
+                    display="block"
+                  />
+                </Text>
+              ) : null}
+              {subtitleFields.length > 0 ? (
+                <Text
+                  as="div"
+                  variant="caption"
+                  className="truncate text-muted-foreground"
+                >
+                  {subtitleFields.map((field, fi) => (
+                    <span key={field.id}>
+                      {fi > 0 ? " · " : null}
                       <FieldCell
-                        field={titleField}
+                        field={field}
                         row={row}
                         resolveCell={resolveCell}
                         resolveEditor={resolveEditor}
-                        display="block"
+                        display="inline"
                       />
-                    </Text>
-                  ) : null}
-                  {subtitleFields.length > 0 ? (
-                    <Text
-                      as="div"
-                      variant="caption"
-                      className="truncate text-muted-foreground"
-                    >
-                      {subtitleFields.map((field, fi) => (
-                        <span key={field.id}>
-                          {fi > 0 ? " · " : null}
-                          <FieldCell
-                            field={field}
-                            row={row}
-                            resolveCell={resolveCell}
-                            resolveEditor={resolveEditor}
-                            display="inline"
-                          />
-                        </span>
-                      ))}
-                    </Text>
-                  ) : null}
-                </div>
-                {trailingFields.length > 0 ? (
-                  <div className="ml-auto flex shrink-0 items-center gap-xs">
-                    {trailingFields.map((field) => (
-                      <span key={field.id}>
-                        <FieldCell
-                          field={field}
-                          row={row}
-                          resolveCell={resolveCell}
-                          resolveEditor={resolveEditor}
-                          display="block"
-                        />
-                      </span>
-                    ))}
-                  </div>
-                ) : null}
-              </>
-            )}
-          </Row>
-        );
-      })}
+                    </span>
+                  ))}
+                </Text>
+              ) : null}
+            </div>
+            {trailingFields.length > 0 ? (
+              <div className="ml-auto flex shrink-0 items-center gap-xs">
+                {trailingFields.map((field) => (
+                  <span key={field.id}>
+                    <FieldCell
+                      field={field}
+                      row={row}
+                      resolveCell={resolveCell}
+                      resolveEditor={resolveEditor}
+                      display="block"
+                    />
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </>
+        )}
+      </Row>
+    );
+  };
+
+  // Window the render once the list is long enough to matter; otherwise keep the
+  // plain `.map`. VirtualRows discovers the scroll ancestor itself, so this works
+  // whether the data-view owns its scroll or is embedded inside a larger one.
+  const virtualize = rows.length > VIRTUALIZE_THRESHOLD;
+  const estimateSize = (options.size ?? "md") === "sm" ? 36 : 44;
+
+  if (virtualize) {
+    return (
+      <VirtualRows<unknown>
+        items={rows}
+        estimateSize={estimateSize}
+        getKey={(row, i) => props.rowKey(row, i)}
+        itemClassName="px-sm"
+      >
+        {(row, i) => renderRow(row, i)}
+      </VirtualRows>
+    );
+  }
+
+  return (
+    <div className={cn("flex flex-col", !props.embedded && "p-sm")}>
+      {rows.map((row, i) => renderRow(row, i))}
     </div>
   );
 }

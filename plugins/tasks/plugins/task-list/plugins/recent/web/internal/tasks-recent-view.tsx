@@ -50,6 +50,10 @@ export function TasksRecentView({ selectedId, onSelect }: TaskViewProps) {
       views={["list"]}
       defaultView="list"
       storageKey={RECENT_VIEW}
+      // Embedded: the tab host (tabbed-view) already owns the scroll surface, so
+      // the data-view must not nest a second scroller. The list view windows its
+      // rows against that outer scroller (VirtualRows discovers it).
+      mode="embedded"
       loading={loading}
       selectedRowId={selectedId}
       onRowActivate={(t) => onSelect(t.id)}

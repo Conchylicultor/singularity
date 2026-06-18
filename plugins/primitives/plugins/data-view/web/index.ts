@@ -10,6 +10,8 @@ export { useResolveCell } from "./cell-slot";
 export { useResolveCellEditor } from "./cell-editor-slot";
 export { useResolveOperatorSet } from "./filter-slot";
 export { EditableCell } from "./components/editable-cell";
+export { VirtualRows } from "./components/virtual-rows";
+export type { VirtualRowsProps } from "./components/virtual-rows";
 export { FieldCell } from "./components/field-cell";
 export type { FieldCellProps } from "./components/field-cell";
 export { FilterValueInput } from "./components/filter/filter-value-input";
