@@ -90,9 +90,8 @@
       - **`push-counter`**
       - **`push-profiling`** — Toolbar button showing push/build Gantt scoped to the last hour.
       - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
-      - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).
       - **`status`** — Displays the conversation status as a colored badge in the toolbar.
-      - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
+      - **`tasks-panel`** — Conversation task pane: a right pane showing the task tree (active task + children) plus the task detail. Opened from the toolbar Tasks button and from inline task chips/links.
       - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
       - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
       - **`vscode`** — Opens the conversation's worktree in VSCode.

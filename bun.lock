@@ -1007,10 +1007,6 @@
       "name": "@singularity/plugin-conversations-conversation-view-resume",
       "version": "0.0.1",
     },
-    "plugins/conversations/plugins/conversation-view/plugins/side-task": {
-      "name": "@singularity/plugin-conversations-conversation-view-side-task",
-      "version": "0.0.1",
-    },
     "plugins/conversations/plugins/conversation-view/plugins/status": {
       "name": "@singularity/plugin-conversations-conversation-view-status",
       "version": "0.0.1",
@@ -4077,8 +4073,6 @@
     "@singularity/plugin-conversations-conversation-view-push-profiling": ["@singularity/plugin-conversations-conversation-view-push-profiling@workspace:plugins/conversations/plugins/conversation-view/plugins/push-profiling"],
 
     "@singularity/plugin-conversations-conversation-view-resume": ["@singularity/plugin-conversations-conversation-view-resume@workspace:plugins/conversations/plugins/conversation-view/plugins/resume"],
-
-    "@singularity/plugin-conversations-conversation-view-side-task": ["@singularity/plugin-conversations-conversation-view-side-task@workspace:plugins/conversations/plugins/conversation-view/plugins/side-task"],
 
     "@singularity/plugin-conversations-conversation-view-status": ["@singularity/plugin-conversations-conversation-view-status@workspace:plugins/conversations/plugins/conversation-view/plugins/status"],
 

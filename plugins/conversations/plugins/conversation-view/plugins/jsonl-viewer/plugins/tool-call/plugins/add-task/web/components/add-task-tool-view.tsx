@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
+import { convTasksPane } from "@plugins/conversations/plugins/conversation-view/plugins/tasks-panel/web";
 import { tasksResource } from "@plugins/tasks/core";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
@@ -45,7 +44,6 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const autostart = input.autostart ?? result?.autostart ?? null;
 
   const tasksResult = useResource(tasksResource);
-  const { convId } = conversationPane.useParams();
   const openPane = useOpenPane();
   const task = useMemo(
     () => (tasksResult.pending || !taskId) ? null : (tasksResult.data.find((t) => t.id === taskId) ?? null),
@@ -55,7 +53,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const openTask = (e: React.MouseEvent) => {
     if (!taskId) return;
     e.stopPropagation();
-    openPane(taskSidePane, { taskId }, { mode: "push", input: { convId } });
+    openPane(convTasksPane, { taskId }, { mode: "push" });
   };
 
   const summary = (

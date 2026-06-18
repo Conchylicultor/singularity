@@ -6,9 +6,11 @@ import { GoToParentAction } from "./components/go-to-parent-action";
 import { ExpandToTasksAction } from "./components/expand-to-tasks-action";
 import { convTasksPane } from "./panes";
 
+export { convTasksPane } from "./panes";
+
 export default {
   description:
-    "Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.",
+    "Conversation task pane: a right pane showing the task tree (active task + children) plus the task detail. Opened from the toolbar Tasks button and from inline task chips/links.",
   contributions: [
     Pane.Register({ pane: convTasksPane }),
     Conversation.ActionBar({ id: "tasks", component: TasksButton }),

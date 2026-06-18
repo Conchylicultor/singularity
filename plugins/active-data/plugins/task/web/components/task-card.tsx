@@ -4,7 +4,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversationById } from "@plugins/conversations/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
-import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
+import { convTasksPane } from "@plugins/conversations/plugins/conversation-view/plugins/tasks-panel/web";
 import { useActiveDataBinding } from "@plugins/active-data/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -224,7 +224,7 @@ function TaskChip({ taskId }: { taskId: string }) {
     <LinkChip
       onClick={(e) => {
         e.stopPropagation();
-        openPane(taskSidePane, { taskId }, { mode: "push", input: { convId: conversation.id } });
+        openPane(convTasksPane, { taskId }, { mode: "push" });
       }}
       leading={<span className="text-muted-foreground">✓</span>}
       title={title}
