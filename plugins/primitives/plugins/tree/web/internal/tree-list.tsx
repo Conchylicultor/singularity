@@ -9,6 +9,7 @@ import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import {
   DndContext,
   DragOverlay,
+  MeasuringStrategy,
   PointerSensor,
   pointerWithin,
   useSensor,
@@ -355,6 +356,15 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     <DndContext
       sensors={sensors}
       collisionDetection={pointerWithin}
+      // In windowed mode, rows mount/unmount as the user scrolls (incl. dnd-kit
+      // autoscroll dragging an off-screen target into view). `Always` re-measures
+      // droppables each frame so freshly-mounted rows become valid drop targets
+      // mid-drag, instead of being invisible to collision detection.
+      measuring={
+        windowed
+          ? { droppable: { strategy: MeasuringStrategy.Always } }
+          : undefined
+      }
       onDragStart={onDragStart}
       onDragEnd={onDragEnd}
       onDragCancel={() => setActiveId(null)}
@@ -416,6 +426,10 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                 estimateSize={ROW_ESTIMATE_PX}
                 getKey={(item) => item.node.id}
                 scrollToIndex={selectedIndex}
+                // Pin the drag source so it stays mounted when scrolled out of
+                // the window — otherwise its draggable unregisters mid-gesture
+                // and dnd-kit cancels the drop.
+                keepMounted={activeId ? [activeId] : undefined}
               >
                 {(item) => <Row node={item.node} depth={item.depth} />}
               </VirtualRows>

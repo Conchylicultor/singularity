@@ -1,11 +1,17 @@
 import {
   type ReactNode,
+  useCallback,
   useEffect,
   useLayoutEffect,
+  useMemo,
   useRef,
   useState,
 } from "react";
-import { useVirtualizer } from "@tanstack/react-virtual";
+import {
+  defaultRangeExtractor,
+  useVirtualizer,
+  type Range,
+} from "@tanstack/react-virtual";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 export interface VirtualRowsProps<T> {
@@ -19,6 +25,14 @@ export interface VirtualRowsProps<T> {
   itemClassName?: string;
   /** When set, scrolls the virtualizer to this index (align: auto — only when off-screen). For host-driven selection reveal. */
   scrollToIndex?: number | null;
+  /**
+   * Item keys that must stay rendered even when scrolled out of the window.
+   * They render at their true measured offset (so they're invisible off-screen
+   * but remain in the DOM). The use case is an in-progress @dnd-kit drag whose
+   * source row would otherwise unmount mid-gesture — unregistering its
+   * draggable and cancelling the drop. Keep it pinned for the drag's duration.
+   */
+  keepMounted?: readonly string[];
   children: (item: T, index: number) => ReactNode;
 }
 
@@ -60,11 +74,40 @@ export function VirtualRows<T>({
   getKey,
   itemClassName,
   scrollToIndex,
+  keepMounted,
   children,
 }: VirtualRowsProps<T>): ReactNode {
   const sizerRef = useRef<HTMLDivElement>(null);
   const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
+
+  // Indexes of the pinned (keepMounted) items. Empty (cheap early-out) whenever
+  // nothing is pinned, which is the common, non-dragging case.
+  const pinnedIndexes = useMemo(() => {
+    if (!keepMounted || keepMounted.length === 0) return [];
+    const want = new Set(keepMounted);
+    const out: number[] = [];
+    items.forEach((item, i) => {
+      if (want.has(getKey(item, i))) out.push(i);
+    });
+    return out;
+  }, [keepMounted, items, getKey]);
+
+  // Force the pinned indexes into the rendered range on top of the windowed
+  // range, so a pinned row stays mounted (at its real offset) even far outside
+  // the viewport.
+  const rangeExtractor = useCallback(
+    (range: Range) => {
+      const base = defaultRangeExtractor(range);
+      if (pinnedIndexes.length === 0) return base;
+      const set = new Set(base);
+      for (const i of pinnedIndexes) {
+        if (i >= 0 && i < items.length) set.add(i);
+      }
+      return [...set].sort((a, b) => a - b);
+    },
+    [pinnedIndexes, items.length],
+  );
 
   // Resolve the scroll container and the list's offset within it once mounted
   // (refs are attached by layout-effect time). A layout effect runs before
@@ -87,6 +130,7 @@ export function VirtualRows<T>({
     estimateSize: () => estimateSize,
     overscan,
     getItemKey: (index) => getKey(items[index]!, index),
+    rangeExtractor,
     scrollMargin,
   });
 
