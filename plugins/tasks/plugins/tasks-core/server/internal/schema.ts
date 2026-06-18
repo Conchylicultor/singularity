@@ -83,6 +83,8 @@ export const ConversationSchema = createSelectSchema(_conversations, {
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
   endedAt: z.coerce.date().nullable(),
+  hibernatedAt: z.coerce.date().nullable(),
+  lastViewedAt: z.coerce.date().nullable(),
 }).extend({
   worktreePath: z.string(),
   taskId: z.string(),

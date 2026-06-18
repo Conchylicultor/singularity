@@ -39,7 +39,7 @@ export { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
 
 export { ConversationStatusSchema, isActiveStatus, hasLiveProcess } from "./status";
 export type { ConversationStatus } from "./status";
-export { createConversation, deleteConversation, resumeConversation } from "./internal/lifecycle";
+export { createConversation, deleteConversation, resumeConversation, ensureResumed } from "./internal/lifecycle";
 export type { Turn } from "./internal/claude-transcript";
 export {
   Runtime,

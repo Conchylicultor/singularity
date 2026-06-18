@@ -5,6 +5,7 @@ import {
   adoptOrphanConversation,
   markConversationGone,
   markConversationClosed,
+  setConversationHibernated,
   notifyConversationsChanged,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { recordReport } from "@plugins/reports/server";
@@ -13,6 +14,7 @@ import { isTransientDbError } from "@plugins/database/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { Runtime, flushInteractivePrompt, type RuntimeInfo } from "./runtime";
 import { autoAnswerConfig } from "../../shared/config";
+import { hibernationConfig } from "../../core/hibernation-config";
 import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { ConversationStatus } from "../../core";
 
@@ -247,9 +249,30 @@ async function tick(): Promise<void> {
     if (dbRow.closeRequested) {
       await markConversationClosed(id);
       changedIds.add(id);
-    } else {
-      if (await markConversationGone(id)) changedIds.add(id);
+      continue;
     }
+
+    // Suspend-instead-of-gone: a waiting, resumable conversation whose process
+    // is missing (idle-killed or lost to a reboot) becomes hibernated rather
+    // than gone — it keeps showing as a normal Waiting conversation and is
+    // silently resumed on open. Close still wins (handled above). Main-only:
+    // tmux is global so every worktree's poller sees every session, but only
+    // main owns the canonical rows — same guard as orphan adoption. On non-main,
+    // or for ineligible rows, this falls through to today's gone path.
+    // The poller NEVER clears `hibernatedAt` — only `ensureResumed` does.
+    if (
+      isMain() &&
+      getConfig(hibernationConfig).enabled &&
+      dbRow.status === "waiting" &&
+      dbRow.claudeSessionId &&
+      !dbRow.hibernatedAt
+    ) {
+      await setConversationHibernated(id, new Date());
+      changedIds.add(id);
+      continue;
+    }
+
+    if (await markConversationGone(id)) changedIds.add(id);
   }
 
   // Adoption changes attempt/task membership → FULL recompute. Otherwise scope

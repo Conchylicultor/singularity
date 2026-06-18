@@ -144,6 +144,13 @@ export const _conversations = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
     endedAt: timestamp("ended_at", { withTimezone: true }),
     closeRequested: boolean("close_requested").notNull().default(false),
+    // Hibernation lifecycle (orthogonal to `status`): `hibernatedAt` is set when
+    // the live process is intentionally absent (idle-killed or lost to a reboot)
+    // while status stays `waiting`; null means a live process is expected.
+    // `lastViewedAt` records when the user last opened the conversation (and on
+    // every turn sent), driving the idle timer (falls back to createdAt).
+    hibernatedAt: timestamp("hibernated_at", { withTimezone: true }),
+    lastViewedAt: timestamp("last_viewed_at", { withTimezone: true }),
   },
   // attempts_v / tasks_v derive status via per-attempt correlated subqueries on
   // conversations.attempt_id, several of them filtered by status (max_ended_at,

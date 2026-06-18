@@ -1047,6 +1047,10 @@
       "name": "@singularity/plugin-conversations-conversations-view-queue",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/hibernation": {
+      "name": "@singularity/plugin-conversations-hibernation",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/model-provider": {
       "name": "@singularity/plugin-conversations-model-provider",
       "version": "0.0.1",
@@ -4093,6 +4097,8 @@
     "@singularity/plugin-conversations-conversations-view-history": ["@singularity/plugin-conversations-conversations-view-history@workspace:plugins/conversations/plugins/conversations-view/plugins/history"],
 
     "@singularity/plugin-conversations-conversations-view-queue": ["@singularity/plugin-conversations-conversations-view-queue@workspace:plugins/conversations/plugins/conversations-view/plugins/queue"],
+
+    "@singularity/plugin-conversations-hibernation": ["@singularity/plugin-conversations-hibernation@workspace:plugins/conversations/plugins/hibernation"],
 
     "@singularity/plugin-conversations-model-provider": ["@singularity/plugin-conversations-model-provider@workspace:plugins/conversations/plugins/model-provider"],
 

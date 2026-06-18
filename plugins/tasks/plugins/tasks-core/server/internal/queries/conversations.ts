@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, inArray, isNotNull, lt, ne, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, isNull, lt, ne, sql, type SQL } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _conversations } from "../tables";
 import { conversations } from "../views";
@@ -135,6 +135,23 @@ export async function listConversationSummariesByAttempt(
     .from(conversations)
     .where(where)
     .orderBy(asc(conversations.createdAt));
+}
+
+// Idle-kill candidates: waiting, not already hibernated, resumable (has a
+// saved Claude session), and idle since `before` (lastViewedAt, or createdAt
+// when never viewed). Used by the conversations.hibernate-idle job.
+export function listHibernationCandidates(before: Date): Promise<{ id: string }[]> {
+  return db
+    .select({ id: conversations.id })
+    .from(conversations)
+    .where(
+      and(
+        eq(conversations.status, "waiting"),
+        isNull(conversations.hibernatedAt),
+        isNotNull(conversations.claudeSessionId),
+        lt(sql`coalesce(${conversations.lastViewedAt}, ${conversations.createdAt})`, before),
+      ),
+    );
 }
 
 export async function getConversation(id: string): Promise<Conversation | null> {

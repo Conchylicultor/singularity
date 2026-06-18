@@ -1,5 +1,6 @@
 export { ConversationStatusSchema, isActiveStatus, hasLiveProcess, type ConversationStatus } from "../server/status";
 export { conversationsResource, type ConversationEntry, type ConversationListPayload } from "./resources";
+export { hibernationConfig } from "./hibernation-config";
 export {
   listConversations,
   listGoneConversations,

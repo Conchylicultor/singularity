@@ -10,6 +10,7 @@ import {
   rewindLastUserTurn,
   type Turn,
 } from "./claude-transcript";
+import { ensureResumed } from "./lifecycle";
 
 export type { Turn };
 
@@ -97,6 +98,10 @@ export const Runtime = {
 };
 
 export async function sendTurn(id: string, text: string): Promise<void> {
+  // A queued/meta-prompt turn must never be sent into a dead pane: if the
+  // conversation is hibernated, transparently resume it (`claude --resume`)
+  // before sending. No-op for live conversations.
+  await ensureResumed(id);
   const row = await getConversationRuntime(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
   await Runtime.get(row.runtime).send(id, text);

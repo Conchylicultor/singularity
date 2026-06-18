@@ -1,0 +1,7 @@
+// @hash 632e36d1f5e2
+{
+  // Kill the live process of a waiting conversation after it has been idle for the configured time (and after a reboot), keeping it shown as a normal Waiting conversation. It is silently resumed (claude --resume) the moment you open it.
+  "enabled": true,
+  // How long a waiting conversation may sit unopened before its process is killed to reclaim resources.
+  "idleHours": 48
+}

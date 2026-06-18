@@ -9,6 +9,7 @@ import {
   getConversationRuntime,
   updateConversation,
   updateTask,
+  setConversationHibernated,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { Runtime } from "./runtime";
 import { DEFAULT_MODEL, normalizeModel, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
@@ -229,6 +230,27 @@ export async function deleteConversation(id: string): Promise<void> {
   await Runtime.get(runtimeId).delete(id);
 }
 
+// Shared resume mechanics: clear the stale (dead) pane, reset the row to
+// "starting" so the poller tracks the new session (and the 30s STARTING_TIMEOUT
+// safety net catches a failed resume → gone), and spawn a fresh `claude --resume`
+// pane. Caller must have validated `row.claudeSessionId`. Does NOT touch task
+// hold/drop or the hibernation flag — callers own those.
+async function respawnResume(row: Conversation): Promise<void> {
+  const runtime = Runtime.get(row.runtime);
+  // tmux refuses `new-session -s <name>` when a (dead) session by that name
+  // still exists. Clear any stale pane before re-spawning.
+  await runtime.delete(row.id);
+
+  // Reset status so the poller can track the new session. Without this,
+  // "done" rows are skipped and the conversation stays stuck as done.
+  await updateConversation(row.id, { status: "starting", endedAt: null });
+
+  await runtime.create(row.id, row.worktreePath, {
+    resumeSessionId: row.claudeSessionId!,
+    model: row.model,
+  });
+}
+
 export async function resumeConversation(id: string): Promise<Conversation> {
   const row = await getConversation(id);
   if (!row) throw new Error(`Conversation ${id} not found`);
@@ -239,21 +261,27 @@ export async function resumeConversation(id: string): Promise<Conversation> {
     throw new Error(`Conversation ${id} has no saved Claude session to resume`);
   }
 
-  const runtime = Runtime.get(row.runtime);
-  // tmux refuses `new-session -s <name>` when a (dead) session by that name
-  // still exists. Clear any stale pane before re-spawning.
-  await runtime.delete(id);
-
-  // Reset status so the poller can track the new session. Without this,
-  // "done" rows are skipped and the conversation stays stuck as done.
-  await updateConversation(id, { status: "starting", endedAt: null });
-
-  await runtime.create(id, row.worktreePath, {
-    resumeSessionId: row.claudeSessionId,
-    model: row.model,
-  });
+  await respawnResume(row);
 
   await updateTask(row.taskId, { drop: false, hold: false });
 
   return (await getConversation(id)) as Conversation;
+}
+
+// Idempotent transparent restore for a hibernated conversation. No-op unless the
+// row is actually hibernated (process intentionally absent). On resume it reuses
+// the exact proven resume path, then clears the hibernation flag. Status stays
+// `waiting`-class to the user (the brief "starting" is invisible — the transcript
+// renders from disk). The chokepoint before any live-process interaction
+// (viewed/select endpoint, sendTurn).
+export async function ensureResumed(id: string): Promise<void> {
+  const row = await getConversation(id);
+  if (!row) throw new Error(`Conversation ${id} not found`);
+  if (!row.hibernatedAt) return;
+  if (!row.claudeSessionId) {
+    throw new Error(`Conversation ${id} is hibernated but has no saved Claude session to resume`);
+  }
+
+  await respawnResume(row);
+  await setConversationHibernated(id, null);
 }

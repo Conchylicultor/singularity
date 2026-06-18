@@ -1,4 +1,6 @@
+import { useEffect } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { markConversationViewed } from "@plugins/conversations/plugins/hibernation/web";
 import { ActionBarView } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
 import { HeaderView } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -13,6 +15,15 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 export function ConversationView() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
+
+  // Selection signal for idle hibernation: opening (or switching to) a
+  // conversation resets its idle timer and transparently resumes it if it was
+  // hibernated. Fire-and-forget — failure here must not block rendering the
+  // transcript (which renders from disk, independent of the live process).
+  useEffect(() => {
+    void markConversationViewed(convId);
+  }, [convId]);
+
   const promptBarItems = Conversation.PromptBar.useContributions();
   const promptInputItems = Conversation.PromptInput.useContributions();
   const abovePromptInputItems = Conversation.AbovePromptInput.useContributions();

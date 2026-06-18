@@ -184,6 +184,31 @@ export async function markConversationGone(id: string): Promise<boolean> {
   return result.length > 0;
 }
 
+// Hibernation flag (orthogonal to status): set a Date to mark the process
+// intentionally absent, null to clear it on resume. Status is untouched —
+// a hibernated conversation stays `waiting`. Only the poller (suspend branch)
+// and the idle-kill job set it; only `ensureResumed` clears it.
+export async function setConversationHibernated(
+  id: string,
+  hibernatedAt: Date | null,
+): Promise<void> {
+  await db
+    .update(_conversations)
+    .set({ hibernatedAt, updatedAt: new Date() })
+    .where(eq(_conversations.id, id));
+  conversationsLiveResource.notify();
+}
+
+// Reset the idle timer: stamp lastViewedAt = now() when the user opens the
+// conversation (and on every turn sent).
+export async function touchConversationViewed(id: string): Promise<void> {
+  const now = new Date();
+  await db
+    .update(_conversations)
+    .set({ lastViewedAt: now, updatedAt: now })
+    .where(eq(_conversations.id, id));
+}
+
 export async function markConversationClosed(
   id: string,
   endedAt: Date = new Date(),

@@ -87,6 +87,7 @@ export {
   getConversation,
   getConversationRuntime,
   getConversationClaudeSessionId,
+  listHibernationCandidates,
   RECENT_GONE_LIMIT,
 } from "./internal/queries/conversations";
 
@@ -126,6 +127,8 @@ export {
   deleteConversationRow,
   markConversationGone,
   markConversationClosed,
+  setConversationHibernated,
+  touchConversationViewed,
 } from "./internal/mutations/conversations";
 export type {
   InsertConversationInput,
