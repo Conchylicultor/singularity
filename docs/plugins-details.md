@@ -2675,7 +2675,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `Aggregate`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`; Values: `getRuntimeProfile`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `recordEntrySpan`, `recordSpan`, `resetRuntimeProfile`, `runWithoutProfiling`
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which follows redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
-        - Imported by: `apps/browser/proxy`
+        - Imported by: `apps/browser/proxy`, `page/bookmark`
       - Server:
         - Exports: Types: `SafeFetchInit`; Values: `assertResolvesPublic`, `isPrivateIp`, `parsePublicUrl`, `safeFetch`, `SsrfError`
     - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
@@ -2766,7 +2766,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.fetchEndpoint`, `page/editor.Editor`, `primitives/css/card.Card`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/loading.Loading`, `primitives/text-editor/paste-images.attachmentUrl`
         - Exports: Values: `BOOKMARK_TYPE`, `bookmarkBlock`
       - Server:
-        - Uses: `infra/attachments.createAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
+        - Uses: `infra/attachments.createAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/safe-fetch.parsePublicUrl`, `infra/safe-fetch.safeFetch`, `infra/safe-fetch.SsrfError`
         - Routes: `GET /api/link-preview`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`, `page/editor.defineBlock`

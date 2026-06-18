@@ -10,7 +10,7 @@
   - Uses: `infra/endpoints.fetchEndpoint`, `page/editor.Editor`, `primitives/css/card.Card`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/loading.Loading`, `primitives/text-editor/paste-images.attachmentUrl`
   - Exports: Values: `BOOKMARK_TYPE`, `bookmarkBlock`
 - Server:
-  - Uses: `infra/attachments.createAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
+  - Uses: `infra/attachments.createAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/safe-fetch.parsePublicUrl`, `infra/safe-fetch.safeFetch`, `infra/safe-fetch.SsrfError`
   - Routes: `GET /api/link-preview`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `page/editor.defineBlock`

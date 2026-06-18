@@ -6,7 +6,7 @@
 
 - Description: SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which follows redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
 - Cross-plugin:
-  - Imported by: `apps/browser/proxy`
+  - Imported by: `apps/browser/proxy`, `page/bookmark`
 - Server:
   - Exports: Types: `SafeFetchInit`; Values: `assertResolvesPublic`, `isPrivateIp`, `parsePublicUrl`, `safeFetch`, `SsrfError`
 

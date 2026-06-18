@@ -1,84 +1,16 @@
 import { HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createAttachment } from "@plugins/infra/plugins/attachments/server";
+import {
+  parsePublicUrl,
+  safeFetch,
+  SsrfError,
+} from "@plugins/infra/plugins/safe-fetch/server";
 import type { LinkPreview } from "../../core";
 
-const FETCH_TIMEOUT_MS = 8000;
-const MAX_REDIRECTS = 5;
 const MAX_HTML_BYTES = 512 * 1024; // cap the HTML we parse
 const MAX_IMAGE_BYTES = 5 * 1024 * 1024; // cap downloaded images
 const USER_AGENT =
   "Mozilla/5.0 (compatible; SingularityBot/1.0; +link-preview)";
-
-/**
- * Reject loopback / private-range / link-local hosts to prevent SSRF against
- * the local network. Hostname only — DNS-rebinding hardening is a follow-up.
- */
-function isBlockedHost(hostname: string): boolean {
-  const host = hostname.toLowerCase().replace(/^\[|\]$/g, ""); // strip IPv6 brackets
-
-  if (host === "localhost" || host.endsWith(".localhost")) return true;
-  if (host === "0.0.0.0" || host === "::1") return true;
-  // IPv6 unique-local (fc00::/7) and link-local (fe80::/10)
-  if (host.startsWith("fc") || host.startsWith("fd") || host.startsWith("fe80"))
-    return true;
-
-  // Private / loopback / link-local IPv4 ranges.
-  if (host.startsWith("127.")) return true;
-  if (host.startsWith("10.")) return true;
-  if (host.startsWith("192.168.")) return true;
-  if (host.startsWith("169.254.")) return true;
-  const match172 = /^172\.(\d{1,3})\./.exec(host);
-  if (match172) {
-    const second = Number(match172[1]);
-    if (second >= 16 && second <= 31) return true;
-  }
-  return false;
-}
-
-/**
- * Fetch with per-hop SSRF revalidation. `redirect: "follow"` would let a public
- * URL 30x-redirect to a private/loopback host (cloud metadata, internal service),
- * defeating the initial guard — so we follow manually and re-guard every hop.
- */
-async function safeFetch(initial: URL): Promise<Response> {
-  let url = initial;
-  for (let hop = 0; hop <= MAX_REDIRECTS; hop++) {
-    const res = await fetch(url.toString(), {
-      redirect: "manual",
-      signal: AbortSignal.timeout(FETCH_TIMEOUT_MS),
-      headers: { "user-agent": USER_AGENT },
-    });
-    if (res.status >= 300 && res.status < 400) {
-      const loc = res.headers.get("location");
-      if (!loc) return res;
-      // Re-guard the redirect target before following it.
-      url = guardUrl(new URL(loc, url).toString());
-      continue;
-    }
-    return res;
-  }
-  throw new HttpError(502, "Too many redirects");
-}
-
-/** Parse + SSRF-guard a URL. Throws HttpError(400) on a disallowed target. */
-function guardUrl(raw: string): URL {
-  let parsed: URL;
-  try {
-    parsed = new URL(raw);
-  } catch (err) {
-    // `new URL` throws TypeError on an unparseable url — surface as a 400. Any
-    // other (unexpected) error propagates.
-    if (!(err instanceof TypeError)) throw err;
-    throw new HttpError(400, "Invalid URL");
-  }
-  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
-    throw new HttpError(400, "Only http(s) URLs are supported");
-  }
-  if (isBlockedHost(parsed.hostname)) {
-    throw new HttpError(400, "URL host is not allowed");
-  }
-  return parsed;
-}
 
 interface ScrapedMeta {
   title?: string;
@@ -227,14 +159,14 @@ async function cacheImage(
   if (!rawUrl) return undefined;
   let parsed: URL;
   try {
-    parsed = guardUrl(rawUrl);
+    parsed = parsePublicUrl(rawUrl);
   } catch (err) {
-    // guardUrl throws HttpError for a blocked/invalid image host → skip (not an
-    // error for a best-effort image). Anything else is unexpected → propagate.
-    if (!(err instanceof HttpError)) throw err;
+    if (!(err instanceof SsrfError)) throw err;
     return undefined;
   }
-  const res = await safeFetch(parsed).catch(() => undefined);
+  const res = await safeFetch(parsed, { headers: { "user-agent": USER_AGENT } }).catch(
+    () => undefined,
+  );
   if (!res || !res.ok) return undefined;
 
   const contentType = res.headers.get("content-type") ?? "";
@@ -258,9 +190,9 @@ function fileNameFor(url: URL, fallback: string, mime: string): string {
 }
 
 export async function scrapeLinkPreview(url: string): Promise<LinkPreview> {
-  const target = guardUrl(url);
+  const target = parsePublicUrl(url);
 
-  const res = await safeFetch(target);
+  const res = await safeFetch(target, { headers: { "user-agent": USER_AGENT } });
   if (!res.ok) {
     throw new HttpError(502, `Failed to fetch URL (status ${res.status})`);
   }
