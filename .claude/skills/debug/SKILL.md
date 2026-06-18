@@ -18,8 +18,14 @@ When a server change doesn't reach an already-open tab until refresh, the bug is
 → [`plugins/primitives/plugins/live-state/CLAUDE.md`](../../../plugins/primitives/plugins/live-state/CLAUDE.md)
 
 ## Profiling (Gantt)
-Build steps, server boot phases, push contention, runtime HTTP/DB/loader, and stats timings. Use to find *slow*, not just *broken*.
+Build steps, server boot phases, push contention, runtime HTTP/DB/loader, and stats timings. Use to find *slow*, not just *broken*. The **Boot** Gantt also shows **per-phase RSS deltas + a phase-boundary memory timeline** (boot-start → after-import → after-onReadyBlocking → after-onReady → after-onAllReady) — use it to see which boot phase grows memory. Caveat: onReadyBlocking/onReady plugins run under `Promise.all`, so per-plugin deltas overlap and are only *directional* (the longest-running span absorbs blame for whatever allocates concurrently); the phase-boundary checkpoints are authoritative.
 → [`plugins/debug/plugins/profiling/CLAUDE.md`](../../../plugins/debug/plugins/profiling/CLAUDE.md)
+
+## Memory (heap / RSS / footprint)
+For "why is this backend using N GB":
+- **Debug → Heap pane** (`heap-snapshot`) — `bun:jsc heapStats()` object-type breakdown (count per JS type, heap size) for a cheap "what's on the JS heap" read, plus an on-demand **full V8 `.heapsnapshot` dump** to `~/.singularity/worktrees/<wt>/heap-<ts>.heapsnapshot` (load offline in Chrome DevTools → Memory, or VS Code). The dump is heavy (blocks the event loop for seconds, hundreds of MB) — manual click only.
+- **CAVEAT — `rss` overcounts on macOS.** `process.memoryUsage().rss` (what the boot checkpoints and **health-monitor** log) counts resident-but-clean/reserved/shared pages and dramatically overstates real memory: a backend reading 5+ GB `rss` was measured at **~885 MB true `phys_footprint`** (~6×). The inflation is JSC's WebKit-Malloc reservations (mostly clean), the 65 GB virtual JS Gigacage (≈0 resident), and IOAccelerator/GPU regions. If the JS heap (`heapStats`) is small but `rss` is huge, the "balloon" is off-heap and largely artifact — confirm real memory with `footprint <pid>` or `vmmap -summary <pid>` (look at *dirty* size and `phys_footprint`, not `rss`). File-watchers (@parcel/watcher) are *not* a memory cost — subscribing even to a huge `.git` allocates ~0 MB.
+→ [`plugins/debug/plugins/heap-snapshot/CLAUDE.md`](../../../plugins/debug/plugins/heap-snapshot/CLAUDE.md)
 
 ## Slow / intermittent contention
 For "why is X slow" (especially bursty/contention slowness), beyond the Gantt:

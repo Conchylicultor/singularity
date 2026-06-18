@@ -1,5 +1,6 @@
 import {
   profilerStart,
+  recordMemoryCheckpoint,
   notificationsWsHandler,
   handleResourceHttp,
   collectContributions,
@@ -10,6 +11,14 @@ import type { WsData, HttpHandler, WsHandler, ServerPluginDefinition, LoadedServ
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { serverEntries } from "../core/server.generated";
 import { topoSortPlugins } from "./topo";
+
+// ── Per-phase RSS attribution (boot Gantt) ──────────────────────
+// We record a memory checkpoint at each clean boot-phase boundary below.
+// CAVEAT: onReadyBlocking and onReady run their plugins under Promise.all, so
+// the per-plugin (per-span) RSS deltas inside those phases overlap and are only
+// *directional*. The phase-boundary checkpoints recorded here are the
+// authoritative per-phase RSS numbers.
+recordMemoryCheckpoint("boot-start");
 
 // ── Load all server plugins ────────────────────────────────────
 const loadResults = await Promise.allSettled(
@@ -45,6 +54,7 @@ for (const e of serverEntries) {
     .filter((d): d is LoadedServerPlugin => d !== undefined);
 }
 const ordered = topoSortPlugins([...byPath.values()]);
+recordMemoryCheckpoint("after-import");
 
 // Phase 1 — register: sequential, topo-sorted. Each plugin's `register`
 // array holds Registration tokens returned by helpers like `Mcp.tool`,
@@ -257,6 +267,7 @@ console.log(`Server listening on ${socketPath}`);
     end();
   }
 }
+recordMemoryCheckpoint("after-onReadyBlocking");
 markServerReady();
 
 // ── onReady ─────────────────────────────────────────────────────
@@ -286,6 +297,7 @@ markServerReady();
   }
   await Promise.all(resolved.values());
 }
+recordMemoryCheckpoint("after-onReady");
 
 // ── onAllReady ──────────────────────────────────────────────────
 // Phase 3 — full barrier: every plugin's `onReady` has resolved. Plugins whose
@@ -306,6 +318,7 @@ await Promise.all(
     }
   }),
 );
+recordMemoryCheckpoint("after-onAllReady");
 
 // Graceful shutdown: drain workers, flush state, release DB connections.
 // Guarded against double-entry so both SIGTERM and a follow-up SIGINT can't

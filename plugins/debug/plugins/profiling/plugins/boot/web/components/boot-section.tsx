@@ -6,7 +6,14 @@ import {
   type PhaseConfig,
 } from "@plugins/debug/plugins/profiling/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getBootProfiling, type ProfilingData } from "../../shared/endpoints";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
+import {
+  getBootProfiling,
+  type ProfilingData,
+  type MemoryCheckpoint,
+} from "../../shared/endpoints";
 
 const PHASE_ORDER = [
   "register",
@@ -14,7 +21,9 @@ const PHASE_ORDER = [
   "runMigrations",
   "routePopulation",
   "socketBind",
+  "onReadyBlocking",
   "onReady",
+  "onAllReady",
 ];
 
 const PHASE_CONFIG: Record<string, PhaseConfig> = {
@@ -23,8 +32,161 @@ const PHASE_CONFIG: Record<string, PhaseConfig> = {
   runMigrations: { label: "Run Migrations", color: "bg-categorical-3", bg: "bg-categorical-3/10" },
   routePopulation: { label: "Route Population", color: "bg-categorical-4", bg: "bg-categorical-4/10" },
   socketBind: { label: "Socket Bind", color: "bg-categorical-5", bg: "bg-categorical-5/10" },
-  onReady: { label: "onReady (parallel)", color: "bg-categorical-6", bg: "bg-categorical-6/10" },
+  onReadyBlocking: { label: "onReadyBlocking (parallel)", color: "bg-categorical-6", bg: "bg-categorical-6/10" },
+  onReady: { label: "onReady (parallel)", color: "bg-categorical-7", bg: "bg-categorical-7/10" },
+  onAllReady: { label: "onAllReady (parallel)", color: "bg-categorical-8", bg: "bg-categorical-8/10" },
 };
+
+function fmtMb(mb: number): string {
+  return `${mb.toFixed(1)} MB`;
+}
+
+function fmtDelta(mb: number): string {
+  const sign = mb >= 0 ? "+" : "";
+  return `${sign}${mb.toFixed(1)} MB`;
+}
+
+function deltaClass(mb: number): string {
+  if (mb > 0.05) return "text-destructive";
+  if (mb < -0.05) return "text-success";
+  return "text-muted-foreground";
+}
+
+interface CheckpointRow {
+  label: string;
+  rssMb: number;
+  delta: number | null;
+  atMs: number;
+  detail: string;
+}
+
+const CHECKPOINT_COLUMNS: ColumnDef<CheckpointRow>[] = [
+  { id: "label", header: "Boundary", value: (r) => r.label },
+  {
+    id: "rss",
+    header: "RSS",
+    align: "end",
+    width: "7rem",
+    value: (r) => r.rssMb,
+    cell: (r) => fmtMb(r.rssMb),
+  },
+  {
+    id: "delta",
+    header: "Δ RSS",
+    align: "end",
+    width: "7rem",
+    value: (r) => r.delta ?? 0,
+    cell: (r) =>
+      r.delta === null ? (
+        <span className="text-muted-foreground">baseline</span>
+      ) : (
+        <span className={deltaClass(r.delta)}>{fmtDelta(r.delta)}</span>
+      ),
+  },
+  {
+    id: "at",
+    header: "At",
+    align: "end",
+    width: "6rem",
+    value: (r) => r.atMs,
+    cell: (r) => `+${r.atMs}ms`,
+  },
+  { id: "detail", header: "heap · ext · arrBuf", value: (r) => r.detail },
+];
+
+interface PhaseDeltaRow {
+  phase: string;
+  label: string;
+  delta: number;
+}
+
+const PHASE_DELTA_COLUMNS: ColumnDef<PhaseDeltaRow>[] = [
+  { id: "phase", header: "Phase", value: (r) => r.label },
+  {
+    id: "delta",
+    header: "Δ RSS",
+    align: "end",
+    width: "7rem",
+    value: (r) => r.delta,
+    cell: (r) => <span className={deltaClass(r.delta)}>{fmtDelta(r.delta)}</span>,
+  },
+];
+
+/**
+ * Per-phase RSS delta (sum of rssEndMb - rssStartMb over the phase's spans) and
+ * the phase-boundary checkpoint timeline.
+ *
+ * CAVEAT: onReadyBlocking / onReady plugins run under Promise.all, so the
+ * per-span (per-plugin) RSS deltas summed here overlap in wall-clock time and
+ * are only directional. The phase-boundary checkpoints (boot-start →
+ * after-import → after-onReadyBlocking → after-onReady → after-onAllReady) are
+ * the authoritative numbers.
+ */
+function MemorySummary({
+  spans,
+  checkpoints,
+}: {
+  spans: ProfilingData["spans"];
+  checkpoints: MemoryCheckpoint[];
+}): ReactElement | null {
+  if (checkpoints.length === 0 && spans.length === 0) return null;
+
+  const checkpointRows: CheckpointRow[] = checkpoints.map((cp, i) => {
+    const prev = i > 0 ? checkpoints[i - 1] : undefined;
+    return {
+      label: cp.label,
+      rssMb: cp.rssMb,
+      delta: prev ? cp.rssMb - prev.rssMb : null,
+      atMs: cp.atMs,
+      detail: `heap ${fmtMb(cp.heapUsedMb)} · ext ${fmtMb(cp.externalMb)} · arrBuf ${fmtMb(cp.arrayBuffersMb)}`,
+    };
+  });
+
+  // Per-phase RSS delta from per-span attribution (directional only).
+  const phaseDelta = new Map<string, number>();
+  for (const span of spans) {
+    if (span.rssStartMb === undefined || span.rssEndMb === undefined) continue;
+    const prev = phaseDelta.get(span.phase) ?? 0;
+    phaseDelta.set(span.phase, prev + (span.rssEndMb - span.rssStartMb));
+  }
+  const phaseDeltaRows: PhaseDeltaRow[] = PHASE_ORDER.filter((p) =>
+    phaseDelta.has(p),
+  ).map((phase) => ({
+    phase,
+    label: PHASE_CONFIG[phase]?.label ?? phase,
+    delta: phaseDelta.get(phase)!,
+  }));
+
+  return (
+    <Inset pad="lg">
+      <Stack gap="lg">
+        <Stack as="section" gap="sm">
+          <SectionLabel>Memory — phase boundaries (authoritative)</SectionLabel>
+          <DataTable
+            data={checkpointRows}
+            columns={CHECKPOINT_COLUMNS}
+            rowKey={(r) => r.label}
+            emptyLabel="No memory checkpoints recorded."
+          />
+        </Stack>
+
+        {phaseDeltaRows.length > 0 && (
+          <Stack as="section" gap="sm">
+            <SectionLabel>
+              Per-phase RSS delta (directional — overlapping under Promise.all)
+            </SectionLabel>
+            <DataTable
+              data={phaseDeltaRows}
+              columns={PHASE_DELTA_COLUMNS}
+              rowKey={(r) => r.phase}
+              emptyLabel="No per-span RSS attribution."
+            />
+          </Stack>
+        )}
+      </Stack>
+    </Inset>
+  );
+}
 
 export function BootSection(): ReactElement | null {
   const { refreshKey } = useProfilingContext();
@@ -47,13 +209,16 @@ export function BootSection(): ReactElement | null {
 
   const grouped = groupByPhase(data.spans);
   return (
-    <GanttSection
-      title="Boot"
-      totalMs={data.totalMs}
-      phaseOrder={PHASE_ORDER}
-      phaseConfig={PHASE_CONFIG}
-      allByPhase={grouped.all}
-      visibleByPhase={grouped.visible}
-    />
+    <div>
+      <MemorySummary spans={data.spans} checkpoints={data.memoryCheckpoints} />
+      <GanttSection
+        title="Boot"
+        totalMs={data.totalMs}
+        phaseOrder={PHASE_ORDER}
+        phaseConfig={PHASE_CONFIG}
+        allByPhase={grouped.all}
+        visibleByPhase={grouped.visible}
+      />
+    </div>
   );
 }

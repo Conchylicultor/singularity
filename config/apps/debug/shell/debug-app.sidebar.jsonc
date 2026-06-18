@@ -1,4 +1,4 @@
-// @hash 039233c8c09e
+// @hash 61b28f10be0a
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
@@ -7,6 +7,7 @@
     "debug.slow-ops.pane:slow-ops",
     "debug.profiling:profiling",
     "debug.health-monitor:health-monitor",
+    "debug.heap-snapshot:heap-snapshot",
     "debug.queue:queue",
     "debug.live-state-health:live-state-health",
     "debug.claude-cli-calls:claude-cli-calls",

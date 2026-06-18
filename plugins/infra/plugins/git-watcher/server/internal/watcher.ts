@@ -48,11 +48,23 @@ export async function startGitWatcher(): Promise<void> {
     }
   }
 
-  // Watch refs/heads/ (loose refs) and the .git root (packed-refs +
-  // HEAD-style files). We filter at recompute time by re-reading every
-  // tracked ref via `git rev-parse`.
+  // Watch ONLY `${commonDir}/refs` — the loose-ref tree (incl. refs/heads).
+  //
+  // We deliberately do NOT watch the whole `.git` common dir. That dir is
+  // SHARED by every linked worktree (1000+ here) and its object store is
+  // high-churn: every fetch / commit / gc across all of them writes under
+  // `objects/`, and each worktree's gitdir churns HEAD/logs/index. Watching it
+  // fires a `recompute()` (which spawns `git rev-parse` per tracked ref) on
+  // thousands of changes that can never move a ref — pure wasted event +
+  // subprocess churn on every backend. `refs/` is a handful of small text
+  // files that only change on an actual ref advance.
+  //
+  // A normal commit/fetch/rebase writes the loose ref under refs/heads/ (or
+  // deletes it when packing) → we get the event and re-read the true sha via
+  // `git rev-parse` (which also resolves packed-refs). The reconcile timer is
+  // the safety net for packed-refs-only movement.
   watcher = await createFileWatcher({
-    dirs: [`${commonDir}/refs/heads`, commonDir],
+    dirs: [`${commonDir}/refs`],
     onChange: () => { void recompute(); },
     onReconcile: () => { void recompute(); },
   });

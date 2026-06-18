@@ -8,11 +8,26 @@ const SpanSchema = z.object({
   label: z.string(),
   startMs: z.number(),
   durationMs: z.number(),
+  rssStartMb: z.number().optional(),
+  rssEndMb: z.number().optional(),
 });
+
+// Phase-boundary memory snapshot — the authoritative per-phase RSS numbers
+// (mirrors the profiler's MemoryCheckpoint).
+const MemoryCheckpointSchema = z.object({
+  label: z.string(),
+  atMs: z.number(),
+  rssMb: z.number(),
+  heapUsedMb: z.number(),
+  externalMb: z.number(),
+  arrayBuffersMb: z.number(),
+});
+export type MemoryCheckpoint = z.infer<typeof MemoryCheckpointSchema>;
 
 export const ProfilingDataSchema = z.object({
   spans: z.array(SpanSchema),
   totalMs: z.number(),
+  memoryCheckpoints: z.array(MemoryCheckpointSchema),
 });
 export type ProfilingData = z.infer<typeof ProfilingDataSchema>;
 

@@ -4,12 +4,12 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { convertTweakcnTheme } from "@plugins/ui/plugins/tweakcn/core";
 import { _tweakcnThemes } from "@plugins/ui/plugins/tweakcn/server";
 import { applyCatalogTheme } from "../../core/endpoints";
-import catalog from "../../shared/catalog.json";
-import type { CatalogTheme } from "../../shared/types";
+import { loadCatalog } from "./load-catalog";
 
 export const handleApply = implement(applyCatalogTheme, async ({ body }) => {
   const { themeId } = body;
-  const theme = (catalog as CatalogTheme[]).find((t) => t.id === themeId);
+  const catalog = await loadCatalog();
+  const theme = catalog.find((t) => t.id === themeId);
   if (!theme) {
     throw new HttpError(404, `Theme "${themeId}" not found in catalog`);
   }

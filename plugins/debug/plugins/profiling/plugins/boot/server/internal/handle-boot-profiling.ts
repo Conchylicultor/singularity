@@ -7,5 +7,6 @@ export const handleBootProfiling = implement(getBootProfiling, () => {
   return {
     spans: server.spans,
     totalMs: server.totalDurationMs,
+    memoryCheckpoints: server.memoryCheckpoints,
   };
 });

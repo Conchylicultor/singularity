@@ -1,0 +1,34 @@
+import { z } from "zod";
+import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+
+// Cheap aggregated heap breakdown from bun:jsc `heapStats()`. Memory values are
+// MB (converted from bytes). `types` is the per-JS-type object count map sorted
+// descending by count — the direct "what is on the heap" answer.
+export const HeapStatsResponseSchema = z.object({
+  heapSizeMb: z.number(),
+  heapCapacityMb: z.number(),
+  objectCount: z.number(),
+  types: z.array(z.object({ type: z.string(), count: z.number() })),
+});
+export type HeapStatsResponse = z.infer<typeof HeapStatsResponseSchema>;
+
+// Result of a full on-demand `.heapsnapshot` dump to disk.
+export const HeapSnapshotResponseSchema = z.object({
+  path: z.string(),
+  sizeBytes: z.number(),
+  capturedAtMs: z.number(),
+});
+export type HeapSnapshotResponse = z.infer<typeof HeapSnapshotResponseSchema>;
+
+// Cheap, safe to call repeatedly — backs the everyday object-type table.
+export const getHeapStats = defineEndpoint({
+  route: "GET /api/debug/heap-stats",
+  response: HeapStatsResponseSchema,
+  dedupe: true,
+});
+
+// Heavy on-demand dump. POST so it never runs from a cache/prefetch.
+export const captureHeapSnapshot = defineEndpoint({
+  route: "POST /api/debug/heap-snapshot",
+  response: HeapSnapshotResponseSchema,
+});

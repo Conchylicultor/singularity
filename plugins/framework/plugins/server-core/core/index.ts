@@ -6,8 +6,8 @@ export {
 export type { ServerContribution, ServerContributionToken } from "./contributions";
 export { reportServerError, setErrorReporter } from "./error-reporter";
 export type { ServerErrorReport } from "./error-reporter";
-export { getProfilingData, profilerStart } from "./profiler";
-export type { PhaseId, Span } from "./profiler";
+export { getProfilingData, profilerStart, recordMemoryCheckpoint } from "./profiler";
+export type { PhaseId, Span, MemoryCheckpoint } from "./profiler";
 export { isServerReady, markServerReady } from "./readiness";
 export {
   Resource,

@@ -7,7 +7,7 @@
 - Description: Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
 - Web:
   - Contributes: `Profiling.Section` → `BootSection`
-  - Uses: `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.PhaseConfig`, `debug/profiling.Profiling`, `debug/profiling.useProfilingContext`, `infra/endpoints.fetchEndpoint`
+  - Uses: `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.PhaseConfig`, `debug/profiling.Profiling`, `debug/profiling.useProfilingContext`, `infra/endpoints.fetchEndpoint`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`
 - Server:
   - Uses: `infra/endpoints.implement`
   - Routes: `GET /api/debug/profiling/boot`

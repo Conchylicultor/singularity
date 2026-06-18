@@ -1175,6 +1175,10 @@
         "recharts": "^2.15.0",
       },
     },
+    "plugins/debug/plugins/heap-snapshot": {
+      "name": "@singularity/plugin-debug-heap-snapshot",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/live-state-health": {
       "name": "@singularity/plugin-debug-live-state-health",
       "version": "0.0.1",
@@ -4213,6 +4217,8 @@
     "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
 
     "@singularity/plugin-debug-health-monitor": ["@singularity/plugin-debug-health-monitor@workspace:plugins/debug/plugins/health-monitor"],
+
+    "@singularity/plugin-debug-heap-snapshot": ["@singularity/plugin-debug-heap-snapshot@workspace:plugins/debug/plugins/heap-snapshot"],
 
     "@singularity/plugin-debug-live-state-health": ["@singularity/plugin-debug-live-state-health@workspace:plugins/debug/plugins/live-state-health"],
 
