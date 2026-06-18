@@ -14,7 +14,7 @@ import {
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { RowActions, RowActionButton } from "@plugins/conversations/plugins/conversations-view/web";
+import { RowActions, RowActionButton, rowActionsAnchor } from "@plugins/primitives/plugins/row-actions/web";
 import {
   createConversationGroup,
   patchConversationGroup,
@@ -405,7 +405,7 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
         forks.length > 0 ? (
           <SidebarMenuSub>
             {forks.map((fork) => (
-              <SidebarMenuSubItem key={fork.id} className="relative group/menu-item">
+              <SidebarMenuSubItem key={fork.id} className={rowActionsAnchor}>
                 <SidebarMenuSubButton
                   className={cn("h-auto py-xs", rowTint(fork))}
                   isActive={fork.id === activeId}
@@ -546,7 +546,7 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
               <div className="mt-0.5 pl-xs">
                 <SidebarMenu>
                   {recentGone.map((conv) => (
-                    <SidebarMenuItem key={conv.id}>
+                    <SidebarMenuItem key={conv.id} className={rowActionsAnchor}>
                       <SidebarMenuButton
                         className={cn("h-auto py-sm", rowTint(conv))}
                         isActive={conv.id === activeId}
@@ -564,7 +564,7 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
                     </SidebarMenuItem>
                   ))}
                   {paginatedItems.map((conv) => (
-                    <SidebarMenuItem key={conv.id}>
+                    <SidebarMenuItem key={conv.id} className={rowActionsAnchor}>
                       <SidebarMenuButton
                         className={cn("h-auto py-sm", rowTint(conv))}
                         isActive={conv.id === activeId}

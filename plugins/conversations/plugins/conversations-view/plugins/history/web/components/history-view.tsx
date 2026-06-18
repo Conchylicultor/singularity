@@ -3,7 +3,8 @@ import { useMemo } from "react";
 import { useConversations } from "@plugins/conversations/web";
 import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
-import { useGoneConversationsPagination, RowActions, RowActionButton } from "@plugins/conversations/plugins/conversations-view/web";
+import { useGoneConversationsPagination } from "@plugins/conversations/plugins/conversations-view/web";
+import { RowActions, RowActionButton, rowActionsAnchor } from "@plugins/primitives/plugins/row-actions/web";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { MdClose } from "react-icons/md";
@@ -42,7 +43,7 @@ export function HistoryView({
   const isEmpty = liveItems.length === 0 && paginatedItems.length === 0;
 
   const renderRow = (conv: Conversation) => (
-    <SidebarMenuItem key={conv.id}>
+    <SidebarMenuItem key={conv.id} className={rowActionsAnchor}>
       <SidebarMenuButton
         className={cn(
           "h-auto py-sm",

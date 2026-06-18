@@ -6,7 +6,6 @@ import { ConversationsSidebar } from "./components/conversations-sidebar";
 export { ConversationsView } from "./slots";
 export type { ViewProps } from "./slots";
 export { useGoneConversationsPagination } from "./internal/use-gone-conversations-pagination";
-export { RowActions, RowActionButton } from "./components/row-actions";
 
 export default {
   description: "Sidebar list of all conversations.",

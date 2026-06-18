@@ -18,7 +18,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationsResource } from "@plugins/conversations/core";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
-import { RowActions, RowActionButton } from "@plugins/conversations/plugins/conversations-view/web";
+import { RowActions, RowActionButton, rowActionsAnchor } from "@plugins/primitives/plugins/row-actions/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
@@ -467,7 +467,7 @@ export function QueueView({
           ) : (
             <SidebarMenu>
               {workingGroups.map((group) => (
-                <li key={group.selected.id} className="group/menu-item relative list-none">
+                <li key={group.selected.id} className={cn(rowActionsAnchor, "list-none")}>
                   <SidebarMenuButton
                     className="h-auto py-sm"
                     isActive={group.selected.id === activeId}
@@ -503,7 +503,7 @@ export function QueueView({
         <div className="mt-0.5 pl-xs">
               <SidebarMenu>
                 {unranked.map((conv) => (
-                  <li key={conv.id} className="group/menu-item relative list-none">
+                  <li key={conv.id} className={cn(rowActionsAnchor, "list-none")}>
                     <SidebarMenuButton
                       className="h-auto py-sm"
                       isActive={conv.id === activeId}
@@ -540,7 +540,7 @@ export function QueueView({
         <div className="mt-0.5 pl-xs">
               <SidebarMenu>
                 {disconnected.map((conv) => (
-                  <li key={conv.id} className="group/menu-item relative list-none">
+                  <li key={conv.id} className={cn(rowActionsAnchor, "list-none")}>
                     <SidebarMenuButton
                       className="h-auto py-sm opacity-60"
                       isActive={conv.id === activeId}
@@ -634,7 +634,7 @@ function QueueRow({
   });
 
   return (
-    <li className="group/menu-item relative list-none">
+    <li className={cn(rowActionsAnchor, "list-none")}>
       <div
         ref={beforeDrop.setNodeRef}
         className={cn(

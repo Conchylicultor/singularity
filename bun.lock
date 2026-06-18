@@ -2697,6 +2697,10 @@
       "name": "@singularity/plugin-primitives-responsive-overflow",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/row-actions": {
+      "name": "@singularity/plugin-primitives-row-actions",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/scoped-store": {
       "name": "@singularity/plugin-primitives-scoped-store",
       "version": "0.0.1",
@@ -4933,6 +4937,8 @@
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
 
     "@singularity/plugin-primitives-responsive-overflow": ["@singularity/plugin-primitives-responsive-overflow@workspace:plugins/primitives/plugins/responsive-overflow"],
+
+    "@singularity/plugin-primitives-row-actions": ["@singularity/plugin-primitives-row-actions@workspace:plugins/primitives/plugins/row-actions"],
 
     "@singularity/plugin-primitives-scoped-store": ["@singularity/plugin-primitives-scoped-store@workspace:plugins/primitives/plugins/scoped-store"],
 

@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { rowActionsAnchor } from "@plugins/primitives/plugins/row-actions/web";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { ReactNode } from "react";
 
@@ -51,7 +52,7 @@ export function DraggableRow({
         {...draggable.attributes}
         {...draggable.listeners}
         className={cn(
-          "relative",
+          rowActionsAnchor,
           draggable.isDragging && "opacity-40",
           droppable.isOver && "rounded-md ring-1 ring-primary/60",
         )}
