@@ -2934,6 +2934,10 @@
       "name": "@singularity/plugin-tasks-auto-start",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/container-tasks": {
+      "name": "@singularity/plugin-tasks-container-tasks",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/task-attachments": {
       "name": "@singularity/plugin-tasks-task-attachments",
       "version": "0.0.1",
@@ -5016,6 +5020,8 @@
     "@singularity/plugin-tasks-attempt-view": ["@singularity/plugin-tasks-attempt-view@workspace:plugins/tasks/plugins/attempt-view"],
 
     "@singularity/plugin-tasks-auto-start": ["@singularity/plugin-tasks-auto-start@workspace:plugins/tasks/plugins/auto-start"],
+
+    "@singularity/plugin-tasks-container-tasks": ["@singularity/plugin-tasks-container-tasks@workspace:plugins/tasks/plugins/container-tasks"],
 
     "@singularity/plugin-tasks-task-attachments": ["@singularity/plugin-tasks-task-attachments@workspace:plugins/tasks/plugins/task-attachments"],
 

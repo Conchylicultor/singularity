@@ -355,6 +355,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.
     - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
+    - **`container-tasks`** — Registry of system container/meta task ids that must not own attempts: a cached hook so the web can gate Launch affordances on container rows. Registry of system container/meta task ids that must not own attempts: server-contribution registry + guard, plus a cached endpoint so the web can gate Launch affordances on container rows.
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
     - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.
     - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.

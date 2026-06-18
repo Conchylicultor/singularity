@@ -3,7 +3,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { handleReport } from "./internal/handle-report";
 import { reportsResource } from "./internal/resources";
 import { recordReport } from "./internal/record-report";
-import { ensureReportsMetaTask } from "./internal/meta-reports";
+import { ensureReportsMetaTask, REPORTS_META_TASK_ID } from "./internal/meta-reports";
+import { ContainerTask } from "@plugins/tasks/plugins/container-tasks/server";
 import { backfillNoiseClassification } from "./internal/backfill-noise";
 import { flushBufferedReports, installProcessHooks } from "./internal/process-hooks";
 import { submitReport } from "../shared/endpoints";
@@ -22,7 +23,7 @@ export default {
   httpRoutes: {
     [submitReport.route]: handleReport,
   },
-  contributions: [Resource.Declare(reportsResource)],
+  contributions: [Resource.Declare(reportsResource), ContainerTask({ id: REPORTS_META_TASK_ID })],
   onReady: async () => {
     installProcessHooks();
     setErrorReporter((report) => {

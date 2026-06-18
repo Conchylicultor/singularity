@@ -15,6 +15,8 @@ import { handleRepoInfo } from "./internal/handle-repo-info";
 import { pushIngestJob, runInitialReconcile } from "./internal/push-watcher";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
+import { ContainerTask } from "@plugins/tasks/plugins/container-tasks/server";
+import { CONVERSATIONS_META_TASK_ID } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   backfillConversationsMetaParent,
   ensureConversationsMetaTask,
@@ -54,6 +56,7 @@ export default {
   register: [addTaskTool, pushIngestJob],
   contributions: [
     Trigger({ on: refAdvanced.where({ refName: "refs/heads/main" }), do: pushIngestJob, with: {}, oneShot: false }),
+    ContainerTask({ id: CONVERSATIONS_META_TASK_ID }),
   ],
   onReady: async () => {
     const created = await ensureConversationsMetaTask();

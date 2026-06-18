@@ -10,7 +10,7 @@
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/slot-render.defineDispatchSlot`, `primitives/tab-id.getTabId`
   - Exports: Types: `ReportContext`; Values: `report`, `Reports`
 - Server:
-  - Uses: `build.getServerBuildId`, `database.db`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`, `tasks/tasks-core.createTask`, `tasks/tasks-core.ensureMetaTask`, `tasks/tasks-core.getTask`
+  - Uses: `build.getServerBuildId`, `database.db`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`, `tasks/container-tasks.ContainerTask`, `tasks/tasks-core.createTask`, `tasks/tasks-core.ensureMetaTask`, `tasks/tasks-core.getTask`
   - DB schema: `plugins/reports/server/internal/tables.ts`
   - Exports: Types: `ReportKindSpec`, `ReportKindVariant`, `ReportNoiseInput`, `ReportNoiseRuleSpec`, `ReportRow`; Values: `_reports`, `recordReport`, `ReportKind`, `ReportNoiseRule`, `REPORTS_META_TASK_ID`, `reportsResource`
   - Resources: `reports` (push)

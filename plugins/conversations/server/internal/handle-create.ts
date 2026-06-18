@@ -21,6 +21,10 @@ export const handleCreate = implement(createConversationEndpoint, async ({ body 
       prepromptId: body.prepromptId,
     });
   } catch (err) {
+    // Intentional client-facing rejections (e.g. the container-task guard)
+    // carry their own HTTP status and are not server crashes: surface them to
+    // the caller unchanged, without collapsing to 500 or filing a crash report.
+    if (err instanceof HttpError) throw err;
     notifyConversationsChanged();
     const message = err instanceof Error ? err.message : String(err);
     console.error("[conversations] createConversation failed", err);

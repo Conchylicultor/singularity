@@ -10,7 +10,7 @@
   - Uses: `primitives/css/ui-kit.Button`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftPopover`
   - Exports: Types: `OpenWithTextArgs`; Values: `ImproveCommands`, `IMPROVEMENTS_META_TASK_ID`
 - Server:
-  - Uses: `conversations.conversationCreated`, `conversations/conversations-view/grouped.addMemberToGroup`, `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core.ensureMetaTask`
+  - Uses: `conversations.conversationCreated`, `conversations/conversations-view/grouped.addMemberToGroup`, `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/container-tasks.ContainerTask`, `tasks/tasks-core.ensureMetaTask`
   - DB schema: `plugins/improve/server/internal/tables.ts`
   - Exports: Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
   - Register: `defineJob('improve.apply-group')`

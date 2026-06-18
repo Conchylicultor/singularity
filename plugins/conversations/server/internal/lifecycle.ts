@@ -22,6 +22,7 @@ import { SYSTEM_META_TASK_ID } from "./meta-system";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
 import { resolvePreprompt } from "@plugins/conversations/plugins/preprompts/server";
 import { getTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
+import { assertNotContainerTask } from "@plugins/tasks/plugins/container-tasks/server";
 import { wrapPreprompt } from "@plugins/conversations/plugins/transcript-watcher/core";
 
 const DEFAULT_RUNTIME = "tmux";
@@ -104,6 +105,10 @@ export async function createConversation(
     conversationId = newId(CONVERSATION_PREFIX);
   } else {
     let taskId = opts.taskId;
+    // A container/meta task is a system folder and must never own an attempt.
+    // Guard only an explicitly-provided id; the auto-created fallback below is
+    // always a fresh leaf.
+    if (opts.taskId) assertNotContainerTask(opts.taskId);
     if (!taskId) {
       const folderId =
         opts.kind === "system" ? SYSTEM_META_TASK_ID : CONVERSATIONS_META_TASK_ID;

@@ -21,7 +21,7 @@ import {
 } from "../core/endpoints";
 import { startPoller } from "./internal/poller";
 import { startTurnEmitter } from "./internal/turn-emitter";
-import { ensureSystemMeta } from "./internal/meta-system";
+import { ensureSystemMeta, SYSTEM_META_TASK_ID } from "./internal/meta-system";
 import {
   maybeLaunchTaskJob,
   maybeLaunchDependentsJob,
@@ -32,6 +32,7 @@ import { conversationTurnCompleted } from "./internal/tables-turn-completed-even
 import { userTurnSent } from "./internal/tables-user-turn-sent-event";
 import { taskStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { Trigger } from "@plugins/infra/plugins/events/server";
+import { ContainerTask } from "@plugins/tasks/plugins/container-tasks/server";
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { autoAnswerConfig } from "../shared/config";
 
@@ -80,6 +81,7 @@ export default {
     ConfigV2.Register({ descriptor: autoAnswerConfig }),
     Trigger({ on: taskStatusChanged, do: maybeLaunchDependentsJob, with: {}, oneShot: false }),
     Trigger({ on: conversationCreated, do: notifyConversationCreatedJob, with: {}, oneShot: false }),
+    ContainerTask({ id: SYSTEM_META_TASK_ID }),
   ],
   register: [maybeLaunchTaskJob, maybeLaunchDependentsJob, notifyConversationCreatedJob, conversationCreated, conversationTurnCompleted, userTurnSent],
   onReady: async () => {
