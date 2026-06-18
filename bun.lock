@@ -2577,6 +2577,10 @@
       "name": "@singularity/plugin-primitives-error-boundary",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/expandable": {
+      "name": "@singularity/plugin-primitives-expandable",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/file-links": {
       "name": "@singularity/plugin-primitives-file-links",
       "version": "0.0.1",
@@ -4881,6 +4885,8 @@
     "@singularity/plugin-primitives-editable-field": ["@singularity/plugin-primitives-editable-field@workspace:plugins/primitives/plugins/editable-field"],
 
     "@singularity/plugin-primitives-error-boundary": ["@singularity/plugin-primitives-error-boundary@workspace:plugins/primitives/plugins/error-boundary"],
+
+    "@singularity/plugin-primitives-expandable": ["@singularity/plugin-primitives-expandable@workspace:plugins/primitives/plugins/expandable"],
 
     "@singularity/plugin-primitives-file-links": ["@singularity/plugin-primitives-file-links@workspace:plugins/primitives/plugins/file-links"],
 
