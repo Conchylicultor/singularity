@@ -2,11 +2,12 @@ import { useState } from "react";
 import { MdAdd } from "react-icons/md";
 import {
   DataView,
+  defineDataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import { IMPROVEMENTS_META_TASK_ID } from "@plugins/improve/web";
 import {
@@ -14,6 +15,8 @@ import {
   type PrototypeMeta,
 } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 import { prototypeDetailPane } from "../panes";
+
+const PROTOTYPES_VIEW = defineDataView("prototypes.gallery");
 
 /** Deterministic hue from the theme (or name) string, for the cover swatch. */
 function hueFor(seed: string): number {
@@ -87,7 +90,7 @@ export function PrototypeGallery() {
       rowKey={(p) => p.name}
       views={["gallery"]}
       defaultView="gallery"
-      storageKey="prototypes:gallery"
+      storageKey={PROTOTYPES_VIEW}
       loading={loading}
       selectedRowId={selectedName}
       onRowActivate={(p) =>

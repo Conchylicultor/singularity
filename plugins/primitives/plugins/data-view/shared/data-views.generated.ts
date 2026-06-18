@@ -18,6 +18,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "deploy.servers" },
   { id: "home.apps" },
   { id: "pages-sidebar" },
+  { id: "prototypes.gallery" },
   { id: "sonata.library" },
   { id: "story.gallery" },
   { id: "tasks-list" },

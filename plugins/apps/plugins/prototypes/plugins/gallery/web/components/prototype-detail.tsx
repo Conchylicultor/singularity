@@ -7,8 +7,8 @@ import {
 } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import { IMPROVEMENTS_META_TASK_ID } from "@plugins/improve/web";

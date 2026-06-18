@@ -4,6 +4,7 @@
 @import "@fontsource-variable/cascadia-code";
 
 @source "../../../../../../../../plugins/";
+@source "../../../../../../../../prototypes/";
 
 @custom-variant dark (&:is(.dark *));
 

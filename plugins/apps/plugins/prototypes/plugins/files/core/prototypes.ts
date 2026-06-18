@@ -44,6 +44,14 @@ export const prototypesVersionResource = resourceDescriptor<number>(
 export const PROTOTYPES_API_BASE = "/api/prototypes";
 
 /**
+ * Route key for the raw per-prototype file handler. Kept as a named const (not a
+ * string literal in `httpRoutes`) because the response is raw bytes/html with a
+ * per-file Content-Type — it can't go through `defineEndpoint`/`implement()`
+ * (JSON-only). Same pattern as asset-mirror's `MIRROR_ROUTE_KEY`.
+ */
+export const PROTOTYPE_FILE_ROUTE = "GET /api/prototypes/:name";
+
+/**
  * Typed list endpoint. JSON, so it goes through `implement()` (raw JSON
  * handlers are banned by `endpoints:no-raw-json-handlers`). The `:name` file
  * routes stay raw handlers — they return per-file bytes/html with a custom

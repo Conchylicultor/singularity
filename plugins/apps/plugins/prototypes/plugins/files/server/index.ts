@@ -1,6 +1,6 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { listPrototypes } from "../core";
+import { listPrototypes, PROTOTYPE_FILE_ROUTE } from "../core";
 import { handleList, handlePrototypeFile } from "./internal/handlers";
 import {
   prototypesResource,
@@ -16,7 +16,7 @@ export default {
     "Serves raw prototype files from the repo-root prototypes/ dir, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.",
   httpRoutes: {
     [listPrototypes.route]: handleList,
-    "GET /api/prototypes/:name": handlePrototypeFile,
+    [PROTOTYPE_FILE_ROUTE]: handlePrototypeFile,
   },
   contributions: [
     Resource.Declare(prototypesResource),
