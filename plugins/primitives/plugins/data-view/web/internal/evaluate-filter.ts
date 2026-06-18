@@ -5,6 +5,7 @@ import type {
   FilterNode,
   FilterOperatorSet,
 } from "../../core";
+import { isOperatorComplete, resolveRuleOperator } from "./rule-resolution";
 
 /**
  * Project a field's filter value off a row: the multi-value `values` accessor
@@ -23,9 +24,12 @@ function projectFieldValue<TRow>(
  * Recursively evaluate a filter node against a row. Pure — `resolveOperatorSet`
  * is injected so this is testable without React.
  *
- * Rules that can't be resolved (missing field or operator) evaluate to `true`
- * (they don't filter the row out — an incomplete rule is a no-op). An empty
- * group is `true`. `and` → every child; `or` → some child.
+ * A rule that is unresolvable (missing field/operator) OR incomplete is a no-op
+ * → evaluates to `true` (keeps the row). Completeness is decided by the shared
+ * `isOperatorComplete`, the SAME authority the chip's rule counter uses — so a
+ * rule never silently filters while the chip reports "0 rules" (the bug a
+ * value-less `bool` rule produced). An empty group is `true`; `and` → every
+ * child; `or` → some child.
  */
 export function evaluateNode<TRow>(
   node: FilterNode,
@@ -42,11 +46,10 @@ export function evaluateNode<TRow>(
       : node.children.some(evalChild);
   }
 
-  const field = fields.find((f) => f.id === node.fieldId);
-  if (!field) return true;
-  const opSet = resolveOperatorSet(field.type ?? "text");
-  const op = opSet?.operators.find((o) => o.id === node.operatorId);
-  if (!op) return true;
+  const resolved = resolveRuleOperator(node, fields, resolveOperatorSet);
+  if (!resolved) return true;
+  const { field, op } = resolved;
+  if (!isOperatorComplete(op, node.value)) return true;
   return op.predicate(node.value, projectFieldValue(field, row));
 }
 

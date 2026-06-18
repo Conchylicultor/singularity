@@ -286,6 +286,15 @@ export interface FilterOperator {
    * `fieldValue` is the row's projected value (FieldValue | readonly string[]).
    */
   predicate: (operand: unknown, fieldValue: FilterFieldValue) => boolean;
+  /**
+   * Whether a rule with this `operand` is *complete* — i.e. actually constrains
+   * rows. Governs BOTH the chip's rule count and the evaluator's no-op gate, so
+   * the two can never disagree. Default: a value-taking operator (`hasValue`)
+   * needs a present operand; a value-less one is always complete. Override when
+   * an absent operand still means something — e.g. `bool` reads it as
+   * "Unchecked", a real constraint, so it stays complete even for `undefined`.
+   */
+  isComplete?: (operand: unknown) => boolean;
 }
 
 /**

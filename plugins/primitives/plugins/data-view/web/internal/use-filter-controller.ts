@@ -6,6 +6,7 @@ import type {
   FilterOperatorSet,
 } from "../../core";
 import { useResolveOperatorSet } from "../filter-slot";
+import { isRuleActive } from "./rule-resolution";
 
 export interface FilterController<TRow> {
   /** The active view's filter tree (null when no filter). */
@@ -16,17 +17,10 @@ export interface FilterController<TRow> {
   filterableFields: FieldDef<TRow>[];
   /** Resolve a field type id → its operator set (honors `extends`). */
   resolveOperatorSet: (typeId: string) => FilterOperatorSet | undefined;
-  /** Count of COMPLETE rules in the tree (field + operator resolved; value
-   *  present when the operator's `hasValue` is true). */
+  /** Count of *active* rules in the tree — rules that resolve and are complete
+   *  per the operator (shared `isRuleActive`, the same gate the evaluator uses),
+   *  so the chip count and what actually filters can never disagree. */
   ruleCount: number;
-}
-
-/** True when `value` is a present operand (not null/undefined/""/[]). */
-function hasOperand(value: unknown): boolean {
-  if (value === null || value === undefined) return false;
-  if (typeof value === "string") return value !== "";
-  if (Array.isArray(value)) return value.length > 0;
-  return true;
 }
 
 function countCompleteRules<TRow>(
@@ -41,13 +35,7 @@ function countCompleteRules<TRow>(
       0,
     );
   }
-  const field = fields.find((f) => f.id === node.fieldId);
-  if (!field) return 0;
-  const opSet = resolveOperatorSet(field.type ?? "text");
-  const op = opSet?.operators.find((o) => o.id === node.operatorId);
-  if (!op) return 0;
-  if (op.hasValue && !hasOperand(node.value)) return 0;
-  return 1;
+  return isRuleActive(node, fields, resolveOperatorSet) ? 1 : 0;
 }
 
 /**
