@@ -12,14 +12,16 @@ import type {
   DataViewRenderProps,
   FilterGroup,
 } from "../../core";
+import {
+  EditableViewSwitcher,
+  useViewVariants,
+} from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
-  useConfigViewModel,
+  useDataViewModel,
   type ViewModel,
-} from "../internal/use-view-model";
-import { useViewVariants } from "../internal/use-view-variants";
+} from "../internal/use-data-view-model";
 import { useFilterController } from "../internal/use-filter-controller";
-import { EditableViewSwitcher } from "./editable-view-switcher";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 import { CreatorsControl } from "./creators-control";
 
@@ -33,7 +35,7 @@ import { CreatorsControl } from "./creators-control";
  */
 export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   const contributions = DataViewSlots.View.useContributions();
-  const viewModel = useConfigViewModel(
+  const viewModel = useDataViewModel(
     props.storageKey,
     contributions,
     props.views,
@@ -73,7 +75,7 @@ function DataViewInner<TRow>({
 
   const embedded = mode === "embedded";
 
-  const viewVariants = useViewVariants();
+  const viewVariants = useViewVariants(contributions);
 
   // Derive the `hasChildren` predicate once from `hierarchy.getParentId` over
   // `rows` (absent hierarchy → always `false`). Flat views (table/gallery) use

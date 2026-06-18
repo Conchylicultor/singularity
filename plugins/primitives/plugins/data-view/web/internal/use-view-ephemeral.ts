@@ -1,19 +1,17 @@
 import { useCallback, useMemo, useState } from "react";
 
 /**
- * Device-local per-instance view state. Everything here is ephemeral / per-device:
- * the active-instance selection, plus each instance's `{ query, expanded }`.
- *
- * Durable `sort`/`filter` live on the instance's config row (the config-backed
- * view model owns them) — they are NOT stored here. The reader stays tolerant of
- * legacy blobs that still carry `sort`/`filter` keys (they are simply ignored).
+ * Device-local per-instance **render** state: each instance's `{ query, expanded }`.
+ * The active-instance selection is *model* state and lives in view-core
+ * (`useActiveViewId`); durable `sort`/`filter` live on the instance's config row
+ * (the config-backed engine owns them). The reader stays tolerant of legacy blobs
+ * that still carry `sort`/`filter` keys (they are simply ignored).
  *
  * State split (see CLAUDE.md):
- *   - active id           → `${storageKey}:active-view`   (device-local)
- *   - query + expand      → `${storageKey}:view-state`     (device-local)
+ *   - active id           → view-core `${storageKey}:active-view`   (device-local)
+ *   - query + expand      → `${storageKey}:view-state`              (device-local)
  */
 
-const ACTIVE_SUFFIX = ":active-view";
 const STATE_SUFFIX = ":view-state";
 
 interface LocalViewState {
@@ -71,9 +69,6 @@ function readLocalMap(key: string): LocalMap {
 }
 
 export interface EphemeralViewState {
-  /** Persisted active-instance id (null → caller falls back to defaultView). */
-  activeViewId: string | null;
-  setActiveView: (viewId: string) => void;
   /** Raw per-instance local blob — query/expanded (device-local). */
   localFor: (viewId: string) => LocalViewState;
   setQuery: (viewId: string, query: string) => void;
@@ -81,26 +76,14 @@ export interface EphemeralViewState {
 }
 
 /**
- * Slim localStorage-only ephemeral state: active-id / query / expand. Durable
- * sort/filter live on the config row (owned by the config-backed view model).
+ * Slim localStorage-only ephemeral render state: query / expand. Active-id lives
+ * in view-core; durable sort/filter live on the config row.
  */
-export function useEphemeralViewState(storageKey: string): EphemeralViewState {
-  const activeKey = `${storageKey}${ACTIVE_SUFFIX}`;
+export function useViewEphemeral(storageKey: string): EphemeralViewState {
   const stateKey = `${storageKey}${STATE_SUFFIX}`;
 
-  const [activeViewId, setActiveViewId] = useState<string | null>(() =>
-    readString(activeKey),
-  );
   const [localMap, setLocalMap] = useState<LocalMap>(() =>
     readLocalMap(stateKey),
-  );
-
-  const setActiveView = useCallback(
-    (viewId: string) => {
-      writeString(activeKey, viewId);
-      setActiveViewId(viewId);
-    },
-    [activeKey],
   );
 
   const writeLocal = useCallback(
@@ -138,13 +121,7 @@ export function useEphemeralViewState(storageKey: string): EphemeralViewState {
   );
 
   return useMemo(
-    () => ({
-      activeViewId,
-      setActiveView,
-      localFor,
-      setQuery,
-      setExpanded,
-    }),
-    [activeViewId, setActiveView, localFor, setQuery, setExpanded],
+    () => ({ localFor, setQuery, setExpanded }),
+    [localFor, setQuery, setExpanded],
   );
 }

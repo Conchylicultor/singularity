@@ -4,7 +4,6 @@ import { dataViewConfigContributions } from "./internal/config-registrations";
 export { DataView } from "./components/data-view";
 export { defineDataView } from "../core";
 export type { DataViewId } from "../core";
-export { viewsDescriptor } from "../shared/views-config";
 export { DataViewSlots } from "./slots";
 export type { DataViewContribution } from "./slots";
 export { useResolveCell } from "./cell-slot";
@@ -35,7 +34,6 @@ export type {
   CreateOption,
   SortState,
   ViewState,
-  ViewInstance,
   DataViewRenderProps,
   DataViewProps,
   TableCellProps,

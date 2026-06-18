@@ -15,8 +15,9 @@ import {
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
+import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
-import type { ViewActions } from "../internal/use-view-model";
+import type { ViewActionsCore } from "../internal/use-view-model";
 import { ViewSettingsPopover } from "./view-settings-popover";
 
 /**
@@ -25,17 +26,17 @@ import { ViewSettingsPopover } from "./view-settings-popover";
  * `+` add menu. Click an inactive chip → select; click the **active** chip → open
  * its settings popover (rename / options sub-form / duplicate / delete).
  */
-export function EditableViewSwitcher({
+export function EditableViewSwitcher<T extends ViewTypeMeta>({
   instances,
   activeId,
   onSelect,
   actions,
   viewVariants,
 }: {
-  instances: ResolvedViewInstance[];
+  instances: ResolvedViewInstance<T>[];
   activeId: string;
   onSelect: (id: string) => void;
-  actions: ViewActions;
+  actions: ViewActionsCore;
   viewVariants: Map<string, VariantEntry>;
 }): ReactNode {
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -58,7 +59,9 @@ export function EditableViewSwitcher({
       <SortableList items={ids} onMove={onMove} orientation="horizontal">
         <Stack direction="row" align="center" gap="xs">
           {instances.map((r) => {
-            const Icon = r.viewType.icon;
+            // `r.viewType.icon` is the generic `T["icon"]`; widen to the
+            // concrete `ViewTypeMeta` icon shape so JSX accepts `<Icon />`.
+            const Icon: ViewTypeMeta["icon"] = r.viewType.icon;
             const id = r.instance.id;
             const isActive = id === activeId;
             const chip = (

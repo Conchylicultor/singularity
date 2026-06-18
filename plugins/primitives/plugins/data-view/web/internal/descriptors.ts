@@ -1,26 +1,17 @@
-import type { ConfigDescriptor } from "@plugins/config_v2/core";
-import { viewsDescriptor } from "../../shared/views-config";
+import { buildViewDescriptors } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import { dataViews } from "../../shared/data-views.generated";
 
 /**
- * The ONE descriptor instance per DataView id for the web runtime.
+ * The per-DataView-id `views` descriptors for the web runtime. data-view owns the
+ * manifest (the scraped `defineDataView(...)` id list); the generic engine
+ * (view-core) builds the descriptors from that id list.
  *
- * `useConfig`/`useSetConfig` match a config registration by descriptor
- * *reference identity* (`reg.descriptor === descriptor`). So the descriptor
- * passed to `ConfigV2.WebRegister` in `web/index.ts` and the one looked up in
- * `use-views-config.ts` MUST be the same object. Centralizing the map here —
- * imported by both — guarantees that. (`viewsDescriptor` also caches per id, so
- * this is belt-and-suspenders; the map is the canonical lookup.)
+ * `useConfig`/`useSetConfig` match a config registration by descriptor *reference
+ * identity*, so the descriptor passed to `ConfigV2.WebRegister` in `web/index.ts`
+ * and the one looked up by `useViewModel` MUST be the same object — both come off
+ * this single `map`.
  */
-export const dataViewDescriptors: Map<string, ConfigDescriptor> = new Map(
-  dataViews.map((v) => [v.id, viewsDescriptor(v.id)]),
-);
+const { map, entries } = buildViewDescriptors(dataViews.map((v) => v.id));
 
-/** All [id, descriptor] pairs, for registration in the web barrel. */
-export const dataViewDescriptorEntries: Array<{
-  id: string;
-  descriptor: ConfigDescriptor;
-}> = dataViews.map((v) => ({
-  id: v.id,
-  descriptor: dataViewDescriptors.get(v.id)!,
-}));
+export const dataViewDescriptors = map;
+export const dataViewDescriptorEntries = entries;

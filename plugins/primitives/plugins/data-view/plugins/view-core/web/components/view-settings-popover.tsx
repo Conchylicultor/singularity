@@ -7,8 +7,9 @@ import { variantField } from "@plugins/fields/plugins/variant/plugins/config/cor
 import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
+import type { ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
-import type { ViewActions } from "../internal/use-view-model";
+import type { ViewActionsCore } from "../internal/use-view-model";
 
 /**
  * Settings panel for the active instance — opened by clicking the active chip.
@@ -18,16 +19,17 @@ import type { ViewActions } from "../internal/use-view-model";
  * The `viewField` is built **web-side at render** with the injected `useVariants`
  * registry, so the type selector + each type's `configSchema` sub-fields recurse
  * through `FieldRenderer`. The stored descriptor stays server-safe (no
- * `useVariants`). `updateView` preserves the host-managed `sort`/`filter` keys.
+ * `useVariants`). `updateView(id, v, { merge: true })` shallow-merges over the
+ * raw view, preserving any host-injected keys (sort/filter) the sub-form omits.
  */
-export function ViewSettingsPopover({
+export function ViewSettingsPopover<T extends ViewTypeMeta>({
   instance,
   actions,
   viewVariants,
   onClose,
 }: {
-  instance: ResolvedViewInstance;
-  actions: ViewActions;
+  instance: ResolvedViewInstance<T>;
+  actions: ViewActionsCore;
   viewVariants: Map<string, VariantEntry>;
   onClose: () => void;
 }): ReactNode {
@@ -65,7 +67,7 @@ export function ViewSettingsPopover({
       <FieldRenderer
         field={viewField}
         value={view}
-        onChange={(v) => actions.updateView(id, v as VariantValue)}
+        onChange={(v) => actions.updateView(id, v as VariantValue, { merge: true })}
       />
 
       <Stack direction="row" gap="xs">

@@ -1,23 +1,17 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
-import type { FieldsRecord } from "@plugins/fields/core";
+import type { ViewTypeMeta } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import type { DataViewRenderProps } from "../core";
 import { Cell } from "./cell-slot";
 import { CellEditor } from "./cell-editor-slot";
 import { Filter } from "./filter-slot";
 
-export interface DataViewContribution {
-  /** Registry id of this view-type (e.g. "table", "gallery"). Instances
-   *  reference it via ViewInstance.type. */
-  type: string;
-  title: string;
-  icon: ComponentType<{ className?: string }>;
-  order?: number;
-  /** This view requires `DataViewProps.hierarchy`; the host drops it when absent. */
-  hierarchical?: boolean;
-  /** ST3: per-instance `options` sub-form schema, type-dispatched by `type`.
-   *  Declared here to fix the contribution shape; unused in ST2. */
-  configSchema?: FieldsRecord;
+/**
+ * A registered view-*type*: the generic `ViewTypeMeta` (type/title/icon/order/
+ * hierarchical/configSchema — owned by view-core) plus data-view's own render
+ * contract, the `component`.
+ */
+export interface DataViewContribution extends ViewTypeMeta {
   component: ComponentType<DataViewRenderProps<unknown>>;
 }
 

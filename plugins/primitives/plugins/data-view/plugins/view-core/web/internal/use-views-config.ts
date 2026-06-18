@@ -1,32 +1,35 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
+import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { Rank } from "@plugins/primitives/plugins/rank/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
-import type { FilterGroup, SortState } from "../../core";
-import type { DataViewContribution } from "../slots";
-import { dataViewDescriptors } from "./descriptors";
-import { buildInstanceFromRow, type ViewConfigRow } from "./resolve-instances";
+import type { ViewConfigRow, ViewTypeMeta } from "../../core";
+import { buildInstanceFromRow } from "./resolve-instances";
 import type { ResolvedViewInstance } from "./resolve-instances";
 
 /** Trailing-edge debounce for config writes — `setConfig` POSTs the whole doc. */
 const WRITE_DEBOUNCE_MS = 400;
 
-/** What a config-mode view model exposes to the host. */
+/** What the config engine exposes to the host. Opaque about the per-instance
+ *  `options` blob — it never names `sort`/`filter`; the host layers those on. */
 export interface ViewsConfigHandle {
   /** Resolved, ordered instances (fail-soft skip of orphan / hierarchical rows). */
   instances: ResolvedViewInstance[];
-  /** sort/filter for one instance, read off its config row. */
-  sortFor: (id: string) => SortState | null;
-  filterFor: (id: string) => FilterGroup | null;
-  setSort: (id: string, fieldId: string) => void;
-  setFilter: (id: string, filter: FilterGroup | null) => void;
+  /** The RAW `view` value for one instance (the variant blob `{ type, ...opts }`),
+   *  read straight off the config row (NOT the merged code+config options). For a
+   *  not-yet-materialized default it returns the seed `{ type }` so callers always
+   *  have a `type` to merge over. `undefined` only when the id is unknown. */
+  viewFor: (id: string) => VariantValue | undefined;
+  /** Write a new `view` value for one instance. `{ merge: true }` shallow-merges
+   *  over the existing raw view (`{ ...prev, ...view }`), preserving any
+   *  host-injected keys the caller didn't carry; default replaces wholesale. */
+  updateView: (id: string, view: VariantValue, opts?: { merge?: boolean }) => void;
   addView: (type: string) => string;
   renameView: (id: string, name: string) => void;
   duplicateView: (id: string) => string;
   deleteView: (id: string) => void;
   reorderView: (id: string, toIndex: number) => void;
-  updateView: (id: string, view: VariantValue) => void;
 }
 
 /** Stable random id for new config rows (the listField also injects one on the
@@ -35,47 +38,44 @@ function newId(): string {
   return `view-${Math.random().toString(36).slice(2, 10)}`;
 }
 
-/** Read the host-managed sort/filter keys off a row's variant value. */
-function readSort(view: VariantValue): SortState | null {
-  return (view.sort as SortState | null | undefined) ?? null;
-}
-function readFilter(view: VariantValue): FilterGroup | null {
-  return (view.filter as FilterGroup | null | undefined) ?? null;
-}
-
 /**
- * Config-mode engine. Reads `viewsDescriptor(storageKey)` (app-scoped), keeps an
- * optimistic mirror, and debounces `setConfig("views", next)`. Mirrors the proven
- * pendingRef / timerRef / flush / scheduleWrite / flush-on-unmount pattern.
+ * Generic opaque-options config engine. Reads the supplied descriptor
+ * (app-scoped), keeps an optimistic mirror, and debounces
+ * `setConfig("views", next)`. Mirrors the proven pendingRef / timerRef / flush /
+ * scheduleWrite / flush-on-unmount pattern.
  *
  * **Materialize-on-first-edit**: while the config list is empty we *display* the
  * synthesized defaults (passed in), but never write them. The first mutating
  * action seeds the persisted list with those defaults and then applies the
  * mutation — exactly like reorder's "unlisted live contributions materialize on
  * first edit".
+ *
+ * The engine treats each row's `view` as an **opaque `VariantValue`** — it never
+ * reads or writes `sort`/`filter`. The host layers those on through `viewFor` +
+ * `updateView({ merge: true })`.
  */
-export function useViewsConfig(
+export function useViewsConfig<T extends ViewTypeMeta>(
   storageKey: string,
-  contributions: SealContributions<DataViewContribution>[],
+  descriptorMap: Map<string, ConfigDescriptor>,
+  contributions: SealContributions<T>[],
   hasHierarchy: boolean,
   viewOptions: Record<string, unknown> | undefined,
-  defaults: ResolvedViewInstance[],
+  defaults: ResolvedViewInstance<T>[],
 ): ViewsConfigHandle {
-  // Resolve the descriptor via the central registration map (reference identity
-  // against the registered `ConfigV2.WebRegister` descriptor). A missing id
-  // means the `defineDataView` marker wasn't scraped into the manifest — fail
-  // loud rather than hand `useConfig` an undefined descriptor (which throws
-  // opaquely downstream).
-  const descriptor = dataViewDescriptors.get(storageKey);
+  // Resolve the descriptor via the supplied map (reference identity against the
+  // registered `ConfigV2.WebRegister` descriptor). A missing id means the marker
+  // wasn't scraped into the consumer's manifest — fail loud rather than hand
+  // `useConfig` an undefined descriptor (which throws opaquely downstream).
+  const descriptor = descriptorMap.get(storageKey);
   if (!descriptor) {
     throw new Error(
-      `data-view: no registered descriptor for storageKey "${storageKey}". ` +
-        `Declare it with defineDataView("${storageKey}") under the plugin's web/ ` +
-        `and run \`./singularity build\` to regenerate the manifest.`,
+      `view-core: no registered descriptor for storageKey "${storageKey}". ` +
+        `Declare it (e.g. defineDataView("${storageKey}")) under the plugin's ` +
+        `web/ and run \`./singularity build\` to regenerate the manifest.`,
     );
   }
   // No `scopeId`: runtime per-instance edits write to the user-global layer
-  // (mirroring reorder's `setConfig("items", …)`). data-view is a PRIMITIVE and
+  // (mirroring reorder's `setConfig("items", …)`). view-core is a PRIMITIVE and
   // stays app-agnostic — it never reaches for the current appId. The
   // per-`storageKey` descriptor already scopes views to one surface; if per-app
   // config is ever wanted, thread a `scopeId` in as a prop (config_v2 scoped
@@ -177,13 +177,10 @@ export function useViewsConfig(
   // The rows actually displayed: the materialized mirror, else synthesized seed
   // (display-only, not persisted) so the switcher shows defaults pre-edit. Stable
   // across renders while un-materialized because seed ids are deterministic.
-  const displayRows = useMemo(
-    () => mirror ?? seedRows(),
-    [mirror, seedRows],
-  );
+  const displayRows = useMemo(() => mirror ?? seedRows(), [mirror, seedRows]);
 
   // Sort by rank, then resolve each row through the contribution registry.
-  const instances = useMemo<ResolvedViewInstance[]>(() => {
+  const instances = useMemo<ResolvedViewInstance<T>[]>(() => {
     const sorted = [...displayRows].sort((a, b) =>
       Rank.compare(Rank.from(a.rank), Rank.from(b.rank)),
     );
@@ -191,7 +188,7 @@ export function useViewsConfig(
       .map((row) =>
         buildInstanceFromRow(row, contributions, hasHierarchy, viewOptions),
       )
-      .filter((r): r is ResolvedViewInstance => r !== null);
+      .filter((r): r is ResolvedViewInstance<T> => r !== null);
   }, [displayRows, contributions, hasHierarchy, viewOptions]);
 
   const rowById = useCallback(
@@ -200,18 +197,12 @@ export function useViewsConfig(
     [displayRows],
   );
 
-  const sortFor = useCallback(
-    (id: string): SortState | null => {
-      const row = rowById(id);
-      return row ? readSort(row.view) : null;
-    },
-    [rowById],
-  );
-  const filterFor = useCallback(
-    (id: string): FilterGroup | null => {
-      const row = rowById(id);
-      return row ? readFilter(row.view) : null;
-    },
+  // The RAW view value off the config row (NOT the merged code+config options),
+  // so writes never persist code-only `viewOptions` keys (e.g. gallery's
+  // `renderCard`). For an unknown id → undefined; the row always has a `type`
+  // (the seed sets `{ type }`), so a merge spread always carries a type.
+  const viewFor = useCallback(
+    (id: string): VariantValue | undefined => rowById(id)?.view,
     [rowById],
   );
 
@@ -224,37 +215,14 @@ export function useViewsConfig(
     [applyMutation],
   );
 
-  const setSort = useCallback(
-    (id: string, fieldId: string) => {
-      mergeView(id, (view) => {
-        const cur = readSort(view);
-        // null → asc → desc → null cycle (matches use-data-table.toggleSort).
-        let sort: SortState | null;
-        if (cur?.fieldId !== fieldId) sort = { fieldId, direction: "asc" };
-        else if (cur.direction === "asc") sort = { fieldId, direction: "desc" };
-        else sort = null;
-        return { ...view, sort };
-      });
-    },
-    [mergeView],
-  );
-
-  const setFilter = useCallback(
-    (id: string, filter: FilterGroup | null) => {
-      mergeView(id, (view) => ({ ...view, filter }));
-    },
-    [mergeView],
-  );
-
   const updateView = useCallback(
-    (id: string, view: VariantValue) => {
-      // Replace the whole `view`, but preserve the host-managed sort/filter that
-      // the options sub-form doesn't carry.
-      mergeView(id, (prev) => ({
-        ...view,
-        sort: readSort(prev),
-        filter: readFilter(prev),
-      }));
+    (id: string, view: VariantValue, opts?: { merge?: boolean }) => {
+      // merge → shallow-merge over the existing raw view, preserving any
+      // host-injected keys (sort/filter/future) the caller didn't carry. The
+      // incoming `view` always carries `type`, so a type change overwrites
+      // `type` + its options; stale old-type keys linger inert (same as before).
+      // Default → replace wholesale.
+      mergeView(id, (prev) => (opts?.merge ? { ...prev, ...view } : view));
     },
     [mergeView],
   );
@@ -360,29 +328,23 @@ export function useViewsConfig(
   return useMemo(
     () => ({
       instances,
-      sortFor,
-      filterFor,
-      setSort,
-      setFilter,
+      viewFor,
+      updateView,
       addView,
       renameView,
       duplicateView,
       deleteView,
       reorderView,
-      updateView,
     }),
     [
       instances,
-      sortFor,
-      filterFor,
-      setSort,
-      setFilter,
+      viewFor,
+      updateView,
       addView,
       renameView,
       duplicateView,
       deleteView,
       reorderView,
-      updateView,
     ],
   );
 }

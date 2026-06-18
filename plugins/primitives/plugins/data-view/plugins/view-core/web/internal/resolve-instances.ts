@@ -1,53 +1,35 @@
 import { useMemo } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
-import type { VariantValue } from "@plugins/fields/plugins/variant/core";
-import type { DataViewContribution } from "../slots";
-import type { ViewInstance } from "../../core";
+import type { ViewInstance, ViewConfigRow, ViewTypeMeta } from "../../core";
 
 /** A resolved view-instance paired with the view-type that renders it. */
-export interface ResolvedViewInstance {
+export interface ResolvedViewInstance<T extends ViewTypeMeta = ViewTypeMeta> {
   instance: ViewInstance;
-  viewType: SealContributions<DataViewContribution>;
+  viewType: SealContributions<T>;
 }
 
 /**
- * One config row of `viewsDescriptor.views`: the `listField` auto-injects `id`
- * and `rank`; `name` is the switcher label; `view` is the `variantField` value
- * `{ type, ...options }` where `type` selects the view-type and the rest is that
- * type's saved options (including the host-managed `sort`/`filter` keys).
- */
-export interface ViewConfigRow {
-  id: string;
-  rank: string;
-  name: string;
-  view: VariantValue;
-}
-
-/**
- * Default-instances resolver. Reproduces today's `available` view resolution
- * (drop hierarchical types when no hierarchy; honor the `views` whitelist for
+ * Default-instances resolver. Reproduces the `available` view resolution (drop
+ * hierarchical types when no hierarchy; honor the `views` whitelist for
  * inclusion + order, else sort by `order ?? 0` then title) and synthesizes
  * exactly one instance per resolved view-type (`id === type`, `name === title`).
- * Data-view-agnostic — it knows only the contributions + the
+ * Type-agnostic — it knows only the contributions + the
  * `views`/`hierarchy`/`viewOptions` inputs, never `FieldDef`/rows.
  */
-export function useResolvedInstances(
-  contributions: SealContributions<DataViewContribution>[],
+export function useResolvedInstances<T extends ViewTypeMeta>(
+  contributions: SealContributions<T>[],
   views: string[] | undefined,
   hasHierarchy: boolean,
   viewOptions: Record<string, unknown> | undefined,
-): ResolvedViewInstance[] {
-  return useMemo<ResolvedViewInstance[]>(() => {
+): ResolvedViewInstance<T>[] {
+  return useMemo<ResolvedViewInstance<T>[]>(() => {
     const usable = hasHierarchy
       ? contributions
       : contributions.filter((c) => !c.hierarchical);
     const resolved = views
       ? views
           .map((type) => usable.find((c) => c.type === type))
-          .filter(
-            (c): c is SealContributions<DataViewContribution> =>
-              c !== undefined,
-          )
+          .filter((c): c is SealContributions<T> => c !== undefined)
       : [...usable].sort(
           (a, b) =>
             (a.order ?? 0) - (b.order ?? 0) || a.title.localeCompare(b.title),
@@ -77,12 +59,12 @@ export function useResolvedInstances(
  * options (e.g. `renderCard`, `cover`) — which can never live in a config row —
  * survive. The view-type component reads its own keys off the merged result.
  */
-export function buildInstanceFromRow(
+export function buildInstanceFromRow<T extends ViewTypeMeta>(
   row: ViewConfigRow,
-  contributions: SealContributions<DataViewContribution>[],
+  contributions: SealContributions<T>[],
   hasHierarchy: boolean,
   viewOptions?: Record<string, unknown>,
-): ResolvedViewInstance | null {
+): ResolvedViewInstance<T> | null {
   const viewType = contributions.find((c) => c.type === row.view.type);
   if (!viewType) return null;
   if (viewType.hierarchical && !hasHierarchy) return null;

@@ -1,23 +1,19 @@
-import { useCallback, useMemo } from "react";
-import type { ComponentType } from "react";
+import { useMemo } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
+import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
-import type { FilterGroup, ViewState } from "../../core";
-import type { DataViewContribution } from "../slots";
-import { useEphemeralViewState } from "./use-view-state";
+import type { AddableViewType, ViewTypeMeta } from "../../core";
 import { useResolvedInstances } from "./resolve-instances";
 import type { ResolvedViewInstance } from "./resolve-instances";
 import { useViewsConfig } from "./use-views-config";
+import { useActiveViewId } from "./use-active-view";
 
-/** A view-type the add-menu offers (capability-gated). */
-export interface AddableViewType {
-  type: string;
-  title: string;
-  icon: ComponentType<{ className?: string }>;
-}
-
-/** Instance actions for the editable view-switcher (every DataView has these). */
-export interface ViewActions {
+/**
+ * Instance actions for the editable view-switcher (every view surface has
+ * these). `updateView` is opaque about the variant value — the host layers
+ * sort/filter on top of it.
+ */
+export interface ViewActionsCore {
   /** View-types the `+` menu offers: registered contributions ∩ `views`
    *  whitelist (if any) ∩ hierarchical gate. */
   available: AddableViewType[];
@@ -26,26 +22,31 @@ export interface ViewActions {
   duplicateView: (id: string) => void;
   deleteView: (id: string) => void;
   reorderView: (id: string, toIndex: number) => void;
-  updateView: (id: string, view: VariantValue) => void;
+  updateView: (id: string, view: VariantValue, opts?: { merge?: boolean }) => void;
 }
 
-/** The unified host contract — both modes produce one of these. */
-export interface ViewModel {
-  instances: ResolvedViewInstance[];
+/**
+ * The generic, type-agnostic view model. Owns the instance list, active-id
+ * resolution, and raw `view` read/write — but knows NOTHING about
+ * sort/filter/query/expand. A consumer (e.g. data-view) wraps it to layer those
+ * render concerns on top.
+ */
+export interface ViewModelCore<T extends ViewTypeMeta = ViewTypeMeta> {
+  instances: ResolvedViewInstance<T>[];
   activeId: string;
   setActiveView: (id: string) => void;
-  stateFor: (id: string) => ViewState;
-  setSort: (id: string, fieldId: string) => void;
-  setFilter: (id: string, filter: FilterGroup | null) => void;
-  setQuery: (id: string, q: string) => void;
-  setExpanded: (id: string, k: string, v: boolean) => void;
-  /** Instance actions for the editable switcher (always present). */
-  actions: ViewActions;
+  /** Raw `view` value for one instance (the variant blob), or the seed `{type}`
+   *  for a not-yet-materialized default. `undefined` only for an unknown id. */
+  viewFor: (id: string) => VariantValue | undefined;
+  updateView: (id: string, view: VariantValue, opts?: { merge?: boolean }) => void;
+  actions: ViewActionsCore;
+  /** Capability-gated add menu (registered ∩ whitelist ∩ hierarchical gate). */
+  available: AddableViewType[];
 }
 
 /** Resolve the active instance id given the persisted selection + fallbacks. */
-function resolveActiveId(
-  instances: ResolvedViewInstance[],
+function resolveActiveId<T extends ViewTypeMeta>(
+  instances: ResolvedViewInstance<T>[],
   persisted: string | null,
   defaultView: string | undefined,
 ): string {
@@ -57,18 +58,20 @@ function resolveActiveId(
 }
 
 /**
- * The single view model: config-authored instances, durable sort/filter written
- * back to the instance's config row, full instance actions. active-id / query /
- * expand stay device-local via the ephemeral store.
+ * The single generic view model: config-authored instances, raw view read/write,
+ * full instance actions. active-id stays device-local via `useActiveViewId`.
+ * Opaque about per-instance options (`sort`/`filter`/query/expand are the host's
+ * concern).
  */
-export function useConfigViewModel(
+export function useViewModel<T extends ViewTypeMeta>(
   storageKey: string,
-  contributions: SealContributions<DataViewContribution>[],
+  descriptorMap: Map<string, ConfigDescriptor>,
+  contributions: SealContributions<T>[],
   views: string[] | undefined,
   hasHierarchy: boolean,
   viewOptions: Record<string, unknown> | undefined,
   defaultView: string | undefined,
-): ViewModel {
+): ViewModelCore<T> {
   // The synthesized defaults seed config materialization (display-only pre-edit).
   const defaults = useResolvedInstances(
     contributions,
@@ -78,39 +81,26 @@ export function useConfigViewModel(
   );
   const cfg = useViewsConfig(
     storageKey,
+    descriptorMap,
     contributions,
     hasHierarchy,
     viewOptions,
     defaults,
   );
-  const ephemeral = useEphemeralViewState(storageKey);
+  const active = useActiveViewId(storageKey);
 
   const activeId = resolveActiveId(
-    cfg.instances,
-    ephemeral.activeViewId,
+    cfg.instances as ResolvedViewInstance<T>[],
+    active.activeViewId,
     defaultView,
-  );
-
-  const stateFor = useCallback(
-    (id: string): ViewState => {
-      const local = ephemeral.localFor(id);
-      return {
-        sort: cfg.sortFor(id),
-        filter: cfg.filterFor(id),
-        query: local.query,
-        expanded: local.expanded,
-      };
-    },
-    [ephemeral, cfg],
   );
 
   // Capability-gated add menu: registered contributions ∩ `views` whitelist (if
   // present) ∩ hierarchical gate. Generic — driven by contributions, never by a
   // named view child.
   const available = useMemo<AddableViewType[]>(() => {
-    const usable = (hasHierarchy
-      ? contributions
-      : contributions.filter((c) => !c.hierarchical)
+    const usable = (
+      hasHierarchy ? contributions : contributions.filter((c) => !c.hierarchical)
     ).filter((c) => (views ? views.includes(c.type) : true));
     return usable
       .slice()
@@ -121,7 +111,7 @@ export function useConfigViewModel(
       .map((c) => ({ type: c.type, title: c.title, icon: c.icon }));
   }, [contributions, views, hasHierarchy]);
 
-  const actions = useMemo<ViewActions>(
+  const actions = useMemo<ViewActionsCore>(
     () => ({
       available,
       addView: cfg.addView,
@@ -136,16 +126,14 @@ export function useConfigViewModel(
 
   return useMemo(
     () => ({
-      instances: cfg.instances,
+      instances: cfg.instances as ResolvedViewInstance<T>[],
       activeId,
-      setActiveView: ephemeral.setActiveView,
-      stateFor,
-      setSort: cfg.setSort,
-      setFilter: cfg.setFilter,
-      setQuery: ephemeral.setQuery,
-      setExpanded: ephemeral.setExpanded,
+      setActiveView: active.setActiveView,
+      viewFor: cfg.viewFor,
+      updateView: cfg.updateView,
       actions,
+      available,
     }),
-    [cfg, activeId, ephemeral, stateFor, actions],
+    [cfg, activeId, active.setActiveView, actions, available],
   );
 }
