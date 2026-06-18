@@ -34,6 +34,7 @@ export default {
     "no-adhoc-layout": [
       // ── PERMANENT: the layout primitives themselves ──────────────────────
       "plugins/primitives/plugins/css/plugins/**/*.{ts,tsx}", // Frame/Grid/Cluster/Center/Overlay + presentational css/ sub-plugins (surface, card, truncating-text, spacing, badge, row, ...)
+      "plugins/primitives/plugins/floating-action/web/internal/floating-action.tsx", // owns the morph/positioning mechanics (absolute panel, the rigid `trigger` collapsed-footprint wrapper) — a layout primitive, never drains
       // ── BURNDOWN: grandfathered pre-rule offenders (drains to 0) ──────────
       // <BURNDOWN-START> (generated — see lint/index.ts header)
       "plugins/active-data/plugins/plugin-link/web/components/plugin-link-chip.tsx",
@@ -325,7 +326,6 @@ export default {
       "plugins/primitives/plugins/error-boundary/web/components/plugin-error-boundary.tsx",
       "plugins/primitives/plugins/filepath-breadcrumb/web/internal/filepath-breadcrumb.tsx",
       "plugins/primitives/plugins/filter-chips/web/internal/filter-chips.tsx",
-      "plugins/primitives/plugins/floating-action/web/internal/floating-action.tsx",
       "plugins/primitives/plugins/folder-picker/web/internal/folder-picker-popover.tsx",
       "plugins/primitives/plugins/folder-picker/web/internal/folder-picker.tsx",
       "plugins/primitives/plugins/graph-canvas/web/components/canvas-edge.tsx",

@@ -113,8 +113,8 @@ export function FloatingActionBarHost() {
       anchor="top-right"
       variant="ghost"
       panelClassName="items-center"
+      trigger={<StatusGlyph status={status} />}
     >
-      <StatusGlyph status={status} />
       <FloatingActionFadeIn className="flex max-w-0 items-center gap-sm overflow-hidden whitespace-nowrap pr-sm transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">
         <ActionRow pinned={false} onTogglePin={togglePin} />
       </FloatingActionFadeIn>

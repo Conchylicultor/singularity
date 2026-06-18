@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type ComponentProps, useLayoutEffect, useRef } from "react";
+import { type ComponentProps, type ReactNode, useLayoutEffect, useRef } from "react";
 import { useDisclosureIntent } from "./use-disclosure-intent";
 
 export type FloatingAnchor =
@@ -22,6 +22,14 @@ export interface FloatingActionProps
   panelClassName?: string;
   closeDelay?: number;
   anchor?: FloatingAnchor;
+  /**
+   * The always-visible collapsed footprint — the element shown while the panel
+   * is closed (e.g. the trigger icon/glyph). The primitive renders it in an
+   * own, rigid wrapper that **never flex-shrinks**, so it can never collapse to
+   * 0 even when `children` are a tall/wide sibling under a clamped panel.
+   * Declare the role here; `children` hold the expanding content.
+   */
+  trigger: ReactNode;
 }
 
 export function FloatingAction({
@@ -30,6 +38,7 @@ export function FloatingAction({
   variant = "outlined",
   closeDelay,
   anchor = "bottom-right",
+  trigger,
   children,
   ...props
 }: FloatingActionProps) {
@@ -87,6 +96,11 @@ export function FloatingAction({
           )}
           {...props}
         >
+          {/* The trigger's rigid wrapper: this `shrink-0` is the load-bearing
+              collapsed-footprint guarantee — the whole point of the slot. It
+              keeps the always-visible trigger from flex-shrinking to 0 next to
+              a tall/wide `children` sibling under a clamped panel. */}
+          <div className="shrink-0">{trigger}</div>
           {children}
         </div>
       </div>

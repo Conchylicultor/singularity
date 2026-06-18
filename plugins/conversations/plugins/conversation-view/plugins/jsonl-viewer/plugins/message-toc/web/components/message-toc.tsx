@@ -78,28 +78,28 @@ export function MessageToc() {
       className="absolute top-2 right-3 z-nav"
       anchor="top-right"
       panelClassName="flex-col w-[3.25rem] group-data-open/fa:w-56 max-h-[1.625rem] group-data-open/fa:max-h-80"
+      trigger={
+        <Frame
+          gap="xs"
+          className="px-sm py-xs group-data-open/fa:border-b group-data-open/fa:border-border/40"
+          leading={
+            <>
+              <MdFormatListNumbered className="size-3.5 text-muted-foreground" />
+              <Text as="span" variant="caption" className="tabular-nums text-muted-foreground">
+                {entries.length}
+              </Text>
+            </>
+          }
+          trailing={
+            <span className="text-3xs font-medium tracking-wide text-muted-foreground opacity-0 transition-opacity duration-150 group-data-open/fa:opacity-100">
+              messages
+            </span>
+          }
+        />
+      }
     >
       <Column
         fill
-        header={
-          <Frame
-            gap="xs"
-            className="px-sm py-xs group-data-open/fa:border-b group-data-open/fa:border-border/40"
-            leading={
-              <>
-                <MdFormatListNumbered className="size-3.5 text-muted-foreground" />
-                <Text as="span" variant="caption" className="tabular-nums text-muted-foreground">
-                  {entries.length}
-                </Text>
-              </>
-            }
-            trailing={
-              <span className="text-3xs font-medium tracking-wide text-muted-foreground opacity-0 transition-opacity duration-150 group-data-open/fa:opacity-100">
-                messages
-              </span>
-            }
-          />
-        }
         body={
           <FloatingActionFadeIn>
             {entries.map((entry) => (
