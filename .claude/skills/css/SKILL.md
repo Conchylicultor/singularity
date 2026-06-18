@@ -23,7 +23,7 @@ Write the role, not the mechanics; let the container own the policy.
 
 ## Layout primitives
 
-Reach for these instead of raw flex/grid. Import from `@plugins/primitives/plugins/<name>/web` (the `css/*` layout primitives live under `@plugins/primitives/plugins/css/plugins/<name>/web`). Shared conventions mirror `Stack`: `gap: SpaceStep`, reused `StackAlign`/`StackJustify`, `as?`, `className` last.
+Reach for these instead of raw flex/grid. Import from `@plugins/primitives/plugins/<name>/web` (the `css/*` layout primitives live under `@plugins/primitives/plugins/css/plugins/<name>/web`). Shared conventions mirror `Stack`: `gap: SpaceStep`, reused `StackAlign`/`StackJustify`, `as?`, `className` last. **All accept `ref?: React.Ref<HTMLElement>`** (React-19 ref-as-prop) — pass `<Scroll ref={sticky.scrollRef}>` for auto-scroll / sticky-scroll / ResizeObserver / scroll-into-view; never fall back to a raw `<div ref=…>` + eslint-disable just to attach a ref.
 
 - **`Stack` / `Inset`** (`spacing`) — 1-D flow container (dir·gap·align·justify·wrap) · padding container. The home for layout rhythm. → [CLAUDE.md](../../../plugins/primitives/plugins/spacing/CLAUDE.md)
 - **`Frame`** (`css/frame`) — named-slot row, **slots-as-props** (no children): `leading` (rigid) · `content` (truncates last) · `meta` (truncates first) · `trailing` (rigid-right). CSS Grid owns the shrink hierarchy in one place — the structural fix for overlapping/overflowing header rows. String `content`/`meta` auto-wrap in the truncation leaf.
