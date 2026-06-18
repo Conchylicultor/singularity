@@ -13,7 +13,7 @@
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations/conversation-category.conversationCategory`, `conversations/conversation-category.conversationCategoryConfig`, `database.db`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`
   - Routes: `GET /api/stats/commits/cumulative`, `GET /api/stats/commits/rate`, `GET /api/stats/commits/lines/cumulative`, `GET /api/stats/commits/lines/rate`
 - Cross-plugin:
-  - Imported by: `stats/cost`, `stats/pushes`, `stats/tasks`
+  - Imported by: `debug/health-monitor`, `stats/cost`, `stats/pushes`, `stats/tasks`
   - Endpoint callers: `stats`
 - Shared:
   - Exports: Values: `commitsConfig`, `getCommitsCumulative`, `getCommitsLinesCumulative`, `getCommitsLinesRate`, `getCommitsRate`

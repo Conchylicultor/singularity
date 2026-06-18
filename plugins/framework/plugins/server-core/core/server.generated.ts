@@ -104,6 +104,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "database/plugins/query", id: "database.query", loader: () => import("@plugins/database/plugins/query/server"), dependsOn: ["database/plugins/admin", "infra/plugins/mcp", "tasks/plugins/tasks-core"] },
   { pluginPath: "database", id: "database", loader: () => import("@plugins/database/server"), dependsOn: ["database/plugins/derived-views", "database/plugins/migrations", "infra/plugins/runtime-profiler"] },
   { pluginPath: "debug/plugins/broadcasts", id: "debug.broadcasts", loader: () => import("@plugins/debug/plugins/broadcasts/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/worktree"] },
+  { pluginPath: "debug/plugins/health-monitor", id: "debug.health-monitor", loader: () => import("@plugins/debug/plugins/health-monitor/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/paths", "primitives/plugins/log-channels"] },
   { pluginPath: "debug/plugins/memory", id: "debug.memory", loader: () => import("@plugins/debug/plugins/memory/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/paths", "infra/plugins/worktree"] },
   { pluginPath: "debug/plugins/profiling/plugins/boot", id: "debug.profiling.boot", loader: () => import("@plugins/debug/plugins/profiling/plugins/boot/server"), dependsOn: ["infra/plugins/endpoints"] },
   { pluginPath: "debug/plugins/profiling/plugins/build", id: "debug.profiling.build", loader: () => import("@plugins/debug/plugins/profiling/plugins/build/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/paths"] },

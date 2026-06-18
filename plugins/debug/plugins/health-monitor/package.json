@@ -1,0 +1,8 @@
+{
+  "name": "@singularity/plugin-debug-health-monitor",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "recharts": "^2.15.0"
+  }
+}

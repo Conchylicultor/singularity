@@ -8,6 +8,7 @@
 - Sub-plugins:
   - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
   - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
+  - **`health-monitor`** — Health monitor debug pane: per-backend event-loop lag, RSS/heap, and GC pressure over time, plus host load/memory/swap. Continuous per-backend health sampler: event-loop lag, GC/heap pressure, and RSS appended to per-worktree JSONL (read from disk even when a backend is wedged), plus main-only host metrics. Surfaced as the Debug → Health pane.
   - **`live-state-health`** — Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.
   - **`logs`** — System logs pane, opened from the Debug sidebar.
   - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.

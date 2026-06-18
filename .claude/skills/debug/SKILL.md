@@ -26,6 +26,8 @@ For "why is X slow" (especially bursty/contention slowness), beyond the Gantt:
 - **`get_runtime_profile` MCP tool** — slowest HTTP / DB / loader spans with the `[acquire]` pool-wait aggregate and per-parent (`byParent`) attribution. Pass `worktree` for another namespace (`"singularity"` = main).
 - **Durable `slow_ops` table** (`query_db`) — has real `last_seen_at` / `last_ms`. Use these (not the in-memory profiler's `max_ms`, which is a sticky peak *since server boot*) to tell "happening now" from "old peak". Also surfaced in **Debug → Slow Ops**.
 - **`pg_stat_activity`** (`query_db`) grouped by `datname` + `wait_event` — cluster-wide backend / lock picture across all worktrees on the shared Postgres. A query that's slow under load but fast under `EXPLAIN ANALYZE` in isolation is **contention**, not a bad plan.
+- **Debug → Health pane** (`health-monitor`) — continuous per-backend time series of **event-loop lag** (p99/max — the headline signal for GC/blocking stalls), **RSS/heap**, and **heap growth**, plus a main-only host strip (load / free-mem / swap). Samples append to `logs/health.jsonl` per worktree and the pane reads them **from disk**, so it works even when a backend is wedged (unlike `get_runtime_profile`, which 404s on an unhealthy backend). Use it to tell a **per-backend** stall (event-loop max spikes, RSS balloon) apart from **host** pressure (load/swap). `cat logs/health.jsonl` for the raw forensic record.
+→ [`plugins/debug/plugins/health-monitor/CLAUDE.md`](../../../plugins/debug/plugins/health-monitor/CLAUDE.md)
 
 ## Crashes
 Uncaught browser/server errors recorded + deduped into tasks; handled 4xx/5xx and mutation errors also file crash tasks. The Debug pane lists all crashes (including noise).

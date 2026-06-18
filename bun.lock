@@ -1152,6 +1152,13 @@
       "name": "@singularity/plugin-debug-claude-cli-calls",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/health-monitor": {
+      "name": "@singularity/plugin-debug-health-monitor",
+      "version": "0.0.1",
+      "dependencies": {
+        "recharts": "^2.15.0",
+      },
+    },
     "plugins/debug/plugins/live-state-health": {
       "name": "@singularity/plugin-debug-live-state-health",
       "version": "0.0.1",
@@ -4145,6 +4152,8 @@
     "@singularity/plugin-debug-broadcasts": ["@singularity/plugin-debug-broadcasts@workspace:plugins/debug/plugins/broadcasts"],
 
     "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
+
+    "@singularity/plugin-debug-health-monitor": ["@singularity/plugin-debug-health-monitor@workspace:plugins/debug/plugins/health-monitor"],
 
     "@singularity/plugin-debug-live-state-health": ["@singularity/plugin-debug-live-state-health@workspace:plugins/debug/plugins/live-state-health"],
 
