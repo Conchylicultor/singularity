@@ -2737,11 +2737,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `framework/server-core`, `infra/endpoints`
       - Core:
         - Exports: Types: `Aggregate`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`; Values: `getRuntimeProfile`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `recordEntrySpan`, `recordSpan`, `resetRuntimeProfile`, `runWithoutProfiling`
-    - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which follows redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
+    - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
         - Imported by: `apps/browser/proxy`, `page/bookmark`
       - Server:
-        - Exports: Types: `SafeFetchInit`; Values: `assertResolvesPublic`, `isPrivateIp`, `parsePublicUrl`, `safeFetch`, `SsrfError`
+        - Exports: Types: `PinnedDial`, `SafeFetchInit`; Values: `assertResolvesPublic`, `buildPinnedDial`, `isPrivateIp`, `parsePublicUrl`, `safeFetch`, `SsrfError`
     - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`

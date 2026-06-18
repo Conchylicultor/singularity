@@ -1,5 +1,10 @@
 import { describe, expect, test } from "bun:test";
-import { SsrfError, isPrivateIp, parsePublicUrl } from "./ssrf";
+import {
+  SsrfError,
+  buildPinnedDial,
+  isPrivateIp,
+  parsePublicUrl,
+} from "./ssrf";
 
 describe("isPrivateIp", () => {
   test("classifies loopback as private", () => {
@@ -97,5 +102,43 @@ describe("parsePublicUrl", () => {
   test("rejects unparseable URLs", () => {
     expect(() => parsePublicUrl("not a url")).toThrow(SsrfError);
     expect(() => parsePublicUrl("")).toThrow(SsrfError);
+  });
+});
+
+describe("buildPinnedDial", () => {
+  test("swaps an IPv4 into the dial URL, keeps host + path + query", () => {
+    const dial = buildPinnedDial(
+      new URL("https://example.com/a/b?x=1#h"),
+      "93.184.216.34",
+    );
+    expect(dial.href).toBe("https://93.184.216.34/a/b?x=1#h");
+    expect(dial.host).toBe("example.com");
+    expect(dial.serverName).toBe("example.com");
+  });
+
+  test("brackets an IPv6 dial host and preserves a non-default port", () => {
+    const dial = buildPinnedDial(
+      new URL("https://example.com:8443/p"),
+      "2606:4700::1",
+    );
+    expect(dial.href).toBe("https://[2606:4700::1]:8443/p");
+    // Host header must carry the non-default port for vhost routing.
+    expect(dial.host).toBe("example.com:8443");
+    expect(dial.serverName).toBe("example.com");
+  });
+
+  test("http targets get no SNI serverName", () => {
+    const dial = buildPinnedDial(new URL("http://example.com/"), "8.8.8.8");
+    expect(dial.href).toBe("http://8.8.8.8/");
+    expect(dial.host).toBe("example.com");
+    expect(dial.serverName).toBeUndefined();
+  });
+
+  test("a literal-IPv6 host strips brackets for the SNI name", () => {
+    const dial = buildPinnedDial(
+      new URL("https://[2606:4700::1]/"),
+      "2606:4700::1",
+    );
+    expect(dial.serverName).toBe("2606:4700::1");
   });
 });

@@ -5,12 +5,13 @@
  * services. This module centralizes IP classification, URL parsing, DNS
  * resolution checks, and a redirect-following fetch that re-guards every hop.
  *
- * Residual risk — DNS-rebinding TOCTOU: `assertResolvesPublic` resolves the
- * hostname and classifies the returned addresses, but `safeFetch` then fetches
- * by hostname, so a hostile resolver could return a public IP to our `lookup`
- * and a private IP to the real connection. Closing this requires pinning the
- * resolved IP into the connection (custom dispatcher / IP-pinned connect) —
- * tracked as a follow-up. Acceptable for a single-user localhost dev tool.
+ * DNS-rebinding TOCTOU is closed by **IP pinning**: `assertResolvesPublic`
+ * resolves + validates the hostname once and returns the validated IP, and
+ * `safeFetch` then dials that exact IP (not the hostname), so `fetch`'s own
+ * resolver never runs a second, unguarded lookup. The hostname is preserved for
+ * SNI, the `Host` header, and TLS certificate verification via Bun fetch's
+ * `tls.serverName` option, so vhost routing and cert identity stay correct while
+ * the connection is bound to the address we security-checked.
  */
 import { lookup } from "node:dns/promises";
 
@@ -161,12 +162,17 @@ export function parsePublicUrl(raw: string): URL {
 }
 
 /**
- * DNS-resolve the URL's hostname and reject if ANY resolved address is
- * non-public (a hostname can have multiple A/AAAA records; one private record is
- * enough to abuse). If the host is already an IP literal, classify it directly
- * without a lookup. Throws {@link SsrfError} on rejection.
+ * DNS-resolve the URL's hostname, reject if ANY resolved address is non-public
+ * (a hostname can have multiple A/AAAA records; one private record is enough to
+ * abuse), and return the **validated IP to pin the connection to**. If the host
+ * is already an IP literal, classify it directly without a lookup and return it.
+ * Throws {@link SsrfError} on rejection.
+ *
+ * Returning the address (rather than just asserting) is what closes the
+ * DNS-rebinding TOCTOU: {@link safeFetch} dials this exact IP, so no second,
+ * unguarded resolution can ever run between the check and the connect.
  */
-export async function assertResolvesPublic(url: URL): Promise<void> {
+export async function assertResolvesPublic(url: URL): Promise<string> {
   const host = url.hostname.toLowerCase().replace(/^\[|\]$/g, "");
 
   // Literal IP — already classified by parsePublicUrl, but re-check defensively.
@@ -174,7 +180,7 @@ export async function assertResolvesPublic(url: URL): Promise<void> {
     if (isPrivateIp(host)) {
       throw new SsrfError(`URL host is not allowed: ${host}`);
     }
-    return;
+    return host;
   }
 
   const records = await lookup(host, { all: true });
@@ -188,13 +194,88 @@ export async function assertResolvesPublic(url: URL): Promise<void> {
       );
     }
   }
+  // Pin the first validated record. Every returned address passed the public
+  // check, so any is safe to dial; we pick one because the connection targets a
+  // single IP (trading native fetch's happy-eyeballs failover for the guarantee
+  // that the address we dial is exactly the one we validated).
+  const first = records[0];
+  if (!first) {
+    throw new SsrfError(`URL host did not resolve: ${host}`);
+  }
+  return first.address;
+}
+
+/** The pinned request shape: a dial URL bound to a validated IP, plus the
+ * original hostname re-attached as the `Host` header and (for https) the TLS
+ * SNI / certificate identity. */
+export interface PinnedDial {
+  /** URL with the hostname swapped for the validated IP (IPv6 bracketed). */
+  href: string;
+  /** Original `host` (incl. non-default port) — sent as the `Host` header. */
+  host: string;
+  /** Hostname for SNI + cert verification; `undefined` for non-TLS targets. */
+  serverName: string | undefined;
 }
 
 /**
- * SSRF-guarded fetch. Parses + guards the target, then fetches with
- * `redirect: "manual"`, re-running {@link parsePublicUrl} + DNS revalidation on
- * every redirect hop (a public URL could otherwise 30x-redirect to a private
- * host, defeating the initial guard). Returns the final non-3xx Response.
+ * Build the pinned request for a guarded `logicalUrl` and its validated `ip`.
+ * Pure (no I/O) so it is unit-testable: dials the IP while keeping the hostname
+ * for `Host`/SNI/cert. IPv6 addresses are bracketed in the dial URL.
+ */
+export function buildPinnedDial(logicalUrl: URL, ip: string): PinnedDial {
+  const dial = new URL(logicalUrl.href);
+  dial.hostname = ip.includes(":") ? `[${ip}]` : ip;
+  return {
+    href: dial.href,
+    host: logicalUrl.host,
+    serverName:
+      logicalUrl.protocol === "https:"
+        ? logicalUrl.hostname.replace(/^\[|\]$/g, "")
+        : undefined,
+  };
+}
+
+/**
+ * Re-attach the logical (hostname) URL to a Response fetched via the IP dial
+ * URL. Native fetch sets `res.url` to whatever URL it was handed — the IP here —
+ * but consumers resolve relative links / redirects / `<base>` against `res.url`,
+ * which must stay the hostname, not the pinned address. `Response.url` is an
+ * accessor on the prototype; an own data property shadows it without disturbing
+ * the streaming body.
+ */
+function withLogicalUrl(res: Response, logicalUrl: URL): Response {
+  Object.defineProperty(res, "url", {
+    value: logicalUrl.href,
+    writable: false,
+    configurable: true,
+  });
+  return res;
+}
+
+/** Merge caller headers with the pinned `Host`, dropping any caller-supplied
+ * host-ish key (case-insensitive) so the validated authority always wins. */
+function headersWithHost(
+  headers: Record<string, string> | undefined,
+  host: string,
+): Record<string, string> {
+  const out: Record<string, string> = {};
+  for (const [k, v] of Object.entries(headers ?? {})) {
+    if (k.toLowerCase() !== "host") out[k] = v;
+  }
+  out.host = host;
+  return out;
+}
+
+/**
+ * SSRF-guarded fetch. Parses + guards the target, resolves it to a validated
+ * public IP, then dials **that IP** (not the hostname) with `redirect: "manual"`,
+ * re-running {@link parsePublicUrl} + DNS revalidation + re-pinning on every
+ * redirect hop (a public URL could otherwise 30x-redirect — or DNS-rebind — to a
+ * private host, defeating the initial guard). Returns the final non-3xx Response.
+ *
+ * The hostname is preserved across the swap via the `Host` header and (for
+ * https) `tls.serverName`, so vhost routing and certificate identity stay bound
+ * to the original host while the socket targets the security-checked address.
  *
  * - `timeoutMs` (default 20s) bounds the whole request via `AbortSignal.timeout`.
  * - `signal` is honored in addition to the timeout (whichever fires first).
@@ -208,8 +289,12 @@ export async function safeFetch(
   const maxRedirects = init.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
   const timeoutMs = init.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-  let url = parsePublicUrl(typeof target === "string" ? target : target.href);
-  await assertResolvesPublic(url);
+  // The *logical* URL keeps the hostname: it is what we guard and what relative
+  // redirect `Location`s resolve against. The *dial* URL targets the pinned IP.
+  let logicalUrl = parsePublicUrl(
+    typeof target === "string" ? target : target.href,
+  );
+  let ip = await assertResolvesPublic(logicalUrl);
 
   // Method + body are mutated across hops: a 301/302/303 downgrades the request
   // to a bodyless GET (standard browser behavior for the POST→GET redirect of
@@ -218,19 +303,25 @@ export async function safeFetch(
   let body = init.body;
 
   for (let hop = 0; hop <= maxRedirects; hop++) {
+    const dial = buildPinnedDial(logicalUrl, ip);
     const signal = mergeSignals(AbortSignal.timeout(timeoutMs), init.signal);
-    const res = await fetch(url.href, {
+    const res = await fetch(dial.href, {
       method,
       body,
       redirect: "manual",
       signal,
-      headers: init.headers,
-    });
+      headers: headersWithHost(init.headers, dial.host),
+      // Bind SNI + cert verification to the hostname even though we dial the IP.
+      ...(dial.serverName ? { tls: { serverName: dial.serverName } } : {}),
+    } as RequestInit);
 
-    if (res.status < 300 || res.status >= 400) return res;
+    if (res.status < 300 || res.status >= 400) {
+      return withLogicalUrl(res, logicalUrl);
+    }
 
     const loc = res.headers.get("location");
-    if (!loc) return res; // 3xx without Location — nothing to follow.
+    // 3xx without Location — nothing to follow.
+    if (!loc) return withLogicalUrl(res, logicalUrl);
 
     // 301/302/303: downgrade to GET and drop the body (PRG); 307/308 preserve.
     if (res.status !== 307 && res.status !== 308) {
@@ -238,9 +329,10 @@ export async function safeFetch(
       body = undefined;
     }
 
-    // Resolve relative Location against the current URL, then re-guard the hop.
-    url = parsePublicUrl(new URL(loc, url).href);
-    await assertResolvesPublic(url);
+    // Resolve relative Location against the logical (hostname) URL — never the
+    // IP dial URL — then re-guard and re-pin the next hop.
+    logicalUrl = parsePublicUrl(new URL(loc, logicalUrl).href);
+    ip = await assertResolvesPublic(logicalUrl);
   }
 
   throw new Error(`Too many redirects (>${maxRedirects})`);
