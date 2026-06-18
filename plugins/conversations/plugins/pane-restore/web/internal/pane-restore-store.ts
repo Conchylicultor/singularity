@@ -1,9 +1,12 @@
-import { getRoute } from "@plugins/primitives/plugins/pane/web";
+import { getRoute, type PaneInput } from "@plugins/primitives/plugins/pane/web";
 
 const LS_PREFIX = "route.restore.";
 const TTL = 30 * 24 * 60 * 60 * 1000;
 
-type SavedSlot = { paneId: string; params: Record<string, string>; input?: Record<string, string> };
+// `input` mirrors PaneSlot.input. Persisted via JSON (localStorage), which
+// round-trips booleans/numbers/nested objects — so it is the structured
+// PaneInput bag, not a string map.
+type SavedSlot = { paneId: string; params: Record<string, string>; input?: PaneInput };
 type Envelope = { v: SavedSlot[]; ts: number };
 
 export function saveRouteForConversation(convId: string, slots: SavedSlot[]): void {

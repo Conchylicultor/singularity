@@ -101,7 +101,7 @@ function LeafTitleReporter({
   tabId: string;
   pane: Parameters<typeof usePaneTitle>[0];
   params: Record<string, string>;
-  input: Record<string, string>;
+  input: Parameters<typeof usePaneTitle>[2];
 }) {
   const { setTabTitle } = useTabs();
   const title = usePaneTitle(pane, params, input);

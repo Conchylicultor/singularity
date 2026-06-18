@@ -1,5 +1,5 @@
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
-import type { PaneSlot, PaneStore } from "@plugins/primitives/plugins/pane/web";
+import type { PaneInput, PaneSlot, PaneStore } from "@plugins/primitives/plugins/pane/web";
 import type { Placement } from "../../core";
 import type { ActiveApp } from "./use-active-app";
 
@@ -28,7 +28,10 @@ export interface Tab {
 export interface PersistedSlot {
   paneId: string;
   params: Record<string, string>;
-  input: Record<string, string>;
+  // Mirrors PaneSlot.input. Persisted via JSON (sessionStorage), which
+  // round-trips booleans/numbers/nested objects — so input is the structured
+  // PaneInput bag, not a string map.
+  input: PaneInput;
   uuid: string;
 }
 

@@ -31,7 +31,7 @@ export function TaskLinkChip({ content }: { content: string; attrs: Record<strin
     if (convId) {
       openPane(taskDetailPane, { taskId }, { mode: "push" });
     } else {
-      openPane(taskDetailPane, { taskId }, { mode: "push", input: { focused: "true" } });
+      openPane(taskDetailPane, { taskId }, { mode: "push", input: { focused: true } });
     }
   };
 

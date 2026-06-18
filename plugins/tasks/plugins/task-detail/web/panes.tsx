@@ -35,9 +35,9 @@ export const taskDetailPane = Pane.define({
   component: TaskDetailBody,
   width: 480,
   resolve: useResolveTask,
-  // Input is serialized into history.state, so values must be strings.
-  // "true" → focused/detail-only mode (no inline tree).
-  input: type<{ focused?: string }>(),
+  // `focused: true` → focused/detail-only mode (no inline tree). Input lives in
+  // history.state (structured-clone), so a real boolean round-trips faithfully.
+  input: type<{ focused?: boolean }>(),
 });
 
 function TasksRoot(): ReactElement {
@@ -60,7 +60,7 @@ function TaskDetailBody(): ReactElement {
   const { taskId } = taskDetailPane.useParams();
   const { focused } = taskDetailPane.useInput();
   const inTasksApp = tasksRootPane.useRouteEntry() !== null;
-  if (!inTasksApp && focused !== "true") return <ConversationTasksBody key={taskId} rootTaskId={taskId} />;
+  if (!inTasksApp && !focused) return <ConversationTasksBody key={taskId} rootTaskId={taskId} />;
   return <FocusedTaskBody key={taskId} taskId={taskId} />;
 }
 

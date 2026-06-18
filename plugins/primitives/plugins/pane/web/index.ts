@@ -44,8 +44,10 @@ export type {
   TypeMarker,
   InferParams,
   PaneInternal,
+  PaneInput,
   PaneSlot,
   PaneOpenMode,
+  OpenPaneFn,
   ResolveHook,
   PaneStore,
 } from "./pane";

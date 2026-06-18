@@ -14,7 +14,7 @@ export function ExpandTaskAction() {
       label="Open task"
       icon={MdOpenInNew}
       onClick={() =>
-        openPane(taskDetailPane, { taskId: ctx.selectedId }, { mode: "push", input: { focused: "true" } })
+        openPane(taskDetailPane, { taskId: ctx.selectedId }, { mode: "push", input: { focused: true } })
       }
     />
   );

@@ -45,18 +45,29 @@ type ResolveField<Path extends string> =
 
 let nextInstanceId = 0;
 
+/**
+ * Caller-provided, non-URL pane input. Unlike `params` (which serialize into
+ * the URL and so must be strings), `input` lives ONLY in `history.state` and is
+ * persisted via the structured-clone algorithm — booleans, numbers, and nested
+ * objects round-trip faithfully. The storage type is therefore an arbitrary
+ * structured-cloneable bag, NOT `Record<string, string>`. Each pane narrows the
+ * write/read surface to its own declared shape via the `input: type<T>()`
+ * marker; this is only the erased runtime storage type.
+ */
+export type PaneInput = Record<string, unknown>;
+
 export interface PaneSlot {
   instanceId: number;
   uuid: string;
   paneId: string;
   params: Record<string, string>;
-  input: Record<string, string>;
+  input: PaneInput;
 }
 
 function createSlot(
   paneId: string,
   params: Record<string, string>,
-  input: Record<string, string> = {},
+  input: PaneInput = {},
   uuid?: string,
 ): PaneSlot {
   return { instanceId: nextInstanceId++, uuid: uuid ?? crypto.randomUUID(), paneId, params, input };
@@ -148,7 +159,7 @@ export interface PaneInternal {
    */
   useTitle: (
     params: Record<string, string>,
-    input: Record<string, string>,
+    input: PaneInput,
   ) => string | undefined;
 }
 
@@ -221,7 +232,7 @@ export interface MatchEntry {
   /** All params accumulated from the route root up to and including this pane. */
   fullParams: Record<string, string>;
   /** Caller-provided input data, persisted in the slot (not in the URL). */
-  input: Record<string, string>;
+  input: PaneInput;
 }
 
 export interface PaneMatch {
@@ -401,7 +412,7 @@ export interface PaneStore {
   handleLocationChange(): void;
   reorderRoute(fromIndex: number, toIndex: number): void;
   restoreRoute(
-    slots: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string> }>,
+    slots: Array<{ paneId: string; params: Record<string, string>; input?: PaneInput }>,
   ): void;
   clearRoute(): void;
   /** Resolve the current route to a `PaneMatch` (memo-friendly, per-store). */
@@ -412,7 +423,7 @@ export interface PaneStore {
   openPaneImpl(
     internal: PaneInternal,
     params: Record<string, string>,
-    opts?: { root?: boolean; input?: Record<string, string> },
+    opts?: { root?: boolean; input?: PaneInput },
   ): void;
   close(internal: PaneInternal, instanceId: number): void;
   unwrap(instanceId: number): void;
@@ -465,7 +476,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   }
 
   function restoreRoute(
-    slots: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string> }>,
+    slots: Array<{ paneId: string; params: Record<string, string>; input?: PaneInput }>,
   ): void {
     if (typeof window === "undefined") return;
     const route: PaneSlot[] = slots.map((s) => createSlot(s.paneId, s.params, s.input ?? {}));
@@ -538,7 +549,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // their route only from `restoreRoute` (persistence) or from being
     // navigated while focused (held in memory).
     if (!store.live) return;
-    const state = window.history.state as { route?: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string>; uuid?: string }> } | null;
+    const state = window.history.state as { route?: Array<{ paneId: string; params: Record<string, string>; input?: PaneInput; uuid?: string }> } | null;
     if (state?.route) {
       const newRoute = state.route.map(s => createSlot(s.paneId, s.params, s.input ?? {}, s.uuid));
       if (routesEqual(currentRoute, newRoute)) return;
@@ -553,7 +564,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   function openPaneImpl(
     internal: PaneInternal,
     params: Record<string, string>,
-    implOpts?: { root?: boolean; input?: Record<string, string> },
+    implOpts?: { root?: boolean; input?: PaneInput },
   ): void {
     const replace = internal.chrome.enabled && !internal.chrome.history;
     const route = currentRoute;
@@ -769,7 +780,7 @@ export function reorderRoute(fromIndex: number, toIndex: number): void {
 }
 
 export function restoreRoute(
-  slots: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string> }>,
+  slots: Array<{ paneId: string; params: Record<string, string>; input?: PaneInput }>,
 ): void {
   liveStore.restoreRoute(slots);
 }
@@ -910,11 +921,11 @@ export function usePathname(): string {
  * `segment` — what `useParams()` returns. Keeping them separate matches
  * design decision 6 ("params are own-only").
  */
-export interface PaneToggleOpts {
+export interface PaneToggleOpts<Input = PaneInput> {
   action?: "close" | "unwrap";
   side?: "left" | "right";
   mode?: PaneOpenMode;
-  input?: Record<string, string>;
+  input?: Input;
 }
 
 export interface PaneRouteEntry<OwnParams = Record<string, string>> {
@@ -922,18 +933,24 @@ export interface PaneRouteEntry<OwnParams = Record<string, string>> {
   uuid: string;
   params: OwnParams;
   fullParams: Record<string, string>;
-  input: Record<string, string>;
+  input: PaneInput;
 }
 
 export interface PaneObject<
   FullParams = {},
   OwnParams = FullParams,
-  Input = Record<string, string>,
+  Input = PaneInput,
 > {
   id: string;
   useParams(): OwnParams;
-  /** Read the caller-provided input data for this pane (persisted in the slot, not in the URL). */
-  useInput(): Input;
+  /**
+   * Read the caller-provided input data for this pane (persisted in the slot,
+   * not in the URL). Returns `Partial<Input>`: input is absent on a cold
+   * deep-link (the route was rebuilt from the URL, which carries no input), so
+   * every declared key is potentially `undefined` and the caller must handle
+   * the missing case.
+   */
+  useInput(): Partial<Input>;
   /** Find this pane in the current route. Returns its params or null if absent. */
   useRouteEntry(): PaneRouteEntry<OwnParams> | null;
   /** Find all instances of this pane in the current route (for panes that can appear multiple times). */
@@ -950,7 +967,7 @@ export interface PaneObject<
   /** Hook: toggle this pane open/closed relative to the caller's position in the route. */
   useToggle(
     params: FullParams,
-    opts?: PaneToggleOpts,
+    opts?: PaneToggleOpts<Input>,
   ): { isOpen: boolean; toggle: () => void };
   back(): void;
   forward(): void;
@@ -983,7 +1000,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     return entry.params;
   }
 
-  function useInput(): Record<string, string> {
+  function useInput(): PaneInput {
     const match = useContext(PaneMatchContext);
     const instanceId = useContext(PaneInstanceContext);
     if (!match) return {};
@@ -1195,7 +1212,7 @@ type DefineArgs<Path extends string, ParentParams, Input> = {
 function define<
   Path extends string = "",
   ParentParams = {},
-  Input = Record<string, string>,
+  Input = PaneInput,
 >(
   args: DefineArgs<Path, ParentParams, Input>,
 ): PaneObject<
@@ -1318,7 +1335,7 @@ export function useRoute(): PaneMatch | null {
 export function usePaneTitle(
   pane: PaneInternal,
   params: Record<string, string>,
-  input: Record<string, string>,
+  input: PaneInput,
 ): string | undefined {
   const dynamic = pane.useTitle(params, input);
   if (dynamic) return dynamic;
@@ -1401,13 +1418,13 @@ export function usePaneRoute(basePath: string): PaneMatch | null {
 
 export type PaneOpenMode = "root" | "push" | "swap";
 
-export function openPane(
-  target: PaneObject<any, any, any>,
+export function openPane<Input = PaneInput>(
+  target: PaneObject<any, any, Input>,
   params: Record<string, string>,
-  opts: { mode: "root"; input?: Record<string, string> },
+  opts: { mode: "root"; input?: Input },
 ): void {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- overload narrows mode to "root" but the check keeps this future-proof for additional modes
-  liveStore.openPaneImpl(target._internal, params, { root: opts.mode === "root", input: opts.input });
+  liveStore.openPaneImpl(target._internal, params, { root: opts.mode === "root", input: opts.input as PaneInput });
 }
 
 // ---------------------------------------------------------------------------
@@ -1415,11 +1432,20 @@ export function openPane(
 // store (the surface it is rendered in).
 // ---------------------------------------------------------------------------
 
-export function useOpenPane(): (
-  target: PaneObject<any, any, any>,
-  params: Record<string, string>,
-  opts: { mode: PaneOpenMode; side?: "left" | "right"; input?: Record<string, string> },
-) => void {
+/**
+ * The caller-aware open function returned by {@link useOpenPane}. Generic on the
+ * target pane's declared `Input` so `opts.input` is type-checked against the
+ * pane that owns it at the call site (not coerced to `Record<string, string>`).
+ */
+export interface OpenPaneFn {
+  <Input = PaneInput>(
+    target: PaneObject<any, any, Input>,
+    params: Record<string, string>,
+    opts: { mode: PaneOpenMode; side?: "left" | "right"; input?: Input },
+  ): void;
+}
+
+export function useOpenPane(): OpenPaneFn {
   const store = usePaneStore();
   const callerInstanceId = useContext(PaneInstanceContext);
 
@@ -1427,7 +1453,7 @@ export function useOpenPane(): (
     (
       target: PaneObject<any, any, any>,
       params: Record<string, string>,
-      opts: { mode: PaneOpenMode; side?: "left" | "right"; input?: Record<string, string> },
+      opts: { mode: PaneOpenMode; side?: "left" | "right"; input?: PaneInput },
     ) => {
       const targetInternal = target._internal;
       const input = opts.input ?? {};
@@ -1493,5 +1519,5 @@ export function useOpenPane(): (
       store.setRoute(newRoute, replace);
     },
     [store, callerInstanceId],
-  );
+  ) as OpenPaneFn;
 }
