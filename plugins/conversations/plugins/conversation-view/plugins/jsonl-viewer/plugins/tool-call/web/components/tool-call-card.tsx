@@ -75,8 +75,18 @@ export function ToolCallCard({
             </>
           }
           content={
+            // Rendered as a block (`as="div"`), not the default inline span:
+            // Frame nests a *node* content slot inside a plain `min-w-0` div, and
+            // `truncate` (overflow:hidden) silently no-ops on an inline child of a
+            // block — so an inline TruncatingText here lays out at full width and
+            // overflows the card instead of ellipsizing. A block element honors
+            // the clip. (Frame auto-truncates a *string* slot correctly because
+            // it makes the span a direct grid item; we pre-wrap only to add the
+            // dim, so we must re-establish block-level truncation ourselves.)
             summary == null ? undefined : typeof summary === "string" ? (
-              <TruncatingText className="opacity-70">{summary}</TruncatingText>
+              <TruncatingText as="div" className="opacity-70">
+                {summary}
+              </TruncatingText>
             ) : (
               <span className="opacity-70">{summary}</span>
             )
