@@ -81,7 +81,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Description: Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 - Load-bearing: yes
 - Web:
-  - Slots: `Auth.Provider` ← `auth.google`, `auth.notion`, `Auth.ScopeRequirement` ← `backup.google-drive`, `accountsPane.Actions`
+  - Slots: `Auth.Provider` ← `auth.google`, `auth.notion`, `Auth.ScopeRequirement` ← `backup.targets.google-drive`, `accountsPane.Actions`
   - Uses: `config_v2/settings.configNavPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/frame.Frame`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.useOpenPane`, `shell/notifications.toast`
   - Exports: Types: `AuthProviderContribution`, `AuthProviderRowProps`, `AuthScopeRequirement`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`; Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `GrantAccessButton`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
 - Central:

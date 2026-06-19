@@ -812,7 +812,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Web:
-    - Slots: `Auth.Provider` ← `auth.google`, `auth.notion`, `Auth.ScopeRequirement` ← `backup.google-drive`, `accountsPane.Actions`
+    - Slots: `Auth.Provider` ← `auth.google`, `auth.notion`, `Auth.ScopeRequirement` ← `backup.targets.google-drive`, `accountsPane.Actions`
     - Uses: `config_v2/settings.configNavPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/frame.Frame`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.useOpenPane`, `shell/notifications.toast`
     - Exports: Types: `AuthProviderContribution`, `AuthProviderRowProps`, `AuthScopeRequirement`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`; Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `GrantAccessButton`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
   - Central:
@@ -823,7 +823,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.centralResourceDescriptor`
     - Exports: Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `DisconnectBody`, `GetAccessTokenArgs`, `GetTokenBody`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `SetApiKeyBody`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `disconnect`, `DisconnectBodySchema`, `getAuthState`, `getToken`, `GetTokenBodySchema`, `oauthCallback`, `oauthStart`, `setApiKey`, `SetApiKeyBodySchema`
   - Cross-plugin:
-    - Imported by: `apps/settings/accounts`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`
+    - Imported by: `apps/settings/accounts`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/targets/google-drive`
     - Endpoint callers: `setup-wizard`
   - Server:
     - Exports: Types: `GetAccessTokenArgs`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCentralOfflineError`, `getTokenFromCentral`
@@ -858,37 +858,89 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Shared:
         - Exports: Values: `notionAuthConfig`
 
-- **`backup`** — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
+- **`backup`** — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
   - Web:
     - Slots: `backupPane.Actions`
     - Contributes: `ConfigV2.WebRegister`, `Pane.Register` "backup", `DebugApp.Sidebar` "Backup" → `component`
-    - Uses: `apps/debug/shell.DebugApp`, `auth.GrantAccessButton`, `config_v2.ConfigV2`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/css/clip.Clip`, `primitives/css/frame.Frame`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.Button`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
+    - Uses: `apps/debug/shell.DebugApp`, `auth.GrantAccessButton`, `config_v2.ConfigV2`, `config_v2/config-link.ConfigGearButton`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/css/clip.Clip`, `primitives/css/frame.Frame`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.Button`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
     - Exports: Values: `backupPane`
   - Server:
-    - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `database/admin.backupDatabase`, `database/admin.listDatabases`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.ATTACHMENTS_DIR`, `infra/paths.BACKUPS_DIR`, `infra/paths.KEY_PATH`, `infra/paths.STORE_PATH`
+    - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.BACKUPS_DIR`
     - DB schema: `plugins/backup/server/internal/tables.ts`
-    - Exports: Values: `_backupRuns`, `BackupTarget`
+    - Exports: Values: `_backupRuns`, `BackupSource`, `BackupTarget`
     - Register: `defineJob('backup.run')`
     - Routes: `POST /api/backup/run`, `GET /api/backup/runs`
   - Cross-plugin:
-    - Imported by: `backup/google-drive`, `backup/local`
+    - Imported by: `backup/sources/attachments`, `backup/sources/claude-settings`, `backup/sources/config`, `backup/sources/databases`, `backup/sources/project-memory`, `backup/sources/secrets`, `backup/sources/singularity-platform`, `backup/sources/transcripts`, `backup/targets/google-drive`, `backup/targets/local`
   - Core:
-    - Exports: Types: `BackupArchive`, `BackupManifest`, `BackupTargetResult`
+    - Exports: Types: `BackupArchive`, `BackupManifest`, `BackupSourceItem`, `BackupSourceReport`, `BackupTargetResult`
   - Shared:
     - Exports: Types: `BackupRun`; Values: `BackupRunSchema`, `listBackupRuns`, `runBackup`
   - Plugins:
-    - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
-      - Web:
-        - Contributes: `ConfigV2.WebRegister`, `Auth.ScopeRequirement` "Back up to Google Drive"
-        - Uses: `auth.Auth`, `config_v2.ConfigV2`, `config_v2.useConfig`
-      - Server:
-        - Uses: `auth.getTokenFromCentral`, `backup.BackupTarget`, `config_v2.ConfigV2`, `config_v2.getConfig`
-    - **`local`** — Config UI for local backup target. Stores backup archives on the local filesystem.
-      - Web:
-        - Contributes: `ConfigV2.WebRegister`
-        - Uses: `config_v2.ConfigV2`
-      - Server:
-        - Uses: `backup.BackupTarget`, `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/paths.BACKUPS_DIR`
+    - **`sources`** — Umbrella for pluggable backup sources, each a self-gating sub-plugin contributing a BackupSource.
+      - Plugins:
+        - **`attachments`** — Config UI for the attachments backup source. Backs up file attachments into the backup archive.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Uses: `backup.BackupSource`, `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/paths.ATTACHMENTS_DIR`
+        - **`claude-settings`** — Config UI for the Claude settings backup source. Backs up Claude CLI settings and history into the backup archive.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Uses: `backup.BackupSource`, `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/paths.CLAUDE_DIR`
+        - **`config`** — Config UI for the config backup source. Backs up Singularity config files into the backup archive.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Uses: `backup.BackupSource`, `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/paths.SINGULARITY_DIR`
+        - **`databases`** — Config UI for the databases backup source. Backs up worktree databases into the backup archive.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Uses: `backup.BackupSource`, `config_v2.ConfigV2`, `config_v2.getConfig`, `database/admin.backupDatabase`, `database/admin.inspectBackup`, `database/admin.listDatabases`
+        - **`project-memory`** — Config UI for the project memory backup source. Backs up Claude Code project memory files into the backup archive.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Uses: `backup.BackupSource`, `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/paths.CLAUDE_PROJECTS_DIR`
+        - **`secrets`** — Config UI for the secrets backup source. Backs up encrypted secrets into the backup archive.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Uses: `backup.BackupSource`, `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/paths.KEY_PATH`, `infra/paths.STORE_PATH`
+        - **`singularity-platform`** — Config UI for the Singularity platform backup source. Backs up Singularity platform files (auth, database config, crashes) into the backup archive.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Uses: `backup.BackupSource`, `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/paths.SINGULARITY_DIR`
+        - **`transcripts`** — Config UI for the transcripts backup source. Backs up active-conversation transcripts into the backup archive.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Uses: `backup.BackupSource`, `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations/transcript-watcher.findTranscriptPath`, `tasks/tasks-core.listActiveConversations`
+    - **`targets`** — Umbrella for pluggable backup targets, each a self-gating sub-plugin contributing a BackupTarget.
+      - Plugins:
+        - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister`, `Auth.ScopeRequirement` "Back up to Google Drive"
+            - Uses: `auth.Auth`, `config_v2.ConfigV2`, `config_v2.useConfig`
+          - Server:
+            - Uses: `auth.getTokenFromCentral`, `backup.BackupTarget`, `config_v2.ConfigV2`, `config_v2.getConfig`
+        - **`local`** — Config UI for local backup target. Stores backup archives on the local filesystem.
+          - Web:
+            - Contributes: `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`
+          - Server:
+            - Uses: `backup.BackupTarget`, `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/paths.BACKUPS_DIR`
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Web:
@@ -983,7 +1035,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
-    - Slots: `ConfigV2.WebRegister` ← `apps.app-rail-framing`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.sources.midi.folders`, `auth.google`, `auth.notion`, `backup`, `backup.google-drive`, `backup.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.slow-ops`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
+    - Slots: `ConfigV2.WebRegister` ← `apps.app-rail-framing`, `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`, `apps.sonata.primitives.keyboard`, `apps.sonata.sources.midi.folders`, `auth.google`, `auth.notion`, `backup`, `backup.sources.attachments`, `backup.sources.claude-settings`, `backup.sources.config`, `backup.sources.databases`, `backup.sources.project-memory`, `backup.sources.secrets`, `backup.sources.singularity-platform`, `backup.sources.transcripts`, `backup.targets.google-drive`, `backup.targets.local`, `build`, `conversations`, `conversations.conversation-category`, `conversations.conversation-view.launch-prompts`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `conversations.conversation-view.turn-summary`, `conversations.hibernation`, `conversations.model-provider`, `conversations.preprompts`, `debug.slow-ops`, `plugin-meta.composition`, `primitives.data-view`, `reorder`, `review.code-review`, `shell.global-action-bar`, `stats.commits`, `stats.cost`, `tasks.task-draft-form`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
     - Contributes: `Core.Boot`
     - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/live-state.hydrateResource`, `primitives/live-state.useResource`
     - Exports: Types: `ConfigRegistration`; Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useScopeMembership`, `useSetConfig`
@@ -994,14 +1046,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `fields.fieldsToZodObject`, `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigSource`, `ConfigV2ConflictEntry`, `ConfigV2ConflictPaths`, `ConfigV2Conflicts`, `ConfigV2ModifiedCounts`, `ConfigV2Scopes`, `ConfigV2ScopesMap`, `ConfigV2Tiers`, `ConfigV2ValidationIssue`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `JsonValue`; Values: `APP_SCOPE_DIR`, `appScopeId`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictPathsResource`, `configV2ConflictPathsSchema`, `configV2ConflictResource`, `configV2ConflictsSchema`, `configV2ModifiedCountsResource`, `configV2ModifiedCountsSchema`, `configV2Resource`, `configV2ScopesMapSchema`, `configV2ScopesResource`, `configV2ScopesSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValidationIssueSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `forkDescriptorScope`, `forkScope`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `removeDescriptorScope`, `scopeAppId`, `setConfigField`, `stringifyConfigValue`, `threeWayMerge`, `validationIssues`
   - Cross-plugin:
-    - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`, `apps/sonata/primitives/keyboard`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/hibernation`, `conversations/model-provider`, `conversations/preprompts`, `debug/slow-ops`, `fields/secret/config`, `framework/tooling/codegen`, `plugin-meta/composition`, `primitives/data-view`, `primitives/data-view/view-core`, `reorder`, `review/code-review`, `shell/global-action-bar`, `stats/commits`, `stats/cost`, `tasks/task-draft-form`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/rich-text-palette`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`, `ui/variant-region`
+    - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`, `apps/sonata/primitives/keyboard`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/sources/attachments`, `backup/sources/claude-settings`, `backup/sources/config`, `backup/sources/databases`, `backup/sources/project-memory`, `backup/sources/secrets`, `backup/sources/singularity-platform`, `backup/sources/transcripts`, `backup/targets/google-drive`, `backup/targets/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/hibernation`, `conversations/model-provider`, `conversations/preprompts`, `debug/slow-ops`, `fields/secret/config`, `framework/tooling/codegen`, `plugin-meta/composition`, `primitives/data-view`, `primitives/data-view/view-core`, `reorder`, `review/code-review`, `shell/global-action-bar`, `stats/commits`, `stats/cost`, `tasks/task-draft-form`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/rich-text-palette`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`, `ui/variant-region`
   - Plugins:
     - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
       - Web:
         - Uses: `config_v2.useConfigRegistrations`, `config_v2/settings.configDetailPane`, `primitives/css/frame.Frame`, `primitives/css/section-label.SectionLabel`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.SelectContent`, `primitives/icon-button.IconButton`, `primitives/pane.useOpenPane`
         - Exports: Types: `ConfigGearButtonProps`, `ConfigMenuContentProps`, `ConfigMenuHeaderProps`, `ConfigPopoverHeaderProps`, `ConfigSelectContentProps`; Values: `ConfigGearButton`, `ConfigMenuContent`, `ConfigMenuHeader`, `ConfigPopoverHeader`, `ConfigSelectContent`, `useOpenConfig`
       - Cross-plugin:
-        - Imported by: `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/preprompts`, `stats/commits`
+        - Imported by: `backup`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/preprompts`, `stats/commits`
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Web:
         - Uses: `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/slot-render.defineDispatchSlot`
@@ -1723,7 +1775,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.CLAUDE_PROJECTS_DIR`, `tasks/tasks-core.getConversationClaudeSessionId`
         - Exports: Values: `findTranscriptPath`, `readJsonlEvents`, `watchTranscript`
       - Cross-plugin:
-        - Imported by: `conversations`, `conversations/conversation-view/jsonl-viewer`, `conversations/transcript-api`, `conversations/transcript-retention`
+        - Imported by: `backup/sources/transcripts`, `conversations`, `conversations/conversation-view/jsonl-viewer`, `conversations/transcript-api`, `conversations/transcript-retention`
       - Core:
         - Exports: Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`; Values: `activeLineUuids`, `extractPreprompt`, `isInterruptContent`, `JsonlEventSchema`, `PREPROMPT_TAG`, `TokenUsageSchema`, `wrapPreprompt`
 
@@ -1741,7 +1793,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/paths.SINGULARITY_DIR`
         - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `countActiveConnections`, `databaseExists`, `dropDatabase`, `forkDatabase`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
       - Cross-plugin:
-        - Imported by: `backup`, `database/fork`, `database/query`, `debug/profiling/push`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `infra/jobs`
+        - Imported by: `backup/sources/databases`, `database/fork`, `database/query`, `debug/profiling/push`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `infra/jobs`
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
       - Server:
         - Uses: `primitives/log-channels.Log`
@@ -2795,11 +2847,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `ndjsonResponse`
     - **`paths`**
       - Cross-plugin:
-        - Imported by: `apps/prototypes/files`, `backup`, `backup/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/staging`, `conversations`, `conversations/conversation-progress`, `conversations/hibernation`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `database/admin`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/git-watcher`, `infra/worktree`, `packages/host-semaphore`, `plugin-meta/composition`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `primitives/commit-list`, `primitives/log-channels`, `primitives/terminal`, `reports`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`
+        - Imported by: `apps/prototypes/files`, `backup`, `backup/sources/attachments`, `backup/sources/claude-settings`, `backup/sources/config`, `backup/sources/project-memory`, `backup/sources/secrets`, `backup/sources/singularity-platform`, `backup/targets/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/staging`, `conversations`, `conversations/conversation-progress`, `conversations/hibernation`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `database/admin`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/git-watcher`, `infra/worktree`, `packages/host-semaphore`, `plugin-meta/composition`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `primitives/commit-list`, `primitives/log-channels`, `primitives/terminal`, `reports`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`
       - Server:
-        - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `currentWorktreeName`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `REPO_ROOT`, `REPORTS_DIR`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`, `WEB_CORE_RELATIVE`, `WEB_DIST_DIR`
+        - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE`, `CLAUDE_DIR`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `currentWorktreeName`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `REPO_ROOT`, `REPORTS_DIR`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`, `WEB_CORE_RELATIVE`, `WEB_DIST_DIR`
       - Core:
-        - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `currentWorktreeName`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PLUGINS_DIR`, `REPO_ROOT`, `REPORTS_DIR`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`
+        - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE_DIR`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `currentWorktreeName`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PLUGINS_DIR`, `REPO_ROOT`, `REPORTS_DIR`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`
     - **`runtime-profiler`**
       - Cross-plugin:
         - Imported by: `framework/server-core`, `infra/endpoints`
@@ -4517,7 +4569,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/live-state.resourceDescriptor`
         - Exports: Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationStatus`, `ConversationSummary`, `Push`, `Task`, `TaskListItem`, `TaskStatus`; Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskListItemSchema`, `TaskSchema`, `TaskStatusSchema`
       - Cross-plugin:
-        - Imported by: `active-data`, `code-explorer`, `conversations`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/allow-monitor`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/notes`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/recover`, `conversations/summary`, `conversations/transcript-api`, `conversations/transcript-retention`, `conversations/transcript-watcher`, `database/query`, `debug/profiling/runtime`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `improve`, `plugin-meta/plugin-health`, `reports`, `review/plugin-changes`, `stats/cost`, `stats/tasks`, `tasks`, `tasks/auto-start`, `tasks/task-preprompt`, `tasks/task-title`
+        - Imported by: `active-data`, `backup/sources/transcripts`, `code-explorer`, `conversations`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/allow-monitor`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/notes`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/recover`, `conversations/summary`, `conversations/transcript-api`, `conversations/transcript-retention`, `conversations/transcript-watcher`, `database/query`, `debug/profiling/runtime`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `improve`, `plugin-meta/plugin-health`, `reports`, `review/plugin-changes`, `stats/cost`, `stats/tasks`, `tasks`, `tasks/auto-start`, `tasks/task-preprompt`, `tasks/task-title`
         - Extended by: `conversations/conversation-category` (table `conversations_ext_category`), `conversations/conversation-view/notes` (table `conversations_ext_notes`), `conversations/conversation-preprompt` (table `conversations_ext_preprompt`), `conversations/conversation-progress` (table `conversations_ext_progress`), `conversations/conversations-view/queue` (table `conversations_ext_queue`), `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`), `tasks/auto-start` (table `tasks_ext_auto_start`), `plugin-meta/plugin-health` (table `tasks_ext_health_review`), `tasks/task-preprompt` (table `tasks_ext_preprompt`)
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.

@@ -183,10 +183,11 @@ export function BackupPanel() {
   return (
     <Stack gap="xl" className="p-xl max-w-2xl">
         <Stack gap="xs">
-          <div className="flex items-center justify-between gap-md">
-            <Text as="h2" variant="heading">Backup</Text>
-            <ConfigGearButton descriptor={backupConfig} label="Backup settings" />
-          </div>
+          <Frame
+            gap="md"
+            content={<Text as="h2" variant="heading">Backup</Text>}
+            trailing={<ConfigGearButton descriptor={backupConfig} label="Backup settings" />}
+          />
           <Text as="p" variant="body" className="text-muted-foreground">
             Archives enabled sources and dispatches to all enabled storage targets.
           </Text>
