@@ -1,5 +1,6 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import {
   Section,
   type PluginNode,
@@ -28,20 +29,19 @@ export function ResourcesDetailSection({ node }: { node: PluginNode }) {
     <Section title="Resources" count={String(rows.length)}>
       <Stack gap="2xs">
         {rows.map((r) => (
-          <Text
-            as="div"
-            variant="caption"
+          <Frame
             key={`${r.runtime}:${r.key}`}
-            className="flex items-center gap-sm px-sm py-2xs"
-          >
-            <code className="min-w-0 truncate font-mono text-foreground">
-              {r.key}
-            </code>
-            <span className="text-muted-foreground/60">{r.mode}</span>
-            <span className="ml-auto shrink-0 text-3xs text-muted-foreground/50">
-              {r.runtime}
-            </span>
-          </Text>
+            className="text-caption px-sm py-2xs"
+            content={
+              <TruncatingText as="code" className="font-mono text-foreground">
+                {r.key}
+              </TruncatingText>
+            }
+            meta={<span className="text-muted-foreground/60">{r.mode}</span>}
+            trailing={
+              <span className="text-3xs text-muted-foreground/50">{r.runtime}</span>
+            }
+          />
         ))}
       </Stack>
     </Section>

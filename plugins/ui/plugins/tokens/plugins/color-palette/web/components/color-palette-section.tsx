@@ -110,18 +110,20 @@ export function ColorPaletteSection({ search }: { search: string }) {
           <button
             key={p.id}
             type="button"
-            className={`flex items-center gap-xs px-sm py-xs text-caption rounded-md border transition-colors ${
+            className={`px-sm py-xs text-caption rounded-md border transition-colors ${
               p.id === config.preset
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
             }`}
             onClick={() => setConfig("preset", p.id)}
           >
-            <span
-              className="size-2.5 rounded-full border border-border/50"
-              style={{ backgroundColor: p.light.primary }}
-            />
-            {p.label}
+            <Stack direction="row" align="center" gap="xs">
+              <span
+                className="size-2.5 rounded-full border border-border/50"
+                style={{ backgroundColor: p.light.primary }}
+              />
+              {p.label}
+            </Stack>
           </button>
         ))}
       </Stack>

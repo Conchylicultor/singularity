@@ -73,20 +73,22 @@ export function FontFamilySection({ search }: { search: string }) {
           <button
             key={p.id}
             type="button"
-            className={`flex items-center gap-xs px-sm py-xs text-caption rounded-md border transition-colors ${
+            className={`px-sm py-xs text-caption rounded-md border transition-colors ${
               p.id === config.preset
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
             }`}
             onClick={() => setConfig("preset", p.id)}
           >
-            <span
-              className="text-caption font-medium"
-              style={{ fontFamily: p.light.fontSans }}
-            >
-              Aa
-            </span>
-            {p.label}
+            <Stack direction="row" align="center" gap="xs">
+              <span
+                className="text-caption font-medium"
+                style={{ fontFamily: p.light.fontSans }}
+              >
+                Aa
+              </span>
+              {p.label}
+            </Stack>
           </button>
         ))}
       </Stack>

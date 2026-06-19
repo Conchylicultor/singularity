@@ -6,6 +6,7 @@ import {
 import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { SlotDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { MdExtension } from "react-icons/md";
 
 type SlotRow = {
@@ -51,11 +52,11 @@ const columns: ColumnDef<SlotRow>[] = [
     width: "minmax(0,1fr)",
     value: (row) => row.contributors.join(" "),
     cell: (row) => (
-      <div className="flex flex-wrap items-center gap-x-xs gap-y-2xs">
+      <Cluster gap="xs" className="gap-y-2xs">
         {row.contributors.map((id) => (
           <PluginChip key={id} pluginId={id} />
         ))}
-      </div>
+      </Cluster>
     ),
   },
 ];

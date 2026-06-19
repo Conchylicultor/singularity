@@ -8,7 +8,8 @@ import {
   type ContributionsFacetData,
 } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 
 // Renders the contributions facet's own data. Read `node.facets[id]` directly
 // (as every render host does) rather than importing the build-time `facets/core`
@@ -35,27 +36,31 @@ export function ContributionsDetailSection({ node }: { node: PluginNode }) {
           {contribs.map((c, i) => {
             const id = contributionId(c);
             return (
-              <Text
-                as="div"
-                variant="caption"
+              <Frame
                 key={`${c.slot}:${id ?? i}`}
-                className="flex items-center gap-sm px-sm py-2xs"
-              >
-                {c.definerPluginId ? (
-                  <PluginLink
-                    name={c.definerPluginId}
-                    label={c.slot}
-                    className="font-mono text-foreground hover:underline"
-                  />
-                ) : (
-                  <code className="font-mono text-foreground">{c.slot}</code>
-                )}
-                {id && (
-                  <code className="ml-auto truncate font-mono text-muted-foreground/60">
-                    {id}
-                  </code>
-                )}
-              </Text>
+                className="text-caption px-sm py-2xs"
+                leading={
+                  c.definerPluginId ? (
+                    <PluginLink
+                      name={c.definerPluginId}
+                      label={c.slot}
+                      className="font-mono text-foreground hover:underline"
+                    />
+                  ) : (
+                    <code className="font-mono text-foreground">{c.slot}</code>
+                  )
+                }
+                meta={
+                  id ? (
+                    <TruncatingText
+                      as="code"
+                      className="font-mono text-right text-muted-foreground/60"
+                    >
+                      {id}
+                    </TruncatingText>
+                  ) : undefined
+                }
+              />
             );
           })}
         </Stack>

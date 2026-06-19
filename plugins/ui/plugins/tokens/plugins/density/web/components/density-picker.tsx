@@ -20,25 +20,32 @@ export function DensityPicker() {
   return (
     <Stack direction="row" gap="sm">
       {presets.map((p) => (
-        <button
+        <Stack
+          as="button"
+          direction="row"
+          align="center"
+          gap="sm"
           key={p.id}
-          className={`flex items-center gap-sm px-md py-xs text-body rounded-md border transition-colors ${
+          className={`px-md py-xs text-body rounded-md border transition-colors ${
             p.id === activeId
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50"
           }`}
           onClick={() => setConfig("preset", p.id)}
         >
-          <span
-            className="inline-flex border border-current rounded-sm bg-current/20"
+          <Stack
+            as="span"
+            direction="row"
+            gap="none"
+            className="border border-current rounded-sm bg-current/20"
             style={{
               padding: `${p.light.padChipY} ${p.light.padChipX}`,
             }}
           >
             <span className="size-1.5 rounded-full bg-current" />
-          </span>
+          </Stack>
           {p.label}
-        </button>
+        </Stack>
       ))}
     </Stack>
   );

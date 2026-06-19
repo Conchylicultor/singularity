@@ -87,20 +87,25 @@ export function DensitySection({ search }: { search: string }) {
           <button
             key={p.id}
             type="button"
-            className={`flex items-center gap-xs px-sm py-xs text-caption rounded-md border transition-colors ${
+            className={`px-sm py-xs text-caption rounded-md border transition-colors ${
               p.id === config.preset
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
             }`}
             onClick={() => setConfig("preset", p.id)}
           >
-            <span
-              className="inline-flex border border-current rounded-sm bg-current/20"
-              style={{ padding: `${p.light.padChipY} ${p.light.padChipX}` }}
-            >
-              <span className="size-1.5 rounded-full bg-current" />
-            </span>
-            {p.label}
+            <Stack direction="row" align="center" gap="xs">
+              <Stack
+                as="span"
+                direction="row"
+                gap="none"
+                className="border border-current rounded-sm bg-current/20"
+                style={{ padding: `${p.light.padChipY} ${p.light.padChipX}` }}
+              >
+                <span className="size-1.5 rounded-full bg-current" />
+              </Stack>
+              {p.label}
+            </Stack>
           </button>
         ))}
       </Stack>

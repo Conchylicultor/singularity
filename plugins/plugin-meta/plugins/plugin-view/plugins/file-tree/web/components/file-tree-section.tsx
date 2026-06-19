@@ -4,6 +4,7 @@ import { FileTree } from "@plugins/code-explorer/web";
 import { getCodeTree } from "@plugins/code-explorer/plugins/code-api/core";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 
 // Sentinel resolving to the current running server's own worktree root.
@@ -28,7 +29,7 @@ export function FileTreeSection({ node }: { node: PluginNode }) {
 
   return (
     <Section title="Files">
-      <div className="max-h-96 overflow-auto rounded-md border">
+      <Scroll axis="both" className="max-h-96 rounded-md border">
         <FileTree
           files={files}
           selectedPath={selected}
@@ -41,7 +42,7 @@ export function FileTreeSection({ node }: { node: PluginNode }) {
             );
           }}
         />
-      </div>
+      </Scroll>
     </Section>
   );
 }

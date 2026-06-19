@@ -4,6 +4,7 @@ import {
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginStaleness, getPluginHealthTasks } from "../../core/endpoints";
@@ -97,7 +98,7 @@ function HealthSectionInner({
 
   return (
     <Section title="Health" count={String(pluginReviews.length)}>
-      <div className="overflow-x-auto">
+      <Scroll axis="x">
         <table className="w-full text-2xs">
           <thead>
             <tr className="text-left text-muted-foreground/60">
@@ -151,7 +152,7 @@ function HealthSectionInner({
             })}
           </tbody>
         </table>
-      </div>
+      </Scroll>
     </Section>
   );
 }

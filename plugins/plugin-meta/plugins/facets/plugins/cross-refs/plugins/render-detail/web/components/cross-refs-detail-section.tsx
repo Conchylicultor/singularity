@@ -14,6 +14,8 @@ import {
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type {
   CrossRefsData,
@@ -74,14 +76,14 @@ function UsesGroup({
 }) {
   return (
     <Stack gap="2xs">
-      <Text as="div" variant="caption" className="flex items-center gap-xs px-sm">
+      <Stack direction="row" gap="xs" className="text-caption px-sm">
         <span className={cn("font-mono font-medium", RUNTIME_COLORS[runtime])}>
           {runtime}
         </span>
         <span className="text-muted-foreground/50">({uses.length})</span>
-      </Text>
+      </Stack>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 indents this nested tree branch under its runtime header; one-off left offset paired with the left border, not sibling rhythm */}
-      <div className="ml-1 flex flex-col gap-px border-l border-border/50 pl-md">
+      <Stack gap="none" className="ml-1 gap-px border-l border-border/50 pl-md">
         {uses.map((u) => (
           <Text
             as="code"
@@ -93,7 +95,7 @@ function UsesGroup({
             {u.symbol ? "." + u.symbol : ""}
           </Text>
         ))}
-      </div>
+      </Stack>
     </Stack>
   );
 }
@@ -107,16 +109,16 @@ function ImportedByBanner({ names }: { names: PluginId[] }) {
   const remaining = names.length - threshold;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-xs gap-y-2xs text-3xs text-muted-foreground">
+    <Cluster gap="xs" className="gap-y-2xs text-3xs text-muted-foreground">
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mr-0.5 is a tiny inline trailing offset on the leading label before the wrapped chip flow, not container rhythm */}
       <span className="mr-0.5 font-medium">Imported by</span>
       {visible.map((name, i) => (
-        <span key={name} className="inline-flex items-center">
+        <Inline gap="none" key={name}>
           <PluginLink name={name} label={asPath(name)} />
           {i < visible.length - 1 && (
             <span className="text-muted-foreground/40">,</span>
           )}
-        </span>
+        </Inline>
       ))}
       {!expanded && remaining > 0 && (
         <button
@@ -126,6 +128,6 @@ function ImportedByBanner({ names }: { names: PluginId[] }) {
           +{remaining} more
         </button>
       )}
-    </div>
+    </Cluster>
   );
 }

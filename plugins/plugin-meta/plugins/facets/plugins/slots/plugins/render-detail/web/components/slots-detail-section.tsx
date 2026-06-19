@@ -1,5 +1,7 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import {
   Section,
   PluginLink,
@@ -22,25 +24,25 @@ export function SlotsDetailSection({ node }: { node: PluginNode }) {
       <Stack gap="2xs">
         {data.map((s) => (
           <Stack gap="2xs" key={s.slotId}>
-            <Text
-              as="div"
-              variant="caption"
-              className="flex items-center gap-sm px-sm py-2xs"
-            >
-              <code className="font-mono text-foreground">
-                {s.groupName}.{s.memberName}
-              </code>
-              <code className="ml-auto truncate font-mono text-muted-foreground/60">
-                {s.slotId}
-              </code>
-            </Text>
+            <Frame
+              className="text-caption px-sm py-2xs"
+              leading={
+                <code className="font-mono text-foreground">
+                  {s.groupName}.{s.memberName}
+                </code>
+              }
+              meta={
+                <TruncatingText
+                  as="code"
+                  className="font-mono text-right text-muted-foreground/60"
+                >
+                  {s.slotId}
+                </TruncatingText>
+              }
+            />
             {s.contributors.length > 0 && (
-              <Text
-                as="div"
-                variant="caption"
-                className="flex flex-wrap items-center gap-x-xs gap-y-2xs px-sm"
-              >
-                <span className="shrink-0 text-muted-foreground/60">←</span>
+              <Cluster gap="xs" className="text-caption gap-y-2xs px-sm">
+                <span className="text-muted-foreground/60">←</span>
                 {s.contributors.map((id) => (
                   <PluginLink
                     key={id}
@@ -49,7 +51,7 @@ export function SlotsDetailSection({ node }: { node: PluginNode }) {
                     className="font-mono text-muted-foreground hover:underline"
                   />
                 ))}
-              </Text>
+              </Cluster>
             )}
           </Stack>
         ))}

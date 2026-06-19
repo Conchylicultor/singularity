@@ -89,18 +89,20 @@ export function ShapeSection({ search }: { search: string }) {
           <button
             key={p.id}
             type="button"
-            className={`flex items-center gap-xs px-sm py-xs text-caption rounded-md border transition-colors ${
+            className={`px-sm py-xs text-caption rounded-md border transition-colors ${
               p.id === config.preset
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
             }`}
             onClick={() => setConfig("preset", p.id)}
           >
-            <span
-              className="size-3 border border-current"
-              style={{ borderRadius: p.light.radius }}
-            />
-            {p.label}
+            <Stack direction="row" align="center" gap="xs">
+              <span
+                className="size-3 border border-current"
+                style={{ borderRadius: p.light.radius }}
+              />
+              {p.label}
+            </Stack>
           </button>
         ))}
       </Stack>

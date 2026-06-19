@@ -9,6 +9,7 @@ import {
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import {
   Section,
   ConsumerList,
@@ -114,10 +115,12 @@ function RuntimeGroup({
         <span className="text-muted-foreground/50">({symbols.length})</span>
       </CollapsibleTrigger>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 indents the collapsed symbol list under its runtime trigger; one-off left offset paired with the left border, not sibling rhythm */}
-      <CollapsibleContent className="ml-1 flex flex-col gap-px border-l border-border/50 pl-md pt-2xs">
-        {sorted.map((row) => (
-          <SymbolRow key={row.name} row={row} />
-        ))}
+      <CollapsibleContent className="ml-1 border-l border-border/50 pl-md pt-2xs">
+        <Stack gap="none" className="gap-px">
+          {sorted.map((row) => (
+            <SymbolRow key={row.name} row={row} />
+          ))}
+        </Stack>
       </CollapsibleContent>
     </Collapsible>
   );
@@ -159,15 +162,16 @@ function SymbolRow({ row }: { row: SymbolRow }) {
         <Badge
           size="sm"
           colorClass={style.className}
+          // eslint-disable-next-line layout/no-adhoc-layout -- fixed-width category tag: w-10 + center keep the short label (hook/comp/type/val) optically aligned in a rigid column; rigid identity chip never shrinks
           className="w-10 shrink-0 justify-center font-mono"
         >
           {style.label}
         </Badge>
       }
     >
-      <code className="min-w-0 truncate font-mono text-foreground">
+      <TruncatingText as="code" className="font-mono text-foreground">
         {row.name}
-      </code>
+      </TruncatingText>
       {consumers.length > 0 && <ConsumerList names={consumers} />}
     </Row>
   );

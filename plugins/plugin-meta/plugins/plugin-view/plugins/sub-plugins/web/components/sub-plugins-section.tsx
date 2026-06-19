@@ -5,6 +5,9 @@ import {
   useCollapsible,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import {
   Section,
   type PluginNode,
@@ -27,11 +30,11 @@ export function SubPluginsSection({ node }: { node: PluginNode }) {
       }
     >
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- -mx-2 negative-bleeds the tree rows out to cancel the Section's horizontal padding so row hover backgrounds span full width */}
-      <div className="-mx-2 flex flex-col">
+      <Stack direction="col" gap="none" className="-mx-2">
         {directChildren.map((c) => (
           <PluginTreeNode key={c.id} node={c} depth={0} />
         ))}
-      </div>
+      </Stack>
     </Section>
   );
 }
@@ -50,16 +53,18 @@ function PluginTreeNode({
   const chevronIcon = hasChildren ? (
     <button
       type="button"
-      className="flex size-4 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+      className="rounded-sm text-muted-foreground hover:text-foreground"
       onClick={(e) => {
         e.stopPropagation();
         toggle();
       }}
     >
-      <CollapsibleChevron open={expanded} className="size-3.5" />
+      <Center className="size-4">
+        <CollapsibleChevron open={expanded} className="size-3.5" />
+      </Center>
     </button>
   ) : (
-    <span className="size-4 shrink-0" />
+    <span className="block size-4" />
   );
 
   return (
@@ -74,9 +79,9 @@ function PluginTreeNode({
         }
         className="min-h-7 cursor-pointer"
       >
-        <span className="truncate">{node.name}</span>
+        <TruncatingText>{node.name}</TruncatingText>
         {node.loadBearing && (
-          <MdBolt className="size-3 shrink-0 text-warning" />
+          <MdBolt className="size-3 text-warning" />
         )}
       </Row>
       {expanded &&

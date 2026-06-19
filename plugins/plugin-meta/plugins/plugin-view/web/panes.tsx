@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "../core/endpoints";
@@ -35,23 +37,25 @@ function PluginViewBody() {
   if (isLoading) {
     return (
       <PaneChrome pane={pluginViewPane} title="Plugin">
-        <Loading className="flex h-full items-center justify-center" />
+        <Center axis="both" className="h-full">
+          <Loading />
+        </Center>
       </PaneChrome>
     );
   }
   if (error) {
     return (
       <PaneChrome pane={pluginViewPane} title="Plugin">
-        <Text
-          as="div"
-          variant="body"
-          className="flex h-full flex-col items-center justify-center gap-sm p-2xl text-center"
-        >
-          <span className="font-medium text-foreground">
-            Failed to load plugin tree
-          </span>
-          <span className="text-muted-foreground">{String(error)}</span>
-        </Text>
+        <Center axis="both" className="h-full p-2xl text-center">
+          <Text as="div" variant="body">
+            <Stack direction="col" align="center" gap="sm">
+              <span className="font-medium text-foreground">
+                Failed to load plugin tree
+              </span>
+              <span className="text-muted-foreground">{String(error)}</span>
+            </Stack>
+          </Text>
+        </Center>
       </PaneChrome>
     );
   }

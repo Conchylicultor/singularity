@@ -85,7 +85,7 @@ const columns: ColumnDef<RouteRow>[] = [
     id: "callers",
     cell: (row) =>
       row.callers > 0 ? (
-        <span className="shrink-0 text-3xs text-muted-foreground/60">
+        <span className="text-3xs text-muted-foreground/60">
           {row.callers} caller{row.callers !== 1 ? "s" : ""}
         </span>
       ) : null,

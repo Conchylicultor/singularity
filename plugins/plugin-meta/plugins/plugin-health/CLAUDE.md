@@ -7,7 +7,7 @@
 - Description: Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
 - Web:
   - Contributes: `PluginViewSlots.Section` "health" → `HealthSection`
-  - Uses: `infra/endpoints.fetchEndpoint`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/relative-time.RelativeTime`
+  - Uses: `infra/endpoints.fetchEndpoint`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/css/scroll.Scroll`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/relative-time.RelativeTime`
 - Server:
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks/task-preprompt.inheritTaskPreprompt`, `tasks/tasks-core._tasks`, `tasks/tasks-core.createTask`, `tasks/tasks-core.getConversation`
   - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`

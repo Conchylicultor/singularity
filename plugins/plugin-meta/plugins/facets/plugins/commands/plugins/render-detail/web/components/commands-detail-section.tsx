@@ -3,7 +3,8 @@ import {
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import type { CommandDef } from "@plugins/plugin-meta/plugins/facets/plugins/commands/core";
 
 // Renders the commands facet's own data. Read `node.facets[id]` directly (as
@@ -20,19 +21,20 @@ export function CommandsDetailSection({ node }: { node: PluginNode }) {
     <Section title="Commands" count={String(data.length)}>
       <Stack gap="2xs">
         {data.map((c) => (
-          <Text
-            as="div"
-            variant="caption"
+          <Frame
             key={c.commandId}
-            className="flex items-center gap-sm px-sm py-2xs"
-          >
-            <code className="min-w-0 truncate font-mono text-foreground">
-              {c.groupName}.{c.memberName}
-            </code>
-            <span className="ml-auto shrink-0 font-mono text-3xs text-muted-foreground/50">
-              {c.commandId}
-            </span>
-          </Text>
+            className="text-caption px-sm py-2xs"
+            content={
+              <TruncatingText as="code" className="font-mono text-foreground">
+                {c.groupName}.{c.memberName}
+              </TruncatingText>
+            }
+            trailing={
+              <span className="font-mono text-3xs text-muted-foreground/50">
+                {c.commandId}
+              </span>
+            }
+          />
         ))}
       </Stack>
     </Section>

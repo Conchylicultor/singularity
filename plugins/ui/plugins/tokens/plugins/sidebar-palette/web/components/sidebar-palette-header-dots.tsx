@@ -1,5 +1,6 @@
 import { useContext } from "react";
 import { useConfig } from "@plugins/config_v2/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   ColorAdjustContext,
   transformValues,
@@ -38,7 +39,7 @@ export function SidebarPaletteHeaderDots() {
   const schema = sidebarPaletteGroup.schema;
 
   return (
-    <span className="flex items-center gap-2xs">
+    <Stack as="span" direction="row" align="center" gap="2xs">
       {REPRESENTATIVE_KEYS.map((key) => (
         <span
           key={key as string}
@@ -48,6 +49,6 @@ export function SidebarPaletteHeaderDots() {
           }}
         />
       ))}
-    </span>
+    </Stack>
   );
 }

@@ -53,7 +53,7 @@ const columns: ColumnDef<ExportRow>[] = [
     header: "Consumers",
     cell: (row) =>
       row.consumers.length > 0 ? (
-        <span className="shrink-0 text-3xs text-muted-foreground/60">
+        <span className="text-3xs text-muted-foreground/60">
           {row.consumers.length} consumer{row.consumers.length !== 1 ? "s" : ""}
         </span>
       ) : null,

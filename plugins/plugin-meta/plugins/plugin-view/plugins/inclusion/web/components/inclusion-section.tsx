@@ -1,6 +1,7 @@
 import { MdArrowForward, MdMyLocation } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge, type BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
@@ -49,13 +50,13 @@ function ImpactList({ title, ids }: { title: string; ids: PluginId[] }) {
         {title} ({ids.length})
       </Text>
       {ids.length > 0 && (
-        <div className="flex flex-wrap gap-xs">
+        <Cluster gap="xs">
           {ids.map((id) => (
             <Badge key={id} size="sm" variant="muted" title={String(id)}>
               {shortName(id)}
             </Badge>
           ))}
-        </div>
+        </Cluster>
       )}
     </Stack>
   );
@@ -89,12 +90,12 @@ export function InclusionSection({ node }: { node: PluginNode }) {
   return (
     <Section title="Composition membership">
       <Stack gap="md">
-        <div className="flex items-center gap-sm">
+        <Stack direction="row" align="center" gap="sm">
           <Badge variant={badge.variant}>{badge.label}</Badge>
           <Text variant="caption" tone="muted">
             in <span className="font-medium">{active.name}</span>
           </Text>
-        </div>
+        </Stack>
 
         {inclusion ? (
           <Stack gap="2xs">
@@ -104,11 +105,11 @@ export function InclusionSection({ node }: { node: PluginNode }) {
               {inclusion.originKind})
             </Text>
             {inclusion.steps.length > 0 ? (
-              <div className="flex flex-wrap items-center gap-xs">
+              <Cluster gap="xs" align="center">
                 {inclusion.steps.map((step, i) => (
                   <EdgeChip key={`${step.from}-${step.to}-${i}`} step={step} />
                 ))}
-              </div>
+              </Cluster>
             ) : (
               <Text variant="caption" tone="muted">
                 Directly seeded — no edges to traverse.
@@ -138,18 +139,18 @@ export function InclusionSection({ node }: { node: PluginNode }) {
 
 function EdgeChip({ step }: { step: InclusionStep }) {
   return (
-    <span className="inline-flex items-center gap-xs">
+    <Stack as="span" direction="row" align="center" gap="xs">
       <LinkChip mono onClick={() => pinAsRoot(step.from)} title={String(step.from)}>
         {shortName(step.from)}
       </LinkChip>
-      <MdArrowForward className="size-3 shrink-0 text-muted-foreground" />
+      <MdArrowForward className="size-3 text-muted-foreground" />
       <Badge size="sm" variant={step.kind === "hard" ? "primary" : "info"}>
         {step.kind}
       </Badge>
-      <MdArrowForward className="size-3 shrink-0 text-muted-foreground" />
+      <MdArrowForward className="size-3 text-muted-foreground" />
       <LinkChip mono onClick={() => pinAsRoot(step.to)} title={String(step.to)}>
         {shortName(step.to)}
       </LinkChip>
-    </span>
+    </Stack>
   );
 }

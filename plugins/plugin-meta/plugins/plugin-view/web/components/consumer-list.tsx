@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { asPath, type PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { PluginLink } from "./plugin-link";
 
 /**
@@ -14,7 +15,11 @@ export function ConsumerList({ names }: { names: string[] }) {
   const remaining = names.length - threshold;
 
   return (
-    <span className="ml-auto inline-flex shrink-0 items-center gap-xs text-3xs text-muted-foreground/60">
+    <Cluster
+      as="span"
+      gap="xs"
+      className="ml-auto text-3xs text-muted-foreground/60"
+    >
       <span>←</span>
       {visible.map((name, i) => (
         <span key={name}>
@@ -33,6 +38,6 @@ export function ConsumerList({ names }: { names: string[] }) {
           +{remaining}
         </button>
       )}
-    </span>
+    </Cluster>
   );
 }

@@ -20,9 +20,13 @@ export function ShapePicker() {
   return (
     <Stack direction="row" gap="sm">
       {presets.map((p) => (
-        <button
+        <Stack
+          as="button"
+          direction="row"
+          align="center"
+          gap="sm"
           key={p.id}
-          className={`flex items-center gap-sm px-md py-xs text-body rounded-md border transition-colors ${
+          className={`px-md py-xs text-body rounded-md border transition-colors ${
             p.id === activeId
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50"
@@ -34,7 +38,7 @@ export function ShapePicker() {
             style={{ borderRadius: p.light.radius }}
           />
           {p.label}
-        </button>
+        </Stack>
       ))}
     </Stack>
   );

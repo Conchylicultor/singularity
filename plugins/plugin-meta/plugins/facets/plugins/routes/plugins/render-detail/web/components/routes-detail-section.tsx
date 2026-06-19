@@ -1,7 +1,10 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import {
   Section,
   PluginLink,
@@ -64,29 +67,32 @@ export function RoutesDetailSection({ node }: { node: PluginNode }) {
             {routes.map((r) => {
               const { method, path } = methodAndPath(r);
               return (
-                <Text
-                  as="div"
-                  variant="caption"
+                <Frame
                   key={`${r.runtime}:${r.type}:${r.route}`}
-                  className="flex items-center gap-sm px-sm py-2xs"
-                >
-                  {method && (
-                    <span
-                      className={cn(
-                        "w-10 shrink-0 font-mono text-3xs font-semibold",
-                        METHOD_COLORS[method] ?? "text-muted-foreground",
-                      )}
-                    >
-                      {method}
+                  className="text-caption px-sm py-2xs"
+                  leading={
+                    method ? (
+                      <span
+                        className={cn(
+                          "w-10 font-mono text-3xs font-semibold",
+                          METHOD_COLORS[method] ?? "text-muted-foreground",
+                        )}
+                      >
+                        {method}
+                      </span>
+                    ) : undefined
+                  }
+                  content={
+                    <TruncatingText as="code" className="font-mono text-foreground">
+                      {path}
+                    </TruncatingText>
+                  }
+                  trailing={
+                    <span className="text-3xs text-muted-foreground/50">
+                      {r.runtime}
                     </span>
-                  )}
-                  <code className="min-w-0 truncate font-mono text-foreground">
-                    {path}
-                  </code>
-                  <span className="ml-auto shrink-0 text-3xs text-muted-foreground/50">
-                    {r.runtime}
-                  </span>
-                </Text>
+                  }
+                />
               );
             })}
           </Stack>
@@ -105,16 +111,16 @@ function CallersBanner({ names }: { names: string[] }) {
   const remaining = names.length - threshold;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-xs gap-y-2xs text-3xs text-muted-foreground">
+    <Cluster gap="xs" className="gap-y-2xs text-3xs text-muted-foreground">
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mr-0.5 is a tiny inline trailing offset on the leading label before the wrapped chip flow, not container rhythm */}
       <span className="mr-0.5 font-medium">Endpoint callers</span>
       {visible.map((name, i) => (
-        <span key={name} className="inline-flex items-center">
+        <Inline gap="none" key={name}>
           <PluginLink name={name} />
           {i < visible.length - 1 && (
             <span className="text-muted-foreground/40">,</span>
           )}
-        </span>
+        </Inline>
       ))}
       {!expanded && remaining > 0 && (
         <button
@@ -124,6 +130,6 @@ function CallersBanner({ names }: { names: string[] }) {
           +{remaining} more
         </button>
       )}
-    </div>
+    </Cluster>
   );
 }
