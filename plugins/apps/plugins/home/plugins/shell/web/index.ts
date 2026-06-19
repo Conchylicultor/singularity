@@ -15,6 +15,7 @@ export default {
       tooltip: "Home",
       component: HomeLayout,
       path: "/home",
+      default: true,
     }),
   ],
 } satisfies PluginDefinition;

@@ -81,7 +81,7 @@ export const compositionsConfig = defineConfig({
         app("pages", "a3", "apps.pages"),
         app("settings", "a4", "apps.settings"),
         app("studio", "a5", "apps.studio"),
-        app("sonata", "a6", "apps.sonata"),
+        app("sonata", "a6", "apps.sonata", ["served-baseline"]),
         app("story", "a7", "apps.story"),
         app("debug", "a8", "apps.debug"),
         app("deploy", "a9", "apps.deploy"),
@@ -108,6 +108,23 @@ export const compositionsConfig = defineConfig({
         subsystem("fields", "aL", ["fields"]),
         subsystem("design-system", "aM", ["primitives.css"]),
         subsystem("mcp", "aN", ["infra.mcp"]),
+        // The reusable baseline EVERY gateway-served app composition `extends`:
+        // the liveness/readiness endpoint the gateway probes plus the runtime
+        // theme engine and the token groups that supply the base CSS variables
+        // (without these a filtered app boots unstyled and fails /api/health).
+        // Entry points (not contributors) so they're forced into the hard
+        // closure unconditionally; the theme-customizer UI stays opt-in/soft.
+        subsystem("served-baseline", "aN5", [
+          "infra.health",
+          "ui.theme-engine",
+          "ui.tokens.color-palette",
+          "ui.tokens.density",
+          "ui.tokens.shape",
+          "ui.tokens.type-scale",
+          "ui.tokens.font-family",
+          "ui.tokens.sidebar-palette",
+          "ui.tokens.shadow",
+        ]),
 
         // ── Packs: reusable contributor sets apps opt into via `extends` ────────
         pack("self-improvement", "aO", [
@@ -127,8 +144,12 @@ export const compositionsConfig = defineConfig({
   },
 });
 
-/** A lean app baseline: entry = the app shell umbrella, nothing soft opted in. */
-function app(name: string, rank: string, entry: string) {
+/**
+ * A lean app baseline: entry = the app shell umbrella, nothing soft opted in.
+ * `extendsList` lets an app pull in a reusable baseline (e.g. `served-baseline`)
+ * when it is built as a self-contained, gateway-served composition.
+ */
+function app(name: string, rank: string, entry: string, extendsList: string[] = []) {
   return {
     id: name,
     rank,
@@ -136,7 +157,7 @@ function app(name: string, rank: string, entry: string) {
     category: "app" as const,
     entryPoints: [entry],
     selectedContributors: [] as string[],
-    extends: [] as string[],
+    extends: extendsList,
   };
 }
 

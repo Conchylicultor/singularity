@@ -1,4 +1,4 @@
-// @hash 15fd2835cb6b
+// @hash f1841fe37e3a
 {
   "manifests": [
     {
@@ -86,7 +86,9 @@
         "apps.sonata"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [
+        "served-baseline"
+      ]
     },
     {
       "id": "story",
@@ -274,6 +276,25 @@
       "category": "subsystem",
       "entryPoints": [
         "infra.mcp"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "served-baseline",
+      "rank": "aN5",
+      "name": "served-baseline",
+      "category": "subsystem",
+      "entryPoints": [
+        "infra.health",
+        "ui.theme-engine",
+        "ui.tokens.color-palette",
+        "ui.tokens.density",
+        "ui.tokens.shape",
+        "ui.tokens.type-scale",
+        "ui.tokens.font-family",
+        "ui.tokens.sidebar-palette",
+        "ui.tokens.shadow"
       ],
       "selectedContributors": [],
       "extends": []

@@ -9,7 +9,7 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 import type { WsData, HttpHandler, WsHandler, ServerPluginDefinition, LoadedServerPlugin } from "@plugins/framework/plugins/server-core/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { serverEntries } from "../core/server.generated";
+import { serverEntries } from "./plugins-active";
 import { topoSortPlugins } from "./topo";
 
 // ── Per-phase RSS attribution (boot Gantt) ──────────────────────

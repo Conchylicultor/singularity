@@ -1,4 +1,4 @@
-import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
+import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { findMarkerCalls, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -238,11 +238,21 @@ function buildDepsForDir(
 export async function renderCollectedDirRegistry(opts: {
   root: string;
   def: DiscoveredCollectedDir;
+  // When provided, restrict the registry to the plugins in this bundle (the
+  // dot-form PluginId set of a composition's hard closure). Each surviving
+  // entry's `dependsOn` is also pruned to surviving `pluginPath`s — defensive,
+  // since a hard closure's deps already survive. When undefined, the output is
+  // byte-identical to the unfiltered registry, so the `plugins-registry-in-sync`
+  // check (which never passes a bundle) is unaffected.
+  bundle?: Set<string>;
 }): Promise<string> {
-  const { root, def } = opts;
-  const entries = await collectEntries(root, def.dir);
-  const deps = buildDepsForDir(root, entries, def.dir);
+  const { root, def, bundle } = opts;
+  const allEntries = await collectEntries(root, def.dir);
+  const deps = buildDepsForDir(root, allEntries, def.dir);
   const exportName = `${def.dir}Entries`;
+
+  const entries = bundle ? allEntries.filter((e) => bundle.has(e.id)) : allEntries;
+  const survivingPaths = new Set(entries.map((e) => e.pluginPath));
 
   const lines: string[] = [];
   lines.push(HEADER);
@@ -256,7 +266,8 @@ export async function renderCollectedDirRegistry(opts: {
   lines.push("");
   lines.push(`export const ${exportName}: CollectedEntry[] = [`);
   for (const e of entries) {
-    const entryDeps = deps.get(e.pluginPath) ?? [];
+    let entryDeps = deps.get(e.pluginPath) ?? [];
+    if (bundle) entryDeps = entryDeps.filter((d) => survivingPaths.has(d));
     const depsLiteral = entryDeps.length > 0
       ? `[${entryDeps.map((d) => JSON.stringify(d)).join(", ")}]`
       : "[]";
@@ -286,5 +297,54 @@ export async function generatePluginRegistry(opts: {
     const next = await renderCollectedDirRegistry({ root: opts.root, def });
     const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
     if (next !== existing) writeFileSync(file, next);
+  }
+}
+
+// ── Composition (filtered) registries ──────────────────────────────
+//
+// A composition build emits gitignored siblings of the committed full
+// registries — same export name, restricted to the composition's bundle. The
+// committed `<dir>.generated.ts` files are never touched, so the build stays
+// byte-identical and `plugins-registry-in-sync` + `git status` stay clean.
+
+// The runtime registries the app actually loads at the import seam. Central is
+// dropped per the F1 requirements; check/lint are build-time-only and never
+// loaded into a served app.
+const COMPOSITION_RUNTIME_DIRS = new Set(["web", "server"]);
+
+export function collectedDirCompositionRegistryPath(
+  def: DiscoveredCollectedDir,
+): string {
+  return join(def.ownerDir, "core", `${def.dir}.composition.generated.ts`);
+}
+
+export async function generateCompositionRegistry(opts: {
+  root: string;
+  bundle: Set<string>;
+}): Promise<void> {
+  const defs = discoverCollectedDirs(opts.root);
+  for (const def of defs) {
+    if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
+    const file = collectedDirCompositionRegistryPath(def);
+    const next = await renderCollectedDirRegistry({
+      root: opts.root,
+      def,
+      bundle: opts.bundle,
+    });
+    const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
+    if (next !== existing) writeFileSync(file, next);
+  }
+}
+
+// Remove any stale filtered registries so a plain (non-composition) build
+// reverts the runtimes to the full committed registries. No-throw if absent.
+export async function clearCompositionRegistries(opts: {
+  root: string;
+}): Promise<void> {
+  const defs = discoverCollectedDirs(opts.root);
+  for (const def of defs) {
+    if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
+    const file = collectedDirCompositionRegistryPath(def);
+    if (existsSync(file)) rmSync(file);
   }
 }

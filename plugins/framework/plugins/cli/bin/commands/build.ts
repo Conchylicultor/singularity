@@ -5,7 +5,10 @@ import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
-import { collectAllPlugins, propagateConfigToUser, regenerateRegistryCodegen, regenerateManifestCodegen, type CodegenStep } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { collectAllPlugins, propagateConfigToUser, regenerateRegistryCodegen, regenerateManifestCodegen, generateCompositionRegistry, clearCompositionRegistries, type CodegenStep } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { resolveComposition, flattenManifest } from "@plugins/plugin-meta/plugins/closure/core";
+import { compositionsConfig, manifestItemToManifest } from "@plugins/plugin-meta/plugins/composition/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 import { checkBroadcasts } from "../broadcasts";
@@ -568,7 +571,11 @@ export function registerBuild(program: Command) {
       "--allow-main",
       "DANGER: allow running build from the main branch. Agents MUST NOT pass this flag without explicit user approval in the current conversation.",
     )
-    .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; migrationAnswers?: string; restart: boolean; skipChecks?: boolean; allowMain?: boolean }) => {
+    .option(
+      "--composition <name>",
+      "Build only the named composition's plugin closure (filtered self-contained registry)",
+    )
+    .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; migrationAnswers?: string; restart: boolean; skipChecks?: boolean; allowMain?: boolean; composition?: string }) => {
       const buildStartedAt = new Date();
 
       // Per-step wrapper for the shared codegen pipeline: keeps build's per-step
@@ -717,6 +724,28 @@ export function registerBuild(program: Command) {
       // spans are threaded through `onStep` so build keeps its granularity.
       console.log("Generating plugin registry...");
       await regenerateRegistryCodegen({ root, onStep: codegenStep });
+
+      // 2a'. Composition build-gating. With `--composition`, emit gitignored
+      // filtered registries (the bundle's hard closure) beside the committed
+      // full ones; the web/server import seams select the filtered file. Without
+      // the flag, clear any stale filtered registries so the runtimes revert to
+      // the full committed set. The committed `<dir>.generated.ts` files are
+      // never touched either way, so the build stays byte-identical.
+      endSpan = buildProfilerStart("compositionRegistry", "build:codegen", "composition registry");
+      if (opts.composition) {
+        const items = compositionsConfig.fields.manifests.defaultValue;
+        const item = items.find((m) => m.id === opts.composition);
+        if (!item) throw new Error(`Unknown composition "${opts.composition}". Known: ${items.map((m) => m.id).join(", ")}`);
+        const allManifests = items.map(manifestItemToManifest);
+        const flat = flattenManifest(manifestItemToManifest(item), allManifests);
+        const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true });
+        const bundle = resolveComposition(tree, flat).bundle;
+        await generateCompositionRegistry({ root, bundle });
+        console.log(`Composition "${opts.composition}": ${bundle.size} plugins in closure.`);
+      } else {
+        await clearCompositionRegistries({ root });
+      }
+      endSpan();
 
       // 2b. Refresh the central-routes manifest so the gateway knows which
       // path prefixes are owned by central plugins.
@@ -910,7 +939,7 @@ export function registerBuild(program: Command) {
             (async (): Promise<StepResult> => {
               const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
               const start = performance.now();
-              const output = await execBuffered(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId });
+              const output = await execBuffered(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) });
               end();
               return {
                 id: "viteBuild",

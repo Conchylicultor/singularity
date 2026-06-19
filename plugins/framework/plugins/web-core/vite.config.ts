@@ -60,6 +60,7 @@ function findViteContributions(pluginsRoot: string): string[] {
 export default defineConfig(async () => {
   const repoRoot = path.resolve(__dirname, "../../../..");
   const pluginsRoot = path.resolve(__dirname, "../../../");
+  const webSdkCore = path.resolve(__dirname, "../web-sdk/core");
 
   const babelPlugins: BabelPluginItem[] = [];
   for (const file of findViteContributions(pluginsRoot)) {
@@ -82,6 +83,16 @@ export default defineConfig(async () => {
     resolve: {
       alias: {
         "@plugins": path.resolve(__dirname, "../../../"),
+        // Composition build-gating: select the full vs. filtered plugin registry
+        // at the IMPORT SEAM via a build-time alias branch — NOT a runtime
+        // `import.meta.env` ternary. A runtime ternary would make Rollup bundle
+        // BOTH registries and ship all ~540 plugins (silent failure). The
+        // filtered file is gitignored and only exists after a `--composition`
+        // build; with no VITE_COMPOSITION we resolve the committed full registry,
+        // so a plain build stays byte-identical.
+        "@composition-web-registry": process.env.VITE_COMPOSITION
+          ? path.join(webSdkCore, "web.composition.generated.ts")
+          : path.join(webSdkCore, "web.generated.ts"),
       },
     },
   };

@@ -15,6 +15,12 @@ export default defineConfig({
   resolve: {
     alias: {
       "@plugins": path.resolve(__dirname, "plugins"),
+      // Mirror web-core's composition build-gating alias so tests that pull in
+      // App.tsx resolve. Tests always use the full registry.
+      "@composition-web-registry": path.resolve(
+        __dirname,
+        "plugins/framework/plugins/web-sdk/core/web.generated.ts",
+      ),
     },
   },
   test: {

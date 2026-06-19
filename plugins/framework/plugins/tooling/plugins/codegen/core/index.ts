@@ -16,7 +16,10 @@ export {
 
 export {
   collectedDirRegistryPath,
+  collectedDirCompositionRegistryPath,
+  clearCompositionRegistries,
   discoverCollectedDirs,
+  generateCompositionRegistry,
   generatePluginRegistry,
   renderCollectedDirRegistry,
   standardPluginDirs,

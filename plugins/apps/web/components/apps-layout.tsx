@@ -13,6 +13,7 @@ import {
 import type { RailFramingProps } from "../../core";
 import { Apps } from "../slots";
 import { useActiveApp, usePathname } from "../internal/use-active-app";
+import { defaultApp } from "../internal/resolve-app";
 import { TabsProvider, useTabs } from "../internal/use-tabs";
 import { TabSurface } from "./tab-surface";
 import { AppRail } from "./app-rail";
@@ -107,17 +108,21 @@ function DocumentTitleSync() {
 export function AppsLayout() {
   const activeApp = useActiveApp();
   const pathname = usePathname();
+  const apps = Apps.App.useContributions();
 
   const matchedId = activeApp?.id;
+  const defaultPath = defaultApp(apps)?.path;
 
   // Any path that matches no app — the bare root `/`, or a stale deep link whose
-  // app was removed — redirects to the Home launcher. Every app owns its `path`
-  // prefix and emits full-path deep links under it (e.g. `/agents/c/:id`), so a
-  // resolvable URL always matches an app directly; there is no catch-all app.
-  // Runs before the tabs surface mounts, normalizing the URL the seed tab reads.
+  // app was removed — redirects to the default app (the one declaring
+  // `default: true`, else the only/first registered app). Every app owns its
+  // `path` prefix and emits full-path deep links under it (e.g. `/agents/c/:id`),
+  // so a resolvable URL always matches an app directly; there is no catch-all
+  // app. Runs before the tabs surface mounts, normalizing the URL the seed tab
+  // reads. No-ops when no apps are registered (nothing to redirect to).
   useEffect(() => {
-    if (!matchedId) redirectTo("/home");
-  }, [pathname, matchedId]);
+    if (!matchedId && defaultPath) redirectTo(defaultPath);
+  }, [pathname, matchedId, defaultPath]);
 
   const basePath = activeApp?.path ?? "";
 

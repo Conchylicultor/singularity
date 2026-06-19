@@ -21,7 +21,7 @@ import { type Placement } from "../../core";
 import { Apps } from "../slots";
 import { getDefaultPlacement } from "./placement-registry";
 import { useActiveApp } from "./use-active-app";
-import { resolveAppForPath } from "./resolve-app";
+import { defaultApp, resolveAppForPath } from "./resolve-app";
 import {
   appPathFor,
   loadPersistedTabs,
@@ -255,7 +255,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   appsRef.current = apps;
 
   const [{ tabs: initialTabs, focusedTabId: initialFocus }] = useState(() =>
-    bootTabs(apps, initialApp?.id ?? "home"),
+    bootTabs(apps, initialApp?.id ?? defaultApp(apps)?.id ?? ""),
   );
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
   const [focusedTabId, setFocusedTabId] = useState<string>(initialFocus);
@@ -441,12 +441,16 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       setTabTitle(tabId, undefined);
 
       if (remaining.length === 0) {
-        // Never allow zero tabs — seed a fresh Home tab and focus it.
+        // Never allow zero tabs — seed a fresh default-app tab and focus it.
+        // Bail if no apps are registered (nothing to seed; the surface stays
+        // empty, which is the only sane outcome with an empty registry).
+        const seedApp = defaultApp(appsRef.current);
+        if (!seedApp) return;
         const seedId = crypto.randomUUID();
         const store = createPaneStore({ live: false });
         const seed: Tab = {
           tabId: seedId,
-          appId: "home",
+          appId: seedApp.id,
           store,
           placement: getDefaultPlacement(),
         };

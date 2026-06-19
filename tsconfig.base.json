@@ -12,6 +12,9 @@
     "noUncheckedIndexedAccess": true,
     "noFallthroughCasesInSwitch": true,
     "jsx": "react-jsx",
-    "paths": { "@plugins/*": ["./plugins/*"] }
+    "paths": {
+      "@plugins/*": ["./plugins/*"],
+      "@composition-web-registry": ["./plugins/framework/plugins/web-sdk/core/web.generated"]
+    }
   }
 }

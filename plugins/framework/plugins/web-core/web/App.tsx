@@ -8,7 +8,7 @@ import {
 import type { LoadedPlugin, PluginLoadError } from "@plugins/framework/plugins/web-sdk/core";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
-import { webEntries } from "@plugins/framework/plugins/web-sdk/core/web.generated";
+import { webEntries } from "@composition-web-registry";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
 
 // Run every Core.Boot readiness task once, before first paint, so plugins can
