@@ -24,6 +24,15 @@ const lastKnownSha = new Map<string, string | null>();
 let watcher: FileWatcher | null = null;
 let started = false;
 
+// The last `refs/heads/main` sha the watcher has observed, or null if not yet
+// seeded. Lets the commits-graph probe fingerprint `main` with zero subprocess.
+// `lastKnownSha` itself stays module-private — callers only read this getter.
+// A null result means "watcher not yet seeded" (never trust it as
+// "main unchanged"): the caller must fall back to an ungated `rev-parse main`.
+export function lastKnownMainSha(): string | null {
+  return lastKnownSha.get("refs/heads/main") ?? null;
+}
+
 export async function startGitWatcher(): Promise<void> {
   if (started) return;
   started = true;

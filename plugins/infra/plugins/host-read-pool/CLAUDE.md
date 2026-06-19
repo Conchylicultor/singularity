@@ -31,6 +31,20 @@ mechanism.
 `floor(cpus/2)` if profiling shows the gate is the bottleneck while CPU is
 unsaturated.
 
+**Two-tier gate (per-worktree fairness).** In front of the host-wide flock gate
+sits a small **in-process per-worktree `createSemaphore`** (size
+`max(1, ceil(host/2))`, env-overridable via
+`SINGULARITY_HEAVY_READ_LOCAL_CONCURRENCY`, clamped to `1 ≤ local ≤ host`). It
+wraps *outside* the host gate, so each backend can only ever present a bounded
+slice of work to the shared flock queue — under a cross-worktree storm (a `main`
+advance fanning `commits-graph` out to ~16 backends) no single worktree can
+monopolize the host gate and starve the others; each must drain its own local
+budget before queuing more. The host gate size is unchanged. The local
+queue-wait is charged as a `heavy-read-local` span sitting beside the host-wide
+`heavy-read-acquire` span in the profiler, so each tier's contention stays
+separately attributable. See
+research/2026-06-19-global-incremental-git-loaders.md (Stage 1).
+
 Gate at the **operation level** — one slot per logical job. The gate never lives
 inside `runGit` (the canonical thin spawn stays ungated so cheap interactive git
 is never serialized behind a 14s archive). See

@@ -1,9 +1,9 @@
 import { resolve, sep } from "node:path";
-import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import type { EditedFile, EditedFileStatus } from "../../core/protocol";
 import { parseDiffNameStatusZ, parseDiffNumstatZ } from "./parse-diff-z";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
+import { currentGeneration, editedFilesMemo } from "./edited-files-cache";
 
 const UNTRACKED_MAX_BYTES = 2 * 1024 * 1024;
 
@@ -55,23 +55,38 @@ function ensureEntry(
   return entry;
 }
 
-// Concurrent identical reads collapse onto one git-status batch: the
-// edited-files live-state loader and the plugin-changes endpoint both call this
-// for the same worktree, often at the same instant during a review. Deduping at
-// the source (not at one caller) means every caller shares the work. See
-// research/2026-06-15-global-live-state-cascade-contention.md (Change 5).
+// The READ path. The @parcel watcher (watch-edited-files.ts) is the authoritative
+// WRITER: it computes the files directly and write-throughs them at a bumped
+// generation. `getEditedFiles` reads through the shared memo with the current
+// generation as the cheap, ungated signature:
+//   - HIT (no watcher recompute since the cached value): returns the watcher's
+//     latest list with NO git spawn and NO heavy slot — e.g. a fresh conversation
+//     subscribing to an already-watched worktree.
+//   - MISS (cold — generation 0 with no cache, or the watcher advanced past the
+//     cached generation): computes once via the memo's embedded per-worktree
+//     single-flight, collapsing with openRoom's compute if concurrent.
+// The signature is a generation counter (NOT git state) because an uncommitted
+// save changes the working-tree diff without moving any SHA — a SHA signature
+// would serve stale data. See research/2026-06-19-global-incremental-git-loaders.md.
 //
-// The dedupe is outermost (N callers → one compute); that single survivor then
-// takes a host-wide heavy-read slot so concurrent *distinct* worktrees stay
-// bounded across the box. See
-// research/2026-06-16-global-host-wide-cpu-admission-flock-broker.md.
-const inflight = createInflight();
-
+// Concurrent identical reads still collapse onto one git-status batch via the
+// memo's embedded inflight: the edited-files loader and the plugin-changes
+// endpoint both call this for the same worktree, often at the same instant during
+// a review. See research/2026-06-15-global-live-state-cascade-contention.md
+// (Change 5) and research/2026-06-16-global-host-wide-cpu-admission-flock-broker.md.
 export function getEditedFiles(worktreePath: string): Promise<EditedFile[]> {
-  return inflight.run(worktreePath, () => computeEditedFiles(worktreePath));
+  return editedFilesMemo.get(
+    worktreePath,
+    () => Promise.resolve(String(currentGeneration(worktreePath))),
+    () => computeEditedFiles(worktreePath),
+  );
 }
 
-async function computeEditedFiles(worktreePath: string): Promise<EditedFile[]> {
+// The un-memoized, gated compute. The watcher calls this DIRECTLY (then primes the
+// memo) so it never reads its own cache; the loader reaches it only on a memo miss.
+export async function computeEditedFiles(
+  worktreePath: string,
+): Promise<EditedFile[]> {
   return withHeavyReadSlot(async () => {
     const byPath = new Map<string, FileEntry>();
 

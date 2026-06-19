@@ -8,7 +8,7 @@ import {
   type CommitDelta,
   type CommitsGraph,
 } from "../../shared/protocol";
-import { computeDelta, computeGraph } from "./compute-graph";
+import { computeDelta, computeGraph, evictWorktree } from "./compute-graph";
 
 type Params = { attemptId: string };
 
@@ -24,6 +24,15 @@ const EMPTY_GRAPH: CommitsGraph = { ...EMPTY_DELTA, commits: [], landedCommits: 
 async function worktreeFor(attemptId: string): Promise<string | null> {
   const row = await getAttempt(attemptId);
   return row?.worktreePath ?? null;
+}
+
+// `onLastUnsubscribe` is sync while `worktreeFor` is async, so drop the cache
+// entry fire-and-forget. Dropping a still-referenced entry is harmless — it just
+// forces a cheap cold re-probe on the next read — so no coordination is needed.
+function evictWorktreeFor(attemptId: string): void {
+  void worktreeFor(attemptId).then((wt) => {
+    if (wt) evictWorktree(wt);
+  });
 }
 
 // Map upstream pushes notifications to the set of attemptIds that have ever
@@ -62,6 +71,7 @@ export const commitDeltaResource = defineResource({
   },
   onLastUnsubscribe: ({ attemptId }: Params) => {
     activeDeltaAttempts.delete(attemptId);
+    evictWorktreeFor(attemptId);
   },
   loader: async ({ attemptId }: Params): Promise<CommitDelta> => {
     const wt = await worktreeFor(attemptId);
@@ -83,6 +93,7 @@ export const commitsGraphResource = defineResource({
   },
   onLastUnsubscribe: ({ attemptId }: Params) => {
     activeGraphAttempts.delete(attemptId);
+    evictWorktreeFor(attemptId);
   },
   loader: async ({ attemptId }: Params): Promise<CommitsGraph> => {
     const wt = await worktreeFor(attemptId);

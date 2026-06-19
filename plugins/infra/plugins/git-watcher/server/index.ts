@@ -6,6 +6,7 @@ import { startGitWatcher, stopGitWatcher } from "./internal/watcher";
 
 export { refHeadResource } from "./internal/ref-head-resource";
 export { refAdvanced, _refAdvancedTriggers } from "./internal/tables-ref-advanced";
+export { lastKnownMainSha } from "./internal/watcher";
 export type { RefAdvancedPayload, RefHead } from "../shared/types";
 export { RefHeadSchema } from "../shared/types";
 

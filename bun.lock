@@ -1849,6 +1849,10 @@
       "name": "@singularity/plugin-infra-file-watcher",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/git-read-cache": {
+      "name": "@singularity/plugin-infra-git-read-cache",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/git-watcher": {
       "name": "@singularity/plugin-infra-git-watcher",
       "version": "0.0.1",
@@ -4569,6 +4573,8 @@
     "@singularity/plugin-infra-events-test": ["@singularity/plugin-infra-events-test@workspace:plugins/infra/plugins/events-test"],
 
     "@singularity/plugin-infra-file-watcher": ["@singularity/plugin-infra-file-watcher@workspace:plugins/infra/plugins/file-watcher"],
+
+    "@singularity/plugin-infra-git-read-cache": ["@singularity/plugin-infra-git-read-cache@workspace:plugins/infra/plugins/git-read-cache"],
 
     "@singularity/plugin-infra-git-watcher": ["@singularity/plugin-infra-git-watcher@workspace:plugins/infra/plugins/git-watcher"],
 

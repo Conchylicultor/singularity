@@ -1,6 +1,7 @@
 import parcel from "@parcel/watcher";
 import type { EditedFile } from "../../core/protocol";
-import { getEditedFiles } from "./get-edited-files";
+import { computeEditedFiles, getEditedFiles } from "./get-edited-files";
+import { evictEditedFiles, primeEditedFiles } from "./edited-files-cache";
 
 const DEBOUNCE_MS = 200;
 const CEILING_MS = 2000;
@@ -70,10 +71,17 @@ export function watchEditedFiles(
 
 async function openRoom(room: Room): Promise<void> {
   try {
+    // Initial load reads THROUGH the memo: at first-subscribe the cache is empty
+    // (generation 0), so this is a compute either way — but going through the memo
+    // shares the embedded single-flight with a concurrent resource-loader read,
+    // collapsing the first-subscribe race to one git batch. (Recompute below stays
+    // on the direct compute, so the watcher never reads a stale gen-N cache.) Then
+    // prime at the new generation so the loader's next read is a hit.
     const files = await getEditedFiles(room.worktreePath);
     room.lastFiles = files;
     room.serialized = JSON.stringify(files);
     room.lastRecomputeAt = Date.now();
+    primeEditedFiles(room.worktreePath, files);
     fanOut(room, files);
   // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
@@ -128,8 +136,15 @@ async function recompute(room: Room): Promise<void> {
     room.ceilingTimer = null;
   }
   try {
-    const files = await getEditedFiles(room.worktreePath);
+    // Direct (un-memoized) compute, then prime the memo at the new generation —
+    // BEFORE the unchanged-JSON early return, so the memo always holds the
+    // freshly-confirmed list at the latest generation (the loader's signature
+    // tracks "number of completed watcher computes"). Returning the same files at
+    // a new generation is correct, never stale; the early return only skips the
+    // fanOut, not the prime.
+    const files = await computeEditedFiles(room.worktreePath);
     const serialized = JSON.stringify(files);
+    primeEditedFiles(room.worktreePath, files);
     if (serialized === room.serialized) return;
     room.serialized = serialized;
     room.lastFiles = files;
@@ -153,6 +168,9 @@ function fanOut(room: Room, files: EditedFile[]): void {
 
 function closeRoom(room: Room): void {
   rooms.delete(room.worktreePath);
+  // Drop the memo + generation entry on the last subscriber (lifecycle cleanup);
+  // a re-subscribe re-primes cheaply via openRoom's compute.
+  evictEditedFiles(room.worktreePath);
   if (room.debounceTimer) clearTimeout(room.debounceTimer);
   if (room.ceilingTimer) clearTimeout(room.ceilingTimer);
   if (room.subscription) {

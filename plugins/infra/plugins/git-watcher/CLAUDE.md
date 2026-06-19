@@ -9,7 +9,7 @@
 - Server:
   - Uses: `infra/events.defineTriggerEvent`, `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.GIT`, `infra/paths.isMain`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`
   - DB schema: `plugins/infra/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
-  - Exports: Types: `RefAdvancedPayload`, `RefHead`; Values: `_refAdvancedTriggers`, `refAdvanced`, `refHeadResource`, `RefHeadSchema`
+  - Exports: Types: `RefAdvancedPayload`, `RefHead`; Values: `_refAdvancedTriggers`, `lastKnownMainSha`, `refAdvanced`, `refHeadResource`, `RefHeadSchema`
   - Register: `defineTriggerEvent('git.refAdvanced')`
 - Cross-plugin:
   - Imported by: `build`, `conversations/conversation-view/commits-graph`, `tasks`
