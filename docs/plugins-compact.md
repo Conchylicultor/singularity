@@ -241,6 +241,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
         - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
         - **`inline`** — Inline-level flow layout primitive: <Inline gap> lays out a baseline-aligned inline-flex row for chips/icons that sit inline in a text run. The inline-level sibling of Stack, delegating to Stack.
+        - **`layout-harness`** — Live Layout Lab gallery: renders the layout-primitive fixture catalog across its width sweep, opened from the Debug sidebar.
         - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge with link coloring (bg-muted + text-primary, hover underline), baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
         - **`overlay`** — In-flow positioning layout primitive: <Overlay behind above clickThrough> paints full-bleed layers under/over its content within its own box, plus the click-through-toggle idiom.
         - **`pin`** — Point-anchored absolute positioning primitive: <Pin to offset> places a child at a corner/edge-center/center of a relative parent. Sibling of Overlay.
