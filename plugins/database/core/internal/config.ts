@@ -1,6 +1,7 @@
 import { readFileSync } from "node:fs";
-import { homedir } from "node:os";
 import { join } from "node:path";
+
+import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 
 export type DatabaseProvider = "embedded" | "system";
 
@@ -23,7 +24,7 @@ export interface DatabaseConfig {
   }>;
 }
 
-const CONFIG_PATH = join(homedir(), ".singularity", "database.json");
+const CONFIG_PATH = join(SINGULARITY_DIR, "database.json");
 
 const SYSTEM_PG_DEFAULTS: DatabaseConfig = {
   connection: {

@@ -1783,17 +1783,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Uses: `database/derived-views.rebuildDerivedViews`, `database/migrations.runMigrations`
     - Exports: Values: `awaitDbReady`, `db`, `isTransientDbError`
+  - Core:
+    - Uses: `infra/paths.SINGULARITY_DIR`
+    - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Cross-plugin:
     - Imported by: `active-data`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/deploy/servers`, `apps/pages/content-search`, `apps/pages/history`, `apps/pages/starred`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/generation`, `apps/story/marker`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/workflows/engine`, `backup`, `build`, `build/build-commits`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/notes`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/summary`, `debug/slow-ops`, `history/engine`, `improve`, `infra/attachments`, `infra/boot-snapshot`, `infra/claude-cli`, `infra/contention`, `infra/entity-extensions`, `infra/events`, `infra/events-test`, `infra/jobs`, `page/attachment-block`, `page/editor`, `page/inline-date`, `page/links`, `plugin-meta/plugin-health`, `primitives/rank`, `reports`, `search/engine`, `shell/notifications`, `stats/commits`, `stats/cost`, `tasks/auto-start`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`, `ui/tweakcn/community-browser`
-  - Core:
-    - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
         - Uses: `infra/paths.SINGULARITY_DIR`
-        - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `countActiveConnections`, `databaseExists`, `dropDatabase`, `forkDatabase`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
+        - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `countActiveConnections`, `databaseExists`, `dropDatabase`, `ensureDatabase`, `forkDatabase`, `getAdminPool`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
       - Cross-plugin:
-        - Imported by: `backup/sources/databases`, `database/fork`, `database/query`, `debug/profiling/push`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `infra/jobs`
+        - Imported by: `backup/sources/databases`, `database/fork`, `database/query`, `debug/profiling/push`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `infra/jobs`, `infra/launcher`
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
       - Server:
         - Uses: `primitives/log-channels.Log`
@@ -1803,6 +1804,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports: Types: `RegisteredView`; Values: `compileCreateView`, `topoSortViews`
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
+      - Cross-plugin:
+        - Imported by: `infra/launcher`
       - Server:
         - Exports: Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
       - Shared:
@@ -1824,6 +1827,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Non-standard folders: `data/`
         - Loose top-level files: `drizzle.config.ts`
     - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
+      - Cross-plugin:
+        - Imported by: `infra/launcher`
       - Server:
         - Exports: Values: `PGBOUNCER_PORT`, `PGBOUNCER_SOCKET_DIR`
       - Shared:
@@ -2810,6 +2815,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `GET /api/health`, `GET /api/health/ready`
       - Shared:
         - Exports: Types: `HealthResponse`; Values: `getHealth`, `HealthResponseSchema`
+      - Cross-plugin:
+        - Endpoint callers: `launcher`
     - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
       - Server:
         - Uses: `packages/host-semaphore.createHostSemaphore`
@@ -2829,6 +2836,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DeadJobRow`, `DeadJobsPayload`, `JobRow`, `JobsPayload`, `JobState`; Values: `cancelJob`, `DeadJobRowSchema`, `DeadJobsPayloadSchema`, `deadJobsResource`, `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`, `listDeadJobs`, `listJobs`, `retryJob`
       - Cross-plugin:
         - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/transcript-retention`, `database/fork`, `debug/worktree-cleanup`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `page/attachment-block`, `page/inline-date`, `page/links`, `shell/notifications`, `tasks`, `tasks/task-title`
+    - **`launcher`**
+      - Server:
+        - Uses: `database/admin.ensureDatabase`, `database/admin.getAdminPool`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `database/pgbouncer.PGBOUNCER_PORT`, `database/pgbouncer.PGBOUNCER_SOCKET_DIR`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.writeWorktreeSpec`
+        - Exports: Values: `awaitPgReady`, `bootSelfContainedApp`, `buildOrLocateGateway`, `ensureDatabaseConfig`, `hasPgBouncerPackage`, `isGatewayListening`, `isRunning`, `pgbouncerConnection`, `pgbouncerService`, `readPid`, `spawnGatewayDaemon`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/push-and-exit`, `conversations/summary`, `database/query`, `debug/profiling/runtime`, `plugin-meta/plugin-health`, `tasks`
@@ -2847,7 +2858,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `ndjsonResponse`
     - **`paths`**
       - Cross-plugin:
-        - Imported by: `apps/prototypes/files`, `backup`, `backup/sources/attachments`, `backup/sources/claude-settings`, `backup/sources/config`, `backup/sources/project-memory`, `backup/sources/secrets`, `backup/sources/singularity-platform`, `backup/targets/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/staging`, `conversations`, `conversations/conversation-progress`, `conversations/hibernation`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `database/admin`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/git-watcher`, `infra/worktree`, `packages/host-semaphore`, `plugin-meta/composition`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `primitives/commit-list`, `primitives/log-channels`, `primitives/terminal`, `reports`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`
+        - Imported by: `apps/prototypes/files`, `backup`, `backup/sources/attachments`, `backup/sources/claude-settings`, `backup/sources/config`, `backup/sources/project-memory`, `backup/sources/secrets`, `backup/sources/singularity-platform`, `backup/targets/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/staging`, `conversations`, `conversations/conversation-progress`, `conversations/hibernation`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `database`, `database/admin`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/git-watcher`, `infra/launcher`, `infra/worktree`, `packages/host-semaphore`, `plugin-meta/composition`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `primitives/commit-list`, `primitives/log-channels`, `primitives/terminal`, `reports`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`
       - Server:
         - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE`, `CLAUDE_DIR`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `currentWorktreeName`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `REPO_ROOT`, `REPORTS_DIR`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`, `WEB_CORE_RELATIVE`, `WEB_DIST_DIR`
       - Core:
@@ -2878,7 +2889,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`
         - Exports: Types: `DerivePushDeps`, `PushHolder`, `WorktreeOp`, `WorktreeOpInfo`, `WorktreeOpPhase`, `WorktreeSpec`; Values: `clearPushHolder`, `clearWorktreeOp`, `derivePushPhases`, `ensureMainWorktreeRoot`, `isCanonicalWorktreePath`, `isWorktreeOpActive`, `listActiveWorktreeOps`, `markWorktreeOpStart`, `PUSH_LOCK_PATH`, `pushLockHeld`, `readPushHolder`, `removeWorktree`, `resolveActiveWorktreeOps`, `setupWorktree`, `setWorktreeOpPhase`, `worktreePathFor`, `worktreesDir`, `writePushHolder`, `writeWorktreeSpec`
       - Cross-plugin:
-        - Imported by: `code-explorer`, `config_v2/staging`, `conversations`, `conversations/conversation-view/op-status`, `conversations/runtime-tmux`, `debug/broadcasts`, `debug/memory`, `debug/profiling/push`, `debug/worktree-cleanup`, `infra/git-watcher`, `plugin-meta/plugin-health`, `stats/commits`, `stats/cost`, `tasks`, `tasks/tasks-core`
+        - Imported by: `code-explorer`, `config_v2/staging`, `conversations`, `conversations/conversation-view/op-status`, `conversations/runtime-tmux`, `debug/broadcasts`, `debug/memory`, `debug/profiling/push`, `debug/worktree-cleanup`, `infra/git-watcher`, `infra/launcher`, `plugin-meta/plugin-health`, `stats/commits`, `stats/cost`, `tasks`, `tasks/tasks-core`
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:

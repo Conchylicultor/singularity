@@ -28,7 +28,7 @@ export function currentWorktreeName(): string {
 }
 
 export const HOME_DIR             = homedir();
-export const SINGULARITY_DIR     = join(HOME_DIR, ".singularity");
+export const SINGULARITY_DIR     = process.env.SINGULARITY_DIR ?? join(HOME_DIR, ".singularity");
 export const BACKUPS_DIR         = join(HOME_DIR, ".backups/singularity");
 export const SECRETS_DIR         = join(SINGULARITY_DIR, "secrets");
 export const STORE_PATH          = join(SINGULARITY_DIR, "secrets.json.enc");

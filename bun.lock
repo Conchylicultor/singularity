@@ -1912,6 +1912,9 @@
         "graphile-worker": "^0.16.6",
       },
     },
+    "plugins/infra/plugins/launcher": {
+      "name": "@singularity/plugin-infra-launcher",
+    },
     "plugins/infra/plugins/mcp": {
       "name": "@singularity/plugin-infra-mcp",
       "version": "0.0.1",
@@ -4643,6 +4646,8 @@
     "@singularity/plugin-infra-host-read-pool": ["@singularity/plugin-infra-host-read-pool@workspace:plugins/infra/plugins/host-read-pool"],
 
     "@singularity/plugin-infra-jobs": ["@singularity/plugin-infra-jobs@workspace:plugins/infra/plugins/jobs"],
+
+    "@singularity/plugin-infra-launcher": ["@singularity/plugin-infra-launcher@workspace:plugins/infra/plugins/launcher"],
 
     "@singularity/plugin-infra-mcp": ["@singularity/plugin-infra-mcp@workspace:plugins/infra/plugins/mcp"],
 

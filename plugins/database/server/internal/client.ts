@@ -5,9 +5,17 @@ import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { recordSpan, chargeWait, currentCallerKind } from "@plugins/infra/plugins/runtime-profiler/core";
 import { readDatabaseConfig, buildConnectionString } from "@plugins/database/core";
 
-const worktree = process.env.SINGULARITY_WORKTREE;
-if (!worktree) {
-  throw new Error("SINGULARITY_WORKTREE env var is required");
+// The worktree name is the worktree DB name — the one thing the worktree pool
+// genuinely needs. The throw is deferred to first use (building the pool's
+// connection string) rather than run at module load, so admin-only importers
+// that never touch the worktree pool stay import-safe. It is still loud and
+// never silently defaulted.
+function requireWorktree(): string {
+  const worktree = process.env.SINGULARITY_WORKTREE;
+  if (!worktree) {
+    throw new Error("SINGULARITY_WORKTREE env var is required");
+  }
+  return worktree;
 }
 
 const config = readDatabaseConfig();
@@ -26,7 +34,7 @@ const conn = config.pgbouncer
 const POOL_MAX = 16;
 
 const pool = new Pool({
-  connectionString: buildConnectionString(conn, worktree),
+  connectionString: buildConnectionString(conn, requireWorktree()),
   max: POOL_MAX,
   idleTimeoutMillis: 20_000,
 });

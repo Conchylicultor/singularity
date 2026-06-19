@@ -19,7 +19,7 @@ export async function backupDatabase(
   const proc = Bun.spawn(["pg_dump", "-Fc", name], {
     stdout: Bun.file(outFile),
     stderr: "pipe",
-    env: { ...process.env, ...libpqSubprocessEnv },
+    env: { ...process.env, ...libpqSubprocessEnv() },
   });
   const code = await proc.exited;
   if (code !== 0) {

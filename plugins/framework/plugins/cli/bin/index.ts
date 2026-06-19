@@ -4,6 +4,7 @@ import { registerCheck } from "./commands/check";
 import { registerPush } from "./commands/push";
 import { registerRegenGenerated } from "./commands/regen-generated";
 import { registerRegenMigrations } from "./commands/regen-migrations";
+import { registerServeApp } from "./commands/serve-app";
 import { registerStart } from "./commands/start";
 
 program.name("singularity").description("Singularity agent CLI");
@@ -13,6 +14,7 @@ registerCheck(program);
 registerPush(program);
 registerRegenGenerated(program);
 registerRegenMigrations(program);
+registerServeApp(program);
 registerStart(program);
 
 program.parse();

@@ -30,7 +30,7 @@ export async function forkDatabase(
   // WITH FORCE — terminates any lingering connection).
   await dropDatabase(temp);
   await getAdminPool().query(`CREATE DATABASE "${temp}"`);
-  const subprocessEnv = { ...process.env, ...libpqSubprocessEnv };
+  const subprocessEnv = { ...process.env, ...libpqSubprocessEnv() };
   const dump = Bun.spawn(["pg_dump", "-Fc", source], {
     env: subprocessEnv,
     stdout: "pipe",

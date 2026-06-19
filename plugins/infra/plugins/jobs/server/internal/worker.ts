@@ -32,7 +32,7 @@ let workerUtilsPromise: Promise<WorkerUtils> | null = null;
 
 export function getWorkerUtils(): Promise<WorkerUtils> {
   if (!workerUtilsPromise) {
-    workerUtilsPromise = makeWorkerUtils({ connectionString });
+    workerUtilsPromise = makeWorkerUtils({ connectionString: connectionString() });
   }
   return workerUtilsPromise;
 }
@@ -90,7 +90,7 @@ export async function startWorker(): Promise<Runner> {
   if (runner) return runner;
   runner = await run(
     {
-      connectionString,
+      connectionString: connectionString(),
       concurrency: CONCURRENCY,
       taskList: {
         // biome-ignore lint/suspicious/noExplicitAny: graphile's JobHelpers typing requires the full interface; we only need job.id and job.attempts.

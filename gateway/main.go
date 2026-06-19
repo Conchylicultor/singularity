@@ -41,14 +41,18 @@ func parseFlags() Config {
 	flag.StringVar(&cfg.LogFormat, "log-format", "text", "log format: text|json")
 	flag.IntVar(&cfg.LogBufferLines, "log-buffer-lines", 1000, "per-worktree backend log ring capacity")
 
-	home, _ := os.UserHomeDir()
-	defaultLogDir := filepath.Join(home, ".singularity", "logs")
+	dataDir := os.Getenv("SINGULARITY_DIR")
+	if dataDir == "" {
+		home, _ := os.UserHomeDir()
+		dataDir = filepath.Join(home, ".singularity")
+	}
+	defaultLogDir := filepath.Join(dataDir, "logs")
 	flag.StringVar(&cfg.LogDir, "log-dir", defaultLogDir, "directory for the gateway and per-worktree log files")
-	defaultRegistry := filepath.Join(home, ".singularity", "worktrees")
+	defaultRegistry := filepath.Join(dataDir, "worktrees")
 	flag.StringVar(&cfg.RegistryDir, "registry-dir", defaultRegistry, "directory of worktree JSON files")
-	defaultSockets := filepath.Join(home, ".singularity", "sockets")
+	defaultSockets := filepath.Join(dataDir, "sockets")
 	flag.StringVar(&cfg.SocketsDir, "sockets-dir", defaultSockets, "directory for per-worktree Unix sockets")
-	defaultCentralRoutes := filepath.Join(home, ".singularity", "central-routes.json")
+	defaultCentralRoutes := filepath.Join(dataDir, "central-routes.json")
 	flag.StringVar(&cfg.CentralRoutesFile, "central-routes-file", defaultCentralRoutes, "path to the central routing manifest")
 
 	flag.Parse()
@@ -102,8 +106,12 @@ func main() {
 	reconcileOrphanBackends(cfg.SocketsDir, reg)
 
 	routes := NewCentralRoutesStore(cfg.CentralRoutesFile)
-	home, _ := os.UserHomeDir()
-	dbConfigPath := filepath.Join(home, ".singularity", "database.json")
+	dataDir := os.Getenv("SINGULARITY_DIR")
+	if dataDir == "" {
+		home, _ := os.UserHomeDir()
+		dataDir = filepath.Join(home, ".singularity")
+	}
+	dbConfigPath := filepath.Join(dataDir, "database.json")
 	sup, err := NewSupervisor(dbConfigPath)
 	if err != nil {
 		slog.Error("supervisor: failed to load config; continuing without services", "err", err)

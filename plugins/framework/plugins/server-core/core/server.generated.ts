@@ -151,6 +151,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/health", id: "infra.health", loader: () => import("@plugins/infra/plugins/health/server"), dependsOn: ["infra/plugins/endpoints"] },
   { pluginPath: "infra/plugins/host-read-pool", id: "infra.host-read-pool", loader: () => import("@plugins/infra/plugins/host-read-pool/server"), dependsOn: ["infra/plugins/runtime-profiler", "packages/plugins/host-semaphore"] },
   { pluginPath: "infra/plugins/jobs", id: "infra.jobs", loader: () => import("@plugins/infra/plugins/jobs/server"), dependsOn: ["database", "database/plugins/admin", "infra/plugins/endpoints", "infra/plugins/paths"] },
+  { pluginPath: "infra/plugins/launcher", id: "infra.launcher", loader: () => import("@plugins/infra/plugins/launcher/server"), dependsOn: ["database", "database/plugins/admin", "database/plugins/embedded", "database/plugins/pgbouncer", "infra/plugins/paths", "infra/plugins/worktree"] },
   { pluginPath: "infra/plugins/mcp", id: "infra.mcp", loader: () => import("@plugins/infra/plugins/mcp/server"), dependsOn: [] },
   { pluginPath: "infra/plugins/ndjson-stream", id: "infra.ndjson-stream", loader: () => import("@plugins/infra/plugins/ndjson-stream/server"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths", id: "infra.paths", loader: () => import("@plugins/infra/plugins/paths/server"), dependsOn: [] },
