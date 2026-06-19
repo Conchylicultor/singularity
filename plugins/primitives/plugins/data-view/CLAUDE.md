@@ -238,6 +238,13 @@ read their choices from `FieldDef.options`. This is also the generic substrate f
 future configurability (saved filters, sort, grouping): they operate on the same
 field schema, so a new typed field unlocks all of them at once with zero chrome code.
 
+The **tree** view honors **filter** (subtree-preserving) but **not sort** — it
+orders by hierarchy rank, ignoring `ViewState.sort`. It opts out by contributing
+`supportsSort: false` (a `DataViewContribution` flag, *not* a generic
+`ViewTypeMeta` key — view-core never knows about sort), so the host hides the
+Sort pill on the tree view while keeping the Filter pill. Default (flag omitted)
+= honors sort.
+
 In the **tree** view only the `primary` field renders, so non-primary fields are
 **filter-only**: invisible in the tree body but fully usable in the filter builder
 (set `filterable: false` to also keep them out of the full-text search accessor).

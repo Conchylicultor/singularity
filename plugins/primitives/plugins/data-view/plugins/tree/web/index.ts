@@ -15,6 +15,7 @@ export default {
       icon: MdAccountTree,
       order: 2,
       hierarchical: true,
+      supportsSort: false,
       component: TreeView,
     }),
   ],

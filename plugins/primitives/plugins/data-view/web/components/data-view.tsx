@@ -127,7 +127,11 @@ function DataViewInner<TRow>({
     activeState.sort,
     setActiveSortRules,
   );
-  const hasSort = sortController.sortableFields.length > 0;
+  // The tree view orders by hierarchy rank and ignores ViewState.sort, so it
+  // opts out via `supportsSort: false` — hide the Sort pill there (Filter still
+  // shows; the tree honors filter). Default (undefined) = honors sort.
+  const activeSupportsSort = activeInstance?.viewType.supportsSort !== false;
+  const hasSort = sortController.sortableFields.length > 0 && activeSupportsSort;
 
   // Config is the single source of truth: zero authored view-instances → render
   // an honest placeholder rather than an empty shell. The build-time

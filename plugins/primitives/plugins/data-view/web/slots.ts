@@ -13,6 +13,11 @@ import { Filter } from "./filter-slot";
  */
 export interface DataViewContribution extends ViewTypeMeta {
   component: ComponentType<DataViewRenderProps<unknown>>;
+  /** Whether this view honors `ViewState.sort` (flat field sort). Default true;
+   *  the tree view sets false because it orders by hierarchy rank, not field
+   *  sort — so the host hides the Sort pill for it (the Filter pill still shows;
+   *  the tree DOES honor filter, subtree-preserving). */
+  supportsSort?: boolean;
 }
 
 export const DataViewSlots = {

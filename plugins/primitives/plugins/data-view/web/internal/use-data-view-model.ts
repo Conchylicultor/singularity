@@ -6,6 +6,7 @@ import { useViewModel } from "@plugins/primitives/plugins/data-view/plugins/view
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type { FilterGroup, SortRule, ViewState } from "../../core";
 import type { DataViewContribution } from "../slots";
+import { cyclePrimarySort } from "./sort-cycle";
 import { dataViewDescriptors } from "./descriptors";
 import { useViewEphemeral } from "./use-view-ephemeral";
 
@@ -116,20 +117,7 @@ export function useDataViewModel(
   const setSort = useCallback(
     (id: string, fieldId: string) => {
       // Header shortcut: cycle the PRIMARY rule, preserving secondary rules.
-      const rules = readSortRules(core.viewFor(id));
-      const primary = rules[0];
-      let next: SortRule[];
-      if (primary?.fieldId === fieldId) {
-        next =
-          primary.direction === "asc"
-            ? [{ fieldId, direction: "desc" }, ...rules.slice(1)] // asc → desc
-            : rules.slice(1); // desc → drop primary
-      } else {
-        next = [
-          { fieldId, direction: "asc" }, // promote to primary asc
-          ...rules.filter((r) => r.fieldId !== fieldId),
-        ];
-      }
+      const next = cyclePrimarySort(readSortRules(core.viewFor(id)), fieldId);
       core.updateView(id, { sort: next } as unknown as VariantValue, {
         merge: true,
       });

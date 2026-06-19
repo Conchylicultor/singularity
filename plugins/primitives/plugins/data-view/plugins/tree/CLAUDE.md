@@ -1,8 +1,11 @@
 # tree
 
 The **tree** view child of the `data-view` primitive. Contributes one
-`DataViewSlots.View("tree")` entry (`hierarchical: true`): a nested, draggable,
-inline-renameable tree rendered through the shared `FieldDef` schema.
+`DataViewSlots.View("tree")` entry (`hierarchical: true`, `supportsSort: false`):
+a nested, draggable, inline-renameable tree rendered through the shared
+`FieldDef` schema. It orders rows by hierarchy rank and ignores `ViewState.sort`,
+so it opts out of the host's Sort pill via `supportsSort: false` (it still
+honors **filter**, subtree-preserving).
 
 ## What it is
 
