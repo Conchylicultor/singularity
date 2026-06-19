@@ -3,7 +3,7 @@ import { nextRankUnder, type RankExecutor } from "@plugins/primitives/plugins/ra
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { _taskDependencies, _tasks } from "../tables";
-import { attempts, tasks } from "../views";
+import { attempts, taskBlocking, tasks } from "../views";
 import type { Task } from "../schema";
 
 export interface TaskFilters {
@@ -27,26 +27,19 @@ export async function getTask(id: string): Promise<Task | null> {
   return row ?? null;
 }
 
-// True iff `taskId` has at least one dependency that is neither dropped nor
-// associated with a completed attempt. Held deps still block. Mirrors the
-// `hasBlockingDep` SQL embedded in the `tasks_v` view's status derivation
-// (schema.ts), exposed as a standalone query so the auto-start engine can
-// gate launches on the same definition the UI sees.
+// True iff any task in `taskId`'s TRANSITIVE dependency closure is unresolved —
+// neither dropped nor backed by a completed attempt (held deps still block).
+// Reads the shared `task_blocking_v` view (see views.ts) so the auto-start gate
+// and the UI status badge derive blocking from one definition rather than two
+// hand-mirrored single-hop queries. A task with no row in the view has no
+// dependencies → not blocked.
 export async function hasBlockingDep(taskId: string): Promise<boolean> {
-  const result = await db.execute(
-    sql`SELECT EXISTS (
-      SELECT 1 FROM ${_taskDependencies} td
-        JOIN ${_tasks} dep ON dep.id = td.depends_on_task_id
-       WHERE td.task_id = ${taskId}
-         AND dep.dropped_at IS NULL
-         AND NOT EXISTS (
-           SELECT 1 FROM ${attempts} a
-            WHERE a.task_id = dep.id AND a.status = 'completed'
-         )
-    ) AS blocking`,
-  );
-  const row = result.rows[0] as { blocking?: boolean } | undefined;
-  return Boolean(row?.blocking);
+  const [row] = await db
+    .select({ blocking: taskBlocking.hasBlockingDep })
+    .from(taskBlocking)
+    .where(eq(taskBlocking.taskId, taskId))
+    .limit(1);
+  return row?.blocking ?? false;
 }
 
 export async function findNextRankInFolder(
@@ -112,16 +105,30 @@ export async function getTaskDependencyIds(taskId: string): Promise<string[]> {
   return rows.map((r) => r.dependsOnTaskId);
 }
 
-// Armed tasks that depend on `changedTaskId`. Used by the static
-// taskStatusChanged trigger to fan out maybeLaunchTaskJob enqueues.
+// Armed tasks that TRANSITIVELY depend on `changedTaskId`. Used by the static
+// taskStatusChanged trigger to fan out maybeLaunchTaskJob enqueues. Must be
+// transitive to match hasBlockingDep: when a deep ancestor resolves, an armed
+// task gated on it may sit several hops down behind an already-dropped (and so
+// unarmed) intermediate — a single-hop fan-out would never re-wake it. The
+// recursive walk follows depends_on edges downstream; UNION dedupes so cycles
+// (barred on insert) terminate. Each wakened task still re-checks hasBlockingDep
+// before launching, so over-broad fan-out is harmless.
 export async function listArmedDependentsOf(
   changedTaskId: string,
 ): Promise<string[]> {
   const result = await db.execute<{ task_id: string }>(
-    sql`SELECT DISTINCT td.task_id
-        FROM ${_taskDependencies} td
-        JOIN tasks_ext_auto_start tas ON tas.parent_id = td.task_id
-        WHERE td.depends_on_task_id = ${changedTaskId}`,
+    sql`WITH RECURSIVE dependents AS (
+          SELECT td.task_id AS task_id
+            FROM ${_taskDependencies} td
+           WHERE td.depends_on_task_id = ${changedTaskId}
+          UNION
+          SELECT td.task_id
+            FROM ${_taskDependencies} td
+            JOIN dependents d ON td.depends_on_task_id = d.task_id
+        )
+        SELECT DISTINCT d.task_id
+          FROM dependents d
+          JOIN tasks_ext_auto_start tas ON tas.parent_id = d.task_id`,
   );
   return result.rows.map((r) => r.task_id);
 }

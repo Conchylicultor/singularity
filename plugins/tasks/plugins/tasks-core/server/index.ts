@@ -8,7 +8,7 @@ import {
   pushesResource,
   conversationsLiveResource,
 } from "./internal/resources";
-import { attempts, conversations, tasks } from "./internal/views";
+import { attempts, conversations, taskBlocking, tasks } from "./internal/views";
 import { pushLanded, taskStatusChanged, conversationStatusChanged } from "./internal/tables-events";
 import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
 
@@ -173,7 +173,7 @@ export default {
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
-  contributions: [Resource.Declare(tasksResource, { bootCritical: true }), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource, { bootCritical: true }), Resource.Declare(pushesResource, { bootCritical: true }), Resource.Declare(conversationsLiveResource, { bootCritical: true }), View({ view: attempts }), View({ view: conversations }), View({ view: tasks, dependsOn: ["attempts_v"] })],
+  contributions: [Resource.Declare(tasksResource, { bootCritical: true }), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource, { bootCritical: true }), Resource.Declare(pushesResource, { bootCritical: true }), Resource.Declare(conversationsLiveResource, { bootCritical: true }), View({ view: attempts }), View({ view: conversations }), View({ view: taskBlocking, dependsOn: ["attempts_v"] }), View({ view: tasks, dependsOn: ["attempts_v", "task_blocking_v"] })],
   register: [pushLanded, taskStatusChanged, conversationStatusChanged],
   onReady: sweepOrphanedAttempts,
 } satisfies ServerPluginDefinition;

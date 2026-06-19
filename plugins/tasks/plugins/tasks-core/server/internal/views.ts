@@ -1,5 +1,5 @@
 import { eq, getTableColumns, sql } from "drizzle-orm";
-import { pgView } from "drizzle-orm/pg-core";
+import { boolean, pgView, text } from "drizzle-orm/pg-core";
 import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./tables";
 
 // Derived (plain, non-materialized) views. These live in `views.ts` — NOT
@@ -82,11 +82,52 @@ export const attempts = pgView("attempts_v").as((qb) => {
     .leftJoin(pushAgg, eq(pushAgg.attemptId, _attempts.id));
 });
 
+// Transitive dependency-blocking, computed once as a shared derived view so the
+// auto-start gate (hasBlockingDep) and the UI status badge (tasks_v) read the
+// SAME definition instead of mirroring two single-hop queries. A task is blocked
+// iff ANY task in its transitive dependency closure is unresolved — neither
+// dropped nor backed by a completed attempt.
+//
+// Single-hop was only ever correct because completion propagates bottom-up: a
+// task can't complete until its own deps resolved, so "direct dep done" implied
+// "its ancestors done". `drop` breaks that invariant — it makes a node
+// non-blocking WITHOUT resolving the node's own deps, punching a hole that a
+// single JOIN can't see (A → B → C: dropping B unblocked C even with A pending).
+// The recursive walk over depends_on edges closes the hole; UNION dedupes so
+// cycles (already barred on insert by taskDependsOn) still terminate. Tasks with
+// no dependencies produce no row — consumers COALESCE the absence to "not
+// blocked".
+export const taskBlocking = pgView("task_blocking_v", {
+  taskId: text("task_id").notNull(),
+  hasBlockingDep: boolean("has_blocking_dep").notNull(),
+}).as(
+  sql`
+    WITH RECURSIVE ancestors AS (
+      SELECT td.task_id AS task_id, td.depends_on_task_id AS ancestor_id
+        FROM ${_taskDependencies} td
+      UNION
+      SELECT a.task_id, td.depends_on_task_id
+        FROM ancestors a
+        JOIN ${_taskDependencies} td ON td.task_id = a.ancestor_id
+    )
+    SELECT a.task_id AS task_id,
+           bool_or(
+             dep.dropped_at IS NULL
+             AND NOT EXISTS (
+               SELECT 1 FROM ${attempts} att
+                WHERE att.task_id = dep.id AND att.status = 'completed'
+             )
+           ) AS has_blocking_dep
+      FROM ancestors a
+      JOIN ${_tasks} dep ON dep.id = a.ancestor_id
+     GROUP BY a.task_id
+  `,
+);
+
 // Per-task facts, same set-at-a-time approach: grouped scans hash-joined to
 // tasks. `task_attempt_agg` aggregates each attempt's status/active straight off
-// attempts_v (the single definition — no re-derivation here); `task_completed`
-// carries each task's completion AND dropped_at so the dependency-blocking
-// aggregate joins it directly with no self-alias of tasks.
+// attempts_v (the single definition — no re-derivation here); transitive
+// dependency-blocking is read from the shared task_blocking_v view.
 export const tasks = pgView("tasks_v").as((qb) => {
   const attemptAgg = qb.$with("task_attempt_agg").as(
     qb
@@ -123,32 +164,6 @@ export const tasks = pgView("tasks_v").as((qb) => {
       .groupBy(_attempts.taskId),
   );
 
-  // Per-task completion + dropped flag, defaulted across ALL tasks (LEFT JOIN +
-  // COALESCE) so the dependency-blocking aggregate can join it by dep id.
-  const completed = qb.$with("task_completed").as(
-    qb
-      .select({
-        id: _tasks.id,
-        droppedAt: _tasks.droppedAt,
-        hasCompleted: sql<boolean>`COALESCE(${attemptAgg.hasCompleted}, false)`.as("has_completed"),
-      })
-      .from(_tasks)
-      .leftJoin(attemptAgg, eq(attemptAgg.taskId, _tasks.id)),
-  );
-
-  const blocking = qb.$with("task_blocking").as(
-    qb
-      .select({
-        taskId: _taskDependencies.taskId,
-        hasBlockingDep: sql<boolean>`bool_or(${completed.droppedAt} IS NULL AND NOT ${completed.hasCompleted})`.as(
-          "has_blocking_dep",
-        ),
-      })
-      .from(_taskDependencies)
-      .innerJoin(completed, eq(completed.id, _taskDependencies.dependsOnTaskId))
-      .groupBy(_taskDependencies.taskId),
-  );
-
   const deps = qb.$with("task_deps").as(
     qb
       .select({
@@ -164,20 +179,20 @@ export const tasks = pgView("tasks_v").as((qb) => {
   );
 
   return qb
-    .with(attemptAgg, waiting, completedPush, completed, blocking, deps)
+    .with(attemptAgg, waiting, completedPush, deps)
     .select({
       ...getTableColumns(_tasks),
       status: sql<"new" | "in_progress" | "need_action" | "attempted" | "done" | "held" | "dropped" | "blocked">`
         CASE
           WHEN COALESCE(${attemptAgg.hasCompleted}, false)                  THEN 'done'
-          WHEN COALESCE(${attemptAgg.hasActive}, false) AND COALESCE(${blocking.hasBlockingDep}, false)
+          WHEN COALESCE(${attemptAgg.hasActive}, false) AND COALESCE(${taskBlocking.hasBlockingDep}, false)
                                                                             THEN 'blocked'
           WHEN COALESCE(${attemptAgg.hasActive}, false) AND COALESCE(${waiting.hasWaiting}, false)
                                                                             THEN 'need_action'
           WHEN COALESCE(${attemptAgg.hasActive}, false)                     THEN 'in_progress'
           WHEN ${_tasks.droppedAt} IS NOT NULL                              THEN 'dropped'
           WHEN ${_tasks.heldAt}    IS NOT NULL                              THEN 'held'
-          WHEN COALESCE(${blocking.hasBlockingDep}, false)                  THEN 'blocked'
+          WHEN COALESCE(${taskBlocking.hasBlockingDep}, false)                  THEN 'blocked'
           WHEN COALESCE(${attemptAgg.hasAttempt}, false)                    THEN 'attempted'
           ELSE                                                                   'new'
         END
@@ -199,7 +214,7 @@ export const tasks = pgView("tasks_v").as((qb) => {
     .leftJoin(attemptAgg, eq(attemptAgg.taskId, _tasks.id))
     .leftJoin(waiting, eq(waiting.taskId, _tasks.id))
     .leftJoin(completedPush, eq(completedPush.taskId, _tasks.id))
-    .leftJoin(blocking, eq(blocking.taskId, _tasks.id))
+    .leftJoin(taskBlocking, eq(taskBlocking.taskId, _tasks.id))
     .leftJoin(deps, eq(deps.taskId, _tasks.id));
 });
 
