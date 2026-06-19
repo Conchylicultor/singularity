@@ -8,7 +8,7 @@ export type {
   HierarchyConfig,
   SelectionConfig,
   CreateOption,
-  SortState,
+  SortRule,
   ViewState,
   DataViewRenderProps,
   DataViewProps,

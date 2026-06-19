@@ -19,6 +19,8 @@ export { evaluateNode, applyFilter } from "./internal/evaluate-filter";
 export { isFilterGroup } from "./internal/filter-shape";
 export { useFilterController } from "./internal/use-filter-controller";
 export type { FilterController } from "./internal/use-filter-controller";
+export { useSortController } from "./internal/use-sort-controller";
+export type { SortController } from "./internal/use-sort-controller";
 export { pickPrimaryField } from "./internal/pick-primary-field";
 export { defineItemActions } from "./internal/define-item-actions";
 export type {
@@ -32,7 +34,7 @@ export type {
   HierarchyConfig,
   SelectionConfig,
   CreateOption,
-  SortState,
+  SortRule,
   ViewState,
   DataViewRenderProps,
   DataViewProps,

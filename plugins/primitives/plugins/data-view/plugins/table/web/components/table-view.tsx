@@ -14,7 +14,7 @@ import {
   type DataViewRenderProps,
   type FieldValue,
   type ItemActionsDescriptor,
-  type SortState,
+  type SortRule,
 } from "@plugins/primitives/plugins/data-view/web";
 
 /** FieldValue → data-table's `string | number | undefined` comparable projection. */
@@ -25,10 +25,14 @@ function coerce(value: FieldValue): string | number | undefined {
   return value;
 }
 
-/** Map the data-view per-view sort onto data-table's column-keyed sort. */
-function mapSort(sort: SortState | null): TableSortState | null {
-  if (!sort) return null;
-  return { columnId: sort.fieldId, direction: sort.direction };
+/**
+ * Map the data-view PRIMARY sort rule onto data-table's single-column sort
+ * indicator. Secondary rules don't paint a header arrow (the sort popover is the
+ * full multi-sort surface); the data-table primitive stays single-sort.
+ */
+function mapPrimary(rules: SortRule[]): TableSortState | null {
+  const p = rules[0];
+  return p ? { columnId: p.fieldId, direction: p.direction } : null;
 }
 
 export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
@@ -89,7 +93,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
       data={rows}
       columns={columns}
       rowKey={props.rowKey}
-      sortState={mapSort(props.state.sort)}
+      sortState={mapPrimary(props.state.sort)}
       onToggleSort={(columnId) => props.setSort(columnId)}
       onRowClick={props.onRowActivate}
       selectedRowId={props.selectedRowId}

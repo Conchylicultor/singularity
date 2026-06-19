@@ -49,7 +49,7 @@ function renderProps(
     rows,
     fields,
     rowKey: (r) => r.id,
-    state: { sort: null, query: "", filter: null },
+    state: { sort: [], query: "", filter: null },
     setSort: () => {},
     setFilter: () => {},
     options: undefined,

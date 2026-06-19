@@ -131,13 +131,19 @@ export interface FieldDef<TRow> {
   primary?: boolean;
 }
 
-export interface SortState {
+/**
+ * One level of an ordered, multi-level sort. Priority = position in `SortRule[]`.
+ * Keyed by `fieldId` (a field is sortable at most once), so no separate uid is
+ * needed — `fieldId` is the React key AND the sortable-list drag id.
+ */
+export interface SortRule {
   fieldId: string;
   direction: "asc" | "desc";
 }
 
 export interface ViewState {
-  sort: SortState | null;
+  /** Ordered sort rules (priority = list order). `[]` = unsorted (source order). */
+  sort: SortRule[];
   /** Per-view quick search. */
   query: string;
   /** The view's filter tree (root is always a group when present), or null. */

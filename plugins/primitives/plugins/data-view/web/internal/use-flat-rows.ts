@@ -1,25 +1,13 @@
 import { useMemo } from "react";
-import type {
-  FieldDef,
-  FieldValue,
-  FilterOperatorSet,
-  ViewState,
-} from "../../core";
+import type { FieldDef, FilterOperatorSet, ViewState } from "../../core";
 import { applyFilter } from "./evaluate-filter";
+import { makeSortComparator } from "./sort-rows";
 
 function isSearchable<TRow>(field: FieldDef<TRow>): boolean {
   if (field.filterable === true) return true;
   if (field.filterable === false) return false;
   const type = field.type ?? "text";
   return type === "text" || type === "enum" || type === "tags";
-}
-
-/** Coerce a FieldValue to a comparable number/string for sorting. */
-function comparableSort(value: FieldValue): number | string {
-  if (value instanceof Date) return value.getTime();
-  if (typeof value === "boolean") return Number(value);
-  if (typeof value === "number") return value;
-  return String(value ?? "");
 }
 
 export function useFlatRows<TRow>(
@@ -51,23 +39,9 @@ export function useFlatRows<TRow>(
     // --- Filter (recursive AND/OR tree via the data-view.filter operator sets) ---
     result = [...applyFilter(result, state.filter, fields, resolveOperatorSet)];
 
-    // --- Sort ---
-    if (state.sort) {
-      const field = fields.find((f) => f.id === state.sort!.fieldId);
-      if (field?.value) {
-        const valueFn = field.value;
-        const direction = state.sort.direction;
-        result.sort((a, b) => {
-          const va = comparableSort(valueFn(a));
-          const vb = comparableSort(valueFn(b));
-          const cmp =
-            typeof va === "number" && typeof vb === "number"
-              ? va - vb
-              : String(va).localeCompare(String(vb));
-          return direction === "desc" ? -cmp : cmp;
-        });
-      }
-    }
+    // --- Sort (multi-level, stable; null when no rule resolves) ---
+    const comparator = makeSortComparator(state.sort, fields);
+    if (comparator) result.sort(comparator);
 
     return result;
   }, [rows, fields, state, resolveOperatorSet, searchAccessor]);

@@ -4,7 +4,7 @@ import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core"
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import { useViewModel } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import type { ResolvedViewInstance } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
-import type { FilterGroup, SortState, ViewState } from "../../core";
+import type { FilterGroup, SortRule, ViewState } from "../../core";
 import type { DataViewContribution } from "../slots";
 import { dataViewDescriptors } from "./descriptors";
 import { useViewEphemeral } from "./use-view-ephemeral";
@@ -36,6 +36,8 @@ export interface ViewModel {
   setActiveView: (id: string) => void;
   stateFor: (id: string) => ViewState;
   setSort: (id: string, fieldId: string) => void;
+  /** Replace the whole sort-rule list for THIS view. */
+  setSortRules: (id: string, rules: SortRule[]) => void;
   setFilter: (id: string, filter: FilterGroup | null) => void;
   setQuery: (id: string, q: string) => void;
   setExpanded: (id: string, k: string, v: boolean) => void;
@@ -43,9 +45,19 @@ export interface ViewModel {
   actions: ViewActions;
 }
 
-/** Read the host-managed sort/filter keys off a row's raw variant value. */
-function readSort(view: VariantValue | undefined): SortState | null {
-  return (view?.sort as SortState | null | undefined) ?? null;
+/**
+ * Read the host-managed sort rules off a row's raw variant value, coercing every
+ * persisted form into a `SortRule[]`. Migrate-on-read — NEVER destructive (the
+ * config is re-serialized to the array shape only when the user edits sort):
+ *   - new array shape → as-is;
+ *   - legacy single `{ fieldId, direction }` object → wrapped in `[obj]`;
+ *   - null / absent → `[]`.
+ */
+function readSortRules(view: VariantValue | undefined): SortRule[] {
+  const raw = view?.sort;
+  if (Array.isArray(raw)) return raw as SortRule[];
+  if (raw && typeof raw === "object") return [raw as SortRule];
+  return [];
 }
 function readFilter(view: VariantValue | undefined): FilterGroup | null {
   return (view?.filter as FilterGroup | null | undefined) ?? null;
@@ -55,10 +67,11 @@ function readFilter(view: VariantValue | undefined): FilterGroup | null {
  * data-view's host model. Wraps view-core's generic `useViewModel` and layers the
  * view-content semantics on top:
  *   - `sortFor`/`filterFor` read the host-managed `sort`/`filter` keys off the raw
- *     config row (`viewFor`),
- *   - `setSort` runs the null→asc→desc→null cycle and `setFilter` writes the whole
- *     tree, both via `updateView(id, { ...view, sort/filter }, { merge: true })`
- *     so the engine preserves every other key,
+ *     config row (`viewFor`); `sortFor` migrates legacy single-`sort` → `SortRule[]`,
+ *   - `setSort` cycles the PRIMARY rule (preserving secondary rules), `setSortRules`
+ *     replaces the whole list, and `setFilter` writes the whole tree — all via
+ *     `updateView(id, { sort/filter }, { merge: true })` so the engine preserves
+ *     every other key,
  *   - `query`/`expanded` come from the device-local ephemeral store,
  *   - the result is repacked into the exact existing `ViewModel` shape so the
  *     `data-view.tsx` render logic is unchanged.
@@ -83,7 +96,7 @@ export function useDataViewModel(
   const ephemeral = useViewEphemeral(storageKey);
 
   const sortFor = useCallback(
-    (id: string): SortState | null => readSort(core.viewFor(id)),
+    (id: string): SortRule[] => readSortRules(core.viewFor(id)),
     [core],
   );
   const filterFor = useCallback(
@@ -91,15 +104,35 @@ export function useDataViewModel(
     [core],
   );
 
+  const setSortRules = useCallback(
+    (id: string, rules: SortRule[]) => {
+      core.updateView(id, { sort: rules } as unknown as VariantValue, {
+        merge: true,
+      });
+    },
+    [core],
+  );
+
   const setSort = useCallback(
     (id: string, fieldId: string) => {
-      const cur = readSort(core.viewFor(id));
-      // null → asc → desc → null cycle (matches use-data-table.toggleSort).
-      let sort: SortState | null;
-      if (cur?.fieldId !== fieldId) sort = { fieldId, direction: "asc" };
-      else if (cur.direction === "asc") sort = { fieldId, direction: "desc" };
-      else sort = null;
-      core.updateView(id, { sort } as unknown as VariantValue, { merge: true });
+      // Header shortcut: cycle the PRIMARY rule, preserving secondary rules.
+      const rules = readSortRules(core.viewFor(id));
+      const primary = rules[0];
+      let next: SortRule[];
+      if (primary?.fieldId === fieldId) {
+        next =
+          primary.direction === "asc"
+            ? [{ fieldId, direction: "desc" }, ...rules.slice(1)] // asc → desc
+            : rules.slice(1); // desc → drop primary
+      } else {
+        next = [
+          { fieldId, direction: "asc" }, // promote to primary asc
+          ...rules.filter((r) => r.fieldId !== fieldId),
+        ];
+      }
+      core.updateView(id, { sort: next } as unknown as VariantValue, {
+        merge: true,
+      });
     },
     [core],
   );
@@ -146,11 +179,12 @@ export function useDataViewModel(
       setActiveView: core.setActiveView,
       stateFor,
       setSort,
+      setSortRules,
       setFilter,
       setQuery: ephemeral.setQuery,
       setExpanded: ephemeral.setExpanded,
       actions,
     }),
-    [core, stateFor, setSort, setFilter, ephemeral, actions],
+    [core, stateFor, setSort, setSortRules, setFilter, ephemeral, actions],
   );
 }
