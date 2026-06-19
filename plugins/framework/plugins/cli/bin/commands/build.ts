@@ -21,13 +21,12 @@ import {
   worktreeDataDir,
   PG_LOG_FILE,
   SINGULARITY_DIR,
-  WORKTREES_DIR,
 } from "../paths";
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
 import { withHostSlot, type HostSlotKind } from "../host-semaphore";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
 import { appendBuildLog } from "../build-log-writer-global";
-import { markWorktreeOpStart, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
+import { markWorktreeOpStart, clearWorktreeOp, writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
@@ -763,12 +762,7 @@ export function registerBuild(program: Command) {
       const mainRoot = await getMainRepoRoot();
       const centralDir = resolve(mainRoot, "plugins/framework/plugins/central-core");
       if (existsSync(join(centralDir, "bin", "index.ts"))) {
-        const centralSpecDir = join(WORKTREES_DIR, "central");
-        mkdirSync(centralSpecDir, { recursive: true });
-        writeFileSync(
-          join(centralSpecDir, "spec.json"),
-          JSON.stringify({ server: centralDir }, null, 2) + "\n",
-        );
+        writeWorktreeSpec({ name: "central", server: centralDir });
       }
       endSpan();
 
@@ -1041,17 +1035,11 @@ export function registerBuild(program: Command) {
       // 6. Write registry JSON
       endSpan = buildProfilerStart("registerWorktree", "build:deploy", "register worktree");
       console.log("Registering worktree...");
-      const spec = {
+      writeWorktreeSpec({
+        name,
         server: resolve(root, "plugins/framework/plugins/server-core"),
         web: livePath,
-      };
-
-      const worktreeDir = join(WORKTREES_DIR, name);
-      mkdirSync(worktreeDir, { recursive: true });
-      writeFileSync(
-        join(worktreeDir, "spec.json"),
-        JSON.stringify(spec, null, 2) + "\n",
-      );
+      });
       endSpan();
 
       // 6b. Emit the central routing manifest. The gateway watches this file
@@ -1063,13 +1051,7 @@ export function registerBuild(program: Command) {
       // 6c. Re-register the `central` worktree spec for idempotency. Path is
       // always main's central-core/ — see comment at the early write above.
       if (existsSync(join(centralDir, "bin", "index.ts"))) {
-        const centralSpec = { server: centralDir };
-        const centralRegDir = join(WORKTREES_DIR, "central");
-        mkdirSync(centralRegDir, { recursive: true });
-        writeFileSync(
-          join(centralRegDir, "spec.json"),
-          JSON.stringify(centralSpec, null, 2) + "\n",
-        );
+        writeWorktreeSpec({ name: "central", server: centralDir });
 
         // 6d. Restart central so it picks up freshly-merged main code. Only
         // done when building from main — agent worktrees never change central's

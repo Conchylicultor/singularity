@@ -26,6 +26,7 @@ export {
   PUSH_LOCK_PATH,
   worktreesDir,
 } from "./internal/worktree-op";
+export { type WorktreeSpec, writeWorktreeSpec } from "./internal/spec";
 
 export default {
 } satisfies ServerPluginDefinition;

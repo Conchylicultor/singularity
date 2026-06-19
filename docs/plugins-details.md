@@ -2819,7 +2819,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`worktree`**
       - Server:
         - Uses: `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`
-        - Exports: Types: `DerivePushDeps`, `PushHolder`, `WorktreeOp`, `WorktreeOpInfo`, `WorktreeOpPhase`; Values: `clearPushHolder`, `clearWorktreeOp`, `derivePushPhases`, `ensureMainWorktreeRoot`, `isWorktreeOpActive`, `listActiveWorktreeOps`, `markWorktreeOpStart`, `PUSH_LOCK_PATH`, `pushLockHeld`, `readPushHolder`, `removeWorktree`, `resolveActiveWorktreeOps`, `setupWorktree`, `setWorktreeOpPhase`, `worktreePathFor`, `worktreesDir`, `writePushHolder`
+        - Exports: Types: `DerivePushDeps`, `PushHolder`, `WorktreeOp`, `WorktreeOpInfo`, `WorktreeOpPhase`, `WorktreeSpec`; Values: `clearPushHolder`, `clearWorktreeOp`, `derivePushPhases`, `ensureMainWorktreeRoot`, `isWorktreeOpActive`, `listActiveWorktreeOps`, `markWorktreeOpStart`, `PUSH_LOCK_PATH`, `pushLockHeld`, `readPushHolder`, `removeWorktree`, `resolveActiveWorktreeOps`, `setupWorktree`, `setWorktreeOpPhase`, `worktreePathFor`, `worktreesDir`, `writePushHolder`, `writeWorktreeSpec`
       - Cross-plugin:
         - Imported by: `code-explorer`, `config_v2/staging`, `conversations`, `conversations/conversation-view/op-status`, `conversations/runtime-tmux`, `debug/broadcasts`, `debug/memory`, `debug/profiling/push`, `debug/worktree-cleanup`, `infra/git-watcher`, `plugin-meta/plugin-health`, `stats/commits`, `stats/cost`, `tasks`
 
