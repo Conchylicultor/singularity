@@ -25,6 +25,59 @@ export interface UiContextMeta {
   owner?: string;
 }
 
+// One machine-coordinate field of the ui-context tag. THE single source of truth
+// for the attribute set: serialize writes these, parse reads these, and the chip
+// popover displays these — each by iterating this list. Adding a field here makes
+// it flow to the wire, the parser, and the UI by construction, so the three can
+// never drift out of sync (the bug where the popover silently dropped
+// contribution/source/owner). `element` is intentionally absent — it is the
+// <picked-content> body, not an attribute, and is handled on its own.
+export interface UiContextField {
+  /** Property on UiContextMeta this field reads/writes. */
+  key: Exclude<keyof UiContextMeta, "element">;
+  /** Attribute name in the serialized `<ui-context …>` tag. */
+  attr: string;
+  /** Human-readable label shown in the chip popover. */
+  label: string;
+  /** Always emitted (never omitted-when-empty). Only `url` is required. */
+  required?: boolean;
+}
+
+// Preserves the literal `key` of each field (so the exhaustiveness check below
+// can see exactly which keys are registered) while typing the rest as a full
+// UiContextField — so `.required` is always present, not narrowed away.
+const field = <K extends UiContextField["key"]>(
+  key: K,
+  attr: string,
+  label: string,
+  required = false,
+): UiContextField & { key: K } => ({ key, attr, label, required });
+
+// Ordered once; this order is the serialized attribute order AND the popover row
+// order. `url` leads (matching the historical wire format), the rest follow
+// outer→inner / coarse→fine.
+export const UI_CONTEXT_FIELDS = [
+  field("url", "url", "URL", true),
+  field("pluginId", "plugin", "Plugin"),
+  field("slotId", "slot", "Slot"),
+  field("contributionId", "contribution", "Contribution"),
+  field("paneId", "pane", "Pane"),
+  field("path", "path", "Path"),
+  field("selector", "selector", "Selector"),
+  field("source", "source", "Source"),
+  field("owner", "owner", "Owner"),
+];
+
+// Compile-time exhaustiveness: every attribute key of UiContextMeta MUST appear
+// in UI_CONTEXT_FIELDS. Add a field to the interface without registering it and
+// this line fails to type-check, naming the missing key — so a new field cannot
+// be serialized/parsed/displayed inconsistently, it simply won't compile.
+type RegisteredKey = (typeof UI_CONTEXT_FIELDS)[number]["key"];
+type UnregisteredKey = Exclude<Exclude<keyof UiContextMeta, "element">, RegisteredKey>;
+const _allFieldsRegistered: UnregisteredKey extends never ? true : UnregisteredKey =
+  true;
+void _allFieldsRegistered;
+
 // Attribute values are quote-delimited, so only `"` would break them (a `>`
 // inside quotes — e.g. a CSS selector "div>div" — is fine). Collapse whitespace
 // so the tag stays single-line for the editor's line-based markdown sync.
@@ -53,12 +106,11 @@ const LEGACY_BODY_PREAMBLE = `${HINT} Picked element: `;
 // which reads far more naturally to a model than cramming prose into an
 // attribute, and keeps the fixed framing cleanly separated from the content.
 export function serializeUiContext(m: UiContextMeta): string {
-  const attr = (k: string, v?: string) => (v ? ` ${k}="${sanitizeAttr(v)}"` : "");
-  const open =
-    `<ui-context url="${sanitizeAttr(m.url)}"` +
-    `${attr("plugin", m.pluginId)}${attr("slot", m.slotId)}${attr("contribution", m.contributionId)}` +
-    `${attr("pane", m.paneId)}${attr("path", m.path)}${attr("selector", m.selector)}${attr("source", m.source)}${attr("owner", m.owner)}>`;
-  return `${open}<hint>${HINT}</hint><picked-content>${sanitizeBody(m.element)}</picked-content></ui-context>`;
+  const attrs = UI_CONTEXT_FIELDS.map((f) => {
+    const v = m[f.key] ?? "";
+    return f.required || v ? ` ${f.attr}="${sanitizeAttr(v)}"` : "";
+  }).join("");
+  return `<ui-context${attrs}><hint>${HINT}</hint><picked-content>${sanitizeBody(m.element)}</picked-content></ui-context>`;
 }
 
 // Match the paired tag. Attribute values are quoted so they may safely contain
@@ -88,16 +140,11 @@ export function parseUiContext(tag: string): UiContextMeta | null {
       : body;
   }
   if (!url || !element) return null;
-  return {
-    url,
-    element,
-    pluginId: get("plugin"),
-    slotId: get("slot"),
-    contributionId: get("contribution"),
-    paneId: get("pane"),
-    path: get("path"),
-    selector: get("selector"),
-    source: get("source"),
-    owner: get("owner"),
-  };
+  const meta: UiContextMeta = { url, element };
+  for (const f of UI_CONTEXT_FIELDS) {
+    if (f.key === "url") continue; // captured above and validated non-empty
+    const v = get(f.attr);
+    if (v !== undefined) meta[f.key] = v;
+  }
+  return meta;
 }

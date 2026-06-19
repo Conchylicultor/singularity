@@ -1,5 +1,5 @@
 import { MdAdsClick } from "react-icons/md";
-import type { UiContextMeta } from "../../core";
+import { UI_CONTEXT_FIELDS, type UiContextMeta } from "../../core";
 import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
@@ -55,12 +55,12 @@ export function UiContextChip({ meta }: { meta: UiContextMeta }) {
             </Text>
           </Stack>
           <Stack gap="2xs">
-            <DetailRow label="Plugin" value={meta.pluginId} />
-            <DetailRow label="Slot" value={meta.slotId} />
-            <DetailRow label="Path" value={meta.path} />
-            <DetailRow label="Pane" value={meta.paneId} />
-            <DetailRow label="Selector" value={meta.selector} />
-            <DetailRow label="URL" value={meta.url} />
+            {/* Every field is rendered straight from the shared registry, so the
+                popover can never silently drop a field the tag carries — adding a
+                field to UI_CONTEXT_FIELDS surfaces it here automatically. */}
+            {UI_CONTEXT_FIELDS.map((f) => (
+              <DetailRow key={f.key} label={f.label} value={meta[f.key]} />
+            ))}
           </Stack>
         </Stack>
       </Inset>

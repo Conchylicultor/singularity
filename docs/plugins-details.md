@@ -2618,7 +2618,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `active-data.ActiveData`, `improve.ImproveCommands`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.PortalForwardProvider`, `primitives/css/ui-kit.usePortalForwardedAttrs`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftFormSlots`
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`
-        - Exports: Types: `UiContextMeta`; Values: `parseUiContext`, `serializeUiContext`, `UI_CONTEXT_RE`, `viteCollectedDir`
+        - Exports: Types: `UiContextField`, `UiContextMeta`; Values: `parseUiContext`, `serializeUiContext`, `UI_CONTEXT_FIELDS`, `UI_CONTEXT_RE`, `viteCollectedDir`
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:
