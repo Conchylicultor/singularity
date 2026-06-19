@@ -13,6 +13,7 @@ import type {
   DataViewProps,
   DataViewRenderProps,
   FilterGroup,
+  SortRule,
 } from "../../core";
 import {
   EditableViewSwitcher,
@@ -24,7 +25,9 @@ import {
   type ViewModel,
 } from "../internal/use-data-view-model";
 import { useFilterController } from "../internal/use-filter-controller";
+import { useSortController } from "../internal/use-sort-controller";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
+import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
 import { CreatorsControl } from "./creators-control";
 
 /**
@@ -112,6 +115,19 @@ function DataViewInner<TRow>({
     setActiveFilter,
   );
   const hasFilters = filterController.filterableFields.length > 0;
+
+  // Sort controller — the popover builder consumes the flat surface (rules,
+  // sortableFields, ruleCount, add/remove/setDirection/setField/move/clear).
+  const setActiveSortRules = useCallback(
+    (rules: SortRule[]) => viewModel.setSortRules(activeViewId, rules),
+    [viewModel, activeViewId],
+  );
+  const sortController = useSortController(
+    fields,
+    activeState.sort,
+    setActiveSortRules,
+  );
+  const hasSort = sortController.sortableFields.length > 0;
 
   // Config is the single source of truth: zero authored view-instances → render
   // an honest placeholder rather than an empty shell. The build-time
@@ -204,6 +220,11 @@ function DataViewInner<TRow>({
           {/* The filter builder: a pill trigger ("Filter" / "N rules") opening
               the Notion-style nested AND/OR popover builder. Rendered only when
               the schema has at least one filterable field. */}
+          {/* The sort + filter builders sit adjacent as a matched pair: each is
+              a pill trigger ("Sort" / "N sorts", "Filter" / "N rules") opening
+              its Notion-style popover. Each renders only when the schema has at
+              least one eligible field. */}
+          {hasSort ? <SortBuilderTrigger controller={sortController} /> : null}
           {hasFilters ? (
             <FilterBuilderTrigger controller={filterController} />
           ) : null}

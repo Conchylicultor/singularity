@@ -20,6 +20,8 @@ import { useResolveFieldIcon } from "../../internal/use-field-icon";
 export function FieldSearchList<TRow>(props: {
   fields: FieldDef<TRow>[];
   onPick: (fieldId: string) => void;
+  /** Search input placeholder. Defaults to "Filter by…" (the filter-builder copy). */
+  placeholder?: string;
   /** Optional advanced affordance rendered below the list (e.g. "Add filter group"). */
   footer?: ReactNode;
 }): ReactNode {
@@ -35,7 +37,7 @@ export function FieldSearchList<TRow>(props: {
         autoFocus
         value={query}
         onChange={(e) => setQuery(e.target.value)}
-        placeholder="Filter by…"
+        placeholder={props.placeholder ?? "Filter by…"}
         aria-label="Search fields"
       />
       <Stack gap="2xs" className="max-h-64 overflow-y-auto">

@@ -17,6 +17,10 @@ export function FieldPicker<TRow>(props: {
   fields: FieldDef<TRow>[];
   value: string;
   onChange: (fieldId: string) => void;
+  /** Trigger button `aria-label`. Defaults to "Filter field" (the filter-builder copy). */
+  label?: string;
+  /** Typeahead placeholder forwarded to `FieldSearchList`. Defaults to "Filter by…". */
+  placeholder?: string;
 }): ReactNode {
   const [open, setOpen] = useState(false);
   const resolveIcon = useResolveFieldIcon();
@@ -30,7 +34,11 @@ export function FieldPicker<TRow>(props: {
       align="start"
       contentClassName="w-72"
       trigger={
-        <Button variant="outline" size="sm" aria-label="Filter field">
+        <Button
+          variant="outline"
+          size="sm"
+          aria-label={props.label ?? "Filter field"}
+        >
           {CurrentIcon ? <CurrentIcon /> : null}
           <span className="truncate">{current?.label ?? "Select field"}</span>
           <MdExpandMore />
@@ -39,6 +47,7 @@ export function FieldPicker<TRow>(props: {
     >
       <FieldSearchList
         fields={props.fields}
+        placeholder={props.placeholder}
         onPick={(fieldId) => {
           setOpen(false);
           props.onChange(fieldId);
