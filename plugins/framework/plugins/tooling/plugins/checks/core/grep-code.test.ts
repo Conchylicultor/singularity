@@ -12,6 +12,8 @@ import { mkdtempSync, rmSync, writeFileSync } from "fs";
 import { tmpdir } from "os";
 import { join } from "path";
 import { grepCode } from "./grep-code";
+import { withScanTree } from "./scan-context";
+import { computeTreeHash } from "./tree-hash";
 
 let root = "";
 
@@ -52,6 +54,48 @@ test("grepCode returns only real-code matches, skipping comments/strings/regex",
   expect(matches[0]!.path).toBe("fixture.ts");
   expect(matches[0]!.line).toBe(3);
   expect(matches[0]!.text).toBe("const ws = new WebSocket(url);");
+});
+
+test("grepCode (no scan tree) scans untracked files via the working-tree fallback", async () => {
+  // The pre-fix blind spot: a brand-new, not-yet-committed file. `--untracked`
+  // means an uncached run still sees it.
+  const f = join(root, "untracked_fallback.ts");
+  writeFileSync(f, "const ws = new WebSocket(url);\n");
+  try {
+    const matches = await grepCode({
+      root,
+      pattern: /new WebSocket\(/,
+      grepArg: "new WebSocket(",
+      fixed: true,
+    });
+    expect(matches.some((m) => m.path === "untracked_fallback.ts" && m.line === 1)).toBe(true);
+  } finally {
+    rmSync(f, { force: true });
+  }
+});
+
+test("grepCode scans the ambient scan tree — incl. files untracked when it was written", async () => {
+  // This is the cache-correctness invariant: the cache key is computeTreeHash's
+  // tree (which includes untracked files via `add -A`), so grepCode must scan
+  // THAT tree's bytes — not the working copy, which may differ or not yet track
+  // the file. Without this, a PASS could be recorded for content never scanned.
+  const f = join(root, "untracked_tree.ts");
+  writeFileSync(f, "const ws = new WebSocket(url);\n"); // untracked at write-tree time
+  const tree = await computeTreeHash(root);
+  expect(tree).toBeTruthy();
+
+  // Mutate the working copy so a working-tree grep would see DIFFERENT content.
+  writeFileSync(f, "const x = 1;\n");
+  try {
+    const matches = await withScanTree(tree, () =>
+      grepCode({ root, pattern: /new WebSocket\(/, grepArg: "new WebSocket(", fixed: true }),
+    );
+    // Found via the tree blob (its untracked-at-write-time content), proving the
+    // scan reads the tree, not the now-mutated working file.
+    expect(matches.some((m) => m.path === "untracked_tree.ts" && m.line === 1)).toBe(true);
+  } finally {
+    rmSync(f, { force: true });
+  }
 });
 
 test("grepCode returns [] when git grep finds nothing", async () => {

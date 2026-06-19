@@ -4,6 +4,7 @@ import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/col
 import type { Check, CheckResult } from "./types";
 import { computeTreeHash } from "./tree-hash";
 import { openCheckCache } from "./cache";
+import { withScanTree } from "./scan-context";
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -92,7 +93,9 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
         return { check, result, durationMs: Math.round(performance.now() - wallStart), wallStart, cached: true };
       }
 
-      const result = await check.run();
+      // Scan the SAME tree the cache key (treeHash) is computed from, so a
+      // recorded PASS always reflects content the check actually inspected.
+      const result = await withScanTree(treeHash, () => check.run());
       const durationMs = Math.round(performance.now() - wallStart);
       // Cache PASSES only — failures must always re-run with full output.
       if (cache !== null && treeHash !== null && sig !== null && result.ok) {
