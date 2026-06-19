@@ -17,6 +17,7 @@ import {
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { configDetailPane } from "../internal/panes";
 import { pruneConfigTree } from "../internal/prune-config-tree";
 import { flattenConfigTree, type ConfigNavRow } from "../internal/flatten-config-tree";
@@ -197,7 +198,7 @@ export function ConfigNav() {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <Stack gap="none" className="h-full min-h-0">
       <DataView<ConfigNavRow>
         rows={rows}
         fields={fields}
@@ -211,6 +212,6 @@ export function ConfigNav() {
         searchAccessor={(r) => r.searchText}
         viewOptions={{ tree: treeOptions }}
       />
-    </div>
+    </Stack>
   );
 }

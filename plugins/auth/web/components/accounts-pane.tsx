@@ -1,4 +1,5 @@
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Auth } from "../slots";
 import { useAuthState } from "../hooks";
 import { DefaultProviderRow } from "./default-provider-row";
@@ -8,8 +9,8 @@ export function AccountsPane() {
   const providers = Auth.Provider.useContributions();
 
   return (
-    <div className="flex flex-col gap-lg p-xl">
-      <div className="flex items-center justify-between">
+    <Stack gap="lg" className="p-xl">
+      <Stack direction="row" align="center" justify="between" gap="none">
         <div>
           <Text as="h1" variant="heading">Accounts</Text>
           <Text as="p" variant="body" className="text-muted-foreground">
@@ -19,7 +20,7 @@ export function AccountsPane() {
             on the main app and shared with all worktrees.
           </Text>
         </div>
-      </div>
+      </Stack>
 
       {!authState.pending && authState.data.mainOffline ? (
         <Text as="div" variant="body" className="rounded-md border border-warning/50 bg-warning/10 p-md text-warning">
@@ -43,7 +44,7 @@ export function AccountsPane() {
         </Text>
       ) : null}
 
-      <div className="flex flex-col divide-y rounded-md border">
+      <Stack gap="none" className="divide-y rounded-md border">
         {providers.length === 0 ? (
           <Text as="div" variant="body" className="p-lg text-muted-foreground">
             No providers registered. Install an auth provider plugin (e.g.
@@ -56,7 +57,7 @@ export function AccountsPane() {
             return <Row key={p.id} providerId={p.id} />;
           })
         )}
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

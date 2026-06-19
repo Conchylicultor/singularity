@@ -10,6 +10,9 @@ import { configV2Resource, removeDescriptorScope } from "@plugins/config_v2/core
 import type { ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Values } from "@plugins/config_v2/core";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { acknowledgeConflict, deleteOverride, mergeConflict, getConfigRawFile } from "../../core";
 import { configDetailPane } from "../internal/panes";
 import { useConflicts } from "../internal/use-conflicts";
@@ -82,7 +85,7 @@ function ConfigDetailInner({
   });
 
   return (
-    <div className="flex flex-col gap-xs p-md">
+    <Stack gap="xs" className="p-md">
       <ScopeTabs storePath={registration.storePath} scopeId={scopeId} onSelect={setScopeId} />
       {gated.pending ? (
         <Loading />
@@ -96,7 +99,7 @@ function ConfigDetailInner({
           tiers={gated.data.tiers}
         />
       )}
-    </div>
+    </Stack>
   );
 }
 
@@ -214,7 +217,7 @@ function ConfigDetailBody({
   return (
     <>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the action toolbar from the fields below (no named margin utility) */}
-      <div className="mb-1 flex items-center justify-end gap-sm">
+      <Stack direction="row" align="center" justify="end" gap="sm" className="mb-1">
         {scopeId && !showRaw && (
           <Button
             variant="ghost"
@@ -227,7 +230,7 @@ function ConfigDetailBody({
         )}
         {hasAnyModified && !showRaw && (
           confirmReset ? (
-            <div className="flex items-center gap-xs">
+            <Stack direction="row" align="center" gap="xs">
               <Text variant="caption" tone="muted">Reset all fields?</Text>
               <Button
                 variant="ghost"
@@ -244,7 +247,7 @@ function ConfigDetailBody({
               >
                 Cancel
               </Button>
-            </div>
+            </Stack>
           ) : (
             <Button
               variant="ghost"
@@ -264,7 +267,7 @@ function ConfigDetailBody({
           {toggleIcon}
           {showRaw ? "Fields" : "Raw file"}
         </Button>
-      </div>
+      </Stack>
       {showRaw ? (
         <RawFileView storePath={registration.storePath} scopeId={scopeId} />
       ) : (
@@ -273,129 +276,141 @@ function ConfigDetailBody({
             conflictEntry.kind === "invalid" ? (
               <>
                 {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the invalid banner from the fields below (no named margin utility) */}
-                <Text as="div" variant="body" className="mb-2 flex flex-col gap-xs rounded-md border border-destructive/30 bg-destructive/10 px-md py-sm text-destructive">
-                  <div className="flex items-center gap-sm">
-                    <MdWarning className="size-4 shrink-0" />
-                    <span className="flex-1">Stored config is invalid for the current schema</span>
-                    <div className="flex shrink-0 gap-xs">
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => setShowDiff((v) => !v)}
-                        className="bg-destructive/20 hover:bg-destructive/30"
-                      >
-                        <MdDifference className="size-3.5" />
-                        {showDiff ? "Hide diff" : "View diff"}
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={() => setShowRaw(true)}
-                        className="bg-destructive/20 hover:bg-destructive/30"
-                      >
-                        View raw
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={handleAcceptAll}
-                        className="bg-destructive/20 hover:bg-destructive/30"
-                      >
-                        Reset to defaults
-                      </Button>
-                    </div>
-                  </div>
-                  {conflictEntry.issues && conflictEntry.issues.length > 0 && (
-                    <div
+                <Text as="div" variant="body" className="mb-2 rounded-md border border-destructive/30 bg-destructive/10 px-md py-sm text-destructive">
+                  <Stack gap="xs">
+                    <Frame
+                      leading={<MdWarning className="size-4" />}
+                      content={<span>Stored config is invalid for the current schema</span>}
+                      trailing={
+                        <Stack direction="row" gap="xs">
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => setShowDiff((v) => !v)}
+                            className="bg-destructive/20 hover:bg-destructive/30"
+                          >
+                            <MdDifference className="size-3.5" />
+                            {showDiff ? "Hide diff" : "View diff"}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={() => setShowRaw(true)}
+                            className="bg-destructive/20 hover:bg-destructive/30"
+                          >
+                            View raw
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={handleAcceptAll}
+                            className="bg-destructive/20 hover:bg-destructive/30"
+                          >
+                            Reset to defaults
+                          </Button>
+                        </Stack>
+                      }
+                    />
+                    {conflictEntry.issues && conflictEntry.issues.length > 0 && (
                       // eslint-disable-next-line spacing/no-adhoc-spacing -- ml indents the issue list under the banner heading (no named margin utility)
-                      className="ml-6 flex flex-col gap-sm"
-                    >
-                      {conflictEntry.issues.map((issue, i) => {
-                        const value = drillPath(conflictEntry.overrideValues, issue.path);
-                        const label = issue.path.length > 0 ? issue.path.join(".") : "(root)";
-                        return (
-                          <div key={i} className="flex flex-col gap-xs">
-                            <Text as="div" variant="caption" className="text-destructive/90">
-                              <code className="rounded-sm bg-destructive/15 px-xs font-medium">{label}</code>
-                              {" — "}
-                              {issue.message}
-                            </Text>
-                            {value === MISSING ? (
-                              <Text as="div" variant="caption" tone="muted">(value missing)</Text>
-                            ) : (
-                              <HighlightedCode code={JSON.stringify(value, null, 2)} lang="json" />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                      <Stack gap="sm" className="ml-6">
+                        {conflictEntry.issues.map((issue, i) => {
+                          const value = drillPath(conflictEntry.overrideValues, issue.path);
+                          const label = issue.path.length > 0 ? issue.path.join(".") : "(root)";
+                          return (
+                            <Stack key={i} gap="xs">
+                              <Text as="div" variant="caption" className="text-destructive/90">
+                                <code className="rounded-sm bg-destructive/15 px-xs font-medium">{label}</code>
+                                {" — "}
+                                {issue.message}
+                              </Text>
+                              {value === MISSING ? (
+                                <Text as="div" variant="caption" tone="muted">(value missing)</Text>
+                              ) : (
+                                <HighlightedCode code={JSON.stringify(value, null, 2)} lang="json" />
+                              )}
+                            </Stack>
+                          );
+                        })}
+                      </Stack>
+                    )}
+                  </Stack>
                 </Text>
                 {showDiff && <InvalidDiff storePath={registration.storePath} />}
               </>
             ) : isSoftConflict ? (
               // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the soft-conflict banner from the fields below (no named margin utility)
-              <Text as="div" variant="body" className="mb-2 flex items-center justify-between rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning">
-                <span>Defaults updated — no conflicts</span>
-                <Button
-                  variant="ghost"
-                  size="xs"
-                  onClick={handleDismiss}
-                  className="shrink-0 bg-warning/20 hover:bg-warning/30"
-                >
-                  Dismiss
-                </Button>
-              </Text>
-            ) : (
-              <>
-                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the hash-conflict banner from the fields below (no named margin utility) */}
-                <Text as="div" variant="body" className="mb-2 flex items-center gap-sm rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning">
-                  <MdWarning className="size-4 shrink-0" />
-                  <span className="flex-1">
-                    {canMerge && trueConflictKeys!.length > 0
-                      ? `Upstream defaults changed — ${trueConflictKeys!.length} field${trueConflictKeys!.length === 1 ? "" : "s"} need${trueConflictKeys!.length === 1 ? "s" : ""} your attention`
-                      : canMerge
-                        ? "Upstream defaults changed — ready to merge cleanly"
-                        : "Upstream defaults changed"}
-                  </span>
-                  <div className="flex shrink-0 gap-xs">
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => setShowDiff((v) => !v)}
-                      className="bg-warning/20 hover:bg-warning/30"
-                    >
-                      <MdDifference className="size-3.5" />
-                      {showDiff ? "Hide diff" : "View diff"}
-                    </Button>
-                    {canMerge && (
-                      <Button
-                        variant="ghost"
-                        size="xs"
-                        onClick={handleMerge}
-                        className="bg-warning/20 hover:bg-warning/30"
-                      >
-                        <MdMerge className="size-3.5" />
-                        Merge
-                      </Button>
-                    )}
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={handleAcceptAll}
-                      className="bg-warning/20 hover:bg-warning/30"
-                    >
-                      Accept all new defaults
-                    </Button>
+              <Text as="div" variant="body" className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning">
+                <Frame
+                  content={<span>Defaults updated — no conflicts</span>}
+                  trailing={
                     <Button
                       variant="ghost"
                       size="xs"
                       onClick={handleDismiss}
                       className="bg-warning/20 hover:bg-warning/30"
                     >
-                      Keep my values
+                      Dismiss
                     </Button>
-                  </div>
+                  }
+                />
+              </Text>
+            ) : (
+              <>
+                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the hash-conflict banner from the fields below (no named margin utility) */}
+                <Text as="div" variant="body" className="mb-2 rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning">
+                  <Frame
+                    leading={<MdWarning className="size-4" />}
+                    content={
+                      <span>
+                        {canMerge && trueConflictKeys!.length > 0
+                          ? `Upstream defaults changed — ${trueConflictKeys!.length} field${trueConflictKeys!.length === 1 ? "" : "s"} need${trueConflictKeys!.length === 1 ? "s" : ""} your attention`
+                          : canMerge
+                            ? "Upstream defaults changed — ready to merge cleanly"
+                            : "Upstream defaults changed"}
+                      </span>
+                    }
+                    trailing={
+                      <Stack direction="row" gap="xs">
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={() => setShowDiff((v) => !v)}
+                          className="bg-warning/20 hover:bg-warning/30"
+                        >
+                          <MdDifference className="size-3.5" />
+                          {showDiff ? "Hide diff" : "View diff"}
+                        </Button>
+                        {canMerge && (
+                          <Button
+                            variant="ghost"
+                            size="xs"
+                            onClick={handleMerge}
+                            className="bg-warning/20 hover:bg-warning/30"
+                          >
+                            <MdMerge className="size-3.5" />
+                            Merge
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={handleAcceptAll}
+                          className="bg-warning/20 hover:bg-warning/30"
+                        >
+                          Accept all new defaults
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="xs"
+                          onClick={handleDismiss}
+                          className="bg-warning/20 hover:bg-warning/30"
+                        >
+                          Keep my values
+                        </Button>
+                      </Stack>
+                    }
+                  />
                 </Text>
                 {showDiff && <ConflictDiff storePath={registration.storePath} />}
               </>
@@ -435,14 +450,14 @@ function RawFileView({ storePath, scopeId }: { storePath: string; scopeId: strin
   const showResolved = data.origin !== null && data.origin !== data.gitOrigin;
 
   return (
-    <div className="flex flex-col gap-md">
+    <Stack gap="md">
       <RawSection label="User override" path={data.overridePath} code={data.override} />
       <RawSection label="Git override" path={data.gitOverridePath} code={data.gitOverride} />
       <RawSection label="Origin (defaults)" path={data.gitOriginPath} code={data.gitOrigin} />
       {showResolved && (
         <RawSection label="Resolved origin (app reads — build pending)" path={data.originPath} code={data.origin} />
       )}
-    </div>
+    </Stack>
   );
 }
 
@@ -450,9 +465,12 @@ function RawSection({ label, path, code }: { label: string; path: string; code: 
   return (
     <section>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the section label from the code block below (no named margin utility) */}
-      <Text as="div" variant="caption" tone="muted" className="mb-1 flex items-baseline gap-sm">
-        <span className="shrink-0 whitespace-nowrap font-medium">{label}</span>
-        <span className="min-w-0 truncate font-mono opacity-70" title={path}>{path}</span>
+      <Text as="div" variant="caption" tone="muted" className="mb-1">
+        <Frame
+          align="baseline"
+          leading={<span className="whitespace-nowrap font-medium">{label}</span>}
+          content={<TruncatingText className="font-mono opacity-70" title={path}>{path}</TruncatingText>}
+        />
       </Text>
       {code !== null ? (
         <HighlightedCode code={code} lang="json" />

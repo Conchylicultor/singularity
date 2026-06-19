@@ -2,6 +2,9 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { TextDiff } from "@plugins/primitives/plugins/diff-view/web";
 import { getConfigRawFile } from "../../core";
 
@@ -23,18 +26,20 @@ export function InvalidDiff({ storePath }: { storePath: string }) {
 
   return (
     // eslint-disable-next-line spacing/no-adhoc-spacing -- mb-2 separates the diff block from the following content
-    <div className="mb-2 overflow-hidden rounded-md border border-border">
-      <Text as="div" variant="caption" tone="muted" className="flex items-center justify-between border-b border-border bg-muted/40 px-md py-xs font-medium">
-        <span>Stored (invalid)</span>
-        <span>Defaults</span>
+    <Clip className="mb-2 rounded-md border border-border">
+      <Text as="div" variant="caption" tone="muted" className="border-b border-border bg-muted/40 px-md py-xs font-medium">
+        <Stack direction="row" align="center" justify="between" gap="none">
+          <span>Stored (invalid)</span>
+          <span>Defaults</span>
+        </Stack>
       </Text>
-      <div className="max-h-96 overflow-auto">
+      <Scroll axis="both" className="max-h-96">
         {stored === defaults ? (
           <Placeholder>No differences in the raw files.</Placeholder>
         ) : (
           <TextDiff oldText={stored} newText={defaults} path="config.json" />
         )}
-      </div>
-    </div>
+      </Scroll>
+    </Clip>
   );
 }

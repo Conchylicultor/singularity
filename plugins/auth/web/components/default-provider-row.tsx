@@ -1,6 +1,8 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Auth } from "../slots";
 import { useAccountStatus } from "../hooks";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -86,47 +88,56 @@ export function DefaultProviderRow({ providerId }: Props) {
   const connected = status?.connected;
 
   return (
-    <div className="flex items-start gap-lg p-lg">
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset to baseline-align icon with adjacent text */}
-      <Icon className="mt-1 h-6 w-6 shrink-0" />
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-sm">
-          <span className="font-medium">{provider.name}</span>
-          <StatusPill
-            connected={connected}
-            needsReconsent={needsReconsent}
-            credentialsMissing={!!credentialsMissing}
-          />
-        </div>
-        {status?.identity?.email ? (
-          <Text as="div" variant="body" className="text-muted-foreground truncate">
-            {status.identity.email}
-          </Text>
-        ) : null}
-        {status?.scopes && status.scopes.length > 0 ? (
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset from preceding sibling block
-          <details className="mt-1 text-caption text-muted-foreground">
-            <summary className="cursor-pointer">
-              {status.scopes.length} scope{status.scopes.length === 1 ? "" : "s"}
-            </summary>
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- list offset below summary + indent for nested list */}
-            <ul className="mt-1 list-disc pl-4">
-              {status.scopes.map((s) => (
-                <li key={s} className="break-all">{s}</li>
-              ))}
-            </ul>
-          </details>
-        ) : null}
-        {status?.lastRefreshError ? (
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset from preceding sibling block
-          <Text as="div" variant="caption" className="mt-1 text-warning">
-            Last refresh failed:{" "}
-            <span className="font-mono">{status.lastRefreshError.message}</span>
-          </Text>
-        ) : null}
-      </div>
-      <div className="flex items-center gap-sm shrink-0">
-        {credentialsMissing ? (
+    <Frame
+      className="p-lg"
+      gap="lg"
+      align="start"
+      leading={
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset to baseline-align icon with adjacent text
+        <Icon className="mt-1 h-6 w-6" />
+      }
+      // The info column must FILL the row (email truncates against the leftover
+      // width), so it lives in the flexible `meta` track, not `content`.
+      meta={
+        <>
+          <Stack direction="row" align="center" gap="sm">
+            <span className="font-medium">{provider.name}</span>
+            <StatusPill
+              connected={connected}
+              needsReconsent={needsReconsent}
+              credentialsMissing={!!credentialsMissing}
+            />
+          </Stack>
+          {status?.identity?.email ? (
+            <Text as="div" variant="body" className="text-muted-foreground truncate">
+              {status.identity.email}
+            </Text>
+          ) : null}
+          {status?.scopes && status.scopes.length > 0 ? (
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset from preceding sibling block
+            <details className="mt-1 text-caption text-muted-foreground">
+              <summary className="cursor-pointer">
+                {status.scopes.length} scope{status.scopes.length === 1 ? "" : "s"}
+              </summary>
+              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- list offset below summary + indent for nested list */}
+              <ul className="mt-1 list-disc pl-4">
+                {status.scopes.map((s) => (
+                  <li key={s} className="break-all">{s}</li>
+                ))}
+              </ul>
+            </details>
+          ) : null}
+          {status?.lastRefreshError ? (
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset from preceding sibling block
+            <Text as="div" variant="caption" className="mt-1 text-warning">
+              Last refresh failed:{" "}
+              <span className="font-mono">{status.lastRefreshError.message}</span>
+            </Text>
+          ) : null}
+        </>
+      }
+      trailing={
+        credentialsMissing ? (
           <Button
             variant="outline"
             size="sm"
@@ -168,9 +179,9 @@ export function DefaultProviderRow({ providerId }: Props) {
           >
             Connect
           </Button>
-        )}
-      </div>
-    </div>
+        )
+      }
+    />
   );
 }
 

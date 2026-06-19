@@ -13,6 +13,9 @@ import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configV2SecretMetaResource } from "@plugins/fields/plugins/secret/plugins/config/core";
 import { MdCheck, MdOpenInNew } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 const REDIRECT_URI = "http://localhost:9000/api/auth/callback/google";
@@ -79,7 +82,7 @@ export function GoogleSetupPane() {
   const hasProject = projectId.length > 0;
 
   return (
-    <div className="flex flex-col gap-xl p-lg max-w-lg">
+    <Stack gap="xl" className="p-lg max-w-lg">
       <div>
         <Text as="label" variant="label">GCP Project ID</Text>
         {/* eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset under label, no flex parent to own a gap */}
@@ -94,7 +97,7 @@ export function GoogleSetupPane() {
         </Text>
       </div>
 
-      <ol className="flex flex-col gap-lg">
+      <Stack as="ol" gap="lg">
         <Step
           number={1}
           title="Select or create a GCP project"
@@ -137,7 +140,7 @@ export function GoogleSetupPane() {
           active={hasProject}
           done={false}
         >
-          <div className="flex flex-col gap-sm">
+          <Stack gap="sm">
             <StepLink
               href={`https://console.cloud.google.com/auth/clients/create?project=${projectId}`}
               disabled={!hasProject}
@@ -145,20 +148,20 @@ export function GoogleSetupPane() {
             <Text as="p" variant="caption" className="text-muted-foreground">
               Application type: <span className="font-medium">Desktop app</span>
             </Text>
-            <div className="flex items-center gap-sm">
-              <Text as="code" variant="caption" className="flex-1 rounded-md bg-muted px-sm py-xs break-all">
-                {REDIRECT_URI}
-              </Text>
-              <CopyButton
-                text={REDIRECT_URI}
-                title="Copy redirect URI"
-                className="shrink-0"
-              />
-            </div>
+            <Frame
+              meta={
+                <Text as="code" variant="caption" className="block rounded-md bg-muted px-sm py-xs break-all">
+                  {REDIRECT_URI}
+                </Text>
+              }
+              trailing={
+                <CopyButton text={REDIRECT_URI} title="Copy redirect URI" />
+              }
+            />
             <Text as="p" variant="caption" className="text-muted-foreground">
               Add this as the Authorized redirect URI
             </Text>
-          </div>
+          </Stack>
         </Step>
 
         <Step
@@ -167,11 +170,13 @@ export function GoogleSetupPane() {
           active={true}
           done={credentialsSaved}
         >
-          <div className="flex flex-col gap-sm">
+          <Stack gap="sm">
             {credentialsSaved ? (
-              <Text as="div" variant="caption" className="flex items-center gap-xs text-success">
-                <MdCheck className="h-4 w-4" />
-                Credentials configured
+              <Text as="div" variant="caption" className="text-success">
+                <Stack direction="row" align="center" gap="xs">
+                  <MdCheck className="h-4 w-4" />
+                  Credentials configured
+                </Stack>
               </Text>
             ) : (
               <>
@@ -198,7 +203,7 @@ export function GoogleSetupPane() {
                 </Button>
               </>
             )}
-          </div>
+          </Stack>
         </Step>
 
         <Step
@@ -207,12 +212,14 @@ export function GoogleSetupPane() {
           active={credentialsSaved}
           done={!!connected}
         >
-          <div className="flex flex-col gap-sm">
+          <Stack gap="sm">
             {connected ? (
-              <Text as="div" variant="caption" className="flex items-center gap-xs text-success">
-                <MdCheck className="h-4 w-4" />
-                Connected
-                {status.identity?.email ? ` (${status.identity.email})` : ""}
+              <Text as="div" variant="caption" className="text-success">
+                <Stack direction="row" align="center" gap="xs">
+                  <MdCheck className="h-4 w-4" />
+                  Connected
+                  {status.identity?.email ? ` (${status.identity.email})` : ""}
+                </Stack>
               </Text>
             ) : (
               <>
@@ -229,10 +236,10 @@ export function GoogleSetupPane() {
                 ) : null}
               </>
             )}
-          </div>
+          </Stack>
         </Step>
-      </ol>
-    </div>
+      </Stack>
+    </Stack>
   );
 }
 
@@ -250,25 +257,33 @@ function Step({
   children: React.ReactNode;
 }) {
   return (
-    <li
-      className={`flex gap-md ${active ? "opacity-100" : "opacity-40 pointer-events-none"}`}
-    >
-      <Text
-        as="div"
-        variant="caption"
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-medium ${
-          done
-            ? "bg-success/15 text-success"
-            : "bg-muted text-muted-foreground"
-        }`}
-      >
-        {done ? <MdCheck className="h-3.5 w-3.5" /> : number}
-      </Text>
-      <div className="flex flex-col gap-xs min-w-0">
-        <Text as="span" variant="label">{title}</Text>
-        {children}
-      </div>
-    </li>
+    <Frame
+      as="li"
+      gap="md"
+      align="start"
+      className={active ? "opacity-100" : "opacity-40 pointer-events-none"}
+      leading={
+        <Center
+          className={`size-6 rounded-full ${
+            done
+              ? "bg-success/15 text-success"
+              : "bg-muted text-muted-foreground"
+          }`}
+        >
+          {done ? (
+            <MdCheck className="h-3.5 w-3.5" />
+          ) : (
+            <Text as="span" variant="caption" className="font-medium">{number}</Text>
+          )}
+        </Center>
+      }
+      meta={
+        <Stack gap="xs">
+          <Text as="span" variant="label">{title}</Text>
+          {children}
+        </Stack>
+      }
+    />
   );
 }
 
