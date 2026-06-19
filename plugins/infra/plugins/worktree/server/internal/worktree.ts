@@ -1,6 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 
 let cachedRepoRoot: string | null = null;
@@ -24,6 +24,15 @@ export async function ensureMainWorktreeRoot(): Promise<string> {
 export async function worktreePathFor(id: string): Promise<string> {
   const root = await ensureMainWorktreeRoot();
   return `${root}/.claude/worktrees/${id}`;
+}
+
+// The inverse of `worktreePathFor`: a real agent worktree always lives as a
+// DIRECT child of `<root>/.claude/worktrees/`. Anything else (the main repo
+// root, /tmp, a hand-edited path) is non-canonical — it is not a worktree this
+// system created, so it must never be adopted as an attempt nor handed to
+// `git worktree remove`.
+export function isCanonicalWorktreePath(path: string, repoRoot: string): boolean {
+  return dirname(path) === join(repoRoot, ".claude", "worktrees");
 }
 
 // Seed the worktree's incremental TypeScript caches from main so the first

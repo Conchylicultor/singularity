@@ -1,8 +1,12 @@
 import { listAttempts, listTasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { listDatabases } from "@plugins/database/plugins/admin/server";
-import { ensureMainWorktreeRoot, worktreePathFor } from "@plugins/infra/plugins/worktree/server";
+import {
+  ensureMainWorktreeRoot,
+  isCanonicalWorktreePath,
+  worktreePathFor,
+} from "@plugins/infra/plugins/worktree/server";
 import { dirExists } from "./reap";
-import { getGitHygiene, isSafeToReap, isTaskDeletable, isCanonicalWorktreePath } from "./safety";
+import { getGitHygiene, isSafeToReap, isTaskDeletable } from "./safety";
 
 export const AUTO_REAP_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 

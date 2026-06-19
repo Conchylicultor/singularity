@@ -1,4 +1,3 @@
-import { dirname, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 
 // `git status --porcelain=v2 --branch` gives us branch tracking info (ahead N)
@@ -64,11 +63,4 @@ export function isSafeToReap(i: SafetyInput): boolean {
     i.taskDeletable &&
     i.ageMs >= SAFE_REAP_AGE_MS
   );
-}
-
-// A real worktree dir is a DIRECT child of `<root>/.claude/worktrees/`. Anything
-// else (the main repo root, /tmp, a hand-edited path) is malformed and must
-// never be handed to `git worktree remove`.
-export function isCanonicalWorktreePath(path: string, repoRoot: string): boolean {
-  return dirname(path) === join(repoRoot, ".claude", "worktrees");
 }

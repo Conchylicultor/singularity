@@ -3,6 +3,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 export {
   ensureMainWorktreeRoot,
   worktreePathFor,
+  isCanonicalWorktreePath,
   setupWorktree,
   removeWorktree,
 } from "./internal/worktree";

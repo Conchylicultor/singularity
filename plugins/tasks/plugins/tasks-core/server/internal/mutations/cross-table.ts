@@ -9,6 +9,7 @@ import { listActiveConversations } from "../queries/conversations";
 import { listPushesForAttempt } from "../queries/pushes";
 import { CONVERSATIONS_META_TASK_ID, updateTask } from "./tasks";
 import { tasksResource, attemptsResource, conversationsLiveResource } from "../resources";
+import { ensureMainWorktreeRoot, isCanonicalWorktreePath } from "@plugins/infra/plugins/worktree/server";
 import path from "path";
 
 // Exit policy shared by every conversation-close path (the manual "Drop &
@@ -61,6 +62,15 @@ const newTaskId = () =>
   `${TASK_PREFIX}-${Math.floor(Date.now() / 1000)}-${Math.random().toString(36).slice(2, 6)}`;
 
 export async function adoptOrphanConversation(input: AdoptOrphanInput) {
+  // Never adopt a tmux session whose worktree is not a canonical agent worktree
+  // (`<root>/.claude/worktrees/<id>`). Stray sessions started in /tmp or the
+  // repo root are not Singularity attempts; adopting them would synthesize a
+  // phantom attempt row with a non-canonical worktree_path that the
+  // worktree-cleanup reaper can never act on. Returning null = not adopted; the
+  // poller treats this exactly like any other un-adopted orphan and moves on.
+  const repoRoot = await ensureMainWorktreeRoot();
+  if (!isCanonicalWorktreePath(input.worktreePath, repoRoot)) return null;
+
   let inserted = false;
   const taskId = newTaskId();
   // Derive attempt id from the worktree directory name so basename(worktreePath) === attemptId.
