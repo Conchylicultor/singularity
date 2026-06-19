@@ -17,6 +17,11 @@ The three injected hooks (`ResourceRuntimeOptions`):
 
 - `wrapLoad(key, fn)` — wrap each loader call. server: `recordEntrySpan("loader",
   key, fn)` (profiler spans + ambient context); central: omitted (identity).
+- `wrapOrigin(kind, key, fn)` — wrap an origin-triggered load (`sub` = sub-ack,
+  `push` = cascade flush) so the nested loader span gets a non-null `parent`
+  naming the request class (and gate waits attribute to it). server:
+  `recordEntrySpan(kind, key, fn)`; central: omitted (identity). See
+  `research/2026-06-19-global-wait-attribution-instrumentation.md`.
 - `reportError(context, err)` — additive failure report. `console.error` ALWAYS
   fires inside the runtime; this hook is extra. server:
   `reportServerError(errorReport(...))`; central: omitted.

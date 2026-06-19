@@ -3,6 +3,7 @@ import { db } from "@plugins/database/server";
 import {
   runWithoutProfiling,
   type SpanRef,
+  type WaitBreakdown,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
@@ -39,6 +40,10 @@ export interface RecordSlowOpInput {
   // caller-attribution fix: this is what the whole refactor exists to capture.
   // Client signals (page-load, element) have no parent and pass null.
   parent?: SpanRef | null;
+  // Per-layer wait charged to this entry span (gate/lock → ms), when it waited.
+  // Merged per layer into the row's durable `waits` so the wait-vs-work split
+  // survives restart. Only entry spans (loader/http/sub/push) carry it.
+  waits?: WaitBreakdown;
 }
 
 // Merge a caller (parent span) into the existing breakdown list: bump an
@@ -68,6 +73,19 @@ function mergeCaller(
   return next;
 }
 
+// Sum an incoming per-layer wait map into the existing one (layer → total ms).
+// A plain additive merge mirroring the aggregate's wait accumulation.
+function mergeWaits(
+  existing: WaitBreakdown,
+  incoming: WaitBreakdown,
+): WaitBreakdown {
+  const next: WaitBreakdown = { ...existing };
+  for (const layer in incoming) {
+    next[layer] = (next[layer] ?? 0) + incoming[layer]!;
+  }
+  return next;
+}
+
 // Prepend the new contention sample and cap the ring at the newest 10. Mirrors
 // the `callers` read-modify-write merge, but a plain bounded prepend (no
 // dedupe) — each sample is a distinct point-in-time capture.
@@ -85,7 +103,7 @@ function mergeSample(
 // the live resource, and fires the singleton rollup report (fire-and-forget so
 // a slow report path never blocks recording). Failures propagate loudly.
 export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
-  const { operationKind, operation, durationMs, thresholdMs, source, parent } =
+  const { operationKind, operation, durationMs, thresholdMs, source, parent, waits } =
     input;
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
 
@@ -146,6 +164,7 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
       const callers = parent
         ? mergeCaller(row.callers, parent, durationMs)
         : row.callers;
+      const nextWaits = waits ? mergeWaits(row.waits, waits) : row.waits;
       const recentSamples = mergeSample(
         row.recentSamples,
         snapshot,
@@ -153,7 +172,7 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
       );
       await tx
         .update(_slowOps)
-        .set({ callers, recentSamples })
+        .set({ callers, waits: nextWaits, recentSamples })
         .where(eq(_slowOps.id, row.id));
     });
   });

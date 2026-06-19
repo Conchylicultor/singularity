@@ -1,5 +1,5 @@
 import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
-import { recordSpan } from "@plugins/infra/plugins/runtime-profiler/core";
+import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 import { cpus } from "node:os";
 
 function heavyReadSize(): number {
@@ -14,5 +14,10 @@ function heavyReadSize(): number {
 const pool = createHostSemaphore({ name: "heavy-read", size: heavyReadSize() });
 
 export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
-  return pool.run(fn, (waitMs) => recordSpan("db", "[heavy-read-acquire]", waitMs));
+  // Charge the cross-process lock-wait to the enclosing entry (loader/http) under
+  // the "heavy-read-acquire" layer, so a heavy git/fs loader's span reads as
+  // wait-vs-work directly (e.g. edited-files 4032ms = lock 3500 / git diff 532)
+  // instead of one opaque number. Context-less callers fall back to a standalone
+  // span inside chargeWait.
+  return pool.run(fn, (waitMs) => chargeWait("heavy-read-acquire", waitMs));
 }

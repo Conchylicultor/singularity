@@ -5,8 +5,10 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 // (@plugins/infra/plugins/runtime-profiler/core). A response schema is required
 // for useEndpoint/fetchEndpoint to actually return parsed data on the client —
 // the server ignores it, so it is client-safe.
+const spanKindSchema = z.enum(["http", "db", "loader", "sub", "push"]);
+
 const spanRefSchema = z.object({
-  kind: z.enum(["http", "db", "loader"]),
+  kind: spanKindSchema,
   label: z.string(),
 });
 
@@ -17,6 +19,10 @@ const parentBreakdownSchema = z.object({
   maxMs: z.number(),
 });
 
+// Per-layer wait charged to an entry (gate/lock name → ms): the wait-vs-work
+// split. Absent when the entry never waited.
+const waitBreakdownSchema = z.record(z.string(), z.number());
+
 const aggregateSchema = z.object({
   label: z.string(),
   count: z.number(),
@@ -24,18 +30,26 @@ const aggregateSchema = z.object({
   maxMs: z.number(),
   lastMs: z.number(),
   byParent: z.array(parentBreakdownSchema),
+  waits: waitBreakdownSchema.optional(),
 });
 
 const slowSpanSchema = z.object({
-  kind: z.enum(["http", "db", "loader"]),
+  kind: spanKindSchema,
   label: z.string(),
   durationMs: z.number(),
   atMs: z.number(),
   parent: spanRefSchema.nullable(),
+  waits: waitBreakdownSchema.optional(),
 });
 
 const byKind = <T extends z.ZodTypeAny>(item: T) =>
-  z.object({ http: z.array(item), db: z.array(item), loader: z.array(item) });
+  z.object({
+    http: z.array(item),
+    db: z.array(item),
+    loader: z.array(item),
+    sub: z.array(item),
+    push: z.array(item),
+  });
 
 export const runtimeProfileSchema = z.object({
   aggregates: byKind(aggregateSchema),

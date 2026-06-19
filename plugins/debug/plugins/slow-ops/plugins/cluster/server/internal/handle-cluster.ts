@@ -15,7 +15,7 @@ const FANOUT_CONCURRENCY = 6;
 
 const SELECT_SLOW_OPS = `
   SELECT id, worktree, operation_kind, operation, count, total_ms, max_ms,
-         last_ms, threshold_ms, callers, recent_samples, first_seen_at,
+         last_ms, threshold_ms, callers, waits, recent_samples, first_seen_at,
          last_seen_at
   FROM slow_ops
 `;
@@ -34,6 +34,7 @@ interface RawRow {
   last_ms: number | string;
   threshold_ms: number | string;
   callers: unknown;
+  waits: unknown;
   recent_samples: unknown;
   first_seen_at: Date | string;
   last_seen_at: Date | string;
@@ -54,6 +55,7 @@ function toSlowOp(row: RawRow): SlowOp {
     lastMs: Number(row.last_ms),
     thresholdMs: Number(row.threshold_ms),
     callers: row.callers,
+    waits: row.waits,
     recentSamples: row.recent_samples,
     firstSeenAt: row.first_seen_at,
     lastSeenAt: row.last_seen_at,

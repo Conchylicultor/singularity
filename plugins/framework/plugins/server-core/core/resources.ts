@@ -85,6 +85,11 @@ function errorReport(context: string, err: unknown): ServerErrorReport {
 // research/2026-06-19-global-live-state-unified-read-path-v2.md (Task 2).
 const runtime = createResourceRuntime({
   wrapLoad: (key, fn) => recordEntrySpan("loader", key, fn),
+  // Origin entry for sub-ack / push-cascade loads: gives the nested loader span a
+  // non-null `parent` naming the request class that triggered it, so head-of-line
+  // blocking is attributable. See
+  // research/2026-06-19-global-wait-attribution-instrumentation.md.
+  wrapOrigin: (kind, key, fn) => recordEntrySpan(kind, key, fn),
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
   debugOwners: () =>
     Resource.Declare.getContributions().map((c) => ({

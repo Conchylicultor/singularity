@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { recordSpan, currentCallerKind } from "@plugins/infra/plugins/runtime-profiler/core";
+import { recordSpan, chargeWait, currentCallerKind } from "@plugins/infra/plugins/runtime-profiler/core";
 import { readDatabaseConfig, buildConnectionString } from "@plugins/database/core";
 
 const worktree = process.env.SINGULARITY_WORKTREE;
@@ -64,10 +64,13 @@ const loaderDbGate = createSemaphore(POOL_MAX - RESERVED_INTERACTIVE);
 // Loader-originated queries (caller kind === "loader") additionally route
 // through `loaderDbGate`, so background load caps at POOL_MAX - RESERVED_INTERACTIVE
 // concurrent connections and interactive work keeps reserved capacity. The gate
-// wait is recorded as a `db [loader-acquire]` span (sibling to the pool's own
-// `[acquire]`) so a saturated gate stays visible in the profiler instead of
-// hiding queue-wait. The caller kind is read synchronously, before any await, so
-// the profiler's ambient context is still active.
+// wait is CHARGED to the enclosing loader entry (via chargeWait) under the
+// "loader-acquire" layer, so the wait lands on the waiting resource's own span
+// (work = total − Σwaits, lock-vs-work readable directly) instead of in a
+// label-shared `db [loader-acquire]` bucket. The caller kind is read
+// synchronously, before any await, so the profiler's ambient context is still
+// active. The pool's own `[acquire]` (connect) and `<sql>` (execute) leaf spans
+// stay — those are real per-query measurements, not gate waits.
 const origQuery = pool.query.bind(pool);
 const origConnect = pool.connect.bind(pool);
 // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
@@ -97,7 +100,7 @@ pool.query = ((...a: Parameters<typeof origQuery>): any => {
   // (jobs/migrations/pollers) queries run ungated against the reserved capacity.
   if (currentCallerKind() === "loader") {
     return loaderDbGate.run(runTimed, (waitMs) =>
-      recordSpan("db", "[loader-acquire]", waitMs),
+      chargeWait("loader-acquire", waitMs),
     );
   }
   return runTimed();

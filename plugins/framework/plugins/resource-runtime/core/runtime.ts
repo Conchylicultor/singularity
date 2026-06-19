@@ -226,6 +226,19 @@ interface SocketState {
 export interface ResourceRuntimeOptions {
   /** Wrap each loader call. server: recordEntrySpan("loader", key, fn); central: omit (identity). */
   wrapLoad?: (key: string, fn: () => Promise<unknown>) => Promise<unknown>;
+  /**
+   * Wrap an origin-triggered load so child loader spans (and the gate waits they
+   * charge) attribute to the originating request class — `sub` (a tab subscribed)
+   * or `push` (a notify cascade). Without it the loader runs with no entry
+   * context and gets `parent: null`. server: recordEntrySpan(kind, key, fn);
+   * central: omit (identity). See
+   * research/2026-06-19-global-wait-attribution-instrumentation.md.
+   */
+  wrapOrigin?: (
+    kind: "sub" | "push",
+    key: string,
+    fn: () => Promise<unknown>,
+  ) => Promise<unknown>;
   /** Report a loader/map/lifecycle failure. console.error ALWAYS fires inside the runtime;
    *  this is the extra hook. server: reportServerError(errorReport(ctx, err)); central: omit. */
   reportError?: (context: string, err: unknown) => void;
@@ -653,7 +666,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         let valueComputed = false;
         if (needValue) {
           try {
-            value = await getResourceValue(entry, params, ctx);
+            // Origin = the push/cascade flush: re-establishes an entry context
+            // (this runs in a bare microtask with no ambient context) so the
+            // loader span attributes to this `push` instead of `parent: null`.
+            value = await (opts.wrapOrigin
+              ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, ctx))
+              : getResourceValue(entry, params, ctx));
             valueComputed = true;
           } catch (err) {
             reportLoaderError(`loader failed for ${entry.key}`, err);
@@ -676,7 +694,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
               // unsafe for diffKeyed — reload the FULL value and diff that.
               let full: unknown;
               try {
-                full = await getResourceValue(entry, params, undefined);
+                full = await (opts.wrapOrigin
+                  ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, undefined))
+                  : getResourceValue(entry, params, undefined));
               } catch (err) {
                 reportLoaderError(`loader failed for ${entry.key}`, err);
                 continue;
@@ -865,7 +885,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
 
     let value: unknown;
     try {
-      value = await getResourceValue(entry, params);
+      // Origin = the subscription: establishes an entry context so the loader
+      // span (and any gate waits it charges) is attributed to this `sub` request
+      // instead of running with `parent: null`.
+      value = await (opts.wrapOrigin
+        ? opts.wrapOrigin("sub", key, () => getResourceValue(entry, params))
+        : getResourceValue(entry, params));
     } catch (err) {
       reportLoaderError(`loader failed for ${key}`, err);
       sendJson(state.ws, { kind: "sub-error", id, key, reason: "loader-failed" });

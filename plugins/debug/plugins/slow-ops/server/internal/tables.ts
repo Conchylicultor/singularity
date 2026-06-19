@@ -24,6 +24,7 @@ const slowOps = defineEntity("slow_ops", slowOpFields, {
     lastMs:        { default: 0 },
     thresholdMs:   { default: 0 },
     callers:       { default: [] },
+    waits:         { default: {} },
     recentSamples: { default: [] },
     firstSeenAt:   { default: defaultNow() },
     lastSeenAt:    { default: defaultNow() },

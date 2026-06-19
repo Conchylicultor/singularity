@@ -12,8 +12,8 @@ type Thresholds = ConfigValues<(typeof slowOpConfig)["fields"]>;
 // per (re)install) and does the final per-kind gating.
 let disposer: { dispose(): void } | null = null;
 
-// Map a span kind to its configured threshold. The profiler only emits
-// "http" | "db" | "loader" spans.
+// Map a span kind to its configured threshold. The `sub`/`push` origin entries
+// wrap a loader, so they share the loader threshold (no separate config knob).
 function thresholdFor(kind: SlowSpan["kind"], t: Thresholds): number {
   switch (kind) {
     case "http":
@@ -21,6 +21,8 @@ function thresholdFor(kind: SlowSpan["kind"], t: Thresholds): number {
     case "db":
       return t.dbMs;
     case "loader":
+    case "sub":
+    case "push":
       return t.loaderMs;
   }
 }
@@ -60,6 +62,7 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         thresholdMs: threshold,
         source: "server-slow-op",
         parent: span.parent,
+        waits: span.waits,
       });
     },
     { thresholdMs: floor },

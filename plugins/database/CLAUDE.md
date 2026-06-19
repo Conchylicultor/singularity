@@ -39,11 +39,16 @@ interactive and context-less (jobs/migrations/pollers) queries run ungated. This
 puts the gate on the actual scarce resource — held connections — so an in-memory
 loader that issues no query never waits, and a loader holds a slot only for the
 duration of one query (it can't head-of-line-block cheap loaders or starve
-interactive work). The gate wait is recorded as a `db [loader-acquire]` span,
-sibling to `[acquire]`. (This replaced an older semaphore that wrapped whole
-loader *bodies* in `server-core/core/resources.ts`.) Transactions and other
-`pool.connect()` → `client.query` paths bypass the gate, same as they bypass
-timing. See `research/2026-06-19-global-live-state-unified-read-path-v2.md` (Task 2).
+interactive work). The gate wait is **charged to the enclosing loader entry**
+via `chargeWait("loader-acquire", ms)`, so the wait lands on the waiting
+resource's own span (work = total − Σwaits, lock-vs-work readable directly)
+instead of a label-shared `db [loader-acquire]` bucket; the pool's own
+`[acquire]` (connect) and `<sql>` (execute) leaf spans stay. (This gate replaced
+an older semaphore that wrapped whole loader *bodies* in
+`server-core/core/resources.ts`.) Transactions and other `pool.connect()` →
+`client.query` paths bypass the gate, same as they bypass timing. See
+`research/2026-06-19-global-live-state-unified-read-path-v2.md` (Task 2) and
+`research/2026-06-19-global-wait-attribution-instrumentation.md`.
 
 ## Bootstrap
 

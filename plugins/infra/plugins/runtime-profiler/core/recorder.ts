@@ -19,13 +19,27 @@
 // runtime at boot via `installSpanContextRuntime`. On the web the default no-op
 // runtime makes every entry point a transparent passthrough.
 
-export type SpanKind = "http" | "db" | "loader";
+// `http` / `db` / `loader` are spans of real work. `sub` / `push` are *origin*
+// entries: the WS-subscription ack and the cascade/push flush that trigger a
+// loader. They exist so a loader run is never `parent: null` — the loader span's
+// parent names the request class that triggered it (sub = a tab subscribed,
+// push = a notify cascade), making head-of-line blocking attributable to its
+// origin. See research/2026-06-19-global-wait-attribution-instrumentation.md.
+export type SpanKind = "http" | "db" | "loader" | "sub" | "push";
 
 /** A reference to an enclosing entry point (the immediate parent of a span). */
 export interface SpanRef {
   kind: SpanKind;
   label: string;
 }
+
+/**
+ * Per-layer wait breakdown charged to an entry while it ran: gate/lock name →
+ * accumulated ms. Lets an entry span report pure operation cost (work = total −
+ * Σwaits) and makes lock-vs-work readable directly, attributed to the resource
+ * that waited. Populated via `chargeWait` from each concurrency gate.
+ */
+export type WaitBreakdown = Record<string, number>;
 
 /** Per-parent breakdown of an aggregate: who issued this label, how often. */
 export interface ParentBreakdown {
@@ -42,6 +56,8 @@ export interface SlowSpan {
   atMs: number;
   /** Immediate enclosing request/loader, if any. */
   parent: SpanRef | null;
+  /** Wait charged to this entry by layer, if it waited (entry spans only). */
+  waits?: WaitBreakdown;
 }
 
 export type SlowSpanHandler = (span: SlowSpan) => void;
@@ -54,18 +70,34 @@ export interface Aggregate {
   lastMs: number;
   /** Attribution by immediate parent, sorted by count desc. */
   byParent: ParentBreakdown[];
+  /** Summed wait by layer across all records of this label, if any waited. */
+  waits?: WaitBreakdown;
 }
 
 const MAX_LABEL_LEN = 500;
 const SLOWEST_CAP = 50;
 
-const KINDS: readonly SpanKind[] = ["http", "db", "loader"];
+const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push"];
 
 // --- Injected ambient-context runtime ---
 
+/**
+ * The mutable ambient entry context: the innermost enclosing entry's identity
+ * plus a per-layer wait accumulator. A gate charges its queue-wait here (via
+ * `chargeWait`) while the entry runs; `recordEntrySpan` materializes the map
+ * into the entry's `waits` on finish. Stored by identity in the server's
+ * AsyncLocalStorage, so a gate awaited deep inside the entry mutates the SAME
+ * map — this is why per-entry wait accumulation works without threading state.
+ */
+export interface EntryContext {
+  kind: SpanKind;
+  label: string;
+  waits: Map<string, number>;
+}
+
 interface SpanContextRuntime {
-  run<T>(ctx: SpanRef, fn: () => T): T;
-  current(): SpanRef | undefined;
+  run<T>(ctx: EntryContext, fn: () => T): T;
+  current(): EntryContext | undefined;
 }
 
 // Default: transparent passthrough with no ambient context (the web case, and
@@ -156,6 +188,8 @@ interface AggregateInternal {
   maxMs: number;
   lastMs: number;
   byParent: Map<string, ParentBreakdown>;
+  /** Summed wait by layer, lazily created the first time a record waits. */
+  waits?: WaitBreakdown;
 }
 
 // Per-kind aggregate maps keyed by label.
@@ -163,6 +197,8 @@ const aggregates: Record<SpanKind, Map<string, AggregateInternal>> = {
   http: new Map(),
   db: new Map(),
   loader: new Map(),
+  sub: new Map(),
+  push: new Map(),
 };
 
 // Per-kind "slowest recent" buffer. We keep a slowest-N set rather than a plain
@@ -173,6 +209,8 @@ const slowest: Record<SpanKind, SlowSpan[]> = {
   http: [],
   db: [],
   loader: [],
+  sub: [],
+  push: [],
 };
 
 let sinceMs = performance.now();
@@ -187,6 +225,7 @@ function record(
   label: string,
   durationMs: number,
   parent: SpanRef | null,
+  waits?: WaitBreakdown,
 ): void {
   if (process.env.SINGULARITY_PROFILING === "0") return;
   // Drop spans produced inside a runWithoutProfiling scope before any aggregate,
@@ -232,9 +271,18 @@ function record(
     }
   }
 
+  // Sum the entry's per-layer wait into the aggregate so a label's wait-vs-work
+  // split is durable across all its records, not just the latest.
+  if (waits) {
+    agg.waits ??= {};
+    for (const layer in waits) {
+      agg.waits[layer] = (agg.waits[layer] ?? 0) + waits[layer]!;
+    }
+  }
+
   const atMs = performance.now();
   const ring = slowest[kind];
-  ring.push({ kind, label: cappedLabel, durationMs, atMs, parent });
+  ring.push({ kind, label: cappedLabel, durationMs, atMs, parent, waits });
   if (ring.length > SLOWEST_CAP) {
     // Drop the single fastest entry to keep the slowest N.
     let minIdx = 0;
@@ -249,7 +297,7 @@ function record(
   // non-throwing fire-and-forget scheduler, so we don't guard it — failing
   // loudly is correct per repo policy.
   if (slowSpanSubs.length > 0) {
-    const span: SlowSpan = { kind, label: cappedLabel, durationMs, atMs, parent };
+    const span: SlowSpan = { kind, label: cappedLabel, durationMs, atMs, parent, waits };
     for (const sub of slowSpanSubs) {
       if (durationMs >= sub.thresholdMs) sub.handler(span);
     }
@@ -261,7 +309,27 @@ function record(
  * entry point if one is active. Used by the DB pool wrapper.
  */
 export function recordSpan(kind: SpanKind, label: string, durationMs: number): void {
-  record(kind, label, durationMs, contextRuntime.current() ?? null);
+  const cur = contextRuntime.current();
+  record(kind, label, durationMs, cur ? { kind: cur.kind, label: cur.label } : null);
+}
+
+/**
+ * Charge `ms` of wait time, under layer name `layer`, to the innermost enclosing
+ * entry (loader/http/sub/push). A concurrency gate calls this from its `onWait`
+ * callback when it makes the current entry queue, so the wait lands ON the
+ * waiting resource's own span (work = total − Σwaits, lock-vs-work readable
+ * directly) instead of in a label-shared bucket. If no entry is active
+ * (context-less: jobs, pollers, migrations), fall back to a standalone `db` span
+ * so the wait is never silently lost. Read+charge synchronously at slot
+ * acquisition, while the ambient context is still active.
+ */
+export function chargeWait(layer: string, ms: number): void {
+  const cur = contextRuntime.current();
+  if (cur) {
+    cur.waits.set(layer, (cur.waits.get(layer) ?? 0) + ms);
+  } else {
+    record("db", `[${layer}]`, ms, null);
+  }
 }
 
 /**
@@ -288,12 +356,18 @@ export async function recordEntrySpan<T>(
   label: string,
   fn: () => T | Promise<T>,
 ): Promise<T> {
-  const parent = contextRuntime.current() ?? null;
+  const cur = contextRuntime.current();
+  const parent: SpanRef | null = cur ? { kind: cur.kind, label: cur.label } : null;
+  // Fresh accumulator per entry: nested entries (loader inside sub/http) each
+  // own their wait map, so a gate charges only the innermost one — no double
+  // counting up the chain.
+  const ctx: EntryContext = { kind, label, waits: new Map() };
   const t0 = performance.now();
   try {
-    return await contextRuntime.run({ kind, label }, fn);
+    return await contextRuntime.run(ctx, fn);
   } finally {
-    record(kind, label, performance.now() - t0, parent);
+    const waits = ctx.waits.size > 0 ? Object.fromEntries(ctx.waits) : undefined;
+    record(kind, label, performance.now() - t0, parent, waits);
   }
 }
 
@@ -313,6 +387,7 @@ export function getRuntimeProfile(): {
         maxMs: agg.maxMs,
         lastMs: agg.lastMs,
         byParent: Array.from(agg.byParent.values()).sort((a, b) => b.count - a.count),
+        waits: agg.waits ? { ...agg.waits } : undefined,
       }))
       .sort((a, b) => b.maxMs - a.maxMs);
     // Most-recent-slowest first: sort the slowest-N buffer by duration desc.

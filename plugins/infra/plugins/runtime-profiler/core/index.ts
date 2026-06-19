@@ -1,6 +1,7 @@
 export {
   recordSpan,
   recordEntrySpan,
+  chargeWait,
   currentCallerKind,
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,
@@ -16,4 +17,6 @@ export type {
   SlowSpanHandler,
   Aggregate,
   ParentBreakdown,
+  WaitBreakdown,
+  EntryContext,
 } from "./recorder";

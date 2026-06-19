@@ -8,10 +8,13 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import {
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,
-  type SpanRef,
+  type EntryContext,
 } from "../../core";
 
-const als = new AsyncLocalStorage<SpanRef>();
+// Stores the EntryContext by identity: AsyncLocalStorage preserves the same
+// object reference across the entry's async continuation, so a gate awaited deep
+// inside a loader mutates the very wait map `recordEntrySpan` later reads.
+const als = new AsyncLocalStorage<EntryContext>();
 
 installSpanContextRuntime({
   run: (ctx, fn) => als.run(ctx, fn),

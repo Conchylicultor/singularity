@@ -1,0 +1,1 @@
+ALTER TABLE "slow_ops" ADD COLUMN "waits" jsonb DEFAULT '{}'::jsonb NOT NULL;

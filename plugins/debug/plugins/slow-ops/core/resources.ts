@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { ContentionSnapshotSchema } from "@plugins/infra/plugins/contention/core";
+import type { WaitBreakdown } from "@plugins/infra/plugins/runtime-profiler/core";
 import {
   fieldsToZodObject,
   type FieldsRecord,
@@ -23,6 +24,11 @@ export const CallerBreakdownSchema = z.object({
   maxMs: z.number(),
 });
 export type CallerBreakdown = z.infer<typeof CallerBreakdownSchema>;
+
+// Per-layer wait charged to this operation (gate/lock name → summed ms): the
+// durable wait-vs-work split. Mirrors the profiler's in-memory `waits`; merged
+// per layer on each occurrence. `{}` when the op never waited on a gate.
+export const WaitBreakdownSchema = z.record(z.string(), z.number());
 
 // One captured contention sample: the box state at the instant a span tripped
 // its threshold, with the span's own duration. Stored as a capped ring on the
@@ -49,6 +55,7 @@ export const slowOpFields = {
   lastMs:        floatField(),
   thresholdMs:   floatField(),
   callers:       jsonField<CallerBreakdown[]>({ schema: z.array(CallerBreakdownSchema), default: [] }),
+  waits:         jsonField<WaitBreakdown>({ schema: WaitBreakdownSchema, default: {} }),
   recentSamples: jsonField<SlowOpSample[]>({ schema: z.array(SlowOpSampleSchema), default: [] }),
   firstSeenAt:   dateField(),
   lastSeenAt:    dateField(),

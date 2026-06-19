@@ -5,16 +5,20 @@ import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { type SpanKind } from "@plugins/infra/plugins/runtime-profiler/core";
 import { runtimeProfileSchema } from "../../shared/endpoints";
 
-const KINDS: readonly SpanKind[] = ["http", "db", "loader"];
+const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push"];
 
 export const runtimeProfileTool = Mcp.tool({
   name: "get_runtime_profile",
-  description: `Slowest HTTP routes, DB queries, and live-state loaders in a worktree's server (in-memory window since last reset). Use to debug app/page slowness and N+1 patterns. Returns top-N by max and average latency per kind; each db/loader aggregate includes a \`byParent\` breakdown attributing it to the enclosing request/loader that issued it, and each \`slowest\` span carries its immediate \`parent\`.
+  description: `Slowest HTTP routes, DB queries, and live-state loaders in a worktree's server (in-memory window since last reset). Use to debug app/page slowness, N+1 patterns, and queueing/head-of-line blocking. Returns top-N by max and average latency per kind; each db/loader aggregate includes a \`byParent\` breakdown attributing it to the enclosing request/loader that issued it, and each \`slowest\` span carries its immediate \`parent\`.
+
+Kinds: \`http\` (routes), \`db\` (queries + the pool \`[acquire]\` connect-wait), \`loader\` (live-state resource loads), and the origin entries \`sub\` (a tab subscribed) / \`push\` (a notify cascade) that trigger loaders — a loader's \`parent\` names which one triggered it.
+
+Wait-vs-work: every entry (loader/http/sub/push) carries a \`waits\` map (gate/lock layer → ms) and a derived \`workMs\` = avg − Σwaits. \`loader-acquire\` = waiting for a DB connection gate slot; \`heavy-read-acquire\` = waiting for a host-wide heavy git/fs read slot. A loader that is mostly \`waits\` was head-of-line-blocked (the resource itself is fast); a loader that is mostly \`workMs\` is genuinely slow.
 
 Default: profiles the current conversation's worktree server. Pass \`worktree\` to target a different worktree (e.g. "att-1778089188-7uvf" or "singularity" for main).`,
   inputSchema: {
     kind: z
-      .enum(["http", "db", "loader", "all"])
+      .enum(["http", "db", "loader", "sub", "push", "all"])
       .optional()
       .describe('Span kind to filter. Defaults to "all".'),
     limit: z
@@ -73,8 +77,10 @@ Default: profiles the current conversation's worktree server. Pass \`worktree\` 
           label: string;
           count: number;
           avgMs: number;
+          workMs: number;
           maxMs: number;
           lastMs: number;
+          waits?: Record<string, number>;
           byParent: ParentRow[];
         }[];
         slowest: {
@@ -82,9 +88,14 @@ Default: profiles the current conversation's worktree server. Pass \`worktree\` 
           durationMs: number;
           atMs: number;
           parent: { kind: SpanKind; label: string } | null;
+          waits?: Record<string, number>;
         }[];
       }
     > = {};
+
+    // Sum the per-layer wait map (total ms across all records of this label).
+    const sumWaits = (waits?: Record<string, number>): number =>
+      waits ? Object.values(waits).reduce((a, b) => a + b, 0) : 0;
 
     for (const k of targetKinds) {
       result[k] = {
@@ -92,8 +103,13 @@ Default: profiles the current conversation's worktree server. Pass \`worktree\` 
           label: agg.label,
           count: agg.count,
           avgMs: Math.round(agg.totalMs / agg.count),
+          // Pure operation cost: average duration minus the average wait. The
+          // direct lock-vs-work read — a high avgMs with a high waits/low workMs
+          // is head-of-line blocking, not a slow resource.
+          workMs: Math.round((agg.totalMs - sumWaits(agg.waits)) / agg.count),
           maxMs: agg.maxMs,
           lastMs: agg.lastMs,
+          waits: agg.waits,
           byParent: agg.byParent.map((pb) => ({
             parentKind: pb.parent.kind,
             parentLabel: pb.parent.label,
@@ -107,6 +123,7 @@ Default: profiles the current conversation's worktree server. Pass \`worktree\` 
           durationMs: s.durationMs,
           atMs: s.atMs,
           parent: s.parent,
+          waits: s.waits,
         })),
       };
     }

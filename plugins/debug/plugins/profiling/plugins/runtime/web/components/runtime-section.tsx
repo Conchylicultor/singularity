@@ -16,8 +16,10 @@ import {
 
 const RUNTIME_VIEW = defineDataView("debug.profiling.runtime");
 
+type RuntimeKind = "http" | "db" | "loader" | "sub" | "push";
+
 interface ParentRow {
-  kind: "http" | "db" | "loader";
+  kind: RuntimeKind;
   label: string;
   count: number;
 }
@@ -26,12 +28,14 @@ interface AggRow {
   label: string;
   count: number;
   avgMs: number;
+  /** Pure operation cost: avg minus average wait. Lock-vs-work, readable directly. */
+  workMs: number;
   maxMs: number;
   lastMs: number;
   byParent: ParentRow[];
+  /** Per-layer wait (gate/lock → summed ms) across this label's records. */
+  waits: Record<string, number>;
 }
-
-type RuntimeKind = "http" | "db" | "loader";
 
 type RuntimeRow = AggRow & { kind: RuntimeKind };
 
@@ -67,6 +71,24 @@ function CallerBreakdown({ parents }: { parents: ParentRow[] }): ReactElement {
   );
 }
 
+// The per-layer wait split beneath an entry's label: ⏳ loader-acquire 1700ms.
+// Makes head-of-line blocking visible inline (which gate, how long).
+function WaitBreakdownLines({ waits }: { waits: Record<string, number> }): ReactElement {
+  return (
+    <Stack gap="2xs" className="pl-md">
+      {Object.entries(waits).map(([layer, ms]) => (
+        <span
+          key={layer}
+          className="truncate font-mono text-3xs text-muted-foreground"
+          title={`${layer}: ${Math.round(ms)}ms wait`}
+        >
+          ⏳ {layer} {Math.round(ms)}ms
+        </span>
+      ))}
+    </Stack>
+  );
+}
+
 function toAggRows(
   aggregates: {
     label: string;
@@ -74,22 +96,29 @@ function toAggRows(
     totalMs: number;
     maxMs: number;
     lastMs: number;
-    byParent: { parent: { kind: "http" | "db" | "loader"; label: string }; count: number }[];
+    byParent: { parent: { kind: RuntimeKind; label: string }; count: number }[];
+    waits?: Record<string, number>;
   }[],
 ): AggRow[] {
   return aggregates
-    .map((agg) => ({
-      label: agg.label,
-      count: agg.count,
-      avgMs: Math.round(agg.totalMs / agg.count),
-      maxMs: agg.maxMs,
-      lastMs: agg.lastMs,
-      byParent: agg.byParent.map((pb) => ({
-        kind: pb.parent.kind,
-        label: pb.parent.label,
-        count: pb.count,
-      })),
-    }))
+    .map((agg) => {
+      const waits = agg.waits ?? {};
+      const totalWait = Object.values(waits).reduce((a, b) => a + b, 0);
+      return {
+        label: agg.label,
+        count: agg.count,
+        avgMs: Math.round(agg.totalMs / agg.count),
+        workMs: Math.round((agg.totalMs - totalWait) / agg.count),
+        maxMs: agg.maxMs,
+        lastMs: agg.lastMs,
+        byParent: agg.byParent.map((pb) => ({
+          kind: pb.parent.kind,
+          label: pb.parent.label,
+          count: pb.count,
+        })),
+        waits,
+      };
+    })
     .sort((a, b) => b.maxMs - a.maxMs);
 }
 
@@ -103,6 +132,8 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
       { value: "http", label: "HTTP" },
       { value: "db", label: "DB" },
       { value: "loader", label: "Loader" },
+      { value: "sub", label: "Sub" },
+      { value: "push", label: "Push" },
     ],
     width: "5rem",
   },
@@ -122,6 +153,7 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
           {row.label}
         </Text>
         {row.byParent.length > 0 && <CallerBreakdown parents={row.byParent} />}
+        {Object.keys(row.waits).length > 0 && <WaitBreakdownLines waits={row.waits} />}
       </Stack>
     ),
   },
@@ -138,6 +170,14 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     label: "Avg (ms)",
     type: "number",
     value: (r) => r.avgMs,
+    align: "end",
+    width: "5rem",
+  },
+  {
+    id: "workMs",
+    label: "Work (ms)",
+    type: "number",
+    value: (r) => r.workMs,
     align: "end",
     width: "5rem",
   },
@@ -174,6 +214,8 @@ export function RuntimeSection(): ReactElement | null {
       ...tag("http", toAggRows(data.aggregates.http)),
       ...tag("db", toAggRows(data.aggregates.db)),
       ...tag("loader", toAggRows(data.aggregates.loader)),
+      ...tag("sub", toAggRows(data.aggregates.sub)),
+      ...tag("push", toAggRows(data.aggregates.push)),
     ];
   }, [data]);
 

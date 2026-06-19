@@ -43,6 +43,7 @@ function op(over: Partial<SlowOp> = {}): SlowOp {
     lastMs: 1000,
     thresholdMs: 500,
     callers: [],
+    waits: {},
     recentSamples: [],
     firstSeenAt: new Date("2026-06-16T00:00:00Z"),
     lastSeenAt: new Date("2026-06-16T00:00:00Z"),

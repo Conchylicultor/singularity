@@ -12,14 +12,18 @@ It is a thin composition over two existing pieces:
 - the cross-process `createHostSemaphore({ name, size })` primitive
   (`@plugins/packages/plugins/host-semaphore/server`) — the flock slot-broker
   that makes the bound span processes;
-- the `runtime-profiler` — each acquire records a `db [heavy-read-acquire]` span
-  (reusing the `db` `SpanKind` with a distinguishing label, exactly like the
-  `db [loader-acquire]` precedent), so a saturated gate stays visible in
-  `get_runtime_profile` / the durable slow-ops store rather than hiding
-  queue-wait.
+- the `runtime-profiler` — each acquire **charges** its lock-wait to the
+  enclosing entry (loader/http) via `chargeWait("heavy-read-acquire", ms)`, so a
+  heavy git/fs loader's span reads as wait-vs-work directly (e.g. edited-files
+  4032ms = lock 3500 / git diff 532) and a saturated gate stays attributed to the
+  resource that waited in `get_runtime_profile` / the durable slow-ops store,
+  rather than hiding queue-wait in a label-shared bucket. Context-less callers
+  (no active entry) fall back to a standalone `db [heavy-read-acquire]` span
+  inside `chargeWait`. See
+  research/2026-06-19-global-wait-attribution-instrumentation.md.
 
 The pool *instance* (fixed name `heavy-read` + size) lives here rather than in
-the bare primitive because its name/size and the profiler span are policy, not
+the bare primitive because its name/size and the wait charging are policy, not
 mechanism.
 
 **Size:** `floor(cpus/4)`, overridable via `SINGULARITY_HEAVY_READ_CONCURRENCY`
