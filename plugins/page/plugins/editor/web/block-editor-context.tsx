@@ -14,7 +14,6 @@ import { useUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { subtreeIds } from "@plugins/primitives/plugins/tree/core";
 import {
-  updateBlock,
   moveBlock,
   applyBlockOpEndpoint,
   patchBlocks,
@@ -234,7 +233,6 @@ export function BlockEditorProvider({
   }, []);
 
   const { mutate: bulkDeleteMutation } = useEndpointMutation(bulkDeleteBlocks);
-  const { mutate: updateBlockMutation } = useEndpointMutation(updateBlock);
 
   const focusBlock = useCallback((id: string, caretOffset?: number) => {
     const handle = focusHandlesRef.current.get(id);
@@ -316,35 +314,59 @@ export function BlockEditorProvider({
     [recordPatchEntry],
   );
 
-  // Persist a block's edited text as a `data.text` row patch through the SAME
-  // optimistic-patch pipeline as structural ops, and record it on the unified
-  // undo stack. Forward typing flows through `dispatchPatch` (not the old
-  // `PATCH /api/blocks/:id`), so undo/redo and forward edits are symmetric. The
-  // entry coalesces per `blockId` so a typing run is one undo step. Undo/redo land
-  // the caret back at `caretOffset`.
-  const commitText = useCallback(
-    (blockId: string, nextRuns: RichText, caretOffset: number) => {
+  // THE single chokepoint for any single-row mutation. Snapshot the current rows,
+  // apply `transform` to just the target row, diff into a minimal forward/reverse
+  // patch pair, optionally `record` it on the unified stack, then dispatch the
+  // forward patch through the SAME optimistic-patch pipeline as structural ops.
+  // Every single-row writer (`commitText`, the block API's `update`/`convertTo`/
+  // `setExpanded`) funnels through here, so forward apply and undo/redo are always
+  // symmetric and a no-op diff records and dispatches nothing. Undo/redo restore
+  // focus to the mutated block (at `caretOffset` when given). `coalesceKey` merges
+  // run-together edits into one undo step; `record: false` keeps a mutation off the
+  // stack (view state) while still flowing it through the optimistic pipeline.
+  const commitRow = useCallback(
+    (
+      blockId: string,
+      transform: (b: Block) => Block,
+      opts: { label: string; coalesceKey?: string; caretOffset?: number; record?: boolean },
+    ) => {
       const before = rowsRef.current;
-      const after = before.map((b) =>
-        b.id === blockId ? { ...b, data: { ...(b.data ?? {}), text: nextRuns } } : b,
-      );
+      const after = before.map((b) => (b.id === blockId ? transform(b) : b));
       const { undo: undoPatch, redo: redoPatch } = patchesFromDiff(diffBlocks(before, after));
       if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return;
-      record({
-        label: "Edit text",
-        coalesceKey: blockId,
-        undo: () => {
-          dispatchPatch(undoPatch);
-          queueMicrotask(() => focusBlock(blockId, caretOffset));
-        },
-        redo: () => {
-          dispatchPatch(redoPatch);
-          queueMicrotask(() => focusBlock(blockId, caretOffset));
-        },
-      });
+      if (opts.record !== false) {
+        record({
+          label: opts.label,
+          coalesceKey: opts.coalesceKey,
+          undo: () => {
+            dispatchPatch(undoPatch);
+            queueMicrotask(() => focusBlock(blockId, opts.caretOffset));
+          },
+          redo: () => {
+            dispatchPatch(redoPatch);
+            queueMicrotask(() => focusBlock(blockId, opts.caretOffset));
+          },
+        });
+      }
       dispatchPatch(redoPatch);
     },
     [record, dispatchPatch, focusBlock],
+  );
+
+  // Persist a block's edited text as a `data.text` row patch through the shared
+  // `commitRow` chokepoint, so forward typing and undo/redo flow through the SAME
+  // optimistic-patch pipeline (not the old `PATCH /api/blocks/:id`). The entry
+  // coalesces per `blockId` so a typing run is one undo step; undo/redo land the
+  // caret back at `caretOffset`.
+  const commitText = useCallback(
+    (blockId: string, nextRuns: RichText, caretOffset: number) => {
+      commitRow(
+        blockId,
+        (b) => ({ ...b, data: { ...(b.data ?? {}), text: nextRuns } }),
+        { label: "Edit text", coalesceKey: blockId, caretOffset },
+      );
+    },
+    [commitRow],
   );
 
   const bulkDelete = useCallback(
@@ -469,30 +491,28 @@ export function BlockEditorProvider({
   const makeBlockAPI = useCallback(
     (blockId: string): BlockEditorAPI => ({
       update(data: unknown) {
-        updateBlockMutation({ params: { id: blockId }, body: { data } });
+        // The single data-write affordance every block renderer uses — routed
+        // through `commitRow` so non-text edits (to-do checked, callout color,
+        // image src, …) are optimistic AND recorded. `coalesceKey: blockId`
+        // collapses streaming/rapid same-block edits into one undo step.
+        commitRow(blockId, (b) => ({ ...b, data }), { label: "Edit block", coalesceKey: blockId });
       },
       setExpanded(expanded: boolean) {
-        // Pure view state — deliberately NOT recorded into structural history
-        // (Notion doesn't undo collapse/expand; it's not a document edit). It
-        // self-corrects on re-click via the blocksResource push.
-        // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: expand/collapse toggle; self-correcting on re-click via blocksResource push.
-        void fetchEndpoint(updateBlock, { id: blockId }, { body: { expanded } });
+        // Pure view state — deliberately NOT recorded into history (`record: false`):
+        // Notion doesn't undo collapse/expand; it's not a document edit. Still flows
+        // through the optimistic patch pipeline for snappiness, self-correcting on
+        // re-click via the blocksResource push.
+        commitRow(blockId, (b) => ({ ...b, expanded }), { label: "Toggle collapse", record: false });
       },
       convertTo(type: string, data: unknown, opts?: { expanded?: boolean }) {
-        // Type conversion IS a recorded document edit. Compute the single-row
-        // after-state (type + data, and expanded when the convert resets it) and
-        // record before firing the PATCH.
-        const before = rowsRef.current;
-        const current = before.find((b) => b.id === blockId);
-        if (current) {
-          const after = before.map((b) =>
-            b.id === blockId
-              ? { ...b, type, data, expanded: opts?.expanded ?? b.expanded }
-              : b,
-          );
-          recordStructural(before, after, "Change block type", blockId);
-        }
-        updateBlockMutation({ params: { id: blockId }, body: { type, data, ...(opts ?? {}) } });
+        // Type conversion IS a recorded document edit. Its forward apply now flows
+        // through the same optimistic patch pipeline as its undo/redo via `commitRow`
+        // (which no-ops a missing/unchanged block on its own).
+        commitRow(
+          blockId,
+          (b) => ({ ...b, type, data, expanded: opts?.expanded ?? b.expanded }),
+          { label: "Change block type" },
+        );
       },
       insertAfter(type: string, data: unknown) {
         const newId = crypto.randomUUID();
@@ -596,7 +616,7 @@ export function BlockEditorProvider({
         setFocusedBlockId(blockId);
       },
     }),
-    [dispatchOp, focusNew, focusBlock, updateBlockMutation, recordStructural],
+    [dispatchOp, focusNew, focusBlock, commitRow],
   );
 
   return (
