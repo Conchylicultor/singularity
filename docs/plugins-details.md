@@ -812,9 +812,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Web:
-    - Slots: `Auth.Provider` ← `auth.google`, `auth.notion`, `accountsPane.Actions`
+    - Slots: `Auth.Provider` ← `auth.google`, `auth.notion`, `Auth.ScopeRequirement` ← `backup.google-drive`, `accountsPane.Actions`
     - Uses: `config_v2/settings.configNavPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/frame.Frame`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.useOpenPane`, `shell/notifications.toast`
-    - Exports: Types: `AuthProviderContribution`, `AuthProviderRowProps`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`; Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
+    - Exports: Types: `AuthProviderContribution`, `AuthProviderRowProps`, `AuthScopeRequirement`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`; Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `GrantAccessButton`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
   - Central:
     - Uses: `infra/secrets.getSecret`, `infra/secrets.ready`, `infra/secrets.SecretsKeychainLockedError`, `infra/secrets.setSecret`
     - Exports: Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `GetAccessTokenArgs`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `registerAuthProvider`
@@ -823,7 +823,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.centralResourceDescriptor`
     - Exports: Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `DisconnectBody`, `GetAccessTokenArgs`, `GetTokenBody`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `SetApiKeyBody`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `disconnect`, `DisconnectBodySchema`, `getAuthState`, `getToken`, `GetTokenBodySchema`, `oauthCallback`, `oauthStart`, `setApiKey`, `SetApiKeyBodySchema`
   - Cross-plugin:
-    - Imported by: `apps/settings/accounts`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup/google-drive`
+    - Imported by: `apps/settings/accounts`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`
     - Endpoint callers: `setup-wizard`
   - Server:
     - Exports: Types: `GetAccessTokenArgs`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCentralOfflineError`, `getTokenFromCentral`
@@ -862,7 +862,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Slots: `backupPane.Actions`
     - Contributes: `ConfigV2.WebRegister`, `Pane.Register` "backup", `DebugApp.Sidebar` "Backup" → `component`
-    - Uses: `apps/debug/shell.DebugApp`, `config_v2.ConfigV2`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/css/clip.Clip`, `primitives/css/frame.Frame`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.Button`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
+    - Uses: `apps/debug/shell.DebugApp`, `auth.GrantAccessButton`, `config_v2.ConfigV2`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/css/clip.Clip`, `primitives/css/frame.Frame`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.Button`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
     - Exports: Values: `backupPane`
   - Server:
     - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `database/admin.backupDatabase`, `database/admin.listDatabases`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.ATTACHMENTS_DIR`, `infra/paths.BACKUPS_DIR`, `infra/paths.KEY_PATH`, `infra/paths.STORE_PATH`
@@ -879,8 +879,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
       - Web:
-        - Contributes: `ConfigV2.WebRegister`
-        - Uses: `config_v2.ConfigV2`
+        - Contributes: `ConfigV2.WebRegister`, `Auth.ScopeRequirement` "Back up to Google Drive"
+        - Uses: `auth.Auth`, `config_v2.ConfigV2`, `config_v2.useConfig`
       - Server:
         - Uses: `auth.getTokenFromCentral`, `backup.BackupTarget`, `config_v2.ConfigV2`, `config_v2.getConfig`
     - **`local`** — Config UI for local backup target. Stores backup archives on the local filesystem.
