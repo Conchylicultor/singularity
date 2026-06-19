@@ -19,6 +19,8 @@ import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 
 function useGithubBase(): string | null {
   const { data } = useEndpoint(getRepoInfo, {});
@@ -63,32 +65,20 @@ export function TaskEvents({ taskId }: { taskId: string }) {
 
   return (
     <Stack gap="xl">
-      <Collapsible defaultOpen className="flex flex-col gap-sm">
+      <Collapsible defaultOpen>
+        <Stack gap="sm">
         <SectionHeaderRow variant="eyebrow">Pushes</SectionHeaderRow>
-        <CollapsibleContent className="flex flex-col gap-sm">
+        <CollapsibleContent>
+        <Stack gap="sm">
         {pushes.length === 0 ? (
           <Text as="p" variant="body" tone="muted">No pushes yet.</Text>
         ) : (
-          <ul className="flex flex-col gap-xs">
+          <Stack as="ul" gap="xs">
             {pushes.map((push) => {
               const short = push.sha.slice(0, 7);
               const url = githubBase
                 ? `${githubBase}/commit/${push.sha}`
                 : null;
-              const content = (
-                <>
-                  <Text as="code" variant="caption" tone="muted" className="shrink-0 font-mono">
-                    {short}
-                  </Text>
-                  <Text as="span" variant="body" className="flex-1 truncate">{push.message}</Text>
-                  <Text as="span" variant="caption" tone="muted" className="shrink-0 tabular-nums">
-                    {formatDate(push.createdAt)}
-                  </Text>
-                  {url ? (
-                    <MdOpenInNew className="text-muted-foreground size-4 shrink-0" />
-                  ) : null}
-                </>
-              );
               return (
                 <li key={push.id}>
                   <Row
@@ -97,47 +87,76 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                     target={url ? "_blank" : undefined}
                     rel={url ? "noreferrer" : undefined}
                     bordered
-                    className="gap-md"
                   >
-                    {content}
+                    <Frame
+                      className="w-full"
+                      gap="md"
+                      leading={
+                        <Text as="code" variant="caption" tone="muted" className="font-mono">
+                          {short}
+                        </Text>
+                      }
+                      content={push.message}
+                      trailing={
+                        <>
+                          <Text as="span" variant="caption" tone="muted" className="tabular-nums">
+                            {formatDate(push.createdAt)}
+                          </Text>
+                          {url ? (
+                            <MdOpenInNew className="text-muted-foreground size-4" />
+                          ) : null}
+                        </>
+                      }
+                    />
                   </Row>
                 </li>
               );
             })}
-          </ul>
+          </Stack>
         )}
+        </Stack>
         </CollapsibleContent>
+        </Stack>
       </Collapsible>
 
-      <Collapsible defaultOpen className="flex flex-col gap-sm">
+      <Collapsible defaultOpen>
+        <Stack gap="sm">
         <SectionHeaderRow variant="eyebrow">Attempts</SectionHeaderRow>
-        <CollapsibleContent className="flex flex-col gap-sm">
+        <CollapsibleContent>
+        <Stack gap="sm">
         {attempts.length === 0 ? (
           <Text as="p" variant="body" tone="muted">No attempts yet.</Text>
         ) : (
-          <ul className="flex flex-col gap-sm">
+          <Stack as="ul" gap="sm">
             {attempts.map((attempt) => {
               const convs = attempt.conversations;
               return (
-                <li
+                <Stack
+                  as="li"
                   key={attempt.id}
-                  className="flex flex-col gap-sm rounded-md border px-md py-sm"
+                  gap="sm"
+                  className="rounded-md border px-md py-sm"
                 >
-                  <div className="flex items-center gap-md">
-                    <AttemptStatusBadge status={attempt.status} />
-                    <Text as="span" variant="caption" tone="muted" className="flex-1 truncate font-mono">
-                      {attempt.worktreePath.split("/").pop()}
-                    </Text>
-                    <Text as="span" variant="caption" tone="muted" className="shrink-0 tabular-nums">
-                      {formatDate(attempt.createdAt)}
-                    </Text>
-                  </div>
+                  <Frame
+                    gap="md"
+                    leading={<AttemptStatusBadge status={attempt.status} />}
+                    content={
+                      <TruncatingText className="text-caption font-mono text-muted-foreground">
+                        {attempt.worktreePath.split("/").pop()}
+                      </TruncatingText>
+                    }
+                    trailing={
+                      <Text as="span" variant="caption" tone="muted" className="tabular-nums">
+                        {formatDate(attempt.createdAt)}
+                      </Text>
+                    }
+                  />
                   {convs.length === 0 ? (
                     <Text as="p" variant="caption" tone="muted" className="pl-xs">
                       No conversations.
                     </Text>
                   ) : (
-                    <ul className="flex flex-col gap-xs">
+                    <Stack as="ul" gap="xs">
                       {convs.map((c) => {
                         const isActive = activeConvId === c.id;
                         return (
@@ -159,14 +178,16 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                           </li>
                         );
                       })}
-                    </ul>
+                    </Stack>
                   )}
-                </li>
+                </Stack>
               );
             })}
-          </ul>
+          </Stack>
         )}
+        </Stack>
         </CollapsibleContent>
+        </Stack>
       </Collapsible>
     </Stack>
   );

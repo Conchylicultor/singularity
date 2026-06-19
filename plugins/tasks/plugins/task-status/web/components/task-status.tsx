@@ -13,6 +13,8 @@ import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 
 /**
  * States that warrant a colored filled badge (they need the user's attention).
@@ -94,13 +96,15 @@ export function StatusIcon({ status }: { status: TaskStatus }) {
   const meta = STATUS_META[status];
   const Icon = meta.icon;
   return (
-    <span
+    <Center
+      as="span"
       title={meta.label}
       aria-label={meta.label}
-      className="flex size-5 shrink-0 items-center justify-center"
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-size status-icon box; must never shrink in a flex row
+      className="size-5 shrink-0"
     >
       <Icon className={cn("size-4", meta.iconClassName)} />
-    </span>
+    </Center>
   );
 }
 
@@ -124,9 +128,9 @@ export function StatusSignal({ status }: { status: TaskStatus }) {
     return <StatusBadge status={status} />;
   }
   return (
-    <span className="inline-flex items-center gap-xs">
+    <Inline gap="xs">
       <StatusDot colorClass={meta.dotClass} />
       <Text variant="caption" tone="muted">{meta.label}</Text>
-    </span>
+    </Inline>
   );
 }

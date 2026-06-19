@@ -10,6 +10,7 @@ import {
 } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 
 // Two-mode description editor:
 //   - Display: text rendered with inline widgets via <InlineText> (file-path
@@ -85,15 +86,17 @@ export function DescriptionView({
       ) : (
         <span className="text-muted-foreground">Add a description…</span>
       )}
-      <Button
-        variant="ghost"
-        size="icon"
-        className={cn(hoverRevealTarget, "absolute top-1 right-1 size-6")}
-        title="Edit description"
-        onClick={() => enterEdit(null)}
-      >
-        <MdEdit className="size-3.5" />
-      </Button>
+      <Pin to="top-right" offset="xs" className={hoverRevealTarget}>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="size-6"
+          title="Edit description"
+          onClick={() => enterEdit(null)}
+        >
+          <MdEdit className="size-3.5" />
+        </Button>
+      </Pin>
     </Text>
   );
 }

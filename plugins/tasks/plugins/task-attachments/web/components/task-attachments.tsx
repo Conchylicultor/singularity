@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -21,9 +22,11 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
   if (!attachments || attachments.length === 0) return null;
 
   return (
-    <Collapsible defaultOpen className="flex flex-col gap-sm">
+    <Collapsible defaultOpen>
+      <Stack gap="sm">
       <SectionHeaderRow variant="eyebrow">Attachments</SectionHeaderRow>
-      <CollapsibleContent className="flex flex-wrap gap-md">
+      <CollapsibleContent>
+        <Stack direction="row" wrap gap="md">
         {attachments.map((a) =>
           a.mime.startsWith("image/") ? (
             <a
@@ -54,7 +57,9 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
             </Row>
           ),
         )}
+        </Stack>
       </CollapsibleContent>
+      </Stack>
     </Collapsible>
   );
 }

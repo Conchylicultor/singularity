@@ -10,6 +10,7 @@ import {
   type GraphCanvasGroup,
 } from "@plugins/primitives/plugins/graph-canvas/web";
 import { tasksResource, type TaskListItem, addTaskDependency } from "@plugins/tasks/core";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { patchTask } from "@plugins/tasks/web";
 import { taskDetailPane, useTaskNavigate } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
@@ -84,12 +85,14 @@ function DeleteTaskButton({ taskId }: { taskId: string }) {
   return (
     <button
       type="button"
-      className="bg-background text-foreground hover:bg-destructive hover:text-destructive-foreground flex h-5 w-5 cursor-pointer items-center justify-center rounded-full border shadow-sm disabled:opacity-50"
+      className="bg-background text-foreground hover:bg-destructive hover:text-destructive-foreground size-5 cursor-pointer rounded-full border shadow-sm disabled:opacity-50"
       disabled={deleting}
       onClick={handleDelete}
       aria-label="Delete task"
     >
-      <span className="text-caption font-medium">&times;</span>
+      <Center className="size-full">
+        <span className="text-caption font-medium">&times;</span>
+      </Center>
     </button>
   );
 }
@@ -117,6 +120,7 @@ function buildGraph(
       tintClass: isTerminal ? "text-muted-foreground" : null,
       ringClass: selected ? "border-primary ring-primary/30 ring-2" : null,
       labelClassName: task.status === "dropped" ? "italic line-through" : null,
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid status icon in the graph node's leading slot (graph-canvas owns the row); must never shrink
       leading: <Icon className={cn("size-4 shrink-0", meta.iconClassName)} />,
       connectable: true,
       actions: hasChildren ? undefined : <DeleteTaskButton taskId={task.id} />,
@@ -203,6 +207,7 @@ function TaskGraphLoaded({
   if (closure.length <= 1) return null;
 
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-height (h-60) graph band; shrink-0 keeps it from being compressed among the stacked detail sections
     <div className="bg-muted/30 h-60 shrink-0 border-b">
       <GraphCanvas
         nodes={nodes}

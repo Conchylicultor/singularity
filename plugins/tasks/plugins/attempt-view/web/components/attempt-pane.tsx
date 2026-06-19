@@ -15,6 +15,10 @@ import type { AttemptWithConversations } from "@plugins/tasks/core";
 import { attemptsResource } from "@plugins/tasks/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { attemptPane } from "../panes";
 
 function SideBySideButton({ convId }: { convId: string }) {
@@ -49,20 +53,22 @@ function AttemptSection({
 }) {
   const worktreeName = attempt.worktreePath.split("/").pop();
   return (
-    <div className="flex flex-col gap-2xs">
-      <div className="flex items-center gap-xs px-sm py-xs">
-        <span
-          className={cn(
-            "min-w-0 flex-1 truncate font-mono text-2xs",
-            isCurrent ? "font-medium text-foreground" : "text-muted-foreground",
-          )}
-        >
-          {worktreeName}
-        </span>
-        <Badge size="sm" className="shrink-0">
-          {attempt.conversations.length}
-        </Badge>
-      </div>
+    <Stack gap="2xs">
+      <Frame
+        gap="xs"
+        className="px-sm py-xs"
+        content={
+          <TruncatingText
+            className={cn(
+              "font-mono text-2xs",
+              isCurrent ? "font-medium text-foreground" : "text-muted-foreground",
+            )}
+          >
+            {worktreeName}
+          </TruncatingText>
+        }
+        trailing={<Badge size="sm">{attempt.conversations.length}</Badge>}
+      />
       {attempt.conversations.length === 0 ? (
         <Text
           as="p"
@@ -72,38 +78,43 @@ function AttemptSection({
           No conversations
         </Text>
       ) : (
-        <ul className="flex flex-col gap-2xs">
+        <Stack as="ul" gap="2xs">
           {attempt.conversations.map((c) => {
             const isActive = c.id === selectedConvId;
             return (
-              <li
+              <Frame
+                as="li"
                 key={c.id}
                 className={cn(
-                  "group flex items-center rounded-md",
+                  "group rounded-md",
                   isActive ? "bg-accent" : "hover:bg-accent",
                 )}
-              >
-                <button
-                  type="button"
-                  onClick={() => onSelect(c.id)}
-                  className="flex min-w-0 flex-1 items-center gap-sm px-sm py-xs text-left text-body"
-                >
-                  <StatusDot colorClass={CONV_STATUS_DOT[c.status]} />
-                  <span className="min-w-0 flex-1 truncate">
-                    {c.title ?? "Starting…"}
-                  </span>
-                </button>
-                {convInstanceId !== undefined && !isActive && (
-                  <div className="flex shrink-0 items-center pr-xs opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto">
-                    <PaneInstanceContext.Provider value={convInstanceId}>
-                      <SideBySideButton convId={c.id} />
-                    </PaneInstanceContext.Provider>
-                  </div>
-                )}
-              </li>
+                content={
+                  <button
+                    type="button"
+                    onClick={() => onSelect(c.id)}
+                    className="w-full px-sm py-xs text-left text-body"
+                  >
+                    <Frame
+                      gap="sm"
+                      leading={<StatusDot colorClass={CONV_STATUS_DOT[c.status]} />}
+                      content={c.title ?? "Starting…"}
+                    />
+                  </button>
+                }
+                trailing={
+                  convInstanceId !== undefined && !isActive ? (
+                    <div className="pr-xs opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto">
+                      <PaneInstanceContext.Provider value={convInstanceId}>
+                        <SideBySideButton convId={c.id} />
+                      </PaneInstanceContext.Provider>
+                    </div>
+                  ) : undefined
+                }
+              />
             );
           })}
-        </ul>
+        </Stack>
       )}
       <LaunchControl
         size="sm"
@@ -111,7 +122,7 @@ function AttemptSection({
         className="px-sm pt-xs"
         getRequest={() => ({ attemptId: attempt.id })}
       />
-    </div>
+    </Stack>
   );
 }
 
@@ -140,25 +151,21 @@ export function AttemptPane() {
   );
 
   const title = (
-    <span className="flex items-center gap-xs">
+    <Inline gap="xs">
       Attempts
-      {totalConversations > 0 && (
-        <Badge size="sm" className="shrink-0">
-          {totalConversations}
-        </Badge>
-      )}
-    </span>
+      {totalConversations > 0 && <Badge size="sm">{totalConversations}</Badge>}
+    </Inline>
   );
 
   return (
     <PaneChrome pane={attemptPane} title={title}>
-      <div className="p-sm">
+      <Inset pad="sm">
         {taskAttempts.length === 0 ? (
           <Text as="p" variant="body" className="text-muted-foreground px-sm py-xs">
             No attempts.
           </Text>
         ) : (
-          <div className="flex flex-col gap-sm">
+          <Stack gap="sm">
             {taskAttempts.map((a) => (
               <AttemptSection
                 key={a.id}
@@ -169,9 +176,9 @@ export function AttemptPane() {
                 onSelect={handleSelect}
               />
             ))}
-          </div>
+          </Stack>
         )}
-      </div>
+      </Inset>
     </PaneChrome>
   );
 }

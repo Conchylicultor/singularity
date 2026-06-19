@@ -11,6 +11,7 @@ import { StatusSignal } from "@plugins/tasks/plugins/task-status/web";
 import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { AuthorDisplay } from "./author-display";
 
 export function TaskHeader({ taskId }: { taskId: string }) {
@@ -42,55 +43,58 @@ export function TaskHeader({ taskId }: { taskId: string }) {
 
   return (
     <Stack gap="lg">
-      <div className="flex items-start gap-md">
-        <input
-          value={titleField.value}
-          onChange={(e) => titleField.onChange(e.target.value)}
-          onFocus={titleField.onFocus}
-          onBlur={titleField.onBlur}
-          placeholder="Untitled"
-          className="text-title flex-1 bg-transparent outline-none placeholder:text-muted-foreground focus:ring-0"
-        />
-      </div>
-      <div className="flex items-center gap-md">
-        <SectionLabel as="span">
-          Status
-        </SectionLabel>
-        <StatusSignal status={task.status} />
-        <div className="ml-auto flex items-center gap-xs">
-          <Button size="sm" variant="ghost" onClick={toggleHold}>
-            {task.status === "held" ? "Resume" : "Hold"}
-          </Button>
-          <Button size="sm" variant="ghost" onClick={toggleDrop}>
-            {task.status === "dropped" ? "Undrop" : "Drop task"}
-          </Button>
-        </div>
-      </div>
-      <div className="flex items-center gap-md">
+      <input
+        value={titleField.value}
+        onChange={(e) => titleField.onChange(e.target.value)}
+        onFocus={titleField.onFocus}
+        onBlur={titleField.onBlur}
+        placeholder="Untitled"
+        className="text-title w-full bg-transparent outline-none placeholder:text-muted-foreground focus:ring-0"
+      />
+      <Frame
+        gap="md"
+        leading={
+          <>
+            <SectionLabel as="span">Status</SectionLabel>
+            <StatusSignal status={task.status} />
+          </>
+        }
+        trailing={
+          <Stack direction="row" gap="xs">
+            <Button size="sm" variant="ghost" onClick={toggleHold}>
+              {task.status === "held" ? "Resume" : "Hold"}
+            </Button>
+            <Button size="sm" variant="ghost" onClick={toggleDrop}>
+              {task.status === "dropped" ? "Undrop" : "Drop task"}
+            </Button>
+          </Stack>
+        }
+      />
+      <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">
           Author
         </SectionLabel>
         <AuthorDisplay author={task.author ?? "user"} />
-      </div>
-      <div className="flex items-center gap-md">
+      </Stack>
+      <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">
           Created
         </SectionLabel>
         <Text as="span" variant="caption">
           <RelativeTime date={new Date(task.createdAt)} />
         </Text>
-      </div>
+      </Stack>
       {task.finishedAt != null && (
-        <div className="flex items-center gap-md">
+        <Stack direction="row" align="center" gap="md">
           <SectionLabel as="span">
             Closed
           </SectionLabel>
           <Text as="span" variant="caption">
             <RelativeTime date={new Date(task.finishedAt)} />
           </Text>
-        </div>
+        </Stack>
       )}
-      <div className="flex items-center gap-md">
+      <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">
           Auto-start
         </SectionLabel>
@@ -99,7 +103,7 @@ export function TaskHeader({ taskId }: { taskId: string }) {
           onChange={(m) => void onAutoStartChange(m ?? "none")}
           ariaLabel="Auto-start model"
         />
-      </div>
+      </Stack>
     </Stack>
   );
 }

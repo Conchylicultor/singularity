@@ -15,6 +15,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { TaskDraftCard } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
 import type { ChildEntry } from "./insert-before-children";
@@ -187,14 +189,17 @@ export function TaskDraftForm({
   };
 
   return (
-    <div
-      className={`flex w-[480px] flex-col gap-sm ${isAgentWorktree ? "rounded-lg border-2 border-destructive/60 p-md" : ""}`}
+    <Stack
+      gap="sm"
+      className={`w-[480px] ${isAgentWorktree ? "rounded-lg border-2 border-destructive/60 p-md" : ""}`}
     >
       {isAgentWorktree && (
-        <Text as="div" variant="caption" className="flex items-center gap-xs font-medium text-destructive">
+        <Stack direction="row" align="center" gap="xs" className="text-destructive">
           <MdScience className="size-3.5" />
-          Experimental — tasks target main from an agent worktree
-        </Text>
+          <Text as="span" variant="caption" className="font-medium">
+            Experimental — tasks target main from an agent worktree
+          </Text>
+        </Stack>
       )}
       <Text as="div" variant="caption" className="text-muted-foreground font-medium">
         {heading ?? "Draft tasks"}
@@ -210,7 +215,7 @@ export function TaskDraftForm({
           items={cards.map((c) => c.localId)}
           strategy={verticalListSortingStrategy}
         >
-          <div className="flex flex-col">
+          <Stack gap="none">
             {cards.map((card, idx) => {
               const isHead = idx === 0;
               return (
@@ -271,31 +276,37 @@ export function TaskDraftForm({
                 </Fragment>
               );
             })}
-          </div>
+          </Stack>
         </SortableContext>
       </DndContext>
 
-      <Button
-        size="sm"
-        variant="ghost"
-        onClick={appendChainCard}
-        loading={submitting}
-        className="text-muted-foreground self-start"
-      >
-        <MdAdd className="size-3.5" />
-        + task
-      </Button>
+      <Stack align="start" gap="none">
+        <Button
+          size="sm"
+          variant="ghost"
+          onClick={appendChainCard}
+          loading={submitting}
+          className="text-muted-foreground"
+        >
+          <MdAdd className="size-3.5" />
+          + task
+        </Button>
+      </Stack>
 
-      <div className="border-border flex items-center gap-sm border-t pt-sm">
-        {footerStart}
-        <div className="flex-1" />
-        <Button size="sm" variant="ghost" onClick={onCancel} loading={submitting}>
-          Cancel
-        </Button>
-        <Button size="sm" onClick={onSubmit} loading={submitting} disabled={hasEmpty}>
-          {isMulti ? "Submit chain" : "Submit"}
-        </Button>
-      </div>
-    </div>
+      <Frame
+        className="border-border border-t pt-sm"
+        leading={footerStart}
+        trailing={
+          <>
+            <Button size="sm" variant="ghost" onClick={onCancel} loading={submitting}>
+              Cancel
+            </Button>
+            <Button size="sm" onClick={onSubmit} loading={submitting} disabled={hasEmpty}>
+              {isMulti ? "Submit chain" : "Submit"}
+            </Button>
+          </>
+        }
+      />
+    </Stack>
   );
 }

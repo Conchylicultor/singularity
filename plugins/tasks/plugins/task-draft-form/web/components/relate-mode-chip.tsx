@@ -1,6 +1,8 @@
 import type React from "react";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
 type ModeValue = TaskChainRelateMode | "independent";
@@ -41,12 +43,14 @@ export function RelateModeChip({
     : RELATE_MODES.filter((m) => m.value !== "independent");
 
   return (
-    <Text as="div" variant="caption" className="flex items-center gap-xs text-muted-foreground">
-      <span>Mode</span>
-      <div
+    <Stack direction="row" align="center" gap="xs">
+      <Text as="span" variant="caption" tone="muted">Mode</Text>
+      <Inline
+        as="div"
+        gap="none"
         role="radiogroup"
         aria-label="Relation to current task"
-        className="border-border bg-muted/40 inline-flex items-center rounded-md border p-2xs"
+        className="border-border bg-muted/40 rounded-md border p-2xs"
       >
         {modes.map((m) => {
           const effective = m.value === "independent" ? undefined : m.value;
@@ -70,7 +74,7 @@ export function RelateModeChip({
             </ToggleChip>
           );
         })}
-      </div>
-    </Text>
+      </Inline>
+    </Stack>
   );
 }

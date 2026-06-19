@@ -12,6 +12,7 @@ import { tasksResource, type TaskListItem, removeTaskDependency } from "@plugins
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export function TaskDependents({ taskId }: { taskId: string }) {
   const tasksResult = useResource(tasksResource);
@@ -22,19 +23,21 @@ export function TaskDependents({ taskId }: { taskId: string }) {
   const dependentIds = tasks.filter((t) => t.dependencies.includes(taskId)).map((t) => t.id);
 
   return (
-    <Collapsible defaultOpen className="flex flex-col gap-sm">
+    <Collapsible defaultOpen>
+      <Stack gap="sm">
       <SectionHeaderRow variant="eyebrow">Dependents</SectionHeaderRow>
       <CollapsibleContent>
         {dependentIds.length === 0 ? (
           <Text as="p" variant="body" tone="muted">No dependents.</Text>
         ) : (
-          <ul className="flex flex-wrap gap-sm">
+          <Stack as="ul" direction="row" wrap gap="sm">
             {dependentIds.map((depId) => (
               <DependentChip key={depId} taskId={taskId} dependentId={depId} tasks={tasks} />
             ))}
-          </ul>
+          </Stack>
         )}
       </CollapsibleContent>
+      </Stack>
     </Collapsible>
   );
 }

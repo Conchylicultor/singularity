@@ -43,48 +43,8 @@ export function InsertBeforeChildren({
     const child = children[0]!;
     return (
       <Inset x="sm" y="xs">
-        <Text as="label" variant="caption" className="flex cursor-pointer items-center gap-xs text-muted-foreground">
-          <input
-            type="checkbox"
-            className="h-3 w-3 cursor-pointer"
-            checked={selectedIds.has(child.id)}
-            disabled={disabled}
-            onChange={(e) => toggle(child.id, e.target.checked)}
-          />
-          <span>
-            Insert before{" "}
-            <span className="text-foreground" title={child.title}>
-              {truncate(child.title, 40)}
-            </span>
-          </span>
-        </Text>
-      </Inset>
-    );
-  }
-
-  return (
-    <div className="flex flex-col gap-xs px-sm py-xs">
-      <div className="flex items-center justify-between">
-        <Text as="span" variant="caption" className="text-muted-foreground">
-          Insert before {noneSelected ? "dependents" : `${selectedIds.size} dependent${selectedIds.size === 1 ? "" : "s"}`}
-        </Text>
-        <button
-          type="button"
-          disabled={disabled}
-          onClick={toggleAll}
-          className="text-caption cursor-pointer text-muted-foreground underline hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
-        >
-          {allSelected ? "None" : "Select all"}
-        </button>
-      </div>
-      <Stack gap="2xs">
-        {children.map((child) => (
-          <Text
-            as="label"
-            variant="caption"
-            key={child.id}
-            className="flex cursor-pointer items-center gap-xs text-muted-foreground"
-          >
+        <Text as="label" variant="caption" className="cursor-pointer text-muted-foreground">
+          <Stack direction="row" align="center" gap="xs">
             <input
               type="checkbox"
               className="h-3 w-3 cursor-pointer"
@@ -92,11 +52,57 @@ export function InsertBeforeChildren({
               disabled={disabled}
               onChange={(e) => toggle(child.id, e.target.checked)}
             />
-            <span title={child.title}>{truncate(child.title, 50)}</span>
+            <span>
+              Insert before{" "}
+              <span className="text-foreground" title={child.title}>
+                {truncate(child.title, 40)}
+              </span>
+            </span>
+          </Stack>
+        </Text>
+      </Inset>
+    );
+  }
+
+  return (
+    <Inset x="sm" y="xs">
+      <Stack gap="xs">
+        <Stack direction="row" align="center" justify="between" gap="sm">
+          <Text as="span" variant="caption" className="text-muted-foreground">
+            Insert before {noneSelected ? "dependents" : `${selectedIds.size} dependent${selectedIds.size === 1 ? "" : "s"}`}
           </Text>
-        ))}
+          <button
+            type="button"
+            disabled={disabled}
+            onClick={toggleAll}
+            className="text-caption cursor-pointer text-muted-foreground underline hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+          >
+            {allSelected ? "None" : "Select all"}
+          </button>
+        </Stack>
+        <Stack gap="2xs">
+          {children.map((child) => (
+            <Text
+              as="label"
+              variant="caption"
+              key={child.id}
+              className="cursor-pointer text-muted-foreground"
+            >
+              <Stack direction="row" align="center" gap="xs">
+                <input
+                  type="checkbox"
+                  className="h-3 w-3 cursor-pointer"
+                  checked={selectedIds.has(child.id)}
+                  disabled={disabled}
+                  onChange={(e) => toggle(child.id, e.target.checked)}
+                />
+                <span title={child.title}>{truncate(child.title, 50)}</span>
+              </Stack>
+            </Text>
+          ))}
+        </Stack>
       </Stack>
-    </div>
+    </Inset>
   );
 }
 

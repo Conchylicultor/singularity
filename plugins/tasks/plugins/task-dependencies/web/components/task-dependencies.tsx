@@ -22,6 +22,7 @@ import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 
@@ -56,7 +57,8 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
   const target = targetForSibling(task);
 
   return (
-    <Collapsible defaultOpen className="flex flex-col gap-sm">
+    <Collapsible defaultOpen>
+      <Stack gap="sm">
       <SectionHeaderRow
         variant="eyebrow"
         actions={
@@ -87,13 +89,14 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
         {deps.length === 0 ? (
           <Text as="p" variant="body" tone="muted">No dependencies.</Text>
         ) : (
-          <ul className="flex flex-wrap gap-sm">
+          <Stack as="ul" direction="row" wrap gap="sm">
             {deps.map((depId) => (
               <DepChip key={depId} taskId={taskId} depId={depId} tasks={tasksResult.data} />
             ))}
-          </ul>
+          </Stack>
         )}
       </CollapsibleContent>
+      </Stack>
     </Collapsible>
   );
 }

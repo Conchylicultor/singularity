@@ -7,6 +7,9 @@ import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { HeadToolbar } from "./head-toolbar";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { ModelChip, type ChainModel } from "./model-chip";
 import { RelateModeChip } from "./relate-mode-chip";
 import {
@@ -69,29 +72,34 @@ function ContextRow({
   const showScreenshot = !!onToggleScreenshot;
   if (!showUrl && !showScreenshot) return null;
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- wrapping checkbox row with asymmetric wrap gaps (gap-x-md horizontal, gap-y-xs vertical); no single-gap layout primitive expresses two-axis wrap spacing
     <div className="flex flex-wrap items-center gap-x-md gap-y-xs pt-xs">
       {showUrl && (
-        <Text as="label" variant="caption" tone="muted" className="flex cursor-pointer items-center gap-xs">
-          <input
-            type="checkbox"
-            className="h-3 w-3 cursor-pointer"
-            checked={!!includeUrl}
-            disabled={disabled}
-            onChange={(e) => onToggleUrl!(e.target.checked)}
-          />
-          URL
+        <Text as="label" variant="caption" tone="muted" className="cursor-pointer">
+          <Stack direction="row" align="center" gap="xs">
+            <input
+              type="checkbox"
+              className="h-3 w-3 cursor-pointer"
+              checked={!!includeUrl}
+              disabled={disabled}
+              onChange={(e) => onToggleUrl!(e.target.checked)}
+            />
+            URL
+          </Stack>
         </Text>
       )}
       {showScreenshot && (
-        <Text as="label" variant="caption" tone="muted" className="flex cursor-pointer items-center gap-xs">
-          <input
-            type="checkbox"
-            className="h-3 w-3 cursor-pointer"
-            checked={!!includeScreenshot}
-            disabled={disabled}
-            onChange={(e) => onToggleScreenshot!(e.target.checked)}
-          />
-          Screenshot
+        <Text as="label" variant="caption" tone="muted" className="cursor-pointer">
+          <Stack direction="row" align="center" gap="xs">
+            <input
+              type="checkbox"
+              className="h-3 w-3 cursor-pointer"
+              checked={!!includeScreenshot}
+              disabled={disabled}
+              onChange={(e) => onToggleScreenshot!(e.target.checked)}
+            />
+            Screenshot
+          </Stack>
         </Text>
       )}
     </div>
@@ -160,18 +168,22 @@ export function TaskDraftCard({
   const showRelate = isHead && !!onRelateModeChange;
 
   return (
-    <div
+    <Stack
+      gap="none"
       ref={setNodeRef}
       style={style}
       data-card-index={index}
       {...attributes}
       {...listeners}
       className={cn(
-        "border-border bg-background group relative flex flex-col rounded-md border p-sm cursor-grab active:cursor-grabbing",
+        "border-border bg-background group relative rounded-md border p-sm cursor-grab active:cursor-grabbing",
         isDragging && "opacity-50 shadow-lg",
       )}
     >
-      <MdDragIndicator className="pointer-events-none absolute right-1.5 top-1.5 size-3 text-muted-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
+      {/* Drag handle hint pinned to the card's top-right; off-ramp 0.375rem inset (not on the spacing ramp). */}
+      <Pin to="top-right" decorative style={{ top: "0.375rem", right: "0.375rem" }}>
+        <MdDragIndicator className="pointer-events-none size-3 text-muted-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
+      </Pin>
       <div onPointerDown={(e) => e.stopPropagation()} className="cursor-auto">
         <TextEditor
           value={text}
@@ -187,18 +199,18 @@ export function TaskDraftCard({
         />
       </div>
       {isHead && <HeadToolbar insertText={insertText} />}
-      <div className="flex flex-wrap items-center justify-between gap-sm pt-xs">
-        <div className="flex flex-wrap items-center gap-md">
+      <Stack direction="row" wrap align="center" justify="between" gap="sm" className="pt-xs">
+        <Stack direction="row" wrap align="center" gap="md">
           <ModelChip value={model} onChange={onModelChange} disabled={disabled} />
-          <Text as="div" variant="caption" tone="muted" className="flex items-center gap-xs">
-            <span>Preprompt</span>
+          <Stack direction="row" align="center" gap="xs">
+            <Text as="span" variant="caption" tone="muted">Preprompt</Text>
             <PrepromptSelect
               value={prepromptId}
               onChange={onPrepromptChange}
               disabled={disabled}
               ariaLabel="Preprompt"
             />
-          </Text>
+          </Stack>
           {showRelate && (
             <RelateModeChip
               value={relateMode}
@@ -207,7 +219,7 @@ export function TaskDraftCard({
               disabled={disabled}
             />
           )}
-        </div>
+        </Stack>
         {removable && (
           <button
             type="button"
@@ -215,12 +227,14 @@ export function TaskDraftCard({
             disabled={disabled}
             aria-label="Remove task"
             title="Remove task"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted flex size-5 items-center justify-center rounded-md cursor-pointer"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted size-5 rounded-md cursor-pointer"
           >
-            <MdClose className="size-3.5" />
+            <Center className="size-full">
+              <MdClose className="size-3.5" />
+            </Center>
           </button>
         )}
-      </div>
+      </Stack>
       <ContextRow
         includeUrl={includeUrl}
         onToggleUrl={onToggleUrl}
@@ -240,19 +254,21 @@ export function TaskDraftCard({
           />
         )}
       {showStandalone && onStandaloneChange && (
-        <div className="px-sm py-xs">
-          <Text as="label" variant="caption" tone="muted" className="flex cursor-pointer items-center gap-xs">
-            <input
-              type="checkbox"
-              className="h-3 w-3 cursor-pointer"
-              checked={!!standalone}
-              disabled={disabled}
-              onChange={(e) => onStandaloneChange(e.target.checked)}
-            />
-            Standalone (don't inherit existing dependencies)
+        <Inset x="sm" y="xs">
+          <Text as="label" variant="caption" tone="muted" className="cursor-pointer">
+            <Stack direction="row" align="center" gap="xs">
+              <input
+                type="checkbox"
+                className="h-3 w-3 cursor-pointer"
+                checked={!!standalone}
+                disabled={disabled}
+                onChange={(e) => onStandaloneChange(e.target.checked)}
+              />
+              Standalone (don't inherit existing dependencies)
+            </Stack>
           </Text>
-        </div>
+        </Inset>
       )}
-    </div>
+    </Stack>
   );
 }

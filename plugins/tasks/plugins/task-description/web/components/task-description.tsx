@@ -6,6 +6,7 @@ import {
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { useIsContainerTask } from "@plugins/tasks/plugins/container-tasks/web";
@@ -41,9 +42,11 @@ function TaskDescriptionInner({
   }, [taskId, detailTask, flushAll]);
 
   return (
-    <Collapsible defaultOpen className="flex flex-col gap-md">
+    <Collapsible defaultOpen>
+      <Stack gap="md">
       <SectionHeaderRow variant="eyebrow">Description</SectionHeaderRow>
-      <CollapsibleContent className="flex flex-col gap-md">
+      <CollapsibleContent>
+        <Stack gap="md">
         <DescriptionView
           value={descField.value}
           onChange={descField.onChange}
@@ -53,7 +56,7 @@ function TaskDescriptionInner({
         {/* A container/meta task is a system folder that can't own an attempt —
             hide Launch so the user never hits the server-side rejection. */}
         {!isContainer && (
-          <div className="flex justify-end">
+          <Stack align="end" gap="none">
             <LaunchControl
               size="sm"
               getRequest={buildLaunchRequest}
@@ -61,9 +64,11 @@ function TaskDescriptionInner({
               className="w-auto"
               openAfterLaunch={false}
             />
-          </div>
+          </Stack>
         )}
+        </Stack>
       </CollapsibleContent>
+      </Stack>
     </Collapsible>
   );
 }

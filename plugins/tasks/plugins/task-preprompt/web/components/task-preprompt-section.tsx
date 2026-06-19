@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useTaskPreprompt } from "../hooks";
 import { setTaskPrepromptRemote } from "../internal/api";
 
@@ -24,14 +25,16 @@ export function TaskPrepromptSection({ taskId }: { taskId: string }) {
   };
 
   return (
-    <Collapsible defaultOpen className="flex flex-col gap-xs">
+    <Collapsible defaultOpen>
+      <Stack gap="xs">
       <SectionHeaderRow variant="eyebrow">Preprompt</SectionHeaderRow>
       <CollapsibleContent>
-        <Text as="div" variant="caption" tone="muted" className="flex items-center gap-sm">
-          <span>Append to the agent's system prompt on launch</span>
+        <Stack direction="row" align="center" gap="sm">
+          <Text as="span" variant="caption" tone="muted">Append to the agent's system prompt on launch</Text>
           <PrepromptSelect value={current} onChange={handleChange} ariaLabel="Task preprompt" />
-        </Text>
+        </Stack>
       </CollapsibleContent>
+      </Stack>
     </Collapsible>
   );
 }
