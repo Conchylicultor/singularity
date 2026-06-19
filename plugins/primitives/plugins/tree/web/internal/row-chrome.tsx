@@ -4,6 +4,8 @@ import { MdAdd, MdMoreHoriz } from "react-icons/md";
 import type { IconType } from "react-icons";
 import { SelectionCheckbox } from "@plugins/primitives/plugins/multi-select/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
 import { useTreeListContext, useTreeRow, type RowControls } from "./use-tree-row";
@@ -74,9 +76,11 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
       <DropdownMenu>
         <DropdownMenuTrigger
           aria-label="More actions"
-          className="flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-background/60 data-[state=open]:bg-background/60"
+          className="size-5 rounded-md text-muted-foreground hover:bg-background/60 data-[state=open]:bg-background/60"
         >
-          <MdMoreHoriz className="size-4" />
+          <Center axis="both" className="size-full">
+            <MdMoreHoriz className="size-4" />
+          </Center>
         </DropdownMenuTrigger>
         <DropdownMenuContent side="bottom" align="end">
           {menuItems.map((item, i) => (
@@ -149,26 +153,23 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
           {children}
         </TreeRowChrome>
         {accent != null && (
+          // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed accent wash painted over the row; a standalone sibling layer (Overlay wraps content, not applicable here)
           <div aria-hidden className="pointer-events-none absolute inset-0">
             {accent}
           </div>
         )}
-        <div
-          ref={r.beforeRef}
-          className="pointer-events-none absolute inset-x-0 top-0 h-[6px]"
-        >
+        <Pin ref={r.beforeRef} to="top" stretch decorative className="h-[6px]">
           {r.isOverBefore && (
+            // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
             <div className="bg-primary absolute inset-x-1 top-0 h-[2px] rounded-full" />
           )}
-        </div>
-        <div
-          ref={r.afterRef}
-          className="pointer-events-none absolute inset-x-0 bottom-0 h-[6px]"
-        >
+        </Pin>
+        <Pin ref={r.afterRef} to="bottom" stretch decorative className="h-[6px]">
           {r.isOverAfter && (
+            // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
             <div className="bg-primary absolute inset-x-1 bottom-0 h-[2px] rounded-full" />
           )}
-        </div>
+        </Pin>
       </div>
       {/* In windowed mode the flat list already contains every visible descendant in paint order, so recursing here would double-render. */}
       {!ctx.windowed && r.isOpen && (

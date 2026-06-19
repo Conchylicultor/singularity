@@ -11,6 +11,9 @@ import {
   MdUnfoldMore,
 } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import type { ColumnDef, DataTableProps } from "./types";
 import { useDataTable } from "./use-data-table";
 
@@ -45,13 +48,11 @@ export function DataTable<TRow>({
 
   if (rows.length === 0) {
     return (
-      <Text
-        as="div"
-        variant="caption"
-        className="flex h-32 items-center justify-center text-muted-foreground"
-      >
-        {emptyLabel}
-      </Text>
+      <Center axis="both" className="h-32">
+        <Text as="div" variant="caption" className="text-muted-foreground">
+          {emptyLabel}
+        </Text>
+      </Center>
     );
   }
 
@@ -78,6 +79,7 @@ export function DataTable<TRow>({
         key={key}
         ref={measure?.ref}
         data-index={measure?.index}
+        // eslint-disable-next-line layout/no-adhoc-layout -- CSS subgrid row inheriting the outer grid's column tracks (no Frame/Grid equivalent for subgrid)
         className={cn(
           "group/dt-row col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-caption hover:bg-accent/30",
           hoverRevealGroup,
@@ -99,40 +101,43 @@ export function DataTable<TRow>({
         }
       >
         {columns.map((col) => (
-          <div key={col.id} className={cn("min-w-0 truncate", alignClass(col.align))}>
+          <TruncatingText as="div" key={col.id} className={alignClass(col.align)}>
             {col.cell
               ? col.cell(row)
               : col.value
                 ? String(col.value(row) ?? "")
                 : null}
-          </div>
+          </TruncatingText>
         ))}
         {rowActions && (
-          <div
-            className={cn(
-              "flex items-center justify-end gap-xs",
-              hoverRevealTarget,
-            )}
+          <Stack
+            direction="row"
+            align="center"
+            justify="end"
+            gap="xs"
+            className={hoverRevealTarget}
             onClick={(e) => e.stopPropagation()}
           >
             {rowActions(row, i)}
-          </div>
+          </Stack>
         )}
       </div>
     );
   };
 
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent)
     <div className="grid gap-x-sm" style={{ gridTemplateColumns: template }}>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks */}
       <div className="sticky top-0 z-raised col-span-full grid grid-cols-subgrid border-b bg-background p-control text-3xs font-medium uppercase tracking-wider text-muted-foreground">
         {columns.map((col) => {
           const sortable = !!col.value;
           const active = sortState?.columnId === col.id;
           return (
-            <span
+            <TruncatingText
+              as="span"
               key={col.id}
               className={cn(
-                "min-w-0 truncate",
                 alignClass(col.align),
                 sortable && "cursor-pointer select-none",
               )}
@@ -142,7 +147,7 @@ export function DataTable<TRow>({
               {sortable && (
                 <SortIcon active={active} direction={active ? sortState!.direction : null} />
               )}
-            </span>
+            </TruncatingText>
           );
         })}
         {rowActions && <span aria-hidden />}
@@ -198,12 +203,14 @@ function VirtualTableBody<TRow>({
 
   // The marker sits at the start of the row region (right after the sticky
   // header); scrollMargin is measured from it.
+  // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer in the subgrid table that reserves the off-screen windowed height
   const marker = <div ref={measureRef} aria-hidden className="col-span-full h-0" />;
 
   if (virtualItems.length === 0) {
     return (
       <>
         {marker}
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the windowed table's total height */}
         <div aria-hidden className="col-span-full" style={{ height: totalSize }} />
       </>
     );
@@ -217,6 +224,7 @@ function VirtualTableBody<TRow>({
     <>
       {marker}
       {paddingTop > 0 && (
+        // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the off-screen rows above the window
         <div aria-hidden className="col-span-full" style={{ height: paddingTop }} />
       )}
       {virtualItems.map((vi) =>
@@ -226,6 +234,7 @@ function VirtualTableBody<TRow>({
         }),
       )}
       {paddingBottom > 0 && (
+        // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the off-screen rows below the window
         <div aria-hidden className="col-span-full" style={{ height: paddingBottom }} />
       )}
     </>

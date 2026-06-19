@@ -106,6 +106,7 @@ export function FilterBuilderPopover<TRow>(props: {
           <Button
             variant="ghost"
             size="sm"
+            // eslint-disable-next-line layout/no-adhoc-layout -- per-child start-alignment override in a stretch flex parent (no primitive for self-*)
             className="self-start"
             onClick={() => {
               controller.setFilter(null);

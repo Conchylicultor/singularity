@@ -88,6 +88,7 @@ function NestedGroupRow<TRow>(props: {
         conjunction={props.parentConjunction}
         onChange={props.onSetConjunction}
       />
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible group-box leaf: fills the conjunction row's remaining width and shrinks (Stack has no per-child grow prop) */}
       <Surface level="sunken" className="min-w-0 flex-1 rounded-md border">
         <Inset pad="sm">
           <Stack gap="xs">

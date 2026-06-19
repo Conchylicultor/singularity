@@ -18,6 +18,7 @@ import {
 } from "@plugins/primitives/plugins/tree/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { TreeViewOptions } from "../internal/types";
 import { EditableTreeLabel } from "./editable-tree-label";
 
@@ -74,6 +75,7 @@ function DefaultRow<TRow>(props: {
     );
   } else if (primaryField) {
     label = (
+      // eslint-disable-next-line layout/no-adhoc-layout -- flexible truncating label, a row-level flex child of TreeRowChrome's flex row (it owns the row layout)
       <span className={cn("min-w-0 flex-1 truncate", labelClass)}>
         {resolveCell(
           primaryField as FieldDef<unknown>,
@@ -84,6 +86,7 @@ function DefaultRow<TRow>(props: {
     );
   } else {
     label = (
+      // eslint-disable-next-line layout/no-adhoc-layout -- flexible truncating label, a row-level flex child of TreeRowChrome's flex row (it owns the row layout)
       <span className={cn("min-w-0 flex-1 truncate", labelClass)}>
         {node.id}
       </span>
@@ -116,9 +119,9 @@ function DefaultRow<TRow>(props: {
     >
       {label}
       {trailing != null ? (
-        <span className="flex shrink-0 items-center justify-center">
+        <Center as="span" axis="both">
           {trailing}
-        </span>
+        </Center>
       ) : null}
     </RowChrome>
   );

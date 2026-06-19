@@ -32,6 +32,8 @@ import {
 } from "@plugins/primitives/plugins/multi-select/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { pendingFocus } from "./pending-focus";
 import { TreeListProvider } from "./use-tree-row";
@@ -371,53 +373,53 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     >
       <TreeListProvider value={ctxValue}>
         <MaybeMultiSelect multiSelect={multiSelect} orderedIds={orderedIds}>
-          <div className="flex flex-col gap-2xs">
+          <Stack gap="2xs">
             {hasToolbar && (
-              <div
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
-                className="sticky top-0 z-raised bg-background mb-1 flex items-center gap-xs"
-              >
-                <div className="flex items-center gap-xs">
-                  {showSearchInput && (
-                    <SearchInput
-                      value={searchQuery}
-                      onChange={(e) => setSearchQuery(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Escape") {
-                          setSearchQuery("");
-                          (e.target as HTMLInputElement).blur();
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
+              <Sticky className="bg-background mb-1">
+                <Stack direction="row" gap="xs" align="center" justify="between">
+                  <Stack direction="row" gap="xs" align="center">
+                    {showSearchInput && (
+                      <SearchInput
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === "Escape") {
+                            setSearchQuery("");
+                            (e.target as HTMLInputElement).blur();
+                          }
+                        }}
+                        placeholder="Filter…"
+                        className="w-32"
+                      />
+                    )}
+                    {toolbar.start}
+                  </Stack>
+                  <Stack direction="row" gap="xs" align="center">
+                    {showExpandAll && (
+                      <ExpandAllButton allExpanded={allExpanded} onToggle={expandAll} />
+                    )}
+                    {toolbar.hideTerminal && (
+                      <ToggleChip
+                        active={hideTerminal}
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setHideTerminal(!hideTerminal)}
+                        title={hideTerminal ? "Show completed" : "Hide completed"}
+                        icon={
+                          hideTerminal ? (
+                            <MdFilterAlt className="size-4" />
+                          ) : (
+                            <MdFilterAltOff className="size-4" />
+                          )
                         }
-                      }}
-                      placeholder="Filter…"
-                      className="w-32"
-                    />
-                  )}
-                  {toolbar.start}
-                </div>
-                <div className="ml-auto flex items-center gap-xs">
-                  {showExpandAll && (
-                    <ExpandAllButton allExpanded={allExpanded} onToggle={expandAll} />
-                  )}
-                  {toolbar.hideTerminal && (
-                    <ToggleChip
-                      active={hideTerminal}
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setHideTerminal(!hideTerminal)}
-                      title={hideTerminal ? "Show completed" : "Hide completed"}
-                      icon={
-                        hideTerminal ? (
-                          <MdFilterAlt className="size-4" />
-                        ) : (
-                          <MdFilterAltOff className="size-4" />
-                        )
-                      }
-                    >
-                      {hideTerminal ? "Completed hidden" : "Hide completed"}
-                    </ToggleChip>
-                  )}
-                </div>
-              </div>
+                      >
+                        {hideTerminal ? "Completed hidden" : "Hide completed"}
+                      </ToggleChip>
+                    )}
+                  </Stack>
+                </Stack>
+              </Sticky>
             )}
             {multiSelect && <SelectionBar actions={multiSelect.actions} />}
             {windowed ? (
@@ -448,7 +450,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                 {addLabel}
               </Button>
             )}
-          </div>
+          </Stack>
         </MaybeMultiSelect>
       </TreeListProvider>
       <DragOverlay dropAnimation={null}>

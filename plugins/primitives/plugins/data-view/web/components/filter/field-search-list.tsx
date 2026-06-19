@@ -5,6 +5,7 @@ import {
 } from "@plugins/primitives/plugins/search/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FieldDef } from "../../../core";
 import { useResolveFieldIcon } from "../../internal/use-field-icon";
@@ -40,28 +41,30 @@ export function FieldSearchList<TRow>(props: {
         placeholder={props.placeholder ?? "Filter by…"}
         aria-label="Search fields"
       />
-      <Stack gap="2xs" className="max-h-64 overflow-y-auto">
-        {filtered.length === 0 ? (
-          <Text as="div" variant="caption" tone="muted" className="px-2xs py-xs">
-            No fields
-          </Text>
-        ) : (
-          filtered.map((field) => {
-            const Icon = resolveIcon(field.type ?? "text");
-            return (
-              <Row
-                key={field.id}
-                size="sm"
-                hover="muted"
-                icon={Icon ? <Icon /> : undefined}
-                onClick={() => props.onPick(field.id)}
-              >
-                <span className="truncate">{field.label}</span>
-              </Row>
-            );
-          })
-        )}
-      </Stack>
+      <Scroll className="max-h-64">
+        <Stack gap="2xs">
+          {filtered.length === 0 ? (
+            <Text as="div" variant="caption" tone="muted" className="px-2xs py-xs">
+              No fields
+            </Text>
+          ) : (
+            filtered.map((field) => {
+              const Icon = resolveIcon(field.type ?? "text");
+              return (
+                <Row
+                  key={field.id}
+                  size="sm"
+                  hover="muted"
+                  icon={Icon ? <Icon /> : undefined}
+                  onClick={() => props.onPick(field.id)}
+                >
+                  <span className="truncate">{field.label}</span>
+                </Row>
+              );
+            })
+          )}
+        </Stack>
+      </Scroll>
       {props.footer}
     </Stack>
   );

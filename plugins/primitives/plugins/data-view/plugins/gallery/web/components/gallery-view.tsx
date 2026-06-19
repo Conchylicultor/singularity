@@ -4,6 +4,8 @@ import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import {
@@ -73,15 +75,15 @@ function renderCover(cover: CoverContent): ReactNode {
       );
     case "icon":
       return (
-        <div className="flex aspect-video w-full items-center justify-center rounded-md bg-primary/10 text-primary">
+        <Center className="aspect-video w-full rounded-md bg-primary/10 text-primary">
           {cover.icon}
-        </div>
+        </Center>
       );
     case "node":
       return (
-        <div className="aspect-video w-full overflow-hidden rounded-md border border-border bg-muted/40">
+        <Clip className="aspect-video w-full rounded-md border border-border bg-muted/40">
           {cover.node}
-        </div>
+        </Clip>
       );
   }
 }
@@ -183,10 +185,12 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         <Button
           variant="ghost"
           onClick={() => creators![0]!.onSelect()}
-          className="focus-ring flex aspect-video flex-col items-center justify-center gap-xs rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:bg-muted/40 hover:text-foreground"
+          className="focus-ring aspect-video rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:bg-muted/40 hover:text-foreground"
         >
-          <MdAdd className="size-5" />
-          <Text variant="label">{creators![0]!.label}</Text>
+          <Stack gap="xs" align="center" justify="center" className="size-full">
+            <MdAdd className="size-5" />
+            <Text variant="label">{creators![0]!.label}</Text>
+          </Stack>
         </Button>
       );
     }
@@ -240,7 +244,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         ) : null}
         {bodyFields.length > 0 ? (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the body block from the card title
-          <div className="mt-1 flex flex-col gap-2xs">
+          <Stack gap="2xs" className="mt-1">
             {bodyFields.map((field) => (
               <Text
                 as="div"
@@ -256,7 +260,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
                 />
               </Text>
             ))}
-          </div>
+          </Stack>
         ) : null}
       </DataCard>
     );

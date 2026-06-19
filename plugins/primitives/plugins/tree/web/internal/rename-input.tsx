@@ -83,6 +83,7 @@ export function RenameInput({
         }
       }}
       placeholder={placeholder}
+      // eslint-disable-next-line layout/no-adhoc-layout -- flexible input leaf, a row-level flex child of the tree row (it owns the row layout)
       className={cn(
         // `min-w-0` lets this flex item shrink below its intrinsic input
         // width; without it the input holds a ~20ch floor and pushes the

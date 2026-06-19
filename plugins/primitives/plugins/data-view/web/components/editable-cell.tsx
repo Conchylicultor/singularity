@@ -1,5 +1,7 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { FieldDef, FieldValue } from "../index";
 import type { useResolveCellEditor } from "../index";
 
@@ -25,11 +27,9 @@ function ReadAffordance(props: {
   onClick: (e: MouseEvent) => void;
 }): ReactNode {
   return (
-    <div
-      className={cn(
-        "min-w-0 cursor-text truncate",
-        props.display === "inline" ? "inline" : "w-full",
-      )}
+    <TruncatingText
+      as={props.display === "inline" ? "span" : "div"}
+      className={cn("cursor-text", props.display === "inline" ? undefined : "w-full")}
       onClick={props.onClick}
     >
       {props.empty ? (
@@ -37,7 +37,7 @@ function ReadAffordance(props: {
       ) : (
         props.read
       )}
-    </div>
+    </TruncatingText>
   );
 }
 
@@ -91,17 +91,17 @@ export function EditableCell(props: {
       onCancel: () => setEditing(false),
     });
     if (editor) {
-      const Wrapper = display === "inline" ? "span" : "div";
-      return (
-        <Wrapper
-          className={cn(
-            "min-w-0",
-            display === "inline" ? "inline-flex" : "w-full",
-          )}
-          onClick={(e) => e.stopPropagation()}
-        >
+      // `min-w-0` is dropped: a block wrapper's min-width is already 0, and the
+      // inline `<Inline>` constrains itself — the cell track (min-w-0) is what
+      // lets the editor shrink.
+      return display === "inline" ? (
+        <Inline gap="none" as="span" onClick={(e) => e.stopPropagation()}>
           {editor}
-        </Wrapper>
+        </Inline>
+      ) : (
+        <div className="w-full" onClick={(e) => e.stopPropagation()}>
+          {editor}
+        </div>
       );
     }
     // No contributed editor for this type → never trap the user.

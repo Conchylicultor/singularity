@@ -8,6 +8,8 @@ import {
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import type { FilterConjunction } from "../../../core";
 
 const LABEL: Record<FilterConjunction, string> = { and: "And", or: "Or" };
@@ -27,17 +29,14 @@ export function ConjunctionCell(props: {
   onChange: (conjunction: FilterConjunction) => void;
 }): ReactNode {
   return (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- w-16 is a fixed alignment rail for the conjunction column, a layout dimension the spacing ramp can't express
+    // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- w-16 fixed alignment rail (a layout dimension the spacing ramp can't express); shrink-0 keeps the rail rigid in the flex row
     <div className="w-16 shrink-0">
       {props.index === 0 ? (
-        <Text
-          as="div"
-          variant="body"
-          tone="muted"
-          className="flex control-sm items-center px-2xs"
-        >
-          Where
-        </Text>
+        <Center axis="vertical" className="control-sm px-2xs">
+          <Text as="div" variant="body" tone="muted">
+            Where
+          </Text>
+        </Center>
       ) : props.index === 1 ? (
         <DropdownMenu>
           <DropdownMenuTrigger
@@ -46,12 +45,15 @@ export function ConjunctionCell(props: {
                 variant="outline"
                 size="sm"
                 aria-label="Conjunction"
-                className="w-full justify-between"
+                className="w-full"
               />
             }
           >
-            <span>{LABEL[props.conjunction]}</span>
-            <MdExpandMore />
+            <Frame
+              className="w-full"
+              content={LABEL[props.conjunction]}
+              trailing={<MdExpandMore />}
+            />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem onClick={() => props.onChange("and")}>
@@ -63,14 +65,11 @@ export function ConjunctionCell(props: {
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <Text
-          as="div"
-          variant="body"
-          tone="muted"
-          className="flex control-sm items-center px-2xs"
-        >
-          {LABEL[props.conjunction]}
-        </Text>
+        <Center axis="vertical" className="control-sm px-2xs">
+          <Text as="div" variant="body" tone="muted">
+            {LABEL[props.conjunction]}
+          </Text>
+        </Center>
       )}
     </div>
   );

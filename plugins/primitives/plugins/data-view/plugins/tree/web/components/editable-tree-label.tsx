@@ -67,6 +67,7 @@ export function EditableTreeLabel<TNode extends TreeItem>(props: {
     if (editor !== undefined) {
       return (
         <span
+          // eslint-disable-next-line layout/no-adhoc-layout -- flexible editor leaf, a row-level flex child of TreeRowChrome's flex row (it owns the row layout)
           className={cn("min-w-0 flex-1", className)}
           onClick={(e) => e.stopPropagation()}
           onMouseDown={(e) => e.stopPropagation()}
@@ -79,6 +80,7 @@ export function EditableTreeLabel<TNode extends TreeItem>(props: {
 
   return (
     <span
+      // eslint-disable-next-line layout/no-adhoc-layout -- flexible truncating label, a row-level flex child of TreeRowChrome's flex row (it owns the row layout)
       className={cn("min-w-0 flex-1 truncate", className)}
       onMouseDown={() => {
         // First interaction selects/navigates the row.

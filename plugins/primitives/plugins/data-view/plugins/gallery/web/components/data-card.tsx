@@ -5,6 +5,8 @@ import {
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { type ReactNode } from "react";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 
 export interface DataCardProps {
   /** Card click + Enter/Space (role=button, tabIndex=0). */
@@ -45,25 +47,29 @@ export function DataCard(props: DataCardProps) {
       }}
       className={cn(
         hoverRevealGroup,
-        "relative flex flex-col gap-md rounded-lg p-lg",
+        "relative rounded-lg p-lg",
         selected && "ring-2 ring-primary",
         className,
       )}
     >
-      {media}
-      <div className="min-w-0 flex-1">{children}</div>
-      {footer}
+      <Stack gap="md">
+        {media}
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- card body fills the column and allows its children to truncate horizontally */}
+        <div className="min-w-0 flex-1">{children}</div>
+        {footer}
+      </Stack>
       {actions ? (
-        <div
-          className={cn(
-            "absolute right-2 top-2 flex items-center gap-xs",
-            hoverRevealTarget,
-          )}
+        <Pin
+          to="top-right"
+          offset="sm"
+          className={hoverRevealTarget}
           // Action clicks must not bubble up to onActivate.
           onClick={(e) => e.stopPropagation()}
         >
-          {actions}
-        </div>
+          <Stack direction="row" gap="xs" align="center">
+            {actions}
+          </Stack>
+        </Pin>
       ) : null}
     </Card>
   );
