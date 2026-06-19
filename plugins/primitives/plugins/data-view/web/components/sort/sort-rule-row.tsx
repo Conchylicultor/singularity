@@ -9,6 +9,7 @@ import {
   hoverRevealClass,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { FieldDef, SortRule } from "../../../core";
+import { useResolveDirectionLabels } from "../../internal/use-direction-labels";
 import { FieldPicker } from "../filter/field-picker";
 import { DirectionPicker } from "./direction-picker";
 
@@ -29,6 +30,9 @@ export function SortRuleRow<TRow>(props: {
 }): ReactNode {
   const { rule } = props;
   const { revealed, groupProps } = useHoverReveal();
+  const resolveDirectionLabels = useResolveDirectionLabels();
+  const activeField = props.fields.find((f) => f.id === rule.fieldId);
+  const directionLabels = resolveDirectionLabels(activeField?.type);
 
   return (
     <SortableItem
@@ -58,6 +62,7 @@ export function SortRuleRow<TRow>(props: {
               />
               <DirectionPicker
                 value={rule.direction}
+                labels={directionLabels}
                 onChange={props.onSetDirection}
               />
             </>

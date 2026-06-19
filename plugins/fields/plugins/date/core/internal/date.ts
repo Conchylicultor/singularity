@@ -13,4 +13,5 @@ export const dateIdentity = defineFieldIdentity<Date>({
       : v == null
         ? null
         : new Date(v as string).getTime(),
+  directionLabels: { asc: "Oldest first", desc: "Newest first" },
 });

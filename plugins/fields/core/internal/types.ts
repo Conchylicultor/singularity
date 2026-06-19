@@ -21,4 +21,12 @@ export interface FieldIdentity<T = unknown> {
   readonly extends?: FieldType;
   /** Projection to a sortable/comparable scalar (Date→ms, bool→0/1, …). */
   readonly coerce?: (value: T) => string | number | null;
+  /**
+   * Human-readable sort-direction labels for this type, mirroring Notion's
+   * type-aware sort menu ("A → Z" / "Z → A" for text, "Newest first" for dates).
+   * `asc`/`desc` map to the ascending/descending comparator. Inherited via the
+   * `extends` chain (int/float reuse number's). Omitted → the generic
+   * "Ascending" / "Descending" fallback.
+   */
+  readonly directionLabels?: { readonly asc: string; readonly desc: string };
 }

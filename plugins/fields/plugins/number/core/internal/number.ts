@@ -8,4 +8,5 @@ export const numberIdentity = defineFieldIdentity<number>({
   label: "Number",
   icon: MdNumbers,
   coerce: (v) => (typeof v === "number" ? v : Number(v)),
+  directionLabels: { asc: "1 → 9", desc: "9 → 1" },
 });

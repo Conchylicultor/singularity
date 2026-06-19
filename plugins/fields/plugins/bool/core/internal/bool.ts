@@ -8,4 +8,5 @@ export const boolIdentity = defineFieldIdentity<boolean>({
   label: "Boolean",
   icon: MdToggleOn,
   coerce: (v) => (v ? 1 : 0),
+  directionLabels: { asc: "Unchecked first", desc: "Checked first" },
 });
