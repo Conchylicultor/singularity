@@ -3,6 +3,11 @@
 Status: **Vision only** — this doc frames the high-level goal and decomposition.
 Detailed design + implementation are carried by the chained follow-up tasks.
 
+> **Detailed design:** see
+> [`research/2026-06-19-data-view-generic-sort-design.md`](./2026-06-19-data-view-generic-sort-design.md)
+> — the implementation contract (data model + migration, comparator, controller,
+> UI structure, table-view coherence) the chained tasks build against.
+
 ## Goal
 
 Give the `data-view` primitive a generic, type-aware, **multi-level** sort builder
