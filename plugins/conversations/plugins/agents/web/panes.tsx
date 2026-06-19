@@ -3,6 +3,8 @@ import { useResource, matchResource } from "@plugins/primitives/plugins/live-sta
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { AgentSideBody } from "./components/agent-side-body";
 import { agentsResource, type Agent } from "../shared/resources";
 import { Agents as AgentsSlots } from "./slots";
@@ -58,16 +60,16 @@ function AgentsRoot(): ReactElement {
   const selectedSystemId = systemAgentDetailPane.useRouteEntry()?.params.systemId;
 
   return (
-    <div className="h-full overflow-auto p-lg">
+    <Scroll axis="both" className="h-full p-lg">
       <AgentsList
         selectedId={selectedUserId}
         selectedSystemId={selectedSystemId}
       />
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the slot section from the agents list above */}
-      <div className="mt-6 flex flex-col gap-lg">
+      <Stack gap="lg" className="mt-6">
         <AgentsSlots.List.Render />
-      </div>
-    </div>
+      </Stack>
+    </Scroll>
   );
 }
 
@@ -82,7 +84,7 @@ function AgentDetailBody(): ReactElement {
   return (
     <PaneChrome pane={agentDetailPane} title={title}>
       <AgentDetail key={id} agentId={id} />
-      <div className="flex flex-col gap-lg px-xl pb-xl">
+      <Stack gap="lg" className="px-xl pb-xl">
         <AgentsSlots.View.Render>
           {(v) => (
             <section className="bg-card rounded-lg border p-lg">
@@ -94,7 +96,7 @@ function AgentDetailBody(): ReactElement {
             </section>
           )}
         </AgentsSlots.View.Render>
-      </div>
+      </Stack>
     </PaneChrome>
   );
 }

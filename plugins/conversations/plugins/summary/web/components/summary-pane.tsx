@@ -9,6 +9,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import {
   conversationSummariesResource,
   type ConversationSummary,
@@ -100,12 +101,13 @@ function SummaryPaneInner({
   const isPending = pendingSince !== null;
 
   return (
-    <Text as="div" variant="body" className="flex flex-col gap-md p-md">
+    <Stack gap="md" className="p-md text-body">
       <Button
         size="sm"
         variant="outline"
         onClick={onSummarize}
         loading={isPending}
+        // eslint-disable-next-line layout/no-adhoc-layout -- per-child self-start so the button hugs its content within the stretch column
         className="gap-xs self-start text-caption"
         aria-label={latest ? "Re-summarise" : "Summarise"}
       >
@@ -120,7 +122,7 @@ function SummaryPaneInner({
           No summary yet. Click Summarise to generate one.
         </Text>
       )}
-    </Text>
+    </Stack>
   );
 }
 
@@ -128,18 +130,24 @@ function SummaryCard({ summary }: { summary: ConversationSummary }) {
   const generated = new Date(summary.generatedAt);
   return (
     <Stack gap="md" className="rounded-md border p-md">
-      <div className="flex items-center justify-between gap-sm">
-        <Badge colorClass={PHASE_CLASSES[summary.phase]}>
-          {PHASE_LABEL[summary.phase]}
-        </Badge>
-        <Text
-          variant="caption"
-          className="text-muted-foreground"
-          title={generated.toISOString()}
-        >
-          {formatRelative(generated)} · {summary.turnCountAtGeneration} turns
-        </Text>
-      </div>
+      <Frame
+        align="center"
+        gap="sm"
+        content={
+          <Badge colorClass={PHASE_CLASSES[summary.phase]}>
+            {PHASE_LABEL[summary.phase]}
+          </Badge>
+        }
+        trailing={
+          <Text
+            variant="caption"
+            className="text-muted-foreground"
+            title={generated.toISOString()}
+          >
+            {formatRelative(generated)} · {summary.turnCountAtGeneration} turns
+          </Text>
+        }
+      />
 
       {summary.phaseDetail && (
         <Section label="Detail">{summary.phaseDetail}</Section>

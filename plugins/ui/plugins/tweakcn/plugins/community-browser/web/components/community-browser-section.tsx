@@ -12,6 +12,7 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { listTweakcnThemes } from "@plugins/ui/plugins/tweakcn/core";
 import type { CatalogTheme } from "../../shared";
 import { getCatalog, applyCatalogTheme } from "../../core";
@@ -127,7 +128,7 @@ export function CommunityBrowserSection({ search }: { search: string }) {
   };
 
   return (
-    <div className="flex flex-col gap-md">
+    <Stack gap="md">
       <DataView<CatalogTheme>
         mode="embedded"
         storageKey={COMMUNITY_BROWSER_VIEW}
@@ -158,6 +159,6 @@ export function CommunityBrowserSection({ search }: { search: string }) {
       />
 
       <ImportByUrl search={search} onApply={handleApply} />
-    </div>
+    </Stack>
   );
 }

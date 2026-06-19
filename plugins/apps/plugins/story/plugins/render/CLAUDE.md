@@ -7,7 +7,7 @@
 - Description: Owns the Story.Renderer + Story.Content dispatch slots, the <StoryRender pageId rendererId/> surface, RendererPicker, and visible unsupported-block / no-renderer fallbacks.
 - Web:
   - Slots: `Story.Renderer` ← `apps.story.renderers.blog`, `apps.story.renderers.slides`, `Story.Content` ← `apps.story.content.text`
-  - Uses: `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/slot-render.defineDispatchSlot`
+  - Uses: `primitives/css/center.Center`, `primitives/css/spacing.Inset`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/slot-render.defineDispatchSlot`
   - Exports: Values: `RendererPicker`, `Story`, `StoryRender`
 - Cross-plugin:
   - Imported by: `apps/story/content/text`, `apps/story/pages-integration`, `apps/story/renderers/blog`, `apps/story/renderers/slides`, `apps/story/shell`

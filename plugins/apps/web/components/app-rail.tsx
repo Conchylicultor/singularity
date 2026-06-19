@@ -1,5 +1,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Apps } from "../slots";
 import { useActiveApp } from "../internal/use-active-app";
 import { useChromeThemeScope } from "../internal/use-chrome-theme-scope";
@@ -17,31 +20,35 @@ export function AppRail() {
   // See useChromeThemeScope.
   const themeScope = useChromeThemeScope();
   return (
-    <div
+    <Stack
+      align="center"
+      gap="xs"
       data-theme-scope={themeScope}
-      className="relative z-nav flex w-(--app-rail-width) shrink-0 flex-col items-center gap-xs border-r bg-background pt-md"
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid rail sibling of the flexible body in the framing row; shrink-0 keeps its fixed width
+      className="relative z-nav w-(--app-rail-width) shrink-0 border-r bg-background pt-md"
     >
       <Apps.App.Render>
         {(app) => (
           <WithTooltip content={app.tooltip} side="right">
-            <button
+            <Center
+              as="button"
               onClick={app.onClick ?? (() => replaceTabApp(focusedTabId, app.id))}
               className={cn(
-                "relative flex size-8 items-center justify-center rounded-md text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                "relative size-8 rounded-md text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 app.id === activeAppId &&
                   "bg-sidebar-accent text-sidebar-accent-foreground",
               )}
             >
               <app.icon className="size-4" />
               {app.badge && (
-                <span className="pointer-events-none absolute right-1 top-1">
+                <Pin to="top-right" offset="xs" decorative>
                   <app.badge />
-                </span>
+                </Pin>
               )}
-            </button>
+            </Center>
           </WithTooltip>
         )}
       </Apps.App.Render>
-    </div>
+    </Stack>
   );
 }

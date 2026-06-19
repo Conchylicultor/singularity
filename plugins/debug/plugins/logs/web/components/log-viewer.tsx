@@ -1,5 +1,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ReconnectingEventSource, useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getLogChannels } from "@plugins/primitives/plugins/log-channels/core";
@@ -180,8 +183,8 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
   }, [selectedKey, isGatewaySource, selected]);
 
   return (
-    <div className="flex h-full flex-col gap-lg p-xl">
-      <div role="tablist" className="flex items-center gap-xs border-b">
+    <Stack gap="lg" className="h-full p-xl">
+      <Stack role="tablist" direction="row" gap="xs" align="center" className="border-b">
         {channels.map((c) => {
           const key = channelKey(c);
           const active = key === selectedKey;
@@ -203,27 +206,26 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
             </button>
           );
         })}
-      </div>
+      </Stack>
 
-      <div
+      <Scroll
+        fill
         ref={viewportRef}
-        className="flex-1 overflow-y-auto rounded-md border bg-muted/30 p-lg font-mono text-caption"
+        className="rounded-md border bg-muted/30 p-lg font-mono text-caption"
       >
         {entries.map((entry) => (
-          <div
+          <Frame
             key={entry.seq}
-            className={cn(
-              "flex gap-sm",
-              entry.stream === "stderr" ? "text-destructive" : "text-foreground",
-            )}
-          >
-            <span className="shrink-0 text-muted-foreground">
-              {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
-            </span>
-            <span>{entry.line}</span>
-          </div>
+            className={entry.stream === "stderr" ? "text-destructive" : "text-foreground"}
+            leading={
+              <span className="text-muted-foreground">
+                {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
+              </span>
+            }
+            content={<span>{entry.line}</span>}
+          />
         ))}
-      </div>
-    </div>
+      </Scroll>
+    </Stack>
   );
 }

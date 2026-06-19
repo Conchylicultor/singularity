@@ -71,6 +71,7 @@ export function PrepromptSelect({
       </SelectTrigger>
       <ConfigSelectContent descriptor={prepromptsConfig} label="Preprompt">
         <SelectItem value={OFF}>
+          {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid spacer reserving glyph width so the None row aligns with glyphed rows */}
           <span className="size-3.5 shrink-0" aria-hidden />
           {offLabel}
         </SelectItem>

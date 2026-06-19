@@ -8,6 +8,10 @@ import { reportsResource } from "@plugins/reports/core";
 import type { Report } from "@plugins/reports/core";
 import { Reports } from "@plugins/reports/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { navigate } from "@plugins/apps/web";
 
 export function ReportsView() {
@@ -19,22 +23,24 @@ export function ReportsView() {
 
   if (rows.length === 0) {
     return (
-      <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
-        No reports recorded yet.
-      </Text>
+      <Center className="h-full">
+        <Text as="div" variant="body" className="text-muted-foreground">
+          No reports recorded yet.
+        </Text>
+      </Center>
     );
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex-1 overflow-auto">
+    <Stack gap="none" className="h-full">
+      <Scroll axis="both" fill>
         <ul className="divide-y">
           {rows.map((c: Report) => (
             <ReportRow key={c.id} report={c} serverBuildId={serverBuildId} />
           ))}
         </ul>
-      </div>
-    </div>
+      </Scroll>
+    </Stack>
   );
 }
 
@@ -42,8 +48,9 @@ function ReportRow({ report: c, serverBuildId }: { report: Report; serverBuildId
   const tabId = getTabId();
   return (
     <li className="px-md py-sm">
-      <div className="flex min-w-0 flex-col gap-xs">
-        <Text as="div" variant="caption" className="flex flex-wrap items-center gap-sm">
+      <Stack gap="xs">
+        <Text as="div" variant="caption">
+          <Cluster>
           <Badge variant="muted" size="md" className="font-mono">
             {c.kind}
           </Badge>
@@ -92,12 +99,13 @@ function ReportRow({ report: c, serverBuildId }: { report: Report; serverBuildId
               task →
             </button>
           )}
+          </Cluster>
         </Text>
         <Text as="div" variant="body" className="truncate text-foreground">
           {/* Per-kind summary, dispatched by report.kind. */}
           <Reports.KindView.Dispatch report={c} />
         </Text>
-      </div>
+      </Stack>
     </li>
   );
 }

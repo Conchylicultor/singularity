@@ -2,6 +2,11 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useCallback, useMemo } from "react";
 import { MdAdd, MdDelete, MdRefresh } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
@@ -95,41 +100,46 @@ export function BroadcastsPanel() {
   };
 
   return (
-    <div className="flex h-full flex-col">
+    <Stack gap="none" className="h-full">
       {/* Header */}
-      <div className="flex items-center justify-between border-b px-lg py-md">
-        <div className="min-w-0">
-          <Text as="span" variant="label">Broadcast Messages</Text>
-          {filePath && (
-            <p
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny one-off offset below label, no parent gap to own it
-              className="mt-0.5 truncate font-mono text-3xs text-muted-foreground/50"
-              title={filePath}
+      <Frame
+        className="border-b px-lg py-md"
+        content={
+          <div>
+            <Text as="span" variant="label">Broadcast Messages</Text>
+            {filePath && (
+              <p
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny one-off offset below label, no parent gap to own it
+                className="mt-0.5 truncate font-mono text-3xs text-muted-foreground/50"
+                title={filePath}
+              >
+                {filePath}
+              </p>
+            )}
+          </div>
+        }
+        trailing={
+          <Stack direction="row" gap="xs">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-7"
+              onClick={() => refetch()}
+              title="Refresh"
             >
-              {filePath}
-            </p>
-          )}
-        </div>
-        <div className="flex shrink-0 items-center gap-xs">
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-7"
-            onClick={() => refetch()}
-            title="Refresh"
-          >
-            <MdRefresh className="size-4" />
-          </Button>
-          <Button
-            size="sm"
-            className="h-7 gap-xs"
-            onClick={() => setShowForm((v) => !v)}
-          >
-            <MdAdd className="size-4" />
-            Add
-          </Button>
-        </div>
-      </div>
+              <MdRefresh className="size-4" />
+            </Button>
+            <Button
+              size="sm"
+              className="h-7 gap-xs"
+              onClick={() => setShowForm((v) => !v)}
+            >
+              <MdAdd className="size-4" />
+              Add
+            </Button>
+          </Stack>
+        }
+      />
 
       {/* Error banner */}
       {error && (
@@ -140,81 +150,99 @@ export function BroadcastsPanel() {
 
       {/* Add form */}
       {showForm && (
-        <div className="flex flex-col gap-sm border-b bg-muted/30 px-lg py-md">
+        <Stack gap="sm" className="border-b bg-muted/30 px-lg py-md">
           {/* Severity */}
-          <div className="flex items-center gap-sm">
-            <Text as="span" variant="caption" className="w-16 shrink-0 text-muted-foreground">Severity</Text>
-            <div className="flex gap-xs">
-              {(["error", "warning", "info"] as BroadcastSeverity[]).map((s) => (
-                <ToggleChip
-                  key={s}
-                  size="sm"
-                  variant="ghost"
-                  active={form.severity === s}
-                  onClick={() => setForm((f) => ({ ...f, severity: s }))}
-                  className={form.severity === s ? SEVERITY_STYLES[s] : undefined}
-                >
-                  {s}
-                </ToggleChip>
-              ))}
-            </div>
-          </div>
+          <Frame
+            align="center"
+            leading={<Text as="span" variant="caption" className="w-16 text-muted-foreground">Severity</Text>}
+            content={
+              <Stack direction="row" gap="xs">
+                {(["error", "warning", "info"] as BroadcastSeverity[]).map((s) => (
+                  <ToggleChip
+                    key={s}
+                    size="sm"
+                    variant="ghost"
+                    active={form.severity === s}
+                    onClick={() => setForm((f) => ({ ...f, severity: s }))}
+                    className={form.severity === s ? SEVERITY_STYLES[s] : undefined}
+                  >
+                    {s}
+                  </ToggleChip>
+                ))}
+              </Stack>
+            }
+          />
 
           {/* Message */}
-          <div className="flex gap-sm">
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to baseline-align label with textarea */}
-            <Text as="span" variant="caption" className="mt-1.5 w-16 shrink-0 text-muted-foreground">Message</Text>
-            <textarea
-              className="flex-1 resize-none rounded-md border bg-background px-sm py-xs text-caption focus:outline-none focus:ring-1 focus:ring-ring"
-              rows={2}
-              placeholder="Rebase required: breaking DB changes landed in abc1234"
-              value={form.message}
-              onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
-            />
-          </div>
+          <Frame
+            align="start"
+            leading={
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to baseline-align label with textarea
+              <Text as="span" variant="caption" className="mt-1.5 w-16 text-muted-foreground">Message</Text>
+            }
+            content={
+              <textarea
+                className="w-full resize-none rounded-md border bg-background px-sm py-xs text-caption focus:outline-none focus:ring-1 focus:ring-ring"
+                rows={2}
+                placeholder="Rebase required: breaking DB changes landed in abc1234"
+                value={form.message}
+                onChange={(e) => setForm((f) => ({ ...f, message: e.target.value }))}
+              />
+            }
+          />
 
           {/* Since / Until */}
-          <div className="flex items-center gap-sm">
-            <Text as="span" variant="caption" className="w-16 shrink-0 text-muted-foreground">Since</Text>
-            <input
-              className="w-28 rounded-md border bg-background px-sm py-xs font-mono text-caption focus:outline-none focus:ring-1 focus:ring-ring"
-              placeholder="abc1234"
-              value={form.since}
-              onChange={(e) => setForm((f) => ({ ...f, since: e.target.value }))}
-            />
-            <Text as="span" variant="caption" className="text-muted-foreground">Until</Text>
-            <input
-              className="w-28 rounded-md border bg-background px-sm py-xs font-mono text-caption focus:outline-none focus:ring-1 focus:ring-ring"
-              placeholder="def5678"
-              value={form.until}
-              onChange={(e) => setForm((f) => ({ ...f, until: e.target.value }))}
-            />
-          </div>
+          <Frame
+            align="center"
+            leading={<Text as="span" variant="caption" className="w-16 text-muted-foreground">Since</Text>}
+            content={
+              <Stack direction="row" gap="sm" align="center">
+                <input
+                  className="w-28 rounded-md border bg-background px-sm py-xs font-mono text-caption focus:outline-none focus:ring-1 focus:ring-ring"
+                  placeholder="abc1234"
+                  value={form.since}
+                  onChange={(e) => setForm((f) => ({ ...f, since: e.target.value }))}
+                />
+                <Text as="span" variant="caption" className="text-muted-foreground">Until</Text>
+                <input
+                  className="w-28 rounded-md border bg-background px-sm py-xs font-mono text-caption focus:outline-none focus:ring-1 focus:ring-ring"
+                  placeholder="def5678"
+                  value={form.until}
+                  onChange={(e) => setForm((f) => ({ ...f, until: e.target.value }))}
+                />
+              </Stack>
+            }
+          />
 
           {/* Commands filter */}
-          <div className="flex items-center gap-sm">
-            <Text as="span" variant="caption" className="w-16 shrink-0 text-muted-foreground">Commands</Text>
-            <div className="flex items-center gap-sm">
-              {ALL_COMMANDS.map((cmd) => (
-                <label key={cmd} className="flex cursor-pointer items-center gap-xs">
-                  <input
-                    type="checkbox"
-                    className="size-3"
-                    checked={form.commands.includes(cmd)}
-                    onChange={() => toggleCommand(cmd)}
-                  />
-                  <Text as="span" variant="caption">{cmd}</Text>
-                </label>
-              ))}
-              {form.commands.length === 0 && (
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off inline gap after checkboxes
-                <Text as="span" variant="caption" className="ml-1 italic text-muted-foreground">(all)</Text>
-              )}
-            </div>
-          </div>
+          <Frame
+            align="center"
+            leading={<Text as="span" variant="caption" className="w-16 text-muted-foreground">Commands</Text>}
+            content={
+              <Stack direction="row" gap="sm" align="center">
+                {ALL_COMMANDS.map((cmd) => (
+                  <label key={cmd} className="cursor-pointer">
+                    <Stack as="span" direction="row" gap="xs" align="center">
+                      <input
+                        type="checkbox"
+                        className="size-3"
+                        checked={form.commands.includes(cmd)}
+                        onChange={() => toggleCommand(cmd)}
+                      />
+                      <Text as="span" variant="caption">{cmd}</Text>
+                    </Stack>
+                  </label>
+                ))}
+                {form.commands.length === 0 && (
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off inline gap after checkboxes
+                  <Text as="span" variant="caption" className="ml-1 italic text-muted-foreground">(all)</Text>
+                )}
+              </Stack>
+            }
+          />
 
           {/* Form actions */}
-          <div className="flex justify-end gap-sm">
+          <Stack direction="row" gap="sm" justify="end">
             <Button
               variant="ghost"
               size="sm"
@@ -235,58 +263,73 @@ export function BroadcastsPanel() {
             >
               Add
             </Button>
-          </div>
-        </div>
+          </Stack>
+        </Stack>
       )}
 
       {/* Entry list */}
-      <div className="flex-1 overflow-y-auto">
+      <Scroll fill>
         {isLoading ? (
-          <Loading className="flex h-full items-center justify-center" />
+          <Center className="h-full">
+            <Loading />
+          </Center>
         ) : entries.length === 0 ? (
-          <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
-            No active broadcasts
-          </Text>
+          <Center className="h-full">
+            <Text as="div" variant="body" className="text-muted-foreground">
+              No active broadcasts
+            </Text>
+          </Center>
         ) : (
           <ul className="divide-y">
             {entries.map((entry, i) => (
-              <li key={i} className="flex items-start gap-md px-lg py-md hover:bg-muted/30">
-                <Badge
-                  size="sm"
-                  colorClass={SEVERITY_STYLES[entry.severity]}
-                  // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align badge with first text line
-                  className="mt-0.5 shrink-0"
-                >
-                  {entry.severity}
-                </Badge>
-                <div className="min-w-0 flex-1">
-                  <Text as="p" variant="body">{entry.message}</Text>
-                  {(entry.since ?? entry.until ?? entry.commands) && (
-                    // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset below message line
-                    <div className="mt-1 flex flex-wrap items-center gap-sm font-mono text-3xs text-muted-foreground">
-                      {entry.since && <span>since: {entry.since.slice(0, 8)}</span>}
-                      {entry.until && <span>until: {entry.until.slice(0, 8)}</span>}
-                      {entry.commands && (
-                        <span className="font-sans">[{entry.commands.join(", ")}]</span>
-                      )}
-                    </div>
-                  )}
-                </div>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  className="size-6 shrink-0 text-muted-foreground hover:text-destructive"
-                  loading={saving}
-                  onClick={() => handleDelete(i)}
-                  title="Delete"
-                >
-                  <MdDelete className="size-4" />
-                </Button>
-              </li>
+              <Frame
+                as="li"
+                key={i}
+                align="start"
+                gap="md"
+                className="px-lg py-md hover:bg-muted/30"
+                leading={
+                  <Badge
+                    size="sm"
+                    colorClass={SEVERITY_STYLES[entry.severity]}
+                    // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align badge with first text line
+                    className="mt-0.5"
+                  >
+                    {entry.severity}
+                  </Badge>
+                }
+                content={
+                  <div>
+                    <Text as="p" variant="body">{entry.message}</Text>
+                    {(entry.since ?? entry.until ?? entry.commands) && (
+                      // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset below message line
+                      <Cluster className="mt-1 font-mono text-3xs text-muted-foreground">
+                        {entry.since && <span>since: {entry.since.slice(0, 8)}</span>}
+                        {entry.until && <span>until: {entry.until.slice(0, 8)}</span>}
+                        {entry.commands && (
+                          <span className="font-sans">[{entry.commands.join(", ")}]</span>
+                        )}
+                      </Cluster>
+                    )}
+                  </div>
+                }
+                trailing={
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="size-6 text-muted-foreground hover:text-destructive"
+                    loading={saving}
+                    onClick={() => handleDelete(i)}
+                    title="Delete"
+                  >
+                    <MdDelete className="size-4" />
+                  </Button>
+                }
+              />
             ))}
           </ul>
         )}
-      </div>
-    </div>
+      </Scroll>
+    </Stack>
   );
 }

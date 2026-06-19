@@ -10,6 +10,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
@@ -67,6 +68,7 @@ function TimelineRow({
         </Button>
       }
     >
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible truncating label column inside Row; min-w-0 lets both lines ellipsize */}
       <Stack gap="2xs" className="min-w-0">
         <Text as="span" variant="body" className="truncate">
           {version.label || "Version"}
@@ -140,59 +142,86 @@ export function VersionHistoryDialog({
         <DialogContent>
           <Surface
             level="overlay"
-            className="flex h-[32rem] w-full max-w-4xl flex-col overflow-hidden rounded-xl shadow-2xl"
+            // The card clips (overflow-hidden) to keep its rounded corners over
+            // the scrolling panes — Surface owns the chrome, Column the layout.
+            // eslint-disable-next-line layout/no-adhoc-layout -- card clips its rounded corners over the scrolling panes
+            className="h-[32rem] w-full max-w-4xl overflow-hidden rounded-xl shadow-2xl"
           >
-            <div className="border-b px-lg py-sm">
-              <DialogTitle>Version history</DialogTitle>
-              <DialogDescription>
-                Browse past versions and restore any of them.
-              </DialogDescription>
-            </div>
-
-            <div className="flex min-h-0 flex-1">
-              {/* LEFT — timeline column, newest first. */}
-              <div className="flex w-72 shrink-0 flex-col border-r">
-                <Inset x="md" t="sm" b="2xs">
-                  <SectionLabel>Timeline</SectionLabel>
-                </Inset>
-                <ScrollArea className="min-h-0 flex-1">
-                  <Inset x="xs" b="xs">
-                    {isLoading ? (
-                      <Loading variant="rows" count={5} />
-                    ) : list.length === 0 ? (
-                      <Placeholder>No versions yet.</Placeholder>
-                    ) : (
-                      <Stack gap="2xs">
-                        {list.map((version) => (
-                          <TimelineRow
-                            key={version.id}
-                            version={version}
-                            selected={version.id === activeId}
-                            onSelect={() => setActiveId(version.id)}
-                            onRestore={() => setPendingRestore(version)}
-                          />
-                        ))}
-                      </Stack>
-                    )}
-                  </Inset>
-                </ScrollArea>
+          <Column
+            className="h-full"
+            header={
+              <div className="border-b px-lg py-sm">
+                <DialogTitle>Version history</DialogTitle>
+                <DialogDescription>
+                  Browse past versions and restore any of them.
+                </DialogDescription>
               </div>
+            }
+            scrollBody={false}
+            body={
+              <Stack
+                direction="row"
+                gap="none"
+                align="stretch"
+                className="h-full"
+              >
+                {/* LEFT — timeline column, newest first. */}
+                <Column
+                  // Rigid timeline pane in the two-pane stretch split.
+                  // eslint-disable-next-line layout/no-adhoc-layout -- rigid left pane of the two-pane stretch split
+                  className="w-72 shrink-0 border-r"
+                  header={
+                    <Inset x="md" t="sm" b="2xs">
+                      <SectionLabel>Timeline</SectionLabel>
+                    </Inset>
+                  }
+                  scrollBody={false}
+                  body={
+                    <ScrollArea className="h-full">
+                      <Inset x="xs" b="xs">
+                        {isLoading ? (
+                          <Loading variant="rows" count={5} />
+                        ) : list.length === 0 ? (
+                          <Placeholder>No versions yet.</Placeholder>
+                        ) : (
+                          <Stack gap="2xs">
+                            {list.map((version) => (
+                              <TimelineRow
+                                key={version.id}
+                                version={version}
+                                selected={version.id === activeId}
+                                onSelect={() => setActiveId(version.id)}
+                                onRestore={() => setPendingRestore(version)}
+                              />
+                            ))}
+                          </Stack>
+                        )}
+                      </Inset>
+                    </ScrollArea>
+                  }
+                />
 
-              {/* RIGHT — host-injected preview of the active version. */}
-              <ScrollArea className="min-h-0 flex-1">
-                {isLoading ? (
-                  <Inset pad="lg">
-                    <Loading variant="block" />
-                  </Inset>
-                ) : activeVersion ? (
-                  renderPreview(activeVersion)
-                ) : (
-                  <Inset pad="lg">
-                    <Placeholder>Select a version to preview it.</Placeholder>
-                  </Inset>
-                )}
-              </ScrollArea>
-            </div>
+                {/* RIGHT — host-injected preview of the active version.
+                    The shadcn ScrollArea keeps its styled scrollbar; it's the
+                    flexible pane filling the remaining width and height of the
+                    two-pane stretch split. */}
+                {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible right pane (styled ScrollArea) of the two-pane stretch split */}
+                <ScrollArea className="min-h-0 flex-1">
+                  {isLoading ? (
+                    <Inset pad="lg">
+                      <Loading variant="block" />
+                    </Inset>
+                  ) : activeVersion ? (
+                    renderPreview(activeVersion)
+                  ) : (
+                    <Inset pad="lg">
+                      <Placeholder>Select a version to preview it.</Placeholder>
+                    </Inset>
+                  )}
+                </ScrollArea>
+              </Stack>
+            }
+          />
           </Surface>
         </DialogContent>
       </Dialog>
@@ -210,8 +239,13 @@ export function VersionHistoryDialog({
             Your current page is saved as a version before restoring, so you can
             undo this.
           </DialogDescription>
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- action row offset below the dialog description; one-off dialog footer spacing */}
-          <div className="mt-4 flex justify-end gap-sm">
+          <Stack
+            direction="row"
+            gap="sm"
+            justify="end"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- action row offset below the dialog description; one-off dialog footer spacing
+            className="mt-4"
+          >
             <Button
               variant="ghost"
               onClick={() => setPendingRestore(null)}
@@ -222,7 +256,7 @@ export function VersionHistoryDialog({
             <Button onClick={confirmRestore} loading={restore.isPending}>
               Restore
             </Button>
-          </div>
+          </Stack>
         </DialogContent>
       </Dialog>
     </>

@@ -10,6 +10,11 @@ import {
   type ModelTier,
 } from "@plugins/conversations/plugins/model-provider/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { CallRow } from "./call-row";
 
 type ModelFilter = "all" | ModelTier;
@@ -49,51 +54,59 @@ function CallsViewInner({ calls }: { calls: ClaudeCliCall[] }) {
   );
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex flex-wrap items-center gap-sm border-b px-md py-sm">
-        <FilterGroup label="Model">
-          <FilterChip active={modelChip.value === "all"} onClick={() => modelChip.setValue("all")}>
-            all
-          </FilterChip>
-          {MODEL_TIERS.map((tier) => (
-            <FilterChip
-              key={tier}
-              active={modelChip.value === tier}
-              onClick={() => modelChip.setValue(tier)}
-            >
-              {tier}
-            </FilterChip>
-          ))}
-        </FilterGroup>
-        {sources.length > 0 && (
-          <FilterGroup label="Source">
-            <FilterChip active={sourceChip.value === "all"} onClick={() => sourceChip.setValue("all")}>
-              all
-            </FilterChip>
-            {sources.map((s) => (
-              <FilterChip
-                key={s}
-                active={sourceChip.value === s}
-                onClick={() => sourceChip.setValue(s)}
-              >
-                {s}
+    <Stack gap="none" className="h-full">
+      <Frame
+        className="border-b px-md py-sm"
+        content={
+          <Cluster>
+            <FilterGroup label="Model">
+              <FilterChip active={modelChip.value === "all"} onClick={() => modelChip.setValue("all")}>
+                all
               </FilterChip>
-            ))}
-          </FilterGroup>
-        )}
-        <div className="flex-1" />
-        <Text as="div" variant="caption" className="text-muted-foreground tabular-nums">
-          {visible.length}
-          {visible.length !== calls.length ? ` / ${calls.length}` : ""} calls
-        </Text>
-      </div>
-      <div className="flex-1 overflow-auto">
-        {visible.length === 0 ? (
-          <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
-            {calls.length === 0
-              ? "No claude --print calls recorded yet."
-              : "No calls match the current filter."}
+              {MODEL_TIERS.map((tier) => (
+                <FilterChip
+                  key={tier}
+                  active={modelChip.value === tier}
+                  onClick={() => modelChip.setValue(tier)}
+                >
+                  {tier}
+                </FilterChip>
+              ))}
+            </FilterGroup>
+            {sources.length > 0 && (
+              <FilterGroup label="Source">
+                <FilterChip active={sourceChip.value === "all"} onClick={() => sourceChip.setValue("all")}>
+                  all
+                </FilterChip>
+                {sources.map((s) => (
+                  <FilterChip
+                    key={s}
+                    active={sourceChip.value === s}
+                    onClick={() => sourceChip.setValue(s)}
+                  >
+                    {s}
+                  </FilterChip>
+                ))}
+              </FilterGroup>
+            )}
+          </Cluster>
+        }
+        trailing={
+          <Text as="div" variant="caption" className="text-muted-foreground tabular-nums">
+            {visible.length}
+            {visible.length !== calls.length ? ` / ${calls.length}` : ""} calls
           </Text>
+        }
+      />
+      <Scroll axis="both" fill>
+        {visible.length === 0 ? (
+          <Center className="h-full">
+            <Text as="div" variant="body" className="text-muted-foreground">
+              {calls.length === 0
+                ? "No claude --print calls recorded yet."
+                : "No calls match the current filter."}
+            </Text>
+          </Center>
         ) : (
           <ul className="divide-y">
             {visible.map((c: ClaudeCliCall) => (
@@ -101,7 +114,7 @@ function CallsViewInner({ calls }: { calls: ClaudeCliCall[] }) {
             ))}
           </ul>
         )}
-      </div>
-    </div>
+      </Scroll>
+    </Stack>
   );
 }

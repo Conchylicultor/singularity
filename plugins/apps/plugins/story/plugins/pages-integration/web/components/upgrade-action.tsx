@@ -1,5 +1,6 @@
 import { MdAutoStories } from "react-icons/md";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { Block } from "@plugins/page/plugins/editor/core";
 import {
@@ -34,9 +35,12 @@ export function UpgradeAction({ row }: ItemActionProps<Block>) {
         type="button"
         onClick={onClick}
         aria-label={label}
-        className="hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded-md"
+        // eslint-disable-next-line layout/no-adhoc-layout -- rigid edge button in the data-view row-actions flex cluster (externally owned)
+        className="hover:bg-background/60 size-6 shrink-0 rounded-md"
       >
-        <MdAutoStories className="size-4" />
+        <Center className="size-full">
+          <MdAutoStories className="size-4" />
+        </Center>
       </button>
     </WithTooltip>
   );

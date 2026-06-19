@@ -1,4 +1,6 @@
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import type { Push } from "@plugins/tasks/core";
 
 export type Source =
@@ -59,7 +61,8 @@ export function SourceTabs({
   pushGroups: PushGroup[];
 }) {
   return (
-    <div className="flex items-center gap-xs overflow-x-auto border-b border-border bg-background/95 px-sm py-xs backdrop-blur">
+    <Scroll axis="x" className="border-b border-border bg-background/95 px-sm py-xs backdrop-blur">
+      <Stack direction="row" gap="xs" align="center">
       <ToggleChip
         active={source.kind === "working"}
         size="sm"
@@ -87,6 +90,7 @@ export function SourceTabs({
           )}
         </ToggleChip>
       ))}
-    </div>
+      </Stack>
+    </Scroll>
   );
 }

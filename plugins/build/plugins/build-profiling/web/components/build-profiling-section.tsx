@@ -8,6 +8,7 @@ import {
   type PhaseConfig,
 } from "@plugins/debug/plugins/profiling/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { getBuildRunProfile } from "../../shared/endpoints";
 
 const PHASE_ORDER = [
@@ -42,7 +43,7 @@ export function BuildProfilingSection({ runId }: { runId: string }): ReactElemen
 
   return (
     <ProfilingContext.Provider value={{ hovered, setHovered, refreshKey: 0 }}>
-      <div className="overflow-hidden rounded-md border">
+      <Clip className="rounded-md border">
         <GanttSection
           title="Build"
           totalMs={data.totalMs}
@@ -52,7 +53,7 @@ export function BuildProfilingSection({ runId }: { runId: string }): ReactElemen
           visibleByPhase={grouped.visible}
         />
         <SpanDetail span={hovered} />
-      </div>
+      </Clip>
     </ProfilingContext.Provider>
   );
 }

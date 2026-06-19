@@ -12,6 +12,14 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 type Tab = "jobs" | "dead" | "events" | "triggers";
 
@@ -26,22 +34,22 @@ export function QueueView() {
   const [tab, setTab] = useState<Tab>("jobs");
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-xs border-b px-md py-sm">
+    <Stack gap="none" className="h-full">
+      <Stack direction="row" gap="xs" align="center" className="border-b px-md py-sm">
         <SegmentedControl
           options={TAB_OPTIONS}
           value={tab}
           onChange={setTab}
           variant="ghost"
         />
-      </div>
-      <div className="flex-1 overflow-auto">
+      </Stack>
+      <Scroll axis="both" fill>
         {tab === "jobs" && <JobsTab />}
         {tab === "dead" && <DeadTab />}
         {tab === "events" && <EventsTab />}
         {tab === "triggers" && <TriggersTab />}
-      </div>
-    </div>
+      </Scroll>
+    </Stack>
   );
 }
 
@@ -118,34 +126,40 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-xs border-b px-md py-sm">
-        <FilterChip active={chipFilter.value === "all"} onClick={() => chipFilter.setValue("all")}>
-          All <span className="opacity-60">{total}</span>
-        </FilterChip>
-        <FilterChip active={chipFilter.value === "pending"} onClick={() => chipFilter.setValue("pending")}>
-          Pending <span className="opacity-60">{counts.pending}</span>
-        </FilterChip>
-        <FilterChip active={chipFilter.value === "running"} onClick={() => chipFilter.setValue("running")}>
-          Running <span className="opacity-60">{counts.running}</span>
-        </FilterChip>
-        <FilterChip active={chipFilter.value === "retrying"} onClick={() => chipFilter.setValue("retrying")}>
-          Retrying <span className="opacity-60">{counts.retrying}</span>
-        </FilterChip>
-        <FilterChip active={chipFilter.value === "dead"} onClick={() => chipFilter.setValue("dead")}>
-          Dead <span className="opacity-60">{counts.dead}</span>
-        </FilterChip>
-        <div className="flex-1" />
-        <Button size="sm" variant="ghost" onClick={() => refetch()}>
-          <MdRefresh className="size-4" /> Refresh
-        </Button>
-      </div>
-      <div className="flex-1 overflow-auto">
+    <Stack gap="none" className="h-full">
+      <Frame
+        className="border-b px-md py-sm"
+        content={
+          <Stack direction="row" gap="xs" align="center">
+            <FilterChip active={chipFilter.value === "all"} onClick={() => chipFilter.setValue("all")}>
+              All <span className="opacity-60">{total}</span>
+            </FilterChip>
+            <FilterChip active={chipFilter.value === "pending"} onClick={() => chipFilter.setValue("pending")}>
+              Pending <span className="opacity-60">{counts.pending}</span>
+            </FilterChip>
+            <FilterChip active={chipFilter.value === "running"} onClick={() => chipFilter.setValue("running")}>
+              Running <span className="opacity-60">{counts.running}</span>
+            </FilterChip>
+            <FilterChip active={chipFilter.value === "retrying"} onClick={() => chipFilter.setValue("retrying")}>
+              Retrying <span className="opacity-60">{counts.retrying}</span>
+            </FilterChip>
+            <FilterChip active={chipFilter.value === "dead"} onClick={() => chipFilter.setValue("dead")}>
+              Dead <span className="opacity-60">{counts.dead}</span>
+            </FilterChip>
+          </Stack>
+        }
+        trailing={
+          <Button size="sm" variant="ghost" onClick={() => refetch()}>
+            <MdRefresh className="size-4" /> Refresh
+          </Button>
+        }
+      />
+      <Scroll axis="both" fill>
         {visible.length === 0 ? (
           <Empty>No jobs.</Empty>
         ) : (
           <table className="w-full text-body">
-            <thead className="sticky top-0 border-b bg-background text-left text-caption text-muted-foreground">
+            <Sticky as="thead" className="border-b bg-background text-left text-caption text-muted-foreground">
               <tr>
                 <th className="px-md py-sm">State</th>
                 <th className="px-md py-sm">Job</th>
@@ -154,7 +168,7 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
                 <th className="px-md py-sm">Last error</th>
                 <th className="px-md py-sm">Actions</th>
               </tr>
-            </thead>
+            </Sticky>
             <tbody>
               {visible.map((r) => (
                 <tr
@@ -192,63 +206,90 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
             </tbody>
           </table>
         )}
-      </div>
+      </Scroll>
       {selected && <JobDrawer job={selected} onClose={() => setSelected(null)} />}
-    </div>
+    </Stack>
+  );
+}
+
+/** Right-pinned full-height drawer over a viewport scrim. */
+function Drawer({
+  onClose,
+  header,
+  children,
+}: {
+  onClose: () => void;
+  header: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  return (
+    <ViewportOverlay layer="popover" className="bg-black/30" onClick={onClose}>
+      <Stack gap="none" direction="row" justify="end" className="h-full">
+        <Clip
+          className="h-full w-[560px] border-l bg-background"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Stack gap="none" className="h-full">
+            <Frame
+              className="border-b px-lg py-md"
+              content={header}
+              trailing={
+                <Button size="sm" variant="ghost" onClick={onClose}>
+                  Close
+                </Button>
+              }
+            />
+            <Scroll fill className="p-lg">
+              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- vertical rhythm between Field rows on a scrollable Text drawer body; not a plain flex container */}
+              <Text as="div" variant="body" className="space-y-4">
+                {children}
+              </Text>
+            </Scroll>
+          </Stack>
+        </Clip>
+      </Stack>
+    </ViewportOverlay>
   );
 }
 
 function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
   return (
-    <ViewportOverlay
-      layer="popover"
-      className="flex justify-end bg-black/30"
-      onClick={onClose}
-    >
-      <div
-        className="flex h-full w-[560px] flex-col overflow-hidden border-l bg-background"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b px-lg py-md">
-          <div>
-            <Text as="div" variant="caption" className="text-muted-foreground">Job</Text>
-            <Text as="div" variant="body" className="font-mono">{job.jobName}</Text>
-          </div>
-          <Button size="sm" variant="ghost" onClick={onClose}>
-            Close
-          </Button>
+    <Drawer
+      onClose={onClose}
+      header={
+        <div>
+          <Text as="div" variant="caption" className="text-muted-foreground">Job</Text>
+          <Text as="div" variant="body" className="font-mono">{job.jobName}</Text>
         </div>
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- vertical rhythm between Field rows on a scrollable Text drawer body; not a plain flex container */}
-        <Text as="div" variant="body" className="flex-1 space-y-4 overflow-auto p-lg">
-          <Field label="ID">
-            <code className="text-caption">{job.id}</code>
-          </Field>
-          <Field label="State">
-            <Badge size="sm" colorClass={STATE_STYLES[job.state]}>
-              {job.state}
-            </Badge>
-          </Field>
-          <Field label="Attempts">{job.attempts} / {job.maxAttempts}</Field>
-          <Field label="Run at">{new Date(job.runAt).toLocaleString()} ({relativeTime(job.runAt)})</Field>
-          {job.lockedAt && (
-            <Field label="Locked at">{new Date(job.lockedAt).toLocaleString()}</Field>
-          )}
-          <Field label="Queue">{job.queueName ?? "(default)"}</Field>
-          <Field label="Input">
-            <pre className="max-h-64 overflow-auto rounded-md bg-muted p-sm text-caption">
-              {JSON.stringify(job.input, null, 2)}
-            </pre>
-          </Field>
-          {job.lastError && (
-            <Field label="Last error">
-              <pre className="max-h-64 overflow-auto rounded-md bg-destructive/5 p-sm text-caption text-destructive">
-                {job.lastError}
-              </pre>
-            </Field>
-          )}
-        </Text>
-      </div>
-    </ViewportOverlay>
+      }
+    >
+      <Field label="ID">
+        <code className="text-caption">{job.id}</code>
+      </Field>
+      <Field label="State">
+        <Badge size="sm" colorClass={STATE_STYLES[job.state]}>
+          {job.state}
+        </Badge>
+      </Field>
+      <Field label="Attempts">{job.attempts} / {job.maxAttempts}</Field>
+      <Field label="Run at">{new Date(job.runAt).toLocaleString()} ({relativeTime(job.runAt)})</Field>
+      {job.lockedAt && (
+        <Field label="Locked at">{new Date(job.lockedAt).toLocaleString()}</Field>
+      )}
+      <Field label="Queue">{job.queueName ?? "(default)"}</Field>
+      <Field label="Input">
+        <Scroll as="pre" axis="both" className="max-h-64 rounded-md bg-muted p-sm text-caption">
+          {JSON.stringify(job.input, null, 2)}
+        </Scroll>
+      </Field>
+      {job.lastError && (
+        <Field label="Last error">
+          <Scroll as="pre" axis="both" className="max-h-64 rounded-md bg-destructive/5 p-sm text-caption text-destructive">
+            {job.lastError}
+          </Scroll>
+        </Field>
+      )}
+    </Drawer>
   );
 }
 
@@ -267,29 +308,33 @@ function DeadTab() {
 function DeadTabInner({ data, refetch }: { data: DeadJobsPayload; refetch: () => Promise<unknown> }) {
   const [selected, setSelected] = useState<DeadJobRow | null>(null);
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center border-b px-md py-sm">
-        <Text as="div" variant="caption" className="text-muted-foreground">
-          Permanently-failed jobs archived from the queue (bounded; GC'd hourly).
-        </Text>
-        <div className="flex-1" />
-        <Button size="sm" variant="ghost" onClick={() => refetch()}>
-          <MdRefresh className="size-4" /> Refresh
-        </Button>
-      </div>
-      <div className="flex-1 overflow-auto">
+    <Stack gap="none" className="h-full">
+      <Frame
+        className="border-b px-md py-sm"
+        content={
+          <Text as="div" variant="caption" className="text-muted-foreground">
+            Permanently-failed jobs archived from the queue (bounded; GC'd hourly).
+          </Text>
+        }
+        trailing={
+          <Button size="sm" variant="ghost" onClick={() => refetch()}>
+            <MdRefresh className="size-4" /> Refresh
+          </Button>
+        }
+      />
+      <Scroll axis="both" fill>
         {data.rows.length === 0 ? (
           <Empty>No dead jobs. Permanently-failed jobs are archived here.</Empty>
         ) : (
           <table className="w-full text-body">
-            <thead className="sticky top-0 border-b bg-background text-left text-caption text-muted-foreground">
+            <Sticky as="thead" className="border-b bg-background text-left text-caption text-muted-foreground">
               <tr>
                 <th className="px-md py-sm">Job</th>
                 <th className="px-md py-sm">Attempts</th>
                 <th className="px-md py-sm">Last error</th>
                 <th className="px-md py-sm">Died</th>
               </tr>
-            </thead>
+            </Sticky>
             <tbody>
               {data.rows.map((r) => (
                 <tr
@@ -312,59 +357,46 @@ function DeadTabInner({ data, refetch }: { data: DeadJobsPayload; refetch: () =>
             </tbody>
           </table>
         )}
-      </div>
+      </Scroll>
       {selected && <DeadJobDrawer job={selected} onClose={() => setSelected(null)} />}
-    </div>
+    </Stack>
   );
 }
 
 function DeadJobDrawer({ job, onClose }: { job: DeadJobRow; onClose: () => void }) {
   return (
-    <ViewportOverlay
-      layer="popover"
-      className="flex justify-end bg-black/30"
-      onClick={onClose}
-    >
-      <div
-        className="flex h-full w-[560px] flex-col overflow-hidden border-l bg-background"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b px-lg py-md">
-          <div>
-            <Text as="div" variant="caption" className="text-muted-foreground">Dead job</Text>
-            <Text as="div" variant="body" className="font-mono">{job.jobName}</Text>
-          </div>
-          <Button size="sm" variant="ghost" onClick={onClose}>
-            Close
-          </Button>
+    <Drawer
+      onClose={onClose}
+      header={
+        <div>
+          <Text as="div" variant="caption" className="text-muted-foreground">Dead job</Text>
+          <Text as="div" variant="body" className="font-mono">{job.jobName}</Text>
         </div>
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- vertical rhythm between Field rows on a scrollable Text drawer body; not a plain flex container */}
-        <Text as="div" variant="body" className="flex-1 space-y-4 overflow-auto p-lg">
-          <Field label="ID">
-            <code className="text-caption">{job.id}</code>
-          </Field>
-          <Field label="Attempts">{job.attempts} / {job.maxAttempts}</Field>
-          <Field label="Died at">
-            {job.diedAt ? `${new Date(job.diedAt).toLocaleString()} (${relativeTime(job.diedAt)})` : "(unknown)"}
-          </Field>
-          <Field label="Archived at">
-            {new Date(job.archivedAt).toLocaleString()} ({relativeTime(job.archivedAt)})
-          </Field>
-          <Field label="Input">
-            <pre className="max-h-64 overflow-auto rounded-md bg-muted p-sm text-caption">
-              {JSON.stringify(job.input, null, 2)}
-            </pre>
-          </Field>
-          {job.lastError && (
-            <Field label="Last error">
-              <pre className="max-h-64 overflow-auto rounded-md bg-destructive/5 p-sm text-caption text-destructive">
-                {job.lastError}
-              </pre>
-            </Field>
-          )}
-        </Text>
-      </div>
-    </ViewportOverlay>
+      }
+    >
+      <Field label="ID">
+        <code className="text-caption">{job.id}</code>
+      </Field>
+      <Field label="Attempts">{job.attempts} / {job.maxAttempts}</Field>
+      <Field label="Died at">
+        {job.diedAt ? `${new Date(job.diedAt).toLocaleString()} (${relativeTime(job.diedAt)})` : "(unknown)"}
+      </Field>
+      <Field label="Archived at">
+        {new Date(job.archivedAt).toLocaleString()} ({relativeTime(job.archivedAt)})
+      </Field>
+      <Field label="Input">
+        <Scroll as="pre" axis="both" className="max-h-64 rounded-md bg-muted p-sm text-caption">
+          {JSON.stringify(job.input, null, 2)}
+        </Scroll>
+      </Field>
+      {job.lastError && (
+        <Field label="Last error">
+          <Scroll as="pre" axis="both" className="max-h-64 rounded-md bg-destructive/5 p-sm text-caption text-destructive">
+            {job.lastError}
+          </Scroll>
+        </Field>
+      )}
+    </Drawer>
   );
 }
 
@@ -379,29 +411,33 @@ function EventsTab() {
   const rows = emissionsResult.data.rows;
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center border-b px-md py-sm">
-        <Text as="div" variant="caption" className="text-muted-foreground">
-          Capped ring-buffer of last ~1000 emit() calls.
-        </Text>
-        <div className="flex-1" />
-        <Button size="sm" variant="ghost" onClick={() => refetch()}>
-          <MdRefresh className="size-4" /> Refresh
-        </Button>
-      </div>
-      <div className="flex-1 overflow-auto">
+    <Stack gap="none" className="h-full">
+      <Frame
+        className="border-b px-md py-sm"
+        content={
+          <Text as="div" variant="caption" className="text-muted-foreground">
+            Capped ring-buffer of last ~1000 emit() calls.
+          </Text>
+        }
+        trailing={
+          <Button size="sm" variant="ghost" onClick={() => refetch()}>
+            <MdRefresh className="size-4" /> Refresh
+          </Button>
+        }
+      />
+      <Scroll axis="both" fill>
         {rows.length === 0 ? (
           <Empty>No emissions recorded yet. Emit an event to populate this log.</Empty>
         ) : (
           <table className="w-full text-body">
-            <thead className="sticky top-0 border-b bg-background text-left text-caption text-muted-foreground">
+            <Sticky as="thead" className="border-b bg-background text-left text-caption text-muted-foreground">
               <tr>
                 <th className="px-md py-sm">Time</th>
                 <th className="px-md py-sm">Event</th>
                 <th className="px-md py-sm">Matched</th>
                 <th className="px-md py-sm">Payload</th>
               </tr>
-            </thead>
+            </Sticky>
             <tbody>
               {rows.map((r) => (
                 <tr
@@ -431,9 +467,9 @@ function EventsTab() {
             </tbody>
           </table>
         )}
-      </div>
+      </Scroll>
       {selected && <EmissionDrawer emission={selected} onClose={() => setSelected(null)} />}
-    </div>
+    </Stack>
   );
 }
 
@@ -445,47 +481,38 @@ function EmissionDrawer({
   onClose: () => void;
 }) {
   return (
-    <ViewportOverlay layer="popover" className="flex justify-end bg-black/30" onClick={onClose}>
-      <div
-        className="flex h-full w-[560px] flex-col overflow-hidden border-l bg-background"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center justify-between border-b px-lg py-md">
-          <div>
-            <Text as="div" variant="caption" className="text-muted-foreground">Emission</Text>
-            <Text as="div" variant="body" className="font-mono">{emission.eventName}</Text>
-          </div>
-          <Button size="sm" variant="ghost" onClick={onClose}>
-            Close
-          </Button>
+    <Drawer
+      onClose={onClose}
+      header={
+        <div>
+          <Text as="div" variant="caption" className="text-muted-foreground">Emission</Text>
+          <Text as="div" variant="body" className="font-mono">{emission.eventName}</Text>
         </div>
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- vertical rhythm between Field rows on a scrollable Text drawer body; not a plain flex container */}
-        <Text as="div" variant="body" className="flex-1 space-y-4 overflow-auto p-lg">
-          <Field label="Emitted at">
-            {new Date(emission.emittedAt).toLocaleString()} ({relativeTime(emission.emittedAt)})
-          </Field>
-          <Field label="Matched triggers">
-            {emission.matchedCount === 0 ? (
-              <span className="text-destructive">
-                0 — no trigger matched this emission.
-              </span>
-            ) : (
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical rhythm between <li> rows on a semantic <ul>; converting to a flex Stack would change list semantics
-              <ul className="space-y-1 font-mono text-caption">
-                {emission.matchedTriggerIds.map((id) => (
-                  <li key={id}>{id}</li>
-                ))}
-              </ul>
-            )}
-          </Field>
-          <Field label="Payload">
-            <pre className="max-h-96 overflow-auto rounded-md bg-muted p-sm text-caption">
-              {JSON.stringify(emission.payload, null, 2)}
-            </pre>
-          </Field>
-        </Text>
-      </div>
-    </ViewportOverlay>
+      }
+    >
+      <Field label="Emitted at">
+        {new Date(emission.emittedAt).toLocaleString()} ({relativeTime(emission.emittedAt)})
+      </Field>
+      <Field label="Matched triggers">
+        {emission.matchedCount === 0 ? (
+          <span className="text-destructive">
+            0 — no trigger matched this emission.
+          </span>
+        ) : (
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical rhythm between <li> rows on a semantic <ul>; converting to a flex Stack would change list semantics
+          <ul className="space-y-1 font-mono text-caption">
+            {emission.matchedTriggerIds.map((id) => (
+              <li key={id}>{id}</li>
+            ))}
+          </ul>
+        )}
+      </Field>
+      <Field label="Payload">
+        <Scroll as="pre" axis="both" className="max-h-96 rounded-md bg-muted p-sm text-caption">
+          {JSON.stringify(emission.payload, null, 2)}
+        </Scroll>
+      </Field>
+    </Drawer>
   );
 }
 
@@ -537,49 +564,57 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <div className="flex items-center gap-xs border-b px-md py-sm">
-        <Text as="div" variant="caption" className="text-muted-foreground">
-          Active subscriptions across all registered events.
-        </Text>
-        {danglingCount > 0 && (
-          <FilterChip active={danglingOnly} onClick={() => setDanglingOnly((v) => !v)}>
-            <span className="text-destructive">Dangling</span>{" "}
-            <span className="opacity-60">{danglingCount}</span>
-          </FilterChip>
-        )}
-        <div className="flex-1" />
-        <Button size="sm" variant="ghost" onClick={() => refetch()}>
-          <MdRefresh className="size-4" /> Refresh
-        </Button>
-      </div>
-      <div className="flex-1 overflow-auto">
+    <Stack gap="none" className="h-full">
+      <Frame
+        className="border-b px-md py-sm"
+        content={
+          <Stack direction="row" gap="xs" align="center">
+            <Text as="div" variant="caption" className="text-muted-foreground">
+              Active subscriptions across all registered events.
+            </Text>
+            {danglingCount > 0 && (
+              <FilterChip active={danglingOnly} onClick={() => setDanglingOnly((v) => !v)}>
+                <span className="text-destructive">Dangling</span>{" "}
+                <span className="opacity-60">{danglingCount}</span>
+              </FilterChip>
+            )}
+          </Stack>
+        }
+        trailing={
+          <Button size="sm" variant="ghost" onClick={() => refetch()}>
+            <MdRefresh className="size-4" /> Refresh
+          </Button>
+        }
+      />
+      <Scroll axis="both" fill>
         {grouped.length === 0 ? (
           <Empty>No active triggers.</Empty>
         ) : (
           <div className="divide-y">
             {grouped.map(([eventName, triggers]) => (
               <div key={eventName}>
-                <Text as="div" variant="caption" className="sticky top-0 border-b bg-muted/50 px-md py-xs font-semibold">
-                  {eventName} <span className="text-muted-foreground">({triggers.length})</span>
-                </Text>
+                <Sticky className="border-b bg-muted/50">
+                  <Text as="div" variant="caption" className="px-md py-xs font-semibold">
+                    {eventName} <span className="text-muted-foreground">({triggers.length})</span>
+                  </Text>
+                </Sticky>
                 <table className="w-full text-body">
                   <tbody>
                     {triggers.map((t) => (
                       <tr key={t.id} className={cn("border-b", !t.enabled && "opacity-60")}>
                         <td className="px-md py-sm font-mono text-caption">
-                          <span className="inline-flex items-center gap-xs">
+                          <Inline gap="xs">
                             {t.jobName}
                             {t.dangling && (
                               <Badge size="sm" colorClass="bg-destructive/10 text-destructive">
                                 dangling
                               </Badge>
                             )}
-                          </span>
+                          </Inline>
                         </td>
                         <td className="px-md py-sm text-caption">
                           {Object.keys(t.filters).length > 0 && (
-                            <div className="flex flex-wrap gap-xs">
+                            <Cluster gap="xs">
                               {Object.entries(t.filters).map(([k, v]) => (
                                 <Badge
                                   key={k}
@@ -590,7 +625,7 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
                                   {k}={v === null ? "*" : JSON.stringify(v)}
                                 </Badge>
                               ))}
-                            </div>
+                            </Cluster>
                           )}
                         </td>
                         <td className="px-md py-sm text-caption text-muted-foreground">
@@ -624,8 +659,8 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
             ))}
           </div>
         )}
-      </div>
-    </div>
+      </Scroll>
+    </Stack>
   );
 }
 
@@ -633,9 +668,11 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
-      {children}
-    </Text>
+    <Center className="h-full">
+      <Text as="div" variant="body" className="text-muted-foreground">
+        {children}
+      </Text>
+    </Center>
   );
 }
 

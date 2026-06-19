@@ -9,6 +9,9 @@ import {
   MdUndo,
 } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 
 export type Tool = "none" | "crop" | "draw";
 
@@ -35,13 +38,13 @@ interface Props {
 
 export function ToolsPane(props: Props) {
   return (
-    <div className="flex h-full min-h-0 flex-col">
+    <Stack gap="none" className="h-full">
       <Text as="div" variant="label" className="border-b px-md py-sm">
         Tools
       </Text>
 
       <div className="border-b p-md">
-        <div className="grid grid-cols-3 gap-xs">
+        <Grid cols={3} minCellWidth="0" gap="xs">
           <ToolButton
             active={props.tool === "none"}
             onClick={() => props.onToolChange("none")}
@@ -60,7 +63,7 @@ export function ToolsPane(props: Props) {
             label="Draw"
             icon={<MdEdit className="size-4" />}
           />
-        </div>
+        </Grid>
       </div>
 
       {props.tool === "crop" && (
@@ -81,7 +84,7 @@ export function ToolsPane(props: Props) {
             <Text as="div" variant="label" tone="muted" className="mb-1">
               Color
             </Text>
-            <div className="flex flex-wrap gap-xs">
+            <Stack direction="row" gap="xs" wrap>
               {COLORS.map((c) => (
                 <button
                   key={c}
@@ -97,19 +100,15 @@ export function ToolsPane(props: Props) {
                   style={{ backgroundColor: c }}
                 />
               ))}
-            </div>
+            </Stack>
           </div>
           <div>
-            <Text
-              as="div"
-              variant="label"
-              tone="muted"
+            <Frame
               // eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset below the width label row
-              className="mb-1 flex items-center justify-between"
-            >
-              <span>Width</span>
-              <span>{props.drawSettings.width}px</span>
-            </Text>
+              className="mb-1"
+              content={<Text as="span" variant="label" tone="muted">Width</Text>}
+              trailing={<Text as="span" variant="label" tone="muted">{props.drawSettings.width}px</Text>}
+            />
             <input
               type="range"
               min={1}
@@ -125,7 +124,7 @@ export function ToolsPane(props: Props) {
               className="w-full"
             />
           </div>
-          <div className="flex gap-sm">
+          <Stack direction="row" gap="sm">
             <Button size="sm" onClick={props.onApplyDraw} disabled={!props.hasStrokes}>
               Apply
             </Button>
@@ -146,7 +145,7 @@ export function ToolsPane(props: Props) {
             >
               Clear
             </Button>
-          </div>
+          </Stack>
         </div>
       )}
 
@@ -165,7 +164,7 @@ export function ToolsPane(props: Props) {
           Reset to original
         </Button>
       </div>
-    </div>
+    </Stack>
   );
 }
 
@@ -185,10 +184,12 @@ function ToolButton({
       variant={active ? "secondary" : "ghost"}
       size="sm"
       onClick={onClick}
-      className="flex h-auto flex-col gap-2xs py-sm"
+      className="h-auto py-sm"
     >
-      {icon}
-      <span className="text-3xs">{label}</span>
+      <Stack gap="2xs" align="center">
+        {icon}
+        <span className="text-3xs">{label}</span>
+      </Stack>
     </Button>
   );
 }

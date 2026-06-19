@@ -1,4 +1,6 @@
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export function FileDisambiguation({
@@ -11,13 +13,13 @@ export function FileDisambiguation({
   onSelect: (path: string) => void;
 }) {
   return (
-    <div className="flex h-full flex-col gap-xs p-md">
+    <Stack gap="xs" className="h-full p-md">
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset on heading above the scroll region, larger than the flex gap */}
       <Text as="div" variant="caption" className="mb-1 text-muted-foreground">
         Multiple files match{" "}
         <span className="font-mono font-medium text-foreground">{query}</span>
       </Text>
-      <div className="min-h-0 flex-1 overflow-auto">
+      <Scroll axis="both" fill>
         {matches.map((filePath) => {
           const lastSlash = filePath.lastIndexOf("/");
           const dir = lastSlash >= 0 ? filePath.slice(0, lastSlash + 1) : "";
@@ -34,7 +36,7 @@ export function FileDisambiguation({
             </Row>
           );
         })}
-      </div>
-    </div>
+      </Scroll>
+    </Stack>
   );
 }

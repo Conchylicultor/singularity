@@ -6,6 +6,8 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -65,7 +67,8 @@ export function ClusterView(): ReactElement {
         width: "minmax(0,1fr)",
         value: (r) => r.operation,
         cell: (r) => (
-          <div className="flex min-w-0 flex-col gap-2xs">
+          // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of the data-view cell's grid; min-w-0 lets the truncating rows shrink
+          <Stack gap="2xs" className="min-w-0">
             <Text as="span" variant="caption" className="truncate font-mono" title={r.operation}>
               {r.operation}
             </Text>
@@ -77,7 +80,7 @@ export function ClusterView(): ReactElement {
             >
               slow across {r.worktrees.length} worktree{r.worktrees.length === 1 ? "" : "s"}
             </Text>
-          </div>
+          </Stack>
         ),
       },
       {
@@ -217,40 +220,46 @@ export function ClusterView(): ReactElement {
   );
 
   return (
-    <div className="flex h-full flex-col overflow-auto">
+    <Scroll axis="both" className="h-full">
       <Stack gap="xl" className="px-md py-md">
-        <div className="flex items-center justify-between gap-md">
-          <Stack gap="2xs" className="min-w-0 flex-1">
-            <SectionLabel>Cross-worktree cluster</SectionLabel>
-            {status === "streaming" && (
-              <ScanProgress received={worktrees.length} total={total} />
-            )}
-            {status === "done" && (
-              <Text as="span" variant="caption" className="text-muted-foreground">
-                {okCount} worktree{okCount === 1 ? "" : "s"} merged
-                {failed.length > 0 && (
-                  <span
-                    className="ml-xs text-warning"
-                    title={failed.map((f) => `${f.name}: ${f.error}`).join("\n")}
-                  >
-                    · {failed.length} failed to load
-                  </span>
-                )}
-              </Text>
-            )}
-            {status === "error" && error && (
-              <Placeholder tone="error">{error}</Placeholder>
-            )}
-          </Stack>
-          <Button
-            variant="outline"
-            size="xs"
-            loading={status === "streaming"}
-            onClick={() => void reload()}
-          >
-            Refresh
-          </Button>
-        </div>
+        <Frame
+          gap="md"
+          align="center"
+          content={
+            <Stack gap="2xs">
+              <SectionLabel>Cross-worktree cluster</SectionLabel>
+              {status === "streaming" && (
+                <ScanProgress received={worktrees.length} total={total} />
+              )}
+              {status === "done" && (
+                <Text as="span" variant="caption" className="text-muted-foreground">
+                  {okCount} worktree{okCount === 1 ? "" : "s"} merged
+                  {failed.length > 0 && (
+                    <span
+                      className="ml-xs text-warning"
+                      title={failed.map((f) => `${f.name}: ${f.error}`).join("\n")}
+                    >
+                      · {failed.length} failed to load
+                    </span>
+                  )}
+                </Text>
+              )}
+              {status === "error" && error && (
+                <Placeholder tone="error">{error}</Placeholder>
+              )}
+            </Stack>
+          }
+          trailing={
+            <Button
+              variant="outline"
+              size="xs"
+              loading={status === "streaming"}
+              onClick={() => void reload()}
+            >
+              Refresh
+            </Button>
+          }
+        />
 
         <DataView<ClusterAggregate>
           rows={aggregates}
@@ -274,6 +283,6 @@ export function ClusterView(): ReactElement {
           emptyState="No contention samples captured yet"
         />
       </Stack>
-    </div>
+    </Scroll>
   );
 }

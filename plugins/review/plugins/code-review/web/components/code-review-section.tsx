@@ -4,6 +4,10 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleChevron, useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { useConfig } from "@plugins/config_v2/web";
 import type { Source } from "@plugins/review/web";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
@@ -28,13 +32,13 @@ export function CodeReviewSection({
   }
 
   return (
-    <div className="flex min-h-0 flex-col">
+    <Stack gap="none" className="min-h-0">
       {source.kind === "working" ? (
         <WorkingTreeBody conversationId={conversation.id} worktree={conversation.attemptId} />
       ) : (
         <PushBody pushId={source.pushId} />
       )}
-    </div>
+    </Stack>
   );
 }
 
@@ -152,7 +156,7 @@ function FileList({
         ) : sorted!.length === 0 ? (
           <Placeholder>{emptyLabel}</Placeholder>
         ) : (
-          <div className="flex flex-col">
+          <Stack gap="none">
             {sections.map((section) => (
               <FileSectionBlock
                 key={section.id ?? "__default__"}
@@ -164,7 +168,7 @@ function FileList({
                 onToggle={toggleOne}
               />
             ))}
-          </div>
+          </Stack>
         )}
       </Body>
     </>
@@ -191,14 +195,16 @@ function FileSectionBlock({
 
   return (
     <Collapsible defaultOpen>
-      <CollapsibleTrigger className="sticky top-0 z-raised gap-sm border-b border-border bg-muted/60 px-md py-sm text-caption font-medium text-muted-foreground backdrop-blur hover:bg-muted">
-        <CollapsibleChevron className="size-3.5" />
-        <span>{label}</span>
-        <span>·</span>
-        <span className="tabular-nums">{totals.count} files</span>
-        <span className="tabular-nums text-success">+{totals.additions}</span>
-        <span className="tabular-nums text-destructive">−{totals.deletions}</span>
-      </CollapsibleTrigger>
+      <Sticky edge="top">
+        <CollapsibleTrigger className="gap-sm border-b border-border bg-muted/60 px-md py-sm text-caption font-medium text-muted-foreground backdrop-blur hover:bg-muted">
+          <CollapsibleChevron className="size-3.5" />
+          <span>{label}</span>
+          <span>·</span>
+          <span className="tabular-nums">{totals.count} files</span>
+          <span className="tabular-nums text-success">+{totals.additions}</span>
+          <span className="tabular-nums text-destructive">−{totals.deletions}</span>
+        </CollapsibleTrigger>
+      </Sticky>
       <CollapsibleContent>
         {section.files.map((file) => (
           <ReviewFileRow
@@ -232,28 +238,30 @@ function ToolbarRow({
   onToggleAll: () => void;
 }) {
   return (
-    <div className="sticky top-0 z-raised flex items-center gap-md border-b border-border bg-background/95 px-lg py-sm backdrop-blur">
-      <Text as="div" variant="label" className="flex items-center gap-sm">
-        <span className="tabular-nums">{count} files</span>
-        <span className="text-success tabular-nums">
-          +{additions}
-        </span>
-        <span className="text-destructive tabular-nums">
-          −{deletions}
-        </span>
-      </Text>
-      <div className="flex flex-1 items-center justify-end gap-xs">
-        <ExpandAllButton
-          variant="full"
-          allExpanded={allExpanded}
-          onToggle={onToggleAll}
-          disabled={!canToggle}
-        />
-      </div>
-    </div>
+    <Sticky edge="top">
+      <Frame
+        gap="md"
+        className="border-b border-border bg-background/95 px-lg py-sm backdrop-blur"
+        content={
+          <Stack direction="row" gap="sm" align="center">
+            <Text as="span" variant="label" className="tabular-nums">{count} files</Text>
+            <Text as="span" variant="label" className="text-success tabular-nums">+{additions}</Text>
+            <Text as="span" variant="label" className="text-destructive tabular-nums">−{deletions}</Text>
+          </Stack>
+        }
+        trailing={
+          <ExpandAllButton
+            variant="full"
+            allExpanded={allExpanded}
+            onToggle={onToggleAll}
+            disabled={!canToggle}
+          />
+        }
+      />
+    </Sticky>
   );
 }
 
 function Body({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-0 flex-1 overflow-auto isolate">{children}</div>;
+  return <Scroll axis="both" fill isolate>{children}</Scroll>;
 }

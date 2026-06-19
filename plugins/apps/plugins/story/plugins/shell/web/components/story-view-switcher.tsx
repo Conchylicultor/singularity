@@ -1,6 +1,7 @@
 import { MdEdit, MdVerticalSplit } from "react-icons/md";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Story } from "@plugins/apps/plugins/story/plugins/render/web";
 
 /**
@@ -36,7 +37,7 @@ export function StoryViewSwitcher({
   ];
 
   return (
-    <div className="flex items-center gap-sm">
+    <Stack direction="row" gap="sm" align="center">
       <SegmentedControl options={options} value={view} onChange={onView} />
       <IconButton
         icon={MdVerticalSplit}
@@ -45,6 +46,6 @@ export function StoryViewSwitcher({
         aria-pressed={split}
         onClick={onToggleSplit}
       />
-    </div>
+    </Stack>
   );
 }

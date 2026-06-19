@@ -13,6 +13,10 @@ import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/p
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { gradientCss } from "./cover-presets";
 import { ChangeCoverPopover } from "./change-cover-popover";
 
@@ -60,7 +64,7 @@ function FilledCover({
   const [repositioning, setRepositioning] = useState(false);
 
   return (
-    <div className={cn(hoverRevealGroup, "group/cover relative h-[30vh] max-h-64 w-full overflow-hidden select-none")}>
+    <Clip className={cn(hoverRevealGroup, "group/cover relative h-[30vh] max-h-64 w-full select-none")}>
       {cover.type === "gradient" ? (
         <div className="size-full" style={{ background: gradientCss(cover.preset) }} />
       ) : (
@@ -68,34 +72,36 @@ function FilledCover({
       )}
 
       {!repositioning && (
-        <div className={cn(hoverRevealTarget, "absolute right-3 bottom-3 z-raised flex gap-xs")}>
-          <ChangeCoverPopover
-            current={cover}
-            onPick={onPick}
-            trigger={
-              <Button variant="secondary" size="sm">
-                <MdImage />
-                Change cover
+        <Pin to="bottom-right" offset="md" className={hoverRevealTarget}>
+          <Stack direction="row" gap="xs">
+            <ChangeCoverPopover
+              current={cover}
+              onPick={onPick}
+              trigger={
+                <Button variant="secondary" size="sm">
+                  <MdImage />
+                  Change cover
+                </Button>
+              }
+            />
+            {cover.type === "image" && (
+              <Button variant="secondary" size="sm" onClick={() => setRepositioning(true)}>
+                <MdSwapVert />
+                Reposition
               </Button>
-            }
-          />
-          {cover.type === "image" && (
-            <Button variant="secondary" size="sm" onClick={() => setRepositioning(true)}>
-              <MdSwapVert />
-              Reposition
+            )}
+            <Button
+              variant="secondary"
+              size="sm"
+              aria-label="Remove cover"
+              onClick={() => void onSave(null)}
+            >
+              <MdDelete />
             </Button>
-          )}
-          <Button
-            variant="secondary"
-            size="sm"
-            aria-label="Remove cover"
-            onClick={() => void onSave(null)}
-          >
-            <MdDelete />
-          </Button>
-        </div>
+          </Stack>
+        </Pin>
       )}
-    </div>
+    </Clip>
   );
 }
 
@@ -179,25 +185,29 @@ function CoverImage({
 
       {repositioning && (
         <>
-          <div className="pointer-events-none absolute inset-x-0 top-3 flex justify-center">
-            <Text
-              as="span"
-              variant="caption"
-              className="rounded-md bg-black/60 px-sm py-2xs text-white"
-            >
-              Drag image to reposition
-            </Text>
-          </div>
-          <div className="absolute right-3 bottom-3 z-raised flex gap-xs">
-            <Button variant="secondary" size="sm" onClick={cancel}>
-              <MdClose />
-              Cancel
-            </Button>
-            <Button variant="default" size="sm" onClick={() => void save()}>
-              <MdCheck />
-              Save
-            </Button>
-          </div>
+          <Pin to="top" offset="md" stretch decorative>
+            <Center axis="horizontal">
+              <Text
+                as="span"
+                variant="caption"
+                className="rounded-md bg-black/60 px-sm py-2xs text-white"
+              >
+                Drag image to reposition
+              </Text>
+            </Center>
+          </Pin>
+          <Pin to="bottom-right" offset="md">
+            <Stack direction="row" gap="xs">
+              <Button variant="secondary" size="sm" onClick={cancel}>
+                <MdClose />
+                Cancel
+              </Button>
+              <Button variant="default" size="sm" onClick={() => void save()}>
+                <MdCheck />
+                Save
+              </Button>
+            </Stack>
+          </Pin>
         </>
       )}
     </>

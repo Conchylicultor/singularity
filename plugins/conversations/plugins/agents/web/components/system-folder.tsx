@@ -8,6 +8,9 @@ import {
   CollapsibleTrigger,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { Agents as AgentsSlots } from "../slots";
 import { systemAgentDetailPane } from "../panes";
 
@@ -28,29 +31,31 @@ export function SystemFolder({
       className="mb-2"
     >
       <CollapsibleTrigger className="hover:bg-accent gap-xs rounded-md px-xs py-xs text-body">
-        <span className="flex size-5 shrink-0 items-center justify-center">
+        <Center as="span" className="size-5">
           <CollapsibleChevron className="size-4" />
-        </span>
+        </Center>
         <SectionLabel as="span">
           System
         </SectionLabel>
       </CollapsibleTrigger>
-      <CollapsibleContent className="flex flex-col">
-        {descriptors.map((d) => {
-          const Icon = d.icon ?? MdAutoAwesome;
-          const selected = d.id === selectedSystemId;
-          return (
-            <Row
-              key={d.id}
-              selected={selected}
-              indent={16 + 4}
-              icon={<Icon className="text-muted-foreground shrink-0" />}
-              onClick={() => openPane(systemAgentDetailPane, { systemId: d.id }, { mode: "push" })}
-            >
-              <span className="truncate">{d.name}</span>
-            </Row>
-          );
-        })}
+      <CollapsibleContent>
+        <Stack gap="none">
+          {descriptors.map((d) => {
+            const Icon = d.icon ?? MdAutoAwesome;
+            const selected = d.id === selectedSystemId;
+            return (
+              <Row
+                key={d.id}
+                selected={selected}
+                indent={16 + 4}
+                icon={<Icon className="text-muted-foreground" />}
+                onClick={() => openPane(systemAgentDetailPane, { systemId: d.id }, { mode: "push" })}
+              >
+                <TruncatingText>{d.name}</TruncatingText>
+              </Row>
+            );
+          })}
+        </Stack>
       </CollapsibleContent>
     </Collapsible>
   );

@@ -9,6 +9,10 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -67,31 +71,37 @@ export function ConfigDefaultsSection({
   }
 
   return (
-    <div className="flex min-h-0 flex-col">
-      <div className="sticky top-0 z-raised flex flex-col gap-2xs border-b border-border bg-background/95 px-lg py-sm backdrop-blur">
-        <div className="flex items-center gap-md">
-          <Text as="div" variant="label">
-            {rows.length} staged {rows.length === 1 ? "config" : "configs"}
+    <Stack gap="none" className="min-h-0">
+      <Sticky edge="top">
+        <Stack gap="2xs" className="border-b border-border bg-background/95 px-lg py-sm backdrop-blur">
+          <Frame
+            gap="md"
+            content={
+              <Text as="div" variant="label">
+                {rows.length} staged {rows.length === 1 ? "config" : "configs"}
+              </Text>
+            }
+            trailing={
+              rows.length > 1 ? (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => applyAll.mutate({})}
+                >
+                  Apply all
+                </Button>
+              ) : undefined
+            }
+          />
+          <Text as="div" variant="caption" tone="muted">
+            Committing pushes the new default directly to{" "}
+            <span className="font-medium">main</span>.
           </Text>
-          {rows.length > 1 && (
-            <div className="flex flex-1 items-center justify-end">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => applyAll.mutate({})}
-              >
-                Apply all
-              </Button>
-            </div>
-          )}
-        </div>
-        <Text as="div" variant="caption" tone="muted">
-          Committing pushes the new default directly to{" "}
-          <span className="font-medium">main</span>.
-        </Text>
-      </div>
+        </Stack>
+      </Sticky>
       <Body>
-        <div className="flex flex-col gap-md p-md">
+        <Inset pad="md">
+          <Stack gap="md">
           {rows.map((row) => (
             <StagedConfigCard
               key={`${row.pluginId} ${row.configName}`}
@@ -114,9 +124,10 @@ export function ConfigDefaultsSection({
               }
             />
           ))}
-        </div>
+          </Stack>
+        </Inset>
       </Body>
-    </div>
+    </Stack>
   );
 }
 
@@ -174,13 +185,15 @@ function StagedConfigCard({
         onApply={onApply}
         onDiscard={onDiscard}
       />
-      <div className="flex flex-col gap-xs px-md pb-md">
-        {Renderer ? (
-          <Renderer row={row} before={before} />
-        ) : (
-          <GenericConfigDiff before={before} after={row.value} />
-        )}
-      </div>
+      <Inset x="md" b="md">
+        <Stack gap="xs">
+          {Renderer ? (
+            <Renderer row={row} before={before} />
+          ) : (
+            <GenericConfigDiff before={before} after={row.value} />
+          )}
+        </Stack>
+      </Inset>
     </Card>
   );
 }
@@ -195,25 +208,32 @@ function CardHeader({
   onDiscard: () => void;
 }) {
   return (
-    <div className="flex items-center gap-sm px-md py-sm">
-      <Text as="div" variant="label" className="min-w-0 flex-1 truncate">
-        {humanizeConfigName(label)}
-      </Text>
-      <Button variant="outline" size="sm" onClick={onApply}>
-        Commit to main
-      </Button>
-      <IconButton
-        icon={MdClose}
-        label="Discard"
-        tooltip="Discard staged default"
-        onClick={onDiscard}
-      />
-    </div>
+    <Frame
+      className="px-md py-sm"
+      content={
+        <Text as="div" variant="label" className="truncate">
+          {humanizeConfigName(label)}
+        </Text>
+      }
+      trailing={
+        <>
+          <Button variant="outline" size="sm" onClick={onApply}>
+            Commit to main
+          </Button>
+          <IconButton
+            icon={MdClose}
+            label="Discard"
+            tooltip="Discard staged default"
+            onClick={onDiscard}
+          />
+        </>
+      }
+    />
   );
 }
 
 function Body({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-0 flex-1 overflow-auto isolate">{children}</div>;
+  return <Scroll axis="both" fill isolate>{children}</Scroll>;
 }
 
 /**

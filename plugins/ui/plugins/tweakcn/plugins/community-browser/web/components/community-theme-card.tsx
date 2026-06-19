@@ -1,7 +1,10 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import type { CatalogTheme } from "../../shared";
 
 const COLOR_BARS = [
@@ -59,38 +62,44 @@ export function CommunityThemeCard({
         }
       }}
       className={cn(
-        "flex flex-col gap-md rounded-lg p-lg",
+        "rounded-lg p-lg",
         isPending && "cursor-wait opacity-50",
       )}
     >
-      <div
-        className="flex h-16 items-end justify-center gap-xs rounded-md px-md py-md"
-        style={{ backgroundColor: bg }}
-      >
-        {COLOR_BARS.map((key) => (
-          <div
-            key={key}
-            className="h-8 flex-1 rounded-sm"
-            style={{ backgroundColor: getColor(theme, key, dark) }}
-          />
-        ))}
-      </div>
-
-      <div className="flex items-center gap-xs">
-        <Text
-          as="span"
-          variant="label"
-          className="flex-1 truncate"
-          style={{ color: fg }}
+      <Stack gap="md">
+        <Grid
+          cols={COLOR_BARS.length}
+          minCellWidth="0"
+          gap="xs"
+          align="end"
+          className="h-16 rounded-md px-md py-md"
+          style={{ backgroundColor: bg }}
         >
-          {theme.name}
-        </Text>
-        {theme.source === "registry" && (
-          <span className="shrink-0 rounded-full bg-primary/10 px-xs text-3xs uppercase tracking-wide text-primary">
-            curated
-          </span>
-        )}
-      </div>
+          {COLOR_BARS.map((key) => (
+            <div
+              key={key}
+              className="h-8 rounded-sm"
+              style={{ backgroundColor: getColor(theme, key, dark) }}
+            />
+          ))}
+        </Grid>
+
+        <Frame
+          gap="xs"
+          content={
+            <TruncatingText className="text-label" style={{ color: fg }}>
+              {theme.name}
+            </TruncatingText>
+          }
+          trailing={
+            theme.source === "registry" ? (
+              <span className="rounded-full bg-primary/10 px-xs text-3xs uppercase tracking-wide text-primary">
+                curated
+              </span>
+            ) : undefined
+          }
+        />
+      </Stack>
     </Card>
   );
 }

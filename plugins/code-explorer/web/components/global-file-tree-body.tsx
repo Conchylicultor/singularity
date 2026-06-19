@@ -1,11 +1,12 @@
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { globalFileTreePane } from "../panes";
 import { FileTreeView } from "./file-tree-view";
 
 export function GlobalFileTreeBody() {
   const { worktree } = globalFileTreePane.useParams();
   return (
-    <div className="h-full min-h-0 overflow-hidden">
+    <Clip fill className="h-full">
       <FileTreeView worktree={worktree} />
-    </div>
+    </Clip>
   );
 }

@@ -6,7 +6,7 @@
 
 - Description: Reusable version-history UI: the useVersionHistory hook and the <VersionHistoryDialog> dialog (preview injected via renderPreview, navigation owned by the host).
 - Web:
-  - Uses: `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Dialog`, `primitives/css/ui-kit.DialogContent`, `primitives/css/ui-kit.DialogDescription`, `primitives/css/ui-kit.DialogTitle`, `primitives/css/ui-kit.ScrollArea`, `primitives/loading.Loading`, `primitives/relative-time.RelativeTime`, `shell/notifications.toast`
+  - Uses: `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/column.Column`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Dialog`, `primitives/css/ui-kit.DialogContent`, `primitives/css/ui-kit.DialogDescription`, `primitives/css/ui-kit.DialogTitle`, `primitives/css/ui-kit.ScrollArea`, `primitives/loading.Loading`, `primitives/relative-time.RelativeTime`, `shell/notifications.toast`
   - Exports: Types: `UseVersionHistoryOptions`, `VersionHistoryDialogProps`; Values: `useVersionHistory`, `VersionHistoryDialog`
 - Cross-plugin:
   - Imported by: `apps/pages/history`

@@ -1,4 +1,5 @@
 import { SegmentedProgressBar } from "@plugins/ui/plugins/segmented-progress-bar/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { PHASE_ORDER, PHASE_LABELS } from "../../shared/schemas";
@@ -14,8 +15,8 @@ export function ProgressBarToolbar() {
   if (conversation.kind === "agent") return null;
   if (!progress) return null;
   return (
-    <span className="inline-flex items-center">
+    <Inline gap="none">
       <SegmentedProgressBar steps={STEPS} activeStep={progress.phase} />
-    </span>
+    </Inline>
   );
 }

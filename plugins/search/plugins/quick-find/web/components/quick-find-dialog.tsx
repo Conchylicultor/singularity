@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
 import { Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -104,7 +106,8 @@ export function QuickFindDialog({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
-        <Surface level="overlay" className="w-full max-w-lg overflow-hidden rounded-xl shadow-2xl">
+        <Clip className="w-full max-w-lg rounded-xl">
+        <Surface level="overlay" className="w-full rounded-xl shadow-2xl">
           <div className="border-b p-sm">
             <SearchInput
               autoFocus
@@ -132,20 +135,23 @@ export function QuickFindDialog({
                     icon={renderIcon?.(result)}
                     onMouseEnter={() => setActiveIdx(idx)}
                     onClick={() => select(result)}
-                    className="flex-col items-start gap-2xs"
                   >
-                    <Text as="span" variant="body" className="truncate">
-                      {result.title || "Untitled"}
-                    </Text>
-                    {result.snippet && result.snippet !== result.title && (
-                      <Snippet snippet={result.snippet} />
-                    )}
+                    {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of Row's flex so the title truncates */}
+                    <Stack gap="2xs" align="start" className="min-w-0">
+                      <Text as="span" variant="body" className="truncate">
+                        {result.title || "Untitled"}
+                      </Text>
+                      {result.snippet && result.snippet !== result.title && (
+                        <Snippet snippet={result.snippet} />
+                      )}
+                    </Stack>
                   </Row>
                 ))
               )}
             </div>
           </ScrollArea>
         </Surface>
+        </Clip>
       </DialogContent>
     </Dialog>
   );

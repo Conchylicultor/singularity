@@ -1,3 +1,4 @@
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { RailFramingProps } from "@plugins/apps/core";
 import { AppRail } from "@plugins/apps/web";
 
@@ -10,12 +11,14 @@ import { AppRail } from "@plugins/apps/web";
  */
 export function RailFraming({ body }: RailFramingProps) {
   return (
-    <div
-      className="flex h-full min-h-0"
+    <Stack
+      direction="row"
+      gap="none"
+      className="h-full min-h-0"
       style={{ "--app-rail-width": "2.5rem" } as React.CSSProperties}
     >
       <AppRail />
       {body}
-    </div>
+    </Stack>
   );
 }

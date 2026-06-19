@@ -11,6 +11,11 @@ import { navigate } from "@plugins/apps/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { recentClientIds } from "../internal/toast";
 import { notificationsResource } from "../../shared/resources";
 import { dismissNotification, dismissAllNotifications, markAllNotificationsRead } from "../../shared/endpoints";
@@ -47,64 +52,74 @@ const VARIANT_TEXT_MUTED: Record<Notification["variant"], string> = {
 function NotificationRow({ n, dismiss, onClose }: { n: Notification; dismiss: (id: string) => void; onClose: () => void }) {
   const clientId = typeof n.metadata?.clientId === "string" ? n.metadata.clientId : null;
   return (
-    <li
-      className={`flex gap-sm px-md py-sm border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
+    <Frame
+      as="li"
+      gap="sm"
+      align="start"
+      className={`px-md py-sm border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
       onClick={
         n.linkTo?.startsWith("/")
           ? () => { navigate(n.linkTo!); onClose(); }
           : undefined
       }
-    >
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-xs min-w-0">
-          <Text as="p" variant="label" className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
-            {n.title}
-          </Text>
-          {n.muted && (
-            <Badge
-              size="sm"
-              variant="muted"
-              className="shrink-0"
-              title="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
-            >
-              muted
-            </Badge>
+      content={
+        <Stack gap="none">
+          <Frame
+            gap="xs"
+            content={
+              <Text as="p" variant="label" className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
+                {n.title}
+              </Text>
+            }
+            trailing={
+              n.muted ? (
+                <Badge
+                  size="sm"
+                  variant="muted"
+                  title="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
+                >
+                  muted
+                </Badge>
+              ) : undefined
+            }
+          />
+          {n.description && n.description !== n.title && (
+            <Text as="p" variant="caption" className="text-muted-foreground line-clamp-2">
+              {n.description}
+            </Text>
           )}
-        </div>
-        {n.description && n.description !== n.title && (
-          <Text as="p" variant="caption" className="text-muted-foreground line-clamp-2">
-            {n.description}
-          </Text>
-        )}
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the metadata row from the description above */}
-        <div className="flex items-center gap-sm mt-0.5">
-          <RelativeTime date={n.createdAt} className="text-3xs text-muted-foreground" />
-          {n.type && (
-            <span className="text-3xs text-muted-foreground">{n.type}</span>
-          )}
-          {clientId != null && (
-            <span className="text-3xs text-muted-foreground">
-              {clientId === getTabId() ? "this tab" : "another tab"}
-            </span>
-          )}
-          {n.linkTo?.startsWith("/") && (
-            <span className="text-3xs text-muted-foreground hover:text-foreground">
-              View &rarr;
-            </span>
-          )}
-        </div>
-      </div>
-      <Text
-        as="button"
-        variant="body"
-        // eslint-disable-next-line text/no-adhoc-typography -- tight line-height centers the × glyph in the button
-        className="shrink-0 text-muted-foreground hover:text-foreground leading-none"
-        onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
-        aria-label="Dismiss"
-      >
-        &times;
-      </Text>
-    </li>
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the metadata row from the description above */}
+          <Stack direction="row" gap="sm" align="center" className="mt-0.5">
+            <RelativeTime date={n.createdAt} className="text-3xs text-muted-foreground" />
+            {n.type && (
+              <span className="text-3xs text-muted-foreground">{n.type}</span>
+            )}
+            {clientId != null && (
+              <span className="text-3xs text-muted-foreground">
+                {clientId === getTabId() ? "this tab" : "another tab"}
+              </span>
+            )}
+            {n.linkTo?.startsWith("/") && (
+              <span className="text-3xs text-muted-foreground hover:text-foreground">
+                View &rarr;
+              </span>
+            )}
+          </Stack>
+        </Stack>
+      }
+      trailing={
+        <Text
+          as="button"
+          variant="body"
+          // eslint-disable-next-line text/no-adhoc-typography -- tight line-height centers the × glyph in the button
+          className="text-muted-foreground hover:text-foreground leading-none"
+          onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
+          aria-label="Dismiss"
+        >
+          &times;
+        </Text>
+      }
+    />
   );
 }
 
@@ -143,7 +158,7 @@ export function BellButton() {
   // the resource loads. Render a neutral bell (no badge) during the load window.
   if (notificationsResult.pending) {
     return (
-      <span className="relative inline-flex">
+      <span className="relative inline-block">
         <IconButton
           icon={MdNotificationsNone}
           label="Notifications"
@@ -204,50 +219,63 @@ export function BellButton() {
       open={open}
       onOpenChange={onOpenChange}
       trigger={
-        <span className="relative inline-flex">
+        <span className="relative inline-block">
           <IconButton
             icon={unreadCount > 0 ? MdNotifications : MdNotificationsNone}
             label="Notifications"
             className={unreadCount > 0 ? undefined : "text-muted-foreground"}
           />
           {unreadCount > 0 && (
-            <span className={`absolute -top-0.5 -right-0.5 flex items-center justify-center size-4 rounded-full ${badgeColor} text-3xs font-bold tabular-nums pointer-events-none`}>
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </span>
+            <Pin
+              to="top-right"
+              outset
+              decorative
+              style={{ top: "-0.125rem", right: "-0.125rem" }}
+            >
+              <Center className={`size-4 rounded-full ${badgeColor} text-3xs font-bold tabular-nums`}>
+                {unreadCount > 9 ? "9+" : unreadCount}
+              </Center>
+            </Pin>
           )}
         </span>
       }
       align="end"
       contentClassName="w-80 p-none"
     >
-        <div className="flex items-center justify-between px-md py-sm border-b">
-          <Text variant="body" className="font-semibold">Notifications</Text>
-          {list.length > 0 && (
-            <Text
-              as="button"
-              variant="caption"
-              className="text-muted-foreground hover:text-foreground"
-              onClick={dismissAll}
-            >
-              Clear all
-            </Text>
-          )}
-        </div>
-        {list.length > 0 && (
-          <div className="flex gap-xs px-md py-xs overflow-x-auto border-b">
-            {(["all", ...(hasErrors ? ["errors"] : []), ...uniqueTypes] as string[]).map((chip) => (
-              <ToggleChip
-                key={chip}
-                variant="ghost"
-                size="sm"
-                active={typeFilter === chip}
-                onClick={() => { setTypeFilter(chip); }}
-                className="shrink-0"
+        <Frame
+          className="px-md py-sm border-b"
+          content={<Text variant="body" className="font-semibold">Notifications</Text>}
+          trailing={
+            list.length > 0 ? (
+              <Text
+                as="button"
+                variant="caption"
+                className="text-muted-foreground hover:text-foreground"
+                onClick={dismissAll}
               >
-                {chip === "all" ? "All" : chip.charAt(0).toUpperCase() + chip.slice(1)}
-              </ToggleChip>
-            ))}
-          </div>
+                Clear all
+              </Text>
+            ) : undefined
+          }
+        />
+        {list.length > 0 && (
+          <Scroll axis="x" className="px-md py-xs border-b">
+            <Stack direction="row" gap="xs">
+              {(["all", ...(hasErrors ? ["errors"] : []), ...uniqueTypes] as string[]).map((chip) => (
+                <ToggleChip
+                  key={chip}
+                  variant="ghost"
+                  size="sm"
+                  active={typeFilter === chip}
+                  onClick={() => { setTypeFilter(chip); }}
+                  // eslint-disable-next-line layout/no-adhoc-layout -- rigid chip in the horizontally-scrolling filter row
+                  className="shrink-0"
+                >
+                  {chip === "all" ? "All" : chip.charAt(0).toUpperCase() + chip.slice(1)}
+                </ToggleChip>
+              ))}
+            </Stack>
+          </Scroll>
         )}
         {list.length === 0 ? (
           <Text as="p" variant="body" className="px-md py-xl text-center text-muted-foreground">
@@ -258,7 +286,7 @@ export function BellButton() {
             No notifications for this filter
           </Text>
         ) : (
-          <div className="max-h-96 overflow-y-auto">
+          <Scroll className="max-h-96">
             {unreadFiltered.length > 0 && (
               <>
                 <div className={`px-md py-xs text-3xs font-semibold uppercase tracking-wider border-b ${hasUnreadError ? "text-destructive bg-destructive/5" : "text-warning bg-warning/5"}`}>
@@ -285,7 +313,7 @@ export function BellButton() {
                 </ul>
               </>
             )}
-          </div>
+          </Scroll>
         )}
     </InlinePopover>
   );

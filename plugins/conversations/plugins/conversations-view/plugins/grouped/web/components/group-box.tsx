@@ -2,6 +2,8 @@ import { MdDeleteOutline, MdDragIndicator } from "react-icons/md";
 import type { ReactNode } from "react";
 import { useDraggable } from "@dnd-kit/core";
 import { RowActionButton } from "@plugins/primitives/plugins/row-actions/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { ConversationGroup } from "../../shared";
 import { GroupContainer } from "./group-container";
 import { GroupRename } from "./group-rename";
@@ -55,16 +57,18 @@ export function GroupBox({
         />
       }
       trailingAction={
-        <div className="flex items-center gap-2xs">
+        <Stack direction="row" align="center" gap="2xs">
           <button
             ref={setHandleRef}
             {...attributes}
             {...listeners}
             type="button"
             aria-label="Reorder group"
-            className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground opacity-0 pointer-events-none hover:bg-accent hover:text-foreground group-hover/header:opacity-100 group-hover/header:pointer-events-auto touch-none"
+            className="cursor-grab rounded-md text-muted-foreground opacity-0 pointer-events-none hover:bg-accent hover:text-foreground group-hover/header:opacity-100 group-hover/header:pointer-events-auto touch-none"
           >
-            <MdDragIndicator className="size-3.5" />
+            <Center className="size-5">
+              <MdDragIndicator className="size-3.5" />
+            </Center>
           </button>
           <RowActionButton
             icon={MdDeleteOutline}
@@ -79,7 +83,7 @@ export function GroupBox({
             }}
             className="opacity-0 pointer-events-none group-hover/header:opacity-100 group-hover/header:pointer-events-auto"
           />
-        </div>
+        </Stack>
       }
     >
       {isEmpty ? (

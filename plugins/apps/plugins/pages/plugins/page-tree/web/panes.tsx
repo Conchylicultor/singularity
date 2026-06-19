@@ -1,6 +1,7 @@
 import { type ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { BlockEditor, BLOCK_GUTTER } from "@plugins/page/plugins/editor/web";
 import { PageHeader } from "./components/page-header";
@@ -77,14 +78,14 @@ function PageDetailBody(): ReactElement {
           their text by BLOCK_GUTTER on the left (page icon / hover-control rail)
           and a matching right gutter, so the icon, title, and every block line
           up while the measure stays centered. */}
-      <div className="flex flex-col">
+      <Stack gap="none">
         <PageCover pageId={pageId} />
-        <div className="flex flex-col gap-lg pb-2xl">
+        <Stack gap="lg" className="pb-2xl">
           {/* Title + body form one tight unit (no flex gap between them): the
               only space under the title is the editor's own top padding, which
               is click-to-edit — so there's no dead strip between title and
               content. */}
-          <div className="flex flex-col">
+          <Stack gap="none">
             <div className={READING_MEASURE} style={{ paddingRight: BLOCK_GUTTER }}>
               <PageHeader pageId={pageId} />
             </div>
@@ -93,14 +94,14 @@ function PageDetailBody(): ReactElement {
               contentClassName={READING_MEASURE}
               onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
             />
-          </div>
+          </Stack>
           <div className={READING_MEASURE} style={{ paddingRight: BLOCK_GUTTER }}>
             <PageDetail.Section.Render>
               {(s) => <s.component pageId={pageId} />}
             </PageDetail.Section.Render>
           </div>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
     </PaneChrome>
   );
 }

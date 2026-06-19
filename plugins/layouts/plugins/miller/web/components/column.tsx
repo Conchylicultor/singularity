@@ -82,6 +82,12 @@ export function Column({ entry, isFirst, isLast, dragHandleProps }: ColumnProps)
         ref={divRef}
         data-pane-id={paneId}
         style={isCollapsed ? { display: "none" } : (expandFull ? undefined : { width })}
+        // The column body is a flex-col clip pane whose row-child role is
+        // JS-measured: the leaf column flex-grows (`flex-1`) while fixed-width
+        // columns stay rigid (`shrink-0`), and `capturedWidthRef` reads
+        // `offsetWidth` to split space 50/50 when a new column opens. The
+        // flex-grow/shrink choice is computed per render, so it stays raw.
+        // eslint-disable-next-line layout/no-adhoc-layout -- JS-measured flex-grow/shrink column body in miller's row
         className={
           isCollapsed
             ? undefined

@@ -7,6 +7,7 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {
   slowOpsResource,
@@ -19,7 +20,7 @@ const SLOW_OPS_LOCAL = defineDataView("debug.slow-ops.local");
 function CallerBreakdownLines({ callers }: { callers: CallerBreakdown[] }): ReactElement {
   const sorted = [...callers].sort((a, b) => b.totalMs - a.totalMs);
   return (
-    <div className="flex flex-col gap-2xs pl-md">
+    <Stack gap="2xs" className="pl-md">
       {sorted.map((c) => (
         <span
           key={`${c.kind}:${c.label}`}
@@ -29,7 +30,7 @@ function CallerBreakdownLines({ callers }: { callers: CallerBreakdown[] }): Reac
           ↳ {c.kind}:{c.label} ×{c.count} ({Math.round(c.totalMs)} ms)
         </span>
       ))}
-    </div>
+    </Stack>
   );
 }
 
@@ -38,7 +39,7 @@ function CallerBreakdownLines({ callers }: { callers: CallerBreakdown[] }): Reac
 function WaitBreakdownLines({ waits }: { waits: Record<string, number> }): ReactElement {
   const sorted = Object.entries(waits).sort((a, b) => b[1] - a[1]);
   return (
-    <div className="flex flex-col gap-2xs pl-md">
+    <Stack gap="2xs" className="pl-md">
       {sorted.map(([layer, ms]) => (
         <span
           key={layer}
@@ -48,7 +49,7 @@ function WaitBreakdownLines({ waits }: { waits: Record<string, number> }): React
           ⏳ {layer} {Math.round(ms)} ms
         </span>
       ))}
-    </div>
+    </Stack>
   );
 }
 
@@ -88,13 +89,14 @@ function SlowOpsViewInner({ ops }: { ops: SlowOp[] }) {
         value: (r) => r.operation,
         width: "minmax(0,1fr)",
         cell: (r) => (
-          <div className="flex min-w-0 flex-col gap-2xs">
+          // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of the data-view cell's grid; min-w-0 lets the truncating operation row shrink
+          <Stack gap="2xs" className="min-w-0">
             <Text as="span" variant="caption" className="truncate font-mono" title={r.operation}>
               {r.operation}
             </Text>
             {r.callers.length > 0 && <CallerBreakdownLines callers={r.callers} />}
             {Object.keys(r.waits).length > 0 && <WaitBreakdownLines waits={r.waits} />}
-          </div>
+          </Stack>
         ),
       },
       {

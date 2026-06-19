@@ -77,6 +77,7 @@ export function DrawCanvas({
   return (
     <canvas
       ref={canvasRef}
+      // eslint-disable-next-line layout/no-adhoc-layout -- canvas positioned by JS/pixel coordinates from the displayed DOMRect
       className="absolute touch-none"
       style={{
         left: displayed.x,

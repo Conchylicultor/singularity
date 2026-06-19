@@ -32,13 +32,20 @@ export function PrepromptGlyph({
 }) {
   const nodes = icon?.svgNodes;
   if (!nodes?.length) {
-    return <MdCampaign aria-hidden className={cn("size-3.5 shrink-0", className)} />;
+    return (
+      <MdCampaign
+        aria-hidden
+        // eslint-disable-next-line layout/no-adhoc-layout -- rigid leaf glyph; must not shrink inside the select/chip flex rows that host it
+        className={cn("size-3.5 shrink-0", className)}
+      />
+    );
   }
   return (
     <svg
       viewBox="0 0 24 24"
       fill="currentColor"
       aria-hidden
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid leaf glyph; must not shrink inside the select/chip flex rows that host it
       className={cn("size-3.5 shrink-0", className)}
     >
       {renderSvgNodes(nodes)}

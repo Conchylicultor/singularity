@@ -268,6 +268,7 @@ export function WindowChrome({
           and handles (also z-raised) so those stay crisp above it. */}
       <div
         aria-hidden
+        // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed inactive-window dim scrim; bare absolute layer with style-driven opacity, not an Overlay wrapping content
         className="pointer-events-none absolute inset-0 z-raised bg-background transition-opacity duration-150 ease-out"
         style={{ opacity: focused ? 0 : 0.35 }}
       />
@@ -282,12 +283,14 @@ export function WindowChrome({
           e.preventDefault();
           openMenuAt(e.clientX, e.clientY);
         }}
+        // eslint-disable-next-line layout/no-adhoc-layout -- draggable window titlebar: top-edge-pinned, fixed height via style, hand-rolled flex row whose flex-1/shrink-0 children coordinate with the move-drag region; window chrome, not a primitive row
         className={`absolute inset-x-0 top-0 z-raised flex shrink-0 items-center gap-xs border-b pr-sm pl-2xs py-xs cursor-grab ${
           focused ? "bg-muted" : "bg-muted/40"
         }`}
         style={{ height: WINDOW_TITLEBAR_INSET, touchAction: "none" }}
       >
         {/* The window icon doubles as the system-menu button (Win32 icon-click). */}
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid leading item in the titlebar's hand-rolled drag flex (see titlebar disable above) */}
         <div onPointerDown={(e) => e.stopPropagation()} className="shrink-0">
           <IconButton
             icon={MenuIcon}
@@ -305,6 +308,7 @@ export function WindowChrome({
             remainder is the move-drag region, and the controls pin right. */}
         <div
           data-floating-window-id={win.id}
+          // eslint-disable-next-line layout/no-adhoc-layout -- flexible slack region of the titlebar's hand-rolled drag flex: soaks up space so the strip sits left and the remainder is the move-drag zone (see titlebar disable above)
           className="min-w-0 flex-1"
         >
           <WindowTabStrip
@@ -317,6 +321,7 @@ export function WindowChrome({
           />
         </div>
         {/* Each control stops the pointer so it never starts a window drag. */}
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid trailing controls cluster pinned right in the titlebar's hand-rolled drag flex (see titlebar disable above) */}
         <div onPointerDown={(e) => e.stopPropagation()} className="flex shrink-0 items-center gap-2xs">
           <IconButton
             icon={geo.pinned ? MdPushPin : MdOutlinePushPin}
@@ -362,6 +367,7 @@ export function WindowChrome({
           drops the window where it is) plus a centred keyboard hint. */}
       {interaction.mode && (
         <div
+          // eslint-disable-next-line layout/no-adhoc-layout -- full-window cursor layer for the modal keyboard move/size affordance; bare absolute layer with style-driven cursor, window chrome
           className="absolute inset-0 z-raised"
           style={{
             cursor: interaction.mode === "move" ? "move" : "nwse-resize",
@@ -369,6 +375,7 @@ export function WindowChrome({
         >
           <Surface
             level="overlay"
+            // eslint-disable-next-line layout/no-adhoc-layout -- top-center keyboard hint inside the modal interaction layer; off-ramp top-3 offset, decorative window chrome
             className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 px-sm py-2xs"
           >
             <Text variant="caption" as="span">

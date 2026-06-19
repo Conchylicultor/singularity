@@ -8,6 +8,7 @@ import { useGoneConversationsPagination } from "@plugins/conversations/plugins/c
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { GroupedConversationList } from "./grouped-conversation-list";
 
 const SHOW_SYSTEM_KEY = "conversations-view:show-system";
@@ -58,7 +59,7 @@ export function GroupedView({
 
   return (
     <Stack gap="xs">
-      <div className="flex items-center justify-end px-sm pb-xs">
+      <Stack gap="none" direction="row" align="center" justify="end" className="px-sm pb-xs">
         <button
           type="button"
           onClick={toggleShowSystem}
@@ -67,17 +68,19 @@ export function GroupedView({
           }
           aria-pressed={showSystem}
           className={cn(
-            "flex size-7 shrink-0 items-center justify-center rounded-md hover:bg-accent",
+            "rounded-md hover:bg-accent",
             showSystem ? "text-foreground" : "text-muted-foreground/60",
           )}
         >
-          {showSystem ? (
-            <MdVisibility className="size-4" />
-          ) : (
-            <MdVisibilityOff className="size-4" />
-          )}
+          <Center className="size-7">
+            {showSystem ? (
+              <MdVisibility className="size-4" />
+            ) : (
+              <MdVisibilityOff className="size-4" />
+            )}
+          </Center>
         </button>
-      </div>
+      </Stack>
       <GroupedConversationList
         active={active}
         system={system}

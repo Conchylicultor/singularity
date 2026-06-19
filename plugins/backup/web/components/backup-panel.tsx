@@ -12,6 +12,9 @@ import {
 } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { BackupTargetResult } from "@plugins/backup/core";
@@ -28,14 +31,14 @@ function formatSize(bytes: number): string {
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
     case "ok":
-      return <MdCheckCircle className="size-4 shrink-0 text-success" />;
+      return <MdCheckCircle className="size-4 text-success" />;
     case "partial":
-      return <MdWarning className="size-4 shrink-0 text-warning" />;
+      return <MdWarning className="size-4 text-warning" />;
     case "failed":
-      return <MdError className="size-4 shrink-0 text-destructive" />;
+      return <MdError className="size-4 text-destructive" />;
     default:
       return (
-        <div className="size-4 shrink-0 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin" />
+        <div className="size-4 rounded-full border-2 border-muted-foreground border-t-transparent animate-spin" />
       );
   }
 }
@@ -43,20 +46,29 @@ function StatusIcon({ status }: { status: string }) {
 function TargetResultRow({ result }: { result: BackupTargetResult }) {
   const Icon = result.targetId === "google-drive" ? MdCloudUpload : MdFolder;
   return (
-    <Text as="div" variant="body" className="flex items-center gap-sm">
-      <Icon className="size-4 shrink-0 text-muted-foreground" />
-      <span className="font-medium capitalize">{result.targetId}</span>
-      {result.ok ? (
-        <MdCheckCircle className="size-3.5 text-success" />
-      ) : (
-        <MdError className="size-3.5 text-destructive" />
-      )}
-      {result.detail && (
-        <Text as="span" variant="caption" className="text-muted-foreground truncate">
-          {result.detail}
-        </Text>
-      )}
-    </Text>
+    <Frame
+      gap="sm"
+      leading={
+        <>
+          <Icon className="size-4 text-muted-foreground" />
+          <Text as="span" variant="body" className="font-medium capitalize">
+            {result.targetId}
+          </Text>
+          {result.ok ? (
+            <MdCheckCircle className="size-3.5 text-success" />
+          ) : (
+            <MdError className="size-3.5 text-destructive" />
+          )}
+        </>
+      }
+      meta={
+        result.detail ? (
+          <TruncatingText className="text-caption text-muted-foreground">
+            {result.detail}
+          </TruncatingText>
+        ) : undefined
+      }
+    />
   );
 }
 
@@ -64,33 +76,43 @@ function BackupRunRow({ run }: { run: BackupRun }) {
   const [expanded, setExpanded] = useState(false);
 
   return (
-    <div className="rounded-md border overflow-hidden">
+    <Clip className="rounded-md border">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-lg py-md hover:bg-muted/50 transition-colors text-left"
+        className="w-full px-lg py-md hover:bg-muted/50 transition-colors text-left"
       >
-        <div className="flex items-center gap-md min-w-0">
-          <StatusIcon status={run.status} />
-          <div className="min-w-0">
-            <Text as="p" variant="label" className="truncate">
-              {new Date(run.startedAt).toLocaleString()}
-            </Text>
-            <Text as="p" variant="caption" className="text-muted-foreground">
-              {run.trigger} ·{" "}
-              {run.archiveSizeBytes
-                ? formatSize(run.archiveSizeBytes)
-                : "in progress"}
-              {run.manifest?.sources.databases.length
-                ? ` · ${run.manifest.sources.databases.length} DB`
-                : ""}
-            </Text>
-          </div>
-        </div>
-        {expanded ? (
-          <MdExpandLess className="size-4 shrink-0 text-muted-foreground" />
-        ) : (
-          <MdExpandMore className="size-4 shrink-0 text-muted-foreground" />
-        )}
+        <Frame
+          gap="md"
+          content={
+            <Frame
+              gap="md"
+              leading={<StatusIcon status={run.status} />}
+              content={
+                <div>
+                  <Text as="p" variant="label" className="truncate">
+                    {new Date(run.startedAt).toLocaleString()}
+                  </Text>
+                  <Text as="p" variant="caption" className="text-muted-foreground">
+                    {run.trigger} ·{" "}
+                    {run.archiveSizeBytes
+                      ? formatSize(run.archiveSizeBytes)
+                      : "in progress"}
+                    {run.manifest?.sources.databases.length
+                      ? ` · ${run.manifest.sources.databases.length} DB`
+                      : ""}
+                  </Text>
+                </div>
+              }
+            />
+          }
+          trailing={
+            expanded ? (
+              <MdExpandLess className="size-4 text-muted-foreground" />
+            ) : (
+              <MdExpandMore className="size-4 text-muted-foreground" />
+            )
+          }
+        />
       </button>
 
       {expanded && run.targetResults && (
@@ -100,7 +122,7 @@ function BackupRunRow({ run }: { run: BackupRun }) {
           ))}
         </Stack>
       )}
-    </div>
+    </Clip>
   );
 }
 

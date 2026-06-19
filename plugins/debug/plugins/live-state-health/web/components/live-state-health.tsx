@@ -11,6 +11,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { ServerResourcesSection } from "./server-resources-section";
 
@@ -39,39 +41,41 @@ export function LiveStateHealth(): ReactElement {
   );
 
   return (
-    <div className="flex h-full flex-col gap-xl overflow-auto p-lg">
-      <SocketsSection sockets={snapshot.sockets} />
-      <LeaderSection leader={snapshot.leader} />
-      <ResourcesSection subs={subs} />
-      <ServerResourcesSection />
-    </div>
+    <Scroll className="h-full p-lg">
+      <Stack gap="xl">
+        <SocketsSection sockets={snapshot.sockets} />
+        <LeaderSection leader={snapshot.leader} />
+        <ResourcesSection subs={subs} />
+        <ServerResourcesSection />
+      </Stack>
+    </Scroll>
   );
 }
 
 function SocketsSection({ sockets }: { sockets: ChannelStatuses }): ReactElement {
   return (
-    <section className="flex flex-col gap-sm">
+    <Stack as="section" gap="sm">
       <SectionLabel>Sockets</SectionLabel>
-      <div className="flex flex-col gap-xs">
+      <Stack gap="xs">
         <SocketRow label="Worktree" status={sockets.worktree} />
         <SocketRow label="Central" status={sockets.central} />
-      </div>
-    </section>
+      </Stack>
+    </Stack>
   );
 }
 
 function SocketRow({ label, status }: { label: string; status: WsStatus }): ReactElement {
   return (
-    <div className="flex items-center gap-sm">
+    <Stack direction="row" gap="sm" align="center">
       <StatusDot colorClass={SOCKET_DOT[status]} size="md" />
-      <Text variant="body" className="w-24 shrink-0">{label}</Text>
+      <Text variant="body" className="w-24">{label}</Text>
       <Text
         variant="caption"
         tone={status === "open" ? "muted" : "destructive"}
       >
         {status}
       </Text>
-    </div>
+    </Stack>
   );
 }
 
@@ -81,13 +85,13 @@ function LeaderSection({
   leader: { worktree: LeaderInfo; central: LeaderInfo };
 }): ReactElement {
   return (
-    <section className="flex flex-col gap-sm">
+    <Stack as="section" gap="sm">
       <SectionLabel>Leader</SectionLabel>
-      <div className="flex flex-col gap-xs">
+      <Stack gap="xs">
         <LeaderRow label="Worktree" info={leader.worktree} />
         <LeaderRow label="Central" info={leader.central} />
-      </div>
-    </section>
+      </Stack>
+    </Stack>
   );
 }
 
@@ -99,11 +103,11 @@ function LeaderRow({ label, info }: { label: string; info: LeaderInfo }): ReactE
       ? { text: "follower (leader elsewhere)", tone: "muted" as const, dot: "bg-success" }
       : { text: "NO LEADER", tone: "destructive" as const, dot: "bg-destructive" };
   return (
-    <div className="flex items-center gap-sm">
+    <Stack direction="row" gap="sm" align="center">
       <StatusDot colorClass={state.dot} size="md" />
-      <Text variant="body" className="w-24 shrink-0">{label}</Text>
+      <Text variant="body" className="w-24">{label}</Text>
       <Text variant="caption" tone={state.tone}>{state.text}</Text>
-    </div>
+    </Stack>
   );
 }
 
@@ -113,14 +117,15 @@ function ResourcesSection({ subs }: { subs: DebugSub[] }): ReactElement {
     // below its content height (the flex-item default in the pane's `h-full`
     // column) makes its rows overflow and the sibling section below overlap them.
     // Sized to content, the pane's own `overflow-auto` scrolls instead.
-    <section className="flex flex-col gap-sm">
+    <Stack as="section" gap="sm">
       <SectionLabel>
         Resources <span className="opacity-60">{subs.length}</span>
       </SectionLabel>
       {subs.length === 0 ? (
         <Text variant="caption" tone="muted">No active subscriptions.</Text>
       ) : (
-        <div className="flex flex-col">
+        <Stack gap="none">
+          {/* eslint-disable layout/no-adhoc-layout -- weighted (flex-[2]) + fixed-width column header row; not a single content/meta Frame */}
           <div className="flex items-center gap-md border-b py-xs">
             <HeadCell className="flex-[2]">Key</HeadCell>
             <HeadCell className="flex-[2]">Params</HeadCell>
@@ -129,12 +134,13 @@ function ResourcesSection({ subs }: { subs: DebugSub[] }): ReactElement {
             <HeadCell className="w-14 text-right">Refs</HeadCell>
             <HeadCell className="w-20">Socket</HeadCell>
           </div>
+          {/* eslint-enable layout/no-adhoc-layout */}
           {subs.map((sub) => (
             <ResourceRow key={`${sub.socket}:${sub.key}:${sub.paramsKey}`} sub={sub} />
           ))}
-        </div>
+        </Stack>
       )}
-    </section>
+    </Stack>
   );
 }
 
@@ -145,6 +151,7 @@ function HeadCell({ children, className }: { children: React.ReactNode; classNam
 }
 
 function ResourceRow({ sub }: { sub: DebugSub }): ReactElement {
+  /* eslint-disable layout/no-adhoc-layout -- weighted (flex-[2]) + fixed-width column data row mirroring the header; not a single content/meta Frame */
   return (
     <div className="flex items-center gap-md border-b border-border/40 py-xs">
       <TruncatingText className="flex-[2]">
@@ -165,4 +172,5 @@ function ResourceRow({ sub }: { sub: DebugSub }): ReactElement {
       <Text variant="caption" tone="muted" className="w-20">{sub.socket}</Text>
     </div>
   );
+  /* eslint-enable layout/no-adhoc-layout */
 }

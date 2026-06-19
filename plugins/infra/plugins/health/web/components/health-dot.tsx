@@ -2,6 +2,7 @@ import { useNotificationsChannelStatuses } from "@plugins/primitives/plugins/liv
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 const STATUS_CLASS: Record<WsStatus, string> = {
   connecting: "bg-warning animate-pulse",
@@ -40,9 +41,9 @@ export function HealthDot() {
 
   return (
     <WithTooltip content={tooltipLabel(worktree, central)}>
-      <div className="flex items-center justify-center size-8 cursor-default">
+      <Center className="size-8 cursor-default">
         <StatusDot size="md" colorClass={STATUS_CLASS[aggregate]} />
-      </div>
+      </Center>
     </WithTooltip>
   );
 }

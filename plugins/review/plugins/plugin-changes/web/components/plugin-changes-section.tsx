@@ -41,13 +41,13 @@ export function PluginChangesSection({
 
   return (
     <Stack gap="sm">
-      <div className="flex justify-end">
+      <Stack direction="row" gap="none" justify="end">
         <ExpandAllButton
           variant="full"
           allExpanded={allExpanded}
           onToggle={toggleAll}
         />
-      </div>
+      </Stack>
       {data.plugins.map((plugin) => (
         <PluginChangeCard
           key={plugin.path}

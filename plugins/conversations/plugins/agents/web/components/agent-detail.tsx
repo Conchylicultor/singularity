@@ -1,4 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
@@ -107,40 +109,47 @@ function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent })
   const agentSvgNodes = parseSvgNodes(agent.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes;
 
   return (
-    <div className="flex flex-col gap-lg p-xl">
-      <div className="flex items-center gap-md">
-        <AvatarPicker
-          value={{
-            icon: agent.icon ?? DEFAULT_AGENT_AVATAR.icon,
-            color: agent.iconColor ?? DEFAULT_AGENT_AVATAR.color,
-            svgNodes: agentSvgNodes,
-          }}
-          onChange={(next) => save({
-            icon: next.icon,
-            iconColor: next.color,
-            iconSvgNodes: next.svgNodes ? JSON.stringify(next.svgNodes) : null,
-          })}
-          triggerLabel="Pick agent avatar"
-        >
-          <Avatar
-            icon={agent.icon ?? DEFAULT_AGENT_AVATAR.icon}
-            color={agent.iconColor ?? DEFAULT_AGENT_AVATAR.color}
-            svgNodes={agentSvgNodes}
-            size="lg"
-            statusDot={latestStatus ? CONV_STATUS_DOT[latestStatus] : null}
-            fallbackKey={agent.id}
+    <Inset pad="xl">
+      <Stack gap="lg">
+      <Frame
+        align="center"
+        gap="md"
+        leading={
+          <AvatarPicker
+            value={{
+              icon: agent.icon ?? DEFAULT_AGENT_AVATAR.icon,
+              color: agent.iconColor ?? DEFAULT_AGENT_AVATAR.color,
+              svgNodes: agentSvgNodes,
+            }}
+            onChange={(next) => save({
+              icon: next.icon,
+              iconColor: next.color,
+              iconSvgNodes: next.svgNodes ? JSON.stringify(next.svgNodes) : null,
+            })}
+            triggerLabel="Pick agent avatar"
+          >
+            <Avatar
+              icon={agent.icon ?? DEFAULT_AGENT_AVATAR.icon}
+              color={agent.iconColor ?? DEFAULT_AGENT_AVATAR.color}
+              svgNodes={agentSvgNodes}
+              size="lg"
+              statusDot={latestStatus ? CONV_STATUS_DOT[latestStatus] : null}
+              fallbackKey={agent.id}
+            />
+          </AvatarPicker>
+        }
+        content={
+          <input
+            value={nameField.value}
+            onChange={(e) => nameField.onChange(e.target.value)}
+            onFocus={nameField.onFocus}
+            onBlur={nameField.onBlur}
+            placeholder="Untitled"
+            className="placeholder:text-muted-foreground w-full bg-transparent text-title outline-none focus:ring-0"
           />
-        </AvatarPicker>
-        <input
-          value={nameField.value}
-          onChange={(e) => nameField.onChange(e.target.value)}
-          onFocus={nameField.onFocus}
-          onBlur={nameField.onBlur}
-          placeholder="Untitled"
-          className="placeholder:text-muted-foreground flex-1 bg-transparent text-title outline-none focus:ring-0"
-        />
-      </div>
-      <div className="flex flex-col gap-xs">
+        }
+      />
+      <Stack gap="xs">
         <SectionLabel as="label">
           Model
         </SectionLabel>
@@ -156,8 +165,8 @@ function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent })
             </option>
           ))}
         </select>
-      </div>
-      <div className="flex flex-col gap-xs">
+      </Stack>
+      <Stack gap="xs">
         <SectionLabel as="label">
           Prompt
         </SectionLabel>
@@ -176,8 +185,8 @@ function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent })
             namespace={`agent-prompt-${agentId}`}
           />
         </div>
-      </div>
-      <div className="flex justify-end">
+      </Stack>
+      <Stack gap="none" direction="row" justify="end">
         <Button
           onClick={launch}
           loading={launching}
@@ -187,8 +196,9 @@ function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent })
           <MdPlayArrow className="size-4" />
           Launch
         </Button>
-      </div>
+      </Stack>
       <AgentLaunches agentId={agentId} />
-    </div>
+      </Stack>
+    </Inset>
   );
 }

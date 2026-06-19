@@ -1,5 +1,6 @@
 import { MdChevronRight } from "react-icons/md";
 import type { MatchEntry } from "@plugins/primitives/plugins/pane/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 interface CollapsedBarProps {
   entry: MatchEntry;
@@ -13,17 +14,22 @@ export function CollapsedBar({ entry, onExpand }: CollapsedBarProps) {
       type="button"
       onClick={onExpand}
       aria-label={`Expand ${title ?? entry.pane.id}`}
-      className="flex h-full w-8 shrink-0 flex-col items-center gap-sm border-r bg-muted/40 py-sm text-muted-foreground hover:bg-muted hover:text-foreground"
+      // The collapsed rail is a rigid column in the externally-owned miller
+      // flex row; `shrink-0` keeps it from being crushed.
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid leaf of miller's not-yet-drained column flex
+      className="h-full w-8 shrink-0 border-r bg-muted/40 py-sm text-muted-foreground hover:bg-muted hover:text-foreground"
     >
-      <MdChevronRight className="size-4" />
-      {title && (
-        <span
-          style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
-          className="truncate text-2xs font-medium"
-        >
-          {title}
-        </span>
-      )}
+      <Stack align="center" gap="sm">
+        <MdChevronRight className="size-4" />
+        {title && (
+          <span
+            style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
+            className="truncate text-2xs font-medium"
+          >
+            {title}
+          </span>
+        )}
+      </Stack>
     </button>
   );
 }

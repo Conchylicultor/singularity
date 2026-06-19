@@ -2,8 +2,8 @@ import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { attemptsResource, tasksResource } from "@plugins/tasks/core";
 
 const currentWorktree = (() => {
@@ -29,14 +29,17 @@ export function WorktreeDropdown() {
 
   return (
     <WithTooltip content={`Current worktree: ${currentWorktree}`}>
-      <Text
-        as="span"
-        variant="body"
-        className="flex min-w-0 items-center gap-xs px-sm py-xs text-muted-foreground cursor-default"
-      >
-        <StatusDot size="sm" colorClass="bg-primary" />
-        <TruncatingText>{taskTitle ?? currentWorktree}</TruncatingText>
-      </Text>
+      <Frame
+        gap="xs"
+        // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of the ActionBar.Item slot row, so the label can truncate
+        className="min-w-0 px-sm py-xs text-muted-foreground cursor-default"
+        leading={<StatusDot size="sm" colorClass="bg-primary" />}
+        content={
+          <Text as="span" variant="body" className="truncate">
+            {taskTitle ?? currentWorktree}
+          </Text>
+        }
+      />
     </WithTooltip>
   );
 }

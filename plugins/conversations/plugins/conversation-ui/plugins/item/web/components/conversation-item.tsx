@@ -4,8 +4,10 @@ import type { ConversationStatus } from "@plugins/conversations/core";
 import { formatRelativeTime, RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { Item } from "../slots";
 
 export { formatRelativeTime };
@@ -62,7 +64,7 @@ export function ConvStatusDot({ conv }: { conv: ConversationItemConv }) {
 export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {
   if (conv.kind !== "system") return null;
   return (
-    <Badge size="sm" className="shrink-0 text-muted-foreground/80">
+    <Badge size="sm" className="text-muted-foreground/80">
       sys
     </Badge>
   );
@@ -71,23 +73,22 @@ export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {
 export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
   const muted = conv.status === "gone" || conv.status === "done";
   return (
-    <Text
+    <TruncatingText
       as="span"
-      variant="caption"
       className={cn(
-        "min-w-0 flex-1 truncate",
+        "text-caption",
         muted && "text-muted-foreground",
       )}
     >
       {conv.title ?? "Starting…"}
-    </Text>
+    </TruncatingText>
   );
 }
 
 export function ConvRelativeTime({ conv }: { conv: ConversationItemConv }) {
   const isSystem = conv.kind === "system";
   return (
-    <span className="shrink-0 text-3xs tabular-nums text-muted-foreground/60">
+    <span className="text-3xs tabular-nums text-muted-foreground/60">
       {isSystem && conv.spawnedBy ? `${conv.spawnedBy} · ` : null}
       <RelativeTime date={conv.createdAt} />
     </span>
@@ -101,32 +102,41 @@ export function ConversationItem({
   const active = conv.status === "working";
   if (layout === "inline") {
     return (
-      <span className={cn("inline-flex max-w-full items-center gap-xs", active && "opacity-60")}>
+      <Inline gap="xs" className={cn("max-w-full", active && "opacity-60")}>
         <AvatarSlot conv={conv} size="xs" />
         <ConvTitle conv={conv} />
         <ConvSysBadge conv={conv} />
         <ChipsSlot conv={conv} />
-      </span>
+      </Inline>
     );
   }
   return (
-    <div className={cn("flex w-full items-start gap-sm overflow-hidden", active && "opacity-60")}>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical nudge to baseline-align the avatar with the title row */}
-      <span className="mt-0.5">
-        <AvatarSlot conv={conv} size="sm" />
-      </span>
-      <Stack gap="2xs" className="min-w-0 flex-1">
-        <div className="flex items-center gap-xs overflow-hidden whitespace-nowrap">
-          <ConvTitle conv={conv} />
-          <ConvSysBadge conv={conv} />
-        </div>
-        <div className="flex items-center gap-xs">
-          <ChipsSlot conv={conv} />
-          <span className="ml-auto">
-            <ConvRelativeTime conv={conv} />
-          </span>
-        </div>
-      </Stack>
-    </div>
+    <Frame
+      align="start"
+      gap="sm"
+      className={cn("w-full", active && "opacity-60")}
+      leading={
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical nudge to baseline-align the avatar with the title row
+        <span className="mt-0.5">
+          <AvatarSlot conv={conv} size="sm" />
+        </span>
+      }
+      content={
+        <Stack gap="2xs">
+          <Frame
+            align="center"
+            gap="xs"
+            content={<ConvTitle conv={conv} />}
+            trailing={<ConvSysBadge conv={conv} />}
+          />
+          <Frame
+            align="center"
+            gap="xs"
+            content={<ChipsSlot conv={conv} />}
+            trailing={<ConvRelativeTime conv={conv} />}
+          />
+        </Stack>
+      }
+    />
   );
 }

@@ -56,6 +56,12 @@ export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
 
   const body = (
     <PluginErrorBoundary slot="layouts.miller" label={basePath}>
+      {/* The horizontal flex row IS the x-scroll container: the SortableItem
+          columns are its direct flex children, and the scroll-into-view effect
+          reads this element's `scrollLeft`/`scrollWidth` to reveal the newest
+          column. flex-row + scroll-container can't be split without breaking the
+          direct-child flex relationship dnd-kit relies on. */}
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- flex-row x-scroll container holding the sortable columns as direct children */}
       <div ref={ref} className="flex h-full overflow-x-auto">
         <SortableList
           items={itemIds}
@@ -70,6 +76,10 @@ export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
                 id={String(entry.instanceId)}
                 handle
                 disabled={!canReorder}
+                // The leaf column flex-grows to fill remaining width; fixed-width
+                // columns stay rigid. The grow/shrink choice is per-column state,
+                // so it stays raw.
+                // eslint-disable-next-line layout/no-adhoc-layout -- per-column flex-grow/shrink role in miller's row
                 className={(state) =>
                   `flex h-full${isLast ? " min-w-[200px] flex-1" : " shrink-0"}${state.isDragging ? " opacity-50" : ""}`
                 }

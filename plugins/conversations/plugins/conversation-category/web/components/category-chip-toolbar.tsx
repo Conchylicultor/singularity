@@ -3,6 +3,7 @@ import { MdAutoAwesome, MdCheck } from "react-icons/md";
 import { ConfigPopoverHeader } from "@plugins/config_v2/plugins/config-link/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
@@ -99,11 +100,9 @@ export function CategoryChipToolbar() {
                   onClick={() => onPick(c)}
                   disabled={busy !== null}
                   icon={
-                    <span
-                      className={`inline-flex size-3 items-center justify-center ${selected ? "opacity-100" : "opacity-0"}`}
-                    >
+                    <Center as="span" className={`size-3 ${selected ? "opacity-100" : "opacity-0"}`}>
                       <MdCheck className="size-3" />
-                    </span>
+                    </Center>
                   }
                 >
                   <Badge size="sm" colorClass={colorClassFor(c)}>

@@ -4,6 +4,7 @@ import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 export interface PageIconValue {
   icon: string | null;
@@ -86,12 +87,15 @@ export function PageIconButton({
           type="button"
           aria-label="Change page icon"
           style={style}
+          // eslint-disable-next-line layout/no-adhoc-layout -- rigid icon trigger in the page header's icon/title stack
           className={cn(
-            "hover:bg-accent flex size-20 shrink-0 items-center justify-center rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+            "hover:bg-accent size-20 shrink-0 rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
             className,
           )}
         >
-          <PageIcon nodes={value.iconSvgNodes} className="size-[4.5rem]" />
+          <Center className="size-full">
+            <PageIcon nodes={value.iconSvgNodes} className="size-[4.5rem]" />
+          </Center>
         </button>
       }
     />

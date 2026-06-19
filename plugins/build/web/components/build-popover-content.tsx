@@ -13,6 +13,9 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -73,12 +76,12 @@ function MainAheadSection() {
 
 function BuildControls({ building, onBuild }: { building: boolean; onBuild: () => void | Promise<void> }) {
   return (
-    <div className="flex items-center gap-sm border-b px-md py-sm">
+    <Stack direction="row" align="center" gap="sm" className="border-b px-md py-sm">
       <Button variant="default" size="sm" loading={building} onClick={() => onBuild()}>
         <MdPlayArrow className="size-4" />
         Build
       </Button>
-    </div>
+    </Stack>
   );
 }
 
@@ -145,66 +148,75 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
   }, [entries]);
 
   return (
-    <div className="relative flex flex-col border-b">
-      <div className="flex items-center justify-between border-b px-md py-xs">
-        <Text as="span" variant="label" className="text-muted-foreground">Logs</Text>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-6"
-          onClick={copyLogs}
-          disabled={entries.length === 0}
-          aria-label="Copy logs"
-        >
-          <MdContentCopy />
-        </Button>
-      </div>
+    <Stack gap="none" className="relative border-b">
+      <Frame
+        className="border-b px-md py-xs"
+        leading={<Text as="span" variant="label" className="text-muted-foreground">Logs</Text>}
+        trailing={
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6"
+            onClick={copyLogs}
+            disabled={entries.length === 0}
+            aria-label="Copy logs"
+          >
+            <MdContentCopy />
+          </Button>
+        }
+      />
       <Scroll
         axis="y"
+        fill={variant === "pane"}
         ref={stickyScroll.scrollRef}
-        className={cn(logViewerClass, variant === "popover" ? "h-48" : "flex-1 min-h-48")}
+        className={cn(logViewerClass, variant === "popover" ? "h-48" : "min-h-48")}
       >
         {entries.length === 0 && (
           <span className="text-muted-foreground">No build logs yet</span>
         )}
         {entries.map((entry) => (
-          <div
+          <Frame
             key={entry.seq}
+            gap="sm"
+            align="start"
             className={cn(
-              "flex gap-sm",
               entry.stream === "stderr" ? "text-destructive" : "text-foreground",
             )}
-          >
-            <span className="shrink-0 text-muted-foreground">
-              {new Date(entry.timestamp).toLocaleTimeString([], {
-                hour: "2-digit",
-                minute: "2-digit",
-                second: "2-digit",
-                hour12: false,
-              })}
-            </span>
-            <span className="whitespace-pre-wrap break-all">{entry.line}</span>
-          </div>
+            leading={
+              <span className="text-muted-foreground">
+                {new Date(entry.timestamp).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                  second: "2-digit",
+                  hour12: false,
+                })}
+              </span>
+            }
+            content={
+              <span className="whitespace-pre-wrap break-all">{entry.line}</span>
+            }
+          />
         ))}
       </Scroll>
-      <div className="absolute bottom-1 left-1/2 -translate-x-1/2">
+      {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}
+      <Pin to="bottom" style={{ bottom: "0.25rem" }}>
         <JumpToBottomButton handle={stickyScroll} />
-      </div>
-    </div>
+      </Pin>
+    </Stack>
   );
 }
 
 function StatusDot({ run }: { run: BuildRun }) {
   if (run.finishedAt === null) {
-    return <span className="block size-2 shrink-0 rounded-full bg-warning animate-pulse" />;
+    return <span className="block size-2 rounded-full bg-warning animate-pulse" />;
   }
   if (run.exitCode === 0) {
-    return <span className="block size-2 shrink-0 rounded-full bg-success" />;
+    return <span className="block size-2 rounded-full bg-success" />;
   }
   if (run.exitCode === -1) {
-    return <span className="block size-2 shrink-0 rounded-full bg-muted-foreground/40" />;
+    return <span className="block size-2 rounded-full bg-muted-foreground/40" />;
   }
-  return <span className="block size-2 shrink-0 rounded-full bg-destructive" />;
+  return <span className="block size-2 rounded-full bg-destructive" />;
 }
 
 function BuildHistoryList({
@@ -230,7 +242,7 @@ function BuildHistoryList({
         <Text as="p" variant="caption" className="mt-1 text-muted-foreground">No builds yet</Text>
       )}
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- list offset below the History label, sibling of label not in a shared flex parent */}
-      <div className="mt-1 flex flex-col gap-2xs">
+      <Stack gap="2xs" className="mt-1">
         {visible.map((run) => (
           <Row
             key={run.id}
@@ -256,7 +268,7 @@ function BuildHistoryList({
             </Badge>
           </Row>
         ))}
-      </div>
+      </Stack>
     </div>
   );
 }
@@ -290,12 +302,12 @@ function BuildPopoverContentInner({
   }, []);
 
   return (
-    <div className={cn("flex flex-col", variant === "pane" && "h-full")}>
+    <Stack gap="none" className={cn(variant === "pane" && "h-full")}>
       <MainAheadSection />
       <BuildControls building={building} onBuild={handleBuild} />
       {variant === "popover" && <BuildLogView variant={variant} />}
       <BuildHistoryList variant={variant} selectedRunId={selectedRunId} onRunClick={onRunClick} />
-    </div>
+    </Stack>
   );
 }
 
@@ -311,9 +323,9 @@ export function BuildPopoverContent({
   const historyResult = useResource(buildHistoryResource);
   if (historyResult.pending) {
     return (
-      <div className={cn("flex flex-col", variant === "pane" && "h-full")}>
+      <Stack gap="none" className={cn(variant === "pane" && "h-full")}>
         <Loading variant="rows" count={3} />
-      </div>
+      </Stack>
     );
   }
   return (

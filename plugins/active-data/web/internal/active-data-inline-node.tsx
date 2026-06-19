@@ -7,6 +7,9 @@ import {
   type SealContributions,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { ActiveData, type ActiveDataInlineContribution } from "../slots";
 
@@ -106,23 +109,31 @@ function ActiveDataInlineChip({ text, nodeKey }: { text: string; nodeKey: NodeKe
   if (!editor.isEditable()) return chip;
 
   return (
-    <span className={cn(hoverRevealGroup, "relative inline-flex align-middle")} contentEditable={false}>
+    <Inline
+      gap="none"
+      className={cn(hoverRevealGroup, "relative align-middle")}
+      contentEditable={false}
+    >
       {chip}
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          editor.update(() => {
-            const node = editor.getEditorState()._nodeMap.get(nodeKey);
-            if (node) (node as LexicalNode).remove();
-          });
-        }}
-        className={cn(hoverRevealTarget, "bg-background/90 border-border text-foreground absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full border")}
-        aria-label="Remove"
-      >
-        <MdClose className="size-3" />
-      </button>
-    </span>
+      <Pin to="top-right" offset="xs" outset>
+        <button
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            editor.update(() => {
+              const node = editor.getEditorState()._nodeMap.get(nodeKey);
+              if (node) (node as LexicalNode).remove();
+            });
+          }}
+          className={cn(hoverRevealTarget, "bg-background/90 border-border text-foreground size-4 rounded-full border")}
+          aria-label="Remove"
+        >
+          <Center className="size-full">
+            <MdClose className="size-3" />
+          </Center>
+        </button>
+      </Pin>
+    </Inline>
   );
 }
 

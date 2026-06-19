@@ -36,6 +36,10 @@ export function PaneOverlayHost() {
   if (!hasPane) return null;
 
   return (
+    // An absolute inset-0 overlay box filling the host app's `relative`
+    // container (NOT an in-flow Overlay layer, and NOT viewport-portalled).
+    // No primitive covers "be the absolute inset-0 positioned box itself".
+    // eslint-disable-next-line layout/no-adhoc-layout -- absolute inset-0 overlay box filling the host's relative container
     <div className="absolute inset-0 z-overlay bg-background">
       <MillerColumns />
     </div>

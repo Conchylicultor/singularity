@@ -6,6 +6,11 @@ import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpo
 import { setConfigField, forkScope, deleteScope } from "@plugins/config_v2/core";
 import { useCurrentAppId } from "@plugins/apps/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeEngine, ThemeScopeProvider, useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { themeCustomizerPane } from "../panes";
@@ -46,15 +51,17 @@ function GlobalPresetPicker() {
   };
 
   return (
-    <div className="flex flex-col gap-md">
-      <div className="flex items-center gap-md">
+    <Stack gap="md">
+      <Stack direction="row" align="center" gap="md">
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible divider rule flanking a rigid centered label */}
         <div className="h-px flex-1 bg-border" />
         <span className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground">
           Theme
         </span>
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible divider rule flanking a rigid centered label */}
         <div className="h-px flex-1 bg-border" />
-      </div>
-      <div className="flex flex-wrap gap-sm">
+      </Stack>
+      <Cluster gap="sm" justify="start">
         {globalPresets.map((p) => (
           <button
             key={p.id}
@@ -68,8 +75,8 @@ function GlobalPresetPicker() {
             {p.label}
           </button>
         ))}
-      </div>
-    </div>
+      </Cluster>
+    </Stack>
   );
 }
 
@@ -80,16 +87,16 @@ function VariantGroupSection() {
   const groups = ThemeEngine.VariantGroup.useContributions();
   if (groups.length === 0) return null;
   return (
-    <div className="flex flex-col gap-lg">
+    <Stack gap="lg">
       <ThemeEngine.VariantGroup.Render>
         {(g) => (
-          <div className="flex flex-col gap-xs">
+          <Stack gap="xs">
             <Text variant="label">{g.componentLabel}</Text>
             <g.component />
-          </div>
+          </Stack>
         )}
       </ThemeEngine.VariantGroup.Render>
-    </div>
+    </Stack>
   );
 }
 
@@ -107,13 +114,13 @@ function TokenModeSelector({
   onChange: (m: TokenMode) => void;
 }) {
   return (
-    <div className="flex gap-xs">
+    <Grid cols={TOKEN_MODES.length} minCellWidth="0" gap="xs">
       {TOKEN_MODES.map(({ id, label }) => (
         <button
           key={id}
           type="button"
           onClick={() => onChange(id)}
-          className={`flex-1 py-xs text-caption font-medium rounded-md border transition-colors ${
+          className={`py-xs text-caption font-medium rounded-md border transition-colors ${
             mode === id
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50"
@@ -122,7 +129,7 @@ function TokenModeSelector({
           {label}
         </button>
       ))}
-    </div>
+    </Grid>
   );
 }
 
@@ -152,24 +159,31 @@ function CustomizeForAppToggle({
     <button
       type="button"
       onClick={onToggle}
-      className={`flex items-center justify-between gap-md px-md py-sm text-body rounded-md border transition-colors ${
+      className={`w-full px-md py-sm text-body rounded-md border transition-colors ${
         forked
           ? "border-primary bg-primary/10 text-primary"
           : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
       }`}
     >
-      <span className="font-medium">Customize for {appLabel}</span>
-      <span
-        className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
-          forked ? "bg-primary" : "bg-muted-foreground/30"
-        }`}
-      >
-        <span
-          className={`inline-block size-3 rounded-full bg-background transition-transform ${
-            forked ? "translate-x-3.5" : "translate-x-0.5"
-          }`}
-        />
-      </span>
+      <Frame
+        gap="md"
+        content={<span className="font-medium">Customize for {appLabel}</span>}
+        trailing={
+          <Center
+            as="span"
+            axis="vertical"
+            className={`relative h-4 w-7 rounded-full transition-colors ${
+              forked ? "bg-primary" : "bg-muted-foreground/30"
+            }`}
+          >
+            <span
+              className={`inline-block size-3 rounded-full bg-background transition-transform ${
+                forked ? "translate-x-3.5" : "translate-x-0.5"
+              }`}
+            />
+          </Center>
+        }
+      />
     </button>
   );
 }
@@ -207,8 +221,8 @@ export function ThemeCustomizerBody() {
   return (
     <PaneChrome pane={themeCustomizerPane} title="Theme Customizer">
       <ThemeScopeProvider scopeId={effectiveScopeId}>
-        <div className="flex flex-col gap-lg">
-          <div className="px-xl pt-lg flex flex-col gap-lg">
+        <Stack gap="lg">
+          <Stack gap="lg" className="px-xl pt-lg">
             {appId && scopeId && (
               <CustomizeForAppToggle
                 appId={appId}
@@ -224,11 +238,11 @@ export function ThemeCustomizerBody() {
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
-          </div>
+          </Stack>
           <TokenModeContext.Provider value={tokenMode}>
             <ThemeCustomizer.Host search={search} />
           </TokenModeContext.Provider>
-        </div>
+        </Stack>
       </ThemeScopeProvider>
     </PaneChrome>
   );

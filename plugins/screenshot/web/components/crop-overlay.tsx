@@ -67,6 +67,7 @@ export function CropOverlay({ displayed, natural, onCommit }: Props) {
   return (
     <div
       ref={overlayRef}
+      // eslint-disable-next-line layout/no-adhoc-layout -- overlay positioned by JS/pixel coordinates from the displayed DOMRect
       className="absolute cursor-crosshair touch-none select-none"
       style={{
         left: displayed.x,
@@ -96,10 +97,12 @@ export function CropOverlay({ displayed, natural, onCommit }: Props) {
         <>
           {/* 4-rect vignette: top, left, right, bottom relative to selection */}
           <div
+            // eslint-disable-next-line layout/no-adhoc-layout -- vignette rect positioned by JS-computed pixel coordinates
             className="pointer-events-none absolute bg-black/50"
             style={{ left: 0, top: 0, right: 0, height: displayedRect.y }}
           />
           <div
+            // eslint-disable-next-line layout/no-adhoc-layout -- vignette rect positioned by JS-computed pixel coordinates
             className="pointer-events-none absolute bg-black/50"
             style={{
               left: 0,
@@ -109,6 +112,7 @@ export function CropOverlay({ displayed, natural, onCommit }: Props) {
             }}
           />
           <div
+            // eslint-disable-next-line layout/no-adhoc-layout -- vignette rect positioned by JS-computed pixel coordinates
             className="pointer-events-none absolute bg-black/50"
             style={{
               left: displayedRect.x + displayedRect.w,
@@ -118,6 +122,7 @@ export function CropOverlay({ displayed, natural, onCommit }: Props) {
             }}
           />
           <div
+            // eslint-disable-next-line layout/no-adhoc-layout -- vignette rect positioned by JS-computed pixel coordinates
             className="pointer-events-none absolute bg-black/50"
             style={{
               left: 0,
@@ -128,6 +133,7 @@ export function CropOverlay({ displayed, natural, onCommit }: Props) {
           />
           {/* Selection border */}
           <div
+            // eslint-disable-next-line layout/no-adhoc-layout -- selection border positioned by JS-computed pixel coordinates
             className="pointer-events-none absolute border-2 border-white shadow-[0_0_0_1px_rgba(0,0,0,0.5)]"
             style={{
               left: displayedRect.x,

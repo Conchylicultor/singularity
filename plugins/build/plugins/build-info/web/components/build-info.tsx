@@ -4,6 +4,8 @@ import { buildHistoryResource } from "@plugins/build/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 function formatDuration(start: Date, end: Date | null): string {
@@ -45,10 +47,12 @@ function StatusBadge({ exitCode, finished }: { exitCode: number | null; finished
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-lg">
-      <Text as="span" variant="caption" className="shrink-0 text-muted-foreground">{label}</Text>
-      <Text as="span" variant="body">{children}</Text>
-    </div>
+    <Frame
+      gap="lg"
+      align="baseline"
+      leading={<Text as="span" variant="caption" className="text-muted-foreground">{label}</Text>}
+      trailing={<Text as="span" variant="body">{children}</Text>}
+    />
   );
 }
 
@@ -62,15 +66,15 @@ export function BuildInfo({ runId }: { runId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-md">
-      <div className="flex items-center gap-sm">
+    <Stack gap="md">
+      <Stack direction="row" align="center" gap="sm">
         <StatusBadge exitCode={run.exitCode} finished={run.finishedAt !== null} />
         <Badge variant={run.trigger === "auto" ? "info" : "muted"}>
           {run.trigger}
         </Badge>
-      </div>
+      </Stack>
 
-      <div className="flex flex-col gap-sm">
+      <Stack gap="sm">
         {run.commitHash && (
           <Row label="Commit">
             {/* eslint-disable-next-line text/no-adhoc-typography -- mono commit-hash chip, intentional inline-code size */}
@@ -88,7 +92,7 @@ export function BuildInfo({ runId }: { runId: string }) {
         <Row label="Duration">
           <span className="tabular-nums">{formatDuration(run.startedAt, run.finishedAt)}</span>
         </Row>
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

@@ -16,6 +16,11 @@ import { MdClose, MdKeyboardDoubleArrowDown, MdOutlineQueue, MdVerticalAlignBott
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { conversationsResource } from "@plugins/conversations/core";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { RowActions, RowActionButton, rowActionsAnchor } from "@plugins/primitives/plugins/row-actions/web";
@@ -70,28 +75,40 @@ function SectionHeader({
   stickyTop: number;
 }) {
   return (
-    <div
-      className="group/header sticky z-nav flex items-center gap-2xs rounded-md bg-sidebar px-xs py-xs"
+    <Sticky
+      layer="nav"
+      className="group/header rounded-md bg-sidebar px-xs py-xs"
       style={{ top: stickyTop }}
     >
-      <button
-        type="button"
-        onClick={onToggleExpanded}
-        aria-expanded={expanded}
-        aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
-        className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
-      >
-        <CollapsibleChevron open={expanded} className="size-4" />
-      </button>
-      <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-xs py-2xs font-semibold text-muted-foreground">
-        {title}
-      </Text>
-      {count > 0 && (
-        <Badge size="sm" className="shrink-0 pointer-events-none opacity-0 transition-opacity group-hover/header:opacity-100">
-          {count}
-        </Badge>
-      )}
-    </div>
+      <Frame
+        gap="2xs"
+        leading={
+          <button
+            type="button"
+            onClick={onToggleExpanded}
+            aria-expanded={expanded}
+            aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
+            className="rounded-md text-muted-foreground hover:bg-accent"
+          >
+            <Center className="size-5">
+              <CollapsibleChevron open={expanded} className="size-4" />
+            </Center>
+          </button>
+        }
+        content={
+          <Text as="div" variant="caption" className="w-full truncate px-xs py-2xs font-semibold text-muted-foreground">
+            {title}
+          </Text>
+        }
+        trailing={
+          count > 0 ? (
+            <Badge size="sm" className="pointer-events-none opacity-0 transition-opacity group-hover/header:opacity-100">
+              {count}
+            </Badge>
+          ) : undefined
+        }
+      />
+    </Sticky>
   );
 }
 
@@ -383,7 +400,7 @@ export function QueueView({
   const goneTop = nextTop;
 
   return (
-    <div className="flex flex-col isolate">
+    <Stack gap="none" className="isolate">
       {/* Queue */}
       <SectionHeader title="Queue" count={allWaitingCount} expanded={queueExpanded} onToggleExpanded={toggleQueueExpanded} stickyTop={queueTop} />
       {queueExpanded && waitingGroups.length === 0 && (
@@ -401,7 +418,7 @@ export function QueueView({
         >
           {/* Pinned top item */}
           {pinnedCluster && (
-            <div className="sticky z-raised bg-sidebar pt-px pb-xs pl-xs" style={{ top: topItemTop }}>
+            <Sticky className="bg-sidebar pt-px pb-xs pl-xs" style={{ top: topItemTop }}>
               <SidebarMenu>
                 <QueueRow
                   conv={pinnedCluster.selected}
@@ -419,7 +436,7 @@ export function QueueView({
                   onStepDown={(id) => fetchEndpoint(stepDownQueue, {}, { body: { conversationId: id, steps: 5 } })}
                 />
               </SidebarMenu>
-            </div>
+            </Sticky>
           )}
           {restClusters.length > 0 && (
             <div className="pl-xs">
@@ -447,9 +464,11 @@ export function QueueView({
           )}
           <DragOverlay dropAnimation={null}>
             {draggingConv ? (
-              <Text as="div" variant="body" className="flex items-center rounded-md border border-accent bg-background/90 px-sm py-xs shadow-md">
-                <ConversationItem conv={draggingConv} />
-              </Text>
+              <Frame
+                align="center"
+                className="rounded-md border border-accent bg-background/90 px-sm py-xs shadow-md"
+                content={<ConversationItem conv={draggingConv} />}
+              />
             ) : null}
           </DragOverlay>
         </DndContext>
@@ -473,12 +492,17 @@ export function QueueView({
                     isActive={group.selected.id === activeId}
                     onClick={() => onNavigate(group.selected.id)}
                   >
-                    <ConversationItem conv={group.selected} />
-                    {group.count > 1 && (
-                      <Badge variant="destructive" size="sm" className="ml-auto shrink-0">
-                        {group.count}
-                      </Badge>
-                    )}
+                    <Frame
+                      className="w-full"
+                      content={<ConversationItem conv={group.selected} />}
+                      trailing={
+                        group.count > 1 ? (
+                          <Badge variant="destructive" size="sm">
+                            {group.count}
+                          </Badge>
+                        ) : undefined
+                      }
+                    />
                   </SidebarMenuButton>
                   <RowActions>
                     <RowActionButton
@@ -587,7 +611,7 @@ export function QueueView({
           )}
         </>
       )}
-    </div>
+    </Stack>
   );
 }
 
@@ -635,10 +659,14 @@ function QueueRow({
 
   return (
     <li className={cn(rowActionsAnchor, "list-none")}>
-      <div
+      <Pin
+        to="top"
+        offset="xs"
+        outset
+        stretch
         ref={beforeDrop.setNodeRef}
         className={cn(
-          "absolute -top-1 left-0 right-0 z-raised h-2",
+          "h-2",
           dragInProgress && beforeDrop.isOver && "bg-primary/40",
         )}
       />
@@ -660,12 +688,17 @@ function QueueRow({
           isActive={isActive}
           onClick={() => onNavigate(conv.id)}
         >
-          <ConversationItem conv={conv} />
-          {clusterSize > 1 && (
-            <Badge variant="destructive" size="sm" className="ml-auto shrink-0">
-              {clusterSize}
-            </Badge>
-          )}
+          <Frame
+            className="w-full"
+            content={<ConversationItem conv={conv} />}
+            trailing={
+              clusterSize > 1 ? (
+                <Badge variant="destructive" size="sm">
+                  {clusterSize}
+                </Badge>
+              ) : undefined
+            }
+          />
         </SidebarMenuButton>
         <RowActions>
           {!isTop && (
@@ -696,10 +729,14 @@ function QueueRow({
           />
         </RowActions>
       </div>
-      <div
+      <Pin
+        to="bottom"
+        offset="xs"
+        outset
+        stretch
         ref={afterDrop.setNodeRef}
         className={cn(
-          "absolute -bottom-1 left-0 right-0 z-raised h-2",
+          "h-2",
           dragInProgress && afterDrop.isOver && "bg-primary/40",
         )}
       />

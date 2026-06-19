@@ -86,6 +86,7 @@ function Handle({
   return (
     <div
       onPointerDown={onPointerDown}
+      // eslint-disable-next-line layout/no-adhoc-layout -- window resize handle: edge/corner hit area positioned by the perimeter edge utilities passed in className; drag chrome, not a ramp-expressible anchor
       className={`absolute ${cursor} ${className}`}
       style={{ touchAction: "none" }}
     />
@@ -107,10 +108,14 @@ export function WindowResizeHandles({
 }) {
   return (
     <>
-      {/* Edges */}
+      {/* Edges — full-length perimeter strips; resize chrome, not ramp-expressible anchors. */}
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- top resize edge strip spanning the window width */}
       <Handle edge={{ top: true }} cursor="cursor-n-resize" className="inset-x-0 top-0 h-1" setGeo={setGeo} windowId={windowId} />
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- bottom resize edge strip spanning the window width */}
       <Handle edge={{ bottom: true }} cursor="cursor-s-resize" className="inset-x-0 bottom-0 h-1" setGeo={setGeo} windowId={windowId} />
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- left resize edge strip spanning the window height */}
       <Handle edge={{ left: true }} cursor="cursor-w-resize" className="inset-y-0 left-0 w-1" setGeo={setGeo} windowId={windowId} />
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- right resize edge strip spanning the window height */}
       <Handle edge={{ right: true }} cursor="cursor-e-resize" className="inset-y-0 right-0 w-1" setGeo={setGeo} windowId={windowId} />
       {/* Corners (size-3 hit area, raised over the edge strips). */}
       <Handle edge={{ top: true, left: true }} cursor="cursor-nw-resize" className="top-0 left-0 z-raised size-3" setGeo={setGeo} windowId={windowId} />

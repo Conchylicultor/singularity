@@ -87,7 +87,9 @@ export function ReorderEditor({
           // Editor-owned wrap container: a single honest flex parent of the
           // sortable cells, so a horizontal row wraps instead of overflowing.
           // `SortableContext` registers items by id regardless of DOM nesting,
-          // so one extra div is invisible to dnd-kit.
+          // so one extra div is invisible to dnd-kit. Kept as one raw flex
+          // parent (fill + wrap + align-content) that dnd-kit measures directly.
+          // eslint-disable-next-line layout/no-adhoc-layout -- editor-owned flex-wrap fill container; single honest flex parent dnd-kit measures
           <div className="flex flex-1 flex-wrap content-start items-start gap-xs min-w-0">
             {itemNodes}
           </div>

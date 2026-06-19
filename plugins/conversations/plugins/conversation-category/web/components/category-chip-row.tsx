@@ -8,6 +8,7 @@ export function CategoryChipRow({ conv }: { conv: ConversationItemConv }) {
   if (!category) return null;
   return (
     <span
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid (non-shrinking) inline category chip in the conversation row's chips flex; truncate is defensive
       className={`shrink-0 truncate rounded-sm p-chip text-3xs font-medium uppercase tracking-wide ${colorClassFor(category)}`}
       title={category}
     >

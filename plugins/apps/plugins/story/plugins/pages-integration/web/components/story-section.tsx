@@ -2,6 +2,8 @@ import { MdOpenInNew } from "react-icons/md";
 import { navigate } from "@plugins/apps/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import {
   useStories,
@@ -48,24 +50,26 @@ export function StorySection({ pageId }: { pageId: string }) {
 
   return (
     <Stack gap="sm">
-      <div className="flex items-center justify-between">
-        <SectionLabel>Story</SectionLabel>
-        <Button
-          variant="ghost"
-          size="xs"
-          onClick={() => navigate(`/story/s/${pageId}`)}
-        >
-          <MdOpenInNew className="size-4" />
-          Open in Story Builder
-        </Button>
-      </div>
+      <Frame
+        leading={<SectionLabel>Story</SectionLabel>}
+        trailing={
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={() => navigate(`/story/s/${pageId}`)}
+          >
+            <MdOpenInNew className="size-4" />
+            Open in Story Builder
+          </Button>
+        }
+      />
       <RendererPicker
         activeId={activeId}
         onSelect={(id) => void markStory(pageId, id)}
       />
-      <div className="max-h-96 overflow-y-auto rounded-md border border-border">
+      <Scroll className="max-h-96 rounded-md border border-border">
         <StoryRender pageId={pageId} rendererId={activeId ?? ""} />
-      </div>
+      </Scroll>
     </Stack>
   );
 }

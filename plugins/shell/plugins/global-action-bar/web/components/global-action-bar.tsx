@@ -5,6 +5,9 @@ import {
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/floating-action/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useConfig } from "@plugins/config_v2/web";
@@ -39,14 +42,20 @@ const PIN_TTL = 10 * 365 * 24 * 60 * 60 * 1000;
 function StatusGlyph({ status }: { status: ActionBarStatus }) {
   return (
     <WithTooltip content={status.pending ? "Loading…" : status.tooltip}>
-      <div className="pointer-events-auto relative flex size-8 shrink-0 items-center justify-center">
+      <Center className="pointer-events-auto relative size-8">
         <MdAutoAwesome className="size-4 text-muted-foreground" />
-        <StatusDot
-          colorClass={`${TONE_CLASS[status.pending ? "ok" : status.tone]}${!status.pending && status.pulse ? " animate-pulse" : ""}`}
-          size="sm"
-          className="absolute -top-0.5 -right-0.5 ring-2 ring-background"
-        />
-      </div>
+        <Pin
+          to="top-right"
+          outset
+          style={{ top: "-0.125rem", right: "-0.125rem" }}
+        >
+          <StatusDot
+            colorClass={`${TONE_CLASS[status.pending ? "ok" : status.tone]}${!status.pending && status.pulse ? " animate-pulse" : ""}`}
+            size="sm"
+            className="ring-2 ring-background"
+          />
+        </Pin>
+      </Center>
     </WithTooltip>
   );
 }
@@ -109,12 +118,14 @@ export function FloatingActionBarHost() {
 
   return (
     <FloatingAction
+      // eslint-disable-next-line layout/no-adhoc-layout -- viewport-corner fixed overlay anchored top-right (outside any transformed ancestor)
       className="fixed top-2 right-3 z-popover"
       anchor="top-right"
       variant="ghost"
       panelClassName="items-center"
       trigger={<StatusGlyph status={status} />}
     >
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- animated max-width hover-reveal strip (clipped while collapsed) */}
       <FloatingActionFadeIn className="flex max-w-0 items-center gap-sm overflow-hidden whitespace-nowrap pr-sm transition-[max-width] duration-200 group-data-open/fa:max-w-[80rem]">
         <ActionRow pinned={false} onTogglePin={togglePin} />
       </FloatingActionFadeIn>
@@ -142,9 +153,10 @@ export function DockedActionBarHost() {
   if (!enabled || !pinned) return null;
 
   return (
-    <div className="flex shrink-0 items-center gap-sm pl-sm">
+    // eslint-disable-next-line layout/no-adhoc-layout -- rigid leaf of the tab bar's flex (must not compress as tabs scroll under it)
+    <Stack direction="row" gap="sm" align="center" className="shrink-0 pl-sm">
       <StatusGlyph status={status} />
       <ActionRow pinned onTogglePin={togglePin} />
-    </div>
+    </Stack>
   );
 }

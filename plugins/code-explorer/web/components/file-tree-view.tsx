@@ -2,6 +2,9 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@plugins/p
 import { useEffect, useState } from "react";
 import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { getCodeTree } from "@plugins/code-explorer/plugins/code-api/core";
@@ -27,7 +30,7 @@ export function FileTreeView({ worktree }: FileTreeViewProps) {
       id="code-explorer-group"
     >
       <ResizablePanel id="tree" defaultSize={25} minSize={15}>
-        <div className="h-full min-h-0 overflow-auto border-r">
+        <Scroll axis="both" fill className="h-full border-r">
           {isLoading ? (
             <Loading variant="rows" />
           ) : error ? (
@@ -45,11 +48,11 @@ export function FileTreeView({ worktree }: FileTreeViewProps) {
               onSelect={setSelectedPath}
             />
           )}
-        </div>
+        </Scroll>
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel id="preview" defaultSize={75} minSize={30}>
-        <div className="h-full min-h-0 overflow-hidden">
+        <Clip fill className="h-full">
           {selectedPath ? (
             <FilePaneView
               worktree={worktree}
@@ -57,11 +60,13 @@ export function FileTreeView({ worktree }: FileTreeViewProps) {
               status="clean"
             />
           ) : (
-            <Text as="div" variant="body" className="flex h-full items-center justify-center px-md py-sm text-muted-foreground">
-              Select a file to preview.
-            </Text>
+            <Center className="h-full">
+              <Text as="div" variant="body" className="px-md py-sm text-muted-foreground">
+                Select a file to preview.
+              </Text>
+            </Center>
           )}
-        </div>
+        </Clip>
       </ResizablePanel>
     </ResizablePanelGroup>
   );

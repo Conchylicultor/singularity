@@ -12,6 +12,7 @@ import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane, buildDetailPane } from "../panes";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 
 /** Inner component: receives settled history data so hooks run unconditionally with real values. */
 function BuildButtonInner({
@@ -83,7 +84,7 @@ function BuildButtonInner({
               <span
                 role="button"
                 tabIndex={0}
-                // eslint-disable-next-line row/no-adhoc-row, spacing/no-adhoc-spacing -- nested interactive chip inside the build trigger button (a real button can't nest inside the Button trigger); ml-0.5 inline offset from preceding button label, no flex parent to own a gap
+                // eslint-disable-next-line layout/no-adhoc-layout, spacing/no-adhoc-spacing -- nested interactive chip inside the build trigger button (a real button can't nest inside the Button trigger); inline-flex row + ml-0.5 inline offset from preceding button label, no flex parent to own a gap
                 className="ml-0.5 inline-flex items-center gap-2xs rounded-md bg-info/15 px-xs py-2xs text-label text-info hover:bg-info/25"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -100,21 +101,24 @@ function BuildButtonInner({
       align="end"
       contentClassName="w-[480px] p-none"
     >
-      <div className="flex items-center justify-between border-b px-md py-sm">
-        <Text as="span" variant="label">Builds</Text>
-        <Button
-          variant="ghost"
-          size="icon"
-          className="size-6"
-          onClick={() => {
-            setOpen(false);
-            openPane(buildPane, {}, { mode: "root" });
-          }}
-          aria-label="Open in pane"
-        >
-          <MdOpenInFull className="size-3" />
-        </Button>
-      </div>
+      <Frame
+        className="border-b px-md py-sm"
+        leading={<Text as="span" variant="label">Builds</Text>}
+        trailing={
+          <Button
+            variant="ghost"
+            size="icon"
+            className="size-6"
+            onClick={() => {
+              setOpen(false);
+              openPane(buildPane, {}, { mode: "root" });
+            }}
+            aria-label="Open in pane"
+          >
+            <MdOpenInFull className="size-3" />
+          </Button>
+        }
+      />
       <BuildPopoverContent
         variant="popover"
         onRunClick={(runId) => {

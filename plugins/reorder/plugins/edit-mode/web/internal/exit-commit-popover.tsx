@@ -6,6 +6,8 @@ import {
   Button,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   useApplyAllConfigDefaults,
@@ -44,14 +46,17 @@ export function ExitCommitPopover({ children }: { children: ReactNode }) {
   };
 
   return (
-    <span className="relative inline-flex">
+    <Inline gap="none" className="relative">
       {children}
       <Popover open={open} onOpenChange={(next) => setExitPromptOpen(next)}>
         {/* Invisible anchor at the pen's corner; never receives the pen click. */}
-        <PopoverTrigger
+        <Pin
+          as={PopoverTrigger}
+          to="bottom-right"
+          decorative
           aria-hidden
           tabIndex={-1}
-          className="pointer-events-none absolute bottom-0 right-0 size-0"
+          className="size-0"
         />
         <PopoverContent align="end" className="w-64">
           <Stack gap="sm">
@@ -71,6 +76,6 @@ export function ExitCommitPopover({ children }: { children: ReactNode }) {
           </Stack>
         </PopoverContent>
       </Popover>
-    </span>
+    </Inline>
   );
 }

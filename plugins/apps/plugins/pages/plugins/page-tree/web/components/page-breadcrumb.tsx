@@ -7,16 +7,17 @@ import {
 } from "@plugins/primitives/plugins/breadcrumb/web";
 import { pagesResource, pageData, type Block } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { pageAncestors } from "../ancestors";
 import { pageDetailPane } from "../panes";
 
 function SegmentLabel({ page }: { page: Block }): ReactElement {
   const data = pageData(page);
   return (
-    <span className="inline-flex items-center gap-2xs">
-      <PageIcon nodes={data.iconSvgNodes} className="size-3.5 shrink-0" />
+    <Inline gap="2xs">
+      <PageIcon nodes={data.iconSvgNodes} className="size-3.5" />
       {data.title || "Untitled"}
-    </span>
+    </Inline>
   );
 }
 

@@ -22,6 +22,7 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 const TaskBindingSchema = z.object({
   taskId: z.string(),
@@ -61,13 +62,14 @@ export function TaskCard({
 
   if (value?.launchedConvId && value.taskId) {
     return (
-      <div
+      <Stack
+        gap="xs"
         // eslint-disable-next-line spacing/no-adhoc-spacing -- top-level widget vertical offset in markdown transcript flow
-        className="my-2 flex flex-col gap-xs"
+        className="my-2"
       >
         <Text as="p" variant="body" tone="muted">{initial}</Text>
         <LaunchedAttempts taskId={value.taskId} />
-      </div>
+      </Stack>
     );
   }
 
@@ -97,9 +99,11 @@ export function TaskCard({
   };
 
   return (
-    <Card
+    <Stack
+      as={Card}
+      gap="sm"
       // eslint-disable-next-line spacing/no-adhoc-spacing -- top-level widget vertical offset in markdown transcript flow
-      className="bg-background my-2 flex flex-col gap-sm p-sm"
+      className="bg-background my-2 p-sm"
     >
       <TextEditor
         value={prompt}
@@ -110,7 +114,7 @@ export function TaskCard({
         maxHeight="20rem"
         namespace={`active-data-task-${editorNs}`}
       />
-      <div className="flex items-center justify-end gap-sm">
+      <Stack direction="row" align="center" justify="end" gap="sm">
         {error ? (
           <Text as="span" variant="caption" tone="destructive" className="mr-auto truncate" title={error}>
             {error}
@@ -142,8 +146,8 @@ export function TaskCard({
             }
           }}
         />
-      </div>
-    </Card>
+      </Stack>
+    </Stack>
   );
 }
 
@@ -173,17 +177,17 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
   }
 
   return (
-    <Card className="flex flex-col gap-sm px-md py-sm bg-transparent">
+    <Stack as={Card} gap="sm" className="px-md py-sm bg-transparent">
       {attempts.map((attempt) => (
-        <div key={attempt.id} className="flex flex-col gap-xs">
-          <div className="flex items-center gap-sm">
+        <Stack key={attempt.id} gap="xs">
+          <Stack direction="row" align="center" gap="sm">
             <AttemptStatusBadge status={attempt.status} />
             <Text as="span" variant="caption" tone="muted" className="truncate font-mono">
               {attempt.worktreePath.split("/").pop()}
             </Text>
-          </div>
+          </Stack>
           {attempt.conversations.length > 0 && (
-            <ul className="flex flex-col gap-2xs">
+            <Stack as="ul" gap="2xs">
               {attempt.conversations.map((c) => {
                 const isActive = activeConvId === c.id;
                 return (
@@ -203,11 +207,11 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
                   </li>
                 );
               })}
-            </ul>
+            </Stack>
           )}
-        </div>
+        </Stack>
       ))}
-    </Card>
+    </Stack>
   );
 }
 

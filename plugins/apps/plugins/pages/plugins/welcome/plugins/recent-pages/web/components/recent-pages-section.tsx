@@ -8,6 +8,8 @@ import { pageDetailPane } from "@plugins/apps/plugins/pages/plugins/page-tree/we
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -43,29 +45,42 @@ export function RecentPagesSection(): ReactElement | null {
       <Text as="span" variant="label" tone="muted">
         Recent pages
       </Text>
-      <Card className="flex flex-col divide-y overflow-hidden rounded-lg p-none">
-        {recent.map((page) => {
-          const { title, iconSvgNodes } = pageData(page);
-          return (
-            <button
-              key={page.id}
-              className="flex items-center gap-md px-md py-sm text-left transition-colors hover:bg-accent"
-              onClick={() =>
-                openPane(pageDetailPane, { pageId: page.id }, { mode: "push" })
-              }
-            >
-              <PageIcon nodes={iconSvgNodes} className="size-5 shrink-0 text-muted-foreground" />
-              <TruncatingText className="flex-1 text-body">
-                {title || "Untitled"}
-              </TruncatingText>
-              <RelativeTime
-                date={page.updatedAt}
-                className="shrink-0 text-caption text-muted-foreground"
-              />
-              <MdArrowForward className="size-4 shrink-0 text-muted-foreground/50" />
-            </button>
-          );
-        })}
+      <Card className="rounded-lg p-none">
+        <Clip className="rounded-lg">
+          <Stack gap="none" className="divide-y">
+            {recent.map((page) => {
+              const { title, iconSvgNodes } = pageData(page);
+              return (
+                <Frame
+                  key={page.id}
+                  as="button"
+                  gap="md"
+                  className="px-md py-sm text-left transition-colors hover:bg-accent"
+                  onClick={() =>
+                    openPane(pageDetailPane, { pageId: page.id }, { mode: "push" })
+                  }
+                  leading={
+                    <PageIcon nodes={iconSvgNodes} className="size-5 text-muted-foreground" />
+                  }
+                  content={
+                    <TruncatingText className="text-body">
+                      {title || "Untitled"}
+                    </TruncatingText>
+                  }
+                  trailing={
+                    <Stack direction="row" gap="md" align="center">
+                      <RelativeTime
+                        date={page.updatedAt}
+                        className="text-caption text-muted-foreground"
+                      />
+                      <MdArrowForward className="size-4 text-muted-foreground/50" />
+                    </Stack>
+                  }
+                />
+              );
+            })}
+          </Stack>
+        </Clip>
       </Card>
     </Stack>
   );

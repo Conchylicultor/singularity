@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { ConfigPopoverHeader } from "@plugins/config_v2/plugins/config-link/web";
 import { prepromptsConfig } from "@plugins/conversations/plugins/preprompts/web";
@@ -37,14 +38,16 @@ export function PrepromptChip() {
         label="Preprompt instructions"
         descriptor={prepromptsConfig}
       />
-      <Text
-        as="div"
-        variant="caption"
-        className="max-h-80 overflow-auto whitespace-pre-wrap break-words px-xs text-muted-foreground"
-        aria-label="Preprompt instructions"
-      >
-        {record.text}
-      </Text>
+      <Scroll className="max-h-80">
+        <Text
+          as="div"
+          variant="caption"
+          className="whitespace-pre-wrap break-words px-xs text-muted-foreground"
+          aria-label="Preprompt instructions"
+        >
+          {record.text}
+        </Text>
+      </Scroll>
     </InlinePopover>
   );
 }

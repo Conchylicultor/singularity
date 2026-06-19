@@ -35,7 +35,7 @@ so the pane never imports this component directly.
 - Description: Cross-worktree cluster tab for the Slow Ops pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint: merges every worktree DB fork's slow_ops into one cluster response.
 - Web:
   - Contributes: `SlowOps.View` "Cluster" → `ClusterView`
-  - Uses: `debug/slow-ops/pane.SlowOps`, `infra/endpoints.getEndpointErrorMessage`, `infra/ndjson-stream.readNdjson`, `primitives/css/badge.Badge`, `primitives/css/clip.Clip`, `primitives/css/placeholder.Placeholder`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/relative-time.RelativeTime`
+  - Uses: `debug/slow-ops/pane.SlowOps`, `infra/endpoints.getEndpointErrorMessage`, `infra/ndjson-stream.readNdjson`, `primitives/css/badge.Badge`, `primitives/css/clip.Clip`, `primitives/css/frame.Frame`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/relative-time.RelativeTime`
 - Server:
   - Uses: `database/admin.listDatabases`, `database/admin.openShortLivedClient`, `infra/ndjson-stream.ndjsonResponse`, `tasks/tasks-core.listAttempts`
   - Routes: `GET /api/slow-ops/cluster`

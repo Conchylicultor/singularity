@@ -13,6 +13,7 @@ import {
   type Tab,
 } from "@plugins/apps/web";
 import { PortalThemeScopeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import {
   Surface,
   PlacementStyleProvider,
@@ -130,7 +131,7 @@ export function SurfaceBody() {
     // Each forked app's scope block is mounted centrally (theme-engine's
     // AppScopeThemes at Core.Root); each tab container is still tagged
     // `data-theme-scope="app:<id>"` to pick it up.
-    <div className="relative h-full w-full overflow-hidden bg-background transform-gpu">
+    <Clip className="relative h-full w-full bg-background transform-gpu">
       {/* Per-placement backdrops (e.g. floating's desktop wallpaper), rendered
           only while >= 1 tab uses that placement so they never bleed otherwise. */}
       {backdrops.map((d) => {
@@ -174,7 +175,7 @@ export function SurfaceBody() {
           />
         );
       })}
-    </div>
+    </Clip>
   );
 }
 
@@ -283,6 +284,7 @@ function TabContainer({
           PortalThemeScopeProvider is ALSO always present (stable scope per tab),
           so it never remounts TabSurface (keep-alive). */}
       <div
+        // eslint-disable-next-line layout/no-adhoc-layout -- stable keep-alive content inset: always-present full-bleed layer whose CSS the active placement's Chrome pushes via insetStyle (titlebar inset / minimized hide); its parent-chain identity must not change, so no wrapping primitive
         className="absolute inset-0 min-h-0 min-w-0 transform-gpu"
         style={insetStyle ?? undefined}
       >

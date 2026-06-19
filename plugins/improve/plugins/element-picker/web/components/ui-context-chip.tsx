@@ -1,6 +1,7 @@
 import { MdAdsClick } from "react-icons/md";
 import { UI_CONTEXT_FIELDS, type UiContextMeta } from "../../core";
 import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 
@@ -8,19 +9,25 @@ import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 function DetailRow({ label, value }: { label: string; value?: string }) {
   if (!value) return null;
   return (
-    <Stack as="div" direction="row" gap="sm" align="baseline">
-      <Text
-        as="span"
-        variant="caption"
-        tone="muted"
-        className="w-14 shrink-0 text-right"
-      >
-        {label}
-      </Text>
-      <Text as="span" variant="caption" className="min-w-0 break-all">
-        {value}
-      </Text>
-    </Stack>
+    <Frame
+      gap="sm"
+      align="baseline"
+      leading={
+        <Text
+          as="span"
+          variant="caption"
+          tone="muted"
+          className="w-14 text-right"
+        >
+          {label}
+        </Text>
+      }
+      content={
+        <Text as="span" variant="caption" className="break-all">
+          {value}
+        </Text>
+      }
+    />
   );
 }
 
@@ -33,14 +40,18 @@ export function UiContextChip({ meta }: { meta: UiContextMeta }) {
       x="xs"
       y="2xs"
       contentEditable={false}
-      className="bg-muted border-border text-foreground hover:bg-accent inline-flex max-w-40 cursor-pointer rounded-md border align-middle transition-colors"
+      className="bg-muted border-border text-foreground hover:bg-accent inline-block max-w-40 cursor-pointer rounded-md border align-middle transition-colors"
     >
-      <Stack as="span" direction="row" gap="2xs" align="center" className="min-w-0">
-        <MdAdsClick className="text-muted-foreground size-3.5 shrink-0" />
-        <Text as="span" variant="label" className="min-w-0 truncate">
-          {meta.element}
-        </Text>
-      </Stack>
+      <Frame
+        as="span"
+        gap="2xs"
+        leading={<MdAdsClick className="text-muted-foreground size-3.5" />}
+        content={
+          <Text as="span" variant="label">
+            {meta.element}
+          </Text>
+        }
+      />
     </Inset>
   );
 
@@ -48,12 +59,15 @@ export function UiContextChip({ meta }: { meta: UiContextMeta }) {
     <InlinePopover trigger={trigger} contentClassName="w-80" tooltip="UI element context">
       <Inset pad="sm">
         <Stack gap="sm">
-          <Stack direction="row" gap="2xs" align="center" className="min-w-0">
-            <MdAdsClick className="text-muted-foreground size-4 shrink-0" />
-            <Text as="span" variant="label" className="min-w-0 break-all">
-              {meta.element}
-            </Text>
-          </Stack>
+          <Frame
+            gap="2xs"
+            leading={<MdAdsClick className="text-muted-foreground size-4" />}
+            content={
+              <Text as="span" variant="label" className="break-all">
+                {meta.element}
+              </Text>
+            }
+          />
           <Stack gap="2xs">
             {/* Every field is rendered straight from the shared registry, so the
                 popover can never silently drop a field the tag carries — adding a

@@ -1,4 +1,6 @@
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/core";
 
 /**
@@ -8,13 +10,12 @@ import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/c
  */
 export function NoRenderer(_props: { story: StoryNode[]; activeRendererId: string }) {
   return (
-    <Text
-      as="div"
-      variant="body"
-      tone="muted"
-      className="flex h-full items-center justify-center p-2xl"
-    >
-      No renderer available
-    </Text>
+    <Center className="h-full">
+      <Inset pad="2xl">
+        <Text variant="body" tone="muted">
+          No renderer available
+        </Text>
+      </Inset>
+    </Center>
   );
 }

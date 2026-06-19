@@ -698,6 +698,9 @@ function ReorderInner({
               // wrapper is `pointer-events-none`. The popover content portals to
               // <body>, escaping that trap — so a nested narrow area becomes
               // editable here even though inline drag never was.
+              // `shrink-0` keeps this rigid trigger from being crushed in the
+              // narrow horizontal reorder band it sits in.
+              // eslint-disable-next-line layout/no-adhoc-layout -- rigid popover-trigger leaf in the constrained horizontal reorder band
               className="shrink-0 pointer-events-auto"
             >
               <MdTune className="size-3.5" />

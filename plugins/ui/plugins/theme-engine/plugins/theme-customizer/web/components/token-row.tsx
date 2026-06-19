@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export interface TokenRowProps {
   label: string;
@@ -75,12 +76,13 @@ export function TokenRow({
         />
       ) : null}
 
-      <div className="flex flex-col flex-1 min-w-0">
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible truncating leaf of Row's flex (label + cssVar column) */}
+      <Stack gap="none" className="flex-1 min-w-0">
         <Text as="span" variant="label" className="truncate">{label}</Text>
         <span className="text-3xs text-muted-foreground truncate font-mono">
           {cssVar}
         </span>
-      </div>
+      </Stack>
 
       {isColor ? (
         <Text
@@ -105,6 +107,7 @@ export function TokenRow({
       {isSplit && (
         <span
           title="Light and dark values differ"
+          // eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-size indicator + clipped gradient fill; rigid leaf of Row's flex
           className="shrink-0 size-3 rounded-full border border-muted-foreground/40 overflow-hidden"
           style={{
             background:
@@ -117,6 +120,7 @@ export function TokenRow({
         type="button"
         onClick={onReset}
         title="Reset to preset value"
+        // eslint-disable-next-line layout/no-adhoc-layout -- rigid reset affordance; rigid leaf of Row's flex
         className={`shrink-0 text-muted-foreground hover:text-foreground transition-opacity ${
           isOverridden
             ? "opacity-100"

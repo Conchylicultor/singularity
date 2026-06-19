@@ -1,6 +1,8 @@
 import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdDelete } from "react-icons/md";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
@@ -47,9 +49,12 @@ export function DeletePageAction({ row }: ItemActionProps<Block>) {
         disabled={result.pending}
         title="Delete page"
         aria-label="Delete page"
-        className="hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
+        // eslint-disable-next-line layout/no-adhoc-layout -- rigid edge button in the data-view row-actions flex cluster (externally owned)
+        className="hover:bg-background/60 size-6 shrink-0 rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
       >
-        <MdDelete className="size-4" />
+        <Center className="size-full">
+          <MdDelete className="size-4" />
+        </Center>
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
@@ -66,15 +71,20 @@ export function DeletePageAction({ row }: ItemActionProps<Block>) {
               ? This also removes all of their content and cannot be undone.
             </DialogDescription>
           )}
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- action row offset below the dialog description; one-off dialog footer spacing */}
-          <div className="mt-4 flex justify-end gap-sm">
+          <Stack
+            direction="row"
+            justify="end"
+            gap="sm"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- action row offset below the dialog description; one-off dialog footer spacing
+            className="mt-4"
+          >
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
             <Button variant="destructive" onClick={() => onConfirm()}>
               Delete
             </Button>
-          </div>
+          </Stack>
         </DialogContent>
       </Dialog>
     </>

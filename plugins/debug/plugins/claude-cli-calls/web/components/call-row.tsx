@@ -6,6 +6,10 @@ import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export function CallRow({ call }: { call: ClaudeCliCall }) {
@@ -18,78 +22,84 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
 
   return (
     <li className="px-md py-sm">
-      <button
-        {...triggerProps}
-        className="flex w-full items-start gap-sm text-left"
-      >
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align chevron with first text line */}
-        <span className="mt-0.5 text-muted-foreground">
-          {open ? <MdExpandLess className="size-4" /> : <MdExpandMore className="size-4" />}
-        </span>
-        <div className="flex min-w-0 flex-1 flex-col gap-xs">
-          <Text as="div" variant="caption" className="flex flex-wrap items-center gap-sm">
-            <Badge size="md" colorClass={familyClass(modelMeta.family)}>
-              {modelMeta.label}
-            </Badge>
-            <Badge variant="muted" size="md" className="font-mono">{call.sourceName}</Badge>
-            <SourceContextChip context={call.sourceContext} />
-            <span className="text-muted-foreground">
-              <RelativeTime date={call.createdAt} />
+      <button {...triggerProps} className="w-full text-left">
+        <Frame
+          align="start"
+          leading={
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align chevron with first text line
+            <span className="mt-0.5 text-muted-foreground">
+              {open ? <MdExpandLess className="size-4" /> : <MdExpandMore className="size-4" />}
             </span>
-            <span className="tabular-nums text-muted-foreground">
-              {call.durationMs}ms
-            </span>
-            {isError && (
-              <Badge variant="destructive" size="md">
-                error
-              </Badge>
-            )}
-          </Text>
-          <Text
-            as="div"
-            variant="body"
-            className={cn(
-              "truncate",
-              isError ? "text-destructive" : "text-foreground",
-            )}
-          >
-            {previewText || <span className="text-muted-foreground">&lt;empty&gt;</span>}
-          </Text>
-        </div>
+          }
+          content={
+            <Stack gap="xs">
+              <Text as="div" variant="caption">
+                <Cluster>
+                <Badge size="md" colorClass={familyClass(modelMeta.family)}>
+                  {modelMeta.label}
+                </Badge>
+                <Badge variant="muted" size="md" className="font-mono">{call.sourceName}</Badge>
+                <SourceContextChip context={call.sourceContext} />
+                <span className="text-muted-foreground">
+                  <RelativeTime date={call.createdAt} />
+                </span>
+                <span className="tabular-nums text-muted-foreground">
+                  {call.durationMs}ms
+                </span>
+                {isError && (
+                  <Badge variant="destructive" size="md">
+                    error
+                  </Badge>
+                )}
+                </Cluster>
+              </Text>
+              <Text
+                as="div"
+                variant="body"
+                className={cn(
+                  "truncate",
+                  isError ? "text-destructive" : "text-foreground",
+                )}
+              >
+                {previewText || <span className="text-muted-foreground">&lt;empty&gt;</span>}
+              </Text>
+            </Stack>
+          }
+        />
       </button>
       {open && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- indented detail block: top/left offset under the trigger row plus vertical rhythm on a Text wrapper element
         <Text as="div" variant="body" id={contentId} className="mt-3 ml-6 space-y-3">
           {call.sourceContext && Object.keys(call.sourceContext).length > 0 && (
             <Section label="Source context">
-              <pre className="overflow-auto rounded-md bg-muted p-sm text-caption">
+              <Scroll as="pre" axis="both" className="rounded-md bg-muted p-sm text-caption">
                 {JSON.stringify(call.sourceContext, null, 2)}
-              </pre>
+              </Scroll>
             </Section>
           )}
           {call.system && (
             <Section label="System">
-              <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-sm text-caption">
+              <Scroll as="pre" className="max-h-64 whitespace-pre-wrap rounded-md bg-muted p-sm text-caption">
                 {call.system}
-              </pre>
+              </Scroll>
             </Section>
           )}
           <Section label="Prompt">
-            <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-sm text-caption">
+            <Scroll as="pre" className="max-h-96 whitespace-pre-wrap rounded-md bg-muted p-sm text-caption">
               {call.prompt}
-            </pre>
+            </Scroll>
           </Section>
           {isError ? (
             <Section label="Error">
-              <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-destructive/10 p-sm text-caption text-destructive">
+              <Scroll as="pre" className="max-h-64 whitespace-pre-wrap rounded-md bg-destructive/10 p-sm text-caption text-destructive">
                 {call.error}
-              </pre>
+              </Scroll>
             </Section>
           ) : (
             <Section label="Output">
-              <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-sm text-caption">
+              <Scroll as="pre" className="max-h-96 whitespace-pre-wrap rounded-md bg-muted p-sm text-caption">
                 {call.output ?? ""}
-              </pre>
+              </Scroll>
             </Section>
           )}
           <Text as="div" variant="caption" className="text-muted-foreground">

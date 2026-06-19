@@ -3,8 +3,10 @@ import { MdChevronLeft, MdChevronRight } from "react-icons/md";
 import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { StoryContentTree } from "./story-content-tree";
 
 /**
@@ -49,18 +51,22 @@ export function SlidesRenderer({ story }: { story: StoryNode[]; activeRendererId
   const current = slides[safeIndex];
   if (!current) {
     return (
-      <div className="flex h-full items-center justify-center">
+      <Center className="h-full">
         <Text tone="muted" variant="body">
           Empty story
         </Text>
-      </div>
+      </Center>
     );
   }
 
   return (
     <Stack gap="sm">
-      <Card className="aspect-[16/9] overflow-auto rounded-lg p-xl">
-        <StoryContentTree nodes={current} />
+      <Card className="aspect-[16/9] rounded-lg p-none">
+        <Scroll axis="both" className="size-full">
+          <Inset pad="xl">
+            <StoryContentTree nodes={current} />
+          </Inset>
+        </Scroll>
       </Card>
       <Stack direction="row" gap="sm" align="center" justify="center">
         <IconButton

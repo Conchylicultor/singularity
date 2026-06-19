@@ -4,6 +4,8 @@ import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 
 // --- Area context ------------------------------------------------------------
@@ -111,33 +113,37 @@ export function SortableReorderItem({
     ctx?.onHide(itemKey);
   }
 
+  // The draggable edit-mode item box: a flex row (or a bounded flex-col when
+  // `fill`) carrying drag chrome (cursor-grab, ring). The layout mode flips on
+  // `fill` and rides with dnd-kit drag state, so the flex mechanics stay raw.
+  const itemClassName = editMode
+    ? ({ isDragging }: { isDragging: boolean }) =>
+        // eslint-disable-next-line layout/no-adhoc-layout -- draggable edit-mode item box; layout mode flips on fill + dnd drag chrome
+        cn(
+          // `control-min-sm` + centered content gives every edit-mode box a
+          // uniform height floor (matching the spacer and Add button) so
+          // heterogeneous contributions don't render ragged rings. Horizontal
+          // boxes hug their content; vertical boxes span the column (`w-full`)
+          // like the un-wrapped list rows they replace.
+          "group/reorder-item relative flex control-min-sm items-center cursor-grab rounded-md ring-1 ring-primary/50",
+          isHorizontal ? "" : "w-full",
+          // Fill contributions span the column height as a bounded flex column
+          // so their inner scroll region clamps (see `fill` docs).
+          fill && "flex-col flex-1 min-h-0",
+          isDragging && "opacity-40",
+        )
+    : "contents";
+
   return (
-    <SortableItem
-      id={itemKey}
-      disabled={!editMode}
-      className={
-        editMode
-          ? ({ isDragging }) =>
-              cn(
-                // `control-min-sm` + centered content gives every edit-mode box
-                // a uniform height floor (matching the spacer and Add button)
-                // so heterogeneous contributions don't render ragged rings.
-                // Horizontal boxes hug their content; vertical boxes span the
-                // column (`w-full`) like the un-wrapped list rows they replace.
-                "group/reorder-item relative flex control-min-sm items-center cursor-grab rounded-md ring-1 ring-primary/50",
-                isHorizontal ? "" : "w-full",
-                // Fill contributions span the column height as a bounded flex
-                // column so their inner scroll region clamps (see `fill` docs).
-                fill && "flex-col flex-1 min-h-0",
-                isDragging && "opacity-40",
-              )
-          : "contents"
-      }
-    >
+    <SortableItem id={itemKey} disabled={!editMode} className={itemClassName}>
       {() => (
         <>
           {editMode && (
+            // Hover-revealed × badge overhanging the item's top-right corner by
+            // a fixed pixel amount (off the density ramp) — drag-affordance
+            // chrome, kept as raw positioning.
             <button
+              // eslint-disable-next-line layout/no-adhoc-layout -- hover-revealed × badge overhanging the draggable item corner (off-ramp pixel overhang)
               className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs cursor-pointer opacity-0 pointer-events-none group-hover/reorder-item:opacity-80 group-hover/reorder-item:pointer-events-auto hover:!opacity-100 hover:pointer-events-auto transition-opacity"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={handleHide}
@@ -148,6 +154,11 @@ export function SortableReorderItem({
           )}
           <div
             ref={contentRef}
+            // The fill branch turns this wrapper into a bounded flex column so a
+            // contribution's inner `flex-1 min-h-0` scroll region clamps instead
+            // of overflowing — a conditional layout bound tied to the fill/edit
+            // machinery, kept raw.
+            // eslint-disable-next-line layout/no-adhoc-layout -- conditional fill bound (bounded flex column) for the edit-mode content wrapper
             className={cn(
               editMode ? "pointer-events-none" : "contents",
               // Fill the box so full-width vertical rows keep spanning the column.
@@ -195,6 +206,8 @@ export function SpacerReorderItem({
   const ctx = useContext(ReorderAreaContext);
 
   if (!editMode) {
+    // A spacer is a flex-grow gap that absorbs the slack between siblings.
+    // eslint-disable-next-line layout/no-adhoc-layout -- flex-grow spacer gap absorbing slack between slot contributions
     return <div className="flex-1" />;
   }
 
@@ -204,9 +217,15 @@ export function SpacerReorderItem({
   }
 
   return (
+    // The SortableItem wrapper inherits the spacer's flex-grow role so the
+    // draggable placeholder still absorbs slack like the live gap it replaces.
+    // eslint-disable-next-line layout/no-adhoc-layout -- flex-grow spacer placeholder absorbing slack
     <SortableItem id={itemKey} className="flex-1">
       {({ isDragging }) => (
+        // The draggable dashed spacer placeholder: a flex-grow, centered box
+        // carrying drag chrome (cursor-grab, dashed ring).
         <div
+          // eslint-disable-next-line layout/no-adhoc-layout -- draggable flex-grow spacer placeholder with drag chrome
           className={cn(
             "group relative flex control-min-sm min-w-8 flex-1 cursor-grab items-center justify-center rounded-md border border-dashed border-muted-foreground/40 px-sm",
             isDragging && "opacity-40",
@@ -216,6 +235,7 @@ export function SpacerReorderItem({
             ⇔
           </span>
           <button
+            // eslint-disable-next-line layout/no-adhoc-layout -- hover-revealed × badge overhanging the spacer corner (off-ramp pixel overhang)
             className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs cursor-pointer opacity-0 pointer-events-none group-hover:opacity-80 group-hover:pointer-events-auto hover:!opacity-100 hover:pointer-events-auto transition-opacity"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleDelete}
@@ -276,7 +296,7 @@ export function RestoreButton({
                 key={item.key}
                 size="sm"
                 hover="accent"
-                icon={<MdAdd className="shrink-0 text-muted-foreground" />}
+                icon={<MdAdd className="text-muted-foreground" />}
                 onClick={() => {
                   handleRestore(item.key);
                   if (hiddenItems.length <= 1) setOpen(false);
@@ -295,7 +315,7 @@ export function RestoreButton({
                 key={insert.label}
                 size="sm"
                 hover="accent"
-                icon={<MdAdd className="shrink-0 text-muted-foreground" />}
+                icon={<MdAdd className="text-muted-foreground" />}
                 onClick={() => {
                   insert.onInsert();
                   setOpen(false);
@@ -308,17 +328,27 @@ export function RestoreButton({
         )}
 
         <div className="border-t border-border px-sm py-sm">
-          <Text
+          <Inline
             as="div"
-            variant="label"
+            gap="xs"
             // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the Marketplace label from the search input
-            className="flex items-center gap-xs text-muted-foreground mb-1.5"
+            className="text-muted-foreground mb-1.5"
           >
             <MdStorefront className="size-3.5" />
-            Marketplace
-          </Text>
+            <Text as="span" variant="label">
+              Marketplace
+            </Text>
+          </Inline>
           <div className="relative">
-            <MdSearch className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
+            {/* Decorative search glyph pinned to the input's left edge, vertically centered. `left-2` (0.5rem) is off the density ramp → inline-style offset. */}
+            <Pin
+              to="left"
+              decorative
+              style={{ left: "0.5rem" }}
+              className="size-3.5 text-muted-foreground"
+            >
+              <MdSearch className="size-3.5" />
+            </Pin>
             <Input
               placeholder="Search..."
               // eslint-disable-next-line spacing/no-adhoc-spacing -- precise left padding clearing the absolutely-positioned search icon
@@ -341,7 +371,7 @@ export function RestoreButton({
             size="sm"
             hover="accent"
             disabled
-            icon={<MdAdd className="shrink-0" />}
+            icon={<MdAdd />}
           >
             Create custom plugin
           </Row>

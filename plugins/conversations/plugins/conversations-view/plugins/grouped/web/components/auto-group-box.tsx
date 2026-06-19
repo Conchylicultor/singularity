@@ -50,7 +50,7 @@ export function AutoGroupBox({
         });
       }}
       leadingIcon={
-        <MdCallMerge className="size-3.5 shrink-0 text-muted-foreground" />
+        <MdCallMerge className="size-3.5 text-muted-foreground" />
       }
       title={<GroupRename value={title} onSave={onRename} />}
     >

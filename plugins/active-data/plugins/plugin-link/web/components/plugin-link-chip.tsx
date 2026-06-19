@@ -81,7 +81,7 @@ export function PluginLinkChip({
         }
       }}
       title={node.description ?? resolvedId}
-      leading={<MdWidgets className="shrink-0 text-muted-foreground" />}
+      leading={<MdWidgets className="text-muted-foreground" />}
       mono
     >
       {id}

@@ -7,6 +7,9 @@ import {
 import { EndpointError, fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { getScreenshot } from "../../shared/endpoints";
 import { ToolsPane, type Tool, type DrawSettings } from "./tools-pane";
 import { CropOverlay, type CropRect } from "./crop-overlay";
@@ -88,31 +91,35 @@ export function ScreenshotView({ id }: { id: string }) {
   }, [reload]);
 
   return (
-    <div className="flex h-full min-h-0 w-full overflow-hidden">
+    // eslint-disable-next-line layout/no-adhoc-layout -- full-surface split row that also clips (flex-row + overflow-hidden, no single primitive)
+    <Stack gap="none" direction="row" className="h-full w-full overflow-hidden">
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible column leaf of the split row (fills + clips its share) */}
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/40">
-          {error ? (
-            <Text as="div" variant="body" tone="muted">
-              {error}
-            </Text>
-          ) : !imageBlob ? (
-            <Loading />
-          ) : (
-            <ImageStage
-              blob={imageBlob}
-              tool={tool}
-              onCropCommit={async (rect) => {
-                const base = strokes.length > 0 ? await applyStrokes(imageBlob, strokes) : imageBlob;
-                const next = await applyCrop(base, rect);
-                setImageBlob(next);
-                resetEdits();
-              }}
-              strokes={strokes}
-              onStrokesChange={setStrokes}
-              drawSettings={draw}
-            />
-          )}
-        </div>
+        <Clip fill>
+          <Center className="relative h-full w-full bg-muted/40">
+            {error ? (
+              <Text as="div" variant="body" tone="muted">
+                {error}
+              </Text>
+            ) : !imageBlob ? (
+              <Loading />
+            ) : (
+              <ImageStage
+                blob={imageBlob}
+                tool={tool}
+                onCropCommit={async (rect) => {
+                  const base = strokes.length > 0 ? await applyStrokes(imageBlob, strokes) : imageBlob;
+                  const next = await applyCrop(base, rect);
+                  setImageBlob(next);
+                  resetEdits();
+                }}
+                strokes={strokes}
+                onStrokesChange={setStrokes}
+                drawSettings={draw}
+              />
+            )}
+          </Center>
+        </Clip>
         <PromptForm
           id={id}
           getBlob={async () => {
@@ -121,6 +128,7 @@ export function ScreenshotView({ id }: { id: string }) {
           }}
         />
       </div>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-width sidebar leaf of the split row */}
       <div className="w-72 shrink-0 border-l bg-background">
         <ToolsPane
           tool={tool}
@@ -159,7 +167,7 @@ export function ScreenshotView({ id }: { id: string }) {
           }}
         />
       </div>
-    </div>
+    </Stack>
   );
 }
 
@@ -184,7 +192,7 @@ function ImageStage({
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
   const [displayedRect, setDisplayedRect] = useState<DOMRect | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
-  const containerRef = useRef<HTMLDivElement | null>(null);
+  const containerRef = useRef<HTMLElement | null>(null);
 
   useEffect(() => {
     const u = URL.createObjectURL(blob);
@@ -218,7 +226,7 @@ function ImageStage({
   }, [url, naturalSize]);
 
   return (
-    <div ref={containerRef} className="relative flex h-full w-full items-center justify-center p-lg">
+    <Center as="div" ref={containerRef} className="relative h-full w-full p-lg">
       {url && (
         <img
           ref={imgRef}
@@ -250,7 +258,7 @@ function ImageStage({
           readOnly={tool !== "draw"}
         />
       )}
-    </div>
+    </Center>
   );
 }
 

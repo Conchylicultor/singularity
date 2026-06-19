@@ -5,6 +5,10 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { MdRefresh } from "react-icons/md";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { listMemoryFiles, readMemoryFile } from "../../shared/endpoints";
@@ -78,24 +82,30 @@ export function MemoryPanel() {
   }, [files]);
 
   return (
-    <div className="flex h-full">
+    <Stack direction="row" gap="none" className="h-full">
       {/* File list */}
-      <div className="flex w-56 shrink-0 flex-col border-r">
-        <div className="flex items-center justify-between border-b px-md py-sm">
-          <SectionLabel as="span" className="font-medium">
-            Memory files
-          </SectionLabel>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="size-6"
-            onClick={() => loadList()}
-            title="Refresh"
-          >
-            <MdRefresh className="size-4" />
-          </Button>
-        </div>
-        <div className="flex-1 overflow-y-auto py-xs">
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-width sidebar column in the two-pane row; must not shrink under the flexible content pane */}
+      <Stack gap="none" className="w-56 shrink-0 border-r">
+        <Frame
+          className="border-b px-md py-sm"
+          content={
+            <SectionLabel as="span" className="font-medium">
+              Memory files
+            </SectionLabel>
+          }
+          trailing={
+            <Button
+              variant="ghost"
+              size="icon"
+              className="size-6"
+              onClick={() => loadList()}
+              title="Refresh"
+            >
+              <MdRefresh className="size-4" />
+            </Button>
+          }
+        />
+        <Scroll fill className="py-xs">
           {grouped.map(({ type, items }) => (
             <div key={type}>
               {type !== "index" && (
@@ -109,20 +119,24 @@ export function MemoryPanel() {
                   type="button"
                   onClick={() => setSelected(f.name)}
                   className={cn(
-                    "w-full px-md py-xs text-left text-caption transition-colors hover:bg-muted/50 flex items-center gap-xs min-w-0",
+                    "w-full px-md py-xs text-left text-caption transition-colors hover:bg-muted/50",
                     selected === f.name && "bg-muted font-medium",
                   )}
                 >
-                  <span className="truncate">{displayName(f.name)}</span>
-                  {f.type !== "index" && f.type !== "other" && (
-                    <Badge
-                      size="sm"
-                      colorClass={TYPE_BADGE_CLASSES[f.type]}
-                      className="ml-auto shrink-0"
-                    >
-                      {formatStatusLabel(f.type)}
-                    </Badge>
-                  )}
+                  <Frame
+                    gap="xs"
+                    content={<span className="truncate">{displayName(f.name)}</span>}
+                    trailing={
+                      f.type !== "index" && f.type !== "other" ? (
+                        <Badge
+                          size="sm"
+                          colorClass={TYPE_BADGE_CLASSES[f.type]}
+                        >
+                          {formatStatusLabel(f.type)}
+                        </Badge>
+                      ) : undefined
+                    }
+                  />
                 </button>
               ))}
             </div>
@@ -130,32 +144,38 @@ export function MemoryPanel() {
           {files.length === 0 && (
             <Text as="p" variant="caption" className="px-md py-lg text-muted-foreground">No memory files found.</Text>
           )}
-        </div>
+        </Scroll>
         {dir && (
           <div className="border-t px-md py-sm">
             <p className="truncate font-mono text-3xs text-muted-foreground/50" title={dir}>{dir}</p>
           </div>
         )}
-      </div>
+      </Stack>
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">
+      <Scroll fill>
         {!selected ? (
-          <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
-            Select a memory file
-          </Text>
+          <Center className="h-full">
+            <Text as="div" variant="body" className="text-muted-foreground">
+              Select a memory file
+            </Text>
+          </Center>
         ) : loadingContent ? (
-          <Loading className="flex h-full items-center justify-center" />
+          <Center className="h-full">
+            <Loading />
+          </Center>
         ) : error ? (
-          <Text as="div" variant="body" className="flex h-full items-center justify-center text-destructive">
-            {error}
-          </Text>
+          <Center className="h-full">
+            <Text as="div" variant="body" className="text-destructive">
+              {error}
+            </Text>
+          </Center>
         ) : content !== null ? (
           <Text as="div" variant="body" className="px-xl py-lg">
             <Markdown>{content}</Markdown>
           </Text>
         ) : null}
-      </div>
-    </div>
+      </Scroll>
+    </Stack>
   );
 }

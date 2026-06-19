@@ -6,6 +6,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import type { StagedDiffProps } from "@plugins/config_v2/plugins/staging/web";
 import type { ReorderTree } from "@plugins/fields/plugins/reorder-tree/core";
 import { diffReorderTrees, type ReorderDiffEntry } from "../internal/diff";
@@ -64,25 +65,33 @@ function DiffRow({ entry }: { entry: ReorderDiffEntry }) {
   const meta = STATUS_META[entry.status];
   const muted = entry.status === "unchanged" || entry.status === "hidden";
   return (
-    <Stack direction="row" gap="sm" align="center">
-      {entry.status === "hidden" ? (
-        <MdClose className="size-3.5 shrink-0 text-warning" />
-      ) : (
-        <MdCheck className="size-3.5 shrink-0 text-success" />
-      )}
-      <Text
-        as="span"
-        variant="caption"
-        tone={muted ? "muted" : "default"}
-        className="min-w-0 flex-1 truncate"
-      >
-        {entry.label}
-      </Text>
-      {entry.status !== "unchanged" && (
-        <Badge size="sm" variant={meta.variant}>
-          {meta.label}
-        </Badge>
-      )}
-    </Stack>
+    <Frame
+      gap="sm"
+      align="center"
+      leading={
+        entry.status === "hidden" ? (
+          <MdClose className="size-3.5 text-warning" />
+        ) : (
+          <MdCheck className="size-3.5 text-success" />
+        )
+      }
+      content={
+        <Text
+          as="span"
+          variant="caption"
+          tone={muted ? "muted" : "default"}
+          className="truncate"
+        >
+          {entry.label}
+        </Text>
+      }
+      trailing={
+        entry.status !== "unchanged" ? (
+          <Badge size="sm" variant={meta.variant}>
+            {meta.label}
+          </Badge>
+        ) : undefined
+      }
+    />
   );
 }

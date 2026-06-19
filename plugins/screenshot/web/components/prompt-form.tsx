@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { LaunchControl, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { saveScreenshotFile } from "../../shared/endpoints";
 
 export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | null | Promise<Blob | null> }) {
@@ -32,7 +33,8 @@ export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | 
   };
 
   return (
-    <div className="bg-background flex shrink-0 flex-col gap-sm border-t p-md">
+    // eslint-disable-next-line layout/no-adhoc-layout -- rigid footer leaf of the screenshot view's flex column
+    <Stack gap="sm" className="bg-background shrink-0 border-t p-md">
       <TextEditor
         value={text}
         onChange={setText}
@@ -42,6 +44,6 @@ export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | 
         namespace="screenshot-prompt"
       />
       <LaunchControl size="sm" getRequest={getRequest} />
-    </div>
+    </Stack>
   );
 }

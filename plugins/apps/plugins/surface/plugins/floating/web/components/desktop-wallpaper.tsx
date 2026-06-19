@@ -24,6 +24,7 @@ export function DesktopWallpaper() {
   return (
     <svg
       aria-hidden
+      // eslint-disable-next-line layout/no-adhoc-layout -- passive full-bleed wallpaper: the SVG element is itself the absolute backdrop layer (its own viewBox + size-full), not an Overlay wrapping content
       className="pointer-events-none absolute inset-0 size-full"
       viewBox="0 0 1600 1000"
       preserveAspectRatio="xMidYMid slice"

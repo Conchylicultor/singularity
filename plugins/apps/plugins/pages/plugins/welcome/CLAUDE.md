@@ -8,7 +8,7 @@
 - Web:
   - Slots: `PagesWelcome.Section` ← `apps.pages.welcome.quick-create`, `apps.pages.welcome.recent-pages`
   - Contributes: `Pane.Register` "pages-root"
-  - Uses: `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/pane.Pane`, `primitives/slot-render.defineRenderSlot`
+  - Uses: `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/pane.Pane`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `PagesWelcome`
 - Cross-plugin:
   - Imported by: `apps/pages/welcome/quick-create`, `apps/pages/welcome/recent-pages`

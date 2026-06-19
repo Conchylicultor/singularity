@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -35,16 +37,16 @@ function ConvReviewBody() {
 
   return (
     <PaneChrome pane={convReviewPane} title="Review">
-      <div className="flex h-full flex-col">
+      <Stack gap="none" className="h-full">
         <SourceTabs
           source={source}
           onChange={setSource}
           pushGroups={pushGroups}
         />
-        <div className="min-h-0 flex-1 overflow-auto">
+        <Scroll axis="both" fill>
           <Review.Host conversationId={convId} source={source} />
-        </div>
-      </div>
+        </Scroll>
+      </Stack>
     </PaneChrome>
   );
 }

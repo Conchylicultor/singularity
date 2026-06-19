@@ -9,6 +9,7 @@ import {
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { storiesResource } from "@plugins/apps/plugins/story/plugins/marker/web";
 import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { storyDetailPane } from "../panes";
 import { createStory } from "../internal/create-story";
@@ -56,8 +57,11 @@ export function StoryGallery() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
-      <div className="min-h-0 flex-1">
+    <Column
+      fill
+      scrollBody={false}
+      className="bg-background text-foreground"
+      body={
         <DataView<Block>
           title="Stories"
           loading={all.pending}
@@ -111,7 +115,7 @@ export function StoryGallery() {
             },
           }}
         />
-      </div>
-    </div>
+      }
+    />
   );
 }

@@ -2,6 +2,7 @@ import { MdEdit, MdDone } from "react-icons/md";
 import { setEditMode, useEditMode } from "@plugins/reorder/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { useHasStagedDefaults } from "@plugins/config_v2/plugins/staging/web";
 import { ExitCommitPopover } from "./exit-commit-popover";
 
@@ -24,11 +25,19 @@ export function PenButton() {
         onClick={() => setEditMode(!editMode)}
       />
       {hasStaged && (
-        <StatusDot
-          colorClass="bg-primary"
-          size="sm"
-          className="pointer-events-none absolute -top-0.5 -right-0.5 ring-2 ring-background"
-        />
+        // The dot overhangs the pen's top-right corner by a fixed 0.125rem —
+        // off the density ramp, so the offset is an inline-style override.
+        <Pin
+          to="top-right"
+          decorative
+          style={{ top: "-0.125rem", right: "-0.125rem" }}
+        >
+          <StatusDot
+            colorClass="bg-primary"
+            size="sm"
+            className="ring-2 ring-background"
+          />
+        </Pin>
       )}
     </ExitCommitPopover>
   );

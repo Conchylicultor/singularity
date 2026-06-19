@@ -1,5 +1,6 @@
 import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import type {
   PlacementChromeProps,
   PlacementDef,
@@ -35,7 +36,12 @@ export const soloDef: PlacementDef = {
 function SoloExitOverlay({ focused, onExitToDefault }: PlacementChromeProps) {
   if (!focused) return null;
   return (
-    <div className="group/solo absolute top-2 right-3 z-max">
+    <Pin
+      to="top-right"
+      // Asymmetric corner offsets (top-2 / right-3) overriding Pin's single-offset anchor.
+      style={{ top: "0.5rem", right: "0.75rem" }}
+      className="group/solo z-max"
+    >
       <div className="opacity-0 transition-opacity pointer-events-none group-hover/solo:opacity-100 group-hover/solo:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto">
         <IconButton
           icon={MdFullscreenExit}
@@ -44,6 +50,6 @@ function SoloExitOverlay({ focused, onExitToDefault }: PlacementChromeProps) {
           onClick={onExitToDefault}
         />
       </div>
-    </div>
+    </Pin>
   );
 }

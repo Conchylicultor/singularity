@@ -1,5 +1,6 @@
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { convFileTreePane } from "../panes";
 import { FileTreeView } from "./file-tree-view";
 
@@ -10,8 +11,8 @@ export function ConvFileTreeBody() {
   const conversation = useConversationById(convId ?? null);
   if (!conversation) return null;
   return (
-    <div className="h-full min-h-0 overflow-hidden">
+    <Clip fill className="h-full">
       <FileTreeView worktree={conversation.attemptId} />
-    </div>
+    </Clip>
   );
 }

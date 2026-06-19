@@ -14,6 +14,10 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { useResponsiveOverflow } from "@plugins/primitives/plugins/responsive-overflow/web";
 import {
   SortableList,
@@ -91,14 +95,22 @@ export function AppTabBar() {
 
   return (
     <PortalThemeScopeProvider scope={themeScope}>
-    <div
+    <Stack
+      direction="row"
+      align="center"
+      gap="none"
       data-theme-scope={themeScope}
-      className="flex shrink-0 items-center border-b bg-background px-xs py-2xs"
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid tab bar above the flexible tab body in AppsLayout's column; shrink-0 keeps its chrome height
+      className="shrink-0 border-b bg-background px-xs py-2xs"
     >
-      <div
+      <Scroll
+        axis="x"
+        hideScrollbar
         ref={containerRef}
-        className="flex min-w-0 items-center gap-2xs overflow-x-auto [&::-webkit-scrollbar]:hidden"
+        // eslint-disable-next-line layout/no-adhoc-layout -- flexible strip yields width to the trailing actions; min-w-0 lets the chips scroll instead of pushing them off-edge
+        className="min-w-0"
       >
+      <Stack direction="row" align="center" gap="2xs">
         <SortableList
           items={resolved.map(({ tab }) => tab.tabId)}
           onMove={(activeId, overId) => moveTab(activeId, overId)}
@@ -119,6 +131,7 @@ export function AppTabBar() {
               <SortableItem
                 key={tab.tabId}
                 id={tab.tabId}
+                // eslint-disable-next-line layout/no-adhoc-layout -- flexible chip leaf of the tab strip; min-w-0 lets the chip shrink/truncate instead of overflowing
                 className={(s) => cn("min-w-0", s.isDragging && "opacity-50")}
               >
                 {() => (
@@ -139,7 +152,8 @@ export function AppTabBar() {
             );
           })}
         </SortableList>
-      </div>
+      </Stack>
+      </Scroll>
       <IconButton
         icon={MdAdd}
         label={newTabPlacement !== getDefaultPlacement() ? "New window" : "New tab"}
@@ -148,6 +162,7 @@ export function AppTabBar() {
       />
       {/* Push the trailing action zone to the far right edge so it sits at a
           fixed corner (like the former floating bar), independent of tab count. */}
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- pure growing spacer pinning the trailing actions to the right edge */}
       <div className="flex-1" />
       {/* Trailing action zone — the `surface` plugin drops its placement control
           here and the global action bar pins itself to the right edge. */}
@@ -182,7 +197,7 @@ export function AppTabBar() {
           </div>,
           document.body,
         )}
-    </div>
+    </Stack>
     </PortalThemeScopeProvider>
   );
 }
@@ -212,40 +227,52 @@ const ChipShell = forwardRef<
   ref,
 ) {
   return (
-    <div
+    <Frame
       ref={ref}
       data-app-tab={appId}
+      gap="xs"
+      // eslint-disable-next-line layout/no-adhoc-layout -- flexible chip leaf of the tab strip; min-w-0 lets the whole chip shrink so its label truncates
       className={cn(
-        "group flex max-w-40 min-w-0 items-center gap-xs rounded-md py-2xs pl-xs pr-2xs text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        "group max-w-40 min-w-0 rounded-md py-2xs pl-xs pr-2xs text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         active && "bg-sidebar-accent text-sidebar-accent-foreground",
       )}
       {...rest}
-    >
-      <button
-        type="button"
-        aria-pressed={active}
-        onClick={onActivate}
-        className="flex min-w-0 flex-1 items-center gap-xs"
-      >
-        <Icon className="size-4 shrink-0" />
-        {!collapsed && (
-          <TruncatingText className="text-label">{label}</TruncatingText>
-        )}
-      </button>
-      {!collapsed && (
+      content={
         <button
           type="button"
-          aria-label={`Close ${label}`}
-          onClick={onClose}
-          className={cn(
-            "flex size-4 shrink-0 items-center justify-center rounded-sm transition-[color,background-color,opacity] hover:bg-sidebar-foreground/10 hover:text-sidebar-accent-foreground group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
-            active ? "opacity-70" : "opacity-0 pointer-events-none",
-          )}
+          aria-pressed={active}
+          onClick={onActivate}
+          className="block w-full"
         >
-          <MdClose className="size-3.5" />
+          <Frame
+            gap="xs"
+            leading={<Icon className="size-4" />}
+            content={
+              collapsed ? undefined : (
+                <TruncatingText className="text-label">{label}</TruncatingText>
+              )
+            }
+          />
         </button>
-      )}
-    </div>
+      }
+      trailing={
+        !collapsed && (
+          <button
+            type="button"
+            aria-label={`Close ${label}`}
+            onClick={onClose}
+            className={cn(
+              "rounded-sm transition-[color,background-color,opacity] hover:bg-sidebar-foreground/10 hover:text-sidebar-accent-foreground group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
+              active ? "opacity-70" : "opacity-0 pointer-events-none",
+            )}
+          >
+            <Center className="size-4">
+              <MdClose className="size-3.5" />
+            </Center>
+          </button>
+        )
+      }
+    />
   );
 });
 

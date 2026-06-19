@@ -1,4 +1,5 @@
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useConversationPreprompt } from "../internal/hooks";
 import { PrepromptIcon } from "./preprompt-icon";
@@ -13,9 +14,9 @@ export function PrepromptListIcon({ conv }: { conv: ConversationItemConv }) {
   if (!record) return null;
   return (
     <WithTooltip content={`Preprompt: ${record.title}`}>
-      <span className="inline-flex text-muted-foreground">
+      <Inline as="span" gap="none" className="text-muted-foreground">
         <PrepromptIcon record={record} />
-      </span>
+      </Inline>
     </WithTooltip>
   );
 }

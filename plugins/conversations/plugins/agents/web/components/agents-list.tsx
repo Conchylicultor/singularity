@@ -14,6 +14,7 @@ import {
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { useMultiSelect } from "@plugins/primitives/plugins/multi-select/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -87,7 +88,7 @@ export function AgentsList({
   const rows = result.data;
 
   return (
-    <div className="flex flex-col gap-xs">
+    <Stack gap="xs">
       <SystemFolder selectedSystemId={selectedSystemId} />
       <DataView<Agent>
         rows={rows}
@@ -146,6 +147,6 @@ export function AgentsList({
           },
         }}
       />
-    </div>
+    </Stack>
   );
 }

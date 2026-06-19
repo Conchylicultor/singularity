@@ -5,6 +5,8 @@ import {
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -90,8 +92,9 @@ export function ImportByUrl({
         <span className="font-medium">Import by URL</span>
       </CollapsibleTrigger>
 
-      <CollapsibleContent className="flex flex-col gap-md border-t border-border/60 px-md py-md">
-        <div className="flex gap-sm">
+      <CollapsibleContent className="border-t border-border/60 px-md py-md">
+       <Stack gap="md">
+        <Stack direction="row" gap="sm">
           <input
             type="text"
             value={input}
@@ -100,6 +103,7 @@ export function ImportByUrl({
               if (e.key === "Enter") handleImport();
             }}
             placeholder="Theme ID or tweakcn URL..."
+            // eslint-disable-next-line layout/no-adhoc-layout -- flexible text input filling the row beside the rigid Import button
             className="flex-1 rounded-md border border-border bg-muted/20 px-md py-xs text-body text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
           />
           <Button
@@ -112,7 +116,7 @@ export function ImportByUrl({
           >
             Import
           </Button>
-        </div>
+        </Stack>
 
         {importMutation.isError && (
           <Text as="p" variant="body" tone="destructive">
@@ -121,43 +125,47 @@ export function ImportByUrl({
         )}
 
         {visible.length > 0 ? (
-          <div className="flex flex-col gap-sm">
+          <Stack gap="sm">
             {visible.map((theme) => (
-              <div
+              <Frame
                 key={theme.id}
-                className="flex items-center justify-between rounded-lg border border-border/60 px-md py-sm"
-              >
-                <Text as="span" variant="label">
-                  {theme.label}
-                </Text>
-                <div className="flex gap-xs">
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => onApply(theme.tweakcnId, theme.presets)}
-                    className="text-primary hover:bg-primary/10"
-                  >
-                    Apply
-                  </Button>
-                  <Button
-                    variant="ghost"
-                    size="xs"
-                    onClick={() => deleteMutation.mutate({ params: { id: theme.id } })}
-                    loading={deleteMutation.isPending}
-                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                  >
-                    Delete
-                  </Button>
-                </div>
-              </div>
+                className="rounded-lg border border-border/60 px-md py-sm"
+                content={
+                  <Text as="span" variant="label">
+                    {theme.label}
+                  </Text>
+                }
+                trailing={
+                  <Stack direction="row" gap="xs">
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => onApply(theme.tweakcnId, theme.presets)}
+                      className="text-primary hover:bg-primary/10"
+                    >
+                      Apply
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
+                      onClick={() => deleteMutation.mutate({ params: { id: theme.id } })}
+                      loading={deleteMutation.isPending}
+                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                    >
+                      Delete
+                    </Button>
+                  </Stack>
+                }
+              />
             ))}
-          </div>
+          </Stack>
         ) : (
           <Text as="p" variant="body" tone="muted">
             Paste a tweakcn theme ID or URL to import any theme — including ones
             not in the community catalog.
           </Text>
         )}
+       </Stack>
       </CollapsibleContent>
     </Collapsible>
   );

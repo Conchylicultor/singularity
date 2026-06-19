@@ -10,7 +10,7 @@ export function ApiChangesSummary({ plugin }: PluginReviewProps) {
   );
   if (count === 0) return null;
   return (
-    <Badge size="sm" colorClass="bg-categorical-5/15 text-categorical-5" className="shrink-0 font-semibold">
+    <Badge size="sm" colorClass="bg-categorical-5/15 text-categorical-5" className="font-semibold">
       {count} API
     </Badge>
   );

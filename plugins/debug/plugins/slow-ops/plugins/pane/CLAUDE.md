@@ -32,7 +32,7 @@ timeline.
 - Web:
   - Slots: `SlowOps.View` ← `debug.slow-ops.cluster`, `debug.slow-ops.pane`, `slowOpsPane.Actions`
   - Contributes: `Pane.Register` "slow-ops", `SlowOps.View` "Local" → `SlowOpsView`, `DebugApp.Sidebar` "Slow Ops" → `component`
-  - Uses: `apps/debug/shell.DebugApp`, `primitives/app-shell.sidebarNavItem`, `primitives/css/text.Text`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/tabbed-view.defineTabbedView`
+  - Uses: `apps/debug/shell.DebugApp`, `primitives/app-shell.sidebarNavItem`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/tabbed-view.defineTabbedView`
   - Exports: Values: `SlowOps`, `slowOpsPane`
 - Cross-plugin:
   - Imported by: `debug/slow-ops/cluster`

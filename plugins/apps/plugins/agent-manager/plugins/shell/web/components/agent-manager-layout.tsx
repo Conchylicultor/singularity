@@ -2,6 +2,7 @@ import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { navigate } from "@plugins/apps/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Shell } from "@plugins/shell/web";
 
 export function AgentManagerLayout() {
@@ -20,12 +21,18 @@ export function AgentManagerLayout() {
             if (window.location.pathname === "/agents") return;
             navigate("/agents");
           }}
-          className="flex min-w-0 items-center gap-sm rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of AppShellLayout's header flex; <a> can't be a Frame host (anchor href)
+          className="block min-w-0 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <img src="/icon.svg" alt="Singularity" className="size-6 shrink-0" />
-          <Text as="span" variant="subheading" className="truncate tracking-tight">
-            Singularity
-          </Text>
+          <Frame
+            gap="sm"
+            leading={<img src="/icon.svg" alt="Singularity" className="size-6" />}
+            content={
+              <Text as="span" variant="subheading" className="truncate tracking-tight">
+                Singularity
+              </Text>
+            }
+          />
         </a>
       }
     >

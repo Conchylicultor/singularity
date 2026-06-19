@@ -1,6 +1,7 @@
 import { useEffect, useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   TooltipProvider,
   appThemeScope,
@@ -35,13 +36,15 @@ function redirectTo(url: string) {
  */
 function DefaultRailFraming({ body }: RailFramingProps) {
   return (
-    <div
-      className="flex h-full min-h-0"
+    <Stack
+      direction="row"
+      gap="none"
+      className="h-full min-h-0"
       style={{ "--app-rail-width": "2.5rem" } as React.CSSProperties}
     >
       <AppRail />
       {body}
-    </div>
+    </Stack>
   );
 }
 
@@ -61,6 +64,7 @@ export function AppTabsBody() {
     // `fixed inset-y-0`) bounds to the content area BELOW the tab bar instead of
     // overlapping it. Portalled overlays (floating bar, popovers, dialogs)
     // render at document.body and are unaffected.
+    // eslint-disable-next-line layout/no-adhoc-layout -- flexible fill leaf of AppsLayout's column; transform-gpu makes it the containing block for fixed-positioned app sidebars
     <div className="relative min-h-0 min-w-0 flex-1 transform-gpu">
       {tabs.map((tab) => {
         const focused = tab.tabId === focusedTabId;
@@ -71,6 +75,7 @@ export function AppTabsBody() {
           // PortalThemeScopeProvider lets portaled descendants re-adopt the scope.
           <div
             key={tab.tabId}
+            // eslint-disable-next-line layout/no-adhoc-layout -- keep-alive: every tab is a full-bleed stacked sibling, only the focused one displayed
             className="absolute inset-0"
             data-theme-scope={appThemeScope(tab.appId)}
             style={{ display: focused ? "block" : "none" }}
@@ -150,12 +155,13 @@ export function AppsLayout() {
     <TooltipProvider delay={300}>
       <TabsProvider>
         <DocumentTitleSync />
-        <div className="flex h-full min-h-0 flex-col">
+        <Stack gap="none" className="h-full min-h-0">
           <AppTabBar />
+          {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible fill leaf below the rigid tab bar; bounds the framed surface's own scroll */}
           <div className="min-h-0 min-w-0 flex-1">
             <FramedSurface />
           </div>
-        </div>
+        </Stack>
       </TabsProvider>
     </TooltipProvider>
   );

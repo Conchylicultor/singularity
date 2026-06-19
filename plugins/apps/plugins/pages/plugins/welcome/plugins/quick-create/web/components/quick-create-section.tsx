@@ -28,6 +28,7 @@ export function QuickCreateSection(): ReactElement {
       <Text as="span" variant="label" tone="muted">
         Start a new page
       </Text>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- responsive col-count grid (1-up → 3-up at the sm viewport breakpoint) */}
       <div className="grid grid-cols-1 gap-md sm:grid-cols-3">
         {PAGE_TEMPLATES.map((template) => {
           const Icon = template.icon;

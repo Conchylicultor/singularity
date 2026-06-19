@@ -2,6 +2,7 @@ import { type ReactElement } from "react";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { PagesWelcome } from "./slots";
 
 export const pagesRootPane = Pane.define({
@@ -21,7 +22,7 @@ function PagesRoot(): ReactElement {
   // The Miller leaf column fills the surface and ignores its own width, so the
   // landing scrolls vertically and centers its content with a max-width column.
   return (
-    <div className="h-full overflow-y-auto">
+    <Scroll className="h-full">
       <Inset x="2xl" y="2xl" className="mx-auto w-full max-w-2xl">
         <Stack gap="2xl">
           <Stack gap="2xs">
@@ -39,6 +40,6 @@ function PagesRoot(): ReactElement {
           </Stack>
         </Stack>
       </Inset>
-    </div>
+    </Scroll>
   );
 }

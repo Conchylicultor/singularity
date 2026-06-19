@@ -1,3 +1,4 @@
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { RailFramingProps } from "@plugins/apps/core";
 
 /**
@@ -8,11 +9,13 @@ import type { RailFramingProps } from "@plugins/apps/core";
  */
 export function HiddenFraming({ body }: RailFramingProps) {
   return (
-    <div
-      className="flex h-full min-h-0"
+    <Stack
+      direction="row"
+      gap="none"
+      className="h-full min-h-0"
       style={{ "--app-rail-width": "0px" } as React.CSSProperties}
     >
       {body}
-    </div>
+    </Stack>
   );
 }

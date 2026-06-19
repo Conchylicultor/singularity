@@ -3,6 +3,9 @@ import { useCallback, useEffect, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdSend } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -230,9 +233,12 @@ export function EventsTestView() {
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-full flex-col overflow-auto p-xl">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-xl">
-        <header className="flex items-start justify-between gap-lg">
+    <Scroll axis="both" className="h-full p-xl">
+      <Stack gap="xl" className="mx-auto w-full max-w-3xl">
+        <Frame
+          gap="lg"
+          align="start"
+          content={
           <div>
             <Text as="h1" variant="title" className="tracking-tight">
               Events Test
@@ -247,13 +253,17 @@ export function EventsTestView() {
               job.
             </Text>
           </div>
-          <Button variant="ghost" size="sm" onClick={refresh}>
-            <MdRefresh className="size-4" />
-            Refresh
-          </Button>
-        </header>
+          }
+          trailing={
+            <Button variant="ghost" size="sm" onClick={refresh}>
+              <MdRefresh className="size-4" />
+              Refresh
+            </Button>
+          }
+        />
 
         {/* Subscribe + Emit forms */}
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- responsive 1→2 column form grid */}
         <div className="grid gap-lg md:grid-cols-2">
           <Section title="Subscribe">
             <FieldRow label="userId (filter)">
@@ -270,15 +280,17 @@ export function EventsTestView() {
                 onChange={(e) => setSubLabel(e.target.value)}
               />
             </FieldRow>
-            <Text as="label" variant="body" tone="muted" className="flex items-center gap-sm">
+            <Stack as="label" direction="row" gap="sm" align="center">
               <input
                 type="checkbox"
                 checked={subOneShot}
                 onChange={(e) => setSubOneShot(e.target.checked)}
                 className="size-4 rounded-md border-input"
               />
-              oneShot (delete row after fire)
-            </Text>
+              <Text as="span" variant="body" tone="muted">
+                oneShot (delete row after fire)
+              </Text>
+            </Stack>
             <Button onClick={onSubscribe} loading={subBusy}>
               <MdBolt className="size-4" />
               Subscribe
@@ -321,6 +333,7 @@ export function EventsTestView() {
             </Text>
           }
         >
+          {/* eslint-disable-next-line layout/no-adhoc-layout -- responsive 1→3 column form grid */}
           <div className="grid gap-md md:grid-cols-3">
             <FieldRow label="label">
               <Input
@@ -348,6 +361,7 @@ export function EventsTestView() {
             variant="secondary"
             onClick={onDirectEnqueue}
             loading={deBusy}
+            // eslint-disable-next-line layout/no-adhoc-layout -- per-child start alignment in the section's flex column
             className="self-start"
           >
             <MdSend className="size-4" />
@@ -369,39 +383,43 @@ export function EventsTestView() {
           ) : (
             <div className="divide-y divide-border rounded-md border border-border">
               {triggers.map((t) => (
-                <div
+                <Frame
                   key={t.id}
+                  gap="md"
                   className={cn(
-                    "flex items-center gap-md px-md py-sm text-body transition-colors",
+                    "px-md py-sm text-body transition-colors",
                     flashedIds.has(t.id) && "bg-success/10",
                   )}
-                >
-                  <div className="flex min-w-0 flex-1 flex-col gap-2xs">
-                    <div className="flex items-center gap-sm">
-                      <Badge variant="muted" size="md" className="font-mono">
-                        {t.userId ?? "(any)"}
-                      </Badge>
-                      <span className="text-muted-foreground">→</span>
-                      <Text as="span" variant="caption" className="font-mono">{t.jobName}</Text>
-                      <Text as="span" variant="caption" tone="muted" className="truncate">
-                        {JSON.stringify(t.jobWith)}
-                      </Text>
-                    </div>
-                    <Text as="div" variant="caption" tone="muted" className="flex items-center gap-sm">
-                      <span>{t.oneShot ? "one-shot" : "recurring"}</span>
-                      <span>·</span>
-                      <span className="truncate font-mono">{t.id}</span>
-                    </Text>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => onDeleteTrigger(t.id)}
-                    aria-label="Delete trigger"
-                  >
-                    <MdDelete className="size-4" />
-                  </Button>
-                </div>
+                  content={
+                    <Stack gap="2xs">
+                      <Stack direction="row" gap="sm" align="center">
+                        <Badge variant="muted" size="md" className="font-mono">
+                          {t.userId ?? "(any)"}
+                        </Badge>
+                        <span className="text-muted-foreground">→</span>
+                        <Text as="span" variant="caption" className="font-mono">{t.jobName}</Text>
+                        <Text as="span" variant="caption" tone="muted" className="truncate">
+                          {JSON.stringify(t.jobWith)}
+                        </Text>
+                      </Stack>
+                      <Stack as="div" direction="row" gap="sm" align="center">
+                        <Text as="span" variant="caption" tone="muted">{t.oneShot ? "one-shot" : "recurring"}</Text>
+                        <Text as="span" variant="caption" tone="muted">·</Text>
+                        <Text as="span" variant="caption" tone="muted" className="truncate font-mono">{t.id}</Text>
+                      </Stack>
+                    </Stack>
+                  }
+                  trailing={
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => onDeleteTrigger(t.id)}
+                      aria-label="Delete trigger"
+                    >
+                      <MdDelete className="size-4" />
+                    </Button>
+                  }
+                />
               ))}
             </div>
           )}
@@ -409,8 +427,9 @@ export function EventsTestView() {
 
         {/* Cleanup by config */}
         <Section title="Delete triggers by job config">
-          <div className="flex items-end gap-sm">
-            <div className="flex-1">
+          <Frame
+            gap="sm"
+            content={
               <FieldRow label="label match">
                 <Input
                   placeholder="exact label to sweep (JSONB @>)"
@@ -418,16 +437,18 @@ export function EventsTestView() {
                   onChange={(e) => setDtLabel(e.target.value)}
                 />
               </FieldRow>
-            </div>
-            <Button
-              variant="outline"
-              onClick={onDeleteTargeting}
-              loading={dtBusy}
-            >
-              <MdDelete className="size-4" />
-              Sweep
-            </Button>
-          </div>
+            }
+            trailing={
+              <Button
+                variant="outline"
+                onClick={onDeleteTargeting}
+                loading={dtBusy}
+              >
+                <MdDelete className="size-4" />
+                Sweep
+              </Button>
+            }
+          />
         </Section>
 
         {/* Job log */}
@@ -445,13 +466,12 @@ export function EventsTestView() {
           ) : (
             <div className="divide-y divide-border rounded-md border border-border">
               {log.map((e, i) => (
-                <Text
-                  as="div"
-                  variant="body"
+                <Stack
+                  gap="2xs"
                   key={`${e.jobId}-${e.firedAt}-${i}`}
-                  className="flex flex-col gap-2xs px-md py-sm"
+                  className="px-md py-sm"
                 >
-                  <div className="flex items-center gap-sm">
+                  <Stack direction="row" gap="sm" align="center">
                     <Badge size="md" colorClass="bg-info/10 text-info-foreground" className="font-mono">
                       {e.label}
                     </Badge>
@@ -462,18 +482,18 @@ export function EventsTestView() {
                     <Text as="span" variant="caption" tone="muted" className="truncate">
                       msg={JSON.stringify(e.message)}
                     </Text>
-                  </div>
+                  </Stack>
                   <Text as="div" variant="caption" tone="muted" className="truncate">
                     {new Date(e.firedAt).toLocaleTimeString()} ·{" "}
                     <span className="font-mono">job {e.jobId}</span>
                   </Text>
-                </Text>
+                </Stack>
               ))}
             </div>
           )}
         </Section>
-      </div>
-    </div>
+      </Stack>
+    </Scroll>
   );
 }
 
@@ -489,13 +509,14 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-md rounded-lg border border-border bg-card p-lg">
-      <div className="flex items-center justify-between gap-sm">
-        <Text as="h2" variant="label">{title}</Text>
-        {action}
-      </div>
-      <div className="flex flex-col gap-md">{children}</div>
-    </section>
+    <Stack as="section" gap="md" className="rounded-lg border border-border bg-card p-lg">
+      <Frame
+        gap="sm"
+        content={<Text as="h2" variant="label">{title}</Text>}
+        trailing={action ?? undefined}
+      />
+      <Stack gap="md">{children}</Stack>
+    </Stack>
   );
 }
 
@@ -507,10 +528,10 @@ function FieldRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-xs">
+    <Stack gap="xs">
       <Text as="label" variant="caption" tone="muted">{label}</Text>
       {children}
-    </div>
+    </Stack>
   );
 }
 

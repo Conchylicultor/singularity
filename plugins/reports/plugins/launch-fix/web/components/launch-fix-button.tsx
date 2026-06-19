@@ -2,6 +2,7 @@ import { MdAutoFixHigh } from "react-icons/md";
 import type { BoundaryErrorReport } from "@plugins/primitives/plugins/error-boundary/web";
 import type { ReportContext } from "@plugins/reports/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 
 export function LaunchFixButton({
@@ -21,11 +22,12 @@ export function LaunchFixButton({
           title={disabled ? "Recording crash…" : "Launch an agent to fix this crash"}
           aria-label="Launch fix agent"
           disabled={disabled}
-          // eslint-disable-next-line badge/no-adhoc-chip -- inline action button
-          className="flex items-center gap-xs rounded-md px-xs py-2xs underline hover:no-underline disabled:cursor-not-allowed disabled:opacity-60 disabled:no-underline"
+          className="rounded-md px-xs py-2xs underline hover:no-underline disabled:cursor-not-allowed disabled:opacity-60 disabled:no-underline"
         >
-          <MdAutoFixHigh className="size-3" />
-          Fix
+          <Stack as="span" direction="row" gap="xs" align="center">
+            <MdAutoFixHigh className="size-3" />
+            Fix
+          </Stack>
         </button>
       }
       title="Fix this crash"

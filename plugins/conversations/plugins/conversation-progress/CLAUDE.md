@@ -7,7 +7,7 @@
 - Description: 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
 - Web:
   - Contributes: `Conversation.Header` → `ProgressBarToolbar`, `Item.Chips` → `ProgressBarRow`, `BootSnapshot.Hydrate`
-  - Uses: `conversations.useConversationById`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `infra/boot-snapshot.BootSnapshot`, `primitives/live-state.useResource`, `ui/segmented-progress-bar.SegmentedProgressBar`
+  - Uses: `conversations.useConversationById`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `infra/boot-snapshot.BootSnapshot`, `primitives/css/inline.Inline`, `primitives/live-state.useResource`, `ui/segmented-progress-bar.SegmentedProgressBar`
 - Server:
   - Uses: `conversations.conversationTurnCompleted`, `database.db`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `infra/paths.GIT`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.pushLanded`
   - DB schema: `plugins/conversations/plugins/conversation-progress/server/internal/tables.ts`

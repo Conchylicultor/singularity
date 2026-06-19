@@ -12,6 +12,7 @@ import {
   SearchInput,
 } from "@plugins/primitives/plugins/search/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 interface FileTreeNode {
@@ -140,14 +141,14 @@ export function FileTree({ files, selectedPath, onSelect }: FileTreeProps) {
 
   return (
     <Text as="div" variant="body">
-      <div className="sticky top-0 z-raised border-b bg-background p-xs">
+      <Sticky className="border-b bg-background p-xs">
         <SearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search files…"
           aria-label="Search files"
         />
-      </div>
+      </Sticky>
       <div className="py-xs">
         {q && filtered.length === 0 ? (
           <div className="px-md py-sm text-muted-foreground">No matches.</div>
@@ -189,6 +190,7 @@ function FileTreeRow({
   const isOpen = expanded.has(node.path);
   const isSelected = !node.isDir && node.path === selectedPath;
 
+  /* eslint-disable layout/no-adhoc-layout -- rigid identity icons in Row's flex region-line, which provides no shrink protection */
   const icon = node.isDir ? (
     <>
       {isOpen ? (
@@ -208,6 +210,7 @@ function FileTreeRow({
       <MdInsertDriveFile className="size-3.5 shrink-0 text-muted-foreground" />
     </>
   );
+  /* eslint-enable layout/no-adhoc-layout */
 
   return (
     <>

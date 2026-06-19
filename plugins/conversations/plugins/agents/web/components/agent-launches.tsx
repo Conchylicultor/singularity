@@ -8,6 +8,9 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { agentLaunchesResource } from "../../shared/resources";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 
 function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
@@ -32,14 +35,14 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
   return (
-    <section className="flex flex-col gap-sm">
+    <Stack as="section" gap="sm">
       <SectionLabel as="h3" className="font-medium">
         Attempts
       </SectionLabel>
       {launches.length === 0 ? (
         <Text as="p" variant="body" tone="muted">No attempts yet.</Text>
       ) : (
-        <ul className="flex flex-col gap-xs">
+        <Stack as="ul" gap="xs">
           {launches.map((launch) => {
             const primary = launch.latestConversation;
             const isActive = primary ? activeConvId === primary.id : false;
@@ -60,16 +63,16 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
                     )
                   }
                   actions={
-                    <>
+                    <Cluster gap="xs">
                       {primary ? (
-                        <Text as="span" variant="caption" tone="muted" className="shrink-0">
+                        <Text as="span" variant="caption" tone="muted">
                           {primary.status}
                         </Text>
                       ) : null}
-                      <Text as="span" variant="caption" tone="muted" className="shrink-0 tabular-nums">
+                      <Text as="span" variant="caption" tone="muted" className="tabular-nums">
                         {formatDate(launch.createdAt)}
                       </Text>
-                    </>
+                    </Cluster>
                   }
                   actionsAlwaysVisible
                   onClick={() => {
@@ -83,13 +86,13 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
                     }
                   }}
                 >
-                  <span className="flex-1 truncate">{title}</span>
+                  <TruncatingText>{title}</TruncatingText>
                 </Row>
               </li>
             );
           })}
-        </ul>
+        </Stack>
       )}
-    </section>
+    </Stack>
   );
 }

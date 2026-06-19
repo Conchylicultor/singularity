@@ -2,6 +2,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Deploy } from "@plugins/apps/plugins/deploy/plugins/shell/web";
 import { serversResource, type Server } from "../shared";
 import { ServersList } from "./components/servers-list";
@@ -43,9 +44,9 @@ export const serverDetailPane = Pane.define({
 
 function ServersRoot() {
   return (
-    <div className="flex h-full flex-col">
+    <Stack gap="none" className="h-full">
       <ServersList />
-    </div>
+    </Stack>
   );
 }
 
@@ -93,7 +94,7 @@ function ServerDetailContent({ serverId, server }: { serverId: string; server: S
   return (
     <>
       <ServerDetail server={server} />
-      <div className="flex flex-col gap-lg p-lg">
+      <Stack gap="lg" className="p-lg">
         <Deploy.Section.Render>
           {(s) => (
             <section key={s.id} className="bg-card rounded-lg border p-lg">
@@ -103,7 +104,7 @@ function ServerDetailContent({ serverId, server }: { serverId: string; server: S
             </section>
           )}
         </Deploy.Section.Render>
-      </div>
+      </Stack>
     </>
   );
 }
