@@ -1,7 +1,8 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
-import { recordSpan } from "@plugins/infra/plugins/runtime-profiler/core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
+import { recordSpan, currentCallerKind } from "@plugins/infra/plugins/runtime-profiler/core";
 import { readDatabaseConfig, buildConnectionString } from "@plugins/database/core";
 
 const worktree = process.env.SINGULARITY_WORKTREE;
@@ -22,11 +23,29 @@ const conn = config.pgbouncer
       user: process.env.PGUSER ?? config.connection.user,
     };
 
+const POOL_MAX = 16;
+
 const pool = new Pool({
   connectionString: buildConnectionString(conn, worktree),
-  max: 16,
+  max: POOL_MAX,
   idleTimeoutMillis: 20_000,
 });
+
+// The one concurrency gate, at the only place the scarce resource is consumed.
+// Of the pool's `max` connections, RESERVED_INTERACTIVE are always kept free for
+// interactive (HTTP/mutation) work; the rest is the ceiling for background/loader
+// queries. A live-state cascade flush can fire ~10 dependent loaders in one
+// microtask; gating here (rather than around whole loader bodies) means an
+// in-memory loader that issues no query never waits, and a loader holds a slot
+// only for the duration of one query — so cheap loaders stop being
+// head-of-line-blocked behind DB/git work, and background load can never starve
+// interactive work of connections. Gating by caller kind (read from the
+// profiler's ambient context) needs no cost-class hints: the gate measures the
+// real scarce thing — held connections — so a loader that doesn't query isn't
+// counted. See research/2026-06-19-global-live-state-unified-read-path-v2.md
+// (Task 2) and research/2026-06-15-global-live-state-cascade-contention.md.
+const RESERVED_INTERACTIVE = 6;
+const loaderDbGate = createSemaphore(POOL_MAX - RESERVED_INTERACTIVE);
 
 // Time every query that flows through pool.query (all drizzle ORM queries).
 // The promise form is reimplemented to split the two phases that node-postgres
@@ -41,17 +60,25 @@ const pool = new Pool({
 // callback form is passed straight through to origQuery untouched (drizzle never
 // uses it). Direct pool.connect() → client.query paths still bypass timing —
 // see plugins/database/CLAUDE.md.
+//
+// Loader-originated queries (caller kind === "loader") additionally route
+// through `loaderDbGate`, so background load caps at POOL_MAX - RESERVED_INTERACTIVE
+// concurrent connections and interactive work keeps reserved capacity. The gate
+// wait is recorded as a `db [loader-acquire]` span (sibling to the pool's own
+// `[acquire]`) so a saturated gate stays visible in the profiler instead of
+// hiding queue-wait. The caller kind is read synchronously, before any await, so
+// the profiler's ambient context is still active.
 const origQuery = pool.query.bind(pool);
 const origConnect = pool.connect.bind(pool);
 // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
 pool.query = ((...a: Parameters<typeof origQuery>): any => {
   const last = a[a.length - 1];
-  if (typeof last === "function") return origQuery(...a); // callback form, untimed
+  if (typeof last === "function") return origQuery(...a); // callback form, untimed + ungated
 
   const first = a[0] as string | { text?: string } | undefined;
   const text = typeof first === "string" ? first : (first?.text ?? "?");
 
-  return (async () => {
+  const runTimed = async () => {
     const acq0 = performance.now();
     const client = await origConnect(); // unwrapped: avoids double-recording
     recordSpan("db", "[acquire]", performance.now() - acq0);
@@ -64,7 +91,16 @@ pool.query = ((...a: Parameters<typeof origQuery>): any => {
     } finally {
       client.release();
     }
-  })();
+  };
+
+  // Gate only background/loader queries; interactive (http) and context-less
+  // (jobs/migrations/pollers) queries run ungated against the reserved capacity.
+  if (currentCallerKind() === "loader") {
+    return loaderDbGate.run(runTimed, (waitMs) =>
+      recordSpan("db", "[loader-acquire]", waitMs),
+    );
+  }
+  return runTimed();
 }) as typeof pool.query;
 
 export const db = drizzle(pool);

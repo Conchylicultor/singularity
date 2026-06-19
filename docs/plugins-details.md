@@ -2485,7 +2485,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `framework/central-core`, `framework/server-core`
     - **`server-core`**
       - Core:
-        - Uses: `framework/resource-runtime.createResourceRuntime`, `framework/tooling/collected-dir.defineCollectedDir`, `infra/runtime-profiler.recordEntrySpan`, `infra/runtime-profiler.recordSpan`, `packages/semaphore.createSemaphore`
+        - Uses: `framework/resource-runtime.createResourceRuntime`, `framework/tooling/collected-dir.defineCollectedDir`, `infra/runtime-profiler.recordEntrySpan`
         - Exports: Types: `DependsOnEntry`, `HttpHandler`, `LoadedServerPlugin`, `MemoryCheckpoint`, `PhaseId`, `Registration`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `Span`, `WsData`, `WsHandler`; Values: `collectContributions`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `loadResourceByKey`, `markServerReady`, `notificationsWsHandler`, `profilerStart`, `recordMemoryCheckpoint`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `withNotifyBatch`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
@@ -2791,7 +2791,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `framework/server-core`, `infra/endpoints`
       - Core:
-        - Exports: Types: `Aggregate`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`; Values: `getRuntimeProfile`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `recordEntrySpan`, `recordSpan`, `resetRuntimeProfile`, `runWithoutProfiling`
+        - Exports: Types: `Aggregate`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`; Values: `currentCallerKind`, `getRuntimeProfile`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `recordEntrySpan`, `recordSpan`, `resetRuntimeProfile`, `runWithoutProfiling`
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
         - Imported by: `apps/browser/proxy`, `page/bookmark`
@@ -2852,7 +2852,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DelayStrategy`; Values: `exponential`, `fixed`, `RetryDeadlineError`, `retryUntil`, `withJitter`
     - **`semaphore`**
       - Cross-plugin:
-        - Imported by: `framework/server-core`, `infra/endpoints`
+        - Imported by: `infra/endpoints`
       - Core:
         - Exports: Types: `Semaphore`; Values: `createSemaphore`
 

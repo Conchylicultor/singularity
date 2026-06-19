@@ -28,6 +28,23 @@ eagerly opens + validates connections up to the pool's `max` so the boot
 thundering herd hits warm connections instead of paying establishment cost.
 node-postgres `min` does **not** pre-connect, so this explicit step is required.
 
+## Connection gate (loader vs interactive)
+
+`pool.query` is also the one concurrency gate. Of the pool's `max` connections,
+`RESERVED_INTERACTIVE` are kept free for interactive (HTTP/mutation) work; the
+rest is the ceiling for **loader-kind** queries (caller kind read from the
+runtime-profiler's ambient context via `currentCallerKind()`, synchronously
+before any await). Loader queries route through a `createSemaphore` gate;
+interactive and context-less (jobs/migrations/pollers) queries run ungated. This
+puts the gate on the actual scarce resource — held connections — so an in-memory
+loader that issues no query never waits, and a loader holds a slot only for the
+duration of one query (it can't head-of-line-block cheap loaders or starve
+interactive work). The gate wait is recorded as a `db [loader-acquire]` span,
+sibling to `[acquire]`. (This replaced an older semaphore that wrapped whole
+loader *bodies* in `server-core/core/resources.ts`.) Transactions and other
+`pool.connect()` → `client.query` paths bypass the gate, same as they bypass
+timing. See `research/2026-06-19-global-live-state-unified-read-path-v2.md` (Task 2).
+
 ## Bootstrap
 
 `awaitPgReady` + `runMigrations` are called in the database plugin's `onReadyBlocking` hook. `onReadyBlocking` is a hard barrier the framework awaits in full before flipping the server-ready flag and before any plugin's `onReady` runs — so consumers can safely use the DB in their own `onReady`, and the gateway holds its hot-swap until migrations have landed. (Previously this lived in `onReady`, where it raced other plugins' `onReady` and the gateway swap until migrations happened to be slow.)

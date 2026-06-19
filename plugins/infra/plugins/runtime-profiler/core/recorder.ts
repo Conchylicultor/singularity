@@ -265,6 +265,19 @@ export function recordSpan(kind: SpanKind, label: string, durationMs: number): v
 }
 
 /**
+ * The kind of the innermost enclosing entry point at the current call site, or
+ * `undefined` when none is active (e.g. a background job, migration, or poller).
+ * A thin read of the same ambient context `recordEntrySpan` maintains — the DB
+ * pool wrapper uses it to gate loader-originated queries (caps background load
+ * below the pool `max` so interactive work keeps reserved connections) without
+ * the runtime needing a separate cost-class taxonomy. Must be read synchronously
+ * (before any await) so the ambient context is still active.
+ */
+export function currentCallerKind(): SpanKind | undefined {
+  return contextRuntime.current()?.kind;
+}
+
+/**
  * Run `fn` as an entry point of the given kind/label: children executed inside
  * `fn` see `{ kind, label }` as their ambient parent, while the entry span
  * itself is recorded against the *outer* parent (so an entry is never its own

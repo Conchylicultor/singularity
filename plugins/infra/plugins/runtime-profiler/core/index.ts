@@ -1,6 +1,7 @@
 export {
   recordSpan,
   recordEntrySpan,
+  currentCallerKind,
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,
   runWithoutProfiling,
