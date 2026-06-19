@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { BlockHandle } from "../../core";
 import { Editor } from "../slots";
@@ -74,7 +75,7 @@ export function BlockTypeList({
   }
 
   return (
-    <div className="flex flex-col">
+    <Stack gap="none">
       {blocks.map((block, i) => {
         const Icon = block.icon;
         return (
@@ -92,6 +93,6 @@ export function BlockTypeList({
           </Row>
         );
       })}
-    </div>
+    </Stack>
   );
 }

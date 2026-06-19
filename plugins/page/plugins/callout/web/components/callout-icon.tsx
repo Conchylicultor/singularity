@@ -3,6 +3,8 @@ import { useState } from "react";
 import { MdLightbulb } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
@@ -48,18 +50,21 @@ export function CalloutIcon({
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
         onMouseDown={(e) => e.preventDefault()}
+        // eslint-disable-next-line layout/no-adhoc-layout -- flex-none + self-start are per-child overrides positioning the trigger as a rigid, top-aligned leading glyph within the callout block's row (owned by the parent, not this file)
         className={cn(
-          "hover:bg-accent flex size-7 flex-none items-center justify-center self-start rounded-md py-xs outline-none focus-visible:ring-2 focus-visible:ring-ring",
+          "hover:bg-accent size-7 flex-none self-start rounded-md py-xs outline-none focus-visible:ring-2 focus-visible:ring-ring",
           className,
         )}
         aria-label="Callout icon and color"
       >
-        <PageIcon nodes={iconSvgNodes} fallback={MdLightbulb} className="size-5" />
+        <Center className="size-full">
+          <PageIcon nodes={iconSvgNodes} fallback={MdLightbulb} className="size-5" />
+        </Center>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-sm" align="start">
         {/* Color row */}
         <SectionLabel className="px-xs pt-xs pb-xs text-3xs">Color</SectionLabel>
-        <div className="flex flex-wrap gap-xs px-xs pb-sm">
+        <Stack direction="row" gap="xs" wrap className="px-xs pb-sm">
           {CALLOUT_COLORS.map((key) => (
             <button
               key={key}
@@ -75,7 +80,7 @@ export function CalloutIcon({
               )}
             />
           ))}
-        </div>
+        </Stack>
 
         {/* Icon picker */}
         <IconPicker

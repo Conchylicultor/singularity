@@ -11,6 +11,10 @@ import {
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { codeBlock } from "../../core";
 import { detectLanguage } from "../detect-language";
@@ -154,9 +158,15 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
 
   return (
     <div className="px-md py-xs">
-      <div className="group relative overflow-hidden rounded-md bg-muted">
+      <Clip className="group relative rounded-md bg-muted">
         {/* Hover/focus toolbar: language picker + copy. */}
-        <div className="absolute top-1 right-1 z-raised flex items-center gap-xs opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+        <Pin to="top-right" offset="xs" layer="raised">
+          <Stack
+            direction="row"
+            gap="xs"
+            align="center"
+            className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+          >
           <Select items={langItems} value={language ?? AUTO} onValueChange={onLanguageChange}>
             <SelectTrigger
               size="sm"
@@ -164,15 +174,19 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
               className="h-6 w-36 bg-background/80 text-caption backdrop-blur"
             >
               {language === undefined ? (
-                <span className="flex min-w-0 items-center gap-xs">
-                  <MdAutoAwesome className="shrink-0 text-muted-foreground" />
-                  <span className="truncate">
-                    Auto
-                    {detected ? (
-                      <span className="text-muted-foreground"> · {detected}</span>
-                    ) : null}
-                  </span>
-                </span>
+                <Frame
+                  as="span"
+                  gap="xs"
+                  leading={<MdAutoAwesome className="text-muted-foreground" />}
+                  content={
+                    <span className="truncate">
+                      Auto
+                      {detected ? (
+                        <span className="text-muted-foreground"> · {detected}</span>
+                      ) : null}
+                    </span>
+                  }
+                />
               ) : (
                 <span className="truncate">
                   {language === PLAIN ? "Plain text" : language}
@@ -199,7 +213,8 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
             size="icon-sm"
             className="bg-background/80 backdrop-blur"
           />
-        </div>
+          </Stack>
+        </Pin>
 
         {/* Underlay: highlighted (or plain) text, decorative — sizes the box. */}
         {html ? (
@@ -233,13 +248,14 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
           autoCorrect="off"
           autoCapitalize="off"
           placeholder="Code…"
+          // eslint-disable-next-line layout/no-adhoc-layout -- interactive full-bleed editor layer laid exactly over the sizing underlay; Overlay's `above` is pointer-events-none so it can't host the live textarea
           className={cn(
             "absolute inset-0 h-full w-full resize-none overflow-hidden border-0 bg-transparent",
             "text-transparent caret-foreground outline-none placeholder:text-muted-foreground",
             METRICS,
           )}
         />
-      </div>
+      </Clip>
     </div>
   );
 }

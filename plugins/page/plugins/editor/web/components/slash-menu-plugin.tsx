@@ -281,6 +281,7 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
     <Surface
       ref={menuRef}
       level="overlay"
+      // eslint-disable-next-line layout/no-adhoc-layout -- scroll body of JS-positioned floating menu (fixed + overflow entangled on one root)
       className="z-popover fixed max-h-80 w-56 overflow-y-auto p-xs"
       style={{ left: caret.left, top: caret.top + 4 }}
     >

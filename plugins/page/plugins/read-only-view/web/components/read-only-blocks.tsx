@@ -11,6 +11,8 @@ import {
   MdLightbulb,
 } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text, type TextVariant } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
@@ -118,19 +120,25 @@ function TextLikeBlock({
         <div className="px-md py-xs">
           {/* eslint-disable-next-line radius/no-adhoc-radius -- rounded-md token matches the callout block chrome */}
           <div className={cn("rounded-md", CALLOUT_BG[color] ?? CALLOUT_BG.default)}>
-            <div className="flex gap-xs px-md">
-              <div
-                className={cn("flex flex-none select-none justify-center py-xs", CALLOUT_TEXT[color] ?? CALLOUT_TEXT.default)}
-                style={{ minWidth: MARKER_GUTTER }}
-              >
-                <PageIcon nodes={iconNodes} fallback={MdLightbulb} className="size-5" />
-              </div>
-              <div className="min-w-0 flex-1">
+            <Frame
+              gap="xs"
+              align="start"
+              className="px-md"
+              leading={
+                <Center
+                  as="span"
+                  className={cn("select-none py-xs", CALLOUT_TEXT[color] ?? CALLOUT_TEXT.default)}
+                  style={{ minWidth: MARKER_GUTTER }}
+                >
+                  <PageIcon nodes={iconNodes} fallback={MdLightbulb} className="size-5" />
+                </Center>
+              }
+              content={
                 <Text as="div" variant="body" className="pr-md py-xs whitespace-pre-wrap break-words">
                   <RunsRenderer value={data.text} />
                 </Text>
-              </div>
-            </div>
+              }
+            />
           </div>
         </div>
         {children}
@@ -167,16 +175,18 @@ function TextLikeBlock({
       : undefined;
 
   const text = (
-    <div className="flex gap-xs pl-md">
-      {marker != null ? (
-        <div
-          className="flex flex-none select-none justify-center"
-          style={{ minWidth: MARKER_GUTTER }}
-        >
-          {marker}
-        </div>
-      ) : null}
-      <div className="min-w-0 flex-1">
+    <Frame
+      gap="xs"
+      align="start"
+      className="pl-md"
+      leading={
+        marker != null ? (
+          <Center as="span" className="select-none" style={{ minWidth: MARKER_GUTTER }}>
+            {marker}
+          </Center>
+        ) : null
+      }
+      content={
         <Text
           as="div"
           variant={asTextVariant(handle.textVariant)}
@@ -184,8 +194,8 @@ function TextLikeBlock({
         >
           <RunsRenderer value={data.text} />
         </Text>
-      </div>
-    </div>
+      }
+    />
   );
 
   // The quote block wraps the shared text in a left-border italic rail.

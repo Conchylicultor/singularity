@@ -1,7 +1,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   useBlockEditor,
@@ -93,9 +94,11 @@ export function EquationBlock({ block, isFocused, editor }: BlockRendererProps) 
           type="button"
           onClick={() => editor.onFocus()}
           aria-label="Edit equation"
-          className="hover:bg-muted/50 flex w-full justify-center rounded-md px-md py-sm outline-none"
+          className="hover:bg-muted/50 w-full rounded-md px-md py-sm outline-none"
         >
-          <KatexMath expression={expression} display />
+          <Center axis="horizontal">
+            <KatexMath expression={expression} display />
+          </Center>
         </button>
       </div>
     );
@@ -103,9 +106,9 @@ export function EquationBlock({ block, isFocused, editor }: BlockRendererProps) 
 
   return (
     <div className="px-md py-xs">
-      <Stack gap="none" className="overflow-hidden rounded-md bg-muted">
+      <Clip className="rounded-md bg-muted">
         {/* Live preview above the source. Empty source shows a muted hint. */}
-        <div className="flex min-h-8 items-center justify-center px-md py-sm">
+        <Center className="min-h-8 px-md py-sm">
           {expression === "" ? (
             <Text variant="caption" tone="muted">
               New equation
@@ -113,7 +116,7 @@ export function EquationBlock({ block, isFocused, editor }: BlockRendererProps) 
           ) : (
             <KatexMath expression={expression} display />
           )}
-        </div>
+        </Center>
         <textarea
           ref={textareaRef}
           value={expression}
@@ -128,6 +131,7 @@ export function EquationBlock({ block, isFocused, editor }: BlockRendererProps) 
           autoCorrect="off"
           autoCapitalize="off"
           placeholder="LaTeX source… e.g. E = mc^2"
+          // eslint-disable-next-line layout/no-adhoc-layout -- textarea self-clip: suppresses the control's own scrollbar (fixed rows=2), not a wrappable box overflow
           className={cn(
             "border-border w-full resize-none overflow-hidden border-t bg-transparent",
             "caret-foreground outline-none placeholder:text-muted-foreground",
@@ -135,7 +139,7 @@ export function EquationBlock({ block, isFocused, editor }: BlockRendererProps) 
           )}
           rows={2}
         />
-      </Stack>
+      </Clip>
     </div>
   );
 }

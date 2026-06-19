@@ -7,7 +7,7 @@
 - Description: Audio block type: upload an audio file and play it inline.
 - Web:
   - Contributes: `Editor.Block` "audio" → `AudioBlock`
-  - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/text-editor/paste-images.attachmentUrl`
+  - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/text-editor/paste-images.attachmentUrl`
   - Exports: Values: `AUDIO_TYPE`, `audioBlock`
 - Core:
   - Uses: `page/editor.defineBlock`

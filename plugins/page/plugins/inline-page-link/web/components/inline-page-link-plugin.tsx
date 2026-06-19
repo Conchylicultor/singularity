@@ -15,6 +15,7 @@ import {
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   usePageOptions,
   PageOptionsList,
@@ -220,10 +221,11 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
   return createPortal(
     <Surface
       level="overlay"
+      // eslint-disable-next-line layout/no-adhoc-layout -- floating menu positioned via JS-computed caret coords
       className="z-popover fixed w-72 p-xs"
       style={{ left: caret.left, top: caret.top + 4 }}
     >
-      <div className="max-h-64 overflow-y-auto">
+      <Scroll className="max-h-64">
         {pageOptionsResult.pending ? (
           <Loading variant="rows" />
         ) : (
@@ -235,7 +237,7 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
             onHoverIndex={setActiveIndex}
           />
         )}
-      </div>
+      </Scroll>
     </Surface>,
     document.body,
   );

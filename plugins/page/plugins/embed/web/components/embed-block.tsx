@@ -2,6 +2,8 @@ import { useState } from "react";
 import { MdOpenInNew, MdSmartDisplay } from "react-icons/md";
 import { cn, Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { embedBlock, toEmbedUrl } from "../../core";
@@ -38,7 +40,7 @@ function EmptyEmbedBlock({
         onFocus={onArm}
       >
         <Stack direction="row" gap="xs" align="center" className="text-muted-foreground">
-          <MdSmartDisplay className="size-4 shrink-0" />
+          <MdSmartDisplay className="size-4" />
           <Text variant="caption" tone="muted">
             Paste a link to embed (YouTube, Vimeo, Spotify, …)
           </Text>
@@ -73,10 +75,12 @@ function FilledEmbedBlock({ url, onReplace }: { url: string; onReplace: () => vo
             href={url}
             target="_blank"
             rel="noreferrer"
-            className="inline-flex items-center gap-2xs text-caption text-muted-foreground hover:text-foreground hover:underline"
+            className="text-caption text-muted-foreground hover:text-foreground hover:underline"
           >
-            Open original
-            <MdOpenInNew className="size-3 shrink-0" />
+            <Inline gap="2xs">
+              Open original
+              <MdOpenInNew className="size-3" />
+            </Inline>
           </a>
           {/*
            * Escape hatch: many sites send X-Frame-Options / CSP frame-ancestors
@@ -96,16 +100,16 @@ function FilledEmbedBlock({ url, onReplace }: { url: string; onReplace: () => vo
             Replace URL
           </button>
         </Stack>
-        <div className="relative w-full aspect-video">
+        <Overlay fill className="w-full aspect-video">
           <iframe
             src={toEmbedUrl(url)}
-            className="absolute inset-0 h-full w-full rounded-md border-0"
+            className="h-full w-full rounded-md border-0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             allowFullScreen
             sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox allow-presentation"
             title="Embedded content"
           />
-        </div>
+        </Overlay>
       </div>
     </div>
   );

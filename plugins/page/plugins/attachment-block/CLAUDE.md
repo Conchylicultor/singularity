@@ -6,7 +6,7 @@
 
 - Description: Shared web infra for attachment-owning page blocks: the reusable <AttachmentUpload> empty-state (click/drop/paste) funnel. Owns the single block↔attachment link (page_blocks_attachments) and one generic reconcile bound to blocksChanged; FK cascade reclaims on delete.
 - Web:
-  - Uses: `infra/attachments.uploadAttachment`, `infra/attachments.UploadedAttachment`, `primitives/css/placeholder.Placeholder`, `primitives/css/ui-kit.cn`
+  - Uses: `infra/attachments.uploadAttachment`, `infra/attachments.UploadedAttachment`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`
   - Exports: Values: `AttachmentUpload`
 - Server:
   - Uses: `database.db`, `infra/attachments.Attachments`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.blocksChanged`

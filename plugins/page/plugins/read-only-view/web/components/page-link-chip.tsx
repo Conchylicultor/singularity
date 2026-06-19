@@ -1,6 +1,7 @@
 import { MdLink } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
@@ -40,9 +41,9 @@ export function PageLinkChip({ pageId }: { pageId: string }) {
   return (
     <LinkChip
       leading={
-        <span className="flex size-3.5 shrink-0 items-center justify-center">
+        <Center as="span" className="size-3.5">
           <PageIcon nodes={data?.iconSvgNodes} fallback={MdLink} className="size-3.5" />
-        </span>
+        </Center>
       }
       onClick={(e) => e.stopPropagation()}
     >

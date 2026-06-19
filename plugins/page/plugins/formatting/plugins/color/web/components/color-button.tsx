@@ -11,6 +11,8 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useFormatToolbar, colorCssValue } from "@plugins/page/plugins/editor/web";
 import { COLOR_TOKENS, type ColorToken } from "@plugins/page/plugins/editor/core";
@@ -98,7 +100,7 @@ export function ColorButton() {
         <Text variant="caption" tone="muted">
           Text color
         </Text>
-        <div className="grid grid-cols-5 gap-2xs">
+        <Grid cols={5} minCellWidth="0" gap="2xs">
           {COLOR_TOKENS.map((token) => {
             const fill = colorCssValue(token);
             const isActive =
@@ -113,7 +115,7 @@ export function ColorButton() {
                 onMouseDown={(e) => e.preventDefault()}
                 onClick={() => applyColor(token)}
                 className={cn(
-                  "flex size-7 items-center justify-center rounded-md border border-border",
+                  "size-7 rounded-md border border-border",
                   isActive && "ring-2 ring-ring",
                 )}
                 // The swatch fill IS the palette token's color (a CSS var, never a
@@ -121,14 +123,16 @@ export function ColorButton() {
                 style={{ backgroundColor: fill ?? "transparent" }}
               >
                 {token === "default" && (
-                  <Text variant="caption" tone="muted">
-                    A
-                  </Text>
+                  <Center className="size-full">
+                    <Text variant="caption" tone="muted">
+                      A
+                    </Text>
+                  </Center>
                 )}
               </button>
             );
           })}
-        </div>
+        </Grid>
       </Stack>
     </InlinePopover>
   );

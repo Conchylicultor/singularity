@@ -2,6 +2,8 @@ import { useState } from "react";
 import { MdLink } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
@@ -49,7 +51,7 @@ function PagePicker({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <div className="max-h-64 overflow-y-auto">
+        <Scroll className="max-h-64">
           {pageOptionsResult.pending ? (
             <Loading variant="rows" />
           ) : (
@@ -64,7 +66,7 @@ function PagePicker({
               }}
             />
           )}
-        </div>
+        </Scroll>
       </Stack>
     </InlinePopover>
   );
@@ -129,9 +131,9 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
         hover="muted"
         onClick={() => onOpenPage?.(pageId)}
         icon={
-          <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
+          <Center as="span" className="size-4 text-muted-foreground">
             <PageIcon nodes={targetData?.iconSvgNodes} fallback={MdLink} className="size-4" />
-          </span>
+          </Center>
         }
       >
         <span className="truncate font-medium underline-offset-2 hover:underline">

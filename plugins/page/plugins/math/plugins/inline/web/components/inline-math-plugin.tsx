@@ -13,6 +13,7 @@ import {
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
 import { KatexMath } from "@plugins/page/plugins/math/plugins/render/web";
@@ -171,11 +172,12 @@ export function InlineMathPlugin(_: BlockTextPluginProps) {
   return createPortal(
     <Surface
       level="overlay"
+      // eslint-disable-next-line layout/no-adhoc-layout -- floating menu positioned via JS-computed caret coords
       className="z-popover fixed w-72 p-sm"
       style={{ left: caret.left, top: caret.top + 4 }}
     >
       <Stack gap="sm">
-        <div className="flex min-h-6 items-center justify-center">
+        <Center className="min-h-6">
           {query === "" ? (
             <Text variant="caption" tone="muted">
               Type a LaTeX expression…
@@ -183,7 +185,7 @@ export function InlineMathPlugin(_: BlockTextPluginProps) {
           ) : (
             <KatexMath expression={query} display={false} />
           )}
-        </div>
+        </Center>
         <Text variant="caption" tone="muted">
           ↵ to insert
         </Text>

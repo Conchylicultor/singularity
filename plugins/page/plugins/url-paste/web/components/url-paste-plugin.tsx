@@ -107,6 +107,7 @@ export function UrlPastePlugin({ block, editor }: BlockTextPluginProps) {
     >
       <Surface
         level="overlay"
+        // eslint-disable-next-line layout/no-adhoc-layout -- floating menu positioned via JS-computed caret coords
         className="fixed w-56 p-xs"
         style={{ left: menu.left, top: menu.top + 4 }}
         // Keep clicks inside the menu from reaching the backdrop (which closes).

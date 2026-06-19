@@ -239,7 +239,7 @@ export function FormatToolbarPlugin() {
         <Surface
           ref={barRef}
           level="overlay"
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- absolute-positioned floating bar placed at a computed viewport coordinate (inside the fixed-inset-0 overlay), not sibling rhythm
+          // eslint-disable-next-line layout/no-adhoc-layout -- floating bar placed at a JS-computed viewport coordinate (left/top/transform below), inside the fixed-inset-0 overlay; not a ramp-expressible anchor
           className="pointer-events-auto absolute p-2xs"
           style={{
             left: position.left,

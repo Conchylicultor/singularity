@@ -5,6 +5,8 @@ import {
   attachmentUrl,
   Lightbox,
 } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { imageBlock } from "../../core";
 
@@ -93,22 +95,29 @@ function FilledImageBlock({
           onClick={() => setLightbox(true)}
           className="block w-full cursor-zoom-in rounded-md"
         />
-        <button
-          type="button"
-          aria-label="Remove image"
-          onClick={() => editor.update({ alt })}
-          className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
-        >
-          <MdClose className="size-4" />
-        </button>
-        <div
+        <Pin to="top-right" offset="xs">
+          <button
+            type="button"
+            aria-label="Remove image"
+            onClick={() => editor.update({ alt })}
+            className="size-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+          >
+            <Center className="size-full">
+              <MdClose className="size-4" />
+            </Center>
+          </button>
+        </Pin>
+        <Pin
+          to="right"
+          stretch
           aria-label="Resize image"
           role="slider"
           onPointerDown={onResizePointerDown}
-          className="absolute top-0 right-0 h-full w-2 cursor-ew-resize"
+          className="w-2 cursor-ew-resize"
         >
+          {/* eslint-disable-next-line layout/no-adhoc-layout -- fractional right-0.5 inset + vertical-center on the drag-grip bar is off the spacing ramp */}
           <div className="absolute top-1/2 right-0.5 h-8 w-1 -translate-y-1/2 rounded-md bg-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
-        </div>
+        </Pin>
       </div>
       {lightbox ? (
         <Lightbox attachmentId={attachmentId} alt={alt} onClose={() => setLightbox(false)} />

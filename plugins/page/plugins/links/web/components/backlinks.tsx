@@ -1,5 +1,6 @@
 import { MdLink } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
@@ -33,9 +34,9 @@ export function Backlinks({ documentId, onOpenPage }: BacklinksProps) {
               hover="muted"
               onClick={() => onOpenPage?.(row.id)}
               icon={
-                <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
+                <Center as="span" className="size-4 text-muted-foreground">
                   <PageIcon nodes={row.iconSvgNodes} fallback={MdLink} className="size-4" />
-                </span>
+                </Center>
               }
             >
               <span className="truncate">{row.title || "Untitled"}</span>

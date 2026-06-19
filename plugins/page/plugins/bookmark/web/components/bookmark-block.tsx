@@ -7,6 +7,10 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { bookmarkBlock, linkPreviewEndpoint } from "../../core";
@@ -65,7 +69,7 @@ function EmptyBookmarkBlock({
   return (
     <Inset x="md" y="xs">
       <Stack direction="row" gap="sm" align="center">
-        <MdBookmark className="size-4 shrink-0 text-muted-foreground" />
+        <MdBookmark className="size-4 text-muted-foreground" />
         <Input
           value={value}
           placeholder="Paste a link…"
@@ -136,18 +140,23 @@ function FetchingBookmarkBlock({
 
   return (
     <Inset x="md" y="xs">
-      <Card className="flex items-center gap-md p-md">
-        <MdBookmark className="size-4 shrink-0 text-muted-foreground" />
-        <Stack gap="2xs" className="min-w-0 flex-1">
-          <Text variant="label" className="truncate font-semibold">
-            {hostname}
-          </Text>
-          {error ? (
-            <Placeholder tone="error">{error}</Placeholder>
-          ) : (
-            <Loading variant="text" label="Fetching preview…" />
-          )}
-        </Stack>
+      <Card className="p-md">
+        <Frame
+          gap="md"
+          leading={<MdBookmark className="size-4 text-muted-foreground" />}
+          content={
+            <Stack gap="2xs">
+              <Text variant="label" className="truncate font-semibold">
+                {hostname}
+              </Text>
+              {error ? (
+                <Placeholder tone="error">{error}</Placeholder>
+              ) : (
+                <Loading variant="text" label="Fetching preview…" />
+              )}
+            </Stack>
+          }
+        />
       </Card>
     </Inset>
   );
@@ -182,57 +191,55 @@ function FilledBookmarkBlock({
   return (
     <Inset x="md" y="xs">
       <div className="group relative">
-        <Card
-          as="a"
-          interactive
-          href={url}
-          target="_blank"
-          rel="noreferrer"
-          className="flex items-stretch gap-md overflow-hidden p-none no-underline"
-        >
-          <Stack gap="2xs" className="min-w-0 flex-1 p-md">
-            <Stack direction="row" gap="2xs" align="center">
-              {faviconId ? (
+        <Card as="a" interactive href={url} target="_blank" rel="noreferrer" className="p-none no-underline">
+          <Clip>
+            <Stack direction="row" gap="md" align="stretch">
+              {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible truncating column beside a full-height stretched image; Frame's center-align can't express the items-stretch card */}
+              <Stack gap="2xs" className="min-w-0 flex-1 p-md">
+                <Stack direction="row" gap="2xs" align="center">
+                  {faviconId ? (
+                    <img src={attachmentUrl(faviconId)} alt="" className="size-4 rounded-sm" />
+                  ) : null}
+                  {siteName ? (
+                    <Text variant="caption" tone="muted" className="truncate">
+                      {siteName}
+                    </Text>
+                  ) : null}
+                </Stack>
+                <Text variant="label" className="line-clamp-2 font-semibold">
+                  {title ?? url}
+                </Text>
+                {description ? (
+                  <Text variant="caption" tone="muted" className="line-clamp-2">
+                    {description}
+                  </Text>
+                ) : null}
+                <Text variant="caption" tone="muted" className="truncate">
+                  {hostname}
+                </Text>
+              </Stack>
+              {imageId ? (
                 <img
-                  src={attachmentUrl(faviconId)}
+                  src={attachmentUrl(imageId)}
                   alt=""
-                  className="size-4 shrink-0 rounded-sm"
+                  className="h-auto w-32 object-cover"
                 />
               ) : null}
-              {siteName ? (
-                <Text variant="caption" tone="muted" className="truncate">
-                  {siteName}
-                </Text>
-              ) : null}
             </Stack>
-            <Text variant="label" className="line-clamp-2 font-semibold">
-              {title ?? url}
-            </Text>
-            {description ? (
-              <Text variant="caption" tone="muted" className="line-clamp-2">
-                {description}
-              </Text>
-            ) : null}
-            <Text variant="caption" tone="muted" className="truncate">
-              {hostname}
-            </Text>
-          </Stack>
-          {imageId ? (
-            <img
-              src={attachmentUrl(imageId)}
-              alt=""
-              className="h-auto w-32 shrink-0 self-stretch object-cover"
-            />
-          ) : null}
+          </Clip>
         </Card>
-        <button
-          type="button"
-          aria-label="Replace bookmark"
-          onClick={() => editor.update({})}
-          className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
-        >
-          <MdRefresh className="size-4" />
-        </button>
+        <Pin to="top-right" offset="xs">
+          <button
+            type="button"
+            aria-label="Replace bookmark"
+            onClick={() => editor.update({})}
+            className="size-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+          >
+            <Center className="size-full">
+              <MdRefresh className="size-4" />
+            </Center>
+          </button>
+        </Pin>
       </div>
     </Inset>
   );

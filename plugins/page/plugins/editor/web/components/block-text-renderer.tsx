@@ -39,7 +39,7 @@ export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRe
         // Don't blur the editor before the onChange registers; the editable
         // field flushes on blur anyway, but this keeps the caret put.
         onMouseDown={(e) => e.preventDefault()}
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 is a one-off vertical offset seating the checkbox glyph on the first text line; horizontal placement is owned by the shared marker gutter
+        // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- mt-2 is a one-off vertical offset seating the checkbox glyph on the first text line (horizontal placement owned by the shared marker gutter); self-start is a per-child cross-axis align onto the gutter's top, not expressible via the parent
         className="accent-primary mt-2 size-3.5 cursor-pointer self-start"
       />
     );

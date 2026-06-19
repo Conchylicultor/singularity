@@ -11,6 +11,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Button, Input, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
 import {
   useFormatToolbar,
@@ -108,10 +109,10 @@ export function LinkButton() {
           icon={MdLink}
           label="Link"
           tooltip={
-            <span className="inline-flex items-center gap-xs">
+            <Inline gap="xs">
               Link
               <Kbd>⌘K</Kbd>
-            </span>
+            </Inline>
           }
           aria-pressed={activeLink !== null}
           onMouseDown={(e) => e.preventDefault()}

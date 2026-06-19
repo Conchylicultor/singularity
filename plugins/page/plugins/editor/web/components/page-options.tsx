@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { MdAddCircleOutline } from "react-icons/md";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pagesResource, pageData, type Block } from "../../core";
@@ -50,9 +52,9 @@ export function usePageOptions(
 
 function PageOptionIcon({ page }: { page: Block }) {
   return (
-    <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
+    <Center as="span" className="size-4 text-muted-foreground">
       <PageIcon nodes={pageData(page).iconSvgNodes} className="size-4" />
-    </span>
+    </Center>
   );
 }
 
@@ -82,7 +84,7 @@ export function PageOptionsList({
     );
   }
   return (
-    <div className="flex flex-col">
+    <Stack gap="none">
       {options.map((option, i) =>
         option.kind === "page" ? (
           <Row
@@ -114,6 +116,6 @@ export function PageOptionsList({
           </Row>
         ),
       )}
-    </div>
+    </Stack>
   );
 }

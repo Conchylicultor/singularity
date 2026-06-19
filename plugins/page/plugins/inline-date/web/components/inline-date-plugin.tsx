@@ -15,6 +15,7 @@ import {
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import type { BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
@@ -221,6 +222,7 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
   return createPortal(
     <Surface
       level="overlay"
+      // eslint-disable-next-line layout/no-adhoc-layout -- floating menu positioned via JS-computed caret coords
       className="z-popover fixed w-72 p-xs"
       style={{ left: caret.left, top: caret.top + 4 }}
     >
@@ -229,7 +231,7 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
           Keep typing a date…
         </Text>
       ) : (
-        <div className="flex flex-col">
+        <Stack gap="none">
           {options.map((option, i) => (
             <Row
               key={`${option.kind}-${i}`}
@@ -250,7 +252,7 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
               <span className="truncate">{option.label}</span>
             </Row>
           ))}
-        </div>
+        </Stack>
       )}
     </Surface>,
     document.body,

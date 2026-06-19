@@ -6,6 +6,7 @@ import {
   type UploadedAttachment,
 } from "@plugins/infra/plugins/attachments/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 // Turn an `accept` spec into a mime predicate: `"*"` → always; `"image/*"` →
 // prefix match; an exact mime → equality.
@@ -97,7 +98,11 @@ export function AttachmentUpload({
         }}
       />
       {error ? <Placeholder tone="error">{error}</Placeholder> : null}
-      <div
+      <Stack
+        as="div"
+        direction="row"
+        align="center"
+        gap="sm"
         role="button"
         tabIndex={0}
         onClick={() => {
@@ -128,13 +133,13 @@ export function AttachmentUpload({
           if (file) void ingest(file);
         }}
         className={cn(
-          "flex cursor-pointer items-center gap-sm rounded-md border border-dashed border-border px-md py-lg text-body text-muted-foreground transition-colors hover:bg-muted",
+          "cursor-pointer rounded-md border border-dashed border-border px-md py-lg text-body text-muted-foreground transition-colors hover:bg-muted",
           dragOver && "border-primary bg-muted",
         )}
       >
-        <Icon className="size-4 shrink-0" />
+        <Icon className="size-4" />
         <span>{uploading ? "Uploading…" : label}</span>
-      </div>
+      </Stack>
     </div>
   );
 }

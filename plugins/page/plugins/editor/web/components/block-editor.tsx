@@ -11,6 +11,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -862,6 +863,7 @@ function SelectionLayer({
               </div>
               {marquee && (
                 <div
+                  // eslint-disable-next-line layout/no-adhoc-layout -- marquee rectangle positioned via JS-computed top/height coords (inset-x-2 insets its sides within the content box); not a ramp-expressible anchor
                   className="bg-primary/10 border-primary/40 pointer-events-none absolute inset-x-2 z-base rounded-md border"
                   style={{ top: marquee.top, height: marquee.height }}
                 />
@@ -871,16 +873,17 @@ function SelectionLayer({
         </ContentScope>
         <DragOverlay dropAnimation={null}>
           {activeId ? (
-            <Text
-              as="div"
-              variant="body"
-              className="bg-background/90 border-accent text-muted-foreground flex items-center gap-xs rounded-md border px-sm py-xs shadow"
+            <Stack
+              direction="row"
+              align="center"
+              gap="xs"
+              className="bg-background/90 border-accent text-muted-foreground rounded-md border px-sm py-xs shadow"
             >
               <MdDragIndicator className="size-4" />
-              {bulkDragRef.current && selectedCount > 1
-                ? `${selectedCount} blocks`
-                : null}
-            </Text>
+              {bulkDragRef.current && selectedCount > 1 ? (
+                <Text variant="body">{`${selectedCount} blocks`}</Text>
+              ) : null}
+            </Stack>
           ) : null}
         </DragOverlay>
       </DndContext>

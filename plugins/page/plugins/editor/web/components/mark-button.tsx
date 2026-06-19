@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import { FORMAT_TEXT_COMMAND } from "lexical";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Mark } from "../../core";
 import { useFormatToolbar } from "../internal/format-toolbar-context";
@@ -37,10 +38,10 @@ export function MarkButton({ mark, icon, label, shortcutHint }: MarkButtonProps)
       label={label}
       tooltip={
         shortcutHint ? (
-          <span className="inline-flex items-center gap-xs">
+          <Inline gap="xs">
             {label}
             {shortcutHint}
-          </span>
+          </Inline>
         ) : (
           label
         )

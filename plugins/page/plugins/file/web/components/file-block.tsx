@@ -15,6 +15,9 @@ import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/p
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { fileBlock } from "../../core";
 
@@ -71,34 +74,37 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
   return (
     <Inset x="md" y="xs">
       <div className="group relative">
-        <Card
-          as="a"
-          interactive
-          href={attachmentUrl(attachmentId)}
-          download={name}
-          className="flex items-center gap-md"
-        >
-          <Icon className="size-6 shrink-0 text-muted-foreground" />
-          <Stack gap="none" className="min-w-0 flex-1">
-            <Text variant="label" className="truncate">
-              {name}
-            </Text>
-            {size != null ? (
-              <Text variant="caption" tone="muted">
-                {formatBytes(size)}
-              </Text>
-            ) : null}
-          </Stack>
-          <MdDownload className="size-5 shrink-0 text-muted-foreground" />
+        <Card as="a" interactive href={attachmentUrl(attachmentId)} download={name}>
+          <Frame
+            gap="md"
+            leading={<Icon className="size-6 text-muted-foreground" />}
+            content={
+              <Stack gap="none">
+                <Text variant="label" className="truncate">
+                  {name}
+                </Text>
+                {size != null ? (
+                  <Text variant="caption" tone="muted">
+                    {formatBytes(size)}
+                  </Text>
+                ) : null}
+              </Stack>
+            }
+            trailing={<MdDownload className="size-5 text-muted-foreground" />}
+          />
         </Card>
-        <button
-          type="button"
-          aria-label="Replace file"
-          onClick={() => editor.update({})}
-          className="absolute top-1 right-1 flex size-6 items-center justify-center rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
-        >
-          <MdSwapHoriz className="size-4" />
-        </button>
+        <Pin to="top-right" offset="xs">
+          <button
+            type="button"
+            aria-label="Replace file"
+            onClick={() => editor.update({})}
+            className="size-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+          >
+            <Center className="size-full">
+              <MdSwapHoriz className="size-4" />
+            </Center>
+          </button>
+        </Pin>
       </div>
     </Inset>
   );

@@ -80,6 +80,7 @@ export function BlockRow({
           aria-label={collapsed ? "Expand" : "Collapse"}
           aria-expanded={!collapsed}
           onClick={() => api.setExpanded(collapsed)}
+          // eslint-disable-next-line layout/no-adhoc-layout -- gutter handle positioned via JS coords (style left below); flex centering seats the glyph in the fixed-size button
           className={cn(
             "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
             "text-muted-foreground hover:bg-accent cursor-pointer",
@@ -99,6 +100,7 @@ export function BlockRow({
           <button
             type="button"
             aria-label="Insert block below"
+            // eslint-disable-next-line layout/no-adhoc-layout -- gutter handle positioned via JS coords (style left below); flex centering seats the glyph in the fixed-size button
             className={cn(
               "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
               "text-muted-foreground hover:bg-accent cursor-pointer",
@@ -124,6 +126,7 @@ export function BlockRow({
             aria-label="Reorder or open block actions"
             {...attributes}
             {...listeners}
+            // eslint-disable-next-line layout/no-adhoc-layout -- gutter handle positioned via JS coords (style left below); flex centering seats the glyph in the fixed-size button
             className={cn(
               "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
               "text-muted-foreground hover:bg-accent cursor-grab active:cursor-grabbing",
@@ -155,12 +158,14 @@ export function BlockRow({
       </div>
       {dropZone && (
         <div
+          // eslint-disable-next-line layout/no-adhoc-layout -- drop indicator positioned via JS-computed left coord (style below) + right-1/top-0/bottom-0 edge pins; not a ramp-expressible anchor
           className={cn(
             "bg-primary pointer-events-none absolute right-1 z-raised h-[2px] rounded-full",
             dropZone === "before" ? "top-0" : "bottom-0",
           )}
           style={{ left: lineIndent + 4 }}
         >
+          {/* eslint-disable-next-line layout/no-adhoc-layout -- decorative endpoint dot offset onto the line via fractional negative coords */}
           <div className="bg-primary absolute -left-1 -top-[3px] size-2 rounded-full" />
         </div>
       )}

@@ -1,4 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
@@ -179,21 +182,24 @@ export function BlockTextEditor({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <div className={cn("relative flex gap-xs", inset && "pl-md")}>
-        {/* Leading-marker gutter: a fixed-width column shared by every marker
-            type so the text content edge is identical across block types.
-            `justify-center` + `min-width` centers narrow glyphs (bullet,
-            number, checkbox) and lets wider markers (the callout icon) grow the
-            column without disturbing the others. */}
-        {marker != null ? (
-          <div
-            className="flex flex-none select-none justify-center"
-            style={{ minWidth: MARKER_GUTTER }}
-          >
-            {marker}
-          </div>
-        ) : null}
-        <div className="relative min-w-0 flex-1">
+      <Frame
+        align="start"
+        gap="xs"
+        className={cn("relative", inset && "pl-md")}
+        leading={
+          /* Leading-marker gutter: a fixed-width column shared by every marker
+             type so the text content edge is identical across block types.
+             `Center` + `min-width` centers narrow glyphs (bullet, number,
+             checkbox) and lets wider markers (the callout icon) grow the column
+             without disturbing the others. */
+          marker != null ? (
+            <Center className="select-none" style={{ minWidth: MARKER_GUTTER }}>
+              {marker}
+            </Center>
+          ) : undefined
+        }
+        content={
+          <div className="relative">
           <RichTextPlugin
             contentEditable={
               <ContentEditable
@@ -207,9 +213,9 @@ export function BlockTextEditor({
             }
             placeholder={
               isEmpty && isFocused && placeholder ? (
-                <div className={cn("text-muted-foreground pointer-events-none absolute left-0 top-0 pr-md py-xs", VARIANT_CLASS[textVariant])}>
+                <Pin to="top-left" decorative className={cn("text-muted-foreground pr-md py-xs", VARIANT_CLASS[textVariant])}>
                   {placeholder}
-                </div>
+                </Pin>
               ) : null
             }
             ErrorBoundary={LexicalErrorBoundary}
@@ -233,8 +239,9 @@ export function BlockTextEditor({
             ) : null,
           )}
           <EditorRefPlugin editorRef={lexicalEditorRef} />
-        </div>
-      </div>
+          </div>
+        }
+      />
     </LexicalComposer>
   );
 }

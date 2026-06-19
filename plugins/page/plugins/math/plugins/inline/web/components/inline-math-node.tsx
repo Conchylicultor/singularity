@@ -9,6 +9,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { KatexMath } from "@plugins/page/plugins/math/plugins/render/web";
 
@@ -133,7 +134,7 @@ function InlineMathView({
       }
     >
       <Stack gap="sm">
-        <div className="flex min-h-6 items-center justify-center">
+        <Center className="min-h-6">
           {draft === "" ? (
             <Text variant="caption" tone="muted">
               Empty
@@ -141,7 +142,7 @@ function InlineMathView({
           ) : (
             <KatexMath expression={draft} display={false} />
           )}
-        </div>
+        </Center>
         <textarea
           value={draft}
           autoFocus

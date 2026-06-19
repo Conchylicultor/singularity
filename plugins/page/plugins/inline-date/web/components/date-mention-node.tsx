@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { MdCalendarToday, MdNotificationsActive } from "react-icons/md";
 import { DecoratorNode, type LexicalNode, type NodeKey } from "lexical";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { formatMention } from "../internal/format-date";
 
 type SerializedDateMentionNode = {
@@ -85,9 +86,9 @@ function DateMentionView({ iso, reminderId }: { iso: string; reminderId: string 
   return (
     <LinkChip
       leading={
-        <span className="flex size-3.5 shrink-0 items-center justify-center">
+        <Center as="span" className="size-3.5">
           <Icon className="size-3.5" />
-        </span>
+        </Center>
       }
       onClick={(e) => e.stopPropagation()}
     >
