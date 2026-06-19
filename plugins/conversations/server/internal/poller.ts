@@ -15,6 +15,7 @@ import { getConfig } from "@plugins/config_v2/server";
 import { Runtime, flushInteractivePrompt, type RuntimeInfo } from "./runtime";
 import { autoAnswerConfig } from "../../shared/config";
 import { hibernationConfig } from "../../core/hibernation-config";
+import { decideMissingProcessAction } from "./hibernation-decision";
 import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { ConversationStatus } from "../../core";
 
@@ -255,23 +256,20 @@ async function tick(): Promise<void> {
     // Suspend-instead-of-gone: a waiting, resumable conversation whose process
     // is missing (idle-killed or lost to a reboot) becomes hibernated rather
     // than gone — it keeps showing as a normal Waiting conversation and is
-    // silently resumed on open. Close still wins (handled above). Main-only:
-    // tmux is global so every worktree's poller sees every session, but only
-    // main owns the canonical rows — same guard as orphan adoption. On non-main,
-    // or for ineligible rows, this falls through to today's gone path.
-    // The poller NEVER clears `hibernatedAt` — only `ensureResumed` does.
-    if (
-      isMain() &&
-      getConfig(hibernationConfig).enabled &&
-      dbRow.status === "waiting" &&
-      dbRow.claudeSessionId &&
-      !dbRow.hibernatedAt
-    ) {
+    // silently resumed on open. Close still wins (handled above). The poller
+    // NEVER clears `hibernatedAt` — only `ensureResumed` does. See
+    // `decideMissingProcessAction` for the eligibility-vs-re-stamp split.
+    const action = decideMissingProcessAction(dbRow, {
+      onMain: isMain(),
+      hibernationEnabled: getConfig(hibernationConfig).enabled,
+    });
+    if (action === "hibernate") {
       await setConversationHibernated(id, new Date());
       changedIds.add(id);
       continue;
     }
-
+    if (action === "leave-hibernated") continue;
+    // action === "gone"
     if (await markConversationGone(id)) changedIds.add(id);
   }
 
