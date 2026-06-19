@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { BundledLanguage } from "shiki";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { getHighlighter, themeForMode } from "./highlighter";
 import { resolveLang } from "./lang";
 import { useDarkMode } from "./use-dark-mode";
@@ -47,12 +48,14 @@ export function HighlightedCode({
   if (!resolved || html === null) {
     return (
       <ContentScope>
-        <pre
+        <Scroll
+          as="pre"
+          axis="both"
           // eslint-disable-next-line spacing/no-adhoc-spacing -- my-2 sets code-block vertical rhythm against surrounding content; one-off, no parent flex to own it
-          className={`my-2 overflow-auto rounded-md bg-muted p-md font-mono text-caption ${className ?? ""}`}
+          className={`my-2 rounded-md bg-muted p-md font-mono text-caption ${className ?? ""}`}
         >
           <code>{code}</code>
-        </pre>
+        </Scroll>
       </ContentScope>
     );
   }

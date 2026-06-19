@@ -20,8 +20,10 @@ export function SidebarPaneSection({
 }) {
   const { open, triggerProps, contentId } = useCollapsible({ defaultOpen });
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- shadcn SidebarGroup is the flex-column clip container for a collapsible section; flex/min-h-0/overflow-hidden configure the third-party component's own box, not a primitive boundary
     <SidebarGroup className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <SidebarGroupLabel
+        // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 keeps the label row rigid inside shadcn SidebarGroup's flex column
         className="group/label shrink-0 cursor-pointer select-none hover:text-sidebar-foreground"
         onClick={triggerProps.onClick}
         aria-expanded={triggerProps["aria-expanded"]}
@@ -36,6 +38,7 @@ export function SidebarPaneSection({
       {open && (
         <SidebarGroupContent
           id={contentId}
+          // eslint-disable-next-line layout/no-adhoc-layout -- shadcn SidebarGroupContent is the flexible scrolling body of the section; flex/min-h-0/overflow-hidden configure the third-party component's own box
           className="min-h-0 flex flex-1 flex-col overflow-hidden"
         >
           {children}

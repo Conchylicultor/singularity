@@ -1,5 +1,7 @@
 import { Button, Sidebar, SidebarHeader, SidebarInset, SidebarProvider, SidebarTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { SurfaceChromeContext } from "@plugins/primitives/plugins/pane/web";
 import { useContext, type ReactNode } from "react";
 import { PluginRuntimeContext, type Contribution } from "@plugins/framework/plugins/web-sdk/core";
@@ -106,13 +108,16 @@ function DefaultFlushFraming({
     <SidebarProvider className="h-full min-h-0">
       <Sidebar>
         {header && (
+          // eslint-disable-next-line layout/no-adhoc-layout -- justify-center vertically centers the header inside shadcn SidebarHeader's own flex column; not a primitive boundary
           <SidebarHeader className="h-chrome-bar justify-center whitespace-nowrap px-chrome py-none">
             {header}
           </SidebarHeader>
         )}
-        <div className="flex min-h-0 flex-1 flex-col">{sidebarContent}</div>
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of shadcn Sidebar's not-yet-drained flex column (claims the height left below the header) */}
+        <Stack gap="none" className="min-h-0 flex-1">{sidebarContent}</Stack>
       </Sidebar>
 
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- min-w-0 on shadcn SidebarInset lets the main area truncate within the not-yet-drained SidebarProvider flex row */}
       <SidebarInset className="min-w-0">{body}</SidebarInset>
     </SidebarProvider>
   );
@@ -171,7 +176,7 @@ export function AppShellLayout({
   const body = (
     <>
       {toolbar}
-      <main className="min-h-0 flex-1 overflow-hidden bg-muted/30">
+      <Clip as="main" fill className="bg-muted/30">
         <SurfaceChromeContext.Provider
           value={{
             contentOwnsTopChrome: !hasToolbar,
@@ -180,7 +185,7 @@ export function AppShellLayout({
         >
           {children}
         </SurfaceChromeContext.Provider>
-      </main>
+      </Clip>
     </>
   );
 
@@ -192,7 +197,7 @@ export function AppShellLayout({
   // No sidebar → no SidebarProvider/Inset; just a full-height column holding
   // the (optional) toolbar and the main renderer. Framing is sidebar-only.
   if (!sidebarSlot) {
-    return <div className="flex h-full min-h-0 flex-col">{body}</div>;
+    return <Stack gap="none" className="h-full min-h-0">{body}</Stack>;
   }
 
   const sidebarContent = (

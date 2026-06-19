@@ -24,6 +24,7 @@ export function ExpandAllButton({
       disabled={disabled}
       title={label}
       aria-label={label}
+      // eslint-disable-next-line layout/no-adhoc-layout -- real <button> (needs type=button + disabled); Stack/Center can't carry button-only attrs, so the centered flex row stays here
       className={cn(
         "flex shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
         variant === "compact"

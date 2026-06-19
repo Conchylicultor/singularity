@@ -8,6 +8,9 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useHostDir } from "./use-host-dir";
 
 export interface FolderPickerProps {
@@ -30,7 +33,7 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
   const subdirs = data?.entries.filter((e) => e.isDirectory) ?? [];
 
   return (
-    <div className="flex flex-col">
+    <Stack gap="none">
       <div className="border-b p-sm">
         {data ? (
           <FilepathBreadcrumb
@@ -43,11 +46,11 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
         )}
       </div>
 
-      <div className="max-h-64 min-h-24 overflow-y-auto p-xs">
+      <Scroll className="max-h-64 min-h-24 p-xs">
         {isLoading ? (
-          <div className="flex justify-center p-md">
+          <Center axis="horizontal" className="p-md">
             <Spinner className="size-4 text-muted-foreground" />
-          </div>
+          </Center>
         ) : isError ? (
           <Placeholder tone="error">{getEndpointErrorMessage(error)}</Placeholder>
         ) : data && !data.isDirectory ? (
@@ -59,16 +62,16 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
             <Row
               key={entry.name}
               hover="muted"
-              icon={<MdFolder className="shrink-0 text-muted-foreground" />}
+              icon={<MdFolder className="text-muted-foreground" />}
               onClick={() => data && setBrowsePath(`${data.path}/${entry.name}`)}
             >
               <TruncatingText>{entry.name}</TruncatingText>
             </Row>
           ))
         )}
-      </div>
+      </Scroll>
 
-      <div className="flex justify-end border-t p-sm">
+      <Stack direction="row" gap="none" justify="end" className="border-t p-sm">
         <Button
           size="sm"
           disabled={!data || !data.isDirectory}
@@ -76,7 +79,7 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
         >
           Select this folder
         </Button>
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

@@ -4,6 +4,10 @@ import { useState, useMemo, useRef, useEffect, useCallback, forwardRef } from "r
 import { MdSearch } from "react-icons/md";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import type { CommandPaletteItem } from "../slots";
 import { fuzzyMatch, type FuzzyMatch } from "./fuzzy";
 
@@ -138,21 +142,26 @@ export function CommandPaletteDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent>
-        <Surface level="overlay" className="w-full max-w-lg overflow-hidden rounded-xl shadow-2xl">
-          <div className="flex items-center gap-sm border-b px-md py-sm">
-            <MdSearch className="size-4 shrink-0 text-muted-foreground" />
-            <input
-              autoFocus
-              value={query}
-              onChange={(e) => {
-                setQuery(e.target.value);
-                setActiveIdx(0);
-              }}
-              onKeyDown={handleKeyDown}
-              className="flex-1 bg-transparent text-body outline-none placeholder:text-muted-foreground"
-              placeholder="Search commands..."
-            />
-          </div>
+        <Surface level="overlay" className="w-full max-w-lg shadow-2xl">
+        <Clip className="rounded-xl">
+          <Frame
+            gap="sm"
+            className="border-b px-md py-sm"
+            leading={<MdSearch className="size-4 text-muted-foreground" />}
+            content={
+              <input
+                autoFocus
+                value={query}
+                onChange={(e) => {
+                  setQuery(e.target.value);
+                  setActiveIdx(0);
+                }}
+                onKeyDown={handleKeyDown}
+                className="w-full bg-transparent text-body outline-none placeholder:text-muted-foreground"
+                placeholder="Search commands..."
+              />
+            }
+          />
 
           <ScrollArea className="max-h-80">
             <div className="p-xs">
@@ -212,27 +221,30 @@ export function CommandPaletteDialog({
           <Text
             as="div"
             variant="caption"
-            className="flex gap-md border-t px-md py-xs text-muted-foreground"
+            className="border-t px-md py-xs text-muted-foreground"
           >
-            <span>
-              <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
-                ↑↓
-              </Kbd>{" "}
-              navigate
-            </span>
-            <span>
-              <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
-                ↵
-              </Kbd>{" "}
-              select
-            </span>
-            <span>
-              <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
-                esc
-              </Kbd>{" "}
-              close
-            </span>
+            <Stack direction="row" gap="md">
+              <span>
+                <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
+                  ↑↓
+                </Kbd>{" "}
+                navigate
+              </span>
+              <span>
+                <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
+                  ↵
+                </Kbd>{" "}
+                select
+              </span>
+              <span>
+                <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
+                  esc
+                </Kbd>{" "}
+                close
+              </span>
+            </Stack>
           </Text>
+        </Clip>
         </Surface>
       </DialogContent>
     </Dialog>
@@ -250,29 +262,35 @@ const CommandRow = forwardRef<
 >(function CommandRow({ item, isActive, onMouseEnter, onClick }, ref) {
   const Icon = item.icon;
   return (
-    <div
+    <Frame
       ref={ref}
       role="option"
       aria-selected={isActive}
+      gap="sm"
       className={cn(
-        "flex cursor-pointer items-center gap-sm rounded-md px-sm py-xs text-body",
+        "cursor-pointer rounded-md px-sm py-xs text-body",
         isActive && "bg-accent text-accent-foreground",
       )}
       onMouseEnter={onMouseEnter}
       onClick={onClick}
-    >
-      {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
-      <span className="flex-1 truncate text-muted-foreground">
-        <HighlightedLabel
-          label={item.label}
-          ranges={item._match?.ranges ?? []}
-        />
-      </span>
-      {item.shortcut && (
-        <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
-          {item.shortcut}
-        </Kbd>
-      )}
-    </div>
+      leading={
+        Icon ? <Icon className="size-4 text-muted-foreground" /> : undefined
+      }
+      content={
+        <TruncatingText className="text-muted-foreground">
+          <HighlightedLabel
+            label={item.label}
+            ranges={item._match?.ranges ?? []}
+          />
+        </TruncatingText>
+      }
+      trailing={
+        item.shortcut ? (
+          <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
+            {item.shortcut}
+          </Kbd>
+        ) : undefined
+      }
+    />
   );
 });

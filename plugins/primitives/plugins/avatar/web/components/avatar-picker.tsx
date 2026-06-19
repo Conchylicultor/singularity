@@ -1,6 +1,7 @@
 import { cn, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
@@ -45,7 +46,7 @@ export function AvatarPicker({
         <SectionLabel className="px-xs pt-xs pb-xs text-3xs">
           Color
         </SectionLabel>
-        <div className="flex flex-wrap gap-xs px-xs pb-sm">
+        <Cluster gap="xs" className="px-xs pb-sm">
           {AVATAR_COLOR_KEYS.map((key) => (
             <button
               key={key}
@@ -60,7 +61,7 @@ export function AvatarPicker({
               )}
             />
           ))}
-        </div>
+        </Cluster>
 
         {/* Icon picker */}
         <IconPicker

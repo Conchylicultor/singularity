@@ -1,5 +1,7 @@
 import { type Node, type NodeProps } from "@xyflow/react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 
 export const GROUP_BG_TYPE = "graphCanvasGroup";
 
@@ -25,14 +27,20 @@ export function GroupBackground({ data }: NodeProps<GroupBgFlowNode>) {
         data.className,
       )}
     >
-      <span
-        className={cn(
-          "absolute top-1 left-2 max-w-[calc(100%-16px)] truncate text-3xs font-medium",
-          data.labelClassName,
-        )}
+      <Pin
+        to="top-left"
+        offset="xs"
+        // top-1 (xs = 0.25rem) maps to offset; left-2 (sm = 0.5rem) is the asymmetric
+        // horizontal inset, applied inline since Pin uses one offset for both edges.
+        style={{ left: "var(--space-sm)" }}
+        className="max-w-[calc(100%-16px)]"
       >
-        {data.label}
-      </span>
+        <TruncatingText
+          className={cn("text-3xs font-medium", data.labelClassName)}
+        >
+          {data.label}
+        </TruncatingText>
+      </Pin>
     </div>
   );
 }

@@ -234,6 +234,7 @@ export function ResponsiveOverflow({
 
       <div
         ref={containerRef}
+        // eslint-disable-next-line layout/no-adhoc-layout -- measurement-based primitive: the inline-flex/min-w-0/overflow-hidden mechanics are integral to width-driven child hiding and have no primitive equivalent
         className={cn("inline-flex min-w-0 overflow-hidden whitespace-nowrap", className)}
         style={{ gap }}
       >

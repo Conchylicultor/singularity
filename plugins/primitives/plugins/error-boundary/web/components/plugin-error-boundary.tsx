@@ -1,6 +1,9 @@
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
 import { UNSAFE_unsealSlotComponent } from "@plugins/framework/plugins/web-sdk/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { ErrorBoundary } from "../slots";
 import { callReporter, type BoundaryErrorReport } from "../reporter";
 
@@ -86,23 +89,29 @@ function CrashFallback({
 
   const tag = [report.slot, report.label].filter(Boolean).join(" / ");
   return (
-    <Text
-      as="div"
-      variant="caption"
-      className="flex items-center gap-sm rounded-md border border-destructive/20 bg-destructive/10 px-md py-sm text-destructive"
-    >
-      <span className="font-medium">{tag || "Plugin"} crashed</span>
-      <span className="truncate text-destructive/70">{report.error.message}</span>
-      <div className="ml-auto flex shrink-0 items-center gap-sm">
-        {actions.map((action, i) => {
-          // UNSAFE: rendered inside the boundary's own fallback — wrapping again is circular.
-          const Component = UNSAFE_unsealSlotComponent(action.component);
-          return <Component key={i} report={report} context={context} />;
-        })}
-        <button className="underline hover:no-underline" onClick={retry}>
-          Retry
-        </button>
-      </div>
+    <Text as="div" variant="caption" className="text-destructive">
+      <Frame
+        gap="sm"
+        className="rounded-md border border-destructive/20 bg-destructive/10 px-md py-sm"
+        leading={<span className="font-medium">{tag || "Plugin"} crashed</span>}
+        content={
+          <TruncatingText className="text-destructive/70">
+            {report.error.message}
+          </TruncatingText>
+        }
+        trailing={
+          <Stack direction="row" align="center" gap="sm">
+            {actions.map((action, i) => {
+              // UNSAFE: rendered inside the boundary's own fallback — wrapping again is circular.
+              const Component = UNSAFE_unsealSlotComponent(action.component);
+              return <Component key={i} report={report} context={context} />;
+            })}
+            <button className="underline hover:no-underline" onClick={retry}>
+              Retry
+            </button>
+          </Stack>
+        }
+      />
     </Text>
   );
 }

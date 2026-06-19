@@ -1,6 +1,8 @@
 import { useState } from "react";
 import { MdClose } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { attachmentUrl } from "../internal/markdown";
 import { Lightbox } from "./lightbox";
@@ -52,17 +54,21 @@ export function AttachmentThumbnail({
         />
       )}
       {onRemove && (
-        <button
-          type="button"
-          onClick={(e) => {
-            e.stopPropagation();
-            onRemove();
-          }}
-          className={cn(hoverRevealTarget, "bg-background/90 border-border text-foreground absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full border")}
-          aria-label="Remove image"
-        >
-          <MdClose className="size-3" />
-        </button>
+        <Pin to="top-right" offset="xs" outset>
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onRemove();
+            }}
+            className={cn(hoverRevealTarget, "bg-background/90 border-border text-foreground block size-4 rounded-full border")}
+            aria-label="Remove image"
+          >
+            <Center className="size-full">
+              <MdClose className="size-3" />
+            </Center>
+          </button>
+        </Pin>
       )}
       {open && (
         <Lightbox

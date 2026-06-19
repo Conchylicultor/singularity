@@ -69,6 +69,7 @@ export function Bar({
   const safe = endSafeArea ?? tier === "chrome";
   return (
     <As
+      // eslint-disable-next-line layout/no-adhoc-layout -- Bar is the sanctioned single-line chrome-strip primitive (enforced by bar/no-adhoc-bar); it owns its own raw flex-row + clip mechanics, the same way the css/* layout primitives own theirs
       className={cn(
         "flex region-line gap-sm border-b",
         TIER_CLASS[tier],

@@ -162,11 +162,13 @@ export function CollapsibleWrap({
   // ResizeObserver, and oscillating row 1 between two positions. Keeping it a
   // sibling of `wrapRef` breaks that feedback path by construction.
   const wrapBox = (
+    // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of the host's chip-row flex; min-w-0 flex-1 lets the measured wrap box fill and shrink
     <div className={cn("relative min-w-0 flex-1", expanded && "z-popover")}>
       {showBackdrop && (
         <Surface
           level="overlay"
           aria-hidden
+          // eslint-disable-next-line layout/no-adhoc-layout -- JS-measured backdrop positioned via computed inline top/left/right/height; no semantic-ramp anchor applies
           className="pointer-events-none absolute -z-10"
           style={{
             top: -PANEL_PAD,
@@ -178,6 +180,7 @@ export function CollapsibleWrap({
       )}
       <div
         ref={wrapRef}
+        // eslint-disable-next-line layout/no-adhoc-layout -- ResizeObserver-measured flex-wrap clip box; the flex-wrap/content-start/min-w-0 mechanics are integral to the row-clamp behavior and have no primitive equivalent
         className={cn("flex flex-wrap content-start min-w-0", className)}
         style={style}
       >
@@ -197,6 +200,7 @@ export function CollapsibleWrap({
         <IconButton
           icon={expanded ? MdExpandLess : MdExpandMore}
           label={expanded ? "Collapse" : "Expand"}
+          // eslint-disable-next-line layout/no-adhoc-layout -- rigid chevron affordance in the host's chip-row flex; must not shrink alongside the wrap box
           className="shrink-0"
           onClick={expanded ? collapse : expand}
         />

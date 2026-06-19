@@ -1,6 +1,7 @@
 import { useCallback, useMemo, useState } from "react";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export interface FilterChipProps {
   active: boolean;
@@ -23,12 +24,12 @@ export interface FilterGroupProps {
 
 export function FilterGroup({ label, children }: FilterGroupProps) {
   return (
-    <div className="flex items-center gap-xs">
+    <Stack direction="row" align="center" gap="xs">
       <Text variant="caption" className="text-muted-foreground">
         {label}:
       </Text>
       {children}
-    </div>
+    </Stack>
   );
 }
 

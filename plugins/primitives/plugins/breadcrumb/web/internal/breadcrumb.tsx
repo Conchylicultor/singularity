@@ -1,4 +1,7 @@
 import type { ReactNode } from "react";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 
 export interface BreadcrumbSegment {
   key: string;
@@ -24,14 +27,20 @@ export function Breadcrumb({
   const prefix = segments.slice(0, lastIndex);
   const active = segments[lastIndex]!;
 
-  return (
-    <span className="flex min-w-0 items-baseline gap-2xs whitespace-nowrap [&_svg:not([class*='size-'])]:icon-auto">
-      {prefix.length > 0 && (
-        <span className="flex min-w-0 shrink items-baseline truncate">
+  // The clipped prefix is the flexible region (truncates/clips first); the active
+  // segment + actions are the rigid trailing cluster.
+  const prefixNode =
+    prefix.length > 0 ? (
+      <Clip className="font-normal text-muted-foreground">
+        <Stack as="span" direction="row" align="baseline" gap="none">
           {prefix.map((seg, i) => (
-            <span
+            <Stack
+              as="span"
+              direction="row"
+              align="baseline"
+              gap="none"
               key={seg.key}
-              className="flex items-baseline whitespace-nowrap"
+              className="whitespace-nowrap"
             >
               {onNavigate ? (
                 <button
@@ -49,12 +58,24 @@ export function Breadcrumb({
               <span className="font-normal text-muted-foreground/50">
                 {separator}
               </span>
-            </span>
+            </Stack>
           ))}
-        </span>
-      )}
-      <span className="shrink-0 truncate font-medium">{active.label}</span>
-      {actions}
-    </span>
+        </Stack>
+      </Clip>
+    ) : undefined;
+
+  return (
+    <Frame
+      align="baseline"
+      gap="2xs"
+      className="whitespace-nowrap [&_svg:not([class*='size-'])]:icon-auto"
+      content={prefixNode}
+      trailing={
+        <>
+          <span className="font-medium">{active.label}</span>
+          {actions}
+        </>
+      }
+    />
   );
 }

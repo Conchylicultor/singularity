@@ -32,7 +32,7 @@ export function FilepathBreadcrumb({
     <CopyButton
       text={path}
       size="inline"
-      className="shrink-0 text-muted-foreground hover:text-foreground"
+      className="text-muted-foreground hover:text-foreground"
       title="Copy path"
     />
   ) : undefined;

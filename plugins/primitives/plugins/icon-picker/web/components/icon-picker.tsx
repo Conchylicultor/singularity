@@ -3,6 +3,11 @@ import { useState, useRef, useEffect } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { MdClose, MdSearch } from "react-icons/md";
 import {
   loadFullIconSet,
@@ -56,7 +61,13 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
   return (
     <div className={className}>
       {/* Header + search */}
-      <div className="flex items-center justify-between px-xs pt-xs pb-xs">
+      <Stack
+        direction="row"
+        align="center"
+        justify="between"
+        gap="none"
+        className="px-xs pt-xs pb-xs"
+      >
         <SectionLabel as="span" className="text-3xs">
           {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on the "loading…" suffix next to the label text */}
           Icon{!fullSet && <span className="ml-1 opacity-50">· loading…</span>}
@@ -64,10 +75,12 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
         {fullSet && (
           <span className="text-3xs text-muted-foreground/50">{iconCount} icons</span>
         )}
-      </div>
+      </Stack>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off horizontal inset + bottom offset on the search box within the picker block */}
       <div className="relative mx-1 mb-2">
-        <MdSearch className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
+        <Pin to="left" offset="sm" decorative>
+          <MdSearch className="size-3.5 text-muted-foreground" />
+        </Pin>
         <input
           ref={searchRef}
           value={query}
@@ -77,28 +90,30 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
           className="w-full rounded-md border border-input bg-background py-xs pl-7 pr-7 text-caption outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
         />
         {query && (
-          <button
-            type="button"
-            onClick={() => { setQuery(""); searchRef.current?.focus(); }}
-            className="absolute right-2 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-          >
-            <MdClose className="size-3.5" />
-          </button>
+          <Pin to="right" offset="sm">
+            <button
+              type="button"
+              onClick={() => { setQuery(""); searchRef.current?.focus(); }}
+              className="text-muted-foreground hover:text-foreground"
+            >
+              <MdClose className="size-3.5" />
+            </button>
+          </Pin>
         )}
       </div>
 
       {/* Icon grid */}
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- space-y between conditional category blocks inside a padded scroll container; not a plain flex stack */}
-      <div className="max-h-64 overflow-y-auto px-xs pb-xs space-y-2">
+      <Scroll className="max-h-64 px-xs pb-xs space-y-2">
         {!fullSet ? (
           <Loading label="Loading icons…" className="py-2xl text-center" />
         ) : isSearching ? (
           searchResults.length > 0 ? (
-            <div className="grid grid-cols-9 gap-xs">
+            <Grid cols={9} minCellWidth="0" gap="xs">
               {searchResults.map((entry) => (
                 <IconBtn key={entry.key} entry={entry} selected={value === entry.key} onPick={pickIcon} />
               ))}
-            </div>
+            </Grid>
           ) : (
             <Text as="p" variant="caption" className="py-lg text-center text-muted-foreground">
               No icons match &ldquo;{query}&rdquo;
@@ -111,15 +126,15 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
               <SectionLabel className="mb-1 text-3xs text-muted-foreground/60">
                 {cat.label}
               </SectionLabel>
-              <div className="grid grid-cols-9 gap-xs">
+              <Grid cols={9} minCellWidth="0" gap="xs">
                 {cat.entries.map((entry) => (
                   <IconBtn key={entry.key} entry={entry} selected={value === entry.key} onPick={pickIcon} />
                 ))}
-              </div>
+              </Grid>
             </div>
           ))
         )}
-      </div>
+      </Scroll>
     </div>
   );
 }
@@ -134,11 +149,13 @@ function IconBtn({ entry, selected, onPick }: { entry: FullIconEntry; selected: 
       title={entry.key.replace(/_/g, " ")}
       onClick={() => onPick(entry)}
       className={cn(
-        "flex size-7 items-center justify-center rounded-md text-foreground/80 hover:bg-accent",
+        "size-7 rounded-md text-foreground/80 hover:bg-accent",
         selected && "bg-accent text-foreground ring-1 ring-ring",
       )}
     >
-      <Icon className="size-4" />
+      <Center>
+        <Icon className="size-4" />
+      </Center>
     </button>
   );
 }

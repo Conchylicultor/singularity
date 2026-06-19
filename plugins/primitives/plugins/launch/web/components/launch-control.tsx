@@ -17,6 +17,8 @@ import {
 } from "@plugins/conversations/plugins/model-provider/web";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export type LaunchRequest = {
   prompt?: string;
@@ -125,34 +127,37 @@ export function LaunchControl({
       onKeyDown={onMenuKeyDown}
     >
       {visibleModels.map((id, i) => (
-        <DropdownMenuItem
-          key={id}
-          onClick={() => setDefaultModel(id)}
-          className="justify-between gap-lg"
-        >
-          <span className="flex items-center gap-xs">
-            {MODEL_REGISTRY[id].label}
-            {id === defaultModel && <MdCheck className="size-3.5 opacity-70" />}
-          </span>
-          <span className="flex items-center gap-xs">
-            <Button
-              variant="ghost"
-              size="icon-xs"
-              aria-label={`Launch ${MODEL_REGISTRY[id].label}`}
-              title={`Launch ${MODEL_REGISTRY[id].label}`}
-              onClick={(e) => {
-                e.stopPropagation();
-                return launch(id, e);
-              }}
-              className="opacity-0 pointer-events-none group-hover/dropdown-menu-item:opacity-100 group-hover/dropdown-menu-item:pointer-events-auto"
-            >
-              <MdPlayArrow className="size-3.5" />
-            </Button>
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-0 resets the Kbd primitive's default left margin in this inline row */}
-            <Kbd className="ml-0 text-muted-foreground border-border bg-muted">
-              {formatShortcutLabel(`mod+${i + 1}`)}
-            </Kbd>
-          </span>
+        <DropdownMenuItem key={id} onClick={() => setDefaultModel(id)}>
+          <Frame
+            gap="lg"
+            content={
+              <Stack direction="row" align="center" gap="xs">
+                {MODEL_REGISTRY[id].label}
+                {id === defaultModel && <MdCheck className="size-3.5 opacity-70" />}
+              </Stack>
+            }
+            trailing={
+              <Stack direction="row" align="center" gap="xs">
+                <Button
+                  variant="ghost"
+                  size="icon-xs"
+                  aria-label={`Launch ${MODEL_REGISTRY[id].label}`}
+                  title={`Launch ${MODEL_REGISTRY[id].label}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    return launch(id, e);
+                  }}
+                  className="opacity-0 pointer-events-none group-hover/dropdown-menu-item:opacity-100 group-hover/dropdown-menu-item:pointer-events-auto"
+                >
+                  <MdPlayArrow className="size-3.5" />
+                </Button>
+                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-0 resets the Kbd primitive's default left margin in this inline row */}
+                <Kbd className="ml-0 text-muted-foreground border-border bg-muted">
+                  {formatShortcutLabel(`mod+${i + 1}`)}
+                </Kbd>
+              </Stack>
+            }
+          />
         </DropdownMenuItem>
       ))}
     </DropdownMenuContent>
@@ -202,6 +207,7 @@ export function LaunchControl({
               variant={btnVariant}
               size={btnSize}
               disabled={disabled}
+              // eslint-disable-next-line layout/no-adhoc-layout -- flexible dropdown button absorbing slack inside the (raw) ButtonGroup row and spreading its own label↔chevron; no primitive composes onto the shadcn Button's internal flex
               className={cn("gap-xs", blue, fullWidth && "flex-1 justify-between")}
             />
           }

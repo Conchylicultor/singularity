@@ -6,7 +6,7 @@
 
 - Description: Factory for full-surface pane toolbars: a sanctioned render-slot header host with reorderable start/end zones. Use instead of hand-rolling a header bar.
 - Web:
-  - Uses: `primitives/bar.Bar`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ControlSize`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.RenderSlot`
+  - Uses: `primitives/bar.Bar`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ControlSize`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.RenderSlot`
   - Exports: Types: `PaneToolbar`, `PaneToolbarItem`, `PaneToolbarOptions`; Values: `definePaneToolbar`
 - Cross-plugin:
   - Imported by: `apps/sonata/shell`, `apps/story/shell`

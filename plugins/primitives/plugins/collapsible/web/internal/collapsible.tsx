@@ -82,6 +82,7 @@ export function CollapsibleTrigger({
       aria-expanded={open}
       aria-controls={contentId}
       onClick={toggle}
+      // eslint-disable-next-line layout/no-adhoc-layout -- the trigger is a real <button> (needs type=button); Stack/Frame can't carry button-only attrs, so the flex row stays here
       className={cn("flex w-full region-line text-left", className)}
       {...props}
     />
@@ -130,6 +131,7 @@ export function CollapsibleChevron({
 
   return (
     <MdChevronRight
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid chevron indicator placed in arbitrary trigger rows; must never shrink
       className={cn(
         "shrink-0 transition-transform duration-200",
         open && "rotate-90",

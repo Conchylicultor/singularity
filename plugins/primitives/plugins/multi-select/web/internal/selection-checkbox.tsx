@@ -20,6 +20,7 @@ export function SelectionCheckbox({
       onChange={() => {}}
       onClick={toggle}
       aria-label="Select item"
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid leaf: a bare native checkbox that must not shrink inside its consumer-owned flex row (no primitive wraps a native <input>)
       className={cn(
         "size-3.5 shrink-0 cursor-pointer accent-primary",
         !isActive && "opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto",

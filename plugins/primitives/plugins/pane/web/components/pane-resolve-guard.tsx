@@ -5,6 +5,9 @@ import { MdClose, MdOpenInFull } from "react-icons/md";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { paneObjectFor, type PaneInternal, type ResolveHook } from "../pane";
 
 interface Props {
@@ -81,24 +84,29 @@ function FallbackChrome({
   const doClose = paneObject.useClose();
   const doPromote = paneObject.usePromote();
   return (
-    <div className="flex h-full flex-col">
-      <Bar tier="pane">
-        <Text as="span" variant="label" tone="muted" className="truncate">
-          {title}
-        </Text>
-        <div className="flex-1" />
-        {chrome.promote && doPromote && (
-          <Button variant="ghost" size="sm" onClick={doPromote} aria-label="Promote">
-            <MdOpenInFull className="size-4" />
-          </Button>
-        )}
-        {chrome.close && doClose && (
-          <Button variant="ghost" size="sm" onClick={doClose} aria-label="Close">
-            <MdClose className="size-4" />
-          </Button>
-        )}
-      </Bar>
-      <div className="flex flex-1 items-center justify-center">{children}</div>
-    </div>
+    <Column
+      className="h-full"
+      header={
+        <Bar tier="pane">
+          <Text as="span" variant="label" tone="muted" className="truncate">
+            {title}
+          </Text>
+          <Stack direction="row" align="center" gap="sm" className="ml-auto">
+            {chrome.promote && doPromote && (
+              <Button variant="ghost" size="sm" onClick={doPromote} aria-label="Promote">
+                <MdOpenInFull className="size-4" />
+              </Button>
+            )}
+            {chrome.close && doClose && (
+              <Button variant="ghost" size="sm" onClick={doClose} aria-label="Close">
+                <MdClose className="size-4" />
+              </Button>
+            )}
+          </Stack>
+        </Bar>
+      }
+      scrollBody={false}
+      body={<Center className="h-full">{children}</Center>}
+    />
   );
 }

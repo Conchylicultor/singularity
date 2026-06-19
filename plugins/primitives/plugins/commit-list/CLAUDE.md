@@ -6,7 +6,7 @@
 
 - Description: Reusable commit row rendering and git log types. Git log parser and commit row types for reuse across plugins.
 - Web:
-  - Uses: `primitives/css/badge.Badge`, `primitives/css/text.Text`
+  - Uses: `primitives/css/badge.Badge`, `primitives/css/frame.Frame`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`
   - Exports: Types: `CommitRow`; Values: `COMMIT_ROW_HEIGHT`, `CommitRail`, `CommitRowItem`, `CommitRowSchema`, `MergeBaseMarker`
 - Server:
   - Uses: `infra/paths.GIT`

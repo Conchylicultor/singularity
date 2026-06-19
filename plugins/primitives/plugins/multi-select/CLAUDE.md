@@ -6,7 +6,7 @@
 
 - Description: Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.
 - Web:
-  - Uses: `primitives/css/ui-kit.cn`
+  - Uses: `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/ui-kit.cn`
   - Exports: Types: `MultiSelectHandle`, `MultiSelectItemHandle`, `MultiSelectProviderProps`, `SelectionBarProps`, `SelectionCheckboxProps`; Values: `MultiSelectProvider`, `SelectionBar`, `SelectionCheckbox`, `useMultiSelect`, `useMultiSelectItem`
 - Cross-plugin:
   - Imported by: `conversations/agents`, `page/editor`, `primitives/tree`

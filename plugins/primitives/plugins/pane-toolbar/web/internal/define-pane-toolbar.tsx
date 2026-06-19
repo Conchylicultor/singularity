@@ -1,5 +1,6 @@
 import { Button, type ControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { ComponentType, ReactNode } from "react";
 import {
   defineRenderSlot,
@@ -85,9 +86,9 @@ export function definePaneToolbar(
     return (
       <Bar tier="chrome" className={className}>
         <Start.Render>{(item) => <ToolbarItem {...item} />}</Start.Render>
-        <div className="ml-auto flex items-center gap-sm">
+        <Stack direction="row" align="center" gap="sm" className="ml-auto">
           <End.Render>{(item) => <ToolbarItem {...item} />}</End.Render>
-        </div>
+        </Stack>
       </Bar>
     );
   }

@@ -4,6 +4,7 @@ import {
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   defineRenderSlot,
   type RenderSlot,
@@ -40,7 +41,7 @@ export function defineDetailSections<EntityProps extends Record<string, unknown>
   function Host(entityProps: EntityProps): ReactNode {
     if (options?.collapsible) {
       return (
-        <div className="flex flex-col gap-sm px-lg pb-lg">
+        <Stack gap="sm" className="px-lg pb-lg">
           <Section.Render>
             {(item) => {
               const C = item.component;
@@ -67,18 +68,18 @@ export function defineDetailSections<EntityProps extends Record<string, unknown>
               );
             }}
           </Section.Render>
-        </div>
+        </Stack>
       );
     }
     return (
-      <div className="flex flex-col gap-xl p-xl">
+      <Stack gap="xl" className="p-xl">
         <Section.Render>
           {(item) => {
             const C = item.component;
             return <C {...entityProps} />;
           }}
         </Section.Render>
-      </div>
+      </Stack>
     );
   }
 

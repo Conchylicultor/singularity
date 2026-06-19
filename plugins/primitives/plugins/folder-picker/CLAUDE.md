@@ -38,7 +38,7 @@ has **no** config_v2 dependency — the `directory-path` config field type wraps
 
 - Description: Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory. Host filesystem directory-browsing endpoint backing the folder-picker UI: lists a directory's subdirectories and validates a typed path.
 - Web:
-  - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/spinner.Spinner`, `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/filepath-breadcrumb.FilepathBreadcrumb`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`
+  - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/css/center.Center`, `primitives/css/frame.Frame`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/spinner.Spinner`, `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/filepath-breadcrumb.FilepathBreadcrumb`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`
   - Exports: Types: `FolderPickerPopoverProps`, `FolderPickerProps`; Values: `FolderPicker`, `FolderPickerPopover`, `useHostDir`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`

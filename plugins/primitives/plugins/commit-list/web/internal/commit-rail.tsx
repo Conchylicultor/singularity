@@ -1,4 +1,5 @@
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 interface Props {
   isFirst: boolean;
@@ -22,7 +23,6 @@ export function CommitRail({ isFirst, isLast, color }: Props) {
       height={ROW_HEIGHT}
       viewBox={`0 0 28 ${ROW_HEIGHT}`}
       aria-hidden="true"
-      className="shrink-0"
     >
       <line
         x1={RAIL_X}
@@ -57,13 +57,18 @@ export function MergeBaseMarker({
 }) {
   const ROW = ROW_HEIGHT;
   return (
-    <Text as="li" variant="caption" className="flex items-center text-muted-foreground">
+    <Stack
+      as="li"
+      direction="row"
+      align="center"
+      gap="none"
+      className="text-muted-foreground"
+    >
       <svg
         width={28}
         height={ROW}
         viewBox={`0 0 28 ${ROW}`}
         aria-hidden="true"
-        className="shrink-0"
       >
         {hasPending && (
           <line
@@ -91,11 +96,13 @@ export function MergeBaseMarker({
           fill={mainColor}
         />
       </svg>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- per-label offset from the rail svg; non-uniform with the svg sibling */}
-      <span className="ml-2 font-mono">{shortSha ?? "main"}</span>
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- per-label offset between sha and merge-base text */}
-      <span className="ml-2">merge-base</span>
-    </Text>
+      <Text as="span" variant="caption">
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- per-label offset from the rail svg; non-uniform with the svg sibling */}
+        <span className="ml-2 font-mono">{shortSha ?? "main"}</span>
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- per-label offset between sha and merge-base text */}
+        <span className="ml-2">merge-base</span>
+      </Text>
+    </Stack>
   );
 }
 

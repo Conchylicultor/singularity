@@ -6,7 +6,7 @@
 
 - Description: Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
 - Web:
-  - Uses: `primitives/select-scope.ContentScope`
+  - Uses: `primitives/css/scroll.Scroll`, `primitives/select-scope.ContentScope`
   - Exports: Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
 - Cross-plugin:
   - Imported by: `config_v2/settings`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/jsonl-viewer/tool-call/write`, `page/code-block`, `page/read-only-view`, `primitives/diff-view`, `primitives/markdown`, `ui/tweakcn/community-browser`

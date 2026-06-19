@@ -2,6 +2,9 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactNode } from "react";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import "./loading.css";
 
 export type LoadingVariant = "text" | "spinner" | "rows" | "cards" | "block";
@@ -44,46 +47,46 @@ export function Loading({
       );
     case "spinner":
       return (
-        <div
+        <Frame
           role="status"
+          gap="sm"
           className={cn(
-            "loading-delayed flex items-center gap-sm px-md py-sm text-body text-muted-foreground",
+            "loading-delayed px-md py-sm text-body text-muted-foreground",
             className,
           )}
-        >
-          <Spinner className="size-4 shrink-0" />
-          {label}
-        </div>
+          leading={<Spinner className="size-4" />}
+          content={label}
+        />
       );
     case "rows":
       return (
-        <div
+        <Stack
           role="status"
           aria-label="Loading"
-          className={cn("loading-delayed flex flex-col gap-sm p-sm", className)}
+          gap="sm"
+          className={cn("loading-delayed p-sm", className)}
         >
           {Array.from({ length: count ?? 6 }, (_, i) => (
             <Shimmer key={i} className="h-8 w-full" />
           ))}
-        </div>
+        </Stack>
       );
     case "cards":
       return (
-        <div
+        <Grid
           role="status"
           aria-label="Loading"
-          className={cn("loading-delayed grid gap-lg p-xl", className)}
-          style={{
-            gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
-          }}
+          minCellWidth="200px"
+          gap="lg"
+          className={cn("loading-delayed p-xl", className)}
         >
           {Array.from({ length: count ?? 8 }, (_, i) => (
-            <div key={i} className="flex flex-col gap-sm">
+            <Stack key={i} gap="sm">
               <Shimmer className="aspect-video w-full" />
               <Shimmer className="h-4 w-3/5" />
-            </div>
+            </Stack>
           ))}
-        </div>
+        </Grid>
       );
     case "block":
       return (

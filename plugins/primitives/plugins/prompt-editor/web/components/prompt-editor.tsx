@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback, useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
@@ -85,9 +86,16 @@ function ToolbarRow() {
   if (items.length === 0) return null;
   if (!editable && !hasAlwaysActive) return null;
   return (
-    <div className="flex items-center gap-xs px-sm pb-xs" onMouseDown={focusEditor}>
+    <Stack
+      direction="row"
+      align="center"
+      gap="xs"
+      className="px-sm pb-xs"
+      onMouseDown={focusEditor}
+    >
       <PromptEditorSlots.FloatingAction.Render>
         {(item) => (
+          // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf wrapper letting an arbitrary contributed action component shrink within the toolbar Stack row
           <div className={cn("min-w-0", !editable && !item.alwaysActive && disabledPartCls)}>
             <item.component
               insertText={insertText}
@@ -97,6 +105,6 @@ function ToolbarRow() {
           </div>
         )}
       </PromptEditorSlots.FloatingAction.Render>
-    </div>
+    </Stack>
   );
 }

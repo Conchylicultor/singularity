@@ -186,6 +186,7 @@ function EditorShell({
 
   return (
     <div
+      // eslint-disable-next-line layout/no-adhoc-layout -- min-w-0 lets the self-contained editor box shrink below its content width inside an arbitrary external flex parent
       className={cn(
         "focus-ring-within w-full min-w-0 rounded-md border transition-colors",
         "border-input",
@@ -199,6 +200,7 @@ function EditorShell({
           contentEditable={
             <ContentEditable
               style={{ minHeight, maxHeight }}
+              // eslint-disable-next-line layout/no-adhoc-layout -- overflow-y-auto configures the scroll on Lexical's third-party ContentEditable element (its own clamped editor viewport), not a primitive boundary
               className={cn(
                 "px-sm py-xs text-body outline-none resize-none",
                 "overflow-y-auto",
@@ -207,6 +209,7 @@ function EditorShell({
               aria-disabled={disabled}
               aria-placeholder={placeholder ?? ""}
               placeholder={
+                // eslint-disable-next-line layout/no-adhoc-layout -- decorative full-bleed placeholder overlay rendered into Lexical's PlainTextPlugin placeholder slot (third-party DOM structure); cannot route through <Overlay above>
                 <div className="text-muted-foreground pointer-events-none absolute inset-0 px-sm py-xs text-body">
                   {placeholder ?? ""}
                 </div>

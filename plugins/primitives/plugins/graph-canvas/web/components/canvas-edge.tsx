@@ -8,6 +8,7 @@ import {
   type Edge,
   type EdgeProps,
 } from "@xyflow/react";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export const CANVAS_EDGE_TYPE = "graphCanvasEdge";
 
@@ -47,8 +48,12 @@ export function CanvasEdge({
       <path d={edgePath} fill="none" stroke="transparent" strokeWidth={20} />
       <BaseEdge path={edgePath} style={style} markerEnd={markerEnd} />
       <EdgeLabelRenderer>
-        <div
-          className="nodrag nopan pointer-events-auto absolute flex items-center gap-xs"
+        <Stack
+          direction="row"
+          gap="xs"
+          align="center"
+          // eslint-disable-next-line layout/no-adhoc-layout -- absolute mid-edge label at xyflow-computed (labelX, labelY) coordinates
+          className="nodrag nopan pointer-events-auto absolute"
           style={{
             transform: "translate(-50%, -50%)",
             left: labelX,
@@ -58,7 +63,7 @@ export function CanvasEdge({
           }}
         >
           {actions}
-        </div>
+        </Stack>
       </EdgeLabelRenderer>
     </g>
   );

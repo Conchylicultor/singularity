@@ -1,6 +1,9 @@
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useState } from "react";
 import { MdCancel, MdCheckCircle, MdFolderOpen } from "react-icons/md";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { FolderPicker } from "./folder-picker";
@@ -38,33 +41,38 @@ export function FolderPickerPopover({
   const valid = validity?.exists === true && validity.isDirectory;
 
   return (
-    <div className="flex items-center gap-xs">
-      <div className="relative flex-1">
-        <Input
-          value={local}
-          placeholder={placeholder ?? "Absolute folder path"}
-          onChange={(e) => setLocal(e.target.value)}
-          onBlur={() => commit(local)}
-          className="pr-2xl"
-        />
-        {hasValue && validity ? (
-          <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
-            {valid ? (
-              <MdCheckCircle
-                className="size-4 text-success"
-                title="Folder exists"
-              />
-            ) : (
-              <MdCancel
-                className="size-4 text-destructive"
-                title="Not an existing folder"
-              />
-            )}
-          </span>
-        ) : null}
-      </div>
-
-      <InlinePopover
+    <Frame
+      gap="xs"
+      content={
+        <div className="relative">
+          <Input
+            value={local}
+            placeholder={placeholder ?? "Absolute folder path"}
+            onChange={(e) => setLocal(e.target.value)}
+            onBlur={() => commit(local)}
+            className="pr-2xl"
+          />
+          {hasValue && validity ? (
+            <Pin to="right" offset="sm" stretch decorative>
+              <Center axis="vertical">
+                {valid ? (
+                  <MdCheckCircle
+                    className="size-4 text-success"
+                    title="Folder exists"
+                  />
+                ) : (
+                  <MdCancel
+                    className="size-4 text-destructive"
+                    title="Not an existing folder"
+                  />
+                )}
+              </Center>
+            </Pin>
+          ) : null}
+        </div>
+      }
+      trailing={
+        <InlinePopover
         open={open}
         onOpenChange={setOpen}
         align="end"
@@ -72,15 +80,16 @@ export function FolderPickerPopover({
         contentClassName="w-80 p-none"
         trigger={<IconButton icon={MdFolderOpen} label="Browse folders" />}
       >
-        <FolderPicker
-          value={value}
-          onSelect={(path) => {
-            setLocal(path);
-            commit(path);
-            setOpen(false);
-          }}
-        />
-      </InlinePopover>
-    </div>
+          <FolderPicker
+            value={value}
+            onSelect={(path) => {
+              setLocal(path);
+              commit(path);
+              setOpen(false);
+            }}
+          />
+        </InlinePopover>
+      }
+    />
   );
 }

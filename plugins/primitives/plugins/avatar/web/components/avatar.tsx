@@ -48,6 +48,7 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
     <span
       ref={ref}
       title={title}
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid inline-level avatar disc: inline-flex center on a shrink-0 leaf that sits inline in flex rows; Center is block-level grid and would break inline placement
       className={cn(
         "relative inline-flex shrink-0 items-center justify-center rounded-full",
         sz.box,
@@ -63,6 +64,7 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
       ) : null}
       {statusDot ? (
         <span
+          // eslint-disable-next-line layout/no-adhoc-layout -- status dot pinned bottom-right with per-size sub-pixel overhang offsets (-right-px/-0.5) baked into SIZE_MAP; not on the spacing ramp Pin/outset expresses
           className={cn(
             "absolute rounded-full ring-background",
             sz.dot,
