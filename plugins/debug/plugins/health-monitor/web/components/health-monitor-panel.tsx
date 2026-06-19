@@ -28,6 +28,10 @@ import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/we
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { loadSeverity } from "@plugins/debug/plugins/slow-ops/core";
 import { getHealthData } from "../../shared/endpoints";
 import type { HealthSeries, HostSample } from "../../shared/schema";
@@ -237,6 +241,84 @@ function BackendSection({ series }: { series: HealthSeries }): ReactElement {
   );
 }
 
+// A backend is "stale" if its newest sample is older than ~3 sample intervals —
+// the sampler ticks every 10s, so >30s of silence means the loop is wedged or
+// the process is gone.
+const STALE_AGE_MS = 3 * SAMPLE_BUCKET_MS;
+
+// Static description of each backend's recurring idle work, surfaced so the
+// "what is this process doing while idle?" question has an answer in-pane. These
+// are fixed by code, not sampled — purely informational.
+const IDLE_WORK_PER_BACKEND = [
+  "worker concurrency 4",
+  "stuck-lock-sweeper 60s",
+  "process-sampler 10s",
+];
+const IDLE_WORK_MAIN_ONLY = ["host-sampler 10s", "crons"];
+
+function BackendRow({ series }: { series: HealthSeries }): ReactElement {
+  const latest = series.samples.length
+    ? series.samples.reduce((a, b) => (a.sampledAt > b.sampledAt ? a : b))
+    : null;
+  const ageMs = latest ? Date.now() - latest.sampledAt : Infinity;
+  const stale = ageMs > STALE_AGE_MS;
+  const depth = latest?.heavyReadDepth ?? 0;
+  return (
+    <Frame
+      leading={
+        <Stack direction="row" align="center" gap="xs">
+          <StatusDot
+            colorClass={stale ? "bg-muted-foreground" : "bg-success"}
+            size="sm"
+          />
+          <Text variant="caption">{series.worktree}</Text>
+        </Stack>
+      }
+      meta={
+        latest ? (
+          <Text variant="caption" tone="muted">
+            <RelativeTime date={new Date(latest.sampledAt)} />
+          </Text>
+        ) : (
+          <Text variant="caption" tone="muted">
+            no samples
+          </Text>
+        )
+      }
+      trailing={
+        <Badge
+          variant={depth > 0 ? "warning" : "muted"}
+          size="sm"
+          title="Host-wide heavy-read gate queue depth"
+        >
+          {`heavy-read ${depth}`}
+        </Badge>
+      }
+    />
+  );
+}
+
+function BackendsSection({ series }: { series: HealthSeries[] }): ReactElement | null {
+  const rows = useMemo(
+    () => [...series].sort((a, b) => a.worktree.localeCompare(b.worktree)),
+    [series],
+  );
+  if (rows.length === 0) return null;
+  return (
+    <Stack as="section" gap="sm">
+      <SectionLabel>Backends</SectionLabel>
+      <Stack gap="2xs">
+        {rows.map((s) => (
+          <BackendRow key={s.worktree} series={s} />
+        ))}
+      </Stack>
+      <Text variant="caption" tone="muted">
+        {`Idle work — per backend: ${IDLE_WORK_PER_BACKEND.join(", ")}; main only: ${IDLE_WORK_MAIN_ONLY.join(", ")}.`}
+      </Text>
+    </Stack>
+  );
+}
+
 function HostSection({ samples }: { samples: HostSample[] }): ReactElement | null {
   const rows = useMemo(
     () => [...samples].sort((a, b) => a.sampledAt - b.sampledAt) as unknown as ChartRow[],
@@ -294,6 +376,7 @@ export function HealthMonitorPanel(): ReactElement {
     <Inset pad="lg">
       <Stack gap="xl">
         <HostSection samples={data.hostSamples} />
+        <BackendsSection series={data.series} />
         {data.series.length === 0 ? (
           <Placeholder>No health samples yet — the sampler warms up within ~10s.</Placeholder>
         ) : (

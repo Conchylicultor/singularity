@@ -46,6 +46,15 @@ export interface HostSemaphore {
    * record a profiler span) without coupling this primitive to a profiler.
    */
   run<T>(fn: () => Promise<T>, onWait?: (waitMs: number) => void): Promise<T>;
+
+  /**
+   * The number of `run` callers currently parked on the SLOW path (all slots
+   * busy, blocking on the broker subprocess for a slot). Fast-path callers that
+   * grabbed a slot immediately are NOT counted — this is the queue-depth gauge,
+   * not the in-flight count. 0 means the gate is uncontended. Observability-only
+   * (e.g. the health-monitor Backends overview); never gates behavior.
+   */
+  depth(): number;
 }
 
 /**
@@ -67,7 +76,15 @@ export function createHostSemaphore(opts: { name: string; size: number }): HostS
   const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
   const files = Array.from({ length: size }, (_, i) => join(slotsDir, `slot-${i}.lock`));
 
+  // Queue-depth gauge: how many `run` callers are currently parked on the slow
+  // path waiting for a broker-held slot. Incremented when entering the slow path
+  // and decremented in a `finally` bracketing the blocking wait — never inline,
+  // since a thrown acquire would otherwise permanently inflate the gauge.
+  let waiting = 0;
+
   return {
+    depth: () => waiting,
+
     async run<T>(fn: () => Promise<T>, onWait?: (waitMs: number) => void): Promise<T> {
       const t0 = onWait ? performance.now() : 0;
 
@@ -104,7 +121,15 @@ export function createHostSemaphore(opts: { name: string; size: number }): HostS
         env: { ...process.env, HOST_SEM_SLOTS_DIR: slotsDir, HOST_SEM_SIZE: String(size) },
       });
 
-      await awaitGranted(broker.stdout, name);
+      // Parked on the slow path: count toward queue depth for the whole blocking
+      // wait. `finally` (not inline) so a thrown/early-closed broker decrements
+      // too — otherwise a failed acquire would permanently inflate the gauge.
+      waiting++;
+      try {
+        await awaitGranted(broker.stdout, name);
+      } finally {
+        waiting--;
+      }
       onWait?.(performance.now() - t0);
 
       try {

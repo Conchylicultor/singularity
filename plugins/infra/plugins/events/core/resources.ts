@@ -25,6 +25,10 @@ export const TriggerRowSchema = z.object({
   oneShot: z.boolean(),
   createdAt: z.string(),
   filters: z.record(z.unknown()),
+  // Computed (not stored): true when `jobName` is not in the live job registry,
+  // i.e. the target job was removed and this trigger can never deliver. Transient
+  // — the boot sweep deletes dangling rows, so this is surfaced, never persisted.
+  dangling: z.boolean(),
 });
 export type TriggerRow = z.infer<typeof TriggerRowSchema>;
 

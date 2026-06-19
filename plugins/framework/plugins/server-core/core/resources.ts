@@ -6,7 +6,11 @@ import type {
   ResourceParams as RtParams,
   DependsOnEntry as RtDep,
 } from "@plugins/framework/plugins/resource-runtime/core";
-import { recordEntrySpan } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  recordEntrySpan,
+  recordSpan,
+  getRuntimeProfile,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineServerContribution } from "./contributions";
 import { reportServerError, type ServerErrorReport } from "./error-reporter";
 
@@ -90,6 +94,26 @@ const runtime = createResourceRuntime({
   // blocking is attributable. See
   // research/2026-06-19-global-wait-attribution-instrumentation.md.
   wrapOrigin: (kind, key, fn) => recordEntrySpan(kind, key, fn),
+  // The notify-flush cycle as one `flush` entry — the per-resource `push` loads
+  // it triggers nest under it (byParent = head-of-line attribution). See
+  // research/2026-06-19-global-observability-frequency-delivery-and-dead-job-gc.md.
+  wrapFlush: (fn) => recordEntrySpan("flush", "flushNotifies", fn),
+  // Delivery latency as a `push` leaf under the active `flush` entry: enqueue→send
+  // time per resource (first-notify staleness window). Attributes to the resource.
+  onDelivered: (key, latencyMs) => recordSpan("push", `deliver:${key}`, latencyMs),
+  // Loader frequency for the _debug endpoint: find this key's loader aggregate in
+  // the current profiling window and derive count / calls-per-minute / slowest.
+  loaderStats: (key) => {
+    const profile = getRuntimeProfile();
+    const agg = profile.aggregates.loader.find((a) => a.label === key);
+    if (!agg) return undefined;
+    const windowMin = Math.max((performance.now() - profile.sinceMs) / 60_000, 1 / 60_000);
+    return {
+      count: agg.count,
+      ratePerMin: agg.count / windowMin,
+      maxMs: agg.maxMs,
+    };
+  },
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
   debugOwners: () =>
     Resource.Declare.getContributions().map((c) => ({

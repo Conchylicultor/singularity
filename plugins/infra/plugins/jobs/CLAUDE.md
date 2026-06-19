@@ -9,13 +9,13 @@
 - Server:
   - Uses: `database.db`, `database/admin.connectionString`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
   - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
-  - Exports: Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`, `ScheduleSpec`; Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
-  - Register: `defineJob('jobs.resume')`
-  - Resources: `jobs-list` (invalidate)
-  - Routes: `GET /api/jobs`, `POST /api/jobs/:id/retry`, `DELETE /api/jobs/:id`
+  - Exports: Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`, `ScheduleSpec`; Values: `deadJobsResource`, `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
+  - Register: `defineJob('jobs.resume')`, `defineJob('jobs.dead-gc')`
+  - Resources: `dead-jobs` (invalidate), `jobs-list` (invalidate)
+  - Routes: `GET /api/jobs`, `GET /api/jobs/dead`, `POST /api/jobs/:id/retry`, `DELETE /api/jobs/:id`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `JobRow`, `JobsPayload`, `JobState`; Values: `cancelJob`, `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`, `listJobs`, `retryJob`
+  - Exports: Types: `DeadJobRow`, `DeadJobsPayload`, `JobRow`, `JobsPayload`, `JobState`; Values: `cancelJob`, `DeadJobRowSchema`, `DeadJobsPayloadSchema`, `deadJobsResource`, `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`, `listDeadJobs`, `listJobs`, `retryJob`
 - Cross-plugin:
   - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/transcript-retention`, `database/fork`, `debug/worktree-cleanup`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `page/attachment-block`, `page/inline-date`, `page/links`, `shell/notifications`, `tasks`, `tasks/task-title`
 

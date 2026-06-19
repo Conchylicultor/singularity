@@ -20,6 +20,13 @@ export const HealthSampleSchema = z.object({
   heapGrowthMb: z.number(), // Δ heapUsed vs prior tick; negative = a GC reclaimed
   gcPreciseCount: z.number(), // perf_hooks 'gc' observer; 0 when unsupported (Bun)
   gcPreciseTotalMs: z.number(),
+  // Host-wide heavy-read gate queue depth at sample time (callers parked waiting
+  // for a slot; 0 = uncontended). Required (not `.default(0)`): a default makes
+  // the schema's input/output types asymmetric, which mismatches the required
+  // `HealthSeries` props downstream. Pre-cutover JSONL lines lacking this field
+  // are dropped by safeParse — a brief history gap as the rolling window refills,
+  // exactly as `physFootprintMb` handled its own cutover above.
+  heavyReadDepth: z.number(),
 });
 export type HealthSample = z.infer<typeof HealthSampleSchema>;
 

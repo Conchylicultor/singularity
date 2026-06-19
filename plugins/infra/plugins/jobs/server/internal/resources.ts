@@ -1,8 +1,15 @@
-import { sql } from "drizzle-orm";
+import { desc, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { JobsPayloadSchema, type JobsPayload, type JobState } from "../../core/resources";
+import {
+  DeadJobsPayloadSchema,
+  JobsPayloadSchema,
+  type DeadJobsPayload,
+  type JobsPayload,
+  type JobState,
+} from "../../core/resources";
 import { JOB_TASK } from "./constants";
+import { _deadJobs } from "./tables";
 
 interface GraphileJobRow {
   id: string;
@@ -67,6 +74,35 @@ export async function loadJobsList(limit = 500): Promise<JobsPayload> {
 
   return { rows, counts };
 }
+
+export async function loadDeadJobsList(limit = 2000): Promise<DeadJobsPayload> {
+  const rows = await db
+    .select()
+    .from(_deadJobs)
+    .orderBy(desc(_deadJobs.archivedAt))
+    .limit(limit);
+  return {
+    rows: rows.map((r) => ({
+      id: r.id,
+      jobName: r.jobName,
+      input: r.input ?? null,
+      attempts: r.attempts,
+      maxAttempts: r.maxAttempts,
+      lastError: r.lastError,
+      diedAt: r.diedAt instanceof Date ? r.diedAt.toISOString() : r.diedAt,
+      archivedAt:
+        r.archivedAt instanceof Date ? r.archivedAt.toISOString() : String(r.archivedAt),
+    })),
+  };
+}
+
+// No poll — notified by reconcileDeadJobs after each archive/purge.
+export const deadJobsResource = defineResource({
+  key: "dead-jobs",
+  mode: "invalidate",
+  schema: DeadJobsPayloadSchema,
+  loader: async (): Promise<DeadJobsPayload> => loadDeadJobsList(2000),
+});
 
 let pollTimer: ReturnType<typeof setInterval> | undefined;
 

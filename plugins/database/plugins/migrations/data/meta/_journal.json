@@ -1156,6 +1156,13 @@
       "tag": "20260619_124324_e6003fd7__purge_malformed_worktree_attempts",
       "hash": "e6003fd7",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1781877331000,
+      "tag": "20260619_135531_88842b5d__dead_jobs_archive",
+      "hash": "88842b5d",
+      "breakpoints": true
     }
   ]
 }

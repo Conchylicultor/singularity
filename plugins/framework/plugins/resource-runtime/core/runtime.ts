@@ -168,6 +168,15 @@ interface DownstreamEdge {
 interface PendingNotify {
   params: ResourceParams;
   affected: Set<string> | null;
+  /**
+   * `performance.now()` of the FIRST notify that opened this pending entry — the
+   * moment the resource became stale. Set only in the `!existing` branch of
+   * `mergePending` and NEVER overwritten on re-merge (coalesce / debounce re-arm
+   * / cascade re-merge all route through `mergePending`), so the delivery-latency
+   * window measures real staleness from first notify to send, not ~0. Read once
+   * in `flushNotifies` to compute `onDelivered` latency.
+   */
+  enqueuedAt: number;
 }
 
 interface RegistryEntry {
@@ -245,6 +254,32 @@ export interface ResourceRuntimeOptions {
     key: string,
     fn: () => Promise<unknown>,
   ) => Promise<unknown>;
+  /**
+   * Wrap the entire `flushNotifies` drain so the notify-flush cycle is measured
+   * as one `flush` entry and the per-resource `push` loads it triggers nest under
+   * it (`byParent` = which resource dominated the cycle → head-of-line). server:
+   * recordEntrySpan("flush", "flushNotifies", fn); central: omit (identity). See
+   * research/2026-06-19-global-observability-frequency-delivery-and-dead-job-gc.md.
+   */
+  wrapFlush?: (fn: () => Promise<void>) => Promise<void>;
+  /**
+   * Report a delivered notify: `latencyMs` = first-notify → send (the
+   * "UI is stale" window), `subscribers` = how many sockets received it. server:
+   * recordSpan("push", `deliver:${key}`, latencyMs); central: omit (no-op). The
+   * leaf `deliver:<key>` span nests under the `flush` entry so latency attributes
+   * to the resource. See the doc above.
+   */
+  onDelivered?: (key: string, latencyMs: number, subscribers: number) => void;
+  /**
+   * Per-key loader stats for the `_debug` endpoint: call count, calls-per-minute,
+   * and slowest single call over the current profiling window. server: derived
+   * from getRuntimeProfile().aggregates.loader (match label === key); central:
+   * omit (field absent). Surfaces loader *frequency* — a cheap loader called
+   * thousands of times a minute — which the slow-single-call surfaces miss.
+   */
+  loaderStats?: (
+    key: string,
+  ) => { count: number; ratePerMin: number; maxMs: number } | undefined;
   /** Report a loader/map/lifecycle failure. console.error ALWAYS fires inside the runtime;
    *  this is the extra hook. server: reportServerError(errorReport(ctx, err)); central: omit. */
   reportError?: (context: string, err: unknown) => void;
@@ -358,7 +393,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   ): void {
     const existing = map.get(pk);
     if (!existing) {
-      map.set(pk, { params, affected: incoming === null ? null : new Set(incoming) });
+      // First merge: stamp the staleness-window start. Never overwritten below.
+      map.set(pk, {
+        params,
+        affected: incoming === null ? null : new Set(incoming),
+        enqueuedAt: performance.now(),
+      });
       return;
     }
     if (existing.affected === null) return; // FULL absorbs everything
@@ -660,21 +700,31 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
     flushRunning = true;
     try {
-      do {
-        flushAgain = false;
-        flushScheduled = false;
-        rebuildDag();
-        // Run each depth level concurrently; barrier between levels so every
-        // cascade merged into a (strictly-deeper) downstream settles before that
-        // downstream level drains. A slow loader can no longer head-of-line-block
-        // an unrelated entry at the same or an earlier depth.
-        for (const level of topoLevels) {
-          await Promise.all(level.map(drainEntry));
-        }
-      } while (flushAgain);
+      // Run the whole drain inside the injected flush wrapper (server:
+      // recordEntrySpan("flush", ...)) so each cycle is one `flush` entry and the
+      // per-resource `push` loads it triggers nest under it (byParent =
+      // head-of-line blocking attribution). Identity passthrough on central.
+      if (opts.wrapFlush) await opts.wrapFlush(runFlushCycle);
+      else await runFlushCycle();
     } finally {
       flushRunning = false;
     }
+  }
+
+  // One flush cycle: re-drains while mid-flush notifies set `flushAgain`. Each
+  // depth level runs concurrently; a barrier between levels so every cascade
+  // merged into a (strictly-deeper) downstream settles before that downstream
+  // level drains. A slow loader can no longer head-of-line-block an unrelated
+  // entry at the same or an earlier depth.
+  async function runFlushCycle(): Promise<void> {
+    do {
+      flushAgain = false;
+      flushScheduled = false;
+      rebuildDag();
+      for (const level of topoLevels) {
+        await Promise.all(level.map(drainEntry));
+      }
+    } while (flushAgain);
   }
 
   // Drain one entry's pending notifies: load (await), send frames, cascade.
@@ -694,7 +744,8 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       clearTimeout(entry.debounceTimer);
       entry.debounceTimer = undefined;
     }
-    for (const { params, affected } of pending) {
+    for (const pendingEntry of pending) {
+      const { params, affected } = pendingEntry;
       const pk = paramsKey(params);
       // Scoped notify (Layer 2): `affected !== null` means recompute only those
       // row ids. An empty scoped set = nothing actually changed → skip the send
@@ -809,6 +860,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           const msg = { kind: "update" as const, key: entry.key, params, value, version };
           for (const s of subs) sendJson(s.ws, msg);
         }
+      }
+
+      // Delivery latency (enqueue → ws.send) charged to this resource under the
+      // active `flush` entry (server: recordSpan("push", `deliver:<key>`)). Only
+      // when a subscriber actually received a frame. Identity no-op on central.
+      if (subs.length > 0) {
+        opts.onDelivered?.(entry.key, performance.now() - pendingEntry.enqueuedAt, subs.length);
       }
 
       for (const edge of entry.downstream) {
@@ -1044,9 +1102,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       mode: ResourceMode;
       pluginId?: string;
       subscribers: number;
+      subCounts: Record<string, number>;
       versions: Record<string, number>;
       dependsOn: string[];
       downstream: string[];
+      loaderStats?: { count: number; ratePerMin: number; maxMs: number };
     }> = [];
     for (const entry of registry.values()) {
       let subscribers = 0;
@@ -1060,9 +1120,15 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         mode: entry.mode,
         pluginId: owner?.pluginId,
         subscribers,
+        // Authoritative per-pk server subscriber count (the diff fan-out factor):
+        // how many tabs receive a delta for each params-tuple.
+        subCounts: Object.fromEntries(entry.subCounts),
         versions: Object.fromEntries(entry.versions),
         dependsOn: entry.upstreamKeys,
         downstream: entry.downstream.map((d) => d.downstreamKey),
+        // Loader frequency over the profiling window (server-only hook; absent on
+        // central). Surfaces a cheap-but-hot loader the slow-single-call view misses.
+        loaderStats: opts.loaderStats?.(entry.key),
       });
     }
     return new Response(

@@ -7,6 +7,7 @@ import {
 } from "node:perf_hooks";
 import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
 import { physFootprintBytes } from "@plugins/framework/plugins/server-core/core";
+import { heavyReadQueueDepth } from "@plugins/infra/plugins/host-read-pool/server";
 import { SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import type { HealthSample } from "../../shared/schema";
 
@@ -76,6 +77,9 @@ function tick(): void {
     heapGrowthMb: (mem.heapUsed - lastHeapUsedBytes) / 1_048_576,
     gcPreciseCount: gcCount,
     gcPreciseTotalMs: gcTotalMs,
+    // Host-wide heavy-read gate queue depth at sample time (cross-process flock
+    // gauge; cheap synchronous read). Surfaces backend contention in the pane.
+    heavyReadDepth: heavyReadQueueDepth(),
   };
   histogram.reset();
   gcCount = 0;

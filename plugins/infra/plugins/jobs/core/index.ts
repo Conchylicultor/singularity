@@ -1,3 +1,3 @@
-export { jobsListResource, JobRowSchema, JobStateSchema, JobsPayloadSchema } from "./resources";
-export type { JobRow, JobState, JobsPayload } from "./resources";
-export { listJobs, retryJob, cancelJob } from "./endpoints";
+export { jobsListResource, JobRowSchema, JobStateSchema, JobsPayloadSchema, deadJobsResource, DeadJobRowSchema, DeadJobsPayloadSchema } from "./resources";
+export type { JobRow, JobState, JobsPayload, DeadJobRow, DeadJobsPayload } from "./resources";
+export { listJobs, listDeadJobs, retryJob, cancelJob } from "./endpoints";

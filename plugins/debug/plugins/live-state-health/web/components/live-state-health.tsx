@@ -12,6 +12,7 @@ import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-la
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { ServerResourcesSection } from "./server-resources-section";
 
 /** Tailwind dot color per socket state — green=healthy, amber=transient, red=dead. */
 const SOCKET_DOT: Record<WsStatus, string> = {
@@ -42,6 +43,7 @@ export function LiveStateHealth(): ReactElement {
       <SocketsSection sockets={snapshot.sockets} />
       <LeaderSection leader={snapshot.leader} />
       <ResourcesSection subs={subs} />
+      <ServerResourcesSection />
     </div>
   );
 }
@@ -107,7 +109,11 @@ function LeaderRow({ label, info }: { label: string; info: LeaderInfo }): ReactE
 
 function ResourcesSection({ subs }: { subs: DebugSub[] }): ReactElement {
   return (
-    <section className="flex min-h-0 flex-col gap-sm">
+    // No `min-h-0`: this section has no internal scroll, so allowing it to shrink
+    // below its content height (the flex-item default in the pane's `h-full`
+    // column) makes its rows overflow and the sibling section below overlap them.
+    // Sized to content, the pane's own `overflow-auto` scrolls instead.
+    <section className="flex flex-col gap-sm">
       <SectionLabel>
         Resources <span className="opacity-60">{subs.length}</span>
       </SectionLabel>

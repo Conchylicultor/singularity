@@ -5,20 +5,20 @@ import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { type SpanKind } from "@plugins/infra/plugins/runtime-profiler/core";
 import { runtimeProfileSchema } from "../../shared/endpoints";
 
-const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push"];
+const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push", "flush"];
 
 export const runtimeProfileTool = Mcp.tool({
   name: "get_runtime_profile",
   description: `Slowest HTTP routes, DB queries, and live-state loaders in a worktree's server (in-memory window since last reset). Use to debug app/page slowness, N+1 patterns, and queueing/head-of-line blocking. Returns top-N by max and average latency per kind; each db/loader aggregate includes a \`byParent\` breakdown attributing it to the enclosing request/loader that issued it, and each \`slowest\` span carries its immediate \`parent\`.
 
-Kinds: \`http\` (routes), \`db\` (queries + the pool \`[acquire]\` connect-wait), \`loader\` (live-state resource loads), and the origin entries \`sub\` (a tab subscribed) / \`push\` (a notify cascade) that trigger loaders — a loader's \`parent\` names which one triggered it.
+Kinds: \`http\` (routes), \`db\` (queries + the pool \`[acquire]\` connect-wait), \`loader\` (live-state resource loads), and the origin entries \`sub\` (a tab subscribed) / \`push\` (a notify cascade) that trigger loaders — a loader's \`parent\` names which one triggered it. \`flush\` is the live-state notify-flush cycle (\`flushNotifies\`): its \`byParent\` names which resource dominated a cycle (head-of-line), and \`push\` carries \`deliver:<key>\` leaves whose duration is the first-notify→send delivery latency (the "UI is stale" window) for that resource.
 
 Wait-vs-work: every entry (loader/http/sub/push) carries a \`waits\` map (gate/lock layer → ms) and a derived \`workMs\` = avg − Σwaits. \`loader-acquire\` = waiting for a DB connection gate slot; \`heavy-read-acquire\` = waiting for a host-wide heavy git/fs read slot. A loader that is mostly \`waits\` was head-of-line-blocked (the resource itself is fast); a loader that is mostly \`workMs\` is genuinely slow.
 
 Default: profiles the current conversation's worktree server. Pass \`worktree\` to target a different worktree (e.g. "att-1778089188-7uvf" or "singularity" for main).`,
   inputSchema: {
     kind: z
-      .enum(["http", "db", "loader", "sub", "push", "all"])
+      .enum(["http", "db", "loader", "sub", "push", "flush", "all"])
       .optional()
       .describe('Span kind to filter. Defaults to "all".'),
     limit: z

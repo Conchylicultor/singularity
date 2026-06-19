@@ -1,5 +1,6 @@
 import {
   index,
+  integer,
   jsonb,
   pgTable,
   primaryKey,
@@ -51,4 +52,27 @@ export const _jobWaits = pgTable(
     primaryKey({ columns: [t.workflowRunId, t.waitName] }),
     index("job_waits_status_idx").on(t.status),
   ],
+);
+
+// Durable archive of permanently-failed graphile jobs. The graphile queue has
+// no GC for jobs that exhausted `max_attempts`, so they accumulate forever in
+// every worktree's `_private_jobs`. `reconcileDeadJobs` copies dead rows here
+// (idempotently — PK is the original graphile job id), purges them from the
+// queue, and bounds this table by TTL + cap. Surfaced in Debug → Queue → Dead.
+export const _deadJobs = pgTable(
+  "dead_jobs",
+  {
+    // Original graphile job id — PK makes the archive INSERT idempotent.
+    id: text("id").primaryKey(),
+    jobName: text("job_name").notNull(),
+    input: jsonb("input"),
+    attempts: integer("attempts").notNull(),
+    maxAttempts: integer("max_attempts").notNull(),
+    lastError: text("last_error"),
+    diedAt: timestamp("died_at", { withTimezone: true }),
+    archivedAt: timestamp("archived_at", { withTimezone: true })
+      .defaultNow()
+      .notNull(),
+  },
+  (t) => [index("dead_jobs_archived_at_idx").on(t.archivedAt)],
 );

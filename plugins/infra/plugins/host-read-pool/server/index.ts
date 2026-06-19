@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { withHeavyReadSlot } from "./internal/pool";
+export { withHeavyReadSlot, heavyReadQueueDepth } from "./internal/pool";
 
 export default {
   description:

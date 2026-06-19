@@ -1,6 +1,7 @@
 import { desc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { getAllRegisteredJobNames } from "@plugins/infra/plugins/jobs/server";
 import {
   EmissionsPayloadSchema,
   TriggersPayloadSchema,
@@ -35,6 +36,7 @@ export async function loadEmissions(limit = 200): Promise<EmissionsPayload> {
 
 export async function loadTriggers(): Promise<TriggersPayload> {
   const out: TriggersPayload["rows"] = [];
+  const registeredNames = getAllRegisteredJobNames();
   for (const [eventName, table] of triggerTableRegistry.entries()) {
     const rows = (await db.select().from(table)) as Row[];
     for (const r of rows) {
@@ -52,6 +54,7 @@ export async function loadTriggers(): Promise<TriggersPayload> {
         createdAt:
           r.createdAt instanceof Date ? r.createdAt.toISOString() : String(r.createdAt),
         filters,
+        dangling: !registeredNames.has(r.jobName as string),
       });
     }
   }

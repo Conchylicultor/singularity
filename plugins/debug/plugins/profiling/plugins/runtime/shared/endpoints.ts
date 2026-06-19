@@ -5,7 +5,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 // (@plugins/infra/plugins/runtime-profiler/core). A response schema is required
 // for useEndpoint/fetchEndpoint to actually return parsed data on the client —
 // the server ignores it, so it is client-safe.
-const spanKindSchema = z.enum(["http", "db", "loader", "sub", "push"]);
+const spanKindSchema = z.enum(["http", "db", "loader", "sub", "push", "flush"]);
 
 const spanRefSchema = z.object({
   kind: spanKindSchema,
@@ -49,6 +49,7 @@ const byKind = <T extends z.ZodTypeAny>(item: T) =>
     loader: z.array(item),
     sub: z.array(item),
     push: z.array(item),
+    flush: z.array(item),
   });
 
 export const runtimeProfileSchema = z.object({

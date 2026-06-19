@@ -1,7 +1,7 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { listJobs, retryJob, cancelJob } from "../../core/endpoints";
+import { listJobs, listDeadJobs, retryJob, cancelJob } from "../../core/endpoints";
 import { getWorkerUtils } from "./worker";
-import { loadJobsList, jobsListResource } from "./resources";
+import { loadJobsList, loadDeadJobsList, jobsListResource } from "./resources";
 
 export const handleListJobs = implement(listJobs, async ({ req }) => {
   const url = new URL(req.url);
@@ -16,6 +16,12 @@ export const handleListJobs = implement(listJobs, async ({ req }) => {
     };
   }
   return payload;
+});
+
+export const handleListDeadJobs = implement(listDeadJobs, async ({ req }) => {
+  const url = new URL(req.url);
+  const limit = Math.min(Number(url.searchParams.get("limit") ?? 2000), 2000);
+  return loadDeadJobsList(limit);
 });
 
 export const handleRetryJob = implement(retryJob, async ({ params }) => {

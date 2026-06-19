@@ -38,3 +38,29 @@ export const jobsListResource = resourceDescriptor<JobsPayload>(
   JobsPayloadSchema,
   { rows: [], counts: { pending: 0, running: 0, retrying: 0, dead: 0 } },
 );
+
+// ─── Dead-letter archive (see server/internal/dead-job-gc.ts) ──────────────
+
+export const DeadJobRowSchema = z.object({
+  id: z.string(),
+  jobName: z.string(),
+  input: z.unknown(),
+  attempts: z.number(),
+  maxAttempts: z.number(),
+  lastError: z.string().nullable(),
+  diedAt: z.string().nullable(),
+  archivedAt: z.string(),
+});
+export type DeadJobRow = z.infer<typeof DeadJobRowSchema>;
+
+export const DeadJobsPayloadSchema = z.object({
+  rows: z.array(DeadJobRowSchema),
+});
+export type DeadJobsPayload = z.infer<typeof DeadJobsPayloadSchema>;
+
+// No poll — the dead-job GC notifies this resource after each reconcile.
+export const deadJobsResource = resourceDescriptor<DeadJobsPayload>(
+  "dead-jobs",
+  DeadJobsPayloadSchema,
+  { rows: [] },
+);

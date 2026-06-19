@@ -21,3 +21,10 @@ export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
   // span inside chargeWait.
   return pool.run(fn, (waitMs) => chargeWait("heavy-read-acquire", waitMs));
 }
+
+// Queue-depth gauge for the host-wide heavy-read gate: how many callers are
+// currently parked waiting for a slot (0 = uncontended). Observability-only,
+// surfaced in the health-monitor Backends overview.
+export function heavyReadQueueDepth(): number {
+  return pool.depth();
+}

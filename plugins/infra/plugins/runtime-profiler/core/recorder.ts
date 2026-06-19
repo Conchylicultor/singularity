@@ -24,8 +24,13 @@
 // loader. They exist so a loader run is never `parent: null` — the loader span's
 // parent names the request class that triggered it (sub = a tab subscribed,
 // push = a notify cascade), making head-of-line blocking attributable to its
-// origin. See research/2026-06-19-global-wait-attribution-instrumentation.md.
-export type SpanKind = "http" | "db" | "loader" | "sub" | "push";
+// origin. `flush` is the live-state notify-flush cycle: each `flushNotifies`
+// drain runs inside a `flush` entry, so the per-resource `push` loads it triggers
+// nest under it — `aggregates.flush[*].byParent` is the head-of-line attribution
+// (which resource dominated a flush cycle) for free. See
+// research/2026-06-19-global-wait-attribution-instrumentation.md and
+// research/2026-06-19-global-observability-frequency-delivery-and-dead-job-gc.md.
+export type SpanKind = "http" | "db" | "loader" | "sub" | "push" | "flush";
 
 /** A reference to an enclosing entry point (the immediate parent of a span). */
 export interface SpanRef {
@@ -77,7 +82,7 @@ export interface Aggregate {
 const MAX_LABEL_LEN = 500;
 const SLOWEST_CAP = 50;
 
-const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push"];
+const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push", "flush"];
 
 // --- Injected ambient-context runtime ---
 
@@ -199,6 +204,7 @@ const aggregates: Record<SpanKind, Map<string, AggregateInternal>> = {
   loader: new Map(),
   sub: new Map(),
   push: new Map(),
+  flush: new Map(),
 };
 
 // Per-kind "slowest recent" buffer. We keep a slowest-N set rather than a plain
@@ -211,6 +217,7 @@ const slowest: Record<SpanKind, SlowSpan[]> = {
   loader: [],
   sub: [],
   push: [],
+  flush: [],
 };
 
 let sinceMs = performance.now();

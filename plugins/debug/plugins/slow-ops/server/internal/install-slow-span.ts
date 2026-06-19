@@ -13,7 +13,8 @@ type Thresholds = ConfigValues<(typeof slowOpConfig)["fields"]>;
 let disposer: { dispose(): void } | null = null;
 
 // Map a span kind to its configured threshold. The `sub`/`push` origin entries
-// wrap a loader, so they share the loader threshold (no separate config knob).
+// and the `flush` notify-flush cycle all wrap loaders, so they share the loader
+// threshold (no separate config knob).
 function thresholdFor(kind: SlowSpan["kind"], t: Thresholds): number {
   switch (kind) {
     case "http":
@@ -23,6 +24,7 @@ function thresholdFor(kind: SlowSpan["kind"], t: Thresholds): number {
     case "loader":
     case "sub":
     case "push":
+    case "flush":
       return t.loaderMs;
   }
 }

@@ -1,11 +1,11 @@
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
-import { MdBolt, MdDelete, MdRefresh, MdReplay, MdWorkOutline } from "react-icons/md";
+import { MdBolt, MdDelete, MdHeartBroken, MdRefresh, MdReplay, MdWorkOutline } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FilterChip, useChipFilter } from "@plugins/primitives/plugins/filter-chips/web";
-import { jobsListResource, retryJob, cancelJob, type JobRow, type JobState, type JobsPayload } from "@plugins/infra/plugins/jobs/core";
+import { jobsListResource, deadJobsResource, retryJob, cancelJob, type JobRow, type JobState, type JobsPayload, type DeadJobRow, type DeadJobsPayload } from "@plugins/infra/plugins/jobs/core";
 import { eventEmissionsResource, eventTriggersResource, patchTriggerEndpoint, deleteTriggerEndpoint, type EmissionRow, type TriggerRow, type TriggersPayload } from "@plugins/infra/plugins/events/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -13,10 +13,11 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 
-type Tab = "jobs" | "events" | "triggers";
+type Tab = "jobs" | "dead" | "events" | "triggers";
 
 const TAB_OPTIONS = [
   { id: "jobs" as Tab, label: "Jobs", icon: <MdWorkOutline className="size-4" /> },
+  { id: "dead" as Tab, label: "Dead", icon: <MdHeartBroken className="size-4" /> },
   { id: "events" as Tab, label: "Events", icon: <MdBolt className="size-4" /> },
   { id: "triggers" as Tab, label: "Triggers" },
 ] as const;
@@ -36,6 +37,7 @@ export function QueueView() {
       </div>
       <div className="flex-1 overflow-auto">
         {tab === "jobs" && <JobsTab />}
+        {tab === "dead" && <DeadTab />}
         {tab === "events" && <EventsTab />}
         {tab === "triggers" && <TriggersTab />}
       </div>
@@ -250,6 +252,122 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
   );
 }
 
+// ─── Dead tab ──────────────────────────────────────────────────────────────
+
+function DeadTab() {
+  const deadResult = useResource(deadJobsResource);
+  const { refetch } = deadResult;
+  return (
+    <ResourceView resource={deadResult} fallback={<Loading />}>
+      {(data) => <DeadTabInner data={data} refetch={refetch} />}
+    </ResourceView>
+  );
+}
+
+function DeadTabInner({ data, refetch }: { data: DeadJobsPayload; refetch: () => Promise<unknown> }) {
+  const [selected, setSelected] = useState<DeadJobRow | null>(null);
+  return (
+    <div className="flex h-full flex-col">
+      <div className="flex items-center border-b px-md py-sm">
+        <Text as="div" variant="caption" className="text-muted-foreground">
+          Permanently-failed jobs archived from the queue (bounded; GC'd hourly).
+        </Text>
+        <div className="flex-1" />
+        <Button size="sm" variant="ghost" onClick={() => refetch()}>
+          <MdRefresh className="size-4" /> Refresh
+        </Button>
+      </div>
+      <div className="flex-1 overflow-auto">
+        {data.rows.length === 0 ? (
+          <Empty>No dead jobs. Permanently-failed jobs are archived here.</Empty>
+        ) : (
+          <table className="w-full text-body">
+            <thead className="sticky top-0 border-b bg-background text-left text-caption text-muted-foreground">
+              <tr>
+                <th className="px-md py-sm">Job</th>
+                <th className="px-md py-sm">Attempts</th>
+                <th className="px-md py-sm">Last error</th>
+                <th className="px-md py-sm">Died</th>
+              </tr>
+            </thead>
+            <tbody>
+              {data.rows.map((r) => (
+                <tr
+                  key={r.id}
+                  className="cursor-pointer border-b hover:bg-accent/30"
+                  onClick={() => setSelected(r)}
+                >
+                  <td className="px-md py-sm font-mono text-caption">{r.jobName}</td>
+                  <td className="px-md py-sm tabular-nums">
+                    {r.attempts}/{r.maxAttempts}
+                  </td>
+                  <td className="px-md py-sm text-caption text-destructive">
+                    {r.lastError ? truncate(r.lastError.split("\n")[0] ?? "", 60) : ""}
+                  </td>
+                  <td className="px-md py-sm text-muted-foreground">
+                    {r.diedAt ? relativeTime(r.diedAt) : relativeTime(r.archivedAt)}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+      {selected && <DeadJobDrawer job={selected} onClose={() => setSelected(null)} />}
+    </div>
+  );
+}
+
+function DeadJobDrawer({ job, onClose }: { job: DeadJobRow; onClose: () => void }) {
+  return (
+    <ViewportOverlay
+      layer="popover"
+      className="flex justify-end bg-black/30"
+      onClick={onClose}
+    >
+      <div
+        className="flex h-full w-[560px] flex-col overflow-hidden border-l bg-background"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between border-b px-lg py-md">
+          <div>
+            <Text as="div" variant="caption" className="text-muted-foreground">Dead job</Text>
+            <Text as="div" variant="body" className="font-mono">{job.jobName}</Text>
+          </div>
+          <Button size="sm" variant="ghost" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- vertical rhythm between Field rows on a scrollable Text drawer body; not a plain flex container */}
+        <Text as="div" variant="body" className="flex-1 space-y-4 overflow-auto p-lg">
+          <Field label="ID">
+            <code className="text-caption">{job.id}</code>
+          </Field>
+          <Field label="Attempts">{job.attempts} / {job.maxAttempts}</Field>
+          <Field label="Died at">
+            {job.diedAt ? `${new Date(job.diedAt).toLocaleString()} (${relativeTime(job.diedAt)})` : "(unknown)"}
+          </Field>
+          <Field label="Archived at">
+            {new Date(job.archivedAt).toLocaleString()} ({relativeTime(job.archivedAt)})
+          </Field>
+          <Field label="Input">
+            <pre className="max-h-64 overflow-auto rounded-md bg-muted p-sm text-caption">
+              {JSON.stringify(job.input, null, 2)}
+            </pre>
+          </Field>
+          {job.lastError && (
+            <Field label="Last error">
+              <pre className="max-h-64 overflow-auto rounded-md bg-destructive/5 p-sm text-caption text-destructive">
+                {job.lastError}
+              </pre>
+            </Field>
+          )}
+        </Text>
+      </div>
+    </ViewportOverlay>
+  );
+}
+
 // ─── Events tab ──────────────────────────────────────────────────────────
 
 function EventsTab() {
@@ -384,15 +502,23 @@ function TriggersTab() {
 }
 
 function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: () => Promise<unknown> }) {
+  const [danglingOnly, setDanglingOnly] = useState(false);
+
+  const danglingCount = useMemo(
+    () => data.rows.filter((r) => r.dangling).length,
+    [data],
+  );
+
   const grouped = useMemo(() => {
     const map = new Map<string, TriggerRow[]>();
     for (const r of data.rows) {
+      if (danglingOnly && !r.dangling) continue;
       const list = map.get(r.eventName) ?? [];
       list.push(r);
       map.set(r.eventName, list);
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [data]);
+  }, [data, danglingOnly]);
 
   async function toggle(id: string, enabled: boolean) {
     try {
@@ -412,10 +538,16 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center border-b px-md py-sm">
+      <div className="flex items-center gap-xs border-b px-md py-sm">
         <Text as="div" variant="caption" className="text-muted-foreground">
           Active subscriptions across all registered events.
         </Text>
+        {danglingCount > 0 && (
+          <FilterChip active={danglingOnly} onClick={() => setDanglingOnly((v) => !v)}>
+            <span className="text-destructive">Dangling</span>{" "}
+            <span className="opacity-60">{danglingCount}</span>
+          </FilterChip>
+        )}
         <div className="flex-1" />
         <Button size="sm" variant="ghost" onClick={() => refetch()}>
           <MdRefresh className="size-4" /> Refresh
@@ -435,7 +567,16 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
                   <tbody>
                     {triggers.map((t) => (
                       <tr key={t.id} className={cn("border-b", !t.enabled && "opacity-60")}>
-                        <td className="px-md py-sm font-mono text-caption">{t.jobName}</td>
+                        <td className="px-md py-sm font-mono text-caption">
+                          <span className="inline-flex items-center gap-xs">
+                            {t.jobName}
+                            {t.dangling && (
+                              <Badge size="sm" colorClass="bg-destructive/10 text-destructive">
+                                dangling
+                              </Badge>
+                            )}
+                          </span>
+                        </td>
                         <td className="px-md py-sm text-caption">
                           {Object.keys(t.filters).length > 0 && (
                             <div className="flex flex-wrap gap-xs">
