@@ -45,6 +45,9 @@ export {
 export type { TempoIndex } from "./tempo-index";
 export { buildTempoIndex } from "./tempo-index";
 
+export type { ActiveNoteIndex } from "./active-note-index";
+export { buildActiveNoteIndex } from "./active-note-index";
+
 export { makeKeySpeller, accidentalGlyph, spellScore } from "./spelling";
 export type { KeySpeller } from "./spelling";
 
