@@ -66,9 +66,12 @@ export const PX_PER_SECOND = 270;
  * the same speed). Unlike `tempoScale` — which scales the scroll RATE but cancels
  * out of note heights — `spread` scales EVERYTHING, including heights, which is
  * exactly the "taller notes" zoom. The live value is ephemeral transport state
- * (the Sonata context); these bounds + default are the persisted
- * `pianoRollConfig.spread` field's clamp. Kept here so the geometry owns the one
- * definition of the spread range. */
+ * (the Sonata context). `SPREAD_MIN` is the DEFAULT zoom-out floor and the
+ * persisted `pianoRollConfig.spread` field's lower clamp; the LIVE floor is
+ * dynamic and can drop below it so a long song can be zoomed out until it fully
+ * fits the lane (the renderer computes that floor and feeds the Sonata context —
+ * see `setSpreadFloor`). Kept here so the geometry owns the one definition of the
+ * default spread range. */
 export const SPREAD_MIN = 0.4;
 export const SPREAD_MAX = 3;
 export const SPREAD_DEFAULT = 1;

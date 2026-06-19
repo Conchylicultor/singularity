@@ -41,6 +41,7 @@ import {
   KEYBOARD_HIGH,
   KEYBOARD_LOW,
   PX_PER_SECOND,
+  SPREAD_MIN,
 } from "./geometry";
 import type { Application } from "pixi.js";
 import { PianoRollCanvas } from "../internal/pixi/app";
@@ -85,6 +86,10 @@ const ZOOM_WHEEL_K = 0.0015;
 /** After the wheel goes quiet this long, a zoom commits to the global config and
  *  a wheel-paused playback resumes — mirroring the drag's resume-on-settle. */
 const WHEEL_IDLE_MS = 180;
+
+/** Headroom left when computing the "fit the whole song" zoom-out floor: the song
+ *  fills ~92% of the lane at max zoom-out, leaving a small gap above it. */
+const FIT_MARGIN = 0.92;
 
 /** Observe an element's pixel size via ResizeObserver (no polling). */
 function useElementSize(): [
@@ -155,7 +160,8 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // scroll gestures drive.
   const { showNoteNames, spread: persistedSpread } = useConfig(pianoRollConfig);
   const setConfig = useSetConfig(pianoRollConfig);
-  const { spread, setSpread, seekTo, isPlaying, play, stop } = useSonata();
+  const { spread, setSpread, setSpreadFloor, seekTo, isPlaying, play, stop } =
+    useSonata();
 
   // Seed the live zoom from the persisted global on load (and reflect a
   // Settings-pane edit live). No loop: only an explicit commit (wheel settle /
@@ -209,6 +215,22 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   const pxPerSecond = PX_PER_SECOND * tempoScale * spread;
   const endSeconds = tempo.beatToSeconds(scoreEndBeat(score));
   const wasPlaying = useRef(false);
+
+  // Let the user zoom OUT until the whole song fits the lane. The song's on-screen
+  // pixel height is `endSeconds * PX_PER_SECOND * tempoScale * spread` (the same
+  // term the scroll offset uses), so the spread that makes it exactly fill the
+  // lane is `laneHeight / (endSeconds * PX_PER_SECOND * tempoScale)`. We hand a
+  // touch-smaller value (FIT_MARGIN headroom) to the context as the dynamic
+  // zoom-out floor; the context caps it at the default floor so short songs (which
+  // already fit far above it) are unaffected. Recomputes on lane resize / tempo.
+  const spreadFloor = useMemo(() => {
+    if (!hasNotes || lane.height <= 0 || endSeconds <= 0) return SPREAD_MIN;
+    const fit = lane.height / (endSeconds * PX_PER_SECOND * tempoScale);
+    return Math.min(SPREAD_MIN, fit * FIT_MARGIN);
+  }, [hasNotes, lane.height, endSeconds, tempoScale]);
+  useEffect(() => {
+    setSpreadFloor(spreadFloor);
+  }, [spreadFloor, setSpreadFloor]);
 
   const { handlers, phase } = useInertialDrag({
     axis: "y",
@@ -389,9 +411,12 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     const settle = () => {
       idle = null;
       // Commit the zoom to the global default and resume any wheel-paused play.
+      // A sub-default fit-zoom is a transient per-song view, NOT a saved note-size
+      // preference, so it is never persisted globally (that would shrink the next
+      // song too) — only in-range zooms write back.
       if (zoomed) {
         zoomed = false;
-        setConfig("spread", spreadRef.current);
+        if (spreadRef.current >= SPREAD_MIN) setConfig("spread", spreadRef.current);
       }
       if (pausedByWheel) {
         pausedByWheel = false;

@@ -126,6 +126,16 @@ export interface SonataContextValue {
    * piano-roll seeds this from it on load and writes back on commit.
    */
   spread: number;
+  /**
+   * Live clamp for {@link spread}. `spreadMax` is constant; `spreadMin` is
+   * DYNAMIC — the renderer lowers it (via {@link setSpreadFloor}) to the
+   * "fit the whole song" zoom so the user can keep zooming out until the entire
+   * song is visible. Long songs push it below the default floor; short songs keep
+   * it. The toolbar wheel reads this range so a full sweep always spans exactly
+   * what's reachable.
+   */
+  spreadMin: number;
+  spreadMax: number;
   activeSourceId: string | null;
   activeDisplayId: string | null;
   /**
@@ -218,9 +228,15 @@ export interface SonataContextValue {
   endScrub: () => void;
   /** Set the playback tempo multiplier (clamped to [0.25, 4]). */
   setTempoScale: (scale: number) => void;
-  /** Set the piano-roll vertical zoom (clamped to [0.4, 3]). Continuous — no
-   *  rounding — so a jog-wheel / pinch drag stays buttery. */
+  /** Set the piano-roll vertical zoom (clamped to [{@link spreadMin}, {@link
+   *  spreadMax}]). Continuous — no rounding — so a jog-wheel / pinch drag stays
+   *  buttery. */
   setSpread: (spread: number) => void;
+  /** Lower the live zoom-out floor ({@link spreadMin}) to the renderer-computed
+   *  "fit the whole song" spread. Capped at the default floor — long songs lower
+   *  it (so you can zoom out until everything fits), short songs keep the default.
+   *  The renderer is the sole caller: it alone measures the lane height. */
+  setSpreadFloor: (min: number) => void;
 
   play: () => void;
   stop: () => void;
@@ -284,6 +300,13 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // Piano-roll vertical zoom. Seeded from pianoRollConfig.spread by the display
   // on load; the 1 here is a pre-seed placeholder for the brief first frame.
   const [spread, setSpreadState] = useState(1);
+  // Dynamic zoom-out floor. The renderer lowers it to the "fit whole song" spread
+  // (see setSpreadFloor); long songs push it below MIN_SPREAD so the user can zoom
+  // out until the entire song is visible. Read through a ref so the stable
+  // setSpread callback always clamps against the current floor.
+  const [spreadMin, setSpreadMinState] = useState(MIN_SPREAD);
+  const spreadMinRef = useRef(MIN_SPREAD);
+  spreadMinRef.current = spreadMin;
   // Bumped on every seek so the audio scheduler can restart from the new cursor.
   const [seekEpoch, setSeekEpoch] = useState(0);
 
@@ -596,9 +619,25 @@ export function SonataProvider({ children }: { children: ReactNode }) {
 
   // Continuous (unlike tempo's 0.05 grid) so a jog-wheel / pinch drag is smooth;
   // the persisted config field carries the tidy step for the settings editor.
+  // Clamps against the live (dynamic) floor so zoom-out can reach "fit the song".
   const setSpread = useCallback((next: number) => {
-    setSpreadState(Math.max(MIN_SPREAD, Math.min(MAX_SPREAD, next)));
+    setSpreadState(Math.max(spreadMinRef.current, Math.min(MAX_SPREAD, next)));
   }, []);
+
+  // The renderer feeds the "fit whole song" floor; cap at the default (short
+  // songs already fit well above it) and reject non-positive / non-finite input.
+  const setSpreadFloor = useCallback((min: number) => {
+    setSpreadMinState(
+      Number.isFinite(min) && min > 0 ? Math.min(MIN_SPREAD, min) : MIN_SPREAD,
+    );
+  }, []);
+
+  // When the floor rises again (shorter song, slower tempo), pull an out-of-range
+  // live spread back within [floor, MAX] so the wheel/renderer never show a value
+  // below the reachable minimum.
+  useEffect(() => {
+    setSpreadState((s) => Math.max(spreadMin, Math.min(MAX_SPREAD, s)));
+  }, [spreadMin]);
 
   // A tempo change rescales `score` mid-flight; re-anchor at the current cursor so
   // the visual transport doesn't jump (audio re-anchors via its score-dep effect).
@@ -705,6 +744,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       isPlaying,
       tempoScale,
       spread,
+      spreadMin,
+      spreadMax: MAX_SPREAD,
       activeSourceId,
       activeDisplayId,
       seekEpoch,
@@ -728,6 +769,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       endScrub,
       setTempoScale,
       setSpread,
+      setSpreadFloor,
       play,
       stop,
       registerClock,
@@ -740,6 +782,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       isPlaying,
       tempoScale,
       spread,
+      spreadMin,
       activeSourceId,
       activeDisplayId,
       seekEpoch,
@@ -761,6 +804,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       endScrub,
       setTempoScale,
       setSpread,
+      setSpreadFloor,
       play,
       stop,
       registerClock,

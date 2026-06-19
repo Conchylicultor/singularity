@@ -9,14 +9,26 @@ import { useSetConfig } from "@plugins/config_v2/web";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
 import { pianoRollConfig } from "../../shared/config";
-import { SPREAD_MAX, SPREAD_MIN } from "./geometry";
+import { SPREAD_MIN } from "./geometry";
 
-/** Spread units per pixel of horizontal drag — a full sweep (≈240px) spans most
- *  of the [0.4, 3] range, so the wheel is precise without feeling sluggish. */
-const SENSITIVITY = 0.006;
+/** Log-zoom units per pixel of horizontal drag. The wheel scrubs `log(spread)`,
+ *  so each pixel multiplies the zoom by a CONSTANT ratio (exp(SENSITIVITY)) no
+ *  matter where you are in the range — the standard log-scale zoom feel. Tuned so
+ *  a ~200px sweep is ≈2.7× and the default [0.4, 3] band spans a comfortable
+ *  ~400px. A wider range (long-song fit) just makes the sweep proportionally
+ *  longer — the per-pixel feel never changes. */
+const SENSITIVITY = 0.005;
 
-/** Zoom-style readout: 1× at the baseline, one decimal only when needed. */
-const asZoom = (spread: number) => `${Math.round(spread * 10) / 10}×`;
+/** Pixels the ribbed face travels per natural-log unit of zoom — chosen so the
+ *  ribs slide a wheel-like distance across the default range. */
+const RIB_SCALE = 60;
+
+/** Zoom-style readout: one decimal at/above 1×, two below (so a deep fit-zoom
+ *  like 0.05× still reads precisely rather than rounding to 0×). */
+const asZoom = (spread: number) =>
+  spread >= 1
+    ? `${Math.round(spread * 10) / 10}×`
+    : `${Math.round(spread * 100) / 100}×`;
 
 /**
  * A horizontal jog wheel for the piano-roll vertical zoom ("spread"). Drag it
@@ -29,26 +41,36 @@ const asZoom = (spread: number) => `${Math.round(spread * 10) / 10}×`;
  * (the `spread` float field) and from pinch / Ctrl+scroll over the roll.
  */
 export function SpreadWheel() {
-  const { spread, setSpread } = useSonata();
+  const { spread, spreadMin, spreadMax, setSpread } = useSonata();
   const setConfig = useSetConfig(pianoRollConfig);
   // The last scrubbed value, captured so the (value-less) settle callback
   // commits exactly where the fling came to rest.
   const lastValue = useRef(spread);
 
+  // Scrub in LOG space: the drag value is `log(spread)`, so a fixed pixel travel
+  // is a fixed zoom RATIO across the whole (dynamic) range — uniform control
+  // whether nudging 1.0×→1.1× or pulling a long song all the way out to fit.
   const { handlers, phase } = useInertialDrag({
     axis: "x",
     unitsPerPixel: SENSITIVITY,
-    bounds: [SPREAD_MIN, SPREAD_MAX],
-    origin: () => spread,
-    onScrub: (v) => {
+    bounds: [Math.log(spreadMin), Math.log(spreadMax)],
+    origin: () => Math.log(spread),
+    onScrub: (logV) => {
+      const v = Math.exp(logV);
       lastValue.current = v;
       setSpread(v);
     },
-    onSettle: () => setConfig("spread", lastValue.current),
+    // A sub-default fit-zoom is a transient per-song view, not a saved note-size
+    // preference — only in-range values write back to the global config.
+    onSettle: () => {
+      if (lastValue.current >= SPREAD_MIN) {
+        setConfig("spread", lastValue.current);
+      }
+    },
   });
 
   return (
-    <WithTooltip content="Note spread — drag to zoom the falling notes">
+    <WithTooltip content="Note spread — drag to zoom; pull left to fit the whole song">
       <Stack direction="row" align="center" gap="none" className="rounded-md border border-border">
         <MdZoomIn className="ml-2xs size-3.5 text-muted-foreground" />
         {/* The ribbed wheel face. The tick pattern + its sliding position are
@@ -58,8 +80,8 @@ export function SpreadWheel() {
           {...handlers}
           role="slider"
           aria-label="Note spread"
-          aria-valuemin={Math.round(SPREAD_MIN * 100)}
-          aria-valuemax={Math.round(SPREAD_MAX * 100)}
+          aria-valuemin={Math.round(spreadMin * 100)}
+          aria-valuemax={Math.round(spreadMax * 100)}
           aria-valuenow={Math.round(spread * 100)}
           aria-valuetext={asZoom(spread)}
           className={cn(
@@ -69,7 +91,9 @@ export function SpreadWheel() {
           style={{
             backgroundImage:
               "repeating-linear-gradient(90deg, var(--border) 0 1px, transparent 1px 9px)",
-            backgroundPositionX: `${spread * 48}px`,
+            // Position tracks log(spread) so the ribs travel uniformly per zoom
+            // ratio (matching the log-space drag), not faster at high zoom.
+            backgroundPositionX: `${Math.log(spread) * RIB_SCALE}px`,
             // Fade the ribs out at both edges so the strip reads as a wheel.
             maskImage:
               "linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent)",
