@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import {
   JumpToBottomButton,
@@ -25,7 +25,7 @@ import {
   clearPendingTurn,
   PendingTurnEcho,
 } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
-import { StickyReportProvider } from "./section-sticky-context";
+import { SectionExpandProvider } from "./section-sticky-context";
 import { JsonlViewer } from "../slots";
 
 interface UsageTotals {
@@ -81,9 +81,9 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
 
 function StickyUserHeader({ children }: { children: ReactNode }) {
   const [expanded, setExpanded] = useState(false);
-  const report = useCallback((v: boolean) => setExpanded(v), []);
+  const value = useMemo(() => ({ expanded, setExpanded }), [expanded]);
   return (
-    <StickyReportProvider value={report}>
+    <SectionExpandProvider value={value}>
       {expanded ? (
         <div className="z-raised bg-background pb-2xs">{children}</div>
       ) : (
@@ -95,7 +95,7 @@ function StickyUserHeader({ children }: { children: ReactNode }) {
           {children}
         </Sticky>
       )}
-    </StickyReportProvider>
+    </SectionExpandProvider>
   );
 }
 

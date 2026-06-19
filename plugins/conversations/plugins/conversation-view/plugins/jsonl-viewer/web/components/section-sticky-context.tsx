@@ -1,6 +1,20 @@
 import { createContext, useContext } from "react";
 
-const StickyReportContext = createContext<(expanded: boolean) => void>(() => {});
+/**
+ * Single source of truth for whether a section's user-text turn is expanded.
+ * Owned by `StickyUserHeader` (which both drops its stickiness and feeds this
+ * value down to the turn's controlled `Expandable`), so the same fact drives
+ * the header chrome and the clamp without a mirrored copy that could desync.
+ */
+export interface SectionExpand {
+  expanded: boolean;
+  setExpanded: (expanded: boolean) => void;
+}
 
-export const StickyReportProvider = StickyReportContext.Provider;
-export const useStickyReport = () => useContext(StickyReportContext);
+const SectionExpandContext = createContext<SectionExpand>({
+  expanded: false,
+  setExpanded: () => {},
+});
+
+export const SectionExpandProvider = SectionExpandContext.Provider;
+export const useSectionExpand = () => useContext(SectionExpandContext);

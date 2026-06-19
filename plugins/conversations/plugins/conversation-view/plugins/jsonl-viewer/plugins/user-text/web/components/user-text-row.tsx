@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { RowActions, useStickyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { RowActions, useSectionExpand } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -52,7 +52,7 @@ function SegmentedContent({ segments }: { segments: UserTextSegment[] }) {
 
 export function UserTextRow({ event }: { event: JsonlEvent }) {
   const e = event as UserTextEvent;
-  const reportSticky = useStickyReport();
+  const { expanded, setExpanded } = useSectionExpand();
 
   const body = e.segments ? (
     <SegmentedContent segments={e.segments} />
@@ -68,7 +68,9 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
         <Pin to="top-right" offset="sm">
           <RowActions floating />
         </Pin>
-        <Expandable onToggle={reportSticky}>{body}</Expandable>
+        <Expandable expanded={expanded} onToggle={setExpanded}>
+          {body}
+        </Expandable>
       </div>
     </ContentScope>
   );

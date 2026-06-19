@@ -14,7 +14,8 @@ export { RowActionButton } from "./components/row-action-button";
 export { CopyTextAction } from "./components/copy-button";
 export { formatTime } from "./utils";
 export { Timestamp } from "./components/timestamp";
-export { useStickyReport } from "./components/section-sticky-context";
+export { useSectionExpand } from "./components/section-sticky-context";
+export type { SectionExpand } from "./components/section-sticky-context";
 export { EventActionProvider, RowActions } from "./internal/event-action-context";
 
 export default {

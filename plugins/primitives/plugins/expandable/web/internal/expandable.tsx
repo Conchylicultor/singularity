@@ -16,6 +16,12 @@ export interface ExpandableProps {
    * with a fade and gains a "Show more" toggle. Default 192 (= 12rem).
    */
   collapsedHeight?: number;
+  /**
+   * Controlled expanded state. When provided, the component is controlled: it
+   * renders this value and never tracks its own — the owner must update it from
+   * `onToggle`. When omitted, the component is uncontrolled and owns the state.
+   */
+  expanded?: boolean;
   /** Notified with the next expanded state whenever the user toggles. */
   onToggle?: (expanded: boolean) => void;
   className?: string;
@@ -42,12 +48,15 @@ const FADE_MASK = "linear-gradient(to bottom, black 65%, transparent 100%)";
 export function Expandable({
   children,
   collapsedHeight = 192,
+  expanded: expandedProp,
   onToggle,
   className,
 }: ExpandableProps) {
   const contentRef = useRef<HTMLDivElement>(null);
   const [overflowing, setOverflowing] = useState(false);
-  const [expanded, setExpanded] = useState(false);
+  const [uncontrolledExpanded, setUncontrolledExpanded] = useState(false);
+  const isControlled = expandedProp !== undefined;
+  const expanded = isControlled ? expandedProp : uncontrolledExpanded;
 
   // Overflow detection: ResizeObserver on the measured content box, deferred
   // via requestAnimationFrame. No timers, no polling. Fires again when async
@@ -86,11 +95,9 @@ export function Expandable({
     : {};
 
   const toggle = () => {
-    setExpanded((prev) => {
-      const next = !prev;
-      onToggle?.(next);
-      return next;
-    });
+    const next = !expanded;
+    if (!isControlled) setUncontrolledExpanded(next);
+    onToggle?.(next);
   };
 
   return (
