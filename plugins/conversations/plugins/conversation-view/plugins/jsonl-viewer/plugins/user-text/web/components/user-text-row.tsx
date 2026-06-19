@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { RowActions, useSectionExpand } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { RowActions, useRowMarkdown, useSectionExpand } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -31,13 +31,13 @@ function InlineImage({ mime, data }: { mime: string; data: string }) {
   );
 }
 
-function SegmentedContent({ segments }: { segments: UserTextSegment[] }) {
+function SegmentedContent({ segments, raw }: { segments: UserTextSegment[]; raw: boolean }) {
   return (
     <>
       {segments.map((seg, i) =>
         seg.kind === "text" ? (
           <Text as="div" variant="body" key={i} className="whitespace-pre-wrap break-words">
-            <InlineText text={seg.value} />
+            {raw ? seg.value : <InlineText text={seg.value} />}
           </Text>
         ) : (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1.5 spaces an inline image segment from the preceding text segment
@@ -53,12 +53,14 @@ function SegmentedContent({ segments }: { segments: UserTextSegment[] }) {
 export function UserTextRow({ event }: { event: JsonlEvent }) {
   const e = event as UserTextEvent;
   const { expanded, setExpanded } = useSectionExpand();
+  const { markdownMode } = useRowMarkdown();
+  const raw = !markdownMode;
 
   const body = e.segments ? (
-    <SegmentedContent segments={e.segments} />
+    <SegmentedContent segments={e.segments} raw={raw} />
   ) : (
     <Text as="div" variant="body" className="whitespace-pre-wrap break-words">
-      <InlineText text={e.text} />
+      {raw ? e.text : <InlineText text={e.text} />}
     </Text>
   );
 
