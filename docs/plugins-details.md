@@ -1190,7 +1190,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `ActionBarView`, `Conversation`
           - Cross-plugin:
             - Imported by: `code-explorer`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/jsonl-viewer/event-counter`, `conversations/conversation-view/open-app`, `conversations/conversation-view/push-profiling`, `conversations/conversation-view/tasks-panel`, `conversations/conversation-view/terminal-pane`, `conversations/conversation-view/vscode`, `review`, `tasks/attempt-view`
-        - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
+        - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-postgres) to bypass security guards.
           - Web:
             - Contributes: `Conversation.Header` → `AllowMonitorChip`
             - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `infra/endpoints.useEndpoint`, `primitives/css/badge.Badge`, `primitives/css/text.Text`, `primitives/tooltip.WithTooltip`
@@ -1800,7 +1800,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/log-channels.Log`
         - Exports: Values: `rebuildDerivedViews`, `View`
       - Cross-plugin:
-        - Imported by: `conversations/agents`, `database`, `tasks/tasks-core`
+        - Imported by: `conversations/agents`, `database`, `database/migrations`, `tasks/tasks-core`
       - Core:
         - Exports: Types: `RegisteredView`; Values: `compileCreateView`, `topoSortViews`
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
@@ -1819,8 +1819,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations`
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
-        - Uses: `primitives/log-channels.Log`
-        - Exports: Values: `migrationsReady`, `runMigrations`
+        - Uses: `database/derived-views.rebuildDerivedViews`, `primitives/log-channels.Log`
+        - Exports: Values: `dryRunPendingMigrations`, `migrationsReady`, `runMigrations`
       - Cross-plugin:
         - Imported by: `database`, `infra/boot-snapshot`
       - Structure:

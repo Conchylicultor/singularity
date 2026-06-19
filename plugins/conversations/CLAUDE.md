@@ -33,7 +33,7 @@
   - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
     - Plugins:
       - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
-      - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
+      - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-postgres) to bypass security guards.
       - **`branch`** — Forks the current Claude session into a background conversation with the typed draft as the opening prompt.
       - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
         - Plugins:

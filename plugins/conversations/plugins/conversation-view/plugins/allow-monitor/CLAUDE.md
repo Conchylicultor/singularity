@@ -1,12 +1,12 @@
 # allow-monitor
 
-Monitors the conversation's worktree for security-bypass sentinel files (`.allow-main`, `.allow-migrations`). When any such file exists, a pulsing red "BYPASS ACTIVE" chip appears in the conversation toolbar header. The chip disappears as soon as the file is removed.
+Monitors the conversation's worktree for security-bypass sentinel files (`.allow-main`, `.allow-postgres`). When any such file exists, a pulsing red "BYPASS ACTIVE" chip appears in the conversation toolbar header. The chip disappears as soon as the file is removed.
 
 Polls every 3 seconds via a plain `useQuery` with `refetchInterval` — no WebSocket push needed since these files can appear at any time independent of conversation events.
 
 ## Plugin reference
 
-- Description: Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
+- Description: Flags when an agent has created an allow-file (.allow-main, .allow-postgres) to bypass security guards.
 - Contributes:
   - `conversationPane.Actions` → `AllowMonitorChip` (position: left)
 - Server:
@@ -17,7 +17,7 @@ Polls every 3 seconds via a plain `useQuery` with `refetchInterval` — no WebSo
 
 ## Plugin reference
 
-- Description: Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
+- Description: Flags when an agent has created an allow-file (.allow-main, .allow-postgres) to bypass security guards.
 - Web:
   - Contributes: `Conversation.Header` → `AllowMonitorChip`
   - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `infra/endpoints.useEndpoint`, `primitives/css/badge.Badge`, `primitives/css/text.Text`, `primitives/tooltip.WithTooltip`

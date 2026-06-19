@@ -3,7 +3,7 @@ import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getAllowFiles } from "../../shared/endpoints";
 
-const ALLOW_FILES = [".allow-main", ".allow-migrations", ".allow-postgres"] as const;
+const ALLOW_FILES = [".allow-main", ".allow-postgres"] as const;
 
 export const handleGetAllowFiles = implement(getAllowFiles, async ({ params }) => {
   const conversation = await getConversation(params.id);

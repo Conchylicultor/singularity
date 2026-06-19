@@ -47,5 +47,4 @@ skills-lock.json
 .claude/worktrees/
 .claude/scheduled_tasks.lock
 .allow-main
-.allow-migrations
 .git-diff-main-reminded
