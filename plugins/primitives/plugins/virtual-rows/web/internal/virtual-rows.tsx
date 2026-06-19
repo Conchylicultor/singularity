@@ -1,5 +1,6 @@
 import {
   type ReactNode,
+  type RefObject,
   useCallback,
   useEffect,
   useLayoutEffect,
@@ -11,6 +12,8 @@ import {
   defaultRangeExtractor,
   useVirtualizer,
   type Range,
+  type Virtualizer,
+  type VirtualItem,
 } from "@tanstack/react-virtual";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
@@ -55,29 +58,46 @@ function findScrollParent(el: HTMLElement | null): HTMLElement {
   return document.scrollingElement as HTMLElement;
 }
 
+export interface UseVirtualRowsOptions<T> {
+  items: readonly T[];
+  /** Estimated px per row; dynamic measurement refines it after mount. */
+  estimateSize: number;
+  /** Rows rendered beyond the viewport on each side. Default 8. */
+  overscan?: number;
+  getKey: (item: T, index: number) => string;
+  /** When set, scrolls the virtualizer to this index (align: auto — only when off-screen). */
+  scrollToIndex?: number | null;
+  /** Item keys that must stay rendered even when scrolled out of the window. */
+  keepMounted?: readonly string[];
+}
+
+export interface UseVirtualRowsResult {
+  /** Attach to the element whose top marks the start of the virtual region;
+   *  scrollMargin is measured from it. */
+  measureRef: RefObject<HTMLDivElement | null>;
+  virtualizer: Virtualizer<HTMLElement, Element>;
+  virtualItems: VirtualItem[];
+  totalSize: number;
+  scrollMargin: number;
+}
+
 /**
- * Windowed renderer shared by data-view's flat views. Renders only the rows
- * intersecting the host's scroll viewport (+overscan) inside a full-height
- * sizer, so a large data source stays cheap to render and scroll. Rows are
- * dynamically measured (variable heights supported).
- *
- * The scroll element is discovered at runtime (`findScrollParent`) rather than
- * threaded in, so the same component windows correctly whether the data-view
- * owns its scroll (surface mode) or is embedded inside a larger scroller. When
- * the list does not start at the top of that scroller (a toolbar / tab strip
- * sits above it), `scrollMargin` offsets the windowing by the measured gap.
+ * Headless windowing engine shared by `VirtualRows` and the data-table body.
+ * Discovers the scroll container at runtime (`findScrollParent`) rather than
+ * threading it in, so windowing works whether the consumer owns its scroll
+ * (surface mode) or is embedded inside a larger scroller. When the region does
+ * not start at the top of that scroller (a toolbar / tab strip sits above it),
+ * `scrollMargin` offsets the windowing by the measured gap.
  */
-export function VirtualRows<T>({
+export function useVirtualRows<T>({
   items,
   estimateSize,
   overscan = 8,
   getKey,
-  itemClassName,
   scrollToIndex,
   keepMounted,
-  children,
-}: VirtualRowsProps<T>): ReactNode {
-  const sizerRef = useRef<HTMLDivElement>(null);
+}: UseVirtualRowsOptions<T>): UseVirtualRowsResult {
+  const measureRef = useRef<HTMLDivElement>(null);
   const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
 
@@ -109,11 +129,11 @@ export function VirtualRows<T>({
     [pinnedIndexes, items.length],
   );
 
-  // Resolve the scroll container and the list's offset within it once mounted
+  // Resolve the scroll container and the region's offset within it once mounted
   // (refs are attached by layout-effect time). A layout effect runs before
   // paint, so the windowed rows appear without a blank frame.
   useLayoutEffect(() => {
-    const sizer = sizerRef.current;
+    const sizer = measureRef.current;
     if (!sizer) return;
     const parent = findScrollParent(sizer);
     setScrollEl(parent);
@@ -139,23 +159,51 @@ export function VirtualRows<T>({
     virtualizer.scrollToIndex(scrollToIndex, { align: "auto" });
   }, [scrollToIndex, virtualizer]);
 
+  return {
+    measureRef,
+    virtualizer,
+    virtualItems: virtualizer.getVirtualItems(),
+    totalSize: virtualizer.getTotalSize(),
+    scrollMargin,
+  };
+}
+
+/**
+ * Windowed renderer shared by data-view's flat views. Renders only the rows
+ * intersecting the host's scroll viewport (+overscan) inside a full-height
+ * sizer, so a large data source stays cheap to render and scroll. Rows are
+ * dynamically measured (variable heights supported).
+ *
+ * The scroll element is discovered at runtime (`findScrollParent`) rather than
+ * threaded in, so the same component windows correctly whether the data-view
+ * owns its scroll (surface mode) or is embedded inside a larger scroller. When
+ * the list does not start at the top of that scroller (a toolbar / tab strip
+ * sits above it), `scrollMargin` offsets the windowing by the measured gap.
+ */
+export function VirtualRows<T>({
+  items,
+  estimateSize,
+  overscan = 8,
+  getKey,
+  itemClassName,
+  scrollToIndex,
+  keepMounted,
+  children,
+}: VirtualRowsProps<T>): ReactNode {
+  const { measureRef, virtualizer, virtualItems, scrollMargin, totalSize } =
+    useVirtualRows({ items, estimateSize, overscan, getKey, scrollToIndex, keepMounted });
+
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- the windowing sizer: a relative positioning host whose height is the full virtual extent, anchoring each row at a measured translateY offset; no positioning primitive models a windowed list
-    <div
-      ref={sizerRef}
-      className="relative w-full"
-      style={{ height: virtualizer.getTotalSize() }}
-    >
-      {virtualizer.getVirtualItems().map((vi) => (
+    <div ref={measureRef} className="relative w-full" style={{ height: totalSize }}>
+      {virtualItems.map((vi) => (
         <div
           key={vi.key}
           data-index={vi.index}
           ref={virtualizer.measureElement}
           // eslint-disable-next-line layout/no-adhoc-layout -- each windowed row is absolutely positioned at its computed translateY (set via style below); dynamic offset positioning no Pin/Overlay primitive expresses
           className={cn("absolute left-0 right-0 top-0", itemClassName)}
-          style={{
-            transform: `translateY(${vi.start - virtualizer.options.scrollMargin}px)`,
-          }}
+          style={{ transform: `translateY(${vi.start - scrollMargin}px)` }}
         >
           {children(items[vi.index]!, vi.index)}
         </div>

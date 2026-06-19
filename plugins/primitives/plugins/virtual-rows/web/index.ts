@@ -1,7 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { VirtualRows } from "./internal/virtual-rows";
-export type { VirtualRowsProps } from "./internal/virtual-rows";
+export { VirtualRows, useVirtualRows } from "./internal/virtual-rows";
+export type {
+  VirtualRowsProps,
+  UseVirtualRowsOptions,
+  UseVirtualRowsResult,
+} from "./internal/virtual-rows";
 
 export default {
   description:

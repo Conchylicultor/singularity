@@ -3679,7 +3679,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `CursorPage`; Values: `cursorPageSchema`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Web:
-        - Uses: `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`
+        - Uses: `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/virtual-rows.useVirtualRows`
         - Exports: Types: `ColumnDef`, `DataTableProps`, `SortState`; Values: `DataTable`
       - Cross-plugin:
         - Imported by: `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/sample-rows`, `debug/heap-snapshot`, `debug/profiling/boot`, `debug/profiling/runtime`, `debug/slow-ops/cluster`, `debug/slow-ops/pane`, `primitives/data-view/table`
@@ -4078,9 +4078,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's flat/tree views.
       - Web:
         - Uses: `primitives/css/ui-kit.cn`
-        - Exports: Types: `VirtualRowsProps`; Values: `VirtualRows`
+        - Exports: Types: `UseVirtualRowsOptions`, `UseVirtualRowsResult`, `VirtualRowsProps`; Values: `useVirtualRows`, `VirtualRows`
       - Cross-plugin:
-        - Imported by: `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/tree`
+        - Imported by: `primitives/data-table`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/tree`
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:

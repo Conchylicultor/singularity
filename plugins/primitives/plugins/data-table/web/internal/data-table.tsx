@@ -1,8 +1,10 @@
+import type { ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
+import { useVirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import {
   MdArrowDownward,
   MdArrowUpward,
@@ -11,6 +13,15 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { ColumnDef, DataTableProps } from "./types";
 import { useDataTable } from "./use-data-table";
+
+/** Above this row count the table windows its rows via the shared virtualizer
+ *  (keeps the subgrid + sticky header; only the visible slice is in the DOM).
+ *  Smaller tables keep the plain map — no virtualizer overhead. */
+const VIRTUALIZE_THRESHOLD = 100;
+
+/** Estimated px per row; dynamic measurement via `virtualizer.measureElement`
+ *  refines it after mount. */
+const ROW_ESTIMATE = 36;
 
 export function DataTable<TRow>({
   data,
@@ -53,6 +64,64 @@ export function DataTable<TRow>({
     ...(rowActions ? ["auto"] : []),
   ].join(" ");
 
+  // Shared row renderer so the plain branch and the windowed branch render
+  // identical rows. The optional `measure` handle is supplied only by the
+  // virtualized branch (tanstack's measureElement reads the data-index).
+  const renderRow = (
+    row: TRow,
+    i: number,
+    measure?: { ref: (el: Element | null) => void; index: number },
+  ) => {
+    const key = rowKey(row, i);
+    return (
+      <div
+        key={key}
+        ref={measure?.ref}
+        data-index={measure?.index}
+        className={cn(
+          "group/dt-row col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-caption hover:bg-accent/30",
+          hoverRevealGroup,
+          key === selectedRowId && "bg-accent",
+          onRowClick && "cursor-pointer",
+        )}
+        onClick={onRowClick ? () => onRowClick(row) : undefined}
+        role={onRowClick ? "button" : undefined}
+        tabIndex={onRowClick ? 0 : undefined}
+        onKeyDown={
+          onRowClick
+            ? (e) => {
+                if (e.key === "Enter" || e.key === " ") {
+                  e.preventDefault();
+                  onRowClick(row);
+                }
+              }
+            : undefined
+        }
+      >
+        {columns.map((col) => (
+          <div key={col.id} className={cn("min-w-0 truncate", alignClass(col.align))}>
+            {col.cell
+              ? col.cell(row)
+              : col.value
+                ? String(col.value(row) ?? "")
+                : null}
+          </div>
+        ))}
+        {rowActions && (
+          <div
+            className={cn(
+              "flex items-center justify-end gap-xs",
+              hoverRevealTarget,
+            )}
+            onClick={(e) => e.stopPropagation()}
+          >
+            {rowActions(row, i)}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="grid gap-x-sm" style={{ gridTemplateColumns: template }}>
       <div className="sticky top-0 z-raised col-span-full grid grid-cols-subgrid border-b bg-background p-control text-3xs font-medium uppercase tracking-wider text-muted-foreground">
@@ -78,55 +147,88 @@ export function DataTable<TRow>({
         })}
         {rowActions && <span aria-hidden />}
       </div>
-      {rows.map((row, i) => {
-        const key = rowKey(row, i);
-        return (
-          <div
-            key={key}
-            className={cn(
-              "group/dt-row col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-caption hover:bg-accent/30",
-              hoverRevealGroup,
-              key === selectedRowId && "bg-accent",
-              onRowClick && "cursor-pointer",
-            )}
-            onClick={onRowClick ? () => onRowClick(row) : undefined}
-            role={onRowClick ? "button" : undefined}
-            tabIndex={onRowClick ? 0 : undefined}
-            onKeyDown={
-              onRowClick
-                ? (e) => {
-                    if (e.key === "Enter" || e.key === " ") {
-                      e.preventDefault();
-                      onRowClick(row);
-                    }
-                  }
-                : undefined
-            }
-          >
-            {columns.map((col) => (
-              <div key={col.id} className={cn("min-w-0 truncate", alignClass(col.align))}>
-                {col.cell
-                  ? col.cell(row)
-                  : col.value
-                    ? String(col.value(row) ?? "")
-                    : null}
-              </div>
-            ))}
-            {rowActions && (
-              <div
-                className={cn(
-                  "flex items-center justify-end gap-xs",
-                  hoverRevealTarget,
-                )}
-                onClick={(e) => e.stopPropagation()}
-              >
-                {rowActions(row, i)}
-              </div>
-            )}
-          </div>
-        );
-      })}
+      {rows.length > VIRTUALIZE_THRESHOLD ? (
+        <VirtualTableBody
+          rows={rows}
+          rowKey={rowKey}
+          selectedRowId={selectedRowId}
+          renderRow={renderRow}
+        />
+      ) : (
+        rows.map((row, i) => renderRow(row, i))
+      )}
     </div>
+  );
+}
+
+/**
+ * Windowed table body: renders only the visible slice of rows in normal grid
+ * flow between two `col-span-full` spacers that reserve the off-screen height —
+ * so the outer subgrid column tracks and the sticky header stay intact (unlike
+ * the absolute/translateY layout, which would drop rows out of grid flow).
+ * A separate component so the virtualizer hook never runs for small tables.
+ */
+function VirtualTableBody<TRow>({
+  rows,
+  rowKey,
+  selectedRowId,
+  renderRow,
+}: {
+  rows: readonly TRow[];
+  rowKey: (row: TRow, index: number) => string;
+  selectedRowId: string | undefined;
+  renderRow: (
+    row: TRow,
+    i: number,
+    measure?: { ref: (el: Element | null) => void; index: number },
+  ) => ReactNode;
+}) {
+  // Reveal the selected row when selection changes off-screen.
+  const selectedIndex = selectedRowId
+    ? rows.findIndex((row, i) => rowKey(row, i) === selectedRowId)
+    : -1;
+
+  const { measureRef, virtualizer, virtualItems, totalSize, scrollMargin } =
+    useVirtualRows<TRow>({
+      items: rows,
+      estimateSize: ROW_ESTIMATE,
+      getKey: rowKey,
+      scrollToIndex: selectedIndex >= 0 ? selectedIndex : null,
+    });
+
+  // The marker sits at the start of the row region (right after the sticky
+  // header); scrollMargin is measured from it.
+  const marker = <div ref={measureRef} aria-hidden className="col-span-full h-0" />;
+
+  if (virtualItems.length === 0) {
+    return (
+      <>
+        {marker}
+        <div aria-hidden className="col-span-full" style={{ height: totalSize }} />
+      </>
+    );
+  }
+
+  const paddingTop = virtualItems[0]!.start - scrollMargin;
+  const paddingBottom =
+    totalSize - (virtualItems[virtualItems.length - 1]!.end - scrollMargin);
+
+  return (
+    <>
+      {marker}
+      {paddingTop > 0 && (
+        <div aria-hidden className="col-span-full" style={{ height: paddingTop }} />
+      )}
+      {virtualItems.map((vi) =>
+        renderRow(rows[vi.index]!, vi.index, {
+          ref: virtualizer.measureElement,
+          index: vi.index,
+        }),
+      )}
+      {paddingBottom > 0 && (
+        <div aria-hidden className="col-span-full" style={{ height: paddingBottom }} />
+      )}
+    </>
   );
 }
 
