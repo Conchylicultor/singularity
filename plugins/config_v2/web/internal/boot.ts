@@ -22,14 +22,15 @@ export const configBootTask = Core.Boot({
     for (const s of scopes) {
       hydrateResource(configV2Resource, { path: s.path, scopeId: s.scopeId }, s.values);
     }
-    // And hydrate the per-path scope LIST (configV2ScopesResource) from the same
-    // scopes, so useConfig's authoritative scoped decision sees the scopeId in the
-    // list on the first frame and reads the scoped value above (no global→scoped
-    // flash). This push resource is otherwise un-hydrated, so without seeding it
-    // the first paint would render global before the WS sub-ack arrives.
-    const byPath = new Map<string, string[]>();
-    for (const s of scopes) byPath.set(s.path, [...(byPath.get(s.path) ?? []), s.scopeId]);
-    for (const [path, ids] of byPath) hydrateResource(configV2ScopesResource, { path }, ids);
+    // And hydrate the scope-membership MAP (configV2ScopesResource, one global
+    // entry keyed `{}`) from the same scopes, so useConfig's authoritative scoped
+    // decision sees the scopeId in this path's list on the first frame and reads
+    // the scoped value above (no global→scoped flash). This push resource is
+    // otherwise un-hydrated, so without seeding it the first paint would render
+    // global before the WS sub-ack arrives.
+    const byPath: Record<string, string[]> = {};
+    for (const s of scopes) (byPath[s.path] ??= []).push(s.scopeId);
+    hydrateResource(configV2ScopesResource, {}, byPath);
     // Record the authoritative server-registered storePaths so useConfig can
     // assert membership and throw loudly on a web-only half-registration.
     // Success path only — a failed boot leaves the set null (graceful degrade).

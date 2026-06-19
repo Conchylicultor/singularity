@@ -13,7 +13,7 @@ import { userScopedDir, discoverScopeIds, scopeSegment, BASE_SCOPE } from "./sco
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
-import { configV2ServerResource, configV2ConflictsServerResource, configV2ScopesServerResource, configV2ConflictPathsServerResource, configV2ModifiedCountsServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, markRegistryReady, registerDescriptorPath, scopeHasOwnConfig, setConfigGetter } from "./resource";
+import { configV2ServerResource, configV2ConflictServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, markRegistryReady, refreshConflictPaths, refreshModifiedCount, refreshScopeMembers, registerDescriptorPath, scopeHasOwnConfig, setConfigGetter } from "./resource";
 import { getFieldStorageProvider } from "./field-storage-providers";
 import { writeScopedOriginSnapshot } from "./scope-snapshot";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -129,15 +129,14 @@ async function buildEntry(
       for (const cb of subs) cb(freshValues);
     }
 
+    // A scoped origin/override file appearing or disappearing changes the
+    // descriptor's customized-scope set. Refresh membership BEFORE conflicts so
+    // the aggregate conflict-paths set sees the current scopes.
+    if (scopeId) refreshScopeMembers(storePath);
+
     notifyValues(storePath, scopeId);
     notifyConflicts(storePath, scopeId);
     notifyTiers(storePath, scopeId);
-    // A scoped origin/override file appearing or disappearing changes the
-    // descriptor's customized-scope set. The scopes loader recomputes own-config
-    // membership, so re-notify it keyed by storePath whenever a scoped file moves.
-    if (scopeId) {
-      configV2ScopesServerResource.notify({ path: storePath });
-    }
   };
 
   const disposables: Disposable[] = [];
@@ -171,11 +170,10 @@ async function buildEntry(
 // per-scope notify for each known scope without a forked entry. A scoped change
 // targets only that scope.
 function notifyValues(storePath: string, scopeId: string): void {
-  // The modified-counts list is computed off effective BASE values across every
-  // descriptor and keyed by `{}` (the whole map), so any value change can shift
-  // it. Notify it once regardless of scope (a scoped-only change recomputes to
-  // the same map — idempotent — so this never over- or under-fires).
-  configV2ModifiedCountsServerResource.notify({});
+  // Modified-count is computed off effective BASE values for this descriptor, so
+  // recompute just this path (scope-independent); refreshModifiedCount notifies the
+  // whole-map resource only when its count actually changed.
+  refreshModifiedCount(storePath);
   if (scopeId) {
     configV2ServerResource.notify({ path: storePath, scopeId });
     return;
@@ -201,25 +199,24 @@ function notifyTiers(storePath: string, scopeId: string): void {
   }
 }
 
-// Notify the conflicts resource for a (storePath, scopeId) change. The conflicts
-// loader is NOT per-path keyed — it returns the whole conflicts map — so the
-// notify key is `{ scopeId }` (or `{}` for base), never per storePath. A scoped
-// change re-notifies only that scope; a BASE change also re-notifies every known
-// un-forked scope, which resolves base live (mirrors notifyValues/notifyTiers).
+// Notify the per-descriptor conflicts resource for a (storePath, scopeId) change.
+// The conflicts loader is keyed by `{ path, scopeId? }`, so notify only this
+// descriptor's path. A scoped change re-notifies only that scope; a BASE change
+// also re-notifies every known un-forked scope of THIS path, which resolves base
+// live (mirrors notifyValues/notifyTiers). The aggregate conflict-paths set is
+// maintained incrementally for this path.
 function notifyConflicts(storePath: string, scopeId: string): void {
-  // The aggregate conflict-paths list spans base + every scope, so any conflict
-  // change (base or scoped) can change it. Notify it once regardless of scope.
-  configV2ConflictPathsServerResource.notify({});
   if (scopeId) {
-    configV2ConflictsServerResource.notify({ scopeId });
-    return;
+    configV2ConflictServerResource.notify({ path: storePath, scopeId });
+  } else {
+    configV2ConflictServerResource.notify({ path: storePath });
+    const descriptor = getDescriptorByStorePath(storePath);
+    for (const sid of knownScopeIds) {
+      if (descriptor && scopeHasOwnConfig(descriptor, sid)) continue;
+      configV2ConflictServerResource.notify({ path: storePath, scopeId: sid });
+    }
   }
-  configV2ConflictsServerResource.notify({});
-  const descriptor = getDescriptorByStorePath(storePath);
-  for (const sid of knownScopeIds) {
-    if (descriptor && scopeHasOwnConfig(descriptor, sid)) continue;
-    configV2ConflictsServerResource.notify({ scopeId: sid });
-  }
+  refreshConflictPaths(storePath);
 }
 
 // Fan out every read-resource notify for a (storePath, scopeId) change in one
@@ -228,10 +225,11 @@ function notifyConflicts(storePath: string, scopeId: string): void {
 // which also change the descriptor's customized-scope set. Mirrors the fan-out
 // the watcher's onFileChange performs.
 export function notifyDescriptorScopeChange(storePath: string, scopeId: string): void {
+  // Refresh membership first so notifyConflicts' aggregate sees current scopes.
+  refreshScopeMembers(storePath);
   notifyValues(storePath, scopeId);
   notifyConflicts(storePath, scopeId);
   notifyTiers(storePath, scopeId);
-  configV2ScopesServerResource.notify({ path: storePath });
 }
 
 function getEntry(descriptor: ConfigDescriptor, scopeId: string = BASE_SCOPE): CacheEntry | undefined {
@@ -305,6 +303,16 @@ export async function initRegistry(): Promise<void> {
           await ensureScopeEntry(descriptor, scopeId);
         }
       }
+    }
+
+    // Warm the in-memory derived caches the aggregate loaders read (scope
+    // membership + conflict-paths), so their first load is a memory read rather
+    // than a filesystem walk. Membership first — refreshConflictPaths reads it.
+    for (const { descriptor, hierarchyPath } of registered) {
+      const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
+      refreshScopeMembers(storePath);
+      refreshConflictPaths(storePath);
+      refreshModifiedCount(storePath);
     }
   } finally {
     // Open the readiness gate even if init threw partway through. Otherwise the

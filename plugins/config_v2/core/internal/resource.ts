@@ -44,16 +44,20 @@ export const configV2ConflictEntrySchema = z.object({
   // captured (a pre-existing conflict) so only the binary Keep/Accept apply.
   trueConflictKeys: z.array(z.string()).optional(),
 });
+export type ConfigV2ConflictEntry = z.infer<typeof configV2ConflictEntrySchema>;
+
 export const configV2ConflictsSchema = z.record(configV2ConflictEntrySchema);
 export type ConfigV2Conflicts = z.infer<typeof configV2ConflictsSchema>;
 
-// Keyed by `{ scopeId? }` (mirrors configV2TiersResource's scope param, minus
-// the per-path key — the loader returns the WHOLE conflicts map, not a single
-// path). Base callers pass `{}`; a scoped subscription passes `{ scopeId }`.
-export const configV2ConflictsResource = resourceDescriptor<ConfigV2Conflicts, { scopeId?: string }>(
+// Per-descriptor conflict, keyed by `{ path, scopeId? }` (mirrors
+// configV2TiersResource's key). Returns the single descriptor's conflict entry
+// for the selected scope, or null when it has no conflict. Keying by path means
+// a change to one descriptor recomputes only that descriptor — the detail page
+// subscribes to exactly the path it shows, never the whole ~180-descriptor map.
+export const configV2ConflictResource = resourceDescriptor<ConfigV2ConflictEntry | null, { path: string; scopeId?: string }>(
   "config-v2.conflicts",
-  configV2ConflictsSchema,
-  {},
+  configV2ConflictEntrySchema.nullable(),
+  null,
 );
 
 export const configV2TiersSchema = z.record(z.enum(["default", "git", "user"]));
@@ -66,22 +70,33 @@ export const configV2TiersResource = resourceDescriptor<ConfigV2Tiers, { path: s
 );
 
 // The list of scopeIds a single descriptor is customized for (has its own
-// config — a propagated git scope or a runtime fork). Keyed by `{ path }`
-// (the descriptor's storePath). Drives the per-descriptor scope tab bar.
+// config — a propagated git scope or a runtime fork). This is the per-descriptor
+// element type; the live resource carries the whole map (see below).
 export const configV2ScopesSchema = z.array(z.string());
 export type ConfigV2Scopes = z.infer<typeof configV2ScopesSchema>;
 
-export const configV2ScopesResource = resourceDescriptor<ConfigV2Scopes, { path: string }>(
+// The whole membership map: storePath → scopeIds (paths with no scopes are
+// omitted). Keyed by `{}` (one global subscription, shared per tab) rather than
+// per-`{ path }`, so the many useConfig/useScopeMembership consumers (the theme
+// injector subscribes one per token descriptor) collapse to a single sub that
+// replays once per WS reconnect instead of paths × tabs. Consumers `select`
+// their own path's slice, so a change to one descriptor's scopes only re-renders
+// that descriptor's readers. Computed server-side from an in-memory map (no
+// per-load filesystem walk).
+export const configV2ScopesMapSchema = z.record(configV2ScopesSchema);
+export type ConfigV2ScopesMap = z.infer<typeof configV2ScopesMapSchema>;
+
+export const configV2ScopesResource = resourceDescriptor<ConfigV2ScopesMap, {}>(
   "config-v2.scopes",
-  configV2ScopesSchema,
-  [],
+  configV2ScopesMapSchema,
+  {},
 );
 
 // storePaths with a conflict in the base scope OR any app scope. Keyed by `{}`
 // (the whole list). Powers the nav-row warning badge and the rail/sidebar
 // attention dots so a scoped-only conflict is discoverable without opening each
-// descriptor — distinct from configV2ConflictsResource, which carries the full
-// per-scope entry map for a single scope (base by default).
+// descriptor — distinct from configV2ConflictResource, which carries a single
+// descriptor's conflict entry for one scope.
 export const configV2ConflictPathsSchema = z.array(z.string());
 export type ConfigV2ConflictPaths = z.infer<typeof configV2ConflictPathsSchema>;
 

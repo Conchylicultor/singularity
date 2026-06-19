@@ -1,14 +1,14 @@
 import { useCallback } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { configV2ScopesResource } from "@plugins/config_v2/core";
-import type { ConfigDescriptor, ConfigV2Scopes } from "@plugins/config_v2/core";
+import type { ConfigDescriptor, ConfigV2ScopesMap } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { useStorePath } from "./use-store-path";
 
 // Whether the given scope has its OWN config for this descriptor — a committed
 // git scope, a runtime fork, OR a plain scoped write. This is the single
 // boot-hydrated membership signal `useConfig` keys off (`configV2ScopesResource`,
-// keyed by `{ path }`, recomputed server-side from `scopeHasOwnConfig`). It
+// one global map keyed `{}`, recomputed server-side from `scopeHasOwnConfig`). It
 // replaces the deprecated forked gate: read and theme now share one source of
 // truth, so they can never disagree (no "few seconds" global→app flash).
 //
@@ -25,10 +25,10 @@ export function useScopeMembership<F extends FieldsRecord>(
 ): boolean {
   const path = useStorePath(descriptor);
   const inScope = useCallback(
-    (list: ConfigV2Scopes) => (scopeId ? list.includes(scopeId) : false),
-    [scopeId],
+    (map: ConfigV2ScopesMap) => (scopeId ? (map[path] ?? []).includes(scopeId) : false),
+    [scopeId, path],
   );
-  const result = useResource(configV2ScopesResource, { path }, { select: inScope });
+  const result = useResource(configV2ScopesResource, {}, { select: inScope });
   if (!scopeId) return false;
   if (result.pending) return false;
   return result.data;

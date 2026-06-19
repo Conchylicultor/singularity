@@ -7,7 +7,7 @@ import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoin
 import { useCombinedResources, useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configV2Resource, removeDescriptorScope } from "@plugins/config_v2/core";
-import type { ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Values } from "@plugins/config_v2/core";
+import type { ConfigV2ConflictEntry, ConfigV2Tiers, ConfigV2Values } from "@plugins/config_v2/core";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
@@ -15,7 +15,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { acknowledgeConflict, deleteOverride, mergeConflict, getConfigRawFile } from "../../core";
 import { configDetailPane } from "../internal/panes";
-import { useConflicts } from "../internal/use-conflicts";
+import { useConflict } from "../internal/use-conflicts";
 import { useTiers } from "../internal/use-tiers";
 import { ConfigFieldRow } from "./config-field-row";
 import { ConflictDiff } from "./conflict-diff";
@@ -76,11 +76,11 @@ function ConfigDetailInner({
     path: registration.storePath,
     ...(scopeId ? { scopeId } : {}),
   });
-  const conflictsRes = useConflicts(scopeId);
+  const conflictRes = useConflict(registration.storePath, scopeId);
   const tiersRes = useTiers(registration.storePath, scopeId);
   const gated = useCombinedResources({
     values: valuesRes,
-    conflicts: conflictsRes,
+    conflict: conflictRes,
     tiers: tiersRes,
   });
 
@@ -95,7 +95,7 @@ function ConfigDetailInner({
           scopeId={scopeId}
           onSelectScope={setScopeId}
           values={gated.data.values}
-          conflicts={gated.data.conflicts}
+          conflict={gated.data.conflict}
           tiers={gated.data.tiers}
         />
       )}
@@ -108,21 +108,21 @@ function ConfigDetailBody({
   scopeId,
   onSelectScope,
   values,
-  conflicts,
+  conflict,
   tiers,
 }: {
   registration: ReturnType<typeof useConfigRegistrations>[number];
   scopeId: string | undefined;
   onSelectScope: (scopeId: string | undefined) => void;
   values: ConfigV2Values;
-  conflicts: ConfigV2Conflicts;
+  conflict: ConfigV2ConflictEntry | null;
   tiers: ConfigV2Tiers;
 }) {
   const [showRaw, setShowRaw] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const defaults = registration.descriptor.defaults as Record<string, unknown>;
-  const conflictEntry = conflicts[registration.storePath];
+  const conflictEntry = conflict;
 
   // Re-collapse transient UI when the descriptor OR the selected scope changes —
   // a fresh scope is a fresh editing context.

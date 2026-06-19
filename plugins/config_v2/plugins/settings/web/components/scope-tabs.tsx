@@ -1,7 +1,8 @@
-import { useMemo, type ComponentType } from "react";
+import { useCallback, useMemo, type ComponentType } from "react";
 import { MdAdd, MdLayers } from "react-icons/md";
 import { Apps } from "@plugins/apps/web";
-import { scopeAppId, configV2ScopesResource, configV2ConflictsResource, forkDescriptorScope } from "@plugins/config_v2/core";
+import { scopeAppId, configV2ScopesResource, configV2ConflictResource, forkDescriptorScope } from "@plugins/config_v2/core";
+import type { ConfigV2ScopesMap } from "@plugins/config_v2/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
@@ -37,8 +38,13 @@ export function ScopeTabs({
   onSelect: (scopeId: string | undefined) => void;
 }) {
   const apps = Apps.App.useContributions();
-  const scopesRes = useResource(configV2ScopesResource, { path: storePath });
-  // `[]` initialData → never pending; gate anyway so the tab bar paints only
+  // One global scopes-map subscription, `select`ed to this descriptor's list.
+  const selectScopes = useCallback(
+    (map: ConfigV2ScopesMap) => map[storePath] ?? [],
+    [storePath],
+  );
+  const scopesRes = useResource(configV2ScopesResource, {}, { select: selectScopes });
+  // `{}` initialData → never pending; gate anyway so the tab bar paints only
   // settled data (no flash of a Base-only bar before known scopes resolve).
   if (scopesRes.pending) return <Loading />;
   const scopes = scopesRes.data;
@@ -71,9 +77,9 @@ export function ScopeTabs({
   );
 }
 
-// One tab. Subscribes the scope's conflicts map (Base passes `{}`) so it can
-// show a warning dot when THIS descriptor is in conflict for that scope. N is
-// small (one sub per customized app), so per-tab subscriptions are fine.
+// One tab. Subscribes this descriptor's per-path conflict for the tab's scope so
+// it can show a warning dot when THIS descriptor is in conflict for that scope. N
+// is small (one sub per customized app), so per-tab subscriptions are fine.
 function ScopeTab({
   label,
   icon,
@@ -89,8 +95,8 @@ function ScopeTab({
   active: boolean;
   onSelect: (scopeId: string | undefined) => void;
 }) {
-  const conflictsRes = useResource(configV2ConflictsResource, scopeId ? { scopeId } : {});
-  const hasConflict = !conflictsRes.pending && conflictsRes.data[storePath] !== undefined;
+  const conflictRes = useResource(configV2ConflictResource, { path: storePath, ...(scopeId ? { scopeId } : {}) });
+  const hasConflict = !conflictRes.pending && conflictRes.data !== null;
 
   return (
     <ToggleChip

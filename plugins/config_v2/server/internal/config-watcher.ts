@@ -23,9 +23,14 @@ export async function initConfigWatcher(): Promise<void> {
         if (watchers.has(p)) notifyWatchers(p);
       }
     },
-    onReconcile: () => {
-      for (const abs of watchers.keys()) notifyWatchers(abs);
-    },
+    // No blanket reconcile. Config files only ever change in-process (setConfig /
+    // fork) or via ./singularity build propagation, and the parcel subscription
+    // above fires on every disk write regardless of which process wrote it — so a
+    // missed event is structurally impossible. The default 30s reconcile re-fired
+    // EVERY watched path (2 per descriptor), each re-reading from disk and re-running
+    // a full conflicts recompute, producing an O(N²) idle I/O storm with nothing
+    // changed. Disable it; rely on the real fs-event path.
+    reconcileMs: null,
     extensions: [".jsonc"],
   });
 }

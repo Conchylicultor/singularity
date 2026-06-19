@@ -12,17 +12,18 @@ export {
   configV2ValidationIssueSchema,
   configV2ConflictEntrySchema,
   configV2ConflictsSchema,
-  configV2ConflictsResource,
+  configV2ConflictResource,
   configV2TiersSchema,
   configV2TiersResource,
   configV2ScopesSchema,
+  configV2ScopesMapSchema,
   configV2ScopesResource,
   configV2ConflictPathsSchema,
   configV2ConflictPathsResource,
   configV2ModifiedCountsSchema,
   configV2ModifiedCountsResource,
 } from "./internal/resource";
-export type { ConfigV2Values, ConfigV2ValidationIssue, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ConflictPaths, ConfigV2ModifiedCounts } from "./internal/resource";
+export type { ConfigV2Values, ConfigV2ValidationIssue, ConfigV2ConflictEntry, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ScopesMap, ConfigV2ConflictPaths, ConfigV2ModifiedCounts } from "./internal/resource";
 export type { ConfigProxy } from "./internal/config-proxy";
 export {
   computeHash,

@@ -1,7 +1,7 @@
 import { useCallback } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { configV2Resource, configV2ScopesResource } from "@plugins/config_v2/core";
-import type { ConfigDescriptor, ConfigValues, ConfigV2Scopes } from "@plugins/config_v2/core";
+import type { ConfigDescriptor, ConfigValues, ConfigV2ScopesMap } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { useStorePath } from "./use-store-path";
 import { useKnownServerPaths } from "./server-paths";
@@ -35,10 +35,12 @@ export function useConfig<F extends FieldsRecord>(
   // A scope DIFFERS from global only when it has its OWN config on disk — a
   // committed git scope, a runtime theme fork, OR a plain scoped setConfig write.
   // There is a single authoritative signal for all three: `configV2ScopesResource`
-  // (keyed by `{ path }`), the live per-descriptor list the server publishes from
+  // (one global map keyed `{}`), the live membership the server publishes from
   // `scopeHasOwnConfig` — the exact predicate read/write/server-resolve all key
-  // off, so no client re-derivation can drift from it. We subscribe to the scoped
-  // key iff our scopeId is in that list; otherwise an untracked scope resolves
+  // off, so no client re-derivation can drift from it. One subscription is shared
+  // by every useConfig/useScopeMembership consumer (a `select` narrows re-renders
+  // to this path's membership flip). We read the scoped key iff our scopeId is in
+  // this path's list; otherwise an untracked scope resolves
   // server-side to exactly the global value (and the server never pushes base
   // changes to an untracked scoped key), so we reuse the live global key.
   //
@@ -52,10 +54,10 @@ export function useConfig<F extends FieldsRecord>(
   // All hooks run unconditionally (Rules of Hooks); only the returned value branches.
   const scopeId = opts?.scopeId;
   const inScope = useCallback(
-    (list: ConfigV2Scopes) => (scopeId ? list.includes(scopeId) : false),
-    [scopeId],
+    (map: ConfigV2ScopesMap) => (scopeId ? (map[path] ?? []).includes(scopeId) : false),
+    [scopeId, path],
   );
-  const scopesRes = useResource(configV2ScopesResource, { path }, { select: inScope });
+  const scopesRes = useResource(configV2ScopesResource, {}, { select: inScope });
   const useScoped = scopesRes.pending ? false : scopesRes.data;
   const globalRes = useResource(configV2Resource, { path });
   const scopedRes = useResource(

@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopesSchema, configV2ConflictPathsSchema, configV2ModifiedCountsSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
-import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ConflictPaths, ConfigV2ModifiedCounts } from "../../core";
+import { configV2ValuesSchema, configV2ConflictEntrySchema, configV2TiersSchema, configV2ScopesMapSchema, configV2ConflictPathsSchema, configV2ModifiedCountsSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
+import type { ConfigV2Values, ConfigV2ConflictEntry, ConfigV2Tiers, ConfigV2ScopesMap, ConfigV2ConflictPaths, ConfigV2ModifiedCounts } from "../../core";
 import type { ConfigDescriptor, ConfigValues, JsonValue } from "../../core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { userScopedDir, discoverScopeIds } from "./scope-paths";
@@ -15,6 +15,21 @@ const descriptorByPath = new Map<string, ConfigDescriptor>();
 // captured at registration so scope helpers can rebuild scoped dirs.
 const hierarchyByDescriptor = new WeakMap<ConfigDescriptor, string>();
 let configGetter: ConfigGetter | null = null;
+
+// In-memory derived state, the single source the aggregate loaders read so a
+// subscribe / WS-reconnect-replay / boot-snapshot read is a pure memory read
+// (no per-load filesystem walk). The AUTHORITATIVE predicates are still on disk
+// (scopeHasOwnConfig / computeDescriptorConflict); these caches are recomputed
+// from them via the refresh* fns ONLY when a config file actually changes
+// (boot, fork, scoped write/delete) — so they can never drift, while the loaders
+// stop touching disk.
+
+// storePath → scopeIds the descriptor has its own config for (empty paths omitted).
+const scopeMembers = new Map<string, string[]>();
+// storePaths with a conflict in base OR any of their scopes.
+const conflictPaths = new Set<string>();
+// storePath → count of BASE fields differing from defaults (zero-count omitted).
+const modifiedCounts = new Map<string, number>();
 
 // Registry readiness gate. The server serves WS/HTTP resource subscriptions before
 // onReady runs initRegistry, so a client can subscribe before descriptors are
@@ -104,132 +119,149 @@ export async function getConfigSnapshot(): Promise<ConfigSnapshotResult> {
   return { global, scopes };
 }
 
-// Compute every descriptor's conflict state for the given scope. `scopeId`
-// undefined → base config (paths land exactly where they do today, byte-for-byte
-// identical to the pre-scope behavior). A scoped call rebuilds the origin /
-// override / ancestor trio under the scope's @app/<id> segment via userScopedDir,
-// surfacing a stale scoped override the same way base conflicts surface.
-function computeAllConflicts(scopeId?: string): ConfigV2Conflicts {
-  const conflicts: ConfigV2Conflicts = {};
-  for (const [storePath, descriptor] of descriptorByPath) {
-    const parts = storePath.replace(/\.jsonc$/, "").split("/");
-    const dir = parts.slice(0, -1).join("/");
-    const name = parts[parts.length - 1]!;
-
-    const scopedDir = userScopedDir(dir, scopeId);
-    const userOriginPath = join(scopedDir, `${name}.origin.jsonc`);
-    const userOverwritesPath = join(scopedDir, `${name}.jsonc`);
-
-    const origin = jsoncConfigProxy(userOriginPath);
-    const overwrites = jsoncConfigProxy(userOverwritesPath);
-
-    if (hasConflict(origin, overwrites)) {
-      const originData = origin.read();
-      const originValues = originData
-        ? (originData.content as Record<string, unknown>)
-        : (descriptor.defaults as Record<string, unknown>);
-      const overrideData = overwrites.read();
-      const overrideValues = overrideData
-        ? (overrideData.content as Record<string, unknown>)
-        : (descriptor.defaults as Record<string, unknown>);
-
-      // When propagate captured a merge base (`<name>.ancestor.jsonc`), a
-      // three-way merge is available: compute which fields truly conflict (both
-      // sides changed differently) so the UI can offer Merge and flag only those
-      // fields. A corrupt ancestor fails loud here exactly like a corrupt
-      // origin/override above — consistent with how this loop treats its inputs.
-      let trueConflictKeys: string[] | undefined;
-      const ancestor = jsoncConfigProxy(join(scopedDir, `${name}.ancestor.jsonc`));
-      if (ancestor.exists()) {
-        const base = ancestor.read()!.content as Record<string, JsonValue>;
-        trueConflictKeys = threeWayMerge(
-          base,
-          overrideValues as Record<string, JsonValue>,
-          originValues as Record<string, JsonValue>,
-        ).conflicts;
-      }
-
-      conflicts[storePath] = {
-        kind: "hash",
-        originValues,
-        overrideValues,
-        ...(trueConflictKeys !== undefined ? { trueConflictKeys } : {}),
-      };
-      continue;
-    }
-
-    // No hash conflict, but the effective document may still fail the current
-    // schema (a field's type changed under stored data, a hand edit went wrong).
-    // The app resolves to defaults; surface it so the user can reset or fix it.
-    const issues = validationIssues(descriptor, origin, overwrites);
-    if (issues) {
-      const stored = effective(origin, overwrites);
-      const overrideValues =
-        stored && typeof stored === "object" && !Array.isArray(stored)
-          ? (stored as Record<string, unknown>)
-          : {};
-      conflicts[storePath] = {
-        kind: "invalid",
-        originValues: descriptor.defaults as Record<string, unknown>,
-        overrideValues,
-        issues,
-      };
-    }
+// Compute a SINGLE descriptor's conflict state for the given scope, or null when
+// it has no conflict. `scopeId` undefined → base config (paths land exactly where
+// they do today). A scoped call rebuilds the origin / override / ancestor trio
+// under the scope's @app/<id> segment via userScopedDir, surfacing a stale scoped
+// override the same way base conflicts surface. Per-descriptor (not whole-map) so
+// the conflicts resource recomputes only the descriptor that actually changed.
+function computeDescriptorConflict(storePath: string, scopeId?: string): ConfigV2ConflictEntry | null {
+  const descriptor = descriptorByPath.get(storePath);
+  if (!descriptor) {
+    throw new Error(`[config-v2] no descriptor registered for conflicts path "${storePath}"`);
   }
-  return conflicts;
+  const parts = storePath.replace(/\.jsonc$/, "").split("/");
+  const dir = parts.slice(0, -1).join("/");
+  const name = parts[parts.length - 1]!;
+
+  const scopedDir = userScopedDir(dir, scopeId);
+  const userOriginPath = join(scopedDir, `${name}.origin.jsonc`);
+  const userOverwritesPath = join(scopedDir, `${name}.jsonc`);
+
+  const origin = jsoncConfigProxy(userOriginPath);
+  const overwrites = jsoncConfigProxy(userOverwritesPath);
+
+  if (hasConflict(origin, overwrites)) {
+    const originData = origin.read();
+    const originValues = originData
+      ? (originData.content as Record<string, unknown>)
+      : (descriptor.defaults as Record<string, unknown>);
+    const overrideData = overwrites.read();
+    const overrideValues = overrideData
+      ? (overrideData.content as Record<string, unknown>)
+      : (descriptor.defaults as Record<string, unknown>);
+
+    // When propagate captured a merge base (`<name>.ancestor.jsonc`), a
+    // three-way merge is available: compute which fields truly conflict (both
+    // sides changed differently) so the UI can offer Merge and flag only those
+    // fields. A corrupt ancestor fails loud here exactly like a corrupt
+    // origin/override above — consistent with how this treats its inputs.
+    let trueConflictKeys: string[] | undefined;
+    const ancestor = jsoncConfigProxy(join(scopedDir, `${name}.ancestor.jsonc`));
+    if (ancestor.exists()) {
+      const base = ancestor.read()!.content as Record<string, JsonValue>;
+      trueConflictKeys = threeWayMerge(
+        base,
+        overrideValues as Record<string, JsonValue>,
+        originValues as Record<string, JsonValue>,
+      ).conflicts;
+    }
+
+    return {
+      kind: "hash",
+      originValues,
+      overrideValues,
+      ...(trueConflictKeys !== undefined ? { trueConflictKeys } : {}),
+    };
+  }
+
+  // No hash conflict, but the effective document may still fail the current
+  // schema (a field's type changed under stored data, a hand edit went wrong).
+  // The app resolves to defaults; surface it so the user can reset or fix it.
+  const issues = validationIssues(descriptor, origin, overwrites);
+  if (issues) {
+    const stored = effective(origin, overwrites);
+    const overrideValues =
+      stored && typeof stored === "object" && !Array.isArray(stored)
+        ? (stored as Record<string, unknown>)
+        : {};
+    return {
+      kind: "invalid",
+      originValues: descriptor.defaults as Record<string, unknown>,
+      overrideValues,
+      issues,
+    };
+  }
+  return null;
 }
 
-export const configV2ConflictsServerResource = defineResource<ConfigV2Conflicts, { scopeId?: string }>({
+export const configV2ConflictServerResource = defineResource<ConfigV2ConflictEntry | null, { path: string; scopeId?: string }>({
   key: "config-v2.conflicts",
   mode: "push",
-  schema: configV2ConflictsSchema,
-  loader: whenRegistryReady(({ scopeId }) => computeAllConflicts(scopeId)),
+  schema: configV2ConflictEntrySchema.nullable(),
+  loader: whenRegistryReady(({ path, scopeId }) => computeDescriptorConflict(path, scopeId)),
 });
 
-// The scopeIds a single descriptor is customized for (has its own config). Keyed
-// by `{ path }` (storePath). Powers the per-descriptor scope tab bar in settings.
-function computeDescriptorScopes(path: string): ConfigV2Scopes {
-  const descriptor = descriptorByPath.get(path);
-  if (!descriptor) {
-    throw new Error(`[config-v2] no descriptor registered for scopes path "${path}"`);
-  }
-  const hierarchyPath = hierarchyByDescriptor.get(descriptor);
-  if (!hierarchyPath) return [];
-  return discoverScopeIds(hierarchyPath).filter((sid) => scopeHasOwnConfig(descriptor, sid));
-}
-
-export const configV2ScopesServerResource = defineResource<ConfigV2Scopes, { path: string }>({
+// The whole scope-membership map, read from the in-memory cache (no filesystem
+// walk per load). Refreshed via refreshScopeMembers whenever a scoped file moves.
+export const configV2ScopesServerResource = defineResource<ConfigV2ScopesMap, {}>({
   key: "config-v2.scopes",
   mode: "push",
-  schema: configV2ScopesSchema,
-  loader: whenRegistryReady(({ path }) => computeDescriptorScopes(path)),
+  schema: configV2ScopesMapSchema,
+  loader: whenRegistryReady(() => Object.fromEntries(scopeMembers)),
 });
 
-// Union of conflicting storePaths across the base scope + every app scope.
-// Reuses computeAllConflicts per scope (which only flags descriptors actually
-// customized for that scope, since an un-customized scope has no @app/<id>
-// files on disk). Backs the nav-row warning badge and rail/sidebar dots.
-function computeConflictPaths(): ConfigV2ConflictPaths {
-  const paths = new Set<string>(Object.keys(computeAllConflicts()));
-  const scopeIds = new Set<string>();
-  for (const [, descriptor] of descriptorByPath) {
-    const hierarchyPath = hierarchyByDescriptor.get(descriptor);
-    if (hierarchyPath) {
-      for (const sid of discoverScopeIds(hierarchyPath)) scopeIds.add(sid);
-    }
-  }
-  for (const sid of scopeIds) {
-    for (const storePath of Object.keys(computeAllConflicts(sid))) paths.add(storePath);
-  }
-  return [...paths];
+// Recompute one descriptor's scope membership from the AUTHORITATIVE disk
+// predicate (scopeHasOwnConfig) and update the in-memory map. Notifies the global
+// scopes resource iff membership changed. Called at boot and at every point a
+// scoped origin/override file appears or disappears — never on a plain read.
+export function refreshScopeMembers(storePath: string): void {
+  const descriptor = descriptorByPath.get(storePath);
+  if (!descriptor) return;
+  const hierarchyPath = hierarchyByDescriptor.get(descriptor);
+  const ids = hierarchyPath
+    ? discoverScopeIds(hierarchyPath).filter((sid) => scopeHasOwnConfig(descriptor, sid))
+    : [];
+  const prev = scopeMembers.get(storePath) ?? [];
+  const changed = ids.length !== prev.length || ids.some((id, i) => id !== prev[i]);
+  if (ids.length > 0) scopeMembers.set(storePath, ids);
+  else scopeMembers.delete(storePath);
+  if (changed) configV2ScopesServerResource.notify({});
 }
 
+// Union of conflicting storePaths across base + every app scope, read from the
+// in-memory set (no per-load rescan). Backs the nav-row warning badge and
+// rail/sidebar dots.
 export const configV2ConflictPathsServerResource = defineResource<ConfigV2ConflictPaths, {}>({
   key: "config-v2.conflict-paths",
   mode: "push",
   schema: configV2ConflictPathsSchema,
-  loader: whenRegistryReady(() => computeConflictPaths()),
+  loader: whenRegistryReady(() => [...conflictPaths]),
 });
+
+// Whether a descriptor conflicts in base OR any of its (in-memory) scopes. Reads
+// only that one descriptor's files (bounded), so it's cheap to run on a change.
+function descriptorHasAnyConflict(storePath: string): boolean {
+  if (computeDescriptorConflict(storePath) !== null) return true;
+  for (const sid of scopeMembers.get(storePath) ?? []) {
+    if (computeDescriptorConflict(storePath, sid) !== null) return true;
+  }
+  return false;
+}
+
+// Recompute one descriptor's aggregate conflict status and update the in-memory
+// set; notify the conflict-paths resource iff the set changed. Relies on
+// scopeMembers being current, so callers refresh scope membership first. Called
+// at boot and on every conflict-affecting change for that descriptor.
+export function refreshConflictPaths(storePath: string): void {
+  if (!descriptorByPath.has(storePath)) return;
+  const had = conflictPaths.has(storePath);
+  const has = descriptorHasAnyConflict(storePath);
+  if (has === had) return;
+  if (has) conflictPaths.add(storePath);
+  else conflictPaths.delete(storePath);
+  configV2ConflictPathsServerResource.notify({});
+}
 
 // Per-descriptor count of BASE fields whose effective value differs from the
 // schema default (paths with zero modified fields are omitted). Compared
@@ -238,25 +270,36 @@ export const configV2ConflictPathsServerResource = defineResource<ConfigV2Confli
 // resolveRedactedConfig before this runs, so they never register as modified —
 // matching what the client resolves. Backs the nav-row modified-count badge and
 // the "Modified only" filter from one data-level read (no per-row config hook).
-function computeModifiedCounts(): ConfigV2ModifiedCounts {
-  const counts: ConfigV2ModifiedCounts = {};
-  for (const [storePath, descriptor] of descriptorByPath) {
-    const values = resolveRedactedConfig(descriptor);
-    const defaults = descriptor.defaults as Record<string, unknown>;
-    let count = 0;
-    for (const key of Object.keys(descriptor.fields)) {
-      if (JSON.stringify(values[key]) !== JSON.stringify(defaults[key])) count++;
-    }
-    if (count > 0) counts[storePath] = count;
+function computeModifiedCount(storePath: string): number {
+  const descriptor = descriptorByPath.get(storePath);
+  if (!descriptor) return 0;
+  const values = resolveRedactedConfig(descriptor);
+  const defaults = descriptor.defaults as Record<string, unknown>;
+  let count = 0;
+  for (const key of Object.keys(descriptor.fields)) {
+    if (JSON.stringify(values[key]) !== JSON.stringify(defaults[key])) count++;
   }
-  return counts;
+  return count;
+}
+
+// Modified-count is computed off effective BASE values only (scope-independent),
+// so recompute just the changed descriptor and notify the whole-map resource iff
+// its count changed. Replaces a full ~180-descriptor rescan on every value change.
+export function refreshModifiedCount(storePath: string): void {
+  if (!descriptorByPath.has(storePath)) return;
+  const prev = modifiedCounts.get(storePath) ?? 0;
+  const count = computeModifiedCount(storePath);
+  if (count === prev) return;
+  if (count > 0) modifiedCounts.set(storePath, count);
+  else modifiedCounts.delete(storePath);
+  configV2ModifiedCountsServerResource.notify({});
 }
 
 export const configV2ModifiedCountsServerResource = defineResource<ConfigV2ModifiedCounts, {}>({
   key: "config-v2.modified-counts",
   mode: "push",
   schema: configV2ModifiedCountsSchema,
-  loader: whenRegistryReady(() => computeModifiedCounts()),
+  loader: whenRegistryReady(() => Object.fromEntries(modifiedCounts)),
 });
 
 export function registerDescriptorPath(path: string, descriptor: ConfigDescriptor, hierarchyPath: string): void {
