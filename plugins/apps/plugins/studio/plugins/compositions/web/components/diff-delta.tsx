@@ -1,5 +1,7 @@
 import { useMemo } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -56,9 +58,9 @@ function DiffLegend() {
   return (
     <Stack gap="2xs">
       <SectionLabel>Legend</SectionLabel>
-      <div className="flex flex-wrap gap-sm">
+      <Cluster gap="sm">
         {DIFF_LEGEND.map(({ state, label, tint }) => (
-          <span key={state} className="flex items-center gap-xs">
+          <Stack key={state} as="span" direction="row" align="center" gap="xs">
             <span
               aria-hidden
               className={cn(
@@ -69,9 +71,9 @@ function DiffLegend() {
             <Text variant="caption" tone="muted">
               {label}
             </Text>
-          </span>
+          </Stack>
         ))}
-      </div>
+      </Cluster>
     </Stack>
   );
 }
@@ -93,18 +95,20 @@ function DeltaGroup({
 }) {
   return (
     <Stack gap="sm">
-      <div className="flex items-center justify-between gap-sm">
-        <SectionLabel>{label}</SectionLabel>
-        <Badge size="sm" variant="muted">
-          {ids.length}
-        </Badge>
-      </div>
+      <Frame
+        content={<SectionLabel>{label}</SectionLabel>}
+        trailing={
+          <Badge size="sm" variant="muted">
+            {ids.length}
+          </Badge>
+        }
+      />
       {ids.length === 0 ? (
         <Text variant="caption" tone="muted">
           No plugins unique to this side.
         </Text>
       ) : (
-        <div className="flex flex-wrap gap-xs">
+        <Cluster gap="xs">
           {ids.map((id) => (
             <span
               key={id}
@@ -119,7 +123,7 @@ function DeltaGroup({
               </Text>
             </span>
           ))}
-        </div>
+        </Cluster>
       )}
     </Stack>
   );

@@ -7,6 +7,10 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type {
   PluginNode,
@@ -53,14 +57,24 @@ export function ContributionsView() {
   }, [plugins, sortedTables]);
 
   if (isLoading) {
-    return <Loading className="flex h-full items-center justify-center" />;
+    return (
+      <Center axis="both" className="h-full">
+        <Loading />
+      </Center>
+    );
   }
   if (error) {
     return (
-      <Text as="div" variant="body" className="flex h-full flex-col items-center justify-center gap-sm p-2xl text-center">
-        <span className="font-medium text-foreground">Failed to load</span>
-        <span className="text-muted-foreground">{String(error)}</span>
-      </Text>
+      <Center axis="both" className="h-full p-2xl">
+        <Stack gap="sm" align="center" className="text-center">
+          <Text variant="body" className="font-medium text-foreground">
+            Failed to load
+          </Text>
+          <Text variant="body" tone="muted">
+            {String(error)}
+          </Text>
+        </Stack>
+      </Center>
     );
   }
 
@@ -69,43 +83,50 @@ export function ContributionsView() {
   const activeRowClick = activeTable?.onRowClick;
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex gap-xs overflow-x-auto border-b px-md py-sm">
-        {sortedTables.map((table) => {
-          const count = rowsByFacet.get(table.facetId)?.length ?? 0;
-          const active = table.facetId === activeId;
-          return (
-            <FilterChip
-              key={table.facetId}
-              active={active}
-              onClick={() => {
-                setSelectedId(table.facetId);
-                setFilter("");
-              }}
-            >
-              <table.icon size={14} />
-              <span className="font-medium">{table.label}</span>
-              <Badge
-                size="sm"
-                colorClass={active ? "bg-foreground/10 text-foreground" : undefined}
-              >
-                {count}
-              </Badge>
-            </FilterChip>
-          );
-        })}
-      </div>
+    <Column
+      fill
+      className="h-full"
+      header={
+        <>
+          <Scroll axis="x" className="border-b px-md py-sm">
+            <Stack direction="row" gap="xs">
+              {sortedTables.map((table) => {
+                const count = rowsByFacet.get(table.facetId)?.length ?? 0;
+                const active = table.facetId === activeId;
+                return (
+                  <FilterChip
+                    key={table.facetId}
+                    active={active}
+                    onClick={() => {
+                      setSelectedId(table.facetId);
+                      setFilter("");
+                    }}
+                  >
+                    <table.icon size={14} />
+                    <span className="font-medium">{table.label}</span>
+                    <Badge
+                      size="sm"
+                      colorClass={active ? "bg-foreground/10 text-foreground" : undefined}
+                    >
+                      {count}
+                    </Badge>
+                  </FilterChip>
+                );
+              })}
+            </Stack>
+          </Scroll>
 
-      <div className="border-b px-md py-sm">
-        <SearchInput
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
-          placeholder="Filter…"
-        />
-      </div>
-
-      <div className="flex-1 min-h-0 overflow-y-auto">
-        {activeTable ? (
+          <div className="border-b px-md py-sm">
+            <SearchInput
+              value={filter}
+              onChange={(e) => setFilter(e.target.value)}
+              placeholder="Filter…"
+            />
+          </div>
+        </>
+      }
+      body={
+        activeTable ? (
           <DataTable
             data={rowsByFacet.get(activeTable.facetId) ?? []}
             columns={activeTable.columns}
@@ -119,11 +140,13 @@ export function ContributionsView() {
             emptyLabel={`No ${activeTable.label.toLowerCase()} found`}
           />
         ) : (
-          <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
-            No contribution tables registered
-          </Text>
-        )}
-      </div>
-    </div>
+          <Center axis="both" className="h-full">
+            <Text variant="body" tone="muted">
+              No contribution tables registered
+            </Text>
+          </Center>
+        )
+      }
+    />
   );
 }

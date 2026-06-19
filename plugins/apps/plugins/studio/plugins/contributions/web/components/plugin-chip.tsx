@@ -8,7 +8,6 @@ export function PluginChip({ pluginId }: { pluginId: string }) {
     <LinkChip
       mono
       title={pluginId}
-      className="shrink-0"
       onClick={(e) => {
         e.stopPropagation();
         openPane(pluginViewPane, { pluginId }, { mode: "push" });

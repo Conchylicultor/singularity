@@ -2,6 +2,7 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getTableRowCount } from "../../shared/endpoints";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 export function RowCountSection({
@@ -21,11 +22,11 @@ export function RowCountSection({
   }
 
   return (
-    <div className="flex items-baseline gap-sm px-md py-sm">
+    <Stack direction="row" align="baseline" gap="sm" className="px-md py-sm">
       <Text variant="title" className="tabular-nums">
         {data.estimate != null ? data.estimate.toLocaleString() : "—"}
       </Text>
       <Text variant="body" className="text-muted-foreground">rows (estimated)</Text>
-    </div>
+    </Stack>
   );
 }

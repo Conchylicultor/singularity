@@ -1,4 +1,5 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge, type BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { MembershipState } from "@plugins/plugin-meta/plugins/closure/core";
@@ -36,19 +37,19 @@ export function MembershipSummary({
 
   return (
     <Stack gap="sm">
-      <div className="flex items-baseline gap-sm">
+      <Stack direction="row" align="baseline" gap="sm">
         <Text variant="heading">{bundle}</Text>
         <Text variant="caption" tone="muted">
           plugins bundled / {membership.size} total
         </Text>
-      </div>
-      <div className="flex flex-wrap gap-xs">
+      </Stack>
+      <Cluster gap="xs">
         {SUMMARY_ROWS.map(({ state, label, variant }) => (
           <Badge key={state} size="sm" variant={variant} title={label}>
             {label} {counts.get(state) ?? 0}
           </Badge>
         ))}
-      </div>
+      </Cluster>
     </Stack>
   );
 }

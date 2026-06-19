@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdAdd, MdDeleteOutline, MdPublic, MdSave } from "react-icons/md";
 import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -81,7 +82,7 @@ function DraftActions({
         placeholder="Composition name"
         aria-label="Composition name"
       />
-      <div className="flex items-center gap-xs">
+      <Stack direction="row" align="center" gap="xs">
         <Button
           variant="default"
           size="sm"
@@ -100,7 +101,7 @@ function DraftActions({
         <Button variant="ghost" size="sm" onClick={() => clearActive()}>
           Clear
         </Button>
-      </div>
+      </Stack>
     </Stack>
   );
 }
@@ -315,16 +316,18 @@ function DraftSection({
   return (
     <Stack gap="lg">
       <Stack gap="sm">
-        <div className="flex items-center justify-between gap-sm">
-          <SectionLabel>Compositions</SectionLabel>
-          <div className="flex items-center gap-xs">
-            <PromoteDefaultButton />
-            <Button variant="outline" size="sm" onClick={onNew}>
-              <MdAdd />
-              New
-            </Button>
-          </div>
-        </div>
+        <Frame
+          content={<SectionLabel>Compositions</SectionLabel>}
+          trailing={
+            <Stack direction="row" align="center" gap="xs">
+              <PromoteDefaultButton />
+              <Button variant="outline" size="sm" onClick={onNew}>
+                <MdAdd />
+                New
+              </Button>
+            </Stack>
+          }
+        />
         {items.length === 0 ? (
           <Text variant="caption" tone="muted">
             No named compositions yet. Create one with New.

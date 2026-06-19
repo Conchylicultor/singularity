@@ -3,6 +3,8 @@ import { MdAdd, MdRemove } from "react-icons/md";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -67,89 +69,94 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
   }
 
   return (
-    <div className="flex h-full flex-col">
-      <Inset pad="sm">
-        <div className="flex flex-wrap items-center gap-sm">
-          <div className="relative w-56">
-            <SearchInput
-              placeholder="Focus on a plugin…"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
+    <Column
+      fill
+      className="h-full"
+      scrollBody={false}
+      header={
+        <Inset pad="sm">
+          <Cluster gap="sm">
+            <div className="relative w-56">
+              <SearchInput
+                placeholder="Focus on a plugin…"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+              />
+              {query && (
+                <Surface
+                  level="overlay"
+                  // eslint-disable-next-line layout/no-adhoc-layout -- dropdown anchored below the input (top-full), outside Pin's in-parent anchor set
+                  className="absolute left-0 top-full z-overlay mt-2xs w-full p-2xs"
+                >
+                  <FocusResults
+                    allIds={allIds}
+                    query={query}
+                    onPick={(id) => {
+                      setFocusId(id);
+                      setQuery("");
+                    }}
+                  />
+                </Surface>
+              )}
+            </div>
+
+            <Stack direction="row" align="center" gap="2xs">
+              <Text variant="caption" tone="muted">Depth</Text>
+              <IconButton
+                icon={MdRemove}
+                label="Decrease depth"
+                size="sm"
+                disabled={depth <= 1}
+                onClick={() => setDepth((d) => Math.max(1, d - 1))}
+              />
+              <Text variant="label">{depth}</Text>
+              <IconButton
+                icon={MdAdd}
+                label="Increase depth"
+                size="sm"
+                onClick={() => setDepth((d) => d + 1)}
+              />
+            </Stack>
+
+            <SegmentedControl<Direction>
+              options={DIRECTION_OPTIONS}
+              value={direction}
+              onChange={setDirection}
             />
-            {query && (
-              <Surface
-                level="overlay"
-                className="absolute left-0 top-full z-overlay mt-2xs w-full p-2xs"
-              >
-                <FocusResults
-                  allIds={allIds}
-                  query={query}
-                  onPick={(id) => {
-                    setFocusId(id);
-                    setQuery("");
-                  }}
-                />
-              </Surface>
+
+            {hiddenCount > 0 && (
+              <Text variant="caption" tone="muted">+{hiddenCount} hidden</Text>
             )}
-          </div>
 
-          <div className="flex items-center gap-2xs">
-            <Text variant="caption" tone="muted">Depth</Text>
-            <IconButton
-              icon={MdRemove}
-              label="Decrease depth"
-              size="sm"
-              disabled={depth <= 1}
-              onClick={() => setDepth((d) => Math.max(1, d - 1))}
-            />
-            <Text variant="label">{depth}</Text>
-            <IconButton
-              icon={MdAdd}
-              label="Increase depth"
-              size="sm"
-              onClick={() => setDepth((d) => d + 1)}
-            />
-          </div>
-
-          <SegmentedControl<Direction>
-            options={DIRECTION_OPTIONS}
-            value={direction}
-            onChange={setDirection}
-          />
-
-          {hiddenCount > 0 && (
-            <Text variant="caption" tone="muted">+{hiddenCount} hidden</Text>
-          )}
-
-          {membership && <Legend />}
-        </div>
-      </Inset>
-
-      <div className="min-h-0 flex-1">
+            {membership && <Legend />}
+          </Cluster>
+        </Inset>
+      }
+      body={
         <GraphCanvas
           nodes={nodes}
           edges={edges}
           focusId={focusId}
           onNodeClick={(id) => setFocusId(id as PluginId)}
         />
-      </div>
-    </div>
+      }
+    />
   );
 }
 
 function Legend() {
   return (
-    <div className="ml-auto flex flex-wrap items-center gap-sm">
+    <Cluster gap="sm" className="ml-auto">
       {STATE_LEGEND.map(({ state, label, tint }) => (
-        <span key={state} className="flex items-center gap-2xs">
+        <Stack key={state} as="span" direction="row" align="center" gap="2xs">
           <span
             aria-hidden
             className={`inline-block size-3 rounded-sm border border-border ${tint ?? "bg-transparent"}`}
           />
           <Text variant="caption" tone="muted">{label}</Text>
-        </span>
+        </Stack>
       ))}
-    </div>
+    </Cluster>
   );
 }
 

@@ -1,5 +1,6 @@
 import { MdUnfoldLess, MdUnfoldMore } from "react-icons/md";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { usePluginTree } from "@plugins/apps/plugins/studio/plugins/explorer/web";
 
 function collectSubtreeIds(node: PluginNode): string[] {
@@ -29,13 +30,15 @@ export function ExpandCollapseButton({ node }: { node: PluginNode }) {
         else expandDescendants(node);
       }}
       aria-label={allExpanded ? "Collapse all" : "Expand all"}
-      className="hidden size-4 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted-foreground/10 group-hover/tree-row:inline-flex"
+      className="hidden size-4 rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted-foreground/10 group-hover/tree-row:block"
     >
-      {allExpanded ? (
-        <MdUnfoldLess className="size-3" />
-      ) : (
-        <MdUnfoldMore className="size-3" />
-      )}
+      <Center axis="both" className="size-full">
+        {allExpanded ? (
+          <MdUnfoldLess className="size-3" />
+        ) : (
+          <MdUnfoldMore className="size-3" />
+        )}
+      </Center>
     </button>
   );
 }
