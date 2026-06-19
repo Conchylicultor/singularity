@@ -1,5 +1,4 @@
 import { useMemo, type ReactElement } from "react";
-import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   DataView,
   defineDataView,
@@ -9,11 +8,12 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { loadSeverity } from "@plugins/debug/plugins/slow-ops/core";
-import { getSlowOpsCluster } from "../../shared/endpoints";
+import { useClusterStream } from "../internal/use-cluster-stream";
+import { ScanProgress } from "./scan-progress";
 import {
   buildClusterAggregate,
   buildContentionTimeline,
@@ -33,25 +33,19 @@ function uniqueSorted(values: string[]): { value: string; label: string }[] {
 }
 
 export function ClusterView(): ReactElement {
-  const { data, isLoading } = useEndpoint(getSlowOpsCluster, {});
-  const refresh = useEndpointMutation(getSlowOpsCluster, {
-    invalidates: [getSlowOpsCluster],
-  });
+  const { worktrees, total, status, error, reload } = useClusterStream();
 
   const aggregates = useMemo(
-    () => (data ? buildClusterAggregate(data.worktrees) : []),
-    [data],
+    () => buildClusterAggregate(worktrees),
+    [worktrees],
   );
   const timeline = useMemo(
-    () => (data ? buildContentionTimeline(data.worktrees) : []),
-    [data],
+    () => buildContentionTimeline(worktrees),
+    [worktrees],
   );
-  const failed = useMemo(
-    () => (data ? failedWorktrees(data.worktrees) : []),
-    [data],
-  );
+  const failed = useMemo(() => failedWorktrees(worktrees), [worktrees]);
 
-  const okCount = data ? data.worktrees.length - failed.length : 0;
+  const okCount = worktrees.length - failed.length;
 
   const aggFields: FieldDef<ClusterAggregate>[] = useMemo(
     () => [
@@ -226,9 +220,12 @@ export function ClusterView(): ReactElement {
     <div className="flex h-full flex-col overflow-auto">
       <Stack gap="xl" className="px-md py-md">
         <div className="flex items-center justify-between gap-md">
-          <Stack gap="2xs">
+          <Stack gap="2xs" className="min-w-0 flex-1">
             <SectionLabel>Cross-worktree cluster</SectionLabel>
-            {data && (
+            {status === "streaming" && (
+              <ScanProgress received={worktrees.length} total={total} />
+            )}
+            {status === "done" && (
               <Text as="span" variant="caption" className="text-muted-foreground">
                 {okCount} worktree{okCount === 1 ? "" : "s"} merged
                 {failed.length > 0 && (
@@ -241,44 +238,41 @@ export function ClusterView(): ReactElement {
                 )}
               </Text>
             )}
+            {status === "error" && error && (
+              <Placeholder tone="error">{error}</Placeholder>
+            )}
           </Stack>
           <Button
             variant="outline"
             size="xs"
-            loading={refresh.isPending}
-            onClick={() => refresh.mutate({})}
+            loading={status === "streaming"}
+            onClick={() => void reload()}
           >
             Refresh
           </Button>
         </div>
 
-        {isLoading && !data ? (
-          <Loading />
-        ) : (
-          <>
-            <DataView<ClusterAggregate>
-              rows={aggregates}
-              fields={aggFields}
-              rowKey={(r) => r.key}
-              storageKey={CLUSTER_AGG}
-              title="Cluster Aggregate"
-              mode="embedded"
-              defaultView="table"
-              emptyState="No slow operations recorded across the cluster"
-            />
+        <DataView<ClusterAggregate>
+          rows={aggregates}
+          fields={aggFields}
+          rowKey={(r) => r.key}
+          storageKey={CLUSTER_AGG}
+          title="Cluster Aggregate"
+          mode="embedded"
+          defaultView="table"
+          emptyState="No slow operations recorded across the cluster"
+        />
 
-            <DataView<TimelineEntry>
-              rows={timeline}
-              fields={timelineFields}
-              rowKey={(r) => r.key}
-              storageKey={CLUSTER_TIMELINE}
-              title="Contention Timeline"
-              mode="embedded"
-              defaultView="table"
-              emptyState="No contention samples captured yet"
-            />
-          </>
-        )}
+        <DataView<TimelineEntry>
+          rows={timeline}
+          fields={timelineFields}
+          rowKey={(r) => r.key}
+          storageKey={CLUSTER_TIMELINE}
+          title="Contention Timeline"
+          mode="embedded"
+          defaultView="table"
+          emptyState="No contention samples captured yet"
+        />
       </Stack>
     </div>
   );

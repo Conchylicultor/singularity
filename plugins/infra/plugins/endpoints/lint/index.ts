@@ -14,13 +14,12 @@ export default {
       // reaching for directly.
       "plugins/primitives/plugins/networking/web/**",
       "plugins/infra/plugins/endpoints/web/**",
+      // Sanctioned NDJSON streaming-reader primitive (readNdjson) — streaming
+      // can't go through fetchEndpoint's single-JSON-response model.
+      "plugins/infra/plugins/ndjson-stream/web/**",
 
       // (b) PERMANENT — special transport that implement()/fetchEndpoint can't
       // express. Do NOT migrate these.
-      // NDJSON stream reader built on top of the endpoint contract (it consumes
-      // endpoint route/interpolatePath and reports via EndpointError) — streaming
-      // can't go through fetchEndpoint's single-JSON-response model.
-      "plugins/debug/plugins/worktree-cleanup/web/internal/read-ndjson.ts",
       // The live-state primitive's own resource GET — this IS the primitive that
       // useEndpoint resources are built on; it cannot depend on itself.
       "plugins/primitives/plugins/live-state/web/use-resource.ts",

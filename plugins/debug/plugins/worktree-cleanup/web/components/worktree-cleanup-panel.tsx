@@ -8,7 +8,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { readNdjson } from "../internal/read-ndjson";
+import { readNdjson } from "@plugins/infra/plugins/ndjson-stream/web";
 import {
   listWorktrees,
   bulkDeleteWorktrees,

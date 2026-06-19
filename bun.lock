@@ -1875,6 +1875,10 @@
         "@modelcontextprotocol/sdk": "^1.20.0",
       },
     },
+    "plugins/infra/plugins/ndjson-stream": {
+      "name": "@singularity/plugin-infra-ndjson-stream",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/paths": {
       "name": "@singularity/plugin-infra-paths",
     },
@@ -4575,6 +4579,8 @@
     "@singularity/plugin-infra-jobs": ["@singularity/plugin-infra-jobs@workspace:plugins/infra/plugins/jobs"],
 
     "@singularity/plugin-infra-mcp": ["@singularity/plugin-infra-mcp@workspace:plugins/infra/plugins/mcp"],
+
+    "@singularity/plugin-infra-ndjson-stream": ["@singularity/plugin-infra-ndjson-stream@workspace:plugins/infra/plugins/ndjson-stream"],
 
     "@singularity/plugin-infra-paths": ["@singularity/plugin-infra-paths@workspace:plugins/infra/plugins/paths"],
 

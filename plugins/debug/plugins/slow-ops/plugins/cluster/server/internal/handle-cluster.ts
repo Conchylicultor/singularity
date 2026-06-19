@@ -1,14 +1,11 @@
-import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
 import {
   listDatabases,
   openShortLivedClient,
 } from "@plugins/database/plugins/admin/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { SlowOpSchema, type SlowOp } from "@plugins/debug/plugins/slow-ops/core";
-import {
-  getSlowOpsCluster,
-  type ClusterWorktree,
-} from "../../shared/endpoints";
+import { type ClusterWorktree } from "../../shared/endpoints";
 
 // Bound the fan-out so a 16-worktree cluster never opens 16 pools at once. Each
 // short-lived pool is `max: 1`, so this caps concurrent backends we add to the
@@ -78,11 +75,24 @@ async function fetchWorktree(name: string): Promise<ClusterWorktree> {
   }
 }
 
-export const handleSlowOpsCluster = implement(getSlowOpsCluster, async () => {
-  const names = await listDatabases();
-  const semaphore = createSemaphore(FANOUT_CONCURRENCY);
-  const worktrees = await Promise.all(
-    names.map((name) => semaphore.run(() => fetchWorktree(name))),
-  );
-  return { worktrees };
-});
+// Streamed as NDJSON rather than a single JSON response: the fan-out across ~16
+// worktree DB forks takes 20s+, so withholding the whole payload until the last
+// fork resolves leaves the user staring at a blank pane (and risks Bun's idle
+// timeout). Instead we emit a `{ total }` frame up front (after listDatabases())
+// so the client can show a determinate "scanning X / N worktrees" progress bar,
+// then emit each `{ worktree }` as its fetch resolves so the two DataViews fill
+// in live. A producer throw is auto-framed as `{ error }` by ndjsonResponse;
+// per-DB failures are still surfaced inline as `ok: false` worktree rows.
+export function handleSlowOpsCluster(): Response {
+  return ndjsonResponse(async (emit) => {
+    const names = await listDatabases();
+    emit({ total: names.length });
+    const semaphore = createSemaphore(FANOUT_CONCURRENCY);
+    await Promise.all(
+      names.map((name) =>
+        semaphore.run(async () => emit({ worktree: await fetchWorktree(name) })),
+      ),
+    );
+    emit({ end: true });
+  });
+}

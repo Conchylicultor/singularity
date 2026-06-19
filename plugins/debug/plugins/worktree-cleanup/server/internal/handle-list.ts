@@ -1,7 +1,7 @@
 import { listAttempts, listTasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { listDatabases } from "@plugins/database/plugins/admin/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
-import { ndjsonResponse } from "../../shared/ndjson";
+import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
 import { type WorktreeEntry } from "../../shared/endpoints";
 import { dirExists } from "./reap";
 

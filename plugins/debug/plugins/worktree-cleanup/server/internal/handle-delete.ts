@@ -1,5 +1,5 @@
 import { getAttempt } from "@plugins/tasks/plugins/tasks-core/server";
-import { ndjsonResponse } from "../../shared/ndjson";
+import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
 import { reapAttempt } from "./reap";
 
 export async function handleDelete(
