@@ -1,0 +1,56 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Layout harness measurer</title>
+    <style>
+      /*
+       * Font determinism: sub-pixel text width drifts across OS font stacks, so
+       * truncation onset can shift a few px. The bespoke geometry tests force a
+       * fixed monospace 14px on the measured root; we do the same on every node
+       * under `[data-geo-root]` so the measured layout is reproducible across
+       * machines. The live gallery uses real fonts; only the measured suite
+       * forces monospace.
+       */
+      [data-geo-root],
+      [data-geo-root] * {
+        font-family: monospace;
+        font-size: 14px;
+      }
+      /*
+       * Token VALUES (`--space-*`, pads, control heights, radius) are emitted at
+       * RUNTIME by ThemeInjector — never in static CSS — so a page that loads only
+       * app.css has them unset (a `gap: var(--space-sm)` collapses to 0). The
+       * measured suite pins the DEFAULT density baseline (the same default the
+       * bespoke geometry tests hardcoded as 8px), so we seed the default
+       * `comfortable` density ramp + the radius/pad tokens the rendered primitives
+       * need for faithful box geometry. `rem` is relative to the (un-overridden)
+       * 16px html root, so 0.5rem = 8px etc.
+       */
+      [data-geo-root] {
+        --space-2xs: 0.125rem;
+        --space-xs: 0.25rem;
+        --space-sm: 0.5rem;
+        --space-md: 0.75rem;
+        --space-lg: 1rem;
+        --space-xl: 1.5rem;
+        --space-2xl: 2rem;
+        --pad-chip-x: 0.375rem;
+        --pad-chip-y: 0.125rem;
+        --pad-control-x: 0.75rem;
+        --pad-control-y: 0.375rem;
+        --pad-row-x: 0.5rem;
+        --pad-row-y: 0.375rem;
+        --control-height-xs: 1.5rem;
+        --control-height-sm: 1.75rem;
+        --control-height-md: 2rem;
+        --control-height-lg: 2.25rem;
+        --radius: 0.625rem;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="./entry.tsx"></script>
+  </body>
+</html>

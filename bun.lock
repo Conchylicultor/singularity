@@ -2508,6 +2508,13 @@
       "name": "@singularity/plugin-primitives-css-inline",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/layout-harness": {
+      "name": "@singularity/plugin-primitives-css-layout-harness",
+      "version": "0.0.1",
+      "devDependencies": {
+        "vite": "^6.0.0",
+      },
+    },
     "plugins/primitives/plugins/css/plugins/link-chip": {
       "name": "@singularity/plugin-primitives-css-link-chip",
       "version": "0.0.1",
@@ -4928,6 +4935,8 @@
     "@singularity/plugin-primitives-css-icon-auto": ["@singularity/plugin-primitives-css-icon-auto@workspace:plugins/primitives/plugins/css/plugins/icon-auto"],
 
     "@singularity/plugin-primitives-css-inline": ["@singularity/plugin-primitives-css-inline@workspace:plugins/primitives/plugins/css/plugins/inline"],
+
+    "@singularity/plugin-primitives-css-layout-harness": ["@singularity/plugin-primitives-css-layout-harness@workspace:plugins/primitives/plugins/css/plugins/layout-harness"],
 
     "@singularity/plugin-primitives-css-link-chip": ["@singularity/plugin-primitives-css-link-chip@workspace:plugins/primitives/plugins/css/plugins/link-chip"],
 

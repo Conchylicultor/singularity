@@ -24,10 +24,16 @@ leaf truncates the same in a flex row, a grid track, or a bare block parent — 
 consumers never need an `as="div"` block workaround to re-establish truncation.
 A caller `max-w-*` / `w-*` in `className` still wins (composes last via `cn`).
 
-The real-browser proof is `web/internal/truncating-text-geometry.test.ts`
-(`bun:test` + Playwright): it renders the leaf as a node child of a plain block
-div and asserts it stays within the container and ellipsizes, with a
-falsification case (plain `inline`) that overflows — the regression this guards.
+The real-browser proof now lives in the **shared layout-harness** (the bespoke
+`truncating-text-geometry.test.ts` was migrated into it and deleted). The
+`truncating-text/block-parent-no-op` fixture (`truncating-text/fixtures/index.ts`)
+renders the leaf as a node child of a plain block div and asserts it stays within
+the container (`noClip`); its `swapLeafDisplay:"inline"` **falsification**
+reproduces the old bare-`inline` construct and asserts `noClip` is then VIOLATED
+(the leaf overflows its block parent — the regression this guards). It is gated by
+`./singularity check layout-geometry`; see
+[`../layout-harness/CLAUDE.md`](../layout-harness/CLAUDE.md). Run on demand:
+`bun test plugins/primitives/plugins/css/plugins/layout-harness/web/internal/layout-geometry.test.ts`.
 
 ## Single-line is a property of the region, not the leaf
 
