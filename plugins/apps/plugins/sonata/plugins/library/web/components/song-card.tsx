@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { MdDelete, MdMusicNote, MdPlayArrow } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -44,7 +45,7 @@ export function SongCard({
           onOpen(song);
         }
       }}
-      className="group relative rounded-lg p-lg"
+      className={cn(hoverRevealGroup, "relative rounded-lg p-lg")}
     >
       <Stack gap="md">
         <Frame
@@ -101,10 +102,11 @@ export function SongCard({
           type="button"
           aria-label={`Delete ${song.title}`}
           className={cn(
+            hoverRevealTarget,
             "size-7 rounded-md",
-            "text-muted-foreground opacity-0 transition-opacity",
+            "text-muted-foreground",
             "hover:bg-destructive/10 hover:text-destructive",
-            "group-hover:opacity-100 focus-visible:opacity-100",
+            "focus-visible:opacity-100",
           )}
           onClick={(e) => {
             // Don't let the delete bubble up and open the song.

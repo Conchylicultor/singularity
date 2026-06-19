@@ -1,4 +1,5 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useRef, useState } from "react";
 import { MdEdit } from "react-icons/md";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
@@ -67,7 +68,7 @@ export function DescriptionView({
     <Text
       as="div"
       variant="body"
-      className="group relative min-h-48 w-full cursor-text rounded-md border p-md"
+      className={cn(hoverRevealGroup, "relative min-h-48 w-full cursor-text rounded-md border p-md")}
       // Enter edit on mouse-up so a drag-select (which suppresses `click`) still
       // switches to edit mode — carrying the selected range into the editor so
       // the user can immediately replace it. A plain click resolves to null and
@@ -87,7 +88,7 @@ export function DescriptionView({
       <Button
         variant="ghost"
         size="icon"
-        className="absolute top-1 right-1 size-6 opacity-0 transition-opacity group-hover:opacity-100"
+        className={cn(hoverRevealTarget, "absolute top-1 right-1 size-6")}
         title="Edit description"
         onClick={() => enterEdit(null)}
       >

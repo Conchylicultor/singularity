@@ -1,4 +1,5 @@
 import { cn, Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import type { BundledLanguage } from "shiki";
@@ -158,15 +159,16 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
 
   return (
     <div className="px-md py-xs">
-      <Clip className="group relative rounded-md bg-muted">
+      <Clip className={cn(hoverRevealGroup, "group relative rounded-md bg-muted")}>
         {/* Hover/focus toolbar: language picker + copy. */}
         <Pin to="top-right" offset="xs" layer="raised">
           <Stack
             direction="row"
             gap="xs"
             align="center"
-            className="opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100"
+            className={hoverRevealTarget}
           >
+
           <Select items={langItems} value={language ?? AUTO} onValueChange={onLanguageChange}>
             <SelectTrigger
               size="sm"

@@ -18,6 +18,8 @@ import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/we
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { fileBlock } from "../../core";
 
@@ -73,7 +75,7 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
 
   return (
     <Inset x="md" y="xs">
-      <div className="group relative">
+      <div className={cn(hoverRevealGroup, "relative")}>
         <Card as="a" interactive href={attachmentUrl(attachmentId)} download={name}>
           <Frame
             gap="md"
@@ -98,7 +100,7 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
             type="button"
             aria-label="Replace file"
             onClick={() => editor.update({})}
-            className="size-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+            className={cn(hoverRevealTarget, "size-6 rounded-full bg-black/50 text-white hover:bg-black/70")}
           >
             <Center className="size-full">
               <MdSwapHoriz className="size-4" />

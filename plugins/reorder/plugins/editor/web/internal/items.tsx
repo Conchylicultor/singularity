@@ -138,7 +138,7 @@ export function SortableReorderItem({
         <>
           {editMode && (
             <button
-              className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs cursor-pointer opacity-0 group-hover/reorder-item:opacity-80 hover:!opacity-100 transition-opacity"
+              className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs cursor-pointer opacity-0 pointer-events-none group-hover/reorder-item:opacity-80 group-hover/reorder-item:pointer-events-auto hover:!opacity-100 hover:pointer-events-auto transition-opacity"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={handleHide}
               aria-label="Hide item"
@@ -216,7 +216,7 @@ export function SpacerReorderItem({
             ⇔
           </span>
           <button
-            className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs cursor-pointer opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
+            className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs cursor-pointer opacity-0 pointer-events-none group-hover:opacity-80 group-hover:pointer-events-auto hover:!opacity-100 hover:pointer-events-auto transition-opacity"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleDelete}
             aria-label="Remove spacer"

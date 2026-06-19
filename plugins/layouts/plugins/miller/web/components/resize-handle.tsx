@@ -1,5 +1,7 @@
 import { useCallback, type PointerEvent as ReactPointerEvent } from "react";
 import { MdChevronLeft } from "react-icons/md";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 
 interface ResizeHandleProps {
   onResize: (dx: number) => void;
@@ -33,10 +35,10 @@ export function ResizeHandle({ onResize, onCollapse }: ResizeHandleProps) {
       role="separator"
       aria-orientation="vertical"
       onPointerDown={onPointerDown}
-      className="group relative w-1 shrink-0 cursor-col-resize"
+      className={cn(hoverRevealGroup, "relative w-1 shrink-0 cursor-col-resize")}
       style={{ touchAction: "none" }}
     >
-      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border group-hover:bg-primary/40" />
+      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border group-hover/hover-reveal:bg-primary/40" />
       {onCollapse && (
         <button
           type="button"
@@ -46,7 +48,7 @@ export function ResizeHandle({ onResize, onCollapse }: ResizeHandleProps) {
             onCollapse();
           }}
           aria-label="Collapse column"
-          className="absolute left-1/2 top-2 z-raised flex size-5 -translate-x-1/2 items-center justify-center rounded-md border bg-background text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover:opacity-100"
+          className={cn(hoverRevealTarget, "absolute left-1/2 top-2 z-raised flex size-5 -translate-x-1/2 items-center justify-center rounded-md border bg-background text-muted-foreground hover:bg-accent hover:text-foreground")}
         >
           <MdChevronLeft className="size-3" />
         </button>

@@ -11,6 +11,7 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { gradientCss } from "./cover-presets";
 import { ChangeCoverPopover } from "./change-cover-popover";
@@ -59,7 +60,7 @@ function FilledCover({
   const [repositioning, setRepositioning] = useState(false);
 
   return (
-    <div className="group/cover relative h-[30vh] max-h-64 w-full overflow-hidden select-none">
+    <div className={cn(hoverRevealGroup, "group/cover relative h-[30vh] max-h-64 w-full overflow-hidden select-none")}>
       {cover.type === "gradient" ? (
         <div className="size-full" style={{ background: gradientCss(cover.preset) }} />
       ) : (
@@ -67,7 +68,7 @@ function FilledCover({
       )}
 
       {!repositioning && (
-        <div className="absolute right-3 bottom-3 z-raised flex gap-xs opacity-0 transition-opacity group-hover/cover:opacity-100">
+        <div className={cn(hoverRevealTarget, "absolute right-3 bottom-3 z-raised flex gap-xs")}>
           <ChangeCoverPopover
             current={cover}
             onPick={onPick}

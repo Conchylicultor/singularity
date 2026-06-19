@@ -7,7 +7,7 @@
 - Description: Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments.
 - Web:
   - Contributes: `Editor.Block` "image" → `ImageBlock`
-  - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text-editor/paste-images.Lightbox`
+  - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text-editor/paste-images.Lightbox`
   - Exports: Values: `imageBlock`
 - Core:
   - Uses: `page/editor.defineBlock`

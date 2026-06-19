@@ -144,7 +144,7 @@ export function LaunchControl({
                 e.stopPropagation();
                 return launch(id, e);
               }}
-              className="opacity-0 group-hover/dropdown-menu-item:opacity-100"
+              className="opacity-0 pointer-events-none group-hover/dropdown-menu-item:opacity-100 group-hover/dropdown-menu-item:pointer-events-auto"
             >
               <MdPlayArrow className="size-3.5" />
             </Button>

@@ -1,5 +1,7 @@
 import { useState } from "react";
 import { MdClose } from "react-icons/md";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { attachmentUrl } from "../internal/markdown";
 import { Lightbox } from "./lightbox";
 
@@ -23,7 +25,7 @@ export function AttachmentThumbnail({
       : "max-h-16 max-w-32 object-cover";
 
   return (
-    <span className="group relative inline-block" contentEditable={false}>
+    <span className={cn(hoverRevealGroup, "relative inline-block")} contentEditable={false}>
       {expandable ? (
         <button
           type="button"
@@ -56,7 +58,7 @@ export function AttachmentThumbnail({
             e.stopPropagation();
             onRemove();
           }}
-          className="bg-background/90 border-border text-foreground absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full border opacity-0 transition-opacity group-hover:opacity-100"
+          className={cn(hoverRevealTarget, "bg-background/90 border-border text-foreground absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full border")}
           aria-label="Remove image"
         >
           <MdClose className="size-3" />

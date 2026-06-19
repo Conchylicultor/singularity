@@ -7,7 +7,7 @@
 - Description: Video block type: upload a video file and play it inline.
 - Web:
   - Contributes: `Editor.Block` "video" → `VideoBlock`
-  - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/text-editor/paste-images.attachmentUrl`
+  - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/text-editor/paste-images.attachmentUrl`
   - Exports: Values: `VIDEO_TYPE`, `videoBlock`
 - Core:
   - Uses: `page/editor.defineBlock`

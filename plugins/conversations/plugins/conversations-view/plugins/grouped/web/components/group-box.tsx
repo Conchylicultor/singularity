@@ -62,7 +62,7 @@ export function GroupBox({
             {...listeners}
             type="button"
             aria-label="Reorder group"
-            className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100 touch-none"
+            className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground opacity-0 pointer-events-none hover:bg-accent hover:text-foreground group-hover/header:opacity-100 group-hover/header:pointer-events-auto touch-none"
           >
             <MdDragIndicator className="size-3.5" />
           </button>
@@ -77,7 +77,7 @@ export function GroupBox({
               e.stopPropagation();
               return onDelete();
             }}
-            className="opacity-0 group-hover/header:opacity-100"
+            className="opacity-0 pointer-events-none group-hover/header:opacity-100 group-hover/header:pointer-events-auto"
           />
         </div>
       }

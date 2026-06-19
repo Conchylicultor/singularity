@@ -12,7 +12,8 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { BLOCK_GUTTER } from "@plugins/page/plugins/editor/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { PageIconButton, PageIconPicker, type PageIconValue } from "./page-icon-button";
 import { ChangeCoverPopover } from "./change-cover-popover";
 import "./page-header.css";
@@ -74,7 +75,7 @@ function PageHeaderInner({ pageId, page }: { pageId: string; page: Block | undef
     // editor's text column. When a cover is present the large icon rises to
     // overlap its bottom edge (a one-off visual overlap the spacing ramp doesn't
     // model — applied via inline negative margin, never a margin utility).
-    <Stack gap="xs" className="group/header pt-lg" style={{ paddingLeft: BLOCK_GUTTER }}>
+    <Stack gap="xs" className={cn(hoverRevealGroup, "group/header pt-lg")} style={{ paddingLeft: BLOCK_GUTTER }}>
       {hasIcon && (
         <PageIconButton
           value={iconValue}
@@ -89,7 +90,7 @@ function PageHeaderInner({ pageId, page }: { pageId: string; page: Block | undef
         <Stack
           direction="row"
           gap="2xs"
-          className="opacity-0 transition-opacity group-hover/header:opacity-100"
+          className={hoverRevealTarget}
         >
           {!hasIcon && (
             <PageIconPicker

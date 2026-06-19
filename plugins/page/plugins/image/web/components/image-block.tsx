@@ -7,6 +7,8 @@ import {
 } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { imageBlock } from "../../core";
 
@@ -86,7 +88,7 @@ function FilledImageBlock({
     <div className="px-md py-xs">
       <div
         ref={wrapperRef}
-        className="group relative inline-block max-w-full"
+        className={cn(hoverRevealGroup, "relative inline-block max-w-full")}
         style={{ width: displayWidth }}
       >
         <img
@@ -100,7 +102,7 @@ function FilledImageBlock({
             type="button"
             aria-label="Remove image"
             onClick={() => editor.update({ alt })}
-            className="size-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+            className={cn(hoverRevealTarget, "size-6 rounded-full bg-black/50 text-white hover:bg-black/70")}
           >
             <Center className="size-full">
               <MdClose className="size-4" />
@@ -116,7 +118,7 @@ function FilledImageBlock({
           className="w-2 cursor-ew-resize"
         >
           {/* eslint-disable-next-line layout/no-adhoc-layout -- fractional right-0.5 inset + vertical-center on the drag-grip bar is off the spacing ramp */}
-          <div className="absolute top-1/2 right-0.5 h-8 w-1 -translate-y-1/2 rounded-md bg-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
+          <div className="pointer-events-none absolute top-1/2 right-0.5 h-8 w-1 -translate-y-1/2 rounded-md bg-foreground/30 opacity-0 transition-opacity group-hover/hover-reveal:opacity-100" />
         </Pin>
       </div>
       {lightbox ? (

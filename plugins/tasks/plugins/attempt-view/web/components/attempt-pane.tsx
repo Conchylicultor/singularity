@@ -94,7 +94,7 @@ function AttemptSection({
                   </span>
                 </button>
                 {convInstanceId !== undefined && !isActive && (
-                  <div className="flex shrink-0 items-center pr-xs opacity-0 group-hover:opacity-100">
+                  <div className="flex shrink-0 items-center pr-xs opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto">
                     <PaneInstanceContext.Provider value={convInstanceId}>
                       <SideBySideButton convId={c.id} />
                     </PaneInstanceContext.Provider>

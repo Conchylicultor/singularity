@@ -94,7 +94,7 @@ export function ReviewFileRow({
             title="Copy path"
             size="inline"
             // eslint-disable-next-line spacing/no-adhoc-spacing -- inline gap after path text before copy button
-            className="ml-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/path:opacity-100"
+            className="ml-1 text-muted-foreground opacity-0 pointer-events-none transition-opacity hover:text-foreground group-hover/path:opacity-100 group-hover/path:pointer-events-auto"
             onClick={(e) => e.stopPropagation()}
           />
         </span>

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MdOpenInNew, MdSmartDisplay } from "react-icons/md";
 import { cn, Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
@@ -69,7 +70,7 @@ function EmptyEmbedBlock({
 function FilledEmbedBlock({ url, onReplace }: { url: string; onReplace: () => void }) {
   return (
     <div className="px-md py-xs">
-      <div className="group">
+      <div className={hoverRevealGroup}>
         <Stack direction="row" gap="sm" align="center" justify="end" className="mb-xs">
           <a
             href={url}
@@ -93,8 +94,8 @@ function FilledEmbedBlock({ url, onReplace }: { url: string; onReplace: () => vo
             type="button"
             onClick={onReplace}
             className={cn(
-              "text-caption text-muted-foreground opacity-0 transition-opacity",
-              "group-hover:opacity-100 hover:text-foreground hover:underline",
+              hoverRevealTarget,
+              "text-caption text-muted-foreground hover:text-foreground hover:underline",
             )}
           >
             Replace URL

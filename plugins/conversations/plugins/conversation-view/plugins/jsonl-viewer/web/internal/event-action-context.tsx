@@ -47,7 +47,7 @@ export function RowActions({
       gap="xs"
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid action strip; stays whole when hosted in a non-Frame flex parent (floating headerless renderers)
       className={cn(
-        "shrink-0 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100",
+        "shrink-0 opacity-0 pointer-events-none transition-opacity group-hover/row:opacity-100 group-hover/row:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto",
         floating && "rounded-lg border border-border/60 bg-background/90 px-xs py-2xs shadow-md backdrop-blur-sm",
         className,
       )}

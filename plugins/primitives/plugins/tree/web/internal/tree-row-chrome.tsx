@@ -109,7 +109,8 @@ export function TreeRowChrome({
           <span
             className={cn(
               "flex items-center justify-center",
-              expandable && "group-hover/tree-row:opacity-0",
+              expandable &&
+                "group-hover/tree-row:opacity-0 group-hover/tree-row:pointer-events-none",
             )}
           >
             {icon}
@@ -126,7 +127,7 @@ export function TreeRowChrome({
               className={cn(
                 "absolute inset-0 flex items-center justify-center rounded-md",
                 "hover:bg-background/60",
-                "opacity-0 group-hover/tree-row:opacity-100 focus-visible:opacity-100",
+                "opacity-0 pointer-events-none group-hover/tree-row:opacity-100 group-hover/tree-row:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
               )}
             >
               <CollapsibleChevron open={isOpen} className="size-4" />
@@ -147,7 +148,7 @@ export function TreeRowChrome({
             "hover:bg-background/60",
             hasChildren
               ? "opacity-40 group-hover/tree-row:opacity-100"
-              : "opacity-0 group-hover/tree-row:opacity-60",
+              : "opacity-0 pointer-events-none group-hover/tree-row:opacity-60 group-hover/tree-row:pointer-events-auto",
           )}
         >
           <CollapsibleChevron open={isOpen} className="size-4" />
@@ -183,10 +184,10 @@ export function TreeRowChrome({
           // after the pointer leaves the row.
           className={cn(
             "flex shrink-0 items-center gap-2xs overflow-hidden whitespace-nowrap",
-            "w-0 opacity-0",
-            "group-hover/tree-row:w-auto group-hover/tree-row:opacity-100",
-            "group-focus-within/tree-row:w-auto group-focus-within/tree-row:opacity-100",
-            "has-data-[state=open]:w-auto has-data-[state=open]:opacity-100",
+            "w-0 opacity-0 pointer-events-none",
+            "group-hover/tree-row:w-auto group-hover/tree-row:opacity-100 group-hover/tree-row:pointer-events-auto",
+            "group-focus-within/tree-row:w-auto group-focus-within/tree-row:opacity-100 group-focus-within/tree-row:pointer-events-auto",
+            "has-data-[state=open]:w-auto has-data-[state=open]:opacity-100 has-data-[state=open]:pointer-events-auto",
           )}
         >
           {actions}

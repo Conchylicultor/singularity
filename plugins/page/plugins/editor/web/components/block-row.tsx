@@ -84,7 +84,7 @@ export function BlockRow({
           className={cn(
             "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
             "text-muted-foreground hover:bg-accent cursor-pointer",
-            collapsed ? "opacity-60" : "opacity-0 group-hover/row:opacity-60",
+            collapsed ? "opacity-60" : "opacity-0 pointer-events-none group-hover/row:opacity-60 group-hover/row:pointer-events-auto",
           )}
           style={{ left: depth * INDENT - 20 }}
         >
@@ -104,7 +104,7 @@ export function BlockRow({
             className={cn(
               "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
               "text-muted-foreground hover:bg-accent cursor-pointer",
-              "opacity-0 group-hover/row:opacity-60",
+              "opacity-0 pointer-events-none group-hover/row:opacity-60 group-hover/row:pointer-events-auto",
             )}
             style={{ left: depth * INDENT - 60 }}
           >
@@ -130,7 +130,7 @@ export function BlockRow({
             className={cn(
               "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
               "text-muted-foreground hover:bg-accent cursor-grab active:cursor-grabbing",
-              "opacity-0 group-hover/row:opacity-60",
+              "opacity-0 pointer-events-none group-hover/row:opacity-60 group-hover/row:pointer-events-auto",
             )}
             style={{ left: depth * INDENT - 40 }}
           >

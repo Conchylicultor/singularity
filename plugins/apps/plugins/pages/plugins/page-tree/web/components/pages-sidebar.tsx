@@ -152,7 +152,7 @@ function PagesHeaderAdd() {
       }}
       variant="ghost"
       size="icon-xs"
-      className="ml-auto opacity-0 group-hover/label:opacity-100 focus-visible:opacity-100"
+      className="ml-auto opacity-0 pointer-events-none group-hover/label:opacity-100 group-hover/label:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto"
     />
   );
 }

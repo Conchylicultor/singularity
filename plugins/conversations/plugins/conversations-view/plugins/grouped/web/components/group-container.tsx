@@ -65,7 +65,7 @@ export function GroupContainer({
         {leadingIcon}
         {title}
         {count !== undefined && count > 0 && (
-          <Badge size="sm" className="shrink-0 opacity-0 transition-opacity group-hover/header:opacity-100">
+          <Badge size="sm" className="shrink-0 pointer-events-none opacity-0 transition-opacity group-hover/header:opacity-100">
             {count}
           </Badge>
         )}

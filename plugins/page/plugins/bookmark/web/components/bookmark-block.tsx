@@ -11,7 +11,8 @@ import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, Input, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { bookmarkBlock, linkPreviewEndpoint } from "../../core";
 
@@ -190,7 +191,7 @@ function FilledBookmarkBlock({
 
   return (
     <Inset x="md" y="xs">
-      <div className="group relative">
+      <div className={cn(hoverRevealGroup, "relative")}>
         <Card as="a" interactive href={url} target="_blank" rel="noreferrer" className="p-none no-underline">
           <Clip>
             <Stack direction="row" gap="md" align="stretch">
@@ -233,7 +234,7 @@ function FilledBookmarkBlock({
             type="button"
             aria-label="Replace bookmark"
             onClick={() => editor.update({})}
-            className="size-6 rounded-full bg-black/50 text-white opacity-0 transition-opacity group-hover:opacity-100 hover:bg-black/70"
+            className={cn(hoverRevealTarget, "size-6 rounded-full bg-black/50 text-white hover:bg-black/70")}
           >
             <Center className="size-full">
               <MdRefresh className="size-4" />

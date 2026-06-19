@@ -9,7 +9,7 @@ export function ConvCountLabel() {
 
   return (
     // eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating this count label from the preceding sidebar header text; no flex parent here to own a gap
-    <Text variant="caption" className="ml-1 text-sidebar-foreground/50 opacity-0 transition-opacity group-hover/label:opacity-100">
+    <Text variant="caption" className="ml-1 text-sidebar-foreground/50 pointer-events-none opacity-0 transition-opacity group-hover/label:opacity-100">
       {activeCount}/{totalCount}
     </Text>
   );

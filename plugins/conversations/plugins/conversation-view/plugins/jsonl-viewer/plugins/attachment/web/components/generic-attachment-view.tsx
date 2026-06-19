@@ -15,7 +15,7 @@ export function GenericAttachmentView({ event }: AttachmentRendererProps) {
           label={`attachment:${event.subtype}`}
           json={event.attachment}
           sourceConversationId={conversationId}
-          className="opacity-0 group-hover/row:opacity-100 focus-within:opacity-100 transition-opacity"
+          className="opacity-0 pointer-events-none group-hover/row:opacity-100 group-hover/row:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto transition-opacity"
         />
       }
     >

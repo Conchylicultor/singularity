@@ -238,8 +238,8 @@ const ChipShell = forwardRef<
           aria-label={`Close ${label}`}
           onClick={onClose}
           className={cn(
-            "flex size-4 shrink-0 items-center justify-center rounded-sm opacity-0 transition-[color,background-color,opacity] hover:bg-sidebar-foreground/10 hover:text-sidebar-accent-foreground group-hover:opacity-100 focus-visible:opacity-100",
-            active && "opacity-70",
+            "flex size-4 shrink-0 items-center justify-center rounded-sm transition-[color,background-color,opacity] hover:bg-sidebar-foreground/10 hover:text-sidebar-accent-foreground group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
+            active ? "opacity-70" : "opacity-0 pointer-events-none",
           )}
         >
           <MdClose className="size-3.5" />

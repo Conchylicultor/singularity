@@ -36,7 +36,7 @@ function SoloExitOverlay({ focused, onExitToDefault }: PlacementChromeProps) {
   if (!focused) return null;
   return (
     <div className="group/solo absolute top-2 right-3 z-max">
-      <div className="opacity-0 transition-opacity group-hover/solo:opacity-100 focus-within:opacity-100">
+      <div className="opacity-0 transition-opacity pointer-events-none group-hover/solo:opacity-100 group-hover/solo:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto">
         <IconButton
           icon={MdFullscreenExit}
           label="Exit fullscreen (Esc)"

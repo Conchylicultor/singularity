@@ -1,4 +1,6 @@
 import { MdAdd, MdArrowDownward, MdLink, MdLinkOff } from "react-icons/md";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 
 export interface ChainConnectorProps {
   linked: boolean;
@@ -10,7 +12,7 @@ export interface ChainConnectorProps {
 export function ChainConnector({ linked, onToggle, disabled, onInsert }: ChainConnectorProps) {
   if (!linked) {
     return (
-      <div className="group/connector relative flex h-3 items-center justify-center">
+      <div className={cn(hoverRevealGroup, "group/connector relative flex h-3 items-center justify-center")}>
         <div className="border-muted-foreground/20 w-full border-t border-dashed" />
         <span className="text-muted-foreground/40 absolute text-3xs uppercase tracking-wider transition-opacity group-hover/connector:opacity-0">
           ∥ parallel
@@ -21,7 +23,7 @@ export function ChainConnector({ linked, onToggle, disabled, onInsert }: ChainCo
           disabled={disabled}
           aria-label="Link tasks (run sequentially)"
           title="Link tasks (run sequentially)"
-          className="text-muted-foreground hover:text-foreground absolute flex size-5 items-center justify-center rounded-full opacity-0 transition-opacity group-hover/connector:opacity-100 focus-visible:opacity-100 disabled:pointer-events-none"
+          className={cn(hoverRevealTarget, "text-muted-foreground hover:text-foreground absolute flex size-5 items-center justify-center rounded-full focus-visible:opacity-100 disabled:pointer-events-none")}
         >
           <MdLink className="size-3.5" />
         </button>
@@ -30,12 +32,12 @@ export function ChainConnector({ linked, onToggle, disabled, onInsert }: ChainCo
   }
 
   return (
-    <div className="group/connector relative flex h-3 items-center justify-center">
+    <div className={cn(hoverRevealGroup, "group/connector relative flex h-3 items-center justify-center")}>
       <div className="text-muted-foreground/60 flex items-center gap-2xs text-3xs uppercase tracking-wider transition-opacity group-hover/connector:opacity-0">
         <MdArrowDownward className="size-3" />
         <span>blocks</span>
       </div>
-      <div className="absolute inset-0 flex items-center justify-center gap-lg opacity-0 transition-opacity group-hover/connector:opacity-100">
+      <div className={cn(hoverRevealTarget, "absolute inset-0 flex items-center justify-center gap-lg")}>
         <button
           type="button"
           onClick={onToggle}

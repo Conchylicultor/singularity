@@ -6,6 +6,8 @@ import {
   UNSAFE_unsealSlotComponent,
   type SealContributions,
 } from "@plugins/framework/plugins/web-sdk/core";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { ActiveData, type ActiveDataInlineContribution } from "../slots";
 
 type SerializedActiveDataInlineNode = {
@@ -104,7 +106,7 @@ function ActiveDataInlineChip({ text, nodeKey }: { text: string; nodeKey: NodeKe
   if (!editor.isEditable()) return chip;
 
   return (
-    <span className="group relative inline-flex align-middle" contentEditable={false}>
+    <span className={cn(hoverRevealGroup, "relative inline-flex align-middle")} contentEditable={false}>
       {chip}
       <button
         type="button"
@@ -115,7 +117,7 @@ function ActiveDataInlineChip({ text, nodeKey }: { text: string; nodeKey: NodeKe
             if (node) (node as LexicalNode).remove();
           });
         }}
-        className="bg-background/90 border-border text-foreground absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full border opacity-0 transition-opacity group-hover:opacity-100"
+        className={cn(hoverRevealTarget, "bg-background/90 border-border text-foreground absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full border")}
         aria-label="Remove"
       >
         <MdClose className="size-3" />
