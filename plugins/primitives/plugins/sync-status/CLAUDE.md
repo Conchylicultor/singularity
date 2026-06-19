@@ -103,7 +103,7 @@ non-surface mounts instead of crashing.
 
 - Description: Per-surface forced sync-status indicator: optimistic/autosave surfaces report {phase,label,retry} via useReportSync; the universal SyncStatusIndicator (mounted once per surface) renders a Google-Keep-style cloud (saving → saved → error+retry). Scoped per surface via scoped-store; tolerates no Provider.
 - Web:
-  - Uses: `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/spinner.Spinner`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/relative-time.RelativeTime`, `primitives/scoped-store.defineScopedStore`, `primitives/tooltip.WithTooltip`
+  - Uses: `primitives/css/pin.Pin`, `primitives/css/spinner.Spinner`, `primitives/icon-button.IconButton`, `primitives/relative-time.RelativeTime`, `primitives/scoped-store.defineScopedStore`, `primitives/tooltip.WithTooltip`
   - Exports: Types: `ReportSyncArgs`, `SyncPhase`; Values: `SyncStatusIndicator`, `SyncStatusProvider`, `useReportSync`
 - Cross-plugin:
   - Imported by: `apps`, `primitives/editable-field`, `primitives/optimistic-mutation`
