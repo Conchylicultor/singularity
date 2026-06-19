@@ -23,8 +23,20 @@ var (the `Grid`-style escape for what a class can't express). `offset="none"`
 Owns position + edge + stacking only. Background, borders, and blur stay in
 `className` (`bg-*` / `border-*` / `backdrop-blur` are not banned).
 
+## Conditional stickiness — toggle, don't swap
+
+To make an element sticky only some of the time, set **`active={false}`** rather
+than rendering a different element when it shouldn't stick. `active=false` drops
+the position/offset/z-layer but keeps the *same* element — so toggling never
+changes element identity and therefore never remounts the children. Swapping
+between `<Sticky>` and a plain `<div>` instead would unmount the subtree on every
+toggle, silently resetting any child component state (e.g. an inner
+`Expandable`'s expanded flag).
+
 ## Props
 
+- **`active`** — whether positioning is applied. `false` renders in normal flow
+  as the same element (no remount). Default `true`.
 - **`edge`** — `"top"` (default) | `"bottom"` | `"left"` | `"right"`.
 - **`offset`** — `SpaceStep` inset from the edge. Default `none`.
 - **`layer`** — z-layer stacking level. Default `raised`.

@@ -1,4 +1,4 @@
-import { Fragment, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { Fragment, useEffect, useLayoutEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import {
   JumpToBottomButton,
@@ -81,20 +81,28 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
 
 function StickyUserHeader({ children }: { children: ReactNode }) {
   const [expanded, setExpanded] = useState(false);
+  const ref = useRef<HTMLElement>(null);
   const value = useMemo(() => ({ expanded, setExpanded }), [expanded]);
+  // A pinned turn loses `position: sticky` the moment it expands, so it snaps
+  // back to its natural scroll position — which sits above the viewport and
+  // carries the just-expanded message out of view. Scroll it back to the top of
+  // the pane so it stays where the user was looking. Stickiness is toggled via
+  // the `active` prop on a single stable element (never by swapping element
+  // types), so the subtree never remounts.
+  useLayoutEffect(() => {
+    if (expanded) ref.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [expanded]);
   return (
     <SectionExpandProvider value={value}>
-      {expanded ? (
-        <div className="z-raised bg-background pb-2xs">{children}</div>
-      ) : (
-        <Sticky
-          edge="top"
-          layer="nav"
-          className="bg-background pb-2xs shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]"
-        >
-          {children}
-        </Sticky>
-      )}
+      <Sticky
+        ref={ref}
+        active={!expanded}
+        edge="top"
+        layer="nav"
+        className={`bg-background pb-2xs ${expanded ? "z-raised" : "shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]"}`}
+      >
+        {children}
+      </Sticky>
     </SectionExpandProvider>
   );
 }

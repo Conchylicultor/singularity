@@ -56,6 +56,13 @@ export function stickyClasses(opts: {
 }
 
 export interface StickyProps extends React.HTMLAttributes<HTMLElement> {
+  /**
+   * Whether sticky positioning is applied. When `false` the element renders in
+   * normal flow (no `position`/offset/z-layer) — but as the SAME element, so
+   * toggling stickiness never changes element identity and therefore never
+   * remounts children (which would reset their state). Defaults to `true`.
+   */
+  active?: boolean;
   /** Which scroll edge to pin to. Defaults to `top`. */
   edge?: StickyEdge;
   /** Inset from the pinned edge, from the spacing ramp. Defaults to `none`
@@ -82,6 +89,7 @@ export interface StickyProps extends React.HTMLAttributes<HTMLElement> {
  * Caller `className` composes last; caller `style` overrides the edge offset.
  */
 export function Sticky({
+  active = true,
   edge = "top",
   offset = "none",
   layer = "raised",
@@ -96,8 +104,8 @@ export function Sticky({
   return (
     <As
       ref={ref}
-      className={cn(sticky.className, className)}
-      style={{ ...sticky.style, ...style }}
+      className={cn(active && sticky.className, className)}
+      style={{ ...(active ? sticky.style : null), ...style }}
       {...rest}
     >
       {children}
