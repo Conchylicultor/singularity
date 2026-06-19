@@ -23,6 +23,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { getCommitsLinesCumulative, getCommitsLinesRate } from "../../shared/endpoints";
 import {
@@ -475,16 +476,15 @@ export function LinesChartsSection() {
 
   return (
     <Stack gap="xl">
-      <Stack direction="row" gap="lg" align="center" justify="between">
-        <ExcludedPathToggles dense />
-        <ToggleChip
-          active={byType}
-          onClick={() => setByType((v) => !v)}
-          className="shrink-0"
-        >
-          By type
-        </ToggleChip>
-      </Stack>
+      <Frame
+        gap="lg"
+        content={<ExcludedPathToggles dense />}
+        trailing={
+          <ToggleChip active={byType} onClick={() => setByType((v) => !v)}>
+            By type
+          </ToggleChip>
+        }
+      />
       <Stack gap="md">
         <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Over time</Text>
         {byType ? <CumulativeLinesBreakdownChart dedup={filterRebases} /> : <CumulativeLinesChart dedup={filterRebases} />}

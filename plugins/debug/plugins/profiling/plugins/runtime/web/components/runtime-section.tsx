@@ -7,6 +7,7 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { formatDuration } from "@plugins/debug/plugins/profiling/web";
 import {
   getRuntimeProfile,
@@ -44,7 +45,7 @@ function CallerBreakdown({ parents }: { parents: ParentRow[] }): ReactElement {
     .map((p) => `${p.kind}:${p.label} ×${p.count}`)
     .join("\n");
   return (
-    <div className="flex flex-col gap-2xs pl-md">
+    <Stack gap="2xs" className="pl-md">
       {shown.map((p) => (
         <span
           key={`${p.kind}:${p.label}`}
@@ -62,7 +63,7 @@ function CallerBreakdown({ parents }: { parents: ParentRow[] }): ReactElement {
           +{rest.length} more caller{rest.length === 1 ? "" : "s"}
         </span>
       )}
-    </div>
+    </Stack>
   );
 }
 
@@ -115,12 +116,13 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     // Renders the per-caller attribution breakdown inline (empty for HTTP,
     // which has no parent).
     cell: (row) => (
-      <div className="flex min-w-0 flex-col gap-2xs">
+      // eslint-disable-next-line layout/no-adhoc-layout -- min-w-0 lets this column shrink within its data-table label track so the label + caller-breakdown lines truncate instead of forcing the cell wide
+      <Stack gap="2xs" className="min-w-0">
         <Text as="span" variant="caption" className="truncate font-mono" title={row.label}>
           {row.label}
         </Text>
         {row.byParent.length > 0 && <CallerBreakdown parents={row.byParent} />}
-      </div>
+      </Stack>
     ),
   },
   {

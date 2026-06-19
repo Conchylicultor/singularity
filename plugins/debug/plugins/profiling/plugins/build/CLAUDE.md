@@ -8,7 +8,7 @@
 - Web:
   - Slots: `buildProfileDetailPane.Actions`
   - Contributes: `Profiling.Section` → `BuildSection`, `Pane.Register` "debug-profiling-build-detail"
-  - Uses: `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.useProfilingContext`, `infra/endpoints.fetchEndpoint`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
+  - Uses: `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.useProfilingContext`, `infra/endpoints.fetchEndpoint`, `primitives/css/clip.Clip`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
   - Exports: Values: `buildProfileDetailPane`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`

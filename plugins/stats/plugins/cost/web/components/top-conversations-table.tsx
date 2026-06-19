@@ -1,4 +1,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ChartState } from "@plugins/stats/plugins/commits/web";
 import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { getCostSessions } from "../../shared/endpoints";
@@ -30,7 +34,7 @@ export function TopConversationsTable() {
       loading={resp === undefined}
       empty={!!resp && resp.rows.length === 0}
     >
-      <div className="overflow-x-auto">
+      <Scroll axis="x">
         <table className="w-full text-body">
           <thead>
             <tr className="border-b text-left text-caption text-muted-foreground">
@@ -47,7 +51,7 @@ export function TopConversationsTable() {
             ))}
           </tbody>
         </table>
-      </div>
+      </Scroll>
     </ChartState>
   );
 }
@@ -72,14 +76,21 @@ function TopRow({ row }: { row: Row }) {
       )}
     >
       <td className="px-sm py-xs">
-        <div className="flex items-baseline gap-sm">
-          <span className="truncate font-medium text-foreground">
-            {row.title ?? <UntitledLabel sessionId={row.sessionId} />}
-          </span>
-          {row.status && (
-            <span className="text-caption text-muted-foreground">{row.status}</span>
-          )}
-        </div>
+        <Frame
+          align="baseline"
+          content={
+            <TruncatingText className="font-medium text-foreground">
+              {row.title ?? <UntitledLabel sessionId={row.sessionId} />}
+            </TruncatingText>
+          }
+          meta={
+            row.status ? (
+              <Text as="span" variant="caption" className="text-muted-foreground">
+                {row.status}
+              </Text>
+            ) : undefined
+          }
+        />
       </td>
       <td className="px-sm py-xs text-caption text-muted-foreground">
         {row.modelsUsed.join(", ")}

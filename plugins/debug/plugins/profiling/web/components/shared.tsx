@@ -109,7 +109,7 @@ export function PhaseGroup({
 
   return (
     <div className={cn("border-b", config.bg)}>
-      <div className="flex items-center gap-sm px-lg py-xs">
+      <Stack direction="row" align="center" gap="sm" className="px-lg py-xs">
         <div className={cn("size-2.5 rounded-full", config.color)} />
         <Text as="div" variant="caption" className="font-semibold">{config.label}</Text>
         <Text as="div" variant="caption" className="font-mono tabular-nums text-muted-foreground">
@@ -123,7 +123,7 @@ export function PhaseGroup({
             ({filteredCount} &lt;1ms hidden)
           </Text>
         )}
-      </div>
+      </Stack>
 
       {spans.length > 0 && (
         <Stack gap="2xs" className="px-lg pb-sm">
@@ -147,16 +147,22 @@ export function SpanRow({
   const { hovered, setHovered } = useProfilingContext();
   const isHovered = hovered?.id === span.id;
   return (
-    <div
-      className="flex items-center gap-sm py-2xs"
+    <Stack
+      direction="row"
+      align="center"
+      gap="sm"
+      className="py-2xs"
       onMouseEnter={() => setHovered(span)}
       onMouseLeave={() => setHovered(null)}
     >
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 160px (w-40) label column kept rigid (shrink-0) to align with the Gantt time axis (LABEL_WIDTH) */}
       <div className="w-40 shrink-0 truncate font-mono text-2xs text-muted-foreground">
         {span.label}
       </div>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible timeline track (flex-1) clipping the runtime-positioned bar (overflow-hidden) */}
       <div className="relative h-5 flex-1 overflow-hidden rounded-md bg-muted/30">
         <div
+          // eslint-disable-next-line layout/no-adhoc-layout -- bar positioned by runtime ms→% offsets (left/width inline style)
           className={cn(
             "absolute top-0 h-full rounded-md transition-opacity",
             color,
@@ -168,10 +174,11 @@ export function SpanRow({
           }}
         />
       </div>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 64px (w-16) duration column kept rigid (shrink-0) to align with the Gantt time axis (DURATION_WIDTH) */}
       <div className="w-16 shrink-0 text-right font-mono text-2xs tabular-nums text-muted-foreground">
         {formatDuration(span.durationMs)}
       </div>
-    </div>
+    </Stack>
   );
 }
 

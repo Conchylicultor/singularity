@@ -13,6 +13,8 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type {
   PushDetail,
@@ -32,14 +34,14 @@ function outcomeVariant(
 
 function Stat({ label, value }: { label: string; value: number }): ReactElement {
   return (
-    <div className="flex flex-col gap-2xs bg-card px-md py-sm">
+    <Stack gap="2xs" className="bg-card px-md py-sm">
       <span className="text-3xs font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
       <Text as="span" variant="caption" className="font-mono tabular-nums">
         {formatDuration(value)}
       </Text>
-    </div>
+    </Stack>
   );
 }
 
@@ -65,7 +67,7 @@ function PushStepsGantt({
   );
   return (
     <ProfilingContext.Provider value={{ hovered, setHovered, refreshKey: 0 }}>
-      <div className="overflow-hidden rounded-md border">
+      <Clip className="rounded-md border">
         <GanttContainer title="Steps" totalMs={totalMs}>
           <Stack gap="2xs" className="px-lg py-sm">
             {spans.map((s) => (
@@ -74,7 +76,7 @@ function PushStepsGantt({
           </Stack>
         </GanttContainer>
         <SpanDetail span={hovered} />
-      </div>
+      </Clip>
     </ProfilingContext.Provider>
   );
 }
@@ -108,8 +110,8 @@ export function PushDetailBody(): ReactElement {
           {error ? "Push not found." : "Loading…"}
         </Placeholder>
       ) : (
-        <div className="flex flex-col gap-lg p-lg">
-          <div className="flex flex-wrap items-center gap-sm">
+        <Stack gap="lg" className="p-lg">
+          <Cluster gap="sm">
             <Text as="span" variant="body" className="truncate font-mono">{branchShort}</Text>
             <Badge variant={outcomeVariant(data.outcome)}>
               {formatStatusLabel(data.outcome)}
@@ -120,8 +122,9 @@ export function PushDetailBody(): ReactElement {
             {data.interrupted && (
               <Badge variant="destructive">interrupted</Badge>
             )}
-          </div>
+          </Cluster>
 
+          {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 4-column hairline stat grid: the 1px (gap-px) gaps reveal the bg-border as cell separators, a hairline technique the Grid gap ramp can't express */}
           <div className="grid grid-cols-4 gap-px overflow-hidden rounded-md border bg-border">
             <Stat label="Pre-lock" value={data.preLockMs} />
             <Stat label="Wait" value={data.waitMs} />
@@ -133,6 +136,7 @@ export function PushDetailBody(): ReactElement {
             <Text
               as="button"
               variant="caption"
+              // eslint-disable-next-line layout/no-adhoc-layout -- left-align this lone link button; its Stack siblings stretch full-width
               className="self-start font-medium text-primary hover:underline"
               onClick={() =>
                 openPane(
@@ -151,7 +155,7 @@ export function PushDetailBody(): ReactElement {
           ) : (
             <Placeholder tone="muted">No step breakdown recorded.</Placeholder>
           )}
-        </div>
+        </Stack>
       )}
     </PaneChrome>
   );

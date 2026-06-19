@@ -10,6 +10,8 @@ import {
 } from "react";
 import { MdClose } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { useGanttZoom, type ZoomWindow } from "./use-gantt-zoom";
 import { DragSelection, type DragState } from "./drag-selection";
 
@@ -51,7 +53,8 @@ export function TimeAxis({
   );
 
   return (
-    <div className="relative flex h-6 border-b px-lg">
+    <Stack direction="row" gap="none" className="relative h-6 border-b px-lg">
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 160px (w-40) label column kept rigid (shrink-0) to align with the Gantt rows (LABEL_WIDTH) */}
       <div className="flex w-40 shrink-0 items-center gap-xs">
         <SectionLabel
           as="span"
@@ -65,8 +68,9 @@ export function TimeAxis({
               {formatTickMs(zoomWindow.startMs)}–
               {formatTickMs(zoomWindow.endMs)}
             </span>
-            <button
-              className="flex items-center text-muted-foreground hover:text-foreground"
+            <Center
+              as="button"
+              className="text-muted-foreground hover:text-foreground"
               onClick={(e) => {
                 e.stopPropagation();
                 onZoomReset?.();
@@ -74,7 +78,7 @@ export function TimeAxis({
               onPointerDown={(e) => e.stopPropagation()}
             >
               <MdClose className="size-3" />
-            </button>
+            </Center>
           </>
         ) : (
           <span className="text-3xs font-medium tabular-nums text-foreground">
@@ -82,10 +86,12 @@ export function TimeAxis({
           </span>
         )}
       </div>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible time-axis track (flex-1) holding runtime-positioned ticks */}
       <div className="relative flex-1">
         {ticks.map((ms) => (
           <div
             key={ms}
+            // eslint-disable-next-line layout/no-adhoc-layout -- tick positioned by runtime % offset along the time axis (left inline style)
             className="absolute top-0 flex h-full flex-col items-center"
             style={{
               left:
@@ -101,8 +107,9 @@ export function TimeAxis({
           </div>
         ))}
       </div>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 64px (w-16) duration-column spacer kept rigid (shrink-0) to align with the Gantt rows (DURATION_WIDTH) */}
       <div className="w-16 shrink-0" />
-    </div>
+    </Stack>
   );
 }
 

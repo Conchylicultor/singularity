@@ -1,5 +1,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState, type ReactElement } from "react";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import {
   formatDuration,
   GanttContainer,
@@ -154,10 +157,9 @@ export function PushGantt({
           ))}
         </div>
       </GanttContainer>
-      <SpanDetail
-        span={hovered}
-        className="sticky bottom-0 z-raised backdrop-blur-sm"
-      />
+      <Sticky edge="bottom" className="backdrop-blur-sm">
+        <SpanDetail span={hovered} />
+      </Sticky>
     </div>
   );
 }
@@ -207,20 +209,24 @@ function PushAttemptRow({
   }, [group, onWorktreeClick]);
 
   return (
-    <div
+    <Stack
+      direction="row"
+      align="center"
+      gap="sm"
       className={cn(
-        "flex items-center gap-sm px-lg py-xs hover:bg-muted/50",
+        "px-lg py-xs hover:bg-muted/50",
         handleClick && "cursor-pointer",
         highlighted && "ring-1 ring-inset ring-primary/40 bg-primary/5",
       )}
       onClick={handleClick}
     >
       <div
+        // eslint-disable-next-line layout/no-adhoc-layout -- fixed 160px (w-40) worktree-label column kept rigid (shrink-0) to align with the Gantt time axis (LABEL_WIDTH)
         className="flex w-40 shrink-0 items-center gap-xs truncate"
         // Bare worktree id stays discoverable on hover even when a title shows.
         title={group.worktree.replace(/^claude-web\//, "")}
       >
-        <div className={cn("size-2 shrink-0 rounded-full", dotColor)} />
+        <StatusDot colorClass={dotColor} size="md" />
         <span
           className={cn(
             "truncate text-2xs text-muted-foreground",
@@ -231,6 +237,7 @@ function PushAttemptRow({
           {group.title ?? group.worktree.replace(/^claude-web\//, "")}
         </span>
       </div>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible timeline track (flex-1) clipping the runtime-positioned bars (overflow-hidden) */}
       <div className="relative h-5 flex-1 overflow-hidden rounded-md bg-muted/30">
         {group.builds.map((build, i) => {
           const status = buildStatus(build);
@@ -252,6 +259,7 @@ function PushAttemptRow({
           return (
             <div
               key={buildSpan.id}
+              // eslint-disable-next-line layout/no-adhoc-layout -- bar positioned by runtime ms→% offsets (left/width inline style)
               className={cn(
                 "absolute top-0 h-full rounded-md transition-opacity",
                 TYPE_FILL.build,
@@ -307,6 +315,7 @@ function PushAttemptRow({
             return (
               <div
                 key={push.pushId}
+                // eslint-disable-next-line layout/no-adhoc-layout -- interrupted-push marker positioned by runtime ms→% offset (left/width inline style)
                 className={cn(
                   "absolute top-0 h-full rounded-md transition-opacity",
                   TYPE_FILL.push,
@@ -361,6 +370,7 @@ function PushAttemptRow({
             <span key={push.pushId}>
               {waitSpan && (
                 <div
+                  // eslint-disable-next-line layout/no-adhoc-layout -- lock-wait bar positioned by runtime ms→% offsets (left/width inline style)
                   className={cn(
                     "absolute top-0 h-full rounded-l transition-opacity",
                     // Lock-wait is always yellow — its own event, never recolored
@@ -389,6 +399,7 @@ function PushAttemptRow({
                 />
               )}
               <div
+                // eslint-disable-next-line layout/no-adhoc-layout -- push hold-bar positioned by runtime ms→% offsets (left/width inline style)
                 className={cn(
                   "absolute top-0 h-full transition-opacity",
                   TYPE_FILL.push,
@@ -419,9 +430,10 @@ function PushAttemptRow({
           );
         })}
       </div>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- fixed 64px (w-16) duration column kept rigid (shrink-0) to align with the Gantt time axis (DURATION_WIDTH) */}
       <div className="w-16 shrink-0 text-right font-mono text-2xs tabular-nums text-muted-foreground">
         {formatDuration(totalDuration)}
       </div>
-    </div>
+    </Stack>
   );
 }

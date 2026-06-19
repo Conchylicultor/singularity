@@ -1,5 +1,6 @@
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { CostKpis } from "./cost-kpis";
 import { CumulativeCostChart } from "./cumulative-cost-chart";
 import { DailyCostChart } from "./daily-cost-chart";
@@ -9,7 +10,7 @@ export function CostSection() {
   return (
     <Stack gap="xl">
       <CostKpis />
-      <div className="grid grid-cols-2 gap-xl">
+      <Grid cols={2} minCellWidth="0" gap="xl">
         <Stack gap="md">
           <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Daily cost by model</Text>
           <DailyCostChart />
@@ -18,7 +19,7 @@ export function CostSection() {
           <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Sessions per day by model family</Text>
           <ModelUsageChart />
         </Stack>
-      </div>
+      </Grid>
       <Stack gap="md">
         <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Cumulative cost over time</Text>
         <CumulativeCostChart />

@@ -3,6 +3,7 @@ import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/end
 import { getCostTotals } from "../../shared/endpoints";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { ScopeToggle } from "./scope-toggle";
 import { useScope } from "./use-scope";
 import { formatTokensCompact, formatUsd } from "./format";
@@ -27,13 +28,15 @@ export function CostKpis() {
   const { data: resp, error } = useEndpoint(getCostTotals, {}, { query: { scope } });
   return (
     <Stack gap="lg">
-      <div className="flex items-center justify-between">
-        <Text as="p" variant="caption" className="text-muted-foreground">
-          Sourced from <code>ccusage</code>: parses{" "}
-          <code>~/.claude/projects</code> on each load.
-        </Text>
-        <ScopeToggle />
-      </div>
+      <Frame
+        content={
+          <Text as="p" variant="caption" className="text-muted-foreground">
+            Sourced from <code>ccusage</code>: parses{" "}
+            <code>~/.claude/projects</code> on each load.
+          </Text>
+        }
+        trailing={<ScopeToggle />}
+      />
       <ChartState
         error={error ? getEndpointErrorMessage(error) : null}
         loading={resp === undefined}
@@ -47,6 +50,7 @@ export function CostKpis() {
 
 function KpiGrid({ totals }: { totals: Totals }) {
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- responsive col-count KPI grid (2-up → 4-up at the sm breakpoint); a fixed breakpoint count the Grid minCellWidth/cols surface deliberately doesn't express
     <div className="grid grid-cols-2 gap-md sm:grid-cols-4">
       <Kpi label="Total spent" value={formatUsd(totals.totalCost)} />
       <Kpi
