@@ -118,6 +118,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`runtime`** — Runtime HTTP/DB/loader profiling tables in the Gantt debug pane. Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.
         - **`stats`** — Stats endpoint profiling for the Gantt debug pane. Stats endpoint profiling data endpoint.
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
+    - **`read-set`** — Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.
     - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
     - **`slow-ops`** [2 sub-plugins] — Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one rollup task.
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.

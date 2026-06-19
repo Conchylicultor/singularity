@@ -10,6 +10,7 @@ import {
   recordEntrySpan,
   recordSpan,
   getRuntimeProfile,
+  getReadSetIndex,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineServerContribution } from "./contributions";
 import { reportServerError, type ServerErrorReport } from "./error-reporter";
@@ -114,6 +115,10 @@ const runtime = createResourceRuntime({
       maxMs: agg.maxMs,
     };
   },
+  // Automatic loader→table read-set for the _debug endpoint: the tables each
+  // loader actually read, captured at the DB pool chokepoint. central: omitted
+  // (field absent). Surfaces gaps/over-broad edges vs the hand-drawn dependsOn.
+  readSet: (key) => getReadSetIndex()[key] ?? [],
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
   debugOwners: () =>
     Resource.Declare.getContributions().map((c) => ({

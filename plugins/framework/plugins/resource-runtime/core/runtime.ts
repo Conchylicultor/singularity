@@ -285,6 +285,13 @@ export interface ResourceRuntimeOptions {
   reportError?: (context: string, err: unknown) => void;
   /** Per-key owner metadata for the _debug endpoint. server: from Resource.Declare; central: omit. */
   debugOwners?: () => Array<{ key: string; pluginId?: string }>;
+  /**
+   * Per-key automatic table read-set for the `_debug` endpoint: the tables this
+   * resource's loader actually read (captured at the DB pool chokepoint), so the
+   * gaps and over-broad edges versus the hand-drawn `dependsOn` graph become
+   * visible. server: from getReadSetIndex(); central: omit (field absent).
+   */
+  readSet?: (key: string) => string[];
 }
 
 export interface ResourceRuntime {
@@ -1106,6 +1113,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       versions: Record<string, number>;
       dependsOn: string[];
       downstream: string[];
+      readSet: string[];
       loaderStats?: { count: number; ratePerMin: number; maxMs: number };
     }> = [];
     for (const entry of registry.values()) {
@@ -1126,6 +1134,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         versions: Object.fromEntries(entry.versions),
         dependsOn: entry.upstreamKeys,
         downstream: entry.downstream.map((d) => d.downstreamKey),
+        // Automatic table read-set captured at the DB chokepoint (server-only
+        // hook; absent on central). Diffed against dependsOn in the debug pane to
+        // surface latent stale-UI gaps and over-broad cascade edges.
+        readSet: opts.readSet?.(entry.key) ?? [],
         // Loader frequency over the profiling window (server-only hook; absent on
         // central). Surfaces a cheap-but-hot loader the slow-single-call view misses.
         loaderStats: opts.loaderStats?.(entry.key),

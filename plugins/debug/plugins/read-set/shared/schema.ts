@@ -1,0 +1,41 @@
+import { z } from "zod";
+
+// A second, read-set-focused typed view of the `GET /api/resources/_debug`
+// payload (the live-state-health pane declares its own subscriber-focused view
+// of the same route). `shared/` is plugin-private, so we cannot import that
+// other view — declaring a second contract over the same route is the
+// established pattern, and zod strips unknown keys so the two coexist.
+//
+// We model only what this pane reads. `readSet` and `loaderStats` are gated
+// defensively (`.default([])` / `.optional()`) so the response still parses
+// before the sibling server change that adds `readSet` lands.
+
+export const loaderStatsSchema = z.object({
+  count: z.number(),
+  ratePerMin: z.number(),
+  maxMs: z.number(),
+});
+
+export const resourceReadSetSchema = z.object({
+  key: z.string(),
+  mode: z.string(),
+  /** Total subscriptions across all sockets. */
+  subscribers: z.number(),
+  /** Upstream resource keys this entry cascades from (the hand-drawn graph). */
+  dependsOn: z.array(z.string()),
+  /** Downstream resource keys this entry cascades to. */
+  downstream: z.array(z.string()),
+  /** Captured table names this resource's loader read since boot/reset. */
+  readSet: z.array(z.string()),
+  /** Loader call frequency over the profiling window (server-only). */
+  loaderStats: loaderStatsSchema.optional(),
+});
+
+export const resourcesReadSetSchema = z.object({
+  topoOrder: z.array(z.string()),
+  resources: z.array(resourceReadSetSchema),
+});
+
+export type LoaderStats = z.infer<typeof loaderStatsSchema>;
+export type ResourceReadSet = z.infer<typeof resourceReadSetSchema>;
+export type ResourcesReadSet = z.infer<typeof resourcesReadSetSchema>;

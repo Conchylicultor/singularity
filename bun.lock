@@ -1263,6 +1263,10 @@
       "name": "@singularity/plugin-debug-queue",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/read-set": {
+      "name": "@singularity/plugin-debug-read-set",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/reports": {
       "name": "@singularity/plugin-debug-reports",
       "version": "0.0.1",
@@ -4340,6 +4344,8 @@
     "@singularity/plugin-debug-profiling-stats": ["@singularity/plugin-debug-profiling-stats@workspace:plugins/debug/plugins/profiling/plugins/stats"],
 
     "@singularity/plugin-debug-queue": ["@singularity/plugin-debug-queue@workspace:plugins/debug/plugins/queue"],
+
+    "@singularity/plugin-debug-read-set": ["@singularity/plugin-debug-read-set@workspace:plugins/debug/plugins/read-set"],
 
     "@singularity/plugin-debug-reports": ["@singularity/plugin-debug-reports@workspace:plugins/debug/plugins/reports"],
 

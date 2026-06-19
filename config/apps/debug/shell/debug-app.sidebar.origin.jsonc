@@ -1,4 +1,4 @@
-// @hash 61b28f10be0a
+// @hash e93662399c11
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -17,6 +17,7 @@
     "debug.profiling:profiling",
     "debug.queue:queue",
     "debug.heap-snapshot:heap-snapshot",
+    "debug.read-set:read-set",
     "debug.health-monitor:health-monitor",
     "debug.reports:reports"
   ]

@@ -98,6 +98,13 @@ export interface EntryContext {
   kind: SpanKind;
   label: string;
   waits: Map<string, number>;
+  /**
+   * The set of DB tables this entry read, lazily created on first
+   * `recordReadTables` (unlike `waits`, which is always allocated). Materialized
+   * into `readSetIndex` by `recordEntrySpan` for loader entries only, so the many
+   * non-loader entries that never read tables don't allocate a Set.
+   */
+  tables?: Set<string>;
 }
 
 interface SpanContextRuntime {
@@ -222,6 +229,12 @@ const slowest: Record<SpanKind, SlowSpan[]> = {
 
 let sinceMs = performance.now();
 
+// Automatic loader→table read-set index: each loader entry's captured `tables`
+// set is unioned in here under its `label` (which, for loader entries, IS the
+// resource key) when the entry finishes. Built up via `recordReadTables` mid-load
+// and flushed in `recordEntrySpan`'s finally; surfaced by `getReadSetIndex`.
+const readSetIndex = new Map<string, Set<string>>();
+
 function parentKey(parent: SpanRef): string {
   return `${parent.kind}:${parent.label}`;
 }
@@ -340,6 +353,33 @@ export function chargeWait(layer: string, ms: number): void {
 }
 
 /**
+ * Capture the loader's table read-set into the ambient `EntryContext`. The DB
+ * pool wrapper calls this with the tables a loader query touched (extracted from
+ * the compiled SQL) while the loader's ambient context is still active. The names
+ * accumulate on `cur.tables` (lazily created — read-set only applies to entries
+ * that actually query) and are flushed into `readSetIndex` by `recordEntrySpan`
+ * when the loader entry finishes. If no entry is active, do nothing: a read-set
+ * only makes sense inside an entry. Read+charge synchronously, before any await,
+ * so the ambient context is still active.
+ *
+ * Honors `runWithoutProfiling` suppression for the same reason `record` does:
+ * the observability subsystem (reports, slow-ops) issues its own DB writes
+ * synchronously inside a slow-span handler — i.e. inside whatever loader
+ * triggered the slow span. Without this guard those suppressed writes (e.g.
+ * `INSERT INTO reports`, the report's `createTask`/`getTask`) would be
+ * mis-attributed to that loader's read-set, fabricating dependency edges.
+ */
+export function recordReadTables(tables: readonly string[]): void {
+  if (process.env.SINGULARITY_PROFILING === "0") return;
+  if (suppressionRuntime.suppressed()) return;
+  const cur = contextRuntime.current();
+  if (cur) {
+    cur.tables ??= new Set();
+    for (const table of tables) cur.tables.add(table);
+  }
+}
+
+/**
  * The kind of the innermost enclosing entry point at the current call site, or
  * `undefined` when none is active (e.g. a background job, migration, or poller).
  * A thin read of the same ambient context `recordEntrySpan` maintains — the DB
@@ -375,6 +415,18 @@ export async function recordEntrySpan<T>(
   } finally {
     const waits = ctx.waits.size > 0 ? Object.fromEntries(ctx.waits) : undefined;
     record(kind, label, performance.now() - t0, parent, waits);
+    // Flush the loader's captured table read-set into the index, keyed by label
+    // (the resource key). Gating on `loader` kind means a stray table captured
+    // under a non-loader entry is never indexed. Done after `record` so it can
+    // never affect span recording.
+    if (kind === "loader" && ctx.tables && ctx.tables.size > 0) {
+      let set = readSetIndex.get(label);
+      if (!set) {
+        set = new Set();
+        readSetIndex.set(label, set);
+      }
+      for (const table of ctx.tables) set.add(table);
+    }
   }
 }
 
@@ -403,10 +455,25 @@ export function getRuntimeProfile(): {
   return { aggregates: aggOut, slowest: slowOut, sinceMs };
 }
 
+/**
+ * The automatic loader→table read-set index, materialized as a plain object
+ * mapping each loader label (resource key) to a sorted list of the tables its
+ * loader read since the last profile reset. Consumed by the resource runtime's
+ * `_debug` payload (server-only).
+ */
+export function getReadSetIndex(): Record<string, string[]> {
+  const out: Record<string, string[]> = {};
+  for (const [label, tables] of readSetIndex) {
+    out[label] = Array.from(tables).sort();
+  }
+  return out;
+}
+
 export function resetRuntimeProfile(): void {
   for (const kind of KINDS) {
     aggregates[kind].clear();
     slowest[kind].length = 0;
   }
+  readSetIndex.clear();
   sinceMs = performance.now();
 }

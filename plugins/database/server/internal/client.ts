@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { recordSpan, chargeWait, currentCallerKind } from "@plugins/infra/plugins/runtime-profiler/core";
+import { recordSpan, chargeWait, currentCallerKind, recordReadTables } from "@plugins/infra/plugins/runtime-profiler/core";
 import { readDatabaseConfig, buildConnectionString } from "@plugins/database/core";
 
 // The worktree name is the worktree DB name — the one thing the worktree pool
@@ -79,6 +79,18 @@ const loaderDbGate = createSemaphore(POOL_MAX - RESERVED_INTERACTIVE);
 // synchronously, before any await, so the profiler's ambient context is still
 // active. The pool's own `[acquire]` (connect) and `<sql>` (execute) leaf spans
 // stay — those are real per-query measurements, not gate waits.
+// Extract the table read-set from compiled SQL by matching quoted identifiers
+// after FROM / JOIN / INTO / UPDATE / DELETE FROM. Drizzle always double-quotes
+// table identifiers, so this is reliable for ORM queries; raw sql`` and CTE
+// aliases fall to coarse over-capture, which is acceptable for this read-set.
+function extractTablesFromSql(text: string): string[] {
+  const re = /\b(?:from|join|into|update|delete\s+from)\s+"([^"]+)"/gi;
+  const tables = new Set<string>();
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text)) !== null) tables.add(m[1]!);
+  return Array.from(tables);
+}
+
 const origQuery = pool.query.bind(pool);
 const origConnect = pool.connect.bind(pool);
 // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
@@ -107,6 +119,10 @@ pool.query = ((...a: Parameters<typeof origQuery>): any => {
   // Gate only background/loader queries; interactive (http) and context-less
   // (jobs/migrations/pollers) queries run ungated against the reserved capacity.
   if (currentCallerKind() === "loader") {
+    // Capture the loader's table read-set into its ambient entry context (still
+    // active here, before the gated promise). Observation-only — does not affect
+    // timing or gating.
+    recordReadTables(extractTablesFromSql(text));
     return loaderDbGate.run(runTimed, (waitMs) =>
       chargeWait("loader-acquire", waitMs),
     );

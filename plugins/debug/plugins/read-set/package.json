@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-debug-read-set",
+  "description": "Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.",
+  "private": true,
+  "version": "0.0.1"
+}
