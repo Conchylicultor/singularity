@@ -1,0 +1,6 @@
+// @hash 1befa300d09b
+{
+  "views": [
+    { "name": "All", "view": { "type": "table", "sort": { "fieldId": "atTime", "direction": "desc" } } }
+  ]
+}

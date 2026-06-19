@@ -1,0 +1,51 @@
+// @hash 1befa300d09b
+{
+  "views": [
+    { "name": "All", "view": { "type": "table", "sort": { "fieldId": "maxMs", "direction": "desc" } } },
+    {
+      "name": "HTTP",
+      "view": {
+        "type": "table",
+        "sort": { "fieldId": "maxMs", "direction": "desc" },
+        "filter": {
+          "kind": "group",
+          "id": "f-http",
+          "conjunction": "and",
+          "children": [
+            { "kind": "rule", "id": "r-http", "fieldId": "kind", "operatorId": "is", "value": "http" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "DB",
+      "view": {
+        "type": "table",
+        "sort": { "fieldId": "maxMs", "direction": "desc" },
+        "filter": {
+          "kind": "group",
+          "id": "f-db",
+          "conjunction": "and",
+          "children": [
+            { "kind": "rule", "id": "r-db", "fieldId": "kind", "operatorId": "is", "value": "db" }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Loaders",
+      "view": {
+        "type": "table",
+        "sort": { "fieldId": "maxMs", "direction": "desc" },
+        "filter": {
+          "kind": "group",
+          "id": "f-loader",
+          "conjunction": "and",
+          "children": [
+            { "kind": "rule", "id": "r-loader", "fieldId": "kind", "operatorId": "is", "value": "loader" }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -1,14 +1,19 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { ReactElement } from "react";
+import { useMemo, type ReactElement } from "react";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import {
+  DataView,
+  defineDataView,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { formatDuration } from "@plugins/debug/plugins/profiling/web";
 import {
   getRuntimeProfile,
   resetRuntimeProfile,
 } from "../../shared/endpoints";
+
+const RUNTIME_VIEW = defineDataView("debug.profiling.runtime");
 
 interface ParentRow {
   kind: "http" | "db" | "loader";
@@ -25,54 +30,12 @@ interface AggRow {
   byParent: ParentRow[];
 }
 
+type RuntimeKind = "http" | "db" | "loader";
+
+type RuntimeRow = AggRow & { kind: RuntimeKind };
+
 // How many distinct callers to render inline before collapsing into "+N more".
 const MAX_PARENTS_SHOWN = 3;
-
-// Shared column definitions for all three tables. The label cell also renders
-// the per-caller attribution breakdown (empty for HTTP, which has no parent).
-const AGG_COLUMNS: ColumnDef<AggRow>[] = [
-  {
-    id: "label",
-    header: "Label",
-    width: "minmax(0,1fr)",
-    cell: (row) => (
-      <div className="flex min-w-0 flex-col gap-2xs">
-        <Text as="span" variant="caption" className="truncate font-mono" title={row.label}>
-          {row.label}
-        </Text>
-        {row.byParent.length > 0 && <CallerBreakdown parents={row.byParent} />}
-      </div>
-    ),
-  },
-  {
-    id: "count",
-    header: "Count",
-    width: "3.5rem",
-    align: "end",
-    value: (row) => row.count,
-  },
-  {
-    id: "avgMs",
-    header: "Avg (ms)",
-    width: "5rem",
-    align: "end",
-    value: (row) => row.avgMs,
-  },
-  {
-    id: "maxMs",
-    header: "Max (ms)",
-    width: "5rem",
-    align: "end",
-    value: (row) => row.maxMs,
-  },
-  {
-    id: "lastMs",
-    header: "Last (ms)",
-    width: "5rem",
-    align: "end",
-    value: (row) => row.lastMs,
-  },
-];
 
 function CallerBreakdown({ parents }: { parents: ParentRow[] }): ReactElement {
   const shown = parents.slice(0, MAX_PARENTS_SHOWN);
@@ -129,6 +92,71 @@ function toAggRows(
     .sort((a, b) => b.maxMs - a.maxMs);
 }
 
+const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
+  {
+    id: "kind",
+    label: "Kind",
+    type: "enum",
+    value: (r) => r.kind,
+    options: [
+      { value: "http", label: "HTTP" },
+      { value: "db", label: "DB" },
+      { value: "loader", label: "Loader" },
+    ],
+    width: "5rem",
+  },
+  {
+    id: "label",
+    label: "Label",
+    type: "text",
+    primary: true,
+    value: (r) => r.label,
+    width: "minmax(0,1fr)",
+    // Renders the per-caller attribution breakdown inline (empty for HTTP,
+    // which has no parent).
+    cell: (row) => (
+      <div className="flex min-w-0 flex-col gap-2xs">
+        <Text as="span" variant="caption" className="truncate font-mono" title={row.label}>
+          {row.label}
+        </Text>
+        {row.byParent.length > 0 && <CallerBreakdown parents={row.byParent} />}
+      </div>
+    ),
+  },
+  {
+    id: "count",
+    label: "Count",
+    type: "number",
+    value: (r) => r.count,
+    align: "end",
+    width: "3.5rem",
+  },
+  {
+    id: "avgMs",
+    label: "Avg (ms)",
+    type: "number",
+    value: (r) => r.avgMs,
+    align: "end",
+    width: "5rem",
+  },
+  {
+    id: "maxMs",
+    label: "Max (ms)",
+    type: "number",
+    value: (r) => r.maxMs,
+    align: "end",
+    width: "5rem",
+  },
+  {
+    id: "lastMs",
+    label: "Last (ms)",
+    type: "number",
+    value: (r) => r.lastMs,
+    align: "end",
+    width: "5rem",
+  },
+];
+
 export function RuntimeSection(): ReactElement | null {
   const { data } = useEndpoint(getRuntimeProfile, {});
 
@@ -136,77 +164,41 @@ export function RuntimeSection(): ReactElement | null {
     invalidates: [getRuntimeProfile],
   });
 
+  const rows = useMemo<RuntimeRow[]>(() => {
+    if (!data) return [];
+    const tag = (kind: RuntimeKind, aggs: AggRow[]): RuntimeRow[] =>
+      aggs.map((r) => ({ ...r, kind }));
+    return [
+      ...tag("http", toAggRows(data.aggregates.http)),
+      ...tag("db", toAggRows(data.aggregates.db)),
+      ...tag("loader", toAggRows(data.aggregates.loader)),
+    ];
+  }, [data]);
+
   if (!data) return null;
 
-  const httpRows = toAggRows(data.aggregates.http);
-  const dbRows = toAggRows(data.aggregates.db);
-  const loaderRows = toAggRows(data.aggregates.loader);
-
-  const hasAny =
-    httpRows.length > 0 || dbRows.length > 0 || loaderRows.length > 0;
-
-  if (!hasAny) {
-    return (
-      <div className="flex flex-col gap-md px-md py-lg">
-        <div className="flex items-center justify-between">
-          <Text as="span" variant="label">Runtime</Text>
-        </div>
-        <Placeholder>No spans recorded yet — interact with the app to generate data.</Placeholder>
-      </div>
-    );
-  }
+  const title = `Runtime — peaks since boot · ${formatDuration(data.windowMs)} window`;
 
   return (
-    <div className="flex flex-col gap-xl py-lg">
-      <div className="flex flex-col gap-2xs px-md">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-xs">
-            <Text as="span" variant="label">Runtime</Text>
-            <Text as="span" variant="caption" tone="muted">
-              — peaks since boot · {formatDuration(data.windowMs)} window
-            </Text>
-          </div>
-          <Button
-            variant="ghost"
-            size="xs"
-            loading={resetMutation.isPending}
-            onClick={() => resetMutation.mutate({})}
-          >
-            Reset window
-          </Button>
-        </div>
-        <Text as="p" variant="caption" tone="muted">
-          Max/avg figures are sticky peaks that never decay. For live recency ("is this slow now?"), see Debug → Slow Ops (last seen).
-        </Text>
-      </div>
-
-      <KindTable title="HTTP Routes" rows={httpRows} emptyLabel="No HTTP spans" />
-      <KindTable title="DB Queries" rows={dbRows} emptyLabel="No DB spans" />
-      <KindTable title="Loaders" rows={loaderRows} emptyLabel="No loader spans" />
-    </div>
-  );
-}
-
-function KindTable({
-  title,
-  rows,
-  emptyLabel,
-}: {
-  title: string;
-  rows: AggRow[];
-  emptyLabel: string;
-}): ReactElement {
-  return (
-    <div className="flex flex-col gap-xs">
-      <Text as="div" variant="caption" className="px-md font-medium uppercase tracking-wider text-muted-foreground">
-        {title}
-      </Text>
-      <DataTable
-        data={rows}
-        columns={AGG_COLUMNS}
-        rowKey={(row) => row.label}
-        emptyLabel={emptyLabel}
-      />
-    </div>
+    <DataView<RuntimeRow>
+      rows={rows}
+      fields={RUNTIME_FIELDS}
+      rowKey={(r) => `${r.kind}:${r.label}`}
+      storageKey={RUNTIME_VIEW}
+      title={title}
+      actions={
+        <Button
+          variant="ghost"
+          size="xs"
+          loading={resetMutation.isPending}
+          onClick={() => resetMutation.mutate({})}
+        >
+          Reset window
+        </Button>
+      }
+      mode="embedded"
+      defaultView="table"
+      emptyState="No runtime spans recorded"
+    />
   );
 }

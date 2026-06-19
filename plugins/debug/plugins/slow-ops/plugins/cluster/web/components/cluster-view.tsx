@@ -1,16 +1,15 @@
-import { useMemo, useState, type ReactElement } from "react";
+import { useMemo, type ReactElement } from "react";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
-  DataTable,
-  type ColumnDef,
-  type SortState,
-} from "@plugins/primitives/plugins/data-table/web";
+  DataView,
+  defineDataView,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { loadSeverity } from "@plugins/debug/plugins/slow-ops/core";
@@ -23,160 +22,21 @@ import {
   type TimelineEntry,
 } from "../internal/aggregate";
 
-// Aggregate table is ranked by cluster-wide impact (total time across every
-// worktree) — a storm draining many worktrees on one op surfaces at the top.
-const DEFAULT_SORT: SortState = { columnId: "totalMs", direction: "desc" };
+// Each stacked DataView needs a unique surface id (its config + per-device state
+// home). Aggregate is ranked by cluster-wide impact (total time across every
+// worktree); timeline is newest-first — both via config-authored default sort.
+const CLUSTER_AGG = defineDataView("debug.slow-ops.cluster-aggregate");
+const CLUSTER_TIMELINE = defineDataView("debug.slow-ops.cluster-timeline");
 
-const AGGREGATE_COLUMNS: ColumnDef<ClusterAggregate>[] = [
-  {
-    id: "operation",
-    header: "Operation",
-    width: "minmax(0,1fr)",
-    value: (row) => `${row.operationKind} ${row.operation}`,
-    cell: (row) => (
-      <div className="flex min-w-0 flex-col gap-2xs">
-        <div className="flex min-w-0 items-center gap-xs">
-          <Badge variant="muted" size="md" className="font-mono">
-            {row.operationKind}
-          </Badge>
-          <Text as="span" variant="caption" className="truncate font-mono" title={row.operation}>
-            {row.operation}
-          </Text>
-        </div>
-        <Text
-          as="span"
-          variant="caption"
-          className="pl-md text-3xs text-muted-foreground"
-          title={row.worktrees.join(", ")}
-        >
-          slow across {row.worktrees.length} worktree{row.worktrees.length === 1 ? "" : "s"}
-        </Text>
-      </div>
-    ),
-  },
-  {
-    id: "worktrees",
-    header: "Worktrees",
-    width: "5.5rem",
-    align: "end",
-    value: (row) => row.worktrees.length,
-  },
-  {
-    id: "count",
-    header: "Count",
-    width: "4rem",
-    align: "end",
-    value: (row) => row.count,
-  },
-  {
-    id: "totalMs",
-    header: "Total (ms)",
-    width: "5.5rem",
-    align: "end",
-    value: (row) => Math.round(row.totalMs),
-  },
-  {
-    id: "maxMs",
-    header: "Max (ms)",
-    width: "5rem",
-    align: "end",
-    value: (row) => Math.round(row.maxMs),
-  },
-  {
-    id: "lastSeen",
-    header: "Last seen",
-    width: "7rem",
-    align: "end",
-    value: (row) => row.lastSeenAt.getTime(),
-    cell: (row) => (
-      <Text as="span" variant="caption" className="text-muted-foreground">
-        <RelativeTime date={row.lastSeenAt} />
-      </Text>
-    ),
-  },
-];
-
-const TIMELINE_COLUMNS: ColumnDef<TimelineEntry>[] = [
-  {
-    id: "atTime",
-    header: "When",
-    width: "6rem",
-    align: "end",
-    value: (row) => row.atTime.getTime(),
-    cell: (row) => (
-      <Text as="span" variant="caption" className="text-muted-foreground">
-        <RelativeTime date={row.atTime} />
-      </Text>
-    ),
-  },
-  {
-    id: "worktree",
-    header: "Worktree",
-    width: "9rem",
-    value: (row) => row.worktree,
-    cell: (row) => (
-      <Badge variant="muted" size="sm" className="truncate font-mono" title={row.worktree}>
-        {row.worktree}
-      </Badge>
-    ),
-  },
-  {
-    id: "operation",
-    header: "Operation",
-    width: "minmax(0,1fr)",
-    value: (row) => `${row.operationKind} ${row.operation}`,
-    cell: (row) => (
-      <Text
-        as="span"
-        variant="caption"
-        className="truncate font-mono"
-        title={`${row.operationKind} ${row.operation}`}
-      >
-        <span className="text-muted-foreground">{row.operationKind}</span> {row.operation}
-      </Text>
-    ),
-  },
-  {
-    id: "durationMs",
-    header: "Dur (ms)",
-    width: "5rem",
-    align: "end",
-    value: (row) => Math.round(row.durationMs),
-  },
-  {
-    id: "load",
-    header: "load1 / cpu",
-    width: "6rem",
-    align: "end",
-    value: (row) => row.loadAvg1,
-    cell: (row) => (
-      <Badge variant={loadSeverity(row.loadAvg1, row.cpuCount)} size="sm" className="font-mono">
-        {Math.round(row.loadAvg1)} / {row.cpuCount}
-      </Badge>
-    ),
-  },
-  {
-    id: "pgActiveBackends",
-    header: "pg active",
-    width: "5rem",
-    align: "end",
-    value: (row) => row.pgActiveBackends,
-  },
-];
+function uniqueSorted(values: string[]): { value: string; label: string }[] {
+  return [...new Set(values)].sort().map((v) => ({ value: v, label: v }));
+}
 
 export function ClusterView(): ReactElement {
   const { data, isLoading } = useEndpoint(getSlowOpsCluster, {});
   const refresh = useEndpointMutation(getSlowOpsCluster, {
     invalidates: [getSlowOpsCluster],
   });
-
-  const [aggSort, setAggSort] = useState<SortState>(DEFAULT_SORT);
-  const toggleAggSort = (columnId: string) =>
-    setAggSort((prev) =>
-      prev.columnId === columnId
-        ? { columnId, direction: prev.direction === "desc" ? "asc" : "desc" }
-        : { columnId, direction: "desc" },
-    );
 
   const aggregates = useMemo(
     () => (data ? buildClusterAggregate(data.worktrees) : []),
@@ -192,6 +52,175 @@ export function ClusterView(): ReactElement {
   );
 
   const okCount = data ? data.worktrees.length - failed.length : 0;
+
+  const aggFields: FieldDef<ClusterAggregate>[] = useMemo(
+    () => [
+      {
+        id: "operationKind",
+        label: "Kind",
+        type: "enum",
+        width: "7rem",
+        value: (r) => r.operationKind,
+        options: uniqueSorted(aggregates.map((r) => r.operationKind)),
+      },
+      {
+        id: "operation",
+        label: "Operation",
+        type: "text",
+        primary: true,
+        width: "minmax(0,1fr)",
+        value: (r) => r.operation,
+        cell: (r) => (
+          <div className="flex min-w-0 flex-col gap-2xs">
+            <Text as="span" variant="caption" className="truncate font-mono" title={r.operation}>
+              {r.operation}
+            </Text>
+            <Text
+              as="span"
+              variant="caption"
+              className="pl-md text-3xs text-muted-foreground"
+              title={r.worktrees.join(", ")}
+            >
+              slow across {r.worktrees.length} worktree{r.worktrees.length === 1 ? "" : "s"}
+            </Text>
+          </div>
+        ),
+      },
+      {
+        id: "worktrees",
+        label: "Worktrees",
+        type: "number",
+        width: "5.5rem",
+        align: "end",
+        value: (r) => r.worktrees.length,
+      },
+      {
+        id: "count",
+        label: "Count",
+        type: "number",
+        width: "4rem",
+        align: "end",
+        value: (r) => r.count,
+      },
+      {
+        id: "totalMs",
+        label: "Total (ms)",
+        type: "number",
+        width: "5.5rem",
+        align: "end",
+        value: (r) => Math.round(r.totalMs),
+      },
+      {
+        id: "maxMs",
+        label: "Max (ms)",
+        type: "number",
+        width: "5rem",
+        align: "end",
+        value: (r) => Math.round(r.maxMs),
+      },
+      {
+        id: "lastSeen",
+        label: "Last seen",
+        type: "date",
+        width: "7rem",
+        align: "end",
+        value: (r) => r.lastSeenAt,
+        cell: (r) => (
+          <Text as="span" variant="caption" className="text-muted-foreground">
+            <RelativeTime date={r.lastSeenAt} />
+          </Text>
+        ),
+      },
+    ],
+    [aggregates],
+  );
+
+  const timelineFields: FieldDef<TimelineEntry>[] = useMemo(
+    () => [
+      {
+        id: "atTime",
+        label: "When",
+        type: "date",
+        width: "6rem",
+        align: "end",
+        value: (r) => r.atTime,
+        cell: (r) => (
+          <Text as="span" variant="caption" className="text-muted-foreground">
+            <RelativeTime date={r.atTime} />
+          </Text>
+        ),
+      },
+      {
+        id: "worktree",
+        label: "Worktree",
+        type: "enum",
+        width: "9rem",
+        value: (r) => r.worktree,
+        options: uniqueSorted(timeline.map((r) => r.worktree)),
+        cell: (r) => (
+          <Badge variant="muted" size="sm" className="truncate font-mono" title={r.worktree}>
+            {r.worktree}
+          </Badge>
+        ),
+      },
+      {
+        id: "operationKind",
+        label: "Kind",
+        type: "enum",
+        width: "7rem",
+        value: (r) => r.operationKind,
+        options: uniqueSorted(timeline.map((r) => r.operationKind)),
+      },
+      {
+        id: "operation",
+        label: "Operation",
+        type: "text",
+        primary: true,
+        width: "minmax(0,1fr)",
+        value: (r) => r.operation,
+        cell: (r) => (
+          <Text
+            as="span"
+            variant="caption"
+            className="truncate font-mono"
+            title={`${r.operationKind} ${r.operation}`}
+          >
+            <span className="text-muted-foreground">{r.operationKind}</span> {r.operation}
+          </Text>
+        ),
+      },
+      {
+        id: "durationMs",
+        label: "Dur (ms)",
+        type: "number",
+        width: "5rem",
+        align: "end",
+        value: (r) => Math.round(r.durationMs),
+      },
+      {
+        id: "load",
+        label: "load1 / cpu",
+        type: "number",
+        width: "6rem",
+        align: "end",
+        value: (r) => r.loadAvg1,
+        cell: (r) => (
+          <Badge variant={loadSeverity(r.loadAvg1, r.cpuCount)} size="sm" className="font-mono">
+            {Math.round(r.loadAvg1)} / {r.cpuCount}
+          </Badge>
+        ),
+      },
+      {
+        id: "pgActiveBackends",
+        label: "pg active",
+        type: "number",
+        width: "5rem",
+        align: "end",
+        value: (r) => r.pgActiveBackends,
+      },
+    ],
+    [timeline],
+  );
 
   return (
     <div className="flex h-full flex-col overflow-auto">
@@ -227,36 +256,27 @@ export function ClusterView(): ReactElement {
           <Loading />
         ) : (
           <>
-            <Stack gap="xs">
-              <SectionLabel>Cluster aggregate</SectionLabel>
-              <DataTable
-                data={aggregates}
-                columns={AGGREGATE_COLUMNS}
-                rowKey={(row) => row.key}
-                sortState={aggSort}
-                onToggleSort={toggleAggSort}
-                emptyLabel="No slow operations recorded across the cluster"
-              />
-            </Stack>
+            <DataView<ClusterAggregate>
+              rows={aggregates}
+              fields={aggFields}
+              rowKey={(r) => r.key}
+              storageKey={CLUSTER_AGG}
+              title="Cluster Aggregate"
+              mode="embedded"
+              defaultView="table"
+              emptyState="No slow operations recorded across the cluster"
+            />
 
-            <Stack gap="xs">
-              <SectionLabel>Contention timeline</SectionLabel>
-              <Text as="span" variant="caption" className="text-muted-foreground">
-                Every captured sample across all worktrees, newest first — a
-                simultaneous storm appears as a dense time cluster sharing a high
-                load / backend count.
-              </Text>
-              {timeline.length === 0 ? (
-                <Placeholder>No contention samples captured yet.</Placeholder>
-              ) : (
-                <DataTable
-                  data={timeline}
-                  columns={TIMELINE_COLUMNS}
-                  rowKey={(row) => row.key}
-                  emptyLabel="No contention samples captured yet"
-                />
-              )}
-            </Stack>
+            <DataView<TimelineEntry>
+              rows={timeline}
+              fields={timelineFields}
+              rowKey={(r) => r.key}
+              storageKey={CLUSTER_TIMELINE}
+              title="Contention Timeline"
+              mode="embedded"
+              defaultView="table"
+              emptyState="No contention samples captured yet"
+            />
           </>
         )}
       </Stack>
