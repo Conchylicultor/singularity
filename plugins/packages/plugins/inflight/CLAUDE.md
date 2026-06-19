@@ -25,7 +25,7 @@ See `research/2026-06-15-global-live-state-cascade-contention.md` (Change 5).
 ## Plugin reference
 
 - Cross-plugin:
-  - Imported by: `infra/endpoints`
+  - Imported by: `framework/resource-runtime`, `infra/endpoints`
 - Core:
   - Exports: Types: `Inflight`; Values: `createInflight`
 

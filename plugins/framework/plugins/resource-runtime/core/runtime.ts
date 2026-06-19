@@ -1,5 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import type { ZodType } from "zod";
+import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import {
   buildSnapshot,
   diffKeyedFull,
@@ -24,8 +25,9 @@ import {
 //   WS  /ws/notifications  (or /ws/central-notifications)     — single push channel
 // and broadcasts updates when the plugin calls resource.notify().
 //
-// The runtime is a DAG leaf: it imports only `zod` (ZodType) and `bun`
-// (ServerWebSocket type). It declares its own local WsData/WsHandler interfaces
+// The runtime is acyclic: besides `zod` (ZodType) and `bun` (ServerWebSocket
+// type) it imports only `@plugins/packages/plugins/inflight/core` (itself a leaf,
+// so no cycle). It declares its own local WsData/WsHandler interfaces
 // (byte-identical to server-core/central-core's types.ts) rather than importing
 // them — importing from either facade would create a cycle. The returned
 // `notificationsWsHandler` is structurally assignable to each facade's WsHandler.
@@ -256,6 +258,7 @@ const HEARTBEAT_MS = 20_000;
 
 export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): ResourceRuntime {
   const registry = new Map<string, RegistryEntry>();
+  const inflight = createInflight();
   let dagDirty = true;
   let topoOrder: RegistryEntry[] = [];
   const sockets = new Map<ServerWebSocket<WsData>, SocketState>();
@@ -276,14 +279,16 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     return JSON.stringify(obj);
   }
 
-  // Time a resource loader call. The loader output is parsed against the
-  // resource's schema before it leaves this function, so every load path
-  // (sub-ack, push/keyed/scoped notify, HTTP fallback) is validated at one
-  // chokepoint — a schema violation throws here and is handled by each caller's
-  // loader-failure path (report + skip the send). Keyed Layer-2 scoped loads
-  // return a partial array, which still satisfies the `z.array(Element)` schema.
-  // `wrapLoad` (server: recordEntrySpan) also establishes the ambient parent
-  // context so DB queries issued inside the loader attribute to it.
+  // Internal refill primitive — the ONLY place `entry.loader` runs. The loader
+  // output is parsed against the resource's schema before it leaves this
+  // function, so every load path (sub-ack, push/keyed/scoped notify, HTTP
+  // fallback) is validated at one chokepoint — a schema violation throws here and
+  // is handled by each caller's loader-failure path (report + skip the send).
+  // Keyed Layer-2 scoped loads return a partial array, which still satisfies the
+  // `z.array(Element)` schema. `wrapLoad` (server: recordEntrySpan) also
+  // establishes the ambient parent context so DB queries issued inside the loader
+  // attribute to it. Private to `getResourceValue` + the keyed reseed below; all
+  // read call sites go through `getResourceValue`.
   function timedLoad(
     entry: RegistryEntry,
     params: ResourceParams,
@@ -291,6 +296,28 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   ): Promise<unknown> {
     const run = async () => entry.schema.parse(await entry.loader(params, ctx));
     return opts.wrapLoad ? opts.wrapLoad(entry.key, run) : run();
+  }
+
+  // The single read accessor. Full loads (ctx === undefined: sub-ack, HTTP
+  // fallback, loadResourceByKey, plain notify-reload) share ONE in-flight loader
+  // promise per (key, params), collapsing the multi-tab / GET-races-sub herd. The
+  // shared parsed value is treated as IMMUTABLE by every coalesced caller (all
+  // current consumers are read-only). inflight clears the key the instant the
+  // promise settles, so the next load is fresh — error/staleness sharing is safe.
+  // Single-flight wraps OUTSIDE the loader semaphore (the semaphore lives in
+  // wrapLoad, inside timedLoad) so a deduped caller never consumes a gate slot.
+  //
+  // Scoped keyed-delta loads (ctx.affectedIds, Layer 2) return a PARTIAL array and
+  // NEVER coalesce: a plain subscriber must not attach to a partial load (torn
+  // snapshot), and two scoped loads with different affectedIds are not the same
+  // work. They run the refill directly.
+  function getResourceValue(
+    entry: RegistryEntry,
+    params: ResourceParams,
+    ctx?: { affectedIds: readonly string[] },
+  ): Promise<unknown> {
+    if (ctx) return timedLoad(entry, params, ctx);
+    return inflight.run(`${entry.key} ${paramsKey(params)}`, () => timedLoad(entry, params));
   }
 
   // Coalesce an incoming notify into the pending map for one pk, applying the
@@ -626,7 +653,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         let valueComputed = false;
         if (needValue) {
           try {
-            value = await timedLoad(entry, params, ctx);
+            value = await getResourceValue(entry, params, ctx);
             valueComputed = true;
           } catch (err) {
             reportLoaderError(`loader failed for ${entry.key}`, err);
@@ -649,7 +676,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
               // unsafe for diffKeyed — reload the FULL value and diff that.
               let full: unknown;
               try {
-                full = await timedLoad(entry, params, undefined);
+                full = await getResourceValue(entry, params, undefined);
               } catch (err) {
                 reportLoaderError(`loader failed for ${entry.key}`, err);
                 continue;
@@ -838,7 +865,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
 
     let value: unknown;
     try {
-      value = await timedLoad(entry, params);
+      value = await getResourceValue(entry, params);
     } catch (err) {
       reportLoaderError(`loader failed for ${key}`, err);
       sendJson(state.ws, { kind: "sub-error", id, key, reason: "loader-failed" });
@@ -917,7 +944,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
 
     let value: unknown;
     try {
-      value = await timedLoad(entry, resourceParams);
+      value = await getResourceValue(entry, resourceParams);
     } catch (err) {
       reportLoaderError(`loader failed for ${key}`, err);
       return new Response("Loader failed", { status: 500 });
@@ -979,7 +1006,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   ): Promise<unknown> {
     const entry = registry.get(key);
     if (!entry) throw new Error(`unknown resource key: ${key}`);
-    return timedLoad(entry, params ?? {});
+    return getResourceValue(entry, params ?? {});
   }
 
   return {

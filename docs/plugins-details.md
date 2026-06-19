@@ -2478,10 +2478,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports: Types: `PluginId`, `RuntimeFolder`; Values: `asFsPath`, `asPath`, `asPluginId`, `pluginIdSegments`, `RUNTIME_FOLDERS`
     - **`resource-runtime`**
+      - Core:
+        - Uses: `packages/inflight.createInflight`
+        - Exports: Types: `DependsOnEntry`, `KeyedDiff`, `KeyedSnapshot`, `Resource`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`
       - Cross-plugin:
         - Imported by: `framework/central-core`, `framework/server-core`
-      - Core:
-        - Exports: Types: `DependsOnEntry`, `KeyedDiff`, `KeyedSnapshot`, `Resource`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`
     - **`server-core`**
       - Core:
         - Uses: `framework/resource-runtime.createResourceRuntime`, `framework/tooling/collected-dir.defineCollectedDir`, `infra/runtime-profiler.recordEntrySpan`, `infra/runtime-profiler.recordSpan`, `packages/semaphore.createSemaphore`
@@ -2843,7 +2844,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `infra/host-read-pool`
     - **`inflight`**
       - Cross-plugin:
-        - Imported by: `infra/endpoints`
+        - Imported by: `framework/resource-runtime`, `infra/endpoints`
       - Core:
         - Exports: Types: `Inflight`; Values: `createInflight`
     - **`retry`**
