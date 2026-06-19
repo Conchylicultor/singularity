@@ -3551,7 +3551,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `GridProps`; Values: `Grid`
           - Cross-plugin:
-            - Imported by: `apps/browser/start-page`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `debug/health-monitor`
+            - Imported by: `apps/browser/start-page`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `debug/health-monitor`, `primitives/data-view/gallery`
         - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
         - **`inline`** — Inline-level flow layout primitive: <Inline gap> lays out a baseline-aligned inline-flex row for chips/icons that sit inline in a text run. The inline-level sibling of Stack, delegating to Stack.
           - Web:
@@ -3698,7 +3698,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-            - Uses: `primitives/css/card.Card`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-view.CreateOption`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/loading.Loading`
+            - Uses: `primitives/css/card.Card`, `primitives/css/grid.Grid`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-view.CreateOption`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/loading.Loading`, `primitives/virtual-rows.VirtualRows`
             - Exports: Types: `CoverContent`, `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`
           - Core:
             - Exports: Types: `CoverContent`, `GalleryViewOptions`
@@ -4079,7 +4079,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/css/ui-kit.cn`
         - Exports: Types: `VirtualRowsProps`; Values: `VirtualRows`
       - Cross-plugin:
-        - Imported by: `primitives/data-view/list`, `primitives/tree`
+        - Imported by: `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/tree`
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
