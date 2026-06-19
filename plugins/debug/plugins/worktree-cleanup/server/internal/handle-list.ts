@@ -4,45 +4,9 @@ import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
 import { type WorktreeEntry } from "../../shared/endpoints";
 import { dirExists } from "./reap";
+import { getGitHygiene, isTaskDeletable, isSafeToReap } from "./safety";
 
-import { GIT } from "@plugins/infra/plugins/paths/server";
 const CONCURRENCY = 50;
-
-// Allowlist of task statuses known to have no live agent session.
-// Intentionally explicit: unknown/future statuses default to not-safe.
-const DELETABLE_TASK_STATUSES = new Set([
-  "done",
-  "dropped",
-]);
-
-// `git status --porcelain=v2 --branch` gives us branch tracking info (ahead N)
-// AND dirty working tree in one subprocess. `du` was removed — it takes ~5s per
-// 50-dir batch on macOS even for empty dirs, making it the dominant bottleneck.
-async function getGitHygiene(
-  wtPath: string,
-): Promise<{ unpushedCount: number; isDirty: boolean }> {
-  try {
-    const p = Bun.spawn(
-      [GIT, "--no-optional-locks", "-C", wtPath, "status", "--porcelain=v2", "--branch"],
-      { stdout: "pipe", stderr: "pipe" },
-    );
-    await p.exited;
-    const statusOut = await new Response(p.stdout).text();
-
-    // Header line: "# branch.ab +<ahead> -<behind>"
-    const abLine = statusOut.split("\n").find((l) => l.startsWith("# branch.ab "));
-    const aheadMatch = abLine?.match(/\+(\d+)/);
-    const unpushedCount = aheadMatch ? parseInt(aheadMatch[1]!, 10) : 0;
-
-    // Any non-header line is a file change
-    const isDirty = statusOut.split("\n").some((l) => l.length > 0 && !l.startsWith("#"));
-
-    return { unpushedCount, isDirty };
-  // eslint-disable-next-line promise-safety/no-bare-catch -- git spawn can fail for many reasons (binary missing, worktree deleted mid-flight, not a git repo); all map to the same conservative safe default (assume dirty = not safe to delete), so every error is correctly handled here
-  } catch {
-    return { unpushedCount: 0, isDirty: true };
-  }
-}
 
 // Run `fn` over `items` with at most `limit` concurrent executions.
 async function pMap<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>): Promise<R[]> {
@@ -81,12 +45,15 @@ async function buildEntry(
     isDirty = hygiene.isDirty;
   }
 
-  const taskDeletable = task ? DELETABLE_TASK_STATUSES.has(task.status) : true;
-  const ageMs = Date.now() - attempt.createdAt.getTime();
-  const oldEnough = ageMs >= 72 * 60 * 60 * 1000;
-  // No worktree but DB remains: always safe (nothing to lose, just a DB drop).
-  // Worktree present: safe only when clean, old enough, and task is done/dropped.
-  const isSafe = (!exists && dbPresent) || (exists && unpushedCount === 0 && !isDirty && taskDeletable && oldEnough);
+  const taskDeletable = isTaskDeletable(task?.status);
+  const isSafe = isSafeToReap({
+    dirExists: exists,
+    dbPresent,
+    unpushedCount,
+    isDirty,
+    taskDeletable,
+    ageMs: Date.now() - attempt.createdAt.getTime(),
+  });
 
   return {
     attemptId: attempt.id,
