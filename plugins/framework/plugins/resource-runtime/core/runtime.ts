@@ -211,6 +211,12 @@ interface RegistryEntry {
   subCounts: Map<string, number>;
   /** Upstream keys this entry listens to (for cycle detection). */
   upstreamKeys: string[];
+  /**
+   * Longest-path depth from a root (no-upstream entry = 0). Computed in
+   * `rebuildDag`; every `dependsOn` edge strictly increases depth, so entries
+   * sharing a depth are mutually independent and flush concurrently.
+   */
+  depth?: number;
   /** Downstream entries to cascade to when this entry notifies. */
   downstream: DownstreamEdge[];
   onFirstSubscribe?: (params: ResourceParams) => void | Promise<void>;
@@ -274,8 +280,16 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   const inflight = createInflight();
   let dagDirty = true;
   let topoOrder: RegistryEntry[] = [];
+  // `topoOrder` grouped by longest-path depth. Each level's entries are mutually
+  // independent (no intra-level edges), so a flush runs a level concurrently and
+  // barriers between levels to preserve cascade-into-downstream ordering.
+  let topoLevels: RegistryEntry[][] = [];
   const sockets = new Map<ServerWebSocket<WsData>, SocketState>();
   let flushScheduled = false;
+  // Single-active-flush mutex. `flushRunning` ⇒ a flush is mid-await; a new
+  // flush sets `flushAgain` instead of overlapping, and the live flush re-drains.
+  let flushRunning = false;
+  let flushAgain = false;
   let batchDepth = 0;
   const heartbeats = new Map<ServerWebSocket<WsData>, ReturnType<typeof setInterval>>();
 
@@ -463,6 +477,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       }
       state.set(entry.key, "visiting");
       stack.push(entry.key);
+      // Post-order: every upstream's depth is finalized before we read it here.
+      // Longest-path depth = 1 + max upstream depth (0 for a root). `?? 0` keeps
+      // dangling-upstream (skipped) and cycle (back-edge, depth not yet set)
+      // cases finite and crash-free — matching the warn-only phase-1 semantics.
+      let depth = 0;
       for (const upKey of entry.upstreamKeys) {
         const up = registry.get(upKey);
         if (!up) {
@@ -472,8 +491,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           continue;
         }
         visit(up, stack);
+        depth = Math.max(depth, (up.depth ?? 0) + 1);
       }
       stack.pop();
+      entry.depth = depth;
       state.set(entry.key, "done");
       order.push(entry);
     };
@@ -488,6 +509,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
 
     topoOrder = order;
+    // Group by depth. Post-order is not depth-sorted across independent subtrees,
+    // so build the levels explicitly rather than slicing `order`.
+    const maxDepth = order.reduce((m, e) => Math.max(m, e.depth ?? 0), 0);
+    const levels: RegistryEntry[][] = Array.from({ length: maxDepth + 1 }, () => []);
+    for (const e of order) levels[e.depth ?? 0]!.push(e);
+    topoLevels = levels;
   }
 
   // --- Broadcast machinery ---
@@ -624,179 +651,204 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   }
 
   async function flushNotifies(): Promise<void> {
-    flushScheduled = false;
-    rebuildDag();
-
-    // Iterate upstream-first so cascades into downstream entries are picked up
-    // later in the same loop. `pendingNotifies` is a Map keyed by paramsKey, so
-    // cascaded-then-pre-existing notifies coalesce automatically.
-    for (const entry of topoOrder) {
-      if (entry.pendingNotifies.size === 0) continue;
-      const pending = Array.from(entry.pendingNotifies.values());
-      entry.pendingNotifies.clear();
-      // Piggyback: this entry's pending is being drained now (possibly by a flush
-      // some other resource scheduled), so cancel any armed debounce timer — it
-      // would otherwise fire redundantly on an already-empty pending map.
-      if (entry.debounceTimer !== undefined) {
-        clearTimeout(entry.debounceTimer);
-        entry.debounceTimer = undefined;
-      }
-      for (const { params, affected } of pending) {
-        const pk = paramsKey(params);
-        // Scoped notify (Layer 2): `affected !== null` means recompute only those
-        // row ids. An empty scoped set = nothing actually changed → skip the send
-        // entirely (no version bump, no empty delta, no cascade).
-        const scoped = affected !== null;
-        if (scoped && affected.size === 0) continue;
-        const version = (entry.versions.get(pk) ?? 0) + 1;
-        entry.versions.set(pk, version);
-        const subs = subscribersFor(entry.key, pk);
-
-        // Compute value once if either a subscriber (push mode) or any
-        // value-aware downstream `map` needs it. For invalidate-mode upstreams
-        // we still compute when a map wants it — rare today, acceptable cost.
-        // `affectedMap` self-queries the DB and must NOT force the value, else we
-        // reintroduce the full upstream load Layer 2 is removing.
-        const hasValueAwareDownstream = entry.downstream.some((d) => d.map !== undefined);
-        const needValue =
-          ((entry.mode === "push" || entry.mode === "keyed") && subs.length > 0) ||
-          hasValueAwareDownstream;
-        const ctx = scoped ? { affectedIds: [...affected] } : undefined;
-        let value: unknown;
-        let valueComputed = false;
-        if (needValue) {
-          try {
-            // Origin = the push/cascade flush: re-establishes an entry context
-            // (this runs in a bare microtask with no ambient context) so the
-            // loader span attributes to this `push` instead of `parent: null`.
-            value = await (opts.wrapOrigin
-              ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, ctx))
-              : getResourceValue(entry, params, ctx));
-            valueComputed = true;
-          } catch (err) {
-            reportLoaderError(`loader failed for ${entry.key}`, err);
-            // Skip sending and cascading on loader failure — otherwise we'd
-            // invalidate downstream state based on a torn read.
-            continue;
-          }
+    // Single-active-flush mutex: never overlap two flushes. A notify that lands
+    // while a flush is mid-await sets `flushAgain`; the live flush re-drains so
+    // mid-flush arrivals are never stranded.
+    if (flushRunning) {
+      flushAgain = true;
+      return;
+    }
+    flushRunning = true;
+    try {
+      do {
+        flushAgain = false;
+        flushScheduled = false;
+        rebuildDag();
+        // Run each depth level concurrently; barrier between levels so every
+        // cascade merged into a (strictly-deeper) downstream settles before that
+        // downstream level drains. A slow loader can no longer head-of-line-block
+        // an unrelated entry at the same or an earlier depth.
+        for (const level of topoLevels) {
+          await Promise.all(level.map(drainEntry));
         }
+      } while (flushAgain);
+    } finally {
+      flushRunning = false;
+    }
+  }
 
-        if (subs.length > 0) {
-          if (entry.mode === "invalidate") {
-            const msg = { kind: "invalidate" as const, key: entry.key, params, version };
+  // Drain one entry's pending notifies: load (await), send frames, cascade.
+  // Begins with a synchronous snapshot+clear of pending and a debounce-timer
+  // cancel, so concurrent sibling entries in the same level never tear each
+  // other's state and every cascade this entry emits has settled before the
+  // next (deeper) level reads it. The per-pk loop stays sequential — the version
+  // and keyed snapshot for a single (key,pk) must advance monotonically.
+  async function drainEntry(entry: RegistryEntry): Promise<void> {
+    if (entry.pendingNotifies.size === 0) return;
+    const pending = Array.from(entry.pendingNotifies.values());
+    entry.pendingNotifies.clear();
+    // Piggyback: this entry's pending is being drained now (possibly by a flush
+    // some other resource scheduled), so cancel any armed debounce timer — it
+    // would otherwise fire redundantly on an already-empty pending map.
+    if (entry.debounceTimer !== undefined) {
+      clearTimeout(entry.debounceTimer);
+      entry.debounceTimer = undefined;
+    }
+    for (const { params, affected } of pending) {
+      const pk = paramsKey(params);
+      // Scoped notify (Layer 2): `affected !== null` means recompute only those
+      // row ids. An empty scoped set = nothing actually changed → skip the send
+      // entirely (no version bump, no empty delta, no cascade).
+      const scoped = affected !== null;
+      if (scoped && affected.size === 0) continue;
+      const version = (entry.versions.get(pk) ?? 0) + 1;
+      entry.versions.set(pk, version);
+      const subs = subscribersFor(entry.key, pk);
+
+      // Compute value once if either a subscriber (push mode) or any
+      // value-aware downstream `map` needs it. For invalidate-mode upstreams
+      // we still compute when a map wants it — rare today, acceptable cost.
+      // `affectedMap` self-queries the DB and must NOT force the value, else we
+      // reintroduce the full upstream load Layer 2 is removing.
+      const hasValueAwareDownstream = entry.downstream.some((d) => d.map !== undefined);
+      const needValue =
+        ((entry.mode === "push" || entry.mode === "keyed") && subs.length > 0) ||
+        hasValueAwareDownstream;
+      const ctx = scoped ? { affectedIds: [...affected] } : undefined;
+      let value: unknown;
+      let valueComputed = false;
+      if (needValue) {
+        try {
+          // Origin = the push/cascade flush: re-establishes an entry context
+          // (this runs in a bare microtask with no ambient context) so the
+          // loader span attributes to this `push` instead of `parent: null`.
+          value = await (opts.wrapOrigin
+            ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, ctx))
+            : getResourceValue(entry, params, ctx));
+          valueComputed = true;
+        } catch (err) {
+          reportLoaderError(`loader failed for ${entry.key}`, err);
+          // Skip sending and cascading on loader failure — otherwise we'd
+          // invalidate downstream state based on a torn read.
+          continue;
+        }
+      }
+
+      if (subs.length > 0) {
+        if (entry.mode === "invalidate") {
+          const msg = { kind: "invalidate" as const, key: entry.key, params, version };
+          for (const s of subs) sendJson(s.ws, msg);
+        } else if (entry.mode === "keyed") {
+          // `value` is guaranteed computed (needValue is true for keyed + subs).
+          const hadSnapshot = entry.snapshots?.has(pk) ?? false;
+          if (scoped && !hadSnapshot) {
+            // Near-unreachable: a subscribed pk always seeded a snapshot at
+            // sub-ack. If we somehow get here, the scoped `value` is partial and
+            // unsafe for diffKeyed — reload the FULL value and diff that.
+            let full: unknown;
+            try {
+              full = await (opts.wrapOrigin
+                ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, undefined))
+                : getResourceValue(entry, params, undefined));
+            } catch (err) {
+              reportLoaderError(`loader failed for ${entry.key}`, err);
+              continue;
+            }
+            // hadSnapshot was false ⇒ ship a full update base. diffKeyed here
+            // serves only to (re)seed the snapshot from the full value.
+            diffKeyed(entry, pk, full);
+            const msg = {
+              kind: "update" as const,
+              key: entry.key,
+              params,
+              value: full,
+              version,
+            };
             for (const s of subs) sendJson(s.ws, msg);
-          } else if (entry.mode === "keyed") {
-            // `value` is guaranteed computed (needValue is true for keyed + subs).
-            const hadSnapshot = entry.snapshots?.has(pk) ?? false;
-            if (scoped && !hadSnapshot) {
-              // Near-unreachable: a subscribed pk always seeded a snapshot at
-              // sub-ack. If we somehow get here, the scoped `value` is partial and
-              // unsafe for diffKeyed — reload the FULL value and diff that.
-              let full: unknown;
-              try {
-                full = await (opts.wrapOrigin
-                  ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, undefined))
-                  : getResourceValue(entry, params, undefined));
-              } catch (err) {
-                reportLoaderError(`loader failed for ${entry.key}`, err);
-                continue;
-              }
-              // hadSnapshot was false ⇒ ship a full update base. diffKeyed here
-              // serves only to (re)seed the snapshot from the full value.
-              diffKeyed(entry, pk, full);
+          } else if (scoped) {
+            // Scoped path: merge the partial recompute into the snapshot and
+            // ship only the changed rows. `deletes:[]`, `order:undefined` —
+            // a scoped notify never asserts membership/order (those stay FULL).
+            const { upserts } = diffKeyedScoped(entry, pk, value as unknown[]);
+            if (upserts.length) {
               const msg = {
-                kind: "update" as const,
+                kind: "delta" as const,
                 key: entry.key,
                 params,
-                value: full,
+                upserts,
+                deletes: [] as string[],
+                order: undefined,
                 version,
               };
               for (const s of subs) sendJson(s.ws, msg);
-            } else if (scoped) {
-              // Scoped path: merge the partial recompute into the snapshot and
-              // ship only the changed rows. `deletes:[]`, `order:undefined` —
-              // a scoped notify never asserts membership/order (those stay FULL).
-              const { upserts } = diffKeyedScoped(entry, pk, value as unknown[]);
-              if (upserts.length) {
-                const msg = {
-                  kind: "delta" as const,
-                  key: entry.key,
-                  params,
-                  upserts,
-                  deletes: [] as string[],
-                  order: undefined,
-                  version,
-                };
-                for (const s of subs) sendJson(s.ws, msg);
-              }
-            } else {
-              // FULL path (unchanged from Layer 1). diffKeyed replaces the stored
-              // snapshot only here, after the loader succeeded — the loader-failure
-              // `continue` above leaves it untouched.
-              const { upserts, deletes, order } = diffKeyed(entry, pk, value);
-              if (!hadSnapshot) {
-                // First notify for this pk: ship a full update so brand-new
-                // subscribers get a complete base to merge subsequent deltas onto.
-                const msg = { kind: "update" as const, key: entry.key, params, value, version };
-                for (const s of subs) sendJson(s.ws, msg);
-              } else {
-                const msg = {
-                  kind: "delta" as const,
-                  key: entry.key,
-                  params,
-                  upserts,
-                  deletes,
-                  order,
-                  version,
-                };
-                for (const s of subs) sendJson(s.ws, msg);
-              }
             }
           } else {
-            const msg = { kind: "update" as const, key: entry.key, params, value, version };
-            for (const s of subs) sendJson(s.ws, msg);
+            // FULL path (unchanged from Layer 1). diffKeyed replaces the stored
+            // snapshot only here, after the loader succeeded — the loader-failure
+            // `continue` above leaves it untouched.
+            const { upserts, deletes, order } = diffKeyed(entry, pk, value);
+            if (!hadSnapshot) {
+              // First notify for this pk: ship a full update so brand-new
+              // subscribers get a complete base to merge subsequent deltas onto.
+              const msg = { kind: "update" as const, key: entry.key, params, value, version };
+              for (const s of subs) sendJson(s.ws, msg);
+            } else {
+              const msg = {
+                kind: "delta" as const,
+                key: entry.key,
+                params,
+                upserts,
+                deletes,
+                order,
+                version,
+              };
+              for (const s of subs) sendJson(s.ws, msg);
+            }
+          }
+        } else {
+          const msg = { kind: "update" as const, key: entry.key, params, value, version };
+          for (const s of subs) sendJson(s.ws, msg);
+        }
+      }
+
+      for (const edge of entry.downstream) {
+        const down = registry.get(edge.downstreamKey);
+        if (!down) continue;
+        let derived: ResourceParams[];
+        if (edge.map) {
+          try {
+            derived = edge.map(params, valueComputed ? value : undefined);
+          } catch (err) {
+            reportLoaderError(
+              `dependsOn map failed (${entry.key} → ${edge.downstreamKey})`,
+              err,
+            );
+            continue;
+          }
+        } else {
+          derived = [params];
+        }
+        // Compute the downstream affected set. Upstream FULL ⇒ FULL; no
+        // affectedMap ⇒ FULL; a throwing affectedMap fails safe to FULL. Never
+        // silently narrows a membership change.
+        let downAffected: Set<string> | null;
+        if (affected === null) {
+          downAffected = null;
+        } else if (!edge.affectedMap) {
+          downAffected = null;
+        } else {
+          try {
+            downAffected = new Set(await edge.affectedMap(affected, params));
+          } catch (err) {
+            reportLoaderError(
+              `affectedMap failed (${entry.key} → ${edge.downstreamKey})`,
+              err,
+            );
+            downAffected = null;
           }
         }
-
-        for (const edge of entry.downstream) {
-          const down = registry.get(edge.downstreamKey);
-          if (!down) continue;
-          let derived: ResourceParams[];
-          if (edge.map) {
-            try {
-              derived = edge.map(params, valueComputed ? value : undefined);
-            } catch (err) {
-              reportLoaderError(
-                `dependsOn map failed (${entry.key} → ${edge.downstreamKey})`,
-                err,
-              );
-              continue;
-            }
-          } else {
-            derived = [params];
-          }
-          // Compute the downstream affected set. Upstream FULL ⇒ FULL; no
-          // affectedMap ⇒ FULL; a throwing affectedMap fails safe to FULL. Never
-          // silently narrows a membership change.
-          let downAffected: Set<string> | null;
-          if (affected === null) {
-            downAffected = null;
-          } else if (!edge.affectedMap) {
-            downAffected = null;
-          } else {
-            try {
-              downAffected = new Set(await edge.affectedMap(affected, params));
-            } catch (err) {
-              reportLoaderError(
-                `affectedMap failed (${entry.key} → ${edge.downstreamKey})`,
-                err,
-              );
-              downAffected = null;
-            }
-          }
-          for (const dp of derived) {
-            mergePending(down.pendingNotifies, paramsKey(dp), dp, downAffected);
-          }
+        for (const dp of derived) {
+          mergePending(down.pendingNotifies, paramsKey(dp), dp, downAffected);
         }
       }
     }

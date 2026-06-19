@@ -13,6 +13,19 @@ runtime's types/values as its own stable public surface, so the ~42
 `defineResource` call sites and ~37 `Resource.Declare` contributors never see
 this plugin directly.
 
+**Flush is level-parallel.** `flushNotifies` walks the dependsOn DAG grouped by
+longest-path depth (`rebuildDag` stamps `entry.depth`; every edge strictly
+increases depth, so a level has no intra-level edges). Each level's entries run
+concurrently (`Promise.all(level.map(drainEntry))`) with a barrier between
+levels, so a cascade merged into a strictly-deeper downstream has settled before
+that downstream drains — and a slow loader can no longer head-of-line-block an
+unrelated entry at the same or earlier depth (the original serial loop's bug; see
+`research/2026-06-19-global-parallel-flush-notifies.md`). `drainEntry` opens with
+a synchronous snapshot+clear of pending and a debounce-timer cancel, and keeps its
+per-pk loop sequential so versions/snapshots stay monotonic. A `flushRunning`
+mutex + `flushAgain` rerun flag guarantee two flushes never overlap: a notify that
+lands mid-flush sets `flushAgain` and is re-drained by the live flush.
+
 The three injected hooks (`ResourceRuntimeOptions`):
 
 - `wrapLoad(key, fn)` — wrap each loader call. server: `recordEntrySpan("loader",

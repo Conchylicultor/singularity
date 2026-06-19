@@ -2,7 +2,9 @@ import { describe, expect, test } from "bun:test";
 import { isCanonicalWorktreePath } from "./worktree";
 
 describe("isCanonicalWorktreePath", () => {
-  const root = "/Users/me/dev/singularity";
+  // Synthetic repo root — `isCanonicalWorktreePath` only does path logic relative
+  // to it. Kept free of real-home patterns so `paths:no-hardcoded-paths` is happy.
+  const root = "/repo/singularity";
   test("accepts a direct child of <root>/.claude/worktrees", () => {
     expect(isCanonicalWorktreePath(`${root}/.claude/worktrees/att-123-abc`, root)).toBe(true);
   });
