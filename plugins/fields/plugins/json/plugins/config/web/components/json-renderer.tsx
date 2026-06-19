@@ -2,6 +2,7 @@ import {
   FieldHeader,
   type FieldRendererComponent,
 } from "@plugins/config_v2/plugins/fields/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -19,11 +20,13 @@ const JsonRenderer: FieldRendererComponent<unknown> = ({ field, value }) => (
     <FieldHeader field={field} />
     <Surface
       level="sunken"
-      className="max-h-64 overflow-auto rounded-lg border border-border p-sm"
+      className="rounded-lg border border-border p-sm"
     >
-      <Text as="pre" variant="caption" tone="muted" className="font-mono whitespace-pre">
-        {JSON.stringify(value, null, 2)}
-      </Text>
+      <Scroll axis="both" className="max-h-64">
+        <Text as="pre" variant="caption" tone="muted" className="font-mono whitespace-pre">
+          {JSON.stringify(value, null, 2)}
+        </Text>
+      </Scroll>
     </Surface>
   </Stack>
 );

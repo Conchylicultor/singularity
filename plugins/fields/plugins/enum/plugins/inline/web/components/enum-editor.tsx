@@ -1,6 +1,7 @@
 import { useRef, useState, type ReactNode } from "react";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { CellEditorProps } from "@plugins/primitives/plugins/data-view/web";
 
 /**
@@ -34,7 +35,7 @@ export function EnumEditor(props: CellEditorProps): ReactNode {
         <span className="truncate text-body">{current?.label ?? selected}</span>
       }
     >
-      <div className="flex flex-col gap-xs">
+      <Stack gap="xs">
         {options.map((o) => (
           <ToggleChip
             key={o.value}
@@ -46,7 +47,7 @@ export function EnumEditor(props: CellEditorProps): ReactNode {
             {o.label}
           </ToggleChip>
         ))}
-      </div>
+      </Stack>
     </InlinePopover>
   );
 }

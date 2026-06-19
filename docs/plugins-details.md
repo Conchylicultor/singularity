@@ -1993,7 +1993,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Avatar field type: config-render capability (icon + color picker for config-v2.fields.renderer) plus the avatarField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "avatar" → `AvatarRenderer`
-            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/avatar.Avatar`, `primitives/avatar.AvatarPicker`, `primitives/avatar.AvatarSpec`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/avatar.Avatar`, `primitives/avatar.AvatarPicker`, `primitives/avatar.AvatarSpec`, `primitives/css/center.Center`, `primitives/css/frame.Frame`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.getFieldResolver`, `fields.pickMeta`, `fields/avatar.avatarFieldType`, `fields/avatar.AvatarSpec`, `fields/avatar.SvgNode`
             - Exports: Types: `AvatarFieldDef`; Values: `avatarField`
@@ -2010,7 +2010,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Boolean field type: config-render capability (checkbox for config-v2.fields.renderer) plus the boolField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "bool" → `BoolRenderer`
-            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/frame.Frame`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/bool.boolFieldType`
             - Exports: Types: `BoolFieldDef`; Values: `boolField`
@@ -2023,7 +2023,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`inline`** — Boolean field type: data-view inline cell editor (immediate-commit toggle).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "bool" → `BoolEditor`
-            - Uses: `primitives/data-view.DataViewSlots`
+            - Uses: `primitives/css/center.Center`, `primitives/data-view.DataViewSlots`
         - **`storage`** — Boolean field type: DB storage capability — maps to a Postgres boolean column.
           - Server:
             - Uses: `fields.Fields`
@@ -2045,14 +2045,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Color field type: config-render capability (hex/oklch popover picker for config-v2.fields.renderer) plus the colorField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "color" → `ColorRenderer`
-            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/color-picker.ColorPickerPopover`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/color-picker.ColorPickerPopover`, `primitives/css/frame.Frame`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/color.colorFieldType`
             - Exports: Types: `ColorFieldDef`; Values: `colorField`
         - **`table`** — Color field type: data-view table cell (read-only color swatch).
           - Web:
             - Contributes: `DataViewSlots.Cell` "color" → `ColorCell`
-            - Uses: `primitives/css/text.Text`, `primitives/data-view.DataViewSlots`
+            - Uses: `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/data-view.DataViewSlots`
     - **`date`** — Date field type: identity only. The data-view cell (relative time) and filter (date range) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "date"
@@ -2098,7 +2098,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Directory-path field type: config-render capability (folder picker for config-v2.fields.renderer) plus the dirPathField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "directory-path" → `DirPathRenderer`
-            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/folder-picker.FolderPickerPopover`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/folder-picker.FolderPickerPopover`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/directory-path.directoryPathFieldType`
             - Exports: Types: `DirPathFieldDef`; Values: `dirPathField`
@@ -2116,7 +2116,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `DynamicEnum.Options` ← `apps.app-rail-framing`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.theme-engine`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`
             - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
-            - Uses: `config_v2/fields.Fields`, `primitives/css/text.Text`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`
+            - Uses: `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`
             - Exports: Types: `DynamicEnumOption`, `DynamicEnumOptionsContribution`; Values: `DynamicEnum`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields/dynamic-enum.dynamicEnumFieldType`
@@ -2136,7 +2136,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
           - Web:
             - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
-            - Uses: `config_v2/fields.Fields`, `primitives/css/text.Text`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`
+            - Uses: `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields/enum.enumFieldType`
             - Exports: Types: `EnumFieldDef`, `EnumOption`, `EnumOptionInput`; Values: `enumField`
@@ -2149,7 +2149,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`inline`** — Enum (select) field type: data-view inline cell editor (single-select chip popover).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "enum" → `EnumEditor`
-            - Uses: `primitives/css/toggle-chip.ToggleChip`, `primitives/data-view.DataViewSlots`, `primitives/popover.InlinePopover`
+            - Uses: `primitives/css/spacing.Stack`, `primitives/css/toggle-chip.ToggleChip`, `primitives/data-view.DataViewSlots`, `primitives/popover.InlinePopover`
         - **`table`** — Enum (select) field type: data-view table cell (read-only chip cell).
           - Web:
             - Contributes: `DataViewSlots.Cell` "enum" → `EnumCell`
@@ -2167,7 +2167,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Float field type: config-render capability (number stepper for config-v2.fields.renderer) plus the floatField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "float" → `FloatRenderer`
-            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/ui-kit.Input`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.Input`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/float.floatFieldType`
             - Exports: Types: `FloatFieldDef`; Values: `floatField`
@@ -2202,7 +2202,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Integer field type: config-render capability (number stepper for config-v2.fields.renderer) plus the intField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "int" → `IntRenderer`
-            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/ui-kit.Input`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.Input`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/int.intFieldType`
             - Exports: Types: `IntFieldDef`; Values: `intField`
@@ -2225,7 +2225,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — JSON field type: config-render capability (read-only formatted JSON for config-v2.fields.renderer) plus the jsonField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "json" → `JsonRenderer`
-            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/json.jsonFieldType`
             - Exports: Types: `JsonFieldDef`; Values: `jsonField`
@@ -2248,7 +2248,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — List field type: config-render capability (sortable drag-and-drop list for config-v2.fields.renderer) plus the listField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "list" → `ListRenderer`
-            - Uses: `config_v2/fields.FieldRenderer`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+            - Uses: `config_v2/fields.FieldRenderer`, `config_v2/fields.Fields`, `primitives/css/frame.Frame`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.fieldSchemaWithDefault`, `fields.FieldsRecord`, `fields.FieldType`, `fields.InferFieldsObject`, `fields/list.listFieldType`, `fields/list.ListItem`
             - Exports: Types: `ListFieldDef`; Values: `isListFieldDef`, `listField`
@@ -2267,7 +2267,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Long-text field type: config-render capability (textarea for config-v2.fields.renderer) plus the multilineTextField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "multiline-text" → `MultilineTextRenderer`
-            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/spacing.Stack`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/multiline-text.multilineTextFieldType`
             - Exports: Types: `MultilineTextFieldDef`; Values: `multilineTextField`
@@ -2306,7 +2306,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Object field type: config-render capability (collapsible sub-field renderer for config-v2.fields.renderer) plus the objectField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "object" → `ObjectRenderer`
-            - Uses: `config_v2/fields.FieldRenderer`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/text.Text`
+            - Uses: `config_v2/fields.FieldRenderer`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.fieldSchemaWithDefault`, `fields.FieldsRecord`, `fields.FieldType`, `fields.InferFieldsObject`, `fields/object.objectFieldType`
             - Exports: Types: `ObjectFieldDef`; Values: `isObjectFieldDef`, `objectField`
@@ -2325,7 +2325,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Reorder-tree field type: config-render capability (read-only tree list for config-v2.fields.renderer) plus the reorderTreeField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "reorder-tree" → `ReorderTreeRenderer`
-            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/text.Text`, `reorder/editor.ReorderEditor`, `reorder/editor.ReorderEntry`, `reorder/editor.SortableReorderItem`, `reorder/node-types.useReorderNodeTypes`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `reorder/editor.ReorderEditor`, `reorder/editor.ReorderEntry`, `reorder/editor.SortableReorderItem`, `reorder/node-types.useReorderNodeTypes`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/reorder-tree.ReorderNode`, `fields/reorder-tree.ReorderTree`, `fields/reorder-tree.reorderTreeFieldType`
             - Exports: Types: `NormalizedNode`, `ReorderTreeFieldDef`; Values: `normalizeNode`, `reorderTreeField`
@@ -2342,7 +2342,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
           - Web:
             - Contributes: `config-v2.fields.renderer` "secret" → `SecretRenderer`
-            - Uses: `config_v2/fields.ConfigFieldContext`, `config_v2/fields.Fields`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/live-state.useResource`
+            - Uses: `config_v2/fields.ConfigFieldContext`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/live-state.useResource`
           - Server:
             - Uses: `config_v2.getAllDescriptors`, `config_v2.hasFieldStorageProvider`, `config_v2.registerFieldStorageProvider`, `infra/secrets.deleteSecret`, `infra/secrets.getSecret`, `infra/secrets.getSecretMetadata`, `infra/secrets.setSecret`
           - Central:
@@ -2366,7 +2366,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — String-list field type: config-render capability (drag-and-drop string list for config-v2.fields.renderer) plus the stringListField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "string-list" → `StringListRenderer`
-            - Uses: `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Input`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+            - Uses: `config_v2/fields.Fields`, `primitives/css/frame.Frame`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Input`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/string-list.stringListFieldType`
             - Exports: Types: `StringListFieldDef`; Values: `stringListField`
@@ -2387,11 +2387,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`inline`** — Tags (multi-value) field type: data-view inline cell editor (multi-select chip popover).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "tags" → `TagsEditor`
-            - Uses: `primitives/css/badge.Badge`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Input`, `primitives/data-view.DataViewSlots`, `primitives/popover.InlinePopover`
+            - Uses: `primitives/css/badge.Badge`, `primitives/css/clip.Clip`, `primitives/css/cluster.Cluster`, `primitives/css/spacing.Stack`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Input`, `primitives/data-view.DataViewSlots`, `primitives/popover.InlinePopover`
         - **`table`** — Tags (multi-value) field type: data-view table cell (read-only tag chips).
           - Web:
             - Contributes: `DataViewSlots.Cell` "tags" → `TagsCell`
-            - Uses: `primitives/css/badge.Badge`, `primitives/data-view.DataViewSlots`
+            - Uses: `primitives/css/badge.Badge`, `primitives/css/clip.Clip`, `primitives/css/spacing.Stack`, `primitives/data-view.DataViewSlots`
     - **`text`** — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "text"
@@ -2405,7 +2405,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "text" → `TextRenderer`
-            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/ui-kit.Input`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.Input`
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/text.textFieldType`
             - Exports: Types: `TextFieldDef`; Values: `textField`
@@ -3515,19 +3515,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `CenterAxis`, `CenterProps`; Values: `Center`
           - Cross-plugin:
-            - Imported by: `apps/browser/webview`, `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/shell`, `apps/sonata/transport-bar`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/explorer/expand-collapse`, `conversations/conversation-view`, `conversations/conversation-view/code/file-pane/image`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/investigate-event`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `primitives/diff-view`
+            - Imported by: `apps/browser/webview`, `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/shell`, `apps/sonata/transport-bar`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/explorer/expand-collapse`, `conversations/conversation-view`, `conversations/conversation-view/code/file-pane/image`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/investigate-event`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `fields/avatar/config`, `fields/bool/inline`, `primitives/diff-view`
         - **`clip`** — Clipping layout primitive: <Clip axis fill> hides overflow without scrolling. Sibling of Scroll, kept orthogonal.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `ClipAxis`, `ClipProps`; Values: `Clip`, `clipClasses`
           - Cross-plugin:
-            - Imported by: `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/primitives/keyboard`, `apps/studio/graph`, `conversations/conversation-view`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/op-status`, `conversations/conversation-view/terminal-pane`, `primitives/data-view`, `primitives/diff-view`
+            - Imported by: `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/primitives/keyboard`, `apps/studio/graph`, `conversations/conversation-view`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/op-status`, `conversations/conversation-view/terminal-pane`, `fields/tags/inline`, `fields/tags/table`, `primitives/data-view`, `primitives/diff-view`
         - **`cluster`** — Wrap-friendly chip group layout primitive: <Cluster> lays out a wrapping row of rigid identity chips that never individually shrink, delegating to Stack.
           - Web:
             - Uses: `primitives/css/spacing.SpaceStep`, `primitives/css/spacing.Stack`, `primitives/css/spacing.StackAlign`, `primitives/css/spacing.StackJustify`
             - Exports: Types: `ClusterProps`; Values: `Cluster`
           - Cross-plugin:
-            - Imported by: `apps/studio/compositions`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/surface/floating`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/prompt-templates`
+            - Imported by: `apps/studio/compositions`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/surface/floating`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/prompt-templates`, `fields/tags/inline`
         - **`color-picker`** — Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
           - Web:
             - Uses: `primitives/css/section-label.SectionLabel`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/persistent-draft.useDraft`
@@ -3546,7 +3546,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.cn`
             - Exports: Types: `FrameAlign`, `FrameProps`; Values: `Frame`
           - Cross-plugin:
-            - Imported by: `apps/browser/shell`, `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/playback-history`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-readout`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/studio/compositions`, `config_v2/config-link`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/attachment/queued-command`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/task-notification`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/tool-call/edit`, `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`, `conversations/conversation-view/jsonl-viewer/tool-call/read`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/op-status`, `conversations/conversation-view/turn-summary`, `primitives/data-view`
+            - Imported by: `apps/browser/shell`, `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/playback-history`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-readout`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/studio/compositions`, `config_v2/config-link`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/attachment/queued-command`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/task-notification`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/tool-call/edit`, `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`, `conversations/conversation-view/jsonl-viewer/tool-call/read`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/op-status`, `conversations/conversation-view/turn-summary`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/list/config`, `fields/string-list/config`, `primitives/data-view`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -3596,7 +3596,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `ScrollAxis`, `ScrollProps`; Values: `Scroll`, `scrollClasses`
           - Cross-plugin:
-            - Imported by: `apps/pages/page-tree`, `apps/pages/starred`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables/sample-rows`, `build`, `build/build-logs`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/jsonl-viewer/tool-call/write`, `conversations/conversation-view/prompt-templates`, `primitives/css/column`, `primitives/diff-view`
+            - Imported by: `apps/pages/page-tree`, `apps/pages/starred`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables/sample-rows`, `build`, `build/build-logs`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/jsonl-viewer/tool-call/write`, `conversations/conversation-view/prompt-templates`, `fields/json/config`, `primitives/css/column`, `primitives/diff-view`
         - **`section-label`** — Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -3614,7 +3614,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `InsetProps`, `SpaceStep`, `StackAlign`, `StackDirection`, `StackJustify`, `StackProps`; Values: `Inset`, `Stack`
           - Cross-plugin:
-            - Imported by: `apps/agent-manager/welcome`, `apps/browser/bookmarks`, `apps/browser/navigation`, `apps/browser/start-page`, `apps/browser/tabs`, `apps/browser/webview`, `apps/deploy/servers`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome`, `apps/pages/welcome/quick-create`, `apps/pages/welcome/recent-pages`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/playback-history`, `apps/sonata/progress/scrubber`, `apps/sonata/rich/chord-progression`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-readout`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/pages-integration`, `apps/story/renderers/blog`, `apps/story/renderers/slides`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/row-count`, `apps/studio/explorer`, `apps/studio/graph`, `apps/surface/floating`, `backup`, `config_v2/fields`, `config_v2/settings`, `config_v2/staging`, `conversations/conversation-ui/item`, `conversations/conversation-view`, `conversations/conversation-view/action-bar`, `conversations/conversation-view/branch`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/fork-conversation`, `conversations/conversation-view/header`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`, `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`, `conversations/conversation-view/jsonl-viewer/attachment/hook-success`, `conversations/conversation-view/jsonl-viewer/attachment/queued-command`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/summary`, `conversations/conversation-view/jsonl-viewer/task-notification`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/edit`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/jsonl-viewer/user-image`, `conversations/conversation-view/pending-turn`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/summary`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/profiling`, `debug/profiling/boot`, `debug/profiling/build`, `debug/profiling/push`, `debug/slow-ops/cluster`, `fields/date/filter`, `fields/json/config`, `fields/list/config`, `fields/number/filter`, `fields/string-list/config`, `fields/variant/config`, `history/dialog`, `improve/element-picker`, `page/bookmark`, `page/editor`, `page/embed`, `page/file`, `page/formatting/color`, `page/formatting/link`, `page/links`, `page/math/equation`, `page/math/inline`, `page/page-link`, `page/read-only-view`, `plugin-meta/facets/commands/render-detail`, `plugin-meta/facets/contributions/render-detail`, `plugin-meta/facets/cross-refs/render-detail`, `plugin-meta/facets/db-schema/render-detail`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/facets/registrations/render-detail`, `plugin-meta/facets/resources/render-detail`, `plugin-meta/facets/routes/render-detail`, `plugin-meta/facets/slots/render-detail`, `plugin-meta/facets/structure/render-detail`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/inclusion`, `plugin-meta/plugin-view/runtimes`, `primitives/css/cluster`, `primitives/css/inline`, `primitives/data-view`, `primitives/data-view/gallery`, `primitives/data-view/view-core`, `primitives/diff-view`, `primitives/expandable`, `primitives/launch`, `primitives/row-actions`, `primitives/sync-status`, `primitives/tabbed-view`, `reorder`, `reorder/edit-mode`, `review/plugin-changes`, `review/plugin-changes/api-changes`, `stats`, `stats/commits`, `stats/cost`, `stats/pushes`, `stats/tasks`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-header`, `ui/segmented-progress-bar`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/variant-region`
+            - Imported by: `apps/agent-manager/welcome`, `apps/browser/bookmarks`, `apps/browser/navigation`, `apps/browser/start-page`, `apps/browser/tabs`, `apps/browser/webview`, `apps/deploy/servers`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome`, `apps/pages/welcome/quick-create`, `apps/pages/welcome/recent-pages`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/playback-history`, `apps/sonata/progress/scrubber`, `apps/sonata/rich/chord-progression`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-readout`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/pages-integration`, `apps/story/renderers/blog`, `apps/story/renderers/slides`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/row-count`, `apps/studio/explorer`, `apps/studio/graph`, `apps/surface/floating`, `backup`, `config_v2/fields`, `config_v2/settings`, `config_v2/staging`, `conversations/conversation-ui/item`, `conversations/conversation-view`, `conversations/conversation-view/action-bar`, `conversations/conversation-view/branch`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/fork-conversation`, `conversations/conversation-view/header`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`, `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`, `conversations/conversation-view/jsonl-viewer/attachment/hook-success`, `conversations/conversation-view/jsonl-viewer/attachment/queued-command`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/summary`, `conversations/conversation-view/jsonl-viewer/task-notification`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/edit`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/jsonl-viewer/user-image`, `conversations/conversation-view/pending-turn`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/summary`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/profiling`, `debug/profiling/boot`, `debug/profiling/build`, `debug/profiling/push`, `debug/slow-ops/cluster`, `fields/color/table`, `fields/date/filter`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/enum/inline`, `fields/float/config`, `fields/int/config`, `fields/json/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/number/filter`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/string-list/config`, `fields/tags/inline`, `fields/tags/table`, `fields/text/config`, `fields/variant/config`, `history/dialog`, `improve/element-picker`, `page/bookmark`, `page/editor`, `page/embed`, `page/file`, `page/formatting/color`, `page/formatting/link`, `page/links`, `page/math/equation`, `page/math/inline`, `page/page-link`, `page/read-only-view`, `plugin-meta/facets/commands/render-detail`, `plugin-meta/facets/contributions/render-detail`, `plugin-meta/facets/cross-refs/render-detail`, `plugin-meta/facets/db-schema/render-detail`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/facets/registrations/render-detail`, `plugin-meta/facets/resources/render-detail`, `plugin-meta/facets/routes/render-detail`, `plugin-meta/facets/slots/render-detail`, `plugin-meta/facets/structure/render-detail`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/inclusion`, `plugin-meta/plugin-view/runtimes`, `primitives/css/cluster`, `primitives/css/inline`, `primitives/data-view`, `primitives/data-view/gallery`, `primitives/data-view/view-core`, `primitives/diff-view`, `primitives/expandable`, `primitives/launch`, `primitives/row-actions`, `primitives/sync-status`, `primitives/tabbed-view`, `reorder`, `reorder/edit-mode`, `review/plugin-changes`, `review/plugin-changes/api-changes`, `stats`, `stats/commits`, `stats/cost`, `stats/pushes`, `stats/tasks`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-header`, `ui/segmented-progress-bar`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/variant-region`
         - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`

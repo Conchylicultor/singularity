@@ -3,6 +3,7 @@ import {
   useLocalValue,
   type FieldRendererComponent,
 } from "@plugins/config_v2/plugins/fields/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { multilineTextFieldType } from "@plugins/fields/plugins/multiline-text/core";
 import { type MultilineTextFieldDef } from "../../core";
 
@@ -14,7 +15,7 @@ const MultilineTextRenderer: FieldRendererComponent<string> = ({
   const { local, setLocal, focus } = useLocalValue(value);
   const rows = (field as MultilineTextFieldDef).rows ?? 4;
   return (
-    <div className="flex flex-col gap-xs py-md">
+    <Stack gap="xs" className="py-md">
       <FieldHeader field={field} />
       <textarea
         value={local}
@@ -28,7 +29,7 @@ const MultilineTextRenderer: FieldRendererComponent<string> = ({
         onChange={(e) => setLocal(e.target.value)}
         className="focus-ring w-full resize-y rounded-lg border border-input bg-transparent px-sm py-xs text-body placeholder:text-muted-foreground dark:bg-input/30"
       />
-    </div>
+    </Stack>
   );
 };
 MultilineTextRenderer.type = multilineTextFieldType;

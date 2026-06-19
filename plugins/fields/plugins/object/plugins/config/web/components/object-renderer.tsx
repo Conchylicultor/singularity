@@ -9,6 +9,7 @@ import {
   FieldRenderer,
   type FieldRendererComponent,
 } from "@plugins/config_v2/plugins/fields/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FieldDef } from "@plugins/fields/core";
 import { objectFieldType } from "@plugins/fields/plugins/object/core";
@@ -25,7 +26,7 @@ const ObjectRenderer: FieldRendererComponent<Record<string, unknown>> = ({
     <Collapsible defaultOpen className="py-xs">
       <CollapsibleTrigger className="gap-sm py-sm">
         <CollapsibleChevron className="size-4 text-muted-foreground" />
-        <div className="flex flex-col gap-2xs text-left">
+        <Stack gap="2xs" className="text-left">
           {field.meta.label ? (
             <Text variant="label">{field.meta.label}</Text>
           ) : null}
@@ -34,20 +35,22 @@ const ObjectRenderer: FieldRendererComponent<Record<string, unknown>> = ({
               {field.meta.description}
             </Text>
           ) : null}
-        </div>
+        </Stack>
       </CollapsibleTrigger>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off margin offsets positioning the nested sub-field indent guide */}
-      <CollapsibleContent className="ml-2 mt-1 flex flex-col border-l border-border pl-lg">
-        {Object.entries(subFields).map(([key, subField]) => (
-          <SubFieldSlot
-            key={key}
-            fieldKey={key}
-            field={subField}
-            value={(value as Record<string, unknown>)[key]}
-            parentValue={value as Record<string, unknown>}
-            onChange={onChange}
-          />
-        ))}
+      <CollapsibleContent className="ml-2 mt-1 border-l border-border pl-lg">
+        <Stack gap="none">
+          {Object.entries(subFields).map(([key, subField]) => (
+            <SubFieldSlot
+              key={key}
+              fieldKey={key}
+              field={subField}
+              value={(value as Record<string, unknown>)[key]}
+              parentValue={value as Record<string, unknown>}
+              onChange={onChange}
+            />
+          ))}
+        </Stack>
       </CollapsibleContent>
     </Collapsible>
   );

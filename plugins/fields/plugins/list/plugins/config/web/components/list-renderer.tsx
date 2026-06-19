@@ -1,6 +1,7 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useMemo } from "react";
 import { MdAdd } from "react-icons/md";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
@@ -83,7 +84,7 @@ const ListRenderer: FieldRendererComponent<ListItem<FieldsRecord>[]> = ({
   }, [sorted, value, onChange, itemFields]);
 
   return (
-    <div className="flex flex-col gap-sm py-md">
+    <Stack gap="sm" className="py-md">
       {field.meta.label ? (
         <Text as="label" variant="label">
           {field.meta.label}
@@ -96,7 +97,7 @@ const ListRenderer: FieldRendererComponent<ListItem<FieldsRecord>[]> = ({
       ) : null}
 
       <SortableList items={ids} onMove={handleMove}>
-        <div className="flex flex-col gap-xs">
+        <Stack gap="xs">
           {sorted.map((item) => (
             <ListItemRow
               key={item.id}
@@ -106,19 +107,16 @@ const ListRenderer: FieldRendererComponent<ListItem<FieldsRecord>[]> = ({
               onRemove={() => handleRemove(item.id)}
             />
           ))}
-        </div>
+        </Stack>
       </SortableList>
 
-      <Button
-        variant="ghost"
-        size="xs"
-        onClick={handleAdd}
-        className="self-start"
-      >
-        <MdAdd className="size-3.5" />
-        Add item
-      </Button>
-    </div>
+      <Stack align="start" gap="none">
+        <Button variant="ghost" size="xs" onClick={handleAdd}>
+          <MdAdd className="size-3.5" />
+          Add item
+        </Button>
+      </Stack>
+    </Stack>
   );
 };
 ListRenderer.type = listFieldType;

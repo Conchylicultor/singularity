@@ -3,6 +3,7 @@ import {
   type FieldRendererComponent,
 } from "@plugins/config_v2/plugins/fields/web";
 import { FolderPickerPopover } from "@plugins/primitives/plugins/folder-picker/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { directoryPathFieldType } from "@plugins/fields/plugins/directory-path/core";
 
 const DirPathRenderer: FieldRendererComponent<string> = ({
@@ -10,14 +11,14 @@ const DirPathRenderer: FieldRendererComponent<string> = ({
   value,
   onChange,
 }) => (
-  <div className="flex flex-col gap-xs py-md">
+  <Stack gap="xs" className="py-md">
     <FieldHeader field={field} />
     <FolderPickerPopover
       value={value}
       onChange={onChange}
       placeholder={field.meta.placeholder}
     />
-  </div>
+  </Stack>
 );
 DirPathRenderer.type = directoryPathFieldType;
 

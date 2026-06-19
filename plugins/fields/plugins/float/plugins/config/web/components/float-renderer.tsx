@@ -4,6 +4,7 @@ import {
   useLocalValue,
   type FieldRendererComponent,
 } from "@plugins/config_v2/plugins/fields/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { floatFieldType } from "@plugins/fields/plugins/float/core";
 import { type FloatFieldDef } from "../../core";
 
@@ -15,7 +16,7 @@ const FloatRenderer: FieldRendererComponent<number> = ({
   const { min, max, step } = field as FloatFieldDef;
   const { local, setLocal, focus } = useLocalValue(String(value));
   return (
-    <div className="flex flex-col gap-xs py-md">
+    <Stack gap="xs" className="py-md">
       <FieldHeader field={field} />
       <Input
         type="number"
@@ -32,7 +33,7 @@ const FloatRenderer: FieldRendererComponent<number> = ({
         }}
         onChange={(e) => setLocal(e.target.value)}
       />
-    </div>
+    </Stack>
   );
 };
 FloatRenderer.type = floatFieldType;

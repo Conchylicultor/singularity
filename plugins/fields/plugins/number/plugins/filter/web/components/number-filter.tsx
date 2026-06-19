@@ -35,10 +35,9 @@ export function NumberRangeInput(props: FilterValueInputProps): ReactNode {
   }
 
   return (
-    <Stack direction="row" gap="xs" align="center" className="min-w-0">
+    <Stack direction="row" gap="xs" align="center">
       <FilterValueInput
         type="number"
-        className="min-w-0 flex-1"
         placeholder="Min"
         value={range.min ?? ""}
         onChange={(e) => update({ min: parse(e.target.value) })}
@@ -48,7 +47,6 @@ export function NumberRangeInput(props: FilterValueInputProps): ReactNode {
       </Text>
       <FilterValueInput
         type="number"
-        className="min-w-0 flex-1"
         placeholder="Max"
         value={range.max ?? ""}
         onChange={(e) => update({ max: parse(e.target.value) })}

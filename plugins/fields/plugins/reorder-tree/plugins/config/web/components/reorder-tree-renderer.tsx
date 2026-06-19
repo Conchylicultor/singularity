@@ -12,6 +12,7 @@ import {
   SortableReorderItem,
   type ReorderEntry,
 } from "@plugins/reorder/plugins/editor/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
 import {
@@ -125,7 +126,7 @@ const ReorderTreeRenderer: FieldRendererComponent<ReorderTree> = ({
   );
 
   return (
-    <div className="flex flex-col gap-xs py-md">
+    <Stack gap="xs" className="py-md">
       <FieldHeader field={field} />
       <ReorderEditor
         entries={entries}
@@ -138,7 +139,7 @@ const ReorderTreeRenderer: FieldRendererComponent<ReorderTree> = ({
         editMode
         orientation="vertical"
       />
-    </div>
+    </Stack>
   );
 };
 

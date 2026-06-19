@@ -2,6 +2,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
 import type { EnumFieldDef } from "../../core";
 import { enumFieldType } from "@plugins/fields/plugins/enum/core";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 const EnumRenderer: FieldRendererComponent<string> = ({
@@ -14,8 +15,8 @@ const EnumRenderer: FieldRendererComponent<string> = ({
     display === "radio" || (display !== "dropdown" && options.length <= 3);
 
   return (
-    <div className="flex flex-col gap-xs py-md">
-      <div className="flex flex-col gap-2xs">
+    <Stack gap="xs" className="py-md">
+      <Stack gap="2xs">
         {field.meta.label ? (
           <Text as="label" variant="label">
             {field.meta.label}
@@ -26,13 +27,13 @@ const EnumRenderer: FieldRendererComponent<string> = ({
             {field.meta.description}
           </Text>
         ) : null}
-      </div>
+      </Stack>
       {useRadio ? (
         <RadioGroup options={options} value={value} onChange={onChange} />
       ) : (
         <DropdownSelect options={options} value={value} onChange={onChange} />
       )}
-    </div>
+    </Stack>
   );
 };
 EnumRenderer.type = enumFieldType;
@@ -47,13 +48,15 @@ function RadioGroup({
   onChange: (value: string) => void;
 }) {
   return (
-    <div role="radiogroup" className="flex flex-col gap-xs">
+    <Stack gap="xs" role="radiogroup">
       {options.map((opt) => (
-        <Text
+        <Stack
           as="label"
-          variant="body"
+          direction="row"
+          align="center"
+          gap="sm"
           key={opt.value}
-          className="flex cursor-pointer items-center gap-sm"
+          className="cursor-pointer"
         >
           <input
             type="radio"
@@ -63,10 +66,10 @@ function RadioGroup({
             onChange={() => onChange(opt.value)}
             className="accent-primary"
           />
-          {opt.label}
-        </Text>
+          <Text variant="body">{opt.label}</Text>
+        </Stack>
       ))}
-    </div>
+    </Stack>
   );
 }
 

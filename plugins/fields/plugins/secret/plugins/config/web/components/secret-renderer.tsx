@@ -1,6 +1,7 @@
 import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useContext, useEffect, useRef, useState } from "react";
 import { MdCheck } from "react-icons/md";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
 import { ConfigFieldContext } from "@plugins/config_v2/plugins/fields/web";
@@ -54,14 +55,14 @@ const SecretRenderer: FieldRendererComponent<string> = ({ field, value, onChange
 
   if (isSet && !editing) {
     return (
-      <div className="flex flex-col gap-xs py-md">
+      <Stack gap="xs" className="py-md">
         {field.meta.label ? <Text as="label" variant="label">{field.meta.label}</Text> : null}
         {field.meta.description ? <Text as="p" variant="caption" className="text-muted-foreground">{field.meta.description}</Text> : null}
-        <div className="flex items-center gap-sm">
-          <Text variant="caption" className="flex items-center gap-xs text-success">
+        <Stack direction="row" align="center" gap="sm">
+          <Stack direction="row" align="center" gap="xs" className="text-success">
             <MdCheck className="size-3.5" />
-            Configured
-          </Text>
+            <Text variant="caption">Configured</Text>
+          </Stack>
           <Button
             variant="ghost"
             size="sm"
@@ -70,13 +71,13 @@ const SecretRenderer: FieldRendererComponent<string> = ({ field, value, onChange
           >
             Replace
           </Button>
-        </div>
-      </div>
+        </Stack>
+      </Stack>
     );
   }
 
   return (
-    <div className="flex flex-col gap-xs py-md">
+    <Stack gap="xs" className="py-md">
       {field.meta.label ? <Text as="label" variant="label">{field.meta.label}</Text> : null}
       {field.meta.description ? <Text as="p" variant="caption" className="text-muted-foreground">{field.meta.description}</Text> : null}
       <Input
@@ -87,7 +88,7 @@ const SecretRenderer: FieldRendererComponent<string> = ({ field, value, onChange
         onBlur={handleBlur}
         onChange={(e) => setLocal(e.target.value)}
       />
-    </div>
+    </Stack>
   );
 };
 SecretRenderer.type = secretFieldType;

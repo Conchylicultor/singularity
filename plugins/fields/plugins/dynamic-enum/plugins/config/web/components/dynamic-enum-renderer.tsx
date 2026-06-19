@@ -2,6 +2,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
 import { dynamicEnumFieldType } from "@plugins/fields/plugins/dynamic-enum/core";
 import type { DynamicEnumFieldDef } from "../../core";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { DynamicEnum, type DynamicEnumOption } from "../internal/slots";
 
@@ -45,8 +46,8 @@ function ResolvedEnum({
     (field.display !== "dropdown" && options.length <= 3);
 
   return (
-    <div className="flex flex-col gap-xs py-md">
-      <div className="flex flex-col gap-2xs">
+    <Stack gap="xs" className="py-md">
+      <Stack gap="2xs">
         {field.meta.label ? (
           <Text as="label" variant="label">
             {field.meta.label}
@@ -57,13 +58,13 @@ function ResolvedEnum({
             {field.meta.description}
           </Text>
         ) : null}
-      </div>
+      </Stack>
       {useRadio ? (
         <RadioGroup options={options} value={value} onChange={onChange} />
       ) : (
         <DropdownSelect options={options} value={value} onChange={onChange} />
       )}
-    </div>
+    </Stack>
   );
 }
 
@@ -77,8 +78,8 @@ function TextFallback({
   onChange: (v: string) => void;
 }) {
   return (
-    <div className="flex flex-col gap-xs py-md">
-      <div className="flex flex-col gap-2xs">
+    <Stack gap="xs" className="py-md">
+      <Stack gap="2xs">
         {field.meta.label ? (
           <Text as="label" variant="label">
             {field.meta.label}
@@ -89,14 +90,14 @@ function TextFallback({
             {field.meta.description}
           </Text>
         ) : null}
-      </div>
+      </Stack>
       <input
-        className="flex h-9 w-full rounded-md border border-input bg-transparent px-md py-xs text-body shadow-sm"
+        className="h-9 w-full rounded-md border border-input bg-transparent px-md py-xs text-body shadow-sm"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.meta.placeholder}
       />
-    </div>
+    </Stack>
   );
 }
 
@@ -110,13 +111,15 @@ function RadioGroup({
   onChange: (value: string) => void;
 }) {
   return (
-    <div role="radiogroup" className="flex flex-col gap-xs">
+    <Stack gap="xs" role="radiogroup">
       {options.map((opt) => (
-        <Text
+        <Stack
           as="label"
-          variant="body"
+          direction="row"
+          align="center"
+          gap="sm"
           key={opt.value}
-          className="flex cursor-pointer items-center gap-sm"
+          className="cursor-pointer"
         >
           <input
             type="radio"
@@ -126,10 +129,10 @@ function RadioGroup({
             onChange={() => onChange(opt.value)}
             className="accent-primary"
           />
-          {opt.label}
-        </Text>
+          <Text variant="body">{opt.label}</Text>
+        </Stack>
       ))}
-    </div>
+    </Stack>
   );
 }
 

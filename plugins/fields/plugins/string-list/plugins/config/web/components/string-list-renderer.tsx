@@ -1,6 +1,7 @@
 import { Button, Input, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useRef, useState } from "react";
 import { MdAdd, MdDragIndicator, MdClose } from "react-icons/md";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -100,15 +101,12 @@ const StringListRenderer: FieldRendererComponent<string[]> = ({
         </Stack>
       </SortableList>
 
-      <Button
-        variant="ghost"
-        size="xs"
-        onClick={handleAdd}
-        className="self-start"
-      >
-        <MdAdd className="size-3.5" />
-        Add item
-      </Button>
+      <Stack align="start" gap="none">
+        <Button variant="ghost" size="xs" onClick={handleAdd}>
+          <MdAdd className="size-3.5" />
+          Add item
+        </Button>
+      </Stack>
     </Stack>
   );
 };
@@ -140,40 +138,46 @@ function StringRow({
       handle
       className={({ isDragging }) =>
         cn(
-          "flex items-center gap-sm rounded-md border border-border bg-card p-sm",
+          "rounded-md border border-border bg-card p-sm",
           isDragging && "opacity-40",
         )
       }
     >
       {(state) => (
-        <>
-          <div
-            {...state.handleProps}
-            className="shrink-0 cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
-          >
-            <MdDragIndicator className="size-4" />
-          </div>
-          <Input
-            value={local}
-            placeholder={placeholder}
-            onFocus={() => {
-              focused.current = true;
-            }}
-            onChange={(e) => setLocal(e.target.value)}
-            onBlur={() => {
-              focused.current = false;
-              onChange(local);
-            }}
-            className="min-w-0 flex-1"
-          />
-          <button
-            type="button"
-            onClick={onRemove}
-            className="shrink-0 rounded-sm p-2xs text-muted-foreground hover:text-destructive"
-          >
-            <MdClose className="size-3.5" />
-          </button>
-        </>
+        <Frame
+          gap="sm"
+          leading={
+            <div
+              {...state.handleProps}
+              className="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
+            >
+              <MdDragIndicator className="size-4" />
+            </div>
+          }
+          content={
+            <Input
+              value={local}
+              placeholder={placeholder}
+              onFocus={() => {
+                focused.current = true;
+              }}
+              onChange={(e) => setLocal(e.target.value)}
+              onBlur={() => {
+                focused.current = false;
+                onChange(local);
+              }}
+            />
+          }
+          trailing={
+            <button
+              type="button"
+              onClick={onRemove}
+              className="rounded-sm p-2xs text-muted-foreground hover:text-destructive"
+            >
+              <MdClose className="size-3.5" />
+            </button>
+          }
+        />
       )}
     </SortableItem>
   );

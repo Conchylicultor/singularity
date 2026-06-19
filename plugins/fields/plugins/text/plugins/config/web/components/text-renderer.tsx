@@ -4,6 +4,7 @@ import {
   useLocalValue,
   type FieldRendererComponent,
 } from "@plugins/config_v2/plugins/fields/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { textFieldType } from "@plugins/fields/plugins/text/core";
 
 const TextRenderer: FieldRendererComponent<string> = ({
@@ -13,7 +14,7 @@ const TextRenderer: FieldRendererComponent<string> = ({
 }) => {
   const { local, setLocal, focus } = useLocalValue(value);
   return (
-    <div className="flex flex-col gap-xs py-md">
+    <Stack gap="xs" className="py-md">
       <FieldHeader field={field} />
       <Input
         value={local}
@@ -25,7 +26,7 @@ const TextRenderer: FieldRendererComponent<string> = ({
         }}
         onChange={(e) => setLocal(e.target.value)}
       />
-    </div>
+    </Stack>
   );
 };
 TextRenderer.type = textFieldType;

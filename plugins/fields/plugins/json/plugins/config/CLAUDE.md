@@ -7,7 +7,7 @@
 - Description: JSON field type: config-render capability (read-only formatted JSON for config-v2.fields.renderer) plus the jsonField factory.
 - Web:
   - Contributes: `config-v2.fields.renderer` "json" → `JsonRenderer`
-  - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`
+  - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`
 - Core:
   - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/json.jsonFieldType`
   - Exports: Types: `JsonFieldDef`; Values: `jsonField`

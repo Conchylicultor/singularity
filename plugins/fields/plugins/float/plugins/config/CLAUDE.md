@@ -19,7 +19,7 @@ capabilities from `number` via the identity `extends` chain.
 - Description: Float field type: config-render capability (number stepper for config-v2.fields.renderer) plus the floatField factory.
 - Web:
   - Contributes: `config-v2.fields.renderer` "float" → `FloatRenderer`
-  - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/ui-kit.Input`
+  - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.Input`
 - Core:
   - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/float.floatFieldType`
   - Exports: Types: `FloatFieldDef`; Values: `floatField`

@@ -16,7 +16,7 @@ a config_v2 `FieldDef<boolean>` carrying the canonical `fields/` bool token
 - Description: Boolean field type: config-render capability (checkbox for config-v2.fields.renderer) plus the boolField factory.
 - Web:
   - Contributes: `config-v2.fields.renderer` "bool" → `BoolRenderer`
-  - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`
+  - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/frame.Frame`
 - Core:
   - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/bool.boolFieldType`
   - Exports: Types: `BoolFieldDef`; Values: `boolField`

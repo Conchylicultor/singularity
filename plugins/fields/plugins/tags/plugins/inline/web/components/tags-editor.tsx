@@ -3,6 +3,9 @@ import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { CellEditorProps } from "@plugins/primitives/plugins/data-view/web";
 
 function sameTags(a: readonly string[], b: readonly string[]): boolean {
@@ -68,20 +71,22 @@ export function TagsEditor(props: CellEditorProps): ReactNode {
       }}
       contentClassName="w-64"
       trigger={
-        <div className="flex min-w-0 gap-xs overflow-hidden whitespace-nowrap">
-          {selected.length === 0 ? (
-            <span className="italic text-muted-foreground/50">Empty</span>
-          ) : (
-            selected.map((t) => (
-              <Badge key={t} size="sm" variant="muted">
-                {labelFor(t)}
-              </Badge>
-            ))
-          )}
-        </div>
+        <Clip className="whitespace-nowrap">
+          <Stack direction="row" gap="xs">
+            {selected.length === 0 ? (
+              <span className="italic text-muted-foreground/50">Empty</span>
+            ) : (
+              selected.map((t) => (
+                <Badge key={t} size="sm" variant="muted">
+                  {labelFor(t)}
+                </Badge>
+              ))
+            )}
+          </Stack>
+        </Clip>
       }
     >
-      <div className="flex flex-col gap-sm">
+      <Stack gap="sm">
         <Input
           autoFocus
           className="h-6 px-xs py-none"
@@ -100,7 +105,7 @@ export function TagsEditor(props: CellEditorProps): ReactNode {
           }}
         />
         {visible.length > 0 && (
-          <div className="flex flex-wrap gap-xs">
+          <Cluster gap="xs">
             {visible.map((v) => (
               <ToggleChip
                 key={v}
@@ -112,9 +117,9 @@ export function TagsEditor(props: CellEditorProps): ReactNode {
                 {labelFor(v)}
               </ToggleChip>
             ))}
-          </div>
+          </Cluster>
         )}
-      </div>
+      </Stack>
     </InlinePopover>
   );
 }

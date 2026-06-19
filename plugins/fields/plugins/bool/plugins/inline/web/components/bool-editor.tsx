@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { MdCheck, MdRemove } from "react-icons/md";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import type { CellEditorProps } from "@plugins/primitives/plugins/data-view/web";
 
 /**
@@ -12,17 +13,18 @@ export function BoolEditor(props: CellEditorProps): ReactNode {
       type="button"
       autoFocus
       aria-label={props.value ? "Set to false" : "Set to true"}
-      className="flex items-center"
       onClick={() => props.onCommit(!props.value)}
       onKeyDown={(e) => {
         if (e.key === "Escape") props.onCancel();
       }}
     >
-      {props.value ? (
-        <MdCheck className="text-foreground" />
-      ) : (
-        <MdRemove className="text-muted-foreground" />
-      )}
+      <Center axis="vertical">
+        {props.value ? (
+          <MdCheck className="text-foreground" />
+        ) : (
+          <MdRemove className="text-muted-foreground" />
+        )}
+      </Center>
     </button>
   );
 }
