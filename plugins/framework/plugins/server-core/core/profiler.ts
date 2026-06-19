@@ -1,3 +1,5 @@
+import { physFootprintBytes } from "./phys-footprint";
+
 export type PhaseId =
   | "register"
   | "awaitPgReady"
@@ -15,21 +17,22 @@ export interface Span {
   label: string;
   startMs: number;
   durationMs: number;
-  /** RSS (MB) at span start. Cheap snapshot of process.memoryUsage().rss. */
-  rssStartMb?: number;
-  /** RSS (MB) at span end. */
-  rssEndMb?: number;
+  /** phys_footprint (MB) at span start — the real macOS footprint, not rss. */
+  physFootprintStartMb?: number;
+  /** phys_footprint (MB) at span end. */
+  physFootprintEndMb?: number;
 }
 
 /**
- * A phase-boundary memory snapshot. Unlike per-span RSS deltas (which overlap
+ * A phase-boundary memory snapshot. Unlike per-span footprint deltas (which overlap
  * for plugins running under Promise.all in onReadyBlocking/onReady and are only
  * directional), these boundary checkpoints are the authoritative numbers.
  */
 export interface MemoryCheckpoint {
   label: string;
   atMs: number;
-  rssMb: number;
+  /** Real macOS phys_footprint (MB); falls back to rss off-darwin. */
+  physFootprintMb: number;
   heapUsedMb: number;
   externalMb: number;
   arrayBuffersMb: number;
@@ -45,6 +48,15 @@ function toMb(bytes: number): number {
   return Math.round((bytes / 1_048_576) * 10) / 10;
 }
 
+/**
+ * Real macOS phys_footprint in bytes, falling back to rss off-darwin (where
+ * proc_pid_rusage has no equivalent). The host is the user's Mac, so this is
+ * effectively always the true footprint.
+ */
+function footprintBytes(): number {
+  return physFootprintBytes() ?? process.memoryUsage().rss;
+}
+
 export function profilerStart(
   id: string,
   phase: PhaseId,
@@ -55,7 +67,7 @@ export function profilerStart(
   idCounts.set(id, count + 1);
   const uniqueId = count === 0 ? id : `${id}:${count}`;
   const t0 = performance.now();
-  const rssStartMb = toMb(process.memoryUsage().rss);
+  const physFootprintStartMb = toMb(footprintBytes());
   return () => {
     spans.push({
       id: uniqueId,
@@ -64,15 +76,15 @@ export function profilerStart(
       label,
       startMs: Math.round(t0 - bootStart),
       durationMs: Math.round(performance.now() - t0),
-      rssStartMb,
-      rssEndMb: toMb(process.memoryUsage().rss),
+      physFootprintStartMb,
+      physFootprintEndMb: toMb(footprintBytes()),
     });
   };
 }
 
 /**
  * Record a process-wide memory snapshot at a clean boot-phase boundary.
- * These boundary checkpoints are the authoritative per-phase RSS numbers
+ * These boundary checkpoints are the authoritative per-phase footprint numbers
  * (per-span deltas inside parallel phases overlap and are only directional).
  */
 export function recordMemoryCheckpoint(label: string): void {
@@ -80,7 +92,7 @@ export function recordMemoryCheckpoint(label: string): void {
   memoryCheckpoints.push({
     label,
     atMs: Math.round(performance.now() - bootStart),
-    rssMb: toMb(mem.rss),
+    physFootprintMb: toMb(footprintBytes()),
     heapUsedMb: toMb(mem.heapUsed),
     externalMb: toMb(mem.external),
     arrayBuffersMb: toMb(mem.arrayBuffers),

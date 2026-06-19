@@ -6,6 +6,7 @@ import {
   type IntervalHistogram,
 } from "node:perf_hooks";
 import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
+import { physFootprintBytes } from "@plugins/framework/plugins/server-core/core";
 import { SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import type { HealthSample } from "../../shared/schema";
 
@@ -64,7 +65,9 @@ function tick(): void {
     eventLoopP50Ms: histogram.percentile(50) / 1e6,
     eventLoopP99Ms: histogram.percentile(99) / 1e6,
     eventLoopMaxMs: histogram.max / 1e6,
-    rssMb: mem.rss / 1_048_576,
+    // Real footprint, not rss (rss over-counts ~6× on macOS). Sync FFI call so a
+    // wedged event loop never starves it. Falls back to rss off-darwin.
+    physFootprintMb: (physFootprintBytes() ?? mem.rss) / 1_048_576,
     heapUsedMb: mem.heapUsed / 1_048_576,
     heapTotalMb: mem.heapTotal / 1_048_576,
     // Δ JS heap since the last tick: a sharp drop is a GC reclaim, a sustained

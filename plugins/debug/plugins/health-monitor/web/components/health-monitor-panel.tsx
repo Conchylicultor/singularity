@@ -203,7 +203,7 @@ function BackendSection({ series }: { series: HealthSeries }): ReactElement {
         <SectionLabel>{series.worktree}</SectionLabel>
         {latest ? (
           <Text variant="caption" tone="muted">
-            {`${latest.rssMb.toFixed(0)} MB RSS · p99 ${latest.eventLoopP99Ms.toFixed(0)} ms`}
+            {`${latest.physFootprintMb.toFixed(0)} MB footprint · p99 ${latest.eventLoopP99Ms.toFixed(0)} ms`}
           </Text>
         ) : null}
       </Stack>
@@ -222,7 +222,7 @@ function BackendSection({ series }: { series: HealthSeries }): ReactElement {
           data={rows}
           markers={markers}
           lines={[
-            { key: "rssMb", label: "RSS", color: "var(--destructive)" },
+            { key: "physFootprintMb", label: "Footprint", color: "var(--destructive)" },
             { key: "heapUsedMb", label: "heap used", color: "var(--primary)" },
           ]}
         />

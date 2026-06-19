@@ -70,7 +70,9 @@ export function HeapPanel(): ReactElement {
           </Stack>
           {data ? (
             <Text variant="caption" tone="muted">
-              {`${data.heapSizeMb.toFixed(1)} MB heap (cap ${data.heapCapacityMb.toFixed(
+              {`${data.physFootprintMb.toFixed(0)} MB footprint · ${data.heapSizeMb.toFixed(
+                1,
+              )} MB heap (cap ${data.heapCapacityMb.toFixed(
                 1,
               )} MB) · ${data.objectCount.toLocaleString()} objects · ${data.types.length} types`}
             </Text>

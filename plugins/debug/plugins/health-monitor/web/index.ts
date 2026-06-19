@@ -9,7 +9,7 @@ export { healthMonitorPane } from "./panes";
 
 export default {
   description:
-    "Health monitor debug pane: per-backend event-loop lag, RSS/heap, and GC pressure over time, plus host load/memory/swap.",
+    "Health monitor debug pane: per-backend event-loop lag, phys_footprint/heap, and GC pressure over time, plus host load/memory/swap.",
   contributions: [
     Pane.Register({ pane: healthMonitorPane }),
     DebugApp.Sidebar({

@@ -54,7 +54,7 @@ function deltaClass(mb: number): string {
 
 interface CheckpointRow {
   label: string;
-  rssMb: number;
+  physFootprintMb: number;
   delta: number | null;
   atMs: number;
   detail: string;
@@ -63,16 +63,16 @@ interface CheckpointRow {
 const CHECKPOINT_COLUMNS: ColumnDef<CheckpointRow>[] = [
   { id: "label", header: "Boundary", value: (r) => r.label },
   {
-    id: "rss",
-    header: "RSS",
+    id: "footprint",
+    header: "Footprint",
     align: "end",
     width: "7rem",
-    value: (r) => r.rssMb,
-    cell: (r) => fmtMb(r.rssMb),
+    value: (r) => r.physFootprintMb,
+    cell: (r) => fmtMb(r.physFootprintMb),
   },
   {
     id: "delta",
-    header: "Δ RSS",
+    header: "Δ Footprint",
     align: "end",
     width: "7rem",
     value: (r) => r.delta ?? 0,
@@ -104,7 +104,7 @@ const PHASE_DELTA_COLUMNS: ColumnDef<PhaseDeltaRow>[] = [
   { id: "phase", header: "Phase", value: (r) => r.label },
   {
     id: "delta",
-    header: "Δ RSS",
+    header: "Δ Footprint",
     align: "end",
     width: "7rem",
     value: (r) => r.delta,
@@ -113,12 +113,12 @@ const PHASE_DELTA_COLUMNS: ColumnDef<PhaseDeltaRow>[] = [
 ];
 
 /**
- * Per-phase RSS delta (sum of rssEndMb - rssStartMb over the phase's spans) and
- * the phase-boundary checkpoint timeline.
+ * Per-phase phys_footprint delta (sum of physFootprintEndMb - physFootprintStartMb
+ * over the phase's spans) and the phase-boundary checkpoint timeline.
  *
  * CAVEAT: onReadyBlocking / onReady plugins run under Promise.all, so the
- * per-span (per-plugin) RSS deltas summed here overlap in wall-clock time and
- * are only directional. The phase-boundary checkpoints (boot-start →
+ * per-span (per-plugin) footprint deltas summed here overlap in wall-clock time
+ * and are only directional. The phase-boundary checkpoints (boot-start →
  * after-import → after-onReadyBlocking → after-onReady → after-onAllReady) are
  * the authoritative numbers.
  */
@@ -135,19 +135,20 @@ function MemorySummary({
     const prev = i > 0 ? checkpoints[i - 1] : undefined;
     return {
       label: cp.label,
-      rssMb: cp.rssMb,
-      delta: prev ? cp.rssMb - prev.rssMb : null,
+      physFootprintMb: cp.physFootprintMb,
+      delta: prev ? cp.physFootprintMb - prev.physFootprintMb : null,
       atMs: cp.atMs,
       detail: `heap ${fmtMb(cp.heapUsedMb)} · ext ${fmtMb(cp.externalMb)} · arrBuf ${fmtMb(cp.arrayBuffersMb)}`,
     };
   });
 
-  // Per-phase RSS delta from per-span attribution (directional only).
+  // Per-phase footprint delta from per-span attribution (directional only).
   const phaseDelta = new Map<string, number>();
   for (const span of spans) {
-    if (span.rssStartMb === undefined || span.rssEndMb === undefined) continue;
+    if (span.physFootprintStartMb === undefined || span.physFootprintEndMb === undefined)
+      continue;
     const prev = phaseDelta.get(span.phase) ?? 0;
-    phaseDelta.set(span.phase, prev + (span.rssEndMb - span.rssStartMb));
+    phaseDelta.set(span.phase, prev + (span.physFootprintEndMb - span.physFootprintStartMb));
   }
   const phaseDeltaRows: PhaseDeltaRow[] = PHASE_ORDER.filter((p) =>
     phaseDelta.has(p),
@@ -173,13 +174,13 @@ function MemorySummary({
         {phaseDeltaRows.length > 0 && (
           <Stack as="section" gap="sm">
             <SectionLabel>
-              Per-phase RSS delta (directional — overlapping under Promise.all)
+              Per-phase footprint delta (directional — overlapping under Promise.all)
             </SectionLabel>
             <DataTable
               data={phaseDeltaRows}
               columns={PHASE_DELTA_COLUMNS}
               rowKey={(r) => r.phase}
-              emptyLabel="No per-span RSS attribution."
+              emptyLabel="No per-span footprint attribution."
             />
           </Stack>
         )}

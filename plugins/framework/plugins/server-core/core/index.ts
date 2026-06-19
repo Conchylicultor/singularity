@@ -6,6 +6,7 @@ export {
 export type { ServerContribution, ServerContributionToken } from "./contributions";
 export { reportServerError, setErrorReporter } from "./error-reporter";
 export type { ServerErrorReport } from "./error-reporter";
+export { physFootprintBytes } from "./phys-footprint";
 export { getProfilingData, profilerStart, recordMemoryCheckpoint } from "./profiler";
 export type { PhaseId, Span, MemoryCheckpoint } from "./profiler";
 export { isServerReady, markServerReady } from "./readiness";

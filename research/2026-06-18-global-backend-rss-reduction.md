@@ -178,6 +178,12 @@ File-watchers and the frontend bundle are both exonerated.
   phantom. `process.memoryUsage()` doesn't expose it; obtain it by shelling out to
   `footprint <pid>` (precedent: host-sampler already spawns `vm_stat` every 10 s) or via
   FFI `task_info(TASK_VM_INFO)`.
+  - **✅ SHIPPED 2026-06-19** (`research/2026-06-19-global-phys-footprint-memory-surfaces.md`).
+    Replaced `rss` with `phys_footprint` on all three surfaces. Acquisition: FFI
+    `proc_pid_rusage(RUSAGE_INFO_V0)` reading `ri_phys_footprint` (synchronous, no
+    subprocess — survives a wedged event loop, unlike a `footprint` spawn) via the new
+    `physFootprintBytes()` helper in `framework/server-core/core`. Falls back to `rss`
+    off-darwin.
 - **R2 — Keep C3 (lazy static imports).** Genuine, if small, real-footprint win on every
   backend; unrelated to the artifact, still worth keeping.
 - **R3 — Revert C1/C2 watcher changes.** Parcel is proven not the cause; the default

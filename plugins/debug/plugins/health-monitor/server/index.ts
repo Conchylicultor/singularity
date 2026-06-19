@@ -7,7 +7,7 @@ import { getHealthData } from "../shared/endpoints";
 
 export default {
   description:
-    "Continuous per-backend health sampler: event-loop lag, GC/heap pressure, and RSS appended to per-worktree JSONL (read from disk even when a backend is wedged), plus main-only host metrics. Surfaced as the Debug → Health pane.",
+    "Continuous per-backend health sampler: event-loop lag, GC/heap pressure, and phys_footprint appended to per-worktree JSONL (read from disk even when a backend is wedged), plus main-only host metrics. Surfaced as the Debug → Health pane.",
   httpRoutes: {
     [getHealthData.route]: handleHealthData,
   },

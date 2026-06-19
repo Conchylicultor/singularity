@@ -11,7 +11,10 @@ export const HealthSampleSchema = z.object({
   eventLoopP50Ms: z.number(),
   eventLoopP99Ms: z.number(),
   eventLoopMaxMs: z.number(),
-  rssMb: z.number(),
+  // Real macOS phys_footprint (MB; rss off-darwin) — replaces the old rssMb,
+  // which over-counted ~6× on macOS. Pre-cutover JSONL lines lack this field and
+  // are dropped by safeParse (a brief history gap as the rolling window refills).
+  physFootprintMb: z.number(),
   heapUsedMb: z.number(),
   heapTotalMb: z.number(),
   heapGrowthMb: z.number(), // Δ heapUsed vs prior tick; negative = a GC reclaimed

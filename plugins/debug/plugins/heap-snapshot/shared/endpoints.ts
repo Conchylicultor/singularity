@@ -8,6 +8,9 @@ export const HeapStatsResponseSchema = z.object({
   heapSizeMb: z.number(),
   heapCapacityMb: z.number(),
   objectCount: z.number(),
+  // Real macOS phys_footprint (MB; rss off-darwin). heapSize ≈ footprint ⇒ JS
+  // allocation; heapSize ≪ footprint ⇒ off-heap/native (the A3 discriminator).
+  physFootprintMb: z.number(),
   types: z.array(z.object({ type: z.string(), count: z.number() })),
 });
 export type HeapStatsResponse = z.infer<typeof HeapStatsResponseSchema>;

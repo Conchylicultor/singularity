@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Health monitor debug pane: per-backend event-loop lag, RSS/heap, and GC pressure over time, plus host load/memory/swap. Continuous per-backend health sampler: event-loop lag, GC/heap pressure, and RSS appended to per-worktree JSONL (read from disk even when a backend is wedged), plus main-only host metrics. Surfaced as the Debug → Health pane.
+- Description: Health monitor debug pane: per-backend event-loop lag, phys_footprint/heap, and GC pressure over time, plus host load/memory/swap. Continuous per-backend health sampler: event-loop lag, GC/heap pressure, and phys_footprint appended to per-worktree JSONL (read from disk even when a backend is wedged), plus main-only host metrics. Surfaced as the Debug → Health pane.
 - Web:
   - Slots: `healthMonitorPane.Actions`
   - Contributes: `Pane.Register` "debug-health-monitor", `DebugApp.Sidebar` "Health" → `component`

@@ -8,16 +8,16 @@ const SpanSchema = z.object({
   label: z.string(),
   startMs: z.number(),
   durationMs: z.number(),
-  rssStartMb: z.number().optional(),
-  rssEndMb: z.number().optional(),
+  physFootprintStartMb: z.number().optional(),
+  physFootprintEndMb: z.number().optional(),
 });
 
-// Phase-boundary memory snapshot — the authoritative per-phase RSS numbers
+// Phase-boundary memory snapshot — the authoritative per-phase footprint numbers
 // (mirrors the profiler's MemoryCheckpoint).
 const MemoryCheckpointSchema = z.object({
   label: z.string(),
   atMs: z.number(),
-  rssMb: z.number(),
+  physFootprintMb: z.number(),
   heapUsedMb: z.number(),
   externalMb: z.number(),
   arrayBuffersMb: z.number(),
