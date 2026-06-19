@@ -624,12 +624,52 @@
       "name": "@singularity/plugin-backup",
       "version": "0.0.1",
     },
-    "plugins/backup/plugins/google-drive": {
-      "name": "@singularity/plugin-backup-google-drive",
+    "plugins/backup/plugins/sources": {
+      "name": "@singularity/plugin-backup-sources",
       "version": "0.0.1",
     },
-    "plugins/backup/plugins/local": {
-      "name": "@singularity/plugin-backup-local",
+    "plugins/backup/plugins/sources/plugins/attachments": {
+      "name": "@singularity/plugin-backup-sources-attachments",
+      "version": "0.0.1",
+    },
+    "plugins/backup/plugins/sources/plugins/claude-settings": {
+      "name": "@singularity/plugin-backup-sources-claude-settings",
+      "version": "0.0.1",
+    },
+    "plugins/backup/plugins/sources/plugins/config": {
+      "name": "@singularity/plugin-backup-sources-config",
+      "version": "0.0.1",
+    },
+    "plugins/backup/plugins/sources/plugins/databases": {
+      "name": "@singularity/plugin-backup-sources-databases",
+      "version": "0.0.1",
+    },
+    "plugins/backup/plugins/sources/plugins/project-memory": {
+      "name": "@singularity/plugin-backup-sources-project-memory",
+      "version": "0.0.1",
+    },
+    "plugins/backup/plugins/sources/plugins/secrets": {
+      "name": "@singularity/plugin-backup-sources-secrets",
+      "version": "0.0.1",
+    },
+    "plugins/backup/plugins/sources/plugins/singularity-platform": {
+      "name": "@singularity/plugin-backup-sources-singularity-platform",
+      "version": "0.0.1",
+    },
+    "plugins/backup/plugins/sources/plugins/transcripts": {
+      "name": "@singularity/plugin-backup-sources-transcripts",
+      "version": "0.0.1",
+    },
+    "plugins/backup/plugins/targets": {
+      "name": "@singularity/plugin-backup-targets",
+      "version": "0.0.1",
+    },
+    "plugins/backup/plugins/targets/plugins/google-drive": {
+      "name": "@singularity/plugin-backup-targets-google-drive",
+      "version": "0.0.1",
+    },
+    "plugins/backup/plugins/targets/plugins/local": {
+      "name": "@singularity/plugin-backup-targets-local",
       "version": "0.0.1",
     },
     "plugins/build": {
@@ -3986,9 +4026,29 @@
 
     "@singularity/plugin-backup": ["@singularity/plugin-backup@workspace:plugins/backup"],
 
-    "@singularity/plugin-backup-google-drive": ["@singularity/plugin-backup-google-drive@workspace:plugins/backup/plugins/google-drive"],
+    "@singularity/plugin-backup-sources": ["@singularity/plugin-backup-sources@workspace:plugins/backup/plugins/sources"],
 
-    "@singularity/plugin-backup-local": ["@singularity/plugin-backup-local@workspace:plugins/backup/plugins/local"],
+    "@singularity/plugin-backup-sources-attachments": ["@singularity/plugin-backup-sources-attachments@workspace:plugins/backup/plugins/sources/plugins/attachments"],
+
+    "@singularity/plugin-backup-sources-claude-settings": ["@singularity/plugin-backup-sources-claude-settings@workspace:plugins/backup/plugins/sources/plugins/claude-settings"],
+
+    "@singularity/plugin-backup-sources-config": ["@singularity/plugin-backup-sources-config@workspace:plugins/backup/plugins/sources/plugins/config"],
+
+    "@singularity/plugin-backup-sources-databases": ["@singularity/plugin-backup-sources-databases@workspace:plugins/backup/plugins/sources/plugins/databases"],
+
+    "@singularity/plugin-backup-sources-project-memory": ["@singularity/plugin-backup-sources-project-memory@workspace:plugins/backup/plugins/sources/plugins/project-memory"],
+
+    "@singularity/plugin-backup-sources-secrets": ["@singularity/plugin-backup-sources-secrets@workspace:plugins/backup/plugins/sources/plugins/secrets"],
+
+    "@singularity/plugin-backup-sources-singularity-platform": ["@singularity/plugin-backup-sources-singularity-platform@workspace:plugins/backup/plugins/sources/plugins/singularity-platform"],
+
+    "@singularity/plugin-backup-sources-transcripts": ["@singularity/plugin-backup-sources-transcripts@workspace:plugins/backup/plugins/sources/plugins/transcripts"],
+
+    "@singularity/plugin-backup-targets": ["@singularity/plugin-backup-targets@workspace:plugins/backup/plugins/targets"],
+
+    "@singularity/plugin-backup-targets-google-drive": ["@singularity/plugin-backup-targets-google-drive@workspace:plugins/backup/plugins/targets/plugins/google-drive"],
+
+    "@singularity/plugin-backup-targets-local": ["@singularity/plugin-backup-targets-local@workspace:plugins/backup/plugins/targets/plugins/local"],
 
     "@singularity/plugin-build": ["@singularity/plugin-build@workspace:plugins/build"],
 

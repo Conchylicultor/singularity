@@ -1,12 +1,22 @@
+export interface BackupSourceItem {
+  label: string;
+  detail?: string;
+  count?: number;
+}
+
+export interface BackupSourceReport {
+  id: string;
+  name: string;
+  skipped: boolean;
+  items: BackupSourceItem[];
+  sizeBytes: number;
+}
+
 export interface BackupManifest {
-  version: 1;
+  version: 2;
   createdAt: string;
   trigger: "manual" | "periodic";
-  sources: {
-    databases: string[];
-    secretsIncluded: boolean;
-    attachmentsIncluded: boolean;
-  };
+  sources: BackupSourceReport[];
   sizeBytes: number;
 }
 

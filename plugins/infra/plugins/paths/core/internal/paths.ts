@@ -38,5 +38,6 @@ export const LEGACY_AUTH_BLOB    = join(LEGACY_AUTH_DIR, "tokens.json.enc");
 export const LEGACY_AUTH_KEY     = join(LEGACY_AUTH_DIR, ".key");
 export const ATTACHMENTS_DIR     = join(SINGULARITY_DIR, "attachments");
 export const REPORTS_DIR         = join(SINGULARITY_DIR, "reports");
+export const CLAUDE_DIR          = join(HOME_DIR, ".claude");
 export const CLAUDE_PROJECTS_DIR = join(HOME_DIR, ".claude", "projects");
 export const CLAUDE_SESSIONS_DIR = join(HOME_DIR, ".claude", "sessions");

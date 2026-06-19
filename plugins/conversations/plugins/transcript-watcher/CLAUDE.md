@@ -15,7 +15,7 @@ One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A p
   - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.CLAUDE_PROJECTS_DIR`, `tasks/tasks-core.getConversationClaudeSessionId`
   - Exports: Values: `findTranscriptPath`, `readJsonlEvents`, `watchTranscript`
 - Cross-plugin:
-  - Imported by: `conversations`, `conversations/conversation-view/jsonl-viewer`, `conversations/transcript-api`, `conversations/transcript-retention`
+  - Imported by: `backup/sources/transcripts`, `conversations`, `conversations/conversation-view/jsonl-viewer`, `conversations/transcript-api`, `conversations/transcript-retention`
 - Core:
   - Exports: Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`; Values: `activeLineUuids`, `extractPreprompt`, `isInterruptContent`, `JsonlEventSchema`, `PREPROMPT_TAG`, `TokenUsageSchema`, `wrapPreprompt`
 

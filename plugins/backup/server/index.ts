@@ -6,12 +6,12 @@ import { backupRunJob } from "./internal/backup-job";
 import { handleRun } from "./internal/handle-run";
 import { handleList } from "./internal/handle-list";
 
-export { BackupTarget } from "./internal/contribution";
+export { BackupSource, BackupTarget } from "./internal/contribution";
 export { _backupRuns } from "./internal/tables";
 
 export default {
   description:
-    "Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.",
+    "Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.",
   httpRoutes: {
     [runBackup.route]: handleRun,
     [listBackupRuns.route]: handleList,

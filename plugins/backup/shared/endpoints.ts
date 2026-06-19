@@ -12,15 +12,30 @@ export const runBackup = defineEndpoint({
   response: RunBackupResultSchema,
 });
 
+const BackupSourceReportSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  skipped: z.boolean(),
+  items: z.array(
+    z.object({
+      label: z.string(),
+      detail: z.string().optional(),
+      count: z.number().optional(),
+    }),
+  ),
+  sizeBytes: z.number(),
+});
+
 const BackupManifestSchema = z.object({
-  version: z.literal(1),
+  version: z.union([z.literal(1), z.literal(2)]),
   createdAt: z.string(),
   trigger: z.enum(["manual", "periodic"]),
-  sources: z.object({
-    databases: z.array(z.string()),
-    secretsIncluded: z.boolean(),
-    attachmentsIncluded: z.boolean(),
-  }),
+  // v2: array of source reports. v1 legacy rows stored a fixed object —
+  // accept it permissively so one old row can't reject the whole list.
+  sources: z.union([
+    z.array(BackupSourceReportSchema),
+    z.object({}).passthrough(),
+  ]),
   sizeBytes: z.number(),
 });
 

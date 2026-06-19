@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-backup-targets",
+  "description": "Umbrella for pluggable backup targets, each a self-gating sub-plugin contributing a BackupTarget.",
+  "private": true,
+  "version": "0.0.1"
+}

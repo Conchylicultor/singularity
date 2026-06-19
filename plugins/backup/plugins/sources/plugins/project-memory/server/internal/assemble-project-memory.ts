@@ -1,0 +1,51 @@
+import { existsSync } from "node:fs";
+import { cp, stat, mkdir } from "node:fs/promises";
+import { join } from "node:path";
+import { getConfig } from "@plugins/config_v2/server";
+import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
+import type { BackupSourceReport } from "@plugins/backup/core";
+import { projectMemorySourceConfig } from "../../shared/config";
+
+export async function assembleProjectMemory(dir: string): Promise<BackupSourceReport> {
+  const { enabled } = getConfig(projectMemorySourceConfig);
+
+  if (!enabled) {
+    return { id: "project-memory", name: "Project Memory", skipped: true, items: [], sizeBytes: 0 };
+  }
+
+  if (!existsSync(CLAUDE_PROJECTS_DIR)) {
+    return { id: "project-memory", name: "Project Memory", skipped: false, items: [], sizeBytes: 0 };
+  }
+
+  let totalCount = 0;
+  let sizeBytes = 0;
+
+  // Scan for */memory/ directories under CLAUDE_PROJECTS_DIR
+  // Bun.Glob does not support onlyDirectories, so scan files under */memory/**/* instead
+  const seen = new Set<string>();
+  for await (const rel of new Bun.Glob("*/memory/**/*").scan({ cwd: CLAUDE_PROJECTS_DIR, onlyFiles: true })) {
+    // rel is like "<project>/memory/foo.md"
+    const projectName = rel.split("/")[0];
+    if (!projectName) continue;
+    if (!seen.has(projectName)) {
+      seen.add(projectName);
+      const memoryDir = join(CLAUDE_PROJECTS_DIR, projectName, "memory");
+      if (existsSync(memoryDir)) {
+        // Use encoded project name to avoid collisions (replace slashes with underscores)
+        const encodedName = projectName.replace(/\//g, "_");
+        const dest = join(dir, encodedName);
+        await mkdir(dest, { recursive: true });
+        await cp(memoryDir, dest, { recursive: true });
+      }
+    }
+    totalCount++;
+    const s = await stat(join(CLAUDE_PROJECTS_DIR, rel));
+    sizeBytes += s.size;
+  }
+
+  const items = totalCount > 0
+    ? [{ label: "memory", detail: `${totalCount} files`, count: totalCount }]
+    : [];
+
+  return { id: "project-memory", name: "Project Memory", skipped: false, items, sizeBytes };
+}

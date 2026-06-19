@@ -1,0 +1,5 @@
+{
+  "name": "@singularity/plugin-backup-targets-google-drive",
+  "private": true,
+  "version": "0.0.1"
+}

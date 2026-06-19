@@ -1,17 +1,12 @@
-import { mkdir, cp, stat, rm } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { mkdir, stat, rm } from "node:fs/promises";
 import { join } from "node:path";
-import {
-  BACKUPS_DIR,
-  STORE_PATH,
-  KEY_PATH,
-  ATTACHMENTS_DIR,
-} from "@plugins/infra/plugins/paths/server";
-import {
-  listDatabases,
-  backupDatabase,
-} from "@plugins/database/plugins/admin/server";
-import type { BackupArchive, BackupManifest } from "@plugins/backup/core";
+import { BACKUPS_DIR } from "@plugins/infra/plugins/paths/server";
+import type {
+  BackupArchive,
+  BackupManifest,
+  BackupSourceReport,
+} from "@plugins/backup/core";
+import { BackupSource } from "./contribution";
 
 function formatTimestamp(): string {
   return new Date()
@@ -29,43 +24,21 @@ export async function assembleArchive(
   const stagingDir = join(runDir, "staging");
   const archivePath = join(runDir, "archive.tar.gz");
 
-  await mkdir(join(stagingDir, "db"), { recursive: true });
-  await mkdir(join(stagingDir, "secrets"), { recursive: true });
+  await mkdir(stagingDir, { recursive: true });
 
-  const allDbs = await listDatabases();
-  const targetDbs = allDbs.filter(
-    (name) => !name.startsWith("claude-") && !name.startsWith("att-"),
-  );
-  for (const db of targetDbs) {
-    await backupDatabase(db, join(stagingDir, "db", `${db}.dump`));
-  }
-
-  let secretsIncluded = false;
-  if (existsSync(STORE_PATH)) {
-    await cp(STORE_PATH, join(stagingDir, "secrets", "secrets.json.enc"));
-    secretsIncluded = true;
-  }
-  if (existsSync(KEY_PATH)) {
-    await cp(KEY_PATH, join(stagingDir, "secrets", ".key"));
-  }
-
-  let attachmentsIncluded = false;
-  if (existsSync(ATTACHMENTS_DIR)) {
-    await cp(ATTACHMENTS_DIR, join(stagingDir, "attachments"), {
-      recursive: true,
-    });
-    attachmentsIncluded = true;
+  const sources = BackupSource.getContributions();
+  const reports: BackupSourceReport[] = [];
+  for (const source of sources) {
+    const dir = join(stagingDir, source.id);
+    await mkdir(dir, { recursive: true });
+    reports.push(await source.assemble(dir));
   }
 
   const manifest: BackupManifest = {
-    version: 1,
+    version: 2,
     createdAt: new Date().toISOString(),
     trigger,
-    sources: {
-      databases: targetDbs,
-      secretsIncluded,
-      attachmentsIncluded,
-    },
+    sources: reports,
     sizeBytes: 0,
   };
 

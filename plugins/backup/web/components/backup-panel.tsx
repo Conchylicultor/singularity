@@ -18,8 +18,10 @@ import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncati
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { GrantAccessButton } from "@plugins/auth/web";
-import type { BackupTargetResult } from "@plugins/backup/core";
+import type { BackupTargetResult, BackupSourceReport } from "@plugins/backup/core";
 import { listBackupRuns, runBackup, type BackupRun } from "../../shared/endpoints";
+import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
+import { backupConfig } from "../../shared/config";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -109,8 +111,8 @@ function BackupRunRow({ run }: { run: BackupRun }) {
                     {run.archiveSizeBytes
                       ? formatSize(run.archiveSizeBytes)
                       : "in progress"}
-                    {run.manifest?.sources.databases.length
-                      ? ` · ${run.manifest.sources.databases.length} DB`
+                    {Array.isArray(run.manifest?.sources)
+                      ? ` · ${run.manifest.sources.filter((s) => !s.skipped).length} sources`
                       : ""}
                   </Text>
                 </div>
@@ -127,11 +129,45 @@ function BackupRunRow({ run }: { run: BackupRun }) {
         />
       </button>
 
-      {expanded && run.targetResults && (
-        <Stack gap="sm" className="border-t px-lg py-md">
-          {run.targetResults.map((r) => (
-            <TargetResultRow key={r.targetId} result={r} />
-          ))}
+      {expanded && (
+        <Stack gap="md" className="border-t px-lg py-md">
+          {Array.isArray(run.manifest?.sources) && (
+            <Stack gap="xs">
+              <Text as="p" variant="label" className="text-muted-foreground uppercase tracking-wide">
+                Sources
+              </Text>
+              {(run.manifest.sources as BackupSourceReport[])
+                .filter((s) => !s.skipped)
+                .map((s) => (
+                  <Stack key={s.id} gap="2xs">
+                    <Text as="p" variant="body" className="font-medium">
+                      {s.name}
+                    </Text>
+                    {s.items.map((item, i) => (
+                      <Text
+                        key={i}
+                        as="p"
+                        variant="caption"
+                        className="text-muted-foreground pl-md"
+                      >
+                        {item.label}
+                        {item.detail ? ` — ${item.detail}` : ""}
+                      </Text>
+                    ))}
+                  </Stack>
+                ))}
+            </Stack>
+          )}
+          {run.targetResults && (
+            <Stack gap="xs">
+              <Text as="p" variant="label" className="text-muted-foreground uppercase tracking-wide">
+                Targets
+              </Text>
+              {run.targetResults.map((r) => (
+                <TargetResultRow key={r.targetId} result={r} />
+              ))}
+            </Stack>
+          )}
         </Stack>
       )}
     </Clip>
@@ -147,10 +183,12 @@ export function BackupPanel() {
   return (
     <Stack gap="xl" className="p-xl max-w-2xl">
         <Stack gap="xs">
-          <Text as="h2" variant="heading">Backup</Text>
+          <div className="flex items-center justify-between gap-md">
+            <Text as="h2" variant="heading">Backup</Text>
+            <ConfigGearButton descriptor={backupConfig} label="Backup settings" />
+          </div>
           <Text as="p" variant="body" className="text-muted-foreground">
-            Archives the database, secrets, and attachments. Dispatches to
-            all enabled storage targets (local, Google Drive).
+            Archives enabled sources and dispatches to all enabled storage targets.
           </Text>
         </Stack>
 
