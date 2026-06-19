@@ -10,6 +10,7 @@ import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { configNavPane } from "@plugins/config_v2/plugins/settings/web";
 import { currentWorktreeName, disconnect, startConnectFlow } from "../connect";
+import { ScopeGrantNotice } from "./scope-grant-notice";
 
 interface Props {
   providerId: string;
@@ -126,6 +127,9 @@ export function DefaultProviderRow({ providerId }: Props) {
                 ))}
               </ul>
             </details>
+          ) : null}
+          {connected && status && !credentialsMissing ? (
+            <ScopeGrantNotice providerId={providerId} status={status} />
           ) : null}
           {status?.lastRefreshError ? (
             // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset from preceding sibling block

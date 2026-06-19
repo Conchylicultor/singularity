@@ -17,6 +17,7 @@ import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { GrantAccessButton } from "@plugins/auth/web";
 import type { BackupTargetResult } from "@plugins/backup/core";
 import { listBackupRuns, runBackup, type BackupRun } from "../../shared/endpoints";
 
@@ -66,6 +67,17 @@ function TargetResultRow({ result }: { result: BackupTargetResult }) {
           <TruncatingText className="text-caption text-muted-foreground">
             {result.detail}
           </TruncatingText>
+        ) : undefined
+      }
+      trailing={
+        !result.ok && result.consent ? (
+          <GrantAccessButton
+            providerId={result.consent.providerId}
+            scopes={result.consent.scopes}
+            label="Grant access"
+            variant="outline"
+            size="sm"
+          />
         ) : undefined
       }
     />

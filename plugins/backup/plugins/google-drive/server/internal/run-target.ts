@@ -3,11 +3,10 @@ import { getConfig } from "@plugins/config_v2/server";
 import { getTokenFromCentral } from "@plugins/auth/server";
 import type { BackupArchive, BackupTargetResult } from "@plugins/backup/core";
 import { googleDriveBackupConfig } from "../../shared/config";
+import { GOOGLE_DRIVE_SCOPES } from "../../shared/scopes";
 import { ensureFolder } from "./folder";
 import { uploadToDrive } from "./upload";
 import { pruneOldBackups } from "./retention";
-
-const DRIVE_SCOPE = "https://www.googleapis.com/auth/drive.file";
 
 export async function runGoogleDriveTarget(
   archive: BackupArchive,
@@ -19,7 +18,7 @@ export async function runGoogleDriveTarget(
 
   const tokenResult = await getTokenFromCentral({
     providerId: "google",
-    scopes: [DRIVE_SCOPE],
+    scopes: [...GOOGLE_DRIVE_SCOPES],
   });
 
   if (!tokenResult.ok) {
@@ -29,6 +28,7 @@ export async function runGoogleDriveTarget(
         ok: false,
         needsConsent: true,
         detail: `Google account not connected or missing Drive scope (${tokenResult.reason})`,
+        consent: { providerId: "google", scopes: [...GOOGLE_DRIVE_SCOPES] },
       };
     }
     return {

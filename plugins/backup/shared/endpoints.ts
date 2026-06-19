@@ -29,6 +29,9 @@ const BackupTargetResultSchema = z.object({
   ok: z.boolean(),
   detail: z.string().optional(),
   needsConsent: z.boolean().optional(),
+  consent: z
+    .object({ providerId: z.string(), scopes: z.array(z.string()) })
+    .optional(),
 });
 
 export const BackupRunSchema = z.object({

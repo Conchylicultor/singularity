@@ -21,4 +21,6 @@ export interface BackupTargetResult {
   ok: boolean;
   detail?: string;
   needsConsent?: boolean;
+  /** When needsConsent, the OAuth provider + scopes the user must grant to fix it. */
+  consent?: { providerId: string; scopes: string[] };
 }

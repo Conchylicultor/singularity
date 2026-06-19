@@ -17,6 +17,13 @@ export interface AuthProviderContribution {
   configureCredentials?: () => void;
 }
 
+export interface AuthScopeRequirement {
+  providerId: string;
+  scopes: string[];
+  reason: string;
+  useEnabled?: () => boolean;
+}
+
 export const Auth = {
   /**
    * Provider sub-plugins contribute here so the Accounts pane knows about them.
@@ -25,5 +32,13 @@ export const Auth = {
    */
   Provider: defineSlot<AuthProviderContribution>("auth.provider", {
     docLabel: (p) => p.name,
+  }),
+  /**
+   * Consumer plugins declare the OAuth scopes they need from a provider here.
+   * The Accounts pane aggregates requirements per provider, diffs against the
+   * granted scopes, and surfaces a "Grant access" affordance for missing ones.
+   */
+  ScopeRequirement: defineSlot<AuthScopeRequirement>("auth.scope-requirement", {
+    docLabel: (r) => r.reason,
   }),
 };

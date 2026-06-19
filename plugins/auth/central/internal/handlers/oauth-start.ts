@@ -46,9 +46,12 @@ export const handleOAuthStart: HttpHandler = async (req, params) => {
     return new Response("missing worktree query param", { status: 400 });
   }
   const scopesParam = url.searchParams.get("scopes");
-  const scopes = scopesParam
+  const requested = scopesParam
     ? scopesParam.split(",").filter((s) => s.length > 0)
-    : descriptor.oauth.defaultScopes;
+    : [];
+  // Default scopes are always granted: a scoped (incremental-consent) request must
+  // never drop the identity scopes the rest of the app relies on.
+  const scopes = [...new Set([...descriptor.oauth.defaultScopes, ...requested])];
 
   const nonce = generateNonce();
   const usePkce = descriptor.oauth.pkce !== false;
