@@ -3,3 +3,4 @@ export type { BoundaryConfig, ZoneDefinition, Edge, AllowEdge, DenyEdge, Runtime
 export { createBoundaryCheck } from "./check";
 export { boundaryRulesCheck } from "./boundary-rules-check";
 export { runtimeNames } from "./runtimes";
+export { compositionRoots } from "./composition-roots";

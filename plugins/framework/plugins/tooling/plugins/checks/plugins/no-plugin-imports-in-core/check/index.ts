@@ -1,4 +1,5 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { compositionRoots } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -17,16 +18,10 @@ const PLUGIN_IMPORT_RE =
 const ALLOWED_PLUGIN_IMPORT_RE = /@plugins\/packages\/|@plugins\/plugin-meta\/plugins\/plugin-tree\/|@plugins\/[^'"]*\/core\b/;
 
 const ALLOWED_DIRS = ["plugins/"];
-const COMPOSITION_ROOTS = [
-  "plugins/framework/plugins/web-core/web/plugins.ts",
-  "plugins/framework/plugins/web-core/web/plugins.generated.ts",
-  "plugins/framework/plugins/server-core/bin/plugins.ts",
-  "plugins/framework/plugins/server-core/bin/plugins.generated.ts",
-  "plugins/framework/plugins/central-core/bin/plugins.ts",
-  "plugins/framework/plugins/central-core/bin/plugins.generated.ts",
-  "plugins/framework/plugins/web-core/web/App.tsx",
-  "eslint.config.ts",
-];
+// Composition roots that legitimately wire plugins together are exempt. The
+// single source of truth is boundary-config.ts's `exclude` list (same set the
+// boundary checker skips) — never maintain a parallel copy here.
+const COMPOSITION_ROOTS = compositionRoots;
 
 const check: Check = {
   id: "no-plugin-imports-in-core",
