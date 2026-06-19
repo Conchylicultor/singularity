@@ -26,6 +26,7 @@ import {
 } from "../internal/use-data-view-model";
 import { useFilterController } from "../internal/use-filter-controller";
 import { useSortController } from "../internal/use-sort-controller";
+import { useSortPresets } from "../internal/use-sort-presets";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
 import { CreatorsControl } from "./creators-control";
@@ -127,6 +128,10 @@ function DataViewInner<TRow>({
     activeState.sort,
     setActiveSortRules,
   );
+  // Saved, shareable sort presets — read from the sibling `sortPresets` key in
+  // the same per-surface config doc (independent of the active instance, so call
+  // unconditionally next to the sort controller).
+  const sortPresets = useSortPresets(props.storageKey);
   // The tree view orders by hierarchy rank and ignores ViewState.sort, so it
   // opts out via `supportsSort: false` — hide the Sort pill there (Filter still
   // shows; the tree honors filter). Default (undefined) = honors sort.
@@ -228,7 +233,12 @@ function DataViewInner<TRow>({
               a pill trigger ("Sort" / "N sorts", "Filter" / "N rules") opening
               its Notion-style popover. Each renders only when the schema has at
               least one eligible field. */}
-          {hasSort ? <SortBuilderTrigger controller={sortController} /> : null}
+          {hasSort ? (
+            <SortBuilderTrigger
+              controller={sortController}
+              presets={sortPresets}
+            />
+          ) : null}
           {hasFilters ? (
             <FilterBuilderTrigger controller={filterController} />
           ) : null}

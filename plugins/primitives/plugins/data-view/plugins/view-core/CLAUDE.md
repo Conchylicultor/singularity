@@ -43,6 +43,26 @@ those on as keys inside the variant value:
 The host (data-view's `useDataViewModel`) wraps `useViewModel` and re-derives
 `sortFor`/`filterFor`/`setSort`/`setFilter` through `viewFor` + `updateView`.
 
+### Generic `extraFields` extension point (does NOT breach the seam)
+
+`viewsDescriptor(id, extraFields?)` accepts an optional `FieldsRecord` of
+consumer-owned **sibling config fields**, merged next to `views` in the per-id
+config doc. It is the seam-safe way for a consumer to persist additional keys in
+the same git-committable, per-app-scopable config file —
+`buildViewDescriptors(ids, extraFields?)` (web) and
+`buildViewConfigRegistrations(entries, extraFields?)` (server) thread it through.
+
+The engine **never names or reads** these fields — they are opaque storage. The
+consumer declares the field def AND reads it back itself (via its own
+`useConfig(descriptor)`), so the invariant "view-core never names
+`sort`/`filter`/any host concern" still holds: the engine knows nothing about
+*what* the extra field means. data-view's saved **sort presets** are the worked
+example — data-view declares `sortPresets` (a nested `listField`) in
+`shared/sort-presets-field.ts`, injects it here, and reads it through its own
+`useSortPresets` hook. Pass a **stable module-constant** `extraFields` per runtime
+(one per consumer): the per-id descriptor cache keys by id alone, so a varying
+field set per id would alias.
+
 ## ⚠️ Invariant: never import data-view (no cycle)
 
 `view-core` is a **child** of `data-view`, so `data-view → view-core` is the only

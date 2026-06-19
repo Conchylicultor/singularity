@@ -141,6 +141,14 @@ export interface SortRule {
   direction: "asc" | "desc";
 }
 
+/** A named, reusable multi-level sort. `rules` priority = list order. */
+export interface SortPreset {
+  /** Stable id (React key + delete/rename target; persisted in the config row). */
+  id: string;
+  label: string;
+  rules: SortRule[];
+}
+
 export interface ViewState {
   /** Ordered sort rules (priority = list order). `[]` = unsorted (source order). */
   sort: SortRule[];

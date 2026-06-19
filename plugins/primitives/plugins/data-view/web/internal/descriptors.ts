@@ -1,6 +1,7 @@
 import { buildViewDescriptors } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { dataViews } from "../../shared/data-views.generated";
+import { sortPresetsExtraFields } from "../../shared/sort-presets-field";
 
 /**
  * The per-DataView-id `views` descriptors for the web runtime. data-view owns the
@@ -15,7 +16,10 @@ import { dataViews } from "../../shared/data-views.generated";
  * and the one looked up by `useViewModel` MUST be the same object — both come off
  * this single `map`.
  */
-const { map, entries } = buildViewDescriptors(dataViews.map((v) => v.id));
+const { map, entries } = buildViewDescriptors(
+  dataViews.map((v) => v.id),
+  sortPresetsExtraFields,
+);
 
 const pluginIdById = new Map(dataViews.map((v) => [v.id, asPluginId(v.pluginId)]));
 

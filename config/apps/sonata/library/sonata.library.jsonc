@@ -1,4 +1,4 @@
-// @hash 1befa300d09b
+// @hash edfdc62ed108
 {
   "views": [
     { "name": "Cards", "view": { "type": "gallery" } },
@@ -28,6 +28,16 @@
           ]
         }
       }
+    }
+  ],
+  "sortPresets": [
+    {
+      "label": "Title A→Z",
+      "rules": [{ "fieldId": "title", "direction": "asc" }]
+    },
+    {
+      "label": "Longest first",
+      "rules": [{ "fieldId": "duration", "direction": "desc" }]
     }
   ]
 }

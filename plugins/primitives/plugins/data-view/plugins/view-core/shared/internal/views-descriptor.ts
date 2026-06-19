@@ -1,5 +1,6 @@
 import { defineConfig } from "@plugins/config_v2/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
+import type { FieldsRecord } from "@plugins/fields/core";
 import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { variantField } from "@plugins/fields/plugins/variant/plugins/config/core";
@@ -28,10 +29,23 @@ import { variantField } from "@plugins/fields/plugins/variant/plugins/config/cor
  * indirectly. The server build pulls no web code — `variantField` is called
  * without its web-only `useVariants` registry, so the descriptor stays
  * server-safe.
+ *
+ * **Generic extension point (`extraFields`).** A consumer may inject its own
+ * sibling config fields next to `views` — opaque to the engine, which never
+ * names or reads them. This preserves the seam: the engine still does not know
+ * about `sort`/`filter`/presets; the consumer declares the field and reads it
+ * back itself (data-view injects `sortPresets`). The internal id cache is
+ * belt-and-suspenders: the canonical reference holders are the maps built once
+ * in the consumer (`buildViewDescriptors` web; the per-entry server
+ * registrations), and a single consumer passes one stable `extraFields`
+ * module-constant per runtime, so keying the cache by id alone keeps identity.
  */
 const cache = new Map<string, ConfigDescriptor>();
 
-export function viewsDescriptor(id: string): ConfigDescriptor {
+export function viewsDescriptor(
+  id: string,
+  extraFields?: FieldsRecord,
+): ConfigDescriptor {
   let descriptor = cache.get(id);
   if (!descriptor) {
     descriptor = defineConfig({
@@ -51,6 +65,10 @@ export function viewsDescriptor(id: string): ConfigDescriptor {
             view: variantField({ label: "View" }),
           },
         }),
+        // Consumer-injected sibling fields (opaque to the engine). The
+        // `extraFields` is a stable module-constant per id, so the per-id cache
+        // never returns a descriptor built with a different field set.
+        ...extraFields,
       },
     });
     cache.set(id, descriptor);

@@ -9,6 +9,7 @@ export type {
   SelectionConfig,
   CreateOption,
   SortRule,
+  SortPreset,
   ViewState,
   DataViewRenderProps,
   DataViewProps,

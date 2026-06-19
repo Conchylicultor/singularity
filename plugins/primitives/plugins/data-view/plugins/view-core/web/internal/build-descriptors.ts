@@ -1,4 +1,5 @@
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
+import type { FieldsRecord } from "@plugins/fields/core";
 import { viewsDescriptor } from "../../shared";
 
 /**
@@ -13,13 +14,21 @@ import { viewsDescriptor } from "../../shared";
  * the `entries`, the model resolves via `map.get(id)`) guarantees that.
  * (`viewsDescriptor` also caches per id, so this is belt-and-suspenders; the map
  * is the canonical lookup.)
+ *
+ * `extraFields` is an opaque consumer-owned set of sibling config fields (e.g.
+ * data-view's `sortPresets`) threaded into every per-id descriptor — view-core
+ * never names them. Pass one stable module-constant per runtime so the per-id
+ * cache identity holds.
  */
-export function buildViewDescriptors(ids: string[]): {
+export function buildViewDescriptors(
+  ids: string[],
+  extraFields?: FieldsRecord,
+): {
   map: Map<string, ConfigDescriptor>;
   entries: Array<{ id: string; descriptor: ConfigDescriptor }>;
 } {
   const map = new Map<string, ConfigDescriptor>(
-    ids.map((id) => [id, viewsDescriptor(id)]),
+    ids.map((id) => [id, viewsDescriptor(id, extraFields)]),
   );
   const entries = ids.map((id) => ({ id, descriptor: map.get(id)! }));
   return { map, entries };
