@@ -9,7 +9,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type { PageCover } from "@plugins/page/plugins/editor/core";
 import { COVER_GRADIENTS } from "./cover-presets";

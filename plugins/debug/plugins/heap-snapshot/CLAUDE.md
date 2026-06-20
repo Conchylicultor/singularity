@@ -8,7 +8,7 @@
 - Web:
   - Slots: `heapSnapshotPane.Actions`
   - Contributes: `Pane.Register` "debug-heap-snapshot", `DebugApp.Sidebar` "Heap" → `component`
-  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/css/placeholder.Placeholder`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
+  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
   - Exports: Values: `heapSnapshotPane`
 - Server:
   - Uses: `infra/endpoints.implement`, `infra/paths.currentWorktreeName`, `infra/paths.SINGULARITY_DIR`

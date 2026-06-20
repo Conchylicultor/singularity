@@ -1,6 +1,5 @@
 import { MdClose } from "react-icons/md";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";

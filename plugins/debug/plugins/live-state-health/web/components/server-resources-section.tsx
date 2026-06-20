@@ -1,8 +1,7 @@
 import { useMemo, type ReactElement } from "react";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";

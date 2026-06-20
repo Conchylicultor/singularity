@@ -1,5 +1,5 @@
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";

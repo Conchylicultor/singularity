@@ -1,6 +1,6 @@
 import { cn, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";

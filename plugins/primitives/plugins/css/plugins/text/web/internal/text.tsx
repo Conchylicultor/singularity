@@ -13,7 +13,8 @@ export type TextVariant =
   | "subheading"
   | "body"
   | "label"
-  | "caption";
+  | "caption"
+  | "eyebrow";
 
 /** Foreground tone applied on top of the variant. `default` inherits the surface. */
 export type TextTone = "default" | "muted" | "primary" | "destructive";
@@ -25,6 +26,10 @@ const VARIANT_CLASS: Record<TextVariant, string> = {
   body: "text-body",
   label: "text-label",
   caption: "text-caption",
+  // Eyebrow/overline role: caption geometry + the small-caps treatment, single
+  // line. Tone stays orthogonal — pair with `tone="muted"` for the classic
+  // section label (see the SectionLabel helper).
+  eyebrow: "text-caption uppercase tracking-wide whitespace-nowrap",
 };
 
 const TONE_CLASS: Record<TextTone, string> = {

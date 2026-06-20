@@ -1,8 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useRef, useEffect } from "react";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";

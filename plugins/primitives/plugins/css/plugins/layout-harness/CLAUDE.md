@@ -87,7 +87,7 @@ server-core tsconfig where `check`/`facet` live. The
 - Web:
   - Slots: `layoutLabPane.Actions`
   - Contributes: `Pane.Register` "layout-lab", `DebugApp.Sidebar` "Layout Lab" → `component`
-  - Uses: `apps/debug/shell.DebugApp`, `primitives/app-shell.sidebarNavItem`, `primitives/css/card.Card`, `primitives/css/scroll.Scroll`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
+  - Uses: `apps/debug/shell.DebugApp`, `primitives/app-shell.sidebarNavItem`, `primitives/css/card.Card`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
   - Exports: Values: `layoutLabPane`
 - Core:
   - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`

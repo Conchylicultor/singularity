@@ -4,9 +4,8 @@ import {
   useEndpointMutation,
   getEndpointErrorMessage,
 } from "@plugins/infra/plugins/endpoints/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";

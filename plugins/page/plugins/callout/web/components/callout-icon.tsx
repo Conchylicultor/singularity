@@ -1,7 +1,7 @@
 import { cn, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdLightbulb } from "react-icons/md";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";

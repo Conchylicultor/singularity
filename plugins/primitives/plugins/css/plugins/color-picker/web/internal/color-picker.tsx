@@ -1,6 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useRef, useCallback, useEffect } from "react";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Color } from "./color";
 import { ColorArea } from "./color-area";
 import { HueSlider } from "./hue-slider";

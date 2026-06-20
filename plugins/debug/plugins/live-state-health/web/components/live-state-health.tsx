@@ -7,8 +7,7 @@ import {
   type LeaderInfo,
 } from "@plugins/primitives/plugins/live-state/web";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";

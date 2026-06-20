@@ -5,11 +5,10 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";

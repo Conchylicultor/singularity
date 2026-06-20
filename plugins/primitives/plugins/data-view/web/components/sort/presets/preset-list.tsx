@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { FieldDef, SortPreset, SortRule } from "../../../../core";
 import { PresetRow } from "./preset-row";

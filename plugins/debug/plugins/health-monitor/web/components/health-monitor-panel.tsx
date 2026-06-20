@@ -23,10 +23,9 @@ import {
   useEndpoint,
   getEndpointErrorMessage,
 } from "@plugins/infra/plugins/endpoints/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";

@@ -1,7 +1,6 @@
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";

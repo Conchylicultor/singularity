@@ -3,7 +3,7 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { backlinksResource } from "../../core/resources";
 

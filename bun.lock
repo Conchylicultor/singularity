@@ -2551,10 +2551,6 @@
       "name": "@singularity/plugin-primitives-css-scroll",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/css/plugins/section-label": {
-      "name": "@singularity/plugin-primitives-css-section-label",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/css/plugins/selection-indicator": {
       "name": "@singularity/plugin-primitives-css-selection-indicator",
       "version": "0.0.1",
@@ -4963,8 +4959,6 @@
     "@singularity/plugin-primitives-css-row": ["@singularity/plugin-primitives-css-row@workspace:plugins/primitives/plugins/css/plugins/row"],
 
     "@singularity/plugin-primitives-css-scroll": ["@singularity/plugin-primitives-css-scroll@workspace:plugins/primitives/plugins/css/plugins/scroll"],
-
-    "@singularity/plugin-primitives-css-section-label": ["@singularity/plugin-primitives-css-section-label@workspace:plugins/primitives/plugins/css/plugins/section-label"],
 
     "@singularity/plugin-primitives-css-selection-indicator": ["@singularity/plugin-primitives-css-selection-indicator@workspace:plugins/primitives/plugins/css/plugins/selection-indicator"],
 

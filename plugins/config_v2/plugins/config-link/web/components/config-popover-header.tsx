@@ -1,5 +1,5 @@
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { ConfigGearButton } from "./config-gear-button";
 

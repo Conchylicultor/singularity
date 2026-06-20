@@ -7,7 +7,7 @@ import {
 } from "@plugins/debug/plugins/profiling/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import {
   getBootProfiling,

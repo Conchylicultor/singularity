@@ -2,7 +2,7 @@ import { type ReactNode, useMemo } from "react";
 import { MdContentCopy, MdDelete } from "react-icons/md";
 import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { variantField } from "@plugins/fields/plugins/variant/plugins/config/core";
 import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";

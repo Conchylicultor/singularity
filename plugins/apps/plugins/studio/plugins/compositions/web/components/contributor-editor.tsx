@@ -1,8 +1,7 @@
 import { useMemo } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import {

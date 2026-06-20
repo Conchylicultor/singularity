@@ -56,14 +56,13 @@ entries back. A genuinely-fixed one-off escapes per-site via
   - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
   - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
   - **`scroll`** — Scroll-container layout primitive: <Scroll axis fill> owns overflow AND the flex-child fill policy (min-h-0 flex-1) as one role.
-  - **`section-label`** — Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
   - **`selection-indicator`** — Presentational checkbox / radio indicator boxes (border + fill + glyph) with the correct preset-independent fixed shape baked in (rounded-checkbox for the checkbox, rounded-full for the radio). The sanctioned home for styled selection indicators so the fixed shape lives in one place and consumers never write radius classes.
   - **`spacing`** — Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp (none|2xs|xs|sm|md|lg|xl|2xl). The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
   - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
   - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
   - **`sticky`** — Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level.
   - **`surface`** — Semantic surface elevation primitive: <Surface level> bundles background + border + radius + shadow into a closed set of roles (sunken/base/raised/overlay), plus the no-adhoc-surface lint rule.
-  - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group. The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
+  - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
   - **`toggle-chip`** — Toggle-chip control: a stateful solid/ghost pill (composes Badge) with active state, button-height matching, polymorphic `as`, plus a SegmentedControl single-select group helper.
   - **`truncating-text`** — Single-line text that truncates with an ellipsis instead of wrapping. Bakes in the min-w-0 + truncate pair flexible labels need inside a flex row.
   - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.

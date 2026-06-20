@@ -1,6 +1,6 @@
 import { MdAutoAwesome } from "react-icons/md";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Collapsible,
   CollapsibleChevron,
