@@ -4,7 +4,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { attemptsResource, tasksResource } from "@plugins/tasks/core";
+import { attemptsResource, tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 
 const currentWorktree = (() => {
   const host = window.location.hostname;

@@ -3,7 +3,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useConfig } from "@plugins/config_v2/web";
-import { pushesResource } from "@plugins/tasks/core";
+import { pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { getFileWarningLevel, type FileWarningLevel } from "../core-files";

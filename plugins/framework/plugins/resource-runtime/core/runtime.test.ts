@@ -564,3 +564,55 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     expect(stats.feed).toBe(1);
   });
 });
+
+describe("defineResource(contract, serverOpts) — keyed-ness derived from the descriptor", () => {
+  // A stand-in for the browser-safe client descriptor: structurally a
+  // ResourceContract. The keyed identity lives HERE only — the server never
+  // restates it, which is the whole point (no drift, no missing-keyOf crash).
+  const rowsContract = {
+    key: "rows",
+    schema: z.array(z.object({ id: z.string(), n: z.number() })),
+    keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
+  };
+
+  test("a keyed contract drives a scoped row delta without restating mode/keyOf", async () => {
+    const h = feedHarness({ rows: ["row_table"] });
+    h.runtime.defineResource(rowsContract, {
+      identityTable: "row_table",
+      loader: (_p, ctx) =>
+        ctx
+          ? [{ id: "a", n: 2 }]
+          : [
+              { id: "a", n: 1 },
+              { id: "b", n: 1 },
+            ],
+    });
+    await h.subscribe("rows");
+
+    h.runtime.applyDbChange({
+      table: "row_table",
+      op: "U",
+      ids: ["a"],
+      origin: "row_table",
+      identityBase: "row_table",
+    });
+    await tick();
+
+    const pushes = h.pushesFor("rows");
+    expect(pushes).toHaveLength(1);
+    // A "delta" frame proves keyed mode took effect — a non-keyed resource would
+    // ship "update". So the contract's `keyed` alone configured the runtime.
+    expect(pushes[0]!.kind).toBe("delta");
+  });
+
+  test("a non-keyed contract honors serverOpts.mode (push)", async () => {
+    const h = harness();
+    h.runtime.defineResource(
+      { key: "n", schema: z.number() },
+      { mode: "push", loader: async () => 1 },
+    );
+    await h.subscribe("n");
+    // sub-ack delivers a full value frame; nothing crashes wiring a bare contract.
+    expect(h.frames.some((f) => f.key === "n")).toBe(true);
+  });
+});

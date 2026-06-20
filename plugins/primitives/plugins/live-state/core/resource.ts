@@ -38,11 +38,15 @@ export interface ResourceDescriptor<T, P extends Record<string, string> = Record
   readonly __params?: P;
 }
 
+// The `keyed?: never` in the return type makes non-keyed-ness statically visible,
+// so the server's `defineResource(descriptor, …)` two-arg overload can discriminate
+// a plain descriptor from a keyed one (and only the keyed branch demands a scope
+// policy). Without it, `keyed` is merely optional and neither branch matches.
 export function resourceDescriptor<T, P extends Record<string, string> = Record<string, never>>(
   key: string,
   schema: ZodType<T>,
   initialData: T,
-): ResourceDescriptor<T, P> {
+): ResourceDescriptor<T, P> & { keyed?: never } {
   return { key, schema, initialData };
 }
 
@@ -51,12 +55,15 @@ export function resourceDescriptor<T, P extends Record<string, string> = Record<
 // stays `z.array(Element)`, so `T` (and every `useResource` caller) is
 // unchanged — the client merges per-row deltas into the same `T[]`. `keyOf`
 // lets the client key prior cache rows when applying a delta.
+// The `keyed: { keyOf }` is REQUIRED in the return type (not the descriptor's
+// optional field), so the server's two-arg `defineResource` can statically see a
+// keyed descriptor and force a scope policy on it.
 export function keyedResourceDescriptor<T extends unknown[], P extends Record<string, string> = Record<string, never>>(
   key: string,
   schema: ZodType<T>,
   initialData: T,
   keyOf: (row: unknown) => string,
-): ResourceDescriptor<T, P> {
+): ResourceDescriptor<T, P> & { keyed: { keyOf: (row: unknown) => string } } {
   return { key, schema, initialData, keyed: { keyOf } };
 }
 

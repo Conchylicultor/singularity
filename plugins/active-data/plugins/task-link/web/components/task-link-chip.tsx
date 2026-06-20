@@ -4,7 +4,7 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import { tasksResource } from "@plugins/tasks/core";
+import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
 const TASK_STATUS_DOT: Record<TaskStatus, string> = {

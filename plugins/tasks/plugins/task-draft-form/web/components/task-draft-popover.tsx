@@ -4,7 +4,8 @@ import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
+import { type TaskListItem } from "@plugins/tasks/core";
+import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import {
   TaskDraftForm,

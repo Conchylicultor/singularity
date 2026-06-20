@@ -6,7 +6,7 @@ import type { ConversationRecord } from "@plugins/conversations/plugins/conversa
 import { useConversation, useHasActiveSiblings } from "@plugins/conversations/web";
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { pushesResource } from "@plugins/tasks/core";
+import { pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { dropAndExit } from "../../core";
 
 export function DropAndExitItem({

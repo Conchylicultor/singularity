@@ -1,5 +1,4 @@
-import type { TaskListItem } from "./resources";
-import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import type { TaskListItem, TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
 // A done or dropped task is neither waiting on its dependencies nor blocking its
 // own dependents, so it both drops out of the count and breaks the chain: we

@@ -3,6 +3,8 @@ import type {
   Resource as RtResource,
   ExternalResource as RtExternalResource,
   ResourceDefinition as RtDef,
+  ResourceContract as RtContract,
+  ServerResourceOptions as RtServerOpts,
   ResourceMode as RtMode,
   ResourceParams as RtParams,
   DependsOnEntry as RtDep,
@@ -40,6 +42,15 @@ export type ExternalResource<T, P extends ResourceParams = ResourceParams> = RtE
   P
 >;
 export type ResourceDefinition<T, P extends ResourceParams = ResourceParams> = RtDef<T, P>;
+// Two-arg `defineResource(contract, serverOpts)` surface: `contract` is the
+// browser-safe shared descriptor (key/schema/keyed), `serverOpts` the DB half.
+// Lets a keyed resource declare its keyed-ness in ONE place — the client
+// descriptor — instead of restating `mode`/`keyOf` on the server and drifting.
+export type ResourceContract<T, P extends ResourceParams = ResourceParams> = RtContract<T, P>;
+export type ServerResourceOptions<T, P extends ResourceParams = ResourceParams> = RtServerOpts<
+  T,
+  P
+>;
 export type DependsOnEntry<P extends ResourceParams = ResourceParams> = RtDep<P>;
 // The shared L4 change-feed contract (see resource-runtime/core). The DB
 // change-feed plugin consumes `applyDbChange` (below); this type is the producer

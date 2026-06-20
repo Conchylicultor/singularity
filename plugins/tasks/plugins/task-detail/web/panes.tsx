@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane, type } from "@plugins/primitives/plugins/pane/web";
 import { Tasks } from "@plugins/tasks/plugins/task-list/web";
-import { tasksResource } from "@plugins/tasks/core";
+import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTask } from "@plugins/tasks/web";
 import { TaskDetailFlushProvider } from "./context";
 import { TaskDetail } from "./components/task-detail";

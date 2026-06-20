@@ -5,7 +5,8 @@ import type { ConversationRecord } from "@plugins/conversations/plugins/conversa
 import { useActiveConversations } from "@plugins/conversations/web";
 import { useTask } from "@plugins/tasks/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { tasksResource, addTaskDependency, removeTaskDependency, type TaskListItem } from "@plugins/tasks/core";
+import { addTaskDependency, removeTaskDependency, type TaskListItem } from "@plugins/tasks/core";
+import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";

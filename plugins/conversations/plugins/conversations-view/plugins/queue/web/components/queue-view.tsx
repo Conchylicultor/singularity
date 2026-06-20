@@ -33,7 +33,7 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { reorderQueue, promoteQueue, demoteQueue, stepDownQueue, rerankQueue } from "../../shared/endpoints";
 import { queueRanksResource } from "../../shared/resources";
 import { applyReorder, type ReorderVars } from "./apply-reorder";
-import { tasksResource } from "@plugins/tasks/core";
+import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
 type RankedConversation = Conversation & { rank: Rank };

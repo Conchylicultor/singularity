@@ -5,7 +5,8 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { tasksResource, countTransitiveDependents, type TaskListItem } from "@plugins/tasks/core";
+import { countTransitiveDependents, type TaskListItem } from "@plugins/tasks/core";
+import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { dropDependents } from "../../shared";
 

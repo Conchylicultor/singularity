@@ -11,9 +11,8 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import { attemptsResource, tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import {
-  attemptsResource,
-  tasksResource,
   createTask as createTaskEndpoint,
 } from "@plugins/tasks/core";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";

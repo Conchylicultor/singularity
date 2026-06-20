@@ -113,19 +113,36 @@ authoritative `order`. An omitted `order` strictly means "in-place upserts,
 membership unchanged" (`deletes` is then necessarily empty, and there are no new
 ids).
 
-Opting in is a ~two-line change on each side:
+Keyed-ness is declared in **one place** — the client descriptor — and the server
+reads it from there, so the two sides cannot drift (a server `mode: "keyed"`
+paired with a plain `resourceDescriptor` that forgot its `keyOf` is a guaranteed
+client crash with no compile-time signal; the single-source form removes the
+class):
 
-- **Server** (`defineResource`): `mode: "keyed"` + `keyOf: (row) => row.id`.
-  The payload must be an array; `keyOf` is required for keyed mode (guarded at
-  registration). The first notify per pk (and every `sub-ack` / HTTP fallback)
-  still ships a full `{ value, version }` so brand-new clients get a complete
-  base; subsequent notifies ship a `delta`.
-- **Client**: use `keyedResourceDescriptor(key, schema, initialData, keyOf)`
-  instead of `resourceDescriptor`. `schema` stays `z.array(Element)`, so `T`
-  (and every `useResource` caller) is unchanged — callers still get `T[]`. The
-  client `keyOf` keys prior cache rows when merging a delta; per-row parsing
-  goes through the array schema's `.element`. A delta that arrives with no
-  cached base is dropped and a fresh full sub is forced (load-bearing guard).
+- **Client/shared** — use `keyedResourceDescriptor(key, schema, initialData,
+  keyOf)` instead of `resourceDescriptor`. `schema` stays `z.array(Element)`, so
+  `T` (and every `useResource` caller) is unchanged — callers still get `T[]`.
+  The `keyOf` keys prior cache rows when merging a delta; per-row parsing goes
+  through the array schema's `.element`. A delta that arrives with no cached base
+  is dropped and a fresh full sub is forced (load-bearing guard).
+- **Server** — pass that descriptor to the two-arg
+  `defineResource(descriptor, { loader, dependsOn?, identityTable? })`. The
+  `key` / `schema` / `mode: "keyed"` / `keyOf` are all derived from the
+  descriptor; the server supplies only the DB-bound half. Do **not** restate
+  `mode`/`keyOf` — the `ServerResourceOptions` type rejects `mode: "keyed"` so
+  keyed-ness can only come from the descriptor. (The flat one-arg
+  `defineResource({ key, mode, keyOf, schema, loader })` form still exists for
+  resources with no shared descriptor, but a keyed resource should always use the
+  two-arg form so it can't drift.) The first notify per pk (and every `sub-ack` /
+  HTTP fallback) still ships a full `{ value, version }` so brand-new clients get
+  a complete base; subsequent notifies ship a `delta`.
+
+  Caveat — descriptor and server resource must live where the server can import
+  the descriptor without a plugin cycle. When the descriptor lives in a sub-plugin
+  the server can see (e.g. `agents/shared`, `tasks-core/core`), this is automatic;
+  when it lives in a parent umbrella the server's plugin already depends on (the
+  `tasks/core` → `tasks-core` case), the descriptor must be relocated down to the
+  shared sub-plugin first.
 
 Strictly additive: `push`/`invalidate` resources are untouched. `tasks` and
 `attempts` are the first adopters.

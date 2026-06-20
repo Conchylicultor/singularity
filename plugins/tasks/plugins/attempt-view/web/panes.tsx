@@ -1,6 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { attemptsResource } from "@plugins/tasks/core";
+import { attemptsResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { AttemptPane } from "./components/attempt-pane";
 
 function useResolveAttempt({ attemptId }: { attemptId: string }) {

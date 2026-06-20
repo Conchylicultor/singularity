@@ -1,6 +1,7 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { tasksResource, type TaskListItem } from "../core";
+import { type TaskListItem } from "../core";
+import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   updateTask,
   setTaskAutoStart,

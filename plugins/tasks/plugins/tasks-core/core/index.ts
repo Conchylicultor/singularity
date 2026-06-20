@@ -31,4 +31,13 @@ export type {
   ConversationListPayload,
 } from "./schemas";
 
+// Client/shared live-state descriptors (single source of truth for key/schema/
+// keyed-ness; the server resources are built from these). See ./resources.ts.
+export {
+  tasksResource,
+  taskDetailResource,
+  attemptsResource,
+  pushesResource,
+} from "./resources";
+
 export { buildTaskPrompt } from "./build-task-prompt";

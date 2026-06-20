@@ -1,5 +1,4 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import {
@@ -10,32 +9,28 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { _agent_launches } from "./tables";
 import { agents } from "./views";
+import type { Agent, AgentLaunchWithStatus } from "./schema";
+// `key` / `schema` / keyed-ness come from the shared client descriptors — the
+// single source of truth both runtimes read. The server adds only the DB half
+// (loader + cascade), so the keyed contract here can't drift from the client
+// (the missing-`keyOf` crash that motivated this).
 import {
-  AgentSchema,
-  AgentLaunchWithStatusSchema,
-  type Agent,
-  type AgentLaunchWithStatus,
-} from "./schema";
-import type { AgentLaunchConversationRef } from "../../shared/resources";
+  agentsResource as agentsDescriptor,
+  agentLaunchesResource as agentLaunchesDescriptor,
+  type AgentLaunchConversationRef,
+} from "../../shared/resources";
 
-export const agentsResource = defineResource<Agent[]>({
-  key: "agents",
+export const agentsResource = defineResource(agentsDescriptor, {
   mode: "push",
-  schema: z.array(AgentSchema),
   loader: async () =>
     db.select().from(agents).orderBy(asc(agents.rank), asc(agents.createdAt)) as unknown as Promise<Agent[]>,
 });
 
-export const agentLaunchesResource = defineResource({
-  key: "agent-launches",
-  // Keyed so a single launch's change ships one row (delta), not the whole list.
-  mode: "keyed",
-  keyOf: (l) => l.id,
+export const agentLaunchesResource = defineResource(agentLaunchesDescriptor, {
   // A launch row's PK is its own identity, so a direct `agent_launches` UPDATE
   // scopes to that launch. Cross-table changes (a conversation's status, which
   // drives `latestConversationStatus`) arrive through the affectedMap edge below.
   identityTable: "agent_launches",
-  schema: z.array(AgentLaunchWithStatusSchema),
   dependsOn: [
     {
       resource: conversationsLiveResource,

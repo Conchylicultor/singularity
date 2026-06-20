@@ -2,7 +2,10 @@
 // pull `server/api`'s runtime surface. Cross-plugin consumers go through
 // `@plugins/conversations/plugins/agents/server/api`.
 import type { ConversationStatus } from "@plugins/conversations/core";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import {
+  keyedResourceDescriptor,
+  resourceDescriptor,
+} from "@plugins/primitives/plugins/live-state/core";
 import { z } from "zod";
 import {
   AgentSchema,
@@ -28,8 +31,12 @@ export const agentsResource = resourceDescriptor<Agent[]>(
   z.array(AgentSchema),
   [],
 );
-export const agentLaunchesResource = resourceDescriptor<AgentLaunchWithStatus[]>(
+// Keyed delta-sync: mirrors the server resource's `mode: "keyed"` + `keyOf`.
+// Must stay in lockstep — a plain `resourceDescriptor` here crashes the client
+// the moment the server ships a row-level delta (no keyOf to merge by).
+export const agentLaunchesResource = keyedResourceDescriptor<AgentLaunchWithStatus[]>(
   "agent-launches",
   z.array(AgentLaunchWithStatusSchema),
   [],
+  (row) => (row as AgentLaunchWithStatus).id,
 );

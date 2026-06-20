@@ -1,9 +1,9 @@
-export {
-  tasksResource,
-  taskDetailResource,
-  attemptsResource,
-  pushesResource,
-} from "./resources";
+// The live-state descriptors moved to `tasks-core/core` (single source of truth
+// with the server resources). Consumers import them directly from
+// `@plugins/tasks/plugins/tasks-core/core` — not re-exported here. The domain
+// types stay surfaced through this umbrella for existing consumers, via an
+// internal re-export file (the barrel must not re-export another plugin's
+// symbols directly — plugin-boundaries' cross-plugin-reexport rule).
 export type {
   Attempt,
   AttemptWithConversations,
@@ -11,7 +11,7 @@ export type {
   Push,
   Task,
   TaskListItem,
-} from "./resources";
+} from "./types";
 export {
   listTasks,
   createTask,

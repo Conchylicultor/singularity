@@ -26,6 +26,8 @@ export type {
   ExternalResource,
   RecomputeIntent,
   ResourceDefinition,
+  ResourceContract,
+  ServerResourceOptions,
   ResourceMode,
   ResourceParams,
 } from "./resources";

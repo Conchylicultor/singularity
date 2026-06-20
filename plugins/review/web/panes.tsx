@@ -5,7 +5,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { pushesResource } from "@plugins/tasks/core";
+import { pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { Review } from "./slots";
 import { type Source, SourceTabs, groupPushes } from "./source";
 

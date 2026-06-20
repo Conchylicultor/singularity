@@ -2,7 +2,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { TasksList } from "@plugins/tasks/plugins/task-list/plugins/tree/web";
-import { tasksResource } from "@plugins/tasks/core";
+import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { TaskNavigateProvider } from "../context";
 import { TaskDetail } from "./task-detail";
 

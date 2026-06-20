@@ -5,7 +5,8 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
+import { type TaskListItem } from "@plugins/tasks/core";
+import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import type { TaskViewProps } from "@plugins/tasks/plugins/task-list/web";
 import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { STATUS_META, StatusBadge } from "@plugins/tasks/plugins/task-status/web";

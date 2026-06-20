@@ -3,19 +3,22 @@ import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { pushes } from "./tables";
 import { attempts, conversations, tasks } from "./views";
+import type { Task, TaskListItem } from "./schema";
+// `key` / `schema` / keyed-ness come from the shared client descriptors — the
+// single source of truth both runtimes read. The server adds only the DB half
+// (loader + cascade), so these keyed contracts can't drift from the client.
 import {
-  TaskSchema,
-  TaskListItemSchema,
-  PushSchema,
-  type Task,
-  type TaskListItem,
-} from "./schema";
-import type { ConversationSummary } from "../../core";
-import {
-  AttemptWithConversationsSchema,
   conversationsResource,
+  tasksResource as tasksDescriptor,
+  taskDetailResource as taskDetailDescriptor,
+  attemptsResource as attemptsDescriptor,
+  pushesResource as pushesDescriptor,
 } from "../../core";
-import type { AttemptWithConversations, ConversationListPayload } from "../../core";
+import type {
+  ConversationSummary,
+  AttemptWithConversations,
+  ConversationListPayload,
+} from "../../core";
 import {
   countGoneConversations,
   listActiveConversations,
@@ -24,12 +27,9 @@ import {
   listGoneConversations,
   RECENT_GONE_LIMIT,
 } from "./queries/conversations";
-import { z } from "zod";
 
-export const conversationsLiveResource = defineResource({
-  key: conversationsResource.key,
+export const conversationsLiveResource = defineResource(conversationsResource, {
   mode: "push",
-  schema: conversationsResource.schema,
   // A `conversations` row change scopes to that conversation id. This resource
   // is push (its aggregate payload re-ships whole), but declaring identity lets
   // it PROPAGATE the scoped conv-ids to its downstream affectedMap edges
@@ -59,22 +59,16 @@ export const conversationsLiveResource = defineResource({
   },
 });
 
-export const pushesResource = defineResource({
-  key: "pushes",
+export const pushesResource = defineResource(pushesDescriptor, {
   mode: "push",
-  schema: z.array(PushSchema),
   loader: async () =>
     db.select().from(pushes).orderBy(desc(pushes.createdAt)),
 });
 
-export const attemptsResource = defineResource({
-  key: "attempts",
-  mode: "keyed",
-  keyOf: (r) => r.id,
+export const attemptsResource = defineResource(attemptsDescriptor, {
   // A direct `attempts` change scopes to that attempt id; conversation changes
   // arrive scoped through the affectedMap edge below (conv → attempt).
   identityTable: "attempts",
-  schema: z.array(AttemptWithConversationsSchema),
   dependsOn: [
     {
       resource: conversationsLiveResource,
@@ -127,15 +121,11 @@ export const attemptsResource = defineResource({
 // on each cascade fire, so it carries only what the list renders — dropping
 // `description` removes ~60% of the payload. The detail pane reads the full row
 // (incl. description) from `taskDetailResource` below.
-export const tasksResource = defineResource<TaskListItem[]>({
-  key: "tasks",
-  mode: "keyed",
-  keyOf: (r) => r.id,
+export const tasksResource = defineResource(tasksDescriptor, {
   // A direct `tasks` change scopes to that task id; attempt/conversation changes
   // arrive scoped through the affectedMap edge below (attempt → task), which is
   // covered transitively (conv → attempt → task).
   identityTable: "tasks",
-  schema: z.array(TaskListItemSchema),
   dependsOn: [
     {
       resource: attemptsResource,
@@ -193,10 +183,8 @@ export const tasksResource = defineResource<TaskListItem[]>({
 // is mutated — so the bulk list stays lean while the description editor remains
 // live across tabs/agents. The list resource stays authoritative for derived
 // fields (status/finishedAt); this exists to supply `description`.
-export const taskDetailResource = defineResource<Task | null, { id: string }>({
-  key: "task-detail",
+export const taskDetailResource = defineResource(taskDetailDescriptor, {
   mode: "push",
-  schema: TaskSchema.nullable(),
   loader: async ({ id }) => {
     const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
     return (row as unknown as Task | undefined) ?? null;

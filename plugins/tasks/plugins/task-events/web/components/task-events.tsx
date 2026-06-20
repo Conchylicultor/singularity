@@ -11,10 +11,9 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import {
-  attemptsResource,
-  pushesResource,
   getRepoInfo,
 } from "@plugins/tasks/core";
+import { attemptsResource, pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";

@@ -3,7 +3,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
-import { attemptsResource } from "@plugins/tasks/core";
+import { attemptsResource } from "@plugins/tasks/plugins/tasks-core/core";
 import type { AttemptStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
 const ATTEMPT_STATUS_DOT: Record<AttemptStatus, string> = {

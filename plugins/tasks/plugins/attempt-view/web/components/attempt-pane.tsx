@@ -12,7 +12,7 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import type { AttemptWithConversations } from "@plugins/tasks/core";
-import { attemptsResource } from "@plugins/tasks/core";
+import { attemptsResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";

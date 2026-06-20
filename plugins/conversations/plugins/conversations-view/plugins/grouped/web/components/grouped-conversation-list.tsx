@@ -24,7 +24,7 @@ import {
 } from "../../shared/endpoints";
 import { conversationGroupsResource } from "../../shared";
 import type { Conversation, TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
-import { tasksResource } from "@plugins/tasks/core";
+import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 import type { ConversationGroup, ConversationGroupMember } from "../../shared";
 import { useTaskAutoGroups } from "./use-task-auto-groups";
 import { AutoGroupBox } from "./auto-group-box";

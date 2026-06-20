@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
+import { type TaskListItem } from "@plugins/tasks/core";
+import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
 
 export function ChildCountAction({
   row,

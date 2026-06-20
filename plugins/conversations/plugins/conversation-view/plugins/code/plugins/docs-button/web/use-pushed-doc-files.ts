@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPushFiles } from "@plugins/code-explorer/plugins/code-api/core";
-import { pushesResource } from "@plugins/tasks/core";
+import { pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { isDocFile } from "./panes";
 

@@ -211,6 +211,85 @@ export type DefineResourceInput<T, P extends ResourceParams = ResourceParams> =
       keyOf: (row: any) => string;
     } & ScopePolicy);
 
+/**
+ * The browser-safe half of a resource declaration: exactly the fields a client
+ * `ResourceDescriptor` already carries that the server *also* needs — the `key`,
+ * the `schema`, and (for delta-sync) the keyed row identity. `defineResource`'s
+ * two-arg form takes one of these and the server supplies only the DB-bound half
+ * (`ServerResourceOptions`), so `key` / `schema` / keyed-ness are declared in
+ * exactly ONE place — the shared descriptor — instead of being restated on both
+ * sides and silently drifting (the "server says keyed, client forgot its keyOf"
+ * crash this collapses out of existence).
+ *
+ * Matched **structurally**: the live-state `ResourceDescriptor` satisfies this
+ * shape without the runtime importing the live-state primitive, so this module
+ * stays acyclic. `P` is threaded through the same phantom `__params` the
+ * descriptor uses, so the server resource inherits the descriptor's param typing.
+ */
+export interface ResourceContract<T, P extends ResourceParams = ResourceParams> {
+  key: string;
+  schema: ZodType<T>;
+  keyed?: { keyOf: (row: unknown) => string };
+  /** Phantom — carries `P` for inference, mirroring the client descriptor. */
+  readonly __params?: P;
+}
+
+/**
+ * A keyed contract — the client descriptor carries a `keyOf` (produced by
+ * `keyedResourceDescriptor`, whose return type makes `keyed` REQUIRED). The
+ * server's two-arg `defineResource` matches this overload and pairs it with a
+ * mandatory `ScopePolicy`, so a keyed resource declared via the descriptor form
+ * is held to the SAME scope-coverage invariant as the flat `DefineResourceInput`
+ * form — the descriptor path is not an escape hatch.
+ */
+export type KeyedResourceContract<T, P extends ResourceParams = ResourceParams> =
+  ResourceContract<T, P> & { keyed: { keyOf: (row: unknown) => string } };
+
+/**
+ * Server-only half of a resource declaration, paired with a `ResourceContract`
+ * in `defineResource`'s two-arg form. Everything here pulls loader/DB code that
+ * must never enter the browser bundle; the browser-safe `key`/`schema`/keyed
+ * fields come from the contract. `mode` picks push vs invalidate for a non-keyed
+ * contract (a keyed contract forces `"keyed"` from its own `keyOf`, so `mode`
+ * excludes it). The keyed overload additionally intersects `ScopePolicy`, which
+ * makes `identityTable` (or the explicit `recompute:` FULL opt-out) mandatory.
+ */
+export interface ServerResourceOptions<T, P extends ResourceParams = ResourceParams> {
+  loader: ResourceDefinition<T, P>["loader"];
+  mode?: Exclude<ResourceMode, "keyed">;
+  dependsOn?: ResourceDefinition<T, P>["dependsOn"];
+  identityTable?: string;
+  debounceMs?: number;
+  onFirstSubscribe?: ResourceDefinition<T, P>["onFirstSubscribe"];
+  onLastUnsubscribe?: ResourceDefinition<T, P>["onLastUnsubscribe"];
+}
+
+// Fold a (contract, server-opts) pair into the flat `ResourceDefinition` the
+// runtime registers. Pure — keyed-ness comes solely from the contract, so the
+// server cannot disagree with the client about it. `recompute` (the keyed FULL
+// opt-out, supplied via the keyed overload's `ScopePolicy`) is threaded through.
+function contractToDefinition<T, P extends ResourceParams>(
+  contract: ResourceContract<T, P>,
+  opts: ServerResourceOptions<T, P> & {
+    identityTable?: string;
+    recompute?: { kind: "full"; reason: string };
+  },
+): ResourceDefinition<T, P> {
+  return {
+    key: contract.key,
+    schema: contract.schema,
+    mode: contract.keyed ? "keyed" : (opts.mode ?? "invalidate"),
+    keyOf: contract.keyed?.keyOf,
+    loader: opts.loader,
+    dependsOn: opts.dependsOn,
+    identityTable: opts.identityTable,
+    recompute: opts.recompute,
+    debounceMs: opts.debounceMs,
+    onFirstSubscribe: opts.onFirstSubscribe,
+    onLastUnsubscribe: opts.onLastUnsubscribe,
+  };
+}
+
 export interface Resource<T, P extends ResourceParams = ResourceParams> {
   key: string;
   mode: ResourceMode;
@@ -406,14 +485,30 @@ export interface ResourceRuntimeOptions {
 
 export interface ResourceRuntime {
   /**
-   * Declare a DB-backed resource. The input is the strict `DefineResourceInput`,
-   * so a `mode: "keyed"` resource that declares neither `identityTable` nor an
-   * explicit `recompute: { kind: "full", reason }` opt-out is a `tsc` error —
-   * scoped-recompute coverage is mandatory-by-construction, never silent.
+   * Declare a DB-backed resource. Two shapes:
+   *
+   * - Flat `(def)` — the strict `DefineResourceInput`, so a `mode: "keyed"`
+   *   resource that declares neither `identityTable` nor an explicit
+   *   `recompute: { kind: "full", reason }` opt-out is a `tsc` error.
+   * - Two-arg `(contract, serverOpts)` — derives `key`/`schema`/keyed-ness from
+   *   the shared client descriptor so server and client can't drift. A KEYED
+   *   contract requires a `ScopePolicy` in `serverOpts` (same scope-coverage
+   *   invariant as the flat form — the descriptor path is not an escape hatch);
+   *   a non-keyed contract takes plain `ServerResourceOptions`.
+   *
+   * Prefer the two-arg form whenever a client descriptor exists for the resource.
    */
-  defineResource: <T, P extends ResourceParams = ResourceParams>(
-    def: DefineResourceInput<T, P>,
-  ) => Resource<T, P>;
+  defineResource: {
+    <T, P extends ResourceParams = ResourceParams>(def: DefineResourceInput<T, P>): Resource<T, P>;
+    <T, P extends ResourceParams = ResourceParams>(
+      contract: KeyedResourceContract<T, P>,
+      opts: ServerResourceOptions<T, P> & ScopePolicy,
+    ): Resource<T, P>;
+    <T, P extends ResourceParams = ResourceParams>(
+      contract: ResourceContract<T, P>,
+      opts: ServerResourceOptions<T, P>,
+    ): Resource<T, P>;
+  };
   /**
    * Like `defineResource`, but the returned handle exposes a callable `notify()`.
    * For escape-hatch resources whose truth lives outside Postgres (the DB
@@ -780,13 +875,34 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // DB-backed resource: the runtime object carries a `notify` method, but the
   // returned type hides it (`Resource` has no `notify`), so hand-notifying a
   // DB-backed resource is a compile error — the change-feed drives it instead.
-  // The public input is the strict `DefineResourceInput` (keyed ⇒ scope policy
-  // mandatory); `createResource` keeps using the loose `ResourceDefinition`, so
-  // the discriminated input is widened back to it here at the one seam.
+  //
+  // Two call shapes (see the `ResourceRuntime` interface): the flat strict
+  // `DefineResourceInput` (keyed ⇒ scope policy mandatory) and the
+  // `(contract, serverOpts)` form that reads key/schema/keyed-ness off a shared
+  // client descriptor so server and client can't disagree about them. Both widen
+  // back to the loose `ResourceDefinition` that `createResource` registers.
   function defineResource<T, P extends ResourceParams = ResourceParams>(
     def: DefineResourceInput<T, P>,
+  ): Resource<T, P>;
+  function defineResource<T, P extends ResourceParams = ResourceParams>(
+    contract: KeyedResourceContract<T, P>,
+    opts: ServerResourceOptions<T, P> & ScopePolicy,
+  ): Resource<T, P>;
+  function defineResource<T, P extends ResourceParams = ResourceParams>(
+    contract: ResourceContract<T, P>,
+    opts: ServerResourceOptions<T, P>,
+  ): Resource<T, P>;
+  function defineResource<T, P extends ResourceParams = ResourceParams>(
+    a: DefineResourceInput<T, P> | ResourceContract<T, P>,
+    opts?: ServerResourceOptions<T, P> & {
+      identityTable?: string;
+      recompute?: { kind: "full"; reason: string };
+    },
   ): Resource<T, P> {
-    return createResource(def as ResourceDefinition<T, P>, false);
+    const def = opts
+      ? contractToDefinition(a as ResourceContract<T, P>, opts)
+      : (a as ResourceDefinition<T, P>);
+    return createResource(def, false);
   }
 
   // Escape-hatch resource (truth outside Postgres): exposes a callable `notify`.

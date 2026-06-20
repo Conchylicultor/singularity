@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { BootSnapshot } from "@plugins/infra/plugins/boot-snapshot/web";
-import { tasksResource, attemptsResource, pushesResource } from "../core";
+import { tasksResource, attemptsResource, pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
 
 export {
   patchTask,

@@ -13,7 +13,7 @@ import { dropAndExit } from "@plugins/conversations/plugins/conversation-view/pl
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
-import { pushesResource } from "@plugins/tasks/core";
+import { pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 
