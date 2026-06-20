@@ -36,6 +36,7 @@ export {
   UNSAFE_installDurableHooks,
 } from "./internal/step-ctx";
 export type { DurableHooks } from "./internal/step-ctx";
+export { NonRetryableError } from "./internal/non-retryable";
 export { jobsListResource, deadJobsResource } from "./internal/resources";
 export { queryDeadJobStats, queryQueueBacklog } from "./internal/introspection";
 export type { DeadJobStat, QueueBacklogStat } from "./internal/introspection";

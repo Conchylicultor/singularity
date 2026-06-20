@@ -18,6 +18,8 @@ import {
   type JobTaskPayload,
 } from "./registry";
 import { isSuspendSignal, makeDurableCtx } from "./step-ctx";
+import { isNonRetryableError } from "./non-retryable";
+import { markJobPermanentlyFailed } from "./introspection";
 import { _jobSteps, _jobWaits } from "./tables";
 
 const CONCURRENCY = 4;
@@ -125,11 +127,15 @@ export async function stopWorker(): Promise<void> {
   }
 }
 
-// Layer 1 failure policy: fail-loud. Unknown job or schema drift → throw;
-// Graphile retries up to `maxAttempts`, then permanently-fails (row stays
-// in `graphile_worker.jobs` with `attempts >= max_attempts`). Layer 1 has
-// nothing to preserve — callers (like the events dispatcher) that want
-// preservation semantics catch those conditions in their own handler.
+// Layer 1 failure policy: fail-loud. Unknown job or input-schema drift → throw;
+// Graphile retries up to `maxAttempts`, then permanently-fails (row stays in
+// `graphile_worker._private_jobs` with `attempts >= max_attempts`). A handler
+// that knows its failure is DETERMINISTIC can throw a `NonRetryableError`
+// instead: the catch below collapses the retry budget so the row dead-letters
+// after a single attempt — loud, reported, and visible, but without burning
+// `maxAttempts` retries of pure waste. Layer 1 itself has nothing to preserve —
+// callers (like the events dispatcher) that want preservation semantics catch
+// those conditions in their own handler.
 async function dispatch(
   payload: JobTaskPayload,
   meta: { jobId: string; attempt: number },
@@ -218,6 +224,17 @@ async function dispatch(
       stack: errObj.stack ?? null,
       errorType: errObj.name,
     });
+    // A NonRetryableError signals a DETERMINISTIC failure — the same stored
+    // input will fail identically on every retry. Collapse the retry budget so
+    // graphile dead-letters this row after the current attempt instead of
+    // churning `maxAttempts` retries of pure waste. The throw below still feeds
+    // graphile's fail handler (sets last_error, clears the lock); the row then
+    // satisfies `deadJobPredicate` and queue-health reaps it as one dead-letter.
+    // If the budget-collapse write itself fails, we fall through to the throw
+    // and graphile retries normally (the real cause was already reported above).
+    if (isNonRetryableError(err)) {
+      await markJobPermanentlyFailed(meta.jobId);
+    }
     throw err;
   }
 

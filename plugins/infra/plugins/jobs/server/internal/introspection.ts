@@ -69,6 +69,22 @@ export async function queryDeadJobStats(): Promise<DeadJobStat[]> {
   }));
 }
 
+// Collapse a job's retry budget to the attempts already spent, so the next
+// graphile `get_job` scan skips it (`attempts < max_attempts` is now false) and
+// it falls straight into the terminally-dead set above — `deadJobPredicate`
+// holds the instant graphile's fail handler clears the lock. This is the
+// supported way to dead-letter a DETERMINISTIC failure after a single attempt
+// instead of burning the full retry budget on a payload that will never parse.
+// Lives here, beside `deadJobPredicate`, because it exists precisely to satisfy
+// it. Targeted single-row write by id — no task join needed.
+export async function markJobPermanentlyFailed(jobId: string): Promise<void> {
+  await db.execute(sql`
+    UPDATE graphile_worker._private_jobs
+       SET max_attempts = attempts
+     WHERE id = ${jobId}::bigint
+  `);
+}
+
 // A single aggregate snapshot of the queue's depth/stall state.
 export interface QueueBacklogStat {
   readyCount: number;

@@ -1,7 +1,11 @@
 import { eq } from "drizzle-orm";
 import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { z } from "zod";
-import { defineJob, UNSAFE_getRegisteredJob } from "@plugins/infra/plugins/jobs/server";
+import {
+  defineJob,
+  NonRetryableError,
+  UNSAFE_getRegisteredJob,
+} from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { triggerTableRegistry } from "./registry";
@@ -19,6 +23,12 @@ import { triggerTableRegistry } from "./registry";
 //
 // Unknown targets (stale triggers referencing deleted jobs) are self-healed:
 // the orphaned trigger row is removed and dispatch returns without throwing.
+//
+// Event-payload schema drift (the target exists but the stored payload no
+// longer parses against its `event:` schema) is its sibling but NOT self-healed
+// — the binding is still valid. It is deterministic, though, so it throws a
+// NonRetryableError to dead-letter after one attempt instead of churning
+// maxAttempts retries on every emission.
 export const eventsDispatchJob = defineJob({
   name: "events.dispatch",
   input: z.object({
@@ -57,11 +67,17 @@ export const eventsDispatchJob = defineJob({
     if (!isNeverEvent) {
       const parsedEvent = target.eventSchema.safeParse(p.eventPayload);
       if (!parsedEvent.success) {
-        const err = new Error(
+        // Event-payload contract drift: the target job exists, but the stored
+        // payload no longer parses against its `event:` schema. This is a
+        // deterministic failure — the same stored payload will never parse on
+        // retry — so we throw a NonRetryableError to dead-letter it after one
+        // attempt instead of churning maxAttempts retries on every emission.
+        // We do NOT self-heal (delete the trigger) like the unknown-job path:
+        // the binding is still valid, the contract just needs fixing. The
+        // worker reports + dead-letters it, keeping the drift loud and visible.
+        throw new NonRetryableError(
           `[events] event drift for job "${p.jobName}" (event "${p.eventName}", trigger ${p.triggerId}): ${parsedEvent.error.message}`,
         );
-        reportServerError({ message: err.message, stack: err.stack ?? null });
-        throw err;
       }
       eventArg = parsedEvent.data;
     }
