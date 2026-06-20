@@ -8,7 +8,7 @@ import { MdClose, MdWebAsset } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   endTabDrag,
   startTabDrag,
@@ -223,7 +223,7 @@ export function WindowTabStrip({
               onSelect(member.tabId);
             }}
           >
-            <TruncatingText className="max-w-28">{member.title}</TruncatingText>
+            <Text className="max-w-28">{member.title}</Text>
             {/* Per-tab close — stops the pointer so it neither selects the chip,
                 starts a chip-drag, nor starts a move-drag, then closes this
                 member alone. */}

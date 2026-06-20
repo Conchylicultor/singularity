@@ -1,6 +1,6 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { FieldDef, FieldValue } from "../index";
 import type { useResolveCellEditor } from "../index";
@@ -27,7 +27,7 @@ function ReadAffordance(props: {
   onClick: (e: MouseEvent) => void;
 }): ReactNode {
   return (
-    <TruncatingText
+    <Text
       as={props.display === "inline" ? "span" : "div"}
       className={cn("cursor-text", props.display === "inline" ? undefined : "w-full")}
       onClick={props.onClick}
@@ -37,7 +37,7 @@ function ReadAffordance(props: {
       ) : (
         props.read
       )}
-    </TruncatingText>
+    </Text>
   );
 }
 

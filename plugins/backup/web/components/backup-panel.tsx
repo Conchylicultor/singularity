@@ -14,7 +14,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { GrantAccessButton } from "@plugins/auth/web";
@@ -66,9 +65,9 @@ function TargetResultRow({ result }: { result: BackupTargetResult }) {
       }
       meta={
         result.detail ? (
-          <TruncatingText className="text-caption text-muted-foreground">
+          <Text className="text-caption text-muted-foreground">
             {result.detail}
-          </TruncatingText>
+          </Text>
         ) : undefined
       }
       trailing={

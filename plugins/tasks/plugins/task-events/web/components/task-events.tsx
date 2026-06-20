@@ -20,7 +20,6 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 
 function useGithubBase(): string | null {
   const { data } = useEndpoint(getRepoInfo, {});
@@ -141,9 +140,9 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                     gap="md"
                     leading={<AttemptStatusBadge status={attempt.status} />}
                     content={
-                      <TruncatingText className="text-caption font-mono text-muted-foreground">
+                      <Text className="text-caption font-mono text-muted-foreground">
                         {attempt.worktreePath.split("/").pop()}
-                      </TruncatingText>
+                      </Text>
                     }
                     trailing={
                       <Text as="span" variant="caption" tone="muted" className="tabular-nums">

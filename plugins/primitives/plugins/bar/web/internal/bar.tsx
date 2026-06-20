@@ -1,4 +1,7 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ElementType, HTMLAttributes } from "react";
 
 export type BarTier = "chrome" | "pane";
@@ -68,6 +71,9 @@ export function Bar({
   const As = as ?? TIER_ELEMENT[tier];
   const safe = endSafeArea ?? tier === "chrome";
   return (
+    // Line container: single-line by contract (the `region-line` root already
+    // carries the structural `whitespace-nowrap`; this adds the leaf ellipsis layer).
+    <SingleLineProvider value={true}>
     <As
       // eslint-disable-next-line layout/no-adhoc-layout -- Bar is the sanctioned single-line chrome-strip primitive (enforced by bar/no-adhoc-bar); it owns its own raw flex-row + clip mechanics, the same way the css/* layout primitives own theirs
       className={cn(
@@ -81,5 +87,6 @@ export function Bar({
     >
       {children}
     </As>
+    </SingleLineProvider>
   );
 }

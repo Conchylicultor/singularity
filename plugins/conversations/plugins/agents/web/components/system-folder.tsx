@@ -1,6 +1,6 @@
 import { MdAutoAwesome } from "react-icons/md";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Collapsible,
   CollapsibleChevron,
@@ -10,7 +10,6 @@ import {
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { Agents as AgentsSlots } from "../slots";
 import { systemAgentDetailPane } from "../panes";
 
@@ -51,7 +50,7 @@ export function SystemFolder({
                 icon={<Icon className="text-muted-foreground" />}
                 onClick={() => openPane(systemAgentDetailPane, { systemId: d.id }, { mode: "push" })}
               >
-                <TruncatingText>{d.name}</TruncatingText>
+                <Text>{d.name}</Text>
               </Row>
             );
           })}

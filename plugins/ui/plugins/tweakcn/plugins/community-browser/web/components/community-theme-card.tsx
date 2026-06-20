@@ -4,7 +4,7 @@ import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { CatalogTheme } from "../../shared";
 
 const COLOR_BARS = [
@@ -86,9 +86,9 @@ export function CommunityThemeCard({
         <Frame
           gap="xs"
           content={
-            <TruncatingText className="text-label" style={{ color: fg }}>
+            <Text variant="label" style={{ color: fg }}>
               {theme.name}
-            </TruncatingText>
+            </Text>
           }
           trailing={
             theme.source === "registry" ? (

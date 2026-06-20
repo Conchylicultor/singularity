@@ -29,7 +29,8 @@ const createRule = ESLintUtils.RuleCreator(
  *     hierarchy (rigid | truncates-last | truncates-first | rigid-right).
  *   - `<Grid>` / `<Cluster>` / `<Center>` / `<Overlay>` — the other layout modes.
  *   - `<Stack>` / `<Inset>` (@plugins/primitives/plugins/css/plugins/spacing/web) — 1-D flow.
- *   - `<TruncatingText>` — THE truncation leaf; the only home for `min-w-0`.
+ *   - `<Text>` inside a line container — THE truncation leaf; the only home for
+ *     `min-w-0` (it ellipsizes via the ambient single-line context).
  *
  * NOT banned (deliberately): `relative` / `static` (positioning *context* is
  * benign — Overlay establishes it), sizing (`w-*`, `h-*`, `size-*`, `min-w-*`
@@ -154,8 +155,8 @@ export default createRule({
         "Raw layout class `{{token}}` is banned — compose layout through the primitives: " +
         "<Frame leading content meta trailing> (named-slot row, owns the shrink hierarchy), " +
         "<Grid>/<Cluster>/<Center>/<Overlay> from @plugins/primitives/plugins/css/plugins/*, " +
-        "<Stack gap>/<Inset pad> from @plugins/primitives/plugins/css/plugins/spacing/web, or <TruncatingText> " +
-        "for the min-w-0 truncation leaf. A genuine one-off escapes per-site with " +
+        "<Stack gap>/<Inset pad> from @plugins/primitives/plugins/css/plugins/spacing/web, or <Text> " +
+        "inside a line container for the min-w-0 truncation leaf. A genuine one-off escapes per-site with " +
         "`// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
     },
   },

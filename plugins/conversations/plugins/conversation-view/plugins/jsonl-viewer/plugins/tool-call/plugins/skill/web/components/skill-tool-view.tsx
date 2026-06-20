@@ -8,7 +8,7 @@ import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web"
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 type SkillInput = { skill: string; args?: string };
 
@@ -49,7 +49,7 @@ export function SkillToolView({ event }: ToolRendererProps) {
   );
 
   const summary = args ? (
-    <TruncatingText className="text-muted-foreground">{args}</TruncatingText>
+    <Text className="text-muted-foreground">{args}</Text>
   ) : undefined;
 
   return (

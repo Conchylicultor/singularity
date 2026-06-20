@@ -7,7 +7,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -65,7 +65,7 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
               icon={<MdFolder className="text-muted-foreground" />}
               onClick={() => data && setBrowsePath(`${data.path}/${entry.name}`)}
             >
-              <TruncatingText>{entry.name}</TruncatingText>
+              <Text>{entry.name}</Text>
             </Row>
           ))
         )}

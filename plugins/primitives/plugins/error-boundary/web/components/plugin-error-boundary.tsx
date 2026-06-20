@@ -3,7 +3,6 @@ import { UNSAFE_unsealSlotComponent } from "@plugins/framework/plugins/web-sdk/c
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { ErrorBoundary } from "../slots";
 import { callReporter, type BoundaryErrorReport } from "../reporter";
 
@@ -95,9 +94,9 @@ function CrashFallback({
         className="rounded-md border border-destructive/20 bg-destructive/10 px-md py-sm"
         leading={<span className="font-medium">{tag || "Plugin"} crashed</span>}
         content={
-          <TruncatingText className="text-destructive/70">
+          <Text className="text-destructive/70">
             {report.error.message}
-          </TruncatingText>
+          </Text>
         }
         trailing={
           <Stack direction="row" align="center" gap="sm">

@@ -19,7 +19,8 @@ alignment (`items-*`, `justify-*`, `place-*`, `self-*`), positioning
 display (`block`/`hidden`/`inline`); spacing and `z-*` are owned by their own
 rules. Compose layout through the primitives instead — `<Frame>` for rows,
 `<Grid>`/`<Cluster>`/`<Center>`/`<Overlay>` for the other modes, `<Stack>` /
-`<Inset>` for 1-D flow, `<TruncatingText>` for the `min-w-0` truncation leaf.
+`<Inset>` for 1-D flow, `<Text>` inside a line container for the `min-w-0`
+truncation leaf (it ellipsizes via the ambient single-line context).
 
 The `ignores` allowlist in `lint/index.ts` keeps only the **permanent** globs for
 the layout primitives themselves (they own the raw mechanics). The **burndown**
@@ -64,7 +65,6 @@ entries back. A genuinely-fixed one-off escapes per-site via
   - **`surface`** — Semantic surface elevation primitive: <Surface level> bundles background + border + radius + shadow into a closed set of roles (sunken/base/raised/overlay), plus the no-adhoc-surface lint rule.
   - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group (incl. the eyebrow/section-label role). The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
   - **`toggle-chip`** — Toggle-chip control: a stateful solid/ghost pill (composes Badge) with active state, button-height matching, polymorphic `as`, plus a SegmentedControl single-select group helper.
-  - **`truncating-text`** — Single-line text that truncates with an ellipsis instead of wrapping. Bakes in the min-w-0 + truncate pair flexible labels need inside a flex row.
   - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.
   - **`viewport-overlay`** — Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor.
   - **`z-layers`** — Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).

@@ -46,9 +46,10 @@ What this does and does NOT do:
   `shrink-0`. Anything that must not shrink should be `shrink-0` (opt-out). A
   forgotten `shrink-0` fails *loudly* (visible squish at any width).
 - **Leaf text still needs truncation.** CSS can't truncate arbitrarily-nested
-  text from an ancestor — wrap the flexible label in `<TruncatingText>` (from
-  `@plugins/primitives/plugins/truncating-text/web`) or apply `min-w-0 truncate`
-  on the text element itself. The cell only makes that truncation *work*.
+  text from an ancestor — render the flexible label as a `<Text>` (from
+  `@plugins/primitives/plugins/css/plugins/text/web`) inside a line container
+  (`Frame`/`Row`/`Bar`), which provides the ambient `SingleLine` context so the
+  `<Text>` ellipsizes. The cell only makes that truncation *work*.
 - The few chrome containers (`app-shell` header, `pane-chrome` title row) add
   `overflow-hidden` as a fixed-height safety net so a forgotten leaf truncation
   clips to one line instead of breaking the layout.

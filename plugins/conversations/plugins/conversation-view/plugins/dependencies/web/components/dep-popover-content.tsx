@@ -2,7 +2,6 @@ import { MdClose } from "react-icons/md";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
@@ -75,11 +74,11 @@ export function DepPopoverContent({
                   gap="xs"
                   align="center"
                   content={
-                    <TruncatingText
+                    <Text
                       className={`text-caption ${isTerminal ? "text-muted-foreground line-through" : ""}`}
                     >
                       {depTask?.title ?? id}
-                    </TruncatingText>
+                    </Text>
                   }
                   trailing={
                     <button

@@ -1,7 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ChartState } from "@plugins/stats/plugins/commits/web";
 import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
@@ -79,9 +78,9 @@ function TopRow({ row }: { row: Row }) {
         <Frame
           align="baseline"
           content={
-            <TruncatingText className="font-medium text-foreground">
+            <Text className="font-medium text-foreground">
               {row.title ?? <UntitledLabel sessionId={row.sessionId} />}
-            </TruncatingText>
+            </Text>
           }
           meta={
             row.status ? (

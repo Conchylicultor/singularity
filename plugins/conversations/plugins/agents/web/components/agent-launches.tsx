@@ -9,7 +9,6 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 
 function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
@@ -85,7 +84,7 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
                     }
                   }}
                 >
-                  <TruncatingText>{title}</TruncatingText>
+                  <Text>{title}</Text>
                 </Row>
               </li>
             );

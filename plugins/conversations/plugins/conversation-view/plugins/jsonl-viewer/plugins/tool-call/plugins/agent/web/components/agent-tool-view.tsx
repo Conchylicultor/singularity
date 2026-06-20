@@ -7,7 +7,7 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
@@ -76,9 +76,9 @@ export function AgentToolView({ event }: ToolRendererProps) {
       }
       content={
         description ? (
-          <TruncatingText className="text-muted-foreground">
+          <Text className="text-muted-foreground">
             {description}
-          </TruncatingText>
+          </Text>
         ) : undefined
       }
     />

@@ -6,7 +6,7 @@
 
 - Description: Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
 - Web:
-  - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/code/file-pane.filePeekPane`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/inline.Inline`, `primitives/css/truncating-text.TruncatingText`, `primitives/pane.useOpenPane`
+  - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/code/file-pane.filePeekPane`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/inline.Inline`, `primitives/css/text.Text`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/pane.useOpenPane`
   - Exports: Values: `FilePath`, `toRelativePath`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/task-notification`, `conversations/conversation-view/jsonl-viewer/tool-call/edit`, `conversations/conversation-view/jsonl-viewer/tool-call/read`, `conversations/conversation-view/jsonl-viewer/tool-call/write`

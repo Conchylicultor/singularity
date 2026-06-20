@@ -9,7 +9,6 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -62,17 +61,17 @@ function summaryFor(questions: Question[], firstAnswerParts: string[]) {
       }
       content={
         questions[0]?.question ? (
-          <TruncatingText className="text-muted-foreground">
+          <Text className="text-muted-foreground">
             {questions[0].question}
-          </TruncatingText>
+          </Text>
         ) : undefined
       }
       meta={
         firstAnswerParts.length > 0 ? (
-          <TruncatingText className="text-foreground">
+          <Text className="text-foreground">
             <span className="text-muted-foreground/50">&rarr;</span>{" "}
             {firstAnswerParts.join(", ")}
-          </TruncatingText>
+          </Text>
         ) : undefined
       }
     />

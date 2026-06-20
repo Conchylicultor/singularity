@@ -1,12 +1,33 @@
 import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, render, fireEvent } from "@testing-library/react";
-import { TruncatingText } from "../index";
+import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Text } from "../index";
 
 afterEach(cleanup);
 
-describe("TruncatingText", () => {
-  it("end-side (default) truncates the tail with no direction override", () => {
-    render(<TruncatingText data-testid="t">a/very/long/path.ts</TruncatingText>);
+// `Text` truncates to a single line ONLY inside a `SingleLine` context (provided by
+// line containers — Frame/Row/Bar/collapsible headers). These tests drive the
+// context explicitly via `<SingleLineProvider>` (what those containers do).
+describe("Text single-line context", () => {
+  it("does NOT truncate outside a single-line context (flow default)", () => {
+    render(
+      <Text variant="body" data-testid="t">
+        a/very/long/path.ts
+      </Text>,
+    );
+    const el = document.querySelector<HTMLElement>('[data-testid="t"]')!;
+    expect(el.classList.contains("truncate")).toBe(false);
+    expect(el.classList.contains("min-w-0")).toBe(false);
+    // No auto-title outside a single-line context (a wrapping paragraph).
+    expect(el.hasAttribute("title")).toBe(false);
+  });
+
+  it("end-side (default) truncates the tail inside a single-line context", () => {
+    render(
+      <SingleLineProvider value={true}>
+        <Text data-testid="t">a/very/long/path.ts</Text>
+      </SingleLineProvider>,
+    );
     const el = document.querySelector<HTMLElement>('[data-testid="t"]')!;
     expect(el.classList.contains("min-w-0")).toBe(true);
     expect(el.classList.contains("truncate")).toBe(true);
@@ -23,9 +44,11 @@ describe("TruncatingText", () => {
 
   it("start-side flips the ellipsis to the lead via the RTL technique", () => {
     render(
-      <TruncatingText side="start" data-testid="t">
-        a/very/long/path.ts
-      </TruncatingText>,
+      <SingleLineProvider value={true}>
+        <Text side="start" data-testid="t">
+          a/very/long/path.ts
+        </Text>
+      </SingleLineProvider>,
     );
     const el = document.querySelector<HTMLElement>('[data-testid="t"]')!;
     // host laid out rtl so text-overflow clips at the visual start.
@@ -44,15 +67,17 @@ describe("TruncatingText", () => {
   it("can BE the interactive leaf via as=button + forwarded handlers", () => {
     const onClick = vi.fn();
     render(
-      <TruncatingText
-        as="button"
-        side="start"
-        onClick={onClick}
-        title="full/path.ts"
-        data-testid="t"
-      >
-        full/path.ts
-      </TruncatingText>,
+      <SingleLineProvider value={true}>
+        <Text
+          as="button"
+          side="start"
+          onClick={onClick}
+          title="full/path.ts"
+          data-testid="t"
+        >
+          full/path.ts
+        </Text>
+      </SingleLineProvider>,
     );
     const el = document.querySelector<HTMLElement>('[data-testid="t"]')!;
     expect(el.tagName).toBe("BUTTON");

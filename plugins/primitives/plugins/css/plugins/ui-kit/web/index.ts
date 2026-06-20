@@ -13,6 +13,8 @@ export {
   type ButtonIconSize,
 } from "./theme/control-size";
 
+export { SingleLineProvider, useSingleLine } from "./theme/single-line";
+
 export { Button, buttonVariants } from "./components/ui/button";
 export { ButtonGroup } from "./components/ui/button-group";
 export {

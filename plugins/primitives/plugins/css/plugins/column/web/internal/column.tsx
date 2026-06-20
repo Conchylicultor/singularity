@@ -1,6 +1,9 @@
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 import type { ReactNode } from "react";
 
@@ -52,7 +55,7 @@ export interface ColumnProps extends React.HTMLAttributes<HTMLElement> {
  * growing+scrolling body, rigid footer) — exactly what `Scroll`'s `fill`
  * (`min-h-0 flex-1 overflow-y-auto`) was built for. So `Column` owns the
  * `flex flex-col` + rigid wrappers and **delegates the scroll body to `Scroll`**
- * (composition, like `Frame` delegates truncation to `TruncatingText`); `Scroll`
+ * (composition, like `Frame` delegates truncation to its `Text` leaf); `Scroll`
  * stays the single owner of `overflow`.
  *
  * Callers write roles, never mechanics (no per-call-site `shrink-0` / `min-h-0` /
@@ -73,21 +76,32 @@ export function Column({
   ...rest
 }: ColumnProps) {
   return (
-    <As
-      ref={ref}
-      className={cn("flex flex-col", GAP_CLASS[gap], fill && "min-h-0 flex-1", className)}
-      {...rest}
-    >
-      {header != null && <div className="shrink-0">{header}</div>}
-      {body != null &&
-        (scrollBody ? (
-          <Scroll axis="y" fill hideScrollbar={hideScrollbar}>
-            {body}
-          </Scroll>
-        ) : (
-          <div className="min-h-0 flex-1">{body}</div>
-        ))}
-      {footer != null && <div className="shrink-0">{footer}</div>}
-    </As>
+    // Flow container (always vertical): RESETS the single-line contract so stacked
+    // regions wrap — `whitespace-normal` re-wraps raw text and the `SingleLine`
+    // reset stops leaves from truncating, in case the column is nested inside a
+    // line container (Frame/Row/Bar).
+    <SingleLineProvider value={false}>
+      <As
+        ref={ref}
+        className={cn(
+          "flex flex-col whitespace-normal",
+          GAP_CLASS[gap],
+          fill && "min-h-0 flex-1",
+          className,
+        )}
+        {...rest}
+      >
+        {header != null && <div className="shrink-0">{header}</div>}
+        {body != null &&
+          (scrollBody ? (
+            <Scroll axis="y" fill hideScrollbar={hideScrollbar}>
+              {body}
+            </Scroll>
+          ) : (
+            <div className="min-h-0 flex-1">{body}</div>
+          ))}
+        {footer != null && <div className="shrink-0">{footer}</div>}
+      </As>
+    </SingleLineProvider>
   );
 }

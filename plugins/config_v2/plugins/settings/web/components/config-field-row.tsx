@@ -7,7 +7,6 @@ import { useCallback } from "react";
 import { MdUndo, MdWarning } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { FieldRenderer, ConfigFieldContext } from "@plugins/config_v2/plugins/fields/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -139,7 +138,7 @@ export function ConfigFieldRow({
         <Text as="div" variant="caption" className="ml-3 rounded-md border border-warning/30 bg-warning/10 px-sm py-xs text-warning">
           <Frame
             leading={<MdWarning className="size-3" />}
-            content={<TruncatingText>Upstream: {formatOriginValue(originValue)}</TruncatingText>}
+            content={<Text>Upstream: {formatOriginValue(originValue)}</Text>}
             trailing={
               <Badge
                 as="button"

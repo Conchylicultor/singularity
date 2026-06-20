@@ -162,7 +162,7 @@
  * single-line guarantee (center the cross-axis + never wrap) into ONE named
  * utility so the invariant lives in exactly one place instead of N hand-repeated
  * `items-center whitespace-nowrap` copies. Display-agnostic on purpose: consumers
- * add their own `flex`/`inline-flex`. The `truncating-text/no-clip-without-nowrap`
+ * add their own `flex`/`inline-flex`. The `text/no-clip-without-nowrap`
  * lint rule treats `region-line` as nowrap-safe (it implies `whitespace-nowrap`). */
 @utility region-line { @apply items-center whitespace-nowrap; } /* twmerge: standalone -- Composite single-line invariant (align-items + whitespace); name doesn't misfile into a built-in group and it's a base layer, not a selectively-overridden single property. */
 

@@ -1,7 +1,6 @@
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useBrowserNav, Favicon } from "@plugins/apps/plugins/browser/plugins/shell/web";
@@ -40,7 +39,7 @@ export function RecentsSection() {
                 }
                 actionsAlwaysVisible
               >
-                <TruncatingText>{r.title}</TruncatingText>
+                <Text>{r.title}</Text>
               </Row>
             ))}
           </Stack>

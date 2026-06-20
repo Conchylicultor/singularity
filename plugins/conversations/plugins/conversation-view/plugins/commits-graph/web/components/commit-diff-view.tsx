@@ -9,7 +9,6 @@ import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { useCommitFiles } from "../use-commit-files";
 
 export function CommitDiffView({
@@ -142,7 +141,7 @@ function CommitFileRow({
           <Frame
             leading={<CollapsibleChevron open={expanded} className="size-4 text-muted-foreground" />}
             content={
-              <TruncatingText>
+              <Text>
                 {from && (
                   <>
                     <span className="text-muted-foreground line-through">{from}</span>
@@ -152,7 +151,7 @@ function CommitFileRow({
                 )}
                 <span className="text-muted-foreground">{dir}</span>
                 <span className="font-medium">{basename}</span>
-              </TruncatingText>
+              </Text>
             }
             trailing={
               <>

@@ -1,7 +1,10 @@
 import { type Node, type NodeProps } from "@xyflow/react";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export const GROUP_BG_TYPE = "graphCanvasGroup";
 
@@ -35,11 +38,11 @@ export function GroupBackground({ data }: NodeProps<GroupBgFlowNode>) {
         style={{ left: "var(--space-sm)" }}
         className="max-w-[calc(100%-16px)]"
       >
-        <TruncatingText
-          className={cn("text-3xs font-medium", data.labelClassName)}
-        >
-          {data.label}
-        </TruncatingText>
+        <SingleLineProvider value={true}>
+          <Text className={cn("text-3xs font-medium", data.labelClassName)}>
+            {data.label}
+          </Text>
+        </SingleLineProvider>
       </Pin>
     </div>
   );

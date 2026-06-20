@@ -12,7 +12,6 @@ import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/we
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { acknowledgeConflict, deleteOverride, mergeConflict, getConfigRawFile } from "../../core";
 import { configDetailPane } from "../internal/panes";
 import { useConflict } from "../internal/use-conflicts";
@@ -456,7 +455,7 @@ function RawSection({ label, path, code }: { label: string; path: string; code: 
         <Frame
           align="baseline"
           leading={<span className="whitespace-nowrap font-medium">{label}</span>}
-          content={<TruncatingText className="font-mono opacity-70" title={path}>{path}</TruncatingText>}
+          content={<Text className="font-mono opacity-70" title={path}>{path}</Text>}
         />
       </Text>
       {code !== null ? (

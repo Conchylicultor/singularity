@@ -18,7 +18,7 @@ be inert.
 
 So `Column` owns `flex flex-col` + the rigid (`shrink-0`) header/footer wrappers,
 and **delegates the scroll body to the existing `<Scroll>` primitive** —
-composition, exactly as `Frame` delegates truncation to `<TruncatingText>`.
+composition, exactly as `Frame` delegates truncation to its `<Text>` leaf.
 `Scroll` stays the single owner of `overflow`; the `min-h-0` / `flex-1` fill pair
 stays inside `Scroll` (or, with `scrollBody={false}`, on the plain flexible body
 wrapper).
@@ -54,7 +54,7 @@ Only present slots render — an absent slot produces no region and no phantom g
 
 - Description: Vertical named-slot layout primitive: <Column header body footer> stacks a rigid header, a flexible scrolling body, and a rigid footer in one flex column — the column twin of the row Frame. Owns the rigid|flexible|rigid fill policy (shrink-0 header/footer, Scroll body); callers write roles, never shrink-0/min-h-0/flex-1 mechanics.
 - Web:
-  - Uses: `primitives/css/scroll.Scroll`, `primitives/css/ui-kit.cn`
+  - Uses: `primitives/css/scroll.Scroll`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SingleLineProvider`
   - Exports: Types: `ColumnProps`; Values: `Column`
 - Cross-plugin:
   - Imported by: `apps/home/shell`, `apps/sonata/library`, `apps/story/shell`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/graph`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/message-toc`, `debug/profiling`, `history/dialog`, `primitives/data-view`, `primitives/diff-view`, `primitives/pane`, `primitives/tabbed-view`

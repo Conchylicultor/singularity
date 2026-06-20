@@ -1,4 +1,7 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ConversationKind } from "@plugins/tasks/plugins/tasks-core/core";
 import type { ConversationStatus } from "@plugins/conversations/core";
 import { formatRelativeTime, RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -7,7 +10,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Item } from "../slots";
 
 export { formatRelativeTime };
@@ -15,10 +18,16 @@ export { formatRelativeTime };
 function ChipsSlot({ conv }: { conv: ConversationItemConv }) {
   const items = Item.Chips.useContributions();
   if (items.length === 0) return null;
+  // The chips are a single-line GROUP: a render slot adds no container of its own,
+  // so without an explicit nowrap row the chips wrap. <Inline> (a non-wrapping
+  // inline-flex row) keeps them on one line — the group-wrap axis is owned by
+  // container choice, independent of the per-leaf single-line context.
   return (
-    <Item.Chips.Render>
-      {(item) => <item.component conv={conv} />}
-    </Item.Chips.Render>
+    <Inline gap="xs">
+      <Item.Chips.Render>
+        {(item) => <item.component conv={conv} />}
+      </Item.Chips.Render>
+    </Inline>
   );
 }
 
@@ -72,16 +81,19 @@ export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {
 
 export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
   const muted = conv.status === "gone" || conv.status === "done";
+  // The title is an intrinsically single-line atom — it's used both as a Frame
+  // `content` (block layout, already a line container) and inside a flow `<Inline>`
+  // (the inline conv chip), so it forces single-line itself to ellipsize in both.
   return (
-    <TruncatingText
-      as="span"
-      className={cn(
-        "text-caption",
-        muted && "text-muted-foreground",
-      )}
-    >
-      {conv.title ?? "Starting…"}
-    </TruncatingText>
+    <SingleLineProvider value={true}>
+      <Text
+        as="span"
+        variant="caption"
+        className={cn(muted && "text-muted-foreground")}
+      >
+        {conv.title ?? "Starting…"}
+      </Text>
+    </SingleLineProvider>
   );
 }
 

@@ -8,8 +8,8 @@ import noAdhocLayout from "./no-adhoc-layout";
  * Layout composition routes through the layout primitives — `<Frame>` (named
  * slots, owns the shrink hierarchy), `<Grid>`/`<Cluster>`/`<Center>`/`<Overlay>`
  * (@plugins/primitives/plugins/css/plugins/*), `<Stack>`/`<Inset>`
- * (@plugins/primitives/plugins/css/plugins/spacing/web), and `<TruncatingText>` (the only
- * home for `min-w-0`) — never raw `flex`/`grid`/`items-*`/`absolute`/`overflow-*`.
+ * (@plugins/primitives/plugins/css/plugins/spacing/web), and `<Text>` inside a line
+ * container (the only home for `min-w-0`) — never raw `flex`/`grid`/`items-*`/`absolute`/`overflow-*`.
  *
  * The `ignores` array below has two tiers:
  *

@@ -5,7 +5,6 @@ import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { conversationsResource, type ConversationListPayload } from "@plugins/conversations/core";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { worktreeOpsResource, type WorktreeOp } from "../../shared";
@@ -159,11 +158,11 @@ function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: numbe
         </>
       }
       content={
-        <TruncatingText>
+        <Text>
           {title ? <span>{title}</span> : <span className="font-mono">{op.slug}</span>}
           {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating flex cell; not a sibling gap the parent can own */}
           {isSelf && <span className="ml-1.5 text-muted-foreground">(this conversation)</span>}
-        </TruncatingText>
+        </Text>
       }
       trailing={
         <>
@@ -228,7 +227,7 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
               <Spinner className="size-3.5" />
             )
           }
-          content={<TruncatingText>{summaryLabel(op)}</TruncatingText>}
+          content={<Text>{summaryLabel(op)}</Text>}
           trailing={
             <>
               {others > 0 && (

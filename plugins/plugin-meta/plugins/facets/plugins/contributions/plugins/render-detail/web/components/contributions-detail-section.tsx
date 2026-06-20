@@ -9,7 +9,7 @@ import {
 } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Renders the contributions facet's own data. Read `node.facets[id]` directly
 // (as every render host does) rather than importing the build-time `facets/core`
@@ -52,12 +52,12 @@ export function ContributionsDetailSection({ node }: { node: PluginNode }) {
                 }
                 meta={
                   id ? (
-                    <TruncatingText
+                    <Text
                       as="code"
                       className="font-mono text-right text-muted-foreground/60"
                     >
                       {id}
-                    </TruncatingText>
+                    </Text>
                   ) : undefined
                 }
               />

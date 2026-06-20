@@ -73,7 +73,7 @@ when `(overflowing || expanded) && !editMode`.
   collapsed/edit affordances still work, but expanding reveals nothing below row 1).
 - Under `flex-wrap`, slot-render wraps each chip in a `min-w-0` cell, which lets the *last*
   chip on a line shrink instead of wrapping — but only if its content is shrinkable
-  (e.g. a `TruncatingText` title). Chips that must **not** shrink (badges, buttons) should
+  (e.g. a `<Text>` title in a line container). Chips that must **not** shrink (badges, buttons) should
   set `shrink-0` on their contribution root so they wrap cleanly to the next line. Fix a
   squished chip there, not in `CollapsibleWrap`.
 

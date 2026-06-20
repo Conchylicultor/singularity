@@ -3,7 +3,7 @@ import type { ToolCallEvent } from "../../core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   CollapsibleCard,
   CardHeaderAction,
@@ -74,12 +74,11 @@ export function ToolCallCard({
             </>
           }
           content={
-            // We pre-wrap a string summary in TruncatingText (rather than letting
-            // Frame auto-wrap it) only to add the `opacity-70` dim. TruncatingText
-            // truncates regardless of parent display context, so no `as="div"`
-            // workaround is needed here.
+            // We pre-wrap a string summary in Text (rather than letting Frame
+            // auto-wrap it) only to add the `opacity-70` dim. The label sits in
+            // Frame's `content` slot — a line container — so Text truncates here.
             summary == null ? undefined : typeof summary === "string" ? (
-              <TruncatingText className="opacity-70">{summary}</TruncatingText>
+              <Text className="opacity-70">{summary}</Text>
             ) : (
               <span className="opacity-70">{summary}</span>
             )

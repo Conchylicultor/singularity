@@ -47,8 +47,8 @@ export interface ClipProps extends React.HTMLAttributes<HTMLElement> {
  * rounded-clipped media box is `<Clip className="rounded-md border">`.
  *
  * NOT for single-line text truncation (`overflow-hidden text-ellipsis
- * whitespace-nowrap`) — that is `<TruncatingText>`, the dedicated truncation
- * leaf. Clip is purely the box-level clipping mechanic.
+ * whitespace-nowrap`) — that is `<Text>` inside a line container (the dedicated
+ * truncation leaf). Clip is purely the box-level clipping mechanic.
  *
  * Caller `className` composes last.
  */

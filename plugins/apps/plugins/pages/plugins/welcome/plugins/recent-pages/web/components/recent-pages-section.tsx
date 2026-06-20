@@ -11,7 +11,6 @@ import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 
 const RECENT_LIMIT = 6;
@@ -63,9 +62,9 @@ export function RecentPagesSection(): ReactElement | null {
                     <PageIcon nodes={iconSvgNodes} className="size-5 text-muted-foreground" />
                   }
                   content={
-                    <TruncatingText className="text-body">
+                    <Text variant="body">
                       {title || "Untitled"}
-                    </TruncatingText>
+                    </Text>
                   }
                   trailing={
                     <Stack direction="row" gap="md" align="center">

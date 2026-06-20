@@ -16,7 +16,7 @@ and inert for consumers that don't pass `rowActions`.
 
 - Description: Sortable/filterable flex-layout data table primitive.
 - Web:
-  - Uses: `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/virtual-rows.useVirtualRows`
+  - Uses: `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/virtual-rows.useVirtualRows`
   - Exports: Types: `ColumnDef`, `DataTableProps`, `SortState`; Values: `DataTable`
 - Cross-plugin:
   - Imported by: `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/sample-rows`, `debug/heap-snapshot`, `debug/profiling/boot`, `primitives/data-view/table`

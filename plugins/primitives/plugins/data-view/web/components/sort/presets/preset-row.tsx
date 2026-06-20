@@ -9,9 +9,11 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  ControlSizeProvider,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import type { FieldDef, SortPreset, SortRule } from "../../../../core";
 import { useResolveDirectionLabels } from "../../../internal/use-direction-labels";
@@ -60,7 +62,9 @@ export function PresetRow<TRow>(props: {
       }
     >
       <Stack gap="2xs">
-        <TruncatingText>{preset.label}</TruncatingText>
+        <SingleLineProvider value={true}>
+          <Text>{preset.label}</Text>
+        </SingleLineProvider>
         {resolved.length > 0 ? (
           <Inline gap="xs">
             {resolved.map((rule) => {

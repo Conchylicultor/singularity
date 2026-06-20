@@ -13,7 +13,7 @@ import {
   PortalThemeScopeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -251,7 +251,7 @@ const ChipShell = forwardRef<
             leading={<Icon className="size-4" />}
             content={
               collapsed ? undefined : (
-                <TruncatingText className="text-label">{label}</TruncatingText>
+                <Text variant="label">{label}</Text>
               )
             }
           />

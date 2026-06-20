@@ -1,13 +1,13 @@
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import type { LayoutFixture } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // The menu-indicator-over-label overlap shape (the SelectItem / DropdownMenu
 // indicator): a long menu label with a trailing checkmark indicator.
 //
 // THE STRUCTURAL FIX routes the indicator through a real RIGID, IN-FLOW track
 // (`Frame`'s `trailing` `auto` column), so it reserves actual space the grid
-// honors: the label's `content` track shrinks to leave room, its `TruncatingText`
+// honors: the label's `content` track shrinks to leave room, its `Text` leaf
 // ellipsizes BEFORE reaching the indicator, and the two never collide.
 //
 // THE OLD BROKEN CONSTRUCT floated the checkmark `absolute` (a `Pin`) over the
@@ -36,9 +36,9 @@ export const pinFixtures: LayoutFixture[] = [
       <div data-geo="container" style={{ position: "relative" }}>
         <Frame
           content={
-            <TruncatingText data-geo="content">
+            <Text data-geo="content">
               a/very/long/menu/item/label/that/should/ellipsize
-            </TruncatingText>
+            </Text>
           }
           trailing={<span data-geo="indicator">✓</span>}
         />

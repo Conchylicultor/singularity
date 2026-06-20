@@ -1,7 +1,7 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import type { LayoutFixture } from "@plugins/primitives/plugins/css/plugins/layout-harness/core";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // The canonical victim: the `CollapsibleCard` header's badge-over-file-path
 // overlap, structurally fixed by `Frame`'s grid track function. This fixture
@@ -29,14 +29,14 @@ export const frameFixtures: LayoutFixture[] = [
           </span>
         }
         content={
-          <TruncatingText data-geo="content">
+          <Text data-geo="content">
             Refactor the frame primitive layout
-          </TruncatingText>
+          </Text>
         }
         meta={
-          <TruncatingText data-geo="meta">
+          <Text data-geo="meta">
             src/primitives/css/frame/web/internal/frame.tsx
-          </TruncatingText>
+          </Text>
         }
         trailing={
           <span data-geo="trailing">
@@ -89,9 +89,9 @@ export const frameFixtures: LayoutFixture[] = [
           </span>
         }
         content={
-          <TruncatingText data-geo="content">
+          <Text data-geo="content">
             Refactor the frame primitive layout
-          </TruncatingText>
+          </Text>
         }
         trailing={
           <span data-geo="trailing">

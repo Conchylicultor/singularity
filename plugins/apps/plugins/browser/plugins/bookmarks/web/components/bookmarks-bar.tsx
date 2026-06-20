@@ -2,7 +2,7 @@ import { MdClose } from "react-icons/md";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
@@ -50,7 +50,7 @@ export function BookmarksBar() {
                   </ControlSizeProvider>
                 }
               >
-                <TruncatingText>{hostOf(b.url)}</TruncatingText>
+                <Text>{hostOf(b.url)}</Text>
               </Row>
             ))}
           </Stack>

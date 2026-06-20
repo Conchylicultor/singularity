@@ -1,4 +1,7 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   useHoverReveal,
   hoverRevealClass,
@@ -72,6 +75,9 @@ export function Row({
     [key: string]: unknown;
   };
   return (
+    // Line container: single-line by contract (the `region-line` root already
+    // carries the structural `whitespace-nowrap`; this adds the leaf ellipsis layer).
+    <SingleLineProvider value={true}>
     <As
       ref={ref}
       type={isButton ? "button" : undefined}
@@ -120,5 +126,6 @@ export function Row({
         </span>
       )}
     </As>
+    </SingleLineProvider>
   );
 }

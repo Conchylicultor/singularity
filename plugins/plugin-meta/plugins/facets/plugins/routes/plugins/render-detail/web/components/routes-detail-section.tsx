@@ -4,7 +4,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Section,
   PluginLink,
@@ -83,9 +83,9 @@ export function RoutesDetailSection({ node }: { node: PluginNode }) {
                     ) : undefined
                   }
                   content={
-                    <TruncatingText as="code" className="font-mono text-foreground">
+                    <Text as="code" className="font-mono text-foreground">
                       {path}
-                    </TruncatingText>
+                    </Text>
                   }
                   trailing={
                     <span className="text-3xs text-muted-foreground/50">

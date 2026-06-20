@@ -1,6 +1,6 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Section,
   type PluginNode,
@@ -33,9 +33,9 @@ export function ResourcesDetailSection({ node }: { node: PluginNode }) {
             key={`${r.runtime}:${r.key}`}
             className="text-caption px-sm py-2xs"
             content={
-              <TruncatingText as="code" className="font-mono text-foreground">
+              <Text as="code" className="font-mono text-foreground">
                 {r.key}
-              </TruncatingText>
+              </Text>
             }
             meta={<span className="text-muted-foreground/60">{r.mode}</span>}
             trailing={

@@ -2,7 +2,7 @@ import { MdPlayArrow } from "react-icons/md";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { Song } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { usePlaybackHistory } from "../hooks";
 
@@ -28,9 +28,9 @@ export function PlayStats({ song }: { song: Song }) {
           {history?.lastPlayedAt ? (
             <>
               <span aria-hidden>·</span>
-              <TruncatingText>
+              <Text>
                 {formatRelativeTime(new Date(history.lastPlayedAt))}
-              </TruncatingText>
+              </Text>
             </>
           ) : null}
         </Stack>

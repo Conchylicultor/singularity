@@ -72,7 +72,7 @@ function applyMutation(scope: HTMLElement, mutate: FixtureMutation): void {
     }
     case "swapLeafDisplay": {
       if (mutate.value === "inline") {
-        // The original TruncatingText bug: a plain inline leaf silently no-ops
+        // The original single-line-leaf bug: a plain inline leaf silently no-ops
         // `overflow`/`text-overflow`, so the text lays out at full width and
         // overflows its block parent → `noClip` is violated.
         const leaf = scope.querySelector<HTMLElement>('[data-geo="content"]');

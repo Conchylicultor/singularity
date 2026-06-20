@@ -2,7 +2,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdArticle } from "react-icons/md";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { gitStatusDot } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 
@@ -45,10 +45,10 @@ export function DocRow({
           </>
         }
         content={
-          <TruncatingText className={cn(!muted && "font-medium")}>{basename}</TruncatingText>
+          <Text className={cn(!muted && "font-medium")}>{basename}</Text>
         }
         meta={
-          dir ? <TruncatingText className="text-muted-foreground">{dir}</TruncatingText> : undefined
+          dir ? <Text className="text-muted-foreground">{dir}</Text> : undefined
         }
       />
     </button>

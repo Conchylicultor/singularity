@@ -6,7 +6,7 @@ import {
 import type { DocMetaRegistration } from "@plugins/plugin-meta/plugins/facets/plugins/registrations/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Renders the registrations facet's own data. Read `node.facets[id]` directly
 // (as every render host does) rather than importing the build-time `facets/core`
@@ -33,9 +33,9 @@ export function RegistrationsDetailSection({ node }: { node: PluginNode }) {
             key={`${r.runtime}:${r.kind}:${i}`}
             className="text-caption px-sm py-2xs"
             content={
-              <TruncatingText as="code" className="font-mono text-foreground">
+              <Text as="code" className="font-mono text-foreground">
                 {format(r)}
-              </TruncatingText>
+              </Text>
             }
             trailing={
               <span className={`font-mono text-3xs ${RUNTIME_COLORS[r.runtime]}`}>

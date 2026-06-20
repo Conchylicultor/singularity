@@ -9,7 +9,7 @@ import {
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Section,
   ConsumerList,
@@ -168,9 +168,9 @@ function SymbolRow({ row }: { row: SymbolRow }) {
         </Badge>
       }
     >
-      <TruncatingText as="code" className="font-mono text-foreground">
+      <Text as="code" className="font-mono text-foreground">
         {row.name}
-      </TruncatingText>
+      </Text>
       {consumers.length > 0 && <ConsumerList names={consumers} />}
     </Row>
   );

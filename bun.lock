@@ -2595,10 +2595,6 @@
       "name": "@singularity/plugin-primitives-css-toggle-chip",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/css/plugins/truncating-text": {
-      "name": "@singularity/plugin-primitives-css-truncating-text",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/css/plugins/ui-kit": {
       "name": "@singularity/plugin-primitives-css-ui-kit",
       "version": "0.0.1",
@@ -4993,8 +4989,6 @@
     "@singularity/plugin-primitives-css-text": ["@singularity/plugin-primitives-css-text@workspace:plugins/primitives/plugins/css/plugins/text"],
 
     "@singularity/plugin-primitives-css-toggle-chip": ["@singularity/plugin-primitives-css-toggle-chip@workspace:plugins/primitives/plugins/css/plugins/toggle-chip"],
-
-    "@singularity/plugin-primitives-css-truncating-text": ["@singularity/plugin-primitives-css-truncating-text@workspace:plugins/primitives/plugins/css/plugins/truncating-text"],
 
     "@singularity/plugin-primitives-css-ui-kit": ["@singularity/plugin-primitives-css-ui-kit@workspace:plugins/primitives/plugins/css/plugins/ui-kit"],
 

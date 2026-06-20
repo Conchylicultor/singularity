@@ -13,7 +13,6 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import type { ColumnDef, DataTableProps } from "./types";
 import { useDataTable } from "./use-data-table";
 
@@ -101,13 +100,13 @@ export function DataTable<TRow>({
         }
       >
         {columns.map((col) => (
-          <TruncatingText as="div" key={col.id} className={alignClass(col.align)}>
+          <Text as="div" key={col.id} className={alignClass(col.align)}>
             {col.cell
               ? col.cell(row)
               : col.value
                 ? String(col.value(row) ?? "")
                 : null}
-          </TruncatingText>
+          </Text>
         ))}
         {rowActions && (
           <Stack
@@ -134,7 +133,7 @@ export function DataTable<TRow>({
           const sortable = !!col.value;
           const active = sortState?.columnId === col.id;
           return (
-            <TruncatingText
+            <Text
               as="span"
               key={col.id}
               className={cn(
@@ -147,7 +146,7 @@ export function DataTable<TRow>({
               {sortable && (
                 <SortIcon active={active} direction={active ? sortState!.direction : null} />
               )}
-            </TruncatingText>
+            </Text>
           );
         })}
         {rowActions && <span aria-hidden />}

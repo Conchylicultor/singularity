@@ -7,7 +7,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import type { CommandPaletteItem } from "../slots";
 import { fuzzyMatch, type FuzzyMatch } from "./fuzzy";
 
@@ -277,12 +276,12 @@ const CommandRow = forwardRef<
         Icon ? <Icon className="size-4 text-muted-foreground" /> : undefined
       }
       content={
-        <TruncatingText className="text-muted-foreground">
+        <Text className="text-muted-foreground">
           <HighlightedLabel
             label={item.label}
             ranges={item._match?.ranges ?? []}
           />
-        </TruncatingText>
+        </Text>
       }
       trailing={
         item.shortcut ? (

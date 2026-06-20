@@ -2,7 +2,8 @@ import type {
   Score,
   SectionAnnotation,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
  * Section-region marker. The Score's `section` annotations carry the song's
@@ -58,10 +59,12 @@ export function SectionBands({
             style={{ left: `${left * 100}%`, width: `${width * 100}%` }}
             title={a.data.name}
           >
-            {/* eslint-disable-next-line text/no-adhoc-typography -- tight chip label: line-height must stay 1 so the band stays slim */}
-            <TruncatingText className="text-3xs leading-none text-foreground/70">
-              {a.data.name}
-            </TruncatingText>
+            <SingleLineProvider value={true}>
+              {/* eslint-disable-next-line text/no-adhoc-typography -- tight chip label: line-height must stay 1 so the band stays slim */}
+              <Text className="text-3xs leading-none text-foreground/70">
+                {a.data.name}
+              </Text>
+            </SingleLineProvider>
           </div>
         );
       })}

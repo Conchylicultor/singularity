@@ -1,6 +1,9 @@
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 import type { ReactNode } from "react";
 
@@ -34,8 +37,8 @@ export interface FrameProps
   extends Omit<React.HTMLAttributes<HTMLElement>, "content"> {
   /** Rigid leading cluster — `auto` track, never shrinks (icons/chips stay whole). */
   leading?: ReactNode;
-  /** Primary content — flexible track, truncates LAST. A string is wrapped in
-   *  `<TruncatingText>`; a node gets a bare `min-w-0` track. */
+  /** Primary content — flexible track, truncates LAST. A string is wrapped in a
+   *  single-lining `<Text>` leaf; a node single-lines via the inherited context. */
   content?: ReactNode;
   /** Secondary metadata — flexible track, truncates FIRST. Same string/node rule. */
   meta?: ReactNode;
@@ -125,12 +128,18 @@ export function frameGridTemplate(present: {
     .join(" ");
 }
 
-/** Wrap a flexible-track slot: a string truncates, a node keeps a bare min-w-0 track. */
+/**
+ * Wrap a flexible-track slot in a bare `min-w-0` track — uniform for string and
+ * node. Frame provides the `SingleLine` context (+ `whitespace-nowrap` on its
+ * root), so the slot's content single-lines: a bare STRING is wrapped in a `<Text>`
+ * leaf that reads the context and ellipsizes (with an auto-title); a NODE relies on
+ * its own inner `<Text>` (now context-truncating) — string and node no longer diverge.
+ */
 function FlexSlot({ children }: { children: ReactNode }) {
-  return typeof children === "string" ? (
-    <TruncatingText>{children}</TruncatingText>
-  ) : (
-    <div className="min-w-0">{children}</div>
+  return (
+    <div className="min-w-0">
+      {typeof children === "string" ? <Text>{children}</Text> : children}
+    </div>
   );
 }
 
@@ -166,34 +175,42 @@ export function Frame({
   // the row's slack so `trailing` pins right and `content` is never centered.
   const fill = present.meta || present.trailing;
   return (
-    <As
-      ref={ref}
-      // `justify-start` packs tracks left in the no-flex shapes (no fill track),
-      // so a lone rigid `auto` never stretches and shoves `content` off the edge.
-      className={cn(
-        "grid justify-start",
-        GAP_CLASS[gap],
-        ALIGN_CLASS[align],
-        className,
-      )}
-      style={{ gridTemplateColumns: frameGridTemplate(present) }}
-      {...rest}
-    >
-      {present.leading && (
-        <div className={cn("flex items-center", GAP_CLASS[gap])}>{leading}</div>
-      )}
-      {present.content && <FlexSlot>{content}</FlexSlot>}
-      {fill &&
-        (present.meta ? (
-          <FlexSlot>{meta}</FlexSlot>
-        ) : (
-          <div className="min-w-0" aria-hidden />
-        ))}
-      {present.trailing && (
-        <div className={cn("flex items-center justify-end", GAP_CLASS[gap])}>
-          {trailing}
-        </div>
-      )}
-    </As>
+    // Line container: declares single-line by contract for every descendant leaf
+    // (the ellipsis-polish layer) AND stops all descendant text from wrapping via
+    // `whitespace-nowrap` on the root (the structural layer). A nested flow region
+    // (Stack/Column/Cluster/Inline) RESETS both, so a two-line label still wraps.
+    <SingleLineProvider value={true}>
+      <As
+        ref={ref}
+        // `justify-start` packs tracks left in the no-flex shapes (no fill track),
+        // so a lone rigid `auto` never stretches and shoves `content` off the edge.
+        // `whitespace-nowrap` is the `region-line` nowrap half (Frame owns its own
+        // `items-*`, so only the whitespace half applies, not `items-center`).
+        className={cn(
+          "grid justify-start whitespace-nowrap",
+          GAP_CLASS[gap],
+          ALIGN_CLASS[align],
+          className,
+        )}
+        style={{ gridTemplateColumns: frameGridTemplate(present) }}
+        {...rest}
+      >
+        {present.leading && (
+          <div className={cn("flex items-center", GAP_CLASS[gap])}>{leading}</div>
+        )}
+        {present.content && <FlexSlot>{content}</FlexSlot>}
+        {fill &&
+          (present.meta ? (
+            <FlexSlot>{meta}</FlexSlot>
+          ) : (
+            <div className="min-w-0" aria-hidden />
+          ))}
+        {present.trailing && (
+          <div className={cn("flex items-center justify-end", GAP_CLASS[gap])}>
+            {trailing}
+          </div>
+        )}
+      </As>
+    </SingleLineProvider>
   );
 }

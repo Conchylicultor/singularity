@@ -1,4 +1,7 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 
 /**
@@ -69,6 +72,23 @@ export interface StackProps extends React.HTMLAttributes<HTMLElement> {
  * Flex layout container with a gap drawn from the closed spacing ramp. Replaces
  * hand-written `flex flex-col gap-*` / `space-y-*`. Caller `className` composes
  * last, so layout overrides (width, min-w-0, …) win.
+ *
+ * ## Flow vs line: when a Stack RESETS the single-line contract
+ *
+ * A line container (`Frame`/`Row`/`Bar`/collapsible header) declares
+ * single-line — its `SingleLine` context truncates leaves and its
+ * `whitespace-nowrap` stops descendant text from wrapping. A Stack used as a
+ * genuine FLOW region (a vertical block of paragraphs, or an explicitly wrapping
+ * row) must RESET both so its text wraps again: it provides
+ * `SingleLineProvider value={false}` (leaves stop truncating) and
+ * `whitespace-normal` (raw text re-wraps), covering the two-line list-row label
+ * nested inside a Frame.
+ *
+ * But a plain HORIZONTAL non-wrapping Stack (`direction="row"`, no `wrap`) is a
+ * line-ish arrangement — a title group / inline cluster — and must INHERIT the
+ * ambient contract, never reset it (else a row-Stack title inside a `region-line`
+ * header would start wrapping). So the reset fires only for `col` or `wrap`
+ * stacks; a row stack stays transparent to the surrounding line context.
  */
 export function Stack({
   direction = "col",
@@ -82,7 +102,8 @@ export function Stack({
   children,
   ...rest
 }: StackProps) {
-  return (
+  const isFlow = direction === "col" || !!wrap;
+  const body = (
     <As
       ref={ref}
       className={cn(
@@ -92,11 +113,17 @@ export function Stack({
         align && ALIGN_CLASS[align],
         justify && JUSTIFY_CLASS[justify],
         wrap && "flex-wrap",
+        isFlow && "whitespace-normal",
         className,
       )}
       {...rest}
     >
       {children}
     </As>
+  );
+  return isFlow ? (
+    <SingleLineProvider value={false}>{body}</SingleLineProvider>
+  ) : (
+    body
   );
 }

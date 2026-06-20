@@ -9,7 +9,7 @@ import {
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -153,12 +153,16 @@ function ResourceRow({ sub }: { sub: DebugSub }): ReactElement {
   /* eslint-disable layout/no-adhoc-layout -- weighted (flex-[2]) + fixed-width column data row mirroring the header; not a single content/meta Frame */
   return (
     <div className="flex items-center gap-md border-b border-border/40 py-xs">
-      <TruncatingText className="flex-[2]">
-        <Text variant="caption">{sub.key}</Text>
-      </TruncatingText>
-      <TruncatingText className="flex-[2]" title={sub.paramsKey}>
-        <Text variant="caption" tone="muted">{sub.paramsKey}</Text>
-      </TruncatingText>
+      <SingleLineProvider value={true}>
+        <Text className="flex-[2]">
+          <Text variant="caption">{sub.key}</Text>
+        </Text>
+      </SingleLineProvider>
+      <SingleLineProvider value={true}>
+        <Text className="flex-[2]" title={sub.paramsKey}>
+          <Text variant="caption" tone="muted">{sub.paramsKey}</Text>
+        </Text>
+      </SingleLineProvider>
       <Text variant="caption" tone="muted" className="w-16 text-right tabular-nums">
         {sub.version}
       </Text>

@@ -79,7 +79,7 @@ export function FloatingAction({
           // pointer- or Tab-reachable. The stable wrapper underneath still
           // receives the pointer-enter that opens it.
           inert={!open}
-          // eslint-disable-next-line truncating-text/no-clip-without-nowrap -- generic morph panel: overflow-hidden clips the width/height transition, not text; single-line-ness is the consumer's call, not this primitive's
+          // eslint-disable-next-line text/no-clip-without-nowrap -- generic morph panel: overflow-hidden clips the width/height transition, not text; single-line-ness is the consumer's call, not this primitive's
           className={cn(
             "flex overflow-hidden rounded-md",
             "transition-[width,max-width,max-height,padding,background-color,box-shadow,border-color] duration-200 ease-out",

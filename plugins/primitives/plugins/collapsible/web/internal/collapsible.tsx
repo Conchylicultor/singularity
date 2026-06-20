@@ -1,4 +1,7 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   createContext,
   useContext,
@@ -75,17 +78,21 @@ export function CollapsibleTrigger({
   const { open, toggle, contentId } = useCtx();
 
   return (
-    <button
-      type="button"
-      data-slot="collapsible-trigger"
-      data-state={open ? "open" : "closed"}
-      aria-expanded={open}
-      aria-controls={contentId}
-      onClick={toggle}
-      // eslint-disable-next-line layout/no-adhoc-layout -- the trigger is a real <button> (needs type=button); Stack/Frame can't carry button-only attrs, so the flex row stays here
-      className={cn("flex w-full region-line text-left", className)}
-      {...props}
-    />
+    // Line container: single-line by contract (the `region-line` root already
+    // carries the structural `whitespace-nowrap`; this adds the leaf ellipsis layer).
+    <SingleLineProvider value={true}>
+      <button
+        type="button"
+        data-slot="collapsible-trigger"
+        data-state={open ? "open" : "closed"}
+        aria-expanded={open}
+        aria-controls={contentId}
+        onClick={toggle}
+        // eslint-disable-next-line layout/no-adhoc-layout -- the trigger is a real <button> (needs type=button); Stack/Frame can't carry button-only attrs, so the flex row stays here
+        className={cn("flex w-full region-line text-left", className)}
+        {...props}
+      />
+    </SingleLineProvider>
   );
 }
 

@@ -8,7 +8,7 @@ import type { DbSchemaFacetData } from "@plugins/plugin-meta/plugins/facets/plug
 import { asPath } from "@plugins/framework/plugins/plugin-id/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Renders the db-schema facet's own data. Read `node.facets[id]` directly (as
 // every render host does) rather than importing the build-time `facets/core`
@@ -46,9 +46,9 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
                   key={t.name}
                   className="text-caption px-sm py-2xs"
                   content={
-                    <TruncatingText as="code" className="font-mono text-foreground">
+                    <Text as="code" className="font-mono text-foreground">
                       {t.name}
-                    </TruncatingText>
+                    </Text>
                   }
                   trailing={
                     <span className="font-mono text-3xs text-muted-foreground/50">
@@ -72,9 +72,9 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
                     <PluginLink name={e.parentPlugin} label={asPath(e.parentPlugin)} />
                   }
                   content={
-                    <TruncatingText as="code" className="font-mono text-muted-foreground">
+                    <Text as="code" className="font-mono text-muted-foreground">
                       {e.tableName}
-                    </TruncatingText>
+                    </Text>
                   }
                 />
               ))}
@@ -93,9 +93,9 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
                     <PluginLink name={e.childPlugin} label={asPath(e.childPlugin)} />
                   }
                   content={
-                    <TruncatingText as="code" className="font-mono text-muted-foreground">
+                    <Text as="code" className="font-mono text-muted-foreground">
                       {e.tableName}
-                    </TruncatingText>
+                    </Text>
                   }
                 />
               ))}

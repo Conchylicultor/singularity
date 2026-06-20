@@ -8,6 +8,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Explorer } from "../slots";
 import { PluginTreeProvider } from "../context";
 import {
@@ -155,15 +156,22 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
   const treeOptions = useMemo<TreeViewOptions<ExplorerRow>>(
     () => ({
       expandAll: true,
+      // Both slots render a GROUP of contributions with no container of their
+      // own — wrap each in a non-wrapping <Inline> so the accents / badges stay a
+      // single-line cluster (the group-wrap axis, owned by container choice).
       rowAccent: (node) => (
-        <Explorer.TreeRowAccent.Render>
-          {(item) => <item.component node={node} />}
-        </Explorer.TreeRowAccent.Render>
+        <Inline gap="2xs">
+          <Explorer.TreeRowAccent.Render>
+            {(item) => <item.component node={node} />}
+          </Explorer.TreeRowAccent.Render>
+        </Inline>
       ),
       trailing: (node) => (
-        <Explorer.TreeRowBadge.Render>
-          {(item) => <item.component node={node} />}
-        </Explorer.TreeRowBadge.Render>
+        <Inline gap="2xs">
+          <Explorer.TreeRowBadge.Render>
+            {(item) => <item.component node={node} />}
+          </Explorer.TreeRowBadge.Render>
+        </Inline>
       ),
     }),
     [],

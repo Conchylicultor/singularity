@@ -7,7 +7,7 @@ import {
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Section,
   type PluginNode,
@@ -79,7 +79,7 @@ function PluginTreeNode({
         }
         className="min-h-7 cursor-pointer"
       >
-        <TruncatingText>{node.name}</TruncatingText>
+        <Text>{node.name}</Text>
         {node.loadBearing && (
           <MdBolt className="size-3 text-warning" />
         )}

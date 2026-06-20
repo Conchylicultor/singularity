@@ -9,7 +9,6 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 
 // A renderable block: either a leaf agent/workflow node or a concurrency group.
 type Block =
@@ -153,9 +152,9 @@ export function WorkflowGraph({
               }
               meta={
                 lane.detail ? (
-                  <TruncatingText className="text-2xs text-muted-foreground">
+                  <Text className="text-2xs text-muted-foreground">
                     {lane.detail}
-                  </TruncatingText>
+                  </Text>
                 ) : undefined
               }
             />

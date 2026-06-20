@@ -1,6 +1,7 @@
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Favicon } from "@plugins/apps/plugins/browser/plugins/shell/web";
 
 /** Parse a URL's hostname; falls back to the raw string for unparseable input. */
@@ -30,7 +31,9 @@ export function LinkTile({ url, label, onClick }: LinkTileProps) {
     <Card as="button" interactive onClick={onClick} title={text}>
       <Stack gap="xs" align="center">
         <Favicon url={url} size={28} />
-        <TruncatingText className="w-full text-center">{text}</TruncatingText>
+        <SingleLineProvider value={true}>
+          <Text className="w-full text-center">{text}</Text>
+        </SingleLineProvider>
       </Stack>
     </Card>
   );

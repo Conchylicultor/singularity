@@ -15,8 +15,9 @@ const createRule = ESLintUtils.RuleCreator(
  * region primitives (pane-toolbar, app-shell toolbar, PaneChrome) each had.
  *
  * The fix is `whitespace-nowrap` on the row so children never wrap in the first place
- * (truncation then stays the job of the flexible leaf via `truncate` / `TruncatingText`),
- * and `overflow-hidden` clips the single line if it still doesn't fit.
+ * (truncation then stays the job of the flexible leaf — a `<Text>` inside a line
+ * container, which ellipsizes via the ambient single-line context), and
+ * `overflow-hidden` clips the single line if it still doesn't fit.
  *
  * Fingerprint (a *co-occurrence* that may live across several `cn()` fragments, so we
  * aggregate every class token of one `className` into one Set first):
@@ -125,9 +126,9 @@ export default createRule({
         "Single-line trap: this flex row has `overflow-hidden` but no `whitespace-nowrap` " +
         "(nor `truncate`). `overflow-hidden` clips text that has ALREADY wrapped — it does not " +
         "stop the wrap, so the row silently grows a second line. Add `whitespace-nowrap` so " +
-        "children never wrap (let a `truncate`/`TruncatingText` leaf ellipsize). If multi-line " +
-        "is intended, use `flex-col`/`flex-wrap`, or " +
-        "`// eslint-disable-next-line truncating-text/no-clip-without-nowrap -- <reason>`.",
+        "children never wrap (let a `truncate` / `<Text>`-in-a-line-container leaf ellipsize). If " +
+        "multi-line is intended, use `flex-col`/`flex-wrap`, or " +
+        "`// eslint-disable-next-line text/no-clip-without-nowrap -- <reason>`.",
     },
   },
   defaultOptions: [],

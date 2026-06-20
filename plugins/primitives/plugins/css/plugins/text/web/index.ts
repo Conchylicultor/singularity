@@ -5,6 +5,7 @@ export {
   type TextProps,
   type TextVariant,
   type TextTone,
+  type TruncateSide,
 } from "./internal/text";
 export { SectionLabel, type SectionLabelProps } from "./internal/section-label";
 

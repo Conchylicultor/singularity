@@ -18,7 +18,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { attemptPane } from "../panes";
 
 function SideBySideButton({ convId }: { convId: string }) {
@@ -58,14 +57,14 @@ function AttemptSection({
         gap="xs"
         className="px-sm py-xs"
         content={
-          <TruncatingText
+          <Text
             className={cn(
               "font-mono text-2xs",
               isCurrent ? "font-medium text-foreground" : "text-muted-foreground",
             )}
           >
             {worktreeName}
-          </TruncatingText>
+          </Text>
         }
         trailing={<Badge>{attempt.conversations.length}</Badge>}
       />

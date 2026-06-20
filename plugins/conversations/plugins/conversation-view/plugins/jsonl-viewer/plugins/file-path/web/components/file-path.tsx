@@ -4,7 +4,8 @@ import { useConversationById } from "@plugins/conversations/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 export function toRelativePath(filePath: string, attemptId: string): string {
   // The attempt id can sit at a path boundary (`/att-xxx/…`) or as the suffix
@@ -39,15 +40,17 @@ export function FilePath({ filePath }: FilePathProps) {
 
   return (
     <Inline gap="2xs" className="group/path max-w-full">
-      <TruncatingText
-        as="button"
-        side="start"
-        onClick={openFile}
-        title={relativePath}
-        className="max-w-full font-mono text-2xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
-      >
-        {relativePath}
-      </TruncatingText>
+      <SingleLineProvider value={true}>
+        <Text
+          as="button"
+          side="start"
+          onClick={openFile}
+          title={relativePath}
+          className="max-w-full font-mono text-2xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        >
+          {relativePath}
+        </Text>
+      </SingleLineProvider>
       <CopyButton
         text={relativePath}
         title="Copy path"

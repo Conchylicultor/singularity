@@ -10,7 +10,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { buildForest, buildDiff, type PageSnapshot } from "../internal/build-diff";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/web";
 
@@ -59,9 +59,9 @@ export function PageVersionPreview({
         gap="sm"
         leading={<PageIcon nodes={iconNodes} fallback={MdDescription} className="size-6" />}
         content={
-          <TruncatingText as="h2" className="text-title">
+          <Text as="h2" variant="title">
             {snap.page.title || "Untitled"}
-          </TruncatingText>
+          </Text>
         }
       />
       {forest.length > 0 ? (

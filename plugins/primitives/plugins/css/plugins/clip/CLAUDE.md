@@ -11,7 +11,8 @@ Owns only the box-level clipping mechanic. Decoration stays in `className` —
 className="rounded-md border">`.
 
 **Not** for single-line text truncation (`overflow-hidden text-ellipsis
-whitespace-nowrap`) → that is `<TruncatingText>`, the dedicated truncation leaf.
+whitespace-nowrap`) → that is `<Text>` inside a line container, the dedicated
+truncation leaf (it ellipsizes via the ambient single-line context).
 
 ## Props
 

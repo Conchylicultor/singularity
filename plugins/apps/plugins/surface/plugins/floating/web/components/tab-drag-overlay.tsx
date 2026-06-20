@@ -1,7 +1,7 @@
 import { useRef, type ComponentType } from "react";
 import { MdWebAsset } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useTabDragSession } from "../hooks/use-tab-drag";
 
 /** Half the ghost width (px) so the chip rides centered under the cursor. */
@@ -131,7 +131,7 @@ export function TabDragOverlay() {
               : "max-w-40 border border-border bg-background text-foreground shadow-lg"
           }
         >
-          <TruncatingText className="max-w-28">{session.label}</TruncatingText>
+          <Text className="max-w-28">{session.label}</Text>
         </Badge>
       </div>
     </div>

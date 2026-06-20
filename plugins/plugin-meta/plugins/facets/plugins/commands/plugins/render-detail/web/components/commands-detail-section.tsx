@@ -4,7 +4,7 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { CommandDef } from "@plugins/plugin-meta/plugins/facets/plugins/commands/core";
 
 // Renders the commands facet's own data. Read `node.facets[id]` directly (as
@@ -25,9 +25,9 @@ export function CommandsDetailSection({ node }: { node: PluginNode }) {
             key={c.commandId}
             className="text-caption px-sm py-2xs"
             content={
-              <TruncatingText as="code" className="font-mono text-foreground">
+              <Text as="code" className="font-mono text-foreground">
                 {c.groupName}.{c.memberName}
-              </TruncatingText>
+              </Text>
             }
             trailing={
               <span className="font-mono text-3xs text-muted-foreground/50">

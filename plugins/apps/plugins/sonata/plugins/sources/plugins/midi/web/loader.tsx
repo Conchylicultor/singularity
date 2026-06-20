@@ -12,7 +12,6 @@ import { MdMusicNote, MdUploadFile } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 
 interface Props {
   onRaw: (raw: unknown) => void;
@@ -113,9 +112,9 @@ export function MidiLoader({ onRaw }: Props) {
               gap="xs"
               leading={<MdMusicNote className="size-3.5" />}
               content={
-                <TruncatingText className="max-w-[16rem]">
+                <Text className="max-w-[16rem]">
                   {fileName}
-                </TruncatingText>
+                </Text>
               }
             />
           </Text>

@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export const CANVAS_NODE_TYPE = "graphCanvas";
 
@@ -66,7 +66,7 @@ export function CanvasNode({ data }: NodeProps<CanvasFlowNode>) {
         gap="sm"
         leading={leading ?? undefined}
         content={
-          <TruncatingText className={labelClassName ?? undefined}>{label}</TruncatingText>
+          <Text className={labelClassName ?? undefined}>{label}</Text>
         }
         trailing={badge ?? undefined}
       />
