@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useId, useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { LaunchControl } from "./launch-control";
 import type { LaunchRequest } from "./launch-control";
@@ -36,6 +37,8 @@ export function LaunchAgentPopover({
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
   const [prepromptId, setPrepromptId] = useState<string | null>(null);
+  // Stable per-instance Lexical namespace so multiple popovers don't collide.
+  const editorId = useId();
 
   return (
     <InlinePopover
@@ -54,12 +57,14 @@ export function LaunchAgentPopover({
           {description}
         </Text>
       </Stack>
-      <textarea
+      <TextEditor
         value={text}
-        onChange={(e) => setText(e.target.value)}
+        onChange={setText}
         placeholder={placeholder}
-        className="focus-ring border-input placeholder:text-muted-foreground min-h-[80px] w-full resize-y rounded-md border bg-transparent px-sm py-xs text-body"
-        rows={3}
+        submitMode="none"
+        minRows={3}
+        maxHeight="16rem"
+        namespace={`launch-agent-popover-${editorId}`}
       />
       {showPreprompt && (
         <PrepromptSelect

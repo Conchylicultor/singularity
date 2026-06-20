@@ -38,7 +38,7 @@ Plugin slot.
   - Uses: `primitives/css/ui-kit.cn`, `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `NodeExtension`, `TextEditorPluginProps`; Values: `registerNodeExtension`, `TextEditor`, `TextEditorSlots`
 - Cross-plugin:
-  - Imported by: `active-data`, `active-data/task`, `conversations/agents`, `conversations/conversation-view/branch`, `primitives/prompt-editor`, `primitives/text-editor/paste-images`, `screenshot`, `tasks/task-description`, `tasks/task-draft-form`
+  - Imported by: `active-data`, `active-data/task`, `conversations/agents`, `conversations/conversation-view/branch`, `primitives/launch`, `primitives/prompt-editor`, `primitives/text-editor/paste-images`, `screenshot`, `tasks/task-description`, `tasks/task-draft-form`
 - Sub-plugins:
   - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
 
