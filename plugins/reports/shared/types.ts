@@ -7,6 +7,7 @@ export const SERVER_REPORT_SOURCES = [
   "server-unhandled",
   "server-caught",
   "server-slow-op",
+  "server-queue-monitor",
 ] as const;
 export const CLIENT_REPORT_SOURCES = [
   "browser-error",

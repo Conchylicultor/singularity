@@ -1,0 +1,9 @@
+// @hash 12024942b651
+{
+  // When off, the monitor job returns early and files no queue-health reports.
+  "enabled": true,
+  // File a queue-backlog report when the number of ready (overdue, unlocked, retry-eligible) jobs exceeds this count.
+  "backlogDepthThreshold": 200,
+  // File a queue-backlog report when the oldest ready job has been overdue longer than this many minutes (a stall signal).
+  "oldestOverdueMinutes": 10
+}

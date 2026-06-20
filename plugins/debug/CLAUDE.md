@@ -15,6 +15,7 @@
   - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
   - **`profiling`** — Gantt chart of build steps and server startup phases.
   - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
+  - **`queue-health`** — Queue-health report renderers: one-line Debug → Reports summaries for the queue-dead-job and queue-backlog kinds, plus the threshold config registration. Queue-health monitor: a cheap per-worktree scheduled job that samples the graphile queue and files deduped reports for terminally-dead jobs (per jobName) and backlog/stall, through the existing reports engine.
   - **`read-set`** — Read-set capture debug pane: the automatic loader→table dependency index plus a diff against the hand-drawn dependsOn graph.
   - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
   - **`slow-ops`** — Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one rollup task.
