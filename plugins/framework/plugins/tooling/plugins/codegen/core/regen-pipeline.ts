@@ -69,17 +69,26 @@ export async function regenerateRegistryCodegen({
 }
 
 /**
- * Manifest-level repo-tree codegen: plugin docs → reorderable-slots →
- * data-views → token-group-vars → config-origins.
+ * Manifest-level repo-tree codegen: data-views → reorderable-slots →
+ * plugin docs → token-group-vars → config-origins.
  *
  * Ordering constraints (load-bearing — do not reorder):
- *   - plugin docs FIRST: builds the enriched plugin tree the next two steps reuse.
- *   - reorderable-slots & data-views: AFTER plugin docs (reuse the enriched tree),
- *     BEFORE config origins — each registers config_v2 directives (one per slot /
- *     one `views` descriptor per id) that the origins depend on. Importing the
- *     codegen barrel also installs the reorder per-slot contribution catalog as
- *     the default origin-annotations preparer, so origins carry the catalog
- *     comments.
+ *   - data-views & reorderable-slots FIRST — these are PRE-BARREL manifests.
+ *     They are generated source files that plugin barrels import at module-load
+ *     to register config_v2 descriptors. Bun's ESM cache freezes a module on the
+ *     first `import()` and a later disk write cannot invalidate it — so these
+ *     manifests MUST be regenerated (via barrel-free tree walks) BEFORE
+ *     `generatePluginDocs` triggers the first barrel import. Otherwise
+ *     `generateConfigOrigins` re-imports stale barrels, misses the new
+ *     descriptor, and `pruneOrphanedConfigFiles` deletes the freshly-authored
+ *     override. Both generators are deliberately barrel-free (`collectDataViews`
+ *     / `collectReorderableSlotSet` use `skipBarrelImport`) so they don't
+ *     themselves freeze stale content.
+ *   - plugin docs: AFTER the pre-barrel manifests — it builds the enriched plugin
+ *     tree (importing every barrel), which token-group-vars / config-origins
+ *     reuse. Importing the codegen barrel also installs the reorder per-slot
+ *     contribution catalog as the default origin-annotations preparer, so origins
+ *     carry the catalog comments.
  *   - custom-utilities: BEFORE the `app-css-utilities-in-sync` check consumes it;
  *     no plugin-tree dependency (it only reads app.css by path), so placed among
  *     the CSS-related steps.
@@ -92,14 +101,14 @@ export async function regenerateManifestCodegen({
   root,
   onStep = runInline,
 }: RegenCodegenOptions): Promise<void> {
-  await onStep("pluginDocs", "generate plugin docs", () =>
-    generatePluginDocs({ root }),
+  await onStep("dataViews", "data-views manifest", () =>
+    generateDataViews({ root }),
   );
   await onStep("reorderableSlots", "reorderable slots manifest", () =>
     generateReorderableSlots({ root }),
   );
-  await onStep("dataViews", "data-views manifest", () =>
-    generateDataViews({ root }),
+  await onStep("pluginDocs", "generate plugin docs", () =>
+    generatePluginDocs({ root }),
   );
   await onStep("customUtilities", "custom-utilities manifest", async () =>
     generateCustomUtilities({ root }),

@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
-import { buildEnrichedTree } from "./docgen";
+import { join, resolve } from "path";
+import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   findMarkerCalls,
   maskSource,
@@ -55,15 +55,23 @@ export interface DataViewEntry {
 }
 
 /**
- * Walk the enriched plugin tree (reusing docgen's cached build) and collect
- * every `defineDataView("<id>")` id keyed to its DEFINING plugin (the node whose
+ * Walk the plugin tree (barrel-free static scan) and collect every
+ * `defineDataView("<id>")` id keyed to its DEFINING plugin (the node whose
  * `web/**` owns the marker). Scans each node's `web/**` source via the blessed
  * `findMarkerCalls` scanner (over a comment/regex-masked copy, strings kept so
  * the string-literal id survives). Deduped by id (FIRST definer wins, stable
  * since `tree.byDir` iteration is deterministic) and sorted by id.
+ *
+ * Uses `{ skipBarrelImport: true }`: this collector only reads `node.dir` /
+ * `node.id` and text-scans web source — it never touches facets/barrel data, so
+ * a barrel-free tree is correct. Critically, it MUST stay barrel-free: the
+ * manifest it feeds is imported by plugin barrels at module-load, so it has to
+ * be regenerated BEFORE the first barrel import freezes the ESM cache.
  */
 export async function collectDataViews(root: string): Promise<DataViewEntry[]> {
-  const tree = await buildEnrichedTree(root);
+  const tree = await buildPluginTree(resolve(root, "plugins"), {
+    skipBarrelImport: true,
+  });
   const definingPath = new Map<string, string>();
 
   for (const node of tree.byDir.values()) {

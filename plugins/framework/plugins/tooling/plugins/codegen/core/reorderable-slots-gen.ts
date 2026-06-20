@@ -1,6 +1,7 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { join, resolve } from "path";
 import { buildEnrichedTree } from "./docgen";
+import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   setDefaultOriginAnnotationsPreparer,
   setDefaultOriginDefaultsPreparer,
@@ -55,27 +56,50 @@ interface ReorderableSlotsData {
 }
 
 /**
+ * The reorderable-slot SET — deterministic static scan, BARREL-FREE.
+ *
+ * Collects every reorderable render slot, keyed to its DEFINING plugin's
+ * hierarchy path, via the STATIC, factory-aware source scanner
+ * (`collectRenderSlotsStatic`). This is a pure function of committed source: it
+ * never imports a barrel, so the slot set is identical in every environment (the
+ * old live-barrel walk made it depend on which barrels happened to evaluate,
+ * which dirtied `main` on the post-push auto-build). Already sorted by slotId and
+ * deduped (first definer wins) by the collector.
+ *
+ * This is the ONLY input `renderManifest` needs, and it MUST stay barrel-free:
+ * the manifest it feeds is imported by plugin barrels at module-load, so it has
+ * to be regenerated BEFORE the first barrel import freezes the ESM cache (a
+ * later disk write cannot invalidate it). The barrel-importing catalog lives in
+ * `collectReorderableSlots`, consumed only by the origin-preparers — which run
+ * lazily during `generateConfigOrigins`, after barrels are primed.
+ */
+async function collectReorderableSlotSet(
+  root: string,
+): Promise<ReorderableSlotEntry[]> {
+  const tree = await buildPluginTree(resolve(root, "plugins"), {
+    skipBarrelImport: true,
+  });
+  return collectRenderSlotsStatic(tree).map(({ slotId, pluginId }) => ({
+    slotId,
+    pluginId,
+  }));
+}
+
+/**
  * Walk the enriched plugin tree (reusing docgen's cached build) and collect:
- *  1. every reorderable render slot, keyed to its DEFINING plugin's hierarchy
- *     path — via the STATIC, factory-aware source scanner
- *     (`collectRenderSlotsStatic`). This is a pure function of committed source:
- *     it never imports a barrel, so the slot set is identical in every
- *     environment (the old live-barrel walk made it depend on which barrels
- *     happened to evaluate, which dirtied `main` on the post-push auto-build).
+ *  1. the reorderable-slot set (via `collectReorderableSlotSet`).
  *  2. the contribution catalog for each such slot, from the contributions facet
- *     (still a runtime read — only the catalog/origin defaults need it, not the
- *     reorderable-slot SET).
+ *     (a RUNTIME read — needs barrel imports; only the catalog/origin defaults
+ *     need it, not the reorderable-slot SET). This is why this function is used
+ *     ONLY by the origin-preparers, which run lazily after barrels are primed.
  */
 async function collectReorderableSlots(
   root: string,
 ): Promise<ReorderableSlotsData> {
   const tree = await buildEnrichedTree(root);
 
-  // (1) The reorderable-slot set — deterministic static scan. Already sorted by
-  // slotId and deduped (first definer wins) by the collector.
-  const slots: ReorderableSlotEntry[] = collectRenderSlotsStatic(tree).map(
-    ({ slotId, pluginId }) => ({ slotId, pluginId }),
-  );
+  // (1) The reorderable-slot set — deterministic static scan.
+  const slots = await collectReorderableSlotSet(root);
   const reorderableIds = new Set(slots.map((s) => s.slotId));
 
   // (2) Catalog: every runtime contribution targeting a reorderable slot.
@@ -132,7 +156,10 @@ export function reorderableSlotsManifestPath(root: string): string {
 export async function renderReorderableSlotsManifest(
   root: string,
 ): Promise<string> {
-  const { slots } = await collectReorderableSlots(root);
+  // Barrel-free: the manifest only needs the static slot SET, NOT the
+  // barrel-imported catalog. This lets the manifest be regenerated before the
+  // first barrel import (see `collectReorderableSlotSet`).
+  const slots = await collectReorderableSlotSet(root);
   return renderManifest(slots);
 }
 
