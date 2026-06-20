@@ -2,6 +2,7 @@ import { createHash } from "node:crypto";
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join, resolve } from "node:path";
 import { chromium } from "playwright";
+import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
 
@@ -22,6 +23,16 @@ const SUITE_REL =
   "plugins/primitives/plugins/css/plugins/layout-harness/web/internal/layout-geometry.test.ts";
 
 const MARKER_DIR = join(SINGULARITY_DIR, "layout-lab-cache");
+
+// Host-wide single-holder gate for the browser-based suite. The suite spawns a
+// Vite build + a headless Chromium; concurrent worktree builds (the build pool
+// admits floor(cpus/4) at once) would otherwise each launch Chromium at the same
+// moment, thrashing CPU until Playwright's launch budget is exhausted — the
+// headless-launch-timeout flake. size 1 ⇒ at most one suite runs across ALL
+// worktrees; combined with the post-acquire marker re-check it also collapses the
+// same-sig thundering herd (the first build runs + writes the marker, the rest
+// skip the launch). flock-backed, so it auto-releases on crash.
+const browserSlot = createHostSemaphore({ name: "layout-geometry", size: 1 });
 
 function sha256(s: string): string {
   return createHash("sha256").update(s).digest("hex");
@@ -99,59 +110,75 @@ const check: Check = {
     const sig = computeSig(root);
 
     // Steady state: an unchanged css subtree ⇒ the sidecar marker exists ⇒ return
-    // OK WITHOUT launching Chromium, regardless of unrelated edits elsewhere.
+    // OK WITHOUT launching Chromium, regardless of unrelated edits elsewhere. This
+    // fast path stays UN-gated, so the zero-launch steady state never queues.
     mkdirSync(MARKER_DIR, { recursive: true });
     if (existsSync(markerFile(sig))) return { ok: true };
 
-    // Chromium must be provisioned (the e2e postinstall owns that). Fail loudly
-    // with a clear hint — never auto-install.
-    let exe: string;
-    try {
-      exe = chromium.executablePath();
-    } catch (err) {
-      return {
-        ok: false,
-        message: `Could not resolve the Playwright Chromium executable: ${(err as Error).message}`,
-        hint: "Provision the browser with `bun e2e/ensure-chromium.mjs` (or `bun run playwright install chromium`), then re-run.",
-      };
-    }
-    if (!exe || !existsSync(exe)) {
-      return {
-        ok: false,
-        message: `Playwright Chromium is not installed (expected at ${exe || "<unresolved>"}).`,
-        hint: "Provision the browser with `bun e2e/ensure-chromium.mjs` (or `bun run playwright install chromium`), then re-run.",
-      };
-    }
+    // Marker absent ⇒ the suite must actually launch Chromium. Serialize that
+    // host-wide (see `browserSlot`) so concurrent worktree builds don't all launch
+    // at once and exhaust the launch budget. Re-check the marker after acquiring:
+    // a peer build with the same sig may have just run the suite and written it,
+    // in which case we skip the launch entirely (double-checked locking).
+    return browserSlot.run(async () => {
+      if (existsSync(markerFile(sig))) return { ok: true };
 
-    const proc = Bun.spawn(["bun", "test", resolve(root, SUITE_REL)], {
-      cwd: root,
-      stdout: "pipe",
-      stderr: "pipe",
+      // Chromium must be provisioned (the e2e postinstall owns that). Fail loudly
+      // with a clear hint — never auto-install.
+      let exe: string;
+      try {
+        exe = chromium.executablePath();
+      } catch (err) {
+        return {
+          ok: false,
+          message: `Could not resolve the Playwright Chromium executable: ${(err as Error).message}`,
+          hint: "Provision the browser with `bun e2e/ensure-chromium.mjs` (or `bun run playwright install chromium`), then re-run.",
+        };
+      }
+      if (!exe || !existsSync(exe)) {
+        return {
+          ok: false,
+          message: `Playwright Chromium is not installed (expected at ${exe || "<unresolved>"}).`,
+          hint: "Provision the browser with `bun e2e/ensure-chromium.mjs` (or `bun run playwright install chromium`), then re-run.",
+        };
+      }
+
+      // `--timeout 120000`: this suite's `beforeAll` runs a Vite build + a cold
+      // headless Chromium launch + page load, which routinely exceeds bun:test's
+      // default 5s per-hook budget under any real load — the dominant cause of the
+      // historical "hook timed out / launch timeout" flake. The flag raises the
+      // default for every hook AND test in the suite (the measures themselves stay
+      // sub-second), so a slow-but-healthy setup never trips the gate.
+      const proc = Bun.spawn(["bun", "test", "--timeout", "120000", resolve(root, SUITE_REL)], {
+        cwd: root,
+        stdout: "pipe",
+        stderr: "pipe",
+      });
+      const [stdout, stderr, exitCode] = await Promise.all([
+        new Response(proc.stdout).text(),
+        new Response(proc.stderr).text(),
+        proc.exited,
+      ]);
+
+      if (exitCode === 0) {
+        // Record the pass atomically (write-temp + rename on the same fs).
+        const file = markerFile(sig);
+        const tmp = join(MARKER_DIR, `.${sha256(file).slice(0, 12)}.tmp`);
+        writeFileSync(tmp, JSON.stringify({ sig, recordedAt: Date.now() }));
+        renameSync(tmp, file);
+        return { ok: true };
+      }
+
+      // bun:test prints results to stderr; include a tail of both streams.
+      const tail = (s: string, n = 60): string =>
+        s.trim().split("\n").slice(-n).join("\n");
+      const combined = [tail(stderr), tail(stdout)].filter(Boolean).join("\n");
+      return {
+        ok: false,
+        message: `layout geometry suite failed (exit ${exitCode}):\n${combined}`,
+        hint: `A layout primitive geometry invariant regressed — run \`bun test --timeout 120000 ${SUITE_REL}\` to see which fixture/slot collided.`,
+      };
     });
-    const [stdout, stderr, exitCode] = await Promise.all([
-      new Response(proc.stdout).text(),
-      new Response(proc.stderr).text(),
-      proc.exited,
-    ]);
-
-    if (exitCode === 0) {
-      // Record the pass atomically (write-temp + rename on the same fs).
-      const file = markerFile(sig);
-      const tmp = join(MARKER_DIR, `.${sha256(file).slice(0, 12)}.tmp`);
-      writeFileSync(tmp, JSON.stringify({ sig, recordedAt: Date.now() }));
-      renameSync(tmp, file);
-      return { ok: true };
-    }
-
-    // bun:test prints results to stderr; include a tail of both streams.
-    const tail = (s: string, n = 60): string =>
-      s.trim().split("\n").slice(-n).join("\n");
-    const combined = [tail(stderr), tail(stdout)].filter(Boolean).join("\n");
-    return {
-      ok: false,
-      message: `layout geometry suite failed (exit ${exitCode}):\n${combined}`,
-      hint: `A layout primitive geometry invariant regressed — run \`bun test ${SUITE_REL}\` to see which fixture/slot collided.`,
-    };
   },
 };
 

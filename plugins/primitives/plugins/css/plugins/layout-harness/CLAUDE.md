@@ -36,6 +36,24 @@ through the generic `loadFixtures()`:
    folds the same sig into `cacheSignature()` so the runner's own cache also
    short-circuits identical full-tree reruns. Fails loudly (no auto-install) if
    Chromium is unprovisioned.
+
+   When the marker IS absent the suite actually launches a browser, which used to
+   flake under load ("hook timed out / headless-launch timeout"). Three guards now
+   make that healthy-but-slow path robust:
+   - **bun:test timeout.** The suite's `beforeAll` (Vite build + cold Chromium
+     launch + page load) routinely exceeds bun:test's default 5s per-hook budget —
+     it ran ~5.0–5.5s even in isolation, so the gate was always one stall from
+     failing. The check spawns `bun test --timeout 120000`, raising the budget for
+     every hook AND test (the dominant fix). `measure-page.ts` likewise raises
+     Playwright's own 30s `launch` timeout to 120s.
+   - **host-wide serialization.** The run is gated behind
+     `createHostSemaphore({ name: "layout-geometry", size: 1 })`
+     (`packages/host-semaphore`): the build pool admits `floor(cpus/4)` concurrent
+     worktree builds, and ungated they all started Chromium at the same instant and
+     thrashed CPU. size 1 ⇒ at most one suite runs across all worktrees.
+   - **double-checked marker.** The marker is re-checked after acquiring the slot,
+     so same-sig peers that queued behind the first runner collapse to a single
+     launch instead of re-running the suite.
 3. **the live Layout Lab gallery** (`web/index.ts` → Debug sidebar) — renders the
    catalog in-app (the human-eyeball complement; no measurement).
 

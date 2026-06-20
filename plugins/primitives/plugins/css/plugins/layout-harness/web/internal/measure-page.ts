@@ -83,7 +83,11 @@ function serveDir(outDir: string): { origin: string; stop: () => void } {
 
 export async function openMeasurer(outDir: string): Promise<Measurer> {
   const srv = serveDir(outDir);
-  const browser: Browser = await chromium.launch();
+  // Playwright's default launch timeout is 30s. Under host load (a CI box or a
+  // box running several worktree servers) cold Chromium startup can briefly
+  // exceed that even when serialized — a slow launch is not a real failure, so
+  // give it generous headroom rather than flaking the geometry gate.
+  const browser: Browser = await chromium.launch({ timeout: 120_000 });
   const page: Page = await browser.newPage();
   await page.goto(`${srv.origin}/entry.html`);
   // The entry sets `window.__fixturesReady` after loadFixtures() resolves and the
