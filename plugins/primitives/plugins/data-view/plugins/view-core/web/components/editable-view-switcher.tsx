@@ -69,7 +69,6 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
               <ToggleChip
                 active={isActive}
                 variant="ghost"
-                size="sm"
                 icon={<Icon />}
                 title={r.instance.name}
                 onClick={() => {

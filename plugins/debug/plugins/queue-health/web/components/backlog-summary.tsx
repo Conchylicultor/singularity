@@ -19,7 +19,7 @@ export function BacklogSummary({ report }: { report: Report }) {
         {d.lockedCount} running
       </span>
       {d.stalled ? (
-        <Badge variant="destructive" size="sm">
+        <Badge variant="destructive">
           stalled
         </Badge>
       ) : null}

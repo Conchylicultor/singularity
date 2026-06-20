@@ -45,7 +45,7 @@ export function MembershipSummary({
       </Stack>
       <Cluster gap="xs">
         {SUMMARY_ROWS.map(({ state, label, variant }) => (
-          <Badge key={state} size="sm" variant={variant} title={label}>
+          <Badge key={state} variant={variant} title={label}>
             {label} {counts.get(state) ?? 0}
           </Badge>
         ))}

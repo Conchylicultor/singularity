@@ -128,7 +128,6 @@ export function MemoryPanel() {
                     trailing={
                       f.type !== "index" && f.type !== "other" ? (
                         <Badge
-                          size="sm"
                           colorClass={TYPE_BADGE_CLASSES[f.type]}
                         >
                           {formatStatusLabel(f.type)}

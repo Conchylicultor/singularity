@@ -47,7 +47,7 @@ function StatusBadge({ status }: { status: string }) {
     attempted: "bg-muted text-muted-foreground",
   };
   return (
-    <Badge size="sm" colorClass={color[status]} className="inline-block">
+    <Badge colorClass={color[status]} className="inline-block">
       {status}
     </Badge>
   );

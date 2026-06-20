@@ -20,7 +20,7 @@ export function RuntimesSection({ node }: { node: PluginNode }) {
 
 function RuntimePill({ kind }: { kind: "web" | "server" | "central" }) {
   return (
-    <Badge size="sm" colorClass={RUNTIME_COLORS[kind]}>
+    <Badge colorClass={RUNTIME_COLORS[kind]}>
       {kind}
     </Badge>
   );

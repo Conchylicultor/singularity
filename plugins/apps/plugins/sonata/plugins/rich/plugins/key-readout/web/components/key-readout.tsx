@@ -165,7 +165,6 @@ export function KeyReadout() {
               <ToggleChip
                 active={keyAutoDetect}
                 variant="ghost"
-                size="sm"
                 onClick={toggleAutoDetect}
                 title={
                   keyAutoDetect

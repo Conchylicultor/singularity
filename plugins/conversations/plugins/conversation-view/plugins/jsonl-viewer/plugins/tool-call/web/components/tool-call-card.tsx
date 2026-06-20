@@ -59,7 +59,6 @@ export function ToolCallCard({
           leading={
             <>
               <Badge
-                size="sm"
                 colorClass={
                   hasError
                     ? "bg-destructive/15 text-destructive"

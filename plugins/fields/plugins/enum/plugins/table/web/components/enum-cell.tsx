@@ -9,7 +9,7 @@ export function EnumCell(props: TableCellProps): ReactNode {
   const label =
     props.field.options?.find((o) => o.value === raw)?.label ?? raw;
   return (
-    <Badge size="sm" variant="muted">
+    <Badge variant="muted">
       {label}
     </Badge>
   );

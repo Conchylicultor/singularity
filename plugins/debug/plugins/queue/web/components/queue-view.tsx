@@ -177,7 +177,7 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
                   onClick={() => setSelected(r)}
                 >
                   <td className="px-md py-sm">
-                    <Badge size="sm" colorClass={STATE_STYLES[r.state]}>
+                    <Badge colorClass={STATE_STYLES[r.state]}>
                       {r.state}
                     </Badge>
                   </td>
@@ -267,7 +267,7 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
         <code className="text-caption">{job.id}</code>
       </Field>
       <Field label="State">
-        <Badge size="sm" colorClass={STATE_STYLES[job.state]}>
+        <Badge colorClass={STATE_STYLES[job.state]}>
           {job.state}
         </Badge>
       </Field>
@@ -449,7 +449,6 @@ function EventsTab() {
                   <td className="px-md py-sm font-mono text-caption">{r.eventName}</td>
                   <td className="px-md py-sm">
                     <Badge
-                      size="sm"
                       colorClass={
                         r.matchedCount === 0
                           ? "bg-destructive/10 text-destructive"
@@ -606,7 +605,7 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
                           <Inline gap="xs">
                             {t.jobName}
                             {t.dangling && (
-                              <Badge size="sm" colorClass="bg-destructive/10 text-destructive">
+                              <Badge colorClass="bg-destructive/10 text-destructive">
                                 dangling
                               </Badge>
                             )}
@@ -619,7 +618,6 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
                                 <Badge
                                   key={k}
                                   variant="muted"
-                                  size="sm"
                                   className="font-mono"
                                 >
                                   {k}={v === null ? "*" : JSON.stringify(v)}

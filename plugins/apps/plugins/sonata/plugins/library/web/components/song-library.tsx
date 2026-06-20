@@ -137,7 +137,6 @@ export function SongLibrary() {
                 value={sort}
                 onChange={setSort}
                 variant="ghost"
-                size="sm"
               />
             ) : null
           }

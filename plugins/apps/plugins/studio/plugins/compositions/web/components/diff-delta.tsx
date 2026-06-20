@@ -97,7 +97,7 @@ function DeltaGroup({
       <Frame
         content={<SectionLabel>{label}</SectionLabel>}
         trailing={
-          <Badge size="sm" variant="muted">
+          <Badge variant="muted">
             {ids.length}
           </Badge>
         }

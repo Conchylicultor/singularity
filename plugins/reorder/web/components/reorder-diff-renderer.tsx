@@ -87,7 +87,7 @@ function DiffRow({ entry }: { entry: ReorderDiffEntry }) {
       }
       trailing={
         entry.status !== "unchanged" ? (
-          <Badge size="sm" variant={meta.variant}>
+          <Badge variant={meta.variant}>
             {meta.label}
           </Badge>
         ) : undefined

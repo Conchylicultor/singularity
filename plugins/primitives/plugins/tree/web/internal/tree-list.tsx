@@ -403,7 +403,6 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                       <ToggleChip
                         active={hideTerminal}
                         variant="ghost"
-                        size="sm"
                         onClick={() => setHideTerminal(!hideTerminal)}
                         title={hideTerminal ? "Show completed" : "Hide completed"}
                         icon={

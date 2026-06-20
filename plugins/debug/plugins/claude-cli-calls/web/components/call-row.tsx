@@ -35,10 +35,10 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
             <Stack gap="xs">
               <Text as="div" variant="caption">
                 <Cluster>
-                <Badge size="md" colorClass={familyClass(modelMeta.family)}>
+                <Badge colorClass={familyClass(modelMeta.family)}>
                   {modelMeta.label}
                 </Badge>
-                <Badge variant="muted" size="md" className="font-mono">{call.sourceName}</Badge>
+                <Badge variant="muted" className="font-mono">{call.sourceName}</Badge>
                 <SourceContextChip context={call.sourceContext} />
                 <span className="text-muted-foreground">
                   <RelativeTime date={call.createdAt} />
@@ -47,7 +47,7 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
                   {call.durationMs}ms
                 </span>
                 {isError && (
-                  <Badge variant="destructive" size="md">
+                  <Badge variant="destructive">
                     error
                   </Badge>
                 )}
@@ -128,7 +128,7 @@ function SourceContextChip({
     })
     .join(" ");
   return (
-    <Badge variant="muted" size="sm" className="truncate font-mono">
+    <Badge variant="muted" className="truncate font-mono">
       {summary}
     </Badge>
   );

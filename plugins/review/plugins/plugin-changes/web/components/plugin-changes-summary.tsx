@@ -14,7 +14,7 @@ export function PluginChangesSummary({
   if (count === 0) return null;
 
   return (
-    <Badge variant="info" size="sm" className="font-semibold">
+    <Badge variant="info" className="font-semibold">
       {count} {count === 1 ? "plugin" : "plugins"}
     </Badge>
   );

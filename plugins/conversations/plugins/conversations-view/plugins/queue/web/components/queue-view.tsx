@@ -102,7 +102,7 @@ function SectionHeader({
         }
         trailing={
           count > 0 ? (
-            <Badge size="sm" className="pointer-events-none opacity-0 transition-opacity group-hover/header:opacity-100">
+            <Badge className="pointer-events-none opacity-0 transition-opacity group-hover/header:opacity-100">
               {count}
             </Badge>
           ) : undefined
@@ -497,7 +497,7 @@ export function QueueView({
                       content={<ConversationItem conv={group.selected} />}
                       trailing={
                         group.count > 1 ? (
-                          <Badge variant="destructive" size="sm">
+                          <Badge variant="destructive">
                             {group.count}
                           </Badge>
                         ) : undefined
@@ -693,7 +693,7 @@ function QueueRow({
             content={<ConversationItem conv={conv} />}
             trailing={
               clusterSize > 1 ? (
-                <Badge variant="destructive" size="sm">
+                <Badge variant="destructive">
                   {clusterSize}
                 </Badge>
               ) : undefined

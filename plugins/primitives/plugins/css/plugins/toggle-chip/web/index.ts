@@ -5,7 +5,6 @@ export {
   SegmentedControl,
   type ToggleChipProps,
   type ToggleChipVariant,
-  type ToggleChipSize,
   type SegmentedControlProps,
   type SegmentedOption,
 } from "./internal/toggle-chip";

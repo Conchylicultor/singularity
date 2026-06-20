@@ -43,7 +43,6 @@ export function PluginChangeCard({
           trailing={
             <>
               <Badge
-                size="sm"
                 colorClass={plugin.status === "added" ? "bg-success/15 text-success" : "bg-info/15 text-info"}
                 className="font-semibold"
               >

@@ -34,7 +34,7 @@ export function TaskUpdateToolView({ event }: ToolRendererProps) {
           <>
             {taskId && <span className="font-mono text-2xs">{taskId}</span>}
             {input.status && (
-              <Badge size="sm" colorClass={statusBadgeClass(input.status)}>
+              <Badge colorClass={statusBadgeClass(input.status)}>
                 {input.status}
               </Badge>
             )}

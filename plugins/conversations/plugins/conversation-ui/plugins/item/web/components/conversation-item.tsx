@@ -64,7 +64,7 @@ export function ConvStatusDot({ conv }: { conv: ConversationItemConv }) {
 export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {
   if (conv.kind !== "system") return null;
   return (
-    <Badge size="sm" className="text-muted-foreground/80">
+    <Badge className="text-muted-foreground/80">
       sys
     </Badge>
   );

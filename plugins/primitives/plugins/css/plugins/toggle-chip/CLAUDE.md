@@ -7,7 +7,7 @@
 - Description: Toggle-chip control: a stateful solid/ghost pill (composes Badge) with active state, button-height matching, polymorphic `as`, plus a SegmentedControl single-select group helper.
 - Web:
   - Uses: `primitives/css/badge.Badge`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.useControlSize`
-  - Exports: Types: `SegmentedControlProps`, `SegmentedOption`, `ToggleChipProps`, `ToggleChipSize`, `ToggleChipVariant`; Values: `SegmentedControl`, `ToggleChip`
+  - Exports: Types: `SegmentedControlProps`, `SegmentedOption`, `ToggleChipProps`, `ToggleChipVariant`; Values: `SegmentedControl`, `ToggleChip`
 - Cross-plugin:
   - Imported by: `apps/prototypes/gallery`, `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/rich/chord-progression`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-readout`, `apps/story/render`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/graph`, `apps/surface`, `apps/surface/floating`, `config_v2/settings`, `conversations/conversation-view/code/file-pane`, `debug/broadcasts`, `debug/queue`, `fields/bool/filter`, `fields/enum/inline`, `fields/tags/inline`, `primitives/data-view`, `primitives/data-view/view-core`, `primitives/filter-chips`, `primitives/tree`, `primitives/view-switcher`, `reorder/edit-mode`, `review`, `shell/notifications`, `stats`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks/task-draft-form`
 

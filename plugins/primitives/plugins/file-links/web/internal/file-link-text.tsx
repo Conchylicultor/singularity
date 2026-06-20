@@ -45,7 +45,7 @@ export function FileLinkText({ text, onFileOpen }: FileLinkTextProps): ReactNode
           );
         }
         return (
-          <Badge key={i} variant="muted" size="sm" className="font-mono">
+          <Badge key={i} variant="muted" className="font-mono">
             {seg.value}
           </Badge>
         );

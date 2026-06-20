@@ -4,7 +4,6 @@ export {
   Badge,
   type BadgeProps,
   type BadgeVariant,
-  type BadgeSize,
   type BadgeShape,
 } from "./internal/badge";
 export { formatStatusLabel } from "./internal/format-label";

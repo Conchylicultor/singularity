@@ -246,7 +246,7 @@ function ChipRow({
       </Stack>
       <Cluster gap="2xs">
         {chips.map((c) => (
-          <Badge key={c.key} variant={variant} size="sm" mono>{c.text}</Badge>
+          <Badge key={c.key} variant={variant} mono>{c.text}</Badge>
         ))}
       </Cluster>
     </Stack>
@@ -291,11 +291,11 @@ function NotifyRow({ entry }: { entry: NotifyEntry }): ReactElement {
     <Stack direction="row" gap="sm" align="baseline" justify="between">
       <Text variant="caption" className="font-mono">{entry.key}</Text>
       <Cluster gap="2xs">
-        {entry.gap ? <Badge variant="destructive" size="sm">read-set gap</Badge> : null}
-        <Badge variant={entry.gap ? "warning" : "muted"} size="sm" mono>
+        {entry.gap ? <Badge variant="destructive">read-set gap</Badge> : null}
+        <Badge variant={entry.gap ? "warning" : "muted"} mono>
           hand {entry.hand}
         </Badge>
-        <Badge variant={entry.feed > 0 ? "success" : "muted"} size="sm" mono>
+        <Badge variant={entry.feed > 0 ? "success" : "muted"} mono>
           feed {entry.feed}
         </Badge>
       </Cluster>

@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, useControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 
 export type BadgeVariant =
@@ -8,7 +8,6 @@ export type BadgeVariant =
   | "destructive"
   | "success"
   | "info";
-export type BadgeSize = "sm" | "md";
 /** Corner treatment. "rect" = status-label rounded rectangle; "pill" = filter/toggle pill. */
 export type BadgeShape = "rect" | "pill";
 
@@ -24,8 +23,6 @@ const VARIANT_CLASS: Record<BadgeVariant, string> = {
 export interface BadgeProps {
   /** Semantic color variant. Default "muted". Ignored when `colorClass` is set. */
   variant?: BadgeVariant;
-  /** Size token. sm → text-3xs, md → text-caption. Default "md". */
-  size?: BadgeSize;
   /** Corner treatment. Default "rect" (rounded rectangle); "pill" → fully rounded. */
   shape?: BadgeShape;
   /** Color-only escape hatch: replaces the variant bg/text classes (map-driven colors). */
@@ -39,13 +36,19 @@ export interface BadgeProps {
   className?: string;
   title?: string;
   children: React.ReactNode;
+  /**
+   * `size` is intentionally never settable — a chip derives its text size SOLELY
+   * from ambient control density (useControlSize). The index signature below would
+   * otherwise let a stray `size` through; typing it as `never` makes passing one a
+   * compile error.
+   */
+  size?: never;
   /** Permissive passthrough for the rendered element (onClick, type, disabled, …). */
   [key: string]: unknown;
 }
 
 export function Badge({
   variant = "muted",
-  size = "md",
   shape = "rect",
   colorClass,
   icon,
@@ -55,6 +58,11 @@ export function Badge({
   children,
   ...rest
 }: BadgeProps) {
+  const density = useControlSize();
+  // Text size tracks ambient control density; only the most compact density
+  // reads as text-3xs. No-provider default ("md") → text-caption, identical to
+  // the previous default. Threshold matches ToggleChip's chipSizeForDensity.
+  const textClass = density === "xs" ? "text-3xs" : "text-caption";
   return (
     <As
       className={cn(
@@ -66,8 +74,7 @@ export function Badge({
         "inline-flex region-line max-w-full gap-xs p-chip align-baseline font-medium tabular-nums [&_svg:not([class*='size-'])]:icon-auto",
         shape === "rect" && "rounded-md",
         shape === "pill" && "rounded-full",
-        size === "sm" && "text-3xs",
-        size === "md" && "text-caption",
+        textClass,
         colorClass ?? VARIANT_CLASS[variant],
         className,
       )}

@@ -154,7 +154,7 @@ export function ClusterView(): ReactElement {
         value: (r) => r.worktree,
         options: uniqueSorted(timeline.map((r) => r.worktree)),
         cell: (r) => (
-          <Badge variant="muted" size="sm" className="truncate font-mono" title={r.worktree}>
+          <Badge variant="muted" className="truncate font-mono" title={r.worktree}>
             {r.worktree}
           </Badge>
         ),
@@ -201,7 +201,7 @@ export function ClusterView(): ReactElement {
         align: "end",
         value: (r) => r.loadAvg1,
         cell: (r) => (
-          <Badge variant={loadSeverity(r.loadAvg1, r.cpuCount)} size="sm" className="font-mono">
+          <Badge variant={loadSeverity(r.loadAvg1, r.cpuCount)} className="font-mono">
             {Math.round(r.loadAvg1)} / {r.cpuCount}
           </Badge>
         ),

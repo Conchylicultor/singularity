@@ -105,7 +105,7 @@ export function CategoryChipToolbar() {
                     </Center>
                   }
                 >
-                  <Badge size="sm" colorClass={colorClassFor(c)}>
+                  <Badge colorClass={colorClassFor(c)}>
                     {c}
                   </Badge>
                 </Row>

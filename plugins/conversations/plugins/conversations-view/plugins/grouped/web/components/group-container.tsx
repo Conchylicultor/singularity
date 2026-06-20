@@ -72,7 +72,7 @@ export function GroupContainer({
         trailing={
           <>
             {count !== undefined && count > 0 && (
-              <Badge size="sm" className="pointer-events-none opacity-0 transition-opacity group-hover/header:opacity-100">
+              <Badge className="pointer-events-none opacity-0 transition-opacity group-hover/header:opacity-100">
                 {count}
               </Badge>
             )}

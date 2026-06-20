@@ -14,7 +14,7 @@ export type NodeEmphasis = "normal" | "dim" | "dep" | "dependent" | "active";
 
 function MetaChip({ children }: { children: React.ReactNode }) {
   return (
-    <Badge variant="muted" size="sm" className="tracking-wider">
+    <Badge variant="muted" className="tracking-wider">
       {children}
     </Badge>
   );
@@ -67,7 +67,7 @@ export function WorkflowNodeCard({
           }
           trailing={
             modelColor ? (
-              <Badge size="sm" colorClass={modelColor} className="font-mono">
+              <Badge colorClass={modelColor} className="font-mono">
                 {modelDisplayLabel(node.model!)}
               </Badge>
             ) : undefined

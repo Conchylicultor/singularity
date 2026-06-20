@@ -124,7 +124,6 @@ export function TabDragOverlay() {
       >
         <Badge
           shape="rect"
-          size="sm"
           icon={<Icon />}
           colorClass={
             onDesktop

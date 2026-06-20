@@ -128,7 +128,6 @@ export function ChordReadout() {
                 trailing={
                   voicings.length > 1 ? (
                     <ToggleChip
-                      size="sm"
                       active={showInversions}
                       onClick={() => setShowInversions((v) => !v)}
                     >

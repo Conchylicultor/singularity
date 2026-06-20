@@ -14,7 +14,7 @@ export function TagsCell(props: TableCellProps): ReactNode {
     <Clip className="whitespace-nowrap">
       <Stack direction="row" gap="xs">
         {tags.map((t) => (
-          <Badge key={t} size="sm" variant="muted">
+          <Badge key={t} variant="muted">
             {labelFor(t)}
           </Badge>
         ))}

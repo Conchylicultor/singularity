@@ -67,7 +67,7 @@ function AttemptSection({
             {worktreeName}
           </TruncatingText>
         }
-        trailing={<Badge size="sm">{attempt.conversations.length}</Badge>}
+        trailing={<Badge>{attempt.conversations.length}</Badge>}
       />
       {attempt.conversations.length === 0 ? (
         <Text
@@ -153,7 +153,7 @@ export function AttemptPane() {
   const title = (
     <Inline gap="xs">
       Attempts
-      {totalConversations > 0 && <Badge size="sm">{totalConversations}</Badge>}
+      {totalConversations > 0 && <Badge>{totalConversations}</Badge>}
     </Inline>
   );
 

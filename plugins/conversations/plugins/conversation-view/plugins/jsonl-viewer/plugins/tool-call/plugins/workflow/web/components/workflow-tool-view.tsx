@@ -125,16 +125,16 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
       gap="sm"
       leading={
         <>
-          <Badge size="sm" colorClass="bg-categorical-6/15 text-categorical-6" icon={<MdAccountTree />} className="font-mono">
+          <Badge colorClass="bg-categorical-6/15 text-categorical-6" icon={<MdAccountTree />} className="font-mono">
             {name ?? "workflow"}
           </Badge>
           {phases.length > 0 && (
-            <Badge variant="muted" size="sm" className="tracking-wider">
+            <Badge variant="muted" className="tracking-wider">
               {phases.length} {phases.length === 1 ? "phase" : "phases"}
             </Badge>
           )}
           {agentCount > 0 && (
-            <Badge variant="muted" size="sm" className="tracking-wider">
+            <Badge variant="muted" className="tracking-wider">
               {agentCount} {agentCount === 1 ? "agent" : "agents"}
             </Badge>
           )}

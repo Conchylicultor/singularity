@@ -83,7 +83,7 @@ export function ReviewFileRow({
             leading={
               <>
                 <CollapsibleChevron open={expanded} className="size-4 text-muted-foreground" />
-                <Badge size="sm" colorClass={statusBadgeColor(file.status)}>
+                <Badge colorClass={statusBadgeColor(file.status)}>
                   {STATUS_LABEL[file.status]}
                 </Badge>
               </>

@@ -65,7 +65,7 @@ function ServerResourceRow({ r }: { r: ResourceDebug }): ReactElement {
         <Inline gap="sm">
           <Stat label="subs" value={r.subscribers} />
           {fanOut > 1 ? (
-            <Badge variant="warning" size="sm">×{fanOut}</Badge>
+            <Badge variant="warning">×{fanOut}</Badge>
           ) : (
             <Stat label="fan" value={`×${fanOut}`} />
           )}

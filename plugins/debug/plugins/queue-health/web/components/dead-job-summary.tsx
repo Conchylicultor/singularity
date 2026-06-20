@@ -13,7 +13,7 @@ export function DeadJobSummary({ report }: { report: Report }) {
 
   return (
     <Inline gap="xs">
-      <Badge variant="destructive" size="sm" mono>
+      <Badge variant="destructive" mono>
         {d.jobName}
       </Badge>
       <span>×{d.deadCount}</span>

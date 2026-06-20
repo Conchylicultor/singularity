@@ -46,7 +46,7 @@ export function TaskListToolView({ event }: ToolRendererProps) {
                     <>
                       {t.id && <span className="font-mono">{t.id}</span>}
                       {t.status && (
-                        <Badge variant="muted" size="sm">
+                        <Badge variant="muted">
                           {formatStatusLabel(t.status)}
                         </Badge>
                       )}

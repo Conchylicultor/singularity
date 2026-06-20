@@ -411,7 +411,7 @@ function CompositionList({
               selected={editingId === item.id}
               onClick={() => onSelect(item)}
               actions={
-                <Badge size="sm" variant="muted">
+                <Badge variant="muted">
                   {item.entryPoints.length} entry · {item.selectedContributors.length}{" "}
                   sel
                   {item.extends.length > 0 ? ` · ${item.extends.length} ext` : ""}

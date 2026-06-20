@@ -61,22 +61,22 @@ function WorkflowNodePaneInner({ events }: { events: JsonlEvent[] }) {
           <>
             <Cluster gap="xs" className="text-2xs">
               {node.phase && (
-                <Badge variant="muted" size="sm">
+                <Badge variant="muted">
                   {node.phase}
                 </Badge>
               )}
               {node.model && (
-                <Badge variant="muted" size="sm" className="font-mono">
+                <Badge variant="muted" className="font-mono">
                   {modelDisplayLabel(node.model)}
                 </Badge>
               )}
               {node.agentType && (
-                <Badge variant="muted" size="sm">
+                <Badge variant="muted">
                   {formatStatusLabel(node.agentType)}
                 </Badge>
               )}
               {node.hasSchema && (
-                <Badge variant="muted" size="sm">
+                <Badge variant="muted">
                   Schema
                 </Badge>
               )}

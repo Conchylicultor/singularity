@@ -28,7 +28,7 @@ function ModelBadge({ model }: { model: string }) {
   const tier = MODEL_TIERS.find((t) => model.includes(t));
   const colors = tier ? familyClass(tier) : "bg-muted text-muted-foreground";
   return (
-    <Badge size="sm" colorClass={colors} className="font-mono">
+    <Badge colorClass={colors} className="font-mono">
       {modelDisplayLabel(model)}
     </Badge>
   );
@@ -36,7 +36,7 @@ function ModelBadge({ model }: { model: string }) {
 
 function MetaBadge({ children }: { children: React.ReactNode }) {
   return (
-    <Badge variant="muted" size="sm" className="tracking-wider">
+    <Badge variant="muted" className="tracking-wider">
       {children}
     </Badge>
   );
@@ -66,7 +66,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
       gap="sm"
       leading={
         <>
-          <Badge size="sm" colorClass="bg-categorical-6/15 text-categorical-6" className="font-mono">
+          <Badge colorClass="bg-categorical-6/15 text-categorical-6" className="font-mono">
             {agentType}
           </Badge>
           {input.model && <ModelBadge model={input.model} />}

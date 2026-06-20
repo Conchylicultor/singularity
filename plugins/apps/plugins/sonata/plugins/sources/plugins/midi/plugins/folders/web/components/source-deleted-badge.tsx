@@ -13,7 +13,7 @@ export function SourceDeletedBadge({ song }: { song: Song }) {
   const midi = useSongMidi(song.id);
   if (!midi || !midi.sourceMissing) return null;
   return (
-    <Badge variant="destructive" size="sm">
+    <Badge variant="destructive">
       Source deleted
     </Badge>
   );

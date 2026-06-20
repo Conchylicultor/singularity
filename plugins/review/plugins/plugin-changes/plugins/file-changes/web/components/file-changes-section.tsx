@@ -53,7 +53,7 @@ function FileRow({
           leading={
             <>
               <CollapsibleChevron open={expanded} className="size-3.5 text-muted-foreground" />
-              <Badge size="sm" colorClass={statusBadgeColor(file.status)}>
+              <Badge colorClass={statusBadgeColor(file.status)}>
                 {label}
               </Badge>
             </>

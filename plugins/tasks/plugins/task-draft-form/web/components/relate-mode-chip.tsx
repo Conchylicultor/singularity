@@ -62,7 +62,6 @@ export function RelateModeChip({
               aria-checked={selected}
               active={selected}
               variant="solid"
-              size="sm"
               disabled={disabled}
               title={m.title}
               onClick={(e: React.MouseEvent) => {

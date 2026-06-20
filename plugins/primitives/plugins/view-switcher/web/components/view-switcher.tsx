@@ -42,7 +42,6 @@ export function ViewSwitcher({
       value={activeId}
       onChange={onSelect}
       variant="ghost"
-      size="sm"
       className={className}
     />
   );

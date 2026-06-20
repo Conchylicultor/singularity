@@ -243,7 +243,6 @@ function ChordChip({
   return (
     <ToggleChip
       active={isActive}
-      size="sm"
       mono
       onClick={() => onSeek(chord.start)}
       title={`${chord.data.symbol} · beats ${chord.start.toFixed(2)}–${chord.end.toFixed(2)}`}

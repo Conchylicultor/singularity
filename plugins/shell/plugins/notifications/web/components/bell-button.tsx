@@ -74,7 +74,6 @@ function NotificationRow({ n, dismiss, onClose }: { n: Notification; dismiss: (i
             trailing={
               n.muted ? (
                 <Badge
-                  size="sm"
                   variant="muted"
                   title="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
                 >
@@ -265,7 +264,6 @@ export function BellButton() {
                 <ToggleChip
                   key={chip}
                   variant="ghost"
-                  size="sm"
                   active={typeFilter === chip}
                   onClick={() => { setTypeFilter(chip); }}
                   // eslint-disable-next-line layout/no-adhoc-layout -- rigid chip in the horizontally-scrolling filter row

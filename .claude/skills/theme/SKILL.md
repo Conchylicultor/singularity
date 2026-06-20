@@ -48,7 +48,7 @@ To add a `@utility`: declare it in `app.css` **and** add it to a `*_UTILITIES` a
 A control's size is a **bundle** (height + padding + radius + text + gap + icon), named by a density `ControlSize = xs|sm|md|lg`. Don't size buttons individually.
 - A **toolbar/slot declares density once** — `defineRenderSlot(id, { controlSize })` (auto-wraps contributions; a host can't forget), or wrap a subtree in `<ControlSizeProvider size>`. Every control inside inherits via React context.
 - Each control maps that density to **its own shape**: text→`control-sm`, icon→`control-icon-sm`, chip→its `sm`. Same height, different shapes.
-- Controls (`Button`/`IconButton`/`PaneIconAction`/`ToggleChip`) **omit `size`** to inherit. An explicit `size` is the escape hatch — fine for standalone controls (forms/dialogs), wrong inside a toolbar.
+- **Chips & icon buttons have NO `size` prop at all** — `Badge`, `ToggleChip`, `SegmentedControl`, and `IconButton`/`PaneIconAction` derive size *solely* from ambient density (`useControlSize`); passing `size` is a **compile error** (the chips' `[key: string]: unknown` passthrough is plugged with `size?: never`). `Button` still accepts an explicit `size` — the last per-instance escape hatch; omit it to inherit (a `size` inside a toolbar is a smell), pending its removal too.
 - Runtime home: web-core `@/theme/control-size` (`ControlSizeProvider`, `useControlSize`, `iconSizeFor`/`textSizeFor`) — co-located with the ambient ui-kit, not the primitive, so foundational `Button` reads it without inverting layers. The CSS `control-*` scale + `no-adhoc-control` lint live in the `control-size` primitive.
 → [`plugins/primitives/plugins/control-size/CLAUDE.md`](../../../plugins/primitives/plugins/control-size/CLAUDE.md)
 

@@ -19,7 +19,6 @@ export function FileTabs({
             aria-selected={isActive}
             active={isActive}
             variant="ghost"
-            size="sm"
             onClick={() => setActiveId(c.id)}
             className={isActive ? "bg-muted text-foreground hover:bg-muted" : undefined}
           >

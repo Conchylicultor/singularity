@@ -393,7 +393,7 @@ export function EventsTestView() {
                   content={
                     <Stack gap="2xs">
                       <Stack direction="row" gap="sm" align="center">
-                        <Badge variant="muted" size="md" className="font-mono">
+                        <Badge variant="muted" className="font-mono">
                           {t.userId ?? "(any)"}
                         </Badge>
                         <span className="text-muted-foreground">→</span>
@@ -472,7 +472,7 @@ export function EventsTestView() {
                   className="px-md py-sm"
                 >
                   <Stack direction="row" gap="sm" align="center">
-                    <Badge size="md" colorClass="bg-info/10 text-info-foreground" className="font-mono">
+                    <Badge colorClass="bg-info/10 text-info-foreground" className="font-mono">
                       {e.label}
                     </Badge>
                     <span className="text-muted-foreground">fired for</span>

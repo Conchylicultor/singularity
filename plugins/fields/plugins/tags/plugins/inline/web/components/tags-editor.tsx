@@ -77,7 +77,7 @@ export function TagsEditor(props: CellEditorProps): ReactNode {
               <span className="italic text-muted-foreground/50">Empty</span>
             ) : (
               selected.map((t) => (
-                <Badge key={t} size="sm" variant="muted">
+                <Badge key={t} variant="muted">
                   {labelFor(t)}
                 </Badge>
               ))
@@ -111,7 +111,6 @@ export function TagsEditor(props: CellEditorProps): ReactNode {
                 key={v}
                 active={selected.includes(v)}
                 variant="ghost"
-                size="sm"
                 onClick={() => toggle(v)}
               >
                 {labelFor(v)}

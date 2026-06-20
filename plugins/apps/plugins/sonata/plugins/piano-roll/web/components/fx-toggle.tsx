@@ -55,7 +55,6 @@ export function FxToggle() {
         trigger={
           <ToggleChip
             active={open}
-            size="sm"
             icon={<MdAutoAwesome />}
             aria-label="Visual effects"
             className={cn(

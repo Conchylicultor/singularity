@@ -50,12 +50,12 @@ function summaryFor(questions: Question[], firstAnswerParts: string[]) {
       leading={
         questions.length > 0 ? (
           questions.map((q, i) => (
-            <Badge key={i} size="sm" colorClass="bg-info/15 text-info" className="font-mono">
+            <Badge key={i} colorClass="bg-info/15 text-info" className="font-mono">
               {q.header}
             </Badge>
           ))
         ) : (
-          <Badge size="sm" colorClass="bg-info/15 text-info" className="font-mono">
+          <Badge colorClass="bg-info/15 text-info" className="font-mono">
             question
           </Badge>
         )

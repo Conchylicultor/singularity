@@ -105,7 +105,6 @@ export function ContributionsView() {
                     <table.icon size={14} />
                     <span className="font-medium">{table.label}</span>
                     <Badge
-                      size="sm"
                       colorClass={active ? "bg-foreground/10 text-foreground" : undefined}
                     >
                       {count}

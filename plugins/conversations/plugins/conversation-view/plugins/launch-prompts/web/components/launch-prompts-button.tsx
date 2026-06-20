@@ -67,7 +67,7 @@ export function LaunchPromptsButton({
               trailing={(() => {
                 const meta = MODEL_REGISTRY[normalizeModel(item.model)];
                 return (
-                  <Badge size="md" colorClass={familyClass(meta.family)}>
+                  <Badge colorClass={familyClass(meta.family)}>
                     {meta.label}
                   </Badge>
                 );

@@ -116,7 +116,7 @@ export function ConfigFieldRow({
         trailing={
           <>
             {tier && tier !== "default" && (
-              <Badge size="sm" colorClass={TIER_BADGE[tier].className}>
+              <Badge colorClass={TIER_BADGE[tier].className}>
                 {TIER_BADGE[tier].label}
               </Badge>
             )}
@@ -145,7 +145,6 @@ export function ConfigFieldRow({
                 as="button"
                 type="button"
                 variant="warning"
-                size="sm"
                 className="hover:bg-warning/30"
                 onClick={handleAcceptOrigin}
               >

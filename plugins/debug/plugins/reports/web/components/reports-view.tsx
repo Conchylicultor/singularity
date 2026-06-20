@@ -51,36 +51,36 @@ function ReportRow({ report: c, serverBuildId }: { report: Report; serverBuildId
       <Stack gap="xs">
         <Text as="div" variant="caption">
           <Cluster>
-          <Badge variant="muted" size="md" className="font-mono">
+          <Badge variant="muted" className="font-mono">
             {c.kind}
           </Badge>
-          <Badge variant="muted" size="md" className="font-mono">
+          <Badge variant="muted" className="font-mono">
             {c.source}
           </Badge>
           {c.noise && (
-            <Badge variant="warning" size="md">
+            <Badge variant="warning">
               noise
             </Badge>
           )}
           {c.rateLimited && (
-            <Badge variant="destructive" size="md">
+            <Badge variant="destructive">
               rate-limited
             </Badge>
           )}
           {c.lastClientId != null &&
             (c.lastClientId === tabId ? (
-              <Badge variant="info" size="md">
+              <Badge variant="info">
                 this tab
               </Badge>
             ) : (
-              <Badge variant="muted" size="md">
+              <Badge variant="muted">
                 another tab
               </Badge>
             ))}
           {c.lastBuildId != null &&
             serverBuildId != null &&
             c.lastBuildId !== serverBuildId && (
-              <Badge variant="warning" size="md">
+              <Badge variant="warning">
                 outdated tab
               </Badge>
             )}

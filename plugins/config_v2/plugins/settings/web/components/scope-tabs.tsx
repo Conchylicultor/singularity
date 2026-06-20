@@ -102,7 +102,6 @@ function ScopeTab({
     <ToggleChip
       active={active}
       variant="ghost"
-      size="sm"
       icon={icon}
       onClick={() => onSelect(scopeId)}
     >
@@ -138,7 +137,7 @@ function AddScopeButton({
       tooltip="Customize for an app"
       contentClassName="w-56 p-1"
       trigger={
-        <ToggleChip active={false} variant="ghost" size="sm" icon={<MdAdd />}>
+        <ToggleChip active={false} variant="ghost" icon={<MdAdd />}>
           App
         </ToggleChip>
       }

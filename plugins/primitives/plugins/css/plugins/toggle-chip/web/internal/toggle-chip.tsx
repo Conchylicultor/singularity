@@ -36,8 +36,6 @@ export interface ToggleChipProps {
   active: boolean;
   /** Color treatment. "solid" = filled-primary (controls); "ghost" = accent (filters). Default "solid". */
   variant?: ToggleChipVariant;
-  /** Size token. md → text-xs px-3 py-1; sm → text-2xs px-2 py-0.5. Default "md". */
-  size?: ToggleChipSize;
   /** Leading icon, rendered before children. */
   icon?: React.ReactNode;
   /** Element to render. Default "button"; pass "a" for link-style chips. */
@@ -46,6 +44,13 @@ export interface ToggleChipProps {
   className?: string;
   title?: string;
   children: React.ReactNode;
+  /**
+   * `size` is intentionally never settable — a chip derives its size SOLELY from
+   * ambient control density (useControlSize). The index signature below would
+   * otherwise let a stray `size` spread through onto Badge; typing it as `never`
+   * makes passing one a compile error.
+   */
+  size?: never;
   /** Permissive passthrough for the rendered element (onClick, href, …). */
   [key: string]: unknown;
 }
@@ -53,7 +58,6 @@ export interface ToggleChipProps {
 export function ToggleChip({
   active,
   variant = "solid",
-  size,
   icon,
   as: As = "button",
   disabled,
@@ -61,9 +65,9 @@ export function ToggleChip({
   children,
   ...rest
 }: ToggleChipProps) {
-  // No explicit `size` → inherit the ambient density (defaults to "md" → "md").
+  // Size is inherited from the ambient density (defaults to "md" → "md").
   const density = useControlSize();
-  const effectiveSize = size ?? chipSizeForDensity(density);
+  const effectiveSize = chipSizeForDensity(density);
   const isButton = As === "button";
   // Auto toggle semantics for plain buttons; defer to the caller's role
   // (e.g. SegmentedControl's role="radio" + aria-checked) when one is supplied.
@@ -108,7 +112,6 @@ export interface SegmentedControlProps<T extends string> {
   onChange: (id: T) => void;
   /** Forwarded to each chip. Default "solid". */
   variant?: ToggleChipVariant;
-  size?: ToggleChipSize;
   /** Wrapper override (e.g. spacing). */
   className?: string;
 }
@@ -118,7 +121,6 @@ export function SegmentedControl<T extends string>({
   value,
   onChange,
   variant = "solid",
-  size,
   className,
 }: SegmentedControlProps<T>) {
   return (
@@ -130,7 +132,6 @@ export function SegmentedControl<T extends string>({
           aria-checked={opt.id === value}
           active={opt.id === value}
           variant={variant}
-          size={size}
           icon={opt.icon}
           title={opt.title}
           onClick={() => onChange(opt.id)}

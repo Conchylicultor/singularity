@@ -30,14 +30,13 @@ export function StructureDetailSection({ node }: { node: PluginNode }) {
     <Section title="Structure">
       <Stack direction="row" wrap gap="xs">
         {data.compositionRoot && (
-          <Badge size="sm" variant="info">
+          <Badge variant="info">
             composition root
           </Badge>
         )}
         {nonStandard.map((f) => (
           <Badge
             key={`folder:${f.name}`}
-            size="sm"
             variant="warning"
             icon={<MdWarningAmber />}
           >
@@ -47,7 +46,6 @@ export function StructureDetailSection({ node }: { node: PluginNode }) {
         {loose.map((name) => (
           <Badge
             key={`file:${name}`}
-            size="sm"
             variant="warning"
             icon={<MdWarningAmber />}
           >

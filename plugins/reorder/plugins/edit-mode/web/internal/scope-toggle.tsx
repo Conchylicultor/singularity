@@ -41,7 +41,6 @@ export function ScopeToggle() {
       options={OPTIONS}
       value={scope}
       onChange={setReorderScope}
-      size="sm"
     />
   );
 }

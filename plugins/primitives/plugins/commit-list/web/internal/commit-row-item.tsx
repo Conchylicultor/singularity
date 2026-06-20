@@ -59,7 +59,7 @@ export function CommitRowItem({
       trailing={
         <Stack direction="row" align="center" gap="sm">
           {pushed && (
-            <Badge variant="success" size="md">
+            <Badge variant="success">
               pushed
             </Badge>
           )}

@@ -21,6 +21,7 @@ Write the role, not the mechanics; let the container own the policy.
 - **Prefer the layout mode where the bug is unrepresentable.** `rigid | flexible | rigid` is canonical Grid (`auto minmax(0,1fr) auto`); an `auto` track can't collapse under its own rigid content, so "container crushed by its own chip" *cannot* happen. Choose the mode that forbids the bug over the one that merely lets you avoid it.
 - **`min-width: 0` is a deliberate leaf decision, never a container reflex.** Exactly one primitive — the truncation leaf — owns it. (Fill containers like `Scroll`/`Clip` use `min-w-0`/`min-h-0` as a *flex-basis* mechanic — a different role that happens to share the class.)
 - **Semantic intent over mechanics.** Write `content` / `meta` / `stack with sm rhythm`; the primitive owns `flex items-center gap-2 min-w-0 …` and can fix it once, globally. Same "CSS-in-semantics" philosophy as `spacing`/`text`/`surface`.
+- **Size is a region property, not a per-element prop.** Same "container owns the policy" rule applied to control density: a chip's/control's size (height·text·padding·icon) is inherited from the ambient `ControlSize` a container declares **once** (`ControlSizeProvider`, or a slot's `controlSize`) — never set per instance. `Badge` / `ToggleChip` / `SegmentedControl` and the icon buttons derive it *solely* from context (no `size` prop; passing one is a compile error). Full model + the `Button` exception in the [`theme` skill](../theme/SKILL.md).
 
 ### Worked example — a header row that won't overlap
 

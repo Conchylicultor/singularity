@@ -617,7 +617,7 @@ function ReorderInner({
         const label = entry._doc?.label ?? contributionLabel(entry);
         return (
           <div className="cursor-grabbing rounded-md border border-primary/50 bg-background/95 px-sm py-2xs shadow-lg ring-1 ring-primary/50">
-            <Badge variant="primary" size="md">
+            <Badge variant="primary">
               {label}
             </Badge>
           </div>

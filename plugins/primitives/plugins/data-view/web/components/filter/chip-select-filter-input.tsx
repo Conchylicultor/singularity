@@ -103,7 +103,6 @@ export function ChipSelectFilterInput(
                 key={o.value}
                 active={selected.includes(o.value)}
                 variant="ghost"
-                size="sm"
                 onClick={() => pick(o.value)}
               >
                 {o.label}

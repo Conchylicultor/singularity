@@ -63,11 +63,11 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
       content={input.title}
       trailing={
         autostart ? (
-          <Badge variant="success" size="sm">
+          <Badge variant="success">
             auto-launch {MODEL_REGISTRY[normalizeModel(autostart)].label}
           </Badge>
         ) : (
-          <Badge variant="warning" size="sm">
+          <Badge variant="warning">
             no auto-launch
           </Badge>
         )

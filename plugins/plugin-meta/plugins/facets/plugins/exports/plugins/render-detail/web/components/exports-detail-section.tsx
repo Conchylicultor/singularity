@@ -160,7 +160,6 @@ function SymbolRow({ row }: { row: SymbolRow }) {
       size="sm"
       icon={
         <Badge
-          size="sm"
           colorClass={style.className}
           // eslint-disable-next-line layout/no-adhoc-layout -- fixed-width category tag: w-10 + center keep the short label (hook/comp/type/val) optically aligned in a rigid column; rigid identity chip never shrinks
           className="w-10 shrink-0 justify-center font-mono"

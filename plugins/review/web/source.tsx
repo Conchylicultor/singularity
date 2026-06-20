@@ -65,7 +65,6 @@ export function SourceTabs({
       <Stack direction="row" gap="xs" align="center">
       <ToggleChip
         active={source.kind === "working"}
-        size="sm"
         onClick={() => onChange({ kind: "working" })}
         title="Uncommitted changes vs. main"
       >
@@ -75,7 +74,6 @@ export function SourceTabs({
         <ToggleChip
           key={g.pushId}
           active={source.kind === "push" && source.pushId === g.pushId}
-          size="sm"
           onClick={() => onChange({ kind: "push", pushId: g.pushId })}
           title={`${g.message} · ${formatDate(g.createdAt)}`}
         >

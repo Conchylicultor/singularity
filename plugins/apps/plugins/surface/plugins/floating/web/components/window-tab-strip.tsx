@@ -205,7 +205,6 @@ export function WindowTabStrip({
             key={member.tabId}
             data-floating-tab-id={member.tabId}
             shape="rect"
-            size="sm"
             icon={<Icon />}
             colorClass={cn(
               "max-w-40 cursor-grab border transition-colors",

@@ -84,7 +84,7 @@ function ArrayChangeRow({
 }) {
   return (
     <Stack direction="row" gap="sm" align="center">
-      <Badge variant={KIND_VARIANT[kind]} size="sm">
+      <Badge variant={KIND_VARIANT[kind]}>
         {kind}
       </Badge>
       <Text variant="caption" as="span">

@@ -41,7 +41,6 @@ export function EnumEditor(props: CellEditorProps): ReactNode {
             key={o.value}
             active={selected === o.value}
             variant="ghost"
-            size="sm"
             onClick={() => choose(o.value)}
           >
             {o.label}

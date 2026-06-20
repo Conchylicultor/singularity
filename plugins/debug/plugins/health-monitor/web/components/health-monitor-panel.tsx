@@ -287,7 +287,6 @@ function BackendRow({ series }: { series: HealthSeries }): ReactElement {
       trailing={
         <Badge
           variant={depth > 0 ? "warning" : "muted"}
-          size="sm"
           title="Host-wide heavy-read gate queue depth"
         >
           {`heavy-read ${depth}`}

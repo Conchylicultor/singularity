@@ -160,7 +160,6 @@ export function BroadcastsPanel() {
                 {(["error", "warning", "info"] as BroadcastSeverity[]).map((s) => (
                   <ToggleChip
                     key={s}
-                    size="sm"
                     variant="ghost"
                     active={form.severity === s}
                     onClick={() => setForm((f) => ({ ...f, severity: s }))}
@@ -290,7 +289,6 @@ export function BroadcastsPanel() {
                 className="px-lg py-md hover:bg-muted/30"
                 leading={
                   <Badge
-                    size="sm"
                     colorClass={SEVERITY_STYLES[entry.severity]}
                     // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align badge with first text line
                     className="mt-0.5"

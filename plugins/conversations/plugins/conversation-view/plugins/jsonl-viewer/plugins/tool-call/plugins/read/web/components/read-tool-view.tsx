@@ -41,7 +41,7 @@ function LineRangeBadge({
   const end = limit != null ? start + limit - 1 : null;
   const label = end != null ? `L${start}–${end}` : `L${start}+`;
   return (
-    <Badge variant="muted" size="sm" className="font-mono">
+    <Badge variant="muted" className="font-mono">
       {label}
     </Badge>
   );

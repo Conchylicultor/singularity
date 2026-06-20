@@ -52,7 +52,7 @@ function ImpactList({ title, ids }: { title: string; ids: PluginId[] }) {
       {ids.length > 0 && (
         <Cluster gap="xs">
           {ids.map((id) => (
-            <Badge key={id} size="sm" variant="muted" title={String(id)}>
+            <Badge key={id} variant="muted" title={String(id)}>
               {shortName(id)}
             </Badge>
           ))}
@@ -144,7 +144,7 @@ function EdgeChip({ step }: { step: InclusionStep }) {
         {shortName(step.from)}
       </LinkChip>
       <MdArrowForward className="size-3 text-muted-foreground" />
-      <Badge size="sm" variant={step.kind === "hard" ? "primary" : "info"}>
+      <Badge variant={step.kind === "hard" ? "primary" : "info"}>
         {step.kind}
       </Badge>
       <MdArrowForward className="size-3 text-muted-foreground" />

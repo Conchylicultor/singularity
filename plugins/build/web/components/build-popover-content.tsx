@@ -263,7 +263,7 @@ function BuildHistoryList({
             <span className="text-muted-foreground">
               <RelativeTime date={run.startedAt} />
             </span>
-            <Badge size="sm" variant={run.trigger === "auto" ? "info" : "muted"}>
+            <Badge variant={run.trigger === "auto" ? "info" : "muted"}>
               {run.trigger}
             </Badge>
           </Row>

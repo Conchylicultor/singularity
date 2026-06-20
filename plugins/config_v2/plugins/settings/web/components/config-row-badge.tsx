@@ -26,7 +26,7 @@ export function ConfigRowBadge({
   const sourceLabel = source ? SOURCE_LABEL[source] : undefined;
   const sourceTag = sourceLabel ? (
     // eslint-disable-next-line spacing/no-adhoc-spacing -- trailing row indicator offset from the row label
-    <Badge variant="muted" size="sm" shape="pill" className="ml-2">
+    <Badge variant="muted" shape="pill" className="ml-2">
       {sourceLabel}
     </Badge>
   ) : null;

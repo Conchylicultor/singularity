@@ -121,12 +121,12 @@ export function WorkflowGraph({
       {(graph.truncated || graph.dynamic) && (
         <Stack gap="xs">
           {graph.truncated && (
-            <Badge colorClass="bg-warning/10 text-warning" size="sm" icon={<MdWarningAmber />}>
+            <Badge colorClass="bg-warning/10 text-warning" icon={<MdWarningAmber />}>
               Graph truncated at the preview cap — see full script below.
             </Badge>
           )}
           {graph.dynamic && (
-            <Badge variant="muted" size="sm">
+            <Badge variant="muted">
               Some steps fan out at runtime; counts shown are representative.
             </Badge>
           )}

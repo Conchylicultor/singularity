@@ -16,7 +16,6 @@ export function BoolValueInput(props: FilterValueInputProps): ReactNode {
       value={current}
       onChange={(id) => props.onChange(id === "checked")}
       variant="ghost"
-      size="sm"
     />
   );
 }

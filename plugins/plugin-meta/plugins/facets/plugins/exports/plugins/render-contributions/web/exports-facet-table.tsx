@@ -40,7 +40,7 @@ const columns: ColumnDef<ExportRow>[] = [
     id: "kind",
     header: "Kind",
     value: (row) => row.kind,
-    cell: (row) => <Badge size="sm">{row.kind}</Badge>,
+    cell: (row) => <Badge>{row.kind}</Badge>,
   },
   {
     id: "plugin",
