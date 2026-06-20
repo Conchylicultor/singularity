@@ -30,6 +30,11 @@ export const conversationsLiveResource = defineResource({
   key: conversationsResource.key,
   mode: "push",
   schema: conversationsResource.schema,
+  // A `conversations` row change scopes to that conversation id. This resource
+  // is push (its aggregate payload re-ships whole), but declaring identity lets
+  // it PROPAGATE the scoped conv-ids to its downstream affectedMap edges
+  // (attempts, agent-launches) — which is what stops the cascade amplification.
+  identityTable: "conversations",
   // Highest fan-out source: one notify cascades to attempts → tasks + FULL
   // recomputes (queueRanks, agentLaunches). The poller can notify multiple times
   // per tick; a fixed-window trailing debounce collapses a tick's status changes
@@ -66,6 +71,9 @@ export const attemptsResource = defineResource({
   key: "attempts",
   mode: "keyed",
   keyOf: (r) => r.id,
+  // A direct `attempts` change scopes to that attempt id; conversation changes
+  // arrive scoped through the affectedMap edge below (conv → attempt).
+  identityTable: "attempts",
   schema: z.array(AttemptWithConversationsSchema),
   dependsOn: [
     {
@@ -123,6 +131,10 @@ export const tasksResource = defineResource<TaskListItem[]>({
   key: "tasks",
   mode: "keyed",
   keyOf: (r) => r.id,
+  // A direct `tasks` change scopes to that task id; attempt/conversation changes
+  // arrive scoped through the affectedMap edge below (attempt → task), which is
+  // covered transitively (conv → attempt → task).
+  identityTable: "tasks",
   schema: z.array(TaskListItemSchema),
   dependsOn: [
     {

@@ -4,7 +4,7 @@ import { applyDbChange } from "@plugins/framework/plugins/server-core/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { parseLiveStatePayload, type DbChange } from "./parse-payload";
 import { getCoveredTables } from "./triggers";
-import { dependentViews } from "./view-deps";
+import { dependentViews, viewIdentityBase } from "./view-deps";
 
 const log = Log.channel("change-feed", { persist: true });
 
@@ -90,13 +90,27 @@ async function connect(): Promise<void> {
 // Route one base-table change into the recompute cascade. The change is applied
 // directly (scoped via its ids), then expanded to every view that transitively
 // depends on the table — because view-backed loaders record the VIEW in their
-// read-set, not the base table. View invalidations are FULL (ids = null): a
-// view's row identity is not guaranteed to match the base PK. applyDbChange is
+// read-set, not the base table. A view whose identity base IS the changed table
+// (a 1:1 PK-preserving view, e.g. `conversations_v` ← `conversations`) forwards
+// the SAME ids, so a scoped UPDATE stays scoped through it; every other view is
+// FULL (its row identity does not map 1:1 to this base PK). Each apply is tagged
+// with `origin` (the base table that actually changed) and `identityBase` (the
+// identity of the relation being applied), so the runtime can deliver a covered
+// change via a single path (the identity view / an affectedMap edge) instead of
+// letting a secondary-view FULL absorb the scoped one. applyDbChange is
 // defensive (unknown/unread relation = no-op, never throws).
 function routeChange(change: DbChange): void {
-  applyDbChange(change);
+  applyDbChange({ ...change, origin: change.table, identityBase: change.table });
   for (const view of dependentViews(change.table)) {
-    applyDbChange({ table: view, op: "U", ids: null });
+    const identityBase = viewIdentityBase(view);
+    const forwardScoped = identityBase === change.table;
+    applyDbChange({
+      table: view,
+      op: forwardScoped ? change.op : "U",
+      ids: forwardScoped ? change.ids : null,
+      origin: change.table,
+      identityBase,
+    });
   }
 }
 

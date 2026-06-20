@@ -267,7 +267,13 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     });
     await h.subscribe("tasks");
 
-    h.runtime.applyDbChange({ table: "tasks", op: "I", ids: ["a"] });
+    h.runtime.applyDbChange({
+      table: "tasks",
+      op: "I",
+      ids: ["a"],
+      origin: "tasks",
+      identityBase: "tasks",
+    });
     await tick();
 
     expect(h.pushesFor("tasks")).toHaveLength(1);
@@ -284,7 +290,13 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     });
     await h.subscribe("tasks");
 
-    h.runtime.applyDbChange({ table: "unrelated_table", op: "U", ids: ["x"] });
+    h.runtime.applyDbChange({
+      table: "unrelated_table",
+      op: "U",
+      ids: ["x"],
+      origin: "unrelated_table",
+      identityBase: "unrelated_table",
+    });
     await tick();
 
     expect(h.pushesFor("tasks")).toHaveLength(0);
@@ -295,6 +307,8 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     h.runtime.defineResource({
       key: "rows",
       mode: "keyed",
+      // Identity table = the resource's own table, so a row UPDATE scopes.
+      identityTable: "row_table",
       schema: z.array(z.object({ id: z.string(), n: z.number() })),
       keyOf: (r: { id: string }) => r.id,
       loader: (_p, ctx) => {
@@ -308,13 +322,164 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     });
     await h.subscribe("rows");
 
-    h.runtime.applyDbChange({ table: "row_table", op: "U", ids: ["a"] });
+    h.runtime.applyDbChange({
+      table: "row_table",
+      op: "U",
+      ids: ["a"],
+      origin: "row_table",
+      identityBase: "row_table",
+    });
     await tick();
 
     const pushes = h.pushesFor("rows");
     expect(pushes).toHaveLength(1);
     // Scoped → a "delta" frame (FULL would be "update" because membership is asserted).
     expect(pushes[0]!.kind).toBe("delta");
+  });
+
+  test("without identityTable, a row UPDATE degrades to FULL (no key-space corruption)", async () => {
+    const h = feedHarness({ rows: ["row_table"] });
+    // Record whether each post-subscribe load was scoped (`ctx` present) or FULL.
+    // The sub-ack also loads (full) to seed the snapshot, so we only inspect
+    // loads the change provoked.
+    const postSubLoads: boolean[] = [];
+    let subscribed = false;
+    h.runtime.defineResource({
+      key: "rows",
+      mode: "keyed",
+      // No identityTable: the change's ids are not provably this resource's keys,
+      // so the runtime must NOT scope — it recomputes FULL.
+      schema: z.array(z.object({ id: z.string(), n: z.number() })),
+      keyOf: (r: { id: string }) => r.id,
+      loader: (_p, ctx) => {
+        if (subscribed) postSubLoads.push(ctx !== undefined);
+        return ctx
+          ? [{ id: "a", n: 2 }]
+          : [
+              { id: "a", n: 1 },
+              { id: "b", n: 1 },
+            ];
+      },
+    });
+    await h.subscribe("rows");
+    subscribed = true;
+
+    h.runtime.applyDbChange({
+      table: "row_table",
+      op: "U",
+      ids: ["a"],
+      origin: "row_table",
+      identityBase: "row_table",
+    });
+    await tick();
+
+    // The change provoked a single FULL recompute (no scoped ctx) — the ids are
+    // not provably this resource's keys without a declared identity.
+    expect(postSubLoads).toEqual([false]);
+  });
+
+  test("an edge-covered origin is suppressed on a direct read-set match (the edge delivers it scoped)", async () => {
+    // down reads BOTH its own table and the upstream's table, but depends on up
+    // via an affectedMap edge. A change to up_t must reach down ONCE, scoped via
+    // the edge — the direct read-set match on up_t is suppressed so it can't
+    // FULL-absorb the scoped delivery.
+    const h = feedHarness({ up: ["up_t"], down: ["down_t", "up_t"] });
+    const postSubLoads: boolean[] = [];
+    let subscribed = false;
+    const up = h.runtime.defineResource({
+      key: "up",
+      mode: "push",
+      identityTable: "up_t",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    h.runtime.defineResource({
+      key: "down",
+      mode: "keyed",
+      identityTable: "down_t",
+      schema: z.array(z.object({ id: z.string(), n: z.number() })),
+      keyOf: (r: { id: string }) => r.id,
+      dependsOn: [{ resource: up, affectedMap: () => ["d1"] }],
+      loader: (_p, ctx) => {
+        if (subscribed) postSubLoads.push(ctx !== undefined);
+        return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }, { id: "d2", n: 1 }];
+      },
+    });
+    await h.subscribe("down");
+    subscribed = true;
+
+    h.runtime.applyDbChange({
+      table: "up_t",
+      op: "U",
+      ids: ["u1"],
+      origin: "up_t",
+      identityBase: "up_t",
+    });
+    await tick();
+
+    const pushes = h.pushesFor("down");
+    // Exactly one frame (the direct read-set match on up_t was suppressed), and it
+    // was a single SCOPED recompute delivered via the edge (loader saw ctx).
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]!.kind).toBe("delta");
+    expect(postSubLoads).toEqual([true]);
+  });
+
+  test("a secondary-view FULL for a covered origin does not absorb the scoped edge delivery", async () => {
+    // Mirrors conversations→attempts: a base change fans out onto the downstream's
+    // identity view as FULL (origin = the upstream's identity, identityBase =
+    // downstream identity). Because the origin is edge-covered, that FULL is
+    // dropped, leaving the scoped edge delivery intact.
+    const h = feedHarness({ up: ["up_t"], down: ["down_v", "up_t"] });
+    const postSubLoads: boolean[] = [];
+    let subscribed = false;
+    const up = h.runtime.defineResource({
+      key: "up",
+      mode: "push",
+      identityTable: "up_t",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    h.runtime.defineResource({
+      key: "down",
+      mode: "keyed",
+      identityTable: "down_t",
+      schema: z.array(z.object({ id: z.string(), n: z.number() })),
+      keyOf: (r: { id: string }) => r.id,
+      dependsOn: [{ resource: up, affectedMap: () => ["d1"] }],
+      loader: (_p, ctx) => {
+        if (subscribed) postSubLoads.push(ctx !== undefined);
+        return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }, { id: "d2", n: 1 }];
+      },
+    });
+    await h.subscribe("down");
+    subscribed = true;
+
+    // The identity-forwarded scoped change to up_t…
+    h.runtime.applyDbChange({
+      table: "up_t",
+      op: "U",
+      ids: ["u1"],
+      origin: "up_t",
+      identityBase: "up_t",
+    });
+    // …and the secondary-view FULL fanout of the same base change onto down_v
+    // (down's identity view), tagged with the originating base up_t.
+    h.runtime.applyDbChange({
+      table: "down_v",
+      op: "U",
+      ids: null,
+      origin: "up_t",
+      identityBase: "down_t",
+    });
+    await tick();
+
+    const pushes = h.pushesFor("down");
+    expect(pushes).toHaveLength(1);
+    // The scoped edge delivery survived (a single load, with ctx); the
+    // secondary-view FULL for the same covered origin was dropped, so it could
+    // not absorb it.
+    expect(postSubLoads).toEqual([true]);
   });
 
   test("DELETE degrades to FULL (a vanished row can't scope)", async () => {
@@ -327,7 +492,13 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     });
     await h.subscribe("rows");
 
-    h.runtime.applyDbChange({ table: "row_table", op: "D", ids: ["a"] });
+    h.runtime.applyDbChange({
+      table: "row_table",
+      op: "D",
+      ids: ["a"],
+      origin: "row_table",
+      identityBase: "row_table",
+    });
     await tick();
     expect(h.pushesFor("rows")).toHaveLength(1);
   });
@@ -343,7 +514,13 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     await h.subscribe("doc", { id: "1" });
     await h.subscribe("doc", { id: "2" });
 
-    h.runtime.applyDbChange({ table: "docs", op: "I", ids: null });
+    h.runtime.applyDbChange({
+      table: "docs",
+      op: "I",
+      ids: null,
+      origin: "docs",
+      identityBase: "docs",
+    });
     await tick();
 
     // Two distinct subscribed params → two invalidate frames.
@@ -369,7 +546,13 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     await h.subscribe("tasks");
 
     r.notify(); // hand
-    h.runtime.applyDbChange({ table: "tasks", op: "I", ids: ["a"] }); // feed
+    h.runtime.applyDbChange({
+      table: "tasks",
+      op: "I",
+      ids: ["a"],
+      origin: "tasks",
+      identityBase: "tasks",
+    }); // feed
     await tick();
 
     const stats = h.runtime.notifyStatsFor("tasks");

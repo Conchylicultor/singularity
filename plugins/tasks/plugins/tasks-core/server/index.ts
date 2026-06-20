@@ -172,7 +172,7 @@ export default {
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
-  contributions: [Resource.Declare(tasksResource, { bootCritical: true }), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource, { bootCritical: true }), Resource.Declare(pushesResource, { bootCritical: true }), Resource.Declare(conversationsLiveResource, { bootCritical: true }), View({ view: attempts }), View({ view: conversations }), View({ view: taskBlocking, dependsOn: ["attempts_v"] }), View({ view: tasks, dependsOn: ["attempts_v", "task_blocking_v"] })],
+  contributions: [Resource.Declare(tasksResource, { bootCritical: true }), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource, { bootCritical: true }), Resource.Declare(pushesResource, { bootCritical: true }), Resource.Declare(conversationsLiveResource, { bootCritical: true }), View({ view: attempts, identityTable: "attempts" }), View({ view: conversations, identityTable: "conversations" }), View({ view: taskBlocking, dependsOn: ["attempts_v"] }), View({ view: tasks, dependsOn: ["attempts_v", "task_blocking_v"], identityTable: "tasks" })],
   register: [pushLanded, taskStatusChanged, conversationStatusChanged],
   onReady: sweepOrphanedAttempts,
 } satisfies ServerPluginDefinition;

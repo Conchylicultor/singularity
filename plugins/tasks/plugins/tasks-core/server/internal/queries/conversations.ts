@@ -21,6 +21,7 @@ type Filters = {
   active?: boolean;
   endedAtNotNull?: boolean;
   endedAtBefore?: Date;
+  taskIds?: readonly string[];
 };
 
 function buildWhere(f: Filters): SQL | undefined {
@@ -30,6 +31,7 @@ function buildWhere(f: Filters): SQL | undefined {
   if (f.active !== undefined) clauses.push(eq(conversations.active, f.active));
   if (f.endedAtNotNull) clauses.push(isNotNull(conversations.endedAt));
   if (f.endedAtBefore) clauses.push(lt(conversations.endedAt, f.endedAtBefore));
+  if (f.taskIds) clauses.push(inArray(conversations.taskId, [...f.taskIds]));
   return clauses.length ? and(...clauses) : undefined;
 }
 
@@ -66,9 +68,14 @@ export function listConversationsForInfra(): Promise<Conversation[]> {
   );
 }
 
-// User-visible list, newest-first. Sidebar / list endpoint.
-export function listConversationsForDisplay(): Promise<Conversation[]> {
-  return queryConversations({}, { col: conversations.createdAt, dir: "desc" });
+// User-visible list, newest-first. Sidebar / list endpoint. Pass `taskIds` to
+// scope to just those tasks' conversations (Layer-2 scoped recompute — e.g.
+// agent-launches recomputing only the affected launches' latest conversation);
+// omit it for the full list.
+export function listConversationsForDisplay(
+  taskIds?: readonly string[],
+): Promise<Conversation[]> {
+  return queryConversations({ taskIds }, { col: conversations.createdAt, dir: "desc" });
 }
 
 // User-visible + active=true. Used by conversationsLiveResource.

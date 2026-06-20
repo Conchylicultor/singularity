@@ -70,7 +70,7 @@ Materialized views hold data and are stateful — they stay in the migration lay
   - Uses: `primitives/log-channels.Log`
   - Exports: Values: `rebuildDerivedViews`, `View`
 - Cross-plugin:
-  - Imported by: `conversations/agents`, `database`, `database/migrations`, `tasks/tasks-core`
+  - Imported by: `conversations/agents`, `database`, `database/change-feed`, `database/migrations`, `tasks/tasks-core`
 - Core:
   - Exports: Types: `RegisteredView`; Values: `compileCreateView`, `topoSortViews`
 

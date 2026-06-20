@@ -128,6 +128,20 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    */
   dependsOn?: ReadonlyArray<DependsOnEntry<P>>;
   /**
+   * The base table whose primary key equals this resource's `keyOf` id (i.e. the
+   * loader reads its own identity view / table). Declaring it lets the L4
+   * change-feed deliver a scoped row change to this resource in its OWN key space
+   * (`ctx.affectedIds` are this resource's keys → `WHERE id IN (…)`), rather than
+   * degrading to a FULL recompute. It is also the unit of cross-resource
+   * coverage: a downstream `affectedMap` edge translates THIS table's changed ids
+   * into the downstream's keys, so the runtime routes a covered change through the
+   * single authoritative path (this identity view OR an edge) and never lets a
+   * secondary view-fanout FULL absorb the scoped delivery. Omit it to keep the
+   * resource on FULL-recompute (the safe default). See
+   * research/2026-06-20-global-scoped-recompute-default.md.
+   */
+  identityTable?: string;
+  /**
    * Fixed-window trailing debounce (ms) for this resource's flushes. When set
    * (and > 0), a `notify()` (or cascaded `mergePending`) into this entry does
    * NOT ride the immediate microtask flush; instead it arms a per-entry timer
@@ -226,6 +240,14 @@ interface RegistryEntry {
   ) => Promise<unknown> | unknown;
   /** Row identity for keyed mode. Undefined for push/invalidate entries. */
   keyOf?: (row: unknown) => string;
+  /**
+   * The base table whose PK == this resource's keyOf id (declared via
+   * `identityTable`). Drives scoped-vs-FULL routing in `applyDbChange`: a change
+   * whose `origin` equals this is delivered scoped via the identity view; covered
+   * origins from `affectedMap` edges are routed through those edges instead.
+   * Undefined → the resource stays on FULL recompute (safe default).
+   */
+  identityTable?: string;
   /**
    * Per-pk snapshot of id→hash for keyed entries. Allocated lazily only when
    * `mode === "keyed"`. Lets the diff ship only changed rows. Evicted per-pk on
@@ -361,17 +383,22 @@ export interface ResourceRuntime {
   loadResourceByKey: (key: string, params?: ResourceParams) => Promise<unknown>;
   /**
    * Route one DB change (from the L4 change-feed) into the recompute cascade.
-   * Inverts the L3 read-set (`table → resourceKey[]`), fans out to every
-   * currently-subscribed params tuple per affected resource (param-less → `{}`),
-   * maps the delta to a scoped/FULL `affected` set, and routes each through the
-   * existing `scheduleNotify` cascade tagged `source: "feed"`. DB-agnostic and
-   * defensive: an unknown table is a no-op, and it never throws. See
-   * research/2026-06-19-global-live-state-l4-db-change-feed.md §6.
+   * Inverts the L3 read-set (`table → resourceKey[]`), decides each resource's
+   * scope from `origin` (the base table that changed) and `identityBase` (the
+   * identity of the matched relation) against the resource's `identityTable` +
+   * `affectedMap` coverage, fans out to every currently-subscribed params tuple
+   * (param-less → `{}`), and routes through `scheduleNotify` tagged
+   * `source: "feed"`. DB-agnostic and defensive: an unknown table is a no-op, and
+   * it never throws. See
+   * research/2026-06-19-global-live-state-l4-db-change-feed.md §6 and
+   * research/2026-06-20-global-scoped-recompute-default.md.
    */
   applyDbChange: (change: {
     table: string;
     op: "I" | "U" | "D";
     ids: string[] | null;
+    origin: string;
+    identityBase: string;
   }) => void;
   /**
    * Self-verification counters for the `_debug` endpoint: how many notifies for
@@ -474,6 +501,44 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     tableToResourcesCache = inverse;
     tableToResourcesSig = sig;
     return inverse;
+  }
+
+  // The set of base tables whose change a resource can absorb through a SINGLE
+  // authoritative scoped path — its own `identityTable` plus, transitively, the
+  // identityTables reachable through its `affectedMap`/`dependsOn` edges. Used by
+  // `applyDbChange`: a feed change whose `origin` is in this set is delivered via
+  // exactly one path (the identity view, or the edge that translates it), so a
+  // secondary view-fanout FULL can never absorb the scoped delivery. Memoized on
+  // registry size — identity/edges are fixed at registration, so the closure only
+  // changes when an entry is added.
+  let coveredOriginsCache: Map<string, Set<string>> | null = null;
+  let coveredOriginsSig = -1;
+  function coveredOriginsFor(key: string): Set<string> {
+    if (!coveredOriginsCache || coveredOriginsSig !== registry.size) {
+      const cache = new Map<string, Set<string>>();
+      const visiting = new Set<string>();
+      const compute = (k: string): Set<string> => {
+        const memo = cache.get(k);
+        if (memo) return memo;
+        if (visiting.has(k)) return new Set(); // cycle guard (bug — warned in rebuildDag)
+        visiting.add(k);
+        const entry = registry.get(k);
+        const out = new Set<string>();
+        if (entry) {
+          if (entry.identityTable) out.add(entry.identityTable);
+          for (const up of entry.upstreamKeys) {
+            for (const o of compute(up)) out.add(o);
+          }
+        }
+        visiting.delete(k);
+        cache.set(k, out);
+        return out;
+      };
+      for (const k of registry.keys()) compute(k);
+      coveredOriginsCache = cache;
+      coveredOriginsSig = registry.size;
+    }
+    return coveredOriginsCache.get(key) ?? new Set();
   }
 
   // console.error ALWAYS fires here; the report hook is additive.
@@ -611,6 +676,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         ctx?: { affectedIds: readonly string[] },
       ) => Promise<unknown> | unknown,
       keyOf: def.keyOf as ((row: unknown) => string) | undefined,
+      identityTable: def.identityTable,
       snapshots: mode === "keyed" ? new Map() : undefined,
       versions: new Map(),
       pendingNotifies: new Map(),
@@ -1384,36 +1450,72 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // --- L4 DB change-feed routing ---
 
   // Route one DB change into the recompute cascade. Pure mapping: invert the L3
-  // read-set, fan out to subscribed params (param-less → {}), map delta→affected,
-  // and route through the existing `scheduleNotify` tagged "feed". Defensive: an
-  // unknown table (no resource reads it yet) is a silent no-op; never throws.
+  // read-set, decide each resource's scope, fan out to subscribed params
+  // (param-less → {}), and route through the existing `scheduleNotify` tagged
+  // "feed". Defensive: an unknown table (no resource reads it yet) is a silent
+  // no-op; never throws.
+  //
+  // `table` is the relation the read-set matched (a base table OR a view the
+  // change-feed forwarded onto). `origin` is the BASE table that actually
+  // changed; `identityBase` is the identity base of `table` (a 1:1 PK-preserving
+  // view maps to its base; any other relation is its own identity). These let the
+  // runtime route a covered change through ONE authoritative path so a secondary
+  // view-fanout FULL can't absorb a scoped delivery. See
+  // research/2026-06-20-global-scoped-recompute-default.md.
   function applyDbChange(change: {
     table: string;
     op: "I" | "U" | "D";
     ids: string[] | null;
+    origin: string;
+    identityBase: string;
   }): void {
     try {
       const affectedKeys = tableToResources().get(change.table);
       if (!affectedKeys || affectedKeys.length === 0) {
         // Unknown/unread table — no resource depends on it (yet). Debug-level,
-        // not warn: this is expected for tables no loader has read, and the
-        // lazy-index gap is covered by parallel hand-notify (see plan §10).
+        // not warn: this is expected for tables no loader has read.
         return;
       }
-      // Map the delta to the cascade's `affected` set: a single-row UPDATE with
-      // ids scopes to those rows (Layer-2 `WHERE id IN (…)`); INSERT/DELETE, a
-      // null/empty id list, or an over-cap statement degrades to FULL (a
-      // membership/order change or a vanished row can't be expressed as a scoped
-      // set). Matches today's hand-notify discipline.
+      // A single-row UPDATE with ids scopes to those rows (Layer-2 `WHERE id IN
+      // (…)`); INSERT/DELETE, a null/empty id list, or an over-cap statement is a
+      // membership/order change that can't be a scoped set → FULL.
       const scopable = change.op === "U" && change.ids != null && change.ids.length > 0;
-      const affected: Set<string> | null = scopable ? new Set(change.ids!) : null;
-      const delta: RecomputeIntent["delta"] = scopable
-        ? { table: change.table, ids: change.ids!, op: change.op }
-        : "FULL";
+      const scopedAffected: Set<string> | null = scopable ? new Set(change.ids!) : null;
 
       for (const key of affectedKeys) {
         const entry = registry.get(key);
         if (!entry) continue;
+
+        // Per-resource scope decision (the unifying rule: an affectedMap edge /
+        // the resource's own identity view takes precedence over any other
+        // read-set match for the same origin).
+        let affected: Set<string> | null;
+        if (coveredOriginsFor(key).has(change.origin)) {
+          if (change.origin === entry.identityTable) {
+            // Identity-origin change: the identity view is the authoritative path.
+            // Drop a duplicate arriving via a SECONDARY view so it can't FULL the
+            // scoped identity delivery.
+            if (change.identityBase !== entry.identityTable) continue;
+            affected = scopedAffected;
+          } else {
+            // Edge-covered origin: an affectedMap edge delivers it (scoped) via
+            // the DAG cascade. Drop EVERY feed delivery for this origin so it
+            // can't absorb that scoped path.
+            continue;
+          }
+        } else {
+          // Uncovered dependency (no identity/edge for this origin): coarse but
+          // correct — recompute the whole resource.
+          affected = null;
+        }
+
+        // Build the RecomputeIntent (the shared L4 contract). Today it is routed
+        // straight through `scheduleNotify`; a future work-admission scheduler
+        // consumes it on the admit side. Construct it so the producer side is the
+        // stable contract surface.
+        const delta: RecomputeIntent["delta"] =
+          affected !== null ? { table: change.table, ids: [...affected], op: "U" } : "FULL";
+
         const subscribed = subscribedParamsFor(key);
         // Fan out to every subscribed params tuple. A param-less resource is
         // always covered (key = {}); a parametrized resource with no current
@@ -1421,10 +1523,6 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         const targets: ResourceParams[] =
           subscribed.length > 0 ? subscribed : [{}];
         for (const params of targets) {
-          // Build the RecomputeIntent (the shared L4 contract). Today it is
-          // routed straight through `scheduleNotify`; a future work-admission
-          // scheduler consumes it on the admit side. Construct it so the type is
-          // exercised and the producer side is the stable contract surface.
           const intent: RecomputeIntent = { resource: key, key: params, delta };
           void intent;
           scheduleNotify(entry, params, affected, { source: "feed" });
