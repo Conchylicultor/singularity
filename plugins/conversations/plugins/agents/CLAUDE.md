@@ -14,7 +14,7 @@
   - Uses: `conversations.createConversation`, `database.db`, `database/derived-views.View`, `infra/attachments.Attachments`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/icon-picker.resolveIconSvgNodesJson`, `primitives/rank.nextRankUnder`, `tasks/container-tasks.ContainerTask`, `tasks/tasks-core._attempts`, `tasks/tasks-core._conversations`, `tasks/tasks-core.conversationsLiveResource`, `tasks/tasks-core.createTask`, `tasks/tasks-core.ensureMetaTask`, `tasks/tasks-core.listConversationsForDisplay`
   - DB schema: `plugins/conversations/plugins/agents/server/internal/schema.ts`, `plugins/conversations/plugins/agents/server/internal/tables-attachments.ts`, `plugins/conversations/plugins/agents/server/internal/tables.ts`, `plugins/conversations/plugins/agents/server/internal/views.ts`
   - Exports: Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`; Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
-  - Resources: `agent-launches` (keyed)
+  - Resources: `agent-launches` (keyed), `agents` (push)
   - Routes: `GET /api/agents`, `POST /api/agents`, `GET /api/agents/:id`, `PATCH /api/agents/:id`, `DELETE /api/agents/:id`, `POST /api/agents/:id/launch`, `GET /api/agents/:id/launches`
 - Core:
   - Uses: `conversations.ConversationStatusSchema`, `infra/endpoints.defineEndpoint`, `primitives/rank.RankSchema`

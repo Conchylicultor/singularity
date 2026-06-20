@@ -14,6 +14,7 @@
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/secrets.deleteSecret`, `infra/secrets.hasSecret`, `infra/secrets.setSecret`
   - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
   - Exports: Values: `_deployServers`, `serversResource`
+  - Resources: `deploy.servers` (push)
   - Routes: `GET /api/deploy/servers`, `POST /api/deploy/servers`, `GET /api/deploy/servers/:id`, `PATCH /api/deploy/servers/:id`, `DELETE /api/deploy/servers/:id`
 - Shared:
   - Exports: Types: `CreateServerBody`, `Server`, `ServerStatus`, `UpdateServerBody`; Values: `createServer`, `CreateServerBodySchema`, `deleteServer`, `getServer`, `listServers`, `ServerSchema`, `serversResource`, `ServerStatusSchema`, `updateServer`, `UpdateServerBodySchema`

@@ -1,5 +1,5 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { maskSource, markerCallSpans, lineAt } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -12,8 +12,6 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-const CALL = "defineExternalResource(";
-
 // Legitimate, documented exceptions: resources that read a Postgres schema the
 // change-feed DELIBERATELY excludes (only the `public` schema gets triggers).
 // Such a resource is feed-blind despite reading the DB, so it must keep an
@@ -24,47 +22,6 @@ const ALLOWED_PATHS = [
   "plugins/infra/plugins/jobs/server/internal/resources.ts",
 ];
 
-/**
- * For each `defineExternalResource(` occurrence in `masked`, return the byte
- * span of its argument-object — from the `(` to its matching `)` — by walking a
- * paren-depth counter over the masked source (strings/comments already blanked,
- * so braces/parens inside them can't throw off the count). Block-level scoping
- * means a file that mixes an external resource with *unrelated* `db.` use does
- * not false-positive; only a `db.` member access *inside* the call counts.
- */
-function externalResourceSpans(masked: string): Array<{ start: number; end: number }> {
-  const spans: Array<{ start: number; end: number }> = [];
-  let from = 0;
-  for (;;) {
-    const at = masked.indexOf(CALL, from);
-    if (at < 0) break;
-    // Position the cursor on the opening paren of the call.
-    let i = at + CALL.length - 1;
-    let depth = 0;
-    const start = i;
-    for (; i < masked.length; i++) {
-      const ch = masked[i];
-      if (ch === "(") depth++;
-      else if (ch === ")") {
-        depth--;
-        if (depth === 0) break;
-      }
-    }
-    spans.push({ start, end: i });
-    from = i + 1;
-  }
-  return spans;
-}
-
-/** 1-based line number of byte offset `idx` in `src`. */
-function lineAt(src: string, idx: number): number {
-  let line = 1;
-  for (let i = 0; i < idx && i < src.length; i++) {
-    if (src[i] === "\n") line++;
-  }
-  return line;
-}
-
 const check: Check = {
   id: "no-db-backed-notify",
   description:
@@ -72,11 +29,16 @@ const check: Check = {
   async run() {
     const root = await getRoot();
 
-    // Fast pre-filter: candidate files that mention the call at all.
+    // Fast pre-filter: candidate files mentioning the bare identifier. We match
+    // `\bdefineExternalResource\b` — NOT a `(`-anchored token — because the
+    // call's generic form (`defineExternalResource<…>(…)`) can SPAN LINES, so a
+    // per-line `(`-anchored pre-filter would miss it and wrongly drop the file.
+    // The precise `<…>`-tolerant, whole-file span walk happens below via
+    // `markerCallSpans`.
     const matches = await grepCode({
       root,
-      pattern: /defineExternalResource\(/,
-      grepArg: CALL,
+      pattern: /\bdefineExternalResource\b/,
+      grepArg: "defineExternalResource",
       fixed: true,
       maskStrings: true,
     });
@@ -98,10 +60,10 @@ const check: Check = {
         .catch(() => null);
       if (src == null) continue;
       const masked = maskSource(src, { strings: true });
-      for (const span of externalResourceSpans(masked)) {
-        const block = masked.slice(span.start, span.end + 1);
+      for (const span of markerCallSpans(masked, "defineExternalResource")) {
+        const block = masked.slice(span.open, span.close + 1);
         if (dbAccess.test(block)) {
-          offenders.push(`${rel}:${lineAt(masked, span.start)}`);
+          offenders.push(`${rel}:${lineAt(masked, span.identifier)}`);
         }
       }
     }

@@ -14,6 +14,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core._conversations`
     - DB schema: `plugins/active-data/server/internal/tables.ts`
     - Exports: Values: `_activeDataBindings`, `activeDataBindingsResource`
+    - Resources: `active-data.bindings` (push)
     - Routes: `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`, `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
   - Core:
     - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
@@ -187,6 +188,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/secrets.deleteSecret`, `infra/secrets.hasSecret`, `infra/secrets.setSecret`
             - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
             - Exports: Values: `_deployServers`, `serversResource`
+            - Resources: `deploy.servers` (push)
             - Routes: `GET /api/deploy/servers`, `POST /api/deploy/servers`, `GET /api/deploy/servers/:id`, `PATCH /api/deploy/servers/:id`, `DELETE /api/deploy/servers/:id`
           - Shared:
             - Exports: Types: `CreateServerBody`, `Server`, `ServerStatus`, `UpdateServerBody`; Values: `createServer`, `CreateServerBodySchema`, `deleteServer`, `getServer`, `listServers`, `ServerSchema`, `serversResource`, `ServerStatusSchema`, `updateServer`, `UpdateServerBodySchema`
@@ -596,6 +598,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/apps/plugins/story/plugins/marker/server/internal/tables.ts`
             - Entity extension of: `page/editor` (table `page_blocks_ext_story`)
             - Exports: Values: `getStoryMark`, `setStoryMark`, `storiesResource`, `storyMark`
+            - Resources: `stories` (push)
             - Routes: `PUT /api/stories/:pageId`, `DELETE /api/stories/:pageId`
           - Cross-plugin:
             - Imported by: `apps/story/pages-integration`, `apps/story/shell`
@@ -1120,7 +1123,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `conversations.createConversation`, `database.db`, `database/derived-views.View`, `infra/attachments.Attachments`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/icon-picker.resolveIconSvgNodesJson`, `primitives/rank.nextRankUnder`, `tasks/container-tasks.ContainerTask`, `tasks/tasks-core._attempts`, `tasks/tasks-core._conversations`, `tasks/tasks-core.conversationsLiveResource`, `tasks/tasks-core.createTask`, `tasks/tasks-core.ensureMetaTask`, `tasks/tasks-core.listConversationsForDisplay`
         - DB schema: `plugins/conversations/plugins/agents/server/internal/schema.ts`, `plugins/conversations/plugins/agents/server/internal/tables-attachments.ts`, `plugins/conversations/plugins/agents/server/internal/tables.ts`, `plugins/conversations/plugins/agents/server/internal/views.ts`
         - Exports: Types: `Agent`, `AgentLaunch`, `AgentLaunchWithStatus`; Values: `_agent_launches`, `_agents`, `agentLaunchesResource`, `AgentLaunchSchema`, `AgentLaunchWithStatusSchema`, `agents`, `AGENTS_META_TASK_ID`, `AgentSchema`, `agentsResource`, `nextAgentRankUnder`
-        - Resources: `agent-launches` (keyed)
+        - Resources: `agent-launches` (keyed), `agents` (push)
         - Routes: `GET /api/agents`, `POST /api/agents`, `GET /api/agents/:id`, `PATCH /api/agents/:id`, `DELETE /api/agents/:id`, `POST /api/agents/:id/launch`, `GET /api/agents/:id/launches`
       - Core:
         - Uses: `conversations.ConversationStatusSchema`, `infra/endpoints.defineEndpoint`, `primitives/rank.RankSchema`
@@ -1136,6 +1139,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_category`)
         - Exports: Values: `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`, `conversationCategoryConfig`
         - Register: `defineJob('conversation-category.classify')`
+        - Resources: `conversation-categories` (push)
         - Routes: `POST /api/conversation-category/:conversationId/classify`, `POST /api/conversation-category/:conversationId`, `DELETE /api/conversation-category/:conversationId`
       - Cross-plugin:
         - Imported by: `stats/commits`
@@ -1152,6 +1156,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)
         - Exports: Values: `conversationPreprompt`, `conversationPrepromptsResource`, `recordConversationPreprompt`, `recordPrepromptJob`
         - Register: `defineJob('conversation-preprompt.record')`
+        - Resources: `conversation-preprompts` (push)
       - Shared:
         - Exports: Types: `ConversationPreprompt`, `ConversationPrepromptsPayload`, `PrepromptIcon`; Values: `ConversationPrepromptSchema`, `ConversationPrepromptsPayloadSchema`, `conversationPrepromptsResource`
     - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
@@ -1164,6 +1169,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_progress`)
         - Exports: Values: `classifyProgressJob`, `conversationProgress`, `conversationProgressResource`, `markProgressPushedJob`
         - Register: `defineJob('conversation-progress.classify')`, `defineJob('conversation-progress.mark-pushed')`
+        - Resources: `conversation-progress` (push)
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
       - Plugins:
         - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
@@ -1563,6 +1569,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
             - Entity extension of: `tasks/tasks-core` (table `conversations_ext_notes`)
             - Exports: Values: `conversationNotes`, `conversationNotesResource`
+            - Resources: `conversation-notes` (push)
             - Routes: `PUT /api/conversation-notes/:conversationId`, `DELETE /api/conversation-notes/:conversationId`
           - Shared:
             - Exports: Types: `ConversationNote`, `ConversationNotesPayload`; Values: `ConversationNoteSchema`, `ConversationNotesPayloadSchema`, `conversationNotesResource`, `deleteNote`, `upsertNote`
@@ -1643,6 +1650,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Entity extension of: `tasks/tasks-core` (table `conversations_ext_turn_summary`)
             - Exports: Values: `generateTurnSummaryJob`, `turnSummaries`, `turnSummariesResource`
             - Register: `defineJob('turn-summary.generate')`
+            - Resources: `turn-summaries` (push)
           - Shared:
             - Exports: Types: `TurnSummariesPayload`, `TurnSummary`; Values: `TurnSummariesPayloadSchema`, `turnSummariesResource`, `turnSummaryConfig`, `TurnSummarySchema`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
@@ -1666,6 +1674,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/rank.nextRankIn`, `primitives/rank.nextRankUnder`, `tasks/tasks-core._conversations`
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
             - Exports: Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
+            - Resources: `conversation-groups` (push)
             - Routes: `POST /api/conversation-groups`, `PATCH /api/conversation-groups/:id`, `DELETE /api/conversation-groups/:id`, `POST /api/conversation-groups/:id/members`, `DELETE /api/conversation-groups/members/:conversationId`
           - Cross-plugin:
             - Imported by: `improve`
@@ -3459,7 +3468,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/plugin-tree`
       - Core:
-        - Exports: Types: `BarrelExport`, `MarkerCall`; Values: `findMarkerCalls`, `maskSource`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
+        - Exports: Types: `BarrelExport`, `MarkerCall`, `MarkerCallSpan`; Values: `findMarkerCalls`, `lineAt`, `markerCallSpans`, `maskSource`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
         - Contributes: `PluginViewSlots.Section` "health" → `HealthSection`
@@ -4581,6 +4590,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_preprompt`)
         - Exports: Values: `getTaskPreprompt`, `inheritTaskPreprompt`, `setTaskPreprompt`, `taskPrepromptsResource`, `tasksPreprompt`
+        - Resources: `task-preprompts` (push)
         - Routes: `PUT /api/task-preprompts/:taskId`, `DELETE /api/task-preprompts/:taskId`
       - Cross-plugin:
         - Imported by: `conversations`, `conversations/conversation-preprompt`, `plugin-meta/plugin-health`, `tasks`
@@ -4605,7 +4615,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`, `plugins/tasks/plugins/tasks-core/server/internal/schema-attachments.ts`, `plugins/tasks/plugins/tasks-core/server/internal/schema.ts`, `plugins/tasks/plugins/tasks-core/server/internal/tables-events.ts`, `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`, `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
         - Exports: Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationStatusChangedPayload`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskListItem`, `TaskStatus`, `TaskStatusChangedPayload`, `UpdateConversationPatch`, `UpdateTaskPatch`; Values: `_attempts`, `_conversations`, `_conversationStatusChangedTriggers`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `conversationAttachments`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `conversationsLiveResource`, `conversationStatusChanged`, `createAttempt`, `createTask`, `deleteAttempt`, `deleteConversationRow`, `dropTaskTree`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankInFolder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `getTaskDependencyIds`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listArmedDependentsOf`, `listAttempts`, `listAttemptsForTask`, `listBlockingDepIds`, `listConversationsForDisplay`, `listConversationsForInfra`, `listDependentIds`, `listGoneConversations`, `listHibernationCandidates`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `markConversationGone`, `maybeDropTaskOnExit`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `removeTaskDependency`, `setConversationHibernated`, `taskAttachments`, `taskDependsOn`, `taskDetailResource`, `TaskListItemSchema`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `touchConversationViewed`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
         - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`, `defineTriggerEvent('conversation.statusChanged')`
-        - Resources: `attempts` (keyed), `pushes` (push)
+        - Resources: `attempts` (keyed), `pushes` (push), `task-detail` (push), `tasks` (keyed)
       - Core:
         - Uses: `primitives/live-state.resourceDescriptor`
         - Exports: Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationStatus`, `ConversationSummary`, `Push`, `Task`, `TaskListItem`, `TaskStatus`; Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskListItemSchema`, `TaskSchema`, `TaskStatusSchema`

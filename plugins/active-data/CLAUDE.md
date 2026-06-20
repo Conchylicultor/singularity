@@ -89,6 +89,7 @@ Behavior:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core._conversations`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
   - Exports: Values: `_activeDataBindings`, `activeDataBindingsResource`
+  - Resources: `active-data.bindings` (push)
   - Routes: `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`, `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`

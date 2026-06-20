@@ -1,5 +1,10 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { maskSource, parseStringField } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import {
+  maskSource,
+  parseStringField,
+  markerCallSpans,
+  lineAt,
+} from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -12,58 +17,6 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-// The `defineResource` IDENTIFIER, then optionally a generic argument list
-// (`<Task | null, { id: string }>`), then the call `(`. `defineExternalResource`
-// is NOT matched: the leading `\b` plus the literal `defineResource` token means
-// `…External…` never aligns (it's `define`+`External`+`Resource`). The match
-// tolerates a `.`-member prefix (`h.runtime.defineResource(…)`) because `\b`
-// after a `.` still anchors the identifier. The `<[^()]*?>` is a deliberately
-// shallow generic skip — it stops at the first `(`/`)`, which is correct because
-// a type argument never contains a paren, while a `<` in a real comparison
-// expression is never immediately preceded by the `defineResource` token.
-const CALL_TOKEN = /\bdefineResource\s*(?:<[^()]*?>)?\s*\(/g;
-
-/**
- * For each `defineResource[<…>](` occurrence in `masked`, return the byte span of
- * its argument-object — from the call's `(` to its matching `)` — by walking a
- * paren-depth counter over the masked source (strings/comments already blanked,
- * so braces/parens inside them can't throw off the count). Block-level scoping
- * means a file that mixes a keyed resource with *other* `defineResource` calls is
- * evaluated per-call, never file-wide.
- */
-function defineResourceSpans(masked: string): Array<{ start: number; end: number }> {
-  const spans: Array<{ start: number; end: number }> = [];
-  const re = new RegExp(CALL_TOKEN.source, "g");
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(masked)) !== null) {
-    // The match ends ON the call's opening paren; position the cursor there.
-    let i = m.index + m[0].length - 1;
-    let depth = 0;
-    const start = i;
-    for (; i < masked.length; i++) {
-      const ch = masked[i];
-      if (ch === "(") depth++;
-      else if (ch === ")") {
-        depth--;
-        if (depth === 0) break;
-      }
-    }
-    spans.push({ start, end: i });
-    // Resume after this call's closing paren so nested matches aren't double-read.
-    re.lastIndex = i + 1;
-  }
-  return spans;
-}
-
-/** 1-based line number of byte offset `idx` in `src`. */
-function lineAt(src: string, idx: number): number {
-  let line = 1;
-  for (let i = 0; i < idx && i < src.length; i++) {
-    if (src[i] === "\n") line++;
-  }
-  return line;
-}
-
 const check: Check = {
   id: "keyed-resource-scope",
   description:
@@ -73,12 +26,13 @@ const check: Check = {
 
     // Fast pre-filter: candidate files that mention the identifier at all. The
     // per-line `pattern` here intentionally matches only the bare identifier
-    // (`\bdefineResource\b`) — NOT the full `<…>(`-tolerant CALL_TOKEN — because
-    // a generic call can SPAN LINES (`defineResource<\n  T\n>(…)`), and the
-    // precise span walk below is whole-file (multiline). Using CALL_TOKEN here
-    // would per-line-miss those calls and wrongly drop the file from candidates.
-    // `\bdefineResource\b` does NOT match `defineExternalResource` (the trailing
-    // `\b` fails before `External`), so external resources never enter the set.
+    // (`\bdefineResource\b`) — NOT a full `<…>(`-tolerant call token — because a
+    // generic call can SPAN LINES (`defineResource<\n  T\n>(…)`), and the precise
+    // span walk below (`markerCallSpans`) is whole-file (multiline). A
+    // `(`-anchored per-line pre-filter would miss those calls and wrongly drop
+    // the file from candidates. `\bdefineResource\b` does NOT match
+    // `defineExternalResource` (no `defineResource` substring in it), so external
+    // resources never enter the set.
     const matches = await grepCode({
       root,
       pattern: /\bdefineResource\b/,
@@ -114,11 +68,11 @@ const check: Check = {
       // `identityTable:`/`recompute:` field tokens are implausible as a string
       // interior inside this call, so keeping strings is safe for them.
       const masked = maskSource(src, { strings: false });
-      for (const span of defineResourceSpans(masked)) {
-        const block = masked.slice(span.start, span.end + 1);
+      for (const span of markerCallSpans(masked, "defineResource")) {
+        const block = masked.slice(span.open, span.close + 1);
         if (parseStringField(block, "mode") !== "keyed") continue;
         if (hasIdentityTable.test(block) || hasRecompute.test(block)) continue;
-        offenders.push(`${rel}:${lineAt(masked, span.start)}`);
+        offenders.push(`${rel}:${lineAt(masked, span.identifier)}`);
       }
     }
 
