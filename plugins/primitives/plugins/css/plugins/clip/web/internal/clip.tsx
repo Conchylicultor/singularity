@@ -13,11 +13,15 @@ const CLIP_CLASS: Record<ClipAxis, string> = {
 /**
  * The pure clip + fill class map — single source of truth, exported so the
  * component and the pure test share one definition. `fill` adds the same
- * flex-child fill pair `Scroll` uses (`min-h-0 flex-1`) for a clipped pane that
- * must fill its flex parent.
+ * axis-aware flex-child fill pair `Scroll` uses: `min-w-0 flex-1` on the `x`
+ * axis, `min-h-0 flex-1` otherwise — for a clipped pane that must fill its flex
+ * parent.
  */
 export function clipClasses(opts: { axis: ClipAxis; fill: boolean }): string {
-  return [CLIP_CLASS[opts.axis], opts.fill ? "min-h-0 flex-1" : null]
+  return [
+    CLIP_CLASS[opts.axis],
+    opts.fill ? (opts.axis === "x" ? "min-w-0 flex-1" : "min-h-0 flex-1") : null,
+  ]
     .filter(Boolean)
     .join(" ");
 }
@@ -25,7 +29,8 @@ export function clipClasses(opts: { axis: ClipAxis; fill: boolean }): string {
 export interface ClipProps extends React.HTMLAttributes<HTMLElement> {
   /** Which axis to clip. Defaults to `both`. */
   axis?: ClipAxis;
-  /** Emit the flex-child fill pair (`min-h-0 flex-1`). Defaults to false. */
+  /** Emit the flex-child fill pair (`min-h-0 flex-1`, or `min-w-0 flex-1` on the
+   *  `x` axis) so the clipped pane fills its flex parent. Defaults to false. */
   fill?: boolean;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;

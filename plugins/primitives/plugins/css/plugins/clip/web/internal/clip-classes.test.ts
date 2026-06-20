@@ -15,5 +15,14 @@ describe("clipClasses", () => {
     expect(clipClasses({ axis: "both", fill: true })).toBe(
       "overflow-hidden min-h-0 flex-1",
     );
+    expect(clipClasses({ axis: "y", fill: true })).toBe(
+      "overflow-y-hidden min-h-0 flex-1",
+    );
+  });
+
+  test("fill switches to the horizontal pair on the x axis", () => {
+    expect(clipClasses({ axis: "x", fill: true })).toBe(
+      "overflow-x-hidden min-w-0 flex-1",
+    );
   });
 });

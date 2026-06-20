@@ -298,7 +298,7 @@ Sibling standard rules (own their dimensions): `no-adhoc-typography` (Text), `no
 
 The system is in excellent shape (both burndowns at 0, near-total coverage of the layout-utility surface). These are the seams the audit surfaced — each is a small inconsistency that costs a developer a lookup or risks a subtle bug. Listed roughly by impact; none is urgent.
 
-1. **`Clip`'s `fill` ignores `axis`.** `Clip fill` always emits the `min-h-0 flex-1` (vertical) pair regardless of `axis`, whereas `Scroll fill` correctly switches to `min-w-0 flex-1` for `axis="x"`. A horizontal `Clip fill` therefore gets the wrong fill mechanic. → Mirror Scroll's axis-aware fill in Clip. **(Likely a real bug.)**
+1. ~~**`Clip`'s `fill` ignores `axis`.**~~ **RESOLVED (2026-06-20).** `clipClasses` now mirrors `Scroll`'s axis-aware fill: `fill` emits `min-w-0 flex-1` for `axis="x"` and `min-h-0 flex-1` otherwise, so a horizontal `<Clip axis="x" fill>` gets the correct flex-fill mechanic. No existing call site combined `axis="x"` + `fill`, so the fix changed zero current renders — it was purely corrective. Pure test extended to cover the `x`-axis pair.
 
 2. ~~**Layer-vocabulary split has no shared source.**~~ **RESOLVED (2026-06-20).** `z-layers` now ships a `web/` barrel that is the single source of the name→class map, exposing `zLayerClass()` plus the `InTreeLayer`/`PortaledLayer` tiers (which a compile-time partition guard ties to the full ladder). `Overlay`/`Pin`/`Sticky`/`ViewportOverlay` import the resolver and deleted their local `LAYER_CLASS` copies; the disjoint unions are now two named tiers derived from one ladder. See [css-z-layers-web-barrel](./2026-06-20-css-z-layers-web-barrel.md).
 
