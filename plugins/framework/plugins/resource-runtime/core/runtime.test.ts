@@ -221,3 +221,159 @@ describe("flushNotifies — level-parallel", () => {
     expect(h.pushesFor("s")[0]!.seq).toBeLessThan(h.pushesFor("f")[0]!.seq);
   });
 });
+
+/**
+ * A harness whose runtime is built with an injected L3 read-set hook so
+ * `applyDbChange` can invert table→resource. `readSet` is a static map for the
+ * test; in production it is `getReadSetIndex()[key]`.
+ */
+function feedHarness(readSetMap: Record<string, string[]>) {
+  const runtime = createResourceRuntime({
+    readSet: (key) => readSetMap[key] ?? [],
+  });
+  const frames: SentFrame[] = [];
+  let seq = 0;
+  const ws = {
+    send(raw: string) {
+      const msg = JSON.parse(raw) as { kind: string; key?: string; version?: number };
+      if (msg.kind === "ping") return;
+      frames.push({ seq: seq++, key: msg.key ?? "", kind: msg.kind, version: msg.version });
+    },
+  };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handler = runtime.notificationsWsHandler as any;
+  handler.open(ws);
+  return {
+    runtime,
+    frames,
+    async subscribe(key: string, params: ResourceParams = {}) {
+      handler.message(ws, JSON.stringify({ op: "sub", key, params }));
+      await tick();
+    },
+    pushesFor(key: string) {
+      return frames.filter((f) => f.key === key && f.kind !== "sub-ack");
+    },
+  };
+}
+
+describe("applyDbChange — L4 DB change-feed routing", () => {
+  test("routes a table change to a subscribed param-less resource (full recompute on INSERT)", async () => {
+    const h = feedHarness({ tasks: ["tasks"] });
+    h.runtime.defineResource({
+      key: "tasks",
+      mode: "invalidate",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    await h.subscribe("tasks");
+
+    h.runtime.applyDbChange({ table: "tasks", op: "I", ids: ["a"] });
+    await tick();
+
+    expect(h.pushesFor("tasks")).toHaveLength(1);
+    expect(h.pushesFor("tasks")[0]!.kind).toBe("invalidate");
+  });
+
+  test("unknown/unread table is a silent no-op", async () => {
+    const h = feedHarness({ tasks: ["tasks"] });
+    h.runtime.defineResource({
+      key: "tasks",
+      mode: "invalidate",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    await h.subscribe("tasks");
+
+    h.runtime.applyDbChange({ table: "unrelated_table", op: "U", ids: ["x"] });
+    await tick();
+
+    expect(h.pushesFor("tasks")).toHaveLength(0);
+  });
+
+  test("a single-row UPDATE scopes to a keyed resource (Layer-2 delta, not full)", async () => {
+    const h = feedHarness({ rows: ["row_table"] });
+    h.runtime.defineResource({
+      key: "rows",
+      mode: "keyed",
+      schema: z.array(z.object({ id: z.string(), n: z.number() })),
+      keyOf: (r: { id: string }) => r.id,
+      loader: (_p, ctx) => {
+        // Full load returns two rows; a scoped load returns only the affected row.
+        if (ctx) return [{ id: "a", n: 2 }];
+        return [
+          { id: "a", n: 1 },
+          { id: "b", n: 1 },
+        ];
+      },
+    });
+    await h.subscribe("rows");
+
+    h.runtime.applyDbChange({ table: "row_table", op: "U", ids: ["a"] });
+    await tick();
+
+    const pushes = h.pushesFor("rows");
+    expect(pushes).toHaveLength(1);
+    // Scoped → a "delta" frame (FULL would be "update" because membership is asserted).
+    expect(pushes[0]!.kind).toBe("delta");
+  });
+
+  test("DELETE degrades to FULL (a vanished row can't scope)", async () => {
+    const h = feedHarness({ rows: ["row_table"] });
+    h.runtime.defineResource({
+      key: "rows",
+      mode: "invalidate",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    await h.subscribe("rows");
+
+    h.runtime.applyDbChange({ table: "row_table", op: "D", ids: ["a"] });
+    await tick();
+    expect(h.pushesFor("rows")).toHaveLength(1);
+  });
+
+  test("fans out to every subscribed params tuple", async () => {
+    const h = feedHarness({ doc: ["docs"] });
+    h.runtime.defineResource({
+      key: "doc",
+      mode: "invalidate",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    await h.subscribe("doc", { id: "1" });
+    await h.subscribe("doc", { id: "2" });
+
+    h.runtime.applyDbChange({ table: "docs", op: "I", ids: null });
+    await tick();
+
+    // Two distinct subscribed params → two invalidate frames.
+    expect(h.pushesFor("doc")).toHaveLength(2);
+  });
+
+  test("never throws on a malformed change (defensive no-op)", () => {
+    const h = feedHarness({});
+    expect(() =>
+      // @ts-expect-error — exercising the defensive path with a bad shape.
+      h.runtime.applyDbChange({ table: "x", op: "U", ids: undefined }),
+    ).not.toThrow();
+  });
+
+  test("notifyStatsFor counts hand vs feed sources", async () => {
+    const h = feedHarness({ tasks: ["tasks"] });
+    const r = h.runtime.defineResource({
+      key: "tasks",
+      mode: "invalidate",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    await h.subscribe("tasks");
+
+    r.notify(); // hand
+    h.runtime.applyDbChange({ table: "tasks", op: "I", ids: ["a"] }); // feed
+    await tick();
+
+    const stats = h.runtime.notifyStatsFor("tasks");
+    expect(stats.hand).toBe(1);
+    expect(stats.feed).toBe(1);
+  });
+});

@@ -7,6 +7,7 @@ export type {
   ResourceMode,
   ResourceParams,
   DependsOnEntry,
+  RecomputeIntent,
 } from "./runtime";
 export {
   buildSnapshot,

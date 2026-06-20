@@ -5,6 +5,7 @@ import type {
   ResourceMode as RtMode,
   ResourceParams as RtParams,
   DependsOnEntry as RtDep,
+  RecomputeIntent as RtRecomputeIntent,
 } from "@plugins/framework/plugins/resource-runtime/core";
 import {
   recordEntrySpan,
@@ -35,6 +36,10 @@ export type ResourceMode = RtMode;
 export type Resource<T, P extends ResourceParams = ResourceParams> = RtResource<T, P>;
 export type ResourceDefinition<T, P extends ResourceParams = ResourceParams> = RtDef<T, P>;
 export type DependsOnEntry<P extends ResourceParams = ResourceParams> = RtDep<P>;
+// The shared L4 change-feed contract (see resource-runtime/core). The DB
+// change-feed plugin consumes `applyDbChange` (below); this type is the producer
+// surface a future work-admission scheduler reconciles against.
+export type RecomputeIntent = RtRecomputeIntent;
 
 // Resource.Declare stays here — its ~37 contributors import it from server-core.
 // `bootCritical` is an optional opt-in: a param-less global resource flagged
@@ -133,4 +138,9 @@ export const {
   handleResourceHttp,
   withNotifyBatch,
   loadResourceByKey,
+  // L4 DB change-feed router: the change-feed plugin's LISTEN consumer calls this
+  // with each parsed DB change to route it through the recompute cascade.
+  applyDbChange,
+  // L4 self-verification counters (hand vs feed) for the read-set debug pane.
+  notifyStatsFor,
 } = runtime;

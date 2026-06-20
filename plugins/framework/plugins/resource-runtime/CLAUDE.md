@@ -59,7 +59,7 @@ the client side and the keyed/scoped delta semantics.
 
 - Core:
   - Uses: `packages/inflight.createInflight`
-  - Exports: Types: `DependsOnEntry`, `KeyedDiff`, `KeyedSnapshot`, `Resource`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`
+  - Exports: Types: `DependsOnEntry`, `KeyedDiff`, `KeyedSnapshot`, `RecomputeIntent`, `Resource`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`
 - Cross-plugin:
   - Imported by: `framework/central-core`, `framework/server-core`
 

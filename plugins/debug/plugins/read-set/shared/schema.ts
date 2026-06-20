@@ -16,6 +16,19 @@ export const loaderStatsSchema = z.object({
   maxMs: z.number(),
 });
 
+/**
+ * Per-resource notify provenance counters (L4 self-verifying parallel run).
+ * `hand` = hand-called notify() invocations; `feed` = DB-change-feed-derived
+ * ones. A resource with `hand > 0 && feed === 0` is a read-set-gap candidate —
+ * the feed under-covers a table the hand-notify does (the bug class L4
+ * eliminates). A feed-only resource is expected (out-of-process writes or a
+ * now-redundant hand-notify).
+ */
+export const notifyStatsSchema = z.object({
+  hand: z.number(),
+  feed: z.number(),
+});
+
 export const resourceReadSetSchema = z.object({
   key: z.string(),
   mode: z.string(),
@@ -29,6 +42,8 @@ export const resourceReadSetSchema = z.object({
   readSet: z.array(z.string()),
   /** Loader call frequency over the profiling window (server-only). */
   loaderStats: loaderStatsSchema.optional(),
+  /** Notify provenance counters (hand-called vs DB-change-feed-derived). */
+  notifyStats: notifyStatsSchema,
 });
 
 export const resourcesReadSetSchema = z.object({
@@ -37,5 +52,6 @@ export const resourcesReadSetSchema = z.object({
 });
 
 export type LoaderStats = z.infer<typeof loaderStatsSchema>;
+export type NotifyStats = z.infer<typeof notifyStatsSchema>;
 export type ResourceReadSet = z.infer<typeof resourceReadSetSchema>;
 export type ResourcesReadSet = z.infer<typeof resourcesReadSetSchema>;

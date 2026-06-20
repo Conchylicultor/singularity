@@ -12,14 +12,17 @@ export type { PhaseId, Span, MemoryCheckpoint } from "./profiler";
 export { isServerReady, markServerReady } from "./readiness";
 export {
   Resource,
+  applyDbChange,
   defineResource,
   handleResourceHttp,
   loadResourceByKey,
   notificationsWsHandler,
+  notifyStatsFor,
   withNotifyBatch,
 } from "./resources";
 export type {
   DependsOnEntry,
+  RecomputeIntent,
   ResourceDefinition,
   ResourceMode,
   ResourceParams,

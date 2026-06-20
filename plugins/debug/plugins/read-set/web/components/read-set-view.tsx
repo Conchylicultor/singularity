@@ -14,10 +14,13 @@ import type { ResourceReadSet } from "../../shared/schema";
 
 // Web-only debug pane consuming `GET /api/resources/_debug`. Everything below is
 // derived PURELY client-side from the `resources[].readSet` (the captured
-// loader→table index the server records) and `resources[].dependsOn` (the
-// hand-drawn cascade graph). Two sections:
+// loader→table index the server records), `resources[].dependsOn` (the
+// hand-drawn cascade graph), and `resources[].notifyStats` (notify provenance
+// counters). Three sections:
 //   A — the captured index, inverted to table → [resource keys].
 //   B — the diff vs `dependsOn`, both directions (missing / over-broad edges).
+//   C — notify provenance: per-resource hand vs feed counts during the L4
+//       parallel run, flagging read-set-gap candidates (hand > 0 && feed === 0).
 
 interface TableEntry {
   table: string;
@@ -34,6 +37,14 @@ interface OverBroadFlag {
   key: string;
   /** Declared upstreams U whose read-set shares no table with R's. */
   upstreams: string[];
+}
+
+interface NotifyEntry {
+  key: string;
+  hand: number;
+  feed: number;
+  /** hand > 0 && feed === 0 — the feed under-covers what the hand-notify does. */
+  gap: boolean;
 }
 
 /** Invert every resource's readSet into table → sorted unique reader keys. */
@@ -111,12 +122,33 @@ function computeDiff(resources: ResourceReadSet[]): {
   return { missing, overBroad };
 }
 
+/**
+ * Project each resource's notify provenance counters into a sorted list, with
+ * gap candidates (hand > 0 && feed === 0) first. Resources that have never
+ * notified (hand === 0 && feed === 0) are dropped — nothing to compare yet.
+ */
+function buildNotifyEntries(resources: ResourceReadSet[]): NotifyEntry[] {
+  return resources
+    .map((r) => ({
+      key: r.key,
+      hand: r.notifyStats.hand,
+      feed: r.notifyStats.feed,
+      gap: r.notifyStats.hand > 0 && r.notifyStats.feed === 0,
+    }))
+    .filter((e) => e.hand > 0 || e.feed > 0)
+    .sort((a, b) => {
+      if (a.gap !== b.gap) return a.gap ? -1 : 1; // gaps first
+      return a.key.localeCompare(b.key);
+    });
+}
+
 export function ReadSetView(): ReactElement {
   const { data } = useEndpoint(resourcesReadSetEndpoint, {}, { refetchInterval: 5000 });
 
   const resources = useMemo(() => data?.resources ?? [], [data]);
   const captured = useMemo(() => buildCapturedIndex(resources), [resources]);
   const { missing, overBroad } = useMemo(() => computeDiff(resources), [resources]);
+  const notifyEntries = useMemo(() => buildNotifyEntries(resources), [resources]);
 
   if (!data) {
     return (
@@ -130,6 +162,7 @@ export function ReadSetView(): ReactElement {
     <Scroll className="h-full p-lg">
       <Stack gap="xl">
         <Caveat />
+        <NotifyProvenanceSection entries={notifyEntries} />
         <CapturedIndexSection entries={captured} />
         <DiffSection missing={missing} overBroad={overBroad} />
       </Stack>
@@ -216,6 +249,56 @@ function ChipRow({
         {chips.map((c) => (
           <Badge key={c.key} variant={variant} size="sm" mono>{c.text}</Badge>
         ))}
+      </Cluster>
+    </Stack>
+  );
+}
+
+// ── Section C: notify provenance (hand vs feed, L4 parallel run) ────────────
+
+function NotifyProvenanceSection({ entries }: { entries: NotifyEntry[] }): ReactElement {
+  const gaps = useMemo(() => entries.filter((e) => e.gap).length, [entries]);
+
+  return (
+    <Stack as="section" gap="sm">
+      <SectionLabel>
+        Notify provenance — hand vs feed{" "}
+        <span className="opacity-60">
+          {entries.length} active{gaps > 0 ? ` · ${gaps} gap` : ""}
+        </span>
+      </SectionLabel>
+      {entries.length === 0 ? (
+        <Text variant="caption" tone="muted">
+          No notifies recorded yet — exercise a mutation to populate counts.
+        </Text>
+      ) : (
+        <Stack gap="2xs">
+          {entries.map((e) => (
+            <NotifyRow key={e.key} entry={e} />
+          ))}
+        </Stack>
+      )}
+    </Stack>
+  );
+}
+
+/**
+ * One resource row: mono key on the left, hand/feed count badges on the right,
+ * with a destructive "read-set gap" flag when the feed never covered a table the
+ * hand-notify did (hand > 0 && feed === 0).
+ */
+function NotifyRow({ entry }: { entry: NotifyEntry }): ReactElement {
+  return (
+    <Stack direction="row" gap="sm" align="baseline" justify="between">
+      <Text variant="caption" className="font-mono">{entry.key}</Text>
+      <Cluster gap="2xs">
+        {entry.gap ? <Badge variant="destructive" size="sm">read-set gap</Badge> : null}
+        <Badge variant={entry.gap ? "warning" : "muted"} size="sm" mono>
+          hand {entry.hand}
+        </Badge>
+        <Badge variant={entry.feed > 0 ? "success" : "muted"} size="sm" mono>
+          feed {entry.feed}
+        </Badge>
       </Cluster>
     </Stack>
   );

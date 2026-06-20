@@ -46,6 +46,22 @@ interface WsHandler {
 export type ResourceMode = "push" | "invalidate" | "keyed";
 export type ResourceParams = Record<string, string>;
 
+/**
+ * The shared L4 contract: one resolved unit of "this resource (at these params)
+ * must recompute because of this DB change". Produced by `applyDbChange` (the DB
+ * change-feed router) and today routed straight through `scheduleNotify`. When the
+ * work-admission scheduler lands (separate worktree) it consumes this type on the
+ * *admit* side; the producer (`applyDbChange`) is unchanged. `delta` is either a
+ * scoped row change (op + the changed PK ids) or `"FULL"` (membership/order
+ * change, a vanished row, or an over-cap / pk-less write). See
+ * research/2026-06-19-global-live-state-l4-db-change-feed.md §2.
+ */
+export type RecomputeIntent = {
+  resource: string;
+  key: ResourceParams;
+  delta: { table: string; ids: string[]; op: "I" | "U" | "D" } | "FULL";
+};
+
 // Upstream edge: when `resource` notifies, this resource is cascaded.
 // `map` translates upstream params (and optionally value) into the list of
 // downstream params tuples to schedule. Default: identity (`[upstreamParams]`).
@@ -313,6 +329,26 @@ export interface ResourceRuntime {
    * research/2026-06-14-global-cold-load-instant-boot.md.
    */
   loadResourceByKey: (key: string, params?: ResourceParams) => Promise<unknown>;
+  /**
+   * Route one DB change (from the L4 change-feed) into the recompute cascade.
+   * Inverts the L3 read-set (`table → resourceKey[]`), fans out to every
+   * currently-subscribed params tuple per affected resource (param-less → `{}`),
+   * maps the delta to a scoped/FULL `affected` set, and routes each through the
+   * existing `scheduleNotify` cascade tagged `source: "feed"`. DB-agnostic and
+   * defensive: an unknown table is a no-op, and it never throws. See
+   * research/2026-06-19-global-live-state-l4-db-change-feed.md §6.
+   */
+  applyDbChange: (change: {
+    table: string;
+    op: "I" | "U" | "D";
+    ids: string[] | null;
+  }) => void;
+  /**
+   * Self-verification counters for the `_debug` endpoint: how many notifies for
+   * this resource key came from hand-`notify()` (`hand`) vs the DB change-feed
+   * (`feed`). Used by the read-set debug pane to surface read-set-gap candidates.
+   */
+  notifyStatsFor: (key: string) => { hand: number; feed: number };
 }
 
 const HEARTBEAT_MS = 20_000;
@@ -334,6 +370,81 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   let flushAgain = false;
   let batchDepth = 0;
   const heartbeats = new Map<ServerWebSocket<WsData>, ReturnType<typeof setInterval>>();
+
+  // --- L4 self-verification (parallel-run instrumentation) ---
+  // Per-resource-key notify counters, split by source (hand-`notify()` vs the DB
+  // change-feed). The feed and hand-notify run together during the migration; a
+  // hand-notify with no matching recent feed intent points at a table the L3
+  // read-set capture missed (a read-set-gap candidate). Cleared never — these are
+  // monotonic, surfaced in the `_debug` payload.
+  interface NotifyStats {
+    hand: number;
+    feed: number;
+    lastHandAt: number;
+    lastFeedAt: number;
+  }
+  const notifyStats = new Map<string, NotifyStats>();
+  function statsFor(key: string): NotifyStats {
+    let s = notifyStats.get(key);
+    if (!s) {
+      s = { hand: 0, feed: 0, lastHandAt: 0, lastFeedAt: 0 };
+      notifyStats.set(key, s);
+    }
+    return s;
+  }
+  // Ring buffer of recent feed intents `(resourceKey, pk, t)`. A hand-notify
+  // checks this window to decide whether the feed already covered the same change.
+  const FEED_RING_CAP = 256;
+  const FEED_MATCH_WINDOW_MS = 2000;
+  const feedRing: Array<{ key: string; pk: string; t: number }> = [];
+  let feedRingHead = 0;
+  function recordFeedIntent(key: string, pk: string, t: number): void {
+    if (feedRing.length < FEED_RING_CAP) {
+      feedRing.push({ key, pk, t });
+    } else {
+      feedRing[feedRingHead] = { key, pk, t };
+      feedRingHead = (feedRingHead + 1) % FEED_RING_CAP;
+    }
+  }
+  function hasRecentFeedIntent(key: string, pk: string, now: number): boolean {
+    for (const e of feedRing) {
+      if (e.key === key && e.pk === pk && now - e.t <= FEED_MATCH_WINDOW_MS) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  // Memoized `table → resourceKey[]` inverse of the L3 read-set hook. The read-set
+  // index only grows (lazy capture, never evicts), so a cheap (entryCount,
+  // totalReadSetSize) signature is a sufficient staleness key — rebuild only when
+  // either changes. Built by iterating the registry and calling `opts.readSet`.
+  let tableToResourcesCache: Map<string, string[]> | null = null;
+  let tableToResourcesSig = "";
+  function tableToResources(): Map<string, string[]> {
+    let totalSize = 0;
+    const perKey: Array<[string, string[]]> = [];
+    for (const entry of registry.values()) {
+      const tables = opts.readSet?.(entry.key) ?? [];
+      totalSize += tables.length;
+      perKey.push([entry.key, tables]);
+    }
+    const sig = `${registry.size}:${totalSize}`;
+    if (tableToResourcesCache && sig === tableToResourcesSig) {
+      return tableToResourcesCache;
+    }
+    const inverse = new Map<string, string[]>();
+    for (const [key, tables] of perKey) {
+      for (const table of tables) {
+        const list = inverse.get(table);
+        if (list) list.push(key);
+        else inverse.set(table, [key]);
+      }
+    }
+    tableToResourcesCache = inverse;
+    tableToResourcesSig = sig;
+    return inverse;
+  }
 
   // console.error ALWAYS fires here; the report hook is additive.
   function reportLoaderError(context: string, err: unknown): void {
@@ -613,8 +724,32 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     entry: RegistryEntry,
     params: ResourceParams,
     affected: Set<string> | null,
+    opts?: { source?: "hand" | "feed" },
   ): void {
-    mergePending(entry.pendingNotifies, paramsKey(params), params, affected);
+    const pk = paramsKey(params);
+    // Self-verification recorder (cascade is byte-identical regardless of source).
+    const source = opts?.source ?? "hand";
+    const now = performance.now();
+    const stats = statsFor(entry.key);
+    if (source === "feed") {
+      stats.feed++;
+      stats.lastFeedAt = now;
+      recordFeedIntent(entry.key, pk, now);
+    } else {
+      stats.hand++;
+      stats.lastHandAt = now;
+      // A hand-notify with no recent feed intent for the same (resource, pk)
+      // means the change-feed did NOT cover this change — i.e. the L3 read-set
+      // capture is missing a table this resource reads. That is exactly the bug
+      // class L4 eliminates, so surface it (loud, but not an error — the parallel
+      // run is expected to find these during the migration).
+      if (!hasRecentFeedIntent(entry.key, pk, now)) {
+        console.warn(
+          `[live-state] read-set-gap candidate: hand-notify for "${entry.key}" pk=${pk} had no matching change-feed intent within ${FEED_MATCH_WINDOW_MS}ms (a table this resource reads may be missing from the L3 read-set)`,
+        );
+      }
+    }
+    mergePending(entry.pendingNotifies, pk, params, affected);
     if (batchDepth > 0) return;
     // Debounced entries do not ride the immediate flush: arm a per-entry
     // fixed-window timer (only if not already armed — never re-armed within a
@@ -1115,6 +1250,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       downstream: string[];
       readSet: string[];
       loaderStats?: { count: number; ratePerMin: number; maxMs: number };
+      notifyStats: { hand: number; feed: number };
     }> = [];
     for (const entry of registry.values()) {
       let subscribers = 0;
@@ -1141,6 +1277,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         // Loader frequency over the profiling window (server-only hook; absent on
         // central). Surfaces a cheap-but-hot loader the slow-single-call view misses.
         loaderStats: opts.loaderStats?.(entry.key),
+        // L4 self-verification: how many notifies came from hand-`notify()` vs the
+        // DB change-feed. A resource with `hand > 0, feed === 0` is a read-set-gap
+        // candidate (the feed isn't covering a table this resource reads).
+        notifyStats: (() => {
+          const s = notifyStats.get(entry.key);
+          return { hand: s?.hand ?? 0, feed: s?.feed ?? 0 };
+        })(),
       });
     }
     return new Response(
@@ -1164,11 +1307,89 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     return getResourceValue(entry, params ?? {});
   }
 
+  // Distinct currently-subscribed params tuples for a resource key, recovered
+  // from every socket's `subs` map (the `ResourceParams` objects are stored there
+  // at sub time). Deduped by pk across sockets.
+  function subscribedParamsFor(key: string): ResourceParams[] {
+    const byPk = new Map<string, ResourceParams>();
+    for (const st of sockets.values()) {
+      const inner = st.subs.get(key);
+      if (!inner) continue;
+      for (const [pk, params] of inner) {
+        if (!byPk.has(pk)) byPk.set(pk, params);
+      }
+    }
+    return [...byPk.values()];
+  }
+
+  // --- L4 DB change-feed routing ---
+
+  // Route one DB change into the recompute cascade. Pure mapping: invert the L3
+  // read-set, fan out to subscribed params (param-less → {}), map delta→affected,
+  // and route through the existing `scheduleNotify` tagged "feed". Defensive: an
+  // unknown table (no resource reads it yet) is a silent no-op; never throws.
+  function applyDbChange(change: {
+    table: string;
+    op: "I" | "U" | "D";
+    ids: string[] | null;
+  }): void {
+    try {
+      const affectedKeys = tableToResources().get(change.table);
+      if (!affectedKeys || affectedKeys.length === 0) {
+        // Unknown/unread table — no resource depends on it (yet). Debug-level,
+        // not warn: this is expected for tables no loader has read, and the
+        // lazy-index gap is covered by parallel hand-notify (see plan §10).
+        return;
+      }
+      // Map the delta to the cascade's `affected` set: a single-row UPDATE with
+      // ids scopes to those rows (Layer-2 `WHERE id IN (…)`); INSERT/DELETE, a
+      // null/empty id list, or an over-cap statement degrades to FULL (a
+      // membership/order change or a vanished row can't be expressed as a scoped
+      // set). Matches today's hand-notify discipline.
+      const scopable = change.op === "U" && change.ids != null && change.ids.length > 0;
+      const affected: Set<string> | null = scopable ? new Set(change.ids!) : null;
+      const delta: RecomputeIntent["delta"] = scopable
+        ? { table: change.table, ids: change.ids!, op: change.op }
+        : "FULL";
+
+      for (const key of affectedKeys) {
+        const entry = registry.get(key);
+        if (!entry) continue;
+        const subscribed = subscribedParamsFor(key);
+        // Fan out to every subscribed params tuple. A param-less resource is
+        // always covered (key = {}); a parametrized resource with no current
+        // subscribers admits nothing (a fresh subscribe loads from scratch).
+        const targets: ResourceParams[] =
+          subscribed.length > 0 ? subscribed : [{}];
+        for (const params of targets) {
+          // Build the RecomputeIntent (the shared L4 contract). Today it is
+          // routed straight through `scheduleNotify`; a future work-admission
+          // scheduler consumes it on the admit side. Construct it so the type is
+          // exercised and the producer side is the stable contract surface.
+          const intent: RecomputeIntent = { resource: key, key: params, delta };
+          void intent;
+          scheduleNotify(entry, params, affected, { source: "feed" });
+        }
+      }
+    } catch (err) {
+      // Never throw out of the feed router — a parse/lookup bug must not take down
+      // the LISTEN consumer. console.error fires (loud), plus the report hook.
+      reportLoaderError(`applyDbChange failed for table "${change.table}"`, err);
+    }
+  }
+
+  function notifyStatsFor(key: string): { hand: number; feed: number } {
+    const s = notifyStats.get(key);
+    return { hand: s?.hand ?? 0, feed: s?.feed ?? 0 };
+  }
+
   return {
     defineResource,
     notificationsWsHandler,
     handleResourceHttp,
     withNotifyBatch,
     loadResourceByKey,
+    applyDbChange,
+    notifyStatsFor,
   };
 }
