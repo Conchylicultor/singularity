@@ -1,8 +1,28 @@
-import type { ReactNode } from "react";
+import type { ComponentType, ReactNode } from "react";
 import type { Components } from "react-markdown";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { langFromClassName, nodeToText } from "./helpers";
+
+// react-markdown hands every component override a fresh `node` (the hast AST
+// node) on every render. Any override that spreads its props onto an intrinsic
+// element therefore leaks it as an invalid `node="[object Object]"` DOM
+// attribute, and — because the object identity changes each render — React
+// rewrites that attribute on every markdown element on every render (~300
+// writes/s in a re-rendering transcript). Strip it once, centrally, over the
+// merged component map so no override (base or enhancer-contributed, present or
+// future) can ever leak it. None of our overrides read `node`.
+export function stripNodeProp(components: Components): Components {
+  const src = components as Record<string, ComponentType<Record<string, unknown>>>;
+  const out: Record<string, ComponentType<Record<string, unknown>>> = {};
+  for (const tag of Object.keys(src)) {
+    const Original = src[tag]!;
+    out[tag] = ({ node: _node, ...rest }: Record<string, unknown>) => (
+      <Original {...rest} />
+    );
+  }
+  return out as Components;
+}
 
 export function buildBaseComponents(
   transform: (children: ReactNode) => ReactNode,

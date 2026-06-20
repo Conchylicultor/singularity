@@ -4,7 +4,7 @@ import remarkGfm from "remark-gfm";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import { MarkdownEnhancementContext } from "./enhancement-context";
-import { buildBaseComponents } from "./base-components";
+import { buildBaseComponents, stripNodeProp } from "./base-components";
 
 const REMARK_PLUGINS = [remarkGfm];
 
@@ -22,7 +22,7 @@ function MarkdownRenderer({ children }: { children: string }) {
     const transform = (c: ReactNode) =>
       transforms.reduce((acc, fn) => fn(acc), c);
     const base = buildBaseComponents(transform, inlineCodeHandlers);
-    return { ...base, ...overrides };
+    return stripNodeProp({ ...base, ...overrides });
   }, [transforms, overrides, inlineCodeHandlers]);
 
   return (
