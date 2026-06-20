@@ -15,6 +15,7 @@ import {
 } from "react-icons/md";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import {
@@ -292,15 +293,16 @@ export function WindowChrome({
         {/* The window icon doubles as the system-menu button (Win32 icon-click). */}
         {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid leading item in the titlebar's hand-rolled drag flex (see titlebar disable above) */}
         <div onPointerDown={(e) => e.stopPropagation()} className="shrink-0">
-          <IconButton
-            icon={MenuIcon}
-            label="Window menu"
-            size="icon-sm"
-            onClick={(e) => {
-              const r = e.currentTarget.getBoundingClientRect();
-              openMenuAt(r.left, r.bottom);
-            }}
-          />
+          <ControlSizeProvider size="sm">
+            <IconButton
+              icon={MenuIcon}
+              label="Window menu"
+              onClick={(e) => {
+                const r = e.currentTarget.getBoundingClientRect();
+                openMenuAt(r.left, r.bottom);
+              }}
+            />
+          </ControlSizeProvider>
         </div>
         {/* In-window tab strip — one chip per member. `data-floating-window-id`
             marks the drop-zone the tab-chip drag hit-tests against. The
@@ -323,37 +325,35 @@ export function WindowChrome({
         {/* Each control stops the pointer so it never starts a window drag. */}
         {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid trailing controls cluster pinned right in the titlebar's hand-rolled drag flex (see titlebar disable above) */}
         <div onPointerDown={(e) => e.stopPropagation()} className="flex shrink-0 items-center gap-2xs">
-          <IconButton
-            icon={geo.pinned ? MdPushPin : MdOutlinePushPin}
-            label={
-              geo.pinned
-                ? `Unpin (${formatShortcutLabel(TOGGLE_PIN_SHORTCUT)})`
-                : `Keep on top (${formatShortcutLabel(TOGGLE_PIN_SHORTCUT)})`
-            }
-            size="icon-sm"
-            // Pinned reads as "active" via the accent tint, matching the menu check.
-            className={geo.pinned ? "text-primary" : undefined}
-            onClick={onTogglePin}
-          />
-          <IconButton
-            icon={MdRemove}
-            label={`Minimize (${formatShortcutLabel("mod+m")})`}
-            size="icon-sm"
-            onClick={toggleMinimize}
-          />
-          <IconButton
-            icon={geo.snap === "maximize" ? MdFilterNone : MdCropSquare}
-            label={geo.snap === "maximize" ? "Restore" : "Maximize"}
-            size="icon-sm"
-            onClick={toggleMaximize}
-          />
-          <IconButton
-            icon={MdClose}
-            // Closes the whole window; the chip × closes a single member.
-            label="Close window"
-            size="icon-sm"
-            onClick={onCloseWindow}
-          />
+          <ControlSizeProvider size="sm">
+            <IconButton
+              icon={geo.pinned ? MdPushPin : MdOutlinePushPin}
+              label={
+                geo.pinned
+                  ? `Unpin (${formatShortcutLabel(TOGGLE_PIN_SHORTCUT)})`
+                  : `Keep on top (${formatShortcutLabel(TOGGLE_PIN_SHORTCUT)})`
+              }
+              // Pinned reads as "active" via the accent tint, matching the menu check.
+              className={geo.pinned ? "text-primary" : undefined}
+              onClick={onTogglePin}
+            />
+            <IconButton
+              icon={MdRemove}
+              label={`Minimize (${formatShortcutLabel("mod+m")})`}
+              onClick={toggleMinimize}
+            />
+            <IconButton
+              icon={geo.snap === "maximize" ? MdFilterNone : MdCropSquare}
+              label={geo.snap === "maximize" ? "Restore" : "Maximize"}
+              onClick={toggleMaximize}
+            />
+            <IconButton
+              icon={MdClose}
+              // Closes the whole window; the chip × closes a single member.
+              label="Close window"
+              onClick={onCloseWindow}
+            />
+          </ControlSizeProvider>
         </div>
       </div>
 

@@ -14,8 +14,6 @@ export function StarButton({ pageId }: { pageId: string }) {
       label={isStarred ? "Remove from favorites" : "Add to favorites"}
       aria-pressed={isStarred}
       onClick={toggle}
-      variant="ghost"
-      size="icon-sm"
     />
   );
 }

@@ -7,7 +7,7 @@ import {
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 
 export interface IconButtonProps
-  extends Omit<ComponentProps<typeof Button>, "children"> {
+  extends Omit<ComponentProps<typeof Button>, "children" | "size"> {
   icon: ComponentType<{ className?: string }>;
   label: string;
   tooltip?: ReactNode;
@@ -21,13 +21,15 @@ export function IconButton({
   tooltip,
   shortcut,
   variant = "ghost",
-  size,
   side,
   ...props
 }: IconButtonProps) {
-  // No explicit `size` → inherit the ambient density as the square icon shape.
+  // An icon button NEVER sizes itself — its square shape is derived from the
+  // ambient control density, which the containing row/slot owns (via
+  // `ControlSizeProvider` or a slot's `controlSize` config). This makes a single
+  // button physically unable to desync from its neighbors.
   const density = useControlSize();
-  const resolvedSize = size ?? iconSizeFor(density);
+  const resolvedSize = iconSizeFor(density);
   const content = shortcut ? (
     <>
       {tooltip ?? label}

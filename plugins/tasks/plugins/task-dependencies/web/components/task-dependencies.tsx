@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useCallback, useMemo } from "react";
 import { MdClose } from "react-icons/md";
@@ -131,14 +131,15 @@ function DepChip({
         actionsAlwaysVisible
         className={isTerminal ? "text-muted-foreground line-through" : undefined}
         actions={
-          <IconButton
-            icon={MdClose}
-            label={`Remove dependency ${title}`}
-            variant="ghost"
-            size="icon-sm"
-            onClick={remove}
-            className="hover:text-destructive"
-          />
+          <ControlSizeProvider size="sm">
+            <IconButton
+              icon={MdClose}
+              label={`Remove dependency ${title}`}
+              variant="ghost"
+              onClick={remove}
+              className="hover:text-destructive"
+            />
+          </ControlSizeProvider>
         }
       >
         <button

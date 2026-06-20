@@ -48,7 +48,7 @@ and the editor.
 
 - Description: Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear; ConfigSelectContent / ConfigMenuContent bake the gear into Select / DropdownMenu picker chrome.
 - Web:
-  - Uses: `config_v2.useConfigRegistrations`, `config_v2/settings.configDetailPane`, `primitives/css/frame.Frame`, `primitives/css/section-label.SectionLabel`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.SelectContent`, `primitives/icon-button.IconButton`, `primitives/pane.useOpenPane`
+  - Uses: `config_v2.useConfigRegistrations`, `config_v2/settings.configDetailPane`, `primitives/css/frame.Frame`, `primitives/css/section-label.SectionLabel`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.SelectContent`, `primitives/icon-button.IconButton`, `primitives/pane.useOpenPane`
   - Exports: Types: `ConfigGearButtonProps`, `ConfigMenuContentProps`, `ConfigMenuHeaderProps`, `ConfigPopoverHeaderProps`, `ConfigSelectContentProps`; Values: `ConfigGearButton`, `ConfigMenuContent`, `ConfigMenuHeader`, `ConfigPopoverHeader`, `ConfigSelectContent`, `useOpenConfig`
 - Cross-plugin:
   - Imported by: `backup`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/preprompts`, `stats/commits`

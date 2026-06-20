@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { MdClose, MdAccountTree } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
@@ -103,18 +104,18 @@ export function FilterRuleRow<TRow>(props: {
           align="center"
           className={hoverRevealClass(revealed)}
         >
-          <IconButton
-            icon={MdAccountTree}
-            label="Turn into group"
-            size="icon-sm"
-            onClick={() => ctx.wrapRuleInGroup(rule.id)}
-          />
-          <IconButton
-            icon={MdClose}
-            label="Remove filter"
-            size="icon-sm"
-            onClick={() => ctx.deleteNode(rule.id)}
-          />
+          <ControlSizeProvider size="sm">
+            <IconButton
+              icon={MdAccountTree}
+              label="Turn into group"
+              onClick={() => ctx.wrapRuleInGroup(rule.id)}
+            />
+            <IconButton
+              icon={MdClose}
+              label="Remove filter"
+              onClick={() => ctx.deleteNode(rule.id)}
+            />
+          </ControlSizeProvider>
         </Stack>
       }
     />

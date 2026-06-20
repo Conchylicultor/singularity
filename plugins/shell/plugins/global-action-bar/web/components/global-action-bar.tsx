@@ -10,6 +10,7 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import {
@@ -71,12 +72,13 @@ function ActionRow({
   return (
     <>
       <ActionBar.Item.Render />
-      <IconButton
-        icon={pinned ? MdPushPin : MdOutlinePushPin}
-        label={pinned ? "Unpin action bar" : "Pin action bar"}
-        size="icon-sm"
-        onClick={onTogglePin}
-      />
+      <ControlSizeProvider size="sm">
+        <IconButton
+          icon={pinned ? MdPushPin : MdOutlinePushPin}
+          label={pinned ? "Unpin action bar" : "Pin action bar"}
+          onClick={onTogglePin}
+        />
+      </ControlSizeProvider>
     </>
   );
 }

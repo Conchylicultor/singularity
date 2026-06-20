@@ -11,6 +11,7 @@ import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import type { FieldDef, SortPreset, SortRule } from "../../../../core";
 import { useResolveDirectionLabels } from "../../../internal/use-direction-labels";
@@ -49,12 +50,13 @@ export function PresetRow<TRow>(props: {
       icon={active ? <MdCheck aria-label="Active preset" /> : undefined}
       onClick={applicable ? () => props.onApply(preset) : undefined}
       actions={
-        <IconButton
-          icon={MdClose}
-          label="Delete preset"
-          size="icon-sm"
-          onClick={() => props.onDelete(preset.id)}
-        />
+        <ControlSizeProvider size="sm">
+          <IconButton
+            icon={MdClose}
+            label="Delete preset"
+            onClick={() => props.onDelete(preset.id)}
+          />
+        </ControlSizeProvider>
       }
     >
       <Stack gap="2xs">

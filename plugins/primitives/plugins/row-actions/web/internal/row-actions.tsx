@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin, type PinAnchor } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
@@ -69,7 +70,6 @@ export function RowActionButton({
       label={label}
       tooltip={tooltip}
       variant="ghost"
-      size="icon-xs"
       onClick={onClick}
       disabled={disabled}
       className={className}
@@ -108,7 +108,7 @@ export function RowActions({
       align="center"
       className={alwaysVisible ? undefined : revealClasses}
     >
-      {children}
+      <ControlSizeProvider size="xs">{children}</ControlSizeProvider>
     </Stack>
   );
   return pin === null ? (

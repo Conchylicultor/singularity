@@ -1,4 +1,5 @@
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdDelete } from "react-icons/md";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { TaskListItem } from "@plugins/tasks/core";
@@ -26,15 +27,16 @@ export function DeleteTaskAction({
     // aria-disabled (not the native `disabled` attribute) so the button still
     // receives hover events and the tooltip explaining *why* it's disabled can
     // appear; onClick early-returns when disabled.
-    <IconButton
-      icon={MdDelete}
-      label="Drop task"
-      tooltip={title}
-      variant="ghost"
-      size="icon-sm"
-      onClick={onClick}
-      aria-disabled={disabled}
-      className="aria-disabled:cursor-not-allowed aria-disabled:opacity-30"
-    />
+    <ControlSizeProvider size="sm">
+      <IconButton
+        icon={MdDelete}
+        label="Drop task"
+        tooltip={title}
+        variant="ghost"
+        onClick={onClick}
+        aria-disabled={disabled}
+        className="aria-disabled:cursor-not-allowed aria-disabled:opacity-30"
+      />
+    </ControlSizeProvider>
   );
 }

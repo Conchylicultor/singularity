@@ -12,6 +12,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { GraphCanvas } from "@plugins/primitives/plugins/graph-canvas/web";
 import {
   useCompositionData,
@@ -100,23 +101,23 @@ export function GraphView({ paneFocusId }: { paneFocusId?: PluginId }) {
               )}
             </div>
 
-            <Stack direction="row" align="center" gap="2xs">
-              <Text variant="caption" tone="muted">Depth</Text>
-              <IconButton
-                icon={MdRemove}
-                label="Decrease depth"
-                size="sm"
-                disabled={depth <= 1}
-                onClick={() => setDepth((d) => Math.max(1, d - 1))}
-              />
-              <Text variant="label">{depth}</Text>
-              <IconButton
-                icon={MdAdd}
-                label="Increase depth"
-                size="sm"
-                onClick={() => setDepth((d) => d + 1)}
-              />
-            </Stack>
+            <ControlSizeProvider size="sm">
+              <Stack direction="row" align="center" gap="2xs">
+                <Text variant="caption" tone="muted">Depth</Text>
+                <IconButton
+                  icon={MdRemove}
+                  label="Decrease depth"
+                  disabled={depth <= 1}
+                  onClick={() => setDepth((d) => Math.max(1, d - 1))}
+                />
+                <Text variant="label">{depth}</Text>
+                <IconButton
+                  icon={MdAdd}
+                  label="Increase depth"
+                  onClick={() => setDepth((d) => d + 1)}
+                />
+              </Stack>
+            </ControlSizeProvider>
 
             <SegmentedControl<Direction>
               options={DIRECTION_OPTIONS}

@@ -7,7 +7,7 @@
 - Description: Browser bookmarks UI: a star toggle in the chrome actions and a bookmarks bar of clickable chips below the omnibox. Browser bookmarks: the browser_bookmarks table, the browser-bookmarks live resource, and add/delete endpoints backing the star toggle and bookmarks bar.
 - Web:
   - Contributes: `Browser.Actions` "Chrome actions" → `BookmarkStar`, `Browser.SubBar` "Sub bar" → `BookmarksBar`
-  - Uses: `apps/browser/shell.Browser`, `apps/browser/shell.Favicon`, `apps/browser/shell.useBrowserNav`, `infra/endpoints.useEndpointMutation`, `primitives/bar.Bar`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/truncating-text.TruncatingText`, `primitives/icon-button.IconButton`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`
+  - Uses: `apps/browser/shell.Browser`, `apps/browser/shell.Favicon`, `apps/browser/shell.useBrowserNav`, `infra/endpoints.useEndpointMutation`, `primitives/bar.Bar`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`
   - Exports: Types: `BookmarkRow`; Values: `BookmarkRowSchema`, `browserBookmarksResource`, `useBookmarks`
 - Server:
   - Uses: `database.db`, `infra/endpoints.implement`

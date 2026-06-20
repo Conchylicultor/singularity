@@ -5,6 +5,7 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import {
   hoverRevealClass,
@@ -70,12 +71,9 @@ export function WorkspacePager() {
           }}
         />
       ))}
-      <IconButton
-        icon={MdAdd}
-        label="New desktop"
-        size="icon-sm"
-        onClick={onCreate}
-      />
+      <ControlSizeProvider size="sm">
+        <IconButton icon={MdAdd} label="New desktop" onClick={onCreate} />
+      </ControlSizeProvider>
     </Cluster>
   );
 }
@@ -118,15 +116,16 @@ function DesktopPill({
       </WithTooltip>
       {removable && (
         <span className={hoverRevealClass(revealed)}>
-          <IconButton
-            icon={MdClose}
-            label={`Close ${label}`}
-            size="icon-sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              removeDesktop(desktop.id);
-            }}
-          />
+          <ControlSizeProvider size="sm">
+            <IconButton
+              icon={MdClose}
+              label={`Close ${label}`}
+              onClick={(e) => {
+                e.stopPropagation();
+                removeDesktop(desktop.id);
+              }}
+            />
+          </ControlSizeProvider>
         </span>
       )}
     </Stack>

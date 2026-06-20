@@ -1,4 +1,4 @@
-import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, ControlSizeProvider, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, type ReactNode } from "react";
 import { MdAdd, MdMoreHoriz } from "react-icons/md";
 import type { IconType } from "react-icons";
@@ -98,13 +98,14 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
   // surrounding actions cluster already stops row-click/drag propagation and
   // owns the hover-reveal, so this button only handles the create.
   const addChild = ctx.canCreate ? (
-    <IconButton
-      icon={MdAdd}
-      label="Add child"
-      variant="ghost"
-      size="icon-xs"
-      onClick={() => r.addChild()}
-    />
+    <ControlSizeProvider size="xs">
+      <IconButton
+        icon={MdAdd}
+        label="Add child"
+        variant="ghost"
+        onClick={() => r.addChild()}
+      />
+    </ControlSizeProvider>
   ) : null;
 
   const trailing =

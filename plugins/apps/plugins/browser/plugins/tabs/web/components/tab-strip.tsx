@@ -5,6 +5,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   useBrowserTabs,
   Favicon,
@@ -45,13 +46,14 @@ export function TabStrip() {
             }
             onClick={() => select(tab.id)}
             actions={
-              <IconButton
-                icon={MdClose}
-                label="Close tab"
-                tooltip="Close tab"
-                size="icon-xs"
-                onClick={() => close(tab.id)}
-              />
+              <ControlSizeProvider size="xs">
+                <IconButton
+                  icon={MdClose}
+                  label="Close tab"
+                  tooltip="Close tab"
+                  onClick={() => close(tab.id)}
+                />
+              </ControlSizeProvider>
             }
           >
             <TruncatingText>{tabLabel(tab.url)}</TruncatingText>

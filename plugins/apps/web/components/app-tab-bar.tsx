@@ -9,6 +9,7 @@ import { createPortal } from "react-dom";
 import { MdAdd, MdClose } from "react-icons/md";
 import {
   cn,
+  ControlSizeProvider,
   PortalThemeScopeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -154,12 +155,13 @@ export function AppTabBar() {
         </SortableList>
       </Stack>
       </Scroll>
-      <IconButton
-        icon={MdAdd}
-        label={newTabPlacement !== getDefaultPlacement() ? "New window" : "New tab"}
-        size="icon-sm"
-        onClick={() => openTab("home", newTabPlacement)}
-      />
+      <ControlSizeProvider size="sm">
+        <IconButton
+          icon={MdAdd}
+          label={newTabPlacement !== getDefaultPlacement() ? "New window" : "New tab"}
+          onClick={() => openTab("home", newTabPlacement)}
+        />
+      </ControlSizeProvider>
       {/* Push the trailing action zone to the far right edge so it sits at a
           fixed corner (like the former floating bar), independent of tab count. */}
       {/* eslint-disable-next-line layout/no-adhoc-layout -- pure growing spacer pinning the trailing actions to the right edge */}

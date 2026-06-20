@@ -4,6 +4,7 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { matchResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   useBrowserNav,
@@ -39,13 +40,14 @@ export function BookmarksBar() {
                 icon={<Favicon url={b.url} size={14} />}
                 onClick={() => navigate(b.url)}
                 actions={
-                  <IconButton
-                    icon={MdClose}
-                    label="Remove bookmark"
-                    tooltip="Remove bookmark"
-                    size="icon-xs"
-                    onClick={() => void remove(b.id)}
-                  />
+                  <ControlSizeProvider size="xs">
+                    <IconButton
+                      icon={MdClose}
+                      label="Remove bookmark"
+                      tooltip="Remove bookmark"
+                      onClick={() => void remove(b.id)}
+                    />
+                  </ControlSizeProvider>
                 }
               >
                 <TruncatingText>{hostOf(b.url)}</TruncatingText>

@@ -1,5 +1,5 @@
 import { MdMyLocation, MdHub } from "react-icons/md";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { openPane } from "@plugins/primitives/plugins/pane/web";
@@ -74,26 +74,26 @@ export function MembershipPin({ node }: { node: PluginNode }) {
       className="relative z-raised hidden group-hover/tree-row:block"
       onClick={(e) => e.stopPropagation()}
     >
-      <Cluster gap="none">
-        <IconButton
-          icon={MdMyLocation}
-          label="Show closure from here"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            pinAsRoot(node.id);
-          }}
-        />
-        <IconButton
-          icon={MdHub}
-          label="Open in graph"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            openPane(graphCanvasPane, {}, { mode: "root", input: { focusId: node.id } });
-          }}
-        />
-      </Cluster>
+      <ControlSizeProvider size="sm">
+        <Cluster gap="none">
+          <IconButton
+            icon={MdMyLocation}
+            label="Show closure from here"
+            onClick={(e) => {
+              e.stopPropagation();
+              pinAsRoot(node.id);
+            }}
+          />
+          <IconButton
+            icon={MdHub}
+            label="Open in graph"
+            onClick={(e) => {
+              e.stopPropagation();
+              openPane(graphCanvasPane, {}, { mode: "root", input: { focusId: node.id } });
+            }}
+          />
+        </Cluster>
+      </ControlSizeProvider>
     </span>
   );
 }

@@ -5,6 +5,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuContent,
   DropdownMenuItem,
+  ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
@@ -109,7 +110,11 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
 
       <DropdownMenu>
         <DropdownMenuTrigger
-          render={<IconButton icon={MdAdd} label="Add view" size="sm" />}
+          render={
+            <ControlSizeProvider size="sm">
+              <IconButton icon={MdAdd} label="Add view" />
+            </ControlSizeProvider>
+          }
         />
         <DropdownMenuContent align="end">
           {actions.available.map((v) => {

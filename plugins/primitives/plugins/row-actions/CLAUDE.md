@@ -6,7 +6,7 @@
 
 - Description: Hover-revealed row-action cluster: a row of small ghost icon buttons (RowActionButton) revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the standard icon-xs sizing. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
 - Web:
-  - Uses: `primitives/css/pin.Pin`, `primitives/css/pin.PinAnchor`, `primitives/css/spacing.Stack`, `primitives/icon-button.IconButton`
+  - Uses: `primitives/css/pin.Pin`, `primitives/css/pin.PinAnchor`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`
   - Exports: Types: `RowActionButtonProps`, `RowActionsProps`; Values: `RowActionButton`, `RowActions`, `rowActionsAnchor`
 - Cross-plugin:
   - Imported by: `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`

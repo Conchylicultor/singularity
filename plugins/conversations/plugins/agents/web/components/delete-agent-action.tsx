@@ -1,5 +1,6 @@
 import { MdDelete } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { deleteAgent } from "@plugins/conversations/plugins/agents/core";
@@ -19,15 +20,16 @@ export function DeleteAgentAction({ row, hasChildren }: ItemActionProps<Agent>) 
   };
 
   return (
-    <IconButton
-      icon={MdDelete}
-      label="Delete agent"
-      tooltip={title}
-      onClick={onClick}
-      disabled={disabled}
-      variant="ghost"
-      size="icon-sm"
-      className={disabled ? "cursor-not-allowed opacity-30" : undefined}
-    />
+    <ControlSizeProvider size="sm">
+      <IconButton
+        icon={MdDelete}
+        label="Delete agent"
+        tooltip={title}
+        onClick={onClick}
+        disabled={disabled}
+        variant="ghost"
+        className={disabled ? "cursor-not-allowed opacity-30" : undefined}
+      />
+    </ControlSizeProvider>
   );
 }

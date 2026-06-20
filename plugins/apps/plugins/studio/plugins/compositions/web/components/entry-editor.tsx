@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MdAdd, MdClose } from "react-icons/md";
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
@@ -114,12 +114,13 @@ export function EntryEditor({
               variant="primary"
               title={String(id)}
               icon={
-                <IconButton
-                  icon={MdClose}
-                  label="Remove entry point"
-                  size="sm"
-                  onClick={() => remove(id)}
-                />
+                <ControlSizeProvider size="sm">
+                  <IconButton
+                    icon={MdClose}
+                    label="Remove entry point"
+                    onClick={() => remove(id)}
+                  />
+                </ControlSizeProvider>
               }
             >
               <span className="font-mono">{shortName(id)}</span>

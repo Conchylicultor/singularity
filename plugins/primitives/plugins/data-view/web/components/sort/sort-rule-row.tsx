@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import { MdClose, MdDragIndicator } from "react-icons/md";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
@@ -68,13 +71,14 @@ export function SortRuleRow<TRow>(props: {
             </>
           }
           trailing={
-            <IconButton
-              icon={MdClose}
-              label="Remove sort"
-              size="icon-sm"
-              className={hoverRevealClass(revealed)}
-              onClick={props.onRemove}
-            />
+            <ControlSizeProvider size="sm">
+              <IconButton
+                icon={MdClose}
+                label="Remove sort"
+                className={hoverRevealClass(revealed)}
+                onClick={props.onRemove}
+              />
+            </ControlSizeProvider>
           }
         />
       )}

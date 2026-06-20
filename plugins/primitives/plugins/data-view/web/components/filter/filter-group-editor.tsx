@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { MdClose } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -96,13 +97,14 @@ function NestedGroupRow<TRow>(props: {
               <Text as="div" variant="caption" tone="muted" className="mr-auto">
                 Filter group
               </Text>
-              <IconButton
-                icon={MdClose}
-                label="Remove group"
-                size="icon-sm"
-                className={hoverRevealClass(revealed)}
-                onClick={() => ctx.deleteNode(group.id)}
-              />
+              <ControlSizeProvider size="sm">
+                <IconButton
+                  icon={MdClose}
+                  label="Remove group"
+                  className={hoverRevealClass(revealed)}
+                  onClick={() => ctx.deleteNode(group.id)}
+                />
+              </ControlSizeProvider>
             </Stack>
             <FilterGroupEditor group={group} ctx={ctx} />
             <AddFilterAffordance

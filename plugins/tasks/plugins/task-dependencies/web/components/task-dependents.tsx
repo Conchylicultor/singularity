@@ -1,5 +1,6 @@
 import { MdClose } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -74,14 +75,15 @@ function DependentChip({
         actionsAlwaysVisible
         className={isTerminal ? "text-muted-foreground line-through" : undefined}
         actions={
-          <IconButton
-            icon={MdClose}
-            label={`Remove dependent ${title}`}
-            variant="ghost"
-            size="icon-sm"
-            onClick={remove}
-            className="hover:text-destructive"
-          />
+          <ControlSizeProvider size="sm">
+            <IconButton
+              icon={MdClose}
+              label={`Remove dependent ${title}`}
+              variant="ghost"
+              onClick={remove}
+              className="hover:text-destructive"
+            />
+          </ControlSizeProvider>
         }
       >
         <button

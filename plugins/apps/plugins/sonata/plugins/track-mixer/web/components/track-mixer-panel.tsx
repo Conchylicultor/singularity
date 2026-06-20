@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState, type ComponentType } from "react";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import {
@@ -265,24 +265,24 @@ function TrackRow({
         </div>
       }
       trailing={
-        <Stack direction="row" align="center" gap="sm">
-          <IconButton
-            icon={muted ? MdVolumeOff : MdVolumeUp}
-            label={muted ? "Unmute track" : "Mute track"}
-            aria-pressed={muted}
-            size="icon-sm"
-            className={cn(muted && "text-destructive")}
-            onClick={() => setTrackMuted(songId, trackId, !muted)}
-          />
-          <IconButton
-            icon={hidden ? MdVisibilityOff : MdVisibility}
-            label={hidden ? "Show track" : "Hide track"}
-            aria-pressed={hidden}
-            size="icon-sm"
-            className={cn(hidden && "text-muted-foreground")}
-            onClick={() => setTrackHidden(songId, trackId, !hidden)}
-          />
-        </Stack>
+        <ControlSizeProvider size="sm">
+          <Stack direction="row" align="center" gap="sm">
+            <IconButton
+              icon={muted ? MdVolumeOff : MdVolumeUp}
+              label={muted ? "Unmute track" : "Mute track"}
+              aria-pressed={muted}
+              className={cn(muted && "text-destructive")}
+              onClick={() => setTrackMuted(songId, trackId, !muted)}
+            />
+            <IconButton
+              icon={hidden ? MdVisibilityOff : MdVisibility}
+              label={hidden ? "Show track" : "Hide track"}
+              aria-pressed={hidden}
+              className={cn(hidden && "text-muted-foreground")}
+              onClick={() => setTrackHidden(songId, trackId, !hidden)}
+            />
+          </Stack>
+        </ControlSizeProvider>
       }
     />
   );
@@ -323,13 +323,14 @@ export function TrackMixerPanel() {
         <SectionHeaderRow
           variant="eyebrow"
           actions={
-            <IconButton
-              icon={MdRestartAlt}
-              label="Reset tracks to defaults"
-              size="icon-sm"
-              disabled={!anyCustomized}
-              onClick={() => resetTrackViews(currentSongId)}
-            />
+            <ControlSizeProvider size="sm">
+              <IconButton
+                icon={MdRestartAlt}
+                label="Reset tracks to defaults"
+                disabled={!anyCustomized}
+                onClick={() => resetTrackViews(currentSongId)}
+              />
+            </ControlSizeProvider>
           }
         >
           Tracks

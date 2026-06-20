@@ -4,6 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SidebarPaneSection } from "@plugins/primitives/plugins/app-shell/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -143,16 +144,17 @@ function PagesHeaderAdd() {
     openPane(pageDetailPane, { pageId: id }, { mode: "push" });
   };
   return (
-    <IconButton
-      icon={MdAdd}
-      label="New page"
-      onClick={(e) => {
-        e.stopPropagation();
-        return createRootPage();
-      }}
-      variant="ghost"
-      size="icon-xs"
-      className="ml-auto opacity-0 pointer-events-none group-hover/label:opacity-100 group-hover/label:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto"
-    />
+    <ControlSizeProvider size="xs">
+      <IconButton
+        icon={MdAdd}
+        label="New page"
+        onClick={(e) => {
+          e.stopPropagation();
+          return createRootPage();
+        }}
+        variant="ghost"
+        className="ml-auto opacity-0 pointer-events-none group-hover/label:opacity-100 group-hover/label:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto"
+      />
+    </ControlSizeProvider>
   );
 }
