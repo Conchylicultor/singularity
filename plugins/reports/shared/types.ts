@@ -16,6 +16,7 @@ export const CLIENT_REPORT_SOURCES = [
   "client-endpoint",
   "live-state-wedge",
   "client-slow-op",
+  "client-render-loop",
 ] as const;
 export type ReportSource =
   | (typeof SERVER_REPORT_SOURCES)[number]

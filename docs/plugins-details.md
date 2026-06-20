@@ -2657,7 +2657,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Composition root: yes
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Web:
-        - Slots: `Core.Root` ← `apps`, `config_v2.staging`, `conversations.model-provider`, `debug.slow-ops`, `infra.health`, `primitives.command-palette`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reorder.edit-mode`, `reports.crash`, `reports.endpoint-errors`, `reports.mutation-errors`, `shell.global-action-bar`, `shell.toaster`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`, `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
+        - Slots: `Core.Root` ← `apps`, `config_v2.staging`, `conversations.model-provider`, `debug.slow-ops`, `infra.health`, `primitives.command-palette`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reorder.edit-mode`, `reports.crash`, `reports.endpoint-errors`, `reports.mutation-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toaster`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`, `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
       - Core:
         - Uses: `framework/plugin-id.asPluginId`, `framework/tooling/collected-dir.defineCollectedDir`
         - Exports: Types: `Contribution`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`
@@ -3978,7 +3978,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports: Types: `ClientMessage`, `EmitLogsBody`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`; Values: `emitLogs`, `EmitLogsBodySchema`, `getLogChannels`
       - Cross-plugin:
-        - Imported by: `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database`, `database/change-feed`, `database/derived-views`, `database/migrations`, `debug/health-monitor`, `debug/slow-ops`, `debug/worktree-cleanup`, `infra/attachments`, `primitives/live-state`
+        - Imported by: `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database`, `database/change-feed`, `database/derived-views`, `database/migrations`, `debug/health-monitor`, `debug/slow-ops`, `debug/worktree-cleanup`, `infra/attachments`, `primitives/live-state`, `reports/render-loop`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot.MarkdownEnhancerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
@@ -4248,7 +4248,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `primitives/live-state.resourceDescriptor`
     - Exports: Types: `Report`; Values: `ReportSchema`, `reportsResource`
   - Cross-plugin:
-    - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/queue-health`, `debug/reports`, `debug/slow-ops`, `infra/health`, `reports/crash`, `reports/endpoint-errors`, `reports/noise-rules`
+    - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/queue-health`, `debug/reports`, `debug/slow-ops`, `infra/health`, `reports/crash`, `reports/endpoint-errors`, `reports/noise-rules`, `reports/render-loop`
   - Plugins:
     - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
       - Web:
@@ -4273,6 +4273,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`noise-rules`** — Built-in noise classification rules for low-signal crashes (e.g. ResizeObserver loop warnings).
       - Server:
         - Uses: `reports.ReportNoiseRule`
+    - **`render-loop`** — Render-loop detector: a single invisible global controller (mounted via Core.Root) that installs one MutationObserver and files a deduped render-loop report when a subtree is rebuilt/re-mutated at a sustained high rate while idle, visible, and doing no meaningful work (wasted DOM thrash). Render-loop report kind: validates render-loop payloads, fingerprints by signature + mutation class, and renders per-loop perf tasks. Re-arms periodically (6h) since a still-present loop is a warning, not a one-shot crash.
+      - Web:
+        - Contributes: `Core.Root` → `RenderLoopController`
+        - Uses: `primitives/log-channels.clientLog`, `reports.report`
+      - Server:
+        - Uses: `reports.ReportKind`
+      - Core:
+        - Exports: Types: `RenderLoopPayload`; Values: `RENDER_LOOP`, `renderLoopFingerprint`, `RenderLoopPayloadSchema`
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Web:

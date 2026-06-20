@@ -185,6 +185,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "reorder", id: "reorder", loader: () => import("@plugins/reorder/server"), dependsOn: ["config_v2"] },
   { pluginPath: "reports/plugins/crash", id: "reports.crash", loader: () => import("@plugins/reports/plugins/crash/server"), dependsOn: ["build", "reports"] },
   { pluginPath: "reports/plugins/noise-rules", id: "reports.noise-rules", loader: () => import("@plugins/reports/plugins/noise-rules/server"), dependsOn: ["reports"] },
+  { pluginPath: "reports/plugins/render-loop", id: "reports.render-loop", loader: () => import("@plugins/reports/plugins/render-loop/server"), dependsOn: ["reports"] },
   { pluginPath: "reports", id: "reports", loader: () => import("@plugins/reports/server"), dependsOn: ["build", "database", "infra/plugins/endpoints", "infra/plugins/paths", "infra/plugins/runtime-profiler", "shell/plugins/notifications", "tasks/plugins/container-tasks", "tasks/plugins/tasks-core"] },
   { pluginPath: "review/plugins/code-review", id: "review.code-review", loader: () => import("@plugins/review/plugins/code-review/server"), dependsOn: ["config_v2"] },
   { pluginPath: "review/plugins/plugin-changes", id: "review.plugin-changes", loader: () => import("@plugins/review/plugins/plugin-changes/server"), dependsOn: ["code-explorer", "conversations/plugins/conversation-view/plugins/code", "infra/plugins/endpoints", "infra/plugins/host-read-pool", "infra/plugins/paths", "tasks/plugins/tasks-core"] },
