@@ -1,19 +1,34 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { MdFolder, MdInsertDriveFile } from "react-icons/md";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
-  MdChevronRight,
-  MdExpandMore,
-  MdFolder,
-  MdFolderOpen,
-  MdInsertDriveFile,
-} from "react-icons/md";
-import {
-  collectAllIds,
-  filterTree,
-  SearchInput,
-} from "@plugins/primitives/plugins/search/web";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+  DataView,
+  defineDataView,
+  type FieldDef,
+  type HierarchyConfig,
+} from "@plugins/primitives/plugins/data-view/web";
+import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
+
+const FILE_TREE_VIEW = defineDataView("code-explorer.file-tree");
+
+/**
+ * A flat row for the DataView tree. The file list arrives as a flat array of
+ * slash-delimited path strings (no explicit parent / type metadata), so the
+ * hierarchy is *derived* from the paths: every intermediate segment becomes a
+ * directory row, the leaf a file row, and `parentId` is the parent's path. The
+ * DataView tree view rebuilds the visible tree from `parentId` + `rank`.
+ */
+interface FileRow {
+  /** Full path — unique, so it doubles as the row id. */
+  id: string;
+  /** Parent directory path, or null for a top-level entry. */
+  parentId: string | null;
+  rank: Rank;
+  /** Last path segment — the rendered label. */
+  name: string;
+  path: string;
+  isDir: boolean;
+}
 
 interface FileTreeNode {
   name: string;
@@ -22,13 +37,14 @@ interface FileTreeNode {
   children: FileTreeNode[];
 }
 
-function buildTree(paths: readonly string[]): FileTreeNode[] {
-  const root: FileTreeNode = {
-    name: "",
-    path: "",
-    isDir: true,
-    children: [],
-  };
+/**
+ * Build the nested directory tree from flat path strings, sorted directories
+ * first then alphabetically. Kept as the intermediate shape so the flatten step
+ * can walk it in display order and assign each sibling group an ascending
+ * fractional rank (mirroring the config-nav `flattenConfigTree` precedent).
+ */
+function buildNestedTree(paths: readonly string[]): FileTreeNode[] {
+  const root: FileTreeNode = { name: "", path: "", isDir: true, children: [] };
 
   for (const full of paths) {
     const segments = full.split("/");
@@ -39,12 +55,7 @@ function buildTree(paths: readonly string[]): FileTreeNode[] {
       let child = cursor.children.find((c) => c.name === name);
       if (!child) {
         const path = segments.slice(0, i + 1).join("/");
-        child = {
-          name,
-          path,
-          isDir: !isLeaf,
-          children: [],
-        };
+        child = { name, path, isDir: !isLeaf, children: [] };
         cursor.children.push(child);
       }
       cursor = child;
@@ -63,62 +74,84 @@ function sortTree(node: FileTreeNode): void {
   for (const c of node.children) sortTree(c);
 }
 
+/**
+ * Flatten the nested tree into DataView rows in DFS / display order, assigning
+ * each sibling group an ascending fractional rank so the tree primitive renders
+ * them in the same directories-first, alphabetical order.
+ */
+function buildFileRows(paths: readonly string[]): FileRow[] {
+  const out: FileRow[] = [];
+  const ROOT = " root";
+  const lastRank = new Map<string, Rank>();
+  const nextRank = (parentId: string | null): Rank => {
+    const key = parentId ?? ROOT;
+    const rank = Rank.between(lastRank.get(key) ?? null, null);
+    lastRank.set(key, rank);
+    return rank;
+  };
+
+  const walk = (nodes: FileTreeNode[], parentId: string | null): void => {
+    for (const node of nodes) {
+      out.push({
+        id: node.path,
+        parentId,
+        rank: nextRank(parentId),
+        name: node.name,
+        path: node.path,
+        isDir: node.isDir,
+      });
+      walk(node.children, node.path);
+    }
+  };
+
+  walk(buildNestedTree(paths), null);
+  return out;
+}
+
+/** Ancestor directory paths of a file path (excluding the file itself). */
+function ancestorsOf(path: string): string[] {
+  if (!path) return [];
+  const segments = path.split("/");
+  const out: string[] = [];
+  for (let i = 1; i < segments.length; i++) {
+    out.push(segments.slice(0, i).join("/"));
+  }
+  return out;
+}
+
 interface FileTreeProps {
   files: readonly string[];
   selectedPath: string;
   onSelect: (path: string) => void;
+  /**
+   * Placement axis threaded straight to DataView. `"surface"` (default) owns its
+   * own scroll + pinned toolbar — for the full-pane explorer. `"embedded"` grows
+   * to natural height and lets a host scroller take over — for the bounded
+   * plugin-detail section.
+   */
+  mode?: "surface" | "embedded";
 }
 
-export function FileTree({ files, selectedPath, onSelect }: FileTreeProps) {
-  const tree = useMemo(() => buildTree(files), [files]);
+export function FileTree({
+  files,
+  selectedPath,
+  onSelect,
+  mode = "surface",
+}: FileTreeProps) {
+  const rows = useMemo(() => buildFileRows(files), [files]);
 
-  const [query, setQuery] = useState("");
-  const q = query.trim().toLowerCase();
-
-  // Filtered-tree mode: a node survives if its own name matches, or any
-  // descendant survives (recursive search across the whole worktree).
-  const filtered = useMemo(() => {
-    if (!q) return tree;
-    return filterTree(
-      tree,
-      (node) => node.name.toLowerCase().includes(q),
-      (node) => node.children,
-      (node, children) => ({ ...node, children }),
-    );
-  }, [tree, q]);
-
-  // While searching, auto-expand every surviving directory so matches deep in
-  // the tree are visible without manual expansion.
-  const autoExpanded = useMemo(() => {
-    if (!q) return null;
-    return new Set(
-      collectAllIds(
-        filtered,
-        (node) => node.path,
-        (node) => node.children,
-      ),
-    );
-  }, [filtered, q]);
-
-  const [expanded, setExpanded] = useState<Set<string>>(() => {
-    const set = new Set<string>();
-    if (selectedPath) {
-      const segments = selectedPath.split("/");
-      for (let i = 1; i < segments.length; i++) {
-        set.add(segments.slice(0, i).join("/"));
-      }
-    }
-    return set;
-  });
+  // Locally-tracked expand state (empty = all collapsed). Pre-opens the selected
+  // file's ancestors so an externally-driven selection is always revealed.
+  const [expanded, setExpanded] = useState<Set<string>>(
+    () => new Set(ancestorsOf(selectedPath)),
+  );
 
   useEffect(() => {
     if (!selectedPath) return;
     setExpanded((prev) => {
       const next = new Set(prev);
-      const segments = selectedPath.split("/");
       let changed = false;
-      for (let i = 1; i < segments.length; i++) {
-        const dir = segments.slice(0, i).join("/");
+      for (const dir of ancestorsOf(selectedPath)) {
         if (!next.has(dir)) {
           next.add(dir);
           changed = true;
@@ -128,116 +161,87 @@ export function FileTree({ files, selectedPath, onSelect }: FileTreeProps) {
     });
   }, [selectedPath]);
 
-  function toggle(dir: string): void {
+  const toggle = useCallback((id: string) => {
     setExpanded((prev) => {
-      const next = new Set(prev);
-      if (next.has(dir)) next.delete(dir);
-      else next.add(dir);
-      return next;
+      const set = new Set(prev);
+      if (set.has(id)) set.delete(id);
+      else set.add(id);
+      return set;
     });
-  }
+  }, []);
 
-  const effectiveExpanded = autoExpanded ?? expanded;
+  const hierarchy = useMemo<HierarchyConfig<FileRow>>(
+    () => ({
+      getParentId: (r) => r.parentId,
+      getRank: (r) => r.rank,
+      isExpanded: (r) => expanded.has(r.id),
+      onToggleExpanded: (id, next) =>
+        setExpanded((prev) => {
+          const set = new Set(prev);
+          if (next) set.add(id);
+          else set.delete(id);
+          return set;
+        }),
+    }),
+    [expanded],
+  );
 
-  return (
-    <Text as="div" variant="body">
-      <Sticky className="border-b bg-background p-xs">
-        <SearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Search files…"
-          aria-label="Search files"
-        />
-      </Sticky>
-      <div className="py-xs">
-        {q && filtered.length === 0 ? (
-          <div className="px-md py-sm text-muted-foreground">No matches.</div>
+  // `name` is the primary (only-rendered-in-tree) field; `kind` is filter-only —
+  // invisible in the tree body but usable in the "Filter" pill (Folder / File).
+  const fields = useMemo<FieldDef<FileRow>[]>(
+    () => [
+      { id: "name", label: "Name", primary: true, value: (r) => r.name },
+      {
+        id: "kind",
+        label: "Type",
+        type: "enum",
+        options: [
+          { value: "folder", label: "Folder" },
+          { value: "file", label: "File" },
+        ],
+        value: (r) => (r.isDir ? "folder" : "file"),
+      },
+    ],
+    [],
+  );
+
+  const treeOptions = useMemo<TreeViewOptions<FileRow>>(
+    () => ({
+      expandAll: true,
+      leadingIcon: (r) =>
+        r.isDir ? (
+          <MdFolder className="size-4 text-info" />
         ) : (
-          filtered.map((node) => (
-            <FileTreeRow
-              key={node.path}
-              node={node}
-              depth={0}
-              expanded={effectiveExpanded}
-              selectedPath={selectedPath}
-              onSelect={onSelect}
-              onToggle={toggle}
-            />
-          ))
-        )}
-      </div>
-    </Text>
+          <MdInsertDriveFile className="size-4 text-muted-foreground" />
+        ),
+    }),
+    [],
   );
-}
 
-interface FileTreeRowProps {
-  node: FileTreeNode;
-  depth: number;
-  expanded: Set<string>;
-  selectedPath: string;
-  onSelect: (path: string) => void;
-  onToggle: (dir: string) => void;
-}
-
-function FileTreeRow({
-  node,
-  depth,
-  expanded,
-  selectedPath,
-  onSelect,
-  onToggle,
-}: FileTreeRowProps) {
-  const isOpen = expanded.has(node.path);
-  const isSelected = !node.isDir && node.path === selectedPath;
-
-  /* eslint-disable layout/no-adhoc-layout -- rigid identity icons in Row's flex region-line, which provides no shrink protection */
-  const icon = node.isDir ? (
-    <>
-      {isOpen ? (
-        <MdExpandMore className="size-3.5 shrink-0 text-muted-foreground" />
-      ) : (
-        <MdChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-      )}
-      {isOpen ? (
-        <MdFolderOpen className="size-3.5 shrink-0 text-info" />
-      ) : (
-        <MdFolder className="size-3.5 shrink-0 text-info" />
-      )}
-    </>
-  ) : (
-    <>
-      <span className="size-3.5 shrink-0" />
-      <MdInsertDriveFile className="size-3.5 shrink-0 text-muted-foreground" />
-    </>
+  // A directory row toggles its own expand state on body click (the chevron does
+  // the same, stopping propagation so they never double-fire); a file row drives
+  // the host's selection.
+  const handleActivate = useCallback(
+    (row: FileRow) => {
+      if (row.isDir) toggle(row.id);
+      else onSelect(row.path);
+    },
+    [toggle, onSelect],
   );
-  /* eslint-enable layout/no-adhoc-layout */
 
   return (
-    <>
-      <Row
-        selected={isSelected}
-        hover="muted"
-        size="sm"
-        indent={depth * 12 + 6}
-        icon={icon}
-        onClick={() => (node.isDir ? onToggle(node.path) : onSelect(node.path))}
-        title={node.path}
-      >
-        <span className="truncate">{node.name}</span>
-      </Row>
-      {node.isDir &&
-        isOpen &&
-        node.children.map((child) => (
-          <FileTreeRow
-            key={child.path}
-            node={child}
-            depth={depth + 1}
-            expanded={expanded}
-            selectedPath={selectedPath}
-            onSelect={onSelect}
-            onToggle={onToggle}
-          />
-        ))}
-    </>
+    <DataView<FileRow>
+      rows={rows}
+      fields={fields}
+      rowKey={(r) => r.id}
+      views={["tree"]}
+      storageKey={FILE_TREE_VIEW}
+      mode={mode}
+      hierarchy={hierarchy}
+      selectedRowId={selectedPath || undefined}
+      onRowActivate={handleActivate}
+      searchAccessor={(r) => r.path}
+      viewOptions={{ tree: treeOptions }}
+    />
   );
 }

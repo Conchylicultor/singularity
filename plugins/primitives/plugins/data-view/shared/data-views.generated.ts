@@ -16,6 +16,7 @@ export interface DataViewEntry {
 
 export const dataViews: DataViewEntry[] = [
   { id: "agents-list", pluginId: "conversations.agents" },
+  { id: "code-explorer.file-tree", pluginId: "code-explorer" },
   { id: "config_v2.settings.nav", pluginId: "config_v2.settings" },
   { id: "debug.profiling.runtime", pluginId: "debug.profiling.runtime" },
   { id: "debug.slow-ops.cluster-aggregate", pluginId: "debug.slow-ops.cluster" },
