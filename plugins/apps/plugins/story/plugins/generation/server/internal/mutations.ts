@@ -1,7 +1,6 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _storyGeneratedUnits } from "./tables";
-import { storyGeneratedUnitsResource } from "./resource";
 
 const t = _storyGeneratedUnits;
 
@@ -47,7 +46,6 @@ export async function startUnitGeneration(args: {
         updatedAt: now,
       },
     });
-  storyGeneratedUnitsResource.notify();
 }
 
 export async function completeUnitGeneration(args: {
@@ -60,7 +58,6 @@ export async function completeUnitGeneration(args: {
     .update(t)
     .set({ output: args.output, status: "ready", error: null, updatedAt: new Date() })
     .where(whereUnit(args.pageId, args.kind, args.unitId));
-  storyGeneratedUnitsResource.notify();
 }
 
 export async function failUnitGeneration(args: {
@@ -73,5 +70,4 @@ export async function failUnitGeneration(args: {
     .update(t)
     .set({ status: "error", error: args.error, updatedAt: new Date() })
     .where(whereUnit(args.pageId, args.kind, args.unitId));
-  storyGeneratedUnitsResource.notify();
 }

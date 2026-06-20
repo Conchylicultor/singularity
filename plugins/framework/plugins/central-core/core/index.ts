@@ -1,8 +1,14 @@
 export { centralCollectedDir } from "./collected-dir";
-export { defineResource, handleResourceHttp, notificationsWsHandler } from "./resources";
+export {
+  defineResource,
+  defineExternalResource,
+  handleResourceHttp,
+  notificationsWsHandler,
+} from "./resources";
 export type {
   DependsOnEntry,
   Resource,
+  ExternalResource,
   ResourceDefinition,
   ResourceMode,
   ResourceParams,

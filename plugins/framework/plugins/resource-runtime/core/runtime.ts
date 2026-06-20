@@ -158,6 +158,19 @@ export interface Resource<T, P extends ResourceParams = ResourceParams> {
   mode: ResourceMode;
   schema: ZodType<T>;
   load(params: P): Promise<T>;
+}
+
+/**
+ * A resource whose truth lives OUTSIDE Postgres (git refs, file watchers,
+ * transcript reads, in-memory registries, the secrets API). The DB change-feed
+ * can never observe these, so they keep an explicit hand-`notify()` — declared
+ * via `defineExternalResource`, which is the only way to get a callable `notify`.
+ * A DB-backed resource (declared with plain `defineResource`) has no `notify`
+ * method at all, so hand-notifying it is a compile error. See
+ * research/2026-06-20-global-remove-hand-notify-dependson.md §2.
+ */
+export interface ExternalResource<T, P extends ResourceParams = ResourceParams>
+  extends Resource<T, P> {
   /**
    * Signal that state has changed. No-arg = parameterless resource.
    * `opts.affectedIds` (Layer 2) scopes the recompute to those row ids — the
@@ -198,6 +211,13 @@ interface PendingNotify {
 interface RegistryEntry {
   key: string;
   mode: ResourceMode;
+  /**
+   * True when declared via `defineExternalResource` — the resource's truth lives
+   * outside Postgres, so a hand-`notify()` is legitimate. The backstop check
+   * (`no-db-backed-notify`) fails if such a resource's loader reads the DB.
+   * Surfaced in the `_debug` payload.
+   */
+  externalSource?: boolean;
   /** Payload schema. The loader output is parsed against it in `timedLoad`. */
   schema: ZodType<unknown>;
   loader: (
@@ -314,6 +334,16 @@ export interface ResourceRuntime {
   defineResource: <T, P extends ResourceParams = ResourceParams>(
     def: ResourceDefinition<T, P>,
   ) => Resource<T, P>;
+  /**
+   * Like `defineResource`, but the returned handle exposes a callable `notify()`.
+   * For escape-hatch resources whose truth lives outside Postgres (the DB
+   * change-feed can never reach them). Sets `entry.externalSource = true` for the
+   * backstop check + `_debug` payload. See
+   * research/2026-06-20-global-remove-hand-notify-dependson.md §2.
+   */
+  defineExternalResource: <T, P extends ResourceParams = ResourceParams>(
+    def: ResourceDefinition<T, P>,
+  ) => ExternalResource<T, P>;
   notificationsWsHandler: WsHandler;
   handleResourceHttp: (
     req: Request,
@@ -527,9 +557,15 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     for (const id of incoming) existing.affected.add(id);
   }
 
-  function defineResource<T, P extends ResourceParams = ResourceParams>(
+  // Single internal builder. Produces the full runtime object (with a working
+  // `notify` either way) and registers the entry. `defineResource` returns it
+  // typed as `Resource` (notify present at runtime but hidden by the type, so a
+  // DB-backed resource can't be hand-notified); `defineExternalResource` returns
+  // the same object typed as `ExternalResource` and marks the entry external.
+  function createResource<T, P extends ResourceParams = ResourceParams>(
     def: ResourceDefinition<T, P>,
-  ): Resource<T, P> {
+    externalSource: boolean,
+  ): ExternalResource<T, P> {
     if (registry.has(def.key)) {
       throw new Error(`defineResource: duplicate key "${def.key}"`);
     }
@@ -568,6 +604,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const entry: RegistryEntry = {
       key: def.key,
       mode,
+      externalSource,
       schema: def.schema as ZodType<unknown>,
       loader: def.loader as (
         params: ResourceParams,
@@ -613,6 +650,22 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         scheduleNotify(entry, (params ?? ({} as P)) as ResourceParams, affected);
       },
     };
+  }
+
+  // DB-backed resource: the runtime object carries a `notify` method, but the
+  // returned type hides it (`Resource` has no `notify`), so hand-notifying a
+  // DB-backed resource is a compile error — the change-feed drives it instead.
+  function defineResource<T, P extends ResourceParams = ResourceParams>(
+    def: ResourceDefinition<T, P>,
+  ): Resource<T, P> {
+    return createResource(def, false);
+  }
+
+  // Escape-hatch resource (truth outside Postgres): exposes a callable `notify`.
+  function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
+    def: ResourceDefinition<T, P>,
+  ): ExternalResource<T, P> {
+    return createResource(def, true);
   }
 
   // Rebuild the topological order and warn on cycles or dangling upstream refs.
@@ -1251,6 +1304,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       readSet: string[];
       loaderStats?: { count: number; ratePerMin: number; maxMs: number };
       notifyStats: { hand: number; feed: number };
+      externalSource: boolean;
     }> = [];
     for (const entry of registry.values()) {
       let subscribers = 0;
@@ -1284,6 +1338,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           const s = notifyStats.get(entry.key);
           return { hand: s?.hand ?? 0, feed: s?.feed ?? 0 };
         })(),
+        // Declared classification: was this resource defined via
+        // `defineExternalResource` (truth outside Postgres)? The
+        // `no-db-backed-notify` check reads this to forbid a DB-reading loader on
+        // an external resource.
+        externalSource: entry.externalSource ?? false,
       });
     }
     return new Response(
@@ -1385,6 +1444,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
 
   return {
     defineResource,
+    defineExternalResource,
     notificationsWsHandler,
     handleResourceHttp,
     withNotifyBatch,

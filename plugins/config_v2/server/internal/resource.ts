@@ -1,5 +1,5 @@
 import { join } from "node:path";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import { configV2ValuesSchema, configV2ConflictEntrySchema, configV2TiersSchema, configV2ScopesMapSchema, configV2ConflictPathsSchema, configV2ModifiedCountsSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
 import type { ConfigV2Values, ConfigV2ConflictEntry, ConfigV2Tiers, ConfigV2ScopesMap, ConfigV2ConflictPaths, ConfigV2ModifiedCounts } from "../../core";
 import type { ConfigDescriptor, ConfigValues, JsonValue } from "../../core";
@@ -73,7 +73,7 @@ function resolveRedactedConfig(descriptor: ConfigDescriptor, scopeId?: string): 
   return redacted;
 }
 
-export const configV2ServerResource = defineResource<ConfigV2Values, { path: string; scopeId?: string }>({
+export const configV2ServerResource = defineExternalResource<ConfigV2Values, { path: string; scopeId?: string }>({
   key: "config-v2.values",
   mode: "push",
   schema: configV2ValuesSchema,
@@ -195,7 +195,7 @@ function computeDescriptorConflict(storePath: string, scopeId?: string): ConfigV
   return null;
 }
 
-export const configV2ConflictServerResource = defineResource<ConfigV2ConflictEntry | null, { path: string; scopeId?: string }>({
+export const configV2ConflictServerResource = defineExternalResource<ConfigV2ConflictEntry | null, { path: string; scopeId?: string }>({
   key: "config-v2.conflicts",
   mode: "push",
   schema: configV2ConflictEntrySchema.nullable(),
@@ -204,7 +204,7 @@ export const configV2ConflictServerResource = defineResource<ConfigV2ConflictEnt
 
 // The whole scope-membership map, read from the in-memory cache (no filesystem
 // walk per load). Refreshed via refreshScopeMembers whenever a scoped file moves.
-export const configV2ScopesServerResource = defineResource<ConfigV2ScopesMap, {}>({
+export const configV2ScopesServerResource = defineExternalResource<ConfigV2ScopesMap, {}>({
   key: "config-v2.scopes",
   mode: "push",
   schema: configV2ScopesMapSchema,
@@ -232,7 +232,7 @@ export function refreshScopeMembers(storePath: string): void {
 // Union of conflicting storePaths across base + every app scope, read from the
 // in-memory set (no per-load rescan). Backs the nav-row warning badge and
 // rail/sidebar dots.
-export const configV2ConflictPathsServerResource = defineResource<ConfigV2ConflictPaths, {}>({
+export const configV2ConflictPathsServerResource = defineExternalResource<ConfigV2ConflictPaths, {}>({
   key: "config-v2.conflict-paths",
   mode: "push",
   schema: configV2ConflictPathsSchema,
@@ -295,7 +295,7 @@ export function refreshModifiedCount(storePath: string): void {
   configV2ModifiedCountsServerResource.notify({});
 }
 
-export const configV2ModifiedCountsServerResource = defineResource<ConfigV2ModifiedCounts, {}>({
+export const configV2ModifiedCountsServerResource = defineExternalResource<ConfigV2ModifiedCounts, {}>({
   key: "config-v2.modified-counts",
   mode: "push",
   schema: configV2ModifiedCountsSchema,
@@ -409,7 +409,7 @@ function computeTiers(path: string, scopeId?: string): ConfigV2Tiers {
   return tiers;
 }
 
-export const configV2TiersServerResource = defineResource<ConfigV2Tiers, { path: string; scopeId?: string }>({
+export const configV2TiersServerResource = defineExternalResource<ConfigV2Tiers, { path: string; scopeId?: string }>({
   key: "config-v2.tiers",
   mode: "push",
   schema: configV2TiersSchema,

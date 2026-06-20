@@ -8,7 +8,6 @@ import { findNextRankInFolder } from "../queries/tasks";
 import { listActiveConversations } from "../queries/conversations";
 import { listPushesForAttempt } from "../queries/pushes";
 import { CONVERSATIONS_META_TASK_ID, updateTask } from "./tasks";
-import { tasksResource, attemptsResource, conversationsLiveResource } from "../resources";
 import { ensureMainWorktreeRoot, isCanonicalWorktreePath } from "@plugins/infra/plugins/worktree/server";
 import path from "path";
 
@@ -131,11 +130,6 @@ export async function adoptOrphanConversation(input: AdoptOrphanInput) {
         .returning();
       inserted = !!row;
     });
-  }
-  if (inserted) {
-    tasksResource.notify();
-    attemptsResource.notify();
-    conversationsLiveResource.notify();
   }
   if (!inserted) return null;
   const [row] = await db

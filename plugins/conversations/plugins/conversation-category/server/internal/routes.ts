@@ -7,7 +7,6 @@ import {
   clearConversationCategory,
 } from "../../shared/endpoints";
 import { conversationCategory } from "./tables";
-import { conversationCategoriesResource } from "./resource";
 import { classifyConversationJob } from "./classify-job";
 
 // Returns 202 Accepted — implement() always returns 200, so use a raw handler here.
@@ -40,10 +39,8 @@ export const handleSetCategory = implement(setConversationCategory, async ({ par
     category: body.category,
     source: "manual",
   });
-  conversationCategoriesResource.notify();
 });
 
 export const handleClearCategory = implement(clearConversationCategory, async ({ params }) => {
   await conversationCategory.delete(params.conversationId);
-  conversationCategoriesResource.notify();
 });

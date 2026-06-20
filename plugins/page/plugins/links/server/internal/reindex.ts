@@ -2,7 +2,6 @@ import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _blocks, PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/server";
 import { PageLinks } from "./extractor";
-import { backlinksResource } from "./resources";
 import { _pageLinks } from "./tables";
 
 // Rebuild the outgoing link edges for a single source page.
@@ -13,9 +12,9 @@ import { _pageLinks } from "./tables";
 // 3. Dedupe targets, drop self-references and ids that aren't `type="page"`
 //    blocks.
 // 4. Diff against the existing page_links rows for this source; insert added
-//    edges, delete removed ones.
-// 5. Notify `backlinksResource` for every affected target (old ∪ new) so
-//    those pages' panels refresh live.
+//    edges, delete removed ones. Each affected target's backlinks panel
+//    refreshes automatically — the page_links insert/delete is invalidated by
+//    the L4 DB change-feed, which fans out to every dependent backlinksResource.
 export async function reindexPage(pageId: string): Promise<void> {
   // Built fresh each call so newly-registered extractors are always honored.
   // `getContributions()` reads the populated server registry. Typed extractors
@@ -85,11 +84,5 @@ export async function reindexPage(pageId: string): Promise<void> {
           inArray(_pageLinks.targetPageId, toDelete),
         ),
       );
-  }
-
-  // Affected targets = old ∪ new; notify each so its backlinks panel refreshes.
-  const affected = new Set<string>([...oldTargets, ...validTargets]);
-  for (const target of affected) {
-    backlinksResource.notify({ pageId: target });
   }
 }

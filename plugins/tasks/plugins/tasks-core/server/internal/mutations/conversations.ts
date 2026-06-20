@@ -4,7 +4,6 @@ import type { ConversationModel } from "@plugins/conversations/plugins/model-pro
 import type { ConversationStatus } from "../../../core/conversation-status";
 import { _attempts, _conversations } from "../tables";
 import { conversations } from "../views";
-import { conversationsLiveResource } from "../resources";
 import { emitStatusChangeIfChanged, emitConversationStatusChange, readTaskStatus } from "../status-emit";
 
 export interface InsertConversationInput {
@@ -143,15 +142,12 @@ export async function updateConversationsTitleForTask(
     .update(_conversations)
     .set({ title, updatedAt: new Date() })
     .where(inArray(_conversations.id, rows.map((r) => r.id)));
-
-  conversationsLiveResource.notify();
 }
 
 export async function deleteConversationRow(id: string): Promise<void> {
   const { taskId, status: prevStatus } = await conversationContext(id);
   const before = taskId ? await readTaskStatus(taskId) : null;
   await db.delete(_conversations).where(eq(_conversations.id, id));
-  conversationsLiveResource.notify();
   if (taskId) await emitStatusChangeIfChanged(taskId, before);
   // A hard delete cascades away the conversation's queue rank row (entity
   // extension, FK CASCADE). Emit a terminal transition so the queue refreshes
@@ -196,7 +192,6 @@ export async function setConversationHibernated(
     .update(_conversations)
     .set({ hibernatedAt, updatedAt: new Date() })
     .where(eq(_conversations.id, id));
-  conversationsLiveResource.notify();
 }
 
 // Reset the idle timer: stamp lastViewedAt = now() when the user opens the

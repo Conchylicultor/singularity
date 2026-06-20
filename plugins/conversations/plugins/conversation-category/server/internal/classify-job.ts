@@ -12,7 +12,6 @@ import {
 } from "@plugins/infra/plugins/claude-cli/server";
 import { conversationCategoryConfig } from "../../shared/config";
 import { conversationCategory } from "./tables";
-import { conversationCategoriesResource } from "./resource";
 import { pickCategory } from "./pick-category";
 
 // First few turns are enough signal — the conversation's intent is set by
@@ -128,7 +127,5 @@ export const classifyConversationJob = defineJob({
       category: picked,
       source: "haiku",
     });
-
-    conversationCategoriesResource.notify();
   },
 });

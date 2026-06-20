@@ -3,7 +3,6 @@ import { db } from "@plugins/database/server";
 import { getServerBuildId } from "@plugins/build/server";
 import { setMutedByMetadata } from "@plugins/shell/plugins/notifications/server";
 import { _reports } from "./tables";
-import { reportsResource } from "./resources";
 import { isNoiseReport } from "./noise-rules";
 
 // Re-evaluate every report row against the CURRENT noise-rule set and sync both
@@ -32,7 +31,6 @@ export async function backfillNoiseClassification(): Promise<void> {
 
   const noiseIds: string[] = [];
   const signalIds: string[] = [];
-  let rowFlips = 0;
   for (const row of rows) {
     // Mirror record-report's staleOrigin derivation so a row reclassifies
     // identically to how a fresh occurrence would be classified right now.
@@ -53,7 +51,6 @@ export async function backfillNoiseClassification(): Promise<void> {
     });
     if (noise !== row.noise) {
       await db.update(_reports).set({ noise }).where(eq(_reports.id, row.id));
-      rowFlips++;
     }
     (noise ? noiseIds : signalIds).push(row.id);
   }
@@ -67,7 +64,6 @@ export async function backfillNoiseClassification(): Promise<void> {
   // via metadata.reportId; setMutedByMetadata writes only the rows that actually
   // disagree and pushes only when something changed, so a converged steady state
   // does two indexed scans and zero writes.
-  const muted = await setMutedByMetadata("reportId", noiseIds, true);
-  const unmuted = await setMutedByMetadata("reportId", signalIds, false);
-  if (rowFlips > 0 || muted > 0 || unmuted > 0) reportsResource.notify();
+  await setMutedByMetadata("reportId", noiseIds, true);
+  await setMutedByMetadata("reportId", signalIds, false);
 }

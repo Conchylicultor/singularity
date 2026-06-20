@@ -2,7 +2,6 @@ import { z } from "zod";
 import { eq } from "drizzle-orm";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { lockDeck, rankForTop, rankJoiningGroup, findTaskIdForConversation, upsertRank } from "./queue-ranks";
-import { queueRanksResource } from "./resource";
 import { validatePin } from "./pinned";
 import { db } from "@plugins/database/server";
 import { conversationsQueue } from "./tables";
@@ -41,6 +40,5 @@ export const seedRankJob = defineJob({
     });
 
     await validatePin();
-    queueRanksResource.notify();
   },
 });

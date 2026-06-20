@@ -1,6 +1,5 @@
 import { db } from "@plugins/database/server";
 import { browserHistory } from "./tables";
-import { browserRecentsServerResource } from "./resource";
 
 // Best-effort hostname for the visit title; falls back to the raw url if it
 // can't be parsed as a URL. `URL.parse` returns null instead of throwing, so no
@@ -15,5 +14,4 @@ export async function recordVisit(url: string): Promise<void> {
     url,
     title: titleFor(url),
   });
-  browserRecentsServerResource.notify();
 }

@@ -81,12 +81,6 @@ export const attemptsResource = defineResource({
         return rows.map((r) => r.attemptId);
       },
     },
-    {
-      resource: pushesResource,
-      // insertPush scopes the pushes notify to [attemptId], so the affected
-      // pushes "ids" ARE attempt ids — identity map.
-      affectedMap: (attemptIds) => [...attemptIds],
-    },
   ],
   loader: async (_params, ctx): Promise<AttemptWithConversations[]> => {
     const ids = ctx?.affectedIds;

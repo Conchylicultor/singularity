@@ -3,7 +3,6 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { PHASE_ORDER, type ConversationPhase } from "../../shared/schemas";
 import { conversationProgress } from "./tables";
-import { conversationProgressResource } from "./resource";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
 
@@ -71,7 +70,5 @@ export const classifyProgressJob = defineJob({
       phase: newPhase,
       source: "heuristic",
     });
-
-    conversationProgressResource.notify();
   },
 });

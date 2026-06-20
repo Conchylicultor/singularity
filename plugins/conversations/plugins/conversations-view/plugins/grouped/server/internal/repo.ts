@@ -3,7 +3,6 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { nextRankIn, nextRankUnder } from "@plugins/primitives/plugins/rank/server";
 import { _conversationGroupMembers, _conversationGroups } from "./tables";
-import { conversationGroupsResource } from "./resource";
 
 const GROUP_PREFIX = "cgrp";
 const newId = () =>
@@ -41,7 +40,6 @@ export async function createGroupWithMembers(input: CreateGroupInput) {
       prevRank = memberRank;
     }
   });
-  conversationGroupsResource.notify();
   return { id };
 }
 
@@ -67,7 +65,6 @@ export async function addMembersToGroup(groupId: string, conversationIds: string
         });
     }
   });
-  conversationGroupsResource.notify();
 }
 
 export async function addMemberToGroup(groupId: string, conversationId: string) {
@@ -81,7 +78,6 @@ export async function removeMember(conversationId: string): Promise<boolean> {
     .returning({ conversationId: _conversationGroupMembers.conversationId });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
-  conversationGroupsResource.notify();
   return true;
 }
 
@@ -103,7 +99,6 @@ export async function updateGroup(id: string, patch: UpdateGroupPatch): Promise<
     .returning({ id: _conversationGroups.id });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
-  conversationGroupsResource.notify();
   return true;
 }
 
@@ -114,6 +109,5 @@ export async function deleteGroup(id: string): Promise<boolean> {
     .returning({ id: _conversationGroups.id });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
-  conversationGroupsResource.notify();
   return true;
 }

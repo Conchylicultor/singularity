@@ -7,7 +7,6 @@ import { AgentSchema } from "../../core/schemas";
 import { _agents } from "./tables";
 import { agentAttachments } from "./tables-attachments";
 import { agents } from "./views";
-import { agentsResource } from "./resources";
 
 export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
   const id = params.id;
@@ -65,7 +64,6 @@ export const handleUpdate = implement(updateAgent, async ({ params, body }) => {
   }
 
   const [row] = await db.select().from(agents).where(eq(agents.id, id)).limit(1);
-  agentsResource.notify();
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new HttpError(404, "Not found after update");
   return AgentSchema.parse(row);

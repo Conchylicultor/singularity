@@ -8,7 +8,6 @@ import {
   getConversation,
   markConversationClosed,
   maybeDropTaskOnExit,
-  notifyConversationsChanged,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 
@@ -41,7 +40,6 @@ export const exitCleanFinalizeJob = defineJob({
 
       await markConversationClosed(conversationId);
       await deleteConversation(conversationId);
-      notifyConversationsChanged();
       // Server-side terminus of the clean push-and-exit flow: persist the
       // close notification exactly once (the client used to fire this toast
       // from a per-tab effect, duplicating the row per open tab). The copy

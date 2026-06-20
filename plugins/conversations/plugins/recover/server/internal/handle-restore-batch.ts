@@ -1,5 +1,4 @@
 import { resumeConversation } from "@plugins/conversations/server";
-import { notifyConversationsChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { restoreBatch } from "../../shared/endpoints";
 
@@ -21,6 +20,5 @@ export const handleRestoreBatch = implement(restoreBatch, async ({ body }) => {
       }
     }),
   );
-  notifyConversationsChanged();
   return { results };
 });

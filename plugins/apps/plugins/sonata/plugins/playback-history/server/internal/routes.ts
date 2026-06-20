@@ -3,7 +3,6 @@ import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { recordPlay } from "../../shared/endpoints";
 import { _songPlaybackExt } from "./tables";
-import { playbackHistoryLiveResource } from "./resource";
 
 export const handleRecordPlay = implement(recordPlay, async ({ params }) => {
   const now = new Date();
@@ -20,5 +19,4 @@ export const handleRecordPlay = implement(recordPlay, async ({ params }) => {
         updatedAt: now,
       },
     });
-  playbackHistoryLiveResource.notify();
 });

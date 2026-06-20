@@ -11,7 +11,7 @@
   - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/frame.Frame`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`
   - Exports: Values: `recoveryPane`
 - Server:
-  - Uses: `conversations.resumeConversation`, `infra/endpoints.implement`, `tasks/tasks-core.notifyConversationsChanged`
+  - Uses: `conversations.resumeConversation`, `infra/endpoints.implement`
   - Routes: `POST /api/conversations-recover/restore-batch`
 - Shared:
   - Exports: Types: `RestoreBatchBody`; Values: `restoreBatch`, `RestoreBatchBodySchema`

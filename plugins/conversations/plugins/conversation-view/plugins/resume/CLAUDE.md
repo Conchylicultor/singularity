@@ -8,7 +8,7 @@
 - Web:
   - Uses: `conversations.useConversation`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpointMutation`, `primitives/css/ui-kit.Button`, `shell/notifications.toast`
 - Server:
-  - Uses: `conversations.resumeConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core.notifyConversationsChanged`
+  - Uses: `conversations.resumeConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
   - Routes: `POST /api/conversations/:id/resume`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

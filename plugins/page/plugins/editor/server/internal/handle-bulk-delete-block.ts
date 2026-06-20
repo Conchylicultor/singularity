@@ -3,7 +3,6 @@ import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { bulkDeleteBlocks } from "../../core/endpoints";
 import { _blocks } from "./tables";
-import { blocksLiveResource } from "./resources";
 import { blocksChanged } from "./tables-events";
 
 export const handleBulkDeleteBlock = implement(
@@ -22,7 +21,6 @@ export const handleBulkDeleteBlock = implement(
         ),
       )
       .returning({ id: _blocks.id });
-    blocksLiveResource.notify({ pageId: params.pageId });
     await blocksChanged.emit({ pageId: params.pageId });
     return { deleted: deleted.length };
   },

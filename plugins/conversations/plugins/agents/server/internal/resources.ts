@@ -2,10 +2,7 @@ import { asc } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import {
-  listConversationsForDisplay,
-  conversationsLiveResource,
-} from "@plugins/tasks/plugins/tasks-core/server";
+import { listConversationsForDisplay } from "@plugins/tasks/plugins/tasks-core/server";
 import { _agent_launches } from "./tables";
 import { agents } from "./views";
 import {
@@ -28,9 +25,6 @@ export const agentLaunchesResource = defineResource({
   key: "agent-launches",
   mode: "push",
   schema: z.array(AgentLaunchWithStatusSchema),
-  // Re-notify whenever conversations change so `latestConversation` stays in
-  // sync with the live status broadcast.
-  dependsOn: [{ resource: conversationsLiveResource }],
   loader: async (): Promise<AgentLaunchWithStatus[]> => {
     const [launches, convRows] = await Promise.all([
       db.select().from(_agent_launches).orderBy(asc(_agent_launches.createdAt)),

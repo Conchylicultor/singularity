@@ -3,7 +3,6 @@ import { db } from "@plugins/database/server";
 import { _attempts, _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../views";
 import type { TaskStatus } from "../schema";
-import { tasksResource, taskDetailResource } from "../resources";
 import { findNextRankInFolder, isDescendant, taskDependsOn } from "../queries/tasks";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
@@ -56,7 +55,6 @@ export async function createTask(input: CreateTaskInput) {
       .set({ expanded: true, updatedAt: new Date() })
       .where(eq(_tasks.id, folderId));
   }
-  tasksResource.notify();
   const [full] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   // New tasks emit their first-ever status (typically "new"). Subscribers
   // bound via `where({ taskId })` only register after creation, so this
@@ -114,8 +112,6 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
       .set({ expanded: true, updatedAt: new Date() })
       .where(eq(_tasks.id, patch.folderId));
   }
-  tasksResource.notify();
-  taskDetailResource.notify({ id });
   await emitStatusChangeIfChanged(id, before);
   const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
@@ -139,8 +135,6 @@ export async function updateTaskTitle(
       ),
     )
     .returning({ id: _tasks.id });
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (updated) tasksResource.notify();
   return !!updated;
 }
 
@@ -172,7 +166,6 @@ export async function addTaskDependency(
     .insert(_taskDependencies)
     .values({ taskId, dependsOnTaskId })
     .onConflictDoNothing();
-  tasksResource.notify();
   await emitStatusChangeIfChanged(taskId, prev);
 }
 
@@ -192,7 +185,6 @@ export async function removeTaskDependency(
     .returning({ taskId: _taskDependencies.taskId });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
-  tasksResource.notify();
   await emitStatusChangeIfChanged(taskId, prev);
   return true;
 }
@@ -233,8 +225,6 @@ export async function dropTaskTree(id: string): Promise<number> {
     .set({ droppedAt: now, heldAt: null, updatedAt: now })
     .where(inArray(_tasks.id, ids));
 
-  tasksResource.notify();
-
   for (const tid of ids) {
     await emitStatusChangeIfChanged(tid, befores.get(tid) ?? null);
   }
@@ -268,6 +258,5 @@ export async function backfillMetaParent(
       ),
     )
     .returning({ id: _tasks.id });
-  if (rows.length > 0) tasksResource.notify();
   return rows.length;
 }

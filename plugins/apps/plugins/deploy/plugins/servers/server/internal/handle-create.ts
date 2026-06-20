@@ -3,7 +3,6 @@ import { setSecret } from "@plugins/infra/plugins/secrets/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createServer } from "../../shared/endpoints";
 import { _deployServers } from "./tables";
-import { serversResource } from "./resources";
 
 export const handleCreate = implement(createServer, async ({ body }) => {
   if (!body.host) {
@@ -24,7 +23,6 @@ export const handleCreate = implement(createServer, async ({ body }) => {
   if (body.sshPrivateKey) {
     await setSecret({ namespace: "deploy-ssh", key: id }, body.sshPrivateKey);
   }
-  serversResource.notify();
   return {
     ...row,
     createdAt: row.createdAt.toISOString(),

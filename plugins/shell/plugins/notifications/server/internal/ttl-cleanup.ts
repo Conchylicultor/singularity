@@ -3,7 +3,6 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { _notifications } from "./tables";
-import { notificationsResource } from "./resources";
 
 const DISMISSED_TTL_MS = 7 * 24 * 3_600_000;
 const AUTO_DISMISS_TTL_MS = 24 * 3_600_000;
@@ -31,7 +30,5 @@ export const ttlCleanupJob = defineJob({
           lt(_notifications.createdAt, autoDismissCutoff),
         ),
       );
-
-    notificationsResource.notify();
   },
 });

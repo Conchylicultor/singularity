@@ -14,6 +14,7 @@ export {
   Resource,
   applyDbChange,
   defineResource,
+  defineExternalResource,
   handleResourceHttp,
   loadResourceByKey,
   notificationsWsHandler,
@@ -22,6 +23,7 @@ export {
 } from "./resources";
 export type {
   DependsOnEntry,
+  ExternalResource,
   RecomputeIntent,
   ResourceDefinition,
   ResourceMode,

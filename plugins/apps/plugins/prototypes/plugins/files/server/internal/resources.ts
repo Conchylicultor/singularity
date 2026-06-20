@@ -1,10 +1,10 @@
 import { z } from "zod";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import { PrototypeMetaSchema } from "../../core";
 import { listPrototypeMetas } from "./list";
 
 /** Server side of `prototypes.list` — re-reads every meta.json on each notify. */
-export const prototypesResource = defineResource({
+export const prototypesResource = defineExternalResource({
   key: "prototypes.list",
   mode: "push",
   schema: z.array(PrototypeMetaSchema),
@@ -17,7 +17,7 @@ export const prototypesResource = defineResource({
  */
 let currentVersion = Date.now();
 
-export const prototypesVersionResource = defineResource({
+export const prototypesVersionResource = defineExternalResource({
   key: "prototypes.version",
   mode: "push",
   schema: z.number(),

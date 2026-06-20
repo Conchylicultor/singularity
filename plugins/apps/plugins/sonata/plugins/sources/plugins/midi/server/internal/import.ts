@@ -11,7 +11,6 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/library/server";
 import { deriveMidiSongMeta, parseMidi } from "../../shared/parse";
 import { songMidi, _songMidiExt } from "./tables";
-import { songMidiLiveResource } from "./resource";
 
 /** SHA-256 (hex) of the raw `.mid` bytes — the content-dedup key. */
 export function hashMidiBytes(bytes: Uint8Array): string {
@@ -103,7 +102,6 @@ async function writeMidiSong({
   // one so a re-import of an edited file leaves no orphaned previous attachment.
   await songAttachments.set(id, [attachmentId]);
 
-  songMidiLiveResource.notify();
   return id;
 }
 
@@ -251,7 +249,6 @@ export async function backfillContentHashes(): Promise<void> {
     .select()
     .from(_songMidiExt)
     .where(isNull(_songMidiExt.contentHash));
-  let backfilled = 0;
   for (const row of rows) {
     const att = await getAttachment(row.attachmentId);
     if (!att) {
@@ -271,9 +268,7 @@ export async function backfillContentHashes(): Promise<void> {
       .update(_songMidiExt)
       .set({ contentHash: hashMidiBytes(await file.bytes()) })
       .where(eq(_songMidiExt.parentId, row.parentId));
-    backfilled++;
   }
-  if (backfilled > 0) songMidiLiveResource.notify();
 }
 
 /**
@@ -310,5 +305,4 @@ export async function setSourceMissing(
     .update(_songMidiExt)
     .set({ sourceMissing: missing })
     .where(eq(_songMidiExt.parentId, songId));
-  songMidiLiveResource.notify();
 }

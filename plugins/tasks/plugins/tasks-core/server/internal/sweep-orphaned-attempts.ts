@@ -1,7 +1,6 @@
 import { db } from "@plugins/database/server";
 import { _attempts, _conversations } from "./tables";
 import { eq, isNull } from "drizzle-orm";
-import { attemptsResource } from "./resources";
 import { emitStatusChangeIfChanged, readTaskStatus } from "./status-emit";
 
 export async function sweepOrphanedAttempts(): Promise<void> {
@@ -24,5 +23,4 @@ export async function sweepOrphanedAttempts(): Promise<void> {
         `createConversation crashed after createAttempt but before insertConversation`,
     );
   }
-  attemptsResource.notify();
 }

@@ -1,6 +1,5 @@
 import { db } from "@plugins/database/server";
 import { _notifications } from "./tables";
-import { notificationsResource } from "./resources";
 import type { NotificationVariant } from "../../shared/schema";
 
 export interface RecordNotificationInput {
@@ -73,7 +72,6 @@ export async function recordNotification(
       },
     })
     .returning({ id: _notifications.id });
-  notificationsResource.notify();
   // onConflictDoUpdate returns the row on both insert and update, so this is
   // populated whether the write was a fresh insert or a dedup hit.
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess

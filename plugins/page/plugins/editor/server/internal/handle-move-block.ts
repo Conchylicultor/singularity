@@ -2,9 +2,8 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { moveBlock } from "../../core/endpoints";
-import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
-import { pagesLiveResource, blocksLiveResource } from "./resources";
 import { blocksChanged } from "./tables-events";
 import { recomputePageIdSubtree } from "./page-id";
 
@@ -45,16 +44,15 @@ export const handleMoveBlock = implement(moveBlock, async ({ params, body }) => 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new HttpError(404, "Not found after move");
 
-  // Notify both the old and the (possibly new) page scope, deduped.
+  // Fan out to reindex subscribers for both the old and the (possibly new) page
+  // scope, deduped. The page_blocks content + sidebar live resources invalidate
+  // via the L4 DB change-feed on the move write.
   const affected = new Set<string>();
   if (before.pageId !== null) affected.add(before.pageId);
   if (row.pageId !== null) affected.add(row.pageId);
   for (const pageId of affected) {
-    blocksLiveResource.notify({ pageId });
     await blocksChanged.emit({ pageId });
   }
-  // Moving a page reorders / reparents the sidebar tree.
-  if (before.type === PAGE_BLOCK_TYPE) pagesLiveResource.notify();
 
   return BlockSchema.parse(row);
 });

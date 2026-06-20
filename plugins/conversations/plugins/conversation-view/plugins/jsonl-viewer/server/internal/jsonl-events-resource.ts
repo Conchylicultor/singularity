@@ -1,4 +1,4 @@
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import {
   findTranscriptPath,
   readJsonlEvents,
@@ -13,7 +13,7 @@ type Params = { id: string };
 const unsubscribes = new Map<string, () => void>();
 const cachedEvents = new Map<string, JsonlEvent[]>();
 
-export const jsonlEventsResource = defineResource({
+export const jsonlEventsResource = defineExternalResource({
   key: "jsonl-events",
   mode: "push",
   schema: JsonlEventsPayloadSchema,

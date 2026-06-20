@@ -5,7 +5,6 @@ import { getServerBuildId } from "@plugins/build/server";
 import { createTask, getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { _reports } from "./tables";
-import { reportsResource } from "./resources";
 import { bumpWindowAndCheck } from "./velocity";
 import { isNoiseReport } from "./noise-rules";
 import { REPORTS_META_TASK_ID } from "./meta-reports";
@@ -165,12 +164,10 @@ export async function recordReport(
   // (e.g. the slow-op rollup) after its first burst.
   if (limited) {
     // Keep the row's count accurate but don't churn the task or the bus.
-    reportsResource.notify();
     return { taskId: row.taskId, wasNew: false, rateLimited: true };
   }
 
   const outcome = await ensureTaskForReport(row.id, `${fp}|${worktree}`, spec);
-  reportsResource.notify();
   // Mirror the task title's "[Stale tab]" marker into the bell so the
   // notification itself reads as benign version-skew at a glance.
   const stalePrefix = staleOrigin ? "[Stale tab] " : "";

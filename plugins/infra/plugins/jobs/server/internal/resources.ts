@@ -1,6 +1,6 @@
 import { desc, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { defineResource, defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import {
   DeadJobsPayloadSchema,
   JobsPayloadSchema,
@@ -106,18 +106,30 @@ export const deadJobsResource = defineResource({
 
 let pollTimer: ReturnType<typeof setInterval> | undefined;
 
-// Graphile-worker lifecycle transitions (pick up, complete, fail) happen inside
-// the runner, which we can't hook. Poll while observed so the debug pane stays
-// reasonably fresh; explicit mutations (retry/cancel) notify immediately.
-export const jobsListResource = defineResource({
+// `jobs-list` reads the `graphile_worker.*` job tables, which live OUTSIDE the
+// public schema the L4 DB change-feed triggers cover (the feed deliberately
+// excludes the graphile_worker schema) — so the feed can NEVER invalidate this
+// resource. It is therefore an explicit-source resource (`defineExternalResource`,
+// the only factory that exposes `notify`): graphile-worker lifecycle transitions
+// (pick up, complete, fail) happen inside the runner we can't hook, so we poll
+// while observed to keep the debug pane reasonably fresh; explicit mutations
+// (retry/cancel/dead-gc) notify immediately. Follow-up: graphile-worker's own
+// LISTEN channel could replace the poll, or the feed could be extended to the
+// graphile_worker schema.
+export const jobsListResource = defineExternalResource({
   key: "jobs-list",
   mode: "invalidate",
   schema: JobsPayloadSchema,
   loader: async (): Promise<JobsPayload> => loadJobsList(500),
   onFirstSubscribe: () => {
-    pollTimer = setInterval(() => { jobsListResource.notify(); }, 3000);
+    pollTimer = setInterval(() => {
+      jobsListResource.notify();
+    }, 3000);
   },
   onLastUnsubscribe: () => {
-    if (pollTimer) { clearInterval(pollTimer); pollTimer = undefined; }
+    if (pollTimer) {
+      clearInterval(pollTimer);
+      pollTimer = undefined;
+    }
   },
 });

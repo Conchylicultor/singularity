@@ -5,7 +5,6 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { pasteBlocks } from "../../core/endpoints";
 import { PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
-import { blocksLiveResource } from "./resources";
 import { blocksChanged } from "./tables-events";
 import { computePageId } from "./page-id";
 import { insertForest, loadPageBlocks, rankWindow } from "./forest";
@@ -48,7 +47,6 @@ export const handlePasteBlock = implement(
       }),
     );
 
-    blocksLiveResource.notify({ pageId: params.pageId });
     await blocksChanged.emit({ pageId: params.pageId });
     return { rootIds };
   },

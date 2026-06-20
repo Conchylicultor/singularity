@@ -1,6 +1,7 @@
 import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
 import type {
   Resource as RtResource,
+  ExternalResource as RtExternalResource,
   ResourceDefinition as RtDef,
   ResourceMode as RtMode,
   ResourceParams as RtParams,
@@ -24,9 +25,14 @@ import type {
 export type ResourceParams = RtParams;
 export type ResourceMode = RtMode;
 export type Resource<T, P extends ResourceParams = ResourceParams> = RtResource<T, P>;
+export type ExternalResource<T, P extends ResourceParams = ResourceParams> = RtExternalResource<
+  T,
+  P
+>;
 export type ResourceDefinition<T, P extends ResourceParams = ResourceParams> = RtDef<T, P>;
 export type DependsOnEntry<P extends ResourceParams = ResourceParams> = RtDep<P>;
 
 const runtime = createResourceRuntime();
-export const { defineResource, handleResourceHttp, notificationsWsHandler } = runtime;
+export const { defineResource, defineExternalResource, handleResourceHttp, notificationsWsHandler } =
+  runtime;
 // withNotifyBatch is available from the runtime but central need not export it.

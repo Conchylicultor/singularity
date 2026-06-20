@@ -1,7 +1,6 @@
 import { db } from "@plugins/database/server";
 import { _attempts } from "../tables";
 import { attempts } from "../views";
-import { attemptsResource } from "../resources";
 import { eq } from "drizzle-orm";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
 
@@ -15,7 +14,6 @@ export async function deleteAttempt(id: string): Promise<void> {
   if (!row) return;
   const before = await readTaskStatus(row.taskId);
   await db.delete(_attempts).where(eq(_attempts.id, id));
-  attemptsResource.notify();
   await emitStatusChangeIfChanged(row.taskId, before);
 }
 
@@ -32,7 +30,6 @@ export async function createAttempt(input: CreateAttemptInput) {
   // here for completeness in case an attempt is created without one.
   const before = await readTaskStatus(input.taskId);
   await db.insert(_attempts).values(input);
-  attemptsResource.notify();
   const [row] = await db
     .select()
     .from(attempts)

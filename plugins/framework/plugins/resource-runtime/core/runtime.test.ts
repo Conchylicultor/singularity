@@ -97,13 +97,13 @@ describe("flushNotifies — level-parallel", () => {
     const slow = controllable(0);
     const fast = controllable(0);
 
-    const slowR = h.runtime.defineResource({
+    const slowR = h.runtime.defineExternalResource({
       key: "slow",
       mode: "push",
       schema: z.number(),
       loader: slow.loader,
     });
-    const fastR = h.runtime.defineResource({
+    const fastR = h.runtime.defineExternalResource({
       key: "fast",
       mode: "push",
       schema: z.number(),
@@ -133,7 +133,7 @@ describe("flushNotifies — level-parallel", () => {
 
   test("a downstream frame is sent strictly after its upstream", async () => {
     const h = harness();
-    const upstreamR = h.runtime.defineResource({
+    const upstreamR = h.runtime.defineExternalResource({
       key: "up",
       mode: "push",
       schema: z.number(),
@@ -163,7 +163,7 @@ describe("flushNotifies — level-parallel", () => {
 
   test("version advances monotonically per (key,pk), one per notify", async () => {
     const h = harness();
-    const r = h.runtime.defineResource({
+    const r = h.runtime.defineExternalResource({
       key: "ver",
       mode: "push",
       schema: z.number(),
@@ -183,13 +183,13 @@ describe("flushNotifies — level-parallel", () => {
   test("a notify arriving mid-flush is re-drained, once, after the in-flight flush", async () => {
     const h = harness();
     const slow = controllable(0);
-    const slowR = h.runtime.defineResource({
+    const slowR = h.runtime.defineExternalResource({
       key: "s",
       mode: "push",
       schema: z.number(),
       loader: slow.loader,
     });
-    const fastR = h.runtime.defineResource({
+    const fastR = h.runtime.defineExternalResource({
       key: "f",
       mode: "push",
       schema: z.number(),
@@ -360,7 +360,7 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
 
   test("notifyStatsFor counts hand vs feed sources", async () => {
     const h = feedHarness({ tasks: ["tasks"] });
-    const r = h.runtime.defineResource({
+    const r = h.runtime.defineExternalResource({
       key: "tasks",
       mode: "invalidate",
       schema: z.number(),

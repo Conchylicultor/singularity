@@ -9,7 +9,7 @@
   - Contributes: `ExitMenu.Item` "hold-and-exit" → `HoldAndExitItem`
   - Uses: `conversations.useConversation`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `primitives/css/ui-kit.DropdownMenuItem`, `shell/notifications.toast`
 - Server:
-  - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.markConversationClosed`, `tasks/tasks-core.notifyConversationsChanged`, `tasks/tasks-core.updateTask`
+  - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.markConversationClosed`, `tasks/tasks-core.updateTask`
   - Routes: `POST /api/conversations/:id/hold-and-exit`
 - Shared:
   - Exports: Values: `holdAndExit`

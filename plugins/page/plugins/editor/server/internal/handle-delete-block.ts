@@ -1,10 +1,8 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { deleteBlock } from "../../core/endpoints";
-import { PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
-import { pagesLiveResource, blocksLiveResource } from "./resources";
 import { blocksChanged } from "./tables-events";
 import { BlockLifecycle } from "./document-hooks";
 import { collectBlockSubtree } from "./collect-subtree";
@@ -22,19 +20,6 @@ export const handleDeleteBlock = implement(deleteBlock, async ({ params }) => {
   // page_links edges). Snapshot the subtree and let registered hooks capture any
   // derived state (e.g. backlinks) that depends on those soon-to-vanish rows.
   const subtreeIds = await collectBlockSubtree(params.id);
-  // The page ids inside the deleted subtree — their content resources go empty
-  // and the sidebar must drop them.
-  const deletedPages = subtreeIds.length
-    ? await db
-        .select({ id: _blocks.id })
-        .from(_blocks)
-        .where(
-          and(
-            inArray(_blocks.id, subtreeIds),
-            eq(_blocks.type, PAGE_BLOCK_TYPE),
-          ),
-        )
-    : [];
 
   const afterCallbacks: Array<() => void | Promise<void>> = [];
   for (const hook of BlockLifecycle.BeforeDelete.getContributions()) {
@@ -49,16 +34,11 @@ export const handleDeleteBlock = implement(deleteBlock, async ({ params }) => {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new HttpError(404, "Not found");
 
-  // The deleted block's content list lost a row. Notify its containing page.
+  // The deleted block's content list lost a row. Fan out to reindex subscribers
+  // for its containing page; the page_blocks live resources invalidate via the
+  // L4 DB change-feed on the cascade DELETE.
   if (target.pageId !== null) {
-    blocksLiveResource.notify({ pageId: target.pageId });
     await blocksChanged.emit({ pageId: target.pageId });
-  }
-  // Any page in the deleted subtree leaves the sidebar; its content resource is
-  // now empty. Refresh once for the sidebar and per emptied page.
-  if (deletedPages.length > 0) {
-    pagesLiveResource.notify();
-    for (const p of deletedPages) blocksLiveResource.notify({ pageId: p.id });
   }
 
   // Hooks re-push state that depended on the cascade-deleted rows (e.g. the

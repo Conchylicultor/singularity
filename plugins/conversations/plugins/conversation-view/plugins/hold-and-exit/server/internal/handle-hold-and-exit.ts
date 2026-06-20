@@ -1,6 +1,6 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { deleteConversation } from "@plugins/conversations/server";
-import { getConversation, markConversationClosed, notifyConversationsChanged, updateTask } from "@plugins/tasks/plugins/tasks-core/server";
+import { getConversation, markConversationClosed, updateTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { holdAndExit } from "../../shared/endpoints";
 
 export const handleHoldAndExit = implement(holdAndExit, async ({ params }) => {
@@ -13,5 +13,4 @@ export const handleHoldAndExit = implement(holdAndExit, async ({ params }) => {
 
   await markConversationClosed(params.id);
   await deleteConversation(params.id);
-  notifyConversationsChanged();
 });

@@ -2,7 +2,6 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { findTaskIdForConversation } from "./queue-ranks";
 import { getPinnedId, setPinnedId, topWaitingByRank } from "./pinned";
-import { queueRanksResource } from "./resource";
 
 export const advancePinJob = defineJob({
   name: "queue.advance-pin",
@@ -21,6 +20,5 @@ export const advancePinJob = defineJob({
     const taskId = await findTaskIdForConversation(conversationId);
     const nextId = await topWaitingByRank(conversationId, taskId ?? undefined);
     await setPinnedId(nextId);
-    queueRanksResource.notify();
   },
 });

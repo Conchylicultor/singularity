@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _songs } from "./tables";
-import { songsLiveResource } from "./resources";
 
 export interface UpdateSongMetaInput {
   id: string;
@@ -29,5 +28,4 @@ export async function updateSongMeta(input: UpdateSongMetaInput): Promise<void> 
   if (Object.keys(patch).length === 0) return;
 
   await db.update(_songs).set(patch).where(eq(_songs.id, input.id));
-  songsLiveResource.notify();
 }

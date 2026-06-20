@@ -1,6 +1,5 @@
 import { db } from "@plugins/database/server";
 import { _songs } from "./tables";
-import { songsLiveResource } from "./resources";
 
 export interface CreateSongRowInput {
   /** Optional stable id (e.g. a starter's seed id). Defaults to a random UUID. */
@@ -32,6 +31,5 @@ export async function createSongRow(input: CreateSongRowInput): Promise<string> 
       endBeat: input.endBeat,
     })
     .onConflictDoNothing();
-  songsLiveResource.notify();
   return id;
 }

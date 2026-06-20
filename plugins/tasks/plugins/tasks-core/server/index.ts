@@ -51,7 +51,6 @@ export {
   pushesResource,
   conversationsLiveResource,
 } from "./internal/resources";
-export { notifyConversationsChanged } from "./internal/notify-conversations";
 export type {
   AttemptWithConversations,
   ConversationSummary,
@@ -99,7 +98,7 @@ export {
   listPushShasIn,
 } from "./internal/queries/pushes";
 
-// Mutation functions — writes (all call .notify() internally)
+// Mutation functions — writes (live-state invalidation is DB-feed-driven)
 export {
   CONVERSATIONS_META_TASK_ID,
   createTask,

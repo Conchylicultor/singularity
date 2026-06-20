@@ -9,7 +9,7 @@
   - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
   - Uses: `conversations.useConversation`, `conversations.useHasActiveSiblings`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `shell/notifications.toast`
 - Server:
-  - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.markConversationClosed`, `tasks/tasks-core.maybeDropTaskOnExit`, `tasks/tasks-core.notifyConversationsChanged`
+  - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.markConversationClosed`, `tasks/tasks-core.maybeDropTaskOnExit`
   - Routes: `POST /api/conversations/:id/drop-and-exit`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

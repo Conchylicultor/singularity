@@ -4,7 +4,6 @@ import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { conversationProgress } from "./tables";
-import { conversationProgressResource } from "./resource";
 
 // Triggered on every `pushLanded` event. Sets phase = "pushed" for ALL
 // conversations in the attempt — not just the one that ran ./singularity push.
@@ -45,7 +44,5 @@ export const markProgressPushedJob = defineJob({
         source: "push",
       });
     }
-
-    conversationProgressResource.notify();
   },
 });

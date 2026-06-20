@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _claudeCliCalls } from "./tables";
-import { claudeCliCallsResource, RECENT_CALLS_LIMIT } from "./resources";
+import { RECENT_CALLS_LIMIT } from "./resources";
 
 export interface RecordCallInput {
   model: string;
@@ -37,7 +37,6 @@ export async function recordClaudeCliCall(input: RecordCallInput): Promise<void>
         LIMIT ${RECENT_CALLS_LIMIT}
       )
     `);
-    claudeCliCallsResource.notify();
   // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.warn("[claude-cli] failed to record call:", err);

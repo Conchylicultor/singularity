@@ -10,7 +10,6 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { bulkMoveBlocks } from "../../core/endpoints";
 import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
-import { blocksLiveResource } from "./resources";
 import { blocksChanged } from "./tables-events";
 import { recomputePageIdSubtree } from "./page-id";
 import { loadPageBlocks, rankWindow } from "./forest";
@@ -69,7 +68,6 @@ export const handleBulkMoveBlock = implement(
       for (const root of roots) await recomputePageIdSubtree(root, tx);
     });
 
-    blocksLiveResource.notify({ pageId: params.pageId });
     await blocksChanged.emit({ pageId: params.pageId });
 
     const moved = await db

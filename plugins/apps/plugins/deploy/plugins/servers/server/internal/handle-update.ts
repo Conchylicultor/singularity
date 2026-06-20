@@ -4,7 +4,6 @@ import { setSecret } from "@plugins/infra/plugins/secrets/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { updateServer } from "../../shared/endpoints";
 import { _deployServers } from "./tables";
-import { serversResource } from "./resources";
 
 export const handleUpdate = implement(updateServer, async ({ params, body }) => {
   const updates: Record<string, unknown> = { updatedAt: new Date() };
@@ -26,7 +25,6 @@ export const handleUpdate = implement(updateServer, async ({ params, body }) => 
       body.sshPrivateKey,
     );
   }
-  serversResource.notify();
   return {
     ...row,
     createdAt: row.createdAt.toISOString(),

@@ -3,7 +3,6 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { promoteQueue } from "../../shared/endpoints";
 import { lockDeck, rankForTop, reseatGroupMembers, upsertRank } from "./queue-ranks";
-import { queueRanksResource } from "./resource";
 import { setPinnedId, validatePin } from "./pinned";
 
 export const handlePromote = implement(promoteQueue, async ({ body }) => {
@@ -24,6 +23,4 @@ export const handlePromote = implement(promoteQueue, async ({ body }) => {
       await setPinnedId(conversationId, tx);
     }
   });
-
-  queueRanksResource.notify();
 });

@@ -5,7 +5,6 @@ import {
   songAttachments,
 } from "@plugins/apps/plugins/sonata/plugins/library/server";
 import { songMidi } from "./tables";
-import { songMidiLiveResource } from "./resource";
 import { hashMidiBytes } from "./import";
 import { STARTERS } from "./starters";
 
@@ -21,7 +20,6 @@ import { STARTERS } from "./starters";
  * `onConflictDoNothing` preserves the existing row).
  */
 export async function seedMidiStarters(): Promise<void> {
-  let seeded = false;
   for (const starter of STARTERS) {
     if (await songMidi.get(starter.id)) continue; // already has MIDI data
 
@@ -55,7 +53,5 @@ export async function seedMidiStarters(): Promise<void> {
       contentHash: hashMidiBytes(bytes),
     });
     await songAttachments.add(starter.id, [att.id]);
-    seeded = true;
   }
-  if (seeded) songMidiLiveResource.notify();
 }

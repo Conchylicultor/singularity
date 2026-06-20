@@ -1,12 +1,12 @@
 import { tasksPreprompt } from "./tables";
-import { taskPrepromptsResource } from "./resource";
 
 export async function getTaskPreprompt(taskId: string) {
   return tasksPreprompt.get(taskId);
 }
 
-// Upsert when a preprompt id is given, delete when null. Notifies the
-// live-state resource so every surface (draft form, task detail) re-renders.
+// Upsert when a preprompt id is given, delete when null. The live-state resource
+// is invalidated by the DB change-feed so every surface (draft form, task
+// detail) re-renders.
 export async function setTaskPreprompt(
   taskId: string,
   prepromptId: string | null,
@@ -16,7 +16,6 @@ export async function setTaskPreprompt(
   } else {
     await tasksPreprompt.delete(taskId);
   }
-  taskPrepromptsResource.notify();
 }
 
 // Snapshot a source task's preprompt onto a destination task. Used when an agent

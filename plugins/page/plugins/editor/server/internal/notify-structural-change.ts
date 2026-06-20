@@ -1,26 +1,25 @@
 import { PAGE_BLOCK_TYPE } from "../../core/schemas";
 import type { BlockRow } from "./forest";
 import { notifyBlockChange } from "./notify";
-import { pagesLiveResource, blocksLiveResource } from "./resources";
 import { blocksChanged } from "./tables-events";
 
 /**
- * Shared post-commit notification for a structural edit to a page's content
+ * Shared post-commit event fan-out for a structural edit to a page's content
  * (the `applyBlockOp` and `patch` handlers both call this). It:
  *
- *   1. notifies the page's content resource + emits `blocksChanged` (via
- *      `notifyBlockChange`) so the open editor and link/image reindexers refresh,
- *      with a `type` derived from the primary edited block so a page edit also
- *      refreshes the sidebar; and
- *   2. for any `type="page"` block in the deleted set, refreshes the sidebar and
- *      that page's (now-empty) content resource + emits its `blocksChanged`.
+ *   1. emits `blocksChanged` for the edited page (via `notifyBlockChange`) so the
+ *      link/image reindexers refresh, with a `type` derived from the primary
+ *      edited block; and
+ *   2. for any `type="page"` block in the deleted set, emits its `blocksChanged`.
  *
- * Factored out of the per-handler bodies so the two structural endpoints share
- * one notify/trigger path rather than each re-deriving it.
+ * The `page_blocks` content + sidebar live resources are invalidated
+ * automatically by the L4 DB change-feed on the underlying write, so this helper
+ * only fans out the cross-plugin event. Factored out of the per-handler bodies
+ * so the two structural endpoints share one trigger path.
  */
 export async function notifyStructuralChange(args: {
   pageId: string;
-  /** The primary edited block's type, used to refresh the sidebar on a page edit. */
+  /** The primary edited block's type, used by reindex subscribers. */
   primaryType: string;
   /** Rows that were deleted by this edit (to fan out per emptied sub-page). */
   deletedRows: BlockRow[];
@@ -28,11 +27,7 @@ export async function notifyStructuralChange(args: {
   await notifyBlockChange({ pageId: args.pageId, type: args.primaryType });
 
   const deletedPages = args.deletedRows.filter((r) => r.type === PAGE_BLOCK_TYPE);
-  if (deletedPages.length > 0) {
-    pagesLiveResource.notify();
-    for (const p of deletedPages) {
-      blocksLiveResource.notify({ pageId: p.id });
-      await blocksChanged.emit({ pageId: p.id });
-    }
+  for (const p of deletedPages) {
+    await blocksChanged.emit({ pageId: p.id });
   }
 }

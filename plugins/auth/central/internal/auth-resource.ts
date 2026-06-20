@@ -1,4 +1,4 @@
-import { defineResource } from "@plugins/framework/plugins/central-core/core";
+import { defineExternalResource } from "@plugins/framework/plugins/central-core/core";
 import { z } from "zod";
 import type { AuthStateValue, AuthAccountState } from "@plugins/auth/core";
 import { computeAuthState, warmAuthState } from "./auth-state";
@@ -28,7 +28,7 @@ const AuthStateValueSchema = z.object({
   providers: z.record(AuthAccountStateSchema),
 }) satisfies z.ZodType<AuthStateValue>;
 
-export const authStateResource = defineResource<AuthStateValue>({
+export const authStateResource = defineExternalResource<AuthStateValue>({
   key: "auth-state",
   mode: "push",
   schema: AuthStateValueSchema,

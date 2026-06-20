@@ -28,6 +28,7 @@ export const handleRetryJob = implement(retryJob, async ({ params }) => {
   if (!params.id) throw new HttpError(400, "id required");
   const utils = await getWorkerUtils();
   await utils.rescheduleJobs([params.id], { attempts: 0, runAt: new Date() });
+  // graphile_worker is outside the public-schema change-feed → notify explicitly.
   jobsListResource.notify();
 });
 
@@ -35,5 +36,6 @@ export const handleCancelJob = implement(cancelJob, async ({ params }) => {
   if (!params.id) throw new HttpError(400, "id required");
   const utils = await getWorkerUtils();
   await utils.completeJobs([params.id]);
+  // graphile_worker is outside the public-schema change-feed → notify explicitly.
   jobsListResource.notify();
 });

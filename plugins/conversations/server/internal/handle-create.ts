@@ -1,4 +1,3 @@
-import { notifyConversationsChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { recordReport } from "@plugins/reports/server";
 import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -21,7 +20,6 @@ export const handleCreate = implement(createConversationEndpoint, async ({ body 
       prepromptId: body.prepromptId,
     });
   } catch (err) {
-    notifyConversationsChanged();
     const message = err instanceof Error ? err.message : String(err);
     console.error("[conversations] createConversation failed", err);
     // Caught errors don't reach the unhandledRejection hook, so feed them to
@@ -48,6 +46,5 @@ export const handleCreate = implement(createConversationEndpoint, async ({ body 
     });
     throw err instanceof HttpError ? err : new HttpError(500, message);
   }
-  notifyConversationsChanged();
   return session;
 });

@@ -13,7 +13,6 @@ import { deleteTrigger } from "./trigger";
 import {
   loadEmissions,
   loadTriggers,
-  eventTriggersResource,
 } from "./resources";
 
 export const handleListEmissions = implement(
@@ -34,7 +33,6 @@ export const handleDeleteTrigger = implement(
   async ({ params }) => {
     if (!params.id) throw new HttpError(400, "id required");
     await deleteTrigger(params.id);
-    eventTriggersResource.notify();
   },
 );
 
@@ -50,6 +48,5 @@ export const handlePatchTrigger = implement(
         // biome-ignore lint/suspicious/noExplicitAny: dynamic column access on untyped PgTable.
         .where(eq((table as any).id as AnyPgColumn, params.id));
     }
-    eventTriggersResource.notify();
   },
 );

@@ -5,9 +5,10 @@ import type { Song } from "./schemas";
 
 /**
  * The reactive list of saved songs, ordered newest-first. The server backs
- * this with a `push`-mode live resource that `.notify()`s after every
- * create/delete mutation. While `pending`, the library renders DataView's
- * loading skeleton — never the empty state.
+ * this with a `push`-mode live resource that the DB change-feed invalidates
+ * automatically on every create/delete/update of the songs table. While
+ * `pending`, the library renders DataView's loading skeleton — never the empty
+ * state.
  */
 export const songsResource = resourceDescriptor<Song[]>(
   "sonata-songs",

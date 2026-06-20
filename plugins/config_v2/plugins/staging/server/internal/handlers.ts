@@ -10,7 +10,6 @@ import {
 } from "../../core/endpoints";
 import { _stagedConfigDefault } from "./tables";
 import { findPromotableDescriptor } from "./registry-lookup";
-import { stagedConfigDefaultsResource } from "./resource";
 import { landDefaultsJob } from "./land-job";
 
 // Match a single staged row by its composite key.
@@ -49,8 +48,6 @@ export const handleStageConfigDefault = implement(
         target: [_stagedConfigDefault.pluginId, _stagedConfigDefault.configName],
         set: { value, updatedAt: new Date() },
       });
-
-    stagedConfigDefaultsResource.notify();
     // return undefined → 204
   },
 );
@@ -92,7 +89,6 @@ export const handleDiscardConfigDefault = implement(
     await db
       .delete(_stagedConfigDefault)
       .where(rowKey(params.pluginId, params.configName));
-    stagedConfigDefaultsResource.notify();
     // return undefined → 204
   },
 );
@@ -101,7 +97,6 @@ export const handleDiscardAllConfigDefaults = implement(
   discardAllConfigDefaults,
   async () => {
     await db.delete(_stagedConfigDefault);
-    stagedConfigDefaultsResource.notify();
     // return undefined → 204
   },
 );

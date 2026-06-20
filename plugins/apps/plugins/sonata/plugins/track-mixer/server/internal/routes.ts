@@ -3,7 +3,6 @@ import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { resetTrackView, upsertTrackView } from "../../shared/endpoints";
 import { _trackView } from "./tables";
-import { trackViewLiveResource } from "./resource";
 
 /**
  * Partial-patch upsert: insert a fresh row (omitted fields take column
@@ -34,7 +33,6 @@ export const handleUpsertTrackView = implement(
         target: [_trackView.songId, _trackView.trackId],
         set,
       });
-    trackViewLiveResource.notify();
   },
 );
 
@@ -43,6 +41,5 @@ export const handleResetTrackView = implement(
   resetTrackView,
   async ({ params }) => {
     await db.delete(_trackView).where(eq(_trackView.songId, params.songId));
-    trackViewLiveResource.notify();
   },
 );

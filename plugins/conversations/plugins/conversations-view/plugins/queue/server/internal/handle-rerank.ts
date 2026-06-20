@@ -3,7 +3,6 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { rerankQueue } from "../../shared/endpoints";
 import { lockDeck, rankForTop, rankJoiningGroup, upsertRank } from "./queue-ranks";
-import { queueRanksResource } from "./resource";
 import { validatePin } from "./pinned";
 
 export const handleRerank = implement(rerankQueue, async ({ body }) => {
@@ -19,6 +18,4 @@ export const handleRerank = implement(rerankQueue, async ({ body }) => {
     await upsertRank(conversationId, rank, tx);
     await validatePin(tx);
   });
-
-  queueRanksResource.notify();
 });

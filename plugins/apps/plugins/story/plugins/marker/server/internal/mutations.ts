@@ -1,5 +1,4 @@
 import { storyMark } from "./tables";
-import { storiesResource } from "./resource";
 
 export async function getStoryMark(pageId: string) {
   return storyMark.get(pageId);
@@ -17,5 +16,4 @@ export async function setStoryMark(
   } else {
     await storyMark.delete(pageId);
   }
-  storiesResource.notify();
 }

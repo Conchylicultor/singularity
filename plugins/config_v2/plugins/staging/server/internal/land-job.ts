@@ -4,7 +4,6 @@ import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import type { StagedConfigDefault } from "../../shared/resources";
 import { _stagedConfigDefault } from "./tables";
-import { stagedConfigDefaultsResource } from "./resource";
 import { landDefaults, type LandedKey } from "./land";
 
 function toStaged(r: {
@@ -76,6 +75,5 @@ export const landDefaultsJob = defineJob({
     if (predicate) {
       await db.delete(_stagedConfigDefault).where(predicate);
     }
-    stagedConfigDefaultsResource.notify();
   },
 });

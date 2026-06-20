@@ -1,4 +1,4 @@
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import {
   resolveActiveWorktreeOps,
   type WorktreeOp,
@@ -14,7 +14,7 @@ import {
 // build.
 const OP_RANK: Record<WorktreeOp, number> = { push: 2, check: 1, build: 0 };
 
-export const worktreeOpsResource = defineResource<WorktreeOpsPayload>({
+export const worktreeOpsResource = defineExternalResource<WorktreeOpsPayload>({
   key: "worktree-ops",
   mode: "push",
   schema: WorktreeOpsPayloadSchema,

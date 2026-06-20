@@ -1,7 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
-import { tasksAutoStartResource } from "./resource";
 import { tasksAutoStart, _tasksAutoStartExt } from "./tables";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
@@ -29,7 +28,6 @@ export async function setTaskAutoStart(
   } else {
     await tasksAutoStart.delete(id);
   }
-  tasksAutoStartResource.notify();
   return true;
 }
 
@@ -41,7 +39,5 @@ export async function claimAutoStart(id: string): Promise<boolean> {
     .delete(_tasksAutoStartExt)
     .where(eq(_tasksAutoStartExt.parentId, id))
     .returning({ parentId: _tasksAutoStartExt.parentId });
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (row) tasksAutoStartResource.notify();
   return !!row;
 }

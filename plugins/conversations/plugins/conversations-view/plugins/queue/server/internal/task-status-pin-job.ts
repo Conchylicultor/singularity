@@ -5,7 +5,6 @@ import { db } from "@plugins/database/server";
 import { _conversations, _attempts, listBlockingDepIds } from "@plugins/tasks/plugins/tasks-core/server";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { validatePin } from "./pinned";
-import { queueRanksResource } from "./resource";
 import { conversationsQueue } from "./tables";
 import { lockDeck, rankAfterBlockers, rankForTop, reseatGroupMembers, upsertRank } from "./queue-ranks";
 
@@ -39,7 +38,6 @@ export const taskStatusPinJob = defineJob({
     }
 
     await validatePin();
-    queueRanksResource.notify();
   },
 });
 

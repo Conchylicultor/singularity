@@ -32,6 +32,7 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
   - **`inherited-theme-defaults-scoped`**
   - **`migration-hashes-unique`**
   - **`migrations-in-sync`**
+  - **`no-db-backed-notify`**
   - **`no-hardcoded-colors`**
   - **`no-plugin-imports-in-core`**
   - **`no-plugin-workspace-deps`**

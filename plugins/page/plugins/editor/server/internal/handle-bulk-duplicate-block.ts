@@ -4,7 +4,6 @@ import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { bulkDuplicateBlocks } from "../../core/endpoints";
 import { _blocks } from "./tables";
-import { blocksLiveResource } from "./resources";
 import { blocksChanged } from "./tables-events";
 import { computePageId } from "./page-id";
 import { insertForest, loadPageBlocks, rankWindow, serializeSubtree } from "./forest";
@@ -40,7 +39,6 @@ export const handleBulkDuplicateBlock = implement(
       }
     });
 
-    blocksLiveResource.notify({ pageId: params.pageId });
     await blocksChanged.emit({ pageId: params.pageId });
     return { rootIds };
   },

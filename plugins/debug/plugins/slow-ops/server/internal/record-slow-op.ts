@@ -19,7 +19,6 @@ import type { CallerBreakdown, SlowOpMarker, SlowOpSample } from "../../core";
 // the value against its own source enum at ingest regardless.
 type SlowOpSource = "server-slow-op" | "client-slow-op";
 import { _slowOps } from "./tables";
-import { slowOpsResource } from "./resources";
 
 // A slim overlay marker per recorded slow op, dual-written to a persisted log
 // channel. Mirrors the health sampler's `Log.channel("health", { persist: true })`
@@ -176,8 +175,6 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
         .where(eq(_slowOps.id, row.id));
     });
   });
-
-  slowOpsResource.notify();
 
   // Dual-write a slim marker for the health-monitor overlay (one line per
   // recorded slow op). The snapshot was captured inside the suppression scope

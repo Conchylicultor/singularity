@@ -5,7 +5,6 @@ import { db } from "@plugins/database/server";
 import { REPO_ROOT, SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { _buildRuns } from "./tables";
-import { buildHistoryResource } from "./build-history-resource";
 import { frontendHashResource } from "./frontend-hash-resource";
 import { buildLog } from "./build-log";
 
@@ -114,7 +113,6 @@ export async function reconcileOrphanBuilds(): Promise<void> {
       .set({ finishedAt, exitCode: resolveOrphanExitCode(orphan.id) })
       .where(eq(_buildRuns.id, orphan.id));
   }
-  buildHistoryResource.notify();
 }
 
 // node-postgres surfaces a unique_violation as SQLSTATE 23505. The partial unique
@@ -188,7 +186,6 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
   });
 
   await db.update(_buildRuns).set({ pid: proc.pid }).where(eq(_buildRuns.id, buildId));
-  buildHistoryResource.notify();
   if (trigger === "auto") {
     await recordNotification({
       type: "build",
@@ -252,7 +249,6 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     .update(_buildRuns)
     .set({ finishedAt: new Date(), exitCode })
     .where(eq(_buildRuns.id, buildId));
-  buildHistoryResource.notify();
   frontendHashResource.notify();
   const linkTo = `/build/r/${buildId}`;
   if (exitCode === 0) {

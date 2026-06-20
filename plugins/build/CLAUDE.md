@@ -15,7 +15,7 @@
   - DB schema: `plugins/build/server/internal/tables.ts`
   - Exports: Values: `_buildRuns`, `getServerBuildId`
   - Register: `defineJob('build.run')`
-  - Resources: `build.frontendHash` (push), `build.history` (push), `build.mainAheadCount` (push)
+  - Resources: `build.history` (push), `build.mainAheadCount` (push)
   - Routes: `POST /api/build`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/commit-list.CommitRowSchema`, `primitives/live-state.resourceDescriptor`

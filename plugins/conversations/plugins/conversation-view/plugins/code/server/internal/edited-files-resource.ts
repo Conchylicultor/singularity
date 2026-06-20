@@ -1,4 +1,4 @@
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { EditedFilesPayloadSchema } from "../../core/protocol";
 import { getEditedFiles } from "./get-edited-files";
@@ -13,7 +13,7 @@ async function worktreeFor(conversationId: string): Promise<string | null> {
   return row?.worktreePath ?? null;
 }
 
-export const editedFilesResource = defineResource({
+export const editedFilesResource = defineExternalResource({
   key: "edited-files",
   mode: "invalidate",
   schema: EditedFilesPayloadSchema,

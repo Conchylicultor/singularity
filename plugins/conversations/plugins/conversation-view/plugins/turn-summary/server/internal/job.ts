@@ -9,7 +9,6 @@ import {
 } from "@plugins/infra/plugins/claude-cli/server";
 import { turnSummaryConfig } from "../../shared/config";
 import { turnSummaries } from "./tables";
-import { turnSummariesResource } from "./resource";
 import { parseMarkdownSections } from "./parse";
 
 const HAIKU_TIMEOUT_MS = 12_000;
@@ -120,7 +119,5 @@ export const generateTurnSummaryJob = defineJob({
       actions: parsed.actions,
       generatedAt: new Date(),
     });
-
-    turnSummariesResource.notify();
   },
 });

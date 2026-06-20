@@ -1,6 +1,7 @@
 import { createResourceRuntime } from "@plugins/framework/plugins/resource-runtime/core";
 import type {
   Resource as RtResource,
+  ExternalResource as RtExternalResource,
   ResourceDefinition as RtDef,
   ResourceMode as RtMode,
   ResourceParams as RtParams,
@@ -34,6 +35,10 @@ import { reportServerError, type ServerErrorReport } from "./error-reporter";
 export type ResourceParams = RtParams;
 export type ResourceMode = RtMode;
 export type Resource<T, P extends ResourceParams = ResourceParams> = RtResource<T, P>;
+export type ExternalResource<T, P extends ResourceParams = ResourceParams> = RtExternalResource<
+  T,
+  P
+>;
 export type ResourceDefinition<T, P extends ResourceParams = ResourceParams> = RtDef<T, P>;
 export type DependsOnEntry<P extends ResourceParams = ResourceParams> = RtDep<P>;
 // The shared L4 change-feed contract (see resource-runtime/core). The DB
@@ -134,6 +139,9 @@ const runtime = createResourceRuntime({
 
 export const {
   defineResource,
+  // Escape-hatch factory: resources whose truth lives outside Postgres keep a
+  // callable `notify()`. DB-backed resources use `defineResource` (no `notify`).
+  defineExternalResource,
   notificationsWsHandler,
   handleResourceHttp,
   withNotifyBatch,

@@ -3,7 +3,6 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { deleteAgent } from "../../core/endpoints";
 import { _agents } from "./tables";
-import { agentLaunchesResource, agentsResource } from "./resources";
 
 export const handleDelete = implement(deleteAgent, async ({ params }) => {
   const children = await db
@@ -17,8 +16,7 @@ export const handleDelete = implement(deleteAgent, async ({ params }) => {
   const [row] = await db.delete(_agents).where(eq(_agents.id, params.id)).returning();
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new HttpError(404, "Not found");
-  // Launches cascade via FK; still notify so subscribed detail views refresh.
-  agentsResource.notify();
-  agentLaunchesResource.notify();
+  // Launches cascade via FK; the DB change-feed invalidates the agents and
+  // agent-launches resources so subscribed detail views refresh.
   // return undefined → implement() sends 204
 });

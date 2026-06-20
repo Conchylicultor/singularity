@@ -74,7 +74,7 @@ export const _attempts = pgTable(
   // tasks_v derives task status via per-task correlated subqueries on
   // attempts.task_id (has_attempt / has_completed / has_active / has_blocking_dep).
   // Without this index those run as full seq scans / nested-loop anti-joins over
-  // all-history attempts on every notifyConversationsChanged cascade.
+  // all-history attempts on every tasks/attempts recompute.
   (t) => [index("attempts_task_id_idx").on(t.taskId)],
 );
 

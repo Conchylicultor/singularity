@@ -3,7 +3,6 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { dismissNotification } from "../../shared/endpoints";
 import { _notifications } from "./tables";
-import { notificationsResource } from "./resources";
 
 export const handleDismiss = implement(dismissNotification, async ({ params }) => {
   const { id } = params;
@@ -12,5 +11,4 @@ export const handleDismiss = implement(dismissNotification, async ({ params }) =
     .update(_notifications)
     .set({ dismissed: true })
     .where(eq(_notifications.id, id));
-  notificationsResource.notify();
 });

@@ -4,7 +4,6 @@ import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { createTask, getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { inheritTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
 import { _pluginHealthReviews, healthReviewExt } from "./tables";
-import { pluginHealthReviewsResource } from "./resource";
 
 export const proposeTaskTool = Mcp.tool({
   name: "propose_task",
@@ -80,8 +79,6 @@ Good: "Floating promise in sidebar refresh". Bad: "Add await to line 42".`,
     // Inherit the spawning agent's system prompt onto the proposed task, so it
     // launches under the same instructions once accepted.
     if (currentTaskId) await inheritTaskPreprompt(currentTaskId, task.id);
-
-    pluginHealthReviewsResource.notify();
 
     return {
       content: [

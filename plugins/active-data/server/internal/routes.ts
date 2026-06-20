@@ -3,7 +3,6 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { putBinding, deleteBinding } from "../../core/endpoints";
 import { _activeDataBindings } from "./tables";
-import { activeDataBindingsResource } from "./resource";
 
 function parseOccurrenceIndex(raw: string): number {
   const n = Number(raw);
@@ -37,8 +36,6 @@ export const handlePutBinding = implement(putBinding, async ({ params, body }) =
         updatedAt: new Date(),
       },
     });
-
-  activeDataBindingsResource.notify({ conversationId: params.conversationId });
 });
 
 export const handleDeleteBinding = implement(deleteBinding, async ({ params }) => {
@@ -54,6 +51,4 @@ export const handleDeleteBinding = implement(deleteBinding, async ({ params }) =
         eq(_activeDataBindings.occurrenceIndex, occurrenceIndex),
       ),
     );
-
-  activeDataBindingsResource.notify({ conversationId: params.conversationId });
 });

@@ -39,7 +39,6 @@ and the `listPrototypes` endpoint.
 - Description: Serves raw prototype files from the repo-root prototypes/ dir, declares the list + version live-state resources, and watches the dir to auto-reload open iframes on edit.
 - Server:
   - Uses: `infra/endpoints.implement`, `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.REPO_ROOT`
-  - Resources: `prototypes.list` (push), `prototypes.version` (push)
   - Routes: `GET /api/prototypes`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`

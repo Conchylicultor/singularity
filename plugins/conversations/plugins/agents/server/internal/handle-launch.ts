@@ -11,7 +11,6 @@ import { launchAgent } from "../../core/endpoints";
 import { _agent_launches } from "./tables";
 import { agents } from "./views";
 import { AGENTS_META_TASK_ID } from "./meta-agents";
-import { agentLaunchesResource } from "./resources";
 
 function formatLaunchTime(d: Date): string {
   const pad = (n: number) => String(n).padStart(2, "0");
@@ -55,7 +54,6 @@ export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
     .toString(36)
     .slice(2, 6)}`;
   await db.insert(_agent_launches).values({ id: launchId, agentId, taskId: task.id });
-  agentLaunchesResource.notify();
 
   return {
     launchId,

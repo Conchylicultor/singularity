@@ -6,7 +6,6 @@ import {
   _workflowExecutions,
   _workflowExecutionSteps,
 } from "./tables";
-import { workflowDefinitionsResource, workflowExecutionsResource } from "./resources";
 
 function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -29,7 +28,6 @@ export async function createDefinition(input: {
       entryStepId: input.entryStepId ?? null,
     })
     .returning();
-  workflowDefinitionsResource.notify();
   return row;
 }
 
@@ -53,14 +51,11 @@ export async function updateDefinition(
     .set(values)
     .where(eq(_workflowDefinitions.id, id))
     .returning();
-  workflowDefinitionsResource.notify();
   return row;
 }
 
 export async function deleteDefinition(id: string) {
   await db.delete(_workflowDefinitions).where(eq(_workflowDefinitions.id, id));
-  workflowDefinitionsResource.notify();
-  workflowExecutionsResource.notify();
 }
 
 export async function createExecution(definitionId: string) {
@@ -76,7 +71,6 @@ export async function createExecution(definitionId: string) {
     .values({ id: executionId, definitionId })
     .returning();
 
-  workflowExecutionsResource.notify();
   return execution;
 }
 
@@ -102,7 +96,6 @@ export async function createExecutionStep(params: {
       input: params.input,
     })
     .returning();
-  workflowExecutionsResource.notify();
   return row;
 }
 
@@ -112,7 +105,6 @@ export async function cancelExecution(id: string) {
     .set({ status: "failed", completedAt: new Date(), updatedAt: new Date() })
     .where(eq(_workflowExecutions.id, id))
     .returning();
-  workflowExecutionsResource.notify();
   return row;
 }
 
@@ -133,7 +125,6 @@ export async function updateExecution(
     .update(_workflowExecutions)
     .set(values)
     .where(eq(_workflowExecutions.id, id));
-  workflowExecutionsResource.notify();
 }
 
 export async function updateExecutionStep(
@@ -159,5 +150,4 @@ export async function updateExecutionStep(
     .update(_workflowExecutionSteps)
     .set(values)
     .where(eq(_workflowExecutionSteps.id, id));
-  workflowExecutionsResource.notify();
 }

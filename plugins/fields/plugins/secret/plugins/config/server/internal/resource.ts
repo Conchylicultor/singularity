@@ -1,11 +1,11 @@
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import { getSecretMetadata } from "@plugins/infra/plugins/secrets/server";
 import { SecretsMainOfflineError } from "@plugins/infra/plugins/secrets/core";
 import { getAllDescriptors, hasFieldStorageProvider } from "@plugins/config_v2/server";
 import { configV2SecretMetaSchema } from "../../core";
 import type { ConfigV2SecretMeta } from "../../core";
 
-export const secretMetaServerResource = defineResource<ConfigV2SecretMeta, { path: string }>({
+export const secretMetaServerResource = defineExternalResource<ConfigV2SecretMeta, { path: string }>({
   key: "config-v2.secret-meta",
   mode: "push",
   schema: configV2SecretMetaSchema,

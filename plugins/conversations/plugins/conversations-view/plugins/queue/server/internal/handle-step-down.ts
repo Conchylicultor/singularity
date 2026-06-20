@@ -3,7 +3,6 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { stepDownQueue } from "../../shared/endpoints";
 import { lockDeck, rankAfterN, reseatGroupMembers, upsertRank, findTaskIdForConversation } from "./queue-ranks";
-import { queueRanksResource } from "./resource";
 import { getPinnedId, setPinnedId, topWaitingByRank, validatePin } from "./pinned";
 import { cascadeBlockedDependents } from "./cascade-blocked";
 
@@ -28,6 +27,4 @@ export const handleStepDown = implement(stepDownQueue, async ({ body }) => {
       await validatePin(tx);
     }
   });
-
-  queueRanksResource.notify();
 });
