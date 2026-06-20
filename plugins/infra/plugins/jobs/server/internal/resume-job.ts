@@ -7,20 +7,9 @@ import {
   UNSAFE_getRegisteredJob,
   type JobTaskPayload,
 } from "./registry";
-import { RESUME_KEYS } from "./step-ctx";
+import { RESUME_KEYS, ResumeInputSchema } from "./resume-contract";
 import { _jobWaits } from "./tables";
 import { getWorkerUtils } from "./worker";
-
-// Resume control-fields. The events plugin's bridge bakes these into the
-// trigger row's `with` (see install-jobs-hooks.ts). Direct timeout enqueues
-// (scheduleResume in the worker) also go through this same shape.
-const ResumeInputSchema = z.object({
-  [RESUME_KEYS.workflowRunId]: z.string(),
-  [RESUME_KEYS.waitName]: z.string(),
-  [RESUME_KEYS.jobName]: z.string(),
-  [RESUME_KEYS.input]: z.unknown(),
-  [RESUME_KEYS.timeout]: z.boolean().optional(),
-});
 
 // Builtin — registered once at jobs plugin boot. Targeted by every
 // `ctx.waitFor(...)` trigger row and every `ctx.sleep(...)` / timeout
@@ -39,12 +28,11 @@ export const jobsResumeJob = defineJob({
   // each is idempotent, so safe to retry on transient failure.
   maxAttempts: 5,
   run: async ({ input, event }) => {
-    const workflowRunId = input[RESUME_KEYS.workflowRunId] as string;
-    const waitName = input[RESUME_KEYS.waitName] as string;
-    const targetJobName = input[RESUME_KEYS.jobName] as string;
+    const workflowRunId = input[RESUME_KEYS.workflowRunId];
+    const waitName = input[RESUME_KEYS.waitName];
+    const targetJobName = input[RESUME_KEYS.jobName];
     const originalInput = input[RESUME_KEYS.input];
-    const isTimeout =
-      (input[RESUME_KEYS.timeout] as boolean | undefined) === true;
+    const isTimeout = input[RESUME_KEYS.timeout] === true;
 
     // The event payload (when present) is what gets stored for the awaiting
     // workflow. Direct timeout enqueues pass `event: undefined`; for

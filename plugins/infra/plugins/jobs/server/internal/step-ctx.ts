@@ -1,6 +1,7 @@
 import { and, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
+import { RESUME_KEYS, type ResumeInput } from "./resume-contract";
 import { _jobSteps, _jobWaits } from "./tables";
 
 // Globally-shared brand. `Symbol.for` returns the same Symbol across module
@@ -76,7 +77,10 @@ export interface WaitForOptions<T> {
 export interface DurableHooks {
   registerTrigger: (spec: {
     event: EventSourceLike;
-    with: Record<string, unknown>;
+    // Pinned to the `jobs.resume` input contract (jobs owns both this
+    // interface and ResumeInputSchema), so the worker's construction of
+    // `with` is compile-checked against the schema the dispatcher parses.
+    with: ResumeInput;
     where: Record<string, unknown>;
     oneShot: boolean;
   }) => Promise<void>;
@@ -115,7 +119,7 @@ export interface DurableCtxInit {
    * we only need to know it scheduled.
    */
   scheduleResume: (
-    payload: Record<string, unknown>,
+    payload: ResumeInput,
     opts: { jobKey: string; runAt?: Date },
   ) => Promise<void>;
 }
@@ -137,18 +141,6 @@ export interface DurableCtx {
   ): Promise<T | null>;
   sleep(ms: number): Promise<void>;
 }
-
-// Reserved keys inserted into the `jobsResumeJob` payload via a trigger's
-// `with` clause (or a scheduled enqueue for timeouts). Kept together so the
-// resume handler can discriminate them from the event payload's own keys
-// (which arrive via the events dispatcher's merge).
-export const RESUME_KEYS = {
-  workflowRunId: "__resume_workflowRunId",
-  waitName: "__resume_waitName",
-  jobName: "__resume_jobName",
-  input: "__resume_input",
-  timeout: "__resume_timeout",
-} as const;
 
 export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
   // Per-invocation counters: wait-seq resets every handler entry so the Nth
@@ -278,7 +270,7 @@ export function makeDurableCtx(init: DurableCtxInit): DurableCtx {
           [RESUME_KEYS.workflowRunId]: init.workflowRunId,
           [RESUME_KEYS.waitName]: waitName,
           [RESUME_KEYS.jobName]: init.jobName,
-          [RESUME_KEYS.input]: init.originalInput as Record<string, unknown>,
+          [RESUME_KEYS.input]: init.originalInput,
         },
         where: mergedFilter,
         oneShot: true,
