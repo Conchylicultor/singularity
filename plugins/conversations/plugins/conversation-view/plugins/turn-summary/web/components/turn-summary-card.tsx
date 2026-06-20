@@ -122,7 +122,13 @@ function BulletList({
           gap="xs"
           align="start"
           leading={icon}
-          content={<span>{item}</span>}
+          // A flow Stack resets Frame's single-line context so a multi-sentence
+          // caveat/action wraps instead of clipping to one line.
+          content={
+            <Stack gap="none">
+              <Text>{item}</Text>
+            </Stack>
+          }
         />
       ))}
     </Stack>

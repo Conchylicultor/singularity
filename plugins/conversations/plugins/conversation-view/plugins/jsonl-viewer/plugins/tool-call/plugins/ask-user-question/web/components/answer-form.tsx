@@ -209,7 +209,11 @@ export function AnswerForm({
                         <Indicator selected={isSelected} multi={q.multiSelect} />
                       }
                       content={
-                        <div className="select-text">
+                        // A flow Stack resets the single-line context Frame
+                        // establishes, so the stacked label/description/preview
+                        // wrap as block paragraphs instead of collapsing onto one
+                        // truncated line.
+                        <Stack gap="2xs" className="select-text">
                           <Text as="p" variant="caption" className="font-medium">
                             {opt.label}
                           </Text>
@@ -217,14 +221,11 @@ export function AnswerForm({
                             {opt.description}
                           </Text>
                           {opt.preview && (
-                            <pre
-                              // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the preview block from the option description above (no named margin utility)
-                              className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground"
-                            >
+                            <pre className="whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground">
                               {opt.preview}
                             </pre>
                           )}
-                        </div>
+                        </Stack>
                       }
                     />
                   </button>

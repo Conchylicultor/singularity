@@ -204,7 +204,11 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                         <Indicator selected={isSelected} multi={q.multiSelect} />
                       }
                       content={
-                        <div>
+                        // A flow Stack resets the single-line context Frame
+                        // establishes, so the stacked label/description/preview
+                        // wrap as block paragraphs instead of collapsing onto one
+                        // truncated line.
+                        <Stack gap="2xs">
                           <Text as="p" variant="caption" className="font-medium">
                             {opt.label}
                           </Text>
@@ -212,14 +216,11 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                             {opt.description}
                           </Text>
                           {opt.preview && (
-                            <pre
-                              // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the preview block from the option description above (no named margin utility)
-                              className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground"
-                            >
+                            <pre className="whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground">
                               {opt.preview}
                             </pre>
                           )}
-                        </div>
+                        </Stack>
                       }
                     />
                   );
@@ -231,9 +232,13 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                     className="rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm"
                     leading={<Indicator selected multi={q.multiSelect} />}
                     content={
-                      <Text as="p" variant="caption" className="italic text-foreground">
-                        {otherText}
-                      </Text>
+                      // Stack resets Frame's single-line context so a long
+                      // freeform answer wraps instead of truncating to one line.
+                      <Stack gap="2xs">
+                        <Text as="p" variant="caption" className="italic text-foreground">
+                          {otherText}
+                        </Text>
+                      </Stack>
                     }
                   />
                 )}

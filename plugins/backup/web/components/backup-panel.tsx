@@ -100,7 +100,7 @@ function BackupRunRow({ run }: { run: BackupRun }) {
               gap="md"
               leading={<StatusIcon status={run.status} />}
               content={
-                <div>
+                <Stack gap="2xs">
                   <Text as="p" variant="label" className="truncate">
                     {new Date(run.startedAt).toLocaleString()}
                   </Text>
@@ -113,7 +113,7 @@ function BackupRunRow({ run }: { run: BackupRun }) {
                       ? ` · ${run.manifest.sources.filter((s) => !s.skipped).length} sources`
                       : ""}
                   </Text>
-                </div>
+                </Stack>
               }
             />
           }

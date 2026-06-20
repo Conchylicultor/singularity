@@ -294,11 +294,12 @@ export function BroadcastsPanel() {
                   </Badge>
                 }
                 content={
-                  <div>
+                  // A flow Stack resets Frame's single-line context so the
+                  // freeform message wraps instead of truncating to one line.
+                  <Stack gap="2xs">
                     <Text as="p" variant="body">{entry.message}</Text>
                     {(entry.since ?? entry.until ?? entry.commands) && (
-                      // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset below message line
-                      <Cluster className="mt-1 font-mono text-3xs text-muted-foreground">
+                      <Cluster className="font-mono text-3xs text-muted-foreground">
                         {entry.since && <span>since: {entry.since.slice(0, 8)}</span>}
                         {entry.until && <span>until: {entry.until.slice(0, 8)}</span>}
                         {entry.commands && (
@@ -306,7 +307,7 @@ export function BroadcastsPanel() {
                         )}
                       </Cluster>
                     )}
-                  </div>
+                  </Stack>
                 }
                 trailing={
                   <Button

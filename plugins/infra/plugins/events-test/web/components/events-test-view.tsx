@@ -239,7 +239,7 @@ export function EventsTestView() {
           gap="lg"
           align="start"
           content={
-          <div>
+          <Stack gap="2xs">
             <Text as="h1" variant="title" className="tracking-tight">
               Events Test
             </Text>
@@ -252,7 +252,7 @@ export function EventsTestView() {
               <code className="rounded-md bg-muted px-xs">events_test.log</code>{" "}
               job.
             </Text>
-          </div>
+          </Stack>
           }
           trailing={
             <Button variant="ghost" onClick={refresh}>
