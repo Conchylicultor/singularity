@@ -1,21 +1,20 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { cn, usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  type PortaledLayer,
+  zLayerClass,
+} from "@plugins/primitives/plugins/css/plugins/z-layers/web";
 
-// The viewport-fill recipe lives in module consts (not inline className literals)
-// so the `no-adhoc-viewport-overlay` rule — which only harvests literals reached
-// from a className attribute subtree — never flags the primitive that owns it.
-// Same trick `<Card>`/`<Surface>` use to stay clear of their own lint.
+// The viewport-fill recipe lives in a module const (not an inline className
+// literal) so the `no-adhoc-viewport-overlay` rule — which only harvests literals
+// reached from a className attribute subtree — never flags the primitive that
+// owns it. Same trick `<Card>`/`<Surface>` use to stay clear of their own lint.
 const OVERLAY_ROOT = "fixed inset-0";
-const LAYER_CLASS = {
-  popover: "z-popover",
-  draw: "z-draw",
-  max: "z-max",
-} as const;
 
 export interface ViewportOverlayProps {
   /** Stacking layer. Defaults to "popover" (the documented portaled-layer). */
-  layer?: keyof typeof LAYER_CLASS;
+  layer?: PortaledLayer;
   /**
    * When false, render `children` inline (no portal, no fixed wrapper, and `rest`
    * is ignored). The extension point for keep-alive toggles like the per-tab solo
@@ -63,7 +62,7 @@ export function ViewportOverlay({
   return createPortal(
     <div
       {...forwarded}
-      className={cn(OVERLAY_ROOT, LAYER_CLASS[layer], className)}
+      className={cn(OVERLAY_ROOT, zLayerClass(layer), className)}
       {...rest}
     >
       {children}

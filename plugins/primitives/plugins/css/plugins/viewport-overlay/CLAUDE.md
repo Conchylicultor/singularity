@@ -56,7 +56,7 @@ pane-relative overlay) or
 
 - Description: Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor.
 - Web:
-  - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.usePortalForwardedAttrs`
+  - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.usePortalForwardedAttrs`, `primitives/css/z-layers.PortaledLayer`, `primitives/css/z-layers.zLayerClass`
   - Exports: Types: `ViewportOverlayProps`; Values: `ViewportOverlay`
 - Cross-plugin:
   - Imported by: `debug/queue`, `improve/element-picker`, `page/editor`, `page/url-paste`, `primitives/text-editor/paste-images`, `screenshot/draw-on-app`

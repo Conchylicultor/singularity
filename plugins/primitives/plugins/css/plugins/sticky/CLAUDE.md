@@ -6,10 +6,10 @@ hand.
 
 ## Layer vocabulary, not raw z
 
-The `layer` prop reuses the `OverlayLayer` names from `overlay` (one vocabulary
-for stacking levels), and the name→`z-*` class map is copied locally — exactly
-as `overlay` itself copies it — because `z-layers` exposes no web barrel. A
-sticky element is never a raw `z-<n>`.
+The `layer` prop is an `InTreeLayer` (`base | raised | nav | float | overlay`)
+from the shared `z-layers/web` resolver, and the name→`z-*` class is resolved
+through that one source via `zLayerClass()`. A sticky element is never a raw
+`z-<n>`.
 
 ## Offset is an inline style
 
@@ -49,7 +49,7 @@ toggle, silently resetting any child component state (e.g. an inner
 
 - Description: Sticky positioning layout primitive: <Sticky edge offset layer> pins a header/footer to a scroll edge with a z-layer-aware stacking level.
 - Web:
-  - Uses: `primitives/css/ui-kit.cn`
+  - Uses: `primitives/css/ui-kit.cn`, `primitives/css/z-layers.InTreeLayer`, `primitives/css/z-layers.zLayerClass`
   - Exports: Types: `StickyEdge`, `StickyProps`; Values: `Sticky`, `stickyClasses`
 - Cross-plugin:
   - Imported by: `code-explorer`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversations-view/queue`, `debug/profiling/push/push-gantt`, `debug/queue`, `primitives/multi-select`, `primitives/tree`, `review/code-review`, `review/config-defaults`

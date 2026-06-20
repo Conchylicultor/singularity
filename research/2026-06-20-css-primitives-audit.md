@@ -259,15 +259,15 @@ A working developer trips on these because they aren't uniform. Memorize the exc
 
 ---
 
-## 6. Layer / stacking vocabulary (three sets — mind the gap)
+## 6. Layer / stacking vocabulary (two tiers from one shared source)
 
-The z-layer ladder is one scale, but the *primitives expose two different subsets of it*, and `ViewportOverlay` a third:
+The z-layer ladder is one scale, exposed to primitives as two named tiers — both derived from a single shared source in `z-layers/web` (RESOLVED 2026-06-20, see §8.2):
 
-- **`Overlay` / `Pin` / `Sticky`** take `OverlayLayer = base | raised | nav | float | overlay` (the in-tree z-layers, 0–40).
-- **`ViewportOverlay`** takes `layer = popover | draw | max` (the portaled top layers, 50–9999).
+- **`Overlay` / `Pin` / `Sticky`** take `InTreeLayer = base | raised | nav | float | overlay` (the in-tree z-layers, 0–40).
+- **`ViewportOverlay`** takes `PortaledLayer = popover | draw | max` (the portaled top layers, 50–9999).
 - Raw `z-<n>` / `z-[…]` is banned everywhere by `no-adhoc-zindex`; always pick a named layer.
 
-This split is intentional (in-tree chrome can't out-stack a portaled modal), but it is a real footgun: the two prop vocabularies don't overlap, and `Sticky` re-declares the name→class map locally because `z-layers` ships no web barrel. See §8.
+The split is intentional (in-tree chrome can't out-stack a portaled modal). Both tiers and the name→class resolver (`zLayerClass()`) now live in the one `z-layers/web` barrel — a compile-time partition guard ties them to the full ladder, so the prop vocabularies are two slices of one source rather than disjoint copies.
 
 ---
 
@@ -300,7 +300,7 @@ The system is in excellent shape (both burndowns at 0, near-total coverage of th
 
 1. **`Clip`'s `fill` ignores `axis`.** `Clip fill` always emits the `min-h-0 flex-1` (vertical) pair regardless of `axis`, whereas `Scroll fill` correctly switches to `min-w-0 flex-1` for `axis="x"`. A horizontal `Clip fill` therefore gets the wrong fill mechanic. → Mirror Scroll's axis-aware fill in Clip. **(Likely a real bug.)**
 
-2. **Layer-vocabulary split has no shared source.** `OverlayLayer` (base…overlay) vs `ViewportOverlay`'s (popover/draw/max) are disjoint string unions, and `Sticky` *copies* the name→`z-*` class map locally because `z-layers` exposes no web barrel. Three places independently know the mapping. → Give `z-layers` a web barrel exporting the full ladder + the name→class resolver; have `Overlay`/`Pin`/`Sticky`/`ViewportOverlay` import it. Removes the copy and makes the in-tree/portaled split explicit in one type.
+2. ~~**Layer-vocabulary split has no shared source.**~~ **RESOLVED (2026-06-20).** `z-layers` now ships a `web/` barrel that is the single source of the name→class map, exposing `zLayerClass()` plus the `InTreeLayer`/`PortaledLayer` tiers (which a compile-time partition guard ties to the full ladder). `Overlay`/`Pin`/`Sticky`/`ViewportOverlay` import the resolver and deleted their local `LAYER_CLASS` copies; the disjoint unions are now two named tiers derived from one ladder. See [css-z-layers-web-barrel](./2026-06-20-css-z-layers-web-barrel.md).
 
 3. **`Card` padding is off-ramp.** `Card` hardcodes `p-3` (a `PAD` const predating the density ramp) instead of an `Inset`/`SpaceStep` value, so it does *not* scale with the Density preset like everything else. → Move card padding onto the ramp (`md` ≈ current 0.75rem) so a Compact/Cozy density actually tightens cards.
 

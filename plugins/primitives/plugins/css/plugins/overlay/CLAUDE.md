@@ -31,9 +31,9 @@ established by DOM order, not by per-layer z-index:
 - `clickThrough` makes `children` `pointer-events-none` so clicks fall through to
   a `behind` click-target.
 - `layer` is orthogonal to the internal order: it sets the stacking level of the
-  **whole box** among its siblings, from the closed z-layer set
-  (`base | raised | nav | float | overlay` → the existing named `z-*`
-  utilities; never a raw z-number).
+  **whole box** among its siblings, an `InTreeLayer`
+  (`base | raised | nav | float | overlay`) resolved to its named `z-*` utility
+  through the shared `z-layers/web` `zLayerClass()`; never a raw z-number.
 
 ## The click-through toggle idiom
 
@@ -49,7 +49,7 @@ header content inside is a `<Frame>`.
 - **`behind`** — full-bleed layer painted under `children` (background / click target).
 - **`above`** — full-bleed layer painted over `children`, always click-through.
 - **`children`** (required) — in-flow content; establishes the box's natural size.
-- **`layer`** — `OverlayLayer`. Default `base`.
+- **`layer`** — `InTreeLayer` (from `z-layers/web`). Default `base`.
 - **`clickThrough`** — make `children` click-through. Default `false`.
 - **`fill`** — make `children` fill the box (`absolute inset-0`) instead of
   sizing it, for a full-surface overlay whose box is sized externally
@@ -64,8 +64,8 @@ header content inside is a `<Frame>`.
 
 - Description: In-flow positioning layout primitive: <Overlay behind above clickThrough> paints full-bleed layers under/over its content within its own box, plus the click-through-toggle idiom.
 - Web:
-  - Uses: `primitives/css/ui-kit.cn`
-  - Exports: Types: `OverlayLayer`, `OverlayProps`; Values: `Overlay`, `OverlayInteractive`
+  - Uses: `primitives/css/ui-kit.cn`, `primitives/css/z-layers.InTreeLayer`, `primitives/css/z-layers.zLayerClass`
+  - Exports: Types: `OverlayProps`; Values: `Overlay`, `OverlayInteractive`
 - Cross-plugin:
   - Imported by: `apps/browser/webview`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `page/editor`, `page/embed`
 

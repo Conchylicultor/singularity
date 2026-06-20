@@ -1,21 +1,10 @@
-import type { OverlayLayer } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  type InTreeLayer,
+  zLayerClass,
+} from "@plugins/primitives/plugins/css/plugins/z-layers/web";
 import type React from "react";
-
-/**
- * The closed stacking-layer set, named off the semantic z-layer scale. The
- * `OverlayLayer` *names* are reused from `overlay` (one source of truth for the
- * layer vocabulary), but the name→class map lives here — exactly like `overlay`
- * itself copies it — because `z-layers` exposes no web barrel. NEVER a raw z-*.
- */
-const LAYER_CLASS: Record<OverlayLayer, string> = {
-  base: "z-base",
-  raised: "z-raised",
-  nav: "z-nav",
-  float: "z-float",
-  overlay: "z-overlay",
-};
 
 /** Which edge of the scroll container the element sticks to. */
 export type StickyEdge = "top" | "bottom" | "left" | "right";
@@ -41,7 +30,7 @@ function spaceLength(step: SpaceStep): string {
 export function stickyClasses(opts: {
   edge: StickyEdge;
   offset: SpaceStep;
-  layer: OverlayLayer;
+  layer: InTreeLayer;
 }): { className: string; style: React.CSSProperties } {
   const len = spaceLength(opts.offset);
   const style: React.CSSProperties =
@@ -52,7 +41,7 @@ export function stickyClasses(opts: {
         : opts.edge === "left"
           ? { left: len }
           : { right: len };
-  return { className: `sticky ${LAYER_CLASS[opts.layer]}`, style };
+  return { className: `sticky ${zLayerClass(opts.layer)}`, style };
 }
 
 export interface StickyProps extends React.HTMLAttributes<HTMLElement> {
@@ -70,7 +59,7 @@ export interface StickyProps extends React.HTMLAttributes<HTMLElement> {
   offset?: SpaceStep;
   /** Stacking level among siblings, from the z-layer scale. Defaults to `raised`
    *  (a sticky header sits above the content it scrolls over). */
-  layer?: OverlayLayer;
+  layer?: InTreeLayer;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
   /** Forwarded to the rendered element (mirrors Surface/Card/Row). */

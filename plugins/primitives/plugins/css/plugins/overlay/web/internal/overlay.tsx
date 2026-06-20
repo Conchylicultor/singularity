@@ -1,22 +1,10 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  type InTreeLayer,
+  zLayerClass,
+} from "@plugins/primitives/plugins/css/plugins/z-layers/web";
 import type React from "react";
 import type { ReactNode } from "react";
-
-/**
- * The closed stacking-layer set for an Overlay box, named off the semantic
- * z-layer scale. z-layers exposes no web barrel, so — exactly like
- * `viewport-overlay`'s local `LAYER_CLASS` — the map lives here and resolves each
- * role to the existing named `z-*` utility. NEVER a raw z-number.
- */
-export type OverlayLayer = "base" | "raised" | "nav" | "float" | "overlay";
-
-const LAYER_CLASS: Record<OverlayLayer, string> = {
-  base: "z-base",
-  raised: "z-raised",
-  nav: "z-nav",
-  float: "z-float",
-  overlay: "z-overlay",
-};
 
 export interface OverlayProps
   extends React.HTMLAttributes<HTMLElement> {
@@ -31,7 +19,7 @@ export interface OverlayProps
   /** Stacking level of the WHOLE box among its siblings, from the z-layer scale.
    *  Defaults to `base`. (The internal behind/children/above order is structural,
    *  not z-driven.) */
-  layer?: OverlayLayer;
+  layer?: InTreeLayer;
   /** When `behind` is a click target, set true so `children` are click-through
    *  (`pointer-events-none`) and clicks fall through to `behind`. Interactive
    *  bits inside `children` opt back in with `<Overlay.Interactive>`. Default false. */
@@ -116,7 +104,7 @@ function OverlayRoot({
   ...rest
 }: OverlayProps) {
   return (
-    <As ref={ref} className={cn("relative", LAYER_CLASS[layer], className)} {...rest}>
+    <As ref={ref} className={cn("relative", zLayerClass(layer), className)} {...rest}>
       {behind != null && <div className="absolute inset-0">{behind}</div>}
       <div
         className={cn(

@@ -1,19 +1,10 @@
-import type { OverlayLayer } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  type InTreeLayer,
+  zLayerClass,
+} from "@plugins/primitives/plugins/css/plugins/z-layers/web";
 import type React from "react";
-
-/**
- * Layer name→class map, copied locally like `overlay`/`sticky` (z-layers has no
- * web barrel). NEVER a raw z-*.
- */
-const LAYER_CLASS: Record<OverlayLayer, string> = {
-  base: "z-base",
-  raised: "z-raised",
-  nav: "z-nav",
-  float: "z-float",
-  overlay: "z-overlay",
-};
 
 /**
  * Where the pinned child anchors inside its `relative` parent: a corner, an
@@ -60,11 +51,11 @@ export function pinClasses(opts: {
   to: PinAnchor;
   offset: SpaceStep;
   outset: boolean;
-  layer: OverlayLayer;
+  layer: InTreeLayer;
   decorative: boolean;
   stretch: boolean;
 }): { className: string; style: React.CSSProperties } {
-  const classes = ["absolute", LAYER_CLASS[opts.layer]];
+  const classes = ["absolute", zLayerClass(opts.layer)];
   if (opts.decorative) classes.push("pointer-events-none");
   const style: React.CSSProperties = {};
   const len = edgeLength(opts.offset, opts.outset);
@@ -120,7 +111,7 @@ export interface PinProps extends React.HTMLAttributes<HTMLElement> {
    *  out, `-top-1 -right-1`). Default false. */
   outset?: boolean;
   /** Stacking level among siblings, from the z-layer scale. Default `raised`. */
-  layer?: OverlayLayer;
+  layer?: InTreeLayer;
   /** Make the child click-through (`pointer-events-none`) — a decorative overlay
    *  that must never eat clicks. Default false. */
   decorative?: boolean;

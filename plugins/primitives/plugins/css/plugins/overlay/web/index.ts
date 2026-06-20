@@ -4,7 +4,6 @@ export {
   Overlay,
   OverlayInteractive,
   type OverlayProps,
-  type OverlayLayer,
 } from "./internal/overlay";
 
 export default {
