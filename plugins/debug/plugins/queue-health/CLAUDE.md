@@ -4,8 +4,7 @@ The graphile-worker job queue degrades **silently** — nothing in the UI signal
 when it breaks. This plugin makes two failure modes **loud** by filing them into
 the existing reports engine (the same surface that captures crashes), modeled
 byte-for-byte on `debug/slow-ops` (durable signal → `ReportKind` → deduped task).
-It reads the queue tables **read-only** and only consumes the public `defineJob`
-API — no changes to the load-bearing `infra/jobs` core.
+It reads the queue **read-only** through the jobs plugin's public introspection API (`queryDeadJobStats` / `queryQueueBacklog`), which owns the graphile-internals coupling — the `jobs.run` task literal, the `payload->>'jobName'` encoding, and the terminally-dead predicate — so this monitor can never drift from how the queue is actually encoded.
 
 ## What it monitors
 
@@ -52,7 +51,7 @@ Read live each tick via `getConfig`, editable in Settings → Config.
   - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `DeadJobSummary`, `Reports.KindView` → `BacklogSummary`
   - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/jobs.defineJob`, `reports.recordReport`, `reports.ReportKind`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/jobs.defineJob`, `infra/jobs.queryDeadJobStats`, `infra/jobs.queryQueueBacklog`, `reports.recordReport`, `reports.ReportKind`
   - Register: `defineJob('debug.queue-health-monitor')`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/int/config.intField`

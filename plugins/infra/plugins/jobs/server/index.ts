@@ -37,6 +37,8 @@ export {
 } from "./internal/step-ctx";
 export type { DurableHooks } from "./internal/step-ctx";
 export { jobsListResource, deadJobsResource } from "./internal/resources";
+export { queryDeadJobStats, queryQueueBacklog } from "./internal/introspection";
+export type { DeadJobStat, QueueBacklogStat } from "./internal/introspection";
 
 export default {
   description:

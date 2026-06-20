@@ -9,7 +9,7 @@
 - Server:
   - Uses: `database.db`, `database/admin.connectionString`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
   - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
-  - Exports: Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`, `ScheduleSpec`; Values: `deadJobsResource`, `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
+  - Exports: Types: `DeadJobStat`, `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `QueueBacklogStat`, `RegisteredJob`, `ScheduleSpec`; Values: `deadJobsResource`, `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `queryDeadJobStats`, `queryQueueBacklog`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
   - Register: `defineJob('jobs.resume')`, `defineJob('jobs.dead-gc')`
   - Resources: `dead-jobs` (invalidate), `jobs-list` (invalidate)
   - Routes: `GET /api/jobs`, `GET /api/jobs/dead`, `POST /api/jobs/:id/retry`, `DELETE /api/jobs/:id`

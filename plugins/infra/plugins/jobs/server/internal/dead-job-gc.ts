@@ -1,7 +1,7 @@
-import { sql as drizzleSql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
-import { JOB_TASK } from "./constants";
+import { deadJobPredicate, jobNameExpr, queueJobsFrom } from "./introspection";
 import { defineJob } from "./registry";
 import { deadJobsResource, jobsListResource } from "./resources";
 
@@ -24,48 +24,43 @@ export async function reconcileDeadJobs(): Promise<void> {
   await db.transaction(async (tx) => {
     // Archive: insert dead queue rows into dead_jobs. ON CONFLICT DO NOTHING
     // keeps this safe to run on every boot / re-fork.
-    await tx.execute(drizzleSql.raw(`
+    await tx.execute(sql`
       INSERT INTO dead_jobs (id, job_name, input, attempts, max_attempts, last_error, died_at)
       SELECT j.id::text,
-             coalesce(j.payload->>'jobName', '(unknown)'),
+             ${jobNameExpr},
              j.payload->'input',
              j.attempts,
              j.max_attempts,
              j.last_error,
              j.updated_at
-        FROM graphile_worker._private_jobs j
-        JOIN graphile_worker._private_tasks t ON t.id = j.task_id
-       WHERE t.identifier = '${JOB_TASK}'
-         AND j.attempts >= j.max_attempts
-         AND j.locked_at IS NULL
+        FROM ${queueJobsFrom}
+       WHERE ${deadJobPredicate}
       ON CONFLICT (id) DO NOTHING
-    `));
+    `);
 
     // Purge: delete the archived rows from the queue.
-    await tx.execute(drizzleSql.raw(`
+    await tx.execute(sql`
       DELETE FROM graphile_worker._private_jobs j
        USING graphile_worker._private_tasks t
        WHERE t.id = j.task_id
-         AND t.identifier = '${JOB_TASK}'
-         AND j.attempts >= j.max_attempts
-         AND j.locked_at IS NULL
-    `));
+         AND ${deadJobPredicate}
+    `);
 
     // Bound the archive: drop rows past the TTL.
-    await tx.execute(drizzleSql.raw(`
+    await tx.execute(sql`
       DELETE FROM dead_jobs
-       WHERE archived_at < now() - interval '${ARCHIVE_TTL}'
-    `));
+       WHERE archived_at < now() - (${ARCHIVE_TTL})::interval
+    `);
 
     // Bound the archive: keep only the newest ARCHIVE_CAP rows.
-    await tx.execute(drizzleSql.raw(`
+    await tx.execute(sql`
       DELETE FROM dead_jobs
        WHERE id IN (
          SELECT id FROM dead_jobs
           ORDER BY archived_at DESC
           OFFSET ${ARCHIVE_CAP}
        )
-    `));
+    `);
   });
 
   deadJobsResource.notify();
