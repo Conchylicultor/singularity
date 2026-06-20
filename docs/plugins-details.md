@@ -1782,7 +1782,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Server:
-    - Uses: `database/derived-views.rebuildDerivedViews`, `database/migrations.runMigrations`
+    - Uses: `database/derived-views.rebuildDerivedViews`, `database/migrations.runMigrations`, `primitives/log-channels.Log`
     - Exports: Values: `awaitDbReady`, `db`, `isTransientDbError`
   - Core:
     - Uses: `infra/paths.SINGULARITY_DIR`
@@ -3970,7 +3970,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports: Types: `ClientMessage`, `EmitLogsBody`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`; Values: `emitLogs`, `EmitLogsBodySchema`, `getLogChannels`
       - Cross-plugin:
-        - Imported by: `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database/change-feed`, `database/derived-views`, `database/migrations`, `debug/health-monitor`, `debug/slow-ops`, `debug/worktree-cleanup`, `infra/attachments`, `primitives/live-state`
+        - Imported by: `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database`, `database/change-feed`, `database/derived-views`, `database/migrations`, `debug/health-monitor`, `debug/slow-ops`, `debug/worktree-cleanup`, `infra/attachments`, `primitives/live-state`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot.MarkdownEnhancerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`

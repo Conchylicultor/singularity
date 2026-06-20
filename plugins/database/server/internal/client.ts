@@ -1,8 +1,9 @@
 import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
-import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
+import { retryUntil, exponential, withJitter } from "@plugins/packages/plugins/retry/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { recordSpan, chargeWait, currentCallerKind, recordReadTables } from "@plugins/infra/plugins/runtime-profiler/core";
+import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { readDatabaseConfig, buildConnectionString } from "@plugins/database/core";
 
 // The worktree name is the worktree DB name — the one thing the worktree pool
@@ -91,6 +92,36 @@ function extractTablesFromSql(text: string): string[] {
   return Array.from(tables);
 }
 
+// Postgres deadlock-victim (40P01) and serialization-failure (40001) are, by
+// definition, retryable: the conflicting statement was rolled back whole and
+// holds nothing. pool.query only ever runs a single autocommit statement
+// (explicit transactions go through pool.connect() → client.query and bypass
+// this wrapper — see plugins/database/CLAUDE.md), so a fresh re-execution is
+// always safe and correct: there is no partial-transaction state to lose. The
+// concrete victim this absorbs is the derived-views boot rebuild, which holds a
+// brief AccessExclusive window over its views (DROP+CREATE in one tx) — during a
+// hot-swap restart that window used to kill concurrent readers on the previous
+// backend (the tasks loader, the allow-files poll) with a hard "deadlock
+// detected" crash. Bounded jittered retry rides out the window instead of
+// surfacing it; a genuinely persistent deadlock still throws after the cap, so a
+// real lock-order bug stays loud.
+const RETRYABLE_SQLSTATES = new Set(["40P01", "40001"]);
+const MAX_QUERY_RETRIES = 4;
+const queryRetryDelay = withJitter(exponential({ initial: 10, max: 250 }));
+
+// Every retry is logged, persistently. The retry self-heals transient contention
+// (DDL vs reads) but is NOT silent: a recurring deadlock — e.g. a genuine
+// lock-order bug — surfaces here as a steady stream of lines even while it keeps
+// succeeding within the cap, instead of vanishing. Grep `db.jsonl` for
+// `[deadlock-retry]`; a rising rate is the signal to fix the source, not the cap.
+const dbLog = Log.channel("db", { persist: true });
+
+function retryableSqlState(err: unknown): string | null {
+  if (!err || typeof err !== "object") return null;
+  const code = (err as { code?: string }).code ?? "";
+  return RETRYABLE_SQLSTATES.has(code) ? code : null;
+}
+
 const origQuery = pool.query.bind(pool);
 const origConnect = pool.connect.bind(pool);
 // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
@@ -101,7 +132,7 @@ pool.query = ((...a: Parameters<typeof origQuery>): any => {
   const first = a[0] as string | { text?: string } | undefined;
   const text = typeof first === "string" ? first : (first?.text ?? "?");
 
-  const runTimed = async () => {
+  const runOnce = async () => {
     const acq0 = performance.now();
     const client = await origConnect(); // unwrapped: avoids double-recording
     recordSpan("db", "[acquire]", performance.now() - acq0);
@@ -115,6 +146,29 @@ pool.query = ((...a: Parameters<typeof origQuery>): any => {
       client.release();
     }
   };
+
+  // Re-run the statement (fresh connection each attempt) on a deadlock/
+  // serialization victim; non-retryable errors propagate immediately, and the
+  // attempt cap re-throws a persistent conflict so it never loops forever.
+  const runTimed = () =>
+    retryUntil(
+      async (attempt) => {
+        try {
+          return await runOnce();
+        } catch (err) {
+          const sqlstate = retryableSqlState(err);
+          // Non-retryable errors, and a retryable one that has exhausted the cap,
+          // propagate — a persistent deadlock still crashes loudly.
+          if (sqlstate === null || attempt >= MAX_QUERY_RETRIES) throw err;
+          dbLog.publish(
+            `[deadlock-retry] sqlstate=${sqlstate} attempt=${attempt + 1}/${MAX_QUERY_RETRIES} sql=${text.slice(0, 160)}`,
+            "stderr",
+          );
+          return null; // retryable victim — back off and retry
+        }
+      },
+      { delay: queryRetryDelay },
+    );
 
   // Gate only background/loader queries; interactive (http) and context-less
   // (jobs/migrations/pollers) queries run ungated against the reserved capacity.

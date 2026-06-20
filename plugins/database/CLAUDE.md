@@ -76,7 +76,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
 - Description: Core database infrastructure. Connection pooling and DB readiness.
 - Load-bearing: yes
 - Server:
-  - Uses: `database/derived-views.rebuildDerivedViews`, `database/migrations.runMigrations`
+  - Uses: `database/derived-views.rebuildDerivedViews`, `database/migrations.runMigrations`, `primitives/log-channels.Log`
   - Exports: Values: `awaitDbReady`, `db`, `isTransientDbError`
 - Core:
   - Uses: `infra/paths.SINGULARITY_DIR`
