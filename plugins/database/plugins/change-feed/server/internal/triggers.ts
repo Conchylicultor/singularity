@@ -1,6 +1,7 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 
 const log = Log.channel("change-feed", { persist: true });
 
@@ -10,7 +11,7 @@ const log = Log.channel("change-feed", { persist: true });
 // written by the migration runner inside `onReadyBlocking`, never read by a
 // live-state loader, and triggering on it adds pure noise. graphile_worker lives
 // in its own schema, so it is already excluded by the public-schema filter.
-const DENYLIST = new Set<string>(["__singularity_migrations"]);
+const DENYLIST = new Set<string>([MIGRATIONS_TABLE_NAME]);
 
 // The generic STATEMENT-level trigger function. It is deterministic, data-less
 // DDL — created with CREATE OR REPLACE on every boot (never a migration), exactly

@@ -5,6 +5,7 @@ import { getViewConfig } from "drizzle-orm/pg-core";
 import {
   topoSortViews,
   compileCreateView,
+  DERIVED_VIEW_STATE_TABLE_NAME,
   type RegisteredView,
 } from "@plugins/database/plugins/derived-views/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
@@ -65,7 +66,7 @@ export async function rebuildDerivedViews(db: NodePgDatabase): Promise<void> {
     // spurious first-boot rebuild on the fork.
     await tx.execute(
       drizzleSql.raw(
-        `CREATE TABLE IF NOT EXISTS "public"."derived_view_state" (
+        `CREATE TABLE IF NOT EXISTS "public"."${DERIVED_VIEW_STATE_TABLE_NAME}" (
            id boolean PRIMARY KEY DEFAULT true CHECK (id),
            signature text NOT NULL
          )`,
@@ -73,7 +74,7 @@ export async function rebuildDerivedViews(db: NodePgDatabase): Promise<void> {
     );
 
     const priorRes = await tx.execute(
-      drizzleSql.raw(`SELECT signature FROM "public"."derived_view_state" LIMIT 1`),
+      drizzleSql.raw(`SELECT signature FROM "public"."${DERIVED_VIEW_STATE_TABLE_NAME}" LIMIT 1`),
     );
     const prior = (priorRes.rows as unknown as { signature: string }[])[0]?.signature;
 
@@ -111,7 +112,7 @@ export async function rebuildDerivedViews(db: NodePgDatabase): Promise<void> {
 
     await tx.execute(
       drizzleSql`
-        INSERT INTO "public"."derived_view_state" (id, signature)
+        INSERT INTO "public".${drizzleSql.raw(`"${DERIVED_VIEW_STATE_TABLE_NAME}"`)} (id, signature)
         VALUES (true, ${signature})
         ON CONFLICT (id) DO UPDATE SET signature = EXCLUDED.signature
       `,

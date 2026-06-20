@@ -1807,7 +1807,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `conversations/agents`, `database`, `database/change-feed`, `database/migrations`, `tasks/tasks-core`
       - Core:
-        - Exports: Types: `RegisteredView`; Values: `compileCreateView`, `topoSortViews`
+        - Exports: Types: `RegisteredView`; Values: `compileCreateView`, `DERIVED_VIEW_STATE_TABLE_NAME`, `IMPERATIVE_PUBLIC_TABLES`, `MIGRATIONS_TABLE_NAME`, `topoSortViews`
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Cross-plugin:
         - Imported by: `infra/launcher`

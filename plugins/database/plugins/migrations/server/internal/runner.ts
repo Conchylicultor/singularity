@@ -4,6 +4,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { rebuildDerivedViews } from "@plugins/database/plugins/derived-views/server";
+import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
 
 const log = Log.channel("migrations", { persist: true });
 
@@ -52,14 +53,14 @@ function listMigrationFiles(dir: string): Migration[] {
 // Creates the ledger table if absent, so callers can use the result directly.
 async function getAppliedHashes(db: NodePgDatabase): Promise<Set<string>> {
   await db.execute(drizzleSql`
-    CREATE TABLE IF NOT EXISTS __singularity_migrations (
+    CREATE TABLE IF NOT EXISTS ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (
       hash text PRIMARY KEY,
       file text NOT NULL,
       applied_at timestamptz NOT NULL DEFAULT now()
     )
   `);
   const applied = await db.execute<{ hash: string }>(
-    drizzleSql`SELECT hash FROM __singularity_migrations`,
+    drizzleSql`SELECT hash FROM ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)}`,
   );
   return new Set(applied.rows.map((r) => r.hash));
 }
@@ -92,7 +93,7 @@ export async function runMigrations(db: NodePgDatabase): Promise<void> {
       await db.transaction(async (tx) => {
         await tx.execute(drizzleSql.raw(m.sqlText));
         await tx.execute(
-          drizzleSql`INSERT INTO __singularity_migrations (hash, file) VALUES (${m.hash}, ${m.file})`,
+          drizzleSql`INSERT INTO ${drizzleSql.raw(MIGRATIONS_TABLE_NAME)} (hash, file) VALUES (${m.hash}, ${m.file})`,
         );
       });
     }

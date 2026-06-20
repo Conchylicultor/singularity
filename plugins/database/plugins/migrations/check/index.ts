@@ -9,6 +9,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 // helpers for non-backend consumers and is import-safe by design.
 import { buildConnectionString, readDatabaseConfig } from "@plugins/database/core";
 import { dryRunPendingMigrations } from "@plugins/database/plugins/migrations/server";
+import orphanedTablesCheck from "./orphaned-tables";
 
 // Inlined minimal Check shape (mirrors the other plugin-contributed checks, e.g.
 // data-migration-dml-only / migration-hashes-unique) to avoid a cross-plugin
@@ -128,4 +129,4 @@ const check: Check = {
   },
 };
 
-export default check;
+export default [check, orphanedTablesCheck];
