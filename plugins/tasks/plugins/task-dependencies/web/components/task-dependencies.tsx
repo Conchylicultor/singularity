@@ -64,18 +64,18 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
         actions={
           <>
             {folderCandidate && (
-              <Button size="xs" variant="outline" onClick={addFolderAsDep}>
+              <Button variant="outline" onClick={addFolderAsDep}>
                 Add folder as dep
               </Button>
             )}
             <TaskDraftPopover
-              trigger={<Button size="xs" variant="outline">+ Prerequisite</Button>}
+              trigger={<Button variant="outline">+ Prerequisite</Button>}
               target={target}
               relate={{ taskId, defaultMode: "prerequisite" }}
               heading="Add prerequisite"
             />
             <TaskDraftPopover
-              trigger={<Button size="xs" variant="outline">+ Follow-up</Button>}
+              trigger={<Button variant="outline">+ Follow-up</Button>}
               target={target}
               relate={{ taskId, defaultMode: "followup" }}
               heading="Add follow-up"

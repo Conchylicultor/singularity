@@ -46,7 +46,7 @@ export function CreatorsControl({
   if (creators.length === 1) {
     const c = creators[0]!;
     return (
-      <Button size="sm" disabled={busy} onClick={() => run(c)}>
+      <Button disabled={busy} onClick={() => run(c)}>
         {c.icon}
         {c.label}
       </Button>

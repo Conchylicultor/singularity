@@ -75,7 +75,6 @@ export function LaunchAgentPopover({
         />
       )}
       <LaunchControl
-        size="sm"
         disabled={disabled}
         // The popover is always a fire-and-forget background launch; callers
         // surface a confirmation toast via onLaunched.

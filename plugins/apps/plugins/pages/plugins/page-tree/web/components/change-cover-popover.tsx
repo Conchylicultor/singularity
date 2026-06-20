@@ -98,7 +98,6 @@ export function ChangeCoverPopover({
           <SectionLabel>Upload</SectionLabel>
           <Button
             variant="secondary"
-            size="sm"
             loading={uploading}
             onClick={() => inputRef.current?.click()}
           >

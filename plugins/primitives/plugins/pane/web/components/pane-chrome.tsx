@@ -111,7 +111,6 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
           {chrome.promote && doPromote && (
             <Button
               variant="ghost"
-              size="sm"
               onClick={doPromote}
               aria-label="Promote"
             >
@@ -121,7 +120,6 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
           {chrome.close && doClose && (
             <Button
               variant="ghost"
-              size="sm"
               onClick={doClose}
               aria-label="Close"
             >

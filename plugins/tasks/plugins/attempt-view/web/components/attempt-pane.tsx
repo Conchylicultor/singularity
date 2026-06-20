@@ -117,7 +117,6 @@ function AttemptSection({
         </Stack>
       )}
       <LaunchControl
-        size="sm"
         variant="outline"
         className="px-sm pt-xs"
         getRequest={() => ({ attemptId: attempt.id })}

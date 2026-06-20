@@ -43,7 +43,7 @@ export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | 
         maxHeight="12rem"
         namespace="screenshot-prompt"
       />
-      <LaunchControl size="sm" getRequest={getRequest} />
+      <LaunchControl getRequest={getRequest} />
     </Stack>
   );
 }

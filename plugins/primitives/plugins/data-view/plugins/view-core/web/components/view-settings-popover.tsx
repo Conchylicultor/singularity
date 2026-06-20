@@ -72,7 +72,6 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
 
       <Stack direction="row" gap="xs">
         <Button
-          size="sm"
           variant="outline"
           onClick={() => {
             actions.duplicateView(id);
@@ -83,7 +82,6 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
           Duplicate
         </Button>
         <Button
-          size="sm"
           variant="ghost"
           className="text-destructive"
           onClick={() => {

@@ -52,7 +52,7 @@ export function PrototypeDetail() {
   const improveButton = (
     <LaunchAgentPopover
       trigger={
-        <Button variant="outline" size="sm">
+        <Button variant="outline">
           <MdAutoAwesome />
           Improve this prototype
         </Button>

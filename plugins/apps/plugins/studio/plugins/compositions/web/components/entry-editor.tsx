@@ -63,7 +63,7 @@ export function EntryEditor({
             align="end"
             contentClassName="w-80"
             trigger={
-              <Button variant="outline" size="sm">
+              <Button variant="outline">
                 <MdAdd />
                 Add
               </Button>

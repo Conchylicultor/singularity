@@ -149,7 +149,7 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
           </Stack>
         }
         trailing={
-          <Button size="sm" variant="ghost" onClick={() => refetch()}>
+          <Button variant="ghost" onClick={() => refetch()}>
             <MdRefresh className="size-4" /> Refresh
           </Button>
         }
@@ -191,12 +191,12 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
                   </td>
                   <td className="px-md py-sm" onClick={(e) => e.stopPropagation()}>
                     {(r.state === "retrying" || r.state === "dead") && (
-                      <Button size="sm" variant="ghost" onClick={() => retry(r.id)}>
+                      <Button variant="ghost" onClick={() => retry(r.id)}>
                         <MdReplay className="size-3.5" /> Retry
                       </Button>
                     )}
                     {r.state === "pending" && (
-                      <Button size="sm" variant="ghost" onClick={() => cancel(r.id)}>
+                      <Button variant="ghost" onClick={() => cancel(r.id)}>
                         <MdDelete className="size-3.5" /> Cancel
                       </Button>
                     )}
@@ -234,7 +234,7 @@ function Drawer({
               className="border-b px-lg py-md"
               content={header}
               trailing={
-                <Button size="sm" variant="ghost" onClick={onClose}>
+                <Button variant="ghost" onClick={onClose}>
                   Close
                 </Button>
               }
@@ -317,7 +317,7 @@ function DeadTabInner({ data, refetch }: { data: DeadJobsPayload; refetch: () =>
           </Text>
         }
         trailing={
-          <Button size="sm" variant="ghost" onClick={() => refetch()}>
+          <Button variant="ghost" onClick={() => refetch()}>
             <MdRefresh className="size-4" /> Refresh
           </Button>
         }
@@ -420,7 +420,7 @@ function EventsTab() {
           </Text>
         }
         trailing={
-          <Button size="sm" variant="ghost" onClick={() => refetch()}>
+          <Button variant="ghost" onClick={() => refetch()}>
             <MdRefresh className="size-4" /> Refresh
           </Button>
         }
@@ -580,7 +580,7 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
           </Stack>
         }
         trailing={
-          <Button size="sm" variant="ghost" onClick={() => refetch()}>
+          <Button variant="ghost" onClick={() => refetch()}>
             <MdRefresh className="size-4" /> Refresh
           </Button>
         }
@@ -639,13 +639,12 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
                         </td>
                         <td className="px-md py-sm text-right">
                           <Button
-                            size="sm"
                             variant="ghost"
                             onClick={() => toggle(t.id, !t.enabled)}
                           >
                             {t.enabled ? "Disable" : "Enable"}
                           </Button>
-                          <Button size="sm" variant="ghost" onClick={() => remove(t.id)}>
+                          <Button variant="ghost" onClick={() => remove(t.id)}>
                             <MdDelete className="size-3.5" />
                           </Button>
                         </td>

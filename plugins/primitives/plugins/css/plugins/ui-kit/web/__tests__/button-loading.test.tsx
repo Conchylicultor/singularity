@@ -29,7 +29,7 @@ describe("Button loading", () => {
 
   it("icon-sized buttons replace their glyph with the spinner while loading", () => {
     const { getByRole } = render(
-      <Button size="icon-sm" loading aria-label="refresh">
+      <Button aspect="icon" loading aria-label="refresh">
         <svg data-testid="glyph" />
       </Button>,
     );

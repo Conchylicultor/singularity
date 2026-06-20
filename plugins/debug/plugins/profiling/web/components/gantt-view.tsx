@@ -21,7 +21,6 @@ export function GanttView(): ReactElement {
             trailing={
               <Button
                 variant="ghost"
-                size="xs"
                 onClick={() => setRefreshKey((k) => k + 1)}
               >
                 <MdRefresh className="size-3.5" />

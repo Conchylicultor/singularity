@@ -194,7 +194,6 @@ export function GoogleSetupPane() {
                 />
                 <Button
                   variant="default"
-                  size="sm"
                   loading={saving}
                   disabled={!clientId && !clientSecret}
                   onClick={handleSaveCredentials}
@@ -225,7 +224,6 @@ export function GoogleSetupPane() {
               <>
                 <Button
                   variant="default"
-                  size="sm"
                   disabled={!credentialsSaved || connecting}
                   onClick={handleConnect}
                 >
@@ -297,7 +295,6 @@ function StepLink({
   return (
     <Button
       variant="outline"
-      size="sm"
       disabled={disabled}
       onClick={() => window.open(href, "_blank")}
       className="w-fit"

@@ -43,13 +43,14 @@ named by a density `ControlSize = "xs" | "sm" | "md" | "lg"`. Size should be set
   `control-sm`, `IconButton`/`PaneIconAction` (icon) → `control-icon-sm`,
   `ToggleChip` → its `sm`. Mixed controls in one toolbar share a height, keep
   their shapes.
-- **Chip & icon controls have no `size` prop** — `Badge`, `ToggleChip`,
-  `SegmentedControl`, and `IconButton`/`PaneIconAction` derive size *only* from
-  ambient density (`useControlSize`); passing `size` is a compile error (the
-  chips' `[key: string]: unknown` passthrough is plugged with `size?: never`, so
-  it can't sneak through onto the underlying element). `Button` still takes an
-  explicit `size` — the last per-instance escape hatch; omit it to inherit, and a
-  `size` inside a toolbar is a smell (slated for removal, mirroring this change).
+- **No control has a `size` prop** — `Badge`, `ToggleChip`, `SegmentedControl`,
+  `IconButton`/`PaneIconAction`, and `Button` all derive density *only* from
+  ambient density (`useControlSize`); passing `size` is a compile error on every
+  one of them (plugged with `size?: never` so it can't sneak through onto the
+  underlying element). There is no per-instance density escape hatch anywhere in
+  the app. `Button`'s **shape** (text vs square-icon vs inline) is selected via
+  an explicit `aspect` prop (`"text"` default | `"icon"` | `"inline"`), which
+  carries no density.
 
 The runtime context lives in the **ui-kit** plugin at
 `@plugins/primitives/plugins/css/plugins/ui-kit/web` (`ControlSizeProvider`, `useControlSize`,

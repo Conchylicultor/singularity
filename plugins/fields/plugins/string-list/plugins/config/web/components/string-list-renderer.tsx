@@ -102,7 +102,7 @@ const StringListRenderer: FieldRendererComponent<string[]> = ({
       </SortableList>
 
       <Stack align="start" gap="none">
-        <Button variant="ghost" size="xs" onClick={handleAdd}>
+        <Button variant="ghost" onClick={handleAdd}>
           <MdAdd className="size-3.5" />
           Add item
         </Button>

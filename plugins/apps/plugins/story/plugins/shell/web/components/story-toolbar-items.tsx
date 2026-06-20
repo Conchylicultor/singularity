@@ -17,7 +17,7 @@ import { StoryViewSwitcher } from "./story-view-switcher";
 export function BackToStories() {
   const store = usePaneStore();
   return (
-    <Button variant="outline" size="xs" onClick={() => store.clearRoute()}>
+    <Button variant="outline" onClick={() => store.clearRoute()}>
       <MdChevronLeft className="size-4" />
       Stories
     </Button>

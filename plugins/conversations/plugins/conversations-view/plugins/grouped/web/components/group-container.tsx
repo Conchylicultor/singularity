@@ -58,7 +58,7 @@ export function GroupContainer({
           <>
             <Button
               variant="ghost"
-              size="icon-xs"
+              aspect="icon"
               onClick={() => onToggleExpanded()}
               aria-label={expanded ? "Collapse group" : "Expand group"}
               className="text-muted-foreground"

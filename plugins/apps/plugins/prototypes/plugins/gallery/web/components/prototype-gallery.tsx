@@ -65,7 +65,7 @@ export function PrototypeGallery() {
   const newButton = (
     <LaunchAgentPopover
       trigger={
-        <Button variant="default" size="sm">
+        <Button variant="default">
           <MdAdd />
           New prototype
         </Button>

@@ -103,7 +103,6 @@ function SummaryPaneInner({
   return (
     <Stack gap="md" className="p-md text-body">
       <Button
-        size="sm"
         variant="outline"
         onClick={onSummarize}
         loading={isPending}

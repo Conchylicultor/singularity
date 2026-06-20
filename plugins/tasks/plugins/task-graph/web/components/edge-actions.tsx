@@ -57,7 +57,7 @@ export function EdgeActions({ sourceTaskId, targetTaskId, targetFolderId, onNavi
     <>
       <Button
         variant="ghost"
-        size="icon-sm"
+        aspect="icon"
         className="bg-background text-foreground hover:bg-primary hover:text-primary-foreground size-6 rounded-full border shadow-sm"
         disabled={inserting}
         onClick={handleInsert}
@@ -67,7 +67,7 @@ export function EdgeActions({ sourceTaskId, targetTaskId, targetFolderId, onNavi
       </Button>
       <Button
         variant="ghost"
-        size="icon-sm"
+        aspect="icon"
         className="bg-background text-foreground hover:bg-destructive hover:text-destructive-foreground size-6 rounded-full border shadow-sm"
         disabled={deleting}
         onClick={handleDelete}

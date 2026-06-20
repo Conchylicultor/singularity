@@ -93,12 +93,12 @@ function FallbackChrome({
           </Text>
           <Stack direction="row" align="center" gap="sm" className="ml-auto">
             {chrome.promote && doPromote && (
-              <Button variant="ghost" size="sm" onClick={doPromote} aria-label="Promote">
+              <Button variant="ghost" onClick={doPromote} aria-label="Promote">
                 <MdOpenInFull className="size-4" />
               </Button>
             )}
             {chrome.close && doClose && (
-              <Button variant="ghost" size="sm" onClick={doClose} aria-label="Close">
+              <Button variant="ghost" onClick={doClose} aria-label="Close">
                 <MdClose className="size-4" />
               </Button>
             )}

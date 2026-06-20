@@ -123,7 +123,7 @@ function AnchorChooser({
       onOpenChange={setOpen}
       contentClassName="w-64"
       trigger={
-        <Button variant="outline" size="sm">
+        <Button variant="outline">
           <MdCalendarToday />
           {label ? (
             <Text variant="body">{label}</Text>

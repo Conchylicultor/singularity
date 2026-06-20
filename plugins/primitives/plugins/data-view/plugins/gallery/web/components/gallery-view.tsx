@@ -160,7 +160,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         {creators?.length ? (
           <Stack align="center" gap="sm">
             {creators.map((c) => (
-              <Button key={c.id} size="sm" onClick={() => void c.onSelect()}>
+              <Button key={c.id} onClick={() => void c.onSelect()}>
                 {c.icon}
                 {c.label}
               </Button>

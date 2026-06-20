@@ -125,11 +125,10 @@ export function ToolsPane(props: Props) {
             />
           </div>
           <Stack direction="row" gap="sm">
-            <Button size="sm" onClick={props.onApplyDraw} disabled={!props.hasStrokes}>
+            <Button onClick={props.onApplyDraw} disabled={!props.hasStrokes}>
               Apply
             </Button>
             <Button
-              size="sm"
               variant="outline"
               onClick={props.onUndoStroke}
               disabled={!props.hasStrokes}
@@ -138,7 +137,6 @@ export function ToolsPane(props: Props) {
               Undo
             </Button>
             <Button
-              size="sm"
               variant="outline"
               onClick={props.onClearStrokes}
               disabled={!props.hasStrokes}
@@ -151,15 +149,15 @@ export function ToolsPane(props: Props) {
 
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- space-y on a bordered padded footer; no named space-y utility, can't be a clean Stack */}
       <div className="mt-auto space-y-2 border-t p-md">
-        <Button variant="outline" size="sm" className="w-full" onClick={props.onCopy}>
+        <Button variant="outline" className="w-full" onClick={props.onCopy}>
           <MdContentCopy className="size-4" />
           Copy to clipboard
         </Button>
-        <Button variant="outline" size="sm" className="w-full" onClick={props.onDownload}>
+        <Button variant="outline" className="w-full" onClick={props.onDownload}>
           <MdDownload className="size-4" />
           Download PNG
         </Button>
-        <Button variant="ghost" size="sm" className="w-full" onClick={props.onReset}>
+        <Button variant="ghost" className="w-full" onClick={props.onReset}>
           <MdRefresh className="size-4" />
           Reset to original
         </Button>
@@ -182,7 +180,6 @@ function ToolButton({
   return (
     <Button
       variant={active ? "secondary" : "ghost"}
-      size="sm"
       onClick={onClick}
       className="h-auto py-sm"
     >

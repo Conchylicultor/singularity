@@ -122,7 +122,7 @@ export function BroadcastsPanel() {
           <Stack direction="row" gap="xs">
             <Button
               variant="ghost"
-              size="icon"
+              aspect="icon"
               className="size-7"
               onClick={() => refetch()}
               title="Refresh"
@@ -130,7 +130,6 @@ export function BroadcastsPanel() {
               <MdRefresh className="size-4" />
             </Button>
             <Button
-              size="sm"
               className="h-7 gap-xs"
               onClick={() => setShowForm((v) => !v)}
             >
@@ -244,7 +243,6 @@ export function BroadcastsPanel() {
           <Stack direction="row" gap="sm" justify="end">
             <Button
               variant="ghost"
-              size="sm"
               className="h-7"
               onClick={() => {
                 setShowForm(false);
@@ -254,7 +252,6 @@ export function BroadcastsPanel() {
               Cancel
             </Button>
             <Button
-              size="sm"
               className="h-7"
               loading={saving}
               disabled={!form.message.trim()}
@@ -314,7 +311,7 @@ export function BroadcastsPanel() {
                 trailing={
                   <Button
                     variant="ghost"
-                    size="icon"
+                    aspect="icon"
                     className="size-6 text-muted-foreground hover:text-destructive"
                     loading={saving}
                     onClick={() => handleDelete(i)}

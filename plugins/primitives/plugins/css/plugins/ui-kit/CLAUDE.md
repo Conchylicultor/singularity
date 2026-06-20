@@ -24,7 +24,10 @@ The global UI kit — one cohesive design-system unit. It owns:
   [`web/theme/CLAUDE.md`](web/theme/CLAUDE.md).
 - **`ControlSize`** affordance-sizing context (`web/theme/control-size.tsx`) —
   `ControlSizeProvider` / `useControlSize` / `iconSizeFor` / `textSizeFor`. The
-  foundational `Button` reads it, so it must sit beside `Button` (not in the
+  foundational `Button` derives its **density** (height) purely from this ambient
+  context — it has no `size` prop; passing one is a compile error. **Shape**
+  (text vs square-icon vs inline) is a separate `aspect` prop (`"text"` default |
+  `"icon"` | `"inline"`). `ControlSize` must sit beside `Button` here (not in the
   `control-size` primitive, which only owns the CSS scale + lint rule).
 - **The portal-forward bridge** (`web/components/portal-forward.tsx`) —
   `PortalForwardProvider` / `usePortalForwardedAttrs`. Portals relocate content to

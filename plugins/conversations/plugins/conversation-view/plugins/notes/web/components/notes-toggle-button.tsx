@@ -17,7 +17,7 @@ export function NotesToggleButton({
   return (
     <Button
       variant={isVisible ? "secondary" : "ghost"}
-      size="icon-sm"
+      aspect="icon"
       title={isVisible ? "Hide notes" : "Add note"}
       aria-label={isVisible ? "Hide notes" : "Add note"}
       aria-pressed={isVisible}

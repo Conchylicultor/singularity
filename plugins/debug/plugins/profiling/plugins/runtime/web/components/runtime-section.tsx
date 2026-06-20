@@ -235,7 +235,6 @@ export function RuntimeSection(): ReactElement | null {
       actions={
         <Button
           variant="ghost"
-          size="xs"
           loading={resetMutation.isPending}
           onClick={() => resetMutation.mutate({})}
         >

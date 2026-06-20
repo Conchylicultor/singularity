@@ -108,7 +108,6 @@ export function ImportByUrl({
           />
           <Button
             variant="ghost"
-            size="sm"
             onClick={handleImport}
             loading={importMutation.isPending}
             disabled={!input.trim()}
@@ -139,7 +138,6 @@ export function ImportByUrl({
                   <Stack direction="row" gap="xs">
                     <Button
                       variant="ghost"
-                      size="xs"
                       onClick={() => onApply(theme.tweakcnId, theme.presets)}
                       className="text-primary hover:bg-primary/10"
                     >
@@ -147,7 +145,6 @@ export function ImportByUrl({
                     </Button>
                     <Button
                       variant="ghost"
-                      size="xs"
                       onClick={() => deleteMutation.mutate({ params: { id: theme.id } })}
                       loading={deleteMutation.isPending}
                       className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"

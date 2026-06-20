@@ -73,7 +73,6 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
 
       <Stack direction="row" gap="none" justify="end" className="border-t p-sm">
         <Button
-          size="sm"
           disabled={!data || !data.isDirectory}
           onClick={() => data && onSelect(data.path)}
         >

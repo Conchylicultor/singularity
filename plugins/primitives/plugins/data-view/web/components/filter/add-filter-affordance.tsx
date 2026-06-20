@@ -32,7 +32,6 @@ export function AddFilterAffordance<TRow>(props: {
       trigger={
         <Button
           variant="ghost"
-          size="sm"
           // eslint-disable-next-line layout/no-adhoc-layout -- per-child start-alignment override in a stretch flex parent (no primitive for self-*)
           className="self-start"
           aria-label="Add filter"

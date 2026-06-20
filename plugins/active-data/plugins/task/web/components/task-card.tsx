@@ -122,7 +122,6 @@ export function TaskCard({
         ) : null}
         <Button
           variant="ghost"
-          size="sm"
           onClick={onCreate}
           disabled={disabled}
           title="Create task"

@@ -25,7 +25,7 @@ export function OperatorPicker(props: {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="outline" size="sm" aria-label="Filter operator" />
+          <Button variant="outline" aria-label="Filter operator" />
         }
       >
         <span className="truncate">{current?.label ?? "—"}</span>

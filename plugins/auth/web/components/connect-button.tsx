@@ -19,7 +19,6 @@ export function ConnectButton({
   const [busy, setBusy] = useState(false);
   return (
     <Button
-      size="sm"
       loading={busy}
       onClick={async () => {
         setBusy(true);

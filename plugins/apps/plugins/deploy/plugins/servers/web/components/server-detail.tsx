@@ -31,7 +31,6 @@ export function ServerDetail({ server }: { server: Server }) {
         trailing={
           <Button
             variant="link"
-            size="xs"
             onClick={handleDelete}
             className="text-destructive hover:text-destructive"
           >

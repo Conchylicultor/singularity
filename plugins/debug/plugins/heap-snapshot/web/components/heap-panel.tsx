@@ -59,7 +59,6 @@ export function HeapPanel(): ReactElement {
           <Stack direction="row" align="center" gap="sm">
             <SectionLabel>Heap (bun:jsc heapStats)</SectionLabel>
             <Button
-              size="sm"
               variant="outline"
               onClick={() => void refetch()}
               disabled={isFetching}

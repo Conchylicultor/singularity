@@ -36,7 +36,7 @@ export function ConversationList() {
       activeId={activeId}
       onNavigate={navigate}
       onCloseConversation={handleCloseConversation}
-      header={<LaunchControl variant="outline" size="sm" fullWidth />}
+      header={<LaunchControl variant="outline" fullWidth />}
     />
   );
 }

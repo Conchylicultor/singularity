@@ -31,7 +31,7 @@ export function RowActionButton({
     <Button
       type="button"
       variant="ghost"
-      size="icon"
+      aspect="icon"
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid action-glyph leaf in the hover-reveal row strip; never shrinks
       className={cn(
         "size-5 shrink-0 text-muted-foreground hover:text-foreground",

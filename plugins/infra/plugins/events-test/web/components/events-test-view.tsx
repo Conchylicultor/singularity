@@ -255,7 +255,7 @@ export function EventsTestView() {
           </div>
           }
           trailing={
-            <Button variant="ghost" size="sm" onClick={refresh}>
+            <Button variant="ghost" onClick={refresh}>
               <MdRefresh className="size-4" />
               Refresh
             </Button>
@@ -412,7 +412,6 @@ export function EventsTestView() {
                   trailing={
                     <Button
                       variant="ghost"
-                      size="sm"
                       onClick={() => onDeleteTrigger(t.id)}
                       aria-label="Delete trigger"
                     >
@@ -455,7 +454,7 @@ export function EventsTestView() {
         <Section
           title={`Job log (${log.length})`}
           action={
-            <Button variant="ghost" size="sm" onClick={onResetLog}>
+            <Button variant="ghost" onClick={onResetLog}>
               <MdDelete className="size-4" />
               Clear
             </Button>

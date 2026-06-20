@@ -51,7 +51,6 @@ function TemplateChip({
     <ButtonGroup className={cn("text-caption", !pinned && "[&>*]:border-dashed")}>
       <Button
         variant="outline"
-        size="xs"
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => applyTemplate(template, insertText)}
       >
@@ -60,7 +59,6 @@ function TemplateChip({
       </Button>
       <Button
         variant="outline"
-        size="xs"
         disabled={!canSend || sending}
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => onSend(template)}

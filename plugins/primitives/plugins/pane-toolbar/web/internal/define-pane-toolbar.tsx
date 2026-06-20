@@ -45,7 +45,7 @@ function ToolbarItem(item: PaneToolbarItem): ReactNode {
   }
   if (item.onClick) {
     return (
-      <Button variant="ghost" size="sm" onClick={item.onClick}>
+      <Button variant="ghost" onClick={item.onClick}>
         {item.icon && <item.icon className="size-4" />}
         {item.label}
       </Button>

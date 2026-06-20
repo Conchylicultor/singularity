@@ -1,4 +1,4 @@
-import { Button, iconSizeFor, useControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentProps, ComponentType, ReactNode } from "react";
 import {
   WithTooltip,
@@ -24,12 +24,10 @@ export function IconButton({
   side,
   ...props
 }: IconButtonProps) {
-  // An icon button NEVER sizes itself — its square shape is derived from the
-  // ambient control density, which the containing row/slot owns (via
-  // `ControlSizeProvider` or a slot's `controlSize` config). This makes a single
-  // button physically unable to desync from its neighbors.
-  const density = useControlSize();
-  const resolvedSize = iconSizeFor(density);
+  // An icon button NEVER sizes itself — `aspect="icon"` makes Button derive its
+  // square box from the ambient control density, which the containing row/slot
+  // owns (via `ControlSizeProvider` or a slot's `controlSize` config). This makes
+  // a single button physically unable to desync from its neighbors.
   const content = shortcut ? (
     <>
       {tooltip ?? label}
@@ -41,7 +39,7 @@ export function IconButton({
 
   return (
     <WithTooltip content={content} side={side}>
-      <Button variant={variant} size={resolvedSize} aria-label={label} {...props}>
+      <Button variant={variant} aspect="icon" aria-label={label} {...props}>
         <Icon />
       </Button>
     </WithTooltip>

@@ -51,7 +51,7 @@ export function FilePath({ filePath }: FilePathProps) {
       <CopyButton
         text={relativePath}
         title="Copy path"
-        size="inline"
+        aspect="inline"
         className="opacity-0 pointer-events-none group-hover/path:opacity-100 group-hover/path:pointer-events-auto transition-opacity"
         onClick={(e) => e.stopPropagation()}
       />

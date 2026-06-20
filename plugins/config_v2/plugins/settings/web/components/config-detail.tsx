@@ -221,7 +221,6 @@ function ConfigDetailBody({
         {scopeId && !showRaw && (
           <Button
             variant="ghost"
-            size="xs"
             onClick={handleStopCustomizing}
           >
             <MdLayersClear className="size-3.5" />
@@ -234,7 +233,6 @@ function ConfigDetailBody({
               <Text variant="caption" tone="muted">Reset all fields?</Text>
               <Button
                 variant="ghost"
-                size="xs"
                 onClick={handleResetAll}
                 className="bg-destructive/20 text-destructive hover:bg-destructive/30"
               >
@@ -242,7 +240,6 @@ function ConfigDetailBody({
               </Button>
               <Button
                 variant="ghost"
-                size="xs"
                 onClick={() => setConfirmReset(false)}
               >
                 Cancel
@@ -251,7 +248,6 @@ function ConfigDetailBody({
           ) : (
             <Button
               variant="ghost"
-              size="xs"
               onClick={() => setConfirmReset(true)}
             >
               <MdUndo className="size-3.5" />
@@ -261,7 +257,6 @@ function ConfigDetailBody({
         )}
         <Button
           variant="ghost"
-          size="xs"
           onClick={() => setShowRaw((v) => !v)}
         >
           {toggleIcon}
@@ -285,7 +280,6 @@ function ConfigDetailBody({
                         <Stack direction="row" gap="xs">
                           <Button
                             variant="ghost"
-                            size="xs"
                             onClick={() => setShowDiff((v) => !v)}
                             className="bg-destructive/20 hover:bg-destructive/30"
                           >
@@ -294,7 +288,6 @@ function ConfigDetailBody({
                           </Button>
                           <Button
                             variant="ghost"
-                            size="xs"
                             onClick={() => setShowRaw(true)}
                             className="bg-destructive/20 hover:bg-destructive/30"
                           >
@@ -302,7 +295,6 @@ function ConfigDetailBody({
                           </Button>
                           <Button
                             variant="ghost"
-                            size="xs"
                             onClick={handleAcceptAll}
                             className="bg-destructive/20 hover:bg-destructive/30"
                           >
@@ -346,7 +338,6 @@ function ConfigDetailBody({
                   trailing={
                     <Button
                       variant="ghost"
-                      size="xs"
                       onClick={handleDismiss}
                       className="bg-warning/20 hover:bg-warning/30"
                     >
@@ -374,7 +365,6 @@ function ConfigDetailBody({
                       <Stack direction="row" gap="xs">
                         <Button
                           variant="ghost"
-                          size="xs"
                           onClick={() => setShowDiff((v) => !v)}
                           className="bg-warning/20 hover:bg-warning/30"
                         >
@@ -384,7 +374,6 @@ function ConfigDetailBody({
                         {canMerge && (
                           <Button
                             variant="ghost"
-                            size="xs"
                             onClick={handleMerge}
                             className="bg-warning/20 hover:bg-warning/30"
                           >
@@ -394,7 +383,6 @@ function ConfigDetailBody({
                         )}
                         <Button
                           variant="ghost"
-                          size="xs"
                           onClick={handleAcceptAll}
                           className="bg-warning/20 hover:bg-warning/30"
                         >
@@ -402,7 +390,6 @@ function ConfigDetailBody({
                         </Button>
                         <Button
                           variant="ghost"
-                          size="xs"
                           onClick={handleDismiss}
                           className="bg-warning/20 hover:bg-warning/30"
                         >

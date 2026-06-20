@@ -778,7 +778,6 @@ function SelectionLayer({
               </button>
               <Button
                 variant="ghost"
-                size="sm"
                 className="text-foreground hover:text-foreground/80"
                 onClick={() => bulkDuplicate([...selectedIds])}
               >

@@ -12,7 +12,6 @@ export function ReviewButton() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      size="sm"
       title="Review"
       aria-label="Review"
       aria-pressed={isOpen}

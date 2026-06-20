@@ -23,7 +23,6 @@ export function AttemptSwitchButton() {
     return (
       <Button
         variant={isOpen ? "secondary" : "ghost"}
-        size="sm"
         title={isOpen ? "Close attempt view" : "Open attempt view"}
         aria-label={isOpen ? "Close attempt view" : "Open attempt view"}
         aria-pressed={isOpen}
@@ -40,7 +39,6 @@ export function AttemptSwitchButton() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      size="sm"
       title={isOpen ? "Close attempt view" : "Open attempt view"}
       aria-label={isOpen ? "Close attempt view" : "Open attempt view"}
       aria-pressed={isOpen}

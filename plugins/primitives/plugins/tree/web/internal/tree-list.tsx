@@ -440,7 +440,6 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
             {showRootAdd && (
               <Button
                 variant="ghost"
-                size="xs"
                 onClick={() => void createAtRoot(null)}
                 // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the tree rows above (no named margin utility)
                 className="text-muted-foreground mt-1 w-fit"

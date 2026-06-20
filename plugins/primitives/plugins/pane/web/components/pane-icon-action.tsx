@@ -1,4 +1,4 @@
-import { Button, iconSizeFor, useControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { forwardRef, type ComponentType, type ReactNode } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
@@ -14,17 +14,16 @@ export const PaneIconAction = forwardRef<
   HTMLButtonElement,
   PaneIconActionProps
 >(function PaneIconAction({ label, icon: Icon, onClick, children }, ref) {
-  // Hoisted (rules-of-hooks): bare Button defaults to the TEXT shape, so force the
-  // square icon shape at the ambient density so custom-children actions match the
-  // icon buttons beside them.
-  const iconSize = iconSizeFor(useControlSize());
+  // A bare Button defaults to the TEXT shape; `aspect="icon"` forces the square
+  // icon shape (at the ambient density) so custom-children actions match the icon
+  // buttons beside them.
   if (children && !Icon) {
     return (
       <WithTooltip content={label}>
         <Button
           ref={ref}
           variant="ghost"
-          size={iconSize}
+          aspect="icon"
           aria-label={label}
           onClick={onClick}
         >

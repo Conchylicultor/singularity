@@ -36,7 +36,7 @@ function shortName(id: PluginId): string {
 
 function PinButton({ id }: { id: PluginId }) {
   return (
-    <Button variant="outline" size="sm" onClick={() => pinAsRoot(id)}>
+    <Button variant="outline" onClick={() => pinAsRoot(id)}>
       <MdMyLocation />
       Show closure from here
     </Button>

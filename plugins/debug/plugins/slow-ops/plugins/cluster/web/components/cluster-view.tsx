@@ -251,7 +251,6 @@ export function ClusterView(): ReactElement {
           trailing={
             <Button
               variant="outline"
-              size="xs"
               loading={status === "streaming"}
               onClick={() => void reload()}
             >

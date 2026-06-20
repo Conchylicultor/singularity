@@ -7,6 +7,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils
 import {
   useControlSize,
   textSizeFor,
+  iconSizeFor,
   type ControlSize,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size"
 
@@ -64,12 +65,13 @@ const buttonVariants = cva(
  * keep type-checking; the promise is detected at runtime.
  */
 type ButtonOwnProps = ButtonPrimitive.Props &
-  VariantProps<typeof buttonVariants> & { loading?: boolean }
+  Omit<VariantProps<typeof buttonVariants>, "size"> &
+  { aspect?: "text" | "icon" | "inline"; loading?: boolean }
 
 function Button({
   className,
   variant = "default",
-  size,
+  aspect = "text",
   shape = "default",
   loading = false,
   disabled = false,
@@ -77,11 +79,19 @@ function Button({
   children,
   ...props
 }: ButtonOwnProps) {
-  // No explicit `size` → inherit the ambient density (set by a toolbar/slot) as
-  // the TEXT shape. Icon shape is the wrapper's job (IconButton/PaneIconAction);
-  // a bare Button can't know its own shape. Explicit `size` always wins.
+  // Density (height) is ALWAYS ambient — read from `useControlSize()` (set by a
+  // toolbar/slot/region), never a per-instance dial that can desync from
+  // neighbors. `aspect` selects the orthogonal SHAPE axis: "text" → text density,
+  // "icon" → a square icon box at that same density, "inline" → the inline escape
+  // (collapses to surrounding text height). There is no per-instance density
+  // override.
   const density = useControlSize()
-  const resolvedSize = size ?? textSizeFor(density)
+  const resolvedSize =
+    aspect === "inline"
+      ? "inline"
+      : aspect === "icon"
+        ? iconSizeFor(density)
+        : textSizeFor(density)
 
   // Auto-pending: if the handler returns a promise, reflect in-flight state
   // until it settles. Guard setState against unmount mid-flight.
@@ -102,7 +112,7 @@ function Button({
   const isLoading = loading || autoPending
   // Icon-shaped buttons have no label, so the spinner replaces the glyph;
   // text buttons keep their label with the spinner as a leading indicator.
-  const iconOnly = (resolvedSize ?? "").startsWith("icon")
+  const iconOnly = resolvedSize.startsWith("icon")
 
   return (
     <ButtonPrimitive

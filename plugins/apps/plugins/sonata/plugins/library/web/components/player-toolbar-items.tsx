@@ -17,7 +17,7 @@ import { Picker } from "./display-picker";
 export function BackToLibrary() {
   const store = usePaneStore();
   return (
-    <Button variant="outline" size="xs" onClick={() => store.clearRoute()}>
+    <Button variant="outline" onClick={() => store.clearRoute()}>
       ← Library
     </Button>
   );

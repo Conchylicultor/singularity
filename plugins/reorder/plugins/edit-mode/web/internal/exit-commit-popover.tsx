@@ -66,10 +66,10 @@ export function ExitCommitPopover({ children }: { children: ReactNode }) {
               everyone. Cancel discards them. Closing keeps them staged.
             </Text>
             <Stack direction="row" gap="sm" justify="end">
-              <Button variant="ghost" size="sm" onClick={cancel}>
+              <Button variant="ghost" onClick={cancel}>
                 Cancel
               </Button>
-              <Button variant="default" size="sm" onClick={commit}>
+              <Button variant="default" onClick={commit}>
                 Commit
               </Button>
             </Stack>

@@ -65,7 +65,6 @@ const SecretRenderer: FieldRendererComponent<string> = ({ field, value, onChange
           </Stack>
           <Button
             variant="ghost"
-            size="sm"
             className="h-6 px-sm text-caption"
             onClick={() => setEditing(true)}
           >

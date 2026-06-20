@@ -228,7 +228,6 @@ export function WorktreeCleanupPanel() {
         trailing={
           <Stack direction="row" gap="sm" align="center">
             <Button
-              size="sm"
               variant="destructive"
               onClick={deleteSafe}
               loading={loading || deletingSteps.size > 0}
@@ -238,7 +237,7 @@ export function WorktreeCleanupPanel() {
               <MdFolderDelete className="size-4 mr-1.5" />
               Delete {safeCount} safe
             </Button>
-            <Button size="icon-sm" variant="outline" onClick={() => load()} loading={loading}>
+            <Button aspect="icon" variant="outline" onClick={() => load()} loading={loading}>
               <MdRefresh className="size-4" />
             </Button>
           </Stack>
@@ -356,14 +355,13 @@ function EntryRow({
         </td>
         <td className="px-lg py-sm text-right whitespace-nowrap">
           {!entry.dirExists && !entry.dbExists ? (
-            <Button size="sm" variant="ghost" disabled className="h-7 text-caption opacity-40 cursor-default">
+            <Button variant="ghost" disabled className="h-7 text-caption opacity-40 cursor-default">
               {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
               <MdDelete className="size-3.5 mr-1" />
               Drop DB
             </Button>
           ) : (
             <Button
-              size="sm"
               variant={entry.isSafe || !entry.dirExists ? "outline" : "ghost"}
               onClick={onDelete}
               disabled={deletingStep != null}
@@ -400,10 +398,10 @@ function EntryRow({
               }
               trailing={
                 <Stack direction="row" gap="sm" align="center">
-                  <Button size="sm" variant="outline" onClick={onCancelConfirm} className="h-7 text-caption">
+                  <Button variant="outline" onClick={onCancelConfirm} className="h-7 text-caption">
                     Cancel
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={onConfirm} className="h-7 text-caption">
+                  <Button variant="destructive" onClick={onConfirm} className="h-7 text-caption">
                     Delete
                   </Button>
                 </Stack>

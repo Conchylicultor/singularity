@@ -84,7 +84,6 @@ function DraftActions({
       <Stack direction="row" align="center" gap="xs">
         <Button
           variant="default"
-          size="sm"
           disabled={!canSave}
           onClick={() => save(draft, editingId ?? undefined)}
         >
@@ -92,12 +91,12 @@ function DraftActions({
           Save
         </Button>
         {editingId !== null && (
-          <Button variant="ghost" size="sm" onClick={onDelete}>
+          <Button variant="ghost" onClick={onDelete}>
             <MdDeleteOutline />
             Delete
           </Button>
         )}
-        <Button variant="ghost" size="sm" onClick={() => clearActive()}>
+        <Button variant="ghost" onClick={() => clearActive()}>
           Clear
         </Button>
       </Stack>
@@ -119,7 +118,6 @@ function PromoteDefaultButton() {
     <WithTooltip content="Stage the current compositions as a committed default for everyone, reviewable in the review pane.">
       <Button
         variant="outline"
-        size="sm"
         disabled={!ready}
         onClick={() => promote()}
       >
@@ -320,7 +318,7 @@ function DraftSection({
           trailing={
             <Stack direction="row" align="center" gap="xs">
               <PromoteDefaultButton />
-              <Button variant="outline" size="sm" onClick={onNew}>
+              <Button variant="outline" onClick={onNew}>
                 <MdAdd />
                 New
               </Button>

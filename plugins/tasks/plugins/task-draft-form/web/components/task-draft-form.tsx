@@ -282,7 +282,6 @@ export function TaskDraftForm({
 
       <Stack align="start" gap="none">
         <Button
-          size="sm"
           variant="ghost"
           onClick={appendChainCard}
           loading={submitting}
@@ -298,10 +297,10 @@ export function TaskDraftForm({
         leading={footerStart}
         trailing={
           <>
-            <Button size="sm" variant="ghost" onClick={onCancel} loading={submitting}>
+            <Button variant="ghost" onClick={onCancel} loading={submitting}>
               Cancel
             </Button>
-            <Button size="sm" onClick={onSubmit} loading={submitting} disabled={hasEmpty}>
+            <Button onClick={onSubmit} loading={submitting} disabled={hasEmpty}>
               {isMulti ? "Submit chain" : "Submit"}
             </Button>
           </>

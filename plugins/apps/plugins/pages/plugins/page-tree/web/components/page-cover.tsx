@@ -78,21 +78,20 @@ function FilledCover({
               current={cover}
               onPick={onPick}
               trigger={
-                <Button variant="secondary" size="sm">
+                <Button variant="secondary">
                   <MdImage />
                   Change cover
                 </Button>
               }
             />
             {cover.type === "image" && (
-              <Button variant="secondary" size="sm" onClick={() => setRepositioning(true)}>
+              <Button variant="secondary" onClick={() => setRepositioning(true)}>
                 <MdSwapVert />
                 Reposition
               </Button>
             )}
             <Button
               variant="secondary"
-              size="sm"
               aria-label="Remove cover"
               onClick={() => void onSave(null)}
             >
@@ -198,11 +197,11 @@ function CoverImage({
           </Pin>
           <Pin to="bottom-right" offset="md">
             <Stack direction="row" gap="xs">
-              <Button variant="secondary" size="sm" onClick={cancel}>
+              <Button variant="secondary" onClick={cancel}>
                 <MdClose />
                 Cancel
               </Button>
-              <Button variant="default" size="sm" onClick={() => void save()}>
+              <Button variant="default" onClick={() => void save()}>
                 <MdCheck />
                 Save
               </Button>

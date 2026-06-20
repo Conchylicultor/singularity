@@ -687,7 +687,7 @@ function ReorderInner({
           trigger={
             <Button
               variant="ghost"
-              size="icon"
+              aspect="icon"
               aria-label="Edit layout"
               // Stop the pointerdown from reaching an ancestor reorder item's
               // dnd-kit sensor (which would capture the pointer and swallow the

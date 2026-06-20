@@ -258,7 +258,6 @@ export function AnswerForm({
       })}
       <Stack direction="row" gap="none" justify="end">
         <Button
-          size="sm"
           loading={m.isPending}
           disabled={!allAnswered}
           onClick={handleSubmit}

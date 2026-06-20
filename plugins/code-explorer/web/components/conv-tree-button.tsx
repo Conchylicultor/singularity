@@ -10,7 +10,6 @@ export function ConvTreeButton() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      size="sm"
       title="File explorer"
       aria-label="File explorer"
       aria-pressed={isOpen}

@@ -58,7 +58,6 @@ function TaskDescriptionInner({
         {!isContainer && (
           <Stack align="end" gap="none">
             <LaunchControl
-              size="sm"
               getRequest={buildLaunchRequest}
               disabled={!task.title.trim()}
               className="w-auto"

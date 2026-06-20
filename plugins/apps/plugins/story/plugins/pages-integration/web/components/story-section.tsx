@@ -55,7 +55,6 @@ export function StorySection({ pageId }: { pageId: string }) {
         trailing={
           <Button
             variant="ghost"
-            size="xs"
             onClick={() => navigate(`/story/s/${pageId}`)}
           >
             <MdOpenInNew className="size-4" />

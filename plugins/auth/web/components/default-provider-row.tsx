@@ -144,7 +144,6 @@ export function DefaultProviderRow({ providerId }: Props) {
         credentialsMissing ? (
           <Button
             variant="outline"
-            size="sm"
             onClick={() =>
               provider.configureCredentials
                 ? provider.configureCredentials()
@@ -158,7 +157,6 @@ export function DefaultProviderRow({ providerId }: Props) {
             {needsReconsent ? (
               <Button
                 variant="default"
-                size="sm"
                 loading={busy}
                 onClick={handleConnect}
               >
@@ -167,7 +165,6 @@ export function DefaultProviderRow({ providerId }: Props) {
             ) : null}
             <Button
               variant="outline"
-              size="sm"
               loading={busy}
               onClick={handleDisconnect}
             >
@@ -177,7 +174,6 @@ export function DefaultProviderRow({ providerId }: Props) {
         ) : (
           <Button
             variant="default"
-            size="sm"
             loading={busy}
             onClick={handleConnect}
           >

@@ -57,7 +57,7 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
         trailing={
           <Button
             variant="ghost"
-            size="icon"
+            aspect="icon"
             className="size-6"
             onClick={copyAll}
             aria-label="Copy logs"
@@ -188,7 +188,7 @@ function LiveLogs(): ReactElement {
         trailing={
           <Button
             variant="ghost"
-            size="icon"
+            aspect="icon"
             className="size-6"
             onClick={copyLogs}
             disabled={entries.length === 0}

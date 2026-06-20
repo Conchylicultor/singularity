@@ -38,7 +38,7 @@ function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
   return (
     <LaunchAgentPopover
       trigger={
-        <Button variant="destructive" size="sm">
+        <Button variant="destructive">
           <MdAutoFixHigh className="size-4" />
           Launch agent to investigate
         </Button>

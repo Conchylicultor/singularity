@@ -43,7 +43,6 @@ export function ConjunctionCell(props: {
             render={
               <Button
                 variant="outline"
-                size="sm"
                 aria-label="Conjunction"
                 className="w-full"
               />

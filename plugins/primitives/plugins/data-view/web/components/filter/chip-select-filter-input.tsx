@@ -76,7 +76,7 @@ export function ChipSelectFilterInput(
       onOpenChange={setOpen}
       contentClassName="w-64"
       trigger={
-        <Button variant="outline" size="sm" aria-label="Select filter values">
+        <Button variant="outline" aria-label="Select filter values">
           {summary === null ? (
             <span className="text-muted-foreground">Select…</span>
           ) : (

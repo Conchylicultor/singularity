@@ -275,7 +275,6 @@ export function RestoreButton({
       trigger={
         <Button
           variant="outline"
-          size="sm"
           aria-label="Add items"
           className="border-dashed border-muted-foreground/40 text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground"
         >

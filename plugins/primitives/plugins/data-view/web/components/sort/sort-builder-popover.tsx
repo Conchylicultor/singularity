@@ -116,7 +116,6 @@ export function SortBuilderPopover<TRow>(props: {
             trailing={
               <Button
                 variant="ghost"
-                size="sm"
                 onClick={() => {
                   controller.clear();
                   props.onClose();

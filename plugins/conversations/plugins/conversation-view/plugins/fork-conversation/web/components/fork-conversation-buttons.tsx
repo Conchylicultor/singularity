@@ -14,7 +14,6 @@ export function ForkConversationButtons({
       <Stack direction="row" gap="xs" align="center">
         <MdForkRight className="size-3.5 text-muted-foreground" />
         <LaunchControl
-          size="sm"
           variant="ghost"
           getRequest={() => ({ attemptId: conversation.attemptId })}
         />

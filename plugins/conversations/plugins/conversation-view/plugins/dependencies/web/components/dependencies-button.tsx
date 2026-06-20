@@ -219,7 +219,7 @@ function DependenciesButtonInner({
           align="end"
           contentClassName="w-96 p-sm"
           trigger={
-            <Button variant="ghost" size="xs" aria-label="Blocked by">
+            <Button variant="ghost" aria-label="Blocked by">
               {hasBlockedBy && (
                 <span className="text-3xs tabular-nums">
                   {depTaskIds.size}
@@ -253,7 +253,7 @@ function DependenciesButtonInner({
           align="end"
           contentClassName="w-96 p-sm"
           trigger={
-            <Button variant="ghost" size="xs" aria-label="Blocking">
+            <Button variant="ghost" aria-label="Blocking">
               <span className={cn("text-3xs", hasBlocking ? "text-muted-foreground" : "text-muted-foreground/40")}>
                 {"→"}
               </span>

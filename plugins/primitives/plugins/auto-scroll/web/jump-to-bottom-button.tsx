@@ -20,7 +20,6 @@ export function JumpToBottomButton({
     <Button
       type="button"
       variant="secondary"
-      size="sm"
       onClick={handle.jumpToBottom}
       aria-label="Jump to bottom"
       className={cn("gap-xs rounded-full shadow-md", className)}

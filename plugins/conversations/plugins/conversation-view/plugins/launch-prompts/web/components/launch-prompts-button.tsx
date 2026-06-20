@@ -51,7 +51,7 @@ export function LaunchPromptsButton({
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="outline" size="sm" loading={launching} aria-label="Launch prompts" />
+          <Button variant="outline" loading={launching} aria-label="Launch prompts" />
         }
       >
         <MdPlaylistPlay className="size-3" />

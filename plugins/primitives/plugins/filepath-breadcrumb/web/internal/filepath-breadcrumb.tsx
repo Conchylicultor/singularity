@@ -31,7 +31,7 @@ export function FilepathBreadcrumb({
   const copyAction = showCopy ? (
     <CopyButton
       text={path}
-      size="inline"
+      aspect="inline"
       className="text-muted-foreground hover:text-foreground"
       title="Copy path"
     />

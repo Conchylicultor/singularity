@@ -52,7 +52,6 @@ export function BranchButtons({
       trigger={
         <Button
           variant="ghost"
-          size="xs"
           className="text-muted-foreground"
           title="Branch conversation"
           aria-label="Branch conversation"
@@ -84,7 +83,6 @@ export function BranchButtons({
             <Button
               key={model}
               variant="outline"
-              size="sm"
               className="gap-xs"
               disabled={!canSubmit}
               onClick={(e) => void launch(model, e)}

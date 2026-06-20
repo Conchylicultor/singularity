@@ -95,7 +95,7 @@ export function MemoryPanel() {
           trailing={
             <Button
               variant="ghost"
-              size="icon"
+              aspect="icon"
               className="size-6"
               onClick={() => loadList()}
               title="Refresh"

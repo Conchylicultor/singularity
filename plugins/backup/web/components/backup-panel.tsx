@@ -78,7 +78,6 @@ function TargetResultRow({ result }: { result: BackupTargetResult }) {
             scopes={result.consent.scopes}
             label="Grant access"
             variant="outline"
-            size="sm"
           />
         ) : undefined
       }

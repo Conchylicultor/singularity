@@ -40,7 +40,7 @@ export type LaunchControlProps = {
   openMode?: PaneOpenMode;
   onLaunched?: (conversation: Conversation) => void;
   variant?: "default" | "outline" | "ghost";
-  size?: "default" | "sm" | "icon";
+  size?: "default" | "icon";
   /**
    * Stretch the control to fill its container, with the model dropdown growing
    * to absorb the slack and the launch button kept at its natural width. Use
@@ -140,7 +140,7 @@ export function LaunchControl({
               <Stack direction="row" align="center" gap="xs">
                 <Button
                   variant="ghost"
-                  size="icon-xs"
+                  aspect="icon"
                   aria-label={`Launch ${MODEL_REGISTRY[id].label}`}
                   title={`Launch ${MODEL_REGISTRY[id].label}`}
                   onClick={(e) => {
@@ -168,7 +168,7 @@ export function LaunchControl({
       <ButtonGroup className={className}>
         <Button
           variant="ghost"
-          size="icon-xs"
+          aspect="icon"
           disabled={busy}
           aria-label={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
           title={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
@@ -181,7 +181,7 @@ export function LaunchControl({
             render={
               <Button
                 variant="ghost"
-                size="icon-xs"
+                aspect="icon"
                 disabled={disabled}
                 aria-label="Choose model"
                 className="px-none"
@@ -196,8 +196,6 @@ export function LaunchControl({
     );
   }
 
-  const btnSize = size === "sm" ? "sm" : "default";
-
   return (
     <ButtonGroup className={cn(fullWidth && "w-full", className)}>
       <DropdownMenu>
@@ -205,7 +203,6 @@ export function LaunchControl({
           render={
             <Button
               variant={btnVariant}
-              size={btnSize}
               disabled={disabled}
               // eslint-disable-next-line layout/no-adhoc-layout -- flexible dropdown button absorbing slack inside the (raw) ButtonGroup row and spreading its own label↔chevron; no primitive composes onto the shadcn Button's internal flex
               className={cn("gap-xs", blue, fullWidth && "flex-1 justify-between")}
@@ -219,7 +216,6 @@ export function LaunchControl({
       </DropdownMenu>
       <Button
         variant={btnVariant}
-        size={btnSize}
         disabled={busy}
         aria-label={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
         title={`Launch ${MODEL_REGISTRY[defaultModel].label}`}

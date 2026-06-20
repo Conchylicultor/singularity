@@ -57,7 +57,6 @@ function TimelineRow({
       actions={
         <Button
           variant="ghost"
-          size="xs"
           onClick={(e) => {
             e.stopPropagation();
             onRestore();

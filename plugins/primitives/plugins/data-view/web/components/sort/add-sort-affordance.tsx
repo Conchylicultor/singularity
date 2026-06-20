@@ -30,7 +30,7 @@ export function AddSortAffordance<TRow>(props: {
           align="start"
           contentClassName="w-72"
           trigger={
-            <Button variant="ghost" size="sm" aria-label="Add sort">
+            <Button variant="ghost" aria-label="Add sort">
               <MdAdd />
               Add sort
             </Button>

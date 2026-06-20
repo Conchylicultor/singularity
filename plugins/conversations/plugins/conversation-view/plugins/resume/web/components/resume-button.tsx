@@ -47,7 +47,7 @@ export function ResumeButton({
   return (
     <Button
       variant="outline"
-      size="icon-sm"
+      aspect="icon"
       title={resume.isPending ? "Resuming…" : tooltip}
       aria-label="Resume"
       loading={resume.isPending}

@@ -224,7 +224,6 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   return (
     <Button
       variant="default"
-      size="sm"
       title={label}
       aria-label={label}
       loading={busy}

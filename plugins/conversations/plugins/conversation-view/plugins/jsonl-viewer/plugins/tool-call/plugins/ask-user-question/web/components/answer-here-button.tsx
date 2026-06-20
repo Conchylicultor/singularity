@@ -37,7 +37,6 @@ export function AnswerHereButton({
       <Stack direction="row" gap="sm" align="center">
         <span>Content pending in terminal — waiting for your input</span>
         <Button
-          size="sm"
           loading={m.isPending}
           onClick={() => m.mutate({ params: { id: conversationId } })}
         >

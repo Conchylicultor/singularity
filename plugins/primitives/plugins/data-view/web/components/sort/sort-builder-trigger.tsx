@@ -31,7 +31,6 @@ export function SortBuilderTrigger<TRow>(props: {
       trigger={
         <Button
           variant={active ? "secondary" : "ghost"}
-          size="sm"
           aria-label="Sort"
         >
           <MdSort />

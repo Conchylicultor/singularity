@@ -28,7 +28,6 @@ export function FilterBuilderTrigger<TRow>(props: {
       trigger={
         <Button
           variant={active ? "secondary" : "ghost"}
-          size="sm"
           aria-label="Filter"
         >
           <MdFilterList />

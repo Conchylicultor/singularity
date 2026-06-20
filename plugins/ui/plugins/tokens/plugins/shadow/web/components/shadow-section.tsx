@@ -296,7 +296,6 @@ export function ShadowSection({ search }: { search: string }) {
             {hasOverrides && (
               <Button
                 variant="ghost"
-                size="xs"
                 // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- one-off top offset + self-start so this lone reset button keeps its natural width (left-aligned) in the column instead of stretching
                 className="self-start mt-1 border border-border text-muted-foreground"
                 onClick={() => setConfig("overrides", EMPTY_OVERRIDES)}

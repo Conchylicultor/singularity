@@ -36,7 +36,6 @@ export function FieldPicker<TRow>(props: {
       trigger={
         <Button
           variant="outline"
-          size="sm"
           aria-label={props.label ?? "Filter field"}
         >
           {CurrentIcon ? <CurrentIcon /> : null}

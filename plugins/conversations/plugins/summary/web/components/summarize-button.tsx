@@ -21,7 +21,7 @@ export function SummarizeButton() {
     return (
       <Button
         variant={isOpen ? "secondary" : "ghost"}
-        size="sm"
+
         disabled
         className="gap-xs text-caption"
         title="Summary"
@@ -41,7 +41,7 @@ export function SummarizeButton() {
     return (
       <Button
         variant={isOpen ? "secondary" : "ghost"}
-        size="sm"
+
         onClick={toggle}
         className="gap-xs text-caption"
         title="Summary"
@@ -57,7 +57,6 @@ export function SummarizeButton() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      size="sm"
       onClick={toggle}
       className="gap-xs"
       title={`Summary: ${PHASE_LABEL[latest.phase]}`}

@@ -17,14 +17,12 @@ export function GrantAccessButton(props: {
   scopes: string[];
   label?: string;
   variant?: "default" | "outline";
-  size?: "sm" | "default";
 }) {
   const {
     providerId,
     scopes,
     label = "Grant access",
     variant = "outline",
-    size = "sm",
   } = props;
   const status = useAccountStatus(providerId);
   const [busy, setBusy] = useState(false);
@@ -65,7 +63,7 @@ export function GrantAccessButton(props: {
   }
 
   return (
-    <Button variant={variant} size={size} loading={busy} onClick={handleGrant}>
+    <Button variant={variant} loading={busy} onClick={handleGrant}>
       {label}
     </Button>
   );

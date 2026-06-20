@@ -22,7 +22,7 @@ export function ImproveButton() {
         if (!next) setInitialText("");
       }}
       trigger={
-        <Button variant="outline" size="sm">
+        <Button variant="outline">
           <MdAutoAwesome />
           Improve
         </Button>

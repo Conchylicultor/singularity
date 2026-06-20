@@ -77,7 +77,7 @@ function MainAheadSection() {
 function BuildControls({ building, onBuild }: { building: boolean; onBuild: () => void | Promise<void> }) {
   return (
     <Stack direction="row" align="center" gap="sm" className="border-b px-md py-sm">
-      <Button variant="default" size="sm" loading={building} onClick={() => onBuild()}>
+      <Button variant="default" loading={building} onClick={() => onBuild()}>
         <MdPlayArrow className="size-4" />
         Build
       </Button>
@@ -155,7 +155,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
         trailing={
           <Button
             variant="ghost"
-            size="icon"
+            aspect="icon"
             className="size-6"
             onClick={copyLogs}
             disabled={entries.length === 0}

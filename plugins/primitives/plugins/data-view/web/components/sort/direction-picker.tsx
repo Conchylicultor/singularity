@@ -31,7 +31,7 @@ export function DirectionPicker(props: {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="outline" size="sm" aria-label="Sort direction" />
+          <Button variant="outline" aria-label="Sort direction" />
         }
       >
         {asc ? <MdArrowUpward /> : <MdArrowDownward />}

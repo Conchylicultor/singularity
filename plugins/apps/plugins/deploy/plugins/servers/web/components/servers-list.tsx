@@ -61,7 +61,6 @@ export function ServersList() {
       actions={
         <Button
           variant="default"
-          size="sm"
           onClick={() => openPane(addServerPane, {}, { mode: "push" })}
         >
           + Add

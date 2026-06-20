@@ -73,7 +73,6 @@ function BuildButtonInner({
       trigger={
         <Button
           variant="outline"
-          size="sm"
           className={status === "failed" ? "text-destructive" : undefined}
         >
           {spinning && <Spinner spinning className="size-4" />}
@@ -107,7 +106,7 @@ function BuildButtonInner({
         trailing={
           <Button
             variant="ghost"
-            size="icon"
+            aspect="icon"
             className="size-6"
             onClick={() => {
               setOpen(false);
@@ -151,7 +150,7 @@ export function BuildButton() {
   // no fake "idle" status and no misleading useEffect trace before data arrives.
   if (historyResult.pending) {
     return (
-      <Button variant="outline" size="sm">
+      <Button variant="outline">
         <MdBuild className="size-4" />
         Builds
       </Button>

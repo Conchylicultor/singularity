@@ -11,7 +11,7 @@ export function NewChildTaskAction() {
   return (
     <TaskDraftPopover
       trigger={
-        <Button variant="ghost" size="icon" aria-label="New child task" title="New child task">
+        <Button variant="ghost" aspect="icon" aria-label="New child task" title="New child task">
           <MdAdd />
         </Button>
       }

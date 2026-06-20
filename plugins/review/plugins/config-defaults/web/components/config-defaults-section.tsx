@@ -85,7 +85,6 @@ export function ConfigDefaultsSection({
               rows.length > 1 ? (
                 <Button
                   variant="outline"
-                  size="sm"
                   onClick={() => applyAll.mutate({})}
                 >
                   Apply all
@@ -217,7 +216,7 @@ function CardHeader({
       }
       trailing={
         <>
-          <Button variant="outline" size="sm" onClick={onApply}>
+          <Button variant="outline" onClick={onApply}>
             Commit to main
           </Button>
           <IconButton

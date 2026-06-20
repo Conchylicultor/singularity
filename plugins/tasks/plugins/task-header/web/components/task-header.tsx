@@ -60,10 +60,10 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         }
         trailing={
           <Stack direction="row" gap="xs">
-            <Button size="sm" variant="ghost" onClick={toggleHold}>
+            <Button variant="ghost" onClick={toggleHold}>
               {task.status === "held" ? "Resume" : "Hold"}
             </Button>
-            <Button size="sm" variant="ghost" onClick={toggleDrop}>
+            <Button variant="ghost" onClick={toggleDrop}>
               {task.status === "dropped" ? "Undrop" : "Drop task"}
             </Button>
           </Stack>

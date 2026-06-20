@@ -97,7 +97,7 @@ function PageHeaderInner({ pageId, page }: { pageId: string; page: Block | undef
               value={iconValue}
               onChange={saveIcon}
               trigger={
-                <Button variant="ghost" size="sm" className="text-muted-foreground">
+                <Button variant="ghost" className="text-muted-foreground">
                   <MdEmojiEmotions />
                   Add icon
                 </Button>
@@ -109,7 +109,7 @@ function PageHeaderInner({ pageId, page }: { pageId: string; page: Block | undef
               current={null}
               onPick={saveCover}
               trigger={
-                <Button variant="ghost" size="sm" className="text-muted-foreground">
+                <Button variant="ghost" className="text-muted-foreground">
                   <MdImage />
                   Add cover
                 </Button>

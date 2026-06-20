@@ -205,7 +205,6 @@ function ClusterGroup({
           }
           trailing={
             <Button
-              size="sm"
               variant="outline"
               onClick={() => onRestore(groupIds)}
               loading={anyPending}
@@ -261,7 +260,6 @@ function ConversationRow({
         }
         trailing={
           <Button
-            size="sm"
             variant="outline"
             onClick={onRestore}
             loading={pending}

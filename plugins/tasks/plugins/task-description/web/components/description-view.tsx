@@ -89,7 +89,7 @@ export function DescriptionView({
       <Pin to="top-right" offset="xs" className={hoverRevealTarget}>
         <Button
           variant="ghost"
-          size="icon"
+          aspect="icon"
           className="size-6"
           title="Edit description"
           onClick={() => enterEdit(null)}

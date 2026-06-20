@@ -41,7 +41,6 @@ export function SavePresetAffordance(props: {
       trigger={
         <Button
           variant="ghost"
-          size="sm"
           disabled={props.disabled}
           aria-label="Save sort as preset"
         >
@@ -67,7 +66,6 @@ export function SavePresetAffordance(props: {
           trailing={
             <Button
               variant="secondary"
-              size="sm"
               disabled={name.trim() === ""}
               onClick={submit}
             >

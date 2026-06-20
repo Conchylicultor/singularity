@@ -102,7 +102,6 @@ export function LiveDrawOverlay({
               </Stack>
               <Stack direction="row" gap="xs" align="center">
                 <Button
-                  size="sm"
                   variant="ghost"
                   onClick={() => onStrokesChange((s) => s.slice(0, -1))}
                   disabled={strokes.length === 0}
@@ -112,7 +111,6 @@ export function LiveDrawOverlay({
                   <MdUndo className="size-4" />
                 </Button>
                 <Button
-                  size="sm"
                   variant="ghost"
                   onClick={() => onStrokesChange([])}
                   disabled={strokes.length === 0}
@@ -132,11 +130,10 @@ export function LiveDrawOverlay({
               gap="sm"
               align="center"
             >
-              <Button variant="outline" size="sm" onClick={onCancel} loading={busy}>
+              <Button variant="outline" onClick={onCancel} loading={busy}>
                 Cancel
               </Button>
               <Button
-                size="sm"
                 onClick={onDone}
                 loading={busy}
                 disabled={strokes.length === 0}
