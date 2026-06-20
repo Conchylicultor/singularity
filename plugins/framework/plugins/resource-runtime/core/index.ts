@@ -5,6 +5,8 @@ export type {
   Resource,
   ExternalResource,
   ResourceDefinition,
+  DefineResourceInput,
+  ScopePolicy,
   ResourceMode,
   ResourceParams,
   DependsOnEntry,

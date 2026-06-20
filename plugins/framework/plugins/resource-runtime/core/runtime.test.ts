@@ -347,8 +347,12 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     h.runtime.defineResource({
       key: "rows",
       mode: "keyed",
-      // No identityTable: the change's ids are not provably this resource's keys,
-      // so the runtime must NOT scope — it recomputes FULL.
+      // Intentionally unscoped: no `identityTable`, so a change's row-ids are not
+      // provably this resource's keys — the runtime must FULL-recompute, never
+      // scope. `recompute` is the sanctioned explicit FULL opt-out; it is
+      // declaration-only (the runtime branches on identityTable absence, not on
+      // this field) and only makes the keyed resource type-legal without scope.
+      recompute: { kind: "full", reason: "test: FULL fallback when identityTable is absent" },
       schema: z.array(z.object({ id: z.string(), n: z.number() })),
       keyOf: (r: { id: string }) => r.id,
       loader: (_p, ctx) => {

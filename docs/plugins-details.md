@@ -2558,7 +2558,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`resource-runtime`**
       - Core:
         - Uses: `packages/inflight.createInflight`
-        - Exports: Types: `DependsOnEntry`, `ExternalResource`, `KeyedDiff`, `KeyedSnapshot`, `RecomputeIntent`, `Resource`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`
+        - Exports: Types: `DefineResourceInput`, `DependsOnEntry`, `ExternalResource`, `KeyedDiff`, `KeyedSnapshot`, `RecomputeIntent`, `Resource`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`, `ScopePolicy`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`
       - Cross-plugin:
         - Imported by: `framework/central-core`, `framework/server-core`
     - **`server-core`**
@@ -2592,6 +2592,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`data-migration-dml-only`**
             - **`data-views-in-sync`**
             - **`inherited-theme-defaults-scoped`**
+            - **`keyed-resource-scope`**
             - **`migration-hashes-unique`**
             - **`migrations-in-sync`**
             - **`no-db-backed-notify`**

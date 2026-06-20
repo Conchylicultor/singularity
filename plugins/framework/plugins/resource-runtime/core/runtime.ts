@@ -139,8 +139,21 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    * secondary view-fanout FULL absorb the scoped delivery. Omit it to keep the
    * resource on FULL-recompute (the safe default). See
    * research/2026-06-20-global-scoped-recompute-default.md.
+   *
+   * MUST be a BASE TABLE name, never a view name — `applyDbChange`'s `origin` is
+   * always the base table that changed, so a view name here silently never matches
+   * and the resource quietly stays on FULL recompute.
    */
   identityTable?: string;
+  /**
+   * Explicit opt-out: this keyed resource intentionally FULL-recomputes (its key
+   * is not a single base-table PK, or its read is irreducibly whole-set). Required
+   * ON A KEYED RESOURCE when `identityTable` is omitted, so a FULL fallback is
+   * always a declared, documented choice — never a silent default. `reason` is
+   * surfaced in the read-set debug pane and read by the future work-admission
+   * scheduler when it decides whether to admit a FULL recompute intent.
+   */
+  recompute?: { kind: "full"; reason: string };
   /**
    * Fixed-window trailing debounce (ms) for this resource's flushes. When set
    * (and > 0), a `notify()` (or cascaded `mergePending`) into this entry does
@@ -166,6 +179,37 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
   onFirstSubscribe?: (params: P) => void | Promise<void>;
   onLastUnsubscribe?: (params: P) => void;
 }
+
+/**
+ * A keyed resource's scope policy: it MUST either declare `identityTable` (its
+ * change scopes to its own keys) or `recompute: { kind: "full", reason }` (an
+ * explicit, documented FULL opt-out) — never both, never neither. This is the
+ * mandatory-by-construction half of scoped-recompute coverage (the build-gating
+ * check is the backstop). See
+ * research/2026-06-20-global-enforce-keyed-resource-scope-coverage.md.
+ */
+export type ScopePolicy =
+  | { identityTable: string; recompute?: never }
+  | { recompute: { kind: "full"; reason: string }; identityTable?: never };
+
+/**
+ * The strict public input to `defineResource` (the runtime keeps the loose
+ * `ResourceDefinition` internally). `mode: "keyed"` requires `keyOf` AND a
+ * `ScopePolicy`; `push`/`invalidate` resources may still optionally set
+ * `identityTable` (e.g. a push aggregate that propagates scoped ids downstream).
+ * `defineExternalResource` is deliberately NOT constrained — keyed external
+ * resources have no DB feed to scope against.
+ */
+export type DefineResourceInput<T, P extends ResourceParams = ResourceParams> =
+  | (Omit<ResourceDefinition<T, P>, "mode" | "keyOf" | "identityTable" | "recompute"> & {
+      mode?: "push" | "invalidate";
+      identityTable?: string;
+    })
+  | (Omit<ResourceDefinition<T, P>, "mode" | "keyOf" | "identityTable" | "recompute"> & {
+      mode: "keyed";
+      // biome-ignore lint/suspicious/noExplicitAny: row type is the element of the array payload — erased here (mirrors ResourceDefinition.keyOf).
+      keyOf: (row: any) => string;
+    } & ScopePolicy);
 
 export interface Resource<T, P extends ResourceParams = ResourceParams> {
   key: string;
@@ -248,6 +292,14 @@ interface RegistryEntry {
    * Undefined → the resource stays on FULL recompute (safe default).
    */
   identityTable?: string;
+  /**
+   * Explicit FULL opt-out (declared via `recompute`). Declaration-only today —
+   * the runtime still treats "no `identityTable`" as FULL behaviourally — but
+   * surfaced here so the read-set debug pane and the future work-admission
+   * scheduler can read whether a keyed resource's FULL recompute is a deliberate,
+   * documented choice rather than a silent default.
+   */
+  recompute?: { kind: "full"; reason: string };
   /**
    * Per-pk snapshot of id→hash for keyed entries. Allocated lazily only when
    * `mode === "keyed"`. Lets the diff ship only changed rows. Evicted per-pk on
@@ -353,8 +405,14 @@ export interface ResourceRuntimeOptions {
 }
 
 export interface ResourceRuntime {
+  /**
+   * Declare a DB-backed resource. The input is the strict `DefineResourceInput`,
+   * so a `mode: "keyed"` resource that declares neither `identityTable` nor an
+   * explicit `recompute: { kind: "full", reason }` opt-out is a `tsc` error —
+   * scoped-recompute coverage is mandatory-by-construction, never silent.
+   */
   defineResource: <T, P extends ResourceParams = ResourceParams>(
-    def: ResourceDefinition<T, P>,
+    def: DefineResourceInput<T, P>,
   ) => Resource<T, P>;
   /**
    * Like `defineResource`, but the returned handle exposes a callable `notify()`.
@@ -677,6 +735,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       ) => Promise<unknown> | unknown,
       keyOf: def.keyOf as ((row: unknown) => string) | undefined,
       identityTable: def.identityTable,
+      recompute: def.recompute,
       snapshots: mode === "keyed" ? new Map() : undefined,
       versions: new Map(),
       pendingNotifies: new Map(),
@@ -721,10 +780,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // DB-backed resource: the runtime object carries a `notify` method, but the
   // returned type hides it (`Resource` has no `notify`), so hand-notifying a
   // DB-backed resource is a compile error — the change-feed drives it instead.
+  // The public input is the strict `DefineResourceInput` (keyed ⇒ scope policy
+  // mandatory); `createResource` keeps using the loose `ResourceDefinition`, so
+  // the discriminated input is widened back to it here at the one seam.
   function defineResource<T, P extends ResourceParams = ResourceParams>(
-    def: ResourceDefinition<T, P>,
+    def: DefineResourceInput<T, P>,
   ): Resource<T, P> {
-    return createResource(def, false);
+    return createResource(def as ResourceDefinition<T, P>, false);
   }
 
   // Escape-hatch resource (truth outside Postgres): exposes a callable `notify`.
