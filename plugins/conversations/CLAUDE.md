@@ -73,6 +73,7 @@
           - **`summary`** — Renders summary separator events in the JSONL viewer.
           - **`system`** — Renders system events in the JSONL viewer.
           - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.
+          - **`teammate-message`** — Renders messages relayed from other Claude sessions (<teammate-message> blocks) distinctly from human user messages.
           - **`tool-call`** [11 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
           - **`unknown`** — Renders unknown JSONL event types as collapsible sections with the raw payload.
           - **`user-image`** — Renders inline image thumbnails for user-image events.

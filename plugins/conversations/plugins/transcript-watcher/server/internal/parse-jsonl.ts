@@ -1,5 +1,11 @@
 import { XMLParser } from "fast-xml-parser";
-import { extractPreprompt, activeLineUuids } from "../../core";
+import {
+  extractPreprompt,
+  activeLineUuids,
+  unwrapRelayEnvelopes,
+  extractTeammateMessages,
+  stripRelayBoilerplate,
+} from "../../core";
 import type { JsonlEvent, TokenUsage, ToolCallResult } from "../../core";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
@@ -223,6 +229,44 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
   // ever appears once; set true on a real hit so a later turn can't re-trigger.
   let seenPreprompt = false;
 
+  // One home for user-turn text handling, shared by the string-content branch
+  // and the array text-block branch (which previously duplicated it). Closes
+  // over `seenPreprompt` and `events`. In order: lift the launch preprompt,
+  // decode any harness relay envelopes, extract teammate-message blocks (each
+  // emitted as its own event), strip the relay scaffolding, then route the rest
+  // through task-notification extraction + image-aware push.
+  const processUserText = async (rawText: string, ts: string): Promise<void> => {
+    let body = rawText;
+    if (!seenPreprompt) {
+      const { preprompt, rest } = extractPreprompt(body);
+      if (preprompt) {
+        seenPreprompt = true;
+        events.push({ kind: "preprompt", at: ts, text: preprompt });
+        body = rest;
+      }
+    }
+    body = unwrapRelayEnvelopes(body);
+    const { messages, rest: afterTeammates } = extractTeammateMessages(body);
+    for (const msg of messages) {
+      events.push({
+        kind: "teammate-message",
+        at: ts,
+        teammateId: msg.teammateId,
+        color: msg.color,
+        summary: msg.summary,
+        body: msg.body,
+      });
+    }
+    body =
+      messages.length > 0
+        ? stripRelayBoilerplate(afterTeammates)
+        : afterTeammates;
+    const remaining = extractTaskNotifications(body, ts, events);
+    if (remaining.length > 0) {
+      await pushTextWithImages(remaining, ts, events);
+    }
+  };
+
   for (const obj of parsed) {
     // Skip lines on an abandoned rewind branch — they are not part of the
     // live conversation. Lines without a uuid (metadata markers) are not in
@@ -281,19 +325,7 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
 
       const content = msg.content;
       if (typeof content === "string") {
-        let body = content;
-        if (!seenPreprompt) {
-          const { preprompt, rest } = extractPreprompt(body);
-          if (preprompt) {
-            seenPreprompt = true;
-            events.push({ kind: "preprompt", at: ts, text: preprompt });
-            body = rest;
-          }
-        }
-        const remaining = extractTaskNotifications(body, ts, events);
-        if (remaining.length > 0) {
-          await pushTextWithImages(remaining, ts, events);
-        }
+        await processUserText(content, ts);
       } else if (Array.isArray(content)) {
         for (const block of content as RawBlock[]) {
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
@@ -313,19 +345,7 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
             }
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           } else if (block?.type === "text" && typeof block.text === "string") {
-            let body = block.text;
-            if (!seenPreprompt) {
-              const { preprompt, rest } = extractPreprompt(body);
-              if (preprompt) {
-                seenPreprompt = true;
-                events.push({ kind: "preprompt", at: ts, text: preprompt });
-                body = rest;
-              }
-            }
-            const remaining = extractTaskNotifications(body, ts, events);
-            if (remaining.length > 0) {
-              await pushTextWithImages(remaining, ts, events);
-            }
+            await processUserText(block.text, ts);
           } else if (
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
             block?.type === "image" &&

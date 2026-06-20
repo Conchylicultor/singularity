@@ -101,6 +101,18 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     text: z.string(),
   }),
   z.object({
+    // Messages relayed from OTHER Claude sessions. The harness drops a
+    // `<teammate-message>` block into a `type:"user"` turn (sometimes wrapped in
+    // a JSON envelope); these are not authored by the human, so they render as a
+    // distinct inbound peer-message card rather than a user bubble.
+    kind: z.literal("teammate-message"),
+    at: z.string(),
+    teammateId: z.string().optional(),
+    color: z.string().optional(),
+    summary: z.string().optional(),
+    body: z.string(),
+  }),
+  z.object({
     kind: z.literal("summary"),
     at: z.string(),
     text: z.string(),
