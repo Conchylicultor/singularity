@@ -10,7 +10,7 @@ export function CostSection() {
   return (
     <Stack gap="xl">
       <CostKpis />
-      <Grid cols={2} minCellWidth="0" gap="xl">
+      <Grid cols={2} gap="xl">
         <Stack gap="md">
           <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Daily cost by model</Text>
           <DailyCostChart />

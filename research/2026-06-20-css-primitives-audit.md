@@ -304,7 +304,7 @@ The system is in excellent shape (both burndowns at 0, near-total coverage of th
 
 3. **`Card` padding is off-ramp.** `Card` hardcodes `p-3` (a `PAD` const predating the density ramp) instead of an `Inset`/`SpaceStep` value, so it does *not* scale with the Density preset like everything else. → Move card padding onto the ramp (`md` ≈ current 0.75rem) so a Compact/Cozy density actually tightens cards.
 
-4. **`Grid` requires `minCellWidth` even when `cols` is set.** When you pass a fixed `cols`, `minCellWidth` is structurally required but entirely unused. → Make the prop type a discriminated union (`{cols}` xor `{minCellWidth, mode?}`) so the API can't be called in a contradictory way.
+4. ~~**`Grid` requires `minCellWidth` even when `cols` is set.**~~ **RESOLVED (2026-06-20).** `GridProps` is now a `{cols}` xor `{minCellWidth, mode?}` discriminated union — a fixed-column grid takes no `minCellWidth`, a responsive grid takes no `cols`; passing both is a type error, so the contradictory call is unrepresentable. All former fixed-`cols` callers dropped their dead `minCellWidth="0"`/`"20rem"`. See [css-grid-discriminated-union](./2026-06-20-css-grid-discriminated-union.md).
 
 5. **"Exactly one primitive owns `min-w-0`" is aspirational, not literal.** Besides `TruncatingText`, `min-w-0` is also legitimately emitted by `Scroll`/`Clip` (`fill` on x), `Bar` (pane tier), `Frame`'s inert spacer, and `ResponsiveOverflow`. These are all *container-fill* uses, not *leaf-truncation* uses — a different role that happens to share the class. → The principle is sound; the wording in the skill/docs should distinguish "the truncation leaf owns `min-w-0`-for-ellipsis" from "fill containers may use `min-w-0`-for-flex-basis." (Documented here; no code change.)
 

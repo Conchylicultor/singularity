@@ -210,7 +210,7 @@ function BackendSection({ series }: { series: HealthSeries }): ReactElement {
           </Text>
         ) : null}
       </Stack>
-      <Grid cols={2} minCellWidth="20rem" gap="xl">
+      <Grid cols={2} gap="xl">
         <ChartBlock
           label="Event-loop lag (ms)"
           data={rows}
@@ -327,7 +327,7 @@ function HostSection({ samples }: { samples: HostSample[] }): ReactElement | nul
   return (
     <Stack as="section" gap="sm">
       <SectionLabel>Host</SectionLabel>
-      <Grid cols={2} minCellWidth="20rem" gap="xl">
+      <Grid cols={2} gap="xl">
         <ChartBlock
           label="Load average"
           data={rows}

@@ -325,7 +325,6 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
           {(chunk) => (
             <Grid
               cols={columns}
-              minCellWidth={`${minCardWidth}px`}
               gap="lg"
               className="pb-lg"
             >

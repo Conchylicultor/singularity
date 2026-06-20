@@ -14,10 +14,8 @@ describe("gridTemplateColumns", () => {
     );
   });
 
-  test("fixed cols wins over minCellWidth/mode", () => {
-    expect(
-      gridTemplateColumns({ minCellWidth: "12rem", mode: "fit", cols: 3 }),
-    ).toBe("repeat(3, minmax(0, 1fr))");
+  test("fixed cols path (no minCellWidth/mode)", () => {
+    expect(gridTemplateColumns({ cols: 3 })).toBe("repeat(3, minmax(0, 1fr))");
   });
 
   test("a rem minCellWidth is interpolated verbatim", () => {

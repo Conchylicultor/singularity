@@ -108,7 +108,7 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
           <Loading label="Loading icons…" className="py-2xl text-center" />
         ) : isSearching ? (
           searchResults.length > 0 ? (
-            <Grid cols={9} minCellWidth="0" gap="xs">
+            <Grid cols={9} gap="xs">
               {searchResults.map((entry) => (
                 <IconBtn key={entry.key} entry={entry} selected={value === entry.key} onPick={pickIcon} />
               ))}
@@ -125,7 +125,7 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
               <SectionLabel className="mb-1 text-3xs text-muted-foreground/60">
                 {cat.label}
               </SectionLabel>
-              <Grid cols={9} minCellWidth="0" gap="xs">
+              <Grid cols={9} gap="xs">
                 {cat.entries.map((entry) => (
                   <IconBtn key={entry.key} entry={entry} selected={value === entry.key} onPick={pickIcon} />
                 ))}

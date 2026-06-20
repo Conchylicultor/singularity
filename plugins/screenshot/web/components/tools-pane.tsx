@@ -44,7 +44,7 @@ export function ToolsPane(props: Props) {
       </Text>
 
       <div className="border-b p-md">
-        <Grid cols={3} minCellWidth="0" gap="xs">
+        <Grid cols={3} gap="xs">
           <ToolButton
             active={props.tool === "none"}
             onClick={() => props.onToolChange("none")}

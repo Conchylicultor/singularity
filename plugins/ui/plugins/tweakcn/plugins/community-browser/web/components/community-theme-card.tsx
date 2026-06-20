@@ -69,7 +69,6 @@ export function CommunityThemeCard({
       <Stack gap="md">
         <Grid
           cols={COLOR_BARS.length}
-          minCellWidth="0"
           gap="xs"
           align="end"
           className="h-16 rounded-md px-md py-md"

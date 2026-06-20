@@ -45,7 +45,7 @@ export function WelcomeView() {
 
         {/* Stats */}
         {!conv.pending && totalCount > 0 && (
-          <Grid cols={3} minCellWidth="0" gap="md" className="w-full">
+          <Grid cols={3} gap="md" className="w-full">
             {[
               { label: "Total", value: totalCount },
               { label: "Active", value: activeCount },

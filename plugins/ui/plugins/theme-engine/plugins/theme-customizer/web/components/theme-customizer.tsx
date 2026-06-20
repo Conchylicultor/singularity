@@ -114,7 +114,7 @@ function TokenModeSelector({
   onChange: (m: TokenMode) => void;
 }) {
   return (
-    <Grid cols={TOKEN_MODES.length} minCellWidth="0" gap="xs">
+    <Grid cols={TOKEN_MODES.length} gap="xs">
       {TOKEN_MODES.map(({ id, label }) => (
         <button
           key={id}

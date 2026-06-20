@@ -100,7 +100,7 @@ export function ColorButton() {
         <Text variant="caption" tone="muted">
           Text color
         </Text>
-        <Grid cols={5} minCellWidth="0" gap="2xs">
+        <Grid cols={5} gap="2xs">
           {COLOR_TOKENS.map((token) => {
             const fill = colorCssValue(token);
             const isActive =

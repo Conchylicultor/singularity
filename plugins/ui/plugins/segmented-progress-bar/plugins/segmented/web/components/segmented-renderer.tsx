@@ -17,7 +17,6 @@ export function SegmentedRenderer({
           <Grid
             as="span"
             cols={steps.length}
-            minCellWidth="0"
             gap="none"
             align="center"
             className="gap-px w-10 cursor-default"
