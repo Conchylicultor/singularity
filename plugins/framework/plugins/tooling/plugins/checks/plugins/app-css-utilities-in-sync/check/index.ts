@@ -1,5 +1,9 @@
-import { readFileSync } from "node:fs";
-import { join } from "node:path";
+import { existsSync, readFileSync } from "fs";
+import { relative } from "path";
+import {
+  renderCustomUtilities,
+  customUtilitiesManifestPath,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -12,81 +16,42 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-const APP_CSS = "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
-const CUSTOM_UTILITIES = "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/custom-utilities.ts";
-
-/**
- * Extract every `@utility <name>` declaration from app.css. CSS block comments
- * are stripped first so a prose mention of `@utility …` inside a comment is not
- * mistaken for a real declaration.
- */
-function declaredUtilities(css: string): Set<string> {
-  const code = css.replace(/\/\*[\s\S]*?\*\//g, "");
-  const out = new Set<string>();
-  for (const m of code.matchAll(/@utility\s+([\w-]+)/g)) {
-    const name = m[1];
-    if (name) out.add(name);
-  }
-  return out;
-}
-
-/**
- * Extract the registered utility names from custom-utilities.ts by text-parsing
- * the string literals inside every `const <NAME>_UTILITIES = [ … ]` array. The
- * `*_UTILITIES` suffix convention is what makes the registry total: any new family
- * is picked up automatically. Text-parse (not import) to avoid runtime/boundary
- * questions. Group ids / conflict ids are scalar fields, never inside these
- * arrays, so they are correctly excluded.
- */
-function registeredUtilities(ts: string): Set<string> {
-  const out = new Set<string>();
-  for (const arr of ts.matchAll(/\w+_UTILITIES\s*=\s*\[([^\]]*)\]/g)) {
-    const body = arr[1];
-    if (!body) continue;
-    for (const lit of body.matchAll(/["'`]([\w-]+)["'`]/g)) {
-      const token = lit[1];
-      if (token) out.add(token);
-    }
-  }
-  return out;
-}
-
 const check: Check = {
   id: "app-css-utilities-in-sync",
   description:
-    "Every custom @utility in app.css must be registered in custom-utilities.ts (the twMerge source of truth), and vice versa",
+    "custom-utilities.generated.ts matches the `/* twmerge: … */` markers in app.css (the twMerge registry source of truth)",
   async run() {
     const root = await getRoot();
-    const css = readFileSync(join(root, APP_CSS), "utf8");
-    const ts = readFileSync(join(root, CUSTOM_UTILITIES), "utf8");
+    const file = customUtilitiesManifestPath(root);
+    const rel = relative(root, file);
 
-    const declared = declaredUtilities(css);
-    const registered = registeredUtilities(ts);
-
-    // Forward: every registered name must be declared in app.css.
-    const missing = [...registered].filter((name) => !declared.has(name));
-    if (missing.length > 0) {
+    // A thrown marker-validation error (missing/invalid `/* twmerge: … */`) is a
+    // legitimate check failure, not a crash — report it as the failure message.
+    let expected: string;
+    try {
+      expected = renderCustomUtilities(root);
+    } catch (err) {
       return {
         ok: false,
-        message: `app.css missing @utility: ${missing.join(", ")}`,
-        hint: "Add the @utility to app.css or remove it from custom-utilities.ts.",
+        message: `app.css custom-@utility markers are invalid: ${err instanceof Error ? err.message : String(err)}`,
+        hint: "Fix the `/* twmerge: … */` marker in app.css, then run `./singularity build`.",
       };
     }
 
-    // Reverse (total): every @utility declared in app.css must be registered, so
-    // cn()/twMerge knows about it. An unregistered custom utility is the
-    // silent-strip / fail-to-dedupe bug class — fail loudly instead.
-    const unregistered = [...declared].filter((name) => !registered.has(name));
-    if (unregistered.length > 0) {
+    if (!existsSync(file)) {
       return {
         ok: false,
-        message: `app.css declares unregistered @utility: ${unregistered.join(", ")}`,
-        hint:
-          "Add it to a *_UTILITIES array in plugins/primitives/plugins/css/plugins/ui-kit/web/theme/custom-utilities.ts and give it a CUSTOM_UTILITY_REGISTRY entry " +
-          "(extend a built-in group, a synthetic group + conflictsWith, or standalone with a reason).",
+        message: `${rel} is missing`,
+        hint: "Run `./singularity build` to generate it.",
       };
     }
-
+    if (readFileSync(file, "utf8") !== expected) {
+      return {
+        ok: false,
+        message: `${rel} is out of sync with the app.css @utility markers`,
+        hint: "Run `./singularity build` and commit the regenerated file.",
+      };
+    }
     return { ok: true };
   },
 };

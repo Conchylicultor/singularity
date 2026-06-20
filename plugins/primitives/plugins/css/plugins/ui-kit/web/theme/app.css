@@ -135,6 +135,7 @@
  * values. Keep the resting `border-*` class on the control; the ring alone
  * signals focus. */
 @utility focus-ring {
+  /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */
   @apply outline-none;
   &:focus-visible {
     @apply ring-3 ring-ring/50;
@@ -142,6 +143,7 @@
 }
 
 @utility focus-ring-within {
+  /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */
   &:has(:focus-visible) {
     @apply ring-3 ring-ring/50;
   }
@@ -153,7 +155,7 @@
  * never exceeds 3px, so a generous preset can't round the box into a near-circle
  * and make multi-select look like radios. The sanctioned checkbox corner — reach
  * for it instead of an arbitrary rounded-[…] literal. */
-@utility rounded-checkbox { border-radius: min(var(--radius), 3px); }
+@utility rounded-checkbox { border-radius: min(var(--radius), 3px); } /* twmerge: extend rounded */
 
 /* Single-line region invariant — the shared base for horizontal chrome strips
  * (the Bar primitive), interactive rows (Row), and chips. Bakes the two-class
@@ -162,12 +164,13 @@
  * `items-center whitespace-nowrap` copies. Display-agnostic on purpose: consumers
  * add their own `flex`/`inline-flex`. The `truncating-text/no-clip-without-nowrap`
  * lint rule treats `region-line` as nowrap-safe (it implies `whitespace-nowrap`). */
-@utility region-line { @apply items-center whitespace-nowrap; }
+@utility region-line { @apply items-center whitespace-nowrap; } /* twmerge: standalone -- Composite single-line invariant (align-items + whitespace); name doesn't misfile into a built-in group and it's a base layer, not a selectively-overridden single property. */
 
 /* Scrollbar-chrome hider — keeps a box scrollable while removing the visible
  * scrollbar (Firefox `scrollbar-width` + the WebKit pseudo-element). The home for
  * the `<Scroll hideScrollbar>` mechanic so call sites never hand-write it. */
 @utility no-scrollbar {
+  /* twmerge: standalone -- Hides scrollbar chrome (scrollbar-width + ::-webkit-scrollbar); additive, no single-value built-in group to conflict with. */
   scrollbar-width: none;
   &::-webkit-scrollbar {
     display: none;
@@ -176,32 +179,36 @@
 
 /* Density padding utilities — the only bridge for runtime-themeable padding,
  * since padding utilities can't read theme vars. Values come from the density
- * token group (--pad-* runtime vars, overridden by ThemeInjector). */
-@utility p-chip    { padding: var(--pad-chip-y) var(--pad-chip-x); }
-@utility p-control { padding: var(--pad-control-y) var(--pad-control-x); }
-@utility p-row     { padding: var(--pad-row-y) var(--pad-row-x); }
-@utility p-card    { padding: var(--pad-card); }
+ * token group (--pad-* runtime vars, overridden by ThemeInjector).
+ * @twmerge group sg-pad conflicts: p */
+@utility p-chip    { padding: var(--pad-chip-y) var(--pad-chip-x); }     /* twmerge: sg-pad */
+@utility p-control { padding: var(--pad-control-y) var(--pad-control-x); } /* twmerge: sg-pad */
+@utility p-row     { padding: var(--pad-row-y) var(--pad-row-x); }       /* twmerge: sg-pad */
+@utility p-card    { padding: var(--pad-card); }                         /* twmerge: sg-pad */
 
 /* Control height utilities — the single source of truth for interactive-control
  * heights (Button, ToggleChip, ButtonGroup, …). Values come from the density
  * token group (--control-height-* runtime vars, overridden by ThemeInjector),
  * so every control scales together with the active density preset. Height only:
- * padding/font/icon stay per-primitive. */
-@utility control-xs { height: var(--control-height-xs); }
-@utility control-sm { height: var(--control-height-sm); }
-@utility control-md { height: var(--control-height-md); }
-@utility control-lg { height: var(--control-height-lg); }
-@utility control-icon-xs { height: var(--control-height-xs); width: var(--control-height-xs); }
-@utility control-icon-sm { height: var(--control-height-sm); width: var(--control-height-sm); }
-@utility control-icon-md { height: var(--control-height-md); width: var(--control-height-md); }
-@utility control-icon-lg { height: var(--control-height-lg); width: var(--control-height-lg); }
+ * padding/font/icon stay per-primitive.
+ * @twmerge group sg-control-height conflicts: size h
+ * @twmerge group sg-control-icon conflicts: size h w */
+@utility control-xs { height: var(--control-height-xs); } /* twmerge: sg-control-height */
+@utility control-sm { height: var(--control-height-sm); } /* twmerge: sg-control-height */
+@utility control-md { height: var(--control-height-md); } /* twmerge: sg-control-height */
+@utility control-lg { height: var(--control-height-lg); } /* twmerge: sg-control-height */
+@utility control-icon-xs { height: var(--control-height-xs); width: var(--control-height-xs); } /* twmerge: sg-control-icon */
+@utility control-icon-sm { height: var(--control-height-sm); width: var(--control-height-sm); } /* twmerge: sg-control-icon */
+@utility control-icon-md { height: var(--control-height-md); width: var(--control-height-md); } /* twmerge: sg-control-icon */
+@utility control-icon-lg { height: var(--control-height-lg); width: var(--control-height-lg); } /* twmerge: sg-control-icon */
 /* Min-height variants — for chrome that wraps variable-height content but should
  * share the control scale's floor (e.g. reorder edit-mode item boxes), so the
- * wrapper lines up with fixed-height controls instead of hugging its content. */
-@utility control-min-xs { min-height: var(--control-height-xs); }
-@utility control-min-sm { min-height: var(--control-height-sm); }
-@utility control-min-md { min-height: var(--control-height-md); }
-@utility control-min-lg { min-height: var(--control-height-lg); }
+ * wrapper lines up with fixed-height controls instead of hugging its content.
+ * @twmerge group sg-control-min conflicts: min-h */
+@utility control-min-xs { min-height: var(--control-height-xs); } /* twmerge: sg-control-min */
+@utility control-min-sm { min-height: var(--control-height-sm); } /* twmerge: sg-control-min */
+@utility control-min-md { min-height: var(--control-height-md); } /* twmerge: sg-control-min */
+@utility control-min-lg { min-height: var(--control-height-lg); } /* twmerge: sg-control-min */
 
 /* Chrome dimension utilities — the single source of truth for app-chrome
  * heights and horizontal padding (toolbar, sidebar header, pane headers).
@@ -209,17 +216,17 @@
  * overridden by ThemeInjector), so chrome scales with the active density
  * preset. Two-tier heights: h-chrome-bar for the toolbar/sidebar header,
  * h-chrome-pane for pane headers; px-chrome is the shared left/right inset. */
-@utility h-chrome-bar { height: var(--chrome-bar-h); }
-@utility h-chrome-pane { height: var(--chrome-pane-h); }
-@utility px-chrome { padding-left: var(--chrome-pad-x); padding-right: var(--chrome-pad-x); }
-@utility pl-chrome { padding-left: var(--chrome-pad-x); }
+@utility h-chrome-bar { height: var(--chrome-bar-h); } /* twmerge: extend h */
+@utility h-chrome-pane { height: var(--chrome-pane-h); } /* twmerge: extend h */
+@utility px-chrome { padding-left: var(--chrome-pad-x); padding-right: var(--chrome-pad-x); } /* twmerge: extend px */
+@utility pl-chrome { padding-left: var(--chrome-pad-x); } /* twmerge: extend pl */
 
 /* Floating-bar safe area — right inset that clears the global floating action
  * bar (a fixed top-right overlay). Width is owned + published by the
  * floating-bar plugin as --floating-bar-safe-area; it falls back to the chrome
  * pad when the bar is hidden (config off / a toolbar-hosting app), so an app
  * header never sits under the bar without hand-reserving a pr-14. */
-@utility pr-floating-bar { padding-right: var(--floating-bar-safe-area, var(--chrome-pad-x)); }
+@utility pr-floating-bar { padding-right: var(--floating-bar-safe-area, var(--chrome-pad-x)); } /* twmerge: extend pr */
 
 /* Spacing scale utilities — the single source of truth for layout gap + padding
  * rhythm (<Stack gap> / <Inset pad> primitives, plugins/primitives/plugins/spacing).
@@ -228,88 +235,89 @@
  * gaps + insets tighten together with the active density preset — unlike raw
  * Tailwind gap-N/p-N, which are fixed. `none` is the constant 0 (no token). The
  * `no-adhoc-spacing` lint rule (spacing plugin) bans raw gap-/p-/m-/space- numerics
- * so every spacing decision routes through these named steps. Kept in sync with
- * custom-utilities.ts via the app-css-utilities-in-sync check. */
-@utility gap-none { gap: 0; }
-@utility gap-2xs  { gap: var(--space-2xs); }
-@utility gap-xs   { gap: var(--space-xs); }
-@utility gap-sm   { gap: var(--space-sm); }
-@utility gap-md   { gap: var(--space-md); }
-@utility gap-lg   { gap: var(--space-lg); }
-@utility gap-xl   { gap: var(--space-xl); }
-@utility gap-2xl  { gap: var(--space-2xl); }
-@utility gap-x-none { column-gap: 0; }
-@utility gap-x-2xs  { column-gap: var(--space-2xs); }
-@utility gap-x-xs   { column-gap: var(--space-xs); }
-@utility gap-x-sm   { column-gap: var(--space-sm); }
-@utility gap-x-md   { column-gap: var(--space-md); }
-@utility gap-x-lg   { column-gap: var(--space-lg); }
-@utility gap-x-xl   { column-gap: var(--space-xl); }
-@utility gap-x-2xl  { column-gap: var(--space-2xl); }
-@utility gap-y-none { row-gap: 0; }
-@utility gap-y-2xs  { row-gap: var(--space-2xs); }
-@utility gap-y-xs   { row-gap: var(--space-xs); }
-@utility gap-y-sm   { row-gap: var(--space-sm); }
-@utility gap-y-md   { row-gap: var(--space-md); }
-@utility gap-y-lg   { row-gap: var(--space-lg); }
-@utility gap-y-xl   { row-gap: var(--space-xl); }
-@utility gap-y-2xl  { row-gap: var(--space-2xl); }
-@utility p-none { padding: 0; }
-@utility p-2xs  { padding: var(--space-2xs); }
-@utility p-xs   { padding: var(--space-xs); }
-@utility p-sm   { padding: var(--space-sm); }
-@utility p-md   { padding: var(--space-md); }
-@utility p-lg   { padding: var(--space-lg); }
-@utility p-xl   { padding: var(--space-xl); }
-@utility p-2xl  { padding: var(--space-2xl); }
-@utility px-none { padding-left: 0; padding-right: 0; }
-@utility px-2xs  { padding-left: var(--space-2xs); padding-right: var(--space-2xs); }
-@utility px-xs   { padding-left: var(--space-xs);  padding-right: var(--space-xs); }
-@utility px-sm   { padding-left: var(--space-sm);  padding-right: var(--space-sm); }
-@utility px-md   { padding-left: var(--space-md);  padding-right: var(--space-md); }
-@utility px-lg   { padding-left: var(--space-lg);  padding-right: var(--space-lg); }
-@utility px-xl   { padding-left: var(--space-xl);  padding-right: var(--space-xl); }
-@utility px-2xl  { padding-left: var(--space-2xl); padding-right: var(--space-2xl); }
-@utility py-none { padding-top: 0; padding-bottom: 0; }
-@utility py-2xs  { padding-top: var(--space-2xs); padding-bottom: var(--space-2xs); }
-@utility py-xs   { padding-top: var(--space-xs);  padding-bottom: var(--space-xs); }
-@utility py-sm   { padding-top: var(--space-sm);  padding-bottom: var(--space-sm); }
-@utility py-md   { padding-top: var(--space-md);  padding-bottom: var(--space-md); }
-@utility py-lg   { padding-top: var(--space-lg);  padding-bottom: var(--space-lg); }
-@utility py-xl   { padding-top: var(--space-xl);  padding-bottom: var(--space-xl); }
-@utility py-2xl  { padding-top: var(--space-2xl); padding-bottom: var(--space-2xl); }
-@utility pt-none { padding-top: 0; }
-@utility pt-2xs  { padding-top: var(--space-2xs); }
-@utility pt-xs   { padding-top: var(--space-xs); }
-@utility pt-sm   { padding-top: var(--space-sm); }
-@utility pt-md   { padding-top: var(--space-md); }
-@utility pt-lg   { padding-top: var(--space-lg); }
-@utility pt-xl   { padding-top: var(--space-xl); }
-@utility pt-2xl  { padding-top: var(--space-2xl); }
-@utility pr-none { padding-right: 0; }
-@utility pr-2xs  { padding-right: var(--space-2xs); }
-@utility pr-xs   { padding-right: var(--space-xs); }
-@utility pr-sm   { padding-right: var(--space-sm); }
-@utility pr-md   { padding-right: var(--space-md); }
-@utility pr-lg   { padding-right: var(--space-lg); }
-@utility pr-xl   { padding-right: var(--space-xl); }
-@utility pr-2xl  { padding-right: var(--space-2xl); }
-@utility pb-none { padding-bottom: 0; }
-@utility pb-2xs  { padding-bottom: var(--space-2xs); }
-@utility pb-xs   { padding-bottom: var(--space-xs); }
-@utility pb-sm   { padding-bottom: var(--space-sm); }
-@utility pb-md   { padding-bottom: var(--space-md); }
-@utility pb-lg   { padding-bottom: var(--space-lg); }
-@utility pb-xl   { padding-bottom: var(--space-xl); }
-@utility pb-2xl  { padding-bottom: var(--space-2xl); }
-@utility pl-none { padding-left: 0; }
-@utility pl-2xs  { padding-left: var(--space-2xs); }
-@utility pl-xs   { padding-left: var(--space-xs); }
-@utility pl-sm   { padding-left: var(--space-sm); }
-@utility pl-md   { padding-left: var(--space-md); }
-@utility pl-lg   { padding-left: var(--space-lg); }
-@utility pl-xl   { padding-left: var(--space-xl); }
-@utility pl-2xl  { padding-left: var(--space-2xl); }
+ * so every spacing decision routes through these named steps. The generated
+ * custom-utilities registry is derived from the per-utility `/* twmerge: … *\/`
+ * markers below; the app-css-utilities-in-sync check guards the generated file. */
+@utility gap-none { gap: 0; }                 /* twmerge: extend gap */
+@utility gap-2xs  { gap: var(--space-2xs); }  /* twmerge: extend gap */
+@utility gap-xs   { gap: var(--space-xs); }   /* twmerge: extend gap */
+@utility gap-sm   { gap: var(--space-sm); }   /* twmerge: extend gap */
+@utility gap-md   { gap: var(--space-md); }   /* twmerge: extend gap */
+@utility gap-lg   { gap: var(--space-lg); }   /* twmerge: extend gap */
+@utility gap-xl   { gap: var(--space-xl); }   /* twmerge: extend gap */
+@utility gap-2xl  { gap: var(--space-2xl); }  /* twmerge: extend gap */
+@utility gap-x-none { column-gap: 0; }                 /* twmerge: extend gap-x */
+@utility gap-x-2xs  { column-gap: var(--space-2xs); }  /* twmerge: extend gap-x */
+@utility gap-x-xs   { column-gap: var(--space-xs); }   /* twmerge: extend gap-x */
+@utility gap-x-sm   { column-gap: var(--space-sm); }   /* twmerge: extend gap-x */
+@utility gap-x-md   { column-gap: var(--space-md); }   /* twmerge: extend gap-x */
+@utility gap-x-lg   { column-gap: var(--space-lg); }   /* twmerge: extend gap-x */
+@utility gap-x-xl   { column-gap: var(--space-xl); }   /* twmerge: extend gap-x */
+@utility gap-x-2xl  { column-gap: var(--space-2xl); }  /* twmerge: extend gap-x */
+@utility gap-y-none { row-gap: 0; }                 /* twmerge: extend gap-y */
+@utility gap-y-2xs  { row-gap: var(--space-2xs); }  /* twmerge: extend gap-y */
+@utility gap-y-xs   { row-gap: var(--space-xs); }   /* twmerge: extend gap-y */
+@utility gap-y-sm   { row-gap: var(--space-sm); }   /* twmerge: extend gap-y */
+@utility gap-y-md   { row-gap: var(--space-md); }   /* twmerge: extend gap-y */
+@utility gap-y-lg   { row-gap: var(--space-lg); }   /* twmerge: extend gap-y */
+@utility gap-y-xl   { row-gap: var(--space-xl); }   /* twmerge: extend gap-y */
+@utility gap-y-2xl  { row-gap: var(--space-2xl); }  /* twmerge: extend gap-y */
+@utility p-none { padding: 0; }                /* twmerge: extend p */
+@utility p-2xs  { padding: var(--space-2xs); } /* twmerge: extend p */
+@utility p-xs   { padding: var(--space-xs); }  /* twmerge: extend p */
+@utility p-sm   { padding: var(--space-sm); }  /* twmerge: extend p */
+@utility p-md   { padding: var(--space-md); }  /* twmerge: extend p */
+@utility p-lg   { padding: var(--space-lg); }  /* twmerge: extend p */
+@utility p-xl   { padding: var(--space-xl); }  /* twmerge: extend p */
+@utility p-2xl  { padding: var(--space-2xl); } /* twmerge: extend p */
+@utility px-none { padding-left: 0; padding-right: 0; }                                  /* twmerge: extend px */
+@utility px-2xs  { padding-left: var(--space-2xs); padding-right: var(--space-2xs); }     /* twmerge: extend px */
+@utility px-xs   { padding-left: var(--space-xs);  padding-right: var(--space-xs); }      /* twmerge: extend px */
+@utility px-sm   { padding-left: var(--space-sm);  padding-right: var(--space-sm); }      /* twmerge: extend px */
+@utility px-md   { padding-left: var(--space-md);  padding-right: var(--space-md); }      /* twmerge: extend px */
+@utility px-lg   { padding-left: var(--space-lg);  padding-right: var(--space-lg); }      /* twmerge: extend px */
+@utility px-xl   { padding-left: var(--space-xl);  padding-right: var(--space-xl); }      /* twmerge: extend px */
+@utility px-2xl  { padding-left: var(--space-2xl); padding-right: var(--space-2xl); }     /* twmerge: extend px */
+@utility py-none { padding-top: 0; padding-bottom: 0; }                                  /* twmerge: extend py */
+@utility py-2xs  { padding-top: var(--space-2xs); padding-bottom: var(--space-2xs); }     /* twmerge: extend py */
+@utility py-xs   { padding-top: var(--space-xs);  padding-bottom: var(--space-xs); }      /* twmerge: extend py */
+@utility py-sm   { padding-top: var(--space-sm);  padding-bottom: var(--space-sm); }      /* twmerge: extend py */
+@utility py-md   { padding-top: var(--space-md);  padding-bottom: var(--space-md); }      /* twmerge: extend py */
+@utility py-lg   { padding-top: var(--space-lg);  padding-bottom: var(--space-lg); }      /* twmerge: extend py */
+@utility py-xl   { padding-top: var(--space-xl);  padding-bottom: var(--space-xl); }      /* twmerge: extend py */
+@utility py-2xl  { padding-top: var(--space-2xl); padding-bottom: var(--space-2xl); }     /* twmerge: extend py */
+@utility pt-none { padding-top: 0; }                /* twmerge: extend pt */
+@utility pt-2xs  { padding-top: var(--space-2xs); } /* twmerge: extend pt */
+@utility pt-xs   { padding-top: var(--space-xs); }  /* twmerge: extend pt */
+@utility pt-sm   { padding-top: var(--space-sm); }  /* twmerge: extend pt */
+@utility pt-md   { padding-top: var(--space-md); }  /* twmerge: extend pt */
+@utility pt-lg   { padding-top: var(--space-lg); }  /* twmerge: extend pt */
+@utility pt-xl   { padding-top: var(--space-xl); }  /* twmerge: extend pt */
+@utility pt-2xl  { padding-top: var(--space-2xl); } /* twmerge: extend pt */
+@utility pr-none { padding-right: 0; }                /* twmerge: extend pr */
+@utility pr-2xs  { padding-right: var(--space-2xs); } /* twmerge: extend pr */
+@utility pr-xs   { padding-right: var(--space-xs); }  /* twmerge: extend pr */
+@utility pr-sm   { padding-right: var(--space-sm); }  /* twmerge: extend pr */
+@utility pr-md   { padding-right: var(--space-md); }  /* twmerge: extend pr */
+@utility pr-lg   { padding-right: var(--space-lg); }  /* twmerge: extend pr */
+@utility pr-xl   { padding-right: var(--space-xl); }  /* twmerge: extend pr */
+@utility pr-2xl  { padding-right: var(--space-2xl); } /* twmerge: extend pr */
+@utility pb-none { padding-bottom: 0; }                /* twmerge: extend pb */
+@utility pb-2xs  { padding-bottom: var(--space-2xs); } /* twmerge: extend pb */
+@utility pb-xs   { padding-bottom: var(--space-xs); }  /* twmerge: extend pb */
+@utility pb-sm   { padding-bottom: var(--space-sm); }  /* twmerge: extend pb */
+@utility pb-md   { padding-bottom: var(--space-md); }  /* twmerge: extend pb */
+@utility pb-lg   { padding-bottom: var(--space-lg); }  /* twmerge: extend pb */
+@utility pb-xl   { padding-bottom: var(--space-xl); }  /* twmerge: extend pb */
+@utility pb-2xl  { padding-bottom: var(--space-2xl); } /* twmerge: extend pb */
+@utility pl-none { padding-left: 0; }                /* twmerge: extend pl */
+@utility pl-2xs  { padding-left: var(--space-2xs); } /* twmerge: extend pl */
+@utility pl-xs   { padding-left: var(--space-xs); }  /* twmerge: extend pl */
+@utility pl-sm   { padding-left: var(--space-sm); }  /* twmerge: extend pl */
+@utility pl-md   { padding-left: var(--space-md); }  /* twmerge: extend pl */
+@utility pl-lg   { padding-left: var(--space-lg); }  /* twmerge: extend pl */
+@utility pl-xl   { padding-left: var(--space-xl); }  /* twmerge: extend pl */
+@utility pl-2xl  { padding-left: var(--space-2xl); } /* twmerge: extend pl */
 
 /* Semantic typography role utilities — the single source of truth for text
  * hierarchy (Text primitive). Each role is a frozen bundle of size + line-height
@@ -320,33 +328,34 @@
  * so every typographic decision routes through these roles via <Text role>.
  * NOTE: roles read the vars directly — never bridge them through @theme inline
  * (that would auto-generate a colliding `text-<role>` font-size utility). */
-@utility text-title      { font-size: var(--font-size-title);      line-height: var(--line-height-title);      font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; }
-@utility text-heading    { font-size: var(--font-size-heading);    line-height: var(--line-height-heading);    font-weight: var(--font-weight-semibold); letter-spacing: -0.005em; }
-@utility text-subheading { font-size: var(--font-size-subheading); line-height: var(--line-height-subheading); font-weight: var(--font-weight-semibold); }
-@utility text-body       { font-size: var(--font-size-body);       line-height: var(--line-height-body);       font-weight: var(--font-weight-normal); }
-@utility text-label      { font-size: var(--font-size-label);      line-height: var(--line-height-label);      font-weight: var(--font-weight-medium); }
-@utility text-caption    { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-normal); }
+@utility text-title      { font-size: var(--font-size-title);      line-height: var(--line-height-title);      font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; }  /* twmerge: extend font-size */
+@utility text-heading    { font-size: var(--font-size-heading);    line-height: var(--line-height-heading);    font-weight: var(--font-weight-semibold); letter-spacing: -0.005em; } /* twmerge: extend font-size */
+@utility text-subheading { font-size: var(--font-size-subheading); line-height: var(--line-height-subheading); font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
+@utility text-body       { font-size: var(--font-size-body);       line-height: var(--line-height-body);       font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+@utility text-label      { font-size: var(--font-size-label);      line-height: var(--line-height-label);      font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
+@utility text-caption    { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 
 /* Em-based icon sizing — glyphs in text-embedded slots (Badge/Row/LinkChip/
  * ToggleChip/Breadcrumb leading+actions) track the slot's font-size instead of a
  * hardcoded size-N. 1.15em reads as slightly larger than cap height: next to
  * text-xs (12px) -> ~13.8px, matching today's dominant size-3.5 (14px) better
- * than bare 1em. Kept in sync with custom-utilities.ts via the
- * app-css-utilities-in-sync check. */
-@utility icon-auto { width: 1.15em; height: 1.15em; }
+ * than bare 1em. Kept in sync with app.css via the app-css-utilities-in-sync
+ * check (the generated custom-utilities registry is derived from these markers).
+ * @twmerge group sg-icon-auto conflicts: size h w */
+@utility icon-auto { width: 1.15em; height: 1.15em; } /* twmerge: sg-icon-auto */
 
 /* Semantic z-layer utilities — the single source of truth for stacking order.
  * Values come from the static --z-* scale in @theme above (structural, not
  * runtime-themeable). The `no-adhoc-zindex` lint rule (z-layers plugin) bans raw
  * `z-<n>`/`z-[…]` so every stacking decision routes through this named ladder. */
-@utility z-base    { z-index: var(--z-base); }
-@utility z-raised  { z-index: var(--z-raised); }
-@utility z-nav     { z-index: var(--z-nav); }
-@utility z-float   { z-index: var(--z-float); }
-@utility z-overlay { z-index: var(--z-overlay); }
-@utility z-popover { z-index: var(--z-popover); }
-@utility z-draw    { z-index: var(--z-draw); }
-@utility z-max     { z-index: var(--z-max); }
+@utility z-base    { z-index: var(--z-base); }    /* twmerge: extend z */
+@utility z-raised  { z-index: var(--z-raised); }  /* twmerge: extend z */
+@utility z-nav     { z-index: var(--z-nav); }     /* twmerge: extend z */
+@utility z-float   { z-index: var(--z-float); }   /* twmerge: extend z */
+@utility z-overlay { z-index: var(--z-overlay); } /* twmerge: extend z */
+@utility z-popover { z-index: var(--z-popover); } /* twmerge: extend z */
+@utility z-draw    { z-index: var(--z-draw); }    /* twmerge: extend z */
+@utility z-max     { z-index: var(--z-max); }     /* twmerge: extend z */
 
 @layer base {
   * {

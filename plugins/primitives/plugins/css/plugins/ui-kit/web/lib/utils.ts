@@ -1,12 +1,13 @@
 import { clsx, type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
-import { CUSTOM_UTILITY_REGISTRY, type CustomGroupId } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/custom-utilities";
+import { CUSTOM_UTILITY_REGISTRY, type CustomGroupId } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/custom-utilities.generated";
 
 // Derive the twMerge extension from the single-source registry so adding a custom
 // @utility never requires a separate hand-edit of the conflict map (the coupling
-// that let role utilities like `text-caption` get silently stripped). See
-// custom-utilities.ts for the wiring semantics.
+// that let role utilities like `text-caption` get silently stripped). The registry
+// is GENERATED from the `/* twmerge: … */` markers in app.css (the single source of
+// truth) — see custom-utilities-types.ts for the wiring semantics.
 const classGroups: Record<string, string[]> = {};
 const conflictingClassGroups: Record<string, string[]> = {};
 for (const entry of CUSTOM_UTILITY_REGISTRY) {

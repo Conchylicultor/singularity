@@ -1,5 +1,6 @@
 import { generateBarrelStubs } from "./barrel-stubs-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
+import { generateCustomUtilities } from "./custom-utilities-gen";
 import { generateDataViews } from "./data-views-gen";
 import { generatePluginDocs } from "./docgen";
 import { generatePluginRegistry } from "./plugin-registry-gen";
@@ -79,6 +80,9 @@ export async function regenerateRegistryCodegen({
  *     codegen barrel also installs the reorder per-slot contribution catalog as
  *     the default origin-annotations preparer, so origins carry the catalog
  *     comments.
+ *   - custom-utilities: BEFORE the `app-css-utilities-in-sync` check consumes it;
+ *     no plugin-tree dependency (it only reads app.css by path), so placed among
+ *     the CSS-related steps.
  *   - token-group-vars: BEFORE the build-time CSS single-owner checks
  *     (`css-vars-single-owner`, `css-vars-supplied`) consume it; safe here since
  *     it only reads token-group descriptors.
@@ -96,6 +100,9 @@ export async function regenerateManifestCodegen({
   );
   await onStep("dataViews", "data-views manifest", () =>
     generateDataViews({ root }),
+  );
+  await onStep("customUtilities", "custom-utilities manifest", async () =>
+    generateCustomUtilities({ root }),
   );
   await onStep("tokenGroupVars", "token-group vars manifest", () =>
     generateTokenGroupVars({ root }),

@@ -35,3 +35,41 @@ owner of every `--token`.
 - **No plugin-specific CSS here.** Animations, keyframes, component overrides, and structural styles belong in the plugin that uses them (as a `.css` file imported from the plugin's own code).
 - **Plugins consume tokens, never define them.** Plugin CSS files may reference `var(--background)` etc. but must not set `--background:` or any other theme variable. This rule is now **machine-enforced** by the `css-vars-single-owner` check: every token-group var must have exactly one declaring owner (its token group), so re-declaring one in static CSS — here or in any plugin — fails the build (declarations inside `@theme`/`@theme inline` are excluded, being Tailwind's lower-precedence utility layer).
 - **No plugin-level theming.** Themes are controlled globally. Plugins must not define their own theme overrides, color schemes, or mode-specific (`.dark`) custom property blocks. If a plugin needs a new token, add it to the relevant token group's descriptor.
+
+## Adding a custom `@utility` (the twMerge marker)
+
+`app.css` is the **single source of truth** for every custom `@utility` AND for how
+`cn()`/tailwind-merge must classify it. The registry consumed by `cn()`
+(`custom-utilities.generated.ts`) is **generated** from co-located markers by
+`./singularity build` — there is no array to edit anywhere, and membership can't
+drift.
+
+Every `@utility` MUST carry one co-located `/* twmerge: <ref> */` marker (the
+generator throws, with the offending `@utility` named, if any is missing — an
+immediate codegen-step build error, not a silent post-build check miss). `<ref>`:
+
+- `extend <builtin>` — append the class into an existing built-in tailwind-merge
+  group (single-property utilities whose property maps 1:1 to one group). Gives
+  order-independent mutual conflict and lifts the class out of any wrong fallback
+  group (e.g. a `text-*` role out of text-color). Allowed `<builtin>` ids:
+  `font-size z h w size min-h p px py pt pr pb pl gap gap-x gap-y rounded`.
+- `<sg-id>` — a synthetic group id, for multi-property utilities (e.g. `h`+`w`) or a
+  property covered by several built-in groups (`height` → both `h` and `size`).
+  Declare the group **once** in the section-header comment as
+  `/* @twmerge group <sg-id> conflicts: <builtin…> */`; each member just references
+  the id. The listed built-ins override the group when they appear later.
+- `standalone -- <reason>` — intentionally outside twMerge; the reason is required.
+
+Examples (all real, from `app.css`):
+
+```css
+/* Density padding utilities … @twmerge group sg-pad conflicts: p */
+@utility p-card    { padding: var(--pad-card); }                /* twmerge: sg-pad */
+@utility p-sm      { padding: var(--space-sm); }                /* twmerge: extend p */
+@utility focus-ring { … /* twmerge: standalone -- Additive box-shadow/outline; no single-value built-in group to conflict with. */ }
+```
+
+The marker may sit at end-of-line, on the line below, or inside the rule body — the
+generator slices from each `@utility` to the next and reads the first
+`/* twmerge: … */` in that slice. After editing, run `./singularity build`; the
+`app-css-utilities-in-sync` check guards the regenerated file.

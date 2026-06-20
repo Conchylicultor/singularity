@@ -79,6 +79,13 @@ export {
   tokenGroupVarsManifestPath,
 } from "./token-group-vars-gen";
 
+export {
+  generateCustomUtilities,
+  renderCustomUtilities,
+  customUtilitiesManifestPath,
+  parseCustomUtilities,
+} from "./custom-utilities-gen";
+
 // Single source of truth for the ordered, non-migration repo-tree codegen
 // pipeline shared by `./singularity build` and the push-time `regen-generated`
 // normalize step, so the two can never drift apart.

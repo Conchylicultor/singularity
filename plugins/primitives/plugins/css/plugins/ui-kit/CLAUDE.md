@@ -3,9 +3,16 @@
 The global UI kit — one cohesive design-system unit. It owns:
 
 - **`cn()`** (`web/lib/utils.ts`) — the className-merge util. Its `tailwind-merge`
-  config is derived from the custom-utility registry (`web/theme/custom-utilities.ts`,
-  internal — never re-exported) so a new `@utility` never needs a hand-edited
-  conflict map.
+  config is derived from the custom-utility registry
+  (`web/theme/custom-utilities.generated.ts`, internal — never re-exported), which
+  is itself **generated from the `/* twmerge: … */` markers in `app.css`** by
+  `./singularity build`. So adding a custom `@utility` is a **single edit at its
+  `app.css` declaration** (the marker) — no separate conflict-map edit, no
+  name-mirroring array. The shape contracts (`BuiltinGroupId`, `RegistryEntry`) live
+  hand-authored in the data-free `web/theme/custom-utilities-types.ts`; only the
+  data is generated. The `app-css-utilities-in-sync` check guards the generated file
+  against drift. See [`web/theme/CLAUDE.md`](web/theme/CLAUDE.md) for the marker
+  grammar.
 - **The shadcn/ui primitives** (`web/components/ui/*`) — the 13 base-ui-based
   components (`Button`, `Dialog`, `Popover`, `Tooltip`, `DropdownMenu`, `Select`,
   `Sheet`, `ScrollArea`, `Separator`, `Input`, `ButtonGroup`, `Resizable*`,
@@ -38,8 +45,10 @@ Everything public is re-exported from the single barrel
 `@plugins/primitives/plugins/css/plugins/ui-kit/web`. There is **no** `@/*` alias — that was
 deleted when this plugin was extracted, so every consumer goes through the
 boundary-legal barrel and the dependency is visible to the boundary checker.
-`custom-utilities.ts` is plugin-internal and intentionally NOT re-exported (only
-`cn` and the `app-css-utilities-in-sync` check read it).
+`custom-utilities.generated.ts` (+ its data-free types peer
+`custom-utilities-types.ts`) is plugin-internal and intentionally NOT re-exported
+(only `cn` reads the registry; the `app-css-utilities-in-sync` check reads `app.css`
+via the codegen generator).
 
 ## shadcn CLI
 
