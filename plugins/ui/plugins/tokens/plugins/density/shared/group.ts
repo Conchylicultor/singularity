@@ -7,6 +7,7 @@ export const densityGroup = defineTokenGroup("density", {
   padControlY: { default: "0.375rem", label: "Control padding Y" },
   padRowX: { default: "0.5rem", label: "Row padding X" },
   padRowY: { default: "0.375rem", label: "Row padding Y" },
+  padCard: { default: "0.75rem", label: "Card padding" },
   controlHeightXs: { default: "1.5rem", label: "Control height XS" },
   controlHeightSm: { default: "1.75rem", label: "Control height SM" },
   controlHeightMd: { default: "2rem", label: "Control height MD" },

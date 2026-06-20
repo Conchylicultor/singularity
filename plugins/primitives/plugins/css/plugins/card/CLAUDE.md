@@ -3,14 +3,16 @@
 The sanctioned home for **card chrome** — the `raised` surface role plus card
 padding. `<Card>` is now a thin `<Surface level="raised">` wrapper (see the
 `surface` primitive): the `rounded + border + bg-card + shadow` chrome and the
-Ctrl+A **select-scope** live in Surface, and Card layers on `p-3` and the
+Ctrl+A **select-scope** live in Surface, and Card layers on `p-card` and the
 interactive/selected affordances. A click into the card + Ctrl+A selects only the
-card, not the surrounding pane, with zero per-consumer wiring.
+card, not the surrounding pane, with zero per-consumer wiring. Card padding is
+the density `p-card` token (`--pad-card`), so it tightens with the active density
+preset (Comfortable / Cozy / Compact) like every other padded chrome surface.
 
 - Polymorphic `as` (`div` | `button` | `a` | `li`, default `div`); `ref`
   forwards to the root DOM element (DnD consumers depend on it).
 - `interactive` adds the hover affordance; `selected` adds the emphasis border.
-- Default chrome is `rounded-md border border-border bg-card shadow-sm p-3`; pass
+- Default chrome is `rounded-md border border-border bg-card shadow-sm p-card`; pass
   `className` to override (cn uses `tailwind-merge`, so `rounded-lg` /
   `bg-muted/30` / a different padding cleanly replace the defaults).
 

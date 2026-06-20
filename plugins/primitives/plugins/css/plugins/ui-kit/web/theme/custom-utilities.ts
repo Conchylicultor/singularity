@@ -17,7 +17,7 @@
 export const CONTROL_HEIGHT_UTILITIES = ["control-xs", "control-sm", "control-md", "control-lg"] as const;
 export const CONTROL_ICON_UTILITIES = ["control-icon-xs", "control-icon-sm", "control-icon-md", "control-icon-lg"] as const;
 export const CONTROL_MIN_UTILITIES = ["control-min-xs", "control-min-sm", "control-min-md", "control-min-lg"] as const;
-export const PAD_UTILITIES = ["p-chip", "p-control", "p-row"] as const;
+export const PAD_UTILITIES = ["p-chip", "p-control", "p-row", "p-card"] as const;
 // Spacing-scale families (gap + padding over the 8-step ramp) — backed by the
 // density --space-* vars. Each joins its matching built-in tailwind-merge group
 // so a named step (`gap-sm`) and a raw Tailwind numeric (`gap-2`) mutually

@@ -180,6 +180,7 @@
 @utility p-chip    { padding: var(--pad-chip-y) var(--pad-chip-x); }
 @utility p-control { padding: var(--pad-control-y) var(--pad-control-x); }
 @utility p-row     { padding: var(--pad-row-y) var(--pad-row-x); }
+@utility p-card    { padding: var(--pad-card); }
 
 /* Control height utilities — the single source of truth for interactive-control
  * heights (Button, ToggleChip, ButtonGroup, …). Values come from the density

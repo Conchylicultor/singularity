@@ -10,11 +10,10 @@ import type React from "react";
  * radius / bg / padding override via `className` (cn = `twMerge(clsx(...))`, so
  * tailwind-merge resolves conflicts and the caller's class wins).
  */
-// Card's default padding is the legacy `p-3` (0.75rem) — kept in a module const,
-// as the prior BASE string did, so it isn't a className string literal subject to
-// `no-adhoc-spacing`. Card predates the density ramp and this padding is its
-// documented public default; consumers override via `className`.
-const PAD = "p-3";
+// Card's default padding comes from the density `p-card` token (--pad-card), so
+// it scales with the active density preset (Comfortable / Cozy / Compact) like
+// every other padded chrome surface. `p-card` is word-valued, so `no-adhoc-spacing`
+// allows it inline; consumers override via `className`.
 const HOVER = "cursor-pointer transition-colors hover:border-primary/60 hover:bg-muted/40";
 const SEL = "border-primary";
 
@@ -68,7 +67,7 @@ export function Card({
       tabIndex={tabIndex ?? (interactive ? 0 : undefined)}
       onKeyDown={onKeyDown}
       {...rest}
-      className={cn(PAD, interactive && HOVER, selected && SEL, className)}
+      className={cn("p-card", interactive && HOVER, selected && SEL, className)}
     >
       {children}
     </Surface>

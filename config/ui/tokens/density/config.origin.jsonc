@@ -1,4 +1,4 @@
-// @hash 76bb69b9020d
+// @hash e073de78cf64
 {
   "preset": "comfortable",
   "overrides": {
@@ -9,6 +9,7 @@
       "padControlY": "",
       "padRowX": "",
       "padRowY": "",
+      "padCard": "",
       "controlHeightXs": "",
       "controlHeightSm": "",
       "controlHeightMd": "",
@@ -31,6 +32,7 @@
       "padControlY": "",
       "padRowX": "",
       "padRowY": "",
+      "padCard": "",
       "controlHeightXs": "",
       "controlHeightSm": "",
       "controlHeightMd": "",
