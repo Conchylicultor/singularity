@@ -1,5 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useState, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import { MdRefresh } from "react-icons/md";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
@@ -10,9 +10,10 @@ import type { Span } from "./shared";
 export function GanttView(): ReactElement {
   const [hovered, setHovered] = useState<Span | null>(null);
   const [refreshKey, setRefreshKey] = useState(0);
+  const ctxValue = useMemo(() => ({ hovered, setHovered, refreshKey }), [hovered, setHovered, refreshKey]);
 
   return (
-    <ProfilingContext.Provider value={{ hovered, setHovered, refreshKey }}>
+    <ProfilingContext.Provider value={ctxValue}>
       <Column
         className="h-full"
         header={

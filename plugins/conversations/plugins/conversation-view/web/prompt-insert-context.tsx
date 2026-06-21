@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useRef, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode } from "react";
 
 type InsertFn = (text: string) => void;
 
@@ -23,7 +23,12 @@ export function PromptInsertProvider({ children }: { children: ReactNode }) {
     insertRef.current?.(text);
   }, []);
 
-  return <Ctx.Provider value={{ registerInsert, insertAtCursor }}>{children}</Ctx.Provider>;
+  const ctxValue = useMemo(
+    () => ({ registerInsert, insertAtCursor }),
+    [registerInsert, insertAtCursor],
+  );
+
+  return <Ctx.Provider value={ctxValue}>{children}</Ctx.Provider>;
 }
 
 export function usePromptInsert() {

@@ -1,4 +1,4 @@
-import { useEffect, type ReactElement, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactElement, type ReactNode } from "react";
 import {
   MultiSelectContext,
   useMultiSelectReducer,
@@ -19,8 +19,13 @@ export function MultiSelectProvider({
     dispatch({ type: "SET_ORDERED_IDS", ids: orderedIds });
   }, [orderedIds, dispatch]);
 
+  const ctxValue = useMemo(
+    () => ({ state, dispatch }),
+    [state, dispatch],
+  );
+
   return (
-    <MultiSelectContext value={{ state, dispatch }}>
+    <MultiSelectContext value={ctxValue}>
       {children}
     </MultiSelectContext>
   );

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
 interface StatsContextValue {
   showEmptyDays: boolean;
@@ -13,8 +13,13 @@ const StatsContext = createContext<StatsContextValue>({
 export function StatsProvider({ children }: { children: ReactNode }) {
   const [showEmptyDays, setShowEmptyDays] = useState(false);
 
+  const ctxValue = useMemo(
+    () => ({ showEmptyDays, setShowEmptyDays }),
+    [showEmptyDays, setShowEmptyDays],
+  );
+
   return (
-    <StatsContext.Provider value={{ showEmptyDays, setShowEmptyDays }}>
+    <StatsContext.Provider value={ctxValue}>
       {children}
     </StatsContext.Provider>
   );

@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   $getSelection,
   $isRangeSelection,
@@ -229,9 +229,12 @@ export function FormatToolbarPlugin() {
     };
   }, [editor, update]);
 
-  if (!visible && !pinned) return null;
+  const value = useMemo<FormatToolbarValue>(
+    () => ({ editor, active, link, color, setPinned }),
+    [editor, active, link, color, setPinned],
+  );
 
-  const value: FormatToolbarValue = { editor, active, link, color, setPinned };
+  if (!visible && !pinned) return null;
 
   return (
     <ViewportOverlay layer="popover" className="pointer-events-none">

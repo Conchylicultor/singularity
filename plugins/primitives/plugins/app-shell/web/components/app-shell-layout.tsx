@@ -3,7 +3,7 @@ import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { SurfaceChromeContext } from "@plugins/primitives/plugins/pane/web";
-import { useContext, type ReactNode } from "react";
+import { useContext, useMemo, type ReactNode } from "react";
 import { PluginRuntimeContext, type Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   renderIsolated,
@@ -173,16 +173,18 @@ export function AppShellLayout({
   // When there's no `chrome`-tier toolbar above it, the columns own the surface
   // top: the first column header hosts the sidebar toggle and the last reserves
   // the floating-action-bar safe area. With a toolbar, the toolbar owns both.
+  const surfaceChrome = useMemo(
+    () => ({
+      contentOwnsTopChrome: !hasToolbar,
+      leadingControl: sidebarSlot ? <SidebarTrigger /> : undefined,
+    }),
+    [hasToolbar, sidebarSlot],
+  );
   const body = (
     <>
       {toolbar}
       <Clip as="main" fill className="bg-muted/30">
-        <SurfaceChromeContext.Provider
-          value={{
-            contentOwnsTopChrome: !hasToolbar,
-            leadingControl: sidebarSlot ? <SidebarTrigger /> : undefined,
-          }}
-        >
+        <SurfaceChromeContext.Provider value={surfaceChrome}>
           {children}
         </SurfaceChromeContext.Provider>
       </Clip>

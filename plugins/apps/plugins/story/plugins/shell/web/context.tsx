@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useStories, markStory } from "@plugins/apps/plugins/story/plugins/marker/web";
 
 /**
@@ -54,10 +54,15 @@ export function StoryEditorProvider({
   // When the user switches to a renderer, that becomes this story's persisted
   // default lens. "author" is a transient editor mode, not a renderer, so it is
   // never written back to the marker.
-  const setView = (next: string) => {
-    setViewState(next);
-    if (next !== "author") void markStory(pageId, next);
-  };
+  const setView = useCallback(
+    (next: string) => {
+      setViewState(next);
+      if (next !== "author") void markStory(pageId, next);
+    },
+    [pageId],
+  );
+
+  const toggleSplit = useCallback(() => setSplit((s) => !s), []);
 
   // The renderer the preview pane should show. In a renderer view it is the
   // active view; in author view it falls back to the persisted default (or `""`,
@@ -66,17 +71,13 @@ export function StoryEditorProvider({
   // plugin exists).
   const activeRendererId = view !== "author" ? view : (defaultRendererId ?? "");
 
+  const value = useMemo<StoryEditorContextValue>(
+    () => ({ pageId, view, setView, split, toggleSplit, activeRendererId }),
+    [pageId, view, setView, split, toggleSplit, activeRendererId],
+  );
+
   return (
-    <StoryEditorContext.Provider
-      value={{
-        pageId,
-        view,
-        setView,
-        split,
-        toggleSplit: () => setSplit((s) => !s),
-        activeRendererId,
-      }}
-    >
+    <StoryEditorContext.Provider value={value}>
       {children}
     </StoryEditorContext.Provider>
   );

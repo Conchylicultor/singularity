@@ -5,6 +5,7 @@ import {
 import {
   createContext,
   useContext,
+  useMemo,
   type ComponentProps,
   type ReactNode,
 } from "react";
@@ -17,10 +18,10 @@ export interface CollapsibleCtx {
   contentId: string;
 }
 
-const Ctx = createContext<CollapsibleCtx | null>(null);
+const CollapsibleContext = createContext<CollapsibleCtx | null>(null);
 
 function useCtx() {
-  const ctx = useContext(Ctx);
+  const ctx = useContext(CollapsibleContext);
   if (!ctx)
     throw new Error(
       "Collapsible compound components must be used inside <Collapsible>",
@@ -35,7 +36,7 @@ function useCtx() {
  * wiring while still working standalone. The raw Ctx stays private.
  */
 export function useCollapsibleContext(): CollapsibleCtx | null {
-  return useContext(Ctx);
+  return useContext(CollapsibleContext);
 }
 
 export interface CollapsibleProps extends UseCollapsibleOptions {
@@ -56,8 +57,13 @@ export function Collapsible({
     onOpenChange,
   });
 
+  const ctxValue = useMemo(
+    () => ({ open, toggle, contentId }),
+    [open, toggle, contentId],
+  );
+
   return (
-    <Ctx value={{ open, toggle, contentId }}>
+    <CollapsibleContext value={ctxValue}>
       <div
         data-slot="collapsible"
         data-state={open ? "open" : "closed"}
@@ -65,7 +71,7 @@ export function Collapsible({
       >
         {children}
       </div>
-    </Ctx>
+    </CollapsibleContext>
   );
 }
 
@@ -133,7 +139,7 @@ export function CollapsibleChevron({
   open: openProp,
   className,
 }: CollapsibleChevronProps) {
-  const ctx = useContext(Ctx);
+  const ctx = useContext(CollapsibleContext);
   const open = openProp ?? ctx?.open ?? false;
 
   return (

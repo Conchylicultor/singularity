@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from "react";
+import { useLayoutEffect, useMemo, useRef } from "react";
 import {
   PaneLayoutContext,
   PaneResolveGuard,
@@ -56,6 +56,16 @@ export function Column({ entry, isFirst, isLast, dragHandleProps }: ColumnProps)
     }
   }, [isLast, paneId, tabId]);
 
+  const paneLayout = useMemo(
+    () => ({
+      onDoubleClickHeader: toggleMaximize,
+      dragHandleProps,
+      atSurfaceStart: isFirst,
+      atSurfaceEnd: isLast || isMaximized,
+    }),
+    [toggleMaximize, dragHandleProps, isFirst, isLast, isMaximized],
+  );
+
   // Some other column in THIS surface is maximized → collapse this one
   // (overrides isLast guard).
   const forcedCollapse = !isMaximized && maximizedId !== null;
@@ -96,14 +106,7 @@ export function Column({ entry, isFirst, isLast, dragHandleProps }: ColumnProps)
               : "flex h-full shrink-0 flex-col overflow-hidden"
         }
       >
-        <PaneLayoutContext.Provider
-          value={{
-            onDoubleClickHeader: toggleMaximize,
-            dragHandleProps,
-            atSurfaceStart: isFirst,
-            atSurfaceEnd: isLast || isMaximized,
-          }}
-        >
+        <PaneLayoutContext.Provider value={paneLayout}>
           {/* Forward the pane id across portals so popovers/menus opened from
               this column still report their containing pane to the picker. */}
           <PortalForwardProvider name="data-pane-id" value={paneId}>

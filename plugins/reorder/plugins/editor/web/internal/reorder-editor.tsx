@@ -48,11 +48,14 @@ export function ReorderEditor({
     [onDrop],
   );
 
-  const ctxValue: ReorderAreaCtxValue = {
-    orientation,
-    onHide,
-    onRemoveNode,
-  };
+  const ctxValue = useMemo<ReorderAreaCtxValue>(
+    () => ({
+      orientation,
+      onHide,
+      onRemoveNode,
+    }),
+    [orientation, onHide, onRemoveNode],
+  );
 
   // The sortable cells + trailing restore button, shared by the bare and
   // wrap-container renders so dnd registration is identical in both. Every entry

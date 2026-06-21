@@ -1,4 +1,4 @@
-import { createContext, useContext, type ReactNode } from "react";
+import { createContext, useContext, useMemo, type ReactNode } from "react";
 
 // Identity for a block-tag widget instance, threaded by the host renderer
 // (e.g. the JSONL assistant-text row). Carries `conversationId` so the
@@ -21,13 +21,11 @@ export function ActiveDataIdentityProvider({
   occurrenceIndex,
   children,
 }: ActiveDataIdentity & { children: ReactNode }) {
-  return (
-    <Ctx.Provider
-      value={{ conversationId, messageId, tag, occurrenceIndex }}
-    >
-      {children}
-    </Ctx.Provider>
+  const value = useMemo(
+    () => ({ conversationId, messageId, tag, occurrenceIndex }),
+    [conversationId, messageId, tag, occurrenceIndex],
   );
+  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
 
 export function useActiveDataIdentity(): ActiveDataIdentity | null {

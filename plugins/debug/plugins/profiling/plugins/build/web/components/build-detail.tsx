@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import {
   GanttSection,
   ProfilingContext,
@@ -25,6 +25,7 @@ export function BuildProfileDetailBody(): ReactElement {
   const [data, setData] = useState<BuildData | null>(null);
   const [hovered, setHovered] = useState<Span | null>(null);
   const [error, setError] = useState(false);
+  const ctxValue = useMemo(() => ({ hovered, setHovered, refreshKey: 0 }), [hovered, setHovered]);
 
   const load = useCallback(async () => {
     try {
@@ -54,7 +55,7 @@ export function BuildProfileDetailBody(): ReactElement {
         </Placeholder>
       ) : (
         <ProfilingContext.Provider
-          value={{ hovered, setHovered, refreshKey: 0 }}
+          value={ctxValue}
         >
           <Inset pad="sm">
             <Clip className="rounded-md border">

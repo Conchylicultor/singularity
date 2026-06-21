@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import {
   GanttSection,
   SpanDetail,
@@ -36,13 +36,14 @@ const PHASE_CONFIG: Record<string, PhaseConfig> = {
 export function BuildProfilingSection({ runId }: { runId: string }): ReactElement | null {
   const { data } = useEndpoint(getBuildRunProfile, { id: runId });
   const [hovered, setHovered] = useState<Span | null>(null);
+  const ctxValue = useMemo(() => ({ hovered, setHovered, refreshKey: 0 }), [hovered, setHovered]);
 
   if (!data || data.spans.length === 0) return null;
 
   const grouped = groupByPhase(data.spans);
 
   return (
-    <ProfilingContext.Provider value={{ hovered, setHovered, refreshKey: 0 }}>
+    <ProfilingContext.Provider value={ctxValue}>
       <Clip className="rounded-md border">
         <GanttSection
           title="Build"

@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, type ReactNode } from "react";
+import { createContext, useContext, useMemo, useState, type ReactNode } from "react";
 
 interface RowMarkdown {
   markdownMode: boolean;
@@ -9,8 +9,14 @@ const RowMarkdownContext = createContext<RowMarkdown | null>(null);
 
 export function RowMarkdownProvider({ children }: { children: ReactNode }) {
   const [markdownMode, setMarkdownMode] = useState(true);
+
+  const ctxValue = useMemo(
+    () => ({ markdownMode, setMarkdownMode }),
+    [markdownMode, setMarkdownMode],
+  );
+
   return (
-    <RowMarkdownContext.Provider value={{ markdownMode, setMarkdownMode }}>
+    <RowMarkdownContext.Provider value={ctxValue}>
       {children}
     </RowMarkdownContext.Provider>
   );

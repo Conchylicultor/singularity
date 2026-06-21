@@ -3,7 +3,7 @@ import {
   hoverRevealGroup,
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { MdUndo, MdWarning } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
@@ -92,6 +92,11 @@ export function ConfigFieldRow({
     setField({ body: { storePath, key: fieldKey, value: originValue, scopeId } });
   }, [setField, storePath, fieldKey, originValue, scopeId]);
 
+  const configFieldCtxValue = useMemo(
+    () => ({ storePath, fieldKey }),
+    [storePath, fieldKey],
+  );
+
   return (
     <div>
       <Frame
@@ -108,7 +113,7 @@ export function ConfigFieldRow({
         // the flexible `meta` track (`minmax(0,1fr)`); `content`'s max-content track
         // would shrink-wrap the input.
         meta={
-          <ConfigFieldContext.Provider value={{ storePath, fieldKey }}>
+          <ConfigFieldContext.Provider value={configFieldCtxValue}>
             <FieldRenderer field={field} value={value} onChange={handleChange} />
           </ConfigFieldContext.Provider>
         }

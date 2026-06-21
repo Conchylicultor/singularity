@@ -145,6 +145,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
           - Plugins:
             - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
             - **`button-safety`** — button-safety lint rule: no-async-raw-button
+            - **`context-safety`** — context-safety lint rule: no-unstable-context-value
             - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch

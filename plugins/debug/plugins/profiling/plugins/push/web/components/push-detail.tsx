@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
 import {
   GanttContainer,
   ProfilingContext,
@@ -53,6 +53,7 @@ function PushStepsGantt({
   holdMs: number;
 }): ReactElement {
   const [hovered, setHovered] = useState<Span | null>(null);
+  const ctxValue = useMemo(() => ({ hovered, setHovered, refreshKey: 0 }), [hovered, setHovered]);
   const spans: Span[] = steps.map((s, i) => ({
     id: `step:${i}:${s.name}`,
     phase: "push",
@@ -66,7 +67,7 @@ function PushStepsGantt({
     1,
   );
   return (
-    <ProfilingContext.Provider value={{ hovered, setHovered, refreshKey: 0 }}>
+    <ProfilingContext.Provider value={ctxValue}>
       <Clip className="rounded-md border">
         <GanttContainer title="Steps" totalMs={totalMs}>
           <Stack gap="2xs" className="px-lg py-sm">
