@@ -1,26 +1,38 @@
 /**
- * Framework-free render-loop / DOM-rebuild-thrash detector.
+ * Framework-free render-loop / DOM-rebuild-thrash detector — TWO tiers off one
+ * global `MutationObserver` on `document.body`. The pathological element fires
+ * continuous mutations — those callbacks ARE the push signal (no
+ * `setInterval`/`setTimeout` loop; satisfies the no-polling rule).
  *
- * Installs ONE global `MutationObserver` on `document.body`. The pathological
- * element fires continuous mutations — those callbacks ARE the push signal (no
- * `setInterval`/`setTimeout` loop; satisfies the no-polling rule). Each
- * `MutationRecord` is attributed to a stable **culprit signature** with
- * per-signature sliding-window rate counters.
- *
- * A deduped `render-loop` report is filed when ALL gates hold:
- *   1. Sustained — one signature stays above its class threshold continuously
- *      for SUSTAINED_MS.
+ * **Leaf tier** — each `MutationRecord` is attributed to a stable **culprit
+ * signature** (DOM node + attr) with per-signature sliding-window rate counters.
+ * Catches a CONCENTRATED loop on one node. A deduped `render-loop` report is
+ * filed when ALL gates hold:
+ *   1. Sustained — one signature stays above its class threshold for SUSTAINED_MS.
  *   2. Idle — no pointer/keyboard/scroll input within IDLE_MS.
  *   3. Visible — `document.visibilityState === "visible"`.
- *   4. Wasted-work — either no-op/oscillating attribute writes (4a) or an
- *      identical childList rebuild whose tag+marker multisets match (4b).
+ *   4. Wasted-work — no-op/oscillating attribute writes (4a) or an identical
+ *      childList rebuild whose tag+marker multisets match (4b).
+ *
+ * **Aggregate (subtree-cascade) tier** — sums mutations across a stable ancestor
+ * (the `aggregateRoot`, preferring `pane:<paneId>`), keyed by leaf signature.
+ * Catches a DIFFUSE cascade spread thin across MANY nodes where no single leaf
+ * crosses threshold. Fires (`mutationClass: "subtree-cascade"`) on:
+ *   1. Sustained — summed rate ≥ AGG_PER_SEC for SUSTAINED_MS.
+ *   2/3. Idle + Visible (shared with the leaf tier).
+ *   4. Breadth — ≥ AGG_MIN_LEAVES distinct leaves each re-touched
+ *      ≥ AGG_MIN_LEAF_REPEAT× within the window (a real cascade re-touches the
+ *      same nodes; this replaces the per-value no-op check and is what marks the
+ *      idle whole-subtree reconciliation as wasted).
+ * The two tiers are disjoint by construction (one hot leaf → breadth 1; a diffuse
+ * cascade has no hot leaf) and carry distinct fingerprints if both ever fire.
  *
  * Firings AND near-misses (passed idle+sustained+visible but failed gate 4) are
  * mirrored to the `render-loop` clientLog channel for threshold tuning;
- * near-misses are logged only (no report) and throttled per signature. After a
- * signature fires once it's synchronously debounced for the session (so a
+ * near-misses are logged only (no report) and throttled per signature/root. After
+ * a signature/root fires once it's synchronously debounced for the session (so a
  * high-rate loop can't burst redundant reports before the async hash resolves).
- * Idle per-signature counters are GC'd.
+ * Idle per-signature counters and per-root windows are GC'd.
  *
  * The detector writes no DOM of its own (a report is a network POST), so it can
  * never feed its own loop.
@@ -30,6 +42,7 @@ import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { report } from "@plugins/reports/web";
 import { RENDER_LOOP, renderLoopFingerprint } from "../../core";
 import type { RenderLoopPayload } from "../../core";
+import { AggregateWindow } from "./aggregate-thrash";
 import { culpritMeta, type CulpritMeta } from "./culprit-signature";
 
 type MutationClass = RenderLoopPayload["mutationClass"];
@@ -74,8 +87,21 @@ interface SignatureState {
   lastNearMissLogAt: number | null;
 }
 
+/** Per-aggregate-root cascade window + gating streak state (aggregate tier). */
+interface AggregateState {
+  root: string;
+  window: AggregateWindow;
+  // performance.now of the first event in the current above-AGG_PER_SEC streak,
+  // or null when the summed rate is currently below threshold.
+  aboveSince: number | null;
+  // Throttle for near-miss log lines (performance.now of the last one, or null).
+  lastNearMissLogAt: number | null;
+}
+
 export function installRenderLoopDetector(): () => void {
   const states = new Map<string, SignatureState>();
+  // Per-aggregate-root cascade windows (the second tier).
+  const aggregates = new Map<string, AggregateState>();
   // Synchronous once-per-loop debounce keys (signature|class|attr) already fired
   // this session. Checked/added in evaluate() before the async fire() so a
   // high-rate loop can't burst redundant reports on the detection frame.
@@ -237,6 +263,23 @@ export function installRenderLoopDetector(): () => void {
     return state;
   }
 
+  function aggStateFor(root: string): AggregateState {
+    let agg = aggregates.get(root);
+    if (!agg) {
+      agg = {
+        root,
+        window: new AggregateWindow(
+          RENDER_LOOP.WINDOW_MS,
+          RENDER_LOOP.AGG_MAX_TRACKED_LEAVES,
+        ),
+        aboveSince: null,
+        lastNearMissLogAt: null,
+      };
+      aggregates.set(root, agg);
+    }
+    return agg;
+  }
+
   function ratePerSec(state: SignatureState, now: number): number {
     // Trim the sliding window, then the count IS the per-second rate (window=1s).
     let oldest = state.events[0];
@@ -364,6 +407,126 @@ export function installRenderLoopDetector(): () => void {
     });
   }
 
+  /**
+   * Aggregate (subtree-cascade) tier. Mirrors `evaluate`'s gate structure but
+   * sums across the root's subtree: gate 1 sustained summed-rate, gates 2/3 idle
+   * + visible (shared), gate 4 recurring breadth. Below breadth → near-miss log.
+   */
+  function evaluateAggregate(agg: AggregateState, now: number): void {
+    const rate = agg.window.rate(now);
+
+    // Gate 1: sustained summed-rate streak across the subtree.
+    if (rate >= RENDER_LOOP.AGG_PER_SEC) {
+      if (agg.aboveSince === null) agg.aboveSince = now;
+    } else {
+      agg.aboveSince = null;
+      return;
+    }
+    const sustainedMs = now - agg.aboveSince;
+    if (sustainedMs < RENDER_LOOP.SUSTAINED_MS) return;
+
+    // Gate 2: idle.
+    const msSinceInteraction = now - lastInteractionAt;
+    if (msSinceInteraction < RENDER_LOOP.IDLE_MS) return;
+
+    // Gate 3: visible.
+    if (document.visibilityState !== "visible") return;
+
+    // Gate 4: recurring breadth — distinct leaves re-touched within the window.
+    const breadth = agg.window.recurringBreadth(
+      now,
+      RENDER_LOOP.AGG_MIN_LEAF_REPEAT,
+    );
+
+    const base = {
+      signature: agg.root,
+      mutationClass: "subtree-cascade" as const,
+      attrName: undefined,
+      ratePerSec: Math.round(rate),
+      sustainedMs: Math.round(sustainedMs),
+      msSinceInteraction: Math.round(msSinceInteraction),
+      visibilityState: document.visibilityState,
+      distinctLeaves: breadth,
+    };
+
+    // Near-miss: gates 1-3 passed but the cascade isn't broad enough. Logged for
+    // tuning (no report), throttled per root so a sustained narrow update can't
+    // flood the clientLog buffer.
+    if (breadth < RENDER_LOOP.AGG_MIN_LEAVES) {
+      if (
+        agg.lastNearMissLogAt === null ||
+        now - agg.lastNearMissLogAt >= RENDER_LOOP.NEAR_MISS_LOG_MS
+      ) {
+        agg.lastNearMissLogAt = now;
+        clientLog(CHANNEL, JSON.stringify({ kind: "near-miss", ...base }));
+      }
+      return;
+    }
+
+    // Synchronous debounce (same rationale as the leaf tier): the fire path is
+    // async (sha256), so guard on the synchronous fingerprint key before the
+    // first hash resolves. Cascade attrName is null, so the key is `root|class|`.
+    const guard = `${base.signature}|${base.mutationClass}|`;
+    if (firedGuards.has(guard)) return;
+    firedGuards.add(guard);
+
+    void fireAggregate(agg, now, base);
+  }
+
+  async function fireAggregate(
+    agg: AggregateState,
+    now: number,
+    base: {
+      signature: string;
+      mutationClass: MutationClass;
+      attrName: undefined;
+      ratePerSec: number;
+      sustainedMs: number;
+      msSinceInteraction: number;
+      visibilityState: string;
+      distinctLeaves: number;
+    },
+  ): Promise<void> {
+    // The aggregate root is a coarse container — all per-node marker fields are
+    // null (pluginId/source/owner/etc. vary across the subtree by design).
+    const data: RenderLoopPayload = {
+      signature: agg.root,
+      pluginId: null,
+      slotId: null,
+      contributionId: null,
+      source: null,
+      owner: null,
+      paneId: null,
+      selector: null,
+      mutationClass: "subtree-cascade",
+      attrName: null,
+      ratePerSec: base.ratePerSec,
+      sustainedMs: base.sustainedMs,
+      sampleValues: null,
+      tagMultiset: null,
+      distinctLeaves: base.distinctLeaves,
+      sampleLeaves: agg.window.sampleLeaves(now, RENDER_LOOP.AGG_SAMPLE_LEAVES),
+      visibilityState: base.visibilityState,
+      msSinceInteraction: base.msSinceInteraction,
+    };
+
+    // Hashed fingerprint is computed here purely for the log line (the server
+    // dedups with the same algorithm + inputs, so the values line up).
+    const fingerprint = await renderLoopFingerprint(data);
+
+    const message = `Render loop (cascade): subtree-cascade @ ${base.ratePerSec}/s across ${base.distinctLeaves} nodes — ${agg.root}`;
+    clientLog(CHANNEL, JSON.stringify({ kind: "fire", fingerprint, ...base }));
+
+    void report({
+      kind: "render-loop",
+      source: "client-render-loop",
+      message,
+      url: window.location.href,
+      userAgent: navigator.userAgent,
+      data: data as unknown as Record<string, unknown>,
+    });
+  }
+
   function onMutations(records: MutationRecord[]): void {
     const now = performance.now();
     for (const record of records) {
@@ -408,6 +571,15 @@ export function installRenderLoopDetector(): () => void {
       }
 
       evaluate(state, now);
+
+      // Aggregate tier: roll this mutation up to its stable container root (keyed
+      // by the LEAF signature, so breadth = distinct nodes). Untracked when there
+      // is no coarse root (never aggregate at bare document-body level).
+      if (meta.aggregateRoot !== undefined) {
+        const agg = aggStateFor(meta.aggregateRoot);
+        agg.window.record(meta.signature, now);
+        evaluateAggregate(agg, now);
+      }
     }
 
     gc(now);
@@ -418,6 +590,11 @@ export function installRenderLoopDetector(): () => void {
   function gc(now: number): void {
     for (const [key, state] of states) {
       if (now - state.lastEventAt > RENDER_LOOP.GC_IDLE_MS) states.delete(key);
+    }
+    for (const [root, agg] of aggregates) {
+      if (now - agg.window.lastEventAt > RENDER_LOOP.GC_IDLE_MS) {
+        aggregates.delete(root);
+      }
     }
   }
 
@@ -447,6 +624,7 @@ export function installRenderLoopDetector(): () => void {
       window.removeEventListener(ev, markInteraction, { capture: true });
     }
     states.clear();
+    aggregates.clear();
     firedGuards.clear();
   };
 }

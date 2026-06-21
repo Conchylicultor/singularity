@@ -31,6 +31,23 @@ export const RENDER_LOOP = {
   // Throttle near-miss log lines to at most one per signature per this window,
   // so a sustained idle non-wasted update can't flood the clientLog buffer.
   NEAR_MISS_LOG_MS: 10000,
+  // --- Aggregate (subtree-cascade) tier ---
+  // Summed mutations/sec across one aggregate root's subtree to fire the cascade
+  // tier (motivating case ~300/s; well above any sparse idle baseline, and 2× the
+  // 30/s leaf attr threshold so a single hot leaf can never satisfy it alone —
+  // it forces genuine breadth across the subtree).
+  AGG_PER_SEC: 60,
+  // Distinct recurring leaf signatures the cascade must touch (separates a
+  // diffuse whole-subtree cascade from a single concentrated leaf loop).
+  AGG_MIN_LEAVES: 5,
+  // A leaf must recur ≥ this many times within the window to count toward breadth
+  // (drops one-shot initial-render bursts; a re-render re-touches the same node).
+  AGG_MIN_LEAF_REPEAT: 2,
+  // Memory cap on distinct tracked leaves per aggregate root (new leaf keys are
+  // skipped once full; existing keys keep updating).
+  AGG_MAX_TRACKED_LEAVES: 256,
+  // Number of sample leaf signatures (hottest first) attached to a cascade report.
+  AGG_SAMPLE_LEAVES: 6,
 } as const;
 
 // The render-loop report payload, stored in the generic `data` jsonb column and
@@ -46,12 +63,22 @@ export const RenderLoopPayloadSchema = z.object({
   owner: z.string().nullable().optional(),
   paneId: z.string().nullable().optional(),
   selector: z.string().nullable().optional(),
-  mutationClass: z.enum(["noop-attr", "oscillating-attr", "childlist-rebuild"]),
+  mutationClass: z.enum([
+    "noop-attr",
+    "oscillating-attr",
+    "childlist-rebuild",
+    "subtree-cascade",
+  ]),
   attrName: z.string().nullable().optional(),
   ratePerSec: z.number(),
   sustainedMs: z.number(),
   sampleValues: z.array(z.string()).nullable().optional(),
   tagMultiset: z.array(z.string()).nullable().optional(),
+  // Aggregate (subtree-cascade) tier only — back-compat: leaf reports leave these
+  // null. distinctLeaves = recurring breadth at fire; sampleLeaves = the hottest
+  // per-node leaf signatures for attribution.
+  distinctLeaves: z.number().nullable().optional(),
+  sampleLeaves: z.array(z.string()).nullable().optional(),
   visibilityState: z.string(),
   msSinceInteraction: z.number(),
 });

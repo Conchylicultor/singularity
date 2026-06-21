@@ -16,6 +16,14 @@ export interface CulpritMeta {
   owner?: string;
   paneId?: string;
   selector?: string;
+  /**
+   * The coarse, stable container the aggregate (subtree-cascade) tier rolls this
+   * node up to: `pane:<paneId>` when inside a pane (the natural cascade boundary),
+   * else the nearest plugin marker's `pluginId@slotId`, else undefined (not
+   * tracked aggregately — never roll up to bare document-body). All per-node
+   * variance (path, source, owner) is dropped so a whole subtree shares one key.
+   */
+  aggregateRoot?: string;
 }
 
 /**
@@ -149,6 +157,15 @@ export function culpritMeta(node: Node): CulpritMeta {
     signature = signature.slice(0, RENDER_LOOP.SIGNATURE_CAP);
   }
 
+  // The aggregate root drops all per-node variance, keeping only the coarse
+  // container identity so a whole subtree shares one rollup key. Prefer the pane
+  // (the natural cascade boundary), else the plugin marker, else untracked.
+  const aggregateRoot = paneId
+    ? `pane:${paneId}`
+    : marker.pluginId
+      ? pluginPart
+      : undefined;
+
   return {
     signature,
     pluginId: marker.pluginId,
@@ -158,5 +175,6 @@ export function culpritMeta(node: Node): CulpritMeta {
     owner,
     paneId,
     selector: path || undefined,
+    aggregateRoot,
   };
 }

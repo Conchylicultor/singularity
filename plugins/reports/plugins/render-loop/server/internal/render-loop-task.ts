@@ -19,6 +19,7 @@ const CLASS_LABEL: Record<RenderLoopPayload["mutationClass"], string> = {
   "noop-attr": "no-op attribute writes (value rewritten to itself)",
   "oscillating-attr": "oscillating attribute writes (a few values cycled)",
   "childlist-rebuild": "identical childList rebuild (same subtree torn down & rebuilt)",
+  "subtree-cascade": "diffuse subtree cascade (a whole subtree re-rendered across many nodes)",
 };
 
 export function renderRenderLoopTask(row: ReportRow): {
@@ -72,6 +73,16 @@ function renderDescription(row: ReportRow): string {
   if (data.tagMultiset && data.tagMultiset.length > 0) {
     lines.push(`- **Rebuilt nodes:** ${data.tagMultiset.join(", ")}`);
   }
+  if (data.distinctLeaves != null) {
+    lines.push(`- **Distinct nodes thrashing:** ${data.distinctLeaves}`);
+  }
+  if (data.sampleLeaves && data.sampleLeaves.length > 0) {
+    const sample = data.sampleLeaves
+      .slice(0, SAMPLE_MAX)
+      .map((v) => `\`${v}\``)
+      .join(", ");
+    lines.push(`- **Sample nodes:** ${sample}`);
+  }
   lines.push(`- **Rate:** ~${Math.round(data.ratePerSec)} mutations/sec`);
   lines.push(`- **Sustained:** ${Math.round(data.sustainedMs)}ms`);
   lines.push(`- **Visibility:** ${data.visibilityState}`);
@@ -88,10 +99,19 @@ function renderDescription(row: ReportRow): string {
   if (row.userAgent) lines.push(`- **User-Agent:** ${row.userAgent}`);
   lines.push("");
   lines.push(`**How to fix**`);
-  lines.push(
-    data.mutationClass === "childlist-rebuild"
-      ? `The named subtree is being torn down and rebuilt every frame instead of reused. Find the component at the source/owner above and stabilize it: memoize the rendered children, give list items stable \`key\`s, or hoist a value/object/callback that's being recreated each render (it forces React to remount the whole subtree). Confirm the parent isn't re-rendering on a per-frame state/store update.`
-      : `An attribute is being rewritten to the same (or a small cycling set of) value(s) every frame with no visible effect. Find the effect/render at the source/owner above that writes this attribute and gate it on an actual value change (skip the write when the new value equals the current one), or move it out of the per-frame path. A monotonic progress bar/timer is exempt by design — this fired because the value **oscillates/repeats**, which is wasted work.`,
-  );
+  lines.push(fixAdvice(data));
   return lines.join("\n");
+}
+
+/** Per-mutation-class remediation guidance for the "How to fix" section. */
+function fixAdvice(data: RenderLoopPayload): string {
+  switch (data.mutationClass) {
+    case "childlist-rebuild":
+      return `The named subtree is being torn down and rebuilt every frame instead of reused. Find the component at the source/owner above and stabilize it: memoize the rendered children, give list items stable \`key\`s, or hoist a value/object/callback that's being recreated each render (it forces React to remount the whole subtree). Confirm the parent isn't re-rendering on a per-frame state/store update.`;
+    case "subtree-cascade":
+      return `A whole subtree under the named aggregate root (pane/plugin) is re-rendering across many nodes on a per-frame/idle cascade — no single node is hot, but together they thrash continuously while idle. This is almost always an unstable value/object/callback recreated on every render high in the subtree (so every descendant re-renders), or a per-frame state/store update at the root. Find the component owning the aggregate root above, memoize/stabilize the props and context value it passes down (\`useMemo\`/\`useCallback\`/stable refs), and confirm the root itself isn't re-rendering while idle (e.g. a subscription firing every frame). The **Sample nodes** above point at the hottest descendants.`;
+    case "noop-attr":
+    case "oscillating-attr":
+      return `An attribute is being rewritten to the same (or a small cycling set of) value(s) every frame with no visible effect. Find the effect/render at the source/owner above that writes this attribute and gate it on an actual value change (skip the write when the new value equals the current one), or move it out of the per-frame path. A monotonic progress bar/timer is exempt by design — this fired because the value **oscillates/repeats**, which is wasted work.`;
+  }
 }
