@@ -8,7 +8,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { conversationsResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { conversationsGoneResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { listGoneConversations } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { restoreBatch } from "../../shared/endpoints";
@@ -47,7 +47,7 @@ function formatTime(date: Date): string {
 }
 
 export function RecoveryView() {
-  const resource = useResource(conversationsResource);
+  const resource = useResource(conversationsGoneResource);
   const queryClient = useQueryClient();
 
   const q = useQuery({

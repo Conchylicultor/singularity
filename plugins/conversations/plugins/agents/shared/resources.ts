@@ -18,7 +18,7 @@ export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./schemas";
 
 // Launch rows embed a pointer to the most recent conversation bound to their
 // taskId so clients can render activity dots and launch links without
-// subscribing to the bounded conversationsResource (which truncates old
+// subscribing to the bounded conversations live resources (which truncate old
 // conversations). `null` when no conversation exists for the task.
 export type AgentLaunchConversationRef = {
   id: string;

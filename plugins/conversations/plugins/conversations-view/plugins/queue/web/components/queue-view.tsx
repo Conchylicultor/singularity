@@ -19,7 +19,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { conversationsResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { conversationsActiveResource, conversationsGoneResource } from "@plugins/tasks/plugins/tasks-core/core";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { RowActions, RowActionButton, rowActionsAnchor } from "@plugins/primitives/plugins/row-actions/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
@@ -104,7 +104,8 @@ export function QueueView({
   onNavigate,
   onCloseConversation,
 }: ViewProps) {
-  const convResult = useResource(conversationsResource);
+  const activeResult = useResource(conversationsActiveResource);
+  const goneResult = useResource(conversationsGoneResource);
   const queueResult = useOptimisticResource<
     typeof queueRanksResource.initialData,
     ReorderVars
@@ -115,12 +116,13 @@ export function QueueView({
   });
   const dispatchReorder = queueResult.dispatch;
   const tasksResult = useResource(tasksResource);
-  // The section assignment reads THREE independently-arriving resources
-  // (conversations, queue ranks, tasks). Gate on all of them together: a
+  // The section assignment reads independently-arriving resources (active +
+  // gone conversations, queue ranks, tasks). Gate on all of them together: a
   // half-loaded snapshot (conversations present, ranks still empty) would
   // bucket every waiting conversation as "Unranked".
   const all = useCombinedResources({
-    conv: convResult,
+    active: activeResult,
+    gone: goneResult,
     queue: queueResult,
     tasks: tasksResult,
   });
@@ -150,8 +152,7 @@ export function QueueView({
         pinnedConversationId: null as string | null,
       };
     }
-    const { conv, queue, tasks } = all.data;
-    const active = conv.active;
+    const { active, gone, queue, tasks } = all.data;
     const ranks = new Map(queue.ranks.map((r) => [r.conversationId, r.rank]));
     const taskStatusMap = new Map(tasks.map((t) => [t.id, t.status]));
     const ranked: RankedConversation[] = [];
@@ -206,7 +207,7 @@ export function QueueView({
       blockedIds: blocked,
       unranked: noRank,
       disconnected: active.filter((c) => c.status === "gone"),
-      recentGone: conv.recentGone,
+      recentGone: gone,
       pinnedConversationId: queue.pinnedConversationId,
     };
   }, [all]);

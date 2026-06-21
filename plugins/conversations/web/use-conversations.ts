@@ -1,14 +1,23 @@
 import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useResource, type ResourceResult } from "@plugins/primitives/plugins/live-state/web";
-import { ConversationSchema, conversationsResource, type ConversationListPayload } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  useResource,
+  useCombinedResources,
+  type ResourceResult,
+} from "@plugins/primitives/plugins/live-state/web";
+import {
+  ConversationSchema,
+  conversationsActiveResource,
+  conversationsSystemResource,
+  conversationsGoneResource,
+  conversationsGoneStatsResource,
+  RECENT_GONE_LIMIT,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { cursorPageSchema } from "@plugins/primitives/plugins/cursor-pagination/core";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { isActiveStatus } from "../core";
 import { getConversation } from "../core/endpoints";
 import { type ConversationEntry } from "../core/resources";
-
-const EMPTY_CONVERSATIONS: ConversationEntry[] = [];
 
 export const GonePageSchema = cursorPageSchema(ConversationSchema);
 
@@ -24,34 +33,43 @@ export type ConversationsState =
     };
 
 export function useConversations(): ConversationsState {
-  const q = useResource(conversationsResource);
-  if (q.pending) return { pending: true };
+  const active = useResource(conversationsActiveResource);
+  const system = useResource(conversationsSystemResource);
+  const gone = useResource(conversationsGoneResource);
+  const stats = useResource(conversationsGoneStatsResource);
+  const all = useCombinedResources({ active, system, gone, stats });
+  if (all.pending) return { pending: true };
   return {
     pending: false,
-    active: q.data.active,
-    recentGone: q.data.recentGone,
-    hasMoreGone: q.data.hasMoreGone,
-    totalGoneCount: q.data.totalGoneCount,
-    system: q.data.system,
+    active: all.data.active,
+    recentGone: all.data.gone,
+    system: all.data.system,
+    totalGoneCount: all.data.stats.totalGoneCount,
+    hasMoreGone: all.data.stats.totalGoneCount > RECENT_GONE_LIMIT,
   };
 }
 
-// Point lookup by id. Subscribes to a derived SLICE of the conversations list
+// Point lookup by id. Subscribes to a derived SLICE of each conversations list
 // (just this id's row) via useResource's `select`, so the component re-renders
-// only when THAT conversation changes — not on every push to the shared list.
+// only when THAT conversation changes — not on every push to a shared list.
 // This is the load-bearing fix for the O(C²) re-render storm where ~175
-// per-conversation toolbar components all observe the same global list.
+// per-conversation toolbar components all observe the same global list. Splitting
+// across the three keyed sub-resources gives strictly better isolation: a status
+// flip on an active row no longer touches the gone/system subscriptions.
 export function useConversation(id: string): ConversationEntry | null {
   const select = useCallback(
-    (p: ConversationListPayload): ConversationEntry | null =>
-      p.active.find((x) => x.id === id) ??
-      p.recentGone.find((x) => x.id === id) ??
-      p.system.find((x) => x.id === id) ??
-      null,
+    (rows: ConversationEntry[]): ConversationEntry | null =>
+      rows.find((x) => x.id === id) ?? null,
     [id],
   );
-  const q = useResource(conversationsResource, undefined, { select });
-  return q.pending ? null : q.data;
+  const active = useResource(conversationsActiveResource, undefined, { select });
+  const gone = useResource(conversationsGoneResource, undefined, { select });
+  const system = useResource(conversationsSystemResource, undefined, { select });
+  // Priority active → gone (recentGone) → system, matching the previous order.
+  const activeHit = active.pending ? null : active.data;
+  const goneHit = gone.pending ? null : gone.data;
+  const systemHit = system.pending ? null : system.data;
+  return activeHit ?? goneHit ?? systemHit ?? null;
 }
 
 // Derived SLICE: does this task have another active conversation? Subscribes
@@ -67,11 +85,11 @@ export function useHasActiveSiblings(
   excludeId: string,
 ): ResourceResult<boolean> {
   const select = useCallback(
-    (p: ConversationListPayload) =>
-      p.active.some((c) => c.taskId === taskId && c.id !== excludeId),
+    (active: ConversationEntry[]) =>
+      active.some((c) => c.taskId === taskId && c.id !== excludeId),
     [taskId, excludeId],
   );
-  return useResource(conversationsResource, undefined, { select, gate: true });
+  return useResource(conversationsActiveResource, undefined, { select, gate: true });
 }
 
 // Derived SLICE: is there another active conversation in this worktree? Used by
@@ -82,8 +100,8 @@ export function useHasActiveSiblingInWorktree(
   excludeId: string,
 ): ResourceResult<boolean> {
   const select = useCallback(
-    (p: ConversationListPayload) =>
-      p.active.some(
+    (active: ConversationEntry[]) =>
+      active.some(
         (c) =>
           c.id !== excludeId &&
           c.worktreePath === worktreePath &&
@@ -91,16 +109,15 @@ export function useHasActiveSiblingInWorktree(
       ),
     [worktreePath, excludeId],
   );
-  return useResource(conversationsResource, undefined, { select, gate: true });
+  return useResource(conversationsActiveResource, undefined, { select, gate: true });
 }
 
-// Derived SLICE: the active list only. Narrows away recentGone/system/gone-count
-// churn so consumers re-render only when an active row changes. Used by the
-// dependencies button's cross-task picker.
-export function useActiveConversations(): ConversationEntry[] {
-  const select = useCallback((p: ConversationListPayload) => p.active, []);
-  const q = useResource(conversationsResource, undefined, { select });
-  return q.pending ? EMPTY_CONVERSATIONS : q.data;
+// The active conversations list. The whole keyed resource IS the active list,
+// so this is a thin pass-through of the resource result; callers gate on
+// `.pending` (never collapse it to a default). Used by the dependencies
+// button's cross-task picker.
+export function useActiveConversations(): ResourceResult<ConversationEntry[]> {
+  return useResource(conversationsActiveResource);
 }
 
 // Point lookup by id. Checks the live WS-backed resource first (real-time

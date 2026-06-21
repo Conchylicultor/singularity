@@ -1,7 +1,12 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { BootSnapshot } from "@plugins/infra/plugins/boot-snapshot/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
-import { conversationsResource } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  conversationsActiveResource,
+  conversationsSystemResource,
+  conversationsGoneResource,
+  conversationsGoneStatsResource,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { autoAnswerConfig } from "../shared/config";
 
 export {
@@ -20,6 +25,9 @@ export default {
   loadBearing: true,
   contributions: [
     ConfigV2.WebRegister({ descriptor: autoAnswerConfig }),
-    BootSnapshot.Hydrate({ descriptor: conversationsResource }),
+    BootSnapshot.Hydrate({ descriptor: conversationsActiveResource }),
+    BootSnapshot.Hydrate({ descriptor: conversationsSystemResource }),
+    BootSnapshot.Hydrate({ descriptor: conversationsGoneResource }),
+    BootSnapshot.Hydrate({ descriptor: conversationsGoneStatsResource }),
   ],
 } satisfies PluginDefinition;

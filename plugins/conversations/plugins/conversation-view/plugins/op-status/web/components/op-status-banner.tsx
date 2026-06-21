@@ -1,10 +1,14 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdExpandLess, MdExpandMore, MdHourglassEmpty } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { conversationsResource, type ConversationListPayload } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  conversationsActiveResource,
+  conversationsGoneResource,
+  conversationsSystemResource,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { worktreeOpsResource, type WorktreeOp } from "../../shared";
 
@@ -23,22 +27,32 @@ function slugOf(worktreePath: string): string {
 // conversation outside the recent window) fall back to the slug.
 const EMPTY_TITLES: Record<string, string> = {};
 
+// Build a partial slug→title map from one conversation list.
+function titleMapOf(rows: ConversationRecord[]): Record<string, string> {
+  const map: Record<string, string> = {};
+  for (const c of rows) {
+    const title = c.title?.trim();
+    if (title) map[slugOf(c.worktreePath)] = title;
+  }
+  return map;
+}
+
 function useTitleBySlug(): Record<string, string> {
-  // Subscribe to a derived SLICE — the slug→title map — via `select`, so the
-  // banner re-renders only when a mapping actually changes (structural sharing
-  // deep-compares the Record), not on every status flip in the conversations
-  // list.
-  const select = useCallback((p: ConversationListPayload): Record<string, string> => {
-    const map: Record<string, string> = {};
-    // Lowest-priority first so a live `active` title wins over a stale one.
-    for (const c of [...p.system, ...p.recentGone, ...p.active]) {
-      const title = c.title?.trim();
-      if (title) map[slugOf(c.worktreePath)] = title;
-    }
-    return map;
-  }, []);
-  const q = useResource(conversationsResource, undefined, { select });
-  return q.pending ? EMPTY_TITLES : q.data;
+  // Subscribe to a derived SLICE — the per-resource slug→title map — via
+  // `select`, so the banner re-renders only when a mapping actually changes
+  // (structural sharing deep-compares the Record), not on every status flip in
+  // the conversations list. One select per keyed sub-resource keeps the lists
+  // independent.
+  const select = useCallback(titleMapOf, []);
+  const active = useResource(conversationsActiveResource, undefined, { select });
+  const gone = useResource(conversationsGoneResource, undefined, { select });
+  const system = useResource(conversationsSystemResource, undefined, { select });
+  return useMemo(() => {
+    if (active.pending || gone.pending || system.pending) return EMPTY_TITLES;
+    // Spread order matches the previous [...system, ...recentGone, ...active]:
+    // a live `active` title wins over a stale gone/system one.
+    return { ...system.data, ...gone.data, ...active.data };
+  }, [active, gone, system]);
 }
 
 // Presentational 1s ticker: the op STATE is push-driven via the resource; this

@@ -3,8 +3,11 @@ import { db } from "@plugins/database/server";
 import { _conversations } from "../tables";
 import { conversations } from "../views";
 import type { Conversation } from "../schema";
+import { RECENT_GONE_LIMIT } from "../../../core";
 
-export const RECENT_GONE_LIMIT = 30;
+// Re-exported so server-side callers keep importing it from the queries module
+// (its canonical source moved to tasks-core/core for client derivation).
+export { RECENT_GONE_LIMIT };
 
 // The model column tolerates legacy/unknown values on parse via the
 // `tolerantEnum` field in ConversationSchema, so reads need no normalization.
@@ -22,6 +25,7 @@ type Filters = {
   endedAtNotNull?: boolean;
   endedAtBefore?: Date;
   taskIds?: readonly string[];
+  convIds?: readonly string[];
 };
 
 function buildWhere(f: Filters): SQL | undefined {
@@ -32,6 +36,7 @@ function buildWhere(f: Filters): SQL | undefined {
   if (f.endedAtNotNull) clauses.push(isNotNull(conversations.endedAt));
   if (f.endedAtBefore) clauses.push(lt(conversations.endedAt, f.endedAtBefore));
   if (f.taskIds) clauses.push(inArray(conversations.taskId, [...f.taskIds]));
+  if (f.convIds) clauses.push(inArray(conversations.id, [...f.convIds]));
   return clauses.length ? and(...clauses) : undefined;
 }
 
@@ -78,17 +83,24 @@ export function listConversationsForDisplay(
   return queryConversations({ taskIds }, { col: conversations.createdAt, dir: "desc" });
 }
 
-// User-visible + active=true. Used by conversationsLiveResource.
-export function listActiveConversations(): Promise<Conversation[]> {
-  return queryConversations({ active: true }, { col: conversations.createdAt, dir: "desc" });
+// User-visible + active=true. Backs conversationsActiveResource. Pass `convIds`
+// to scope to just those conversations (keyed scoped recompute — a real
+// `WHERE id IN (…)` rather than an in-memory filter); omit it for the full list.
+export function listActiveConversations(convIds?: readonly string[]): Promise<Conversation[]> {
+  return queryConversations(
+    { active: true, convIds },
+    { col: conversations.createdAt, dir: "desc" },
+  );
 }
 
 // Active system-kind conversations only. Used to surface running plumbing
 // in the sidebar behind a debug toggle. UI lists must NOT mix these into
-// the regular active list.
-export function listActiveSystemConversations(): Promise<Conversation[]> {
+// the regular active list. Pass `convIds` for a keyed scoped recompute.
+export function listActiveSystemConversations(
+  convIds?: readonly string[],
+): Promise<Conversation[]> {
   return queryConversations(
-    { onlySystem: true, active: true },
+    { onlySystem: true, active: true, convIds },
     { col: conversations.createdAt, dir: "desc" },
   );
 }

@@ -1,18 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { conversationsResource } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  conversationsActiveResource,
+  conversationsGoneResource,
+  conversationsSystemResource,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { getConversation } from "@plugins/conversations/core";
 import { useConversationById } from "@plugins/conversations/web";
 import { ConversationView } from "./components/conversation-view";
 
 function useResolveConversation({ convId }: { convId: string }) {
-  const resource = useResource(conversationsResource);
+  const active = useResource(conversationsActiveResource);
+  const gone = useResource(conversationsGoneResource);
+  const system = useResource(conversationsSystemResource);
+  const resource = useCombinedResources({ active, gone, system });
 
   const inLive =
     !resource.pending &&
-    [...resource.data.active, ...resource.data.recentGone, ...resource.data.system].some(
+    [...resource.data.active, ...resource.data.gone, ...resource.data.system].some(
       (c) => c.id === convId,
     );
 

@@ -8,16 +8,20 @@ import type { Task, TaskListItem } from "./schema";
 // single source of truth both runtimes read. The server adds only the DB half
 // (loader + cascade), so these keyed contracts can't drift from the client.
 import {
-  conversationsResource,
   tasksResource as tasksDescriptor,
   taskDetailResource as taskDetailDescriptor,
   attemptsResource as attemptsDescriptor,
   pushesResource as pushesDescriptor,
+  conversationsActiveResource as conversationsActiveDescriptor,
+  conversationsSystemResource as conversationsSystemDescriptor,
+  conversationsGoneResource as conversationsGoneDescriptor,
+  conversationsGoneStatsResource as conversationsGoneStatsDescriptor,
+  RECENT_GONE_LIMIT,
 } from "../../core";
 import type {
   ConversationSummary,
   AttemptWithConversations,
-  ConversationListPayload,
+  Conversation,
 } from "../../core";
 import {
   countGoneConversations,
@@ -25,38 +29,55 @@ import {
   listActiveSystemConversations,
   listConversationSummariesByAttempt,
   listGoneConversations,
-  RECENT_GONE_LIMIT,
 } from "./queries/conversations";
 
-export const conversationsLiveResource = defineResource(conversationsResource, {
-  mode: "push",
-  // A `conversations` row change scopes to that conversation id. This resource
-  // is push (its aggregate payload re-ships whole), but declaring identity lets
-  // it PROPAGATE the scoped conv-ids to its downstream affectedMap edges
-  // (attempts, agent-launches) — which is what stops the cascade amplification.
+// The old aggregate `conversationsLiveResource` is decomposed into four keyed
+// delta-sync sub-resources (+ one scalar stats resource). A single conversation
+// status change now ships ONE keyed-delta upsert on `conversations-active`
+// instead of re-shipping the whole list to every subscriber.
+//
+// These MUST be defined before `attemptsResource`: the runtime wires a downstream
+// edge only if the upstream entry already exists, and attempts depends on the
+// active sub-resource below.
+export const conversationsActiveResource = defineResource(conversationsActiveDescriptor, {
+  // The loader reads the whole `conversations` table, so the L4 feed delivers
+  // EVERY conversation UPDATE here scoped to its id (read-sets are table-level) —
+  // which is why attempts can cascade off this one sub-resource alone: the
+  // delivered affected set drives the downstream edge regardless of whether this
+  // active-filtered payload actually changed.
   identityTable: "conversations",
-  // Highest fan-out source: one notify cascades to attempts → tasks + FULL
-  // recomputes (queueRanks, agentLaunches). The poller can notify multiple times
-  // per tick; a fixed-window trailing debounce collapses a tick's status changes
-  // into one flush. Source-only — never on the keyed attempts/tasks resources.
+  // Highest fan-out source: one notify cascades to attempts → tasks. The poller
+  // can notify multiple times per tick; a fixed-window trailing debounce
+  // collapses a tick's status changes into one flush. Source-only — never on the
+  // keyed attempts/tasks resources.
   // See research/2026-06-15-global-live-state-cascade-contention.md.
   debounceMs: 250,
-  loader: async (): Promise<ConversationListPayload> => {
-    const [active, goneRows, totalGoneCount, system] = await Promise.all([
-      listActiveConversations(),
-      listGoneConversations({ limit: RECENT_GONE_LIMIT + 1 }),
-      countGoneConversations(),
-      listActiveSystemConversations(),
-    ]);
-    const hasMoreGone = goneRows.length > RECENT_GONE_LIMIT;
-    return {
-      active,
-      recentGone: hasMoreGone ? goneRows.slice(0, RECENT_GONE_LIMIT) : goneRows,
-      hasMoreGone,
-      totalGoneCount,
-      system,
-    };
+  loader: async (_p, ctx): Promise<Conversation[]> =>
+    listActiveConversations(ctx?.affectedIds),
+});
+
+export const conversationsSystemResource = defineResource(conversationsSystemDescriptor, {
+  identityTable: "conversations",
+  loader: async (_p, ctx): Promise<Conversation[]> =>
+    listActiveSystemConversations(ctx?.affectedIds),
+});
+
+export const conversationsGoneResource = defineResource(conversationsGoneDescriptor, {
+  // Bounded window ordered by endedAt DESC LIMIT 30: one conversation ending
+  // changes window MEMBERSHIP (a row enters, the oldest may drop), which a per-id
+  // scoped recompute can't express — so it declares the explicit FULL opt-out.
+  recompute: {
+    kind: "full",
+    reason:
+      "bounded recent-gone window ordered by endedAt; one conversation ending changes window membership",
   },
+  loader: async (): Promise<Conversation[]> =>
+    listGoneConversations({ limit: RECENT_GONE_LIMIT }),
+});
+
+export const conversationsGoneStatsResource = defineResource(conversationsGoneStatsDescriptor, {
+  mode: "push",
+  loader: async () => ({ totalGoneCount: await countGoneConversations() }),
 });
 
 export const pushesResource = defineResource(pushesDescriptor, {
@@ -71,7 +92,13 @@ export const attemptsResource = defineResource(attemptsDescriptor, {
   identityTable: "attempts",
   dependsOn: [
     {
-      resource: conversationsLiveResource,
+      // Cascades off the active sub-resource ALONE. This is sufficient because the
+      // active loader's read-set covers the whole `conversations` table, so the L4
+      // feed delivers every conversation change here scoped to its id (even
+      // gone-only rows the active filter excludes), and the downstream affectedMap
+      // edge fires on that delivered affected set — not on whether the payload
+      // changed.
+      resource: conversationsActiveResource,
       // A changed conversation affects exactly its owning attempt. Map the
       // changed conversation ids → their attempt ids via the conversations_v
       // view (carries attemptId; index conversations_attempt_id_status_idx).

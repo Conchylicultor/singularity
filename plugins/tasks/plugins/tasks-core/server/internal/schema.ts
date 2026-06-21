@@ -77,7 +77,7 @@ export const ConversationSchema = createSelectSchema(_conversations, {
   // Tolerant by construction (see StoredModelSchema): a legacy/unknown stored
   // model (e.g. written by a concurrent worktree on pre-flatten code, or an id
   // later removed from the registry) normalizes to a concrete model instead of
-  // rejecting the row — which would blank the whole conversationsResource array.
+  // rejecting the row — which would blank a whole conversations sub-resource array.
   model: StoredModelSchema,
   kind: ConversationKindSchema,
   createdAt: z.coerce.date(),

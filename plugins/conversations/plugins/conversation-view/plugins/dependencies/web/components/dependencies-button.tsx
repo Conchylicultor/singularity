@@ -22,23 +22,31 @@ export function DependenciesButton({
   conversation: ConversationRecord;
 }) {
   const tasksResult = useResource(tasksResource);
-  if (tasksResult.pending) return null;
-  return <DependenciesButtonInner conversation={conversation} allTasks={tasksResult.data} />;
+  const activeResult = useActiveConversations();
+  if (tasksResult.pending || activeResult.pending) return null;
+  return (
+    <DependenciesButtonInner
+      conversation={conversation}
+      allTasks={tasksResult.data}
+      active={activeResult.data}
+    />
+  );
 }
 
 function DependenciesButtonInner({
   conversation,
   allTasks,
+  active,
 }: {
   conversation: ConversationRecord;
   allTasks: TaskListItem[];
+  active: ConversationRecord[];
 }) {
   const [blockedByOpen, setBlockedByOpen] = useState(false);
   const [blockingOpen, setBlockingOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   const task = useTask(conversation.taskId);
-  const active = useActiveConversations();
 
   const depTaskIds = useMemo(
     () => new Set(task?.dependencies ?? []),

@@ -4,7 +4,7 @@ import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import {
   _attempts,
   _conversations,
-  conversationsLiveResource,
+  conversationsActiveResource,
   listConversationsForDisplay,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { _agent_launches } from "./tables";
@@ -33,7 +33,10 @@ export const agentLaunchesResource = defineResource(agentLaunchesDescriptor, {
   identityTable: "agent_launches",
   dependsOn: [
     {
-      resource: conversationsLiveResource,
+      // Relies on conversationsActiveResource's loader reading the whole
+      // `conversations` table, so the L4 feed delivers every conversation change
+      // here scoped to its id (the affectedMap fires on the delivered set).
+      resource: conversationsActiveResource,
       // A changed conversation affects every launch sharing its task. Map the
       // changed conversation ids → the launch ids for their tasks
       // (conversation → attempt → task → launch).

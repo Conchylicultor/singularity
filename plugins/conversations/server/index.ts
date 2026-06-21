@@ -75,7 +75,7 @@ export default {
     [listConversationTurns.route]: handleListTurns,
     [closeConversation.route]: handleClose,
   },
-  // conversationsLiveResource is mounted on tasks-core.
+  // The conversations live resources (active/system/gone/gone-stats) are mounted on tasks-core.
   contributions: [
     ConfigV2.Register({ descriptor: autoAnswerConfig }),
     Trigger({ on: taskStatusChanged, do: maybeLaunchDependentsJob, with: {}, oneShot: false }),

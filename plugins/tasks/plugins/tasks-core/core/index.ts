@@ -23,12 +23,10 @@ export type { ConversationStatus } from "./conversation-status";
 export {
   ConversationSummarySchema,
   AttemptWithConversationsSchema,
-  conversationsResource,
 } from "./schemas";
 export type {
   ConversationSummary,
   AttemptWithConversations,
-  ConversationListPayload,
 } from "./schemas";
 
 // Client/shared live-state descriptors (single source of truth for key/schema/
@@ -38,6 +36,11 @@ export {
   taskDetailResource,
   attemptsResource,
   pushesResource,
+  conversationsActiveResource,
+  conversationsSystemResource,
+  conversationsGoneResource,
+  conversationsGoneStatsResource,
+  RECENT_GONE_LIMIT,
 } from "./resources";
 
 export { buildTaskPrompt } from "./build-task-prompt";
