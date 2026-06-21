@@ -1,4 +1,8 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+  type ControlSize,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import type React from "react";
 
@@ -30,6 +34,8 @@ export interface CardProps {
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>;
   /** Overrides the scope's default `-1` (e.g. `0` for keyboard-focusable cards). */
   tabIndex?: number;
+  /** Optional control density for everything inside the card; omitted = inherit ambient (no change). */
+  controlSize?: ControlSize;
   className?: string;
   children: React.ReactNode;
   /** Permissive passthrough for the rendered element (onClick, href, role, type, …). */
@@ -57,6 +63,7 @@ export function Card({
   ref,
   onKeyDown,
   tabIndex,
+  controlSize,
   ...rest
 }: CardProps) {
   return (
@@ -69,7 +76,11 @@ export function Card({
       {...rest}
       className={cn("p-card", interactive && HOVER, selected && SEL, className)}
     >
-      {children}
+      {controlSize ? (
+        <ControlSizeProvider size={controlSize}>{children}</ControlSizeProvider>
+      ) : (
+        children
+      )}
     </Surface>
   );
 }

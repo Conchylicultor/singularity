@@ -52,6 +52,12 @@ named by a density `ControlSize = "xs" | "sm" | "md" | "lg"`. Size should be set
   an explicit `aspect` prop (`"text"` default | `"icon"` | `"inline"`), which
   carries no density.
 
+Region primitives declare intrinsic density so consumers don't have to: `Bar`
+(toolbars/headers) wraps its contents in `sm` by default; `DataTable` wraps in
+`xs` (compact); `Card` opts in via an explicit `controlSize` prop. Composing
+these primitives is the primary way to set density for chrome and tables —
+`ControlSizeProvider` is still available for bespoke markup that doesn't use them.
+
 The runtime context lives in the **ui-kit** plugin at
 `@plugins/primitives/plugins/css/plugins/ui-kit/web` (`ControlSizeProvider`, `useControlSize`,
 `iconSizeFor`/`textSizeFor`, `ControlSize`) — co-located with the shadcn `Button`

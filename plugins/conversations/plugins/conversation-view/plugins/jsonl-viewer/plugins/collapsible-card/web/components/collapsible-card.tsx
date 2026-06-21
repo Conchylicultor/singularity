@@ -99,6 +99,7 @@ export function CollapsibleCard({
   const sideContent = aside ?? (filePath ? <FilePath filePath={filePath} /> : null);
   return (
     <Card
+      controlSize="xs"
       className={cn(
         "group px-md py-sm",
         error ? ERROR_CARD : CARD_CHROME,

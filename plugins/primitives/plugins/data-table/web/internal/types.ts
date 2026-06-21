@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import type { ControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { SortState } from "./use-data-table";
 
 export interface ColumnDef<TRow> {
@@ -40,4 +41,6 @@ export interface DataTableProps<TRow> {
   selectedRowId?: string;
   /** Trailing per-row actions, hover-revealed in their own column. */
   rowActions?: (row: TRow, index: number) => ReactNode;
+  /** Control density for the table's controls/badges; defaults to compact (`xs`). */
+  controlSize?: ControlSize;
 }

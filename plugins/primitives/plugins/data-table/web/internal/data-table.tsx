@@ -1,5 +1,8 @@
 import type { ReactNode } from "react";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   hoverRevealGroup,
   hoverRevealTarget,
@@ -36,6 +39,7 @@ export function DataTable<TRow>({
   onRowClick,
   rowActions,
   selectedRowId,
+  controlSize = "xs",
 }: DataTableProps<TRow>) {
   const { rows, sortState, toggleSort } = useDataTable(
     data,
@@ -47,11 +51,13 @@ export function DataTable<TRow>({
 
   if (rows.length === 0) {
     return (
-      <Center axis="both" className="h-32">
-        <Text as="div" variant="caption" className="text-muted-foreground">
-          {emptyLabel}
-        </Text>
-      </Center>
+      <ControlSizeProvider size={controlSize}>
+        <Center axis="both" className="h-32">
+          <Text as="div" variant="caption" className="text-muted-foreground">
+            {emptyLabel}
+          </Text>
+        </Center>
+      </ControlSizeProvider>
     );
   }
 
@@ -125,8 +131,9 @@ export function DataTable<TRow>({
   };
 
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent)
-    <div className="grid gap-x-sm" style={{ gridTemplateColumns: template }}>
+    <ControlSizeProvider size={controlSize}>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent) */}
+      <div className="grid gap-x-sm" style={{ gridTemplateColumns: template }}>
       {/* eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks */}
       <div className="sticky top-0 z-raised col-span-full grid grid-cols-subgrid border-b bg-background p-control text-3xs font-medium uppercase tracking-wider text-muted-foreground">
         {columns.map((col) => {
@@ -161,7 +168,8 @@ export function DataTable<TRow>({
       ) : (
         rows.map((row, i) => renderRow(row, i))
       )}
-    </div>
+      </div>
+    </ControlSizeProvider>
   );
 }
 

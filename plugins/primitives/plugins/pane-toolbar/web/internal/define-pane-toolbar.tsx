@@ -31,9 +31,11 @@ export interface PaneToolbar {
 
 export interface PaneToolbarOptions {
   /**
-   * Make the toolbar size-owning: every contributed control inherits this
-   * density (see `RenderSlotConfig.controlSize`). Omit to let each contribution
-   * keep its own size.
+   * Override the slot-level control density. The toolbar's `<Bar>` host already
+   * supplies the `sm` baseline — so contributions inherit `sm` automatically.
+   * Pass this option to override that baseline for every contribution rendered
+   * in the Start/End zones (see `RenderSlotConfig.controlSize`; innermost wins).
+   * Omit to accept the `sm` baseline from `Bar`.
    */
   controlSize?: ControlSize;
 }

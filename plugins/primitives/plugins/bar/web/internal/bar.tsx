@@ -1,6 +1,8 @@
 import {
   cn,
   SingleLineProvider,
+  ControlSizeProvider,
+  type ControlSize,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ElementType, HTMLAttributes } from "react";
 
@@ -32,6 +34,12 @@ export interface BarProps extends HTMLAttributes<HTMLElement> {
    * right edge, so the global floating bar doesn't occlude its actions.
    */
   endSafeArea?: boolean;
+  /**
+   * The control density declared for everything inside this bar; defaults to
+   * `"sm"` (the chrome tier). Innermost provider wins, so a child region/slot
+   * may override.
+   */
+  controlSize?: ControlSize;
 }
 
 /** Per-tier chrome: height token, horizontal inset, and (chrome only) the bg. */
@@ -64,6 +72,7 @@ export function Bar({
   overflow = "hidden",
   as,
   endSafeArea,
+  controlSize = "sm",
   className,
   children,
   ...rest
@@ -85,7 +94,7 @@ export function Bar({
       )}
       {...rest}
     >
-      {children}
+      <ControlSizeProvider size={controlSize}>{children}</ControlSizeProvider>
     </As>
     </SingleLineProvider>
   );

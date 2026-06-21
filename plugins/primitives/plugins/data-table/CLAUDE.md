@@ -1,5 +1,7 @@
 # data-table
 
+`DataTable` declares compact (`xs`) control density by default, so badges in cells and row-action buttons render at the smallest tier. Overridable via the `controlSize` prop.
+
 ## Per-row actions
 
 `DataTableProps.rowActions?(row, index)` renders trailing per-row actions in
@@ -16,7 +18,11 @@ and inert for consumers that don't pass `rowActions`.
 
 - Description: Sortable/filterable flex-layout data table primitive.
 - Web:
+<<<<<<< .merge_file_4eZguN
   - Uses: `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/virtual-rows.useVirtualRows`
+=======
+  - Uses: `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/virtual-rows.useVirtualRows`
+>>>>>>> .merge_file_tZH6sE
   - Exports: Types: `ColumnDef`, `DataTableProps`, `SortState`; Values: `DataTable`
 - Cross-plugin:
   - Imported by: `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/sample-rows`, `debug/heap-snapshot`, `debug/profiling/boot`, `primitives/data-view/table`

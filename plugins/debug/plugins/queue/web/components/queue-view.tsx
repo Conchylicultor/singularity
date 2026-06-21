@@ -1,4 +1,4 @@
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { MdBolt, MdDelete, MdHeartBroken, MdRefresh, MdReplay, MdWorkOutline } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
@@ -34,22 +34,24 @@ export function QueueView() {
   const [tab, setTab] = useState<Tab>("jobs");
 
   return (
-    <Stack gap="none" className="h-full">
-      <Stack direction="row" gap="xs" align="center" className="border-b px-md py-sm">
-        <SegmentedControl
-          options={TAB_OPTIONS}
-          value={tab}
-          onChange={setTab}
-          variant="ghost"
-        />
+    <ControlSizeProvider size="xs">
+      <Stack gap="none" className="h-full">
+        <Stack direction="row" gap="xs" align="center" className="border-b px-md py-sm">
+          <SegmentedControl
+            options={TAB_OPTIONS}
+            value={tab}
+            onChange={setTab}
+            variant="ghost"
+          />
+        </Stack>
+        <Scroll axis="both" fill>
+          {tab === "jobs" && <JobsTab />}
+          {tab === "dead" && <DeadTab />}
+          {tab === "events" && <EventsTab />}
+          {tab === "triggers" && <TriggersTab />}
+        </Scroll>
       </Stack>
-      <Scroll axis="both" fill>
-        {tab === "jobs" && <JobsTab />}
-        {tab === "dead" && <DeadTab />}
-        {tab === "events" && <EventsTab />}
-        {tab === "triggers" && <TriggersTab />}
-      </Scroll>
-    </Stack>
+    </ControlSizeProvider>
   );
 }
 

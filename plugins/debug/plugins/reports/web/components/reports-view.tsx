@@ -13,6 +13,7 @@ import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { navigate } from "@plugins/apps/web";
+import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 export function ReportsView() {
   const result = useResource(reportsResource);
@@ -23,24 +24,28 @@ export function ReportsView() {
 
   if (rows.length === 0) {
     return (
-      <Center className="h-full">
-        <Text as="div" variant="body" className="text-muted-foreground">
-          No reports recorded yet.
-        </Text>
-      </Center>
+      <ControlSizeProvider size="xs">
+        <Center className="h-full">
+          <Text as="div" variant="body" className="text-muted-foreground">
+            No reports recorded yet.
+          </Text>
+        </Center>
+      </ControlSizeProvider>
     );
   }
 
   return (
-    <Stack gap="none" className="h-full">
-      <Scroll axis="both" fill>
-        <ul className="divide-y">
-          {rows.map((c: Report) => (
-            <ReportRow key={c.id} report={c} serverBuildId={serverBuildId} />
-          ))}
-        </ul>
-      </Scroll>
-    </Stack>
+    <ControlSizeProvider size="xs">
+      <Stack gap="none" className="h-full">
+        <Scroll axis="both" fill>
+          <ul className="divide-y">
+            {rows.map((c: Report) => (
+              <ReportRow key={c.id} report={c} serverBuildId={serverBuildId} />
+            ))}
+          </ul>
+        </Scroll>
+      </Stack>
+    </ControlSizeProvider>
   );
 }
 
