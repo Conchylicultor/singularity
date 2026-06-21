@@ -1,0 +1,11 @@
+// @hash bace34e0ab3e
+{
+  // When off, the monitor job returns early and files no live-state churn reports.
+  "enabled": true,
+  // File a live-state-noop report when a resource sustains this many no-op (empty-diff) pushes per second over the window.
+  "noopRateThreshold": 1,
+  // Sliding window over which the no-op push rate is measured.
+  "windowSeconds": 60,
+  // Minimum number of no-op pushes that must occur in the window before a report fires — avoids boot-time false positives.
+  "minNoopSamples": 30
+}

@@ -474,6 +474,9 @@ export interface ResourceRuntimeOptions {
   reportError?: (context: string, err: unknown) => void;
   /** Per-key owner metadata for the _debug endpoint. server: from Resource.Declare; central: omit. */
   debugOwners?: () => Array<{ key: string; pluginId?: string }>;
+  /** Fired once per push to >=1 subscriber, with whether the push carried a content change.
+   *  A `changed: false` push is a wasted no-op (empty keyed diff). */
+  onPush?(key: string, info: { subscribers: number; changed: boolean }): void;
   /**
    * Per-key automatic table read-set for the `_debug` endpoint: the tables this
    * resource's loader actually read (captured at the DB pool chokepoint), so the
@@ -1263,6 +1266,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
               version,
             };
             for (const s of subs) sendJson(s.ws, msg);
+            opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
           } else if (scoped) {
             // Scoped path: merge the partial recompute into the snapshot and
             // ship only the changed rows. `deletes:[]`, `order:undefined` —
@@ -1280,6 +1284,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
               };
               for (const s of subs) sendJson(s.ws, msg);
             }
+            // Emit regardless of whether a frame was sent: the recompute happened,
+            // so an empty scoped diff (upserts.length === 0) is a recorded no-op push.
+            opts.onPush?.(entry.key, { subscribers: subs.length, changed: upserts.length > 0 });
           } else {
             // FULL path (unchanged from Layer 1). diffKeyed replaces the stored
             // snapshot only here, after the loader succeeded — the loader-failure
@@ -1290,6 +1297,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
               // subscribers get a complete base to merge subsequent deltas onto.
               const msg = { kind: "update" as const, key: entry.key, params, value, version };
               for (const s of subs) sendJson(s.ws, msg);
+              opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
             } else {
               const msg = {
                 kind: "delta" as const,
@@ -1301,6 +1309,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
                 version,
               };
               for (const s of subs) sendJson(s.ws, msg);
+              opts.onPush?.(entry.key, {
+                subscribers: subs.length,
+                changed: upserts.length > 0 || deletes.length > 0 || order !== undefined,
+              });
             }
           }
         } else {

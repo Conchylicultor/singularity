@@ -19,6 +19,7 @@ export {
   loadResourceByKey,
   notificationsWsHandler,
   notifyStatsFor,
+  onResourcePush,
   setRelationResolver,
   withNotifyBatch,
 } from "./resources";
@@ -28,6 +29,7 @@ export type {
   RecomputeIntent,
   ResourceDefinition,
   ResourceContract,
+  ResourcePushObserver,
   ServerResourceOptions,
   ResourceMode,
   ResourceParams,

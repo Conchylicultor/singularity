@@ -1227,6 +1227,10 @@
       "name": "@singularity/plugin-debug-heap-snapshot",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/live-state-churn": {
+      "name": "@singularity/plugin-debug-live-state-churn",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/live-state-health": {
       "name": "@singularity/plugin-debug-live-state-health",
       "version": "0.0.1",
@@ -4361,6 +4365,8 @@
     "@singularity/plugin-debug-health-monitor": ["@singularity/plugin-debug-health-monitor@workspace:plugins/debug/plugins/health-monitor"],
 
     "@singularity/plugin-debug-heap-snapshot": ["@singularity/plugin-debug-heap-snapshot@workspace:plugins/debug/plugins/heap-snapshot"],
+
+    "@singularity/plugin-debug-live-state-churn": ["@singularity/plugin-debug-live-state-churn@workspace:plugins/debug/plugins/live-state-churn"],
 
     "@singularity/plugin-debug-live-state-health": ["@singularity/plugin-debug-live-state-health@workspace:plugins/debug/plugins/live-state-health"],
 

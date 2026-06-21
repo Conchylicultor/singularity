@@ -118,6 +118,21 @@ function errorReport(context: string, err: unknown): ServerErrorReport {
   };
 }
 
+// Push-outcome observer registry (the `onSlowSpan` shape): lets other plugins
+// subscribe to per-push outcomes (was the push a real content change, or a wasted
+// no-op?) WITHOUT server-core importing them. The runtime emits `onPush` once per
+// keyed push to >=1 subscriber; we fan it out to every registered observer. A
+// debug plugin registers at boot via `onResourcePush` from this barrel.
+export type ResourcePushObserver = (
+  key: string,
+  info: { subscribers: number; changed: boolean },
+) => void;
+const pushObservers = new Set<ResourcePushObserver>();
+export function onResourcePush(cb: ResourcePushObserver): () => void {
+  pushObservers.add(cb);
+  return () => pushObservers.delete(cb);
+}
+
 // `wrapLoad` only establishes the profiler entry span + ambient context for the
 // loader body. Concurrency is NOT bounded here: the scarce resource is DB
 // connections, not loader bodies, so the gate lives at the one place those are
@@ -162,6 +177,10 @@ const runtime = createResourceRuntime({
   // to `relationIdentityBase`); identity until then and on central.
   resolveRelation: (r) => relationResolver(r),
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
+  // Fan each push outcome out to every registered observer (no-op detector et al).
+  onPush: (key, info) => {
+    for (const cb of pushObservers) cb(key, info);
+  },
   debugOwners: () =>
     Resource.Declare.getContributions().map((c) => ({
       key: c.key,
