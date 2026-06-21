@@ -1,0 +1,87 @@
+import {
+  Button,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { MdInsights } from "react-icons/md";
+import { useProfilerReport, startSession, stopSession } from "../internal/session";
+import { registerExcludedComponent } from "../internal/global-api";
+import { InitiatorRow } from "./initiator-row";
+
+const SESSION_MAX_MS = 30_000;
+
+export function RenderProfilerPane() {
+  const report = useProfilerReport();
+  const { running, totalCommits, commitsPerSec, durationMs, initiators } = report;
+
+  return (
+    <Stack gap="none" className="h-full">
+      <Inset x="md" y="sm">
+        <Stack direction="row" gap="md" align="center" justify="between">
+          <Stack direction="row" gap="sm" align="center">
+            <MdInsights className="size-4 text-muted-foreground" />
+            <Text variant="subheading">Render Profiler</Text>
+          </Stack>
+          <ControlSizeProvider size="sm">
+            {running ? (
+              <Button variant="destructive" onClick={() => stopSession()}>
+                Stop
+              </Button>
+            ) : (
+              <Button
+                variant="default"
+                onClick={() => startSession({ maxDurationMs: SESSION_MAX_MS })}
+              >
+                Start
+              </Button>
+            )}
+          </ControlSizeProvider>
+        </Stack>
+      </Inset>
+
+      <Inset x="md" y="2xs">
+        <Text as="div" variant="caption" tone="muted">
+          {running
+            ? `Running — ${totalCommits} commits · ${commitsPerSec.toFixed(1)}/s · ${(durationMs / 1000).toFixed(1)}s (auto-stops at ${SESSION_MAX_MS / 1000}s)`
+            : totalCommits > 0
+              ? `Stopped — ${totalCommits} commits · ${commitsPerSec.toFixed(1)}/s over ${(durationMs / 1000).toFixed(1)}s`
+              : "Off. Start a session and interact with / idle on the suspect screen."}
+        </Text>
+      </Inset>
+
+      <Scroll axis="both" fill>
+        {report.bridgeMissing ? (
+          <Inset pad="md">
+            <Placeholder tone="error">
+              The React commit bridge isn&apos;t installed (the frontend predates
+              this feature). Run ./singularity build to rebuild index.html, then
+              reload.
+            </Placeholder>
+          </Inset>
+        ) : initiators.length === 0 ? (
+          <Inset pad="md">
+            <Placeholder>
+              {running
+                ? "Listening for commits… interact with or idle on the suspect screen."
+                : "Start a session and interact with / idle on the suspect screen."}
+            </Placeholder>
+          </Inset>
+        ) : (
+          <ul className="divide-y">
+            {initiators.map((stat) => (
+              <InitiatorRow key={stat.signature} stat={stat} />
+            ))}
+          </ul>
+        )}
+      </Scroll>
+    </Stack>
+  );
+}
+
+// Self-exclusion: the profiler must never attribute its own UI churn. Register
+// at module load (before any session can run).
+registerExcludedComponent(RenderProfilerPane);
+registerExcludedComponent(InitiatorRow);

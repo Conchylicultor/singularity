@@ -71,6 +71,79 @@
         if (prefersDark) document.documentElement.classList.add("dark");
       })();
     </script>
+    <!-- React commit bridge. Generic, passive — NO profiler logic here.
+         React's renderer reads `window.__REACT_DEVTOOLS_GLOBAL_HOOK__` exactly
+         once, when `react-dom/client` initializes (before createRoot().render()).
+         If the global is absent at that moment React never emits commit
+         callbacks and nothing later can retro-register. So a minimal passive
+         hook MUST exist before the module script below loads react-dom.
+         This installs/augments that hook and exposes a `__commitSubscribers`
+         Set; the render-profiler debug plugin subscribes on demand. Zero-cost
+         when nobody subscribes: one empty-Set check per commit. If the real
+         React DevTools extension already installed a hook, we augment it (wrap
+         onCommitFiberRoot once) so both coexist. -->
+    <script>
+      (function () {
+        var nextId = 1;
+        var hook = window.__REACT_DEVTOOLS_GLOBAL_HOOK__;
+        if (!hook) {
+          var subs = new Set();
+          hook = {
+            supportsFiber: true,
+            isDisabled: false,
+            renderers: new Map(),
+            __commitSubscribers: subs,
+            __commitBridgeWrapped: true,
+            inject: function (r) {
+              var id = nextId++;
+              this.renderers.set(id, r);
+              return id;
+            },
+            checkDCE: function () {},
+            onCommitFiberUnmount: function () {},
+            onPostCommitFiberRoot: function () {},
+            onScheduleFiberRoot: function () {},
+            onCommitFiberRoot: function (rendererId, root) {
+              if (subs.size) {
+                subs.forEach(function (cb) {
+                  try {
+                    cb(root);
+                  } catch (e) {
+                    /* a subscriber must never break a React commit */
+                  }
+                });
+              }
+            },
+          };
+          window.__REACT_DEVTOOLS_GLOBAL_HOOK__ = hook;
+        } else {
+          if (!hook.__commitSubscribers) {
+            hook.__commitSubscribers = new Set();
+          }
+          if (!hook.__commitBridgeWrapped) {
+            hook.__commitBridgeWrapped = true;
+            var origCommit = hook.onCommitFiberRoot;
+            hook.onCommitFiberRoot = function (rendererId, root) {
+              var result;
+              if (typeof origCommit === "function") {
+                result = origCommit.apply(this, arguments);
+              }
+              var s = hook.__commitSubscribers;
+              if (s && s.size) {
+                s.forEach(function (cb) {
+                  try {
+                    cb(root);
+                  } catch (e) {
+                    /* a subscriber must never break a React commit */
+                  }
+                });
+              }
+              return result;
+            };
+          }
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icon_32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icon_16x16.png" />

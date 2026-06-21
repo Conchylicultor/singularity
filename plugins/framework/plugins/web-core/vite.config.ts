@@ -73,6 +73,10 @@ export default defineConfig(async () => {
   return {
     root: path.resolve(__dirname, "./web"),
     plugins: [react({ babel: { plugins: babelPlugins } }), tailwindcss()],
+    // Preserve function/class `.name` through minification so debugging,
+    // profiling (the render-profiler reads component names off fibers), crash
+    // reports, and stack traces show real component names, not mangled `n`/`t`.
+    esbuild: { keepNames: true },
     define: { "import.meta.env.VITE_BUILD_ID": JSON.stringify(process.env.VITE_BUILD_ID ?? "dev") },
     // `server:` is NOT added on purpose.
     // /api and /ws proxying is handled by the gateway, NOT Vite.
