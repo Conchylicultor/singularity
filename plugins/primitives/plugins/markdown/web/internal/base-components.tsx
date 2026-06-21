@@ -24,9 +24,13 @@ export function stripNodeProp(components: Components): Components {
   return out as Components;
 }
 
+// `transform` and `getInlineCodeHandlers` are stable accessors that read the
+// latest context value at call time. The base map is built ONCE (permanent tag
+// identities) so react-markdown never remounts a base tag — live data flows
+// through these accessors without changing any component identity.
 export function buildBaseComponents(
   transform: (children: ReactNode) => ReactNode,
-  inlineCodeHandlers: Array<(text: string) => ReactNode | null>,
+  getInlineCodeHandlers: () => Array<(text: string) => ReactNode | null>,
 ): Components {
   return {
     h1: ({ children, ...p }) => (
@@ -96,7 +100,7 @@ export function buildBaseComponents(
       if (isBlock) {
         return <HighlightedCode code={text} lang={lang} />;
       }
-      for (const handler of inlineCodeHandlers) {
+      for (const handler of getInlineCodeHandlers()) {
         const result = handler(text);
         if (result !== null) return <>{result}</>;
       }

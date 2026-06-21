@@ -1,4 +1,4 @@
-import { useContext, useMemo, type ReactNode } from "react";
+import { useContext, useMemo, useRef, type ReactNode } from "react";
 import ReactMarkdownLib from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
@@ -15,15 +15,37 @@ export const MarkdownEnhancerSlot: Slot<{
 }> = defineSlot("markdown.enhancer");
 
 function MarkdownRenderer({ children }: { children: string }) {
-  const { transforms, components: overrides, inlineCodeHandlers } = useContext(
-    MarkdownEnhancementContext,
+  const enhancement = useContext(MarkdownEnhancementContext);
+  const { components: overrides } = enhancement;
+
+  // Keep the live context value in a ref so the stable accessors below read the
+  // latest transforms / inline-code handlers at call time without forcing any
+  // component identity to change.
+  const ref = useRef(enhancement);
+  ref.current = enhancement;
+
+  // Base map built ONCE (empty deps): every base tag — including `code` — gets a
+  // permanent identity, so react-markdown never remounts them on a re-render.
+  // The accessors read `ref.current`, so live data is reflected in place.
+  const base = useMemo(
+    () =>
+      stripNodeProp(
+        buildBaseComponents(
+          (c: ReactNode) => ref.current.transforms.reduce((acc, fn) => fn(acc), c),
+          () => ref.current.inlineCodeHandlers,
+        ),
+      ),
+    [],
   );
-  const components = useMemo(() => {
-    const transform = (c: ReactNode) =>
-      transforms.reduce((acc, fn) => fn(acc), c);
-    const base = buildBaseComponents(transform, inlineCodeHandlers);
-    return stripNodeProp({ ...base, ...overrides });
-  }, [transforms, overrides, inlineCodeHandlers]);
+
+  // Overrides re-wrap only when the override map actually changes; `code` lives
+  // only in `base`, so its identity is constant forever.
+  const strippedOverrides = useMemo(() => stripNodeProp(overrides), [overrides]);
+
+  const components = useMemo(
+    () => ({ ...base, ...strippedOverrides }),
+    [base, strippedOverrides],
+  );
 
   return (
     <ReactMarkdownLib remarkPlugins={REMARK_PLUGINS} components={components}>

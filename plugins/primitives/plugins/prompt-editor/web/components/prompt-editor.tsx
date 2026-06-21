@@ -11,6 +11,10 @@ import {
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { PromptEditorSlots } from "../slots";
 
+type FloatingActionItem = Parameters<
+  NonNullable<React.ComponentProps<typeof PromptEditorSlots.FloatingAction.Render>["children"]>
+>[0];
+
 export function PromptEditor(props: {
   value: string;
   onChange: (markdown: string) => void;
@@ -82,6 +86,20 @@ function ToolbarRow() {
     [editor],
   );
 
+  const renderItem = useCallback(
+    (item: FloatingActionItem) => (
+      // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf wrapper letting an arbitrary contributed action component shrink within the toolbar Stack row
+      <div className={cn("min-w-0", !editable && !item.alwaysActive && disabledPartCls)}>
+        <item.component
+          insertText={insertText}
+          getContent={getContent}
+          clearContent={clearContent}
+        />
+      </div>
+    ),
+    [editable, insertText, getContent, clearContent],
+  );
+
   const hasAlwaysActive = !editable && items.some((i) => i.alwaysActive);
   if (items.length === 0) return null;
   if (!editable && !hasAlwaysActive) return null;
@@ -93,18 +111,7 @@ function ToolbarRow() {
       className="px-sm pb-xs"
       onMouseDown={focusEditor}
     >
-      <PromptEditorSlots.FloatingAction.Render>
-        {(item) => (
-          // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf wrapper letting an arbitrary contributed action component shrink within the toolbar Stack row
-          <div className={cn("min-w-0", !editable && !item.alwaysActive && disabledPartCls)}>
-            <item.component
-              insertText={insertText}
-              getContent={getContent}
-              clearContent={clearContent}
-            />
-          </div>
-        )}
-      </PromptEditorSlots.FloatingAction.Render>
+      <PromptEditorSlots.FloatingAction.Render>{renderItem}</PromptEditorSlots.FloatingAction.Render>
     </Stack>
   );
 }

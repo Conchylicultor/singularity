@@ -7,6 +7,7 @@ import {
 } from "@tanstack/react-query";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
 import { reportSlowResource } from "./slow-resource-reporter";
+import { dateAwareReplaceEqualDeep } from "./internal/structural-sharing";
 import type { ChannelStatuses } from "./notifications-client";
 import type { ResourceDescriptor } from "../core/resource";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
@@ -225,6 +226,14 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     initialData: resource.initialData as NonUndefinedGuard<T>,
     // Seeded at epoch 0 so `dataUpdatedAt === 0` means only initialData has been seen.
     initialDataUpdatedAt: 0,
+    // Date-aware structural sharing for EVERY resource (with or without
+    // `select`): RQ applies the query's `structuralSharing` to both the
+    // query-data merge AND the select-result memoization. The default
+    // `replaceEqualDeep` treats `Date` instances as opaque (so a deeply-equal
+    // payload that carries `z.coerce.date()` fields still mints a new reference
+    // on every push), defeating the documented slice-selector dedup. This is
+    // strictly stronger dedup, never weaker.
+    structuralSharing: dateAwareReplaceEqualDeep,
     // With a selector, narrow re-renders to the selected slice: structural
     // sharing keeps a deeply-equal slice's reference, and limiting
     // notifyOnChangeProps to data/error stops the per-push `dataUpdatedAt`
