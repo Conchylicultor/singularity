@@ -18,7 +18,10 @@
  * (the `aggregateRoot`, preferring `pane:<paneId>`), keyed by leaf signature.
  * Catches a DIFFUSE cascade spread thin across MANY nodes where no single leaf
  * crosses threshold. Fires (`mutationClass: "subtree-cascade"`) on:
- *   1. Sustained — summed rate ≥ AGG_PER_SEC for SUSTAINED_MS.
+ *   1. Sustained — summed rate over its class threshold for SUSTAINED_MS (split
+ *      AGG_REBUILD_PER_SEC vs AGG_ATTR_PER_SEC: a childList rebuild is ~2 records
+ *      yet far costlier than an attr write, so a diffuse rebuild cascade at only
+ *      ~8 records/s is a real loop while attr churn runs ~300/s).
  *   2/3. Idle + Visible (shared with the leaf tier).
  *   4. Breadth — ≥ AGG_MIN_LEAVES distinct leaves each re-touched
  *      ≥ AGG_MIN_LEAF_REPEAT× within the window (a real cascade re-touches the
@@ -409,14 +412,21 @@ export function installRenderLoopDetector(): () => void {
 
   /**
    * Aggregate (subtree-cascade) tier. Mirrors `evaluate`'s gate structure but
-   * sums across the root's subtree: gate 1 sustained summed-rate, gates 2/3 idle
-   * + visible (shared), gate 4 recurring breadth. Below breadth → near-miss log.
+   * sums across the root's subtree: gate 1 sustained summed-rate (split by class,
+   * since a childList rebuild is far costlier per record than an attr write),
+   * gates 2/3 idle + visible (shared), gate 4 recurring breadth. Below breadth →
+   * near-miss log.
    */
   function evaluateAggregate(agg: AggregateState, now: number): void {
-    const rate = agg.window.rate(now);
+    const rebuildRate = agg.window.rate(now, "childlist");
+    const attrRate = agg.window.rate(now, "attr");
+    // The qualifying stream (prefer childList — costlier — when both are over).
+    const overRebuild = rebuildRate >= RENDER_LOOP.AGG_REBUILD_PER_SEC;
+    const overAttr = attrRate >= RENDER_LOOP.AGG_ATTR_PER_SEC;
+    const rate = overRebuild ? rebuildRate : attrRate;
 
-    // Gate 1: sustained summed-rate streak across the subtree.
-    if (rate >= RENDER_LOOP.AGG_PER_SEC) {
+    // Gate 1: sustained summed-rate streak across the subtree (either class).
+    if (overRebuild || overAttr) {
       if (agg.aboveSince === null) agg.aboveSince = now;
     } else {
       agg.aboveSince = null;
@@ -577,7 +587,11 @@ export function installRenderLoopDetector(): () => void {
       // is no coarse root (never aggregate at bare document-body level).
       if (meta.aggregateRoot !== undefined) {
         const agg = aggStateFor(meta.aggregateRoot);
-        agg.window.record(meta.signature, now);
+        agg.window.record(
+          meta.signature,
+          now,
+          record.type === "childList" ? "childlist" : "attr",
+        );
         evaluateAggregate(agg, now);
       }
     }

@@ -72,7 +72,9 @@ the gating/streak state, mirroring the leaf `evaluate`.
 
 ### Gates (aggregate fire)
 
-1. **Sustained** — `rate ≥ AGG_PER_SEC` continuously for `SUSTAINED_MS` (reuse 3s).
+1. **Sustained** — the summed rate of *either* class is over its own floor
+   (`AGG_REBUILD_PER_SEC` for childList, `AGG_ATTR_PER_SEC` for attributes)
+   continuously for `SUSTAINED_MS` (reuse 3s).
 2. **Idle** — reuse the shared `lastInteractionAt` (no input within `IDLE_MS`).
 3. **Visible** — reuse `document.visibilityState`.
 4. **Breadth (the wasted-work discriminator, replacing per-value no-op checks)** —
@@ -111,9 +113,18 @@ different `mutationClass` → distinct fingerprints / reports. The per-session
 
 ### Constants (added to `RENDER_LOOP`)
 
-- `AGG_PER_SEC = 60` — aggregate mutations/sec across the subtree (motivating case
-  ~300/s; well above any sparse idle baseline; a single leaf maxes at the 30/s leaf
-  threshold so 60 forces genuine breadth).
+The summed-rate floor is **split by mutation class**, mirroring the leaf tier —
+because a childList rebuild is only ~2 `MutationRecords` (a remove + an add) yet
+far costlier than an attribute write, so the two classes cannot share one
+count-based threshold. A diffuse rebuild cascade (e.g. every code block remounted
+on each transcript re-render) is only ~8 records/s total but a real loop; raw-count
+attribute churn is ~300/s. The cascade fires if **either** class stream is over its
+own floor (and breadth holds):
+
+- `AGG_REBUILD_PER_SEC = 6` — summed childList records/sec (≈2× the 3/s leaf
+  rebuild floor — a genuine multi-subtree rebuild cascade, not one list edit).
+- `AGG_ATTR_PER_SEC = 60` — summed attribute records/sec (2× the 30/s leaf attr
+  floor, so a single hot leaf can never satisfy it alone — forces genuine breadth).
 - `AGG_MIN_LEAVES = 5` — distinct recurring leaf signatures (separates diffuse from
   concentrated).
 - `AGG_MIN_LEAF_REPEAT = 2` — a leaf must recur ≥2×/window to count (drops one-shot

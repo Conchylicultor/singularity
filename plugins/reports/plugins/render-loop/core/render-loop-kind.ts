@@ -32,11 +32,18 @@ export const RENDER_LOOP = {
   // so a sustained idle non-wasted update can't flood the clientLog buffer.
   NEAR_MISS_LOG_MS: 10000,
   // --- Aggregate (subtree-cascade) tier ---
-  // Summed mutations/sec across one aggregate root's subtree to fire the cascade
-  // tier (motivating case ~300/s; well above any sparse idle baseline, and 2× the
-  // 30/s leaf attr threshold so a single hot leaf can never satisfy it alone —
-  // it forces genuine breadth across the subtree).
-  AGG_PER_SEC: 60,
+  // The summed-rate thresholds are SPLIT by mutation class, mirroring the leaf
+  // tier's split — because a childList rebuild (a torn-down + rebuilt subtree) is
+  // only ~2 MutationRecords yet far costlier than an attribute write, so the two
+  // classes can't share one count-based floor. A diffuse rebuild cascade (e.g.
+  // every code block remounted on each transcript re-render) is only ~8 records/s
+  // total but a real loop; raw-count attribute churn is ~300/s.
+  // Summed childList records/sec across the subtree (≈2× the 3/s leaf rebuild
+  // floor — a genuine multi-subtree rebuild cascade, not one occasional list edit).
+  AGG_REBUILD_PER_SEC: 6,
+  // Summed attribute records/sec across the subtree (2× the 30/s leaf attr floor,
+  // so a single hot leaf can never satisfy it alone — forces genuine breadth).
+  AGG_ATTR_PER_SEC: 60,
   // Distinct recurring leaf signatures the cascade must touch (separates a
   // diffuse whole-subtree cascade from a single concentrated leaf loop).
   AGG_MIN_LEAVES: 5,
