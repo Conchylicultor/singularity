@@ -1,6 +1,5 @@
 export {
   buildEnrichedTree,
-  buildPluginTree,
   collectAllPlugins,
   generatePluginDocs,
   pluginClaudeMdPath,
@@ -10,8 +9,6 @@ export {
   renderDetailsDoc,
   renderPluginClaudeMd,
   type GenerateDocsOptions,
-  type PluginNode,
-  type PluginTree,
 } from "./docgen";
 
 export {

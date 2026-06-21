@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { ConversationStatusSchema } from "@plugins/conversations/core";
+import { ConversationStatusSchema } from "@plugins/tasks/plugins/tasks-core/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 
 // Pure Zod schemas for agent types — no drizzle imports, safe to use in

@@ -2,7 +2,6 @@ import { existsSync, readFileSync } from "fs";
 import { join, relative, resolve } from "path";
 import {
   barrelStubsPath,
-  buildPluginTree,
   collectedDirCompositionRegistryPath,
   collectedDirRegistryPath,
   discoverCollectedDirs,
@@ -10,6 +9,7 @@ import {
   preBarrelManifests,
   resolveImportSpecifier,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };

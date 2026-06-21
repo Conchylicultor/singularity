@@ -9,8 +9,8 @@ import {
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { type TaskListItem, removeTaskDependency } from "@plugins/tasks/core";
-import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { removeTaskDependency } from "@plugins/tasks/core";
+import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";

@@ -19,7 +19,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { conversationsResource } from "@plugins/conversations/core";
+import { conversationsResource } from "@plugins/tasks/plugins/tasks-core/core";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { RowActions, RowActionButton, rowActionsAnchor } from "@plugins/primitives/plugins/row-actions/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";

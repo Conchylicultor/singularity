@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
 export const ExitMenu = {

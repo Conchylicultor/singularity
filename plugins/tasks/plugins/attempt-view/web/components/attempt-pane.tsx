@@ -11,8 +11,7 @@ import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
-import type { AttemptWithConversations } from "@plugins/tasks/core";
-import { attemptsResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { attemptsResource, type AttemptWithConversations } from "@plugins/tasks/plugins/tasks-core/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";

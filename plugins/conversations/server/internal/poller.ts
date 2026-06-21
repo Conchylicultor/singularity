@@ -16,7 +16,7 @@ import { autoAnswerConfig } from "../../shared/config";
 import { hibernationConfig } from "../../core/hibernation-config";
 import { decideMissingProcessAction } from "./hibernation-decision";
 import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
-import type { ConversationStatus } from "../../core";
+import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
 function liveStatusFor(info: RuntimeInfo): ConversationStatus {
   return info.working ? "working" : "waiting";

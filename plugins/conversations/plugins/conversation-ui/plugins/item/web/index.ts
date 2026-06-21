@@ -7,7 +7,6 @@ export {
   ConvTitle,
   ConvRelativeTime,
   CONV_STATUS_DOT,
-  formatRelativeTime,
   type ConversationItemConv,
   type ConversationItemProps,
 } from "./components/conversation-item";

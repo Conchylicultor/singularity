@@ -1,7 +1,7 @@
 import { writeFileSync, mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
-import type { Check, CheckResult } from "./types";
+import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
 import { computeTreeHash } from "./tree-hash";
 import { openCheckCache } from "./cache";
 import { withScanTree } from "./scan-context";

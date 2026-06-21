@@ -3,7 +3,8 @@ import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { buildTaskPrompt } from "@plugins/tasks/plugins/tasks-core/core";
 import { useIsContainerTask } from "@plugins/tasks/plugins/container-tasks/web";
-import { getTask, type TaskListItem } from "@plugins/tasks/core";
+import { getTask } from "@plugins/tasks/core";
+import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 
 export function LaunchAgentAction({ row }: ItemActionProps<TaskListItem>) {
   const taskId = row.id;

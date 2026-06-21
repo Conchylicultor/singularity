@@ -4,7 +4,7 @@ import {
   CollapsibleChevron,
   useCollapsible,
 } from "@plugins/primitives/plugins/collapsible/web";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { turnSummariesResource } from "../../shared";

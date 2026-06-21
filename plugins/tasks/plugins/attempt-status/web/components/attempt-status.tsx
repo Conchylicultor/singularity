@@ -1,4 +1,4 @@
-import type { Attempt } from "@plugins/tasks/core";
+import type { Attempt } from "@plugins/tasks/plugins/tasks-core/core";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 
 /**

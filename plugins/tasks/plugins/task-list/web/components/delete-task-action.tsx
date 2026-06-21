@@ -2,7 +2,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdDelete } from "react-icons/md";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import type { TaskListItem } from "@plugins/tasks/core";
+import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { patchTask } from "@plugins/tasks/web";
 
 // "Delete" is a soft drop: it marks the task dropped (reversible via the

@@ -1,7 +1,7 @@
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { defineTabbedView } from "@plugins/primitives/plugins/tabbed-view/web";
 import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
-import { type TaskListItem } from "@plugins/tasks/core";
+import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import type { ComponentType } from "react";
 
 export interface TaskViewProps {

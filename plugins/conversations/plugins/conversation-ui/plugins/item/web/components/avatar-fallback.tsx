@@ -1,6 +1,6 @@
 import { Avatar } from "@plugins/primitives/plugins/avatar/web";
 import type { ConversationItemConv } from "./conversation-item";
-import type { ConversationStatus } from "@plugins/conversations/core";
+import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
 // Mirrors CONV_STATUS_DOT from conversation-item — kept in sync manually.
 // Defined here to avoid a runtime circular import (conversation-item ↔ slots).

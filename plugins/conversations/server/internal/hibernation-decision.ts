@@ -1,4 +1,4 @@
-import type { ConversationStatus } from "../../core";
+import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
 /**
  * What to do with a DB row whose live process is missing.

@@ -4,6 +4,30 @@ Implements the cross-plugin boundary rules (R1–R10) enforced by
 `./singularity check plugin-boundaries`. The rule grammar is summarized in the
 root `CLAUDE.md`.
 
+## Cross-plugin re-export (provenance-based)
+
+The `cross-plugin-reexport` rule is **name-level and transitive**, not a
+surface-syntax scan of the barrel. For every name a barrel actually *surfaces*,
+it resolves the name back to its origin plugin and flags any whose origin
+differs from the barrel's own plugin — there is **no umbrella/parent→descendant
+carve-out**. The resolver (`check/reexport-provenance.ts`) follows three shapes,
+at any depth, through the plugin's own internal files:
+
+- **Direct**: `export { X } from "@plugins/other/<runtime>"` in the barrel.
+- **Indirect chain**: `export { X } from "./internal"` where `./internal`
+  (re-)exports `X` from another plugin. Relative hops are followed only while
+  they stay inside the plugin; a relative path escaping into another plugin is
+  R8's job (`relative-cross-plugin`), so the resolver stops there.
+- **Import-then-reexport**: `import { X } from "@plugins/other/<runtime>"; export { X };`
+  (the bare `export { X }` carries no `from`), in the barrel or any surfaced
+  internal file.
+
+Because it is name-level, an internal file that re-exports a foreign symbol the
+barrel does **not** surface is correctly *not* flagged. To fix a real violation,
+import the foreign symbol from its source barrel at each consumer — never proxy
+it. `REEXPORT_EXCEPTIONS` (in `check/index.ts`) is a scoped, temporary allowlist
+for in-flight migrations only.
+
 ## Asset imports (R4 exemption)
 
 A cross-plugin **side-effect import of a non-JS asset** (a `.css` stylesheet,

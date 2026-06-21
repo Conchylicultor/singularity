@@ -1,6 +1,6 @@
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import type { ConversationStatus } from "@plugins/conversations/core";
+import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 
 const STATUS_CLASSES: Record<ConversationStatus, string> = {

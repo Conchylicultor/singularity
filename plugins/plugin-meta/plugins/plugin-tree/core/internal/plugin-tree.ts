@@ -6,16 +6,6 @@ import {
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { loadFacets, setFacet, type Facet } from "@plugins/plugin-meta/plugins/facets/core";
 import { asPluginId, type PluginId } from "@plugins/framework/plugins/plugin-id/core";
-export {
-  readIfExists,
-  stripTypes,
-  matchBracket,
-  parseBarrelExports,
-  walkFiles,
-  parseDefineGroup,
-  parseStringField,
-  parseBoolField,
-} from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   readIfExists,
   stripTypes,

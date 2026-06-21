@@ -2,17 +2,14 @@ import {
   cn,
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { ConversationKind } from "@plugins/tasks/plugins/tasks-core/core";
-import type { ConversationStatus } from "@plugins/conversations/core";
-import { formatRelativeTime, RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import type { ConversationKind, ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
+import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Item } from "../slots";
-
-export { formatRelativeTime };
 
 function ChipsSlot({ conv }: { conv: ConversationItemConv }) {
   const items = Item.Chips.useContributions();

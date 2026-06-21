@@ -2,7 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { conversationsResource, getConversation } from "@plugins/conversations/core";
+import { conversationsResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { getConversation } from "@plugins/conversations/core";
 import { useConversationById } from "@plugins/conversations/web";
 import { ConversationView } from "./components/conversation-view";
 

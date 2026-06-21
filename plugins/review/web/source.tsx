@@ -1,7 +1,7 @@
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import type { Push } from "@plugins/tasks/core";
+import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
 
 export type Source =
   | { kind: "working" }

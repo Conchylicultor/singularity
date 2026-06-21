@@ -2,7 +2,7 @@ import { and, asc, eq, inArray } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { _conversations, _attempts, listDependentIds, listBlockingDepIds } from "@plugins/tasks/plugins/tasks-core/server";
-import type { ConversationStatus } from "@plugins/conversations/core";
+import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { conversationsQueue } from "./tables";
 import {
   findTaskIdForConversation,

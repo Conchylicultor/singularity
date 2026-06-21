@@ -2,8 +2,6 @@ import type { ComponentType } from "react";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 
-export type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
-
 export const Conversation = {
   PromptBar: defineRenderSlot<{
     section: string;

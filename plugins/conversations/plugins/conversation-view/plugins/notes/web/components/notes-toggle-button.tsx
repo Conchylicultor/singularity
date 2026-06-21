@@ -1,6 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdStickyNote2 } from "react-icons/md";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConversationNote } from "../internal/use-conversation-note";
 
 export function NotesToggleButton({

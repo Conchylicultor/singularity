@@ -3,6 +3,8 @@ import { dirname, join, relative, resolve, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { standardPluginDirs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { runtimeNames } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
+import { stripComments, splitTopLevelStatements } from "./parse";
+import { collectForeignReexports } from "./reexport-provenance";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -127,7 +129,22 @@ const check: Check = {
           }
           continue;
         }
-        checkBarrelPurity(barrel, relative(root, barrel), violations, p.relPath, runtime);
+        const barrelRel = relative(root, barrel).split(sep).join("/");
+        checkBarrelPurity(barrel, barrelRel, violations);
+
+        // Name-level cross-plugin re-export detection (direct + indirect chains
+        // + import-then-reexport). Single source of truth for the
+        // `cross-plugin-reexport` rule; the old inline branch is removed.
+        for (const v of collectForeignReexports({
+          barrelRel,
+          ownPlugin: p.relPath,
+          runtime,
+          pluginSet,
+          readFile: (relPath) => safeRead(join(root, relPath)),
+          exceptions: REEXPORT_EXCEPTIONS,
+        })) {
+          violations.push(v);
+        }
       }
     }
 
@@ -553,43 +570,18 @@ function dirContainsTsFiles(dir: string): boolean {
  * top-level `await`, control flow) is a violation — it should live in a sibling file
  * (conventionally `shared/`).
  */
-function checkBarrelPurity(
-  absPath: string,
-  relPath: string,
-  violations: Violation[],
-  pluginPath: string,
-  runtime: string,
-) {
+function checkBarrelPurity(absPath: string, relPath: string, violations: Violation[]) {
   const raw = safeRead(absPath);
   if (!raw) return;
-  // stripComments (not stripCommentsAndStrings) so `from` specifiers survive
-  // for the cross-plugin re-export check below.
   const stripped = stripComments(raw);
   const stmts = splitTopLevelStatements(stripped);
   for (const { text, line } of stmts) {
     const trimmed = text.trim();
     if (!trimmed) continue;
     if (isAllowedBarrelStatement(trimmed)) {
-      if (trimmed.startsWith("export ")) {
-        const specifier = extractFromSpecifier(trimmed);
-        if (specifier?.startsWith("@plugins/")) {
-          const rest = specifier.slice("@plugins/".length);
-          const segments = rest.split("/");
-          const lastSeg = segments[segments.length - 1]!;
-          if (runtimeNames.has(lastSeg)) {
-            const specPluginPath = segments.slice(0, -1).join("/");
-            const exceptionKey = `${pluginPath}/${runtime} -> ${specifier}`;
-            if (specPluginPath !== pluginPath && !REEXPORT_EXCEPTIONS.has(exceptionKey)) {
-              violations.push({
-                rule: "cross-plugin-reexport",
-                file: `${relPath}:${line}`,
-                message: `barrel re-exports from another plugin: \`${specifier}\``,
-                fix: `import the source barrel directly — never proxy another plugin's symbols through your own barrel. Consumers should \`import { … } from "${specifier}"\` themselves.`,
-              });
-            }
-          }
-        }
-      }
+      // Cross-plugin re-export detection (direct, indirect, and
+      // import-then-reexport) lives in the name-level provenance resolver
+      // (`collectForeignReexports`), invoked separately in the R3 barrel loop.
       continue;
     }
     const head = trimmed.split(/\s+/).slice(0, 3).join(" ");
@@ -609,11 +601,6 @@ function checkBarrelPurity(
       fix: "move this code into a sibling file (conventionally `shared/`). Barrels may only contain imports, re-exports, type aliases, and a single `export default`.",
     });
   }
-}
-
-function extractFromSpecifier(stmt: string): string | null {
-  const m = stmt.match(/from\s+["']([^"']+)["']\s*$/);
-  return m ? m[1]! : null;
 }
 
 function isWildcardReexport(s: string): boolean {
@@ -641,153 +628,6 @@ function isAllowedBarrelStatement(s: string): boolean {
     return false;
   }
   return false;
-}
-
-// ============================================================================
-// Tokenizer: strip comments + string/template contents, preserve structure
-// ============================================================================
-
-/**
- * Strip only comments (line and block), preserving string-literal contents
- * so module specifiers in imports survive. Maintains line positions.
- */
-function stripComments(src: string): string {
-  let out = "";
-  let i = 0;
-  const n = src.length;
-  while (i < n) {
-    const c = src[i]!;
-    const next = src[i + 1];
-    if (c === "/" && next === "/") {
-      while (i < n && src[i] !== "\n") {
-        out += src[i] === "\n" ? "\n" : " ";
-        i++;
-      }
-      continue;
-    }
-    if (c === "/" && next === "*") {
-      out += "  ";
-      i += 2;
-      while (i < n && !(src[i] === "*" && src[i + 1] === "/")) {
-        out += src[i] === "\n" ? "\n" : " ";
-        i++;
-      }
-      if (i < n) {
-        out += "  ";
-        i += 2;
-      }
-      continue;
-    }
-    if (c === '"' || c === "'" || c === "`") {
-      // Copy the string literal verbatim, skipping escapes.
-      const quote = c;
-      out += c;
-      i++;
-      while (i < n && src[i] !== quote) {
-        if (src[i] === "\\" && i + 1 < n) {
-          out += src[i]! + src[i + 1]!;
-          i += 2;
-          continue;
-        }
-        // Template interpolation: we don't recurse inside ${...}, just copy.
-        out += src[i];
-        i++;
-      }
-      if (i < n) {
-        out += src[i];
-        i++;
-      }
-      continue;
-    }
-    out += c;
-    i++;
-  }
-  return out;
-}
-
-interface TopLevelStmt {
-  text: string;
-  line: number;
-}
-
-/**
- * Split `src` (already comment-/string-stripped) into top-level statements.
- * Statements are delimited by `;` or by newlines where the previous line is
- * statement-complete AND current depth is 0. For simplicity we treat each
- * semicolon-or-EOF segment at brace/paren/bracket depth 0 as one statement.
- */
-function splitTopLevelStatements(src: string): TopLevelStmt[] {
-  const out: TopLevelStmt[] = [];
-  let depth = 0;
-  let start = 0;
-  let line = 1;
-  let stmtLine = 1;
-  for (let i = 0; i < src.length; i++) {
-    const c = src[i]!;
-    if (c === "\n") line++;
-    if (c === "{" || c === "(" || c === "[") depth++;
-    else if (c === "}" || c === ")" || c === "]") depth = Math.max(0, depth - 1);
-    else if (c === ";" && depth === 0) {
-      const text = src.slice(start, i);
-      out.push({ text, line: stmtLine });
-      start = i + 1;
-      stmtLine = line;
-    }
-  }
-  if (start < src.length) {
-    const text = src.slice(start);
-    if (text.trim()) out.push({ text, line: stmtLine });
-  }
-  // Also split on top-level newlines where the preceding statement form is
-  // complete — specifically, `}` followed by a newline at depth 0 terminates
-  // things like `interface X { ... }` and `export default { ... }`. Our
-  // semicolon-based split already handles most real cases (TS code uses
-  // semicolons or follows ASI conventions where barrels do); the added
-  // robustness below catches brace-closed declarations lacking a trailing `;`.
-  return expandBraceTerminated(out);
-}
-
-function expandBraceTerminated(stmts: TopLevelStmt[]): TopLevelStmt[] {
-  const out: TopLevelStmt[] = [];
-  for (const s of stmts) {
-    const parts = splitByTopLevelBraceClose(s.text, s.line);
-    for (const p of parts) out.push(p);
-  }
-  return out;
-}
-
-function splitByTopLevelBraceClose(text: string, baseLine: number): TopLevelStmt[] {
-  const out: TopLevelStmt[] = [];
-  let depth = 0;
-  let start = 0;
-  let line = baseLine;
-  let stmtLine = baseLine;
-  for (let i = 0; i < text.length; i++) {
-    const c = text[i]!;
-    if (c === "\n") line++;
-    if (c === "{" || c === "(" || c === "[") depth++;
-    else if (c === "}" || c === ")" || c === "]") {
-      depth = Math.max(0, depth - 1);
-      if (depth === 0 && c === "}") {
-        // Look ahead: if next non-whitespace char ends the segment with a newline
-        // before any further syntactically meaningful token, split here.
-        let j = i + 1;
-        while (j < text.length && text[j] !== "\n" && /\s/.test(text[j]!)) j++;
-        if (j >= text.length || text[j] === "\n") {
-          out.push({ text: text.slice(start, i + 1), line: stmtLine });
-          start = i + 1;
-          stmtLine = line + (text[j] === "\n" ? 1 : 0);
-          i = j;
-          if (text[j] === "\n") line++;
-        }
-      }
-    }
-  }
-  if (start < text.length) {
-    const tail = text.slice(start);
-    if (tail.trim()) out.push({ text: tail, line: stmtLine });
-  }
-  return out;
 }
 
 // ============================================================================

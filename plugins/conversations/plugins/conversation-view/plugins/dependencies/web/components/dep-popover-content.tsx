@@ -4,8 +4,8 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import type { TaskListItem } from "@plugins/tasks/core";
+import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
+import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 
 export function DepPopoverContent({
   label,

@@ -3,8 +3,7 @@ import { useResource, ResourceView } from "@plugins/primitives/plugins/live-stat
 import { useSubtreeExpandAll } from "@plugins/primitives/plugins/tree/web";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
-import { type TaskListItem } from "@plugins/tasks/core";
-import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { patchTask } from "@plugins/tasks/web";
 
 function ExpandCollapseAllActionInner({

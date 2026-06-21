@@ -1,12 +1,12 @@
 import { Button, ButtonGroup, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useMemo, useCallback } from "react";
 import { MdLink } from "react-icons/md";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useActiveConversations } from "@plugins/conversations/web";
 import { useTask } from "@plugins/tasks/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { addTaskDependency, removeTaskDependency, type TaskListItem } from "@plugins/tasks/core";
-import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { addTaskDependency, removeTaskDependency } from "@plugins/tasks/core";
+import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";

@@ -5,7 +5,6 @@ import { conversationPane } from "./panes";
 import { ConversationTitle } from "./components/conversation-title";
 
 export { Conversation } from "./slots";
-export type { ConversationRecord } from "./slots";
 export { conversationPane } from "./panes";
 export { ConversationView } from "./components/conversation-view";
 export { draftToPlainText, isDraftEmpty } from "./prompt-draft-utils";

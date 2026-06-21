@@ -114,8 +114,6 @@ export async function collectAllPlugins(root: string): Promise<PluginNode[]> {
   return Array.from(tree.byDir.values());
 }
 
-export { type PluginNode };
-
 function renderTreeBody(roots: PluginNode[], root: string, mode: RenderMode, facets: Facet[]): string {
   const lines: string[] = [];
   for (let i = 0; i < roots.length; i++) {
@@ -254,5 +252,4 @@ function renderDetailsDocFromTree(tree: PluginTree, root: string): string {
   return `${DETAILS_HEADER}${BEGIN}\n\n${body}\n${END}\n`;
 }
 
-export { renderPluginClaudeMd, buildPluginTree };
-export type { PluginTree };
+export { renderPluginClaudeMd };

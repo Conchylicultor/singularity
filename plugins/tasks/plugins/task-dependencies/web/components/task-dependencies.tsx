@@ -11,12 +11,11 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
-  type TaskListItem,
   addTaskDependency,
   removeTaskDependency,
   type TaskChainTarget,
 } from "@plugins/tasks/core";
-import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";

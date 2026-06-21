@@ -1,7 +1,7 @@
 // In-plugin imports go straight to the leaf so the frontend bundle doesn't
 // pull `server/api`'s runtime surface. Cross-plugin consumers go through
 // `@plugins/conversations/plugins/agents/server/api`.
-import type { ConversationStatus } from "@plugins/conversations/core";
+import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   keyedResourceDescriptor,
   resourceDescriptor,

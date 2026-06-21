@@ -1,12 +1,12 @@
 import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useResource, type ResourceResult } from "@plugins/primitives/plugins/live-state/web";
-import { ConversationSchema, type ConversationListPayload } from "@plugins/tasks/plugins/tasks-core/core";
+import { ConversationSchema, conversationsResource, type ConversationListPayload } from "@plugins/tasks/plugins/tasks-core/core";
 import { cursorPageSchema } from "@plugins/primitives/plugins/cursor-pagination/core";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { isActiveStatus } from "../core";
 import { getConversation } from "../core/endpoints";
-import { conversationsResource, type ConversationEntry } from "../core/resources";
+import { type ConversationEntry } from "../core/resources";
 
 const EMPTY_CONVERSATIONS: ConversationEntry[] = [];
 

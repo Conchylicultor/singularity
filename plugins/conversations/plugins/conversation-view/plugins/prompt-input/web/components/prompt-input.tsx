@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import {
-  type ConversationRecord,
   isDraftEmpty,
   usePromptInsert,
 } from "@plugins/conversations/plugins/conversation-view/web";

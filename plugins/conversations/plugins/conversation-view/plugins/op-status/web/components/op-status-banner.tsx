@@ -4,8 +4,8 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { conversationsResource, type ConversationListPayload } from "@plugins/conversations/core";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { conversationsResource, type ConversationListPayload } from "@plugins/tasks/plugins/tasks-core/core";
+import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { worktreeOpsResource, type WorktreeOp } from "../../shared";
 
 // The op markers are keyed on the worktree directory basename, exactly how the

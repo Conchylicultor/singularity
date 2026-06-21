@@ -1,7 +1,7 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdCallSplit } from "react-icons/md";
-import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";

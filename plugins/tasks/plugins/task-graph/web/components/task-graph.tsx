@@ -9,8 +9,8 @@ import {
   type GraphCanvasEdge,
   type GraphCanvasGroup,
 } from "@plugins/primitives/plugins/graph-canvas/web";
-import { type TaskListItem, addTaskDependency } from "@plugins/tasks/core";
-import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { addTaskDependency } from "@plugins/tasks/core";
+import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { patchTask } from "@plugins/tasks/web";
 import { taskDetailPane, useTaskNavigate } from "@plugins/tasks/plugins/task-detail/web";
