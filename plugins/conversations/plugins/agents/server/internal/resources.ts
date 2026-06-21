@@ -4,6 +4,7 @@ import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import {
   _attempts,
   _conversations,
+  conversationCascadeSignatures,
   conversationsActiveResource,
   listConversationsForDisplay,
 } from "@plugins/tasks/plugins/tasks-core/server";
@@ -37,6 +38,12 @@ export const agentLaunchesResource = defineResource(agentLaunchesDescriptor, {
       // `conversations` table, so the L4 feed delivers every conversation change
       // here scoped to its id (the affectedMap fires on the delivered set).
       resource: conversationsActiveResource,
+      // Relevance gate: skip the cascade when a conversation write touched only
+      // transient fields (waitingFor/updatedAt/lastViewedAt) — agent-launches
+      // displays just the latest conversation's title/status, so those writes
+      // produced empty deltas on every poller tick. Real status/title changes
+      // still flow through (they're in the signature).
+      signature: conversationCascadeSignatures,
       // A changed conversation affects every launch sharing its task. Map the
       // changed conversation ids → the launch ids for their tasks
       // (conversation → attempt → task → launch).

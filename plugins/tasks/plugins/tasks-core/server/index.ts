@@ -88,6 +88,7 @@ export {
   listConversationsForDisplay,
   listActiveConversations,
   listActiveSystemConversations,
+  conversationCascadeSignatures,
   listGoneConversations,
   getConversation,
   getConversationRuntime,

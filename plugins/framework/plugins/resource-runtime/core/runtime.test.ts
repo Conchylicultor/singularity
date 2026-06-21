@@ -486,6 +486,130 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     expect(postSubLoads).toEqual([true]);
   });
 
+  test("a scoped cascade whose upstream signature is unchanged does not recompute the downstream", async () => {
+    // Relevance gate: down derives only a COARSE projection of up's rows. When up
+    // changes but that projection is unchanged (signature equal), the cascade is
+    // skipped — no downstream recompute, no empty delta. A later change that DOES
+    // move the signature propagates again. Mirrors a conversation
+    // waitingFor/updatedAt write vs the attempts / agent-launches aggregates.
+    const h = feedHarness({ up: ["up_t"], down: ["down_t", "up_t"] });
+    const postSubLoads: boolean[] = [];
+    let subscribed = false;
+    let sig = "v1";
+    const up = h.runtime.defineResource({
+      key: "up",
+      mode: "push",
+      identityTable: "up_t",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    h.runtime.defineResource({
+      key: "down",
+      mode: "keyed",
+      identityTable: "down_t",
+      schema: z.array(z.object({ id: z.string(), n: z.number() })),
+      keyOf: (r: { id: string }) => r.id,
+      dependsOn: [
+        { resource: up, signature: () => new Map([["u1", sig]]), affectedMap: () => ["d1"] },
+      ],
+      loader: (_p, ctx) => {
+        if (subscribed) postSubLoads.push(ctx !== undefined);
+        return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }];
+      },
+    });
+    await h.subscribe("down");
+    subscribed = true;
+
+    const change = (): void =>
+      h.runtime.applyDbChange({
+        table: "up_t",
+        op: "U",
+        ids: ["u1"],
+        origin: "up_t",
+        identityBase: "up_t",
+      });
+
+    // 1st change: signature "v1" is new → propagates → down recomputes (scoped).
+    change();
+    await tick();
+    expect(postSubLoads).toEqual([true]);
+
+    // 2nd change: signature still "v1" → unchanged → cascade skipped, no recompute.
+    change();
+    await tick();
+    expect(postSubLoads).toEqual([true]);
+    expect(h.pushesFor("down")).toHaveLength(1);
+
+    // 3rd change: signature moves to "v2" → propagates again.
+    sig = "v2";
+    change();
+    await tick();
+    expect(postSubLoads).toEqual([true, true]);
+  });
+
+  test("a FULL upstream cascade clears remembered signatures so the next scoped change re-propagates", async () => {
+    const h = feedHarness({ up: ["up_t"], down: ["down_t", "up_t"] });
+    const postSubLoads: boolean[] = [];
+    let subscribed = false;
+    const up = h.runtime.defineResource({
+      key: "up",
+      mode: "push",
+      identityTable: "up_t",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    h.runtime.defineResource({
+      key: "down",
+      mode: "keyed",
+      identityTable: "down_t",
+      schema: z.array(z.object({ id: z.string(), n: z.number() })),
+      keyOf: (r: { id: string }) => r.id,
+      dependsOn: [
+        { resource: up, signature: () => new Map([["u1", "stable"]]), affectedMap: () => ["d1"] },
+      ],
+      loader: (_p, ctx) => {
+        if (subscribed) postSubLoads.push(ctx !== undefined);
+        return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }];
+      },
+    });
+    await h.subscribe("down");
+    subscribed = true;
+
+    const scoped = (): void =>
+      h.runtime.applyDbChange({
+        table: "up_t",
+        op: "U",
+        ids: ["u1"],
+        origin: "up_t",
+        identityBase: "up_t",
+      });
+
+    scoped();
+    await tick();
+    expect(postSubLoads).toHaveLength(1); // first scoped change propagates (new sig)
+
+    scoped();
+    await tick();
+    expect(postSubLoads).toHaveLength(1); // unchanged sig → skipped
+
+    // A FULL upstream change (INSERT → ids null) clears the edge's signature memo.
+    h.runtime.applyDbChange({
+      table: "up_t",
+      op: "I",
+      ids: null,
+      origin: "up_t",
+      identityBase: "up_t",
+    });
+    await tick();
+    const afterFull = postSubLoads.length;
+
+    // The next scoped change must re-propagate even though the signature string is
+    // unchanged — the memo was cleared by the FULL, so it can't wrongly skip.
+    scoped();
+    await tick();
+    expect(postSubLoads.length).toBe(afterFull + 1);
+  });
+
   test("DELETE degrades to FULL (a vanished row can't scope)", async () => {
     const h = feedHarness({ rows: ["row_table"] });
     h.runtime.defineResource({

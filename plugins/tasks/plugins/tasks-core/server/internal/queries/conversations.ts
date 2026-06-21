@@ -156,6 +156,41 @@ export async function listConversationSummariesByAttempt(
     .orderBy(asc(conversations.createdAt));
 }
 
+// Transient conversation columns the aggregate resources (attempts / tasks /
+// agent-launches) never read. The poller rewrites these at up to ~1/s on active
+// conversations: `waitingFor` (interactive-prompt hint), `updatedAt` (bumped on
+// every write), and `lastViewedAt` (selection / turn-sent). The aggregates
+// derive only coarse facts — liveness (status), title, kind, ownership, ended/
+// created timestamps — so a write touching ONLY these columns would otherwise
+// cascade into attempts → tasks → agent-launches and recompute-then-diff-to-
+// empty on every tick. See the `signature` cascade gate below.
+const TRANSIENT_CONVERSATION_FIELDS = ["waitingFor", "updatedAt", "lastViewedAt"] as const;
+
+// Cascade relevance signature for a conversation change (see
+// DependsOnEntry.signature). Returns id → hash of the conversation row MINUS the
+// transient fields above, so the conv → attempts and conv → agent-launches edges
+// skip a downstream recompute when only a transient field moved. We hash the
+// whole row minus a small deny-list (rather than an allow-list of consumed
+// columns) so a newly-consumed conversation column is covered automatically —
+// the only failure mode of a missed strip is re-churn (which the
+// live-state-churn detector re-flags), never stale aggregate data.
+export async function conversationCascadeSignatures(
+  convIds: ReadonlySet<string>,
+): Promise<Map<string, string>> {
+  if (convIds.size === 0) return new Map();
+  const rows = await db
+    .select()
+    .from(_conversations)
+    .where(inArray(_conversations.id, [...convIds]));
+  const sigs = new Map<string, string>();
+  for (const row of rows) {
+    const relevant: Record<string, unknown> = { ...row };
+    for (const f of TRANSIENT_CONVERSATION_FIELDS) delete relevant[f];
+    sigs.set(row.id, JSON.stringify(relevant));
+  }
+  return sigs;
+}
+
 // Idle-kill candidates: waiting, not already hibernated, resumable (has a
 // saved Claude session), and idle since `before` (lastViewedAt, or createdAt
 // when never viewed). Used by the conversations.hibernate-idle job.

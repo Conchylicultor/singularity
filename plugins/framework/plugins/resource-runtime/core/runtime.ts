@@ -89,6 +89,29 @@ export interface DependsOnEntry<P extends ResourceParams = ResourceParams> {
     // biome-ignore lint/suspicious/noExplicitAny: upstream params type is erased — see above.
     upstreamParams: any,
   ) => Promise<string[]> | string[];
+  /**
+   * Relevance gate for a SCOPED cascade (Layer 2). Given the changed upstream
+   * row ids, return id→signature capturing ONLY the upstream fields THIS
+   * downstream actually derives from. The runtime remembers the last signature
+   * per id and forwards an id to `affectedMap` only when its signature changed
+   * (or it is new / unknown). Transient upstream fields the downstream ignores —
+   * e.g. a conversation's `waitingFor`/`updatedAt`, which the tasks/attempts
+   * aggregates never read — thus stop triggering downstream no-op recomputes at
+   * the source, instead of recomputing-then-diffing-to-empty on every write.
+   *
+   * Like `affectedMap`, it MUST self-query the DB (never read the upstream
+   * value, so it does not force the upstream loader). Consulted ONLY on scoped
+   * cascades; a FULL cascade (insert/delete/bulk/reconnect) bypasses it AND
+   * clears the remembered signatures, so the next scoped change always
+   * re-propagates rather than comparing against a pre-FULL signature. An id
+   * absent from the returned map is treated as changed (fail-safe). Omit for the
+   * default: cascade on every delivered id.
+   */
+  signature?: (
+    upstreamAffected: ReadonlySet<string>,
+    // biome-ignore lint/suspicious/noExplicitAny: upstream params type is erased — see above.
+    upstreamParams: any,
+  ) => Promise<Map<string, string>> | Map<string, string>;
 }
 
 export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams> {
@@ -326,6 +349,19 @@ interface DownstreamEdge {
     upstreamAffected: ReadonlySet<string>,
     upstreamParams: ResourceParams,
   ) => Promise<string[]> | string[];
+  /** Relevance gate (see DependsOnEntry.signature). Undefined = cascade every id. */
+  signature?: (
+    upstreamAffected: ReadonlySet<string>,
+    upstreamParams: ResourceParams,
+  ) => Promise<Map<string, string>> | Map<string, string>;
+  /**
+   * Per-upstream-id memory of the last signature forwarded through this edge,
+   * owned by the runtime. Compared against `signature()` to drop scoped cascades
+   * whose downstream-relevant projection is unchanged. Cleared on a FULL cascade
+   * (the new values weren't observed, so a stale entry could wrongly skip the
+   * next scoped change back to a pre-FULL signature).
+   */
+  lastSignatures: Map<string, string>;
 }
 
 // A coalesced pending notify for one params-tuple. `affected === null` means
@@ -827,6 +863,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
                 upstreamParams: ResourceParams,
               ) => Promise<string[]> | string[])
             | undefined,
+          signature: dep.signature as
+            | ((
+                upstreamAffected: ReadonlySet<string>,
+                upstreamParams: ResourceParams,
+              ) => Promise<Map<string, string>> | Map<string, string>)
+            | undefined,
+          lastSignatures: new Map(),
         },
       });
     }
@@ -1350,12 +1393,44 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         // silently narrows a membership change.
         let downAffected: Set<string> | null;
         if (affected === null) {
+          // FULL cascade: propagate everything. Drop remembered signatures — the
+          // new upstream values weren't observed here, so a stale entry could
+          // wrongly skip the next scoped change back to a pre-FULL signature.
+          edge.lastSignatures.clear();
           downAffected = null;
         } else if (!edge.affectedMap) {
           downAffected = null;
         } else {
+          // Relevance gate (Layer 2): keep only the upstream ids whose
+          // downstream-relevant signature changed, so a scoped change that
+          // touched only fields this downstream ignores (e.g. a conversation's
+          // waitingFor/updatedAt vs the tasks/attempts aggregates) stops here
+          // instead of forcing a recompute that diffs to empty. No signature on
+          // the edge ⇒ every delivered id passes (prior behavior).
+          let relevant: ReadonlySet<string> = affected;
+          if (edge.signature) {
+            try {
+              const sigs = await edge.signature(affected, params);
+              const kept = new Set<string>();
+              for (const id of affected) {
+                const sig = sigs.get(id);
+                if (sig === undefined || sig !== edge.lastSignatures.get(id)) {
+                  kept.add(id);
+                  if (sig !== undefined) edge.lastSignatures.set(id, sig);
+                }
+              }
+              relevant = kept;
+            } catch (err) {
+              reportLoaderError(
+                `signature failed (${entry.key} → ${edge.downstreamKey})`,
+                err,
+              );
+              relevant = affected; // fail-safe: cascade everything
+            }
+          }
+          if (relevant.size === 0) continue; // nothing relevant changed → skip edge
           try {
-            downAffected = new Set(await edge.affectedMap(affected, params));
+            downAffected = new Set(await edge.affectedMap(relevant, params));
           } catch (err) {
             reportLoaderError(
               `affectedMap failed (${entry.key} → ${edge.downstreamKey})`,

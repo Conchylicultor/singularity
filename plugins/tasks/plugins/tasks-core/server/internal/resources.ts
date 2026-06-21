@@ -24,6 +24,7 @@ import type {
   Conversation,
 } from "../../core";
 import {
+  conversationCascadeSignatures,
   countGoneConversations,
   listActiveConversations,
   listActiveSystemConversations,
@@ -99,6 +100,12 @@ export const attemptsResource = defineResource(attemptsDescriptor, {
       // edge fires on that delivered affected set — not on whether the payload
       // changed.
       resource: conversationsActiveResource,
+      // Relevance gate: a conversation write that touched ONLY transient fields
+      // (waitingFor/updatedAt/lastViewedAt — none of which an attempt derives)
+      // never reaches this edge's affectedMap, so it can't cascade a no-op
+      // recompute through attempts → tasks. Genuine status/title/liveness
+      // changes still flow through (they're in the signature).
+      signature: conversationCascadeSignatures,
       // A changed conversation affects exactly its owning attempt. Map the
       // changed conversation ids → their attempt ids via the conversations_v
       // view (carries attemptId; index conversations_attempt_id_status_idx).
