@@ -2,9 +2,10 @@ import { Client } from "pg";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { applyDbChange } from "@plugins/framework/plugins/server-core/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";
 import { parseLiveStatePayload, type DbChange } from "./parse-payload";
 import { getCoveredTables } from "./triggers";
-import { dependentViews, viewIdentityBase } from "./view-deps";
+import { dependentViews } from "./view-deps";
 
 const log = Log.channel("change-feed", { persist: true });
 
@@ -102,7 +103,7 @@ async function connect(): Promise<void> {
 function routeChange(change: DbChange): void {
   applyDbChange({ ...change, origin: change.table, identityBase: change.table });
   for (const view of dependentViews(change.table)) {
-    const identityBase = viewIdentityBase(view);
+    const identityBase = relationIdentityBase(view);
     const forwardScoped = identityBase === change.table;
     applyDbChange({
       table: view,

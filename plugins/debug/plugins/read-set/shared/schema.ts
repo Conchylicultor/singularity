@@ -6,9 +6,13 @@ import { z } from "zod";
 // other view — declaring a second contract over the same route is the
 // established pattern, and zod strips unknown keys so the two coexist.
 //
-// We model only what this pane reads. `readSet` and `loaderStats` are gated
-// defensively (`.default([])` / `.optional()`) so the response still parses
-// before the sibling server change that adds `readSet` lands.
+// We model only what this pane reads. `identityTable`, `recompute`, and
+// `loaderStats` are gated defensively (`.optional()`) so the response still
+// parses before the sibling server change that adds them lands. `coveredOrigins`
+// is required (like `readSet`) — the server always emits it, and `.optional()`
+// keeps input and output types identical, whereas a `.default([])` would make
+// the field optional in the endpoint's (input-typed) response and break the
+// consuming `ResourceReadSet` (output-typed) shape.
 
 export const loaderStatsSchema = z.object({
   count: z.number(),
@@ -40,6 +44,18 @@ export const resourceReadSetSchema = z.object({
   downstream: z.array(z.string()),
   /** Captured table names this resource's loader read since boot/reset. */
   readSet: z.array(z.string()),
+  /**
+   * Read-set resolved to base-table space (views → their identity base), for
+   * like-for-like comparison with coveredOrigins. Required (server always emits
+   * it); a `.default([])` would break the input/output type parity.
+   */
+  readSetBases: z.array(z.string()),
+  /** Declared identity table (intent to be scoped); absent → no scoped intent. */
+  identityTable: z.string().optional(),
+  /** Explicit FULL-recompute opt-out (a declared choice, not a degradation). */
+  recompute: z.object({ kind: z.literal("full"), reason: z.string() }).optional(),
+  /** Authoritative scoped-vs-FULL routing set: tables this resource absorbs scoped. */
+  coveredOrigins: z.array(z.string()),
   /** Loader call frequency over the profiling window (server-only). */
   loaderStats: loaderStatsSchema.optional(),
   /** Notify provenance counters (hand-called vs DB-change-feed-derived). */

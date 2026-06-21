@@ -1,5 +1,9 @@
-import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import {
+  setRelationResolver,
+  type ServerPluginDefinition,
+} from "@plugins/framework/plugins/server-core/core";
 import { db } from "@plugins/database/server";
+import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";
 import { rebuildTriggers } from "./internal/triggers";
 import { startListener, stopListener } from "./internal/listener";
 import { buildViewDeps } from "./internal/view-deps";
@@ -26,6 +30,13 @@ export default {
   // complete and queryable.
   async onReady() {
     await buildViewDeps(db);
+    // Inject the relation→identity-base resolver into server-core's live-state
+    // runtime, so the read-set `_debug` ceiling resolves view-backed read-sets
+    // into base-table space (matching `coveredOrigins`). change-feed is the wirer
+    // because it already bridges the DB and live-state layers (importing both
+    // barrels); derived-views stays a pure provider of `relationIdentityBase`,
+    // and server-core never statically imports a feature plugin (no cycle).
+    setRelationResolver(relationIdentityBase);
     startListener();
   },
   async onShutdown() {

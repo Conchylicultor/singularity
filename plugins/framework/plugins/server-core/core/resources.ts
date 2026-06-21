@@ -93,6 +93,22 @@ export const Resource = {
   Declare: declareResource,
 };
 
+// Maps a captured read-set relation to its identity base table for the `_debug`
+// ceiling (views → their base, so it compares like-for-like with the base-table
+// `coveredOrigins`). The resolver lives in derived-views (which owns the View
+// registry), but server-core/core must NOT statically import a feature plugin —
+// that would cycle (derived-views/server already imports server-core/core). So it
+// is injected at boot via `setRelationResolver`: change-feed (the DB↔live-state
+// bridge that already imports both barrels) wires in `relationIdentityBase` once
+// the View registry is built. The holder defaults to identity, so the ceiling is
+// correct (raw == base) before the setter runs and on central (no views); the
+// closure passed to the runtime reads the CURRENT holder at call time, so it is
+// harmless that the runtime is constructed before the setter is called.
+let relationResolver: (relation: string) => string = (r) => r;
+export function setRelationResolver(fn: (relation: string) => string): void {
+  relationResolver = fn;
+}
+
 function errorReport(context: string, err: unknown): ServerErrorReport {
   const e = err instanceof Error ? err : new Error(String(err));
   return {
@@ -140,6 +156,11 @@ const runtime = createResourceRuntime({
   // loader actually read, captured at the DB pool chokepoint. central: omitted
   // (field absent). Surfaces gaps/over-broad edges vs the hand-drawn dependsOn.
   readSet: (key) => getReadSetIndex()[key] ?? [],
+  // Resolve a read-set relation to its identity base table, so the _debug ceiling
+  // compares the base-resolved read-set against the base-table `coveredOrigins`.
+  // The closure reads the boot-injected holder at call time (set by change-feed
+  // to `relationIdentityBase`); identity until then and on central.
+  resolveRelation: (r) => relationResolver(r),
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
   debugOwners: () =>
     Resource.Declare.getContributions().map((c) => ({

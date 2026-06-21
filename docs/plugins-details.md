@@ -1806,12 +1806,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `backup/sources/databases`, `database/change-feed`, `database/fork`, `database/query`, `debug/profiling/push`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `infra/jobs`, `infra/launcher`
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
       - Server:
-        - Uses: `database.db`, `database/admin.connectionString`, `database/derived-views.View`, `primitives/log-channels.Log`
+        - Uses: `database.db`, `database/admin.connectionString`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
         - Exports: Types: `DbChange`; Values: `getCoveredTables`, `parseLiveStatePayload`, `rebuildTriggers`
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
       - Server:
         - Uses: `primitives/log-channels.Log`
-        - Exports: Values: `rebuildDerivedViews`, `View`
+        - Exports: Values: `rebuildDerivedViews`, `relationIdentityBase`, `View`
       - Cross-plugin:
         - Imported by: `conversations/agents`, `database`, `database/change-feed`, `database/migrations`, `tasks/tasks-core`
       - Core:
@@ -2580,7 +2580,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`server-core`**
       - Core:
         - Uses: `framework/resource-runtime.createResourceRuntime`, `framework/tooling/collected-dir.defineCollectedDir`, `infra/runtime-profiler.getReadSetIndex`, `infra/runtime-profiler.getRuntimeProfile`, `infra/runtime-profiler.recordEntrySpan`, `infra/runtime-profiler.recordSpan`
-        - Exports: Types: `DependsOnEntry`, `ExternalResource`, `HttpHandler`, `LoadedServerPlugin`, `MemoryCheckpoint`, `PhaseId`, `RecomputeIntent`, `Registration`, `ResourceContract`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `ServerResourceOptions`, `Span`, `WsData`, `WsHandler`; Values: `applyDbChange`, `collectContributions`, `defineExternalResource`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `loadResourceByKey`, `markServerReady`, `notificationsWsHandler`, `notifyStatsFor`, `physFootprintBytes`, `profilerStart`, `recordMemoryCheckpoint`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `withNotifyBatch`
+        - Exports: Types: `DependsOnEntry`, `ExternalResource`, `HttpHandler`, `LoadedServerPlugin`, `MemoryCheckpoint`, `PhaseId`, `RecomputeIntent`, `Registration`, `ResourceContract`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `ServerResourceOptions`, `Span`, `WsData`, `WsHandler`; Values: `applyDbChange`, `collectContributions`, `defineExternalResource`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `loadResourceByKey`, `markServerReady`, `notificationsWsHandler`, `notifyStatsFor`, `physFootprintBytes`, `profilerStart`, `recordMemoryCheckpoint`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `setRelationResolver`, `withNotifyBatch`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
         - Exports: Types: `Check`, `CheckResult`

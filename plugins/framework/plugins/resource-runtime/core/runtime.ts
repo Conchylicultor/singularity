@@ -481,6 +481,14 @@ export interface ResourceRuntimeOptions {
    * visible. server: from getReadSetIndex(); central: omit (field absent).
    */
   readSet?: (key: string) => string[];
+  /**
+   * Map a captured read-set relation to its identity base table, so the debug
+   * ceiling compares like-for-like with `coveredOrigins` (stated in base-table
+   * space): a view-backed loader records the VIEW (`conversations_v`), but
+   * coveredOrigins names the base (`conversations`). server: relationIdentityBase
+   * (resolves declared identity views, else identity); central: omitted (identity).
+   */
+  resolveRelation?: (relation: string) => string;
 }
 
 export interface ResourceRuntime {
@@ -1546,6 +1554,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       dependsOn: string[];
       downstream: string[];
       readSet: string[];
+      readSetBases: string[];
+      identityTable?: string;
+      recompute?: { kind: "full"; reason: string };
+      coveredOrigins: string[];
       loaderStats?: { count: number; ratePerMin: number; maxMs: number };
       notifyStats: { hand: number; feed: number };
       externalSource: boolean;
@@ -1557,6 +1569,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         if (inner) subscribers += inner.size;
       }
       const owner = ownerByKey.get(entry.key);
+      // The raw captured read-set (the VIEW/table names loaders actually read)
+      // AND its base-resolved projection (views → their identity base), so the
+      // ceiling can compare like-for-like with `coveredOrigins` (base-table
+      // space) while the captured index keeps the raw names. `resolveRelation` is
+      // identity on central (no derived views there).
+      const rawReadSet = opts.readSet?.(entry.key) ?? [];
+      const resolve = opts.resolveRelation ?? ((r) => r);
+      const readSetBases = [...new Set(rawReadSet.map(resolve))].sort();
       out.push({
         key: entry.key,
         mode: entry.mode,
@@ -1571,7 +1591,22 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         // Automatic table read-set captured at the DB chokepoint (server-only
         // hook; absent on central). Diffed against dependsOn in the debug pane to
         // surface latent stale-UI gaps and over-broad cascade edges.
-        readSet: opts.readSet?.(entry.key) ?? [],
+        readSet: rawReadSet,
+        // The read-set resolved into base-table space (views → identity base) for
+        // the ceiling's like-for-like comparison against `coveredOrigins`.
+        readSetBases,
+        // Declared scope policy: the resource's own `identityTable` (intent to be
+        // scoped) and its explicit `recompute: full` opt-out (a deliberate FULL,
+        // not a degradation). The read-set debug pane uses both to tell a silent
+        // FULL apart from a declared one.
+        identityTable: entry.identityTable,
+        recompute: entry.recompute,
+        // The authoritative scoped-vs-FULL routing set: the base tables whose
+        // change this resource can absorb through a single scoped path — its own
+        // `identityTable` ∪ the transitive identityTables reachable via its
+        // `affectedMap`/`dependsOn` edges. A read-set table OUTSIDE this set
+        // silently FULL-recomputes the resource (`coveredOriginsFor`, ~564).
+        coveredOrigins: [...coveredOriginsFor(entry.key)].sort(),
         // Loader frequency over the profiling window (server-only hook; absent on
         // central). Surfaces a cheap-but-hot loader the slow-single-call view misses.
         loaderStats: opts.loaderStats?.(entry.key),

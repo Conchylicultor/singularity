@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export { rebuildDerivedViews } from "./internal/rebuild";
 export { View } from "./internal/contribution";
+export { relationIdentityBase } from "./internal/relation-identity";
 
 export default {
   description:

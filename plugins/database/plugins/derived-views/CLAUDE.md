@@ -68,7 +68,7 @@ Materialized views hold data and are stateful — they stay in the migration lay
 - Description: Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
 - Server:
   - Uses: `primitives/log-channels.Log`
-  - Exports: Values: `rebuildDerivedViews`, `View`
+  - Exports: Values: `rebuildDerivedViews`, `relationIdentityBase`, `View`
 - Cross-plugin:
   - Imported by: `conversations/agents`, `database`, `database/change-feed`, `database/migrations`, `tasks/tasks-core`
 - Core:

@@ -19,6 +19,7 @@ export {
   loadResourceByKey,
   notificationsWsHandler,
   notifyStatsFor,
+  setRelationResolver,
   withNotifyBatch,
 } from "./resources";
 export type {
