@@ -1,7 +1,5 @@
-import {
-  cn,
-  SingleLineProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import {
   useHoverReveal,
   hoverRevealClass,
@@ -75,10 +73,10 @@ export function Row({
     [key: string]: unknown;
   };
   return (
-    // Line container: single-line by contract (the `region-line` root already
-    // carries the structural `whitespace-nowrap`; this adds the leaf ellipsis layer).
-    <SingleLineProvider value={true}>
-    <As
+    // The single-line contract (region-line + SingleLineProvider) comes from
+    // <Line>; Row layers its interactive row chrome (width, padding, hover) on top.
+    <Line
+      as={As}
       ref={ref}
       type={isButton ? "button" : undefined}
       disabled={isButton ? disabled : undefined}
@@ -100,7 +98,7 @@ export function Row({
         onBlur?.(e);
       }}
       className={cn(
-        "group flex w-full region-line rounded-md p-row text-left transition-colors [&_svg:not([class*='size-'])]:icon-auto",
+        "group w-full rounded-md p-row text-left transition-colors [&_svg:not([class*='size-'])]:icon-auto",
         "disabled:pointer-events-none disabled:opacity-50",
         size === "sm" && "gap-xs text-caption",
         size === "md" && "gap-sm text-body",
@@ -125,7 +123,6 @@ export function Row({
           {actions}
         </span>
       )}
-    </As>
-    </SingleLineProvider>
+    </Line>
   );
 }

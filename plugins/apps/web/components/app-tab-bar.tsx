@@ -14,6 +14,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -227,11 +228,12 @@ const ChipShell = forwardRef<
   ref,
 ) {
   return (
-    <div
+    <Line
+      as="div"
       ref={ref}
       data-app-tab={appId}
       className={cn(
-        "group flex max-w-40 min-w-0 items-center gap-xs rounded-md py-2xs pl-xs pr-2xs text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        "group max-w-40 min-w-0 gap-xs rounded-md py-2xs pl-xs pr-2xs text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         active && "bg-sidebar-accent text-sidebar-accent-foreground",
       )}
       {...rest}
@@ -260,7 +262,7 @@ const ChipShell = forwardRef<
           <MdClose className="size-3.5" />
         </button>
       )}
-    </div>
+    </Line>
   );
 });
 

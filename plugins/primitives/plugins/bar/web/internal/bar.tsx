@@ -1,9 +1,9 @@
 import {
   cn,
-  SingleLineProvider,
   ControlSizeProvider,
   type ControlSize,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import type { ElementType, HTMLAttributes } from "react";
 
 export type BarTier = "chrome" | "pane";
@@ -80,13 +80,13 @@ export function Bar({
   const As = as ?? TIER_ELEMENT[tier];
   const safe = endSafeArea ?? tier === "chrome";
   return (
-    // Line container: single-line by contract (the `region-line` root already
-    // carries the structural `whitespace-nowrap`; this adds the leaf ellipsis layer).
-    <SingleLineProvider value={true}>
-    <As
-      // eslint-disable-next-line layout/no-adhoc-layout -- Bar is the sanctioned single-line chrome-strip primitive (enforced by bar/no-adhoc-bar); it owns its own raw flex-row + clip mechanics, the same way the css/* layout primitives own theirs
+    // The single-line contract (region-line + SingleLineProvider) comes from
+    // <Line>; Bar layers its strip chrome (border, tier height/inset, clip) on top.
+    <Line
+      as={As}
+      // eslint-disable-next-line layout/no-adhoc-layout -- Bar is the sanctioned single-line chrome-strip primitive (enforced by bar/no-adhoc-bar); it owns its own raw min-w-0 + clip mechanics, the same way the css/* layout primitives own theirs
       className={cn(
-        "flex region-line gap-sm border-b",
+        "gap-sm border-b",
         TIER_CLASS[tier],
         safe && "pr-floating-bar",
         overflow === "visible" ? "overflow-visible" : "overflow-hidden",
@@ -95,7 +95,6 @@ export function Bar({
       {...rest}
     >
       <ControlSizeProvider size={controlSize}>{children}</ControlSizeProvider>
-    </As>
-    </SingleLineProvider>
+    </Line>
   );
 }
