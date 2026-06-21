@@ -8,11 +8,7 @@
 
 - Description: Single-line chrome-strip primitive: the horizontal toolbar/header band (border-b + chrome height + inset, never-wrap via region-line) shared by app/pane toolbars and pane headers. Two tiers (chrome | pane); consumers compose it and own what they host.
 - Web:
-<<<<<<< .merge_file_F2Ek4u
-  - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SingleLineProvider`
-=======
-  - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.ControlSizeProvider`
->>>>>>> .merge_file_dGmYsA
+  - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.SingleLineProvider`
   - Exports: Types: `BarProps`, `BarTier`; Values: `Bar`
 - Cross-plugin:
   - Imported by: `apps/browser/bookmarks`, `apps/browser/shell`, `apps/browser/tabs`, `primitives/app-shell`, `primitives/pane`, `primitives/pane-toolbar`
