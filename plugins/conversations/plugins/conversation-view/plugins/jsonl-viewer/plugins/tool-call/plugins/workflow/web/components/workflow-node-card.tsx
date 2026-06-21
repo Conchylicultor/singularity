@@ -6,7 +6,6 @@ import type { TracedNode } from "../internal/trace-types";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 
@@ -53,26 +52,19 @@ export function WorkflowNodeCard({
       )}
     >
       <Stack gap="xs">
-        <Frame
-          gap="xs"
-          leading={
-            node.kind === "workflow" ? (
-              <MdAccountTree className="size-3 text-muted-foreground" />
-            ) : undefined
-          }
-          content={
-            <Text as="span" variant="label" className="truncate text-foreground">
-              {node.label}
-            </Text>
-          }
-          trailing={
-            modelColor ? (
-              <Badge colorClass={modelColor} className="font-mono">
-                {modelDisplayLabel(node.model!)}
-              </Badge>
-            ) : undefined
-          }
-        />
+        <span className="flex min-w-0 items-center gap-xs">
+          {node.kind === "workflow" && (
+            <MdAccountTree className="size-3 shrink-0 text-muted-foreground" />
+          )}
+          <Text as="span" variant="label" className="min-w-0 flex-1 truncate text-foreground">
+            {node.label}
+          </Text>
+          {modelColor && (
+            <Badge colorClass={modelColor} className="shrink-0 font-mono">
+              {modelDisplayLabel(node.model!)}
+            </Badge>
+          )}
+        </span>
         {(node.agentType || node.isolation || node.hasSchema) && (
           <Cluster gap="xs">
             {node.agentType && <MetaChip>{formatStatusLabel(node.agentType)}</MetaChip>}

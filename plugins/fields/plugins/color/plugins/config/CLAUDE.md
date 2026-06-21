@@ -21,7 +21,7 @@ carrying the canonical `fields/` color token
 - Description: Color field type: config-render capability (hex/oklch popover picker for config-v2.fields.renderer) plus the colorField factory.
 - Web:
   - Contributes: `config-v2.fields.renderer` "color" → `ColorRenderer`
-  - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/color-picker.ColorPickerPopover`, `primitives/css/frame.Frame`
+  - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/color-picker.ColorPickerPopover`
 - Core:
   - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/color.colorFieldType`
   - Exports: Types: `ColorFieldDef`; Values: `colorField`

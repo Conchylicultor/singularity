@@ -31,8 +31,6 @@ import { AutoGroupBox } from "./auto-group-box";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { MdChevronRight, MdClose, MdFolder, MdRemoveCircleOutline } from "react-icons/md";
 import { DraggableRow, type DropTarget } from "./draggable-row";
 import { GroupBox } from "./group-box";
@@ -524,32 +522,25 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
         </GroupContainer>
         {(recentGone.length > 0 || paginatedItems.length > 0) && (
           <div className="rounded-md transition-colors hover:bg-muted/30">
-            <Frame
-              gap="2xs"
-              className="rounded-md px-xs py-xs"
-              leading={
-                <button
-                  type="button"
-                  onClick={toggleGoneExpanded}
-                  aria-label={goneExpanded ? "Collapse closed" : "Expand closed"}
-                  className="rounded-md text-muted-foreground hover:bg-accent"
-                >
-                  <Center className="size-5">
-                    <MdChevronRight
-                      className={cn(
-                        "size-4 transition-transform",
-                        !dragInProgress && goneExpanded && "rotate-90",
-                      )}
-                    />
-                  </Center>
-                </button>
-              }
-              content={
-                <Text as="div" variant="caption" className="w-full truncate px-xs py-2xs font-semibold text-muted-foreground">
-                  Closed
-                </Text>
-              }
-            />
+            {/* eslint-disable-next-line badge/no-adhoc-chip -- group header row, awaiting Row primitive */}
+            <div className="flex items-center gap-2xs rounded-md px-xs py-xs">
+              <button
+                type="button"
+                onClick={toggleGoneExpanded}
+                aria-label={goneExpanded ? "Collapse closed" : "Expand closed"}
+                className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+              >
+                <MdChevronRight
+                  className={cn(
+                    "size-4 transition-transform",
+                    !dragInProgress && goneExpanded && "rotate-90",
+                  )}
+                />
+              </button>
+              <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-xs py-2xs font-semibold text-muted-foreground">
+                Closed
+              </Text>
+            </div>
             {!dragInProgress && goneExpanded && (
               // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 nudges the expanded list just below the header row (sibling under a non-flex container)
               <div className="mt-0.5 pl-xs">
@@ -598,23 +589,16 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
       </Stack>
       <DragOverlay dropAnimation={null}>
         {activeGroupId ? (
-          <Frame
-            align="center"
-            gap="xs"
-            className="bg-background/90 border-accent rounded-md border px-sm py-xs shadow-md"
-            leading={<MdFolder className="size-3.5 text-muted-foreground" />}
-            content={
-              <Text as="span" variant="label" className="truncate">
-                {groups.find((g) => g.id === activeGroupId)?.title || "Group"}
-              </Text>
-            }
-          />
+          <Text as="div" variant="label" className="bg-background/90 border-accent flex items-center gap-xs rounded-md border px-sm py-xs shadow-md">
+            <MdFolder className="size-3.5 shrink-0 text-muted-foreground" />
+            <span className="truncate">
+              {groups.find((g) => g.id === activeGroupId)?.title || "Group"}
+            </span>
+          </Text>
         ) : activeConv ? (
-          <Frame
-            align="center"
-            className="bg-background/90 border-accent rounded-md border px-sm py-xs shadow-md"
-            content={<ConversationItem conv={activeConv} />}
-          />
+          <Text as="div" variant="body" className="bg-background/90 border-accent flex items-center rounded-md border px-sm py-xs shadow-md">
+            <ConversationItem conv={activeConv} />
+          </Text>
         ) : null}
       </DragOverlay>
     </DndContext>

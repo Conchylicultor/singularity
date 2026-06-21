@@ -3,7 +3,6 @@ import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/end
 import { getCostTotals } from "../../shared/endpoints";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { ScopeToggle } from "./scope-toggle";
 import { useScope } from "./use-scope";
 import { formatTokensCompact, formatUsd } from "./format";
@@ -28,15 +27,13 @@ export function CostKpis() {
   const { data: resp, error } = useEndpoint(getCostTotals, {}, { query: { scope } });
   return (
     <Stack gap="lg">
-      <Frame
-        content={
-          <Text as="p" variant="caption" className="text-muted-foreground">
-            Sourced from <code>ccusage</code>: parses{" "}
-            <code>~/.claude/projects</code> on each load.
-          </Text>
-        }
-        trailing={<ScopeToggle />}
-      />
+      <div className="flex items-center justify-between">
+        <Text as="p" variant="caption" className="text-muted-foreground">
+          Sourced from <code>ccusage</code>: parses{" "}
+          <code>~/.claude/projects</code> on each load.
+        </Text>
+        <ScopeToggle />
+      </div>
       <ChartState
         error={error ? getEndpointErrorMessage(error) : null}
         loading={resp === undefined}

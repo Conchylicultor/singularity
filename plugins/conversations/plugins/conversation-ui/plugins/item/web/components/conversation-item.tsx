@@ -9,7 +9,6 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Item } from "../slots";
 
@@ -81,9 +80,10 @@ export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {
 
 export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
   const muted = conv.status === "gone" || conv.status === "done";
-  // The title is an intrinsically single-line atom — it's used both as a Frame
-  // `content` (block layout, already a line container) and inside a flow `<Inline>`
-  // (the inline conv chip), so it forces single-line itself to ellipsize in both.
+  // The title is an intrinsically single-line atom — it's used both in the
+  // block layout's title row (already a line container) and inside a flow
+  // `<Inline>` (the inline conv chip), so it forces single-line itself to
+  // ellipsize in both.
   return (
     <SingleLineProvider value={true}>
       <Text
@@ -123,32 +123,23 @@ export function ConversationItem({
     );
   }
   return (
-    <Frame
-      align="start"
-      gap="sm"
-      className={cn("w-full", active && "opacity-60")}
-      leading={
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical nudge to baseline-align the avatar with the title row
-        <span className="mt-0.5">
-          <AvatarSlot conv={conv} size="sm" />
-        </span>
-      }
-      content={
-        <Stack gap="2xs">
-          <Frame
-            align="center"
-            gap="xs"
-            content={<ConvTitle conv={conv} />}
-            trailing={<ConvSysBadge conv={conv} />}
-          />
-          <Frame
-            align="center"
-            gap="xs"
-            content={<ChipsSlot conv={conv} />}
-            trailing={<ConvRelativeTime conv={conv} />}
-          />
-        </Stack>
-      }
-    />
+    <div className={cn("flex w-full items-start gap-sm overflow-hidden", active && "opacity-60")}>
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical nudge to baseline-align the avatar with the title row */}
+      <span className="mt-0.5">
+        <AvatarSlot conv={conv} size="sm" />
+      </span>
+      <Stack gap="2xs" className="min-w-0 flex-1">
+        <div className="flex items-center gap-xs overflow-hidden whitespace-nowrap">
+          <ConvTitle conv={conv} />
+          <ConvSysBadge conv={conv} />
+        </div>
+        <div className="flex items-center gap-xs">
+          <ChipsSlot conv={conv} />
+          <span className="ml-auto">
+            <ConvRelativeTime conv={conv} />
+          </span>
+        </div>
+      </Stack>
+    </div>
   );
 }

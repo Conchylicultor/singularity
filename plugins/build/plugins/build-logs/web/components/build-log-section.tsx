@@ -14,7 +14,6 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { getBuildRunLogs } from "../../shared/endpoints";
@@ -51,21 +50,18 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
 
   return (
     <Stack gap="xs">
-      <Frame
-        className="pb-xs"
-        leading={<Text as="span" variant="label" className="text-muted-foreground">Logs</Text>}
-        trailing={
-          <Button
-            variant="ghost"
-            aspect="icon"
-            className="size-6"
-            onClick={copyAll}
-            aria-label="Copy logs"
-          >
-            <MdContentCopy />
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-between pb-xs">
+        <Text as="span" variant="label" className="text-muted-foreground">Logs</Text>
+        <Button
+          variant="ghost"
+          aspect="icon"
+          className="size-6"
+          onClick={copyAll}
+          aria-label="Copy logs"
+        >
+          <MdContentCopy />
+        </Button>
+      </div>
       {steps.map((step) => (
         <StepSection key={step.id} step={step} />
       ))}
@@ -79,23 +75,15 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
   return (
     <Collapsible defaultOpen={!step.success || step.lines.length <= 6}>
       <Clip className="rounded-md border bg-muted/30">
-        <CollapsibleTrigger className="px-md py-xs text-caption hover:bg-muted/50 transition-colors">
-          <Frame
-            className="w-full"
-            gap="sm"
-            leading={
-              <>
-                <CollapsibleChevron className="size-3 text-muted-foreground" />
-                {step.success ? (
-                  <MdCheck className="size-3.5 text-success" />
-                ) : (
-                  <MdClose className="size-3.5 text-destructive" />
-                )}
-                <span className="font-medium">{step.label}</span>
-              </>
-            }
-            trailing={<span className="text-muted-foreground">{duration}s</span>}
-          />
+        <CollapsibleTrigger className="flex items-center gap-sm px-md py-xs text-caption hover:bg-muted/50 transition-colors">
+          <CollapsibleChevron className="size-3 text-muted-foreground" />
+          {step.success ? (
+            <MdCheck className="size-3.5 text-success shrink-0" />
+          ) : (
+            <MdClose className="size-3.5 text-destructive shrink-0" />
+          )}
+          <span className="font-medium">{step.label}</span>
+          <span className="text-muted-foreground ml-auto">{duration}s</span>
         </CollapsibleTrigger>
         <CollapsibleContent>
           {step.lines.length > 0 && (
@@ -177,27 +165,22 @@ function LiveLogs(): ReactElement {
 
   return (
     <Stack gap="none" className="relative">
-      <Frame
-        className="pb-xs"
-        leading={
-          <Text as="span" variant="label" className="text-muted-foreground">
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline word spacing after "Logs" label text */}
-            Logs <span className="text-muted-foreground/60 ml-1">Live</span>
-          </Text>
-        }
-        trailing={
-          <Button
-            variant="ghost"
-            aspect="icon"
-            className="size-6"
-            onClick={copyLogs}
-            disabled={entries.length === 0}
-            aria-label="Copy logs"
-          >
-            <MdContentCopy />
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-between pb-xs">
+        <Text as="span" variant="label" className="text-muted-foreground">
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline word spacing after "Logs" label text */}
+          Logs <span className="text-muted-foreground/60 ml-1">Live</span>
+        </Text>
+        <Button
+          variant="ghost"
+          aspect="icon"
+          className="size-6"
+          onClick={copyLogs}
+          disabled={entries.length === 0}
+          aria-label="Copy logs"
+        >
+          <MdContentCopy />
+        </Button>
+      </div>
       <Scroll
         axis="y"
         ref={stickyScroll.scrollRef}
@@ -207,27 +190,23 @@ function LiveLogs(): ReactElement {
           <span className="text-muted-foreground">No build logs yet</span>
         )}
         {entries.map((entry) => (
-          <Frame
+          <div
             key={entry.seq}
-            gap="sm"
-            align="start"
             className={cn(
+              "flex gap-sm",
               entry.stream === "stderr" ? "text-destructive" : "text-foreground",
             )}
-            leading={
-              <span className="text-muted-foreground">
-                {new Date(entry.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                  hour12: false,
-                })}
-              </span>
-            }
-            content={
-              <span className="whitespace-pre-wrap break-all">{entry.line}</span>
-            }
-          />
+          >
+            <span className="shrink-0 text-muted-foreground">
+              {new Date(entry.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+              })}
+            </span>
+            <span className="whitespace-pre-wrap break-all">{entry.line}</span>
+          </div>
         ))}
       </Scroll>
       {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}

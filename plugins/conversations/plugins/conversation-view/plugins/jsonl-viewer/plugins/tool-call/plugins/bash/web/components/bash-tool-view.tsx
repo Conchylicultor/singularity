@@ -3,7 +3,6 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 
 interface BashInput {
@@ -33,19 +32,12 @@ export function BashToolView({ event }: ToolRendererProps) {
           className="mt-2 rounded-md border border-border/40 bg-muted font-mono"
         >
           <Text as="div" variant="caption">
-            <Frame
-              gap="sm"
-              align="start"
-              className="px-md py-sm"
-              leading={
-                <span className="select-none text-muted-foreground/40">$</span>
-              }
-              content={
-                <span className="whitespace-pre-wrap break-words text-foreground">
-                  {input.command}
-                </span>
-              }
-            />
+            <div className="flex items-start gap-sm px-md py-sm">
+              <span className="select-none text-muted-foreground/40">$</span>
+              <span className="flex-1 whitespace-pre-wrap break-words text-foreground">
+                {input.command}
+              </span>
+            </div>
             {result && (
               <>
                 <div className="border-t border-border/30" />

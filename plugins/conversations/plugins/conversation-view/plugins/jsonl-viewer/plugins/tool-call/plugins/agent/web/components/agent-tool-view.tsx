@@ -5,7 +5,6 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -62,26 +61,19 @@ export function AgentToolView({ event }: ToolRendererProps) {
   };
 
   const summary = (
-    <Frame
-      gap="sm"
-      leading={
-        <>
-          <Badge colorClass="bg-categorical-6/15 text-categorical-6" className="font-mono">
-            {agentType}
-          </Badge>
-          {input.model && <ModelBadge model={input.model} />}
-          {input.run_in_background && <MetaBadge>Background</MetaBadge>}
-          {input.isolation === "worktree" && <MetaBadge>Worktree</MetaBadge>}
-        </>
-      }
-      content={
-        description ? (
-          <Text className="text-muted-foreground">
-            {description}
-          </Text>
-        ) : undefined
-      }
-    />
+    <span className="flex min-w-0 items-center gap-sm">
+      <Badge colorClass="bg-categorical-6/15 text-categorical-6" className="font-mono">
+        {agentType}
+      </Badge>
+      {input.model && <ModelBadge model={input.model} />}
+      {input.run_in_background && <MetaBadge>Background</MetaBadge>}
+      {input.isolation === "worktree" && <MetaBadge>Worktree</MetaBadge>}
+      {description && (
+        <Text className="min-w-0 text-muted-foreground">
+          {description}
+        </Text>
+      )}
+    </span>
   );
 
   // The report affordance must be a header *sibling*, not part of `summary`:

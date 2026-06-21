@@ -29,9 +29,9 @@ export function Omnibox() {
   };
 
   return (
-    // Rendered inside the chrome `<Frame>`'s flexible `content` track, which
-    // already supplies the `min-w-0` truncation context — the form + input just
-    // fill that track's width.
+    // Rendered inside the chrome bar's flexible content cell, which already
+    // supplies the `min-w-0` truncation context — the form + input just fill
+    // that cell's width.
     <form onSubmit={submit} className="w-full">
       <SearchInput
         wrapperClassName="w-full"

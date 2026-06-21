@@ -3,8 +3,6 @@ import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web"
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { gitStatusBadge } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
@@ -75,53 +73,43 @@ export function ReviewFileRow({
         <button
           type="button"
           onClick={onToggle}
-          className={`text-body w-full px-md py-xs text-left hover:bg-muted/80 ${LEVEL_BG[level]}`}
+          className={`text-body flex w-full items-center gap-sm px-md py-xs text-left hover:bg-muted/80 ${LEVEL_BG[level]}`}
           aria-expanded={expanded}
           title={level !== "safe" ? LEVEL_TOOLTIP[level] : undefined}
         >
-          <Frame
-            leading={
+          <CollapsibleChevron open={expanded} className="size-4 shrink-0 text-muted-foreground" />
+          <Badge colorClass={statusBadgeColor(file.status)} className="shrink-0">
+            {STATUS_LABEL[file.status]}
+          </Badge>
+          <span className="group/path min-w-0 flex-1 truncate">
+            {from && (
               <>
-                <CollapsibleChevron open={expanded} className="size-4 text-muted-foreground" />
-                <Badge colorClass={statusBadgeColor(file.status)}>
-                  {STATUS_LABEL[file.status]}
-                </Badge>
+                <span className="text-muted-foreground line-through">{from}</span>
+                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline arrow separator offset between from/to paths */}
+                <span className="mx-1.5 text-muted-foreground">→</span>
               </>
-            }
-            content={
-              <span className="group/path block truncate">
-                {from && (
-                  <>
-                    <span className="text-muted-foreground line-through">{from}</span>
-                    {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline arrow separator offset between from/to paths */}
-                    <span className="mx-1.5 text-muted-foreground">→</span>
-                  </>
-                )}
-                <span className="text-muted-foreground">{dir}</span>
-                <span className="font-medium">{basename}</span>
-                <CopyButton
-                  text={file.path}
-                  title="Copy path"
-                  aspect="inline"
-                  // eslint-disable-next-line spacing/no-adhoc-spacing -- inline gap after path text before copy button
-                  className="ml-1 text-muted-foreground opacity-0 pointer-events-none transition-opacity hover:text-foreground group-hover/path:opacity-100 group-hover/path:pointer-events-auto"
-                  onClick={(e) => e.stopPropagation()}
-                />
-              </span>
-            }
-            trailing={
-              <Stack as="span" direction="row" gap="sm" align="center">
-                <Text as="span" variant="caption" className="text-success tabular-nums">+{file.additions}</Text>
-                <Text as="span" variant="caption" className="text-destructive tabular-nums">−{file.deletions}</Text>
-                {level !== "safe" && (
-                  <MdWarning
-                    className={LEVEL_ICON_CLASS[level]}
-                    aria-label={LEVEL_TOOLTIP[level]}
-                  />
-                )}
-              </Stack>
-            }
-          />
+            )}
+            <span className="text-muted-foreground">{dir}</span>
+            <span className="font-medium">{basename}</span>
+            <CopyButton
+              text={file.path}
+              title="Copy path"
+              aspect="inline"
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- inline gap after path text before copy button
+              className="ml-1 text-muted-foreground opacity-0 pointer-events-none transition-opacity hover:text-foreground group-hover/path:opacity-100 group-hover/path:pointer-events-auto"
+              onClick={(e) => e.stopPropagation()}
+            />
+          </span>
+          <Text as="span" variant="caption" className="flex shrink-0 items-center gap-sm tabular-nums">
+            <span className="text-success">+{file.additions}</span>
+            <span className="text-destructive">−{file.deletions}</span>
+            {level !== "safe" && (
+              <MdWarning
+                className={LEVEL_ICON_CLASS[level]}
+                aria-label={LEVEL_TOOLTIP[level]}
+              />
+            )}
+          </Text>
         </button>
       </Sticky>
       {expanded && (

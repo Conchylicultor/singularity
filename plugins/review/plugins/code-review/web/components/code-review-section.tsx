@@ -5,7 +5,6 @@ import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleChevron, useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { useConfig } from "@plugins/config_v2/web";
@@ -238,27 +237,25 @@ function ToolbarRow({
   onToggleAll: () => void;
 }) {
   return (
-    <Sticky edge="top">
-      <Frame
-        gap="md"
-        className="border-b border-border bg-background/95 px-lg py-sm backdrop-blur"
-        content={
-          <Stack direction="row" gap="sm" align="center">
-            <Text as="span" variant="label" className="tabular-nums">{count} files</Text>
-            <Text as="span" variant="label" className="text-success tabular-nums">+{additions}</Text>
-            <Text as="span" variant="label" className="text-destructive tabular-nums">−{deletions}</Text>
-          </Stack>
-        }
-        trailing={
-          <ExpandAllButton
-            variant="full"
-            allExpanded={allExpanded}
-            onToggle={onToggleAll}
-            disabled={!canToggle}
-          />
-        }
-      />
-    </Sticky>
+    <div className="sticky top-0 z-raised flex items-center gap-md border-b border-border bg-background/95 px-lg py-sm backdrop-blur">
+      <Text as="div" variant="label" className="flex items-center gap-sm">
+        <span className="tabular-nums">{count} files</span>
+        <span className="text-success tabular-nums">
+          +{additions}
+        </span>
+        <span className="text-destructive tabular-nums">
+          −{deletions}
+        </span>
+      </Text>
+      <div className="flex flex-1 items-center justify-end gap-xs">
+        <ExpandAllButton
+          variant="full"
+          allExpanded={allExpanded}
+          onToggle={onToggleAll}
+          disabled={!canToggle}
+        />
+      </div>
+    </div>
   );
 }
 

@@ -6,8 +6,7 @@ import {
   Collapsible,
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -113,36 +112,30 @@ function ParamInput({
   };
 
   return (
-    <Frame
-      className="group"
-      gap="sm"
-      content={
-        <input
-          ref={inputRef}
-          type="text"
-          className="w-full text-caption font-mono bg-transparent border border-transparent rounded-md px-xs py-2xs focus:border-border focus:bg-background focus:outline-none"
-          value={localValue}
-          onChange={(e) => setLocalValue(e.target.value)}
-          onBlur={commit}
-          onKeyDown={(e) => { if (e.key === "Enter") inputRef.current?.blur(); }}
-        />
-      }
-      trailing={
-        <button
-          type="button"
-          onClick={handleReset}
-          title="Reset to preset value"
-          className={`text-muted-foreground hover:text-foreground transition-opacity ${
-            isOverridden
-              ? "opacity-100"
-              : "opacity-0 group-hover:opacity-30 pointer-events-none"
-          }`}
-          aria-hidden={!isOverridden}
-        >
-          <MdUndo size={14} />
-        </button>
-      }
-    />
+    <div className="flex items-center gap-sm group">
+      <input
+        ref={inputRef}
+        type="text"
+        className="flex-1 text-caption font-mono bg-transparent border border-transparent rounded-md px-xs py-2xs focus:border-border focus:bg-background focus:outline-none"
+        value={localValue}
+        onChange={(e) => setLocalValue(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => { if (e.key === "Enter") inputRef.current?.blur(); }}
+      />
+      <button
+        type="button"
+        onClick={handleReset}
+        title="Reset to preset value"
+        className={`shrink-0 text-muted-foreground hover:text-foreground transition-opacity ${
+          isOverridden
+            ? "opacity-100"
+            : "opacity-0 group-hover:opacity-30 pointer-events-none"
+        }`}
+        aria-hidden={!isOverridden}
+      >
+        <MdUndo size={14} />
+      </button>
+    </div>
   );
 }
 
@@ -222,74 +215,59 @@ export function ShadowSection({ search }: { search: string }) {
         <CollapsibleContent className="ml-2 mt-1">
           <Stack gap="xs">
             {/* Color row */}
-            <Frame
-              gap="sm"
-              className="group region-line rounded-md p-row hover:bg-muted/50"
-              leading={
-                <Text as="span" variant="label" className="w-16">Color</Text>
-              }
-              content={
-                <Stack direction="row" align="center" gap="sm">
-                  <ColorPickerPopover
-                    value={colorOklch}
-                    onChange={(oklch) => {
-                      const param = oklchToChannels(oklch);
-                      if (!param) return;
-                      if (param === baseParams.color) {
-                        setConfig("overrides", { ...overrides, color: "" });
-                      } else {
-                        setConfig("overrides", { ...overrides, color: param });
-                      }
-                    }}
-                  />
-                  <Text as="span" variant="caption" className="font-mono text-muted-foreground">
-                    {mergedParams.color}
-                  </Text>
-                </Stack>
-              }
-              trailing={
-                <button
-                  type="button"
-                  onClick={() => {
-                    setConfig("overrides", { ...overrides, color: "" });
+            <Row as="div" hover="muted" className="gap-sm">
+              <Text as="span" variant="label" className="w-16 shrink-0">Color</Text>
+              <div className="flex items-center gap-sm flex-1">
+                <ColorPickerPopover
+                  value={colorOklch}
+                  onChange={(oklch) => {
+                    const param = oklchToChannels(oklch);
+                    if (!param) return;
+                    if (param === baseParams.color) {
+                      setConfig("overrides", { ...overrides, color: "" });
+                    } else {
+                      setConfig("overrides", { ...overrides, color: param });
+                    }
                   }}
-                  title="Reset to preset value"
-                  className={`text-muted-foreground hover:text-foreground transition-opacity ${
-                    colorIsOverridden
-                      ? "opacity-100"
-                      : "opacity-0 group-hover:opacity-30 pointer-events-none"
-                  }`}
-                  aria-hidden={!colorIsOverridden}
-                >
-                  <MdUndo size={14} />
-                </button>
-              }
-            />
+                />
+                <Text as="span" variant="caption" className="font-mono text-muted-foreground">
+                  {mergedParams.color}
+                </Text>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setConfig("overrides", { ...overrides, color: "" });
+                }}
+                title="Reset to preset value"
+                className={`shrink-0 text-muted-foreground hover:text-foreground transition-opacity ${
+                  colorIsOverridden
+                    ? "opacity-100"
+                    : "opacity-0 group-hover:opacity-30 pointer-events-none"
+                }`}
+                aria-hidden={!colorIsOverridden}
+              >
+                <MdUndo size={14} />
+              </button>
+            </Row>
 
             {/* Numeric/text param rows */}
             {PARAM_FIELDS.map(({ key, label }) => {
               const isOverridden = overrides[key] !== "";
               return (
-                <Frame
-                  key={key}
-                  gap="sm"
-                  className="group region-line rounded-md p-row hover:bg-muted/50"
-                  leading={
-                    <Text as="span" variant="label" className="w-16">
-                      {label}
-                    </Text>
-                  }
-                  content={
-                    <ParamInput
-                      paramKey={key}
-                      value={mergedParams[key]}
-                      isOverridden={isOverridden}
-                      baseParams={baseParams}
-                      overrides={overrides}
-                      setConfig={setConfig}
-                    />
-                  }
-                />
+                <Row key={key} as="div" hover="muted" className="gap-sm">
+                  <Text as="span" variant="label" className="w-16 shrink-0">
+                    {label}
+                  </Text>
+                  <ParamInput
+                    paramKey={key}
+                    value={mergedParams[key]}
+                    isOverridden={isOverridden}
+                    baseParams={baseParams}
+                    overrides={overrides}
+                    setConfig={setConfig}
+                  />
+                </Row>
               );
             })}
 

@@ -7,7 +7,6 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { conversationsResource, listGoneConversations } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -126,25 +125,16 @@ export function RecoveryView() {
 
   return (
     <Stack gap="none" className="h-full">
-      <Frame
-        align="center"
-        gap="md"
-        className="px-lg py-md border-b"
-        content={
-          <Frame
-            align="center"
-            gap="sm"
-            leading={<Text as="h2" variant="label" className="font-semibold">Recovery</Text>}
-            content={
-              items.length > 0 ? (
-                <Text as="span" variant="caption" tone="muted">
-                  {items.length} recently closed
-                </Text>
-              ) : undefined
-            }
-          />
-        }
-      />
+      <div className="flex items-center justify-between px-lg py-md border-b gap-md">
+        <div className="flex items-center gap-sm min-w-0">
+          <Text as="h2" variant="label" className="font-semibold shrink-0">Recovery</Text>
+          {items.length > 0 && (
+            <Text as="span" variant="caption" tone="muted" className="truncate">
+              {items.length} recently closed
+            </Text>
+          )}
+        </div>
+      </div>
 
       <Scroll axis="both" fill>
         {isLoading && items.length === 0 ? (
@@ -194,28 +184,21 @@ function ClusterGroup({
   return (
     <div className="border-b">
       {isCluster && endedAt && (
-        <Frame
-          align="center"
-          gap="sm"
-          className="px-lg py-sm bg-muted/30 border-b"
-          content={
-            <Text as="span" variant="caption" className="font-medium">
-              {formatTime(endedAt)} — {group.length} conversations closed
-            </Text>
-          }
-          trailing={
-            <Button
-              variant="outline"
-              onClick={() => onRestore(groupIds)}
-              loading={anyPending}
-              className="h-7 text-caption"
-            >
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-              <MdRestore className="size-3.5 mr-1" />
-              Restore all ({group.length})
-            </Button>
-          }
-        />
+        <div className="flex items-center justify-between px-lg py-sm bg-muted/30 border-b">
+          <Text as="span" variant="caption" className="font-medium">
+            {formatTime(endedAt)} — {group.length} conversations closed
+          </Text>
+          <Button
+            variant="outline"
+            onClick={() => onRestore(groupIds)}
+            loading={anyPending}
+            className="h-7 text-caption"
+          >
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
+            <MdRestore className="size-3.5 mr-1" />
+            Restore all ({group.length})
+          </Button>
+        </div>
       )}
       {group.map((conversation) => (
         <ConversationRow
@@ -243,34 +226,27 @@ function ConversationRow({
 }) {
   return (
     <>
-      <Frame
-        align="center"
-        gap="md"
-        className="px-lg py-sm hover:bg-muted/30"
-        content={
-          <Stack gap="2xs">
-            <Text as="span" variant="caption" className="truncate font-medium">
-              {conversation.title ?? conversation.id}
-            </Text>
-            <Stack direction="row" gap="sm" align="center" className="text-3xs text-muted-foreground">
-              <span>{conversation.model}</span>
-              {conversation.endedAt && <span>{formatTime(conversation.endedAt)}</span>}
-            </Stack>
-          </Stack>
-        }
-        trailing={
-          <Button
-            variant="outline"
-            onClick={onRestore}
-            loading={pending}
-            className="h-7 text-caption"
-          >
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-            <MdRestore className="size-3.5 mr-1" />
-            Restore
-          </Button>
-        }
-      />
+      <div className="flex items-center gap-md px-lg py-sm hover:bg-muted/30">
+        <div className="flex-1 min-w-0 flex flex-col gap-2xs">
+          <Text as="span" variant="caption" className="truncate font-medium">
+            {conversation.title ?? conversation.id}
+          </Text>
+          <div className="flex items-center gap-sm text-3xs text-muted-foreground">
+            <span>{conversation.model}</span>
+            {conversation.endedAt && <span>{formatTime(conversation.endedAt)}</span>}
+          </div>
+        </div>
+        <Button
+          variant="outline"
+          onClick={onRestore}
+          loading={pending}
+          className="h-7 text-caption"
+        >
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
+          <MdRestore className="size-3.5 mr-1" />
+          Restore
+        </Button>
+      </div>
       {error && (
         <div className="px-lg py-xs bg-muted/10">
           <Text as="span" variant="caption" tone="destructive">{error}</Text>

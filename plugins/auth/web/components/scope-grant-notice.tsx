@@ -1,6 +1,5 @@
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import type { AuthAccountState } from "@plugins/auth/core";
 import { Auth, type AuthScopeRequirement } from "../slots";
 import { missingScopes } from "../scopes";
@@ -87,10 +86,8 @@ function ActiveNotice({
     requirement.providerId.slice(1);
 
   return (
-    <Frame
-      align="center"
-      gap="sm"
-      meta={
+    <div className="flex items-center gap-sm">
+      <div className="min-w-0 flex-1">
         <Stack gap="2xs">
           <Text as="div" variant="label" className="text-foreground">
             {requirement.reason}
@@ -99,13 +96,13 @@ function ActiveNotice({
             Needs additional {providerLabel} access
           </Text>
         </Stack>
-      }
-      trailing={
+      </div>
+      <div className="flex shrink-0 items-center gap-sm">
         <GrantAccessButton
           providerId={requirement.providerId}
           scopes={requirement.scopes}
         />
-      }
-    />
+      </div>
+    </div>
   );
 }

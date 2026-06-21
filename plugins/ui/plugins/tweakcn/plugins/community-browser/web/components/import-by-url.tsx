@@ -6,7 +6,6 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -126,34 +125,31 @@ export function ImportByUrl({
         {visible.length > 0 ? (
           <Stack gap="sm">
             {visible.map((theme) => (
-              <Frame
+              <div
                 key={theme.id}
-                className="rounded-lg border border-border/60 px-md py-sm"
-                content={
-                  <Text as="span" variant="label">
-                    {theme.label}
-                  </Text>
-                }
-                trailing={
-                  <Stack direction="row" gap="xs">
-                    <Button
-                      variant="ghost"
-                      onClick={() => onApply(theme.tweakcnId, theme.presets)}
-                      className="text-primary hover:bg-primary/10"
-                    >
-                      Apply
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      onClick={() => deleteMutation.mutate({ params: { id: theme.id } })}
-                      loading={deleteMutation.isPending}
-                      className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
-                    >
-                      Delete
-                    </Button>
-                  </Stack>
-                }
-              />
+                className="flex items-center justify-between rounded-lg border border-border/60 px-md py-sm"
+              >
+                <Text as="span" variant="label">
+                  {theme.label}
+                </Text>
+                <div className="flex gap-xs">
+                  <Button
+                    variant="ghost"
+                    onClick={() => onApply(theme.tweakcnId, theme.presets)}
+                    className="text-primary hover:bg-primary/10"
+                  >
+                    Apply
+                  </Button>
+                  <Button
+                    variant="ghost"
+                    onClick={() => deleteMutation.mutate({ params: { id: theme.id } })}
+                    loading={deleteMutation.isPending}
+                    className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    Delete
+                  </Button>
+                </div>
+              </div>
             ))}
           </Stack>
         ) : (

@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdAdd, MdDeleteOutline, MdPublic, MdSave } from "react-icons/md";
 import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -313,18 +312,16 @@ function DraftSection({
   return (
     <Stack gap="lg">
       <Stack gap="sm">
-        <Frame
-          content={<SectionLabel>Compositions</SectionLabel>}
-          trailing={
-            <Stack direction="row" align="center" gap="xs">
-              <PromoteDefaultButton />
-              <Button variant="outline" onClick={onNew}>
-                <MdAdd />
-                New
-              </Button>
-            </Stack>
-          }
-        />
+        <div className="flex items-center justify-between gap-sm">
+          <SectionLabel>Compositions</SectionLabel>
+          <div className="flex items-center gap-xs">
+            <PromoteDefaultButton />
+            <Button variant="outline" onClick={onNew}>
+              <MdAdd />
+              New
+            </Button>
+          </div>
+        </div>
         {items.length === 0 ? (
           <Text variant="caption" tone="muted">
             No named compositions yet. Create one with New.

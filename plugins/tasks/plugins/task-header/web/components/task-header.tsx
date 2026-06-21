@@ -10,7 +10,6 @@ import { StatusSignal } from "@plugins/tasks/plugins/task-status/web";
 import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { AuthorDisplay } from "./author-display";
 
 export function TaskHeader({ taskId }: { taskId: string }) {
@@ -50,25 +49,18 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         placeholder="Untitled"
         className="text-title w-full bg-transparent outline-none placeholder:text-muted-foreground focus:ring-0"
       />
-      <Frame
-        gap="md"
-        leading={
-          <>
-            <SectionLabel as="span">Status</SectionLabel>
-            <StatusSignal status={task.status} />
-          </>
-        }
-        trailing={
-          <Stack direction="row" gap="xs">
-            <Button variant="ghost" onClick={toggleHold}>
-              {task.status === "held" ? "Resume" : "Hold"}
-            </Button>
-            <Button variant="ghost" onClick={toggleDrop}>
-              {task.status === "dropped" ? "Undrop" : "Drop task"}
-            </Button>
-          </Stack>
-        }
-      />
+      <div className="flex items-center gap-md">
+        <SectionLabel as="span">Status</SectionLabel>
+        <StatusSignal status={task.status} />
+        <div className="ml-auto flex items-center gap-xs">
+          <Button variant="ghost" onClick={toggleHold}>
+            {task.status === "held" ? "Resume" : "Hold"}
+          </Button>
+          <Button variant="ghost" onClick={toggleDrop}>
+            {task.status === "dropped" ? "Undrop" : "Drop task"}
+          </Button>
+        </div>
+      </div>
       <Stack direction="row" align="center" gap="md">
         <SectionLabel as="span">
           Author

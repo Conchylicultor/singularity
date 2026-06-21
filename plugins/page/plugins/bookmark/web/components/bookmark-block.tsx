@@ -7,7 +7,6 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -141,23 +140,18 @@ function FetchingBookmarkBlock({
 
   return (
     <Inset x="md" y="xs">
-      <Card className="p-md">
-        <Frame
-          gap="md"
-          leading={<MdBookmark className="size-4 text-muted-foreground" />}
-          content={
-            <Stack gap="2xs">
-              <Text variant="label" className="truncate font-semibold">
-                {hostname}
-              </Text>
-              {error ? (
-                <Placeholder tone="error">{error}</Placeholder>
-              ) : (
-                <Loading variant="text" label="Fetching preview…" />
-              )}
-            </Stack>
-          }
-        />
+      <Card className="flex items-center gap-md p-md">
+        <MdBookmark className="size-4 shrink-0 text-muted-foreground" />
+        <Stack gap="2xs" className="min-w-0 flex-1">
+          <Text variant="label" className="truncate font-semibold">
+            {hostname}
+          </Text>
+          {error ? (
+            <Placeholder tone="error">{error}</Placeholder>
+          ) : (
+            <Loading variant="text" label="Fetching preview…" />
+          )}
+        </Stack>
       </Card>
     </Inset>
   );

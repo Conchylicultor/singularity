@@ -1,6 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ReconnectingEventSource, useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
@@ -214,16 +213,18 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
         className="rounded-md border bg-muted/30 p-lg font-mono text-caption"
       >
         {entries.map((entry) => (
-          <Frame
+          <div
             key={entry.seq}
-            className={entry.stream === "stderr" ? "text-destructive" : "text-foreground"}
-            leading={
-              <span className="text-muted-foreground">
-                {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
-              </span>
-            }
-            content={<span>{entry.line}</span>}
-          />
+            className={cn(
+              "flex gap-sm",
+              entry.stream === "stderr" ? "text-destructive" : "text-foreground",
+            )}
+          >
+            <span className="shrink-0 text-muted-foreground">
+              {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
+            </span>
+            <span>{entry.line}</span>
+          </div>
         ))}
       </Scroll>
     </Stack>

@@ -1,5 +1,4 @@
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { colorAdjustConfig } from "../internal/config";
@@ -38,75 +37,53 @@ export function ColorAdjustPicker() {
         ))}
       </Stack>
       <Stack gap="sm" className="text-body">
-        <Frame
-          as="label"
-          gap="sm"
-          leading={<span className="w-24 text-muted-foreground">Hue</span>}
-          meta={
-            <input
-              type="range"
-              min={-180}
-              max={180}
-              step={1}
-              value={hueShift}
-              onChange={(e) => setConfig("hueShift", Number(e.target.value))}
-              className="w-full"
-            />
-          }
-          trailing={
-            <span className="w-10 text-right tabular-nums">{hueShift}</span>
-          }
-        />
-        <Frame
-          as="label"
-          gap="sm"
-          leading={
-            <span className="w-24 text-muted-foreground">Saturation</span>
-          }
-          meta={
-            <input
-              type="range"
-              min={0}
-              max={2}
-              step={0.05}
-              value={saturationScale}
-              onChange={(e) =>
-                setConfig("saturationScale", Number(e.target.value))
-              }
-              className="w-full"
-            />
-          }
-          trailing={
-            <span className="w-10 text-right tabular-nums">
-              {saturationScale.toFixed(2)}
-            </span>
-          }
-        />
-        <Frame
-          as="label"
-          gap="sm"
-          leading={
-            <span className="w-24 text-muted-foreground">Lightness</span>
-          }
-          meta={
-            <input
-              type="range"
-              min={0.2}
-              max={2}
-              step={0.05}
-              value={lightnessScale}
-              onChange={(e) =>
-                setConfig("lightnessScale", Number(e.target.value))
-              }
-              className="w-full"
-            />
-          }
-          trailing={
-            <span className="w-10 text-right tabular-nums">
-              {lightnessScale.toFixed(2)}
-            </span>
-          }
-        />
+        <label className="flex items-center gap-sm">
+          <span className="w-24 text-muted-foreground">Hue</span>
+          <input
+            type="range"
+            min={-180}
+            max={180}
+            step={1}
+            value={hueShift}
+            onChange={(e) => setConfig("hueShift", Number(e.target.value))}
+            className="flex-1"
+          />
+          <span className="w-10 text-right tabular-nums">{hueShift}</span>
+        </label>
+        <label className="flex items-center gap-sm">
+          <span className="w-24 text-muted-foreground">Saturation</span>
+          <input
+            type="range"
+            min={0}
+            max={2}
+            step={0.05}
+            value={saturationScale}
+            onChange={(e) =>
+              setConfig("saturationScale", Number(e.target.value))
+            }
+            className="flex-1"
+          />
+          <span className="w-10 text-right tabular-nums">
+            {saturationScale.toFixed(2)}
+          </span>
+        </label>
+        <label className="flex items-center gap-sm">
+          <span className="w-24 text-muted-foreground">Lightness</span>
+          <input
+            type="range"
+            min={0.2}
+            max={2}
+            step={0.05}
+            value={lightnessScale}
+            onChange={(e) =>
+              setConfig("lightnessScale", Number(e.target.value))
+            }
+            className="flex-1"
+          />
+          <span className="w-10 text-right tabular-nums">
+            {lightnessScale.toFixed(2)}
+          </span>
+        </label>
       </Stack>
     </Stack>
   );

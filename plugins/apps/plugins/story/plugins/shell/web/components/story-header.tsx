@@ -4,7 +4,6 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { pagesResource, updateBlock, pageData, type Block } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 
 /**
  * Editable story title in the editor top bar. Mirrors the pages `PageHeader` but
@@ -40,26 +39,19 @@ function StoryHeaderInner({ pageId, page }: { pageId: string; page: Block | unde
   });
 
   return (
-    <Frame
-      gap="sm"
-      // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of the editor top-bar's flex row (externally owned)
-      className="min-w-0 flex-1"
-      leading={
-        <PageIcon nodes={data?.iconSvgNodes} className="size-5 text-muted-foreground" />
-      }
-      content={
-        <input
-          value={title.value}
-          onChange={(e) => title.onChange(e.target.value)}
-          onFocus={title.onFocus}
-          onBlur={title.onBlur}
-          placeholder="Untitled"
-          // `text-subheading` is the sanctioned typographic scale (the same utility
-          // `<Text variant="subheading">` emits); it carries its own weight, so no
-          // raw `font-semibold` / banned `text-lg` is needed on this <input>.
-          className="w-full truncate bg-transparent text-subheading outline-none"
-        />
-      }
-    />
+    <div className="flex min-w-0 flex-1 items-center gap-sm">
+      <PageIcon nodes={data?.iconSvgNodes} className="size-5 shrink-0 text-muted-foreground" />
+      <input
+        value={title.value}
+        onChange={(e) => title.onChange(e.target.value)}
+        onFocus={title.onFocus}
+        onBlur={title.onBlur}
+        placeholder="Untitled"
+        // `text-subheading` is the sanctioned typographic scale (the same utility
+        // `<Text variant="subheading">` emits); it carries its own weight, so no
+        // raw `font-semibold` / banned `text-lg` is needed on this <input>.
+        className="min-w-0 flex-1 truncate bg-transparent text-subheading outline-none"
+      />
+    </div>
   );
 }

@@ -1,5 +1,4 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback } from "react";
 import { MdDragIndicator, MdClose } from "react-icons/md";
@@ -25,50 +24,42 @@ export function ListItemRow<F extends FieldsRecord>({
       handle
       className={({ isDragging }) =>
         cn(
-          "rounded-md border border-border bg-card p-sm",
+          "flex items-start gap-sm rounded-md border border-border bg-card p-sm",
           isDragging && "opacity-40",
         )
       }
     >
       {(state) => (
-        <Frame
-          align="start"
-          gap="sm"
-          leading={
-            <div
-              {...state.handleProps}
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align the drag handle with the first sub-field
-              className="mt-1 cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
-            >
-              <MdDragIndicator className="size-4" />
-            </div>
-          }
-          content={
-            <Stack gap="2xs">
-              {Object.entries(itemFields).map(([key, field]) => (
-                <SubFieldRow
-                  key={key}
-                  fieldKey={key}
-                  field={field}
-                  value={(item as Record<string, unknown>)[key]}
-                  onChange={(val) =>
-                    onChange({ ...item, [key]: val } as ListItem<F>)
-                  }
-                />
-              ))}
-            </Stack>
-          }
-          trailing={
-            <button
-              type="button"
-              onClick={onRemove}
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align the remove button with the first sub-field
-              className="mt-1 rounded-sm p-2xs text-muted-foreground hover:text-destructive"
-            >
-              <MdClose className="size-3.5" />
-            </button>
-          }
-        />
+        <>
+          <div
+            {...state.handleProps}
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align the drag handle with the first sub-field
+            className="mt-1 shrink-0 cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
+          >
+            <MdDragIndicator className="size-4" />
+          </div>
+          <Stack gap="2xs" className="min-w-0 flex-1">
+            {Object.entries(itemFields).map(([key, field]) => (
+              <SubFieldRow
+                key={key}
+                fieldKey={key}
+                field={field}
+                value={(item as Record<string, unknown>)[key]}
+                onChange={(val) =>
+                  onChange({ ...item, [key]: val } as ListItem<F>)
+                }
+              />
+            ))}
+          </Stack>
+          <button
+            type="button"
+            onClick={onRemove}
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align the remove button with the first sub-field
+            className="mt-1 shrink-0 rounded-sm p-2xs text-muted-foreground hover:text-destructive"
+          >
+            <MdClose className="size-3.5" />
+          </button>
+        </>
       )}
     </SortableItem>
   );

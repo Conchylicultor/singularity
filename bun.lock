@@ -2520,10 +2520,6 @@
       "name": "@singularity/plugin-primitives-css-control-size",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/css/plugins/frame": {
-      "name": "@singularity/plugin-primitives-css-frame",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/css/plugins/grid": {
       "name": "@singularity/plugin-primitives-css-grid",
       "version": "0.0.1",
@@ -4965,8 +4961,6 @@
     "@singularity/plugin-primitives-css-column": ["@singularity/plugin-primitives-css-column@workspace:plugins/primitives/plugins/css/plugins/column"],
 
     "@singularity/plugin-primitives-css-control-size": ["@singularity/plugin-primitives-css-control-size@workspace:plugins/primitives/plugins/css/plugins/control-size"],
-
-    "@singularity/plugin-primitives-css-frame": ["@singularity/plugin-primitives-css-frame@workspace:plugins/primitives/plugins/css/plugins/frame"],
 
     "@singularity/plugin-primitives-css-grid": ["@singularity/plugin-primitives-css-grid@workspace:plugins/primitives/plugins/css/plugins/grid"],
 

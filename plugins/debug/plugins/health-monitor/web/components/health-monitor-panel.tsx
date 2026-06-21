@@ -27,7 +27,6 @@ import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -263,18 +262,16 @@ function BackendRow({ series }: { series: HealthSeries }): ReactElement {
   const stale = ageMs > STALE_AGE_MS;
   const depth = latest?.heavyReadDepth ?? 0;
   return (
-    <Frame
-      leading={
-        <Stack direction="row" align="center" gap="xs">
-          <StatusDot
-            colorClass={stale ? "bg-muted-foreground" : "bg-success"}
-            size="sm"
-          />
-          <Text variant="caption">{series.worktree}</Text>
-        </Stack>
-      }
-      meta={
-        latest ? (
+    <div className="flex items-center gap-sm">
+      <Stack direction="row" align="center" gap="xs">
+        <StatusDot
+          colorClass={stale ? "bg-muted-foreground" : "bg-success"}
+          size="sm"
+        />
+        <Text variant="caption">{series.worktree}</Text>
+      </Stack>
+      <div className="min-w-0 flex-1">
+        {latest ? (
           <Text variant="caption" tone="muted">
             <RelativeTime date={new Date(latest.sampledAt)} />
           </Text>
@@ -282,17 +279,17 @@ function BackendRow({ series }: { series: HealthSeries }): ReactElement {
           <Text variant="caption" tone="muted">
             no samples
           </Text>
-        )
-      }
-      trailing={
+        )}
+      </div>
+      <div className="flex shrink-0 items-center gap-sm">
         <Badge
           variant={depth > 0 ? "warning" : "muted"}
           title="Host-wide heavy-read gate queue depth"
         >
           {`heavy-read ${depth}`}
         </Badge>
-      }
-    />
+      </div>
+    </div>
   );
 }
 

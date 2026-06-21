@@ -5,7 +5,6 @@ import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugin
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 
 type TaskListResult = Array<{ id?: string; description?: string; status?: string }>;
 
@@ -37,24 +36,20 @@ export function TaskListToolView({ event }: ToolRendererProps) {
         >
           <Stack gap="xs">
             {tasks.map((t, i) => (
-              <Frame
+              <div
                 key={t.id ?? i}
-                gap="sm"
-                className="text-2xs text-muted-foreground"
-                leading={
-                  t.id || t.status ? (
-                    <>
-                      {t.id && <span className="font-mono">{t.id}</span>}
-                      {t.status && (
-                        <Badge variant="muted">
-                          {formatStatusLabel(t.status)}
-                        </Badge>
-                      )}
-                    </>
-                  ) : undefined
-                }
-                content={t.description || undefined}
-              />
+                className="flex items-center gap-sm text-2xs text-muted-foreground"
+              >
+                {t.id && <span className="shrink-0 font-mono">{t.id}</span>}
+                {t.status && (
+                  <Badge variant="muted" className="shrink-0">
+                    {formatStatusLabel(t.status)}
+                  </Badge>
+                )}
+                {t.description && (
+                  <span className="min-w-0 truncate">{t.description}</span>
+                )}
+              </div>
             ))}
           </Stack>
         </Scroll>

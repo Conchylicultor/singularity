@@ -13,8 +13,7 @@ export interface CollectedEntry {
 }
 
 export const fixturesEntries: CollectedEntry[] = [
-  { pluginPath: "primitives/plugins/css/plugins/frame", id: "primitives.css.frame", loader: () => import("@plugins/primitives/plugins/css/plugins/frame/fixtures"), dependsOn: ["primitives/plugins/css/plugins/text"] },
-  { pluginPath: "primitives/plugins/css/plugins/overlay", id: "primitives.css.overlay", loader: () => import("@plugins/primitives/plugins/css/plugins/overlay/fixtures"), dependsOn: ["primitives/plugins/css/plugins/frame"] },
-  { pluginPath: "primitives/plugins/css/plugins/pin", id: "primitives.css.pin", loader: () => import("@plugins/primitives/plugins/css/plugins/pin/fixtures"), dependsOn: ["primitives/plugins/css/plugins/frame", "primitives/plugins/css/plugins/text"] },
+  { pluginPath: "primitives/plugins/css/plugins/overlay", id: "primitives.css.overlay", loader: () => import("@plugins/primitives/plugins/css/plugins/overlay/fixtures"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/css/plugins/pin", id: "primitives.css.pin", loader: () => import("@plugins/primitives/plugins/css/plugins/pin/fixtures"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/text", id: "primitives.css.text", loader: () => import("@plugins/primitives/plugins/css/plugins/text/fixtures"), dependsOn: [] },
 ];

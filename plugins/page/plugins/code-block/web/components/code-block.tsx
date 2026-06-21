@@ -13,7 +13,6 @@ import {
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
@@ -176,19 +175,15 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
               className="h-6 w-36 bg-background/80 text-caption backdrop-blur"
             >
               {language === undefined ? (
-                <Frame
-                  as="span"
-                  gap="xs"
-                  leading={<MdAutoAwesome className="text-muted-foreground" />}
-                  content={
-                    <span className="truncate">
-                      Auto
-                      {detected ? (
-                        <span className="text-muted-foreground"> · {detected}</span>
-                      ) : null}
-                    </span>
-                  }
-                />
+                <span className="flex min-w-0 items-center gap-xs">
+                  <MdAutoAwesome className="shrink-0 text-muted-foreground" />
+                  <span className="truncate">
+                    Auto
+                    {detected ? (
+                      <span className="text-muted-foreground"> · {detected}</span>
+                    ) : null}
+                  </span>
+                </span>
               ) : (
                 <span className="truncate">
                   {language === PLAIN ? "Plain text" : language}

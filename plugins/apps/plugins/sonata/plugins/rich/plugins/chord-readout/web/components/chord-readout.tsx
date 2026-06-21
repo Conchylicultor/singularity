@@ -6,7 +6,6 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import {
   chordPitches,
   invertVoicing,
@@ -119,23 +118,19 @@ export function ChordReadout() {
           {voicings && (
             // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the voicings section from the beats line above; no flex parent to own a gap
             <div className="mt-3">
-              <Frame
-                content={
-                  <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Notes
-                  </div>
-                }
-                trailing={
-                  voicings.length > 1 ? (
-                    <ToggleChip
-                      active={showInversions}
-                      onClick={() => setShowInversions((v) => !v)}
-                    >
-                      Inversions
-                    </ToggleChip>
-                  ) : undefined
-                }
-              />
+              <div className="flex items-center justify-between">
+                <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Notes
+                </div>
+                {voicings.length > 1 && (
+                  <ToggleChip
+                    active={showInversions}
+                    onClick={() => setShowInversions((v) => !v)}
+                  >
+                    Inversions
+                  </ToggleChip>
+                )}
+              </div>
               {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 top offset below the Notes header row inside the Card; no parent gap to own it */}
               <Stack gap="sm" className="mt-2">
                 {(showInversions ? voicings : voicings.slice(0, 1)).map(

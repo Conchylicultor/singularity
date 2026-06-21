@@ -14,7 +14,6 @@ import { configV2SecretMetaResource } from "@plugins/fields/plugins/secret/plugi
 import { MdCheck, MdOpenInNew } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
@@ -148,16 +147,16 @@ export function GoogleSetupPane() {
             <Text as="p" variant="caption" className="text-muted-foreground">
               Application type: <span className="font-medium">Desktop app</span>
             </Text>
-            <Frame
-              meta={
-                <Text as="code" variant="caption" className="block rounded-md bg-muted px-sm py-xs break-all">
-                  {REDIRECT_URI}
-                </Text>
-              }
-              trailing={
-                <CopyButton text={REDIRECT_URI} title="Copy redirect URI" />
-              }
-            />
+            <div className="flex items-center gap-sm">
+              <Text as="code" variant="caption" className="flex-1 rounded-md bg-muted px-sm py-xs break-all">
+                {REDIRECT_URI}
+              </Text>
+              <CopyButton
+                text={REDIRECT_URI}
+                title="Copy redirect URI"
+                className="shrink-0"
+              />
+            </div>
             <Text as="p" variant="caption" className="text-muted-foreground">
               Add this as the Authorized redirect URI
             </Text>
@@ -255,33 +254,27 @@ function Step({
   children: React.ReactNode;
 }) {
   return (
-    <Frame
-      as="li"
-      gap="md"
-      align="start"
-      className={active ? "opacity-100" : "opacity-40 pointer-events-none"}
-      leading={
-        <Center
-          className={`size-6 rounded-full ${
-            done
-              ? "bg-success/15 text-success"
-              : "bg-muted text-muted-foreground"
-          }`}
-        >
-          {done ? (
-            <MdCheck className="h-3.5 w-3.5" />
-          ) : (
-            <Text as="span" variant="caption" className="font-medium">{number}</Text>
-          )}
-        </Center>
-      }
-      meta={
-        <Stack gap="xs">
-          <Text as="span" variant="label">{title}</Text>
-          {children}
-        </Stack>
-      }
-    />
+    <li
+      className={`flex gap-md items-start ${active ? "opacity-100" : "opacity-40 pointer-events-none"}`}
+    >
+      <Center
+        className={`size-6 shrink-0 rounded-full ${
+          done
+            ? "bg-success/15 text-success"
+            : "bg-muted text-muted-foreground"
+        }`}
+      >
+        {done ? (
+          <MdCheck className="h-3.5 w-3.5" />
+        ) : (
+          <Text as="span" variant="caption" className="font-medium">{number}</Text>
+        )}
+      </Center>
+      <div className="flex flex-col gap-xs min-w-0">
+        <Text as="span" variant="label">{title}</Text>
+        {children}
+      </div>
+    </li>
   );
 }
 

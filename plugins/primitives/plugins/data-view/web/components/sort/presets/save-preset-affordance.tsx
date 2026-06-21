@@ -5,7 +5,6 @@ import {
   Input,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 
 /**
@@ -62,17 +61,15 @@ export function SavePresetAffordance(props: {
             }
           }}
         />
-        <Frame
-          trailing={
-            <Button
-              variant="secondary"
-              disabled={name.trim() === ""}
-              onClick={submit}
-            >
-              Save
-            </Button>
-          }
-        />
+        <div className="flex items-center justify-end gap-sm">
+          <Button
+            variant="secondary"
+            disabled={name.trim() === ""}
+            onClick={submit}
+          >
+            Save
+          </Button>
+        </div>
       </Stack>
     </InlinePopover>
   );

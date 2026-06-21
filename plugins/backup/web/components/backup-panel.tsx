@@ -12,7 +12,6 @@ import {
 } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -48,39 +47,28 @@ function StatusIcon({ status }: { status: string }) {
 function TargetResultRow({ result }: { result: BackupTargetResult }) {
   const Icon = result.targetId === "google-drive" ? MdCloudUpload : MdFolder;
   return (
-    <Frame
-      gap="sm"
-      leading={
-        <>
-          <Icon className="size-4 text-muted-foreground" />
-          <Text as="span" variant="body" className="font-medium capitalize">
-            {result.targetId}
-          </Text>
-          {result.ok ? (
-            <MdCheckCircle className="size-3.5 text-success" />
-          ) : (
-            <MdError className="size-3.5 text-destructive" />
-          )}
-        </>
-      }
-      meta={
-        result.detail ? (
-          <Text className="text-caption text-muted-foreground">
-            {result.detail}
-          </Text>
-        ) : undefined
-      }
-      trailing={
-        !result.ok && result.consent ? (
-          <GrantAccessButton
-            providerId={result.consent.providerId}
-            scopes={result.consent.scopes}
-            label="Grant access"
-            variant="outline"
-          />
-        ) : undefined
-      }
-    />
+    <Text as="div" variant="body" className="flex items-center gap-sm">
+      <Icon className="size-4 shrink-0 text-muted-foreground" />
+      <span className="font-medium capitalize">{result.targetId}</span>
+      {result.ok ? (
+        <MdCheckCircle className="size-3.5 text-success" />
+      ) : (
+        <MdError className="size-3.5 text-destructive" />
+      )}
+      {result.detail && (
+        <Text as="span" variant="caption" className="text-muted-foreground truncate">
+          {result.detail}
+        </Text>
+      )}
+      {!result.ok && result.consent && (
+        <GrantAccessButton
+          providerId={result.consent.providerId}
+          scopes={result.consent.scopes}
+          label="Grant access"
+          variant="outline"
+        />
+      )}
+    </Text>
   );
 }
 
@@ -91,40 +79,30 @@ function BackupRunRow({ run }: { run: BackupRun }) {
     <Clip className="rounded-md border">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full px-lg py-md hover:bg-muted/50 transition-colors text-left"
+        className="w-full flex items-center justify-between px-lg py-md hover:bg-muted/50 transition-colors text-left"
       >
-        <Frame
-          gap="md"
-          content={
-            <Frame
-              gap="md"
-              leading={<StatusIcon status={run.status} />}
-              content={
-                <Stack gap="2xs">
-                  <Text as="p" variant="label" className="truncate">
-                    {new Date(run.startedAt).toLocaleString()}
-                  </Text>
-                  <Text as="p" variant="caption" className="text-muted-foreground">
-                    {run.trigger} ·{" "}
-                    {run.archiveSizeBytes
-                      ? formatSize(run.archiveSizeBytes)
-                      : "in progress"}
-                    {Array.isArray(run.manifest?.sources)
-                      ? ` · ${run.manifest.sources.filter((s) => !s.skipped).length} sources`
-                      : ""}
-                  </Text>
-                </Stack>
-              }
-            />
-          }
-          trailing={
-            expanded ? (
-              <MdExpandLess className="size-4 text-muted-foreground" />
-            ) : (
-              <MdExpandMore className="size-4 text-muted-foreground" />
-            )
-          }
-        />
+        <div className="flex items-center gap-md min-w-0">
+          <StatusIcon status={run.status} />
+          <Stack gap="2xs">
+            <Text as="p" variant="label" className="truncate">
+              {new Date(run.startedAt).toLocaleString()}
+            </Text>
+            <Text as="p" variant="caption" className="text-muted-foreground">
+              {run.trigger} ·{" "}
+              {run.archiveSizeBytes
+                ? formatSize(run.archiveSizeBytes)
+                : "in progress"}
+              {Array.isArray(run.manifest?.sources)
+                ? ` · ${run.manifest.sources.filter((s) => !s.skipped).length} sources`
+                : ""}
+            </Text>
+          </Stack>
+        </div>
+        {expanded ? (
+          <MdExpandLess className="size-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <MdExpandMore className="size-4 shrink-0 text-muted-foreground" />
+        )}
       </button>
 
       {expanded && (
@@ -181,11 +159,12 @@ export function BackupPanel() {
   return (
     <Stack gap="xl" className="p-xl max-w-2xl">
         <Stack gap="xs">
-          <Frame
-            gap="md"
-            content={<Text as="h2" variant="heading">Backup</Text>}
-            trailing={<ConfigGearButton descriptor={backupConfig} label="Backup settings" />}
-          />
+          <div className="flex items-center justify-between gap-md">
+            <Text as="h2" variant="heading">Backup</Text>
+            <div className="flex shrink-0 items-center gap-md">
+              <ConfigGearButton descriptor={backupConfig} label="Backup settings" />
+            </div>
+          </div>
           <Text as="p" variant="body" className="text-muted-foreground">
             Archives enabled sources and dispatches to all enabled storage targets.
           </Text>

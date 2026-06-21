@@ -14,7 +14,6 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import {
   Collapsible,
@@ -149,22 +148,19 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
 
   return (
     <Stack gap="none" className="relative border-b">
-      <Frame
-        className="border-b px-md py-xs"
-        leading={<Text as="span" variant="label" className="text-muted-foreground">Logs</Text>}
-        trailing={
-          <Button
-            variant="ghost"
-            aspect="icon"
-            className="size-6"
-            onClick={copyLogs}
-            disabled={entries.length === 0}
-            aria-label="Copy logs"
-          >
-            <MdContentCopy />
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-between border-b px-md py-xs">
+        <Text as="span" variant="label" className="text-muted-foreground">Logs</Text>
+        <Button
+          variant="ghost"
+          aspect="icon"
+          className="size-6"
+          onClick={copyLogs}
+          disabled={entries.length === 0}
+          aria-label="Copy logs"
+        >
+          <MdContentCopy />
+        </Button>
+      </div>
       <Scroll
         axis="y"
         fill={variant === "pane"}
@@ -175,27 +171,23 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
           <span className="text-muted-foreground">No build logs yet</span>
         )}
         {entries.map((entry) => (
-          <Frame
+          <div
             key={entry.seq}
-            gap="sm"
-            align="start"
             className={cn(
+              "flex gap-sm",
               entry.stream === "stderr" ? "text-destructive" : "text-foreground",
             )}
-            leading={
-              <span className="text-muted-foreground">
-                {new Date(entry.timestamp).toLocaleTimeString([], {
-                  hour: "2-digit",
-                  minute: "2-digit",
-                  second: "2-digit",
-                  hour12: false,
-                })}
-              </span>
-            }
-            content={
-              <span className="whitespace-pre-wrap break-all">{entry.line}</span>
-            }
-          />
+          >
+            <span className="shrink-0 text-muted-foreground">
+              {new Date(entry.timestamp).toLocaleTimeString([], {
+                hour: "2-digit",
+                minute: "2-digit",
+                second: "2-digit",
+                hour12: false,
+              })}
+            </span>
+            <span className="whitespace-pre-wrap break-all">{entry.line}</span>
+          </div>
         ))}
       </Scroll>
       {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}

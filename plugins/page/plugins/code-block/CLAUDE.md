@@ -7,7 +7,7 @@
 - Description: Code block type: editable with live syntax highlighting, language picker, and copy button.
 - Web:
   - Contributes: `Editor.Block` "code-block" → `CodeBlock`
-  - Uses: `page/editor.Editor`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/clip.Clip`, `primitives/css/frame.Frame`, `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectSeparator`, `primitives/css/ui-kit.SelectTrigger`, `primitives/editable-field.useEditableField`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/syntax-highlight.getHighlighter`, `primitives/syntax-highlight.resolveLang`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.themeForMode`, `primitives/syntax-highlight.useDarkMode`
+  - Uses: `page/editor.Editor`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/clip.Clip`, `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectSeparator`, `primitives/css/ui-kit.SelectTrigger`, `primitives/editable-field.useEditableField`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/syntax-highlight.getHighlighter`, `primitives/syntax-highlight.resolveLang`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.themeForMode`, `primitives/syntax-highlight.useDarkMode`
   - Exports: Values: `codeBlock`
 - Core:
   - Uses: `page/editor.defineBlock`

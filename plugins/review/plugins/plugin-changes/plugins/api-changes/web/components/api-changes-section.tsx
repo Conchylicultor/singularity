@@ -6,7 +6,6 @@ import {
 import type { PluginReviewProps } from "@plugins/review/plugins/plugin-changes/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 
 function DiffSection({ label, diff }: { label: string; diff: FacetDiff["diff"] }) {
   return (
@@ -15,20 +14,16 @@ function DiffSection({ label, diff }: { label: string; diff: FacetDiff["diff"] }
         {label}
       </Text>
       {diff.added.map((item) => (
-        <Frame
-          key={item}
-          gap="xs"
-          leading={<MdAdd className="size-3 text-success" />}
-          content={<Text as="code" variant="caption" className="text-success">{item}</Text>}
-        />
+        <Text as="span" variant="caption" key={item} className="flex items-center gap-xs">
+          <MdAdd className="size-3 text-success shrink-0" />
+          <code className="text-success">{item}</code>
+        </Text>
       ))}
       {diff.removed.map((item) => (
-        <Frame
-          key={item}
-          gap="xs"
-          leading={<MdRemove className="size-3 text-destructive" />}
-          content={<Text as="code" variant="caption" className="text-destructive">{item}</Text>}
-        />
+        <Text as="span" variant="caption" key={item} className="flex items-center gap-xs">
+          <MdRemove className="size-3 text-destructive shrink-0" />
+          <code className="text-destructive">{item}</code>
+        </Text>
       ))}
     </Stack>
   );

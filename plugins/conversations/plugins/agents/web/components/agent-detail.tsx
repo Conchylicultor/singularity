@@ -1,6 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
@@ -111,44 +110,38 @@ function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent })
   return (
     <Inset pad="xl">
       <Stack gap="lg">
-      <Frame
-        align="center"
-        gap="md"
-        leading={
-          <AvatarPicker
-            value={{
-              icon: agent.icon ?? DEFAULT_AGENT_AVATAR.icon,
-              color: agent.iconColor ?? DEFAULT_AGENT_AVATAR.color,
-              svgNodes: agentSvgNodes,
-            }}
-            onChange={(next) => save({
-              icon: next.icon,
-              iconColor: next.color,
-              iconSvgNodes: next.svgNodes ? JSON.stringify(next.svgNodes) : null,
-            })}
-            triggerLabel="Pick agent avatar"
-          >
-            <Avatar
-              icon={agent.icon ?? DEFAULT_AGENT_AVATAR.icon}
-              color={agent.iconColor ?? DEFAULT_AGENT_AVATAR.color}
-              svgNodes={agentSvgNodes}
-              size="lg"
-              statusDot={latestStatus ? CONV_STATUS_DOT[latestStatus] : null}
-              fallbackKey={agent.id}
-            />
-          </AvatarPicker>
-        }
-        content={
-          <input
-            value={nameField.value}
-            onChange={(e) => nameField.onChange(e.target.value)}
-            onFocus={nameField.onFocus}
-            onBlur={nameField.onBlur}
-            placeholder="Untitled"
-            className="placeholder:text-muted-foreground w-full bg-transparent text-title outline-none focus:ring-0"
+      <div className="flex items-center gap-md">
+        <AvatarPicker
+          value={{
+            icon: agent.icon ?? DEFAULT_AGENT_AVATAR.icon,
+            color: agent.iconColor ?? DEFAULT_AGENT_AVATAR.color,
+            svgNodes: agentSvgNodes,
+          }}
+          onChange={(next) => save({
+            icon: next.icon,
+            iconColor: next.color,
+            iconSvgNodes: next.svgNodes ? JSON.stringify(next.svgNodes) : null,
+          })}
+          triggerLabel="Pick agent avatar"
+        >
+          <Avatar
+            icon={agent.icon ?? DEFAULT_AGENT_AVATAR.icon}
+            color={agent.iconColor ?? DEFAULT_AGENT_AVATAR.color}
+            svgNodes={agentSvgNodes}
+            size="lg"
+            statusDot={latestStatus ? CONV_STATUS_DOT[latestStatus] : null}
+            fallbackKey={agent.id}
           />
-        }
-      />
+        </AvatarPicker>
+        <input
+          value={nameField.value}
+          onChange={(e) => nameField.onChange(e.target.value)}
+          onFocus={nameField.onFocus}
+          onBlur={nameField.onBlur}
+          placeholder="Untitled"
+          className="placeholder:text-muted-foreground w-full bg-transparent text-title outline-none focus:ring-0"
+        />
+      </div>
       <Stack gap="xs">
         <SectionLabel as="label">
           Model

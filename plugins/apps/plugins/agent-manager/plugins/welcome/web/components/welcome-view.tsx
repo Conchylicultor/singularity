@@ -12,7 +12,6 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 
 export function WelcomeView() {
   const conv = useConversations();
@@ -84,36 +83,29 @@ export function WelcomeView() {
             <Clip as={Card} className="rounded-lg p-none">
               <Stack gap="none" className="divide-y">
                 {recentConversations.map((conversation) => (
-                  <Frame
+                  <button
                     key={conversation.id}
-                    as="button"
-                    gap="md"
+                    className="flex items-center gap-md px-md py-sm text-left hover:bg-accent transition-colors"
                     onClick={() => openConversation(conversation.id)}
-                    className="px-md py-sm text-left hover:bg-accent transition-colors"
-                    leading={
-                      <StatusDot
-                        colorClass={conversation.active ? "bg-info" : "bg-muted-foreground/40"}
-                      />
-                    }
-                    content={
-                      <Stack gap="2xs">
-                        <span
-                          className={cn(
-                            "truncate text-caption",
-                            !conversation.active
-                              ? "text-muted-foreground"
-                              : "font-medium text-foreground",
-                          )}
-                        >
-                          {conversation.title ?? "Starting..."}
-                        </span>
-                        <RelativeTime date={conversation.createdAt} className="text-3xs text-muted-foreground" />
-                      </Stack>
-                    }
-                    trailing={
-                      <MdArrowForward className="size-3.5 text-muted-foreground/50" />
-                    }
-                  />
+                  >
+                    <StatusDot
+                      colorClass={conversation.active ? "bg-info" : "bg-muted-foreground/40"}
+                    />
+                    <Stack gap="2xs" className="overflow-hidden flex-1">
+                      <span
+                        className={cn(
+                          "truncate text-caption",
+                          !conversation.active
+                            ? "text-muted-foreground"
+                            : "font-medium text-foreground",
+                        )}
+                      >
+                        {conversation.title ?? "Starting..."}
+                      </span>
+                      <RelativeTime date={conversation.createdAt} className="text-3xs text-muted-foreground" />
+                    </Stack>
+                    <MdArrowForward className="size-3.5 text-muted-foreground/50 shrink-0" />
+                  </button>
                 ))}
               </Stack>
             </Clip>

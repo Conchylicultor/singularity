@@ -11,7 +11,6 @@ import { navigate } from "@plugins/apps/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
@@ -52,73 +51,62 @@ const VARIANT_TEXT_MUTED: Record<Notification["variant"], string> = {
 function NotificationRow({ n, dismiss, onClose }: { n: Notification; dismiss: (id: string) => void; onClose: () => void }) {
   const clientId = typeof n.metadata?.clientId === "string" ? n.metadata.clientId : null;
   return (
-    <Frame
-      as="li"
-      gap="sm"
-      align="start"
-      className={`px-md py-sm border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
+    <li
+      className={`flex gap-sm px-md py-sm border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
       onClick={
         n.linkTo?.startsWith("/")
           ? () => { navigate(n.linkTo!); onClose(); }
           : undefined
       }
-      content={
-        <Stack gap="none">
-          <Frame
-            gap="xs"
-            content={
-              <Text as="p" variant="label" className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
-                {n.title}
-              </Text>
-            }
-            trailing={
-              n.muted ? (
-                <Badge
-                  variant="muted"
-                  title="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
-                >
-                  muted
-                </Badge>
-              ) : undefined
-            }
-          />
-          {n.description && n.description !== n.title && (
-            <Text as="p" variant="caption" className="text-muted-foreground line-clamp-2">
-              {n.description}
-            </Text>
+    >
+      <div className="flex-1 min-w-0">
+        <div className="flex items-center gap-xs min-w-0">
+          <Text as="p" variant="label" className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
+            {n.title}
+          </Text>
+          {n.muted && (
+            <Badge
+              variant="muted"
+              title="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
+            >
+              muted
+            </Badge>
           )}
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the metadata row from the description above */}
-          <Stack direction="row" gap="sm" align="center" className="mt-0.5">
-            <RelativeTime date={n.createdAt} className="text-3xs text-muted-foreground" />
-            {n.type && (
-              <span className="text-3xs text-muted-foreground">{n.type}</span>
-            )}
-            {clientId != null && (
-              <span className="text-3xs text-muted-foreground">
-                {clientId === getTabId() ? "this tab" : "another tab"}
-              </span>
-            )}
-            {n.linkTo?.startsWith("/") && (
-              <span className="text-3xs text-muted-foreground hover:text-foreground">
-                View &rarr;
-              </span>
-            )}
-          </Stack>
+        </div>
+        {n.description && n.description !== n.title && (
+          <Text as="p" variant="caption" className="text-muted-foreground line-clamp-2">
+            {n.description}
+          </Text>
+        )}
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the metadata row from the description above */}
+        <Stack direction="row" gap="sm" align="center" className="mt-0.5">
+          <RelativeTime date={n.createdAt} className="text-3xs text-muted-foreground" />
+          {n.type && (
+            <span className="text-3xs text-muted-foreground">{n.type}</span>
+          )}
+          {clientId != null && (
+            <span className="text-3xs text-muted-foreground">
+              {clientId === getTabId() ? "this tab" : "another tab"}
+            </span>
+          )}
+          {n.linkTo?.startsWith("/") && (
+            <span className="text-3xs text-muted-foreground hover:text-foreground">
+              View &rarr;
+            </span>
+          )}
         </Stack>
-      }
-      trailing={
-        <Text
-          as="button"
-          variant="body"
-          // eslint-disable-next-line text/no-adhoc-typography -- tight line-height centers the × glyph in the button
-          className="text-muted-foreground hover:text-foreground leading-none"
-          onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
-          aria-label="Dismiss"
-        >
-          &times;
-        </Text>
-      }
-    />
+      </div>
+      <Text
+        as="button"
+        variant="body"
+        // eslint-disable-next-line text/no-adhoc-typography -- tight line-height centers the × glyph in the button
+        className="shrink-0 text-muted-foreground hover:text-foreground leading-none"
+        onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
+        aria-label="Dismiss"
+      >
+        &times;
+      </Text>
+    </li>
   );
 }
 
@@ -241,22 +229,19 @@ export function BellButton() {
       align="end"
       contentClassName="w-80 p-none"
     >
-        <Frame
-          className="px-md py-sm border-b"
-          content={<Text variant="body" className="font-semibold">Notifications</Text>}
-          trailing={
-            list.length > 0 ? (
-              <Text
-                as="button"
-                variant="caption"
-                className="text-muted-foreground hover:text-foreground"
-                onClick={dismissAll}
-              >
-                Clear all
-              </Text>
-            ) : undefined
-          }
-        />
+        <div className="flex items-center justify-between px-md py-sm border-b">
+          <Text variant="body" className="font-semibold">Notifications</Text>
+          {list.length > 0 && (
+            <Text
+              as="button"
+              variant="caption"
+              className="text-muted-foreground hover:text-foreground"
+              onClick={dismissAll}
+            >
+              Clear all
+            </Text>
+          )}
+        </div>
         {list.length > 0 && (
           <Scroll axis="x" className="px-md py-xs border-b">
             <Stack direction="row" gap="xs">

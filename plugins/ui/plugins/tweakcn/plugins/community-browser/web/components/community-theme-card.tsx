@@ -3,7 +3,6 @@ import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { CatalogTheme } from "../../shared";
 
@@ -83,21 +82,21 @@ export function CommunityThemeCard({
           ))}
         </Grid>
 
-        <Frame
-          gap="xs"
-          content={
-            <Text variant="label" style={{ color: fg }}>
-              {theme.name}
-            </Text>
-          }
-          trailing={
-            theme.source === "registry" ? (
-              <span className="rounded-full bg-primary/10 px-xs text-3xs uppercase tracking-wide text-primary">
-                curated
-              </span>
-            ) : undefined
-          }
-        />
+        <div className="flex items-center gap-xs">
+          <Text
+            as="span"
+            variant="label"
+            className="flex-1 truncate"
+            style={{ color: fg }}
+          >
+            {theme.name}
+          </Text>
+          {theme.source === "registry" && (
+            <span className="shrink-0 rounded-full bg-primary/10 px-xs text-3xs uppercase tracking-wide text-primary">
+              curated
+            </span>
+          )}
+        </div>
       </Stack>
     </Card>
   );

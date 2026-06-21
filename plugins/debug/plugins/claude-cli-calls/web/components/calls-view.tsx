@@ -11,8 +11,6 @@ import {
 } from "@plugins/conversations/plugins/model-provider/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { CallRow } from "./call-row";
@@ -55,49 +53,43 @@ function CallsViewInner({ calls }: { calls: ClaudeCliCall[] }) {
 
   return (
     <Stack gap="none" className="h-full">
-      <Frame
-        className="border-b px-md py-sm"
-        content={
-          <Cluster>
-            <FilterGroup label="Model">
-              <FilterChip active={modelChip.value === "all"} onClick={() => modelChip.setValue("all")}>
-                all
+      <div className="flex flex-wrap items-center gap-sm border-b px-md py-sm">
+        <FilterGroup label="Model">
+          <FilterChip active={modelChip.value === "all"} onClick={() => modelChip.setValue("all")}>
+            all
+          </FilterChip>
+          {MODEL_TIERS.map((tier) => (
+            <FilterChip
+              key={tier}
+              active={modelChip.value === tier}
+              onClick={() => modelChip.setValue(tier)}
+            >
+              {tier}
+            </FilterChip>
+          ))}
+        </FilterGroup>
+        {sources.length > 0 && (
+          <FilterGroup label="Source">
+            <FilterChip active={sourceChip.value === "all"} onClick={() => sourceChip.setValue("all")}>
+              all
+            </FilterChip>
+            {sources.map((s) => (
+              <FilterChip
+                key={s}
+                active={sourceChip.value === s}
+                onClick={() => sourceChip.setValue(s)}
+              >
+                {s}
               </FilterChip>
-              {MODEL_TIERS.map((tier) => (
-                <FilterChip
-                  key={tier}
-                  active={modelChip.value === tier}
-                  onClick={() => modelChip.setValue(tier)}
-                >
-                  {tier}
-                </FilterChip>
-              ))}
-            </FilterGroup>
-            {sources.length > 0 && (
-              <FilterGroup label="Source">
-                <FilterChip active={sourceChip.value === "all"} onClick={() => sourceChip.setValue("all")}>
-                  all
-                </FilterChip>
-                {sources.map((s) => (
-                  <FilterChip
-                    key={s}
-                    active={sourceChip.value === s}
-                    onClick={() => sourceChip.setValue(s)}
-                  >
-                    {s}
-                  </FilterChip>
-                ))}
-              </FilterGroup>
-            )}
-          </Cluster>
-        }
-        trailing={
-          <Text as="div" variant="caption" className="text-muted-foreground tabular-nums">
-            {visible.length}
-            {visible.length !== calls.length ? ` / ${calls.length}` : ""} calls
-          </Text>
-        }
-      />
+            ))}
+          </FilterGroup>
+        )}
+        <div className="flex-1" />
+        <Text as="div" variant="caption" className="text-muted-foreground tabular-nums">
+          {visible.length}
+          {visible.length !== calls.length ? ` / ${calls.length}` : ""} calls
+        </Text>
+      </div>
       <Scroll axis="both" fill>
         {visible.length === 0 ? (
           <Center className="h-full">

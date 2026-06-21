@@ -12,7 +12,6 @@ import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane, buildDetailPane } from "../panes";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 
 /** Inner component: receives settled history data so hooks run unconditionally with real values. */
 function BuildButtonInner({
@@ -100,24 +99,21 @@ function BuildButtonInner({
       align="end"
       contentClassName="w-[480px] p-none"
     >
-      <Frame
-        className="border-b px-md py-sm"
-        leading={<Text as="span" variant="label">Builds</Text>}
-        trailing={
-          <Button
-            variant="ghost"
-            aspect="icon"
-            className="size-6"
-            onClick={() => {
-              setOpen(false);
-              openPane(buildPane, {}, { mode: "root" });
-            }}
-            aria-label="Open in pane"
-          >
-            <MdOpenInFull className="size-3" />
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-between border-b px-md py-sm">
+        <Text as="span" variant="label">Builds</Text>
+        <Button
+          variant="ghost"
+          aspect="icon"
+          className="size-6"
+          onClick={() => {
+            setOpen(false);
+            openPane(buildPane, {}, { mode: "root" });
+          }}
+          aria-label="Open in pane"
+        >
+          <MdOpenInFull className="size-3" />
+        </Button>
+      </div>
       <BuildPopoverContent
         variant="popover"
         onRunClick={(runId) => {

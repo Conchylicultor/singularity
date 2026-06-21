@@ -18,7 +18,6 @@ import { useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
@@ -96,34 +95,28 @@ function FxToggleRow({ effect }: { effect: FxItem }) {
       role="switch"
       aria-checked={enabled}
       onClick={() => setConfig("enabled", !enabled)}
-      className="w-full rounded-sm p-xs text-left transition-colors hover:bg-muted"
+      className="flex w-full items-center gap-sm rounded-sm p-xs text-left transition-colors hover:bg-muted"
     >
-      <Frame
-        align="center"
-        gap="sm"
-        leading={
-          Icon ? <Icon className="icon-auto text-muted-foreground" /> : null
-        }
-        content={<Text variant="body">{effect.label}</Text>}
-        trailing={
-          // Switch visual — the whole row is the actual control (role="switch").
-          <span
-            aria-hidden
-            className={cn(
-              "relative h-4 w-7 rounded-full transition-colors",
-              enabled ? "bg-primary" : "bg-muted-foreground/30",
-            )}
-          >
-            <span
-              // eslint-disable-next-line layout/no-adhoc-layout -- toggle knob: 0.5 base offset is off the spacing ramp and translate-x-3 is the value-driven slide
-              className={cn(
-                "absolute left-0.5 top-0.5 size-3 rounded-full bg-background shadow-sm transition-transform",
-                enabled && "translate-x-3",
-              )}
-            />
-          </span>
-        }
-      />
+      {Icon ? <Icon className="icon-auto shrink-0 text-muted-foreground" /> : null}
+      <Text variant="body" className="min-w-0 flex-1 truncate">
+        {effect.label}
+      </Text>
+      {/* Switch visual — the whole row is the actual control (role="switch"). */}
+      <span
+        aria-hidden
+        className={cn(
+          "relative h-4 w-7 shrink-0 rounded-full transition-colors",
+          enabled ? "bg-primary" : "bg-muted-foreground/30",
+        )}
+      >
+        <span
+          // eslint-disable-next-line layout/no-adhoc-layout -- toggle knob: 0.5 base offset is off the spacing ramp and translate-x-3 is the value-driven slide
+          className={cn(
+            "absolute left-0.5 top-0.5 size-3 rounded-full bg-background shadow-sm transition-transform",
+            enabled && "translate-x-3",
+          )}
+        />
+      </span>
     </button>
   );
 }

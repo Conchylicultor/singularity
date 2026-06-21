@@ -11,7 +11,6 @@ import { useCallback, useRef, useState } from "react";
 import { MdMusicNote, MdUploadFile } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 
 interface Props {
   onRaw: (raw: unknown) => void;
@@ -106,17 +105,10 @@ export function MidiLoader({ onRaw }: Props) {
           <Text
             as="div"
             variant="caption"
-            className="rounded-md bg-muted px-sm py-xs text-muted-foreground"
+            className="flex items-center gap-xs rounded-md bg-muted px-sm py-xs text-muted-foreground"
           >
-            <Frame
-              gap="xs"
-              leading={<MdMusicNote className="size-3.5" />}
-              content={
-                <Text className="max-w-[16rem]">
-                  {fileName}
-                </Text>
-              }
-            />
+            <MdMusicNote className="size-3.5 shrink-0" />
+            <Text className="truncate max-w-[16rem]">{fileName}</Text>
           </Text>
         ) : null}
       </Stack>

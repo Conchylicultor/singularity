@@ -6,7 +6,6 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { useCommitFiles } from "../use-commit-files";
@@ -138,32 +137,24 @@ function CommitFileRow({
           className="text-body w-full bg-muted px-md py-xs text-left hover:bg-muted/80"
           aria-expanded={expanded}
         >
-          <Frame
-            leading={<CollapsibleChevron open={expanded} className="size-4 text-muted-foreground" />}
-            content={
-              <Text>
-                {from && (
-                  <>
-                    <span className="text-muted-foreground line-through">{from}</span>
-                    {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal offset around the rename arrow between two file paths */}
-                    <span className="mx-1.5 text-muted-foreground">→</span>
-                  </>
-                )}
-                <span className="text-muted-foreground">{dir}</span>
-                <span className="font-medium">{basename}</span>
-              </Text>
-            }
-            trailing={
-              <>
-                <Text as="span" variant="caption" className="tabular-nums text-success">
-                  +{file.additions}
-                </Text>
-                <Text as="span" variant="caption" className="tabular-nums text-destructive">
-                  −{file.deletions}
-                </Text>
-              </>
-            }
-          />
+          <div className="flex w-full items-center gap-sm">
+            <CollapsibleChevron open={expanded} className="size-4 shrink-0 text-muted-foreground" />
+            <span className="min-w-0 flex-1 truncate">
+              {from && (
+                <>
+                  <span className="text-muted-foreground line-through">{from}</span>
+                  {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal offset around the rename arrow between two file paths */}
+                  <span className="mx-1.5 text-muted-foreground">→</span>
+                </>
+              )}
+              <span className="text-muted-foreground">{dir}</span>
+              <span className="font-medium">{basename}</span>
+            </span>
+            <Text as="span" variant="caption" className="flex shrink-0 items-center gap-sm tabular-nums">
+              <span className="text-success">+{file.additions}</span>
+              <span className="text-destructive">−{file.deletions}</span>
+            </Text>
+          </div>
         </button>
       </Sticky>
       {expanded && (

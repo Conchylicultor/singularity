@@ -1,7 +1,6 @@
 import { MdNotificationsNone } from "react-icons/md";
 import type { StructuredTag } from "../internal/parse-structured-tag";
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
@@ -37,11 +36,14 @@ export function StructuredTagCard({ structured }: { structured: StructuredTag })
     <CollapsibleCard
       icon={<MdNotificationsNone className="size-3.5" />}
       label={
-        <Frame
-          gap="xs"
-          leading={<span className="font-medium">{humanizeTag(tag)}</span>}
-          content={liftSummary ? summary : undefined}
-        />
+        <div className="flex items-center gap-xs">
+          <span className="font-medium">{humanizeTag(tag)}</span>
+          {liftSummary && (
+            <div className="min-w-0">
+              <Text>{summary}</Text>
+            </div>
+          )}
+        </div>
       }
     >
       <Stack gap="xs">

@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { RowActions } from "../internal/event-action-context";
 
 /**
@@ -26,31 +24,19 @@ export function EventLine({
   children?: ReactNode;
 }) {
   return (
-    <Text as="div" variant="caption" className="text-muted-foreground">
-      <Frame
-        gap="sm"
-        className="px-xs py-xs"
-        leading={
-          <Stack
-            direction="row"
-            align="center"
-            gap="xs"
-            as="span"
-            className="font-medium tracking-wide text-2xs"
-          >
-            {icon}
-            {label}
-          </Stack>
-        }
-        content={
-          children != null ? (
-            <Stack direction="row" align="center" gap="xs" as="span">
-              {children}
-            </Stack>
-          ) : undefined
-        }
-        trailing={<RowActions />}
-      />
+    <Text
+      as="div"
+      variant="caption"
+      className="flex items-center gap-sm px-xs py-xs text-muted-foreground"
+    >
+      <span className="flex shrink-0 items-center gap-xs font-medium tracking-wide text-2xs">
+        {icon}
+        {label}
+      </span>
+      {children != null && (
+        <span className="flex min-w-0 items-center gap-xs">{children}</span>
+      )}
+      <RowActions className="ml-auto" />
     </Text>
   );
 }

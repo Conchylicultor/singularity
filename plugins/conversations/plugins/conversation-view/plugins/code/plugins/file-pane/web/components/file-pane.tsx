@@ -3,7 +3,6 @@ import { FileContent } from "./file-content";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { FileTabs } from "./file-tabs";
 import { useFileRenderers } from "./use-file-renderers";
@@ -25,11 +24,15 @@ export function FilePaneView({
       fill
       className="h-full"
       header={
-        <Text as="div" variant="body" className="border-b px-sm py-xs">
-          <Frame
-            content={<FilepathBreadcrumb path={path} />}
-            trailing={<FileTabs {...renderers} />}
-          />
+        <Text
+          as="div"
+          variant="body"
+          className="flex items-center gap-sm border-b px-sm py-xs"
+        >
+          <div className="min-w-0 flex-1">
+            <FilepathBreadcrumb path={path} />
+          </div>
+          <FileTabs {...renderers} />
         </Text>
       }
       body={

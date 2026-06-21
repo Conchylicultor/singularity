@@ -5,7 +5,6 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { MdRefresh } from "react-icons/md";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
@@ -85,25 +84,20 @@ export function MemoryPanel() {
       {/* File list */}
       {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid fixed-width sidebar column in the two-pane row; must not shrink under the flexible content pane */}
       <Stack gap="none" className="w-56 shrink-0 border-r">
-        <Frame
-          className="border-b px-md py-sm"
-          content={
-            <SectionLabel as="span" className="font-medium">
-              Memory files
-            </SectionLabel>
-          }
-          trailing={
-            <Button
-              variant="ghost"
-              aspect="icon"
-              className="size-6"
-              onClick={() => loadList()}
-              title="Refresh"
-            >
-              <MdRefresh className="size-4" />
-            </Button>
-          }
-        />
+        <div className="flex items-center justify-between border-b px-md py-sm">
+          <SectionLabel as="span" className="font-medium">
+            Memory files
+          </SectionLabel>
+          <Button
+            variant="ghost"
+            aspect="icon"
+            className="size-6"
+            onClick={() => loadList()}
+            title="Refresh"
+          >
+            <MdRefresh className="size-4" />
+          </Button>
+        </div>
         <Scroll fill className="py-xs">
           {grouped.map(({ type, items }) => (
             <div key={type}>
@@ -118,23 +112,19 @@ export function MemoryPanel() {
                   type="button"
                   onClick={() => setSelected(f.name)}
                   className={cn(
-                    "w-full px-md py-xs text-left text-caption transition-colors hover:bg-muted/50",
+                    "w-full px-md py-xs text-left text-caption transition-colors hover:bg-muted/50 flex items-center gap-xs min-w-0",
                     selected === f.name && "bg-muted font-medium",
                   )}
                 >
-                  <Frame
-                    gap="xs"
-                    content={<span className="truncate">{displayName(f.name)}</span>}
-                    trailing={
-                      f.type !== "index" && f.type !== "other" ? (
-                        <Badge
-                          colorClass={TYPE_BADGE_CLASSES[f.type]}
-                        >
-                          {formatStatusLabel(f.type)}
-                        </Badge>
-                      ) : undefined
-                    }
-                  />
+                  <span className="truncate">{displayName(f.name)}</span>
+                  {f.type !== "index" && f.type !== "other" && (
+                    <Badge
+                      colorClass={TYPE_BADGE_CLASSES[f.type]}
+                      className="ml-auto shrink-0"
+                    >
+                      {formatStatusLabel(f.type)}
+                    </Badge>
+                  )}
                 </button>
               ))}
             </div>

@@ -2,8 +2,6 @@ import { type ReactNode } from "react";
 import type { ToolCallEvent } from "../../core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   CollapsibleCard,
   CardHeaderAction,
@@ -48,42 +46,24 @@ export function ToolCallCard({
       aside={aside}
       trailing={isRunning ? <BouncingDots size="sm" /> : undefined}
       label={
-        <Frame
-          gap="sm"
-          // The label is the flexible (flex-1 min-w-0) leaf of collapsible-card's
-          // externally-owned content flex; Frame owns the rigid|truncate hierarchy
-          // internally. This wrapper class folds away once collapsible-card's own
-          // row is drained to Frame slots.
-          // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of collapsible-card's not-yet-drained content flex
-          className="min-w-0 flex-1"
-          leading={
-            <>
-              <Badge
-                colorClass={
-                  hasError
-                    ? "bg-destructive/15 text-destructive"
-                    : "bg-primary/10 text-primary"
-                }
-                className="font-mono"
-              >
-                {event.name || "tool_call"}
-              </Badge>
-              {/* Interactive chip sits inside the (click-through) label, so it
-                  opts back into pointer events via CardHeaderAction. */}
-              {leading && <CardHeaderAction>{leading}</CardHeaderAction>}
-            </>
-          }
-          content={
-            // We pre-wrap a string summary in Text (rather than letting Frame
-            // auto-wrap it) only to add the `opacity-70` dim. The label sits in
-            // Frame's `content` slot — a line container — so Text truncates here.
-            summary == null ? undefined : typeof summary === "string" ? (
-              <Text className="opacity-70">{summary}</Text>
-            ) : (
-              <span className="opacity-70">{summary}</span>
-            )
-          }
-        />
+        <>
+          <Badge
+            colorClass={
+              hasError
+                ? "bg-destructive/15 text-destructive"
+                : "bg-primary/10 text-primary"
+            }
+            className="shrink-0 font-mono"
+          >
+            {event.name || "tool_call"}
+          </Badge>
+          {/* Interactive chip sits inside the (click-through) label, so it opts
+              back into pointer events via CardHeaderAction to keep its onClick. */}
+          {leading && <CardHeaderAction className="shrink-0">{leading}</CardHeaderAction>}
+          {summary && (
+            <span className="min-w-0 flex-1 truncate opacity-70">{summary}</span>
+          )}
+        </>
       }
     >
       {children}

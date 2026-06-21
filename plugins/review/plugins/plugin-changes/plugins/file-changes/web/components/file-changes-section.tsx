@@ -3,9 +3,7 @@ import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web"
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { DiffOrImageView } from "@plugins/primitives/plugins/diff-view/web";
@@ -46,46 +44,36 @@ function FileRow({
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="text-body w-full px-sm py-xs text-left hover:bg-muted/50"
+        className="text-body flex w-full items-center gap-sm px-sm py-xs text-left hover:bg-muted/50"
         aria-expanded={expanded}
       >
-        <Frame
-          leading={
+        <CollapsibleChevron open={expanded} className="size-3.5 shrink-0 text-muted-foreground" />
+        <Badge colorClass={statusBadgeColor(file.status)} className="shrink-0">
+          {label}
+        </Badge>
+        <Text as="span" variant="caption" className="group/path min-w-0 flex-1 truncate">
+          {from && (
             <>
-              <CollapsibleChevron open={expanded} className="size-3.5 text-muted-foreground" />
-              <Badge colorClass={statusBadgeColor(file.status)}>
-                {label}
-              </Badge>
+              <span className="text-muted-foreground line-through">{from}</span>
+              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline arrow separator offset between from/to paths */}
+              <span className="mx-1.5 text-muted-foreground">&rarr;</span>
             </>
-          }
-          content={
-            <Text as="div" variant="caption" className="group/path truncate">
-              {from && (
-                <>
-                  <span className="text-muted-foreground line-through">{from}</span>
-                  {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline arrow separator offset between from/to paths */}
-                  <span className="mx-1.5 text-muted-foreground">&rarr;</span>
-                </>
-              )}
-              <span className="text-muted-foreground">{dir}</span>
-              <span className="font-medium">{basename}</span>
-              <CopyButton
-                text={file.path}
-                title="Copy path"
-                aspect="inline"
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- inline gap after path text before copy button
-                className="ml-1 text-muted-foreground opacity-0 pointer-events-none transition-opacity hover:text-foreground group-hover/path:opacity-100 group-hover/path:pointer-events-auto"
-                onClick={(e) => e.stopPropagation()}
-              />
-            </Text>
-          }
-          trailing={
-            <Stack as="span" direction="row" gap="sm" align="center">
-              <Text as="span" variant="caption" className="text-success tabular-nums">+{file.additions}</Text>
-              <Text as="span" variant="caption" className="text-destructive tabular-nums">&minus;{file.deletions}</Text>
-            </Stack>
-          }
-        />
+          )}
+          <span className="text-muted-foreground">{dir}</span>
+          <span className="font-medium">{basename}</span>
+          <CopyButton
+            text={file.path}
+            title="Copy path"
+            aspect="inline"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- inline gap after path text before copy button
+            className="ml-1 text-muted-foreground opacity-0 pointer-events-none transition-opacity hover:text-foreground group-hover/path:opacity-100 group-hover/path:pointer-events-auto"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </Text>
+        <Text as="span" variant="caption" className="flex shrink-0 items-center gap-sm tabular-nums">
+          <span className="text-success">+{file.additions}</span>
+          <span className="text-destructive">&minus;{file.deletions}</span>
+        </Text>
       </button>
       {expanded && (
         <div className="bg-background">

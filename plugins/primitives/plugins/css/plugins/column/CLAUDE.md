@@ -1,25 +1,22 @@
 # column
 
-The named-slot **column** primitive — the column twin of `<Frame>`. A vertical
-stack of up to three **role slots** — `header` / `body` / `footer` — passed as
-props (no `children`). Where `Frame` is the named-slot *row*, `Column` is the
-named-slot *column*: it bakes the `rigid | flexible | rigid` fill policy into one
-place so callers write **roles, never mechanics**.
+The named-slot **column** primitive — a vertical stack of up to three **role
+slots** — `header` / `body` / `footer` — passed as props (no `children`). It
+bakes the `rigid | flexible | rigid` fill policy into one place so callers write
+**roles, never mechanics**.
 
 ## Why flex (not grid)
 
-`Frame` uses CSS grid because the *row* shrink hierarchy (content truncates last,
-meta first) needs track sizing. `Column`'s requirement is simpler and is the
-textbook flex-column: a rigid header, a growing+scrolling body, a rigid footer —
-which is exactly what `<Scroll>`'s `fill` (`min-h-0 flex-1 overflow-y-auto`) was
-built for. Flex keeps the body's `Scroll` composition **honest**: `fill` is
-semantically correct in a flex column, whereas in a grid cell its `flex-1` would
-be inert.
+`Column`'s requirement is the textbook flex-column: a rigid header, a
+growing+scrolling body, a rigid footer — which is exactly what `<Scroll>`'s
+`fill` (`min-h-0 flex-1 overflow-y-auto`) was built for. Flex keeps the body's
+`Scroll` composition **honest**: `fill` is semantically correct in a flex column,
+whereas in a grid cell its `flex-1` would be inert.
 
 So `Column` owns `flex flex-col` + the rigid (`shrink-0`) header/footer wrappers,
 and **delegates the scroll body to the existing `<Scroll>` primitive** —
-composition, exactly as `Frame` delegates truncation to its `<Text>` leaf.
-`Scroll` stays the single owner of `overflow`; the `min-h-0` / `flex-1` fill pair
+composition. `Scroll` stays the single owner of `overflow`; the `min-h-0` /
+`flex-1` fill pair
 stays inside `Scroll` (or, with `scrollBody={false}`, on the plain flexible body
 wrapper).
 
@@ -52,7 +49,7 @@ Only present slots render — an absent slot produces no region and no phantom g
 
 ## Plugin reference
 
-- Description: Vertical named-slot layout primitive: <Column header body footer> stacks a rigid header, a flexible scrolling body, and a rigid footer in one flex column — the column twin of the row Frame. Owns the rigid|flexible|rigid fill policy (shrink-0 header/footer, Scroll body); callers write roles, never shrink-0/min-h-0/flex-1 mechanics.
+- Description: Vertical named-slot layout primitive: <Column header body footer> stacks a rigid header, a flexible scrolling body, and a rigid footer in one flex column. Owns the rigid|flexible|rigid fill policy (shrink-0 header/footer, Scroll body); callers write roles, never shrink-0/min-h-0/flex-1 mechanics.
 - Web:
   - Uses: `primitives/css/scroll.Scroll`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SingleLineProvider`
   - Exports: Types: `ColumnProps`; Values: `Column`

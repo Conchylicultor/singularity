@@ -9,7 +9,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 
@@ -50,32 +49,23 @@ export function RecentPagesSection(): ReactElement | null {
             {recent.map((page) => {
               const { title, iconSvgNodes } = pageData(page);
               return (
-                <Frame
+                <button
                   key={page.id}
-                  as="button"
-                  gap="md"
-                  className="px-md py-sm text-left transition-colors hover:bg-accent"
+                  className="flex items-center gap-md px-md py-sm text-left transition-colors hover:bg-accent"
                   onClick={() =>
                     openPane(pageDetailPane, { pageId: page.id }, { mode: "push" })
                   }
-                  leading={
-                    <PageIcon nodes={iconSvgNodes} className="size-5 text-muted-foreground" />
-                  }
-                  content={
-                    <Text variant="body">
-                      {title || "Untitled"}
-                    </Text>
-                  }
-                  trailing={
-                    <Stack direction="row" gap="md" align="center">
-                      <RelativeTime
-                        date={page.updatedAt}
-                        className="text-caption text-muted-foreground"
-                      />
-                      <MdArrowForward className="size-4 text-muted-foreground/50" />
-                    </Stack>
-                  }
-                />
+                >
+                  <PageIcon nodes={iconSvgNodes} className="size-5 shrink-0 text-muted-foreground" />
+                  <Text variant="body" className="min-w-0 flex-1">
+                    {title || "Untitled"}
+                  </Text>
+                  <RelativeTime
+                    date={page.updatedAt}
+                    className="shrink-0 text-caption text-muted-foreground"
+                  />
+                  <MdArrowForward className="size-4 shrink-0 text-muted-foreground/50" />
+                </button>
               );
             })}
           </Stack>

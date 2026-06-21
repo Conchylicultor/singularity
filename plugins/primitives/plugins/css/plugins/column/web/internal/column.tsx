@@ -44,19 +44,17 @@ export interface ColumnProps extends React.HTMLAttributes<HTMLElement> {
 }
 
 /**
- * The named-slot column primitive — the column twin of `<Frame>`. A vertical
- * stack of up to three role slots — `header` / `body` / `footer` — laid out as a
- * flex column with the `rigid | flexible | rigid` fill policy baked into one
- * place: the header/footer wrappers are `shrink-0` (never crushed), and the body
- * is the single flexible region.
+ * The named-slot **column** primitive — a vertical stack of up to three role
+ * slots — `header` / `body` / `footer` — laid out as a flex column with the
+ * `rigid | flexible | rigid` fill policy baked into one place: the header/footer
+ * wrappers are `shrink-0` (never crushed), and the body is the single flexible
+ * region.
  *
- * Where `Frame` uses CSS grid because the *row* shrink hierarchy needs track
- * sizing, `Column`'s requirement is the textbook flex-column (rigid header,
+ * `Column`'s requirement is the textbook flex-column (rigid header,
  * growing+scrolling body, rigid footer) — exactly what `Scroll`'s `fill`
  * (`min-h-0 flex-1 overflow-y-auto`) was built for. So `Column` owns the
  * `flex flex-col` + rigid wrappers and **delegates the scroll body to `Scroll`**
- * (composition, like `Frame` delegates truncation to its `Text` leaf); `Scroll`
- * stays the single owner of `overflow`.
+ * (composition); `Scroll` stays the single owner of `overflow`.
  *
  * Callers write roles, never mechanics (no per-call-site `shrink-0` / `min-h-0` /
  * `flex-1`). Only present slots render — an absent slot produces no region. Caller
@@ -79,7 +77,7 @@ export function Column({
     // Flow container (always vertical): RESETS the single-line contract so stacked
     // regions wrap — `whitespace-normal` re-wraps raw text and the `SingleLine`
     // reset stops leaves from truncating, in case the column is nested inside a
-    // line container (Frame/Row/Bar).
+    // line container (Row/Bar).
     <SingleLineProvider value={false}>
       <As
         ref={ref}

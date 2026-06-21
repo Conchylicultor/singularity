@@ -6,10 +6,7 @@ import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export function CallRow({ call }: { call: ClaudeCliCall }) {
@@ -22,50 +19,44 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
 
   return (
     <li className="px-md py-sm">
-      <button {...triggerProps} className="w-full text-left">
-        <Frame
-          align="start"
-          leading={
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align chevron with first text line
-            <span className="mt-0.5 text-muted-foreground">
-              {open ? <MdExpandLess className="size-4" /> : <MdExpandMore className="size-4" />}
+      <button
+        {...triggerProps}
+        className="flex w-full items-start gap-sm text-left"
+      >
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align chevron with first text line */}
+        <span className="mt-0.5 text-muted-foreground">
+          {open ? <MdExpandLess className="size-4" /> : <MdExpandMore className="size-4" />}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-xs">
+          <Text as="div" variant="caption" className="flex flex-wrap items-center gap-sm">
+            <Badge colorClass={familyClass(modelMeta.family)}>
+              {modelMeta.label}
+            </Badge>
+            <Badge variant="muted" className="font-mono">{call.sourceName}</Badge>
+            <SourceContextChip context={call.sourceContext} />
+            <span className="text-muted-foreground">
+              <RelativeTime date={call.createdAt} />
             </span>
-          }
-          content={
-            <Stack gap="xs">
-              <Text as="div" variant="caption">
-                <Cluster>
-                <Badge colorClass={familyClass(modelMeta.family)}>
-                  {modelMeta.label}
-                </Badge>
-                <Badge variant="muted" className="font-mono">{call.sourceName}</Badge>
-                <SourceContextChip context={call.sourceContext} />
-                <span className="text-muted-foreground">
-                  <RelativeTime date={call.createdAt} />
-                </span>
-                <span className="tabular-nums text-muted-foreground">
-                  {call.durationMs}ms
-                </span>
-                {isError && (
-                  <Badge variant="destructive">
-                    error
-                  </Badge>
-                )}
-                </Cluster>
-              </Text>
-              <Text
-                as="div"
-                variant="body"
-                className={cn(
-                  "truncate",
-                  isError ? "text-destructive" : "text-foreground",
-                )}
-              >
-                {previewText || <span className="text-muted-foreground">&lt;empty&gt;</span>}
-              </Text>
-            </Stack>
-          }
-        />
+            <span className="tabular-nums text-muted-foreground">
+              {call.durationMs}ms
+            </span>
+            {isError && (
+              <Badge variant="destructive">
+                error
+              </Badge>
+            )}
+          </Text>
+          <Text
+            as="div"
+            variant="body"
+            className={cn(
+              "truncate",
+              isError ? "text-destructive" : "text-foreground",
+            )}
+          >
+            {previewText || <span className="text-muted-foreground">&lt;empty&gt;</span>}
+          </Text>
+        </div>
       </button>
       {open && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- indented detail block: top/left offset under the trigger row plus vertical rhythm on a Text wrapper element

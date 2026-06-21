@@ -9,7 +9,6 @@ import { ReadOnlyBlocks } from "@plugins/page/plugins/read-only-view/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { buildForest, buildDiff, type PageSnapshot } from "../internal/build-diff";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/web";
@@ -55,15 +54,12 @@ export function PageVersionPreview({
 
   return (
     <Stack gap="md">
-      <Frame
-        gap="sm"
-        leading={<PageIcon nodes={iconNodes} fallback={MdDescription} className="size-6" />}
-        content={
-          <Text as="h2" variant="title">
-            {snap.page.title || "Untitled"}
-          </Text>
-        }
-      />
+      <div className="flex items-center gap-sm">
+        <PageIcon nodes={iconNodes} fallback={MdDescription} className="size-6" />
+        <Text as="h2" variant="title" className="min-w-0 truncate">
+          {snap.page.title || "Untitled"}
+        </Text>
+      </div>
       {forest.length > 0 ? (
         <ReadOnlyBlocks forest={forest} diff={diff} />
       ) : (

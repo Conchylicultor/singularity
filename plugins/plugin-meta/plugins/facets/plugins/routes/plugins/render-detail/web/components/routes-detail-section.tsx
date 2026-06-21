@@ -3,7 +3,6 @@ import { useState } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Section,
@@ -67,32 +66,29 @@ export function RoutesDetailSection({ node }: { node: PluginNode }) {
             {routes.map((r) => {
               const { method, path } = methodAndPath(r);
               return (
-                <Frame
+                <Text
+                  as="div"
+                  variant="caption"
                   key={`${r.runtime}:${r.type}:${r.route}`}
-                  className="text-caption px-sm py-2xs"
-                  leading={
-                    method ? (
-                      <span
-                        className={cn(
-                          "w-10 font-mono text-3xs font-semibold",
-                          METHOD_COLORS[method] ?? "text-muted-foreground",
-                        )}
-                      >
-                        {method}
-                      </span>
-                    ) : undefined
-                  }
-                  content={
-                    <Text as="code" className="font-mono text-foreground">
-                      {path}
-                    </Text>
-                  }
-                  trailing={
-                    <span className="text-3xs text-muted-foreground/50">
-                      {r.runtime}
+                  className="flex items-center gap-sm px-sm py-2xs"
+                >
+                  {method && (
+                    <span
+                      className={cn(
+                        "w-10 shrink-0 font-mono text-3xs font-semibold",
+                        METHOD_COLORS[method] ?? "text-muted-foreground",
+                      )}
+                    >
+                      {method}
                     </span>
-                  }
-                />
+                  )}
+                  <code className="min-w-0 truncate font-mono text-foreground">
+                    {path}
+                  </code>
+                  <span className="ml-auto shrink-0 text-3xs text-muted-foreground/50">
+                    {r.runtime}
+                  </span>
+                </Text>
               );
             })}
           </Stack>

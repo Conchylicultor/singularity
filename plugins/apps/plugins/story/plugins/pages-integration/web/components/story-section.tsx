@@ -2,7 +2,6 @@ import { MdOpenInNew } from "react-icons/md";
 import { navigate } from "@plugins/apps/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -50,18 +49,16 @@ export function StorySection({ pageId }: { pageId: string }) {
 
   return (
     <Stack gap="sm">
-      <Frame
-        leading={<SectionLabel>Story</SectionLabel>}
-        trailing={
-          <Button
-            variant="ghost"
-            onClick={() => navigate(`/story/s/${pageId}`)}
-          >
-            <MdOpenInNew className="size-4" />
-            Open in Story Builder
-          </Button>
-        }
-      />
+      <div className="flex items-center justify-between">
+        <SectionLabel>Story</SectionLabel>
+        <Button
+          variant="ghost"
+          onClick={() => navigate(`/story/s/${pageId}`)}
+        >
+          <MdOpenInNew className="size-4" />
+          Open in Story Builder
+        </Button>
+      </div>
       <RendererPicker
         activeId={activeId}
         onSelect={(id) => void markStory(pageId, id)}

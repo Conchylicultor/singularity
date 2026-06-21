@@ -17,7 +17,6 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { attemptPane } from "../panes";
 
 function SideBySideButton({ convId }: { convId: string }) {
@@ -53,21 +52,17 @@ function AttemptSection({
   const worktreeName = attempt.worktreePath.split("/").pop();
   return (
     <Stack gap="2xs">
-      <Frame
-        gap="xs"
-        className="px-sm py-xs"
-        content={
-          <Text
-            className={cn(
-              "font-mono text-2xs",
-              isCurrent ? "font-medium text-foreground" : "text-muted-foreground",
-            )}
-          >
-            {worktreeName}
-          </Text>
-        }
-        trailing={<Badge>{attempt.conversations.length}</Badge>}
-      />
+      <div className="flex items-center gap-xs px-sm py-xs">
+        <span
+          className={cn(
+            "min-w-0 flex-1 truncate font-mono text-2xs",
+            isCurrent ? "font-medium text-foreground" : "text-muted-foreground",
+          )}
+        >
+          {worktreeName}
+        </span>
+        <Badge className="shrink-0">{attempt.conversations.length}</Badge>
+      </div>
       {attempt.conversations.length === 0 ? (
         <Text
           as="p"
@@ -81,36 +76,31 @@ function AttemptSection({
           {attempt.conversations.map((c) => {
             const isActive = c.id === selectedConvId;
             return (
-              <Frame
-                as="li"
+              <li
                 key={c.id}
                 className={cn(
-                  "group rounded-md",
+                  "group flex items-center rounded-md",
                   isActive ? "bg-accent" : "hover:bg-accent",
                 )}
-                content={
-                  <button
-                    type="button"
-                    onClick={() => onSelect(c.id)}
-                    className="w-full px-sm py-xs text-left text-body"
-                  >
-                    <Frame
-                      gap="sm"
-                      leading={<StatusDot colorClass={CONV_STATUS_DOT[c.status]} />}
-                      content={c.title ?? "Starting…"}
-                    />
-                  </button>
-                }
-                trailing={
-                  convInstanceId !== undefined && !isActive ? (
-                    <div className="pr-xs opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto">
-                      <PaneInstanceContext.Provider value={convInstanceId}>
-                        <SideBySideButton convId={c.id} />
-                      </PaneInstanceContext.Provider>
-                    </div>
-                  ) : undefined
-                }
-              />
+              >
+                <button
+                  type="button"
+                  onClick={() => onSelect(c.id)}
+                  className="flex min-w-0 flex-1 items-center gap-sm px-sm py-xs text-left text-body"
+                >
+                  <StatusDot colorClass={CONV_STATUS_DOT[c.status]} />
+                  <span className="min-w-0 flex-1 truncate">
+                    {c.title ?? "Starting…"}
+                  </span>
+                </button>
+                {convInstanceId !== undefined && !isActive && (
+                  <div className="flex shrink-0 items-center pr-xs opacity-0 pointer-events-none group-hover:opacity-100 group-hover:pointer-events-auto">
+                    <PaneInstanceContext.Provider value={convInstanceId}>
+                      <SideBySideButton convId={c.id} />
+                    </PaneInstanceContext.Provider>
+                  </div>
+                )}
+              </li>
             );
           })}
         </Stack>

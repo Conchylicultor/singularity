@@ -6,7 +6,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import type { SortRule } from "../../../core";
 import type { SortController } from "../../internal/use-sort-controller";
@@ -105,27 +104,23 @@ export function SortBuilderPopover<TRow>(props: {
             />
           ) : null}
           <DropdownMenuSeparator />
-          {/* `<Frame leading … trailing>` so the footer buttons hug their
-              content: Save preset packs left, Delete sort pins right. */}
-          <Frame
-            leading={
-              <SavePresetAffordance
-                onSave={(label) => presets.savePreset(label, controller.rules)}
-              />
-            }
-            trailing={
-              <Button
-                variant="ghost"
-                onClick={() => {
-                  controller.clear();
-                  props.onClose();
-                }}
-              >
-                <MdDelete />
-                Delete sort
-              </Button>
-            }
-          />
+          {/* `flex … justify-between` so the footer buttons hug their content:
+              Save preset packs left, Delete sort pins right. */}
+          <div className="flex items-center justify-between gap-sm">
+            <SavePresetAffordance
+              onSave={(label) => presets.savePreset(label, controller.rules)}
+            />
+            <Button
+              variant="ghost"
+              onClick={() => {
+                controller.clear();
+                props.onClose();
+              }}
+            >
+              <MdDelete />
+              Delete sort
+            </Button>
+          </div>
         </>
       )}
     </Stack>

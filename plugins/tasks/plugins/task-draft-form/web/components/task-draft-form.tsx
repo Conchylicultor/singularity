@@ -16,7 +16,6 @@ import {
 } from "@dnd-kit/sortable";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { TaskDraftCard } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
 import type { ChildEntry } from "./insert-before-children";
@@ -292,20 +291,16 @@ export function TaskDraftForm({
         </Button>
       </Stack>
 
-      <Frame
-        className="border-border border-t pt-sm"
-        leading={footerStart}
-        trailing={
-          <>
-            <Button variant="ghost" onClick={onCancel} loading={submitting}>
-              Cancel
-            </Button>
-            <Button onClick={onSubmit} loading={submitting} disabled={hasEmpty}>
-              {isMulti ? "Submit chain" : "Submit"}
-            </Button>
-          </>
-        }
-      />
+      <div className="border-border flex items-center gap-sm border-t pt-sm">
+        {footerStart}
+        <div className="flex-1" />
+        <Button variant="ghost" onClick={onCancel} loading={submitting}>
+          Cancel
+        </Button>
+        <Button onClick={onSubmit} loading={submitting} disabled={hasEmpty}>
+          {isMulti ? "Submit chain" : "Submit"}
+        </Button>
+      </div>
     </Stack>
   );
 }

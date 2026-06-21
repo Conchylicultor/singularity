@@ -10,7 +10,6 @@ import {
 } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 
 export type Tool = "none" | "crop" | "draw";
@@ -103,12 +102,16 @@ export function ToolsPane(props: Props) {
             </Stack>
           </div>
           <div>
-            <Frame
+            <Text
+              as="div"
+              variant="label"
+              tone="muted"
               // eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset below the width label row
-              className="mb-1"
-              content={<Text as="span" variant="label" tone="muted">Width</Text>}
-              trailing={<Text as="span" variant="label" tone="muted">{props.drawSettings.width}px</Text>}
-            />
+              className="mb-1 flex items-center justify-between"
+            >
+              <span>Width</span>
+              <span>{props.drawSettings.width}px</span>
+            </Text>
             <input
               type="range"
               min={1}

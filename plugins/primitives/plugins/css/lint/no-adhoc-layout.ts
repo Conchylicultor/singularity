@@ -25,9 +25,8 @@ const createRule = ESLintUtils.RuleCreator(
  *   - clipping:        `overflow-*`
  *
  * Compose these through the layout primitives instead:
- *   - `<Frame leading content meta trailing>` — named-slot row, owns the shrink
- *     hierarchy (rigid | truncates-last | truncates-first | rigid-right).
- *   - `<Grid>` / `<Cluster>` / `<Center>` / `<Overlay>` — the other layout modes.
+ *   - `<Stack direction="row">` / `<Cluster>` / `<Row>` — horizontal rows.
+ *   - `<Grid>` / `<Center>` / `<Overlay>` — the other layout modes.
  *   - `<Stack>` / `<Inset>` (@plugins/primitives/plugins/css/plugins/spacing/web) — 1-D flow.
  *   - `<Text>` inside a line container — THE truncation leaf; the only home for
  *     `min-w-0` (it ellipsizes via the ambient single-line context).
@@ -147,14 +146,14 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow raw Tailwind layout utilities (flex/grid/positioning/alignment/overflow). Compose layout through the <Frame>/<Grid>/<Cluster>/<Center>/<Overlay> and <Stack>/<Inset> primitives.",
+        "Disallow raw Tailwind layout utilities (flex/grid/positioning/alignment/overflow). Compose layout through the <Stack>/<Cluster>/<Row>/<Grid>/<Center>/<Overlay> and <Inset> primitives.",
     },
     schema: [],
     messages: {
       adhocLayout:
         "Raw layout class `{{token}}` is banned — compose layout through the primitives: " +
-        "<Frame leading content meta trailing> (named-slot row, owns the shrink hierarchy), " +
-        "<Grid>/<Cluster>/<Center>/<Overlay> from @plugins/primitives/plugins/css/plugins/*, " +
+        "<Stack direction=\"row\">/<Cluster>/<Row> for horizontal rows, " +
+        "<Grid>/<Center>/<Overlay> from @plugins/primitives/plugins/css/plugins/*, " +
         "<Stack gap>/<Inset pad> from @plugins/primitives/plugins/css/plugins/spacing/web, or <Text> " +
         "inside a line container for the min-w-0 truncation leaf. A genuine one-off escapes per-site with " +
         "`// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",

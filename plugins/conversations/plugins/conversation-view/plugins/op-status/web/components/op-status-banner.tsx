@@ -3,7 +3,6 @@ import { MdExpandLess, MdExpandMore, MdHourglassEmpty } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { conversationsResource, type ConversationListPayload } from "@plugins/conversations/core";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
@@ -137,48 +136,40 @@ function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: numbe
           : "Pushing";
 
   return (
-    <Text as="div" variant="caption" className={`px-md py-xs ${isSelf ? "bg-primary/5" : ""}`}>
-    <Frame
-      gap="sm"
-      align="center"
-      leading={
-        <>
-          {queuePos !== null ? (
-            <span className="w-6 text-center font-mono tabular-nums text-muted-foreground">
-              #{queuePos}
-            </span>
-          ) : (
-            <span className="w-6" />
-          )}
-          {waiting ? (
-            <MdHourglassEmpty className="size-3.5 text-warning" />
-          ) : (
-            <Spinner className="size-3.5" />
-          )}
-        </>
-      }
-      content={
-        <Text>
-          {title ? <span>{title}</span> : <span className="font-mono">{op.slug}</span>}
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating flex cell; not a sibling gap the parent can own */}
-          {isSelf && <span className="ml-1.5 text-muted-foreground">(this conversation)</span>}
-        </Text>
-      }
-      trailing={
-        <>
-          <span className="text-muted-foreground">{phaseText}</span>
-          {waited !== null && (
-            <span
-              className="text-muted-foreground/70"
-              title="Time spent queued for the push lock before pushing started"
-            >
-              waited {formatElapsed(waited)}
-            </span>
-          )}
-          <span className="font-mono tabular-nums text-muted-foreground">{elapsed}</span>
-        </>
-      }
-    />
+    <Text
+      as="div"
+      variant="caption"
+      className={`flex items-center gap-sm px-md py-xs ${
+        isSelf ? "bg-primary/5" : ""
+      }`}
+    >
+      {queuePos !== null ? (
+        <span className="w-6 shrink-0 text-center font-mono tabular-nums text-muted-foreground">
+          #{queuePos}
+        </span>
+      ) : (
+        <span className="w-6 shrink-0" />
+      )}
+      {waiting ? (
+        <MdHourglassEmpty className="size-3.5 shrink-0 text-warning" />
+      ) : (
+        <Spinner className="size-3.5 shrink-0" />
+      )}
+      <span className="min-w-0 flex-1 truncate">
+        {title ? <span className="truncate">{title}</span> : <span className="font-mono">{op.slug}</span>}
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating flex cell; not a sibling gap the parent can own */}
+        {isSelf && <span className="ml-1.5 text-muted-foreground">(this conversation)</span>}
+      </span>
+      <span className="shrink-0 text-muted-foreground">{phaseText}</span>
+      {waited !== null && (
+        <span
+          className="shrink-0 text-muted-foreground/70"
+          title="Time spent queued for the push lock before pushing started"
+        >
+          waited {formatElapsed(waited)}
+        </span>
+      )}
+      <span className="shrink-0 font-mono tabular-nums text-muted-foreground">{elapsed}</span>
     </Text>
   );
 }
@@ -214,44 +205,33 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="w-full text-left hover:bg-foreground/[0.03]"
+        className="flex w-full items-center gap-sm px-md py-sm text-left hover:bg-foreground/[0.03]"
       >
-        <Frame
-          gap="sm"
-          align="center"
-          className="px-md py-sm"
-          leading={
-            queued ? (
-              <MdHourglassEmpty className="size-3.5" />
-            ) : (
-              <Spinner className="size-3.5" />
-            )
-          }
-          content={<Text>{summaryLabel(op)}</Text>}
-          trailing={
-            <>
-              {others > 0 && (
-                <span className="text-muted-foreground">
-                  +{others} other{others === 1 ? "" : "s"}
-                </span>
-              )}
-              {waited !== null && (
-                <span
-                  className="text-muted-foreground/70"
-                  title="Time spent queued for the push lock before pushing started"
-                >
-                  waited {formatElapsed(waited)}
-                </span>
-              )}
-              <span className="font-mono tabular-nums text-muted-foreground">{elapsed}</span>
-              {expanded ? (
-                <MdExpandLess className="size-4 text-muted-foreground" />
-              ) : (
-                <MdExpandMore className="size-4 text-muted-foreground" />
-              )}
-            </>
-          }
-        />
+        {queued ? (
+          <MdHourglassEmpty className="size-3.5 shrink-0" />
+        ) : (
+          <Spinner className="size-3.5 shrink-0" />
+        )}
+        <span className="flex-1">{summaryLabel(op)}</span>
+        {others > 0 && (
+          <span className="shrink-0 text-muted-foreground">
+            +{others} other{others === 1 ? "" : "s"}
+          </span>
+        )}
+        {waited !== null && (
+          <span
+            className="shrink-0 text-muted-foreground/70"
+            title="Time spent queued for the push lock before pushing started"
+          >
+            waited {formatElapsed(waited)}
+          </span>
+        )}
+        <span className="shrink-0 font-mono tabular-nums text-muted-foreground">{elapsed}</span>
+        {expanded ? (
+          <MdExpandLess className="size-4 shrink-0 text-muted-foreground" />
+        ) : (
+          <MdExpandMore className="size-4 shrink-0 text-muted-foreground" />
+        )}
       </button>
       {expanded && (
         <div className="border-t border-border/60 bg-background/40 py-xs text-foreground">

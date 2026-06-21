@@ -5,7 +5,6 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 function formatDuration(start: Date, end: Date | null): string {
@@ -47,12 +46,10 @@ function StatusBadge({ exitCode, finished }: { exitCode: number | null; finished
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <Frame
-      gap="lg"
-      align="baseline"
-      leading={<Text as="span" variant="caption" className="text-muted-foreground">{label}</Text>}
-      trailing={<Text as="span" variant="body">{children}</Text>}
-    />
+    <div className="flex items-baseline justify-between gap-lg">
+      <Text as="span" variant="caption" className="shrink-0 text-muted-foreground">{label}</Text>
+      <Text as="span" variant="body">{children}</Text>
+    </div>
   );
 }
 

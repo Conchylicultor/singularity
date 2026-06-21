@@ -5,7 +5,6 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 import {
   useHoverReveal,
@@ -18,11 +17,10 @@ import { DirectionPicker } from "./direction-picker";
 
 /**
  * One sort level: `[drag handle] [field ▾] [direction ▾] [✕]` — a flat single
- * line laid out on a `<Frame>` so the rigid pickers (`leading`) never crush and
- * the hover-revealed remove (`trailing`) stays pinned to the row edge (Frame
- * auto-pins `trailing` via its inert spacer, so no `content` slot is needed).
- * The whole row is a `SortableItem` keyed by `fieldId` — priority = list order,
- * reordered by dragging the handle.
+ * line laid out as a `justify-between` flex row so the rigid pickers (left
+ * cluster) never crush and the hover-revealed remove (right cluster) stays
+ * pinned to the row edge. The whole row is a `SortableItem` keyed by `fieldId` —
+ * priority = list order, reordered by dragging the handle.
  */
 export function SortRuleRow<TRow>(props: {
   rule: SortRule;
@@ -44,33 +42,31 @@ export function SortRuleRow<TRow>(props: {
       className={({ isDragging }) => cn(isDragging && "opacity-40")}
     >
       {(state) => (
-        <Frame
-          gap="xs"
-          align="center"
+        <div
           {...groupProps}
-          leading={
-            <>
-              <div
-                {...state.handleProps}
-                className="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
-              >
-                <MdDragIndicator className="size-4" />
-              </div>
-              <FieldPicker
-                fields={props.fields}
-                value={rule.fieldId}
-                onChange={props.onChangeField}
-                label="Sort field"
-                placeholder="Sort by…"
-              />
-              <DirectionPicker
-                value={rule.direction}
-                labels={directionLabels}
-                onChange={props.onSetDirection}
-              />
-            </>
-          }
-          trailing={
+          className="flex items-center justify-between gap-xs"
+        >
+          <div className="flex shrink-0 items-center gap-xs">
+            <div
+              {...state.handleProps}
+              className="cursor-grab text-muted-foreground hover:text-foreground active:cursor-grabbing"
+            >
+              <MdDragIndicator className="size-4" />
+            </div>
+            <FieldPicker
+              fields={props.fields}
+              value={rule.fieldId}
+              onChange={props.onChangeField}
+              label="Sort field"
+              placeholder="Sort by…"
+            />
+            <DirectionPicker
+              value={rule.direction}
+              labels={directionLabels}
+              onChange={props.onSetDirection}
+            />
+          </div>
+          <div className="flex shrink-0 items-center justify-end gap-xs">
             <ControlSizeProvider size="sm">
               <IconButton
                 icon={MdClose}
@@ -79,8 +75,8 @@ export function SortRuleRow<TRow>(props: {
                 onClick={props.onRemove}
               />
             </ControlSizeProvider>
-          }
-        />
+          </div>
+        </div>
       )}
     </SortableItem>
   );

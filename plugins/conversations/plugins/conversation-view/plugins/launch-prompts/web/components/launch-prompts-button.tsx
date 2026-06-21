@@ -10,7 +10,6 @@ import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/e
 import { createConversation } from "@plugins/conversations/core";
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { launchPromptsConfig } from "../../shared/config";
 
 export function LaunchPromptsButton({
@@ -59,20 +58,20 @@ export function LaunchPromptsButton({
       </DropdownMenuTrigger>
       <ConfigMenuContent descriptor={launchPromptsConfig} label="Launch prompts" align="start">
         {prompts.map((item) => (
-          <DropdownMenuItem key={item.id} onClick={() => void launch(item)}>
-            <Frame
-              gap="xl"
-              align="center"
-              content={<span>{item.title}</span>}
-              trailing={(() => {
-                const meta = MODEL_REGISTRY[normalizeModel(item.model)];
-                return (
-                  <Badge colorClass={familyClass(meta.family)}>
-                    {meta.label}
-                  </Badge>
-                );
-              })()}
-            />
+          <DropdownMenuItem
+            key={item.id}
+            onClick={() => void launch(item)}
+            className="flex items-center justify-between gap-xl"
+          >
+            <span>{item.title}</span>
+            {(() => {
+              const meta = MODEL_REGISTRY[normalizeModel(item.model)];
+              return (
+                <Badge colorClass={familyClass(meta.family)}>
+                  {meta.label}
+                </Badge>
+              );
+            })()}
           </DropdownMenuItem>
         ))}
       </ConfigMenuContent>

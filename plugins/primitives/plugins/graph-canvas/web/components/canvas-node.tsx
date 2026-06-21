@@ -2,8 +2,6 @@ import type { ReactNode } from "react";
 import { useState } from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export const CANVAS_NODE_TYPE = "graphCanvas";
 
@@ -45,7 +43,7 @@ export function CanvasNode({ data }: NodeProps<CanvasFlowNode>) {
     <div
       title={title ?? label}
       className={cn(
-        "bg-card text-foreground relative rounded-md border border-border text-caption shadow-sm transition-colors",
+        "bg-card text-foreground relative flex h-9 items-center gap-sm rounded-md border border-border px-sm text-caption shadow-sm transition-colors",
         "hover:border-foreground/40 focus:outline-none cursor-pointer",
         tintClass,
         ringClass,
@@ -61,15 +59,9 @@ export function CanvasNode({ data }: NodeProps<CanvasFlowNode>) {
         isConnectable={connectable ?? false}
         style={handleStyle}
       />
-      <Frame
-        className="size-full px-sm"
-        gap="sm"
-        leading={leading ?? undefined}
-        content={
-          <Text className={labelClassName ?? undefined}>{label}</Text>
-        }
-        trailing={badge ?? undefined}
-      />
+      {leading != null && <span className="shrink-0">{leading}</span>}
+      <span className={cn("min-w-0 flex-1 truncate", labelClassName)}>{label}</span>
+      {badge != null && <span className="shrink-0">{badge}</span>}
       <Handle
         type="source"
         position={Position.Right}

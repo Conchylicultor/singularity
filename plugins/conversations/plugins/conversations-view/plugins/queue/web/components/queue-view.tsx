@@ -16,8 +16,6 @@ import { MdClose, MdKeyboardDoubleArrowDown, MdOutlineQueue, MdVerticalAlignBott
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -77,37 +75,26 @@ function SectionHeader({
   return (
     <Sticky
       layer="nav"
-      className="group/header rounded-md bg-sidebar px-xs py-xs"
+      className="group/header flex items-center gap-2xs rounded-md bg-sidebar px-xs py-xs"
       style={{ top: stickyTop }}
     >
-      <Frame
-        gap="2xs"
-        leading={
-          <button
-            type="button"
-            onClick={onToggleExpanded}
-            aria-expanded={expanded}
-            aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
-            className="rounded-md text-muted-foreground hover:bg-accent"
-          >
-            <Center className="size-5">
-              <CollapsibleChevron open={expanded} className="size-4" />
-            </Center>
-          </button>
-        }
-        content={
-          <Text as="div" variant="caption" className="w-full truncate px-xs py-2xs font-semibold text-muted-foreground">
-            {title}
-          </Text>
-        }
-        trailing={
-          count > 0 ? (
-            <Badge className="pointer-events-none opacity-0 transition-opacity group-hover/header:opacity-100">
-              {count}
-            </Badge>
-          ) : undefined
-        }
-      />
+      <button
+        type="button"
+        onClick={onToggleExpanded}
+        aria-expanded={expanded}
+        aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
+        className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+      >
+        <CollapsibleChevron open={expanded} className="size-4" />
+      </button>
+      <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-xs py-2xs font-semibold text-muted-foreground">
+        {title}
+      </Text>
+      {count > 0 && (
+        <Badge className="shrink-0 pointer-events-none opacity-0 transition-opacity group-hover/header:opacity-100">
+          {count}
+        </Badge>
+      )}
     </Sticky>
   );
 }
@@ -464,11 +451,9 @@ export function QueueView({
           )}
           <DragOverlay dropAnimation={null}>
             {draggingConv ? (
-              <Frame
-                align="center"
-                className="rounded-md border border-accent bg-background/90 px-sm py-xs shadow-md"
-                content={<ConversationItem conv={draggingConv} />}
-              />
+              <Text as="div" variant="body" className="flex items-center rounded-md border border-accent bg-background/90 px-sm py-xs shadow-md">
+                <ConversationItem conv={draggingConv} />
+              </Text>
             ) : null}
           </DragOverlay>
         </DndContext>
@@ -492,17 +477,12 @@ export function QueueView({
                     isActive={group.selected.id === activeId}
                     onClick={() => onNavigate(group.selected.id)}
                   >
-                    <Frame
-                      className="w-full"
-                      content={<ConversationItem conv={group.selected} />}
-                      trailing={
-                        group.count > 1 ? (
-                          <Badge variant="destructive">
-                            {group.count}
-                          </Badge>
-                        ) : undefined
-                      }
-                    />
+                    <ConversationItem conv={group.selected} />
+                    {group.count > 1 && (
+                      <Badge variant="destructive" className="ml-auto shrink-0">
+                        {group.count}
+                      </Badge>
+                    )}
                   </SidebarMenuButton>
                   <RowActions>
                     <RowActionButton
@@ -688,17 +668,12 @@ function QueueRow({
           isActive={isActive}
           onClick={() => onNavigate(conv.id)}
         >
-          <Frame
-            className="w-full"
-            content={<ConversationItem conv={conv} />}
-            trailing={
-              clusterSize > 1 ? (
-                <Badge variant="destructive">
-                  {clusterSize}
-                </Badge>
-              ) : undefined
-            }
-          />
+          <ConversationItem conv={conv} />
+          {clusterSize > 1 && (
+            <Badge variant="destructive" className="ml-auto shrink-0">
+              {clusterSize}
+            </Badge>
+          )}
         </SidebarMenuButton>
         <RowActions>
           {!isTop && (

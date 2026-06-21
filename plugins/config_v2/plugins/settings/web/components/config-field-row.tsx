@@ -6,7 +6,6 @@ import {
 import { useCallback, useMemo } from "react";
 import { MdUndo, MdWarning } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { FieldRenderer, ConfigFieldContext } from "@plugins/config_v2/plugins/fields/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -99,63 +98,51 @@ export function ConfigFieldRow({
 
   return (
     <div>
-      <Frame
-        className={cn(hoverRevealGroup, "rounded-md py-xs pl-none pr-sm")}
-        leading={
-          <div
-            className={cn(
-              "h-8 w-0.5 rounded-full transition-colors",
-              hasConflict ? "bg-warning" : isModified ? "bg-primary" : "bg-transparent",
-            )}
-          />
-        }
-        // The field editor must FILL the row (not size to content), so it lives in
-        // the flexible `meta` track (`minmax(0,1fr)`); `content`'s max-content track
-        // would shrink-wrap the input.
-        meta={
+      <div className={cn(hoverRevealGroup, "flex items-center gap-sm rounded-md py-xs pl-none pr-sm")}>
+        <div
+          className={cn(
+            "h-8 w-0.5 shrink-0 rounded-full transition-colors",
+            hasConflict ? "bg-warning" : isModified ? "bg-primary" : "bg-transparent",
+          )}
+        />
+        <div className="min-w-0 flex-1">
           <ConfigFieldContext.Provider value={configFieldCtxValue}>
             <FieldRenderer field={field} value={value} onChange={handleChange} />
           </ConfigFieldContext.Provider>
-        }
-        trailing={
-          <>
-            {tier && tier !== "default" && (
-              <Badge colorClass={TIER_BADGE[tier].className}>
-                {TIER_BADGE[tier].label}
-              </Badge>
-            )}
-            <button
-              type="button"
-              onClick={handleReset}
-              className={cn(
-                "rounded-sm p-xs text-muted-foreground hover:text-foreground",
-                isModified ? hoverRevealTarget : "pointer-events-none opacity-0",
-              )}
-              aria-label={`Reset ${field.meta.label ?? fieldKey}`}
-            >
-              <MdUndo className="size-3.5" />
-            </button>
-          </>
-        }
-      />
+        </div>
+        {tier && tier !== "default" && (
+          <Badge colorClass={TIER_BADGE[tier].className} className="shrink-0">
+            {TIER_BADGE[tier].label}
+          </Badge>
+        )}
+        <button
+          type="button"
+          onClick={handleReset}
+          className={cn(
+            "shrink-0 rounded-sm p-xs text-muted-foreground hover:text-foreground",
+            isModified ? hoverRevealTarget : "pointer-events-none opacity-0",
+          )}
+          aria-label={`Reset ${field.meta.label ?? fieldKey}`}
+        >
+          <MdUndo className="size-3.5" />
+        </button>
+      </div>
       {hasConflict && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-3 indents the conflict note under the field's value column
-        <Text as="div" variant="caption" className="ml-3 rounded-md border border-warning/30 bg-warning/10 px-sm py-xs text-warning">
-          <Frame
-            leading={<MdWarning className="size-3" />}
-            content={<Text>Upstream: {formatOriginValue(originValue)}</Text>}
-            trailing={
-              <Badge
-                as="button"
-                type="button"
-                variant="warning"
-                className="hover:bg-warning/30"
-                onClick={handleAcceptOrigin}
-              >
-                Accept
-              </Badge>
-            }
-          />
+        <Text as="div" variant="caption" className="ml-3 flex items-center gap-sm rounded-md border border-warning/30 bg-warning/10 px-sm py-xs text-warning">
+          <MdWarning className="size-3 shrink-0" />
+          <span className="flex-1 truncate">
+            Upstream: {formatOriginValue(originValue)}
+          </span>
+          <Badge
+            as="button"
+            type="button"
+            variant="warning"
+            className="shrink-0 hover:bg-warning/30"
+            onClick={handleAcceptOrigin}
+          >
+            Accept
+          </Badge>
         </Text>
       )}
     </div>

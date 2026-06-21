@@ -2,7 +2,6 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 
 type TaskUpdateInput = {
   taskId?: string;
@@ -28,19 +27,14 @@ export function TaskUpdateToolView({ event }: ToolRendererProps) {
   const taskId = input.taskId ?? input.id;
   const summary =
     taskId || input.status ? (
-      <Frame
-        gap="sm"
-        leading={
-          <>
-            {taskId && <span className="font-mono text-2xs">{taskId}</span>}
-            {input.status && (
-              <Badge colorClass={statusBadgeClass(input.status)}>
-                {input.status}
-              </Badge>
-            )}
-          </>
-        }
-      />
+      <span className="flex min-w-0 items-center gap-sm">
+        {taskId && <span className="font-mono text-2xs">{taskId}</span>}
+        {input.status && (
+          <Badge colorClass={statusBadgeClass(input.status)}>
+            {input.status}
+          </Badge>
+        )}
+      </span>
     ) : undefined;
 
   return (

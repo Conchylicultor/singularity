@@ -9,7 +9,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import type { FilterConjunction } from "../../../core";
 
 const LABEL: Record<FilterConjunction, string> = { and: "And", or: "Or" };
@@ -44,15 +43,12 @@ export function ConjunctionCell(props: {
               <Button
                 variant="outline"
                 aria-label="Conjunction"
-                className="w-full"
+                className="w-full justify-between"
               />
             }
           >
-            <Frame
-              className="w-full"
-              content={LABEL[props.conjunction]}
-              trailing={<MdExpandMore />}
-            />
+            <span>{LABEL[props.conjunction]}</span>
+            <MdExpandMore />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
             <DropdownMenuItem onClick={() => props.onChange("and")}>

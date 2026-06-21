@@ -81,8 +81,8 @@ export type FixtureMutation =
 // `invariants` against the per-width measurements.
 
 export interface LayoutFixture {
-  id: string; // "frame/header-badge-over-path"
-  primitive: string; // "frame"
+  id: string; // "<primitive>/<scenario>", e.g. "grid/uniform-cards"
+  primitive: string; // "grid"
   dims: FixtureDims;
   widths: number[]; // container widths to sweep (px)
   render: () => ReactElement; // REAL component; author data-geo on measured boxes

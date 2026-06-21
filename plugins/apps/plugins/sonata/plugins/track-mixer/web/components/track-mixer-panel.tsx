@@ -21,7 +21,6 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   SearchInput,
@@ -142,15 +141,11 @@ function InstrumentPicker({
         <button
           type="button"
           aria-label="Track instrument"
-          // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of TrackRow's instrument+notes Stack (button is the interaction wrapper; Frame inside owns the icon|label|chevron shrink hierarchy)
-          className="min-w-0 rounded-md text-3xs text-muted-foreground transition-colors hover:text-foreground"
+          className="flex min-w-0 items-center gap-xs rounded-md text-3xs text-muted-foreground transition-colors hover:text-foreground"
         >
-          <Frame
-            gap="xs"
-            leading={ResolvedIcon ? <ResolvedIcon className="size-3" /> : undefined}
-            content={resolvedLabel}
-            trailing={<MdExpandMore className="size-3" />}
-          />
+          {ResolvedIcon ? <ResolvedIcon className="size-3 shrink-0" /> : null}
+          <span className="truncate">{resolvedLabel}</span>
+          <MdExpandMore className="size-3 shrink-0" />
         </button>
       }
     >
@@ -241,50 +236,47 @@ function TrackRow({
     customized,
   } = entry;
   return (
-    <Frame
-      className="py-xs"
-      leading={<ColorSwatch songId={songId} trackId={trackId} color={color} />}
-      content={
-        <div className={cn(hidden && "opacity-50")}>
-          <Text as="div" variant="caption" className="truncate font-medium text-foreground">
-            {name}
-          </Text>
-          <Stack direction="row" align="center" gap="xs" className="text-3xs text-muted-foreground">
-            <InstrumentPicker
-              songId={songId}
-              trackId={trackId}
-              options={options}
-              resolvedId={instrumentId}
-              resolvedLabel={instrumentLabel}
-              customized={customized}
-            />
-            <span>
-              · {noteCount} {noteCount === 1 ? "note" : "notes"}
-            </span>
-          </Stack>
-        </div>
-      }
-      trailing={
-        <ControlSizeProvider size="sm">
-          <Stack direction="row" align="center" gap="sm">
-            <IconButton
-              icon={muted ? MdVolumeOff : MdVolumeUp}
-              label={muted ? "Unmute track" : "Mute track"}
-              aria-pressed={muted}
-              className={cn(muted && "text-destructive")}
-              onClick={() => setTrackMuted(songId, trackId, !muted)}
-            />
-            <IconButton
-              icon={hidden ? MdVisibilityOff : MdVisibility}
-              label={hidden ? "Show track" : "Hide track"}
-              aria-pressed={hidden}
-              className={cn(hidden && "text-muted-foreground")}
-              onClick={() => setTrackHidden(songId, trackId, !hidden)}
-            />
-          </Stack>
-        </ControlSizeProvider>
-      }
-    />
+    <div className="flex items-center gap-sm py-xs">
+      <ColorSwatch songId={songId} trackId={trackId} color={color} />
+
+      <div className={cn("min-w-0 flex-1", hidden && "opacity-50")}>
+        <Text as="div" variant="caption" className="truncate font-medium text-foreground">
+          {name}
+        </Text>
+        <Stack direction="row" align="center" gap="xs" className="text-3xs text-muted-foreground">
+          <InstrumentPicker
+            songId={songId}
+            trackId={trackId}
+            options={options}
+            resolvedId={instrumentId}
+            resolvedLabel={instrumentLabel}
+            customized={customized}
+          />
+          <span>
+            · {noteCount} {noteCount === 1 ? "note" : "notes"}
+          </span>
+        </Stack>
+      </div>
+
+      <ControlSizeProvider size="sm">
+        <Stack direction="row" align="center" gap="sm">
+          <IconButton
+            icon={muted ? MdVolumeOff : MdVolumeUp}
+            label={muted ? "Unmute track" : "Mute track"}
+            aria-pressed={muted}
+            className={cn(muted && "text-destructive")}
+            onClick={() => setTrackMuted(songId, trackId, !muted)}
+          />
+          <IconButton
+            icon={hidden ? MdVisibilityOff : MdVisibility}
+            label={hidden ? "Show track" : "Hide track"}
+            aria-pressed={hidden}
+            className={cn(hidden && "text-muted-foreground")}
+            onClick={() => setTrackHidden(songId, trackId, !hidden)}
+          />
+        </Stack>
+      </ControlSizeProvider>
+    </div>
   );
 }
 

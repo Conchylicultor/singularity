@@ -8,7 +8,6 @@ import {
   type ContributionsFacetData,
 } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Renders the contributions facet's own data. Read `node.facets[id]` directly
@@ -36,31 +35,30 @@ export function ContributionsDetailSection({ node }: { node: PluginNode }) {
           {contribs.map((c, i) => {
             const id = contributionId(c);
             return (
-              <Frame
+              <Text
+                as="div"
+                variant="caption"
                 key={`${c.slot}:${id ?? i}`}
-                className="text-caption px-sm py-2xs"
-                leading={
-                  c.definerPluginId ? (
-                    <PluginLink
-                      name={c.definerPluginId}
-                      label={c.slot}
-                      className="font-mono text-foreground hover:underline"
-                    />
-                  ) : (
-                    <code className="font-mono text-foreground">{c.slot}</code>
-                  )
-                }
-                meta={
-                  id ? (
-                    <Text
-                      as="code"
-                      className="font-mono text-right text-muted-foreground/60"
-                    >
-                      {id}
-                    </Text>
-                  ) : undefined
-                }
-              />
+                className="flex items-center gap-sm px-sm py-2xs"
+              >
+                {c.definerPluginId ? (
+                  <PluginLink
+                    name={c.definerPluginId}
+                    label={c.slot}
+                    className="font-mono text-foreground hover:underline"
+                  />
+                ) : (
+                  <code className="font-mono text-foreground">{c.slot}</code>
+                )}
+                {id && (
+                  <Text
+                    as="code"
+                    className="ml-auto truncate font-mono text-muted-foreground/60"
+                  >
+                    {id}
+                  </Text>
+                )}
+              </Text>
             );
           })}
         </Stack>

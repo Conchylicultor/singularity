@@ -6,7 +6,6 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -221,43 +220,37 @@ export function ClusterView(): ReactElement {
   return (
     <Scroll axis="both" className="h-full">
       <Stack gap="xl" className="px-md py-md">
-        <Frame
-          gap="md"
-          align="center"
-          content={
-            <Stack gap="2xs">
-              <SectionLabel>Cross-worktree cluster</SectionLabel>
-              {status === "streaming" && (
-                <ScanProgress received={worktrees.length} total={total} />
-              )}
-              {status === "done" && (
-                <Text as="span" variant="caption" className="text-muted-foreground">
-                  {okCount} worktree{okCount === 1 ? "" : "s"} merged
-                  {failed.length > 0 && (
-                    <span
-                      className="ml-xs text-warning"
-                      title={failed.map((f) => `${f.name}: ${f.error}`).join("\n")}
-                    >
-                      · {failed.length} failed to load
-                    </span>
-                  )}
-                </Text>
-              )}
-              {status === "error" && error && (
-                <Placeholder tone="error">{error}</Placeholder>
-              )}
-            </Stack>
-          }
-          trailing={
-            <Button
-              variant="outline"
-              loading={status === "streaming"}
-              onClick={() => void reload()}
-            >
-              Refresh
-            </Button>
-          }
-        />
+        <div className="flex items-center justify-between gap-md">
+          <Stack gap="2xs" className="min-w-0 flex-1">
+            <SectionLabel>Cross-worktree cluster</SectionLabel>
+            {status === "streaming" && (
+              <ScanProgress received={worktrees.length} total={total} />
+            )}
+            {status === "done" && (
+              <Text as="span" variant="caption" className="text-muted-foreground">
+                {okCount} worktree{okCount === 1 ? "" : "s"} merged
+                {failed.length > 0 && (
+                  <span
+                    className="ml-xs text-warning"
+                    title={failed.map((f) => `${f.name}: ${f.error}`).join("\n")}
+                  >
+                    · {failed.length} failed to load
+                  </span>
+                )}
+              </Text>
+            )}
+            {status === "error" && error && (
+              <Placeholder tone="error">{error}</Placeholder>
+            )}
+          </Stack>
+          <Button
+            variant="outline"
+            loading={status === "streaming"}
+            onClick={() => void reload()}
+          >
+            Refresh
+          </Button>
+        </div>
 
         <DataView<ClusterAggregate>
           rows={aggregates}

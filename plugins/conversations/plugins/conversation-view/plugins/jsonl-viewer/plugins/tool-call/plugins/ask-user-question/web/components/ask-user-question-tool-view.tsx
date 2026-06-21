@@ -8,7 +8,6 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -44,37 +43,32 @@ export function Indicator({
 
 function summaryFor(questions: Question[], firstAnswerParts: string[]) {
   return (
-    <Frame
-      gap="xs"
-      leading={
-        questions.length > 0 ? (
-          questions.map((q, i) => (
-            <Badge key={i} colorClass="bg-info/15 text-info" className="font-mono">
-              {q.header}
-            </Badge>
-          ))
-        ) : (
-          <Badge colorClass="bg-info/15 text-info" className="font-mono">
-            question
+    <span className="flex min-w-0 items-center gap-xs">
+      {questions.length > 0 ? (
+        questions.map((q, i) => (
+          <Badge key={i} colorClass="bg-info/15 text-info" className="shrink-0 font-mono">
+            {q.header}
           </Badge>
-        )
-      }
-      content={
-        questions[0]?.question ? (
-          <Text className="text-muted-foreground">
-            {questions[0].question}
-          </Text>
-        ) : undefined
-      }
-      meta={
-        firstAnswerParts.length > 0 ? (
-          <Text className="text-foreground">
-            <span className="text-muted-foreground/50">&rarr;</span>{" "}
+        ))
+      ) : (
+        <Badge colorClass="bg-info/15 text-info" className="shrink-0 font-mono">
+          question
+        </Badge>
+      )}
+      {questions[0]?.question && (
+        <span className="min-w-0 truncate text-muted-foreground">
+          {questions[0].question}
+        </span>
+      )}
+      {firstAnswerParts.length > 0 && (
+        <>
+          <span className="shrink-0 text-muted-foreground/50">&rarr;</span>
+          <span className="min-w-0 truncate text-foreground">
             {firstAnswerParts.join(", ")}
-          </Text>
-        ) : undefined
-      }
-    />
+          </span>
+        </>
+      )}
+    </span>
   );
 }
 
@@ -195,52 +189,37 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                 {q.options.map((opt, oi) => {
                   const isSelected = selected.has(opt.label);
                   return (
-                    <Frame
+                    <div
                       key={oi}
-                      gap="sm"
-                      align="start"
-                      className={isSelected ? "rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm" : hasAnswer ? "pl-2xs opacity-60" : "pl-2xs"}
-                      leading={
-                        <Indicator selected={isSelected} multi={q.multiSelect} />
-                      }
-                      content={
-                        // A flow Stack resets the single-line context Frame
-                        // establishes, so the stacked label/description/preview
-                        // wrap as block paragraphs instead of collapsing onto one
-                        // truncated line.
-                        <Stack gap="2xs">
-                          <Text as="p" variant="caption" className="font-medium">
-                            {opt.label}
-                          </Text>
-                          <Text as="p" variant="caption" tone="muted">
-                            {opt.description}
-                          </Text>
-                          {opt.preview && (
-                            <pre className="whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground">
-                              {opt.preview}
-                            </pre>
-                          )}
-                        </Stack>
-                      }
-                    />
+                      className={`flex gap-sm ${isSelected ? "rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm" : hasAnswer ? "pl-2xs opacity-60" : "pl-2xs"}`}
+                    >
+                      <Indicator selected={isSelected} multi={q.multiSelect} />
+                      <div className="min-w-0 flex-1">
+                        <Text as="p" variant="caption" className="font-medium">
+                          {opt.label}
+                        </Text>
+                        <Text as="p" variant="caption" tone="muted">
+                          {opt.description}
+                        </Text>
+                        {opt.preview && (
+                          <pre
+                            // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the preview block from the option description above (no named margin utility)
+                            className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground"
+                          >
+                            {opt.preview}
+                          </pre>
+                        )}
+                      </div>
+                    </div>
                   );
                 })}
                 {otherText != null && (
-                  <Frame
-                    gap="sm"
-                    align="start"
-                    className="rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm"
-                    leading={<Indicator selected multi={q.multiSelect} />}
-                    content={
-                      // Stack resets Frame's single-line context so a long
-                      // freeform answer wraps instead of truncating to one line.
-                      <Stack gap="2xs">
-                        <Text as="p" variant="caption" className="italic text-foreground">
-                          {otherText}
-                        </Text>
-                      </Stack>
-                    }
-                  />
+                  <div className="flex gap-sm rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm">
+                    <Indicator selected multi={q.multiSelect} />
+                    <Text as="p" variant="caption" className="italic text-foreground">
+                      {otherText}
+                    </Text>
+                  </div>
                 )}
                 {notes != null && (
                   <div className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 py-xs pl-sm">

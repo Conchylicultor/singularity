@@ -9,8 +9,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeEngine, ThemeScopeProvider, useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { themeCustomizerPane } from "../panes";
@@ -159,31 +157,24 @@ function CustomizeForAppToggle({
     <button
       type="button"
       onClick={onToggle}
-      className={`w-full px-md py-sm text-body rounded-md border transition-colors ${
+      className={`flex items-center justify-between gap-md px-md py-sm text-body rounded-md border transition-colors ${
         forked
           ? "border-primary bg-primary/10 text-primary"
           : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
       }`}
     >
-      <Frame
-        gap="md"
-        content={<span className="font-medium">Customize for {appLabel}</span>}
-        trailing={
-          <Center
-            as="span"
-            axis="vertical"
-            className={`relative h-4 w-7 rounded-full transition-colors ${
-              forked ? "bg-primary" : "bg-muted-foreground/30"
-            }`}
-          >
-            <span
-              className={`inline-block size-3 rounded-full bg-background transition-transform ${
-                forked ? "translate-x-3.5" : "translate-x-0.5"
-              }`}
-            />
-          </Center>
-        }
-      />
+      <span className="font-medium">Customize for {appLabel}</span>
+      <span
+        className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+          forked ? "bg-primary" : "bg-muted-foreground/30"
+        }`}
+      >
+        <span
+          className={`inline-block size-3 rounded-full bg-background transition-transform ${
+            forked ? "translate-x-3.5" : "translate-x-0.5"
+          }`}
+        />
+      </span>
     </button>
   );
 }

@@ -15,7 +15,6 @@ import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewpor
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
@@ -129,33 +128,27 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
 
   return (
     <Stack gap="none" className="h-full">
-      <Frame
-        className="border-b px-md py-sm"
-        content={
-          <Stack direction="row" gap="xs" align="center">
-            <FilterChip active={chipFilter.value === "all"} onClick={() => chipFilter.setValue("all")}>
-              All <span className="opacity-60">{total}</span>
-            </FilterChip>
-            <FilterChip active={chipFilter.value === "pending"} onClick={() => chipFilter.setValue("pending")}>
-              Pending <span className="opacity-60">{counts.pending}</span>
-            </FilterChip>
-            <FilterChip active={chipFilter.value === "running"} onClick={() => chipFilter.setValue("running")}>
-              Running <span className="opacity-60">{counts.running}</span>
-            </FilterChip>
-            <FilterChip active={chipFilter.value === "retrying"} onClick={() => chipFilter.setValue("retrying")}>
-              Retrying <span className="opacity-60">{counts.retrying}</span>
-            </FilterChip>
-            <FilterChip active={chipFilter.value === "dead"} onClick={() => chipFilter.setValue("dead")}>
-              Dead <span className="opacity-60">{counts.dead}</span>
-            </FilterChip>
-          </Stack>
-        }
-        trailing={
-          <Button variant="ghost" onClick={() => refetch()}>
-            <MdRefresh className="size-4" /> Refresh
-          </Button>
-        }
-      />
+      <div className="flex items-center gap-xs border-b px-md py-sm">
+        <FilterChip active={chipFilter.value === "all"} onClick={() => chipFilter.setValue("all")}>
+          All <span className="opacity-60">{total}</span>
+        </FilterChip>
+        <FilterChip active={chipFilter.value === "pending"} onClick={() => chipFilter.setValue("pending")}>
+          Pending <span className="opacity-60">{counts.pending}</span>
+        </FilterChip>
+        <FilterChip active={chipFilter.value === "running"} onClick={() => chipFilter.setValue("running")}>
+          Running <span className="opacity-60">{counts.running}</span>
+        </FilterChip>
+        <FilterChip active={chipFilter.value === "retrying"} onClick={() => chipFilter.setValue("retrying")}>
+          Retrying <span className="opacity-60">{counts.retrying}</span>
+        </FilterChip>
+        <FilterChip active={chipFilter.value === "dead"} onClick={() => chipFilter.setValue("dead")}>
+          Dead <span className="opacity-60">{counts.dead}</span>
+        </FilterChip>
+        <div className="flex-1" />
+        <Button variant="ghost" onClick={() => refetch()}>
+          <MdRefresh className="size-4" /> Refresh
+        </Button>
+      </div>
       <Scroll axis="both" fill>
         {visible.length === 0 ? (
           <Empty>No jobs.</Empty>
@@ -232,15 +225,12 @@ function Drawer({
           onClick={(e) => e.stopPropagation()}
         >
           <Stack gap="none" className="h-full">
-            <Frame
-              className="border-b px-lg py-md"
-              content={header}
-              trailing={
-                <Button variant="ghost" onClick={onClose}>
-                  Close
-                </Button>
-              }
-            />
+            <div className="flex items-center justify-between border-b px-lg py-md">
+              {header}
+              <Button variant="ghost" onClick={onClose}>
+                Close
+              </Button>
+            </div>
             <Scroll fill className="p-lg">
               {/* eslint-disable-next-line spacing/no-adhoc-spacing -- vertical rhythm between Field rows on a scrollable Text drawer body; not a plain flex container */}
               <Text as="div" variant="body" className="space-y-4">
@@ -311,19 +301,15 @@ function DeadTabInner({ data, refetch }: { data: DeadJobsPayload; refetch: () =>
   const [selected, setSelected] = useState<DeadJobRow | null>(null);
   return (
     <Stack gap="none" className="h-full">
-      <Frame
-        className="border-b px-md py-sm"
-        content={
-          <Text as="div" variant="caption" className="text-muted-foreground">
-            Permanently-failed jobs archived from the queue (bounded; GC'd hourly).
-          </Text>
-        }
-        trailing={
-          <Button variant="ghost" onClick={() => refetch()}>
-            <MdRefresh className="size-4" /> Refresh
-          </Button>
-        }
-      />
+      <div className="flex items-center border-b px-md py-sm">
+        <Text as="div" variant="caption" className="text-muted-foreground">
+          Permanently-failed jobs archived from the queue (bounded; GC'd hourly).
+        </Text>
+        <div className="flex-1" />
+        <Button variant="ghost" onClick={() => refetch()}>
+          <MdRefresh className="size-4" /> Refresh
+        </Button>
+      </div>
       <Scroll axis="both" fill>
         {data.rows.length === 0 ? (
           <Empty>No dead jobs. Permanently-failed jobs are archived here.</Empty>
@@ -414,19 +400,15 @@ function EventsTab() {
 
   return (
     <Stack gap="none" className="h-full">
-      <Frame
-        className="border-b px-md py-sm"
-        content={
-          <Text as="div" variant="caption" className="text-muted-foreground">
-            Capped ring-buffer of last ~1000 emit() calls.
-          </Text>
-        }
-        trailing={
-          <Button variant="ghost" onClick={() => refetch()}>
-            <MdRefresh className="size-4" /> Refresh
-          </Button>
-        }
-      />
+      <div className="flex items-center border-b px-md py-sm">
+        <Text as="div" variant="caption" className="text-muted-foreground">
+          Capped ring-buffer of last ~1000 emit() calls.
+        </Text>
+        <div className="flex-1" />
+        <Button variant="ghost" onClick={() => refetch()}>
+          <MdRefresh className="size-4" /> Refresh
+        </Button>
+      </div>
       <Scroll axis="both" fill>
         {rows.length === 0 ? (
           <Empty>No emissions recorded yet. Emit an event to populate this log.</Empty>
@@ -566,27 +548,21 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
 
   return (
     <Stack gap="none" className="h-full">
-      <Frame
-        className="border-b px-md py-sm"
-        content={
-          <Stack direction="row" gap="xs" align="center">
-            <Text as="div" variant="caption" className="text-muted-foreground">
-              Active subscriptions across all registered events.
-            </Text>
-            {danglingCount > 0 && (
-              <FilterChip active={danglingOnly} onClick={() => setDanglingOnly((v) => !v)}>
-                <span className="text-destructive">Dangling</span>{" "}
-                <span className="opacity-60">{danglingCount}</span>
-              </FilterChip>
-            )}
-          </Stack>
-        }
-        trailing={
-          <Button variant="ghost" onClick={() => refetch()}>
-            <MdRefresh className="size-4" /> Refresh
-          </Button>
-        }
-      />
+      <div className="flex items-center gap-xs border-b px-md py-sm">
+        <Text as="div" variant="caption" className="text-muted-foreground">
+          Active subscriptions across all registered events.
+        </Text>
+        {danglingCount > 0 && (
+          <FilterChip active={danglingOnly} onClick={() => setDanglingOnly((v) => !v)}>
+            <span className="text-destructive">Dangling</span>{" "}
+            <span className="opacity-60">{danglingCount}</span>
+          </FilterChip>
+        )}
+        <div className="flex-1" />
+        <Button variant="ghost" onClick={() => refetch()}>
+          <MdRefresh className="size-4" /> Refresh
+        </Button>
+      </div>
       <Scroll axis="both" fill>
         {grouped.length === 0 ? (
           <Empty>No active triggers.</Empty>

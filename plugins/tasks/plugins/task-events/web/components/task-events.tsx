@@ -18,7 +18,6 @@ import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 
 function useGithubBase(): string | null {
   const { data } = useEndpoint(getRepoInfo, {});
@@ -85,27 +84,18 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                     target={url ? "_blank" : undefined}
                     rel={url ? "noreferrer" : undefined}
                     bordered
+                    className="gap-md"
                   >
-                    <Frame
-                      className="w-full"
-                      gap="md"
-                      leading={
-                        <Text as="code" variant="caption" tone="muted" className="font-mono">
-                          {short}
-                        </Text>
-                      }
-                      content={push.message}
-                      trailing={
-                        <>
-                          <Text as="span" variant="caption" tone="muted" className="tabular-nums">
-                            {formatDate(push.createdAt)}
-                          </Text>
-                          {url ? (
-                            <MdOpenInNew className="text-muted-foreground size-4" />
-                          ) : null}
-                        </>
-                      }
-                    />
+                    <Text as="code" variant="caption" tone="muted" className="shrink-0 font-mono">
+                      {short}
+                    </Text>
+                    <Text as="span" variant="body" className="flex-1 truncate">{push.message}</Text>
+                    <Text as="span" variant="caption" tone="muted" className="shrink-0 tabular-nums">
+                      {formatDate(push.createdAt)}
+                    </Text>
+                    {url ? (
+                      <MdOpenInNew className="text-muted-foreground size-4 shrink-0" />
+                    ) : null}
                   </Row>
                 </li>
               );
@@ -135,20 +125,15 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                   gap="sm"
                   className="rounded-md border px-md py-sm"
                 >
-                  <Frame
-                    gap="md"
-                    leading={<AttemptStatusBadge status={attempt.status} />}
-                    content={
-                      <Text className="text-caption font-mono text-muted-foreground">
-                        {attempt.worktreePath.split("/").pop()}
-                      </Text>
-                    }
-                    trailing={
-                      <Text as="span" variant="caption" tone="muted" className="tabular-nums">
-                        {formatDate(attempt.createdAt)}
-                      </Text>
-                    }
-                  />
+                  <div className="flex items-center gap-md">
+                    <AttemptStatusBadge status={attempt.status} />
+                    <Text className="flex-1 truncate text-caption font-mono text-muted-foreground">
+                      {attempt.worktreePath.split("/").pop()}
+                    </Text>
+                    <Text as="span" variant="caption" tone="muted" className="shrink-0 tabular-nums">
+                      {formatDate(attempt.createdAt)}
+                    </Text>
+                  </div>
                   {convs.length === 0 ? (
                     <Text as="p" variant="caption" tone="muted" className="pl-xs">
                       No conversations.

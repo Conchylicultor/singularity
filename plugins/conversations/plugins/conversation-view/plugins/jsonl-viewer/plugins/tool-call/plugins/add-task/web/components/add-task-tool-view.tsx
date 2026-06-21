@@ -11,7 +11,6 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 
 type AddTaskInput = {
   title: string;
@@ -58,21 +57,18 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   };
 
   const summary = (
-    <Frame
-      gap="sm"
-      content={input.title}
-      trailing={
-        autostart ? (
-          <Badge variant="success">
-            auto-launch {MODEL_REGISTRY[normalizeModel(autostart)].label}
-          </Badge>
-        ) : (
-          <Badge variant="warning">
-            no auto-launch
-          </Badge>
-        )
-      }
-    />
+    <span className="flex min-w-0 items-center gap-sm">
+      <span className="min-w-0 truncate">{input.title}</span>
+      {autostart ? (
+        <Badge variant="success" className="shrink-0">
+          auto-launch {MODEL_REGISTRY[normalizeModel(autostart)].label}
+        </Badge>
+      ) : (
+        <Badge variant="warning" className="shrink-0">
+          no auto-launch
+        </Badge>
+      )}
+    </span>
   );
 
   return (

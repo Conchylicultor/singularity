@@ -1,5 +1,4 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Section,
@@ -29,19 +28,20 @@ export function ResourcesDetailSection({ node }: { node: PluginNode }) {
     <Section title="Resources" count={String(rows.length)}>
       <Stack gap="2xs">
         {rows.map((r) => (
-          <Frame
+          <Text
+            as="div"
+            variant="caption"
             key={`${r.runtime}:${r.key}`}
-            className="text-caption px-sm py-2xs"
-            content={
-              <Text as="code" className="font-mono text-foreground">
-                {r.key}
-              </Text>
-            }
-            meta={<span className="text-muted-foreground/60">{r.mode}</span>}
-            trailing={
-              <span className="text-3xs text-muted-foreground/50">{r.runtime}</span>
-            }
-          />
+            className="flex items-center gap-sm px-sm py-2xs"
+          >
+            <Text as="code" className="min-w-0 truncate font-mono text-foreground">
+              {r.key}
+            </Text>
+            <span className="text-muted-foreground/60">{r.mode}</span>
+            <span className="ml-auto shrink-0 text-3xs text-muted-foreground/50">
+              {r.runtime}
+            </span>
+          </Text>
         ))}
       </Stack>
     </Section>

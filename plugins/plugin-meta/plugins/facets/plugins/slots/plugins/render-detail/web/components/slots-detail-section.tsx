@@ -1,5 +1,4 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -24,22 +23,18 @@ export function SlotsDetailSection({ node }: { node: PluginNode }) {
       <Stack gap="2xs">
         {data.map((s) => (
           <Stack gap="2xs" key={s.slotId}>
-            <Frame
-              className="text-caption px-sm py-2xs"
-              leading={
-                <code className="font-mono text-foreground">
-                  {s.groupName}.{s.memberName}
-                </code>
-              }
-              meta={
-                <Text
-                  as="code"
-                  className="font-mono text-right text-muted-foreground/60"
-                >
-                  {s.slotId}
-                </Text>
-              }
-            />
+            <Text
+              as="div"
+              variant="caption"
+              className="flex items-center gap-sm px-sm py-2xs"
+            >
+              <code className="font-mono text-foreground">
+                {s.groupName}.{s.memberName}
+              </code>
+              <code className="ml-auto truncate font-mono text-muted-foreground/60">
+                {s.slotId}
+              </code>
+            </Text>
             {s.contributors.length > 0 && (
               <Cluster gap="xs" className="text-caption gap-y-2xs px-sm">
                 <span className="text-muted-foreground/60">←</span>

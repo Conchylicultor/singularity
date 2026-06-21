@@ -9,7 +9,6 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import {
   conversationSummariesResource,
   type ConversationSummary,
@@ -129,24 +128,18 @@ function SummaryCard({ summary }: { summary: ConversationSummary }) {
   const generated = new Date(summary.generatedAt);
   return (
     <Stack gap="md" className="rounded-md border p-md">
-      <Frame
-        align="center"
-        gap="sm"
-        content={
-          <Badge colorClass={PHASE_CLASSES[summary.phase]}>
-            {PHASE_LABEL[summary.phase]}
-          </Badge>
-        }
-        trailing={
-          <Text
-            variant="caption"
-            className="text-muted-foreground"
-            title={generated.toISOString()}
-          >
-            {formatRelative(generated)} · {summary.turnCountAtGeneration} turns
-          </Text>
-        }
-      />
+      <div className="flex items-center justify-between gap-sm">
+        <Badge colorClass={PHASE_CLASSES[summary.phase]}>
+          {PHASE_LABEL[summary.phase]}
+        </Badge>
+        <Text
+          variant="caption"
+          className="text-muted-foreground"
+          title={generated.toISOString()}
+        >
+          {formatRelative(generated)} · {summary.turnCountAtGeneration} turns
+        </Text>
+      </div>
 
       {summary.phaseDetail && (
         <Section label="Detail">{summary.phaseDetail}</Section>

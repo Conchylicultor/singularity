@@ -2,10 +2,10 @@ import type { GeometryInvariant, MeasuredFixture } from "./types";
 
 // The generic, PURE geometry oracle. One function per invariant kind, each
 // consuming the per-width measurement map and returning a debuggable result.
-// The math is ported EXACTLY from the bespoke frame geometry test
-// (frame/web/internal/frame-geometry.test.ts) — that test is the source of truth
-// these invariants generalize. No DOM, no Playwright: the measurement happens in
-// the harness; the oracle only judges the numbers.
+// The math was ported EXACTLY from the original bespoke per-primitive geometry
+// tests (truncation-onset measurement of `scrollWidth > clientWidth`) that these
+// invariants generalize. No DOM, no Playwright: the measurement happens in the
+// harness; the oracle only judges the numbers.
 
 export type OracleResult = { ok: true } | { ok: false; detail: string };
 

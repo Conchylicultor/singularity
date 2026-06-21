@@ -17,8 +17,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { useResponsiveOverflow } from "@plugins/primitives/plugins/responsive-overflow/web";
 import {
   SortableList,
@@ -229,52 +227,40 @@ const ChipShell = forwardRef<
   ref,
 ) {
   return (
-    <Frame
+    <div
       ref={ref}
       data-app-tab={appId}
-      gap="xs"
-      // eslint-disable-next-line layout/no-adhoc-layout -- flexible chip leaf of the tab strip; min-w-0 lets the whole chip shrink so its label truncates
       className={cn(
-        "group max-w-40 min-w-0 rounded-md py-2xs pl-xs pr-2xs text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+        "group flex max-w-40 min-w-0 items-center gap-xs rounded-md py-2xs pl-xs pr-2xs text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
         active && "bg-sidebar-accent text-sidebar-accent-foreground",
       )}
       {...rest}
-      content={
+    >
+      <button
+        type="button"
+        aria-pressed={active}
+        onClick={onActivate}
+        className="flex min-w-0 flex-1 items-center gap-xs"
+      >
+        <Icon className="size-4 shrink-0" />
+        {!collapsed && (
+          <Text variant="label">{label}</Text>
+        )}
+      </button>
+      {!collapsed && (
         <button
           type="button"
-          aria-pressed={active}
-          onClick={onActivate}
-          className="block w-full"
+          aria-label={`Close ${label}`}
+          onClick={onClose}
+          className={cn(
+            "flex size-4 shrink-0 items-center justify-center rounded-sm transition-[color,background-color,opacity] hover:bg-sidebar-foreground/10 hover:text-sidebar-accent-foreground group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
+            active ? "opacity-70" : "opacity-0 pointer-events-none",
+          )}
         >
-          <Frame
-            gap="xs"
-            leading={<Icon className="size-4" />}
-            content={
-              collapsed ? undefined : (
-                <Text variant="label">{label}</Text>
-              )
-            }
-          />
+          <MdClose className="size-3.5" />
         </button>
-      }
-      trailing={
-        !collapsed && (
-          <button
-            type="button"
-            aria-label={`Close ${label}`}
-            onClick={onClose}
-            className={cn(
-              "rounded-sm transition-[color,background-color,opacity] hover:bg-sidebar-foreground/10 hover:text-sidebar-accent-foreground group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
-              active ? "opacity-70" : "opacity-0 pointer-events-none",
-            )}
-          >
-            <Center className="size-4">
-              <MdClose className="size-3.5" />
-            </Center>
-          </button>
-        )
-      }
-    />
+      )}
+    </div>
   );
 });
 

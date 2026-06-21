@@ -5,7 +5,6 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import type { DocMetaRegistration } from "@plugins/plugin-meta/plugins/facets/plugins/registrations/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Renders the registrations facet's own data. Read `node.facets[id]` directly
@@ -29,20 +28,24 @@ export function RegistrationsDetailSection({ node }: { node: PluginNode }) {
     <Section title="Registrations" count={String(data.length)}>
       <Stack gap="2xs">
         {data.map((r, i) => (
-          <Frame
+          <Text
+            as="div"
+            variant="caption"
             key={`${r.runtime}:${r.kind}:${i}`}
-            className="text-caption px-sm py-2xs"
-            content={
-              <Text as="code" className="font-mono text-foreground">
-                {format(r)}
-              </Text>
-            }
-            trailing={
-              <span className={`font-mono text-3xs ${RUNTIME_COLORS[r.runtime]}`}>
-                {r.runtime}
-              </span>
-            }
-          />
+            className="flex items-center gap-sm px-sm py-2xs"
+          >
+            <Text
+              as="code"
+              className="min-w-0 truncate font-mono text-foreground"
+            >
+              {format(r)}
+            </Text>
+            <span
+              className={`ml-auto shrink-0 font-mono text-3xs ${RUNTIME_COLORS[r.runtime]}`}
+            >
+              {r.runtime}
+            </span>
+          </Text>
         ))}
       </Stack>
     </Section>

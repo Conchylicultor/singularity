@@ -4,7 +4,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   FieldCell,
@@ -107,63 +106,60 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
         {options.renderRow ? (
           options.renderRow(row)
         ) : (
-          <Frame
-            className="w-full"
-            content={
-              <>
-                {titleField ? (
-                  <Text
-                    as="div"
-                    variant="label"
-                    className="truncate text-foreground"
-                  >
-                    <FieldCell
-                      field={titleField}
-                      row={row}
-                      resolveCell={resolveCell}
-                      resolveEditor={resolveEditor}
-                      display="block"
-                    />
-                  </Text>
-                ) : null}
-                {subtitleFields.length > 0 ? (
-                  <Text
-                    as="div"
-                    variant="caption"
-                    className="truncate text-muted-foreground"
-                  >
-                    {subtitleFields.map((field, fi) => (
-                      <span key={field.id}>
-                        {fi > 0 ? " · " : null}
-                        <FieldCell
-                          field={field}
-                          row={row}
-                          resolveCell={resolveCell}
-                          resolveEditor={resolveEditor}
-                          display="inline"
-                        />
-                      </span>
-                    ))}
-                  </Text>
-                ) : null}
-              </>
-            }
-            trailing={
-              trailingFields.length > 0
-                ? trailingFields.map((field) => (
+          <>
+            <div className="flex min-w-0 flex-col overflow-hidden">
+              {titleField ? (
+                <Text
+                  as="div"
+                  variant="label"
+                  className="truncate text-foreground"
+                >
+                  <FieldCell
+                    field={titleField}
+                    row={row}
+                    resolveCell={resolveCell}
+                    resolveEditor={resolveEditor}
+                    display="block"
+                  />
+                </Text>
+              ) : null}
+              {subtitleFields.length > 0 ? (
+                <Text
+                  as="div"
+                  variant="caption"
+                  className="truncate text-muted-foreground"
+                >
+                  {subtitleFields.map((field, fi) => (
                     <span key={field.id}>
+                      {fi > 0 ? " · " : null}
                       <FieldCell
                         field={field}
                         row={row}
                         resolveCell={resolveCell}
                         resolveEditor={resolveEditor}
-                        display="block"
+                        display="inline"
                       />
                     </span>
-                  ))
-                : undefined
-            }
-          />
+                  ))}
+                </Text>
+              ) : null}
+            </div>
+            {trailingFields.length > 0 ? (
+              <div className="ml-auto flex shrink-0 items-center gap-xs">
+                {trailingFields.map((field) => (
+                  <span key={field.id}>
+                    <FieldCell
+                      field={field}
+                      row={row}
+                      resolveCell={resolveCell}
+                      resolveEditor={resolveEditor}
+                      display="block"
+                    />
+                  </span>
+                ))}
+              </div>
+            ) : null}
+          </>
         )}
       </Row>
     );

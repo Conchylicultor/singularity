@@ -5,9 +5,7 @@ import {
   CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
@@ -77,8 +75,8 @@ const ERROR_CARD = "border-destructive/60 bg-destructive/5";
 // font is a property of the card chrome, not of each renderer. Without it,
 // call sites drifted (some plain strings in sans, some font-mono spans).
 // The positioning context for the full-bleed toggle overlay is owned by the
-// <Overlay> below (it emits `relative`); the row layout itself is owned by
-// <Frame>. region-line keeps the strip single-line (whitespace-nowrap); the
+// <Overlay> below (it emits `relative`); the row layout itself is a plain
+// flex strip. region-line keeps the strip single-line (whitespace-nowrap); the
 // typography/color/hover are inherited by every slot.
 const HEADER =
   "w-full region-line font-sans text-2xs text-muted-foreground hover:text-foreground";
@@ -126,58 +124,41 @@ export function CollapsibleCard({
           />
         }
       >
-        {/* The header row is a <Frame>: rigid disclosure chevron + the title
-            content + the secondary aside + rigid trailing actions, laid out on a
-            grid that OWNS the shrink hierarchy. The title (`content`) holds its
-            width and truncates last; the aside (`meta`) yields space and
-            truncates first. The two live in SEPARATE grid tracks, so the badge
-            (inside the title) can never overlap the file path — the exact bug
-            this primitive was built to make unrepresentable. */}
-        <Frame
-          gap="sm"
-          leading={<CollapsibleChevron open={open} className="size-3" />}
-          content={
-            // The card OWNS the title group: leading icon, the title content,
-            // and an optional muted note, all in the one canonical title font
-            // (inherited from HEADER). Call sites pass content — never their own
-            // `font-*`/`text-*`. Identity chips inside the label stay rigid and
-            // only the flexible text leaf ellipsizes; this group rides in the
-            // content track, kept off the aside's track by the grid.
-            <Stack
-              direction="row"
-              gap="xs"
-              align="center"
-              // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of Frame's content track: min-w-0 lets the title's text leaf truncate inside this nested flex row
-              className="min-w-0"
-            >
-              {icon}
-              {label}
-              {note != null && (
-                <span className="text-muted-foreground/60">{note}</span>
-              )}
-            </Stack>
-          }
-          meta={
-            // Interactive aside opts back into pointer events via
-            // CardHeaderAction. As `meta` it occupies the `minmax(0,1fr)` track,
-            // so it shrinks (the FilePath's own RTL ellipsis takes over) before
-            // the title ever does.
-            sideContent ? (
-              <CardHeaderAction>{sideContent}</CardHeaderAction>
-            ) : undefined
-          }
-          trailing={
-            // Rigid right cluster: optional trailing affordance + the always-on
-            // row actions. The `auto` track is right-justified by Frame, so no
-            // `ml-auto` is needed.
-            <>
-              {trailing && <CardHeaderAction>{trailing}</CardHeaderAction>}
-              <CardHeaderAction>
-                <RowActions />
-              </CardHeaderAction>
-            </>
-          }
-        />
+        {/* Non-interactive: pointer-events-none lets clicks fall through to the
+            overlay button beneath, so the chevron+label area toggles too. */}
+        <span className="pointer-events-none relative flex min-w-0 items-center gap-sm">
+          <CollapsibleChevron open={open} className="size-3" />
+          {/* The card OWNS the title group: leading icon, the title content, and
+              an optional muted note, all painted in the one canonical title font
+              (inherited from HEADER). Call sites pass content — never their own
+              `font-*`/`text-*` — so the family/size can't drift per renderer.
+              No `truncate` here: this row holds identity chips (e.g. the
+              tool-name Badge, `shrink-0`) next to free text. `overflow:hidden`
+              would clip the chips too once the row gets tight. Truncation is the
+              job of the flexible leaf (a `flex-1 truncate` summary span), never
+              the container — so chips stay whole and only the text ellipsizes. */}
+          <span className="flex min-w-0 items-center gap-xs">
+            {icon}
+            {label}
+            {note != null && (
+              <span className="text-muted-foreground/60">{note}</span>
+            )}
+          </span>
+        </span>
+        {/* Interactive siblings opt back in via CardHeaderAction. min-w-0 lets
+            the aside (typically a FilePath with its own overflow ellipsis)
+            shrink below its content width instead of overflowing the card. */}
+        {sideContent && (
+          <CardHeaderAction className="min-w-0">{sideContent}</CardHeaderAction>
+        )}
+        {trailing && (
+          <CardHeaderAction className="ml-auto shrink-0">
+            {trailing}
+          </CardHeaderAction>
+        )}
+        <CardHeaderAction className={cn("shrink-0", !trailing && "ml-auto")}>
+          <RowActions />
+        </CardHeaderAction>
       </Overlay>
       {open && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the collapsible body from the header inside the non-flex Card; lifting into Card padding would also pad the always-present header

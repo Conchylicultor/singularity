@@ -1,7 +1,6 @@
 import { MdClose } from "react-icons/md";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
@@ -45,23 +44,19 @@ export function DepPopoverContent({
         // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the current-deps list from the search input; fragment parent can't own the gap
         <ul className="mb-2 space-y-px">
           {currentConvs.map((c) => (
-            <li key={c.taskId}>
-              <Frame
-                gap="xs"
-                align="center"
-                content={<ConversationItem conv={c} layout="inline" />}
-                trailing={
-                  <button
-                    type="button"
-                    onClick={() => onRemove(c.taskId!)}
-                    disabled={busy === c.taskId}
-                    className="hover:bg-destructive/10 hover:text-destructive rounded-md p-2xs"
-                    aria-label="Remove"
-                  >
-                    <MdClose className="size-3" />
-                  </button>
-                }
-              />
+            <li key={c.taskId} className="flex items-center gap-xs">
+              <div className="flex-1 overflow-hidden">
+                <ConversationItem conv={c} layout="inline" />
+              </div>
+              <button
+                type="button"
+                onClick={() => onRemove(c.taskId!)}
+                disabled={busy === c.taskId}
+                className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded-md p-2xs"
+                aria-label="Remove"
+              >
+                <MdClose className="size-3" />
+              </button>
             </li>
           ))}
           {orphanIds.map((id) => {
@@ -69,29 +64,23 @@ export function DepPopoverContent({
             const isTerminal =
               depTask?.status === "done" || depTask?.status === "dropped";
             return (
-              <li key={id}>
-                <Frame
-                  gap="xs"
-                  align="center"
-                  content={
-                    <Text
-                      className={`text-caption ${isTerminal ? "text-muted-foreground line-through" : ""}`}
-                    >
-                      {depTask?.title ?? id}
-                    </Text>
-                  }
-                  trailing={
-                    <button
-                      type="button"
-                      onClick={() => onRemove(id)}
-                      disabled={busy === id}
-                      className="hover:bg-destructive/10 hover:text-destructive rounded-md p-2xs"
-                      aria-label="Remove"
-                    >
-                      <MdClose className="size-3" />
-                    </button>
-                  }
-                />
+              <li key={id} className="flex items-center gap-xs">
+                <Text
+                  as="span"
+                  className={`text-caption flex-1 truncate ${isTerminal ? "text-muted-foreground line-through" : ""}`}
+                >
+                  {depTask?.title ?? id}
+                </Text>
+                <button
+                  type="button"
+                  onClick={() => onRemove(id)}
+                  disabled={busy === id}
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- p-2xs is the named 0.5-step density utility; the rule's regex erroneously matches the leading "2" of 2xs
+                  className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded-md p-2xs"
+                  aria-label="Remove"
+                >
+                  <MdClose className="size-3" />
+                </button>
               </li>
             );
           })}

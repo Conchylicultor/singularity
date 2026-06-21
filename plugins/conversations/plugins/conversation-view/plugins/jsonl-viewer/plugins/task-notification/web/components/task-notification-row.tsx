@@ -4,7 +4,6 @@ import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-vie
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
@@ -35,16 +34,11 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
     return (
       <CollapsibleCard
         label={
-          <Frame
-            gap="xs"
-            leading={
-              <>
-                {dot}
-                <span className="font-medium">{label}</span>
-              </>
-            }
-            content={e.summary}
-          />
+          <span className="flex min-w-0 items-center gap-xs">
+            {dot}
+            <span className="shrink-0 font-medium">{label}</span>
+            {summary}
+          </span>
         }
         aside={e.outputFile ? <FilePath filePath={e.outputFile} /> : undefined}
       >

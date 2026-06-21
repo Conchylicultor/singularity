@@ -9,7 +9,6 @@ import { saveKeyAutoDetect } from "@plugins/apps/plugins/sonata/plugins/rich/plu
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import {
@@ -154,29 +153,25 @@ export function KeyReadout() {
   return (
     <Card className="rounded-lg p-lg">
       <Stack gap="sm">
-        <Frame
-          content={
-            <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-              Current key
-            </div>
-          }
-          trailing={
-            showToggle ? (
-              <ToggleChip
-                active={keyAutoDetect}
-                variant="ghost"
-                onClick={toggleAutoDetect}
-                title={
-                  keyAutoDetect
-                    ? "Using a key auto-detected from the notes. Turn off to use the song's own (MIDI) key."
-                    : "Using the song's own (MIDI) key. Turn on to auto-detect the key from the notes instead."
-                }
-              >
-                Auto-detect
-              </ToggleChip>
-            ) : undefined
-          }
-        />
+        <div className="flex items-center justify-between gap-sm">
+          <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Current key
+          </div>
+          {showToggle && (
+            <ToggleChip
+              active={keyAutoDetect}
+              variant="ghost"
+              onClick={toggleAutoDetect}
+              title={
+                keyAutoDetect
+                  ? "Using a key auto-detected from the notes. Turn off to use the song's own (MIDI) key."
+                  : "Using the song's own (MIDI) key. Turn on to auto-detect the key from the notes instead."
+              }
+            >
+              Auto-detect
+            </ToggleChip>
+          )}
+        </div>
         {current && scale ? (
           <>
             <Stack gap="2xs">
@@ -187,34 +182,25 @@ export function KeyReadout() {
                   {current.mode}
                 </span>
               </div>
-              <Frame
-                align="baseline"
-                content={
-                  <Text as="div" variant="caption" className="text-muted-foreground">
-                    relative {scale.relative.tonic} {scale.relative.mode}
-                  </Text>
-                }
-                trailing={
-                  <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                    {active?.source === "derived" ? "Auto-detected" : "From MIDI"}
-                  </span>
-                }
-              />
+              <div className="flex items-baseline justify-between gap-sm">
+                <Text as="div" variant="caption" className="text-muted-foreground">
+                  relative {scale.relative.tonic} {scale.relative.mode}
+                </Text>
+                <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  {active?.source === "derived" ? "Auto-detected" : "From MIDI"}
+                </span>
+              </div>
             </Stack>
 
             <Stack gap="xs">
-              <Frame
-                leading={
-                  <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                    Scale
-                  </div>
-                }
-                meta={
-                  <div className="text-2xs tabular-nums text-muted-foreground/80 text-right">
-                    {scale.names.join(" · ")}
-                  </div>
-                }
-              />
+              <div className="flex items-center justify-between">
+                <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Scale
+                </div>
+                <div className="text-2xs tabular-nums text-muted-foreground/80 text-right">
+                  {scale.names.join(" · ")}
+                </div>
+              </div>
               <Keyboard
                 low={KB_LOW}
                 high={KB_HIGH}

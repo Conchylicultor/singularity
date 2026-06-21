@@ -1,6 +1,5 @@
 import { useMemo } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
@@ -70,14 +69,12 @@ export function ContributorEditor({
 
   return (
     <Stack gap="sm">
-      <Frame
-        content={<SectionLabel>Contributors</SectionLabel>}
-        trailing={
-          <Text variant="caption" tone="muted">
-            {selected.size} selected · {candidates.length} options
-          </Text>
-        }
-      />
+      <div className="flex items-center justify-between gap-sm">
+        <SectionLabel>Contributors</SectionLabel>
+        <Text variant="caption" tone="muted">
+          {selected.size} selected · {candidates.length} options
+        </Text>
+      </div>
       <SearchInput
         value={query}
         onChange={(e) => onQueryChange(e.target.value)}
@@ -95,24 +92,20 @@ export function ContributorEditor({
               ? impactOfPruning(graph, draft, id)
               : impactOfSelecting(graph, draft, id);
             return (
-              <Frame
-                key={id}
-                content={
-                  <ToggleChip
-                    variant="ghost"
-                    active={isOn}
-                    title={String(id)}
-                    onClick={() => toggle(id)}
-                  >
-                    <span className="truncate font-mono">{shortName(id)}</span>
-                  </ToggleChip>
-                }
-                trailing={
-                  <Text variant="caption" tone="muted">
-                    {isOn ? `−${cost.length} drop` : `+${cost.length} add`}
-                  </Text>
-                }
-              />
+              <div key={id} className="flex items-center justify-between gap-sm">
+                <ToggleChip
+                  variant="ghost"
+                  active={isOn}
+                  title={String(id)}
+                  onClick={() => toggle(id)}
+                  className="min-w-0"
+                >
+                  <span className="truncate font-mono">{shortName(id)}</span>
+                </ToggleChip>
+                <Text variant="caption" tone="muted" className="shrink-0">
+                  {isOn ? `−${cost.length} drop` : `+${cost.length} add`}
+                </Text>
+              </div>
             );
           })}
         </Stack>

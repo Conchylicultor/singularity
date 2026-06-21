@@ -1,5 +1,4 @@
 import { type ControlSize, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import {
   createElement,
   Fragment,
@@ -172,10 +171,10 @@ export function defineRenderSlot<P>(
           : renderContributionIsolated(clean, contribution, id);
         return horizontal ? (
           // A single-child `min-w-0` flex cell relaying the shrink-chain to each
-          // contribution (so flexible text truncates instead of wrapping). Frame
-          // with only `content` is exactly this: one `minmax(0,1fr)` grid track,
-          // center-aligned — the min-w-0 flexible cell expressed as a role.
-          <Frame key={cId} content={wrapped} />
+          // contribution (so flexible text truncates instead of wrapping).
+          <div key={cId} className="flex min-w-0 items-center">
+            {wrapped}
+          </div>
         ) : (
           <Fragment key={cId}>{wrapped}</Fragment>
         );

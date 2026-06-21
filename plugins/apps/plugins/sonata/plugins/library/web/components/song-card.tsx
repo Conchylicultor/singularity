@@ -5,7 +5,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { deleteSong } from "../../core";
@@ -48,48 +47,38 @@ export function SongCard({
       className={cn(hoverRevealGroup, "relative rounded-lg p-lg")}
     >
       <Stack gap="md">
-        <Frame
-          align="start"
-          gap="md"
-          leading={
-            <Center className="size-10 rounded-md bg-primary/10 text-primary">
-              <MdMusicNote className="size-5" />
-            </Center>
-          }
-          content={
-            <div>
-              <Text
-                as="div"
-                variant="body"
-                className="truncate font-semibold text-foreground"
-              >
-                {song.title}
-              </Text>
-              <Text as="div" variant="caption" tone="muted" className="truncate">
-                {song.composer ?? "Unknown"}
-              </Text>
-            </div>
-          }
-        />
-
-        <Frame
-          content={
-            <Text variant="caption" tone="muted">
-              <span className="tabular-nums">
-                {formatDuration(song.durationSec)}
-              </span>
-            </Text>
-          }
-          trailing={
-            <Center
-              aria-hidden
-              as="span"
-              className="size-7 rounded-full bg-primary/10 text-primary"
+        <div className="flex items-start gap-md">
+          <Center className="size-10 rounded-md bg-primary/10 text-primary">
+            <MdMusicNote className="size-5" />
+          </Center>
+          <div className="min-w-0 flex-1">
+            <Text
+              as="div"
+              variant="body"
+              className="truncate font-semibold text-foreground"
             >
-              <MdPlayArrow className="size-4" />
-            </Center>
-          }
-        />
+              {song.title}
+            </Text>
+            <Text as="div" variant="caption" tone="muted" className="truncate">
+              {song.composer ?? "Unknown"}
+            </Text>
+          </div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <Text variant="caption" tone="muted">
+            <span className="tabular-nums">
+              {formatDuration(song.durationSec)}
+            </span>
+          </Text>
+          <Center
+            aria-hidden
+            as="span"
+            className="size-7 rounded-full bg-primary/10 text-primary"
+          >
+            <MdPlayArrow className="size-4" />
+          </Center>
+        </div>
 
         {/* Per-card metadata contributed by other plugins (e.g. play stats). */}
         <Library.CardMeta.Render>

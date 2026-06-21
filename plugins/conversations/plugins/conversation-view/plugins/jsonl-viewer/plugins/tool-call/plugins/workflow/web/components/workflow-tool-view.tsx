@@ -4,8 +4,6 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
@@ -35,31 +33,23 @@ function PhaseList({
   return (
     <Stack as="ol" gap="xs">
       {phases.map((phase, i) => (
-        <Frame
-          as="li"
-          key={i}
-          gap="sm"
-          align="start"
-          leading={
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 optically centers the number badge to the first text line
-            <Center className="mt-0.5 size-4 rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6">
-              {i + 1}
-            </Center>
-          }
-          content={
-            <Text as="div" variant="caption">
-              <span className="font-medium text-foreground">
-                {phase.title ?? "(untitled phase)"}
+        <Text as="li" variant="caption" key={i} className="flex gap-sm">
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 optically centers the number badge to the first text line */}
+          <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6">
+            {i + 1}
+          </span>
+          <div className="min-w-0">
+            <span className="font-medium text-foreground">
+              {phase.title ?? "(untitled phase)"}
+            </span>
+            {phase.detail && (
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1.5 separates the inline detail from the phase title
+              <span className="ml-1.5 text-muted-foreground">
+                {phase.detail}
               </span>
-              {phase.detail && (
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1.5 separates the inline detail from the phase title
-                <span className="ml-1.5 text-muted-foreground">
-                  {phase.detail}
-                </span>
-              )}
-            </Text>
-          }
-        />
+            )}
+          </div>
+        </Text>
       ))}
     </Stack>
   );
@@ -120,33 +110,26 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
 
   const agentCount = graph?.nodes.length ?? 0;
   const summary = (
-    <Frame
-      gap="sm"
-      leading={
-        <>
-          <Badge colorClass="bg-categorical-6/15 text-categorical-6" icon={<MdAccountTree />} className="font-mono">
-            {name ?? "workflow"}
-          </Badge>
-          {phases.length > 0 && (
-            <Badge variant="muted" className="tracking-wider">
-              {phases.length} {phases.length === 1 ? "phase" : "phases"}
-            </Badge>
-          )}
-          {agentCount > 0 && (
-            <Badge variant="muted" className="tracking-wider">
-              {agentCount} {agentCount === 1 ? "agent" : "agents"}
-            </Badge>
-          )}
-        </>
-      }
-      content={
-        description ? (
-          <Text className="text-muted-foreground">
-            {description}
-          </Text>
-        ) : undefined
-      }
-    />
+    <span className="flex min-w-0 items-center gap-sm">
+      <Badge colorClass="bg-categorical-6/15 text-categorical-6" icon={<MdAccountTree />} className="shrink-0 font-mono">
+        {name ?? "workflow"}
+      </Badge>
+      {phases.length > 0 && (
+        <Badge variant="muted" className="shrink-0 tracking-wider">
+          {phases.length} {phases.length === 1 ? "phase" : "phases"}
+        </Badge>
+      )}
+      {agentCount > 0 && (
+        <Badge variant="muted" className="shrink-0 tracking-wider">
+          {agentCount} {agentCount === 1 ? "agent" : "agents"}
+        </Badge>
+      )}
+      {description && (
+        <span className="min-w-0 truncate text-muted-foreground">
+          {description}
+        </span>
+      )}
+    </span>
   );
 
   return (

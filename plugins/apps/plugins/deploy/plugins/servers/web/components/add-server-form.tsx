@@ -2,7 +2,6 @@ import { useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { createServer } from "../../shared/endpoints";
 
 export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }) {
@@ -57,31 +56,25 @@ export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }
           autoFocus
         />
       </Stack>
-      <Frame
-        align="start"
-        gap="md"
-        content={
-          <Stack as="label" gap="xs">
-            <Text as="span" variant="label">SSH User</Text>
-            <input
-              className="bg-input rounded-md border px-sm py-xs text-body"
-              value={sshUser}
-              onChange={(e) => setSshUser(e.target.value)}
-            />
-          </Stack>
-        }
-        trailing={
-          <Stack as="label" gap="xs" className="w-20">
-            <Text as="span" variant="label">Port</Text>
-            <input
-              className="bg-input rounded-md border px-sm py-xs text-body"
-              type="number"
-              value={port}
-              onChange={(e) => setPort(e.target.value)}
-            />
-          </Stack>
-        }
-      />
+      <div className="flex gap-md">
+        <label className="flex flex-1 flex-col gap-xs">
+          <Text as="span" variant="label">SSH User</Text>
+          <input
+            className="bg-input rounded-md border px-sm py-xs text-body"
+            value={sshUser}
+            onChange={(e) => setSshUser(e.target.value)}
+          />
+        </label>
+        <label className="flex w-20 flex-col gap-xs">
+          <Text as="span" variant="label">Port</Text>
+          <input
+            className="bg-input rounded-md border px-sm py-xs text-body"
+            type="number"
+            value={port}
+            onChange={(e) => setPort(e.target.value)}
+          />
+        </label>
+      </div>
       <Stack as="label" gap="xs">
         <Text as="span" variant="label">SSH Private Key</Text>
         <textarea

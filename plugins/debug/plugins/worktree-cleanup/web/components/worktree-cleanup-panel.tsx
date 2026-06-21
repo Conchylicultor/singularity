@@ -8,7 +8,6 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { readNdjson } from "@plugins/infra/plugins/ndjson-stream/web";
@@ -209,40 +208,31 @@ export function WorktreeCleanupPanel() {
   return (
     <Stack gap="none" className="h-full">
       {/* Header */}
-      <Frame
-        gap="md"
-        className="px-lg py-md border-b"
-        content={
-          <Frame
-            gap="sm"
-            leading={<Text as="h2" variant="label" className="font-semibold">Worktree Cleanup</Text>}
-            content={
-              entries && entries.length > 0 ? (
-                <Text as="span" variant="caption" className="text-muted-foreground truncate">
-                  {entries.length} worktree{entries.length !== 1 ? "s" : ""} · {safeCount} safe to delete
-                </Text>
-              ) : undefined
-            }
-          />
-        }
-        trailing={
-          <Stack direction="row" gap="sm" align="center">
-            <Button
-              variant="destructive"
-              onClick={deleteSafe}
-              loading={loading || deletingSteps.size > 0}
-              disabled={safeCount === 0}
-            >
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-              <MdFolderDelete className="size-4 mr-1.5" />
-              Delete {safeCount} safe
-            </Button>
-            <Button aspect="icon" variant="outline" onClick={() => load()} loading={loading}>
-              <MdRefresh className="size-4" />
-            </Button>
-          </Stack>
-        }
-      />
+      <div className="flex items-center justify-between px-lg py-md border-b gap-md">
+        <div className="flex items-center gap-sm min-w-0">
+          <Text as="h2" variant="label" className="font-semibold shrink-0">Worktree Cleanup</Text>
+          {entries && entries.length > 0 && (
+            <Text as="span" variant="caption" className="text-muted-foreground truncate">
+              {entries.length} worktree{entries.length !== 1 ? "s" : ""} · {safeCount} safe to delete
+            </Text>
+          )}
+        </div>
+        <div className="flex items-center gap-sm shrink-0">
+          <Button
+            variant="destructive"
+            onClick={deleteSafe}
+            loading={loading || deletingSteps.size > 0}
+            disabled={safeCount === 0}
+          >
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
+            <MdFolderDelete className="size-4 mr-1.5" />
+            Delete {safeCount} safe
+          </Button>
+          <Button aspect="icon" variant="outline" onClick={() => load()} loading={loading}>
+            <MdRefresh className="size-4" />
+          </Button>
+        </div>
+      </div>
 
       {/* Automatic-reaper policy note */}
       <Text as="div" variant="caption" className="px-lg py-sm text-muted-foreground border-b">
@@ -389,24 +379,19 @@ function EntryRow({
       {confirmOpen && (
         <tr className="border-b bg-warning/5">
           <td colSpan={5} className="px-lg py-sm">
-            <Frame
-              gap="lg"
-              content={
-                <Text as="span" variant="caption" className="text-warning">
-                  This worktree has unpushed commits or uncommitted changes. Delete anyway?
-                </Text>
-              }
-              trailing={
-                <Stack direction="row" gap="sm" align="center">
-                  <Button variant="outline" onClick={onCancelConfirm} className="h-7 text-caption">
-                    Cancel
-                  </Button>
-                  <Button variant="destructive" onClick={onConfirm} className="h-7 text-caption">
-                    Delete
-                  </Button>
-                </Stack>
-              }
-            />
+            <div className="flex items-center justify-between gap-lg">
+              <Text as="span" variant="caption" className="text-warning">
+                This worktree has unpushed commits or uncommitted changes. Delete anyway?
+              </Text>
+              <div className="flex items-center gap-sm shrink-0">
+                <Button variant="outline" onClick={onCancelConfirm} className="h-7 text-caption">
+                  Cancel
+                </Button>
+                <Button variant="destructive" onClick={onConfirm} className="h-7 text-caption">
+                  Delete
+                </Button>
+              </div>
+            </div>
           </td>
         </tr>
       )}

@@ -5,7 +5,6 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { resourcesDebugEndpoint, type ResourceDebug } from "../../shared/endpoints";
 
 // Server-fed companion to the client `ResourcesSection`: the authoritative
@@ -16,7 +15,7 @@ import { resourcesDebugEndpoint, type ResourceDebug } from "../../shared/endpoin
 // they answer "is a cheap loader being hammered, and how wide does it fan out?".
 // Default-sorted by call-rate desc so the hottest loader is on top.
 //
-// Composed from <Frame>/<Inline> (sanctioned layout primitives), NOT a
+// Composed from flow flex rows + <Inline>, NOT a
 // DataTable: the pane is a single flow `overflow-auto` column shared by every
 // section, and DataTable pins a `sticky` header to that shared scroll container
 // — which overlaps the sections above it. Flow rows compose correctly here.
@@ -59,9 +58,11 @@ export function ServerResourcesSection(): ReactElement {
 function ServerResourceRow({ r }: { r: ResourceDebug }): ReactElement {
   const fanOut = maxFanOut(r.subCounts);
   return (
-    <Frame
-      content={<Text variant="caption">{r.key}</Text>}
-      trailing={
+    <div className="flex items-center gap-sm">
+      <div className="min-w-0 flex-1">
+        <Text variant="caption">{r.key}</Text>
+      </div>
+      <div className="flex shrink-0 items-center gap-sm">
         <Inline gap="sm">
           <Stat label="subs" value={r.subscribers} />
           {fanOut > 1 ? (
@@ -72,8 +73,8 @@ function ServerResourceRow({ r }: { r: ResourceDebug }): ReactElement {
           <Stat label="/min" value={r.loaderStats ? Math.round(r.loaderStats.ratePerMin) : "—"} />
           <Stat label="max ms" value={r.loaderStats ? Math.round(r.loaderStats.maxMs) : "—"} />
         </Inline>
-      }
-    />
+      </div>
+    </div>
   );
 }
 

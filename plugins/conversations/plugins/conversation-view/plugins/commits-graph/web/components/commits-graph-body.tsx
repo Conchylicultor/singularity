@@ -7,7 +7,6 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversationById } from "@plugins/conversations/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { commitsGraphResource } from "../../shared/resources";
 import { convCommitDiffPane, convCommitsGraphPane } from "../panes";
@@ -62,16 +61,14 @@ export function CommitsGraphBody() {
       className="h-full"
       header={
         <Text as="header" variant="caption" className="border-b border-border px-lg py-sm text-muted-foreground">
-          <Frame
-            leading={
-              <>
-                <span className="font-mono text-foreground">{branchLabel}</span>
-                <span>↑{ahead}</span>
-                {behind > 0 ? <span className="text-warning">↓{behind}</span> : null}
-              </>
-            }
-            trailing={<span>vs main</span>}
-          />
+          <div className="flex items-baseline gap-sm">
+            <span className="font-mono text-foreground">{branchLabel}</span>
+            <span>↑{ahead}</span>
+            {behind > 0 ? (
+              <span className="text-warning">↓{behind}</span>
+            ) : null}
+            <span className="ml-auto">vs main</span>
+          </div>
         </Text>
       }
       body={
