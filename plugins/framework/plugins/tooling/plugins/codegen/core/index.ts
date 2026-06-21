@@ -95,3 +95,19 @@ export {
   type CodegenStep,
   type RegenCodegenOptions,
 } from "./regen-pipeline";
+
+// The pre-barrel manifest set — the single source of truth for which
+// `*.generated.ts` files MUST be regenerated before the first barrel import.
+// Read by both the runtime freeze-point guard and the static completeness check.
+export {
+  preBarrelManifests,
+  writePreBarrelManifest,
+  type PreBarrelManifest,
+} from "./pre-barrel-manifests";
+
+// Static module-import-graph helpers used by the `pre-barrel-manifests-complete`
+// check to prove no barrel reaches an unregistered `*.generated.ts` at load.
+export {
+  extractRuntimeImportSpecifiers,
+  resolveImportSpecifier,
+} from "./import-graph";

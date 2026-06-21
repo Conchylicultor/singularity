@@ -1754,6 +1754,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-plugins-registry-in-sync",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/pre-barrel-manifests-complete": {
+      "name": "@singularity/plugin-framework-tooling-checks-pre-barrel-manifests-complete",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/reorderable-slots-in-sync": {
       "name": "@singularity/plugin-framework-tooling-checks-reorderable-slots-in-sync",
       "version": "0.0.1",
@@ -4603,6 +4607,8 @@
     "@singularity/plugin-framework-tooling-checks-plugins-have-claudemd": ["@singularity/plugin-framework-tooling-checks-plugins-have-claudemd@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/plugins-have-claudemd"],
 
     "@singularity/plugin-framework-tooling-checks-plugins-registry-in-sync": ["@singularity/plugin-framework-tooling-checks-plugins-registry-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/plugins-registry-in-sync"],
+
+    "@singularity/plugin-framework-tooling-checks-pre-barrel-manifests-complete": ["@singularity/plugin-framework-tooling-checks-pre-barrel-manifests-complete@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/pre-barrel-manifests-complete"],
 
     "@singularity/plugin-framework-tooling-checks-reorderable-slots-in-sync": ["@singularity/plugin-framework-tooling-checks-reorderable-slots-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/reorderable-slots-in-sync"],
 

@@ -1,4 +1,8 @@
-export { registerBarrelStubs, importBarrel } from "./internal/stubs";
+export {
+  registerBarrelStubs,
+  importBarrel,
+  setPreBarrelImportGuard,
+} from "./internal/stubs";
 export {
   AUTO_STUB_PACKAGES,
   AUTO_STUB_CSS,

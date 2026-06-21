@@ -224,11 +224,36 @@ export function registerBarrelStubs(_repoRoot: string): void {
 }
 
 /**
+ * Optional one-shot guard fired immediately before the FIRST barrel import.
+ *
+ * The codegen pipeline installs this to assert all pre-barrel `*.generated.ts`
+ * manifests are fresh before any barrel freezes the ESM cache (a later disk
+ * write cannot invalidate a frozen module). Kept here so the freeze point and
+ * its guard are co-located; barrel-import owns no codegen knowledge — the guard
+ * fn is injected via `setPreBarrelImportGuard`.
+ */
+let preBarrelImportGuard: (() => void | Promise<void>) | null = null;
+
+/** Install (or replace) the one-shot pre-barrel-import guard. */
+export function setPreBarrelImportGuard(
+  fn: () => void | Promise<void>,
+): void {
+  preBarrelImportGuard = fn;
+}
+
+/**
  * Dynamically import a barrel file. Throws on failure so missing stubs
  * surface as build errors rather than silently omitting plugin metadata.
  * Requires `registerBarrelStubs()` to have been called first.
  */
 export async function importBarrel(barrelPath: string): Promise<Record<string, unknown>> {
+  // Fire-once freeze-point guard: capture and clear FIRST (even if it throws),
+  // so a single barrel import triggers it exactly once and never re-arms.
+  if (preBarrelImportGuard) {
+    const guard = preBarrelImportGuard;
+    preBarrelImportGuard = null;
+    await guard();
+  }
   try {
     return (await import(barrelPath)) as Record<string, unknown>;
   } catch (e) {

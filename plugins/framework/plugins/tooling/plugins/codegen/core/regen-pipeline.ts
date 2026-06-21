@@ -1,11 +1,14 @@
+import { setPreBarrelImportGuard } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { generateBarrelStubs } from "./barrel-stubs-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
-import { generateCustomUtilities } from "./custom-utilities-gen";
-import { generateDataViews } from "./data-views-gen";
 import { generatePluginDocs } from "./docgen";
 import { generatePluginRegistry } from "./plugin-registry-gen";
-import { generateReorderableSlots } from "./reorderable-slots-gen";
 import { generateTokenGroupVars } from "./token-group-vars-gen";
+import {
+  preBarrelManifests,
+  writePreBarrelManifest,
+} from "./pre-barrel-manifests";
+import { assertPreBarrelManifestsFresh } from "./pre-barrel-guard";
 
 /**
  * Single source of truth for the ordered, non-migration **repo-tree** codegen
@@ -69,29 +72,36 @@ export async function regenerateRegistryCodegen({
 }
 
 /**
- * Manifest-level repo-tree codegen: data-views → reorderable-slots →
- * plugin docs → token-group-vars → config-origins.
+ * Manifest-level repo-tree codegen: pre-barrel manifests → plugin docs →
+ * token-group-vars → config-origins.
  *
  * Ordering constraints (load-bearing — do not reorder):
- *   - data-views & reorderable-slots FIRST — these are PRE-BARREL manifests.
- *     They are generated source files that plugin barrels import at module-load
- *     to register config_v2 descriptors. Bun's ESM cache freezes a module on the
- *     first `import()` and a later disk write cannot invalidate it — so these
- *     manifests MUST be regenerated (via barrel-free tree walks) BEFORE
- *     `generatePluginDocs` triggers the first barrel import. Otherwise
- *     `generateConfigOrigins` re-imports stale barrels, misses the new
- *     descriptor, and `pruneOrphanedConfigFiles` deletes the freshly-authored
- *     override. Both generators are deliberately barrel-free (`collectDataViews`
- *     / `collectReorderableSlotSet` use `skipBarrelImport`) so they don't
- *     themselves freeze stale content.
+ *   - PRE-BARREL manifests FIRST — the set is now defined by `preBarrelManifests`
+ *     (codegen/core/pre-barrel-manifests.ts), not hand-listed here. These are
+ *     generated source files that plugin barrels import at module-load (directly
+ *     or transitively). Bun's ESM cache freezes a module on the first `import()`
+ *     and a later disk write cannot invalidate it — so every one MUST be
+ *     regenerated (via barrel-free renderers) BEFORE `generatePluginDocs`
+ *     triggers the first barrel import. Otherwise `generateConfigOrigins`
+ *     re-imports stale barrels, misses the new descriptor, and
+ *     `pruneOrphanedConfigFiles` deletes the freshly-authored override. This is
+ *     enforced structurally now, not just by ordering: the runtime guard
+ *     (`assertPreBarrelManifestsFresh`, installed below as the one-shot
+ *     pre-barrel-import guard) throws if any manifest is stale at the first
+ *     barrel import, and the `pre-barrel-manifests-complete` static check proves
+ *     no barrel reaches an unregistered `*.generated.ts` at load.
+ *
+ *     NB: customUtilities lives in the pre-barrel set because it IS
+ *     barrel-reachable at module-load — the ui-kit web barrel's `cn` export pulls
+ *     `lib/utils.ts`, which iterates `CUSTOM_UTILITY_REGISTRY` (from
+ *     `custom-utilities.generated.ts`) at top level. Its renderer only reads
+ *     app.css by path (no plugin tree), so generating it pre-barrel is sound; it
+ *     was previously generated AFTER plugin docs, which was a latent freeze bug.
  *   - plugin docs: AFTER the pre-barrel manifests — it builds the enriched plugin
  *     tree (importing every barrel), which token-group-vars / config-origins
  *     reuse. Importing the codegen barrel also installs the reorder per-slot
  *     contribution catalog as the default origin-annotations preparer, so origins
  *     carry the catalog comments.
- *   - custom-utilities: BEFORE the `app-css-utilities-in-sync` check consumes it;
- *     no plugin-tree dependency (it only reads app.css by path), so placed among
- *     the CSS-related steps.
  *   - token-group-vars: BEFORE the build-time CSS single-owner checks
  *     (`css-vars-single-owner`, `css-vars-supplied`) consume it; safe here since
  *     it only reads token-group descriptors.
@@ -101,22 +111,30 @@ export async function regenerateManifestCodegen({
   root,
   onStep = runInline,
 }: RegenCodegenOptions): Promise<void> {
-  await onStep("dataViews", "data-views manifest", () =>
-    generateDataViews({ root }),
-  );
-  await onStep("reorderableSlots", "reorderable slots manifest", () =>
-    generateReorderableSlots({ root }),
-  );
-  await onStep("pluginDocs", "generate plugin docs", () =>
-    generatePluginDocs({ root }),
-  );
-  await onStep("customUtilities", "custom-utilities manifest", async () =>
-    generateCustomUtilities({ root }),
-  );
-  await onStep("tokenGroupVars", "token-group vars manifest", () =>
-    generateTokenGroupVars({ root }),
-  );
-  await onStep("configOrigins", "generate config origins", () =>
-    generateConfigOrigins({ root }),
-  );
+  // Pre-barrel phase: regenerate every barrel-reachable manifest before any
+  // barrel import freezes the ESM cache. Set defined by `preBarrelManifests`.
+  for (const m of preBarrelManifests) {
+    await onStep(m.id, `${m.id} manifest`, () =>
+      writePreBarrelManifest(m, root),
+    );
+  }
+
+  // Arm the freeze-point guard: the first barrel import (inside generatePluginDocs)
+  // now asserts every pre-barrel manifest is still fresh, turning the ordering
+  // invariant into a loud runtime failure instead of silent config pruning.
+  setPreBarrelImportGuard(() => assertPreBarrelManifestsFresh(root));
+  try {
+    await onStep("pluginDocs", "generate plugin docs", () =>
+      generatePluginDocs({ root }),
+    );
+    await onStep("tokenGroupVars", "token-group vars manifest", () =>
+      generateTokenGroupVars({ root }),
+    );
+    await onStep("configOrigins", "generate config origins", () =>
+      generateConfigOrigins({ root }),
+    );
+  } finally {
+    // Disarm so a guard never leaks into a later run / unrelated barrel import.
+    setPreBarrelImportGuard(() => {});
+  }
 }
