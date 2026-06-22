@@ -169,14 +169,18 @@ export function defineRenderSlot<P>(
               contribution,
             )
           : renderContributionIsolated(clean, contribution, id);
-        return horizontal ? (
-          // A single-child `min-w-0` flex cell relaying the shrink-chain to each
-          // contribution (so flexible text truncates instead of wrapping).
-          <div key={cId} className="flex min-w-0 items-center">
+        // Stable element type across the post-measure `horizontal` flip so React
+        // reconciles each contribution subtree in place instead of tearing it
+        // down and rebuilding it on every (re)mount. Horizontal rows get the
+        // `min-w-0` flex cell that relays the shrink-chain (so flexible text
+        // truncates instead of wrapping); vertical lists get `display:contents`,
+        // a layout-neutral box identical to the old `<Fragment>` — so vertical
+        // layout is byte-for-byte unchanged. Swapping the element type (div ↔
+        // Fragment) at the same key was the per-mount DOM-teardown amplifier.
+        return (
+          <div key={cId} className={horizontal ? "flex min-w-0 items-center" : "contents"}>
             {wrapped}
           </div>
-        ) : (
-          <Fragment key={cId}>{wrapped}</Fragment>
         );
       },
       [cleanById, children, horizontal],
