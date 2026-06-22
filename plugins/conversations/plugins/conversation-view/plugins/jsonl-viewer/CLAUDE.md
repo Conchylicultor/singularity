@@ -43,6 +43,7 @@ do not duplicate it in `system`, `task-notification`, `meta-prompt`,
   - **`code-listing`** — Renders `cat -n`-formatted file content with syntax highlighting and a line-number gutter. Shared by the Read tool renderer and the edited-file attachment renderer.
   - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional sibling file path (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className.
   - **`event-counter`** — Displays the total event count in the conversation toolbar.
+  - **`fields-card`** — Shared appearance for a headline + truncating summary preview + fold-out key/value field list. Used by the queued task-notification card and the native task-notification row so the two never diverge.
   - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
   - **`investigate-event`** — Presentational hover-revealed button on JSONL fallback rows that launches an investigation agent seeded with the raw event JSON and source conversation id.
   - **`message-toc`** — Floating table of contents listing user messages for quick navigation.

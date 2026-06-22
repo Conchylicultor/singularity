@@ -920,6 +920,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/fields-card": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-fields-card",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-file-path",
       "version": "0.0.1",
@@ -4245,6 +4249,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-collapsible-card": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-collapsible-card@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-fields-card": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-fields-card@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/fields-card"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-file-path": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-file-path@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path"],
 

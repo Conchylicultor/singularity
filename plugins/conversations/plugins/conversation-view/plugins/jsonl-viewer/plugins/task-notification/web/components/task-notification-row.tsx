@@ -1,10 +1,8 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
-import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
+import { FieldsCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/fields-card/web";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
 
@@ -24,38 +22,21 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
   const e = event as TaskNotificationEvent;
   const dot = <StatusDot colorClass={STATUS_DOT[e.status] ?? "bg-muted-foreground"} />;
   const label = statusLabel(e.status);
-  const summary = <span className="truncate">{e.summary}</span>;
   const hasExtra = !!e.extra && Object.keys(e.extra).length > 0;
 
-  // Arbitrary, potentially long `extra` fields fold behind the row's own
-  // chevron so the default stays a single quiet line; the summary is the
-  // human-readable headline, so nothing is lost while collapsed.
+  // Arbitrary, potentially long `extra` fields fold behind the card's chevron so
+  // the default stays a single quiet line; the summary rides the header's
+  // truncating slot and is repeated in full inside the body — the shared
+  // FieldsCard owns that whole shape.
   if (hasExtra) {
     return (
-      <CollapsibleCard
-        label={
-          <span className="flex min-w-0 items-center gap-xs">
-            {dot}
-            <span className="shrink-0 font-medium">{label}</span>
-            {summary}
-          </span>
-        }
+      <FieldsCard
+        icon={dot}
+        label={<span className="font-medium">{label}</span>}
+        summary={e.summary}
+        fields={Object.entries(e.extra ?? {}).map(([key, value]) => ({ key, value }))}
         aside={e.outputFile ? <FilePath filePath={e.outputFile} /> : undefined}
-      >
-        <Stack gap="xs">
-          {Object.entries(e.extra ?? {}).map(([k, v]) => (
-            <Text
-              key={k}
-              as="div"
-              variant="caption"
-              className="whitespace-pre-wrap break-words text-muted-foreground"
-            >
-              <span className="text-muted-foreground/60">{k}: </span>
-              {v}
-            </Text>
-          ))}
-        </Stack>
-      </CollapsibleCard>
+      />
     );
   }
 
@@ -63,7 +44,7 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
   // (FilePath truncates with an RTL ellipsis if it gets long).
   return (
     <EventLine icon={dot} label={label}>
-      {summary}
+      <span className="truncate">{e.summary}</span>
       {e.outputFile && <FilePath filePath={e.outputFile} />}
     </EventLine>
   );
