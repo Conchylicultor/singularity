@@ -17,6 +17,7 @@ import {
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import { setFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
+import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { type Placement } from "../../core";
 import { Apps } from "../slots";
 import { getDefaultPlacement } from "./placement-registry";
@@ -399,7 +400,19 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       // Strip any query/hash — routing is path-based.
       const pathname = url.split(/[?#]/)[0] ?? url;
       const resolved = resolveAppForPath(pathname, appsRef.current);
-      if (!resolved) return; // No app's path prefix owns this URL.
+      if (!resolved) {
+        // No app's path prefix owns this URL, so navigation cannot proceed. This
+        // is always a programmer error — a caller built a path that doesn't start
+        // with a registered app base (e.g. a notification linkTo missing its
+        // /agents prefix). Surface it loudly instead of silently no-opping, which
+        // makes "looks clickable but does nothing" bugs invisible.
+        clientLog(
+          "navigation",
+          `navigate(): no app owns path "${pathname}" — link is unrooted or points to an unregistered app`,
+          "stderr",
+        );
+        return;
+      }
       const route = parseUrl(resolved.routePath) ?? [];
       const focused = tabsRef.current.find((t) => t.tabId === focusedRef.current);
       if (focused && focused.appId === resolved.app.id) {

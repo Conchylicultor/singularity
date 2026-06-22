@@ -250,7 +250,11 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     .set({ finishedAt: new Date(), exitCode })
     .where(eq(_buildRuns.id, buildId));
   frontendHashResource.notify();
-  const linkTo = `/build/r/${buildId}`;
+  // linkTo must be an app-rooted path: the bell-button's navigate() resolves the
+  // owning app by longest path-prefix. The build panes live inside the
+  // agent-manager app (base path /agents), so the segment "build/r/:runId" must
+  // be prefixed with /agents — otherwise no app owns the URL and the click no-ops.
+  const linkTo = `/agents/build/r/${buildId}`;
   if (exitCode === 0) {
     await recordNotification({
       type: "build",
