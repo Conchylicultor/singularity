@@ -185,6 +185,13 @@ async function safeHandle(
     return await handler(req, params);
   } catch (err) {
     const errObj = err instanceof Error ? err : new Error(String(err));
+    // Fail loudly: always emit a durable log line (captured by the gateway into
+    // the per-worktree backend log) BEFORE returning a generic 500. The crash
+    // report below is DB-backed and deduped — and is silently dropped during the
+    // boot window before the reports plugin registers its reporter — so it can't
+    // be the only signal. A 500 with zero log line made this class of bug
+    // invisible.
+    console.error(`[http] ${req.method} ${pathname}: ${errObj.message}`, errObj.stack ?? "");
     reportServerError({
       message: `[http] ${req.method} ${pathname}: ${errObj.message}`,
       stack: errObj.stack ?? null,

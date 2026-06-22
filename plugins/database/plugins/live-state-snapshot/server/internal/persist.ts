@@ -79,12 +79,18 @@ export async function readPersistedSnapshots(
 ): Promise<Map<string, unknown>> {
   const out = new Map<string, unknown>();
   if (keys.length === 0) return out;
+  // Drizzle expands a JS array inside a `sql` template into a comma-separated
+  // list of bound params — correct for `IN (…)` but NOT for `ANY(…)` (which
+  // needs a single array value, and otherwise raises "op ANY/ALL (array)
+  // requires array on right side" → 500). Use the `IN` form so the expansion is
+  // well-formed. The `keys.length === 0` early return above guarantees a
+  // non-empty list.
   const res = await db.execute<{ resource_key: string; value: unknown }>(
     drizzleSql`
       SELECT resource_key, value
       FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
       WHERE params_key = '{}'
-        AND resource_key = ANY(${keys})
+        AND resource_key IN (${drizzleSql.join(keys, drizzleSql`, `)})
     `,
   );
   for (const row of res.rows) out.set(row.resource_key, row.value);
