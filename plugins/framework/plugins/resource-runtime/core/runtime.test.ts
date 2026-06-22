@@ -515,20 +515,23 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
       schema: z.number(),
       loader: async () => 1,
     });
-    h.runtime.defineResource({
-      key: "down",
-      mode: "keyed",
-      identityTable: "down_t",
-      schema: z.array(z.object({ id: z.string(), n: z.number() })),
-      keyOf: (r: { id: string }) => r.id,
-      dependsOn: [
-        { resource: up, signature: () => new Map([["u1", sig]]), affectedMap: () => ["d1"] },
-      ],
-      loader: (_p, ctx) => {
-        if (subscribed) postSubLoads.push(ctx !== undefined);
-        return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }];
+    h.runtime.defineResource(
+      {
+        key: "down",
+        schema: z.array(z.object({ id: z.string(), n: z.number() })),
+        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
       },
-    });
+      {
+        identityTable: "down_t",
+        dependsOn: [
+          { resource: up, signature: () => new Map([["u1", sig]]), affectedMap: () => ["d1"] },
+        ],
+        loader: (_p, ctx) => {
+          if (subscribed) postSubLoads.push(ctx !== undefined);
+          return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }];
+        },
+      },
+    );
     await h.subscribe("down");
     subscribed = true;
 
@@ -570,20 +573,23 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
       schema: z.number(),
       loader: async () => 1,
     });
-    h.runtime.defineResource({
-      key: "down",
-      mode: "keyed",
-      identityTable: "down_t",
-      schema: z.array(z.object({ id: z.string(), n: z.number() })),
-      keyOf: (r: { id: string }) => r.id,
-      dependsOn: [
-        { resource: up, signature: () => new Map([["u1", "stable"]]), affectedMap: () => ["d1"] },
-      ],
-      loader: (_p, ctx) => {
-        if (subscribed) postSubLoads.push(ctx !== undefined);
-        return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }];
+    h.runtime.defineResource(
+      {
+        key: "down",
+        schema: z.array(z.object({ id: z.string(), n: z.number() })),
+        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
       },
-    });
+      {
+        identityTable: "down_t",
+        dependsOn: [
+          { resource: up, signature: () => new Map([["u1", "stable"]]), affectedMap: () => ["d1"] },
+        ],
+        loader: (_p, ctx) => {
+          if (subscribed) postSubLoads.push(ctx !== undefined);
+          return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }];
+        },
+      },
+    );
     await h.subscribe("down");
     subscribed = true;
 
