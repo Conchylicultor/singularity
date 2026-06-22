@@ -18,7 +18,7 @@ export const Item = {
   Chips: defineRenderSlot<{
     component: ComponentType<{ conv: ConversationItemConv }>;
   }>("conversation-item.chips"),
-  Avatar: defineDispatchSlot<{ conv: ConversationItemConv; size: "xs" | "sm" }, string>(
+  Avatar: defineDispatchSlot<{ conv: ConversationItemConv }, string>(
     "conversation-item.avatar",
     {
       // No string/regexp keys are used — all contributions match via predicate.

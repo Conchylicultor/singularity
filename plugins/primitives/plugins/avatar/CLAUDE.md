@@ -3,20 +3,28 @@
 Reusable circular avatar primitive — an icon on a colored disc, with an
 optional status dot overlay (Slack-style). Pure web; no server, no slots.
 
+## Size: density from context (no prop)
+
+An `Avatar`'s size has **no prop** — it tracks the ambient `ControlSize`
+(`useControlSize`), keying its `SIZE_MAP` bundle (box / icon / pinned status dot
+/ ring offsets) off the four density tiers `xs | sm | md | lg`. Deliberate
+sizing is a `<ControlSizeProvider size>` around the region (mirroring `Badge`),
+never a per-instance `size`; passing one is a compile error (`size?: never`).
+The no-provider default is `md`.
+
 ## Components
 
-- `<Avatar icon? color? size? statusDot? fallbackGlyph? fallbackKey? colorless? />`
+- `<Avatar icon? color? statusDot? fallbackGlyph? fallbackKey? colorless? />`
   — renders a round badge.
   - `icon`: key into `AVATAR_ICONS` (e.g. `"robot"`, `"rocket"`).
   - `color`: key into `AVATAR_COLORS` (Tailwind hue names). Falls back to a
     deterministic auto-color derived from `fallbackKey` (or `icon`) when null.
-  - `size`: `"xs" | "sm" | "md" | "lg"`.
   - `statusDot`: a Tailwind background class (e.g. `bg-amber-500`). When
     set, renders a small dot bottom-right with a ring matching the surface
     bg, like Slack's presence indicator.
   - `fallbackGlyph`: a single character (first char used, uppercased) rendered
     centered when there is no icon/svg, so the disc is never blank. Sized per
-    size variant via the box's own `text-*` class. Providing it also tints the
+    density via the box's own `text-*` class. Providing it also tints the
     disc via the deterministic auto-color (unless `color` is set or `colorless`).
   - `fallbackKey`: stable key feeding the deterministic auto-color hash.
   - `colorless`: forces the neutral muted disc, ignoring `color`, the
@@ -48,8 +56,8 @@ color palette.
 
 - Description: Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
 - Web:
-  - Uses: `primitives/css/cluster.Cluster`, `primitives/css/row.Row`, `primitives/css/text.SectionLabel`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/icon-picker.IconPicker`, `primitives/icon-picker.SvgIcon`
-  - Exports: Types: `AvatarColor`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`; Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`
+  - Uses: `primitives/css/cluster.Cluster`, `primitives/css/row.Row`, `primitives/css/text.SectionLabel`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/css/ui-kit.useControlSize`, `primitives/icon-picker.IconPicker`, `primitives/icon-picker.SvgIcon`
+  - Exports: Types: `AvatarColor`, `AvatarPickerProps`, `AvatarProps`, `AvatarSpec`; Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`
 - Server:
   - Uses: `primitives/icon-picker.resolveIconSvgNodes`
 - Cross-plugin:

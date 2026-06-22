@@ -39,7 +39,6 @@ export function AgentAvatarTitlePrefix() {
           icon={DEFAULT_AGENT_AVATAR.icon}
           color={DEFAULT_AGENT_AVATAR.color}
           svgNodes={DEFAULT_AGENT_AVATAR.svgNodes}
-          size="sm"
         />
       </button>
     );
@@ -85,7 +84,6 @@ function AgentAvatarTitlePrefixInner({
         icon={agent?.icon ?? DEFAULT_AGENT_AVATAR.icon}
         color={agent?.iconColor ?? DEFAULT_AGENT_AVATAR.color}
         svgNodes={parseSvgNodes(agent?.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes}
-        size="sm"
         fallbackKey={agent?.id}
       />
     </button>

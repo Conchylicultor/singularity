@@ -15,16 +15,9 @@ const STATUS_DOT: Record<ConversationStatus, string> = {
 // Placeholder rendered by Item.Avatar when no contribution's predicate matches.
 // Keeps all rows aligned along their title column. Shows the title's first
 // letter on a deterministically-tinted disc so rows never appear blank.
-export function AvatarFallback({
-  conv,
-  size,
-}: {
-  conv: ConversationItemConv;
-  size: "xs" | "sm";
-}) {
+export function AvatarFallback({ conv }: { conv: ConversationItemConv }) {
   return (
     <Avatar
-      size={size}
       statusDot={STATUS_DOT[conv.status]}
       fallbackGlyph={conv.title?.trim()[0] ?? "?"}
       fallbackKey={conv.id}

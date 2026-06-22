@@ -18,27 +18,27 @@ function formatDuration(start: Date, end: Date | null): string {
 function StatusBadge({ exitCode, finished }: { exitCode: number | null; finished: boolean }) {
   if (!finished) {
     return (
-      <Badge variant="warning" icon={<StatusDot size="md" colorClass="bg-warning animate-pulse" />}>
+      <Badge variant="warning" icon={<StatusDot colorClass="bg-warning animate-pulse" />}>
         Running
       </Badge>
     );
   }
   if (exitCode === 0) {
     return (
-      <Badge variant="success" icon={<StatusDot size="md" colorClass="bg-success" />}>
+      <Badge variant="success" icon={<StatusDot colorClass="bg-success" />}>
         Success
       </Badge>
     );
   }
   if (exitCode === -1) {
     return (
-      <Badge variant="muted" icon={<StatusDot size="md" colorClass="bg-muted-foreground/60" />}>
+      <Badge variant="muted" icon={<StatusDot colorClass="bg-muted-foreground/60" />}>
         Superseded
       </Badge>
     );
   }
   return (
-    <Badge variant="destructive" icon={<StatusDot size="md" colorClass="bg-destructive" />}>
+    <Badge variant="destructive" icon={<StatusDot colorClass="bg-destructive" />}>
       Failed (exit {exitCode})
     </Badge>
   );

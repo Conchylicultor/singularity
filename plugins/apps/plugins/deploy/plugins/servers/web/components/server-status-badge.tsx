@@ -13,7 +13,7 @@ export function ServerStatusBadge({ status }: { status: ServerStatus }) {
   const { bg, label } = styles[status];
   return (
     <Stack as="span" direction="row" align="center" gap="xs">
-      <StatusDot colorClass={bg} size="md" className="inline-block" />
+      <StatusDot colorClass={bg} className="inline-block" />
       <Text as="span" variant="caption">{label}</Text>
     </Stack>
   );

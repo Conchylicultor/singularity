@@ -264,10 +264,7 @@ function BackendRow({ series }: { series: HealthSeries }): ReactElement {
   return (
     <div className="flex items-center gap-sm">
       <Stack direction="row" align="center" gap="xs">
-        <StatusDot
-          colorClass={stale ? "bg-muted-foreground" : "bg-success"}
-          size="sm"
-        />
+        <StatusDot colorClass={stale ? "bg-muted-foreground" : "bg-success"} />
         <Text variant="caption">{series.worktree}</Text>
       </Stack>
       <div className="min-w-0 flex-1">

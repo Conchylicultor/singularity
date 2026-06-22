@@ -226,7 +226,7 @@ function PushAttemptRow({
         // Bare worktree id stays discoverable on hover even when a title shows.
         title={group.worktree.replace(/^claude-web\//, "")}
       >
-        <StatusDot colorClass={dotColor} size="md" />
+        <StatusDot colorClass={dotColor} />
         <span
           className={cn(
             "truncate text-2xs text-muted-foreground",

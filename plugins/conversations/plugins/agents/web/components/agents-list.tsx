@@ -122,12 +122,12 @@ export function AgentsList({
         viewOptions={{
           tree: {
             leadingIcon: (a: Agent) => (
+              // Avatar + status dot inherit the DataView body's compact density.
               <>
                 <Avatar
                   icon={a.icon ?? DEFAULT_AGENT_AVATAR.icon}
                   color={a.iconColor ?? DEFAULT_AGENT_AVATAR.color}
                   svgNodes={parseSvgNodes(a.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes}
-                  size="xs"
                   fallbackKey={a.id}
                 />
                 <AgentStatus agentId={a.id} />

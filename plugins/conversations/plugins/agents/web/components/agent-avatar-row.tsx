@@ -28,7 +28,6 @@ export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
     <Avatar
       icon={agent?.icon ?? DEFAULT_AGENT_AVATAR.icon}
       svgNodes={parseSvgNodes(agent?.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes}
-      size="sm"
       statusDot={CONV_STATUS_DOT[conv.status]}
       title={agent?.name}
       colorless

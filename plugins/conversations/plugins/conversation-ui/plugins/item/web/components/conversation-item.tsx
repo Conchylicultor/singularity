@@ -1,5 +1,6 @@
 import {
   cn,
+  ControlSizeProvider,
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ConversationKind, ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
@@ -30,8 +31,8 @@ function ChipsSlot({ conv }: { conv: ConversationItemConv }) {
 // Renders the first Item.Avatar contribution whose `match` predicate returns
 // true for this conversation. Falls back to a blank-disc placeholder (via the
 // slot's configured fallback) so the title column stays aligned across rows.
-function AvatarSlot({ conv, size }: { conv: ConversationItemConv; size: "xs" | "sm" }) {
-  return <Item.Avatar.Dispatch conv={conv} size={size} />;
+function AvatarSlot({ conv }: { conv: ConversationItemConv }) {
+  return <Item.Avatar.Dispatch conv={conv} />;
 }
 
 export const CONV_STATUS_DOT: Record<ConversationStatus, string> = {
@@ -112,7 +113,9 @@ export function ConversationItem({
   if (layout === "inline") {
     return (
       <Inline gap="xs" className={cn("max-w-full", active && "opacity-60")}>
-        <AvatarSlot conv={conv} size="xs" />
+        <ControlSizeProvider size="xs">
+          <AvatarSlot conv={conv} />
+        </ControlSizeProvider>
         <ConvTitle conv={conv} />
         <ConvSysBadge conv={conv} />
         <ChipsSlot conv={conv} />
@@ -123,7 +126,9 @@ export function ConversationItem({
     <div className={cn("flex w-full items-start gap-sm overflow-hidden", active && "opacity-60")}>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical nudge to baseline-align the avatar with the title row */}
       <span className="mt-0.5">
-        <AvatarSlot conv={conv} size="sm" />
+        <ControlSizeProvider size="sm">
+          <AvatarSlot conv={conv} />
+        </ControlSizeProvider>
       </span>
       <Stack gap="2xs" className="min-w-0 flex-1">
         <div className="flex items-center gap-xs overflow-hidden whitespace-nowrap">

@@ -34,7 +34,6 @@ export function PenButton() {
         >
           <StatusDot
             colorClass="bg-primary"
-            size="sm"
             className="ring-2 ring-background"
           />
         </Pin>

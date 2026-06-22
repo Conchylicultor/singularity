@@ -66,7 +66,7 @@ function SocketsSection({ sockets }: { sockets: ChannelStatuses }): ReactElement
 function SocketRow({ label, status }: { label: string; status: WsStatus }): ReactElement {
   return (
     <Stack direction="row" gap="sm" align="center">
-      <StatusDot colorClass={SOCKET_DOT[status]} size="md" />
+      <StatusDot colorClass={SOCKET_DOT[status]} />
       <Text variant="body" className="w-24">{label}</Text>
       <Text
         variant="caption"
@@ -103,7 +103,7 @@ function LeaderRow({ label, info }: { label: string; info: LeaderInfo }): ReactE
       : { text: "NO LEADER", tone: "destructive" as const, dot: "bg-destructive" };
   return (
     <Stack direction="row" gap="sm" align="center">
-      <StatusDot colorClass={state.dot} size="md" />
+      <StatusDot colorClass={state.dot} />
       <Text variant="body" className="w-24">{label}</Text>
       <Text variant="caption" tone={state.tone}>{state.text}</Text>
     </Stack>

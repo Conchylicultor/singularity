@@ -33,7 +33,7 @@ export function WorktreeDropdown() {
         variant="body"
         className="flex min-w-0 items-center gap-xs px-sm py-xs text-muted-foreground cursor-default"
       >
-        <StatusDot size="sm" colorClass="bg-primary" />
+        <StatusDot colorClass="bg-primary" />
         <Text as="span" variant="body" className="truncate">
           {taskTitle ?? currentWorktree}
         </Text>

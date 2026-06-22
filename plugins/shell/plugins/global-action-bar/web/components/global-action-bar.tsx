@@ -52,7 +52,6 @@ function StatusGlyph({ status }: { status: ActionBarStatus }) {
         >
           <StatusDot
             colorClass={`${TONE_CLASS[status.pending ? "ok" : status.tone]}${!status.pending && status.pulse ? " animate-pulse" : ""}`}
-            size="sm"
             className="ring-2 ring-background"
           />
         </Pin>

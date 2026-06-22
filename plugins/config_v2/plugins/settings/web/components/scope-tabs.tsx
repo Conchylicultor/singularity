@@ -106,7 +106,7 @@ function ScopeTab({
       onClick={() => onSelect(scopeId)}
     >
       {label}
-      {hasConflict && <StatusDot colorClass="bg-warning" size="sm" />}
+      {hasConflict && <StatusDot colorClass="bg-warning" />}
     </ToggleChip>
   );
 }

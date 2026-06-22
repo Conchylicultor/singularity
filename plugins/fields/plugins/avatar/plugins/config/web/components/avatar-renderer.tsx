@@ -43,7 +43,6 @@ const AvatarRenderer: FieldRendererComponent<AvatarSpec> = ({
             icon={value.icon}
             color={value.color}
             svgNodes={value.svgNodes}
-            size="md"
           />
         )}
       </AvatarPicker>

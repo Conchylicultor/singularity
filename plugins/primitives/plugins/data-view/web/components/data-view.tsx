@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type ReactNode, useCallback, useMemo } from "react";
 import type {
   Contribution,
@@ -253,11 +253,21 @@ function DataViewInner<TRow>({
           />
         </div>
       }
-      body={renderIsolated(
-        DataViewSlots.View.id,
-        activeInstance.viewType as unknown as Contribution,
-        renderProps,
-      )}
+      body={
+        // One density for every view type, so a row's controls and decorations
+        // (avatars, status dots, chips, buttons) look identical whether the same
+        // data is shown as a table, tree, list, or gallery. The table view's
+        // `data-table` primitive already defaults to `xs`; declaring it here once
+        // brings tree/list/gallery in line instead of each falling through to the
+        // ambient `md` default.
+        <ControlSizeProvider size="xs">
+          {renderIsolated(
+            DataViewSlots.View.id,
+            activeInstance.viewType as unknown as Contribution,
+            renderProps,
+          )}
+        </ControlSizeProvider>
+      }
     />
   );
 }

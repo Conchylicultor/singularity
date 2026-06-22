@@ -1,16 +1,17 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  useControlSize,
+  type ControlSize,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { forwardRef } from "react";
 import { SvgIcon } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { avatarColorClass } from "../internal/colors";
 
-export type AvatarSize = "xs" | "sm" | "md" | "lg";
-
 export interface AvatarProps {
   icon?: string | null;
   color?: string | null;
   svgNodes?: SvgNode[] | null;
-  size?: AvatarSize;
   /** Tailwind bg class for an overlaid status dot (Slack-style presence). */
   statusDot?: string | null;
   /** Used as a stable key for the deterministic color fallback when `color` is null. */
@@ -26,9 +27,15 @@ export interface AvatarProps {
   colorless?: boolean;
   className?: string;
   title?: string;
+  /**
+   * `size` is intentionally never settable — the disc derives its size SOLELY
+   * from ambient control density (useControlSize). Deliberate sizing is a
+   * `<ControlSizeProvider size>` around the region, never a per-instance prop.
+   */
+  size?: never;
 }
 
-const SIZE_MAP: Record<AvatarSize, { box: string; icon: string; dot: string; ring: string }> = {
+const SIZE_MAP: Record<ControlSize, { box: string; icon: string; dot: string; ring: string }> = {
   xs: { box: "size-4 text-[10px]", icon: "size-2.5", dot: "size-1.5 -right-px -bottom-px", ring: "ring-1" },
   sm: { box: "size-6 text-xs", icon: "size-3.5", dot: "size-2 -right-px -bottom-px", ring: "ring-2" },
   md: { box: "size-8 text-sm", icon: "size-4", dot: "size-2.5 -right-0.5 -bottom-0.5", ring: "ring-2" },
@@ -36,9 +43,10 @@ const SIZE_MAP: Record<AvatarSize, { box: string; icon: string; dot: string; rin
 };
 
 export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
-  { icon, color, svgNodes, size = "sm", statusDot, fallbackKey, fallbackGlyph, colorless, className, title },
+  { icon, color, svgNodes, statusDot, fallbackKey, fallbackGlyph, colorless, className, title },
   ref,
 ) {
+  const size = useControlSize();
   const sz = SIZE_MAP[size];
   const hasSvg = svgNodes != null && svgNodes.length > 0;
   const glyph = fallbackGlyph ? fallbackGlyph.charAt(0).toUpperCase() : null;

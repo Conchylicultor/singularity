@@ -50,7 +50,6 @@ export function TeammateMessageRow({ event }: { event: JsonlEvent }) {
     <CollapsibleCard
       icon={
         <Avatar
-          size="xs"
           fallbackKey={e.teammateId}
           fallbackGlyph={e.teammateId?.[0] ?? "?"}
         />

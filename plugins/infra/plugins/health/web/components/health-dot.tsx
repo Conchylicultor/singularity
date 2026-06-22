@@ -42,7 +42,7 @@ export function HealthDot() {
   return (
     <WithTooltip content={tooltipLabel(worktree, central)}>
       <Center className="size-8 cursor-default">
-        <StatusDot size="md" colorClass={STATUS_CLASS[aggregate]} />
+        <StatusDot colorClass={STATUS_CLASS[aggregate]} />
       </Center>
     </WithTooltip>
   );

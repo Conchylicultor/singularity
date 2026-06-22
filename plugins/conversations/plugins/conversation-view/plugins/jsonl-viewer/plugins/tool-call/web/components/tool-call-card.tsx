@@ -45,7 +45,7 @@ export function ToolCallCard({
       defaultOpen={defaultOpen}
       summary={summary}
       aside={aside}
-      trailing={isRunning ? <BouncingDots size="sm" /> : undefined}
+      trailing={isRunning ? <BouncingDots /> : undefined}
       label={
         // Rigid identity only: the tool-name badge + an optional leading chip.
         // The flexible `summary` rides the card's own flexible cell (passed as a

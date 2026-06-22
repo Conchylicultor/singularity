@@ -19,7 +19,6 @@ export function CategoryAvatarRow({ conv }: { conv: ConversationItemConv }) {
     <Avatar
       icon={avatar?.icon ?? null}
       svgNodes={avatar?.svgNodes ?? null}
-      size="sm"
       statusDot={CONV_STATUS_DOT[conv.status]}
       colorless={hasIcon}
       fallbackGlyph={hasIcon ? undefined : (conv.title?.trim()[0] ?? "?")}

@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
@@ -124,14 +124,17 @@ function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent })
           })}
           triggerLabel="Pick agent avatar"
         >
-          <Avatar
-            icon={agent.icon ?? DEFAULT_AGENT_AVATAR.icon}
-            color={agent.iconColor ?? DEFAULT_AGENT_AVATAR.color}
-            svgNodes={agentSvgNodes}
-            size="lg"
-            statusDot={latestStatus ? CONV_STATUS_DOT[latestStatus] : null}
-            fallbackKey={agent.id}
-          />
+          {/* Hero avatar (48px) next to the name input — the comfortable header
+              region declares `lg` once; the avatar tracks it. */}
+          <ControlSizeProvider size="lg">
+            <Avatar
+              icon={agent.icon ?? DEFAULT_AGENT_AVATAR.icon}
+              color={agent.iconColor ?? DEFAULT_AGENT_AVATAR.color}
+              svgNodes={agentSvgNodes}
+              statusDot={latestStatus ? CONV_STATUS_DOT[latestStatus] : null}
+              fallbackKey={agent.id}
+            />
+          </ControlSizeProvider>
         </AvatarPicker>
         <input
           value={nameField.value}
