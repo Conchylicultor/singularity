@@ -2904,7 +2904,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`launcher`**
       - Server:
         - Uses: `database/admin.ensureDatabase`, `database/admin.getAdminPool`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `database/pgbouncer.PGBOUNCER_PORT`, `database/pgbouncer.PGBOUNCER_SOCKET_DIR`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.writeWorktreeSpec`
-        - Exports: Values: `awaitPgReady`, `bootSelfContainedApp`, `buildOrLocateGateway`, `ensureDatabaseConfig`, `hasPgBouncerPackage`, `isGatewayListening`, `isRunning`, `pgbouncerConnection`, `pgbouncerService`, `readPid`, `spawnGatewayDaemon`
+        - Exports: Values: `awaitPgReady`, `bootSelfContainedApp`, `buildOrLocateGateway`, `ensureDatabaseConfig`, `hasPgBouncerPackage`, `isGatewayListening`, `isRunning`, `pgbouncerConnection`, `pgbouncerService`, `readPid`, `spawnGatewayDaemon`, `writeReleaseDatabaseConfig`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/push-and-exit`, `conversations/summary`, `database/query`, `debug/profiling/runtime`, `plugin-meta/plugin-health`, `tasks`
