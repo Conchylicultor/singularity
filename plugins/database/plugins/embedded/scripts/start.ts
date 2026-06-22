@@ -42,6 +42,16 @@ function platformPackage(): string {
 // ─── binary resolution ──────────────────────────────────────
 
 function resolveBinDir(): string {
+  // A packaged release points at vendored native binaries via env override.
+  const override = process.env.SINGULARITY_PG_BIN_DIR;
+  if (override) {
+    if (!existsSync(override)) {
+      throw new Error(
+        `pg: SINGULARITY_PG_BIN_DIR set to ${override} but that directory does not exist`,
+      );
+    }
+    return override;
+  }
   const pluginRoot = join(dirname(import.meta.dir)); // scripts/ -> embedded plugin root
   const pkg = platformPackage();
   const dir = join(pluginRoot, "node_modules", pkg, "native", "bin");

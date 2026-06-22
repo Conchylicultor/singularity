@@ -58,8 +58,9 @@ func (s State) String() string {
 
 // Spec is the on-disk schema parsed from ~/.singularity/worktrees/<name>.json.
 type Spec struct {
-	Server string `json:"server"` // absolute path to the backend's working directory
-	Web    string `json:"web"`    // absolute path to web/dist
+	Server  string   `json:"server"`            // absolute path to the backend's working directory (cwd)
+	Web     string   `json:"web"`               // absolute path to web/dist
+	Command []string `json:"command,omitempty"` // optional: argv to spawn (release: compiled server binary). When empty, falls back to the bun convention.
 }
 
 // WorktreeStatus is the public projection of a worktree's state, returned by
@@ -577,7 +578,11 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error)
 		return nil, fmt.Errorf("unlink stale socket: %w", err)
 	}
 
-	cmd := exec.Command("bun", "bin/index.ts")
+	argv := spec.Command
+	if len(argv) == 0 {
+		argv = []string{"bun", "bin/index.ts"}
+	}
+	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Dir = spec.Server
 	cmd.Env = append(os.Environ(),
 		fmt.Sprintf("SOCKET_PATH=%s", socketPath),

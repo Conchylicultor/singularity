@@ -10,7 +10,14 @@ const log = Log.channel("migrations", { persist: true });
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 
-const MIGRATIONS_DIR = join(import.meta.dir, "..", "..", "data");
+// A packaged release reads the migration SQL files from a vendored dir via env
+// override: `import.meta.dir` resolves into the compiled binary's virtual FS
+// (not a real on-disk path), so the `../../data` relative lookup can't find the
+// `.sql` files. The release vendors `data/` and points here. When unset (dev),
+// resolve relative to this module as before.
+const MIGRATIONS_DIR =
+  process.env.SINGULARITY_MIGRATIONS_DIR ??
+  join(import.meta.dir, "..", "..", "data");
 
 interface Migration {
   file: string;

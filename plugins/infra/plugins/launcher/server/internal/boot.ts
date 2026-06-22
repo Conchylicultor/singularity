@@ -182,16 +182,87 @@ export function ensureDatabaseConfig(repoRoot: string, log: LogFn = noop): void 
 }
 
 /**
- * Build (or locate) the gateway binary via `go build -o gateway`. Fails loud if
- * the build does not exit cleanly. Returns the gateway working dir and binary
- * path so the caller can spawn it.
+ * Write a release `database.json`: the SAME `DatabaseConfig` shape as
+ * `ensureDatabaseConfig`'s embedded path, but with each service's `start` argv
+ * pointing at a compiled start binary instead of `["bun","run",<startScript.ts>]`.
+ * A packaged release has no bun and no node_modules, so the dev probe + the
+ * `bun run` invocation don't apply — the compiled `pg-start` / `pgbouncer-start`
+ * binaries resolve the vendored native PG/PgBouncer instead.
+ *
+ * The `connection` / `pgbouncer` blocks and the `ready` socket probes are
+ * identical to the embedded case (same canonical PG_* / PGBOUNCER_* constants),
+ * so a release cluster is indistinguishable to the gateway from a dev embedded
+ * one — only the spawn command differs. PgBouncer is included only when a start
+ * binary is supplied.
+ */
+export function writeReleaseDatabaseConfig(
+  opts: { pgStartBin: string; pgbouncerStartBin?: string },
+  log: LogFn = noop,
+): void {
+  const { pgStartBin, pgbouncerStartBin } = opts;
+  const hasPgBouncer = pgbouncerStartBin !== undefined;
+
+  const config = {
+    provider: "embedded" as const,
+    connection: {
+      host: PG_SOCKET_DIR,
+      port: PG_PORT,
+      user: PG_USER,
+    },
+    ...(hasPgBouncer ? { pgbouncer: pgbouncerConnection() } : {}),
+    services: [
+      {
+        name: "postgres",
+        start: [pgStartBin],
+        ready: {
+          unix: join(PG_SOCKET_DIR, `.s.PGSQL.${PG_PORT}`),
+        },
+        watchdog: { intervalSec: 2 },
+      },
+      ...(hasPgBouncer
+        ? [
+            {
+              name: "pgbouncer",
+              start: [pgbouncerStartBin],
+              ready: {
+                unix: join(PGBOUNCER_SOCKET_DIR, `.s.PGSQL.${PGBOUNCER_PORT}`),
+              },
+              watchdog: { intervalSec: 2 },
+            },
+          ]
+        : []),
+    ],
+  };
+
+  mkdirSync(SINGULARITY_DIR, { recursive: true });
+  writeFileSync(DATABASE_CONFIG_PATH, JSON.stringify(config, null, 2) + "\n");
+  log(
+    `Generated release database config (embedded Postgres${hasPgBouncer ? " + PgBouncer" : ""})`,
+  );
+}
+
+/**
+ * Build (or locate) the gateway binary. If `<repoRoot>/gateway/gateway` already
+ * exists, skip the build and return it as-is — this is the release path (a
+ * vendored prebuilt binary, no Go toolchain on the host) and also a fast path in
+ * dev (a prior build left the binary in place). Only run `go build -o gateway`
+ * when the binary is absent. Pass `forceBuild` to rebuild unconditionally (dev
+ * correctness when the gateway Go source changed). Fails loud if the build does
+ * not exit cleanly. Returns the gateway working dir and binary path so the
+ * caller can spawn it.
  */
 export async function buildOrLocateGateway(
   repoRoot: string,
   log: LogFn = noop,
+  forceBuild = false,
 ): Promise<{ gatewayDir: string; gatewayBin: string }> {
   const gatewayDir = join(repoRoot, "gateway");
   const gatewayBin = join(gatewayDir, "gateway");
+
+  if (!forceBuild && existsSync(gatewayBin)) {
+    log("Using prebuilt gateway");
+    return { gatewayDir, gatewayBin };
+  }
 
   log("Building gateway...");
   const build = Bun.spawn(["go", "build", "-o", "gateway", "."], {
@@ -208,9 +279,15 @@ export async function buildOrLocateGateway(
 
 /**
  * Daemonize the gateway: spawn it detached (`unref()`), write its pid to the pid
- * file, and return the pid. The child inherits the parent env — which carries
- * SINGULARITY_DIR — so the cluster, registry, and every backend re-root under the
- * release dir; do NOT strip env. The `-listen :<port>` flag pins the listen port.
+ * file, and return the pid. We pass `env: { ...process.env }` EXPLICITLY — Bun
+ * snapshots the real environment at process start, so runtime mutations to
+ * `process.env` (the release launcher's `SINGULARITY_DIR` + PG bin-dir overrides,
+ * set in launch.ts before any import) are NOT reflected in a child's inherited
+ * env unless we spread the live `process.env` into the spawn. Spreading it
+ * forwards those overrides to the gateway, which re-roots its registry / sockets
+ * / cluster dirs and the supervised PG/PgBouncer start binaries (and every
+ * spawned backend) under the release dir. The `-listen :<port>` flag pins the
+ * listen port.
  */
 export function spawnGatewayDaemon(opts: {
   gatewayDir: string;
@@ -238,6 +315,10 @@ export function spawnGatewayDaemon(opts: {
       stdout: logFd,
       stderr: logFd,
       stdin: "ignore",
+      // Explicit spread (not implicit inherit) so runtime `process.env`
+      // mutations — SINGULARITY_DIR + the PG bin-dir overrides set by the
+      // release launcher — actually reach the gateway. See the docstring.
+      env: { ...process.env },
     },
   );
 
@@ -346,10 +427,16 @@ export async function bootSelfContainedApp(opts: {
   web: string;
   port: number;
   repoRoot: string;
+  /**
+   * Explicit backend spawn argv (e.g. `["<abs>/server"]` for a compiled
+   * release). Threaded into spec.json; absent in dev, where the gateway
+   * falls back to `bun bin/index.ts`.
+   */
+  command?: string[];
   logLevel?: string;
   log?: LogFn;
 }): Promise<void> {
-  const { name, server, web, port, repoRoot } = opts;
+  const { name, server, web, command, port, repoRoot } = opts;
   const logLevel = opts.logLevel ?? "info";
   const log = opts.log ?? noop;
 
@@ -363,7 +450,7 @@ export async function bootSelfContainedApp(opts: {
 
   // Spec last: the gateway's fsnotify watcher only discovers the namespace once
   // its DB exists, so the backend's boot migrator never races DB creation.
-  writeWorktreeSpec({ name, server, web });
+  writeWorktreeSpec({ name, server, web, command });
   log(`Registered app "${name}"; waiting for backend to become ready...`);
 
   await awaitAppReady(name, port);

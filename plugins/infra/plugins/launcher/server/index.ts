@@ -8,6 +8,7 @@ export {
   pgbouncerService,
   pgbouncerConnection,
   ensureDatabaseConfig,
+  writeReleaseDatabaseConfig,
   buildOrLocateGateway,
   spawnGatewayDaemon,
   awaitPgReady,

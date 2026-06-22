@@ -9,7 +9,14 @@ import {
 } from "@plugins/framework/plugins/server-core/core";
 import type { WsData, HttpHandler, WsHandler, ServerPluginDefinition, LoadedServerPlugin } from "@plugins/framework/plugins/server-core/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { serverEntries } from "./plugins-active";
+// The registry import goes through the `@composition-server-registry` alias
+// (declared in tsconfig.base.json → `bin/plugins-active`). In dev this resolves
+// to `plugins-active.ts`, whose existsSync selector picks full vs. filtered at
+// runtime — identical behavior to a direct relative import. At release-compile
+// time, `release.ts` overrides this alias to resolve STATICALLY to the filtered
+// `core/server.composition.generated.ts`, so the bundler's closure IS the
+// composition closure (no runtime dynamic specifier to defeat `bun --compile`).
+import { serverEntries } from "@composition-server-registry";
 import { topoSortPlugins } from "./topo";
 
 // ── Per-phase RSS attribution (boot Gantt) ──────────────────────

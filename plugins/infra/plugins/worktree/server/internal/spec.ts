@@ -9,6 +9,13 @@ export interface WorktreeSpec {
   server: string;
   /** Absolute path to web/dist. Omitted for API-only namespaces (central). */
   web?: string;
+  /**
+   * Explicit backend spawn argv (e.g. `["<abs>/server"]` for a compiled
+   * release). Omitted for dev, where the gateway falls back to its
+   * `bun bin/index.ts` convention. On-disk JSON key is exactly `command`
+   * (the Go gateway reads it via `json:"command"`).
+   */
+  command?: string[];
 }
 
 /**
@@ -22,13 +29,22 @@ export interface WorktreeSpec {
  * trees the spec points at (a present `server.composition.generated.ts` selects
  * the filtered server), never carried here.
  */
-export function writeWorktreeSpec({ name, server, web }: WorktreeSpec): string {
+export function writeWorktreeSpec({
+  name,
+  server,
+  web,
+  command,
+}: WorktreeSpec): string {
   const dir = join(worktreesDir(), name);
   mkdirSync(dir, { recursive: true });
   const path = join(dir, "spec.json");
-  writeFileSync(
-    path,
-    JSON.stringify(web ? { server, web } : { server }, null, 2) + "\n",
-  );
+  // Build the spec object additively so absent keys are omitted entirely —
+  // a dev spec must serialize byte-for-byte as before (no `web`/`command`
+  // when unset), since the gateway treats a missing `command` as "use the
+  // bun bin/index.ts convention".
+  const spec: { server: string; web?: string; command?: string[] } = { server };
+  if (web) spec.web = web;
+  if (command) spec.command = command;
+  writeFileSync(path, JSON.stringify(spec, null, 2) + "\n");
   return path;
 }

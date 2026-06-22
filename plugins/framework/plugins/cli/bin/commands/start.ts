@@ -68,9 +68,14 @@ export function registerStart(program: Command) {
 
       const repoRoot = await getMainRepoRoot();
 
+      // Dev `start` always rebuilds the shared gateway (forceBuild): it is the
+      // only path that compiles the gateway, so a Go source change must take
+      // effect here. The skip-if-exists fast path is reserved for the release
+      // launcher (a vendored prebuilt binary, no Go toolchain on the host).
       const { gatewayDir, gatewayBin } = await buildOrLocateGateway(
         repoRoot,
         console.log,
+        true,
       );
 
       ensureDatabaseConfig(repoRoot, console.log);

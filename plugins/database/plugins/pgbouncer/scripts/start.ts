@@ -36,6 +36,16 @@ function platformPackage(): string {
 // ─── binary resolution ──────────────────────────────────────
 
 function resolveBinary(): string {
+  // A packaged release points at the vendored native binary via env override.
+  const override = process.env.SINGULARITY_PGBOUNCER_BIN;
+  if (override) {
+    if (!existsSync(override)) {
+      throw new Error(
+        `pgbouncer: SINGULARITY_PGBOUNCER_BIN set to ${override} but that file does not exist`,
+      );
+    }
+    return override;
+  }
   const pluginRoot = dirname(import.meta.dir);
   const bin = join(pluginRoot, "node_modules", platformPackage(), "native", "bin", "pgbouncer");
   if (!existsSync(bin)) {
