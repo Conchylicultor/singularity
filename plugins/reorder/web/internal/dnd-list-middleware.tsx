@@ -375,11 +375,6 @@ function ReorderInner({
     );
   }, []);
 
-  const hideItemRef = useRef(hideItem);
-  hideItemRef.current = hideItem;
-  const restoreItemRef = useRef(restoreItem);
-  restoreItemRef.current = restoreItem;
-
   // --- Drag reorder ----------------------------------------------------------
 
   const onDrop = useCallback((draggedKey: string, overKey: string) => {
@@ -414,9 +409,6 @@ function ReorderInner({
       materializeTree([...next, ...tail], hiddenKeysRef.current),
     );
   }, []);
-
-  const onDropRef = useRef(onDrop);
-  onDropRef.current = onDrop;
 
   // --- Inserts (registry-driven) --------------------------------------------
 
@@ -652,15 +644,20 @@ function ReorderInner({
   const wrap = regime === "editor-wrap";
   const strategy = injected?.strategy ?? (wrap ? rectSortingStrategy : undefined);
 
-  // Shared callback wiring (ref-backed; identical write paths for both surfaces).
+  // Shared callback wiring. These are passed straight through — each is already
+  // a stable `useCallback([])` reading fresh state via internal refs (commitTree,
+  // entries, hiddenKeys). Wrapping them in fresh inline arrows here would defeat
+  // that stability: `onHide`/`onRemoveNode` feed `ReorderEditor`'s `ctxValue`
+  // useMemo, so a new identity each render churns `ReorderAreaContext` and
+  // re-renders every draggable item app-wide on every live-state push.
   const editorProps = {
     entries,
     hiddenItems,
-    onDrop: (a: string, o: string) => onDropRef.current(a, o),
-    onHide: (k: string) => hideItemRef.current(k),
-    onRestore: (k: string) => restoreItemRef.current(k),
+    onDrop,
+    onHide: hideItem,
+    onRestore: restoreItem,
     inserts,
-    onRemoveNode: (id: string) => onRemoveNodeRef.current(id),
+    onRemoveNode,
     renderOverlay,
   };
 
