@@ -106,10 +106,17 @@ export default createFacet<CrossRefsData>({
         const seen = new Set<string>();
         for (const use of data.raw[rt]) {
           const r = resolvePluginSpecifier(tree, use.specifier);
-          if (!r)
-            throw new Error(
-              `cross-refs facet: import "${use.specifier}" (in plugin ${node.id}/${rt}) resolved to no plugin node`,
-            );
+          // An unresolved @plugins/… import is either a genuine bug — already
+          // caught loudly by `type-check` (tsc) and the boundary checker at
+          // build/push time — or a transient artifact of building this tree at
+          // runtime over a live, mid-mutation working dir: review.plugin-changes
+          // diffs against the `main` checkout, which is half-written during a
+          // `./singularity push` merge, and the studio/plugin-view panes read
+          // live dirs too. A hard throw here turns that transient half-written
+          // state into a resource-loader crash for an unrelated baseline tree,
+          // so skip the use instead — the genuine-bug case still fails loudly at
+          // its dedicated gates.
+          if (!r) continue;
           if (r.node === node) continue; // self-skip
           if (r.suffix[0] !== rt) continue; // same-runtime filter
           const key = `${r.node.id}:${use.symbol ?? ""}`;

@@ -157,10 +157,13 @@ export default createFacet<DbSchemaFacetData>({
         // A defineExtension parent is always a cross-plugin barrel import.
         if (!ref.parentModule.startsWith("@plugins/")) continue;
         const r = resolvePluginSpecifier(tree, ref.parentModule);
-        if (!r)
-          throw new Error(
-            `db-schema facet: defineExtension parent "${ref.parentModule}" (in plugin ${node.id}) resolved to no plugin node`,
-          );
+        // Same rationale as the cross-refs facet: an unresolved parent is a
+        // genuine bug already caught by tsc + the boundary checker at build
+        // time, or a transient artifact of building this tree at runtime over a
+        // live, mid-mutation working dir (e.g. the `main` checkout half-written
+        // during a `./singularity push` merge). Skip rather than crash the tree
+        // build for an unrelated baseline tree.
+        if (!r) continue;
         const parentPlugin = r.node.id;
         const parentTableName =
           (pluginVarToTable.get(parentPlugin) ?? new Map()).get(ref.parentVarName) ?? "";
