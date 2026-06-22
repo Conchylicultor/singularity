@@ -131,9 +131,11 @@ class):
   descriptor; the server supplies only the DB-bound half. Do **not** restate
   `mode`/`keyOf` — the `ServerResourceOptions` type rejects `mode: "keyed"` so
   keyed-ness can only come from the descriptor. (The flat one-arg
-  `defineResource({ key, mode, keyOf, schema, loader })` form still exists for
-  resources with no shared descriptor, but a keyed resource should always use the
-  two-arg form so it can't drift.) The first notify per pk (and every `sub-ack` /
+  `defineResource({ key, mode, schema, loader })` form is **push/invalidate-ONLY**
+  and structurally **cannot** be keyed — a keyed resource MUST use
+  `keyedResourceDescriptor(...)` + the two-arg `defineResource(descriptor, opts)`
+  form. Inline `keyed:` contract literals are banned by the
+  `keyed-resource-scope` check.) The first notify per pk (and every `sub-ack` /
   HTTP fallback) still ships a full `{ value, version }` so brand-new clients get
   a complete base; subsequent notifies ship a `delta`.
 

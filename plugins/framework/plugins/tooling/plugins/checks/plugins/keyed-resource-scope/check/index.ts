@@ -20,7 +20,7 @@ async function getRoot(): Promise<string> {
 const check: Check = {
   id: "keyed-resource-scope",
   description:
-    "Every `mode: \"keyed\"` `defineResource(...)` must declare a scope policy — either `identityTable` (scope a change to its own keys) or the explicit `recompute:` FULL opt-out — so a keyed resource can never SILENTLY fall back to FULL recompute. This is a static BACKSTOP to the primary type constraint (which makes the omission a tsc error): it catches type bypasses (`as any`, `// @ts-ignore`, local wrappers) and guards against the type being weakened later. KNOWN LIMITATION: it scans the DECLARATION in the call body, not actual DB reads, so a keyed loader delegating its DB work to an imported helper is out of scope by design — the type is the primary enforcement. See research/2026-06-20-global-scoped-recompute-default.md.",
+    "A keyed live-state resource MUST be declared via a CLIENT-SHARED `keyedResourceDescriptor(...)` plus the two-arg `defineResource(descriptor, opts)` form, so `keyOf` is declared once and the server can never drift from the client. This static BACKSTOP forbids the two ways keyed-ness can be smuggled into the server without a shared descriptor: (1) the flat `mode: \"keyed\"` form (banned at the type level via `ServerResourceOptions` rejecting `mode:\"keyed\"`, so any textual `mode:\"keyed\"` is a type bypass — `as any`, `// @ts-expect-error`, a local wrapper), and (2) an inline `keyed:` contract literal as the FIRST argument (the sanctioned form passes an imported descriptor IDENTIFIER, so `keyed:` never appears in a real call). Both let server keyed-ness drift from the client and crash the browser (\"no keyOf registered for keyed resource\") with no compile-time signal. See research/2026-06-21-global-keyed-resource-flat-form-elimination.md.",
   async run() {
     const root = await getRoot();
 
@@ -41,18 +41,45 @@ const check: Check = {
       maskStrings: true,
     });
     // Skip test fixtures: `*.test.ts(x)` / `__tests__/` files construct
-    // edge-case resource shapes (e.g. keyed WITHOUT identityTable) precisely to
-    // exercise the runtime's defensive FULL-fallback path — they are not app
-    // resource declarations. This mirrors the type-check exclusion (the same
-    // patterns are excluded from server-core/tsconfig.json), so the enforced
-    // surface stays identical between the type constraint and this backstop.
+    // deliberate edge-case resource shapes (including the now-banned flat keyed
+    // form) precisely to exercise the runtime's defensive paths — they are not
+    // app resource declarations.
     const isTestPath = (rel: string) => /\.test\.tsx?$/.test(rel) || rel.includes("__tests__/");
     const candidatePaths = [...new Set(matches.map((m) => m.path))].filter((rel) => !isTestPath(rel));
 
-    // A keyed span PASSES iff it declares `identityTable:` (scoped to its own
-    // keys) OR `recompute:` (an explicit FULL opt-out).
-    const hasIdentityTable = /\bidentityTable\s*:/;
-    const hasRecompute = /\brecompute\s*:/;
+    // Rule 2 (inline `keyed:` contract) must only fire on a top-level field of
+    // the FIRST argument's object literal. We walk the first-arg substring at
+    // brace depth 1, skipping comments/strings, so a nested `keyed` property in a
+    // loader's data object — or any `keyed:` in the second `opts` arg — never
+    // false-positives.
+    const inlineKeyedAtDepth1 = (firstArg: string): boolean => {
+      let depth = 0;
+      for (let i = 0; i < firstArg.length; i++) {
+        const c = firstArg[i];
+        // Comments are already blanked by `maskSource`; strings are kept (so
+        // `mode`'s value is readable), so skip string interiors here lest a
+        // `keyed:`-looking substring inside a string mislead the depth scan.
+        if (c === '"' || c === "'" || c === "`") {
+          const q = c;
+          i++;
+          while (i < firstArg.length && firstArg[i] !== q) {
+            if (firstArg[i] === "\\") i++;
+            i++;
+          }
+          continue;
+        }
+        if (c === "{") depth++;
+        else if (c === "}") depth--;
+        else if (depth === 1 && c === "k") {
+          // Match `keyed:` only when `k` is a token start (the previous char is
+          // not an identifier char), so a longer property name ending in `keyed`
+          // never matches.
+          const prev = firstArg[i - 1] ?? "";
+          if (!/[A-Za-z0-9_$]/.test(prev) && /^keyed\s*:/.test(firstArg.slice(i))) return true;
+        }
+      }
+      return false;
+    };
 
     const offenders: string[] = [];
     for (const rel of candidatePaths) {
@@ -63,16 +90,56 @@ const check: Check = {
       // Mask comments + regex literals but KEEP string interiors (`strings:
       // false`): we must read the STRING VALUE of `mode` (`"keyed"`), which a
       // full string-mask would blank to `""`. Comments are still blanked, so a
-      // commented-out `identityTable:` (e.g. `// No identityTable:` in the
-      // runtime tests) never counts as a real declaration. The
-      // `identityTable:`/`recompute:` field tokens are implausible as a string
-      // interior inside this call, so keeping strings is safe for them.
+      // commented-out `mode:`/`keyed:` never counts as a real declaration.
       const masked = maskSource(src, { strings: false });
       for (const span of markerCallSpans(masked, "defineResource")) {
         const block = masked.slice(span.open, span.close + 1);
-        if (parseStringField(block, "mode") !== "keyed") continue;
-        if (hasIdentityTable.test(block) || hasRecompute.test(block)) continue;
-        offenders.push(`${rel}:${lineAt(masked, span.identifier)}`);
+        const line = lineAt(masked, span.identifier);
+
+        // Rule 1 — flat keyed bypass. The sanctioned two-arg keyed form passes an
+        // imported descriptor and NEVER writes `mode:` textually, so any literal
+        // `mode: "keyed"` anywhere in the call is itself a flat-form bypass.
+        if (parseStringField(block, "mode") === "keyed") {
+          offenders.push(`${rel}:${line} (flat mode:"keyed")`);
+          continue;
+        }
+
+        // Rule 2 — inline `keyed:` contract literal. Only when the FIRST
+        // argument is an object literal. The sanctioned form passes a descriptor
+        // IDENTIFIER, so an inline `{ key, schema, keyed: { keyOf } }` first arg
+        // is the only way `keyed:` shows up at the call's contract position.
+        // `block` is `(...args...)`; find the first non-space char after `(`.
+        let i = 1;
+        while (i < block.length && /\s/.test(block[i]!)) i++;
+        if (block[i] !== "{") continue; // first arg is an identifier → rule 2 N/A
+        // Slice the first-arg object literal: from this `{` to its matching `}`.
+        let depth = 0;
+        let firstArgEnd = -1;
+        for (let j = i; j < block.length; j++) {
+          const c = block[j];
+          if (c === '"' || c === "'" || c === "`") {
+            const q = c;
+            j++;
+            while (j < block.length && block[j] !== q) {
+              if (block[j] === "\\") j++;
+              j++;
+            }
+            continue;
+          }
+          if (c === "{") depth++;
+          else if (c === "}") {
+            depth--;
+            if (depth === 0) {
+              firstArgEnd = j;
+              break;
+            }
+          }
+        }
+        if (firstArgEnd < 0) continue;
+        const firstArg = block.slice(i, firstArgEnd + 1);
+        if (inlineKeyedAtDepth1(firstArg)) {
+          offenders.push(`${rel}:${line} (inline keyed: contract)`);
+        }
       }
     }
 
@@ -80,9 +147,9 @@ const check: Check = {
 
     return {
       ok: false,
-      message: `Keyed \`defineResource(\` without a scope policy in ${offenders.length} place(s) (declares neither \`identityTable\` nor \`recompute\`):\n    ${offenders.join("\n    ")}`,
+      message: `Keyed \`defineResource(\` not declared through a shared descriptor in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
       hint:
-        "A `mode: \"keyed\"` resource that declares neither field SILENTLY FULL-recomputes the whole cascade on its own table — the exact regression scoped recompute was built to remove. Declare `identityTable` set to the base table whose PK equals `keyOf`'s id, so a single-row change scopes to your own keys; or, if the key is irreducibly whole-set, opt into FULL deliberately with `recompute: { kind: \"full\", reason: \"…\" }`. See research/2026-06-20-global-scoped-recompute-default.md.",
+        "A keyed live-state resource MUST be declared via a CLIENT-SHARED `keyedResourceDescriptor(key, schema, initialData, keyOf)` plus the two-arg `defineResource(descriptor, { loader, identityTable, … })` form — never the flat `mode: \"keyed\"` form and never an inline `keyed:` contract literal. Both smuggle keyed-ness into the server without sharing `keyOf` with the client, so the server's keyed-ness can drift from the client and crash the browser (\"no keyOf registered for keyed resource\") with no compile-time signal. Move the contract (`key`/`schema`/`keyOf`) into a shared descriptor the server can import, then pass only the DB half as `opts`. See research/2026-06-21-global-keyed-resource-flat-form-elimination.md.",
     };
   },
 };

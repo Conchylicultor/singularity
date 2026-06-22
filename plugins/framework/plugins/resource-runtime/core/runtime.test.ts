@@ -304,22 +304,25 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
 
   test("a single-row UPDATE scopes to a keyed resource (Layer-2 delta, not full)", async () => {
     const h = feedHarness({ rows: ["row_table"] });
-    h.runtime.defineResource({
-      key: "rows",
-      mode: "keyed",
-      // Identity table = the resource's own table, so a row UPDATE scopes.
-      identityTable: "row_table",
-      schema: z.array(z.object({ id: z.string(), n: z.number() })),
-      keyOf: (r: { id: string }) => r.id,
-      loader: (_p, ctx) => {
-        // Full load returns two rows; a scoped load returns only the affected row.
-        if (ctx) return [{ id: "a", n: 2 }];
-        return [
-          { id: "a", n: 1 },
-          { id: "b", n: 1 },
-        ];
+    h.runtime.defineResource(
+      {
+        key: "rows",
+        schema: z.array(z.object({ id: z.string(), n: z.number() })),
+        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
       },
-    });
+      {
+        // Identity table = the resource's own table, so a row UPDATE scopes.
+        identityTable: "row_table",
+        loader: (_p, ctx) => {
+          // Full load returns two rows; a scoped load returns only the affected row.
+          if (ctx) return [{ id: "a", n: 2 }];
+          return [
+            { id: "a", n: 1 },
+            { id: "b", n: 1 },
+          ];
+        },
+      },
+    );
     await h.subscribe("rows");
 
     h.runtime.applyDbChange({
@@ -344,27 +347,30 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
     // loads the change provoked.
     const postSubLoads: boolean[] = [];
     let subscribed = false;
-    h.runtime.defineResource({
-      key: "rows",
-      mode: "keyed",
-      // Intentionally unscoped: no `identityTable`, so a change's row-ids are not
-      // provably this resource's keys — the runtime must FULL-recompute, never
-      // scope. `recompute` is the sanctioned explicit FULL opt-out; it is
-      // declaration-only (the runtime branches on identityTable absence, not on
-      // this field) and only makes the keyed resource type-legal without scope.
-      recompute: { kind: "full", reason: "test: FULL fallback when identityTable is absent" },
-      schema: z.array(z.object({ id: z.string(), n: z.number() })),
-      keyOf: (r: { id: string }) => r.id,
-      loader: (_p, ctx) => {
-        if (subscribed) postSubLoads.push(ctx !== undefined);
-        return ctx
-          ? [{ id: "a", n: 2 }]
-          : [
-              { id: "a", n: 1 },
-              { id: "b", n: 1 },
-            ];
+    h.runtime.defineResource(
+      {
+        key: "rows",
+        schema: z.array(z.object({ id: z.string(), n: z.number() })),
+        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
       },
-    });
+      {
+        // Intentionally unscoped: no `identityTable`, so a change's row-ids are not
+        // provably this resource's keys — the runtime must FULL-recompute, never
+        // scope. `recompute` is the sanctioned explicit FULL opt-out; it is
+        // declaration-only (the runtime branches on identityTable absence, not on
+        // this field) and only makes the keyed resource type-legal without scope.
+        recompute: { kind: "full", reason: "test: FULL fallback when identityTable is absent" },
+        loader: (_p, ctx) => {
+          if (subscribed) postSubLoads.push(ctx !== undefined);
+          return ctx
+            ? [{ id: "a", n: 2 }]
+            : [
+                { id: "a", n: 1 },
+                { id: "b", n: 1 },
+              ];
+        },
+      },
+    );
     await h.subscribe("rows");
     subscribed = true;
 
@@ -397,18 +403,21 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
       schema: z.number(),
       loader: async () => 1,
     });
-    h.runtime.defineResource({
-      key: "down",
-      mode: "keyed",
-      identityTable: "down_t",
-      schema: z.array(z.object({ id: z.string(), n: z.number() })),
-      keyOf: (r: { id: string }) => r.id,
-      dependsOn: [{ resource: up, affectedMap: () => ["d1"] }],
-      loader: (_p, ctx) => {
-        if (subscribed) postSubLoads.push(ctx !== undefined);
-        return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }, { id: "d2", n: 1 }];
+    h.runtime.defineResource(
+      {
+        key: "down",
+        schema: z.array(z.object({ id: z.string(), n: z.number() })),
+        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
       },
-    });
+      {
+        identityTable: "down_t",
+        dependsOn: [{ resource: up, affectedMap: () => ["d1"] }],
+        loader: (_p, ctx) => {
+          if (subscribed) postSubLoads.push(ctx !== undefined);
+          return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }, { id: "d2", n: 1 }];
+        },
+      },
+    );
     await h.subscribe("down");
     subscribed = true;
 
@@ -444,18 +453,21 @@ describe("applyDbChange — L4 DB change-feed routing", () => {
       schema: z.number(),
       loader: async () => 1,
     });
-    h.runtime.defineResource({
-      key: "down",
-      mode: "keyed",
-      identityTable: "down_t",
-      schema: z.array(z.object({ id: z.string(), n: z.number() })),
-      keyOf: (r: { id: string }) => r.id,
-      dependsOn: [{ resource: up, affectedMap: () => ["d1"] }],
-      loader: (_p, ctx) => {
-        if (subscribed) postSubLoads.push(ctx !== undefined);
-        return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }, { id: "d2", n: 1 }];
+    h.runtime.defineResource(
+      {
+        key: "down",
+        schema: z.array(z.object({ id: z.string(), n: z.number() })),
+        keyed: { keyOf: (r: unknown) => (r as { id: string }).id },
       },
-    });
+      {
+        identityTable: "down_t",
+        dependsOn: [{ resource: up, affectedMap: () => ["d1"] }],
+        loader: (_p, ctx) => {
+          if (subscribed) postSubLoads.push(ctx !== undefined);
+          return ctx ? [{ id: "d1", n: 2 }] : [{ id: "d1", n: 1 }, { id: "d2", n: 1 }];
+        },
+      },
+    );
     await h.subscribe("down");
     subscribed = true;
 

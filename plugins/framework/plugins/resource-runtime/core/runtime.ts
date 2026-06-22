@@ -216,23 +216,24 @@ export type ScopePolicy =
   | { recompute: { kind: "full"; reason: string }; identityTable?: never };
 
 /**
- * The strict public input to `defineResource` (the runtime keeps the loose
- * `ResourceDefinition` internally). `mode: "keyed"` requires `keyOf` AND a
- * `ScopePolicy`; `push`/`invalidate` resources may still optionally set
- * `identityTable` (e.g. a push aggregate that propagates scoped ids downstream).
- * `defineExternalResource` is deliberately NOT constrained — keyed external
- * resources have no DB feed to scope against.
+ * The strict public input to the flat one-arg `defineResource` (the runtime
+ * keeps the loose `ResourceDefinition` internally). This form is
+ * **push/invalidate-only**: a keyed resource cannot be declared this way. Keyed-ness
+ * comes SOLELY from the two-arg `defineResource(descriptor, opts)` overload, which
+ * derives it from the shared client `KeyedResourceContract` descriptor — so the
+ * client always carries the matching `keyOf`. This structurally removes the
+ * "server says keyed, client forgot its keyOf → browser crash" class. `push`/
+ * `invalidate` resources may still optionally set `identityTable` (e.g. a push
+ * aggregate that propagates scoped ids downstream). `defineExternalResource` is
+ * deliberately NOT constrained — keyed external resources have no DB feed to scope
+ * against. See
+ * research/2026-06-20-global-enforce-keyed-resource-scope-coverage.md.
  */
 export type DefineResourceInput<T, P extends ResourceParams = ResourceParams> =
-  | (Omit<ResourceDefinition<T, P>, "mode" | "keyOf" | "identityTable" | "recompute"> & {
-      mode?: "push" | "invalidate";
-      identityTable?: string;
-    })
-  | (Omit<ResourceDefinition<T, P>, "mode" | "keyOf" | "identityTable" | "recompute"> & {
-      mode: "keyed";
-      // biome-ignore lint/suspicious/noExplicitAny: row type is the element of the array payload — erased here (mirrors ResourceDefinition.keyOf).
-      keyOf: (row: any) => string;
-    } & ScopePolicy);
+  Omit<ResourceDefinition<T, P>, "mode" | "keyOf" | "identityTable" | "recompute"> & {
+    mode?: "push" | "invalidate";
+    identityTable?: string;
+  };
 
 /**
  * The browser-safe half of a resource declaration: exactly the fields a client
@@ -534,13 +535,13 @@ export interface ResourceRuntime {
   /**
    * Declare a DB-backed resource. Two shapes:
    *
-   * - Flat `(def)` — the strict `DefineResourceInput`, so a `mode: "keyed"`
-   *   resource that declares neither `identityTable` nor an explicit
-   *   `recompute: { kind: "full", reason }` opt-out is a `tsc` error.
+   * - Flat `(def)` — the strict `DefineResourceInput`, which is
+   *   **push/invalidate-only**: a `mode: "keyed"` flat resource is unrepresentable.
+   *   Keyed-ness can only be declared via the two-arg form below.
    * - Two-arg `(contract, serverOpts)` — derives `key`/`schema`/keyed-ness from
    *   the shared client descriptor so server and client can't drift. A KEYED
-   *   contract requires a `ScopePolicy` in `serverOpts` (same scope-coverage
-   *   invariant as the flat form — the descriptor path is not an escape hatch);
+   *   contract requires a `ScopePolicy` in `serverOpts` (the scope-coverage
+   *   invariant lives entirely here — there is no flat keyed form to skip it);
    *   a non-keyed contract takes plain `ServerResourceOptions`.
    *
    * Prefer the two-arg form whenever a client descriptor exists for the resource.
@@ -552,7 +553,7 @@ export interface ResourceRuntime {
       opts: ServerResourceOptions<T, P> & ScopePolicy,
     ): Resource<T, P>;
     <T, P extends ResourceParams = ResourceParams>(
-      contract: ResourceContract<T, P>,
+      contract: ResourceContract<T, P> & { keyed?: never },
       opts: ServerResourceOptions<T, P>,
     ): Resource<T, P>;
   };
@@ -943,7 +944,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     opts: ServerResourceOptions<T, P> & ScopePolicy,
   ): Resource<T, P>;
   function defineResource<T, P extends ResourceParams = ResourceParams>(
-    contract: ResourceContract<T, P>,
+    contract: ResourceContract<T, P> & { keyed?: never },
     opts: ServerResourceOptions<T, P>,
   ): Resource<T, P>;
   function defineResource<T, P extends ResourceParams = ResourceParams>(

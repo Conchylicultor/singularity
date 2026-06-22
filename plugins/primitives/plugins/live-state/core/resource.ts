@@ -67,10 +67,15 @@ export function keyedResourceDescriptor<T extends unknown[], P extends Record<st
   return { key, schema, initialData, keyed: { keyOf } };
 }
 
+// Like `resourceDescriptor` but tagged for the central WS endpoint. The
+// `keyed?: never` mirrors `resourceDescriptor` so a central resource passed to
+// the two-arg `defineResource(descriptor, …)` form matches the non-keyed
+// overload (central resources are never keyed — there is no DB change-feed to
+// scope a delta against).
 export function centralResourceDescriptor<T, P extends Record<string, string> = Record<string, never>>(
   key: string,
   schema: ZodType<T>,
   initialData: T,
-): ResourceDescriptor<T, P> {
+): ResourceDescriptor<T, P> & { keyed?: never } {
   return { key, origin: "central", schema, initialData };
 }
