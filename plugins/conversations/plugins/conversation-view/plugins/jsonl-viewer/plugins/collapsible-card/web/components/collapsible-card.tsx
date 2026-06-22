@@ -7,6 +7,8 @@ import {
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
@@ -50,6 +52,12 @@ export interface CollapsibleCardProps {
    *  delta (`(3)`, `· 12ms`). The card paints it muted; pass the bare content
    *  including any separator, never the muted color class. */
   note?: ReactNode;
+  /** Flexible, click-through descriptive text (a command, a one-line summary).
+   *  Distinct from `label` (rigid identity) and `aside` (interactive): the card
+   *  drops it into the single flexible cell where it absorbs slack and
+   *  ellipsizes on one line. Stays click-through, so tapping it toggles the
+   *  card. Pass bare content — the card paints it muted/dimmed. */
+  summary?: ReactNode;
   /** Convenience: render a clickable FilePath as the sibling aside. */
   filePath?: string;
   /** Sibling affordance after the label. Overrides filePath. Wrapped in
@@ -87,6 +95,7 @@ export function CollapsibleCard({
   icon,
   label,
   note,
+  summary,
   filePath,
   aside,
   trailing,
@@ -128,44 +137,52 @@ export function CollapsibleCard({
       >
         {/* <Line> is the actual single-line flex row (Overlay renders children
             in a non-flex wrapper, so the row mechanics must live here, not on
-            HEADER). It carries region-line + the SingleLineProvider, so `ml-auto`
-            works and every leaf truncates instead of wrapping. */}
+            HEADER). It carries region-line + the SingleLineProvider, so every
+            leaf truncates instead of wrapping.
+
+            The row is three structural zones: a RIGID identity group, the ONE
+            flexible <Fill> cell, then RIGID trailing actions. The grow/shrink
+            role lives ONLY on <Fill> — never on identity. (Putting flex-1 on the
+            identity group was the old bug: with no flexible child it grew empty,
+            opening a gap on short content; under a long sibling its min-w-0
+            collapsed below the shrink-0 badge, overlapping it.) */}
         <Line className="gap-sm">
-          {/* Non-interactive: pointer-events-none lets clicks fall through to the
-              overlay button beneath, so the chevron+label area toggles too. The
-              flexible truncating leaf — flex-1 so it absorbs slack and its summary
-              child ellipsizes while the rigid trailing actions stay flush-right. */}
-          <span className="pointer-events-none relative flex min-w-0 flex-1 items-center gap-sm">
+          {/* Zone 1 — rigid identity. shrink-0: never grows into slack, never
+              collapses under a long neighbour, so the chevron + tool badge stay
+              intact. pointer-events-none lets clicks fall through to the overlay
+              toggle beneath, so tapping the identity area collapses the card. */}
+          <span className="pointer-events-none relative flex shrink-0 items-center gap-xs">
             <CollapsibleChevron open={open} className="size-3" />
-            {/* The card OWNS the title group: leading icon, the title content, and
-                an optional muted note, all painted in the one canonical title font
-                (inherited from HEADER). Call sites pass content — never their own
-                `font-*`/`text-*` — so the family/size can't drift per renderer.
-                No `truncate` here: this row holds identity chips (e.g. the
-                tool-name Badge, `shrink-0`) next to free text. `overflow:hidden`
-                would clip the chips too once the row gets tight. Truncation is the
-                job of the flexible leaf (a `flex-1 truncate` summary span), never
-                the container — so chips stay whole and only the text ellipsizes. */}
-            <span className="flex min-w-0 items-center gap-xs">
-              {icon}
-              {label}
-              {note != null && (
-                <span className="text-muted-foreground/60">{note}</span>
-              )}
-            </span>
+            {icon}
+            {label}
+            {note != null && (
+              <span className="text-muted-foreground/60">{note}</span>
+            )}
           </span>
-          {/* Interactive siblings opt back in via CardHeaderAction. min-w-0 lets
-              the aside (typically a FilePath with its own overflow ellipsis)
-              shrink below its content width instead of overflowing the card. */}
-          {sideContent && (
-            <CardHeaderAction className="min-w-0">{sideContent}</CardHeaderAction>
-          )}
+          {/* Zone 2 — the single flexible cell. Always present: it absorbs all
+              slack (so an empty one pushes the trailing actions flush-right, the
+              ml-auto role) and is the ONE place truncation happens. Holds the
+              click-through `summary` (ellipsizes via the ambient single-line
+              <Text>) and/or the interactive `aside` (e.g. a FilePath with its own
+              start-ellipsis); min-w-0 on the aside lets it shrink below its
+              content width instead of overflowing the card. */}
+          <Fill>
+            {/* Inner single-line row arranging summary + aside; <Fill> owns the
+                grow/shrink, <Line> the row mechanics. */}
+            <Line className="gap-sm">
+              {summary != null && (
+                <Text className="pointer-events-none opacity-70">{summary}</Text>
+              )}
+              {sideContent && (
+                <CardHeaderAction className="min-w-0">{sideContent}</CardHeaderAction>
+              )}
+            </Line>
+          </Fill>
+          {/* Zone 3 — rigid trailing actions, flush-right (slack lives in Fill). */}
           {trailing && (
-            <CardHeaderAction className="ml-auto shrink-0">
-              {trailing}
-            </CardHeaderAction>
+            <CardHeaderAction className="shrink-0">{trailing}</CardHeaderAction>
           )}
-          <CardHeaderAction className={cn("shrink-0", !trailing && "ml-auto")}>
+          <CardHeaderAction className="shrink-0">
             <RowActions />
           </CardHeaderAction>
         </Line>

@@ -43,9 +43,14 @@ export function ToolCallCard({
     <CollapsibleCard
       error={hasError}
       defaultOpen={defaultOpen}
+      summary={summary}
       aside={aside}
       trailing={isRunning ? <BouncingDots size="sm" /> : undefined}
       label={
+        // Rigid identity only: the tool-name badge + an optional leading chip.
+        // The flexible `summary` rides the card's own flexible cell (passed as a
+        // prop), not bundled here — so identity stays shrink-0 and never strands
+        // the grow slot.
         <>
           <Badge
             colorClass={
@@ -60,9 +65,6 @@ export function ToolCallCard({
           {/* Interactive chip sits inside the (click-through) label, so it opts
               back into pointer events via CardHeaderAction to keep its onClick. */}
           {leading && <CardHeaderAction className="shrink-0">{leading}</CardHeaderAction>}
-          {summary && (
-            <span className="min-w-0 flex-1 truncate opacity-70">{summary}</span>
-          )}
         </>
       }
     >
