@@ -46,6 +46,10 @@ export const pluginChangesResource = defineResource({
   key: "review.plugin-changes",
   mode: "push",
   schema: PluginChangesSchema,
+  // Coalesce rapid-fire git changes (frequent agent commits) — the heavy
+  // buildPluginTree compute only needs to run once the ref settles, not on every
+  // individual commit arriving in a burst.
+  debounceMs: 3000,
   dependsOn: [
     // worktree file edits → edited-files resource is keyed { id: conversationId }
     { resource: editedFilesResource, map: (p: { id: string }) => [{ conversationId: p.id }] },

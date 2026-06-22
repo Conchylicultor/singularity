@@ -1,13 +1,13 @@
-// @hash 3cd0174d325d
+// @hash 5b63ec7611e7
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
     "conversations.conversation-view.branch:branch",
+    "conversations.conversation-view.dependencies:dependencies",
     "conversations.conversation-view.fork-conversation:fork-conversation",
     "conversations.conversation-view.launch-prompts:launch-prompts",
-    "conversations.conversation-view.dependencies:dependencies",
     "conversations.conversation-view.notes:notes-toggle"
   ]
 }

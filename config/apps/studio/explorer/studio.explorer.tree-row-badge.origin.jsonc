@@ -1,13 +1,13 @@
-// @hash 665ce8c43c7c
+// @hash 4bbbf4c32e6d
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
     "apps.studio.explorer.child-count:child-count",
-    "apps.studio.explorer.load-bearing:load-bearing",
+    "apps.studio.explorer.collapsed:collapsed",
     "apps.studio.explorer.expand-collapse:expand-collapse",
-    "apps.studio.explorer.membership:membership",
-    "apps.studio.explorer.collapsed:collapsed"
+    "apps.studio.explorer.load-bearing:load-bearing",
+    "apps.studio.explorer.membership:membership"
   ]
 }

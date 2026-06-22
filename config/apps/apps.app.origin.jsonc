@@ -1,21 +1,21 @@
-// @hash cc055bea30e4
+// @hash 4650ff7823dc
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
     "apps.agent-manager.shell:agent-manager",
-    "apps.settings.shell:settings",
-    "apps.home.shell:home",
-    "apps.studio.shell:studio",
-    "apps.deploy.shell:deploy",
-    "apps.sonata.shell:sonata",
-    "apps.workflows.shell:workflows",
     "apps.browser.shell:browser",
-    "apps.prototypes.shell:prototypes",
+    "apps.debug.shell:debug",
+    "apps.deploy.shell:deploy",
     "apps.file-explorer.shell:file-explorer",
+    "apps.home.shell:home",
     "apps.pages.shell:pages",
+    "apps.prototypes.shell:prototypes",
+    "apps.settings.shell:settings",
+    "apps.sonata.shell:sonata",
     "apps.story.shell:story",
-    "apps.debug.shell:debug"
+    "apps.studio.shell:studio",
+    "apps.workflows.shell:workflows"
   ]
 }

@@ -1,12 +1,12 @@
-// @hash 30ca99910d6f
+// @hash be1d68be9cd7
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "conversations.conversation-view.op-status:op-status",
-    "conversations.conversation-view.dependent-count:dependent-count",
+    "conversations.conversation-preprompt:preprompt",
     "conversations.conversation-progress:progress",
-    "conversations.conversation-preprompt:preprompt"
+    "conversations.conversation-view.dependent-count:dependent-count",
+    "conversations.conversation-view.op-status:op-status"
   ]
 }

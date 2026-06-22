@@ -1,11 +1,11 @@
-// @hash d788a9de5ff8
+// @hash 1e0885f5553d
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "conversations.conversation-view.op-status:op-status",
     "conversations.conversation-view.notes:notes",
+    "conversations.conversation-view.op-status:op-status",
     "conversations.conversation-view.turn-summary:turn-summary"
   ]
 }

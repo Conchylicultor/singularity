@@ -1,13 +1,13 @@
-// @hash c283db5ee990
+// @hash 7df73fc0ddc7
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
     "debug.profiling.boot:boot",
-    "debug.profiling.runtime:runtime",
-    "debug.profiling.push:push",
     "debug.profiling.build:build",
+    "debug.profiling.push:push",
+    "debug.profiling.runtime:runtime",
     "debug.profiling.stats:stats"
   ]
 }

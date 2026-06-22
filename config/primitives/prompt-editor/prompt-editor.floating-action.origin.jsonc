@@ -1,12 +1,12 @@
-// @hash a621761bf7d9
+// @hash 3a0216538445
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "primitives.prompt-editor.voice-input:voice-input",
     "conversations.conversation-view.exit-menu:exit-menu",
+    "conversations.conversation-view.prompt-templates:prompt-templates",
     "conversations.conversation-view.push-and-exit:push-and-exit",
-    "conversations.conversation-view.prompt-templates:prompt-templates"
+    "primitives.prompt-editor.voice-input:voice-input"
   ]
 }

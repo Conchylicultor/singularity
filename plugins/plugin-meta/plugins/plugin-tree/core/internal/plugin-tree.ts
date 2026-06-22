@@ -1,4 +1,5 @@
-import { existsSync, readdirSync } from "fs";
+import { existsSync } from "fs";
+import { readdir, readFile } from "node:fs/promises";
 import { basename, join, relative } from "path";
 import {
   registerBarrelStubs,
@@ -7,11 +8,19 @@ import {
 import { loadFacets, setFacet, type Facet } from "@plugins/plugin-meta/plugins/facets/core";
 import { asPluginId, type PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
-  readIfExists,
   stripTypes,
   parseStringField,
   parseBoolField,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+
+async function readIfExistsAsync(path: string): Promise<string | null> {
+  try {
+    return await readFile(path, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code == null) throw err;
+    return null;
+  }
+}
 
 // ── Public types ────────────────────────────────────────────────────
 
@@ -99,51 +108,67 @@ function isWalkable(name: string): boolean {
  * specific marker file like package.json), so a freshly authored, not-yet-
  * committed plugin — whose real `.ts` files count as content — is still found.
  */
-function hasPluginContent(dir: string): boolean {
+async function hasPluginContent(dir: string): Promise<boolean> {
   let entries;
   try {
-    entries = readdirSync(dir, { withFileTypes: true });
+    entries = await readdir(dir, { withFileTypes: true });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code == null) throw err;
     return false;
   }
   for (const e of entries) {
     if (e.isFile()) return true;
-    if (e.isDirectory() && isWalkable(e.name) && hasPluginContent(join(dir, e.name))) return true;
+    if (e.isDirectory() && isWalkable(e.name) && (await hasPluginContent(join(dir, e.name)))) {
+      return true;
+    }
   }
   return false;
 }
 
-function findAllPluginDirs(pluginsRoot: string): string[] {
+async function findAllPluginDirs(pluginsRoot: string): Promise<string[]> {
   const out: string[] = [];
-  function walk(dir: string, depth: number) {
+  async function walk(dir: string, depth: number): Promise<void> {
     if (depth > 10) return;
     // Purely positional: any directory visited here (other than the root itself)
     // sits at a plugin position, so it is a plugin — provided it actually holds
     // source content and isn't a hollow shell left behind by a relocation.
-    if (dir !== pluginsRoot && hasPluginContent(dir)) out.push(dir);
+    if (dir !== pluginsRoot && (await hasPluginContent(dir))) out.push(dir);
 
     let entries;
     try {
-      entries = readdirSync(dir, { withFileTypes: true });
+      entries = await readdir(dir, { withFileTypes: true });
     } catch (err) {
       if ((err as NodeJS.ErrnoException).code == null) throw err;
       return;
     }
+    const subWalks: Promise<void>[] = [];
     for (const e of entries) {
       if (!e.isDirectory()) continue;
       if (!isWalkable(e.name)) continue;
-      if (dir === pluginsRoot) walk(join(dir, e.name), depth + 1);
-      else if (e.name === "plugins") {
+      if (dir === pluginsRoot) {
+        subWalks.push(walk(join(dir, e.name), depth + 1));
+      } else if (e.name === "plugins") {
         const sub = join(dir, e.name);
-        const childEntries = readdirSync(sub, { withFileTypes: true });
-        for (const c of childEntries) {
-          if (c.isDirectory() && isWalkable(c.name)) walk(join(sub, c.name), depth + 1);
-        }
+        subWalks.push(
+          readdir(sub, { withFileTypes: true })
+            .then((childEntries) =>
+              Promise.all(
+                childEntries
+                  .filter((c) => c.isDirectory() && isWalkable(c.name))
+                  .map((c) => walk(join(sub, c.name), depth + 1)),
+              ),
+            )
+            .then(() => undefined)
+            .catch((err) => {
+              if ((err as NodeJS.ErrnoException).code != null) return;
+              throw err;
+            }),
+        );
       }
     }
+    await Promise.all(subWalks);
   }
-  walk(pluginsRoot, 0);
+  await walk(pluginsRoot, 0);
   return out;
 }
 
@@ -154,10 +179,13 @@ interface CollectedPlugin {
   parentDir: string | null;
 }
 
-function collectCoreFields(dir: string, pluginsRoot: string): CollectedPlugin {
-  const webIndex = readIfExists(join(dir, "web", "index.ts"));
-  const serverIndex = readIfExists(join(dir, "server", "index.ts"));
-  const centralIndex = readIfExists(join(dir, "central", "index.ts"));
+async function collectCoreFields(dir: string, pluginsRoot: string): Promise<CollectedPlugin> {
+  const [webIndex, serverIndex, centralIndex, pkgSrc] = await Promise.all([
+    readIfExistsAsync(join(dir, "web", "index.ts")),
+    readIfExistsAsync(join(dir, "server", "index.ts")),
+    readIfExistsAsync(join(dir, "central", "index.ts")),
+    readIfExistsAsync(join(dir, "package.json")),
+  ]);
 
   const webSrc = webIndex ? stripTypes(webIndex) : null;
   const serverSrc = serverIndex ? stripTypes(serverIndex) : null;
@@ -171,15 +199,12 @@ function collectCoreFields(dir: string, pluginsRoot: string): CollectedPlugin {
   if (serverDesc) descriptions.server = serverDesc;
   if (centralDesc) descriptions.central = centralDesc;
   let description = webDesc ?? serverDesc ?? centralDesc;
-  if (!description) {
-    const pkgSrc = readIfExists(join(dir, "package.json"));
-    if (pkgSrc) {
-      try {
-        const pkg = JSON.parse(pkgSrc);
-        if (typeof pkg.description === "string" && pkg.description) description = pkg.description;
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      } catch {}
-    }
+  if (!description && pkgSrc) {
+    try {
+      const pkg = JSON.parse(pkgSrc);
+      if (typeof pkg.description === "string" && pkg.description) description = pkg.description;
+    // eslint-disable-next-line promise-safety/no-bare-catch
+    } catch {}
   }
 
   const loadBearing =
@@ -191,18 +216,15 @@ function collectCoreFields(dir: string, pluginsRoot: string): CollectedPlugin {
     (webSrc ? parseBoolField(webSrc, "collapsed") : false) ||
     (serverSrc ? parseBoolField(serverSrc, "collapsed") : false) ||
     (centralSrc ? parseBoolField(centralSrc, "collapsed") : false);
-  // Read package.json once for both the collapsed and compositionRoot markers.
+  // package.json collapsed and compositionRoot markers.
   let compositionRoot = false;
-  {
-    const pkgSrc = readIfExists(join(dir, "package.json"));
-    if (pkgSrc) {
-      try {
-        const pkg = JSON.parse(pkgSrc);
-        if (pkg.singularity?.collapsed === true) collapsed = true;
-        if (pkg.singularity?.compositionRoot === true) compositionRoot = true;
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      } catch {}
-    }
+  if (pkgSrc) {
+    try {
+      const pkg = JSON.parse(pkgSrc);
+      if (pkg.singularity?.collapsed === true) collapsed = true;
+      if (pkg.singularity?.compositionRoot === true) compositionRoot = true;
+    // eslint-disable-next-line promise-safety/no-bare-catch
+    } catch {}
   }
 
   const rel = relative(pluginsRoot, dir);
@@ -250,19 +272,20 @@ export async function buildPluginTree(
   pluginsRoot: string,
   opts?: { skipBarrelImport?: boolean },
 ): Promise<PluginTree> {
-  // Step 1: find all plugin directories
-  const dirs = findAllPluginDirs(pluginsRoot);
+  // Step 1: find all plugin directories (async fs walk — does not block event loop)
+  // Sort to restore deterministic ordering (parallel walks complete in arbitrary order).
+  const dirs = (await findAllPluginDirs(pluginsRoot)).sort();
 
-  // Step 2: collect core fields for each plugin
+  // Step 2: collect core fields for each plugin (async parallel reads)
   const byDir = new Map<string, PluginNode>();
   const byPath = new Map<string, PluginNode>();
   const parentDirs = new Map<string, string | null>();
 
-  for (const d of dirs) {
-    const collected = collectCoreFields(d, pluginsRoot);
-    byDir.set(d, collected.node);
-    byPath.set(collected.node.path, collected.node);
-    parentDirs.set(d, collected.parentDir);
+  const collected = await Promise.all(dirs.map((d) => collectCoreFields(d, pluginsRoot)));
+  for (const c of collected) {
+    byDir.set(c.node.dir, c.node);
+    byPath.set(c.node.path, c.node);
+    parentDirs.set(c.node.dir, c.parentDir);
   }
 
   // Step 3: assemble tree — parent resolution, children, sort, hierarchy IDs

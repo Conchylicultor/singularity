@@ -1,11 +1,11 @@
-// @hash 1d45a850fac1
+// @hash c3cb06b3ff9f
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
+    "apps.pages.content-search:search",
     "apps.pages.page-tree:pages",
-    "apps.pages.starred:favorites",
-    "apps.pages.content-search:search"
+    "apps.pages.starred:favorites"
   ]
 }

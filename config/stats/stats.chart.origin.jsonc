@@ -1,4 +1,4 @@
-// @hash ff962147af57
+// @hash f64ea22ac42f
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -6,12 +6,12 @@
   "items": [
     "stats.commits:commits",
     "stats.commits:lines",
-    "stats.tasks:tasks-active",
-    "stats.pushes:pushes",
     "stats.cost:cost-overview",
     "stats.cost:cost-token-mix",
     "stats.cost:cost-avg-per-conversation",
     "stats.cost:cost-distribution",
-    "stats.cost:cost-top-conversations"
+    "stats.cost:cost-top-conversations",
+    "stats.pushes:pushes",
+    "stats.tasks:tasks-active"
   ]
 }

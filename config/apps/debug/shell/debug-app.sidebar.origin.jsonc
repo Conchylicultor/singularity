@@ -1,27 +1,27 @@
-// @hash 36fcebf14497
+// @hash 1b908883a364
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "infra.events-test:events-test",
-    "primitives.css.layout-harness:layout-lab",
-    "conversations.recover:conversations-recover",
     "backup:backup",
-    "debug.claude-cli-calls:claude-cli-calls",
+    "conversations.recover:conversations-recover",
     "debug.broadcasts:broadcasts",
-    "debug.memory:memory",
-    "debug.slow-ops.pane:slow-ops",
+    "debug.claude-cli-calls:claude-cli-calls",
+    "debug.health-monitor:health-monitor",
+    "debug.heap-snapshot:heap-snapshot",
     "debug.live-state-churn.emit:live-state-emit",
-    "debug.worktree-cleanup:worktree-cleanup",
-    "debug.render-profiler:render-profiler",
     "debug.live-state-health:live-state-health",
     "debug.logs:logs",
+    "debug.memory:memory",
     "debug.profiling:profiling",
     "debug.queue:queue",
-    "debug.heap-snapshot:heap-snapshot",
     "debug.read-set:read-set",
-    "debug.health-monitor:health-monitor",
-    "debug.reports:reports"
+    "debug.render-profiler:render-profiler",
+    "debug.reports:reports",
+    "debug.slow-ops.pane:slow-ops",
+    "debug.worktree-cleanup:worktree-cleanup",
+    "infra.events-test:events-test",
+    "primitives.css.layout-harness:layout-lab"
   ]
 }

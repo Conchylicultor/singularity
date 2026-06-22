@@ -1,4 +1,4 @@
-// @hash 40128c5bf347
+// @hash 5486f818457d
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -6,8 +6,8 @@
   "items": [
     "apps.sonata.rich.chord-progression:chord-progression",
     "apps.sonata.rich.chord-readout:chord-readout",
-    "apps.sonata.rich.key-readout:key-readout",
     "apps.sonata.rich.circle-of-fifths:circle-of-fifths",
+    "apps.sonata.rich.key-readout:key-readout",
     "apps.sonata.sources.chord-grid:chord-grid-editor",
     "apps.sonata.track-mixer:track-mixer"
   ]

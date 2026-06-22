@@ -1,11 +1,11 @@
-// @hash ae4fa29cac6d
+// @hash 650297637295
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
+    "apps.browser.bookmarks:bookmark-star",
     "apps.browser.proxy:proxy-toggle",
-    "apps.browser.webview:open-external",
-    "apps.browser.bookmarks:bookmark-star"
+    "apps.browser.webview:open-external"
   ]
 }

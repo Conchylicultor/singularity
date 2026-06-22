@@ -1,22 +1,22 @@
-// @hash 7a0793a5dd61
+// @hash 767ac96ca624
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "ui.theme-engine.theme-customizer:theme-customizer",
-    "ui.theme-toggle:theme-light-dark",
+    "apps.agent-manager.worktree-switcher:worktree-switcher",
+    "apps.surface:placement-control",
+    "build:build",
+    "fullscreen:fullscreen-toggle",
+    "improve:improve",
+    "improve.element-picker:element-picker",
+    "infra.health:health-dot",
     "reorder.edit-mode:reorder-pen",
     "reorder.edit-mode:reorder-scope-toggle",
-    "infra.health:health-dot",
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",
     "shell.notifications:notifications",
-    "improve:improve",
-    "improve.element-picker:element-picker",
-    "build:build",
-    "fullscreen:fullscreen-toggle",
-    "apps.agent-manager.worktree-switcher:worktree-switcher",
-    "apps.surface:placement-control"
+    "ui.theme-engine.theme-customizer:theme-customizer",
+    "ui.theme-toggle:theme-light-dark"
   ]
 }

@@ -1,13 +1,13 @@
-// @hash 373010a44394
+// @hash 9c66621c6c3d
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "build.build-fix:fix",
-    "build.build-profiling:profiling",
     "build.build-commits:commits",
+    "build.build-fix:fix",
+    "build.build-info:info",
     "build.build-logs:logs",
-    "build.build-info:info"
+    "build.build-profiling:profiling"
   ]
 }

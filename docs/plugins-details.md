@@ -114,6 +114,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Routes: `POST /api/browser/bookmarks`, `DELETE /api/browser/bookmarks/:id`
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
+            - Endpoint callers: `history`
         - **`history`** — Browser history: a headless recorder that logs every navigation to the history store, plus the useRecents() hook over the browser-recents live resource. Browser history store (browser_history table), the distinct-by-url recents live resource, and the POST /api/browser/history record endpoint.
           - Web:
             - Contributes: `Browser.Effects` "Effects" → `RecordVisits`
@@ -147,8 +148,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Routes: `GET /api/browser/proxy`, `POST /api/browser/proxy`
           - Core:
             - Exports: Types: `BrowserProxyNavKind`, `BrowserProxyNavMessage`, `MetaRefreshDirective`; Values: `BROWSER_PROXY_NAV_MESSAGE`, `BROWSER_PROXY_PATH`, `isProxyUrl`, `parseBrowserProxyNavMessage`, `parseMetaRefresh`, `proxyUrl`
-          - Cross-plugin:
-            - Endpoint callers: `history`
         - **`shell`** — App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, and exports the <Favicon> component.
           - Web:
             - Slots: `Browser.TabStrip` ← `apps.browser.tabs`, `Browser.NavControls` ← `apps.browser.navigation`, `Browser.Omnibox` ← `apps.browser.omnibox`, `Browser.Actions` ← `apps.browser.bookmarks`, `apps.browser.proxy`, `apps.browser.webview`, `Browser.SubBar` ← `apps.browser.bookmarks`, `Browser.Viewport` ← `apps.browser.webview`, `Browser.StartPage` ← `apps.browser.start-page`, `Browser.Effects` ← `apps.browser.history`
@@ -3588,7 +3587,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `PluginHealthReview`, `PluginStaleness`, `ReviewTaskSummary`; Values: `getPluginHealthReviews`, `getPluginHealthTasks`, `getPluginStaleness`, `PluginHealthReviewSchema`, `PluginStalenessSchema`, `ReviewTaskSummarySchema`
     - **`plugin-tree`**
       - Core:
-        - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.Facet`, `plugin-meta/facets.loadFacets`, `plugin-meta/facets.setFacet`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.parseStringField`, `plugin-meta/parse-utils.readIfExists`, `plugin-meta/parse-utils.stripTypes`
+        - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.Facet`, `plugin-meta/facets.loadFacets`, `plugin-meta/facets.setFacet`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.parseStringField`, `plugin-meta/parse-utils.stripTypes`
         - Exports: Types: `PluginNode`, `PluginTree`, `Runtime`; Values: `buildPluginTree`, `resolvePluginSpecifier`
       - Cross-plugin:
         - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/closure`

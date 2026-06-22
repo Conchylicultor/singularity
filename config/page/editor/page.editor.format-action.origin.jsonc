@@ -1,15 +1,15 @@
-// @hash 5ea53219996b
+// @hash c3c14e2b8402
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "page.formatting.underline:underline",
-    "page.formatting.color:color",
+    "page.formatting.bold:bold",
     "page.formatting.code:code",
+    "page.formatting.color:color",
     "page.formatting.italic:italic",
     "page.formatting.link:link",
-    "page.formatting.bold:bold",
-    "page.formatting.strikethrough:strikethrough"
+    "page.formatting.strikethrough:strikethrough",
+    "page.formatting.underline:underline"
   ]
 }

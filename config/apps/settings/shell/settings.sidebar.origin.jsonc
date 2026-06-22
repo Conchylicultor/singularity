@@ -1,11 +1,11 @@
-// @hash 975115c32348
+// @hash 31729cc1d140
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "apps.settings.config:config",
+    "apps.settings.accounts:accounts",
     "apps.settings.appearance:appearance",
-    "apps.settings.accounts:accounts"
+    "apps.settings.config:config"
   ]
 }

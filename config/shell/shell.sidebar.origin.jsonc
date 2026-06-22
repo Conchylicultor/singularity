@@ -1,13 +1,13 @@
-// @hash aadee5363ce2
+// @hash 16da3ca71f4e
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "tasks.task-detail:tasks",
-    "conversations.conversations-view:conversations",
-    "conversations.agents:agents",
     "code-explorer:code-explorer",
-    "stats:stats"
+    "conversations.agents:agents",
+    "conversations.conversations-view:conversations",
+    "stats:stats",
+    "tasks.task-detail:tasks"
   ]
 }
