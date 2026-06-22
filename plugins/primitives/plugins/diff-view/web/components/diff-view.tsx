@@ -1,5 +1,5 @@
 import type { ClipboardEvent, CSSProperties, JSX, KeyboardEvent, MouseEvent, ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   Decoration,
   Diff,
@@ -53,7 +53,7 @@ function getSideFromNode(node: Node | null): DiffSide | null {
   return getSide(node instanceof Element ? node : node?.parentElement ?? null);
 }
 
-export function DiffRenderer({
+export const DiffRenderer = memo(function DiffRenderer({
   files,
   hunks,
   tokens,
@@ -179,21 +179,15 @@ export function DiffRenderer({
     }
   }
 
-  const effectiveHunks = hunks ?? files[0]?.hunks ?? [];
-
-  return (
-    <Scroll
-      axis="both"
-      ref={containerRef}
-      // eslint-disable-next-line text/no-adhoc-typography -- leading-5 fixes mono diff line-height for gutter alignment, distinct from caption's tighter line-height
-      className="diff-view font-mono text-caption leading-5"
-      data-monotonous={fixedSide ? "" : undefined}
-      onKeyDown={handleKeyDown}
-      onMouseDown={handleMouseDown}
-      onCopy={handleCopy}
-      tabIndex={-1}
-    >
-      {files.map((file, i) => (
+  // Memoize the heavy react-diff-view element tree on its actual inputs. The
+  // transcript re-renders at several Hz from idle live-state pushes; without
+  // this, every propagation re-render hands <Diff> a fresh `children` render
+  // prop, defeating its internal memo() and re-reconciling every hunk/line/cell
+  // (the diff is the heaviest subtree on the page). Reusing the same element
+  // refs lets React bail out of the subtree entirely on an unchanged re-render.
+  const diffElements = useMemo(() => {
+    const effectiveHunks = hunks ?? files[0]?.hunks ?? [];
+    return files.map((file, i) => (
         <Diff
           key={`${file.oldRevision}-${file.newRevision}`}
           viewType="split"
@@ -244,10 +238,25 @@ export function DiffRenderer({
             })
           }
         </Diff>
-      ))}
+      ));
+  }, [files, hunks, tokens, totalLines, onExpandLines]);
+
+  return (
+    <Scroll
+      axis="both"
+      ref={containerRef}
+      // eslint-disable-next-line text/no-adhoc-typography -- leading-5 fixes mono diff line-height for gutter alignment, distinct from caption's tighter line-height
+      className="diff-view font-mono text-caption leading-5"
+      data-monotonous={fixedSide ? "" : undefined}
+      onKeyDown={handleKeyDown}
+      onMouseDown={handleMouseDown}
+      onCopy={handleCopy}
+      tabIndex={-1}
+    >
+      {diffElements}
     </Scroll>
   );
-}
+});
 
 export function DiffView({
   worktree,
