@@ -3,6 +3,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { editedFilesResource } from "./internal/edited-files-resource";
 
 export { getEditedFiles } from "./internal/get-edited-files";
+export { editedFilesResource } from "./internal/edited-files-resource";
 
 export default {
   description:
