@@ -6,7 +6,7 @@
 
 - Description: L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, with a bounded changelog catch-up that recomputes only the resources whose tables changed during downtime.
 - Server:
-  - Uses: `database.awaitDbReady`, `database.db`, `database/change-feed.LIVE_STATE_CHANGELOG_TABLE`, `database/change-feed.LIVE_STATE_SNAPSHOT_TABLE`, `database/change-feed.routeChange`, `database/migrations.migrationsReady`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
+  - Uses: `database.awaitDbReady`, `database.db`, `database/change-feed.routeChange`, `database/migrations.migrationsReady`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
   - DB schema: `plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`
   - Exports: Values: `readPersistedSnapshots`
   - Register: `defineJob('database.live-state-changelog-prune')`

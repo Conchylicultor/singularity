@@ -4,5 +4,7 @@ export { compileCreateView } from "./internal/compile";
 export {
   MIGRATIONS_TABLE_NAME,
   DERIVED_VIEW_STATE_TABLE_NAME,
+  LIVE_STATE_CHANGELOG_TABLE,
+  LIVE_STATE_SNAPSHOT_TABLE,
   IMPERATIVE_PUBLIC_TABLES,
 } from "./internal/imperative-tables";

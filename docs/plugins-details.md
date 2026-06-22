@@ -1814,7 +1814,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
       - Server:
         - Uses: `database.db`, `database/admin.connectionString`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
-        - Exports: Types: `DbChange`; Values: `getCoveredTables`, `LIVE_STATE_CHANGELOG_TABLE`, `LIVE_STATE_SNAPSHOT_TABLE`, `parseLiveStatePayload`, `rebuildTriggers`, `routeChange`
+        - Exports: Types: `DbChange`; Values: `getCoveredTables`, `parseLiveStatePayload`, `rebuildTriggers`, `routeChange`
       - Cross-plugin:
         - Imported by: `database/live-state-snapshot`
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
@@ -1824,7 +1824,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `conversations/agents`, `database`, `database/change-feed`, `database/migrations`, `tasks/tasks-core`
       - Core:
-        - Exports: Types: `RegisteredView`; Values: `compileCreateView`, `DERIVED_VIEW_STATE_TABLE_NAME`, `IMPERATIVE_PUBLIC_TABLES`, `MIGRATIONS_TABLE_NAME`, `topoSortViews`
+        - Exports: Types: `RegisteredView`; Values: `compileCreateView`, `DERIVED_VIEW_STATE_TABLE_NAME`, `IMPERATIVE_PUBLIC_TABLES`, `LIVE_STATE_CHANGELOG_TABLE`, `LIVE_STATE_SNAPSHOT_TABLE`, `MIGRATIONS_TABLE_NAME`, `topoSortViews`
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Cross-plugin:
         - Imported by: `infra/launcher`
@@ -1841,7 +1841,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations`
     - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, with a bounded changelog catch-up that recomputes only the resources whose tables changed during downtime.
       - Server:
-        - Uses: `database.awaitDbReady`, `database.db`, `database/change-feed.LIVE_STATE_CHANGELOG_TABLE`, `database/change-feed.LIVE_STATE_SNAPSHOT_TABLE`, `database/change-feed.routeChange`, `database/migrations.migrationsReady`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
+        - Uses: `database.awaitDbReady`, `database.db`, `database/change-feed.routeChange`, `database/migrations.migrationsReady`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
         - DB schema: `plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`
         - Exports: Values: `readPersistedSnapshots`
         - Register: `defineJob('database.live-state-changelog-prune')`

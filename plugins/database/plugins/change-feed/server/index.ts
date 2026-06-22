@@ -8,12 +8,7 @@ import { rebuildTriggers } from "./internal/triggers";
 import { startListener, stopListener } from "./internal/listener";
 import { buildViewDeps } from "./internal/view-deps";
 
-export {
-  rebuildTriggers,
-  getCoveredTables,
-  LIVE_STATE_CHANGELOG_TABLE,
-  LIVE_STATE_SNAPSHOT_TABLE,
-} from "./internal/triggers";
+export { rebuildTriggers, getCoveredTables } from "./internal/triggers";
 export { parseLiveStatePayload } from "./internal/parse-payload";
 export type { DbChange } from "./internal/parse-payload";
 // The single source of change routing — reused by the L2 cold-boot catch-up

@@ -5,7 +5,7 @@ import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import {
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
-} from "@plugins/database/plugins/change-feed/server";
+} from "@plugins/database/plugins/derived-views/core";
 
 const log = Log.channel("live-state-snapshot", { persist: true });
 

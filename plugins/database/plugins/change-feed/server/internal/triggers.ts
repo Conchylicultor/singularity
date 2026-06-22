@@ -1,7 +1,11 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
-import { MIGRATIONS_TABLE_NAME } from "@plugins/database/plugins/derived-views/core";
+import {
+  MIGRATIONS_TABLE_NAME,
+  LIVE_STATE_CHANGELOG_TABLE,
+  LIVE_STATE_SNAPSHOT_TABLE,
+} from "@plugins/database/plugins/derived-views/core";
 
 const log = Log.channel("change-feed", { persist: true });
 
@@ -18,8 +22,10 @@ const log = Log.channel("change-feed", { persist: true });
 // infinitely (each INSERT firing the trigger that does another INSERT). The
 // snapshot table is written by the runtime persist hook (out of band of any
 // trigger) and read only at boot, so it never needs a feed either.
-export const LIVE_STATE_CHANGELOG_TABLE = "live_state_changelog";
-export const LIVE_STATE_SNAPSHOT_TABLE = "live_state_snapshot";
+//
+// The table-name constants live in the derived-views core leaf (the imperative-
+// public-table allowlist) so the orphaned-db-tables check and the create sites
+// share one source — see that module.
 const DENYLIST = new Set<string>([
   MIGRATIONS_TABLE_NAME,
   LIVE_STATE_CHANGELOG_TABLE,

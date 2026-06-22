@@ -30,6 +30,25 @@ export const MIGRATIONS_TABLE_NAME = "__singularity_migrations";
 export const DERIVED_VIEW_STATE_TABLE_NAME = "derived_view_state";
 
 /**
+ * The L2 durable change outbox, created imperatively by change-feed inside its
+ * trigger-rebuild transaction
+ * (`plugins/database/plugins/change-feed/server/internal/triggers.ts`) — the
+ * `live_state_notify()` trigger function INSERTs into it on every commit. Not
+ * present in the drizzle snapshot; the orphaned-db-tables check treats it as
+ * declared.
+ */
+export const LIVE_STATE_CHANGELOG_TABLE = "live_state_changelog";
+
+/**
+ * The L2 persisted live-state materialization, created imperatively by
+ * live-state-snapshot
+ * (`plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`)
+ * — the durable snapshot + xmin watermark read at cold boot. Not present in the
+ * drizzle snapshot; the orphaned-db-tables check treats it as declared.
+ */
+export const LIVE_STATE_SNAPSHOT_TABLE = "live_state_snapshot";
+
+/**
  * The full allowlist of public tables created imperatively (outside drizzle).
  * The orphaned-db-tables check subtracts these from the live-table set so they
  * are never flagged as orphans.
@@ -37,4 +56,6 @@ export const DERIVED_VIEW_STATE_TABLE_NAME = "derived_view_state";
 export const IMPERATIVE_PUBLIC_TABLES: readonly string[] = [
   MIGRATIONS_TABLE_NAME,
   DERIVED_VIEW_STATE_TABLE_NAME,
+  LIVE_STATE_CHANGELOG_TABLE,
+  LIVE_STATE_SNAPSHOT_TABLE,
 ];

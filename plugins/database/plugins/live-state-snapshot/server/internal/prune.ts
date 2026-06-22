@@ -5,7 +5,7 @@ import { db } from "@plugins/database/server";
 import {
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
-} from "@plugins/database/plugins/change-feed/server";
+} from "@plugins/database/plugins/derived-views/core";
 
 // Hard time-ceiling on retained changelog history. Beyond this, a row is pruned
 // even if a stale snapshot floor would otherwise pin it — bounding the table even

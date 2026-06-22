@@ -1,7 +1,7 @@
 import { sql as drizzleSql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { Resource } from "@plugins/framework/plugins/server-core/core";
-import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/change-feed/server";
+import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 
 // The set of resource keys L2 persists: boot-critical AND DB-backed. `bootCritical`
 // is read GENERICALLY from the shared Resource.Declare collection (never by naming

@@ -1,6 +1,6 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
-import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/change-feed/server";
+import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 
 // `live_state_snapshot` — the persisted materialized value. One row per
 // (resource_key, params_key); `params_key = "{}"` for the param-less
