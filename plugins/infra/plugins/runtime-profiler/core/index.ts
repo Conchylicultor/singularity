@@ -4,6 +4,7 @@ export {
   chargeWait,
   recordReadTables,
   getReadSetIndex,
+  seedReadSetIndex,
   currentCallerKind,
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,

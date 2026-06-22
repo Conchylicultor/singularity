@@ -1856,7 +1856,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `infra/paths.SINGULARITY_DIR`
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Cross-plugin:
-    - Imported by: `active-data`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/deploy/servers`, `apps/pages/content-search`, `apps/pages/history`, `apps/pages/starred`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/generation`, `apps/story/marker`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/workflows/engine`, `backup`, `build`, `build/build-commits`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/notes`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/summary`, `database/change-feed`, `database/live-state-snapshot`, `debug/slow-ops`, `history/engine`, `improve`, `infra/attachments`, `infra/boot-snapshot`, `infra/claude-cli`, `infra/contention`, `infra/entity-extensions`, `infra/events`, `infra/events-test`, `infra/jobs`, `page/attachment-block`, `page/editor`, `page/inline-date`, `page/links`, `plugin-meta/plugin-health`, `primitives/rank`, `reports`, `search/engine`, `shell/notifications`, `stats/commits`, `stats/cost`, `tasks/auto-start`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`, `ui/tweakcn/community-browser`
+    - Imported by: `active-data`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/deploy/servers`, `apps/pages/content-search`, `apps/pages/history`, `apps/pages/starred`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/generation`, `apps/story/marker`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/workflows/engine`, `backup`, `build`, `build/build-commits`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/notes`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/summary`, `database/change-feed`, `database/live-state-snapshot`, `debug/slow-ops`, `history/engine`, `improve`, `infra/attachments`, `infra/claude-cli`, `infra/contention`, `infra/entity-extensions`, `infra/events`, `infra/events-test`, `infra/jobs`, `page/attachment-block`, `page/editor`, `page/inline-date`, `page/links`, `plugin-meta/plugin-health`, `primitives/rank`, `reports`, `search/engine`, `shell/notifications`, `stats/commits`, `stats/cost`, `tasks/auto-start`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`, `ui/tweakcn/community-browser`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
@@ -1905,7 +1905,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `database/derived-views.rebuildDerivedViews`, `primitives/log-channels.Log`
         - Exports: Values: `dryRunPendingMigrations`, `migrationsReady`, `runMigrations`
       - Cross-plugin:
-        - Imported by: `database`, `database/live-state-snapshot`, `infra/boot-snapshot`
+        - Imported by: `database`, `database/live-state-snapshot`
       - Structure:
         - Non-standard folders: `data/`
         - Loose top-level files: `drizzle.config.ts`
@@ -2673,7 +2673,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`server-core`**
       - Core:
         - Uses: `framework/resource-runtime.createResourceRuntime`, `framework/tooling/collected-dir.defineCollectedDir`, `infra/runtime-profiler.getReadSetIndex`, `infra/runtime-profiler.getRuntimeProfile`, `infra/runtime-profiler.recordEntrySpan`, `infra/runtime-profiler.recordSpan`
-        - Exports: Types: `DependsOnEntry`, `ExternalResource`, `HttpHandler`, `LiveStateSnapshotHooks`, `LoadedServerPlugin`, `MemoryCheckpoint`, `PhaseId`, `RecomputeIntent`, `Registration`, `ResourceContract`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ResourcePushObserver`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `ServerResourceOptions`, `Span`, `WsData`, `WsHandler`; Values: `applyDbChange`, `collectContributions`, `defineExternalResource`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `loadResourceByKey`, `markServerReady`, `notificationsWsHandler`, `notifyStatsFor`, `onResourcePush`, `physFootprintBytes`, `profilerStart`, `recordMemoryCheckpoint`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `setLiveStateSnapshotHooks`, `setRelationResolver`, `triggerResourcePush`, `withNotifyBatch`
+        - Exports: Types: `DependsOnEntry`, `ExternalResource`, `HttpHandler`, `LiveStateSnapshotHooks`, `LoadedServerPlugin`, `MemoryCheckpoint`, `PhaseId`, `RecomputeIntent`, `Registration`, `ResourceContract`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ResourcePushObserver`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `ServerResourceOptions`, `Span`, `WsData`, `WsHandler`; Values: `applyDbChange`, `collectContributions`, `defineExternalResource`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `loadResourceByKey`, `markServerReady`, `notificationsWsHandler`, `notifyStatsFor`, `onResourcePush`, `physFootprintBytes`, `profilerStart`, `recomputeResource`, `recordMemoryCheckpoint`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `setLiveStateSnapshotHooks`, `setRelationResolver`, `triggerResourcePush`, `withNotifyBatch`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
         - Exports: Types: `Check`, `CheckResult`
@@ -2839,12 +2839,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `apps/pages/page-tree`, `apps/sonata/library`, `apps/sonata/sources/midi`, `conversations`, `conversations/agents`, `page/attachment-block`, `page/audio`, `page/bookmark`, `page/file`, `page/image`, `page/video`, `primitives/text-editor/paste-images`, `screenshot/draw-on-app`, `tasks`, `tasks/task-draft-form`, `tasks/tasks-core`
         - Endpoint callers: `task-attachments`
-    - **`boot-snapshot`** — Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint; server-side buffer-cache warm-up behind the readiness barrier.
+    - **`boot-snapshot`** — Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint.
       - Web:
         - Contributes: `Core.Boot`
         - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.hydrateResource`, `primitives/live-state.resourceDescriptorByKey`, `reports.report`
       - Server:
-        - Uses: `database.awaitDbReady`, `database/live-state-snapshot.readPersistedSnapshots`, `database/migrations.migrationsReady`, `infra/endpoints.implement`
+        - Uses: `database/live-state-snapshot.readPersistedSnapshots`, `infra/endpoints.implement`
         - Routes: `GET /api/resources/boot-snapshot`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
@@ -3000,7 +3000,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `framework/server-core`, `infra/endpoints`
       - Core:
-        - Exports: Types: `Aggregate`, `EntryContext`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `WaitBreakdown`; Values: `chargeWait`, `currentCallerKind`, `getReadSetIndex`, `getRuntimeProfile`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `resetRuntimeProfile`, `runWithoutProfiling`
+        - Exports: Types: `Aggregate`, `EntryContext`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `WaitBreakdown`; Values: `chargeWait`, `currentCallerKind`, `getReadSetIndex`, `getRuntimeProfile`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `resetRuntimeProfile`, `runWithoutProfiling`, `seedReadSetIndex`
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
         - Imported by: `apps/browser/proxy`, `apps/sonata/sources/ultimate-guitar`, `page/bookmark`

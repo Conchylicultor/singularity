@@ -20,11 +20,22 @@ CREATE TABLE IF NOT EXISTS ${LIVE_STATE_SNAPSHOT_TABLE} (
   params_key   text    NOT NULL,
   value        jsonb   NOT NULL,
   position     numeric NOT NULL,
+  tables_read  text[]  NOT NULL DEFAULT '{}'::text[],
   updated_at   timestamptz NOT NULL DEFAULT now(),
   PRIMARY KEY (resource_key, params_key)
 );
 `;
 
+// Idempotent in-place upgrade for snapshot tables created before `tables_read`
+// existed: pre-existing rows get the `'{}'` default (treated as "no usable
+// read-set" → force-FULL once on the next boot, which re-persists the real
+// read-set). Derived DDL, NOT a drizzle migration — same pattern as the CREATE.
+const SNAPSHOT_TABLE_ADD_TABLES_READ = `
+ALTER TABLE ${LIVE_STATE_SNAPSHOT_TABLE}
+  ADD COLUMN IF NOT EXISTS tables_read text[] NOT NULL DEFAULT '{}'::text[];
+`;
+
 export async function ensureSnapshotTable(db: NodePgDatabase): Promise<void> {
   await db.execute(drizzleSql.raw(SNAPSHOT_TABLE_DDL));
+  await db.execute(drizzleSql.raw(SNAPSHOT_TABLE_ADD_TABLES_READ));
 }

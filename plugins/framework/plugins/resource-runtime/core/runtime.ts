@@ -562,6 +562,7 @@ export interface ResourceRuntimeOptions {
     paramsKey: string,
     value: unknown,
     watermark: string,
+    tablesRead: readonly string[],
   ) => Promise<void>;
 }
 
@@ -646,6 +647,15 @@ export interface ResourceRuntime {
     origin: string;
     identityBase: string;
   }) => void;
+  /**
+   * Force a FULL recompute of a single registered resource by key (param-less →
+   * key `{}`), routed through the SAME cascade the feed uses (`source: "feed"`).
+   * Used by the L2 boot init to recompute resources that have no usable persisted
+   * read-set yet (first boot / newly-added / one-time migration), which persists
+   * the value AND populates its read-set for the next boot. A no-op if the key is
+   * not registered.
+   */
+  recomputeResource: (key: string) => void;
   /**
    * Self-verification counters for the `_debug` endpoint: how many notifies for
    * this resource key came from hand-`notify()` (`hand`) vs the DB change-feed
@@ -1368,8 +1378,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         // reported but does not block the send/cascade — the prior snapshot row
         // simply stays current.
         if (persisted && watermark !== undefined && opts.persistSnapshot) {
+          // The loader has already run (via `getResourceValue` above), so its
+          // captured read-set is flushed into the read-set index — `opts.readSet`
+          // returns the tables this resource read, persisted alongside the value
+          // so the next cold boot can route catch-up by it without a loader run.
+          const tablesRead = opts.readSet?.(entry.key) ?? [];
           try {
-            await opts.persistSnapshot(entry.key, pk, value, watermark);
+            await opts.persistSnapshot(entry.key, pk, value, watermark, tablesRead);
           } catch (err) {
             reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
           }
@@ -1953,6 +1968,15 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
   }
 
+  // Force a FULL recompute of one resource by key (param-less → `{}`), through the
+  // SAME `scheduleNotify(..., { source: "feed" })` path the feed router uses, so
+  // the recompute is byte-identical to a feed-driven one. Used by the L2 boot init
+  // for resources with no usable persisted read-set. No-op if the key is unknown.
+  function recomputeResource(key: string): void {
+    const entry = registry.get(key);
+    if (entry) scheduleNotify(entry, {}, null, { source: "feed" });
+  }
+
   function notifyStatsFor(key: string): { hand: number; feed: number } {
     const s = notifyStats.get(key);
     return { hand: s?.hand ?? 0, feed: s?.feed ?? 0 };
@@ -1967,6 +1991,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     loadResourceByKey,
     triggerResourcePush,
     applyDbChange,
+    recomputeResource,
     notifyStatsFor,
   };
 }

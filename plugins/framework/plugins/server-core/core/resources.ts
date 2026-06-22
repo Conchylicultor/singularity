@@ -128,6 +128,7 @@ export interface LiveStateSnapshotHooks {
     paramsKey: string,
     value: unknown,
     watermark: string,
+    tablesRead: readonly string[],
   ) => Promise<void>;
 }
 let liveStateSnapshotHooks: LiveStateSnapshotHooks | null = null;
@@ -216,11 +217,11 @@ const runtime = createResourceRuntime({
     }
     return liveStateSnapshotHooks.captureWatermark();
   },
-  persistSnapshot: (key, paramsKey, value, watermark) => {
+  persistSnapshot: (key, paramsKey, value, watermark, tablesRead) => {
     if (!liveStateSnapshotHooks) {
       throw new Error("persistSnapshot called before live-state-snapshot hooks installed");
     }
-    return liveStateSnapshotHooks.persistSnapshot(key, paramsKey, value, watermark);
+    return liveStateSnapshotHooks.persistSnapshot(key, paramsKey, value, watermark, tablesRead);
   },
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
   // Fan each push outcome out to every registered observer (no-op detector et al).
@@ -249,6 +250,9 @@ export const {
   // L4 DB change-feed router: the change-feed plugin's LISTEN consumer calls this
   // with each parsed DB change to route it through the recompute cascade.
   applyDbChange,
+  // L2 boot init: force a FULL recompute of one resource (no usable persisted
+  // read-set yet), re-persisting its value AND read-set for the next boot.
+  recomputeResource,
   // L4 self-verification counters (hand vs feed) for the read-set debug pane.
   notifyStatsFor,
 } = runtime;

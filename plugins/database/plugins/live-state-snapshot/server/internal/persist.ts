@@ -11,7 +11,7 @@ import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-vie
 // injected `shouldPersist` only needs the boot-critical membership test. The
 // contribution set is fixed at module load, so caching it once is correct.
 let bootCriticalSet: Set<string> | null = null;
-function bootCriticalKeys(): Set<string> {
+export function bootCriticalKeys(): Set<string> {
   if (!bootCriticalSet) {
     bootCriticalSet = new Set(
       Resource.Declare.getContributions()
@@ -43,32 +43,63 @@ export async function captureWatermark(): Promise<string> {
   return xmin;
 }
 
-// Persist the FULL value under (resource_key, params_key) with its watermark.
-// Called by the runtime only on loader success. `value` is serialized to jsonb via
-// the parameter binding (drizzle passes a JS object as a json param).
+// Persist the FULL value under (resource_key, params_key) with its watermark and
+// the per-resource read-set (the tables the loader read while computing `value`,
+// written atomically with it so it is always consistent with the value it
+// describes). Called by the runtime only on loader success. `value` is serialized
+// to jsonb via the parameter binding (drizzle passes a JS object as a json param).
+//
+// `tablesRead` binds as a Postgres text[]: drizzle expands a JS array inside a
+// `sql` template into a comma-separated list of bound params (NOT a single array
+// value), so an `ARRAY[…]` constructor is built explicitly via `sql.join`. An
+// empty array yields `ARRAY[]::text[]`, a valid empty text[] literal.
 export async function persistSnapshot(
   key: string,
   paramsKey: string,
   value: unknown,
   watermark: string,
+  tablesRead: readonly string[],
 ): Promise<void> {
+  const tablesArray = drizzleSql`ARRAY[${drizzleSql.join(
+    tablesRead.map((t) => drizzleSql`${t}`),
+    drizzleSql`, `,
+  )}]::text[]`;
   await db.execute(
     drizzleSql`
       INSERT INTO ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
-        (resource_key, params_key, value, position, updated_at)
+        (resource_key, params_key, value, position, tables_read, updated_at)
       VALUES (
         ${key},
         ${paramsKey},
         ${JSON.stringify(value)}::jsonb,
         ${watermark}::numeric,
+        ${tablesArray},
         now()
       )
       ON CONFLICT (resource_key, params_key) DO UPDATE
         SET value = EXCLUDED.value,
             position = EXCLUDED.position,
+            tables_read = EXCLUDED.tables_read,
             updated_at = EXCLUDED.updated_at
     `,
   );
+}
+
+// Read the persisted read-sets for the param-less ("{}") snapshots in ONE query,
+// for the boot seed. Returns resource_key → string[] (the pg driver returns a
+// text[] column as a JS string[]). A key with an empty `tables_read` is "no usable
+// read-set" — the caller (boot init) force-FULL recomputes it.
+export async function readPersistedReadSets(): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  const res = await db.execute<{ resource_key: string; tables_read: string[] }>(
+    drizzleSql`
+      SELECT resource_key, tables_read
+      FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
+      WHERE params_key = '{}'
+    `,
+  );
+  for (const row of res.rows) out.set(row.resource_key, row.tables_read ?? []);
+  return out;
 }
 
 // Read the persisted param-less ("{}") values for the given resource keys in ONE

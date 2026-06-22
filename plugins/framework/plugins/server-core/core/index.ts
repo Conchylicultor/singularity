@@ -20,6 +20,7 @@ export {
   notificationsWsHandler,
   notifyStatsFor,
   onResourcePush,
+  recomputeResource,
   setRelationResolver,
   setLiveStateSnapshotHooks,
   triggerResourcePush,

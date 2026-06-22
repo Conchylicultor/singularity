@@ -42,6 +42,16 @@ function replayChange(row: ChangelogRow): void {
 // changed tables is FULL-recomputed unconditionally and logged loudly. The
 // listener's connect-time fullSweep covers currently-subscribed resources as
 // additional defense-in-depth.
+//
+// Catch-up is the bounded boot driver. It routes every replayed row through
+// `routeChange → applyDbChange`, which inverts the IN-MEMORY read-set index
+// (`table → resource`). That index is seeded at boot from the persisted
+// `tables_read` column (live-state-snapshot's `onReadyBlocking`), so catch-up
+// works at a cold boot with NO loader having run — previously it depended on the
+// warm/fullSweep path having populated the index first. It also relies on the
+// post-LISTEN ordering documented at the call site in `server/index.ts`: this runs
+// after change-feed's listener has its LISTEN up, so a commit landing after the
+// `SELECT` below is delivered on the live path (no gap).
 export async function runCatchUp(): Promise<void> {
   const floorRes = await db.execute<{ min_position: string | null }>(
     drizzleSql.raw(

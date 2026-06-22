@@ -1,7 +1,8 @@
 # boot-snapshot
 
 Makes a cold page load feel instant by eliminating the boot burst's per-resource
-WS round-trips and the cold buffer cache for **boot-critical** resources. See
+WS round-trips for **boot-critical** resources — they ship in one snapshot
+request. See
 [the cold-load plan](../../../../research/2026-06-14-global-cold-load-instant-boot.md).
 
 A resource opts in **one-sidedly** — a single server declaration in the
@@ -10,8 +11,8 @@ resource's own plugin:
 - **Server (the single source)** — flag the declaration boot-critical:
   `Resource.Declare(myResource, { bootCritical: true })`. The server reads the
   set generically (`Resource.Declare.getContributions().filter(c => c.bootCritical)`),
-  never by name. This drives both the readiness-barrier warm-up and the snapshot
-  endpoint.
+  never by name. This drives the snapshot endpoint and (in the
+  `live-state-snapshot` plugin) the L2 persisted-materialization set.
 - **Client (auto-derived — no second list)** — the boot task no longer maintains
   a parallel client registry. It iterates the **keys** the snapshot already ships
   and resolves each to its client `ResourceDescriptor` via the live-state
@@ -34,16 +35,18 @@ window listeners are not mounted yet during the boot window.)
 
 Scope is **param-less global** resources only — the server can't know a client's
 route params at snapshot time. Route-parametrized resources self-heal via their
-normal sub-ack, now fast because the warm-up primed their tables.
+normal sub-ack.
+
+This plugin no longer runs a server-side warm-up. Cold boot is now a pure
+snapshot read: `live-state-snapshot` persists each boot-critical resource's value
+**and** its read-set durably, seeds the in-memory table→resource index from that
+read-set at boot, and runs a **bounded** changelog catch-up — so no boot-critical
+loader runs at boot unless its tables actually changed during downtime (or it has
+no usable persisted read-set yet). See
+[the L3 plan](../../../../research/2026-06-23-global-live-state-persisted-read-set-no-boot-recompute.md).
 
 How it works:
 
-- **Server warm-up (`onReadyBlocking`)** runs the boot-critical loaders once
-  behind the readiness barrier so PG's buffer cache + the pool are warm before
-  the gateway hot-swaps to this backend. It explicitly awaits `awaitDbReady` +
-  `migrationsReady` (barrier hooks run in parallel) and is best-effort +
-  time-boxed (`WARM_BUDGET_MS`, `Promise.allSettled`) so no loader can wedge the
-  swap.
 - **Snapshot endpoint** `GET /api/resources/boot-snapshot` returns
   `{ resources: Record<key, value> }` — every boot-critical resource loaded in
   one request (a failed loader is omitted, not fatal).
@@ -56,12 +59,12 @@ How it works:
 
 ## Plugin reference
 
-- Description: Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint; server-side buffer-cache warm-up behind the readiness barrier.
+- Description: Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint.
 - Web:
   - Contributes: `Core.Boot`
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.hydrateResource`, `primitives/live-state.resourceDescriptorByKey`, `reports.report`
 - Server:
-  - Uses: `database.awaitDbReady`, `database/live-state-snapshot.readPersistedSnapshots`, `database/migrations.migrationsReady`, `infra/endpoints.implement`
+  - Uses: `database/live-state-snapshot.readPersistedSnapshots`, `infra/endpoints.implement`
   - Routes: `GET /api/resources/boot-snapshot`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

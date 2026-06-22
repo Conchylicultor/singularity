@@ -1,5 +1,9 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { setLiveStateSnapshotHooks } from "@plugins/framework/plugins/server-core/core";
+import {
+  setLiveStateSnapshotHooks,
+  recomputeResource,
+} from "@plugins/framework/plugins/server-core/core";
+import { seedReadSetIndex } from "@plugins/infra/plugins/runtime-profiler/core";
 import { awaitDbReady, db } from "@plugins/database/server";
 import { migrationsReady } from "@plugins/database/plugins/migrations/server";
 import { ensureSnapshotTable } from "./internal/tables-ddl";
@@ -7,6 +11,8 @@ import {
   shouldPersist,
   captureWatermark,
   persistSnapshot,
+  readPersistedReadSets,
+  bootCriticalKeys,
 } from "./internal/persist";
 import { runCatchUp } from "./internal/catch-up";
 import { liveStateChangelogPruneJob } from "./internal/prune";
@@ -38,13 +44,42 @@ export default {
     await migrationsReady;
     await ensureSnapshotTable(db);
     setLiveStateSnapshotHooks({ shouldPersist, captureWatermark, persistSnapshot });
+    // Seed the in-memory loader→table read-set index from the durable
+    // `tables_read` column BEFORE the readiness barrier flips — so the
+    // table→resource inversion (`tableToResources`) is non-empty for catch-up's
+    // first `applyDbChange`, with NO loader run at boot. Only non-empty read-sets
+    // are seeded; an empty one means "no usable read-set" → force-FULL in onReady.
+    const persistedReadSets = await readPersistedReadSets();
+    const seed: Record<string, string[]> = {};
+    for (const [key, tables] of persistedReadSets) {
+      if (tables.length > 0) seed[key] = tables;
+    }
+    seedReadSetIndex(seed);
   },
-  // Bounded catch-up runs after the barrier (alongside change-feed's listener,
-  // which also starts in onReady). It replays the changelog rows committed since
-  // the oldest persisted snapshot floor through the SAME `routeChange` cascade the
-  // live listener uses — converging every persisted resource whose tables changed
-  // while the server was down, and nothing else.
+  // Boot init + bounded catch-up, after the barrier (alongside change-feed's
+  // listener, which also starts in onReady).
   async onReady() {
+    // Force a FULL recompute of each boot-critical resource that has NO usable
+    // persisted read-set yet (first boot, newly-added resource, or the one-time
+    // migration of pre-existing snapshot rows): catch-up can't bound such a
+    // resource (no read-set to route by, possibly no snapshot floor). The
+    // recompute persists both its value AND its read-set for the next boot. On a
+    // steady-state deploy `needsInit` is empty → no forced recomputes. Boot-
+    // critical keys are read GENERICALLY from `Resource.Declare` (never by name).
+    const usable = await readPersistedReadSets();
+    for (const key of bootCriticalKeys()) {
+      if (!usable.get(key)?.length) recomputeResource(key);
+    }
+
+    // ORDERING INVARIANT (gap-free boot): `runCatchUp()` MUST run AFTER the
+    // change-feed listener's LISTEN is established, so any commit landing after
+    // catch-up's `SELECT` produces a NOTIFY on the live path (double-handling is
+    // harmless — catch-up is an idempotent recompute+diff). This holds
+    // structurally: live-state-snapshot statically imports change-feed
+    // (`routeChange`, table constants) → a dependsOn edge → its `onReady` fires
+    // after change-feed's `onReady` (which calls `startListener()`). Do NOT remove
+    // that import edge without re-establishing the ordering another way. See the
+    // plan's "Ordering invariant" section.
     await runCatchUp();
   },
 } satisfies ServerPluginDefinition;

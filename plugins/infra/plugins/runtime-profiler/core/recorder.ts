@@ -469,6 +469,28 @@ export function getReadSetIndex(): Record<string, string[]> {
   return out;
 }
 
+/**
+ * Seed the loader→table read-set index from a persisted snapshot of it (the
+ * durable `tables_read` column on `live_state_snapshot`). Each `seed[key]`'s
+ * tables are UNIONED into `readSetIndex[key]` — append-only, identical to how a
+ * live loader's captured tables merge in `recordEntrySpan`'s finally; it never
+ * clears. Called once at boot (before the readiness barrier) so the in-memory
+ * table→resource inversion (`getReadSetIndex` / `tableToResources`) is non-empty
+ * for the first `applyDbChange` of catch-up, WITHOUT any loader having run.
+ */
+export function seedReadSetIndex(seed: Record<string, readonly string[]>): void {
+  for (const key in seed) {
+    const tables = seed[key]!;
+    if (tables.length === 0) continue;
+    let set = readSetIndex.get(key);
+    if (!set) {
+      set = new Set();
+      readSetIndex.set(key, set);
+    }
+    for (const table of tables) set.add(table);
+  }
+}
+
 export function resetRuntimeProfile(): void {
   for (const kind of KINDS) {
     aggregates[kind].clear();

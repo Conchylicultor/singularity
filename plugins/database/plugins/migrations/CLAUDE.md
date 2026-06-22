@@ -93,7 +93,7 @@ the branch-local migration set is final and `origin/main` is fresh.
   - Uses: `database/derived-views.rebuildDerivedViews`, `primitives/log-channels.Log`
   - Exports: Values: `dryRunPendingMigrations`, `migrationsReady`, `runMigrations`
 - Cross-plugin:
-  - Imported by: `database`, `database/live-state-snapshot`, `infra/boot-snapshot`
+  - Imported by: `database`, `database/live-state-snapshot`
 - Structure:
   - Non-standard folders: `data/`
   - Loose top-level files: `drizzle.config.ts`

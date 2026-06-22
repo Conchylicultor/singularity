@@ -21,6 +21,7 @@ let client: Client | null = null;
 let livenessTimer: ReturnType<typeof setInterval> | null = null;
 let started = false;
 let connecting = false;
+let firstConnect = true;
 let reconnectDelay = RECONNECT_MIN_MS;
 
 // A single raw pg Client on the DIRECT socket (connectionString() bypasses
@@ -66,13 +67,28 @@ async function connect(): Promise<void> {
     client = c;
     reconnectDelay = RECONNECT_MIN_MS; // reset backoff on success
 
-    // Mark-stale-on-(re)connect: a dropped socket may have missed NOTIFYs while
-    // down (or this is the first connect after boot, before which writes were
-    // unobserved). Fire a FULL invalidation across every table we installed a
-    // trigger on so no resource can be stranded stale. applyDbChange drops any
-    // table no resource reads, so sweeping the full table universe is safe and
-    // total — it only does work for currently-subscribed, DB-backed resources.
-    fullSweep();
+    // Mark-stale-on-RECONNECT only — never on the first (boot) connect.
+    //
+    // At cold boot the authoritative driver is the bounded catch-up in
+    // live-state-snapshot (snapshot floor + changelog replay): because LISTEN is
+    // already established here before catch-up runs, replay is precise and
+    // gap-free, and it recomputes ONLY the resources whose tables actually
+    // changed during downtime. An unconditional fullSweep at boot would instead
+    // re-run + re-persist every boot-critical loader, defeating that precision.
+    // So skip the sweep on the first successful connect.
+    //
+    // On a genuine RECONNECT (mid-session socket drop), a dropped socket may have
+    // missed NOTIFYs while down, so fullSweep stays as defense-in-depth: it fires
+    // a FULL invalidation across every triggered table. applyDbChange drops any
+    // table no resource reads, so the sweep only does work for currently-
+    // subscribed, DB-backed resources.
+    //
+    // See research/2026-06-23-global-live-state-persisted-read-set-no-boot-recompute.md.
+    if (firstConnect) {
+      firstConnect = false; // flips only AFTER a successful first connect
+    } else {
+      fullSweep();
+    }
 
     log.publish("[change-feed] LISTEN live_state established");
   } catch (err) {
