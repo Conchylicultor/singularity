@@ -2039,7 +2039,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `apps/debug/shell.DebugApp`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/badge.BadgeVariant`, `primitives/css/cluster.Cluster`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/log-channels.clientLog`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
         - Exports: Values: `renderProfilerPane`
       - Core:
-        - Exports: Types: `HookChange`, `HookKind`, `InitiatorStat`, `ProfilerReport`, `ProfilerStartOptions`; Values: `RENDER_PROFILER_CHANNEL`, `RENDER_PROFILER_GLOBAL`
+        - Exports: Types: `HookChange`, `HookKind`, `InitiatorStat`, `ProfilerReport`, `ProfilerStartOptions`, `RemountCause`, `RemountStat`; Values: `RENDER_PROFILER_CHANNEL`, `RENDER_PROFILER_GLOBAL`
     - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
       - Web:
         - Slots: `reportsPane.Actions`

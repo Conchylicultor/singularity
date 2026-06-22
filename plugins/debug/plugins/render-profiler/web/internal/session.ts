@@ -6,9 +6,14 @@ import {
   type InitiatorStat,
   type ProfilerReport,
   type ProfilerStartOptions,
+  type RemountStat,
 } from "../../core";
 import type { FiberRoot } from "./react-types";
-import { collectInitiators, getComponentName } from "./fiber-walk";
+import {
+  collectCommit,
+  getComponentName,
+  type PositionOccupant,
+} from "./fiber-walk";
 import { classifyHookChanges } from "./hook-classify";
 import { isExcludedFiber } from "./global-api";
 
@@ -19,6 +24,14 @@ const FLUSH_INTERVAL_MS = 250;
 // ---- Module-level session state -------------------------------------------
 
 const stats = new Map<string, InitiatorStat>();
+// Remount aggregation, keyed by positionKey (a different identity space from the
+// initiator signature — a position with a from→to type, not a single component).
+const remounts = new Map<string, RemountStat>();
+// Previous commit's recorded position occupants; diffed against each commit's
+// positions to detect remounts. Swapped EVERY commit (not on the throttled
+// flush) or the diff goes stale and reports phantom remounts.
+let prevPositions = new Map<string, PositionOccupant>();
+let remountTruncated = false;
 let totalCommits = 0;
 let startedAtMs: number | null = null;
 let running = false;
@@ -41,6 +54,7 @@ function emptyReport(): ProfilerReport {
     totalCommits: 0,
     commitsPerSec: 0,
     initiators: [],
+    remounts: [],
   };
 }
 
@@ -80,6 +94,10 @@ function computeReport(): ProfilerReport {
     }))
     .sort((a, b) => b.commitCount - a.commitCount);
 
+  const remountStats = Array.from(remounts.values()).sort(
+    (a, b) => b.count - a.count,
+  );
+
   return {
     running,
     startedAtMs,
@@ -87,6 +105,8 @@ function computeReport(): ProfilerReport {
     totalCommits,
     commitsPerSec: totalCommits / secs,
     initiators,
+    remounts: remountStats,
+    remountTruncated: remountTruncated || undefined,
     bridgeMissing: bridgeMissing || undefined,
   };
 }
@@ -108,6 +128,8 @@ interface CommitInitiator {
   componentName: string;
   ancestorPath: string[];
   changedHooks: HookChange[];
+  /** True when this signature's fiber freshly mounted this commit. */
+  isMount: boolean;
 }
 
 function onCommit(root: FiberRoot): void {
@@ -115,13 +137,17 @@ function onCommit(root: FiberRoot): void {
   // One commit per onCommit call — the headline "commits/s" rate.
   totalCommits += 1;
 
+  const { initiators, currentPositions, remounts: detected, truncated } =
+    collectCommit(root, prevPositions);
+  if (truncated) remountTruncated = true;
+
   // Dedupe by signature WITHIN this commit: a repeated list row (e.g. 180
   // SortableItem fibers) shares one signature and must count as ONE commit for
   // that initiator (not 180), or commitCount would exceed totalCommits and the
   // per-initiator rate would be meaningless. We keep the per-commit fiber count
   // as `instanceCount` — a separate, useful signal.
   const perCommit = new Map<string, CommitInitiator & { instances: number }>();
-  for (const { fiber, ancestorPath } of collectInitiators(root)) {
+  for (const { fiber, ancestorPath, isMount } of initiators) {
     if (isExcludedFiber(fiber)) continue;
     const componentName = getComponentName(fiber);
     const changedHooks = classifyHookChanges(fiber).filter((h) => h.changed);
@@ -129,11 +155,14 @@ function onCommit(root: FiberRoot): void {
     const seen = perCommit.get(signature);
     if (seen) {
       seen.instances += 1;
+      // The signature counts as a mount for this commit if any instance mounted.
+      if (isMount) seen.isMount = true;
     } else {
       perCommit.set(signature, {
         componentName,
         ancestorPath,
         changedHooks,
+        isMount,
         instances: 1,
       });
     }
@@ -144,6 +173,8 @@ function onCommit(root: FiberRoot): void {
     const existing = stats.get(signature);
     if (existing) {
       existing.commitCount += 1;
+      if (info.isMount) existing.mountCount += 1;
+      else existing.updateCount += 1;
       existing.instanceCount = info.instances;
       existing.lastSeenMs = now;
       existing.changedHooks = info.changedHooks;
@@ -154,6 +185,8 @@ function onCommit(root: FiberRoot): void {
         componentName: info.componentName,
         ancestorPath: info.ancestorPath,
         commitCount: 1,
+        mountCount: info.isMount ? 1 : 0,
+        updateCount: info.isMount ? 0 : 1,
         instanceCount: info.instances,
         ratePerSec: 0,
         firstSeenMs: now,
@@ -162,6 +195,33 @@ function onCommit(root: FiberRoot): void {
       });
     }
   }
+
+  // Aggregate remounts by positionKey: bump the count and refresh from/to/cause
+  // to the most recent occurrence.
+  for (const r of detected) {
+    const existing = remounts.get(r.positionKey);
+    if (existing) {
+      existing.count += 1;
+      existing.fromType = r.fromType;
+      existing.toType = r.toType;
+      existing.cause = r.cause;
+      existing.ancestorPath = r.ancestorPath;
+    } else {
+      remounts.set(r.positionKey, {
+        positionKey: r.positionKey,
+        ancestorPath: r.ancestorPath,
+        fromType: r.fromType,
+        toType: r.toType,
+        cause: r.cause,
+        count: 1,
+      });
+    }
+  }
+
+  // Swap the position snapshot EVERY commit (not on the throttled flush), or the
+  // diff goes stale and reports phantom remounts.
+  prevPositions = currentPositions;
+
   maybeFlush();
 }
 
@@ -172,6 +232,9 @@ function bridgeSubscribers(): Set<(root: FiberRoot) => void> | undefined {
 export function startSession(opts?: ProfilerStartOptions): void {
   if (running) return;
   stats.clear();
+  remounts.clear();
+  prevPositions = new Map();
+  remountTruncated = false;
   totalCommits = 0;
   bridgeMissing = false;
   maxDurationMs = opts?.maxDurationMs ?? DEFAULT_MAX_DURATION_MS;

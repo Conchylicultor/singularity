@@ -45,6 +45,32 @@ export interface InitiatorStat {
   firstSeenMs: number;
   lastSeenMs: number;
   changedHooks: HookChange[];
+  /** Commits where this initiator's fiber freshly mounted (`alternate === null`). */
+  mountCount: number;
+  /** Commits where this initiator's fiber updated in place (`alternate !== null`). */
+  updateCount: number;
+}
+
+/**
+ * Structural reason a position was destroyed-and-rebuilt rather than updated in
+ * place. `element-type` = the rendered element type flipped (e.g. `Fragment→div`);
+ * `key-change` = same type but a different React `key`; `unknown` reserved.
+ */
+export type RemountCause = "element-type" | "key-change" | "unknown";
+
+/** Aggregated stats for one remounting reconciliation position over a session. */
+export interface RemountStat {
+  /** key/index-keyed structural path identifying the reconciliation position. */
+  positionKey: string;
+  /** Nearest component ancestor display names, nearest-last (display). */
+  ancestorPath: string[];
+  /** Prev occupant name at this position. */
+  fromType: string;
+  /** Current occupant name at this position. */
+  toType: string;
+  cause: RemountCause;
+  /** Number of commits in which this position remounted. */
+  count: number;
 }
 
 /** The ranked snapshot the pane and headless callers read. */
@@ -55,6 +81,10 @@ export interface ProfilerReport {
   totalCommits: number;
   commitsPerSec: number;
   initiators: InitiatorStat[];
+  /** Remounting positions ranked by count desc. */
+  remounts: RemountStat[];
+  /** Set when the position map hit POSITION_MAP_CAP (some remounts may be missed). */
+  remountTruncated?: boolean;
   /**
    * Set when the passive commit bridge (index.html) was not installed — e.g.
    * the frontend was not rebuilt after this feature landed. The engine cannot

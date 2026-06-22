@@ -51,6 +51,9 @@ export function InitiatorRow({ stat }: { stat: InitiatorStat }) {
           {stat.commitCount} commits · {stat.ratePerSec.toFixed(1)}/s
           {stat.instanceCount > 1 ? ` · ×${stat.instanceCount} instances` : ""}
         </Text>
+        <Text as="div" variant="caption" tone="muted">
+          {stat.mountCount} mounts · {stat.updateCount} updates
+        </Text>
         {stat.changedHooks.length > 0 && (
           <Cluster>
             {stat.changedHooks.map((h) => (

@@ -99,8 +99,26 @@ if (initiators.length === 0) {
       .map((h) => `${HOOK_LABEL[h.kind] ?? h.kind} #${h.index}`)
       .join(", ");
     const instances = s.instanceCount > 1 ? ` ×${s.instanceCount}` : "";
+    const mu = ` (${s.mountCount}m/${s.updateCount}u)`;
     console.log(
-      `${s.commitCount.toString().padStart(5)}  ${s.ratePerSec.toFixed(1).padStart(5)}/s  ${path}${s.componentName}${instances}${hooks ? `  [${hooks}]` : ""}`,
+      `${s.commitCount.toString().padStart(5)}  ${s.ratePerSec.toFixed(1).padStart(5)}/s  ${path}${s.componentName}${instances}${mu}${hooks ? `  [${hooks}]` : ""}`,
+    );
+  }
+}
+
+const remounts = (report.remounts ?? []).slice(0, top);
+console.log("");
+console.log("remounts:");
+if (report.remountTruncated) {
+  console.log("(position map hit its cap — some remounts may be missed)");
+}
+if (remounts.length === 0) {
+  console.log("(no remounts recorded — nothing destroyed-and-rebuilt)");
+} else {
+  for (const r of remounts) {
+    const path = r.ancestorPath.length ? r.ancestorPath.join(" > ") + " > " : "";
+    console.log(
+      `${r.count.toString().padStart(5)}  ${path}${r.fromType} > ${r.toType}  [${r.cause}]`,
     );
   }
 }

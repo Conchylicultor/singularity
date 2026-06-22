@@ -13,6 +13,8 @@ export const FunctionComponent = 0;
 export const ClassComponent = 1;
 export const HostRoot = 3;
 export const HostComponent = 5;
+export const HostText = 6;
+export const Fragment = 7;
 export const ForwardRef = 11;
 export const MemoComponent = 14;
 export const SimpleMemoComponent = 15;
@@ -28,6 +30,8 @@ export interface Fiber {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- React internal: component fn/class/forwardRef/memo object
   type: any;
   key: string | null;
+  /** React's authoritative per-parent reconciliation slot index. */
+  index: number;
   flags: number;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any -- React internal: hook linked-list node
   memoizedState: any;

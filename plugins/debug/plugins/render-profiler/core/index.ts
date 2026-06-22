@@ -2,6 +2,8 @@ export type {
   HookKind,
   HookChange,
   InitiatorStat,
+  RemountCause,
+  RemountStat,
   ProfilerReport,
   ProfilerStartOptions,
 } from "./types";

@@ -10,12 +10,14 @@ import { MdInsights } from "react-icons/md";
 import { useProfilerReport, startSession, stopSession } from "../internal/session";
 import { registerExcludedComponent } from "../internal/global-api";
 import { InitiatorRow } from "./initiator-row";
+import { RemountRow } from "./remount-row";
 
 const SESSION_MAX_MS = 30_000;
 
 export function RenderProfilerPane() {
   const report = useProfilerReport();
-  const { running, totalCommits, commitsPerSec, durationMs, initiators } = report;
+  const { running, totalCommits, commitsPerSec, durationMs, initiators, remounts } =
+    report;
 
   return (
     <Stack gap="none" className="h-full">
@@ -70,11 +72,34 @@ export function RenderProfilerPane() {
             </Placeholder>
           </Inset>
         ) : (
-          <ul className="divide-y">
-            {initiators.map((stat) => (
-              <InitiatorRow key={stat.signature} stat={stat} />
-            ))}
-          </ul>
+          <Stack gap="none">
+            <ul className="divide-y">
+              {initiators.map((stat) => (
+                <InitiatorRow key={stat.signature} stat={stat} />
+              ))}
+            </ul>
+            {(remounts.length > 0 || report.remountTruncated) && (
+              <>
+                <Inset x="md" y="2xs" className="border-t bg-muted/30">
+                  <Text as="div" variant="eyebrow" tone="muted">
+                    Remounts
+                  </Text>
+                </Inset>
+                {report.remountTruncated && (
+                  <Inset x="md" y="2xs">
+                    <Text as="div" variant="caption" tone="muted">
+                      Position map hit its cap — some remounts may be missed.
+                    </Text>
+                  </Inset>
+                )}
+                <ul className="divide-y">
+                  {remounts.map((stat) => (
+                    <RemountRow key={stat.positionKey} stat={stat} />
+                  ))}
+                </ul>
+              </>
+            )}
+          </Stack>
         )}
       </Scroll>
     </Stack>
