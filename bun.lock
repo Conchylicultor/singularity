@@ -436,6 +436,10 @@
       "name": "@singularity/plugin-apps-sonata-sources-midi-folders",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar": {
+      "name": "@singularity/plugin-apps-sonata-sources-ultimate-guitar",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/theory": {
       "name": "@singularity/plugin-apps-sonata-theory",
       "version": "0.0.1",
@@ -3981,6 +3985,8 @@
     "@singularity/plugin-apps-sonata-sources-midi": ["@singularity/plugin-apps-sonata-sources-midi@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/midi"],
 
     "@singularity/plugin-apps-sonata-sources-midi-folders": ["@singularity/plugin-apps-sonata-sources-midi-folders@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/midi/plugins/folders"],
+
+    "@singularity/plugin-apps-sonata-sources-ultimate-guitar": ["@singularity/plugin-apps-sonata-sources-ultimate-guitar@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar"],
 
     "@singularity/plugin-apps-sonata-theory": ["@singularity/plugin-apps-sonata-theory@workspace:plugins/apps/plugins/sonata/plugins/theory"],
 

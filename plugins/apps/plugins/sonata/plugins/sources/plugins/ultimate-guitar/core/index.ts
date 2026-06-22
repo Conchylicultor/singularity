@@ -1,0 +1,16 @@
+/**
+ * `@plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/core` —
+ * pure, framework-free public API for the Ultimate Guitar source.
+ *
+ * Re-exports the normalized raw-tab schema/type, the URL→tab-id resolver, and
+ * the fetch-error taxonomy. This leaf has ONLY a `core` runtime and depends on
+ * nothing but `zod`.
+ */
+
+export { UgTabSchema } from "./raw-tab";
+export type { UgTab } from "./raw-tab";
+
+export { extractUgTabId } from "./tab-url";
+
+export { UgFetchError } from "./errors";
+export type { UgFetchErrorKind } from "./errors";
