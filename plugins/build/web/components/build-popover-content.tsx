@@ -1,4 +1,5 @@
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -150,16 +151,15 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
     <Stack gap="none" className="relative border-b">
       <div className="flex items-center justify-between border-b px-md py-xs">
         <Text as="span" variant="label" className="text-muted-foreground">Logs</Text>
-        <Button
-          variant="ghost"
-          aspect="icon"
-          className="size-6"
-          onClick={copyLogs}
-          disabled={entries.length === 0}
-          aria-label="Copy logs"
-        >
-          <MdContentCopy />
-        </Button>
+        <ControlSizeProvider size="xs">
+          <IconButton
+            icon={MdContentCopy}
+            label="Copy logs"
+            variant="ghost"
+            onClick={copyLogs}
+            disabled={entries.length === 0}
+          />
+        </ControlSizeProvider>
       </div>
       <Scroll
         axis="y"

@@ -1,4 +1,5 @@
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useRef, useCallback, useEffect, type ReactElement } from "react";
 import { MdContentCopy, MdCheck, MdClose } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";
@@ -52,15 +53,9 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
     <Stack gap="xs">
       <div className="flex items-center justify-between pb-xs">
         <Text as="span" variant="label" className="text-muted-foreground">Logs</Text>
-        <Button
-          variant="ghost"
-          aspect="icon"
-          className="size-6"
-          onClick={copyAll}
-          aria-label="Copy logs"
-        >
-          <MdContentCopy />
-        </Button>
+        <ControlSizeProvider size="xs">
+          <IconButton icon={MdContentCopy} label="Copy logs" variant="ghost" onClick={copyAll} />
+        </ControlSizeProvider>
       </div>
       {steps.map((step) => (
         <StepSection key={step.id} step={step} />
@@ -170,16 +165,15 @@ function LiveLogs(): ReactElement {
           {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline word spacing after "Logs" label text */}
           Logs <span className="text-muted-foreground/60 ml-1">Live</span>
         </Text>
-        <Button
-          variant="ghost"
-          aspect="icon"
-          className="size-6"
-          onClick={copyLogs}
-          disabled={entries.length === 0}
-          aria-label="Copy logs"
-        >
-          <MdContentCopy />
-        </Button>
+        <ControlSizeProvider size="xs">
+          <IconButton
+            icon={MdContentCopy}
+            label="Copy logs"
+            variant="ghost"
+            onClick={copyLogs}
+            disabled={entries.length === 0}
+          />
+        </ControlSizeProvider>
       </div>
       <Scroll
         axis="y"

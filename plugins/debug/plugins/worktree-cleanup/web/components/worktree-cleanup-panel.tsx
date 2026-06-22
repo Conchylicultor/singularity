@@ -1,4 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MdDelete, MdFolderDelete, MdRefresh, MdWarning } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -228,9 +229,7 @@ export function WorktreeCleanupPanel() {
             <MdFolderDelete className="size-4 mr-1.5" />
             Delete {safeCount} safe
           </Button>
-          <Button aspect="icon" variant="outline" onClick={() => load()} loading={loading}>
-            <MdRefresh className="size-4" />
-          </Button>
+          <IconButton icon={MdRefresh} label="Refresh" variant="outline" onClick={() => load()} loading={loading} />
         </div>
       </div>
 

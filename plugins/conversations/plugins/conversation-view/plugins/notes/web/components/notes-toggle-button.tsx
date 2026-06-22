@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { MdStickyNote2 } from "react-icons/md";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConversationNote } from "../internal/use-conversation-note";
@@ -15,15 +15,12 @@ export function NotesToggleButton({
   if (pending || noteExists) return null;
 
   return (
-    <Button
+    <IconButton
+      icon={MdStickyNote2}
+      label={isVisible ? "Hide notes" : "Add note"}
       variant={isVisible ? "secondary" : "ghost"}
-      aspect="icon"
-      title={isVisible ? "Hide notes" : "Add note"}
-      aria-label={isVisible ? "Hide notes" : "Add note"}
       aria-pressed={isVisible}
       onClick={toggleVisible}
-    >
-      <MdStickyNote2 className="size-3.5" />
-    </Button>
+    />
   );
 }

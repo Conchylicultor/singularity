@@ -1,4 +1,5 @@
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ControlSizeProvider, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useRef, useState } from "react";
 import { MdEdit } from "react-icons/md";
@@ -87,15 +88,14 @@ export function DescriptionView({
         <span className="text-muted-foreground">Add a description…</span>
       )}
       <Pin to="top-right" offset="xs" className={hoverRevealTarget}>
-        <Button
-          variant="ghost"
-          aspect="icon"
-          className="size-6"
-          title="Edit description"
-          onClick={() => enterEdit(null)}
-        >
-          <MdEdit className="size-3.5" />
-        </Button>
+        <ControlSizeProvider size="xs">
+          <IconButton
+            icon={MdEdit}
+            label="Edit description"
+            variant="ghost"
+            onClick={() => enterEdit(null)}
+          />
+        </ControlSizeProvider>
       </Pin>
     </Text>
   );

@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { MdReplay } from "react-icons/md";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConversation } from "@plugins/conversations/web";
@@ -45,16 +45,14 @@ export function ResumeButton({
   }
 
   return (
-    <Button
+    <IconButton
+      icon={MdReplay}
+      label="Resume"
+      tooltip={resume.isPending ? "Resuming…" : tooltip}
       variant="outline"
-      aspect="icon"
-      title={resume.isPending ? "Resuming…" : tooltip}
-      aria-label="Resume"
       loading={resume.isPending}
       disabled={!canResume}
       onClick={onClick}
-    >
-      <MdReplay className="size-3.5" />
-    </Button>
+    />
   );
 }

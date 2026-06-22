@@ -8,7 +8,7 @@
 - Web:
   - Slots: `broadcastsPane.Actions`
   - Contributes: `Pane.Register` "debug-broadcasts", `DebugApp.Sidebar` "Broadcasts" → `component`
-  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
+  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
   - Exports: Values: `broadcastsPane`
 - Server:
   - Uses: `infra/endpoints.implement`, `infra/worktree.ensureMainWorktreeRoot`

@@ -1,4 +1,5 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useCallback, useMemo } from "react";
 import { MdAdd, MdDelete, MdRefresh } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -114,15 +115,14 @@ export function BroadcastsPanel() {
           )}
         </div>
         <div className="flex shrink-0 items-center gap-xs">
-          <Button
-            variant="ghost"
-            aspect="icon"
-            className="size-7"
-            onClick={() => refetch()}
-            title="Refresh"
-          >
-            <MdRefresh className="size-4" />
-          </Button>
+          <ControlSizeProvider size="sm">
+            <IconButton
+              icon={MdRefresh}
+              label="Refresh"
+              variant="ghost"
+              onClick={() => refetch()}
+            />
+          </ControlSizeProvider>
           <Button
             className="h-7 gap-xs"
             onClick={() => setShowForm((v) => !v)}
@@ -274,16 +274,16 @@ export function BroadcastsPanel() {
                     </div>
                   )}
                 </div>
-                <Button
-                  variant="ghost"
-                  aspect="icon"
-                  className="size-6 text-muted-foreground hover:text-destructive"
-                  loading={saving}
-                  onClick={() => handleDelete(i)}
-                  title="Delete"
-                >
-                  <MdDelete className="size-4" />
-                </Button>
+                <ControlSizeProvider size="xs">
+                  <IconButton
+                    icon={MdDelete}
+                    label="Delete"
+                    variant="ghost"
+                    className="text-muted-foreground hover:text-destructive"
+                    loading={saving}
+                    onClick={() => handleDelete(i)}
+                  />
+                </ControlSizeProvider>
               </li>
             ))}
           </ul>

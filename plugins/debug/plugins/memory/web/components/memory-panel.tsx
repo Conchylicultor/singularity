@@ -1,4 +1,5 @@
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ControlSizeProvider, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -88,15 +89,14 @@ export function MemoryPanel() {
           <SectionLabel as="span" className="font-medium">
             Memory files
           </SectionLabel>
-          <Button
-            variant="ghost"
-            aspect="icon"
-            className="size-6"
-            onClick={() => loadList()}
-            title="Refresh"
-          >
-            <MdRefresh className="size-4" />
-          </Button>
+          <ControlSizeProvider size="xs">
+            <IconButton
+              icon={MdRefresh}
+              label="Refresh"
+              variant="ghost"
+              onClick={() => loadList()}
+            />
+          </ControlSizeProvider>
         </div>
         <Scroll fill className="py-xs">
           {grouped.map(({ type, items }) => (

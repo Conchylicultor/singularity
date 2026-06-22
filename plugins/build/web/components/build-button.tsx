@@ -1,4 +1,5 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState, useEffect } from "react";
 import { useResource, useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
 import { MdOpenInFull, MdRefresh, MdBuild } from "react-icons/md";
@@ -101,18 +102,17 @@ function BuildButtonInner({
     >
       <div className="flex items-center justify-between border-b px-md py-sm">
         <Text as="span" variant="label">Builds</Text>
-        <Button
-          variant="ghost"
-          aspect="icon"
-          className="size-6"
-          onClick={() => {
-            setOpen(false);
-            openPane(buildPane, {}, { mode: "root" });
-          }}
-          aria-label="Open in pane"
-        >
-          <MdOpenInFull className="size-3" />
-        </Button>
+        <ControlSizeProvider size="xs">
+          <IconButton
+            icon={MdOpenInFull}
+            label="Open in pane"
+            variant="ghost"
+            onClick={() => {
+              setOpen(false);
+              openPane(buildPane, {}, { mode: "root" });
+            }}
+          />
+        </ControlSizeProvider>
       </div>
       <BuildPopoverContent
         variant="popover"
