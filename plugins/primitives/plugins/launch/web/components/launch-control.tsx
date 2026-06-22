@@ -1,4 +1,5 @@
 import { Button, ButtonGroup, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useState } from "react";
 import { MdPlayArrow, MdExpandMore, MdCheck } from "react-icons/md";
 import { useOpenPane, type PaneOpenMode } from "@plugins/primitives/plugins/pane/web";
@@ -135,19 +136,16 @@ export function LaunchControl({
             {id === defaultModel && <MdCheck className="size-3.5 opacity-70" />}
           </span>
           <span className="flex items-center gap-xs">
-            <Button
+            <IconButton
+              icon={MdPlayArrow}
+              label={`Launch ${MODEL_REGISTRY[id].label}`}
               variant="ghost"
-              aspect="icon"
-              aria-label={`Launch ${MODEL_REGISTRY[id].label}`}
-              title={`Launch ${MODEL_REGISTRY[id].label}`}
               onClick={(e) => {
                 e.stopPropagation();
                 return launch(id, e);
               }}
               className="opacity-0 pointer-events-none group-hover/dropdown-menu-item:opacity-100 group-hover/dropdown-menu-item:pointer-events-auto"
-            >
-              <MdPlayArrow className="size-3.5" />
-            </Button>
+            />
             {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-0 resets the Kbd primitive's default left margin in this inline row */}
             <Kbd className="ml-0 text-muted-foreground border-border bg-muted">
               {formatShortcutLabel(`mod+${i + 1}`)}
@@ -161,6 +159,7 @@ export function LaunchControl({
   if (size === "icon") {
     return (
       <ButtonGroup className={className}>
+        {/* eslint-disable-next-line icon-button/prefer-icon-button -- per-model glyph size; IconButton hardcodes the glyph */}
         <Button
           variant="ghost"
           aspect="icon"

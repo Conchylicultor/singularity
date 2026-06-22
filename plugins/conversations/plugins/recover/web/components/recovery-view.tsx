@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdRestore } from "react-icons/md";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -189,16 +189,17 @@ function ClusterGroup({
           <Text as="span" variant="caption" className="font-medium">
             {formatTime(endedAt)} — {group.length} conversations closed
           </Text>
-          <Button
-            variant="outline"
-            onClick={() => onRestore(groupIds)}
-            loading={anyPending}
-            className="h-7 text-caption"
-          >
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-            <MdRestore className="size-3.5 mr-1" />
-            Restore all ({group.length})
-          </Button>
+          <ControlSizeProvider size="sm">
+            <Button
+              variant="outline"
+              onClick={() => onRestore(groupIds)}
+              loading={anyPending}
+            >
+              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
+              <MdRestore className="size-3.5 mr-1" />
+              Restore all ({group.length})
+            </Button>
+          </ControlSizeProvider>
         </div>
       )}
       {group.map((conversation) => (
@@ -237,16 +238,17 @@ function ConversationRow({
             {conversation.endedAt && <span>{formatTime(conversation.endedAt)}</span>}
           </div>
         </div>
-        <Button
-          variant="outline"
-          onClick={onRestore}
-          loading={pending}
-          className="h-7 text-caption"
-        >
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-          <MdRestore className="size-3.5 mr-1" />
-          Restore
-        </Button>
+        <ControlSizeProvider size="sm">
+          <Button
+            variant="outline"
+            onClick={onRestore}
+            loading={pending}
+          >
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
+            <MdRestore className="size-3.5 mr-1" />
+            Restore
+          </Button>
+        </ControlSizeProvider>
       </div>
       {error && (
         <div className="px-lg py-xs bg-muted/10">

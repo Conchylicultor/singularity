@@ -122,14 +122,14 @@ export function BroadcastsPanel() {
               variant="ghost"
               onClick={() => refetch()}
             />
+            <Button
+              className="gap-xs"
+              onClick={() => setShowForm((v) => !v)}
+            >
+              <MdAdd className="size-4" />
+              Add
+            </Button>
           </ControlSizeProvider>
-          <Button
-            className="h-7 gap-xs"
-            onClick={() => setShowForm((v) => !v)}
-          >
-            <MdAdd className="size-4" />
-            Add
-          </Button>
         </div>
       </div>
 
@@ -215,26 +215,26 @@ export function BroadcastsPanel() {
           </div>
 
           {/* Form actions */}
-          <Stack direction="row" gap="sm" justify="end">
-            <Button
-              variant="ghost"
-              className="h-7"
-              onClick={() => {
-                setShowForm(false);
-                setForm(defaultForm);
-              }}
-            >
-              Cancel
-            </Button>
-            <Button
-              className="h-7"
-              loading={saving}
-              disabled={!form.message.trim()}
-              onClick={() => handleAdd()}
-            >
-              Add
-            </Button>
-          </Stack>
+          <ControlSizeProvider size="sm">
+            <Stack direction="row" gap="sm" justify="end">
+              <Button
+                variant="ghost"
+                onClick={() => {
+                  setShowForm(false);
+                  setForm(defaultForm);
+                }}
+              >
+                Cancel
+              </Button>
+              <Button
+                loading={saving}
+                disabled={!form.message.trim()}
+                onClick={() => handleAdd()}
+              >
+                Add
+              </Button>
+            </Stack>
+          </ControlSizeProvider>
         </Stack>
       )}
 

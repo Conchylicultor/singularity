@@ -1,4 +1,4 @@
-import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, ControlSizeProvider, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useContext, useEffect, useRef, useState } from "react";
 import { MdCheck } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -63,13 +63,15 @@ const SecretRenderer: FieldRendererComponent<string> = ({ field, value, onChange
             <MdCheck className="size-3.5" />
             <Text variant="caption">Configured</Text>
           </Stack>
-          <Button
-            variant="ghost"
-            className="h-6 px-sm text-caption"
-            onClick={() => setEditing(true)}
-          >
-            Replace
-          </Button>
+          <ControlSizeProvider size="xs">
+            <Button
+              variant="ghost"
+              className="px-sm"
+              onClick={() => setEditing(true)}
+            >
+              Replace
+            </Button>
+          </ControlSizeProvider>
         </Stack>
       </Stack>
     );

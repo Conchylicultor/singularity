@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdAdd } from "react-icons/md";
 import { useBlockEditor } from "../block-editor-context";
 import { BlockTypeMenu } from "./block-type-menu";
@@ -12,20 +12,22 @@ export function AddBlockMenu() {
   const { insert } = useBlockEditor();
 
   return (
-    <BlockTypeMenu
-      align="start"
-      side="bottom"
-      onSelect={(block) => insert(block.type, block.empty?.() ?? {})}
-      trigger={
-        <Button
-          type="button"
-          variant="ghost"
-          className="text-muted-foreground hover:text-foreground h-7 gap-xs px-sm text-body"
-        >
-          <MdAdd className="size-4" />
-          Add block
-        </Button>
-      }
-    />
+    <ControlSizeProvider size="sm">
+      <BlockTypeMenu
+        align="start"
+        side="bottom"
+        onSelect={(block) => insert(block.type, block.empty?.() ?? {})}
+        trigger={
+          <Button
+            type="button"
+            variant="ghost"
+            className="text-muted-foreground hover:text-foreground gap-xs px-sm"
+          >
+            <MdAdd className="size-4" />
+            Add block
+          </Button>
+        }
+      />
+    </ControlSizeProvider>
   );
 }

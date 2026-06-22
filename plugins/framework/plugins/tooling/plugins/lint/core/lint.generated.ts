@@ -39,6 +39,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/css/plugins/viewport-overlay", id: "primitives.css.viewport-overlay", loader: () => import("@plugins/primitives/plugins/css/plugins/viewport-overlay/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/z-layers", id: "primitives.css.z-layers", loader: () => import("@plugins/primitives/plugins/css/plugins/z-layers/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/data-table", id: "primitives.data-table", loader: () => import("@plugins/primitives/plugins/data-table/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/icon-button", id: "primitives.icon-button", loader: () => import("@plugins/primitives/plugins/icon-button/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/live-state", id: "primitives.live-state", loader: () => import("@plugins/primitives/plugins/live-state/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/loading", id: "primitives.loading", loader: () => import("@plugins/primitives/plugins/loading/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/log-channels", id: "primitives.log-channels", loader: () => import("@plugins/primitives/plugins/log-channels/lint"), dependsOn: [] },

@@ -32,8 +32,19 @@ const createRule = ESLintUtils.RuleCreator(
  *      height and no horizontal padding, so it is NOT flagged here — that shape
  *      stays the domain of `badge/no-adhoc-chip` / `row`.
  *
- * Neither check has an auto-fix: choosing the right primitive + size variant and
- * adding the import are unsafe to mechanize.
+ *   C. A fixed-height class on the `<Button>`/`<IconButton>` PRIMITIVES — a
+ *      `className` carrying a `h-N`/`size-N` base-class. The type lock
+ *      (`size?: never`) removed the `size` *prop*, but `className="size-6"` IS
+ *      the `xs` control height written by hand: the same per-instance density
+ *      escape, just relocated to the class string. Height is ambient (set once
+ *      on the region via `<ControlSizeProvider size>` or a slot's `controlSize`),
+ *      so a per-instance height override desyncs the control from its neighbors.
+ *      Only digit-led `h-`/`size-` match — `min-h-0`, `h-auto`, `h-full`, and
+ *      fixed *width* (`w-N`, on a text button) stay legal; only height is owned
+ *      by the scale.
+ *
+ * None of these checks has an auto-fix: choosing the right primitive + region
+ * density and adding the import are unsafe to mechanize.
  */
 
 // Fixed-height marker: `h-7`, `h-6`, … or the `size-*` shorthand `size-8`, ….
@@ -138,6 +149,9 @@ function baseClass(token: string): string {
 }
 
 const HOST_TAGS = new Set(["button", "a"]);
+// Sanctioned control PRIMITIVES whose height is ambient — a per-instance fixed
+// height/size class on either is the relocated density escape (Check C).
+const CONTROL_COMPONENTS = new Set(["Button", "IconButton"]);
 
 export default createRule({
   name: "no-adhoc-control",
@@ -145,7 +159,7 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow divergent/hand-rolled controls: importing buttonVariants, or a raw button/a styled with fixed height + horizontal padding + rounded. Size controls through <Button>/<IconButton>/<ButtonGroup> and the shared control-* scale.",
+        "Disallow divergent/hand-rolled controls: importing buttonVariants, a raw button/a styled with fixed height + horizontal padding + rounded, or a fixed h-*/size-* class on the <Button>/<IconButton> primitives. Size controls through <Button>/<IconButton>/<ButtonGroup> and the shared control-* scale, set once per region.",
     },
     schema: [],
     messages: {
@@ -153,6 +167,8 @@ export default createRule({
         "Do not import `buttonVariants`. Style through the <Button> primitive (or <ButtonGroup> for split/segmented controls); applying buttonVariants to a non-button element is the divergence escape hatch this rule prevents.",
       adhocControl:
         "Hand-rolled button detected (fixed height + horizontal padding + rounded). Use <Button>/<IconButton> for actions, or <ButtonGroup> for split/segmented controls, so size comes from the shared control-size scale.",
+      adhocControlSize:
+        "Height comes from ambient control density, not a per-instance class. Drop the `h-*`/`size-*` and set density on the region via `<ControlSizeProvider size>` (or a slot's `controlSize`).",
     },
   },
   defaultOptions: [],
@@ -178,16 +194,15 @@ export default createRule({
         }
       },
 
-      // Check B — ban hand-rolled buttons (raw <button>/<a> styled like a control).
+      // Checks B + C — both inspect a `className` attribute, differing only on
+      // the owning JSX tag.
       JSXAttribute(node) {
         // Only `className` attributes.
         if (node.name.type !== "JSXIdentifier" || node.name.name !== "className") return;
 
-        // Host-tag gate: a JSXAttribute's parent is always the JSXOpeningElement.
-        // Require an intrinsic host tag in {button, a}. This skips component
-        // elements (`<Button>`, capitalized — already a primitive) for free.
+        // A JSXAttribute's parent is always the JSXOpeningElement.
         const tag = node.parent.name;
-        if (tag.type !== "JSXIdentifier" || !HOST_TAGS.has(tag.name)) return;
+        if (tag.type !== "JSXIdentifier") return;
 
         // Aggregate every class token of this attribute into one Set, stripping
         // variant prefixes so `hover:rounded-full` etc. count as their base.
@@ -198,6 +213,19 @@ export default createRule({
           const c = baseClass(t);
           return FIXED_HEIGHT.test(c) || FIXED_SIZE.test(c);
         });
+
+        // Check C — a fixed height/size class on the <Button>/<IconButton>
+        // primitives (capitalized component tags). Height is ambient; a
+        // per-instance class here is the relocated density escape.
+        if (CONTROL_COMPONENTS.has(tag.name)) {
+          if (hasHeight) context.report({ node, messageId: "adhocControlSize" });
+          return;
+        }
+
+        // Check B — ban hand-rolled buttons (raw <button>/<a> styled like a
+        // control). Require an intrinsic host tag in {button, a}.
+        if (!HOST_TAGS.has(tag.name)) return;
+
         const hasPadX = [...tokens].some((t) => {
           const c = baseClass(t);
           return PX.test(c) || PL.test(c) || PR.test(c);

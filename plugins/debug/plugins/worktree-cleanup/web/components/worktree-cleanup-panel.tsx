@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MdDelete, MdFolderDelete, MdRefresh, MdWarning } from "react-icons/md";
@@ -343,34 +343,35 @@ function EntryRow({
           <DirtyIndicator entry={entry} />
         </td>
         <td className="px-lg py-sm text-right whitespace-nowrap">
-          {!entry.dirExists && !entry.dbExists ? (
-            <Button variant="ghost" disabled className="h-7 text-caption opacity-40 cursor-default">
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-              <MdDelete className="size-3.5 mr-1" />
-              Drop DB
-            </Button>
-          ) : (
-            <Button
-              variant={entry.isSafe || !entry.dirExists ? "outline" : "ghost"}
-              onClick={onDelete}
-              disabled={deletingStep != null}
-              className="h-7 text-caption"
-            >
-              {deletingStep != null ? (
-                <>
-                  {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-                  <Spinner className="size-3.5 mr-1" />
-                  {STEP_LABEL[deletingStep]}
-                </>
-              ) : (
-                <>
-                  {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
-                  <MdDelete className="size-3.5 mr-1" />
-                  {entry.dirExists ? "Delete" : "Drop DB"}
-                </>
-              )}
-            </Button>
-          )}
+          <ControlSizeProvider size="sm">
+            {!entry.dirExists && !entry.dbExists ? (
+              <Button variant="ghost" disabled className="opacity-40 cursor-default">
+                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
+                <MdDelete className="size-3.5 mr-1" />
+                Drop DB
+              </Button>
+            ) : (
+              <Button
+                variant={entry.isSafe || !entry.dirExists ? "outline" : "ghost"}
+                onClick={onDelete}
+                disabled={deletingStep != null}
+              >
+                {deletingStep != null ? (
+                  <>
+                    {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
+                    <Spinner className="size-3.5 mr-1" />
+                    {STEP_LABEL[deletingStep]}
+                  </>
+                ) : (
+                  <>
+                    {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
+                    <MdDelete className="size-3.5 mr-1" />
+                    {entry.dirExists ? "Delete" : "Drop DB"}
+                  </>
+                )}
+              </Button>
+            )}
+          </ControlSizeProvider>
         </td>
       </tr>
 
@@ -382,14 +383,16 @@ function EntryRow({
               <Text as="span" variant="caption" className="text-warning">
                 This worktree has unpushed commits or uncommitted changes. Delete anyway?
               </Text>
-              <div className="flex items-center gap-sm shrink-0">
-                <Button variant="outline" onClick={onCancelConfirm} className="h-7 text-caption">
-                  Cancel
-                </Button>
-                <Button variant="destructive" onClick={onConfirm} className="h-7 text-caption">
-                  Delete
-                </Button>
-              </div>
+              <ControlSizeProvider size="sm">
+                <div className="flex items-center gap-sm shrink-0">
+                  <Button variant="outline" onClick={onCancelConfirm}>
+                    Cancel
+                  </Button>
+                  <Button variant="destructive" onClick={onConfirm}>
+                    Delete
+                  </Button>
+                </div>
+              </ControlSizeProvider>
             </div>
           </td>
         </tr>

@@ -19,15 +19,24 @@ font, radius, and icon size stay per-primitive.
 
 ## Enforcement
 
-`lint/no-adhoc-control.ts` fails `./singularity check` on the two ways a control
+`lint/no-adhoc-control.ts` fails `./singularity check` on the three ways a control
 diverges from the scale:
 
-- importing `buttonVariants` to paint a non-button element like a button, and
+- importing `buttonVariants` to paint a non-button element like a button (Check A),
 - a raw `<button>`/`<a>` carrying the hand-rolled fingerprint (fixed height +
-  horizontal padding + rounded).
+  horizontal padding + rounded) (Check B), and
+- a fixed `h-*`/`size-*` class on the `<Button>`/`<IconButton>` primitives
+  themselves (Check C) — `className="size-6"` *is* the `xs` control height
+  written by hand, the same per-instance density escape relocated to the class
+  string. Height is ambient, so a per-instance override desyncs the control from
+  its neighbors. Only digit-led `h-`/`size-` match; `min-h-0`, `h-auto`,
+  `h-full`, and fixed *width* (`w-N`) stay legal — only height is owned by the
+  scale. Set density once on the region via `<ControlSizeProvider size>` (or a
+  slot's `controlSize`) instead.
 
 Don't hand-roll a sized button — reach for `<Button>` / `<ButtonGroup>` so size
-comes from the shared scale.
+comes from the shared scale, and set density on the containing region rather than
+per control.
 
 ## Density from context (toolbar-enforced size)
 
