@@ -3,6 +3,8 @@ import { db } from "@plugins/database/server";
 import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/core";
 import { getServerBuildId } from "@plugins/build/server";
 import { createTask, getTask } from "@plugins/tasks/plugins/tasks-core/server";
+import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { _reports } from "./tables";
 import { bumpWindowAndCheck } from "./velocity";
@@ -190,9 +192,7 @@ export async function recordReport(
     variant: spec.meta.variant,
     muted: row.noise,
     dedupeKey: notifDedupeKey,
-    // Full path into the agent-manager namespace (its task pane lives at
-    // `/agents/tasks/t/:taskId`).
-    linkTo: outcome.taskId ? `/agents/tasks/t/${outcome.taskId}` : null,
+    linkTo: outcome.taskId ? taskDetailRoute.link(agentManagerApp, { taskId: outcome.taskId }) : null,
     metadata: {
       reportId: row.id,
       taskId: outcome.taskId,

@@ -3,6 +3,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
+import { pageDetailRoute } from "@plugins/apps/plugins/pages/plugins/page-tree/core";
 import { BlockEditor, BLOCK_GUTTER } from "@plugins/page/plugins/editor/web";
 import { PageHeader } from "./components/page-header";
 import { PageBreadcrumb } from "./components/page-breadcrumb";
@@ -29,13 +30,13 @@ function useResolvePage({ pageId }: { pageId: string }) {
 }
 
 export const pageDetailPane = Pane.define({
-  id: "page-detail",
-  // No `defaultAncestors`: the page tree lives in the sidebar slot, so the
-  // welcome plugin's `pages-root` empty-state pane should only appear as the
-  // index for bare `/pages` — never stacked as an extra Miller column to the
-  // left of an open page. Opening a page therefore yields a single-entry chain
-  // that replaces the empty state rather than sitting beside it.
-  segment: "page/:pageId",
+  // `pageDetailRoute` has no parent (hence no default ancestors): the page tree
+  // lives in the sidebar slot, so the welcome plugin's `pages-root` empty-state
+  // pane should only appear as the index for bare `/pages` — never stacked as an
+  // extra Miller column to the left of an open page. Opening a page therefore
+  // yields a single-entry chain that replaces the empty state rather than
+  // sitting beside it.
+  route: pageDetailRoute,
   component: PageDetailBody,
   width: 720,
   chrome: { title: (params) => params.pageId },

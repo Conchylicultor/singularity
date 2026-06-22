@@ -3,6 +3,8 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
+import { pageDetailRoute } from "@plugins/apps/plugins/pages/plugins/page-tree/core";
+import { pagesApp } from "@plugins/apps/plugins/pages/plugins/shell/core";
 import { _blocks } from "@plugins/page/plugins/editor/server";
 import { plainOf } from "@plugins/page/plugins/editor/core";
 import { stripInlineTokens } from "../../core";
@@ -51,7 +53,7 @@ export const reminderFireJob = defineJob({
         title: `Reminder · ${pageTitle}`,
         description: snippet || pageTitle,
         variant: "info",
-        linkTo: `/pages/page/${row.pageId}`,
+        linkTo: pageDetailRoute.link(pagesApp, { pageId: row.pageId }),
         dedupeKey: `page.reminder:${row.id}`,
       });
     });

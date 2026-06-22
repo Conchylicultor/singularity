@@ -10,6 +10,8 @@ import {
   maybeDropTaskOnExit,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
+import { conversationRoute } from "@plugins/conversations/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 
 const FINALIZE_TIMEOUT_MS = 60_000;
 
@@ -51,8 +53,7 @@ export const exitCleanFinalizeJob = defineJob({
           ? "No changes were pushed — task marked as dropped"
           : "Branch pushed and conversation closed",
         variant: dropped ? "info" : "success",
-        // Full path into the agent-manager namespace (`/agents/c/:convId`).
-        linkTo: `/agents/c/${conversationId}`,
+        linkTo: conversationRoute.link(agentManagerApp, { convId: conversationId }),
         dedupeKey: `push-and-exit-clean:${conversationId}`,
       });
     });

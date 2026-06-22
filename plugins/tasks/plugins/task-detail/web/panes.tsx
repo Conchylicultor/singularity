@@ -2,7 +2,7 @@ import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane, type } from "@plugins/primitives/plugins/pane/web";
 import { Tasks } from "@plugins/tasks/plugins/task-list/web";
-import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { tasksResource, tasksRootRoute, taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTask } from "@plugins/tasks/web";
 import { TaskDetailFlushProvider } from "./context";
 import { TaskDetail } from "./components/task-detail";
@@ -14,8 +14,7 @@ import { TasksPaneContext } from "./tasks-pane-context";
 // declarations (hoisted), so the forward reference is safe at runtime.
 
 export const tasksRootPane = Pane.define({
-  id: "tasks-root",
-  segment: "tasks",
+  route: tasksRootRoute,
   component: TasksRoot,
   // No chrome; the tasks list is its own UI.
   chrome: false,
@@ -29,9 +28,7 @@ function useResolveTask({ taskId }: { taskId: string }) {
 }
 
 export const taskDetailPane = Pane.define({
-  id: "task-detail",
-  defaultAncestors: [tasksRootPane],
-  segment: "t/:taskId",
+  route: taskDetailRoute,
   component: TaskDetailBody,
   width: 480,
   resolve: useResolveTask,

@@ -1,18 +1,16 @@
 import type { ReactElement } from "react";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { buildRoute, buildDetailRoute } from "@plugins/build/core";
 import { BuildPopoverContent } from "./components/build-popover-content";
 import { BuildDetail } from "./slots";
 
 export const buildPane = Pane.define({
-  id: "build",
-  segment: "build",
+  route: buildRoute,
   component: BuildPaneBody,
 });
 
 export const buildDetailPane = Pane.define({
-  id: "build-detail",
-  defaultAncestors: [buildPane],
-  segment: "r/:runId",
+  route: buildDetailRoute,
   component: BuildDetailBody,
   width: 480,
   resolve: false,

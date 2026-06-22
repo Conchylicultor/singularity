@@ -4,6 +4,8 @@ import type { ReportContext } from "@plugins/reports/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
+import { conversationRoute } from "@plugins/conversations/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 
 export function LaunchFixButton({
   report,
@@ -46,7 +48,7 @@ export function LaunchFixButton({
           title: "Fixing crash",
           description: "Agent launched in the background — open it from here or the bell.",
           variant: "info",
-          linkTo: `/agents/c/${conv.id}`,
+          linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
         });
       }}
       getRequest={(userText) => {

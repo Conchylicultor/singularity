@@ -1,4 +1,5 @@
 export { isActiveStatus, hasLiveProcess } from "../server/status";
+export { conversationRoute } from "./routes";
 export { type ConversationEntry } from "./resources";
 export { hibernationConfig } from "./hibernation-config";
 export {

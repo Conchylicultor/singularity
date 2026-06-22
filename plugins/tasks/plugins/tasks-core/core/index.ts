@@ -50,3 +50,5 @@ export { buildTaskPrompt } from "./build-task-prompt";
 // derives from this one model. See ./task-graph.ts.
 export { TaskGraph, isSettled, SETTLED_STATUSES } from "./task-graph";
 export type { TaskNode } from "./task-graph";
+
+export { tasksRootRoute, taskDetailRoute } from "./routes";

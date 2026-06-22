@@ -9,6 +9,8 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
+import { conversationRoute } from "@plugins/conversations/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
   prototypesResource,
   type PrototypeMeta,
@@ -80,7 +82,7 @@ export function PrototypeGallery() {
           title: "Creating prototype",
           description: "Agent launched in the background — open it from here or the bell.",
           variant: "info",
-          linkTo: `/agents/c/${conv.id}`,
+          linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
         });
       }}
       getRequest={(userText) => {

@@ -7,7 +7,7 @@ import {
   conversationsGoneResource,
   conversationsSystemResource,
 } from "@plugins/tasks/plugins/tasks-core/core";
-import { getConversation } from "@plugins/conversations/core";
+import { getConversation, conversationRoute } from "@plugins/conversations/core";
 import { useConversationById } from "@plugins/conversations/web";
 import { ConversationView } from "./components/conversation-view";
 
@@ -48,8 +48,7 @@ function useResolveConversation({ convId }: { convId: string }) {
 }
 
 export const conversationPane = Pane.define({
-  id: "conversation",
-  segment: "c/:convId",
+  route: conversationRoute,
   component: ConversationView,
   width: 600,
   resolve: useResolveConversation,

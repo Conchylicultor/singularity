@@ -4,6 +4,8 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { REPO_ROOT, SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
+import { buildDetailRoute } from "@plugins/build/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { _buildRuns } from "./tables";
 import { frontendHashResource } from "./frontend-hash-resource";
 import { buildLog } from "./build-log";
@@ -250,11 +252,7 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     .set({ finishedAt: new Date(), exitCode })
     .where(eq(_buildRuns.id, buildId));
   frontendHashResource.notify();
-  // linkTo must be an app-rooted path: the bell-button's navigate() resolves the
-  // owning app by longest path-prefix. The build panes live inside the
-  // agent-manager app (base path /agents), so the segment "build/r/:runId" must
-  // be prefixed with /agents — otherwise no app owns the URL and the click no-ops.
-  const linkTo = `/agents/build/r/${buildId}`;
+  const linkTo = buildDetailRoute.link(agentManagerApp, { runId: buildId });
   if (exitCode === 0) {
     await recordNotification({
       type: "build",

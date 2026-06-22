@@ -1,6 +1,8 @@
 import { MdAutoAwesome } from "react-icons/md";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
+import { conversationRoute } from "@plugins/conversations/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 export function InvestigateEventButton({
@@ -38,7 +40,7 @@ export function InvestigateEventButton({
           title: "Investigating event",
           description: "Agent launched in the background — open it from here or the bell.",
           variant: "info",
-          linkTo: `/agents/c/${conv.id}`,
+          linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
         });
       }}
       getRequest={(userText) => {

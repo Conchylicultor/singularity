@@ -18,8 +18,8 @@
   - Resources: `build.history` (push), `build.mainAheadCount` (push)
   - Routes: `POST /api/build`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `primitives/commit-list.CommitRowSchema`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
+  - Uses: `infra/endpoints.defineEndpoint`, `primitives/commit-list.CommitRowSchema`, `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
+  - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildDetailRoute`, `buildHistoryResource`, `buildRoute`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
 - Cross-plugin:
   - Imported by: `build/build-commits`, `build/build-fix`, `build/build-info`, `build/build-logs`, `build/build-profiling`, `debug/reports`, `reports`, `reports/crash`
 - Shared:

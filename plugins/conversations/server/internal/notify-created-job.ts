@@ -2,6 +2,8 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
+import { conversationRoute } from "@plugins/conversations/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import {
   MODEL_REGISTRY,
   normalizeModel,
@@ -43,10 +45,7 @@ export const notifyConversationCreatedJob = defineJob({
       title,
       description,
       variant: "info",
-      // Full path into the agent-manager app namespace (its conversation pane
-      // lives at `/agents/c/:convId`), so the link resolves by prefix match
-      // like every other app's deep links.
-      linkTo: `/agents/c/${event.conversationId}`,
+      linkTo: conversationRoute.link(agentManagerApp, { convId: event.conversationId }),
       dedupeKey: `conversation-created:${event.conversationId}`,
     });
   },

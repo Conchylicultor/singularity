@@ -10,6 +10,9 @@
   - Contributes: `Apps.App` "Pages" → `PagesLayout`
   - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Pages`
+- Core:
+  - Uses: `primitives/pane.defineApp`
+  - Exports: Values: `pagesApp`
 - Cross-plugin:
   - Imported by: `apps/pages/content-search`, `apps/pages/page-tree`, `apps/pages/starred`
 

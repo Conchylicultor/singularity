@@ -4,6 +4,8 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
+import { conversationRoute } from "@plugins/conversations/core";
+import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { type BuildRun, buildHistoryResource } from "@plugins/build/core";
 import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
 
@@ -54,7 +56,7 @@ function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
           title: "Investigating build failure",
           description: "Agent launched in the background — open it from here or the bell.",
           variant: "info",
-          linkTo: `/agents/c/${conv.id}`,
+          linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
         });
       }}
       getRequest={(userText) => {

@@ -1714,6 +1714,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-no-db-backed-notify",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/no-hand-built-link-to": {
+      "name": "@singularity/plugin-framework-tooling-checks-no-hand-built-link-to",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/no-hardcoded-colors": {
       "name": "@singularity/plugin-framework-tooling-checks-no-hardcoded-colors",
       "version": "0.0.1",
@@ -4611,6 +4615,8 @@
     "@singularity/plugin-framework-tooling-checks-migrations-in-sync": ["@singularity/plugin-framework-tooling-checks-migrations-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/migrations-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-no-db-backed-notify": ["@singularity/plugin-framework-tooling-checks-no-db-backed-notify@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-db-backed-notify"],
+
+    "@singularity/plugin-framework-tooling-checks-no-hand-built-link-to": ["@singularity/plugin-framework-tooling-checks-no-hand-built-link-to@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-hand-built-link-to"],
 
     "@singularity/plugin-framework-tooling-checks-no-hardcoded-colors": ["@singularity/plugin-framework-tooling-checks-no-hardcoded-colors@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/no-hardcoded-colors"],
 

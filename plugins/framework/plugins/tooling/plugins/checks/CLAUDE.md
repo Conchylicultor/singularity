@@ -34,6 +34,7 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
   - **`migration-hashes-unique`**
   - **`migrations-in-sync`**
   - **`no-db-backed-notify`**
+  - **`no-hand-built-link-to`**
   - **`no-hardcoded-colors`**
   - **`no-plugin-imports-in-core`**
   - **`no-plugin-workspace-deps`**

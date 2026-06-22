@@ -1,0 +1,1 @@
+export { pageDetailRoute } from "./routes";

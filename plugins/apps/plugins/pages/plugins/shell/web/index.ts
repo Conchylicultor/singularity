@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps/web";
 import { MdDescription } from "react-icons/md";
+import { pagesApp } from "../core";
 import { PagesLayout } from "./components/pages-layout";
 
 export { Pages } from "./slots";
@@ -10,11 +11,11 @@ export default {
     "App shell for Pages. Registers the /pages app entry and defines the Pages.Sidebar slot.",
   contributions: [
     Apps.App({
-      id: "pages",
+      id: pagesApp.id,
       icon: MdDescription,
       tooltip: "Pages",
       component: PagesLayout,
-      path: "/pages",
+      path: pagesApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;
