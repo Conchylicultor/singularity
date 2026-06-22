@@ -23,7 +23,7 @@
  */
 
 import { parseChordSymbol } from "@plugins/apps/plugins/sonata/plugins/theory/core";
-import { type ChordEvent } from "./voicings";
+import { type ChordEvent } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 
 /** Default bar length in quarter-note beats (4/4). */
 const BEATS_PER_BAR = 4;

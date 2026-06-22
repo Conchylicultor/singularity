@@ -6,8 +6,8 @@ import {
   scoreEndBeat,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { openSongImperative } from "@plugins/apps/plugins/sonata/plugins/library/web";
+import { DEFAULT_VOICING_ID } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { compile, type ChordGridRaw } from "../compile";
-import { DEFAULT_VOICING_ID } from "../voicings";
 import { createChordGridSong } from "../../shared/endpoints";
 
 /**

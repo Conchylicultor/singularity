@@ -452,6 +452,10 @@
       "name": "@singularity/plugin-apps-sonata-transport-bar",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/voicing": {
+      "name": "@singularity/plugin-apps-sonata-voicing",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/story": {
       "name": "@singularity/plugin-apps-story",
       "version": "0.0.1",
@@ -4001,6 +4005,8 @@
     "@singularity/plugin-apps-sonata-track-mixer": ["@singularity/plugin-apps-sonata-track-mixer@workspace:plugins/apps/plugins/sonata/plugins/track-mixer"],
 
     "@singularity/plugin-apps-sonata-transport-bar": ["@singularity/plugin-apps-sonata-transport-bar@workspace:plugins/apps/plugins/sonata/plugins/transport-bar"],
+
+    "@singularity/plugin-apps-sonata-voicing": ["@singularity/plugin-apps-sonata-voicing@workspace:plugins/apps/plugins/sonata/plugins/voicing"],
 
     "@singularity/plugin-apps-story": ["@singularity/plugin-apps-story@workspace:plugins/apps/plugins/story"],
 

@@ -22,8 +22,12 @@ import type {
   Note,
   Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
+  DEFAULT_VOICING_ID,
+  findVoicing,
+} from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { parseGrid } from "./parse-grid";
-import { CHORD_GRID_TRACK, DEFAULT_VOICING_ID, findVoicing } from "./voicings";
+import { CHORD_GRID_NOTE_PREFIX, CHORD_GRID_TRACK } from "./constants";
 
 /** Raw input shape produced by `ChordGridLoader`. */
 export interface ChordGridRaw {
@@ -86,7 +90,11 @@ export function compile(raw: unknown): Score {
       }) satisfies Annotation<"chord", ChordData>,
   );
 
-  const notes: Note[] = findVoicing(voicingId).voice(events, { octave });
+  const notes: Note[] = findVoicing(voicingId).voice(events, {
+    octave,
+    track: CHORD_GRID_TRACK,
+    idPrefix: CHORD_GRID_NOTE_PREFIX,
+  });
 
   return {
     meta: {},

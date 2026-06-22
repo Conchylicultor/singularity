@@ -12,8 +12,8 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { asChordGridRaw, type ChordGridRaw } from "./compile";
+import { VOICINGS } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { parseGrid } from "./parse-grid";
-import { VOICINGS } from "./voicings";
 
 interface Props {
   raw?: unknown;

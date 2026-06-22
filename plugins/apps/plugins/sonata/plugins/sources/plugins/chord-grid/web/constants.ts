@@ -5,3 +5,13 @@
  * drift on a string literal.
  */
 export const CHORD_GRID_SOURCE_ID = "chord-grid";
+
+/** The track id chord-grid's derived notes belong to (a single voiced track). */
+export const CHORD_GRID_TRACK = "cg0";
+
+/**
+ * Note-id namespace for chord-grid's derived notes. Voiced note ids are
+ * `cg-${eventIndex}-${toneIndex}`; the shared voicing leaf builds them from this
+ * prefix so chord-grid notes never collide with another source's.
+ */
+export const CHORD_GRID_NOTE_PREFIX = "cg";

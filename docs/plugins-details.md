@@ -566,6 +566,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `apps/sonata/score.accidentalGlyph`, `apps/sonata/score.Annotation`, `apps/sonata/score.bars`, `apps/sonata/score.beatGrid`, `apps/sonata/score.ChordData`, `apps/sonata/score.effectiveKeyAt`, `apps/sonata/score.emptyScore`, `apps/sonata/score.KeySignature`, `apps/sonata/score.KeySpeller`, `apps/sonata/score.makeKeySpeller`, `apps/sonata/score.Note`, `apps/sonata/score.Score`, `apps/sonata/score.scoreEndBeat`, `apps/sonata/score.TimeSigEvent`
             - Exports: Types: `ChordMatch`, `ChordTemplate`, `ChordWindow`; Values: `CHORD_TEMPLATES`, `chordPitches`, `detectChord`, `detectChordWeighted`, `detectChordWindows`, `formatChordSymbol`, `formatSpelledChordSymbol`, `inferKeys`, `invertVoicing`, `parseChordSymbol`, `PC_NAMES`, `qualitySymbol`, `qualityToIntervals`
+          - Cross-plugin:
+            - Imported by: `apps/sonata/voicing`
         - **`track-mixer`** — Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track). Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / muted / hidden) and serves the reactive rollup consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
           - Web:
             - Contributes: `Sonata.Section` "Tracks" → `TrackMixerPanel`
@@ -582,6 +584,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `SonataToolbar.End` "playback" → `PlaybackControls`
             - Uses: `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.useCursorSelector`, `apps/sonata/shell.useSonata`, `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/icon-button.IconButton`
+        - **`voicing`** — Voicing strategies for Sonata: turn timed chord events into performed notes. Shared by every chord-authoring source (chord-grid, Ultimate Guitar, …) so chord-to-notes voicing has one home.
+          - Core:
+            - Uses: `apps/sonata/theory.chordPitches`
+            - Exports: Types: `ChordEvent`, `Voicing`, `VoicingOptions`; Values: `DEFAULT_VOICING_ID`, `findVoicing`, `VOICINGS`
     - **`story`** — Story Builder — author a page as a block tree and render it through pluggable lenses.
       - Plugins:
         - **`content`** — Story content widgets: per-block-type Story.Content renderers.
