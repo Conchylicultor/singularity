@@ -104,13 +104,18 @@ export type ChordData = {
 };
 export type VoicingData = { label?: string }; // targets notes via target.noteIds
 export type SectionData = { name: string };
+// A run of lyric text over its beat range — one line/phrase/syllable of words a
+// songsheet renders under the chords. The `Annotation.start`/`end` carry the
+// timing (synthesized for sources, like UG, that ship no timing of their own);
+// `text` is the literal words. Sources with no lyrics simply emit none.
+export type LyricData = { text: string };
 
 /**
  * Typed, time-ranged meaning layered on top of the notes.
  *
  * `T` is the discriminating `type` tag and `D` its `data` shape. The built-in
- * union (`chord` | `voicing` | `section`) declares its `data` here so overlays
- * get type-safe payloads — the one place a little central coupling pays off.
+ * union (`chord` | `voicing` | `section` | `lyric`) declares its `data` here so
+ * overlays get type-safe payloads — the one place a little central coupling pays off.
  */
 export interface Annotation<T extends string = string, D = unknown> {
   /** "chord" | "voicing" | "section" | "key" | … */
@@ -132,6 +137,7 @@ export interface Annotation<T extends string = string, D = unknown> {
 export type ChordAnnotation = Annotation<"chord", ChordData>;
 export type VoicingAnnotation = Annotation<"voicing", VoicingData>;
 export type SectionAnnotation = Annotation<"section", SectionData>;
+export type LyricAnnotation = Annotation<"lyric", LyricData>;
 
 /** The canonical in-memory model — the narrow waist. */
 export interface Score {
