@@ -529,6 +529,40 @@ export interface ResourceRuntimeOptions {
    * (resolves declared identity views, else identity); central: omitted (identity).
    */
   resolveRelation?: (relation: string) => string;
+  /**
+   * L2 persisted materialization — true when this resource key should be
+   * persisted to `live_state_snapshot` for instant cold boot. Backed by
+   * `bootCritical && !externalSource` (the boot-critical, DB-backed set). When it
+   * returns true, `drainEntry` captures the xmin watermark BEFORE the loader runs,
+   * forces a FULL recompute even with zero subscribers, and persists the value on
+   * loader success. server: injected by the live-state-snapshot plugin at boot
+   * (reads the current holder at call time); central / before-injection: omitted
+   * (no resource is persisted). See
+   * research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.3.
+   */
+  shouldPersist?: (key: string) => boolean;
+  /**
+   * Capture the durable monotonic position (the xmin watermark) the persisted
+   * value will be stamped with. Called BEFORE the loader's first read, so any
+   * write not visible to the loader's snapshot has xid >= this watermark and is
+   * therefore replayed by catch-up (under-replay impossible; over-replay
+   * harmless). server: `SELECT pg_snapshot_xmin(pg_current_snapshot())::text`
+   * through the pool. Only invoked when `shouldPersist(key)` is true.
+   */
+  captureWatermark?: () => Promise<string>;
+  /**
+   * Persist a freshly-recomputed FULL value to `live_state_snapshot` under
+   * (key, paramsKey) with its captured watermark. Called only on loader SUCCESS
+   * (never on the failure/continue path), so the snapshot is never torn. server:
+   * `INSERT … ON CONFLICT (resource_key, params_key) DO UPDATE`. Only invoked
+   * when `shouldPersist(key)` is true.
+   */
+  persistSnapshot?: (
+    key: string,
+    paramsKey: string,
+    value: unknown,
+    watermark: string,
+  ) => Promise<void>;
 }
 
 export interface ResourceRuntime {
@@ -1238,14 +1272,27 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       clearTimeout(entry.debounceTimer);
       entry.debounceTimer = undefined;
     }
+    // L2: persisted entries (boot-critical, DB-backed) always recompute FULL and
+    // persist their value to `live_state_snapshot` — even with zero subscribers —
+    // so cold boot reads a fresh snapshot instead of a from-scratch rebuild. A
+    // scoped partial is never persisted (§3.6/§6.7), and the value is never
+    // persisted as a stale partial: the FULL recompute below ignores `affected`.
+    // Gated on `!entry.externalSource` defensively (the injected `shouldPersist`
+    // already excludes external sources, but a runtime check makes the invariant
+    // hold regardless of how the hook is backed). See
+    // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.3.
+    const persisted = !entry.externalSource && (opts.shouldPersist?.(entry.key) ?? false);
+
     for (const pendingEntry of pending) {
       const { params, affected } = pendingEntry;
       const pk = paramsKey(params);
       // Scoped notify (Layer 2): `affected !== null` means recompute only those
       // row ids. An empty scoped set = nothing actually changed → skip the send
-      // entirely (no version bump, no empty delta, no cascade).
-      const scoped = affected !== null;
-      if (scoped && affected.size === 0) continue;
+      // entirely (no version bump, no empty delta, no cascade). A persisted entry
+      // is forced to FULL (it cannot persist a scoped partial), so the scoped
+      // bookkeeping below only applies to the non-persisted path.
+      const scoped = affected !== null && !persisted;
+      if (affected !== null && affected.size === 0 && !persisted) continue;
       const version = (entry.versions.get(pk) ?? 0) + 1;
       entry.versions.set(pk, version);
       const subs = subscribersFor(entry.key, pk);
@@ -1255,14 +1302,34 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       // we still compute when a map wants it — rare today, acceptable cost.
       // `affectedMap` self-queries the DB and must NOT force the value, else we
       // reintroduce the full upstream load Layer 2 is removing.
+      // L2: a persisted entry ALWAYS needs the (FULL) value so it can be written
+      // to the snapshot, even when no tab is subscribed.
       const hasValueAwareDownstream = entry.downstream.some((d) => d.map !== undefined);
       const needValue =
+        persisted ||
         ((entry.mode === "push" || entry.mode === "keyed") && subs.length > 0) ||
         hasValueAwareDownstream;
-      const ctx = scoped ? { affectedIds: [...affected] } : undefined;
+      // L2: a persisted entry never passes a scoped ctx — it recomputes FULL.
+      const ctx = scoped ? { affectedIds: [...affected!] } : undefined;
       let value: unknown;
       let valueComputed = false;
       if (needValue) {
+        // L2: capture the durable position BEFORE the loader's first read, so any
+        // write invisible to the loader's snapshot has xid >= this watermark and
+        // is replayed by catch-up. program-order `await` makes it a true floor
+        // across all of a multi-query loader's statements.
+        let watermark: string | undefined;
+        if (persisted && opts.captureWatermark) {
+          try {
+            watermark = await opts.captureWatermark();
+          } catch (err) {
+            // A failed watermark capture must not strand the value — skip the
+            // persist this cycle (the snapshot keeps its prior, older floor) but
+            // still serve subscribers. Loud via the report hook.
+            reportLoaderError(`watermark capture failed for ${entry.key}`, err);
+            watermark = undefined;
+          }
+        }
         try {
           // Origin = the push/cascade flush: re-establishes an entry context
           // (this runs in a bare microtask with no ambient context) so the
@@ -1274,8 +1341,21 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         } catch (err) {
           reportLoaderError(`loader failed for ${entry.key}`, err);
           // Skip sending and cascading on loader failure — otherwise we'd
-          // invalidate downstream state based on a torn read.
+          // invalidate downstream state based on a torn read. Never persist on
+          // the failure path (the snapshot stays untouched).
           continue;
+        }
+
+        // L2: persist the FULL value on loader SUCCESS only. Requires a captured
+        // watermark (skipped above on capture failure). Persist failure is
+        // reported but does not block the send/cascade — the prior snapshot row
+        // simply stays current.
+        if (persisted && watermark !== undefined && opts.persistSnapshot) {
+          try {
+            await opts.persistSnapshot(entry.key, pk, value, watermark);
+          } catch (err) {
+            reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
+          }
         }
       }
 

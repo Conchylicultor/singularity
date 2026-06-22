@@ -1187,6 +1187,10 @@
       "name": "@singularity/plugin-database-fork",
       "version": "0.0.1",
     },
+    "plugins/database/plugins/live-state-snapshot": {
+      "name": "@singularity/plugin-database-live-state-snapshot",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/migrations": {
       "name": "@singularity/plugin-database-migrations",
       "version": "0.0.1",
@@ -4359,6 +4363,8 @@
     "@singularity/plugin-database-embedded": ["@singularity/plugin-database-embedded@workspace:plugins/database/plugins/embedded"],
 
     "@singularity/plugin-database-fork": ["@singularity/plugin-database-fork@workspace:plugins/database/plugins/fork"],
+
+    "@singularity/plugin-database-live-state-snapshot": ["@singularity/plugin-database-live-state-snapshot@workspace:plugins/database/plugins/live-state-snapshot"],
 
     "@singularity/plugin-database-migrations": ["@singularity/plugin-database-migrations@workspace:plugins/database/plugins/migrations"],
 

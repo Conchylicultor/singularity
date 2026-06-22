@@ -21,11 +21,13 @@ export {
   notifyStatsFor,
   onResourcePush,
   setRelationResolver,
+  setLiveStateSnapshotHooks,
   withNotifyBatch,
 } from "./resources";
 export type {
   DependsOnEntry,
   ExternalResource,
+  LiveStateSnapshotHooks,
   RecomputeIntent,
   ResourceDefinition,
   ResourceContract,

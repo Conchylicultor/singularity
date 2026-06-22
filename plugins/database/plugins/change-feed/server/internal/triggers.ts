@@ -11,7 +11,43 @@ const log = Log.channel("change-feed", { persist: true });
 // written by the migration runner inside `onReadyBlocking`, never read by a
 // live-state loader, and triggering on it adds pure noise. graphile_worker lives
 // in its own schema, so it is already excluded by the public-schema filter.
-const DENYLIST = new Set<string>([MIGRATIONS_TABLE_NAME]);
+//
+// `live_state_changelog` and `live_state_snapshot` (the L2 persisted-
+// materialization tables) are denylisted because `live_state_notify()` writes the
+// changelog from inside every trigger — a trigger ON the changelog would recurse
+// infinitely (each INSERT firing the trigger that does another INSERT). The
+// snapshot table is written by the runtime persist hook (out of band of any
+// trigger) and read only at boot, so it never needs a feed either.
+export const LIVE_STATE_CHANGELOG_TABLE = "live_state_changelog";
+export const LIVE_STATE_SNAPSHOT_TABLE = "live_state_snapshot";
+const DENYLIST = new Set<string>([
+  MIGRATIONS_TABLE_NAME,
+  LIVE_STATE_CHANGELOG_TABLE,
+  LIVE_STATE_SNAPSHOT_TABLE,
+]);
+
+// L2 durable outbox DDL. Created INSIDE rebuildTriggers' transaction, before the
+// trigger function is (re)defined, so the table the function INSERTs into is
+// guaranteed to exist before any data-change trigger can fire. Derived-state
+// table (CREATE TABLE IF NOT EXISTS on boot, like __singularity_derived_view_state)
+// — NOT a drizzle migration. See
+// research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.1.
+//
+//  - `seq` is a stable ordering / prune key only (NOT the watermark).
+//  - `xid` is `pg_current_xact_id()` — the 64-bit xid8, stored as numeric so it
+//    never overflows signed bigint near 2^63. NEVER the 32-bit txid_* forms.
+//  - `ids` is the changed PKs, or NULL (bulk / pk-less / over-cap → FULL on catch-up).
+const CHANGELOG_TABLE_DDL = `
+CREATE TABLE IF NOT EXISTS ${LIVE_STATE_CHANGELOG_TABLE} (
+  seq        bigserial PRIMARY KEY,
+  xid        numeric   NOT NULL,
+  t          text      NOT NULL,
+  op         char(1)   NOT NULL,
+  ids        text[],
+  at         timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS live_state_changelog_xid_idx ON ${LIVE_STATE_CHANGELOG_TABLE} (xid);
+`;
 
 // The generic STATEMENT-level trigger function. It is deterministic, data-less
 // DDL — created with CREATE OR REPLACE on every boot (never a migration), exactly
@@ -50,12 +86,26 @@ BEGIN
 
   -- NOTIFY payloads are capped at ~8 KB. Over the cap, drop the id list and let
   -- the consumer recompute the whole table (FULL-for-table) instead of losing
-  -- the change entirely.
+  -- the change entirely. The same over-cap rule applies to the durable changelog
+  -- row below (NULL ids → FULL on catch-up), so re-derive ids once here.
   IF octet_length(payload) > 7000 THEN
+    ids := NULL;
     payload := json_build_object('t', TG_TABLE_NAME, 'op', left(TG_OP, 1), 'ids', NULL)::text;
   END IF;
 
   PERFORM pg_notify('live_state', payload);
+
+  -- L2 durable outbox: write a transactional changelog row alongside the
+  -- ephemeral NOTIFY. Because this INSERT runs inside the same trigger/txn as the
+  -- data change, the changelog row commits ATOMICALLY with the write (a
+  -- rolled-back write leaves no changelog row). The xid is the 64-bit xid8 via
+  -- pg_current_xact_id() — the same family as the watermark the runtime captures
+  -- (pg_snapshot_xmin) — so the catch-up replay predicate (xid >= position) is
+  -- never under-replayed. See
+  -- research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.1.
+  INSERT INTO live_state_changelog (xid, t, op, ids)
+  VALUES (pg_current_xact_id()::text::numeric, TG_TABLE_NAME, left(TG_OP, 1), ids);
+
   RETURN NULL;
 END;
 $live_state$ LANGUAGE plpgsql;
@@ -140,6 +190,14 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
   }
 
   await db.transaction(async (tx) => {
+    // L2: the changelog the trigger function INSERTs into MUST exist before the
+    // function is defined and before any per-table trigger that fires it. Create
+    // it first, inside this same transaction — `onReadyBlocking` hooks run in
+    // parallel, so the live-state-snapshot plugin's own boot ordering can't be
+    // relied on for this (it owns the snapshot table; change-feed owns the
+    // changelog because change-feed writes it).
+    await tx.execute(drizzleSql.raw(CHANGELOG_TABLE_DDL));
+
     await tx.execute(drizzleSql.raw(NOTIFY_FUNCTION_DDL));
 
     for (const { table, pkCol } of triggers) {

@@ -8,9 +8,18 @@ import { rebuildTriggers } from "./internal/triggers";
 import { startListener, stopListener } from "./internal/listener";
 import { buildViewDeps } from "./internal/view-deps";
 
-export { rebuildTriggers, getCoveredTables } from "./internal/triggers";
+export {
+  rebuildTriggers,
+  getCoveredTables,
+  LIVE_STATE_CHANGELOG_TABLE,
+  LIVE_STATE_SNAPSHOT_TABLE,
+} from "./internal/triggers";
 export { parseLiveStatePayload } from "./internal/parse-payload";
 export type { DbChange } from "./internal/parse-payload";
+// The single source of change routing — reused by the L2 cold-boot catch-up
+// driver (live-state-snapshot) so replay can never drift from the live LISTEN
+// path. See research/2026-06-22-global-live-state-l2-persisted-materialization.md.
+export { routeChange } from "./internal/route-change";
 
 export default {
   description:

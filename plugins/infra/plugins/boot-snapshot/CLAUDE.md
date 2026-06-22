@@ -61,7 +61,7 @@ How it works:
   - Contributes: `Core.Boot`
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.hydrateResource`, `primitives/live-state.resourceDescriptorByKey`, `reports.report`
 - Server:
-  - Uses: `database.awaitDbReady`, `database/migrations.migrationsReady`, `infra/endpoints.implement`
+  - Uses: `database.awaitDbReady`, `database/live-state-snapshot.readPersistedSnapshots`, `database/migrations.migrationsReady`, `infra/endpoints.implement`
   - Routes: `GET /api/resources/boot-snapshot`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

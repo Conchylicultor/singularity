@@ -109,6 +109,32 @@ export function setRelationResolver(fn: (relation: string) => string): void {
   relationResolver = fn;
 }
 
+// L2 persisted-materialization hooks — injected at boot by the
+// `live-state-snapshot` feature plugin (the same byte-for-byte pattern as
+// `setRelationResolver`). server-core/core MUST NOT statically import that plugin
+// (it imports `@plugins/database/server` + this barrel — a static import here
+// would cycle). So the plugin calls `setLiveStateSnapshotHooks` once at boot and
+// the runtime closures below read the CURRENT holders at call time. Before
+// injection (and on central, which never installs them) every hook is the inert
+// default: `shouldPersist` returns false → no resource is persisted, and the
+// capture/persist hooks are never reached. The runtime is constructed before the
+// setter runs, which is harmless because the closures dereference the holder
+// lazily. See research/2026-06-22-global-live-state-l2-persisted-materialization.md.
+export interface LiveStateSnapshotHooks {
+  shouldPersist: (key: string) => boolean;
+  captureWatermark: () => Promise<string>;
+  persistSnapshot: (
+    key: string,
+    paramsKey: string,
+    value: unknown,
+    watermark: string,
+  ) => Promise<void>;
+}
+let liveStateSnapshotHooks: LiveStateSnapshotHooks | null = null;
+export function setLiveStateSnapshotHooks(hooks: LiveStateSnapshotHooks): void {
+  liveStateSnapshotHooks = hooks;
+}
+
 function errorReport(context: string, err: unknown): ServerErrorReport {
   const e = err instanceof Error ? err : new Error(String(err));
   return {
@@ -176,6 +202,26 @@ const runtime = createResourceRuntime({
   // The closure reads the boot-injected holder at call time (set by change-feed
   // to `relationIdentityBase`); identity until then and on central.
   resolveRelation: (r) => relationResolver(r),
+  // L2 persisted materialization. All three read the boot-injected holder at call
+  // time (set by the live-state-snapshot plugin once the DB is ready). Until then
+  // — and on central, which never installs them — `shouldPersist` returns false,
+  // so no resource is ever persisted and the capture/persist hooks are never hit.
+  shouldPersist: (key) => liveStateSnapshotHooks?.shouldPersist(key) ?? false,
+  captureWatermark: () => {
+    if (!liveStateSnapshotHooks) {
+      // Unreachable: the runtime only calls this when shouldPersist returned true,
+      // which requires the hooks to be installed. Fail loudly if that invariant
+      // is ever violated rather than persisting a value with no watermark.
+      throw new Error("captureWatermark called before live-state-snapshot hooks installed");
+    }
+    return liveStateSnapshotHooks.captureWatermark();
+  },
+  persistSnapshot: (key, paramsKey, value, watermark) => {
+    if (!liveStateSnapshotHooks) {
+      throw new Error("persistSnapshot called before live-state-snapshot hooks installed");
+    }
+    return liveStateSnapshotHooks.persistSnapshot(key, paramsKey, value, watermark);
+  },
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
   // Fan each push outcome out to every registered observer (no-op detector et al).
   onPush: (key, info) => {

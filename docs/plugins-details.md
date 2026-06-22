@@ -1803,7 +1803,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `infra/paths.SINGULARITY_DIR`
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Cross-plugin:
-    - Imported by: `active-data`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/deploy/servers`, `apps/pages/content-search`, `apps/pages/history`, `apps/pages/starred`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/generation`, `apps/story/marker`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/workflows/engine`, `backup`, `build`, `build/build-commits`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/notes`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/summary`, `database/change-feed`, `debug/slow-ops`, `history/engine`, `improve`, `infra/attachments`, `infra/boot-snapshot`, `infra/claude-cli`, `infra/contention`, `infra/entity-extensions`, `infra/events`, `infra/events-test`, `infra/jobs`, `page/attachment-block`, `page/editor`, `page/inline-date`, `page/links`, `plugin-meta/plugin-health`, `primitives/rank`, `reports`, `search/engine`, `shell/notifications`, `stats/commits`, `stats/cost`, `tasks/auto-start`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`, `ui/tweakcn/community-browser`
+    - Imported by: `active-data`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/deploy/servers`, `apps/pages/content-search`, `apps/pages/history`, `apps/pages/starred`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/generation`, `apps/story/marker`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/workflows/engine`, `backup`, `build`, `build/build-commits`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/notes`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/summary`, `database/change-feed`, `database/live-state-snapshot`, `debug/slow-ops`, `history/engine`, `improve`, `infra/attachments`, `infra/boot-snapshot`, `infra/claude-cli`, `infra/contention`, `infra/entity-extensions`, `infra/events`, `infra/events-test`, `infra/jobs`, `page/attachment-block`, `page/editor`, `page/inline-date`, `page/links`, `plugin-meta/plugin-health`, `primitives/rank`, `reports`, `search/engine`, `shell/notifications`, `stats/commits`, `stats/cost`, `tasks/auto-start`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`, `ui/tweakcn/community-browser`
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
@@ -1814,7 +1814,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
       - Server:
         - Uses: `database.db`, `database/admin.connectionString`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
-        - Exports: Types: `DbChange`; Values: `getCoveredTables`, `parseLiveStatePayload`, `rebuildTriggers`
+        - Exports: Types: `DbChange`; Values: `getCoveredTables`, `LIVE_STATE_CHANGELOG_TABLE`, `LIVE_STATE_SNAPSHOT_TABLE`, `parseLiveStatePayload`, `rebuildTriggers`, `routeChange`
+      - Cross-plugin:
+        - Imported by: `database/live-state-snapshot`
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
       - Server:
         - Uses: `primitives/log-channels.Log`
@@ -1837,12 +1839,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `defineJob('database.fork')`, `defineJob('database.fork-temp-sweep')`
       - Cross-plugin:
         - Imported by: `conversations`
+    - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, with a bounded changelog catch-up that recomputes only the resources whose tables changed during downtime.
+      - Server:
+        - Uses: `database.awaitDbReady`, `database.db`, `database/change-feed.LIVE_STATE_CHANGELOG_TABLE`, `database/change-feed.LIVE_STATE_SNAPSHOT_TABLE`, `database/change-feed.routeChange`, `database/migrations.migrationsReady`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
+        - DB schema: `plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`
+        - Exports: Values: `readPersistedSnapshots`
+        - Register: `defineJob('database.live-state-changelog-prune')`
+      - Cross-plugin:
+        - Imported by: `infra/boot-snapshot`
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
         - Uses: `database/derived-views.rebuildDerivedViews`, `primitives/log-channels.Log`
         - Exports: Values: `dryRunPendingMigrations`, `migrationsReady`, `runMigrations`
       - Cross-plugin:
-        - Imported by: `database`, `infra/boot-snapshot`
+        - Imported by: `database`, `database/live-state-snapshot`, `infra/boot-snapshot`
       - Structure:
         - Non-standard folders: `data/`
         - Loose top-level files: `drizzle.config.ts`
@@ -2597,7 +2607,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`server-core`**
       - Core:
         - Uses: `framework/resource-runtime.createResourceRuntime`, `framework/tooling/collected-dir.defineCollectedDir`, `infra/runtime-profiler.getReadSetIndex`, `infra/runtime-profiler.getRuntimeProfile`, `infra/runtime-profiler.recordEntrySpan`, `infra/runtime-profiler.recordSpan`
-        - Exports: Types: `DependsOnEntry`, `ExternalResource`, `HttpHandler`, `LoadedServerPlugin`, `MemoryCheckpoint`, `PhaseId`, `RecomputeIntent`, `Registration`, `ResourceContract`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ResourcePushObserver`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `ServerResourceOptions`, `Span`, `WsData`, `WsHandler`; Values: `applyDbChange`, `collectContributions`, `defineExternalResource`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `loadResourceByKey`, `markServerReady`, `notificationsWsHandler`, `notifyStatsFor`, `onResourcePush`, `physFootprintBytes`, `profilerStart`, `recordMemoryCheckpoint`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `setRelationResolver`, `withNotifyBatch`
+        - Exports: Types: `DependsOnEntry`, `ExternalResource`, `HttpHandler`, `LiveStateSnapshotHooks`, `LoadedServerPlugin`, `MemoryCheckpoint`, `PhaseId`, `RecomputeIntent`, `Registration`, `ResourceContract`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ResourcePushObserver`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `ServerResourceOptions`, `Span`, `WsData`, `WsHandler`; Values: `applyDbChange`, `collectContributions`, `defineExternalResource`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `loadResourceByKey`, `markServerReady`, `notificationsWsHandler`, `notifyStatsFor`, `onResourcePush`, `physFootprintBytes`, `profilerStart`, `recordMemoryCheckpoint`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `setLiveStateSnapshotHooks`, `setRelationResolver`, `withNotifyBatch`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
         - Exports: Types: `Check`, `CheckResult`
@@ -2766,7 +2776,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Core.Boot`
         - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.hydrateResource`, `primitives/live-state.resourceDescriptorByKey`, `reports.report`
       - Server:
-        - Uses: `database.awaitDbReady`, `database/migrations.migrationsReady`, `infra/endpoints.implement`
+        - Uses: `database.awaitDbReady`, `database/live-state-snapshot.readPersistedSnapshots`, `database/migrations.migrationsReady`, `infra/endpoints.implement`
         - Routes: `GET /api/resources/boot-snapshot`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
@@ -2890,7 +2900,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
         - Exports: Types: `DeadJobRow`, `DeadJobsPayload`, `JobRow`, `JobsPayload`, `JobState`; Values: `cancelJob`, `DeadJobRowSchema`, `DeadJobsPayloadSchema`, `deadJobsResource`, `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`, `listDeadJobs`, `listJobs`, `retryJob`
       - Cross-plugin:
-        - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/transcript-retention`, `database/fork`, `debug/live-state-churn`, `debug/queue-health`, `debug/worktree-cleanup`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `page/attachment-block`, `page/inline-date`, `page/links`, `shell/notifications`, `tasks`, `tasks/task-title`
+        - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/transcript-retention`, `database/fork`, `database/live-state-snapshot`, `debug/live-state-churn`, `debug/queue-health`, `debug/worktree-cleanup`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `page/attachment-block`, `page/inline-date`, `page/links`, `shell/notifications`, `tasks`, `tasks/task-title`
     - **`launcher`**
       - Server:
         - Uses: `database/admin.ensureDatabase`, `database/admin.getAdminPool`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `database/pgbouncer.PGBOUNCER_PORT`, `database/pgbouncer.PGBOUNCER_SOCKET_DIR`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.writeWorktreeSpec`
@@ -4006,7 +4016,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports: Types: `ClientMessage`, `EmitLogsBody`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`; Values: `emitLogs`, `EmitLogsBodySchema`, `getLogChannels`
       - Cross-plugin:
-        - Imported by: `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database`, `database/change-feed`, `database/derived-views`, `database/migrations`, `debug/health-monitor`, `debug/render-profiler`, `debug/slow-ops`, `debug/worktree-cleanup`, `infra/attachments`, `primitives/live-state`, `reports/render-loop`
+        - Imported by: `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database`, `database/change-feed`, `database/derived-views`, `database/live-state-snapshot`, `database/migrations`, `debug/health-monitor`, `debug/render-profiler`, `debug/slow-ops`, `debug/worktree-cleanup`, `infra/attachments`, `primitives/live-state`, `reports/render-loop`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot.MarkdownEnhancerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
