@@ -3,6 +3,15 @@
 // these as declared, and the sites that create them reference these constants so
 // the allowlist can never drift from reality.
 //
+// That last invariant is STATICALLY ENFORCED by the `imperative-create-table-
+// allowlisted` check (plugins/database/plugins/migrations/check/): every real-code
+// `CREATE TABLE` must name one of the IMPERATIVE_PUBLIC_TABLES constants on its
+// line, so an unallowlisted imperative table cannot land at the push gate (the
+// DB-side orphaned-db-tables check only catches it later, on a reachable DB). To
+// add an imperative table: add its name constant below, include it in the
+// IMPERATIVE_PUBLIC_TABLES array, and interpolate that constant on the CREATE
+// TABLE line at the create site.
+//
 // Lives in the derived-views CORE leaf — the shared sink every consumer already
 // depends on (migrations → derived-views, change-feed → derived-views,
 // database/server → derived-views, and the migrations check). It is deliberately
