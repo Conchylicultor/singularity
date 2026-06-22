@@ -1,4 +1,8 @@
-import { cn, useControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  useControlSize,
+  textStepFor,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 
 export type BadgeVariant =
@@ -59,10 +63,11 @@ export function Badge({
   ...rest
 }: BadgeProps) {
   const density = useControlSize();
-  // Text size tracks ambient control density; only the most compact density
-  // reads as text-3xs. No-provider default ("md") → text-caption, identical to
-  // the previous default. Threshold matches ToggleChip's chipSizeForDensity.
-  const textClass = density === "xs" ? "text-3xs" : "text-caption";
+  // Text size tracks ambient control density via the single density→text policy
+  // (textStepFor, shared with Button + Text): the compact `xs` density drops one
+  // rung to text-caption-compact; every other density (incl. the no-provider
+  // default "md") reads text-caption.
+  const textClass = textStepFor(density) ? "text-caption-compact" : "text-caption";
   return (
     <As
       className={cn(

@@ -335,6 +335,19 @@
 @utility text-label      { font-size: var(--font-size-label);      line-height: var(--line-height-label);      font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
 @utility text-caption    { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
 
+/* Compact typography roles — the `xs` (compact) control density's one rung down.
+ * Each is the SAME weight/tracking as its base role but the next size+line-height
+ * rung smaller, so hierarchy + semantics survive compaction (a compact subheading
+ * keeps its semibold). `Text` swaps in the `-compact` map when the ambient
+ * `ControlSize` is `xs` (textStepFor === 1); `Badge` reads `text-caption-compact`
+ * the same way. One density→text-step policy, three consumers (Button/Badge/Text). */
+@utility text-title-compact      { font-size: var(--font-size-heading);    line-height: var(--line-height-heading);    font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; }  /* twmerge: extend font-size */
+@utility text-heading-compact    { font-size: var(--font-size-subheading); line-height: var(--line-height-subheading); font-weight: var(--font-weight-semibold); letter-spacing: -0.005em; } /* twmerge: extend font-size */
+@utility text-subheading-compact { font-size: var(--font-size-body);       line-height: var(--line-height-body);       font-weight: var(--font-weight-semibold); }                          /* twmerge: extend font-size */
+@utility text-body-compact       { font-size: var(--font-size-label);      line-height: var(--line-height-label);      font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+@utility text-label-compact      { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-medium); }                            /* twmerge: extend font-size */
+@utility text-caption-compact    { font-size: var(--font-size-2xs);        line-height: var(--line-height-2xs);        font-weight: var(--font-weight-normal); }                            /* twmerge: extend font-size */
+
 /* Em-based icon sizing — glyphs in text-embedded slots (Badge/Row/LinkChip/
  * ToggleChip/Breadcrumb leading+actions) track the slot's font-size instead of a
  * hardcoded size-N. 1.15em reads as slightly larger than cap height: next to

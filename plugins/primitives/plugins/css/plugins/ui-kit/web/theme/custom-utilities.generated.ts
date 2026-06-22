@@ -33,7 +33,7 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ["pr-none", "pr-2xs", "pr-xs", "pr-sm", "pr-md", "pr-lg", "pr-xl", "pr-2xl"], extend: "pr" },
   { classes: ["pb-none", "pb-2xs", "pb-xs", "pb-sm", "pb-md", "pb-lg", "pb-xl", "pb-2xl"], extend: "pb" },
   { classes: ["pl-none", "pl-2xs", "pl-xs", "pl-sm", "pl-md", "pl-lg", "pl-xl", "pl-2xl"], extend: "pl" },
-  { classes: ["text-title", "text-heading", "text-subheading", "text-body", "text-label", "text-caption"], extend: "font-size" },
+  { classes: ["text-title", "text-heading", "text-subheading", "text-body", "text-label", "text-caption", "text-title-compact", "text-heading-compact", "text-subheading-compact", "text-body-compact", "text-label-compact", "text-caption-compact"], extend: "font-size" },
   { classes: ["icon-auto"], group: "sg-icon-auto", conflictsWith: ["size", "h", "w"] },
   { classes: ["z-base", "z-raised", "z-nav", "z-float", "z-overlay", "z-popover", "z-draw", "z-max"], extend: "z" },
 ] as const satisfies readonly RegistryEntry[];

@@ -9,6 +9,8 @@ export {
   useControlSize,
   iconSizeFor,
   textSizeFor,
+  textStepFor,
+  buttonTextClassFor,
   type ControlSize,
   type ButtonIconSize,
 } from "./theme/control-size";

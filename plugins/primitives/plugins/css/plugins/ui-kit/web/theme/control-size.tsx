@@ -62,3 +62,25 @@ export function iconSizeFor(size: ControlSize): ButtonIconSize {
 export function textSizeFor(size: ControlSize): ControlSize {
   return size
 }
+
+/**
+ * THE single density→text-step policy — the one threshold consumed by `Button`,
+ * `Badge`, AND `Text`, so a row of mixed leaves can never desync its type rung.
+ * `xs` drops exactly one type rung; `sm`/`md`/`lg` keep the comfortable size
+ * (type tracks content density, not chrome affordance — toolbars/headers default
+ * to `sm` and must stay legible). A future change to where text steps is a single
+ * edit here.
+ */
+export function textStepFor(density: ControlSize): 0 | 1 {
+  return density === "xs" ? 1 : 0
+}
+
+/**
+ * `Button`'s own text rungs (body size; the cva still supplies `font-medium`),
+ * driven by the shared step. The raw `text-sm`/`text-xs` strings are intentional
+ * here — `ui-kit` is the sanctioned home for raw size mechanics and the
+ * `no-adhoc-typography` lint never follows a call result into its function body.
+ */
+export function buttonTextClassFor(density: ControlSize): string {
+  return textStepFor(density) ? "text-xs" : "text-sm"
+}

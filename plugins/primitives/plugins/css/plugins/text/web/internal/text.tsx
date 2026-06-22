@@ -1,4 +1,9 @@
-import { cn, useSingleLine } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  useSingleLine,
+  useControlSize,
+  textStepFor,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
  * The closed set of semantic typographic roles. Each role maps to a frozen
@@ -33,6 +38,23 @@ const VARIANT_CLASS: Record<TextVariant, string> = {
   // line. Tone stays orthogonal — pair with `tone="muted"` for the classic
   // section label (see the SectionLabel helper).
   eyebrow: "text-caption uppercase tracking-wide whitespace-nowrap",
+};
+
+/**
+ * The compact rung for each variant — the weight/tracking-preserving `-compact`
+ * utility, swapped in when the ambient `ControlSize` is `xs` (textStepFor === 1).
+ * Mirrors `VARIANT_CLASS` exactly; eyebrow composes `text-caption-compact` with
+ * its small-caps treatment. The threshold is owned by the single density→text
+ * policy (`textStepFor`), shared with `Button` and `Badge`.
+ */
+const COMPACT_VARIANT_CLASS: Record<TextVariant, string> = {
+  title: "text-title-compact",
+  heading: "text-heading-compact",
+  subheading: "text-subheading-compact",
+  body: "text-body-compact",
+  label: "text-label-compact",
+  caption: "text-caption-compact",
+  eyebrow: "text-caption-compact uppercase tracking-wide whitespace-nowrap",
 };
 
 const TONE_CLASS: Record<TextTone, string> = {
@@ -104,6 +126,10 @@ export function Text({
   ...rest
 }: TextProps) {
   const singleLine = useSingleLine();
+  // Type size tracks the ambient control density via the single density→text
+  // policy: at `xs` each variant swaps for its weight-preserving `-compact` rung.
+  // An omitted variant inherits the surrounding typography — nothing to compact.
+  const compact = textStepFor(useControlSize()) === 1;
   // Auto-derive the hover tooltip from string children when truncating, so the
   // clipped content stays discoverable (the role TruncatingText used to fill). An
   // explicit `title` always wins; outside a single-line context we add none (a
@@ -113,7 +139,10 @@ export function Text({
 
   // Composition order variant → tone → single-line leaf → caller className:
   // caller wins last so layout overrides (margins, width caps) compose on top.
-  const typography = cn(variant && VARIANT_CLASS[variant], TONE_CLASS[tone]);
+  const variantClass = variant
+    ? (compact ? COMPACT_VARIANT_CLASS : VARIANT_CLASS)[variant]
+    : undefined;
+  const typography = cn(variantClass, TONE_CLASS[tone]);
 
   if (singleLine && side === "start") {
     return (

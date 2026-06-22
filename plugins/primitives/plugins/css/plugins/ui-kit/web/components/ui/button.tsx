@@ -8,11 +8,12 @@ import {
   useControlSize,
   textSizeFor,
   iconSizeFor,
+  buttonTextClassFor,
   type ControlSize,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size"
 
 const buttonVariants = cva(
-  "group/button focus-ring inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding text-sm font-medium whitespace-nowrap transition-all select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+  "group/button focus-ring inline-flex shrink-0 items-center justify-center rounded-lg border border-transparent bg-clip-padding font-medium whitespace-nowrap transition-all select-none active:not-aria-[haspopup]:translate-y-px disabled:pointer-events-none disabled:opacity-50 aria-invalid:border-destructive aria-invalid:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:border-destructive/50 dark:aria-invalid:ring-destructive/40 [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
       variant: {
@@ -31,8 +32,8 @@ const buttonVariants = cva(
         md: "control-md gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         default:
           "control-md gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
-        xs: "control-xs gap-1 rounded-[min(var(--radius-md),10px)] px-2 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
-        sm: "control-sm gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 text-xs in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
+        xs: "control-xs gap-1 rounded-[min(var(--radius-md),10px)] px-2 in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3",
+        sm: "control-sm gap-1 rounded-[min(var(--radius-md),12px)] px-2.5 in-data-[slot=button-group]:rounded-lg has-data-[icon=inline-end]:pr-1.5 has-data-[icon=inline-start]:pl-1.5 [&_svg:not([class*='size-'])]:size-3.5",
         lg: "control-lg gap-1.5 px-2.5 has-data-[icon=inline-end]:pr-2 has-data-[icon=inline-start]:pl-2",
         icon: "control-icon-md",
         "icon-xs":
@@ -93,6 +94,11 @@ function Button({
         ? iconSizeFor(density)
         : textSizeFor(density)
 
+  // Text size flows through the shared density→text policy (textStepFor, also
+  // consumed by Badge + Text). The `inline` aspect keeps its own `text-[1em]`
+  // (collapses to surrounding text height), so it opts out.
+  const textClass = aspect === "inline" ? undefined : buttonTextClassFor(density)
+
   // Auto-pending: if the handler returns a promise, reflect in-flight state
   // until it settles. Guard setState against unmount mid-flight.
   const [autoPending, setAutoPending] = useState(false)
@@ -117,7 +123,7 @@ function Button({
   return (
     <ButtonPrimitive
       data-slot="button"
-      className={cn(buttonVariants({ variant, size: resolvedSize, shape, className }))}
+      className={cn(buttonVariants({ variant, size: resolvedSize, shape }), textClass, className)}
       disabled={disabled || isLoading}
       data-loading={isLoading || undefined}
       onClick={onClick ? handleClick : undefined}
