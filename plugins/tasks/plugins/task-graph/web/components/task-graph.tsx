@@ -10,39 +10,17 @@ import {
   type GraphCanvasGroup,
 } from "@plugins/primitives/plugins/graph-canvas/web";
 import { addTaskDependency } from "@plugins/tasks/core";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  tasksResource,
+  TaskGraph as TaskGraphValue,
+  isSettled,
+  type TaskListItem,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { patchTask } from "@plugins/tasks/web";
 import { taskDetailPane, useTaskNavigate } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import { EdgeActions } from "./edge-actions";
-
-function computeDagClosure(rootId: string, allTasks: readonly TaskListItem[]): TaskListItem[] {
-  const byId = new Map(allTasks.map((t) => [t.id, t]));
-  const reverseDeps = new Map<string, string[]>();
-  for (const t of allTasks) {
-    for (const d of t.dependencies) {
-      const arr = reverseDeps.get(d) ?? [];
-      arr.push(t.id);
-      reverseDeps.set(d, arr);
-    }
-  }
-  const visited = new Set<string>();
-  const stack = [rootId];
-  while (stack.length) {
-    const id = stack.pop()!;
-    if (visited.has(id)) continue;
-    visited.add(id);
-    const t = byId.get(id);
-    if (!t) continue;
-    for (const d of t.dependencies) {
-      if (byId.has(d)) stack.push(d);
-    }
-    for (const r of reverseDeps.get(id) ?? []) stack.push(r);
-    if (t.groupId && byId.has(t.groupId)) stack.push(t.groupId);
-  }
-  return [...visited].map((id) => byId.get(id)).filter((t): t is TaskListItem => !!t);
-}
 
 function getGroupDepth(groupId: string, byId: Map<string, TaskListItem>): number {
   let depth = 0;
@@ -56,10 +34,6 @@ function getGroupDepth(groupId: string, byId: Map<string, TaskListItem>): number
     depth++;
   }
   return depth;
-}
-
-function isNonBlocking(task: TaskListItem): boolean {
-  return task.status === "done" || task.status === "dropped";
 }
 
 const GROUP_PALETTE = [
@@ -112,7 +86,7 @@ function buildGraph(
     const meta = STATUS_META[task.status];
     const Icon = meta.icon;
     const selected = task.id === selectedId;
-    const isTerminal = task.status === "done" || task.status === "dropped";
+    const isTerminal = isSettled(task.status);
     const hasChildren = childIds.has(task.id);
     return {
       id: task.id,
@@ -136,7 +110,7 @@ function buildGraph(
       edges.push({
         from: dep,
         to: t.id,
-        tone: isNonBlocking(depTask) ? "success" : "muted",
+        tone: isSettled(depTask.status) ? "success" : "muted",
         actions: (
           <EdgeActions
             sourceTaskId={dep}
@@ -187,7 +161,17 @@ function TaskGraphLoaded({
   taskId: string;
   allTasks: readonly TaskListItem[];
 }) {
-  const closure = useMemo(() => computeDagClosure(taskId, allTasks), [taskId, allTasks]);
+  const closure = useMemo(() => {
+    const byId = new Map(allTasks.map((t) => [t.id, t]));
+    const root = byId.get(taskId);
+    // closure() excludes the queried id; re-include the root so it renders.
+    const ids = TaskGraphValue.from(allTasks)
+      .closure(taskId, { includeGroups: true })
+      .map((n) => n.id);
+    return [...(root ? [taskId] : []), ...ids]
+      .map((id) => byId.get(id))
+      .filter((t): t is TaskListItem => !!t);
+  }, [taskId, allTasks]);
   const ctxNavigate = useTaskNavigate();
   const openPane = useOpenPane();
   const onNavigate = useCallback(

@@ -97,6 +97,14 @@ export const attempts = pgView("attempts_v").as((qb) => {
 // cycles (already barred on insert by taskDependsOn) still terminate. Tasks with
 // no dependencies produce no row — consumers COALESCE the absence to "not
 // blocked".
+//
+// This recursive CTE is the SQL embodiment of `isSettled` / `TaskGraph.
+// activeBlockers` (core/task-graph.ts): it walks *through* settled (dropped or
+// completed) ancestors and blocks on ANY non-settled one — the same rule, in
+// both directions. It cannot read `tasks_v.status` to define "settled" because
+// tasks_v depends on this view (circular), so it re-derives settled from the raw
+// columns (`dropped_at IS NULL AND NOT EXISTS(completed attempt)`); both
+// definitions must stay in agreement.
 export const taskBlocking = pgView("task_blocking_v", {
   taskId: text("task_id").notNull(),
   hasBlockingDep: boolean("has_blocking_dep").notNull(),

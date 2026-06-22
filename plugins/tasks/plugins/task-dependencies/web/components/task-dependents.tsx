@@ -10,7 +10,12 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { removeTaskDependency } from "@plugins/tasks/core";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import {
+  tasksResource,
+  TaskGraph,
+  isSettled,
+  type TaskListItem,
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -22,7 +27,9 @@ export function TaskDependents({ taskId }: { taskId: string }) {
   if (tasksResult.pending) return <Loading variant="rows" />;
 
   const tasks = tasksResult.data;
-  const dependentIds = tasks.filter((t) => t.dependencies.includes(taskId)).map((t) => t.id);
+  const dependentIds = TaskGraph.from(tasks)
+    .directDependents(taskId)
+    .map((t) => t.id);
 
   return (
     <Collapsible defaultOpen>
@@ -55,9 +62,7 @@ function DependentChip({
 }) {
   const dependent = tasks.find((t) => t.id === dependentId) ?? null;
   const title = dependent?.title ?? dependentId;
-  const isTerminal = dependent
-    ? dependent.status === "done" || dependent.status === "dropped"
-    : false;
+  const isTerminal = dependent ? isSettled(dependent.status) : false;
   const openPane = useOpenPane();
 
   const open = () => openPane(taskDetailPane, { taskId: dependentId }, { mode: "swap" });

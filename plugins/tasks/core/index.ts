@@ -41,4 +41,3 @@ export type {
   TaskChainSubmitBody,
   TaskChainSubmitResponse,
 } from "./task-chain-types";
-export { countTransitiveDependents } from "./utils";

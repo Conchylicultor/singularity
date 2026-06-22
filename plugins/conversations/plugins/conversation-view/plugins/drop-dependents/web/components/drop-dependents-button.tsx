@@ -5,8 +5,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import { useConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
-import { countTransitiveDependents } from "@plugins/tasks/core";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import { tasksResource, TaskGraph, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { dropDependents } from "../../shared";
 
@@ -28,10 +27,10 @@ function DropDependentsItemInner({
   allTasks: TaskListItem[];
 }) {
   const live = useConversation(conversation.id) ?? conversation;
-  const dependentCount = useMemo(
-    () => countTransitiveDependents(conversation.taskId, allTasks),
-    [conversation.taskId, allTasks],
-  );
+  const graph = useMemo(() => TaskGraph.from(allTasks), [allTasks]);
+  const dependentCount = conversation.taskId
+    ? graph.activeDependents(conversation.taskId).length
+    : 0;
 
   const { mutate, isPending } = useEndpointMutation(dropDependents, {
     onSuccess: (data) => {

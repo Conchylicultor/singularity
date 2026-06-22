@@ -1,6 +1,5 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { countTransitiveDependents } from "@plugins/tasks/core";
-import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
+import { tasksResource, TaskGraph } from "@plugins/tasks/plugins/tasks-core/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 
 /**
@@ -23,7 +22,9 @@ export function DependentCountBadge({
 
   if (tasksResult.pending) return null;
 
-  const count = taskId ? countTransitiveDependents(taskId, tasksResult.data) : 0;
+  const count = taskId
+    ? TaskGraph.from(tasksResult.data).activeDependents(taskId).length
+    : 0;
   if (count === 0) return null;
 
   return (

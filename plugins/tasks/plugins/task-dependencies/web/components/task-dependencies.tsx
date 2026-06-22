@@ -15,7 +15,7 @@ import {
   removeTaskDependency,
   type TaskChainTarget,
 } from "@plugins/tasks/core";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import { tasksResource, isSettled, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
@@ -111,7 +111,7 @@ function DepChip({
 }) {
   const dep = tasks.find((t) => t.id === depId) ?? null;
   const title = dep?.title ?? depId;
-  const isTerminal = dep ? dep.status === "done" || dep.status === "dropped" : false;
+  const isTerminal = dep ? isSettled(dep.status) : false;
   const openPane = useOpenPane();
 
   const open = () => openPane(taskDetailPane, { taskId: depId }, { mode: "swap" });

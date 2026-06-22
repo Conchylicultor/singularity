@@ -5,6 +5,7 @@ import { db } from "@plugins/database/server";
 import { _taskDependencies, _tasks } from "../tables";
 import { attempts, taskBlocking, tasks } from "../views";
 import type { Task } from "../schema";
+import { TaskGraph } from "../../../core";
 
 export interface TaskFilters {
   excludeId?: string;
@@ -70,6 +71,10 @@ export async function isDescendant(
   return false;
 }
 
+// Intentionally SINGLE-HOP DIRECT (distinct from the transitive `task_blocking_v`
+// / TaskGraph.activeBlockers): callers feed the result to `rankAfterBlockers` and
+// walk the frontier themselves, so this must stay the direct-dependency frontier,
+// not the transitive closure. Do NOT "consolidate" it onto the transitive view.
 export async function listBlockingDepIds(taskId: string): Promise<string[]> {
   const rows = await db
     .select({ depTaskId: _taskDependencies.dependsOnTaskId })
@@ -134,29 +139,9 @@ export async function listArmedDependentsOf(
 }
 
 // True if `start` (transitively) depends on `target`. Used to prevent
-// dependency cycles before inserting `target → start`.
+// dependency cycles before inserting `target → start`. Structural and
+// status-agnostic: routes through the shared TaskGraph so the last in-process
+// server walk derives from the same model as every other traversal.
 export async function taskDependsOn(start: string, target: string): Promise<boolean> {
-  const all = await db
-    .select({
-      taskId: _taskDependencies.taskId,
-      dependsOnTaskId: _taskDependencies.dependsOnTaskId,
-    })
-    .from(_taskDependencies);
-  const edges = new Map<string, string[]>();
-  for (const e of all) {
-    const list = edges.get(e.taskId);
-    if (list) list.push(e.dependsOnTaskId);
-    else edges.set(e.taskId, [e.dependsOnTaskId]);
-  }
-  const stack = [start];
-  const seen = new Set<string>();
-  while (stack.length) {
-    const cur = stack.pop()!;
-    if (cur === target) return true;
-    if (seen.has(cur)) continue;
-    seen.add(cur);
-    const next = edges.get(cur);
-    if (next) stack.push(...next);
-  }
-  return false;
+  return TaskGraph.from(await listTasks()).dependsOn(start, target);
 }

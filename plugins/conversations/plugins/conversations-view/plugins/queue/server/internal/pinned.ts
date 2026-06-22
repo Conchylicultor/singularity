@@ -6,17 +6,15 @@ import { conversationsQueue, _queueState } from "./tables";
 
 const SINGLETON = "singleton";
 
-// True when the conversation's task has no non-dropped dependency without a completed attempt.
-const notBlocked = sql`NOT EXISTS (
-  SELECT 1 FROM task_dependencies td
-    JOIN tasks dep ON dep.id = td.depends_on_task_id
-   WHERE td.task_id = ${_attempts.taskId}
-     AND dep.dropped_at IS NULL
-     AND NOT EXISTS (
-       SELECT 1 FROM attempts_v a
-        WHERE a.task_id = dep.id AND a.status = 'completed'
-     )
-)`;
+// True when the conversation's task has no active (transitive) blocking
+// dependency. Reads the shared `task_blocking_v` view (the SQL embodiment of
+// isSettled/activeBlockers) instead of re-deriving the predicate here — the old
+// hand-written copy was single-hop and so couldn't punch through a *dropped*
+// intermediate to see a deeper unresolved blocker. A task with no row in the
+// view has no dependencies → not blocked.
+const notBlocked = sql`NOT COALESCE((
+  SELECT b.has_blocking_dep FROM task_blocking_v b WHERE b.task_id = ${_attempts.taskId}
+), false)`;
 
 // True when no other live member of the same task was created more recently.
 const isGroupSelected = sql`NOT EXISTS (

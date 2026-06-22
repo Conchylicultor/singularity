@@ -6,7 +6,7 @@ import { useActiveConversations } from "@plugins/conversations/web";
 import { useTask } from "@plugins/tasks/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { addTaskDependency, removeTaskDependency } from "@plugins/tasks/core";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import { tasksResource, TaskGraph, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
@@ -53,13 +53,13 @@ function DependenciesButtonInner({
     [task?.dependencies],
   );
 
+  const graph = useMemo(() => TaskGraph.from(allTasks), [allTasks]);
+
   const blockedTaskIds = useMemo(() => {
     const myId = conversation.taskId;
     if (!myId) return new Set<string>();
-    return new Set(
-      allTasks.filter((t) => t.dependencies.includes(myId)).map((t) => t.id),
-    );
-  }, [allTasks, conversation.taskId]);
+    return new Set(graph.directDependents(myId).map((t) => t.id));
+  }, [graph, conversation.taskId]);
 
   const convByTaskId = useMemo(() => {
     const map = new Map<string, (typeof active)[number]>();

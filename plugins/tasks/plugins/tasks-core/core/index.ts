@@ -44,3 +44,9 @@ export {
 } from "./resources";
 
 export { buildTaskPrompt } from "./build-task-prompt";
+
+// The single dependency-graph value object + settled predicate. Every traversal
+// (badge counts, drop sets, the launch gate, cycle checks, the graph view)
+// derives from this one model. See ./task-graph.ts.
+export { TaskGraph, isSettled, SETTLED_STATUSES } from "./task-graph";
+export type { TaskNode } from "./task-graph";

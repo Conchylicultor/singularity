@@ -3,7 +3,8 @@ import { db } from "@plugins/database/server";
 import { _attempts, _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../views";
 import type { TaskStatus } from "../schema";
-import { findNextRankInFolder, isDescendant, taskDependsOn } from "../queries/tasks";
+import { TaskGraph } from "../../../core";
+import { findNextRankInFolder, isDescendant, listTasks, taskDependsOn } from "../queries/tasks";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
@@ -190,29 +191,13 @@ export async function removeTaskDependency(
 }
 
 export async function dropTaskTree(id: string): Promise<number> {
-  const allDeps = await db
-    .select({
-      taskId: _taskDependencies.taskId,
-      dependsOnTaskId: _taskDependencies.dependsOnTaskId,
-    })
-    .from(_taskDependencies);
-  const dependentsOf = new Map<string, string[]>();
-  for (const row of allDeps) {
-    const list = dependentsOf.get(row.dependsOnTaskId);
-    if (list) list.push(row.taskId);
-    else dependentsOf.set(row.dependsOnTaskId, [row.taskId]);
-  }
-  const ids: string[] = [];
-  const seen = new Set<string>();
-  const stack = [id];
-  while (stack.length) {
-    const cur = stack.pop()!;
-    if (seen.has(cur)) continue;
-    seen.add(cur);
-    ids.push(cur);
-    const deps = dependentsOf.get(cur);
-    if (deps) stack.push(...deps);
-  }
+  // Drop `id` plus every task that TRANSITIVELY depends on it and is still
+  // active. The shared TaskGraph walk continues *through* settled (done/dropped)
+  // intermediates to reach active nodes behind them, but never re-acts on the
+  // settled nodes themselves — so already done/dropped descendants are left
+  // untouched while a deep active dependent gated behind one is still dropped.
+  const graph = TaskGraph.from(await listTasks());
+  const ids = [...new Set([id, ...graph.activeDependents(id).map((n) => n.id)])];
 
   const now = new Date();
   const befores = new Map<string, TaskStatus | null>();
