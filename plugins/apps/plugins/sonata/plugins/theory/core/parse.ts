@@ -9,10 +9,13 @@
  * Returns `null` for anything that isn't a recognised chord, so callers can skip
  * (and surface) typos rather than crash on user input.
  *
- * Slash/inversion symbols (e.g. `"C/E"`) are intentionally NOT parsed in v1:
- * authoring sources don't emit inversions, and detection sets `ChordData.bass`
- * directly. The round-trip is unaffected — `formatChordSymbol` only appends a
- * slash when `bass` is set, which this parser never produces.
+ * Slash/inversion symbols (e.g. `"C/E"`, `"D/F#"`, `"Am7/G"`) ARE parsed: a
+ * trailing `/X` is split off, `X` is read as a bare bass note → pitch class, and
+ * the result sets `ChordData.bass` with the slash baked into `symbol`. This is
+ * additive — a non-slash symbol parses exactly as before. Inversion-emitting
+ * sources (e.g. Ultimate Guitar tabs) need this; the chord part still has to be
+ * a recognised chord and the bass a recognised note, else the whole symbol is
+ * unrecognised (`null`).
  */
 
 import type { ChordData } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -86,11 +89,28 @@ const SUFFIXES_BY_LENGTH = [...SUFFIX_TO_QUALITY].sort(
   (a, b) => b.suffix.length - a.suffix.length,
 );
 
-/** Parse a chord symbol string into `ChordData`, or `null` if unrecognised. */
-export function parseChordSymbol(input: string): ChordData | null {
-  const s = input.trim();
-  if (s.length === 0) return null;
+/**
+ * Read a bare note (letter A–G + accidentals) into its pitch class, or `null`.
+ * Shared by the root parse and the slash-bass parse so the accidental math has
+ * one home.
+ */
+function parseNotePc(s: string): number | null {
+  const m = /^([A-Ga-g])([#b♯♭]*)$/.exec(s);
+  if (!m) return null;
 
+  let pc = LETTER_PC[m[1]!.toUpperCase()]!;
+  for (const ch of m[2]!) {
+    if (ch === "#" || ch === "♯") pc += 1;
+    else if (ch === "b" || ch === "♭") pc -= 1;
+  }
+  return ((pc % 12) + 12) % 12;
+}
+
+/**
+ * Parse the chord part (root + quality, no slash bass) into `ChordData`, or
+ * `null` if unrecognised. The slash-bass handling lives in `parseChordSymbol`.
+ */
+function parseChordCore(s: string): ChordData | null {
   // Root: a letter A–G followed by any number of accidentals (# / b / ♯ / ♭).
   const m = /^([A-Ga-g])([#b♯♭]*)(.*)$/.exec(s);
   if (!m) return null;
@@ -117,5 +137,32 @@ export function parseChordSymbol(input: string): ChordData | null {
     root,
     quality: match.quality,
     symbol: rootText + qualitySymbol(match.quality),
+  };
+}
+
+/**
+ * Parse a chord symbol string into `ChordData`, or `null` if unrecognised.
+ * Supports an optional trailing `/X` slash bass (e.g. `"G/B"`, `"D/F#"`).
+ */
+export function parseChordSymbol(input: string): ChordData | null {
+  const s = input.trim();
+  if (s.length === 0) return null;
+
+  // Split off an optional trailing slash bass.
+  const slash = s.indexOf("/");
+  if (slash === -1) return parseChordCore(s);
+
+  const core = parseChordCore(s.slice(0, slash));
+  if (!core) return null;
+
+  const bassText = s.slice(slash + 1).trim();
+  const bass = parseNotePc(bassText);
+  if (bass === null) return null;
+
+  const normalizedBassText = bassText.replace(/♯/g, "#").replace(/♭/g, "b");
+  return {
+    ...core,
+    bass,
+    symbol: core.symbol + "/" + normalizedBassText,
   };
 }

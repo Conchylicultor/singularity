@@ -7,6 +7,7 @@
     "apps.sonata.rich.chord-readout:chord-readout",
     "apps.sonata.rich.key-readout:key-readout",
     "apps.sonata.rich.circle-of-fifths:circle-of-fifths",
+    "apps.sonata.sources.ultimate-guitar:ultimate-guitar-editor",
     "apps.sonata.sources.chord-grid:chord-grid-editor"
   ]
 }
