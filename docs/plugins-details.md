@@ -552,7 +552,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports: Values: `fetchUgTabContent`
                 - Routes: `POST /api/sonata/sources/ultimate-guitar/fetch`
               - Core:
-                - Exports: Types: `UgFetchErrorKind`, `UgTab`; Values: `extractUgTabId`, `UgFetchError`, `UgTabSchema`
+                - Exports: Types: `ParsedChord`, `ParsedLine`, `ParsedSection`, `ParsedTab`, `UgFetchErrorKind`, `UgParseErrorKind`, `UgTab`; Values: `extractUgTabId`, `parseUgContent`, `parseUgTab`, `UgFetchError`, `UgParseError`, `UgTabSchema`
         - **`theory`** — Music-theory primitives for Sonata: the chord vocabulary (quality↔intervals↔symbol) and a chord-symbol parser shared by chord analyzers and chord-authoring sources.
           - Core:
             - Uses: `apps/sonata/score.accidentalGlyph`, `apps/sonata/score.Annotation`, `apps/sonata/score.bars`, `apps/sonata/score.beatGrid`, `apps/sonata/score.ChordData`, `apps/sonata/score.effectiveKeyAt`, `apps/sonata/score.emptyScore`, `apps/sonata/score.KeySignature`, `apps/sonata/score.KeySpeller`, `apps/sonata/score.makeKeySpeller`, `apps/sonata/score.Note`, `apps/sonata/score.Score`, `apps/sonata/score.scoreEndBeat`, `apps/sonata/score.TimeSigEvent`
