@@ -10,6 +10,9 @@
   - Contributes: `Apps.App` "Deploy" → `DeployLayout`
   - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Deploy`
+- Core:
+  - Uses: `primitives/pane.defineApp`
+  - Exports: Values: `deployApp`
 - Cross-plugin:
   - Imported by: `apps/deploy/servers`
 

@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps/web";
 import { MdSchema } from "react-icons/md";
+import { workflowsApp } from "../core";
 import { WorkflowsLayout } from "./components/workflows-layout";
 
 export { WorkflowsApp } from "./slots";
@@ -10,11 +11,11 @@ export default {
     "App shell for the workflows app. Registers the /workflows app entry and defines WorkflowsApp.Sidebar/Toolbar slots.",
   contributions: [
     Apps.App({
-      id: "workflows",
+      id: workflowsApp.id,
       icon: MdSchema,
       tooltip: "Workflows",
       component: WorkflowsLayout,
-      path: "/workflows",
+      path: workflowsApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;

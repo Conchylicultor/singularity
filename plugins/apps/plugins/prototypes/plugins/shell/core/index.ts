@@ -1,0 +1,1 @@
+export { prototypesApp } from "./app";

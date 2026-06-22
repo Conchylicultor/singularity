@@ -10,6 +10,9 @@
   - Contributes: `Apps.App` "Settings" → `SettingsLayout`
   - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Settings`, `SETTINGS_APP_PATH`
+- Core:
+  - Uses: `primitives/pane.defineApp`
+  - Exports: Values: `settingsApp`
 - Cross-plugin:
   - Imported by: `apps/settings/accounts`, `apps/settings/appearance`, `apps/settings/config`
 

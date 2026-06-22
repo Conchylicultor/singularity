@@ -1,0 +1,1 @@
+export { homeApp } from "./app";

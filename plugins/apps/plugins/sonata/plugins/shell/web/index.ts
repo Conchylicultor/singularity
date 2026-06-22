@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps/web";
 import { MdPiano } from "react-icons/md";
+import { sonataApp } from "../core";
 import { SonataLayout } from "./components/sonata-layout";
 
 export { Sonata, SonataToolbar } from "./slots";
@@ -32,11 +33,11 @@ export default {
     "App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.",
   contributions: [
     Apps.App({
-      id: "sonata",
+      id: sonataApp.id,
       icon: MdPiano,
       tooltip: "Sonata",
       component: SonataLayout,
-      path: "/sonata",
+      path: sonataApp.basePath,
     }),
   ],
 } satisfies PluginDefinition;

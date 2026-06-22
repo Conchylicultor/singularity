@@ -12,6 +12,9 @@ App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar
   - Contributes: `Apps.App` "Studio" → `StudioLayout`
   - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Studio`
+- Core:
+  - Uses: `primitives/pane.defineApp`
+  - Exports: Values: `studioApp`
 - Cross-plugin:
   - Imported by: `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/graph`
 

@@ -1,0 +1,1 @@
+export { sonataApp } from "./app";

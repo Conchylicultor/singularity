@@ -10,6 +10,9 @@
   - Contributes: `Apps.App` "Browser" → `BrowserLayout`
   - Uses: `apps.Apps`, `primitives/bar.Bar`, `primitives/scoped-store.defineScopedStore`, `primitives/slot-render.defineMountSlot`, `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `BrowserNavApi`, `BrowserProxyApi`, `BrowserTab`, `BrowserTabsApi`, `BrowserTabsState`, `BrowserTabSummary`, `FaviconProps`; Values: `Browser`, `BrowserTabsStore`, `Favicon`, `useBrowserNav`, `useBrowserProxy`, `useBrowserTabs`
+- Core:
+  - Uses: `primitives/pane.defineApp`
+  - Exports: Values: `browserApp`
 - Cross-plugin:
   - Imported by: `apps/browser/bookmarks`, `apps/browser/history`, `apps/browser/navigation`, `apps/browser/omnibox`, `apps/browser/proxy`, `apps/browser/start-page`, `apps/browser/tabs`, `apps/browser/webview`
 

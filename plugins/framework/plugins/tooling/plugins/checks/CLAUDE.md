@@ -19,6 +19,7 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
   - Exports: Types: `CheckCache`, `CodeMatch`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
+  - **`apps-paths-from-app-ref`**
   - **`barrel-stubs-in-sync`**
   - **`class-token-walk-in-sync`**
   - **`collected-dir-tsconfig-coverage`**

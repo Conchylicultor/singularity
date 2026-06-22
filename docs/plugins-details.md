@@ -155,6 +155,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Browser" → `BrowserLayout`
             - Uses: `apps.Apps`, `primitives/bar.Bar`, `primitives/scoped-store.defineScopedStore`, `primitives/slot-render.defineMountSlot`, `primitives/slot-render.defineRenderSlot`
             - Exports: Types: `BrowserNavApi`, `BrowserProxyApi`, `BrowserTab`, `BrowserTabsApi`, `BrowserTabsState`, `BrowserTabSummary`, `FaviconProps`; Values: `Browser`, `BrowserTabsStore`, `Favicon`, `useBrowserNav`, `useBrowserProxy`, `useBrowserTabs`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports: Values: `browserApp`
           - Cross-plugin:
             - Imported by: `apps/browser/bookmarks`, `apps/browser/history`, `apps/browser/navigation`, `apps/browser/omnibox`, `apps/browser/proxy`, `apps/browser/start-page`, `apps/browser/tabs`, `apps/browser/webview`
         - **`start-page`** — Browser start page: the empty-state landing shown in the viewport when no URL is loaded — a centered hero (wordmark + search), curated quick links, and the live bookmarks and recents sections.
@@ -177,6 +180,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Debug" → `DebugLayout`
             - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `DebugApp`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports: Values: `debugApp`
           - Cross-plugin:
             - Imported by: `backup`, `conversations/recover`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/queue`, `debug/read-set`, `debug/render-profiler`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `infra/events-test`, `primitives/css/layout-harness`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
@@ -201,6 +207,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Deploy" → `DeployLayout`
             - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `Deploy`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports: Values: `deployApp`
           - Cross-plugin:
             - Imported by: `apps/deploy/servers`
     - **`file-explorer`** — File explorer app.
@@ -211,6 +220,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "File Explorer" → `FileExplorerLayout`
             - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `FileExplorer`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports: Values: `fileExplorerApp`
     - **`home`** — Home — app launcher and entry point.
       - Plugins:
         - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
@@ -223,6 +235,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Home" → `HomeLayout`
             - Uses: `apps.Apps`, `layouts/miller.PaneOverlayHost`, `primitives/css/column.Column`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `Home`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports: Values: `homeApp`
           - Cross-plugin:
             - Imported by: `apps/home/app-cards`
     - **`pages`** — Notion-like pages app.
@@ -311,6 +326,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
             - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports: Values: `prototypesApp`
     - **`settings`** — Settings app.
       - Plugins:
         - **`accounts`** — Account settings surface: registers the accounts pane and its Settings sidebar entry.
@@ -331,6 +349,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Settings" → `SettingsLayout`
             - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `Settings`, `SETTINGS_APP_PATH`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports: Values: `settingsApp`
           - Cross-plugin:
             - Imported by: `apps/settings/accounts`, `apps/settings/appearance`, `apps/settings/config`
     - **`sonata`** — Sonata — extensible piano and music app.
@@ -520,6 +541,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses: `apps.Apps`, `layouts/full-pane.FullPane`, `primitives/css/center.Center`, `primitives/css/text.Text`, `primitives/pane-toolbar.definePaneToolbar`, `primitives/scoped-store.defineScopedStore`, `primitives/scoped-store.ScopedStore`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineMountSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.defineWrapperSlot`
             - Exports: Types: `CursorApi`, `CursorStore`, `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `TransportClock`; Values: `cursorApiFor`, `CursorStoreProvider`, `KeyModeStoreProvider`, `Sonata`, `SonataProvider`, `SonataToolbar`, `TEMPO_MATH_FLOOR`, `useCursorApi`, `useCursorBeat`, `useCursorSelector`, `useKeyAutoDetect`, `useSetKeyAutoDetect`, `useSonata`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports: Values: `sonataApp`
           - Cross-plugin:
             - Imported by: `apps/sonata/audio/engine`, `apps/sonata/audio/piano`, `apps/sonata/audio/soundfont`, `apps/sonata/controls`, `apps/sonata/library`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/playback-history`, `apps/sonata/progress/scrubber`, `apps/sonata/rich/chord-analyzer`, `apps/sonata/rich/chord-overlay`, `apps/sonata/rich/chord-progression`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/circle-of-fifths`, `apps/sonata/rich/key-chip`, `apps/sonata/rich/key-mode`, `apps/sonata/rich/key-readout`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
@@ -653,6 +677,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Story" → `StoryLayout`, `StoryToolbar.Start` "back" → `BackToStories`, `StoryToolbar.Start` "title" → `StoryTitleItem`, `StoryToolbar.End` "view-switcher" → `ViewSwitcherItem`, `Pane.Register` "story-gallery", `Pane.Register` "story-detail"
             - Uses: `apps.Apps`, `apps/story/marker.markStory`, `apps/story/marker.storiesResource`, `apps/story/marker.useStories`, `apps/story/render.Story`, `apps/story/render.StoryRender`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `layouts/full-pane.FullPane`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `primitives/css/column.Column`, `primitives/css/spacing.Stack`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/editable-field.useEditableField`, `primitives/icon-button.IconButton`, `primitives/live-state.ResourceView`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane-toolbar.definePaneToolbar`, `primitives/pane.Pane`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/relative-time.formatRelativeTime`
             - Exports: Values: `StoryToolbar`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports: Values: `storyApp`
         - **`story-core`** — Renderer-agnostic StoryNode IR plus buildStoryTree — the single place a block type maps to a structural role (divider → break, else content).
           - Core:
             - Uses: `page/divider.DIVIDER_TYPE`, `primitives/rank.Rank`, `primitives/tree.buildTree`, `primitives/tree.TreeNode`
@@ -777,6 +804,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Studio" → `StudioLayout`
             - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `Studio`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports: Values: `studioApp`
           - Cross-plugin:
             - Imported by: `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/graph`
     - **`surface`** — Generic per-tab surface dispatcher: renders every open tab at once positioned by its own placement, dispatched through the Surface.Placement registry. Owns the multi-placement body and the placement control; each placement (docked / floating / solo) is a self-contained sub-plugin.
@@ -824,6 +854,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Workflows" → `WorkflowsLayout`
             - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `WorkflowsApp`
+          - Core:
+            - Uses: `primitives/pane.defineApp`
+            - Exports: Values: `workflowsApp`
         - **`steps`** — Umbrella for workflow step type plugins.
           - Plugins:
             - **`branch`** — Branch step type for workflows. Routes execution based on a field value from the previous step's output. Branch step type for workflows. Routes execution based on a field value from the previous step's output.
@@ -2639,6 +2672,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `CheckCache`, `CodeMatch`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
           - Plugins:
             - **`app-css-utilities-in-sync`**
+            - **`apps-paths-from-app-ref`**
             - **`barrel-stubs-in-sync`**
             - **`class-token-walk-in-sync`**
             - **`collected-dir-tsconfig-coverage`**
@@ -4066,7 +4100,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/bar.Bar`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/select-scope.ContentScope`, `primitives/slot-render.renderIsolated`, `primitives/surface-id.SurfaceIdContext`, `primitives/tooltip.WithTooltip`
         - Exports: Types: `InferParams`, `MatchEntry`, `OpenPaneFn`, `PaneChromeConfig`, `PaneInput`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneRouteEntry`, `PaneSlot`, `PaneStore`, `PaneToggleOpts`, `ResolveHook`, `SurfaceChrome`, `TypeMarker`; Values: `buildRouteUrl`, `clearRoute`, `createPaneStore`, `defaultStore`, `getBasePath`, `getRoute`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `PaneStoreContext`, `PaneSurfaceAppContext`, `PaneSurfaceProvider`, `parseUrl`, `reorderRoute`, `restoreRoute`, `setBasePath`, `setLiveStore`, `stripBasePath`, `SurfaceChromeContext`, `type`, `useCurrentPane`, `useIndexMatch`, `useOpenPane`, `usePaneMatch`, `usePaneRoute`, `usePaneStore`, `usePaneTitle`, `usePathname`, `useRoute`, `useSurfaceAppId`, `useSyncPaneRegistry`
       - Cross-plugin:
-        - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `apps`, `apps/agent-manager/shell`, `apps/agent-manager/welcome`, `apps/deploy/servers`, `apps/pages/content-search`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/pages/starred`, `apps/pages/welcome`, `apps/pages/welcome/quick-create`, `apps/pages/welcome/recent-pages`, `apps/prototypes/gallery`, `apps/settings/accounts`, `apps/settings/appearance`, `apps/settings/config`, `apps/sonata/library`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables`, `apps/studio/explorer`, `apps/studio/explorer/membership`, `apps/studio/graph`, `auth`, `auth/google`, `auth/google/setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/agents`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/file-path`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/open-app`, `conversations/conversation-view/push-profiling`, `conversations/conversation-view/terminal-pane`, `conversations/conversation-view/vscode`, `conversations/conversations-view`, `conversations/pane-restore`, `conversations/recover`, `conversations/summary`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/profiling/build`, `debug/profiling/push`, `debug/queue`, `debug/read-set`, `debug/render-profiler`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `infra/events-test`, `layouts/full-pane`, `layouts/host`, `layouts/miller`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/sub-plugins`, `primitives/app-shell`, `primitives/css/layout-harness`, `primitives/launch`, `review`, `screenshot`, `stats`, `stats/cost`, `tasks/attempt-view`, `tasks/task-dependencies`, `tasks/task-detail`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-header`, `tasks/tasks-core`, `ui/theme-engine/theme-customizer`
+        - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `apps`, `apps/agent-manager/shell`, `apps/agent-manager/welcome`, `apps/browser/shell`, `apps/debug/shell`, `apps/deploy/servers`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/pages/content-search`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/pages/starred`, `apps/pages/welcome`, `apps/pages/welcome/quick-create`, `apps/pages/welcome/recent-pages`, `apps/prototypes/gallery`, `apps/prototypes/shell`, `apps/settings/accounts`, `apps/settings/appearance`, `apps/settings/config`, `apps/settings/shell`, `apps/sonata/library`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables`, `apps/studio/explorer`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/studio/shell`, `apps/workflows/shell`, `auth`, `auth/google`, `auth/google/setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/agents`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/file-path`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/open-app`, `conversations/conversation-view/push-profiling`, `conversations/conversation-view/terminal-pane`, `conversations/conversation-view/vscode`, `conversations/conversations-view`, `conversations/pane-restore`, `conversations/recover`, `conversations/summary`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/profiling/build`, `debug/profiling/push`, `debug/queue`, `debug/read-set`, `debug/render-profiler`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `infra/events-test`, `layouts/full-pane`, `layouts/host`, `layouts/miller`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/sub-plugins`, `primitives/app-shell`, `primitives/css/layout-harness`, `primitives/launch`, `review`, `screenshot`, `stats`, `stats/cost`, `tasks/attempt-view`, `tasks/task-dependencies`, `tasks/task-detail`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-header`, `tasks/tasks-core`, `ui/theme-engine/theme-customizer`
       - Core:
         - Exports: Types: `AppRef`, `InferParams`, `RouteDef`; Values: `defineApp`, `defineRoute`, `fillSegment`
     - **`pane-toolbar`** — Factory for full-surface pane toolbars: a sanctioned render-slot header host with reorderable start/end zones. Use instead of hand-rolling a header bar.

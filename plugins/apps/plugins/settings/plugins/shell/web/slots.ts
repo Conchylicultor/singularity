@@ -1,9 +1,10 @@
 import type { ComponentType } from "react";
 import type { AppShellSidebarItem } from "@plugins/primitives/plugins/app-shell/web";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import { settingsApp } from "../core";
 
 /** The Settings app's base URL path and its index pane's `appPath`. */
-export const SETTINGS_APP_PATH = "/settings";
+export const SETTINGS_APP_PATH = settingsApp.basePath;
 
 export const Settings = {
   /** Left-rail entries — one per settings surface (account, config, …). */

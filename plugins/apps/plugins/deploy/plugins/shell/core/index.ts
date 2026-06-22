@@ -1,0 +1,1 @@
+export { deployApp } from "./app";

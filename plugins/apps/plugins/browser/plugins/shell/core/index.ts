@@ -1,0 +1,1 @@
+export { browserApp } from "./app";

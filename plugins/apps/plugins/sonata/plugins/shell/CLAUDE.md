@@ -31,6 +31,9 @@ explicit (`currentSongId != null`) rather than an implicit empty-bus.
   - Contributes: `Apps.App` "Sonata" → `SonataLayout`
   - Uses: `apps.Apps`, `layouts/full-pane.FullPane`, `primitives/css/center.Center`, `primitives/css/text.Text`, `primitives/pane-toolbar.definePaneToolbar`, `primitives/scoped-store.defineScopedStore`, `primitives/scoped-store.ScopedStore`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineMountSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.defineWrapperSlot`
   - Exports: Types: `CursorApi`, `CursorStore`, `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `TransportClock`; Values: `cursorApiFor`, `CursorStoreProvider`, `KeyModeStoreProvider`, `Sonata`, `SonataProvider`, `SonataToolbar`, `TEMPO_MATH_FLOOR`, `useCursorApi`, `useCursorBeat`, `useCursorSelector`, `useKeyAutoDetect`, `useSetKeyAutoDetect`, `useSonata`
+- Core:
+  - Uses: `primitives/pane.defineApp`
+  - Exports: Values: `sonataApp`
 - Cross-plugin:
   - Imported by: `apps/sonata/audio/engine`, `apps/sonata/audio/piano`, `apps/sonata/audio/soundfont`, `apps/sonata/controls`, `apps/sonata/library`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/playback-history`, `apps/sonata/progress/scrubber`, `apps/sonata/rich/chord-analyzer`, `apps/sonata/rich/chord-overlay`, `apps/sonata/rich/chord-progression`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/circle-of-fifths`, `apps/sonata/rich/key-chip`, `apps/sonata/rich/key-mode`, `apps/sonata/rich/key-readout`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`
 

@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { MdAutoStories } from "react-icons/md";
+import { storyApp } from "../core";
 import { StoryLayout } from "./components/story-layout";
 import { StoryToolbar } from "./toolbar";
 import {
@@ -18,11 +19,11 @@ export default {
     "App shell for Story Builder. Registers the /story app entry and the gallery + editor panes (browse story-marked pages, author a story, switch between Author and renderer lenses).",
   contributions: [
     Apps.App({
-      id: "story",
+      id: storyApp.id,
       icon: MdAutoStories,
       tooltip: "Story",
       component: StoryLayout,
-      path: "/story",
+      path: storyApp.basePath,
     }),
     // Editor toolbar zones: Start (← Stories, title) + End (view switcher).
     StoryToolbar.Start({ id: "back", component: BackToStories }),

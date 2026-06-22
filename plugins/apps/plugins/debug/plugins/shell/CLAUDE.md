@@ -10,6 +10,9 @@
   - Contributes: `Apps.App` "Debug" → `DebugLayout`
   - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `DebugApp`
+- Core:
+  - Uses: `primitives/pane.defineApp`
+  - Exports: Values: `debugApp`
 - Cross-plugin:
   - Imported by: `backup`, `conversations/recover`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/queue`, `debug/read-set`, `debug/render-profiler`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `infra/events-test`, `primitives/css/layout-harness`
 
