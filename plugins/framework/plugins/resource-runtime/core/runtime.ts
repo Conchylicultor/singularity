@@ -617,6 +617,17 @@ export interface ResourceRuntime {
    */
   loadResourceByKey: (key: string, params?: ResourceParams) => Promise<unknown>;
   /**
+   * Re-emit a registered resource to its current subscribers WITHOUT a DB change:
+   * schedules a notify so the loader re-runs and the keyed diff comes back empty,
+   * producing a real no-op push. Sibling to `loadResourceByKey`. If `params` is
+   * omitted, fans out to every distinct currently-subscribed params tuple for the
+   * key. Returns the number of param-tuples scheduled (0 = no subscribers, so the
+   * push is unobservable). Throws on an unknown key (fail loudly). Tagged
+   * `source: "synthetic"` so it never pollutes the hand-vs-feed counters — the
+   * deterministic-churn emitter for the live-state-churn debug pane.
+   */
+  triggerResourcePush: (key: string, params?: ResourceParams) => number;
+  /**
    * Route one DB change (from the L4 change-feed) into the recompute cascade.
    * Inverts the L3 read-set (`table → resourceKey[]`), decides each resource's
    * scope from `origin` (the base table that changed) and `identityBase` (the
@@ -1110,29 +1121,35 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     entry: RegistryEntry,
     params: ResourceParams,
     affected: Set<string> | null,
-    opts?: { source?: "hand" | "feed" },
+    opts?: { source?: "hand" | "feed" | "synthetic" },
   ): void {
     const pk = paramsKey(params);
     // Self-verification recorder (cascade is byte-identical regardless of source).
     const source = opts?.source ?? "hand";
-    const now = performance.now();
-    const stats = statsFor(entry.key);
-    if (source === "feed") {
-      stats.feed++;
-      stats.lastFeedAt = now;
-      recordFeedIntent(entry.key, pk, now);
-    } else {
-      stats.hand++;
-      stats.lastHandAt = now;
-      // A hand-notify with no recent feed intent for the same (resource, pk)
-      // means the change-feed did NOT cover this change — i.e. the L3 read-set
-      // capture is missing a table this resource reads. That is exactly the bug
-      // class L4 eliminates, so surface it (loud, but not an error — the parallel
-      // run is expected to find these during the migration).
-      if (!hasRecentFeedIntent(entry.key, pk, now)) {
-        console.warn(
-          `[live-state] read-set-gap candidate: hand-notify for "${entry.key}" pk=${pk} had no matching change-feed intent within ${FEED_MATCH_WINDOW_MS}ms (a table this resource reads may be missing from the L3 read-set)`,
-        );
+    // A synthetic push (the debug churn emitter) drives the identical cascade but
+    // is NOT a real change, so it must not touch the hand-vs-feed self-verification
+    // counters or spam the read-set-gap warning at N/sec — skip the whole stats
+    // block and fall straight through to the shared merge + flush-scheduling tail.
+    if (source !== "synthetic") {
+      const now = performance.now();
+      const stats = statsFor(entry.key);
+      if (source === "feed") {
+        stats.feed++;
+        stats.lastFeedAt = now;
+        recordFeedIntent(entry.key, pk, now);
+      } else {
+        stats.hand++;
+        stats.lastHandAt = now;
+        // A hand-notify with no recent feed intent for the same (resource, pk)
+        // means the change-feed did NOT cover this change — i.e. the L3 read-set
+        // capture is missing a table this resource reads. That is exactly the bug
+        // class L4 eliminates, so surface it (loud, but not an error — the parallel
+        // run is expected to find these during the migration).
+        if (!hasRecentFeedIntent(entry.key, pk, now)) {
+          console.warn(
+            `[live-state] read-set-gap candidate: hand-notify for "${entry.key}" pk=${pk} had no matching change-feed intent within ${FEED_MATCH_WINDOW_MS}ms (a table this resource reads may be missing from the L3 read-set)`,
+          );
+        }
       }
     }
     mergePending(entry.pendingNotifies, pk, params, affected);
@@ -1813,6 +1830,26 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     return getResourceValue(entry, params ?? {});
   }
 
+  // Re-emit a registered resource to its current subscribers WITHOUT a DB change.
+  // Schedules a notify (tagged "synthetic" so the self-verification counters and
+  // the read-set-gap warning are left untouched) so the loader re-runs against an
+  // unchanged DB and the keyed diff comes back empty — a real no-op push. Sibling
+  // to `loadResourceByKey`. With `params`, targets just that tuple; otherwise fans
+  // out to every distinct currently-subscribed params tuple for the key. Returns
+  // the number of param-tuples scheduled (0 = nobody listening, push unobservable).
+  // Throws on an unknown key (fail loudly). Drives the live-state-churn emitter.
+  function triggerResourcePush(key: string, params?: ResourceParams): number {
+    const entry = registry.get(key);
+    if (!entry) {
+      throw new Error(`[resources] triggerResourcePush: unknown key "${key}"`);
+    }
+    const targets = params ? [params] : subscribedParamsFor(key);
+    for (const p of targets) {
+      scheduleNotify(entry, p, null, { source: "synthetic" });
+    }
+    return targets.length;
+  }
+
   // Distinct currently-subscribed params tuples for a resource key, recovered
   // from every socket's `subs` map (the `ResourceParams` objects are stored there
   // at sub time). Deduped by pk across sockets.
@@ -1928,6 +1965,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     handleResourceHttp,
     withNotifyBatch,
     loadResourceByKey,
+    triggerResourcePush,
     applyDbChange,
     notifyStatsFor,
   };

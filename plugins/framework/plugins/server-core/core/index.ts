@@ -22,6 +22,7 @@ export {
   onResourcePush,
   setRelationResolver,
   setLiveStateSnapshotHooks,
+  triggerResourcePush,
   withNotifyBatch,
 } from "./resources";
 export type {

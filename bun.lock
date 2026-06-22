@@ -1247,6 +1247,14 @@
       "name": "@singularity/plugin-debug-live-state-churn",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/live-state-churn/plugins/emit": {
+      "name": "@singularity/plugin-debug-live-state-churn-emit",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/live-state-churn/plugins/monitor": {
+      "name": "@singularity/plugin-debug-live-state-churn-monitor",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/live-state-health": {
       "name": "@singularity/plugin-debug-live-state-health",
       "version": "0.0.1",
@@ -4403,6 +4411,10 @@
     "@singularity/plugin-debug-heap-snapshot": ["@singularity/plugin-debug-heap-snapshot@workspace:plugins/debug/plugins/heap-snapshot"],
 
     "@singularity/plugin-debug-live-state-churn": ["@singularity/plugin-debug-live-state-churn@workspace:plugins/debug/plugins/live-state-churn"],
+
+    "@singularity/plugin-debug-live-state-churn-emit": ["@singularity/plugin-debug-live-state-churn-emit@workspace:plugins/debug/plugins/live-state-churn/plugins/emit"],
+
+    "@singularity/plugin-debug-live-state-churn-monitor": ["@singularity/plugin-debug-live-state-churn-monitor@workspace:plugins/debug/plugins/live-state-churn/plugins/monitor"],
 
     "@singularity/plugin-debug-live-state-health": ["@singularity/plugin-debug-live-state-health@workspace:plugins/debug/plugins/live-state-health"],
 

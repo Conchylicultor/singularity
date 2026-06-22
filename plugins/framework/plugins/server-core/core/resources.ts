@@ -243,6 +243,9 @@ export const {
   handleResourceHttp,
   withNotifyBatch,
   loadResourceByKey,
+  // Re-emit a registered resource to its current subscribers without a DB change
+  // (a real no-op push). Drives the live-state-churn deterministic-churn emitter.
+  triggerResourcePush,
   // L4 DB change-feed router: the change-feed plugin's LISTEN consumer calls this
   // with each parsed DB change to route it through the recompute cascade.
   applyDbChange,
