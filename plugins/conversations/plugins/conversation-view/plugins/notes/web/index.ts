@@ -1,7 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { BootSnapshot } from "@plugins/infra/plugins/boot-snapshot/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
-import { conversationNotesResource } from "../shared";
 import { NotesArea } from "./components/notes-area";
 import { NotesToggleButton } from "./components/notes-toggle-button";
 
@@ -16,6 +14,5 @@ export default {
       section: "Notes",
       sectionOrder: -1,
     }),
-    BootSnapshot.Hydrate({ descriptor: conversationNotesResource }),
   ],
 } satisfies PluginDefinition;

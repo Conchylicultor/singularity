@@ -1,5 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { BootSnapshot } from "@plugins/infra/plugins/boot-snapshot/web";
 import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
 import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Shell } from "@plugins/shell/web";
@@ -18,7 +17,6 @@ import { DeleteAgentAction } from "./components/delete-agent-action";
 import { ExpandAgentButton } from "./components/expand-agent-button";
 import { ExpandCollapseAllAction } from "./components/expand-collapse-all-action";
 import { Agents as AgentsSlots } from "./slots";
-import { agentsResource, agentLaunchesResource } from "../shared/resources";
 
 export {
   agentsRootPane,
@@ -54,7 +52,5 @@ export default {
       component: ExpandCollapseAllAction,
     }),
     AgentsSlots.AgentActions({ id: "delete", component: DeleteAgentAction }),
-    BootSnapshot.Hydrate({ descriptor: agentsResource }),
-    BootSnapshot.Hydrate({ descriptor: agentLaunchesResource }),
   ],
 } satisfies PluginDefinition;

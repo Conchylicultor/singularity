@@ -38,6 +38,27 @@ export interface ResourceDescriptor<T, P extends Record<string, string> = Record
   readonly __params?: P;
 }
 
+// Module-level key→descriptor registry. Populated by descriptor-module evaluation
+// (each factory call below runs on import), so a key→descriptor lookup exists before
+// first paint — boot-snapshot hydration resolves the server's snapshot keys against it
+// instead of a hand-maintained client list. Keys are unique per resource by construction.
+const byKey = new Map<string, ResourceDescriptor<unknown>>();
+
+function registerDescriptor(d: ResourceDescriptor<unknown>): void {
+  const existing = byKey.get(d.key);
+  // Dev guard: a genuine key collision (two distinct descriptors, same key) would
+  // silently shadow one resource. HMR re-eval (same logical descriptor, new object)
+  // is benign — only warn when the schemas differ.
+  if (existing && existing !== d && existing.schema !== d.schema) {
+    console.warn(`[live-state] duplicate resource descriptor for key "${d.key}"`);
+  }
+  byKey.set(d.key, d);
+}
+
+export function resourceDescriptorByKey(key: string): ResourceDescriptor<unknown> | undefined {
+  return byKey.get(key);
+}
+
 // The `keyed?: never` in the return type makes non-keyed-ness statically visible,
 // so the server's `defineResource(descriptor, …)` two-arg overload can discriminate
 // a plain descriptor from a keyed one (and only the keyed branch demands a scope
@@ -47,7 +68,9 @@ export function resourceDescriptor<T, P extends Record<string, string> = Record<
   schema: ZodType<T>,
   initialData: T,
 ): ResourceDescriptor<T, P> & { keyed?: never } {
-  return { key, schema, initialData };
+  const d = { key, schema, initialData };
+  registerDescriptor(d as ResourceDescriptor<unknown>);
+  return d;
 }
 
 // Keyed delta-sync variant of `resourceDescriptor`. The matching server
@@ -64,7 +87,9 @@ export function keyedResourceDescriptor<T extends unknown[], P extends Record<st
   initialData: T,
   keyOf: (row: unknown) => string,
 ): ResourceDescriptor<T, P> & { keyed: { keyOf: (row: unknown) => string } } {
-  return { key, schema, initialData, keyed: { keyOf } };
+  const d = { key, schema, initialData, keyed: { keyOf } };
+  registerDescriptor(d as ResourceDescriptor<unknown>);
+  return d;
 }
 
 // Like `resourceDescriptor` but tagged for the central WS endpoint. The
@@ -77,5 +102,7 @@ export function centralResourceDescriptor<T, P extends Record<string, string> = 
   schema: ZodType<T>,
   initialData: T,
 ): ResourceDescriptor<T, P> & { keyed?: never } {
-  return { key, origin: "central", schema, initialData };
+  const d = { key, origin: "central" as const, schema, initialData };
+  registerDescriptor(d as ResourceDescriptor<unknown>);
+  return d;
 }

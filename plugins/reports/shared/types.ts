@@ -18,6 +18,7 @@ export const CLIENT_REPORT_SOURCES = [
   "live-state-wedge",
   "client-slow-op",
   "client-render-loop",
+  "boot-snapshot",
 ] as const;
 export type ReportSource =
   | (typeof SERVER_REPORT_SOURCES)[number]

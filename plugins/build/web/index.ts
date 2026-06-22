@@ -1,10 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { BootSnapshot } from "@plugins/infra/plugins/boot-snapshot/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { buildConfig } from "../shared/config";
-import { buildHistoryResource, mainAheadCountResource, frontendHashResource } from "../core";
 import { BuildButton } from "./components/build-button";
 import { buildPane, buildDetailPane } from "./panes";
 
@@ -23,8 +21,5 @@ export default {
     Pane.Register({ pane: buildPane }),
     Pane.Register({ pane: buildDetailPane }),
     ConfigV2.WebRegister({ descriptor: buildConfig }),
-    BootSnapshot.Hydrate({ descriptor: buildHistoryResource }),
-    BootSnapshot.Hydrate({ descriptor: mainAheadCountResource }),
-    BootSnapshot.Hydrate({ descriptor: frontendHashResource }),
   ],
 } satisfies PluginDefinition;

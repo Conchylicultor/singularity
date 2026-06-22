@@ -19,7 +19,7 @@
   - Uses: `primitives/live-state.resourceDescriptor`
   - Exports: Types: `Report`; Values: `ReportSchema`, `reportsResource`
 - Cross-plugin:
-  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/live-state-churn`, `debug/queue-health`, `debug/reports`, `debug/slow-ops`, `infra/health`, `reports/crash`, `reports/endpoint-errors`, `reports/noise-rules`, `reports/render-loop`
+  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/live-state-churn`, `debug/queue-health`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `infra/health`, `reports/crash`, `reports/endpoint-errors`, `reports/noise-rules`, `reports/render-loop`
 - Sub-plugins:
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).

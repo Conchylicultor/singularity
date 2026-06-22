@@ -1,25 +1,51 @@
 import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { hydrateResource } from "@plugins/primitives/plugins/live-state/web";
+import { hydrateResource, resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/web";
+import { report } from "@plugins/reports/web";
 import { bootSnapshot } from "../../core";
-import { registeredDescriptors } from "./registry";
 
-// Boot-readiness task: fetch every boot-critical resource in ONE request and
-// seed the live-state cache before first paint, so boot-critical resources read
-// real data synchronously on the first render (no `pending` flash, no WS
-// round-trip). Mirrors config_v2's `Core.Boot` snapshot task.
+// Boot-readiness task: fetch every boot-critical resource in ONE request and seed the
+// live-state cache before first paint (no `pending` flash, no WS round-trip).
 //
-// Scope: param-less GLOBAL resources only (route-parametrized resources are
-// excluded — the server can't know the client's params at snapshot time; they
-// self-heal via their normal sub-ack, now fast because Phase C warmed their
-// tables). Best-effort: a failure (or a key missing from the snapshot because
-// its server loader failed) just means the WS sub-ack fills the cache shortly
-// after — we never throw and brick boot.
+// The snapshot ships ONLY boot-critical resources (the server's single source —
+// `Resource.Declare(r, { bootCritical: true })`) and omits any whose loader failed this
+// boot, so ITS KEYS are the authoritative set to hydrate. We resolve each key to its
+// client descriptor via the live-state descriptor registry (populated when each
+// descriptor module is evaluated, which happens before boot tasks run). A snapshot key
+// with no registered descriptor means a boot-critical resource whose descriptor was not
+// in the eager web import graph — a real bug, surfaced loudly rather than silently lost.
 export const bootSnapshotTask = Core.Boot({
   run: async () => {
     const { resources } = await fetchEndpoint(bootSnapshot, {});
-    for (const d of registeredDescriptors()) {
-      if (d.key in resources) hydrateResource(d, undefined, resources[d.key]);
+    const missing: string[] = [];
+    for (const key of Object.keys(resources)) {
+      const d = resourceDescriptorByKey(key);
+      if (!d) {
+        missing.push(key);
+        continue;
+      }
+      hydrateResource(d, undefined, resources[key]);
+    }
+    if (missing.length) {
+      // The crash collector's window error listener is NOT mounted yet during the boot
+      // window (RootRenderer mounts after runBootTasks resolves), so a queueMicrotask
+      // throw would only reach the console. report() is a direct keepalive POST that
+      // files a deduped crash task regardless of mount state.
+      const summary = `boot-snapshot: unresolved descriptor key(s): ${missing.join(", ")}`;
+      console.error(`[boot-snapshot] no descriptor registered for: ${missing.join(", ")}`);
+      void report({
+        kind: "crash",
+        source: "boot-snapshot",
+        message: summary,
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        // Matches the crash kind's CrashPayloadSchema (errorType + stack). No real
+        // Error is thrown here, so we synthesize a minimal stack for fingerprinting.
+        data: {
+          errorType: "BootSnapshotUnresolvedDescriptor",
+          stack: new Error(summary).stack ?? null,
+        },
+      });
     }
   },
 });

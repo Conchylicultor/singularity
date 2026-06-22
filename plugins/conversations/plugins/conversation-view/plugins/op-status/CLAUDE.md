@@ -67,8 +67,8 @@ lock) was indistinguishable from the agent merely "working".
 
 - Description: Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Also a sidebar row chip flagging the same op (Building / Pushing / Waiting for lock). Watches the per-worktree build/push op markers and pushes them to a live-state resource. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
 - Web:
-  - Contributes: `Conversation.AbovePromptInput` → `OpStatusBanner`, `Item.Chips` → `OpStatusChip`, `BootSnapshot.Hydrate`
-  - Uses: `conversations.useConversation`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.Conversation`, `infra/boot-snapshot.BootSnapshot`, `primitives/css/clip.Clip`, `primitives/css/inline.Inline`, `primitives/css/spinner.Spinner`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/tooltip.WithTooltip`
+  - Contributes: `Conversation.AbovePromptInput` → `OpStatusBanner`, `Item.Chips` → `OpStatusChip`
+  - Uses: `conversations.useConversation`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.Conversation`, `primitives/css/clip.Clip`, `primitives/css/inline.Inline`, `primitives/css/spinner.Spinner`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/tooltip.WithTooltip`
 - Server:
   - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/worktree.resolveActiveWorktreeOps`, `infra/worktree.WorktreeOp`, `infra/worktree.worktreesDir`
   - Exports: Values: `worktreeOpsResource`
