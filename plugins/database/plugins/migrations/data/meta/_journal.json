@@ -1163,6 +1163,13 @@
       "tag": "20260619_135531_88842b5d__dead_jobs_archive",
       "hash": "88842b5d",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1782152805000,
+      "tag": "20260622_182645_0a1660d1__fix_build_notification_link_prefix",
+      "hash": "0a1660d1",
+      "breakpoints": true
     }
   ]
 }

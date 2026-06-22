@@ -17,7 +17,6 @@ import {
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import { setFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
-import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { type Placement } from "../../core";
 import { Apps } from "../slots";
 import { getDefaultPlacement } from "./placement-registry";
@@ -401,17 +400,16 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       const pathname = url.split(/[?#]/)[0] ?? url;
       const resolved = resolveAppForPath(pathname, appsRef.current);
       if (!resolved) {
-        // No app's path prefix owns this URL, so navigation cannot proceed. This
-        // is always a programmer error — a caller built a path that doesn't start
-        // with a registered app base (e.g. a notification linkTo missing its
-        // /agents prefix). Surface it loudly instead of silently no-opping, which
-        // makes "looks clickable but does nothing" bugs invisible.
-        clientLog(
-          "navigation",
-          `navigate(): no app owns path "${pathname}" — link is unrooted or points to an unregistered app`,
-          "stderr",
+        // No registered app owns this path, so navigation cannot proceed. Every
+        // real caller passes an app-rooted path (/agents/…, /story/…); reaching
+        // here means a caller built a malformed link — e.g. a notification linkTo
+        // missing its /agents prefix. Throw instead of silently no-opping: an
+        // uncaught error in this event-handler is caught by the global crash
+        // collector and filed as a deduped report+task, so the structural bug
+        // surfaces and gets fixed rather than manifesting as a dead, silent click.
+        throw new Error(
+          `navigate(): no registered app owns path "${pathname}" — the link is unrooted or points to an unregistered app`,
         );
-        return;
       }
       const route = parseUrl(resolved.routePath) ?? [];
       const focused = tabsRef.current.find((t) => t.tabId === focusedRef.current);
