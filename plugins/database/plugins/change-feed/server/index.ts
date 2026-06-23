@@ -1,9 +1,11 @@
 import {
   setRelationResolver,
+  setFeedExemptTables,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
 import { db } from "@plugins/database/server";
 import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";
+import { feedExemptTables } from "@plugins/database/plugins/derived-tables/server";
 import { rebuildTriggers } from "./internal/triggers";
 import { startListener, stopListener } from "./internal/listener";
 import { buildViewDeps } from "./internal/view-deps";
@@ -41,6 +43,11 @@ export default {
     // barrels); derived-views stays a pure provider of `relationIdentityBase`,
     // and server-core never statically imports a feature plugin (no cycle).
     setRelationResolver(relationIdentityBase);
+    // Inject the feed-exempt rollup tables (derived-tables) into the runtime's
+    // _debug builder, so a trigger-maintained rollup a loader reads (e.g.
+    // task_latest_conversation for agent-launches) is subtracted from the
+    // emitted read-set and never shows as a false "silent FULL recompute".
+    setFeedExemptTables(feedExemptTables);
     startListener();
   },
   async onShutdown() {

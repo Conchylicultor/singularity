@@ -109,6 +109,21 @@ export function setRelationResolver(fn: (relation: string) => string): void {
   relationResolver = fn;
 }
 
+// Feed-exempt base tables (trigger-maintained materialized rollups from
+// derived-tables) the `_debug` builder subtracts from each resource's emitted
+// read-set, so a rollup never reads as a false "silent FULL recompute" in the
+// read-set pane. Injected at boot by change-feed (the DB↔live-state bridge that
+// already imports the derived-tables barrel) via `setFeedExemptTables` — the
+// same boot-injection pattern as `setRelationResolver`, so server-core/core
+// never statically imports a feature/database plugin. Defaults to empty (no
+// filtering) before injection and on central. The closure passed to the runtime
+// reads the CURRENT holder at call time, so constructing the runtime before the
+// setter runs is harmless.
+let feedExemptTablesHolder: () => Set<string> = () => new Set<string>();
+export function setFeedExemptTables(fn: () => Set<string>): void {
+  feedExemptTablesHolder = fn;
+}
+
 // L2 persisted-materialization hooks — injected at boot by the
 // `live-state-snapshot` feature plugin (the same byte-for-byte pattern as
 // `setRelationResolver`). server-core/core MUST NOT statically import that plugin
@@ -203,6 +218,10 @@ const runtime = createResourceRuntime({
   // The closure reads the boot-injected holder at call time (set by change-feed
   // to `relationIdentityBase`); identity until then and on central.
   resolveRelation: (r) => relationResolver(r),
+  // Feed-exempt rollup tables to subtract from the _debug read-set. Reads the
+  // boot-injected holder at call time (set by change-feed to feedExemptTables());
+  // empty until then and on central, so no filtering occurs.
+  feedExemptTables: () => feedExemptTablesHolder(),
   // L2 persisted materialization. All three read the boot-injected holder at call
   // time (set by the live-state-snapshot plugin once the DB is ready). Until then
   // — and on central, which never installs them — `shouldPersist` returns false,

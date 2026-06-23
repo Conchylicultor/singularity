@@ -1177,6 +1177,10 @@
       "name": "@singularity/plugin-database-change-feed",
       "version": "0.0.1",
     },
+    "plugins/database/plugins/derived-tables": {
+      "name": "@singularity/plugin-database-derived-tables",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/derived-views": {
       "name": "@singularity/plugin-database-derived-views",
       "version": "0.0.1",
@@ -4389,6 +4393,8 @@
     "@singularity/plugin-database-admin": ["@singularity/plugin-database-admin@workspace:plugins/database/plugins/admin"],
 
     "@singularity/plugin-database-change-feed": ["@singularity/plugin-database-change-feed@workspace:plugins/database/plugins/change-feed"],
+
+    "@singularity/plugin-database-derived-tables": ["@singularity/plugin-database-derived-tables@workspace:plugins/database/plugins/derived-tables"],
 
     "@singularity/plugin-database-derived-views": ["@singularity/plugin-database-derived-views@workspace:plugins/database/plugins/derived-views"],
 

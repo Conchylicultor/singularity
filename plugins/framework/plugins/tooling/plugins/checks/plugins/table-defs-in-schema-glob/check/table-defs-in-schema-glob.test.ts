@@ -7,7 +7,12 @@
  */
 
 import { test, expect } from "bun:test";
-import { parseSchemaGlobs, isCandidatePath } from "./index";
+import {
+  parseSchemaGlobs,
+  isCandidatePath,
+  parseImperativeTableNameConsts,
+  isImperativeReadHandle,
+} from "./index";
 
 const DRIZZLE_CONFIG_SCHEMA = `
 export default defineConfig({
@@ -67,4 +72,45 @@ test("a __tests__ server file is out of scope", () => {
 
 test("a non-server file is out of scope", () => {
   expect(isCandidatePath("plugins/improve/web/internal/tables.ts", globFiles)).toBe(false);
+});
+
+// --- imperative-table read-handle exemption ---
+
+const IMPERATIVE_TABLES_SOURCE = `
+export const MIGRATIONS_TABLE_NAME = "__singularity_migrations";
+export const TASK_LATEST_CONVERSATION_TABLE = "task_latest_conversation";
+export const IMPERATIVE_PUBLIC_TABLES: readonly string[] = [
+  MIGRATIONS_TABLE_NAME,
+  DERIVED_VIEW_STATE_TABLE_NAME,
+  TASK_LATEST_CONVERSATION_TABLE,
+];
+`;
+
+test("parseImperativeTableNameConsts extracts the listed name constants", () => {
+  expect(parseImperativeTableNameConsts(IMPERATIVE_TABLES_SOURCE)).toEqual(
+    new Set(["MIGRATIONS_TABLE_NAME", "DERIVED_VIEW_STATE_TABLE_NAME", "TASK_LATEST_CONVERSATION_TABLE"]),
+  );
+});
+
+test("parseImperativeTableNameConsts returns empty (fail closed) when the array is absent", () => {
+  expect(parseImperativeTableNameConsts("export const x = 1;").size).toBe(0);
+});
+
+const names = parseImperativeTableNameConsts(IMPERATIVE_TABLES_SOURCE);
+
+test("a pgTable read handle on an imperative name constant is exempt", () => {
+  expect(
+    isImperativeReadHandle(
+      "export const _task_latest_conversation = pgTable(TASK_LATEST_CONVERSATION_TABLE, {",
+      names,
+    ),
+  ).toBe(true);
+});
+
+test("a pgTable on a non-imperative identifier is NOT exempt", () => {
+  expect(isImperativeReadHandle("export const x = pgTable(SOME_OTHER_TABLE, {", names)).toBe(false);
+});
+
+test("a pgTable with a string-literal name is NOT exempt", () => {
+  expect(isImperativeReadHandle('export const x = pgTable("agents", {', names)).toBe(false);
 });

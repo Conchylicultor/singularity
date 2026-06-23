@@ -530,6 +530,19 @@ export interface ResourceRuntimeOptions {
    */
   resolveRelation?: (relation: string) => string;
   /**
+   * Feed-exempt base tables: trigger-maintained materialized rollups
+   * (derived-tables) that a loader reads but the change-feed deliberately does
+   * NOT install NOTIFY triggers on (a rollup is a pure read-cache fed by its
+   * source's change). The `_debug` builder subtracts these from the emitted
+   * read-set so a rollup never shows as a false "silent FULL recompute" (a
+   * read-set base outside `coveredOrigins`) in the Debug → Read-set pane — the
+   * source-driven scoped path already covers the change. server: injected at
+   * boot by change-feed (reads the current holder at call time); central /
+   * before-injection: omitted (empty set, no filtering). See
+   * research/2026-06-23-global-agent-launches-incremental-materialization.md §8.
+   */
+  feedExemptTables?: () => Set<string>;
+  /**
    * L2 persisted materialization — true when this resource key should be
    * persisted to `live_state_snapshot` for instant cold boot. Backed by
    * `bootCritical && !externalSource` (the boot-critical, DB-backed set). When it
@@ -1774,8 +1787,16 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       // ceiling can compare like-for-like with `coveredOrigins` (base-table
       // space) while the captured index keeps the raw names. `resolveRelation` is
       // identity on central (no derived views there).
-      const rawReadSet = opts.readSet?.(entry.key) ?? [];
       const resolve = opts.resolveRelation ?? ((r) => r);
+      // Drop feed-exempt rollup tables (derived-tables) from the emitted
+      // read-set: the change-feed installs no trigger on them, so they are not
+      // in `coveredOrigins` and would otherwise read as a false "silent FULL
+      // recompute" — but the source-driven scoped path already covers the
+      // change. Filter on the base-resolved name (a rollup is itself a base).
+      const feedExempt = opts.feedExemptTables?.() ?? new Set<string>();
+      const rawReadSet = (opts.readSet?.(entry.key) ?? []).filter(
+        (r) => !feedExempt.has(resolve(r)),
+      );
       const readSetBases = [...new Set(rawReadSet.map(resolve))].sort();
       out.push({
         key: entry.key,

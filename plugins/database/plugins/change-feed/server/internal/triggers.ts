@@ -6,6 +6,10 @@ import {
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
+import {
+  rebuildDerivedTables,
+  feedExemptTables,
+} from "@plugins/database/plugins/derived-tables/server";
 
 const log = Log.channel("change-feed", { persist: true });
 
@@ -26,11 +30,21 @@ const log = Log.channel("change-feed", { persist: true });
 // The table-name constants live in the derived-views core leaf (the imperative-
 // public-table allowlist) so the orphaned-db-tables check and the create sites
 // share one source — see that module.
-const DENYLIST = new Set<string>([
-  MIGRATIONS_TABLE_NAME,
-  LIVE_STATE_CHANGELOG_TABLE,
-  LIVE_STATE_SNAPSHOT_TABLE,
-]);
+// `feedExemptTables()` adds the trigger-maintained materialized rollup tables
+// (derived-tables contributions): a rollup is a pure read-cache fed by its
+// source's change, never an independent write surface — a NOTIFY trigger on it
+// would double-route the source change through the rollup's id space and defeat
+// the correctly-scoped source-driven recompute. Built at CALL time (not module
+// load) so the contribution set is read after collectContributions has run, the
+// same way rebuildDerivedViews reads View.getContributions() lazily.
+function buildDenylist(): Set<string> {
+  return new Set<string>([
+    MIGRATIONS_TABLE_NAME,
+    LIVE_STATE_CHANGELOG_TABLE,
+    LIVE_STATE_SNAPSHOT_TABLE,
+    ...feedExemptTables(),
+  ]);
+}
 
 // L2 durable outbox DDL. Created INSIDE rebuildTriggers' transaction, before the
 // trigger function is (re)defined, so the table the function INSERTs into is
@@ -137,6 +151,7 @@ function triggerName(table: string, op: "i" | "u" | "d"): string {
 
 // Every public-schema user table minus the denylist.
 async function listPublicTables(db: NodePgDatabase): Promise<string[]> {
+  const denylist = buildDenylist();
   const res = await db.execute<{ relname: string }>(
     drizzleSql.raw(
       `SELECT relname FROM pg_stat_user_tables WHERE schemaname = 'public' ORDER BY relname`,
@@ -144,7 +159,7 @@ async function listPublicTables(db: NodePgDatabase): Promise<string[]> {
   );
   return res.rows
     .map((r) => r.relname)
-    .filter((t) => !DENYLIST.has(t));
+    .filter((t) => !denylist.has(t));
 }
 
 // The single-column primary key of a table, or "" for composite/no PK
@@ -245,6 +260,18 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
         ),
       );
     }
+
+    // Trigger-maintained materialized rollups (derived-tables): create each
+    // rollup table + maintenance function + triggers + reconcile, INSIDE this
+    // same transaction, AFTER the per-table NOTIFY-trigger loop. Race-free home
+    // (onReadyBlocking hooks have no topo order) — and because `listPublicTables`
+    // was snapshotted BEFORE this txn, the rollup tables didn't exist when the
+    // feed's trigger set was computed, so no live_state NOTIFY trigger is ever
+    // installed on them (and feedExemptTables() in the DENYLIST keeps the
+    // post-txn coverage check from flagging them). Mirrors why the L2 changelog
+    // table is created here. See
+    // research/2026-06-23-global-agent-launches-incremental-materialization.md §7.
+    await rebuildDerivedTables(tx);
   });
 
   coveredTables = triggers.map((t) => t.table);

@@ -58,6 +58,19 @@ export const LIVE_STATE_CHANGELOG_TABLE = "live_state_changelog";
 export const LIVE_STATE_SNAPSHOT_TABLE = "live_state_snapshot";
 
 /**
+ * A trigger-maintained materialized rollup ("hand-rolled IVM"): the latest
+ * non-system conversation per task, maintained incrementally by STATEMENT
+ * triggers on `conversations` and rebuilt from source on boot. Created
+ * imperatively inside change-feed's trigger-rebuild transaction
+ * (`rebuildDerivedTables`, via the `DerivedTable` contribution in
+ * `plugins/conversations/plugins/agents/server/internal/rollup-spec.ts`). Not
+ * present in the drizzle snapshot; the orphaned-db-tables check treats it as
+ * declared. The constant must appear literally on the `CREATE TABLE` line in
+ * that spec (the imperative-create-table-allowlisted check enforces this).
+ */
+export const TASK_LATEST_CONVERSATION_TABLE = "task_latest_conversation";
+
+/**
  * The full allowlist of public tables created imperatively (outside drizzle).
  * The orphaned-db-tables check subtracts these from the live-table set so they
  * are never flagged as orphans.
@@ -67,4 +80,5 @@ export const IMPERATIVE_PUBLIC_TABLES: readonly string[] = [
   DERIVED_VIEW_STATE_TABLE_NAME,
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
+  TASK_LATEST_CONVERSATION_TABLE,
 ];

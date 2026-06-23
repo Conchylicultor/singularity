@@ -6,9 +6,9 @@ import {
   _conversations,
   conversationCascadeSignatures,
   conversationsActiveResource,
-  listConversationsForDisplay,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { _agent_launches } from "./tables";
+import { _task_latest_conversation } from "./rollup-table";
 import { agents } from "./views";
 import type { Agent, AgentLaunchWithStatus } from "./schema";
 // `key` / `schema` / keyed-ness come from the shared client descriptors — the
@@ -66,19 +66,27 @@ export const agentLaunchesResource = defineResource(agentLaunchesDescriptor, {
           .from(_agent_launches)
           .where(inArray(_agent_launches.id, [...ids]))
       : await db.select().from(_agent_launches).orderBy(asc(_agent_launches.createdAt));
-    // Scope the conversation read to just the affected launches' tasks when
-    // scoped; otherwise the full user-visible list.
+    // The per-task latest non-system conversation is pre-materialized in the
+    // `task_latest_conversation` rollup (trigger-maintained + boot-reconciled),
+    // so this is an indexed point-lookup join instead of re-deriving the whole
+    // per-task latest map from a full `conversations_v` scan on every recompute.
+    // Scope to just the affected launches' tasks when scoped; otherwise read all.
     const taskIds = [...new Set(launches.map((l) => l.taskId))];
-    const convRows = ids
+    const rollupRows = ids
       ? taskIds.length > 0
-        ? await listConversationsForDisplay(taskIds)
+        ? await db
+            .select()
+            .from(_task_latest_conversation)
+            .where(inArray(_task_latest_conversation.taskId, taskIds))
         : []
-      : await listConversationsForDisplay();
-    // Rows are in createdAt desc order, so the first hit per taskId is the latest.
+      : await db.select().from(_task_latest_conversation);
     const latestByTask = new Map<string, AgentLaunchConversationRef>();
-    for (const c of convRows) {
-      if (latestByTask.has(c.taskId)) continue;
-      latestByTask.set(c.taskId, { id: c.id, title: c.title, status: c.status });
+    for (const r of rollupRows) {
+      latestByTask.set(r.taskId, {
+        id: r.conversationId,
+        title: r.title,
+        status: r.status as AgentLaunchConversationRef["status"],
+      });
     }
     return launches.map((l) => {
       const latest = latestByTask.get(l.taskId) ?? null;

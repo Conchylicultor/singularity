@@ -6,7 +6,7 @@
 
 - Description: L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
 - Server:
-  - Uses: `database.db`, `database/admin.connectionString`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
+  - Uses: `database.db`, `database/admin.connectionString`, `database/derived-tables.feedExemptTables`, `database/derived-tables.rebuildDerivedTables`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
   - Exports: Types: `DbChange`; Values: `getCoveredTables`, `parseLiveStatePayload`, `rebuildTriggers`, `routeChange`
 - Cross-plugin:
   - Imported by: `database/live-state-snapshot`
