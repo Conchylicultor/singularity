@@ -1,4 +1,4 @@
-// @hash 1b908883a364
+// @hash 270fa396b1af
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
@@ -6,6 +6,7 @@
     "debug.reports:reports",
     "debug.slow-ops.pane:slow-ops",
     "debug.profiling:profiling",
+    "debug.boot-profile:boot-profile",
     "debug.render-profiler:render-profiler",
     "debug.health-monitor:health-monitor",
     "debug.heap-snapshot:heap-snapshot",

@@ -1228,6 +1228,10 @@
       "name": "@singularity/plugin-debug",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/boot-profile": {
+      "name": "@singularity/plugin-debug-boot-profile",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/broadcasts": {
       "name": "@singularity/plugin-debug-broadcasts",
       "version": "0.0.1",
@@ -2823,6 +2827,14 @@
       "name": "@singularity/plugin-primitives-pane-toolbar",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/perfs": {
+      "name": "@singularity/plugin-primitives-perfs",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/perfs/plugins/boot-trace": {
+      "name": "@singularity/plugin-primitives-perfs-boot-trace",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/persistent-draft": {
       "name": "@singularity/plugin-primitives-persistent-draft",
       "version": "0.0.1",
@@ -4416,6 +4428,8 @@
 
     "@singularity/plugin-debug": ["@singularity/plugin-debug@workspace:plugins/debug"],
 
+    "@singularity/plugin-debug-boot-profile": ["@singularity/plugin-debug-boot-profile@workspace:plugins/debug/plugins/boot-profile"],
+
     "@singularity/plugin-debug-broadcasts": ["@singularity/plugin-debug-broadcasts@workspace:plugins/debug/plugins/broadcasts"],
 
     "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
@@ -5163,6 +5177,10 @@
     "@singularity/plugin-primitives-pane": ["@singularity/plugin-primitives-pane@workspace:plugins/primitives/plugins/pane"],
 
     "@singularity/plugin-primitives-pane-toolbar": ["@singularity/plugin-primitives-pane-toolbar@workspace:plugins/primitives/plugins/pane-toolbar"],
+
+    "@singularity/plugin-primitives-perfs": ["@singularity/plugin-primitives-perfs@workspace:plugins/primitives/plugins/perfs"],
+
+    "@singularity/plugin-primitives-perfs-boot-trace": ["@singularity/plugin-primitives-perfs-boot-trace@workspace:plugins/primitives/plugins/perfs/plugins/boot-trace"],
 
     "@singularity/plugin-primitives-persistent-draft": ["@singularity/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
 

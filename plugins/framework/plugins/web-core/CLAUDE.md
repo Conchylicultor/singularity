@@ -47,7 +47,7 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
 ## Plugin reference
 
 - Web:
-  - Uses: `primitives/css/text.Text`, `primitives/css/ui-kit`, `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`
+  - Uses: `primitives/css/text.Text`, `primitives/css/ui-kit`, `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`, `primitives/perfs/boot-trace.markBootInstant`, `primitives/perfs/boot-trace.startBootSpan`
 - Structure:
   - Loose top-level files: `vite.config.ts`
   - Composition root: yes

@@ -1,6 +1,7 @@
 import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { hydrateResource, resourceDescriptorByKey } from "@plugins/primitives/plugins/live-state/web";
+import { recordBootSpan } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { report } from "@plugins/reports/web";
 import { bootSnapshot } from "../../core";
 
@@ -16,7 +17,28 @@ import { bootSnapshot } from "../../core";
 // in the eager web import graph — a real bug, surfaced loudly rather than silently lost.
 export const bootSnapshotTask = Core.Boot({
   run: async () => {
-    const { resources } = await fetchEndpoint(bootSnapshot, {});
+    const reqStart = performance.now();
+    const { resources, timings } = await fetchEndpoint(bootSnapshot, {});
+    const reqMs = performance.now() - reqStart;
+    recordBootSpan({
+      id: "boot-snapshot",
+      phase: "boot-tasks",
+      label: "Boot snapshot fetch",
+      startMs: reqStart,
+      durationMs: reqMs,
+    });
+    for (const key of Object.keys(resources)) {
+      const t = timings[key];
+      recordBootSpan({
+        id: `res:${key}`,
+        phase: "resources",
+        label: key,
+        startMs: reqStart,
+        durationMs: reqMs,
+        workMs: t?.workMs,
+        detail: t?.source,
+      });
+    }
     const missing: string[] = [];
     for (const key of Object.keys(resources)) {
       const d = resourceDescriptorByKey(key);

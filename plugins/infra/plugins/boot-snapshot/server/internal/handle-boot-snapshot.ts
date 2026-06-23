@@ -17,19 +17,40 @@ import { bootCriticalKeys } from "./boot-keys";
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.4.
 export const handleBootSnapshot = implement(bootSnapshot, async () => {
   const keys = bootCriticalKeys();
+
+  const t0 = performance.now();
   const persisted = await readPersistedSnapshots(keys);
+  const persistedReadMs = performance.now() - t0;
 
   const missing = keys.filter((k) => !persisted.has(k));
   const loaded = await Promise.allSettled(
-    missing.map(async (k): Promise<[string, unknown]> => [k, await loadResourceByKey(k)]),
+    missing.map(async (k): Promise<[string, unknown, number]> => {
+      const s = performance.now();
+      const v = await loadResourceByKey(k);
+      return [k, v, performance.now() - s];
+    }),
   );
 
   const resources: Record<string, unknown> = {};
-  for (const k of keys) {
-    if (persisted.has(k)) resources[k] = persisted.get(k);
+  const timings: Record<string, { source: "persisted" | "loader"; workMs: number }> = {};
+
+  // The persisted keys all share the single batched read, so there's no per-key
+  // server work to attribute — amortize that one read across them for a directional
+  // work number (the read is one query, not per-key).
+  const persistedKeys = keys.filter((k) => persisted.has(k));
+  const perPersisted = persistedKeys.length > 0 ? persistedReadMs / persistedKeys.length : 0;
+  for (const k of persistedKeys) {
+    resources[k] = persisted.get(k);
+    timings[k] = { source: "persisted", workMs: perPersisted };
   }
+
+  // A failed fallback loader stays OMITTED (rejected → never reaches resources/timings).
   for (const r of loaded) {
-    if (r.status === "fulfilled") resources[r.value[0]] = r.value[1];
+    if (r.status === "fulfilled") {
+      const [k, v, workMs] = r.value;
+      resources[k] = v;
+      timings[k] = { source: "loader", workMs };
+    }
   }
-  return { resources };
+  return { resources, timings };
 });

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-perfs",
+  "description": "Umbrella for client-side performance primitives.",
+  "private": true,
+  "version": "0.0.1"
+}

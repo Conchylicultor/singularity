@@ -62,7 +62,7 @@ How it works:
 - Description: Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint.
 - Web:
   - Contributes: `Core.Boot`
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.hydrateResource`, `primitives/live-state.resourceDescriptorByKey`, `reports.report`
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.hydrateResource`, `primitives/live-state.resourceDescriptorByKey`, `primitives/perfs/boot-trace.recordBootSpan`, `reports.report`
 - Server:
   - Uses: `database/live-state-snapshot.readPersistedSnapshots`, `infra/endpoints.implement`
   - Routes: `GET /api/resources/boot-snapshot`

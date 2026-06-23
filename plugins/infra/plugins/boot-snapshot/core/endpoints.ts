@@ -14,7 +14,21 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 //
 // NOTE: the plan's `version` per entry is intentionally omitted — `hydrateResource`
 // doesn't consume it and the version-aware sub-skip (Phase D) is out of scope.
+//
+// `timings` is additive (existing `{ resources }` consumers keep working): per-key
+// server work time — a persisted-read share for the L2 fast path, or the individual
+// loader duration for keys that fell back to a from-scratch load — consumed by the
+// boot profiler to split wait vs work.
 export const bootSnapshot = defineEndpoint({
   route: "GET /api/resources/boot-snapshot",
-  response: z.object({ resources: z.record(z.string(), z.unknown()) }),
+  response: z.object({
+    resources: z.record(z.string(), z.unknown()),
+    timings: z.record(
+      z.string(),
+      z.object({
+        source: z.enum(["persisted", "loader"]),
+        workMs: z.number(),
+      }),
+    ),
+  }),
 });

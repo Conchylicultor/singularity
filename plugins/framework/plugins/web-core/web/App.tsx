@@ -8,6 +8,7 @@ import {
 import type { LoadedPlugin, PluginLoadError } from "@plugins/framework/plugins/web-sdk/core";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
+import { startBootSpan, markBootInstant } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { webEntries } from "@composition-web-registry";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
 
@@ -60,8 +61,13 @@ export default function App() {
   useEffect(() => {
     let cancelled = false;
     void (async () => {
+      const endLoad = startBootSpan("load-plugins", "scripts", "loadPlugins");
       const result = await loadPlugins(webEntries);
+      endLoad();
+      const endBoot = startBootSpan("boot-tasks", "boot-tasks", "runBootTasks");
       await runBootTasks(result.plugins);
+      endBoot();
+      markBootInstant("set-state", "paint", "App setState (first render)");
       if (!cancelled) setState(result);
     })();
     return () => {
