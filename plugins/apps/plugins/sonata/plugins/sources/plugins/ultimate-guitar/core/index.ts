@@ -7,8 +7,8 @@
  * This leaf has ONLY a `core` runtime and depends on nothing but `zod`.
  */
 
-export { UgTabSchema } from "./raw-tab";
-export type { UgTab } from "./raw-tab";
+export { UgTabSchema, UgSearchResultSchema } from "./raw-tab";
+export type { UgTab, UgSearchResult } from "./raw-tab";
 
 export { extractUgTabId } from "./tab-url";
 

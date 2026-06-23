@@ -1,11 +1,29 @@
-import { useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import { MdMusicNote } from "react-icons/md";
 import {
   Button,
   DialogTitle,
   DialogDescription,
+  ScrollArea,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   beatToSeconds,
@@ -13,49 +31,204 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { openSongImperative } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile } from "../compile";
-import { fetchUgTab, createUltimateGuitarSong } from "../../shared/endpoints";
+import { extractUgTabId, UgFetchError, type UgSearchResult } from "../../core";
+import {
+  fetchUgTab,
+  createUltimateGuitarSong,
+  searchUgTabs,
+} from "../../shared/endpoints";
+
+/**
+ * Debounce a value: the returned value lags `input` by `delayMs` of quiet time.
+ * Inlined (the `quick-find/use-search.ts` twin is plugin-private) — an 8-line
+ * useState + setTimeout/clearTimeout that resets the timer on every change.
+ */
+function useDebouncedValue<T>(value: T, delayMs: number): T {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const id = setTimeout(() => setDebounced(value), delayMs);
+    return () => clearTimeout(id);
+  }, [value, delayMs]);
+  return debounced;
+}
+
+/** True when `query` parses as a UG tab URL (so it should import directly). */
+function looksLikeUgUrl(query: string): boolean {
+  try {
+    extractUgTabId(query);
+    return true;
+  } catch (err) {
+    // extractUgTabId throws UgFetchError("invalid-url") for anything that isn't
+    // a UG tab URL — that's the signal we're probing for. Re-throw anything else.
+    if (err instanceof UgFetchError) return false;
+    throw err;
+  }
+}
+
+type TypeFilter = "chords" | "all";
+
+const TYPE_OPTIONS = [
+  { id: "chords" as const, label: "Chords" },
+  { id: "all" as const, label: "All types" },
+];
 
 /**
  * Import dialog for the Ultimate Guitar source, rendered INSIDE the
  * imperative-dialog host's `DialogContent` (so it paints its own panel + title).
  *
- * Flow is **fetch-first**: paste a UG URL → fetch the raw `UgTab` → `compile()`
- * it client-side (so the same recognise-gate + timing synthesis the player uses
- * decides the metrics) → derive `durationSec`/`endBeat` → create the song. Only
- * then do we open it. Fetching before creating means a cancel (or a fetch
- * failure) never leaves a half-formed "Untitled" orphan in the library — the
- * song row is written exactly once, with real metadata, after the network
- * round-trip succeeds.
+ * **Smart single input.** One field both searches UG's catalog (free text) and
+ * imports directly (a pasted tab URL):
+ * - URL mode (`looksLikeUgUrl`) → no results list, a single "Import this tab"
+ *   button funnelling through `importByUrl`.
+ * - Search mode → debounced `searchUgTabs` (AbortController-guarded so a stale
+ *   request never clobbers a newer one), a client-side type filter (Chords vs
+ *   all), and a results list whose rows import on click.
  *
- * Loud-failure posture: any fetch/compile error is surfaced in a `role="alert"`
- * red line, never swallowed and never rethrown out of the click handler (which
- * would crash the dialog mid-import). The user can correct the URL and retry.
+ * Both paths funnel through `importByUrl`, which is **fetch-first**: fetch the
+ * raw `UgTab` → `compile()` it client-side (so the same recognise-gate + timing
+ * synthesis the player uses decides the metrics) → derive `durationSec`/`endBeat`
+ * → create the song. Only then do we open it. Fetching before creating means a
+ * cancel (or a fetch failure) never leaves a half-formed "Untitled" orphan in
+ * the library — the song row is written exactly once, after the round-trip.
+ *
+ * Loud-failure posture: any fetch/compile/search error is surfaced in a
+ * `role="alert"` red line, never swallowed and never rethrown out of a handler
+ * (which would crash the dialog mid-import).
  */
 export function UgImportDialog({ onClose }: { onClose: () => void }) {
-  const [url, setUrl] = useState("");
+  const [query, setQuery] = useState("");
+  const [typeFilter, setTypeFilter] = useState<TypeFilter>("chords");
   const [error, setError] = useState<string | null>(null);
 
-  // `Button` auto-pends on a promise-returning onClick (spinner + double-click
-  // guard), so we return the promise to it rather than void-swallowing it.
-  async function importTab() {
-    const trimmed = url.trim();
-    if (trimmed.length === 0) return;
-    setError(null);
-    try {
-      const tab = await fetchEndpoint(fetchUgTab, {}, { body: { url: trimmed } });
-      const score = compile(tab);
-      const endBeat = scoreEndBeat(score);
-      const song = await fetchEndpoint(
-        createUltimateGuitarSong,
-        {},
-        { body: { ...tab, durationSec: beatToSeconds(score, endBeat), endBeat } },
-      );
-      onClose();
-      openSongImperative(song);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : String(err));
+  // Search state.
+  const [results, setResults] = useState<UgSearchResult[]>([]);
+  const [searching, setSearching] = useState(false);
+
+  // Per-row import progress: the tabId currently being imported (disables the
+  // whole list while the fetch→compile→create round-trip runs).
+  const [importingId, setImportingId] = useState<string | null>(null);
+
+  const [activeIdx, setActiveIdx] = useState(0);
+  const activeRef = useRef<HTMLButtonElement>(null);
+
+  const trimmed = query.trim();
+  const isUrl = trimmed.length > 0 && looksLikeUgUrl(trimmed);
+  const isSearch = trimmed.length > 0 && !isUrl;
+
+  // Debounce only the search text — URL mode imports on an explicit click.
+  const debouncedQuery = useDebouncedValue(isSearch ? trimmed : "", 150);
+
+  // Fire the search whenever the debounced query changes, aborting the prior
+  // request so a slow earlier response can never overwrite a newer one.
+  useEffect(() => {
+    if (debouncedQuery.length === 0) {
+      setResults([]);
+      setSearching(false);
+      return;
     }
-  }
+    const controller = new AbortController();
+    setSearching(true);
+    setError(null);
+    fetchEndpoint(
+      searchUgTabs,
+      {},
+      { body: { query: debouncedQuery }, signal: controller.signal },
+    )
+      .then((res) => {
+        setResults(res.results);
+        setSearching(false);
+      })
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setResults([]);
+        setSearching(false);
+        setError(err instanceof Error ? err.message : String(err));
+      });
+    return () => controller.abort();
+  }, [debouncedQuery]);
+
+  // Client-side type filter: "Chords" keeps anything whose UG type contains
+  // "Chords" (covers both "Chords" and "Ukulele Chords" — the two that compile
+  // to a songsheet); "All types" passes everything through.
+  const filtered = useMemo(
+    () =>
+      typeFilter === "all"
+        ? results
+        : results.filter((r) => r.type.includes("Chords")),
+    [results, typeFilter],
+  );
+
+  // Reset the active row whenever the visible list changes.
+  useEffect(() => {
+    setActiveIdx(0);
+  }, [filtered]);
+
+  useEffect(() => {
+    activeRef.current?.scrollIntoView({ block: "nearest" });
+  }, [activeIdx]);
+
+  // `Button` auto-pends on a promise-returning onClick (spinner + double-click
+  // guard); the result rows drive their own `importingId` spinner instead.
+  const importByUrl = useCallback(
+    async (url: string) => {
+      const target = url.trim();
+      if (target.length === 0) return;
+      setError(null);
+      try {
+        const tab = await fetchEndpoint(fetchUgTab, {}, { body: { url: target } });
+        const score = compile(tab);
+        const endBeat = scoreEndBeat(score);
+        const song = await fetchEndpoint(
+          createUltimateGuitarSong,
+          {},
+          { body: { ...tab, durationSec: beatToSeconds(score, endBeat), endBeat } },
+        );
+        onClose();
+        openSongImperative(song);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : String(err));
+      }
+    },
+    [onClose],
+  );
+
+  const importResult = useCallback(
+    async (result: UgSearchResult) => {
+      if (importingId !== null) return;
+      setImportingId(result.tabId);
+      try {
+        await importByUrl(`https://tabs.ultimate-guitar.com/tab/${result.tabId}`);
+      } finally {
+        setImportingId(null);
+      }
+    },
+    [importByUrl, importingId],
+  );
+
+  const handleSearchKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (isUrl && e.key === "Enter") {
+        e.preventDefault();
+        void importByUrl(trimmed);
+        return;
+      }
+      if (!isSearch || filtered.length === 0) return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setActiveIdx((i) => (i + 1) % filtered.length);
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setActiveIdx((i) => (i - 1 + filtered.length) % filtered.length);
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        const chosen = filtered[activeIdx];
+        if (chosen) void importResult(chosen);
+      }
+    },
+    [isUrl, isSearch, filtered, activeIdx, importByUrl, importResult, trimmed],
+  );
+
+  const listDisabled = importingId !== null;
 
   return (
     <Surface
@@ -67,45 +240,99 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
         <Stack gap="2xs">
           <DialogTitle>Import from Ultimate Guitar</DialogTitle>
           <DialogDescription>
-            Paste a tab URL to import chords, sections, and lyrics.
+            Search for a song or paste a tab URL to import chords, sections, and
+            lyrics.
           </DialogDescription>
         </Stack>
 
-        <Stack gap="xs">
-          <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Ultimate Guitar URL
-          </span>
-          <input
-            type="url"
-            value={url}
-            onChange={(e) => setUrl(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                void importTab();
-              }
-            }}
-            placeholder="https://tabs.ultimate-guitar.com/tab/..."
-            spellCheck={false}
-            autoFocus
-            className="rounded-md border border-border bg-background px-md py-sm text-body outline-none focus:border-primary"
-          />
-        </Stack>
+        <SearchInput
+          autoFocus
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          onKeyDown={handleSearchKeyDown}
+          placeholder="Search songs or paste a tab URL…"
+          spellCheck={false}
+        />
 
-        {error ? (
-          <span className="text-caption text-destructive" role="alert">
-            {error}
-          </span>
+        {isSearch ? (
+          <SegmentedControl
+            variant="ghost"
+            options={TYPE_OPTIONS}
+            value={typeFilter}
+            onChange={setTypeFilter}
+          />
         ) : null}
 
-        <Stack direction="row" gap="sm" justify="end">
-          <Button variant="ghost" onClick={onClose}>
-            Cancel
-          </Button>
-          <Button onClick={importTab} disabled={url.trim().length === 0}>
-            Import
-          </Button>
-        </Stack>
+        {error ? (
+          <Text variant="caption" tone="destructive" role="alert">
+            {error}
+          </Text>
+        ) : null}
+
+        {isUrl ? (
+          <Stack direction="row" gap="sm" justify="end">
+            <Button variant="ghost" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button onClick={() => importByUrl(trimmed)}>Import this tab</Button>
+          </Stack>
+        ) : isSearch ? (
+          <ScrollArea className="max-h-80">
+            {searching && filtered.length === 0 ? (
+              <Loading variant="rows" />
+            ) : filtered.length === 0 ? (
+              <Placeholder>No results.</Placeholder>
+            ) : (
+              <Stack gap="2xs">
+                {filtered.map((result, idx) => {
+                  const importing = importingId === result.tabId;
+                  return (
+                    <Row
+                      key={result.tabId}
+                      ref={idx === activeIdx ? activeRef : undefined}
+                      selected={idx === activeIdx}
+                      disabled={listDisabled}
+                      hover="muted"
+                      icon={
+                        importing ? (
+                          <Spinner className="size-4" />
+                        ) : (
+                          <MdMusicNote />
+                        )
+                      }
+                      onMouseEnter={() => setActiveIdx(idx)}
+                      onClick={() => importResult(result)}
+                    >
+                      <Fill>
+                        <Stack gap="2xs" align="start">
+                          <Inline gap="xs" wrap>
+                            <Text variant="body" className="font-semibold">
+                              {result.songName || "Untitled"}
+                            </Text>
+                            <Text variant="caption" tone="muted">
+                              {result.artistName}
+                            </Text>
+                          </Inline>
+                          <Inline gap="xs" wrap>
+                            <Badge>{result.type}</Badge>
+                            <Text variant="caption" tone="muted">
+                              {`★${result.rating.toFixed(1)} · ${result.votes}`}
+                              {result.version !== null
+                                ? ` · v${result.version}`
+                                : ""}
+                            </Text>
+                          </Inline>
+                        </Stack>
+                      </Fill>
+                    </Row>
+                  );
+                })}
+              </Stack>
+            )}
+          </ScrollArea>
+        ) : (
+          <Placeholder>Type a song name to search.</Placeholder>
+        )}
       </Stack>
     </Surface>
   );

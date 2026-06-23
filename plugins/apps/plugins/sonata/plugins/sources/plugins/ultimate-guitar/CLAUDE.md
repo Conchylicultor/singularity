@@ -48,6 +48,21 @@ Ultimate Guitar (UG) input source for Sonata. The source pipeline so far:
     a cancel (or a fetch failure) never leaves a half-formed "Untitled" orphan in
     the library. The in-player editor section debounce-persists edits and keeps
     the live header title in sync when a different tab is loaded.
+- **Task 7 — catalog search.** The import dialog is a **smart single input**:
+  text that parses as a UG tab URL (`extractUgTabId`) imports directly; any other
+  text searches UG's catalog. `POST /api/sonata/sources/ultimate-guitar/search`
+  (`searchUgTabContent` in `ug-client.ts`) hits the signed mobile API's
+  `/tab/search` route (same auth + loud-failure taxonomy as fetch) and returns a
+  slim `UgSearchResult[]` (`tabId`, `songName`, `artistName`, `type`, `rating`,
+  `votes`, `version`). The dialog renders the results as rows (artist + type
+  badge + ★rating·votes), defaulting a `Chords | All types` filter to **Chords**
+  — the type whose chord/lyric markup compiles to a songsheet (the filter matches
+  any `type` containing `"Chords"`, covering "Ukulele Chords" too). UG ignores a
+  server-side `type=` param, so **type filtering is client-side**. Selecting a
+  row synthesizes `https://tabs.ultimate-guitar.com/tab/<tabId>` and reuses the
+  exact fetch→compile→create→open import path. A no-match query returns a **404**
+  from UG, which search treats as an **empty list** ("No results") — *not* an
+  upstream error (unlike fetch, where 404 = a specific tab id is gone).
 
 ## Markup parser (`core/parse.ts`)
 
@@ -126,12 +141,14 @@ surfacing as crash tasks, not just toasts.
   `UgTab`/`UgTabSchema`, `extractUgTabId`, `UgFetchError`/`UgFetchErrorKind`, and
   the `parseUgTab`/`parseUgContent` markup parser with its
   `UgParseError`/`UgParseErrorKind` taxonomy and `Parsed*` model types.
+  Plus `UgSearchResult`/`UgSearchResultSchema` (the slim search-result row).
   Co-located `tab-url.test.ts` + `parse.test.ts` (bun:test, no network).
-- `shared/endpoints.ts` — `fetchUgTab` endpoint contract.
+- `shared/endpoints.ts` — `fetchUgTab` + `searchUgTabs` endpoint contracts.
 - `server/internal/ug-client.ts` — the signing + `safeFetch` + loud-failure
-  client (`fetchUgTabContent`).
-- `server/internal/routes.ts` — `implement()` handler; maps `UgFetchError.kind`
-  → `HttpError`.
+  client. Shared `signedUgGet` (auth + transport) and `throwForUgStatus` (status
+  taxonomy) back both `fetchUgTabContent` and `searchUgTabContent`.
+- `server/internal/routes.ts` — `implement()` handlers (fetch + search); map
+  `UgFetchError.kind` → `HttpError`.
 - `web/compile.ts` — `compile(raw)` + the pure `synthesizeScore(parsed)`,
   `collectUnrecognisedChords(parsed)` (the deduped set of chord symbols
   `synthesizeScore` drops because `theory.parseChordSymbol` can't recognise
@@ -150,8 +167,11 @@ surfacing as crash tasks, not just toasts.
   in-player editor, gated to UG songs; debounce-persists edits via the `PUT`
   endpoint and syncs the live header title when a different tab is loaded.
 - `web/components/ug-import-dialog.tsx` — `UgImportDialog`: the
-  "Import from Ultimate Guitar" URL-paste dialog (fetch → compile → create →
-  open), rendered through the imperative-dialog primitive.
+  "Import from Ultimate Guitar" smart-input dialog. A UG URL imports directly;
+  free text searches the catalog (debounced) and lists results (artist + type
+  badge + ★rating·votes) behind a `Chords | All types` filter. Both URL mode and
+  a result click funnel through one `importByUrl` (fetch → compile → create →
+  open). Rendered through the imperative-dialog primitive.
 - `web/components/ug-create-option.tsx` — `ultimateGuitarCreateOption`: the
   `Library.Source` create affordance opening the import dialog.
 - `web/hydrate.ts` — `hydrate(songId)`: fetches the persisted `UgTab` for the
@@ -168,14 +188,14 @@ surfacing as crash tasks, not just toasts.
 - Description: Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → annotations + voiced notes, sections, lyrics, synthesized 4/4 tempo). Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section. Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration).
 - Web:
   - Contributes: `Sonata.Source` "Ultimate Guitar", `Library.Source` "ultimate-guitar", `Sonata.Section` "Ultimate Guitar" → `UltimateGuitarEditorSection`
-  - Uses: `apps/sonata/library.Library`, `apps/sonata/library.openSongImperative`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/css/card.Card`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.DialogDescription`, `primitives/css/ui-kit.DialogTitle`, `primitives/imperative-dialog.openDialog`
+  - Uses: `apps/sonata/library.Library`, `apps/sonata/library.openSongImperative`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/card.Card`, `primitives/css/fill.Fill`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/spinner.Spinner`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.DialogDescription`, `primitives/css/ui-kit.DialogTitle`, `primitives/css/ui-kit.ScrollArea`, `primitives/imperative-dialog.openDialog`, `primitives/loading.Loading`, `primitives/search.SearchInput`
 - Server:
   - Uses: `apps/sonata/library._songs`, `apps/sonata/library.createSongRow`, `apps/sonata/library.updateSongMeta`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/safe-fetch.safeFetch`, `infra/safe-fetch.SsrfError`
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_ultimate_guitar`)
   - Exports: Values: `fetchUgTabContent`, `songUltimateGuitar`
-  - Routes: `POST /api/sonata/sources/ultimate-guitar/fetch`, `POST /api/sonata/songs/ultimate-guitar`, `GET /api/sonata/songs/:id/ultimate-guitar`, `PUT /api/sonata/songs/:id/ultimate-guitar`
+  - Routes: `POST /api/sonata/sources/ultimate-guitar/fetch`, `POST /api/sonata/sources/ultimate-guitar/search`, `POST /api/sonata/songs/ultimate-guitar`, `GET /api/sonata/songs/:id/ultimate-guitar`, `PUT /api/sonata/songs/:id/ultimate-guitar`
 - Core:
-  - Exports: Types: `ParsedChord`, `ParsedLine`, `ParsedSection`, `ParsedTab`, `UgFetchErrorKind`, `UgParseErrorKind`, `UgTab`; Values: `extractUgTabId`, `parseUgContent`, `parseUgTab`, `UgFetchError`, `UgParseError`, `UgTabSchema`
+  - Exports: Types: `ParsedChord`, `ParsedLine`, `ParsedSection`, `ParsedTab`, `UgFetchErrorKind`, `UgParseErrorKind`, `UgSearchResult`, `UgTab`; Values: `extractUgTabId`, `parseUgContent`, `parseUgTab`, `UgFetchError`, `UgParseError`, `UgSearchResultSchema`, `UgTabSchema`
 
 <!-- AUTOGENERATED:END -->
