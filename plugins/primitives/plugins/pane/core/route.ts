@@ -88,6 +88,27 @@ export function fillSegment(
 }
 
 // ---------------------------------------------------------------------------
+// Segment match-pattern normalization — param *names* are erased, only their
+// structural shape survives. `s/:pageId` and `s/:serverId` both normalize to
+// `s/:`, so two panes that match the same URLs collide; `page/:pageId`
+// (`page/:`) does not collide with `s/:`. THE single definition: the runtime
+// registry (`useSyncPaneRegistry`) enforces the globally-unique-segment
+// invariant at registration, and the `pane:segments-unique` check enforces the
+// same invariant statically at build time — both call this, so they can't drift.
+// ---------------------------------------------------------------------------
+
+export function normalizeSegmentPattern(segment: string): string {
+  return segment
+    .split("/")
+    .map((part) => {
+      if (part.startsWith(":") && part.endsWith("*")) return ":*";
+      if (part.startsWith(":")) return ":";
+      return part;
+    })
+    .join("/");
+}
+
+// ---------------------------------------------------------------------------
 // RouteDef — a typed, pure route identity. Chains to a parent route; `path`
 // builds the app-relative URL, `link` prepends an app's base path.
 // ---------------------------------------------------------------------------

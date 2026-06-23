@@ -64,5 +64,6 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/css/plugins/layout-harness", id: "primitives.css.layout-harness", loader: () => import("@plugins/primitives/plugins/css/plugins/layout-harness/check"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "primitives/plugins/data-view", id: "primitives.data-view", loader: () => import("@plugins/primitives/plugins/data-view/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/icon-picker", id: "primitives.icon-picker", loader: () => import("@plugins/primitives/plugins/icon-picker/check"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/pane", id: "primitives.pane", loader: () => import("@plugins/primitives/plugins/pane/check"), dependsOn: [] },
   { pluginPath: "reorder", id: "reorder", loader: () => import("@plugins/reorder/check"), dependsOn: [] },
 ];

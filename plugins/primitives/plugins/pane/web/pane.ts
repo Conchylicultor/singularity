@@ -13,6 +13,7 @@ import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { SurfaceIdContext } from "@plugins/primitives/plugins/surface-id/web";
 import {
   fillSegment,
+  normalizeSegmentPattern,
   type AppRef,
   type InferParams,
   type RouteDef,
@@ -261,24 +262,6 @@ function segmentParamNames(segment: string): string[] {
     .split("/")
     .filter((seg) => seg.startsWith(":"))
     .map((seg) => seg.slice(1).replace(/\*$/, ""));
-}
-
-/**
- * Normalize a segment to its URL match pattern — param *names* are erased, only
- * their structural shape survives. `s/:pageId` and `s/:serverId` both normalize
- * to `s/:`, so two panes that match the same URLs collide; `page/:pageId`
- * (`page/:`) does not collide with `s/:`. Used by {@link useSyncPaneRegistry}
- * to enforce the globally-unique-segment invariant at the registry boundary.
- */
-function normalizeSegmentPattern(segment: string): string {
-  return segment
-    .split("/")
-    .map((part) => {
-      if (part.startsWith(":") && part.endsWith("*")) return ":*";
-      if (part.startsWith(":")) return ":";
-      return part;
-    })
-    .join("/");
 }
 
 function matchSegmentParts(
