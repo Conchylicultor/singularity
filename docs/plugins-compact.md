@@ -61,6 +61,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
           - Plugins:
             - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
             - **`collapsed`** — Collapsed badge in the explorer plugin tree row.
+            - **`disabled`** — Disabled badge in the explorer plugin tree row.
             - **`expand-collapse`** — Expand/collapse all descendants button in the explorer plugin tree row.
             - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
             - **`membership`** — Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.

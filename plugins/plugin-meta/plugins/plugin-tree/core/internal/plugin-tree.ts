@@ -36,6 +36,9 @@ export interface PluginNode {
   loadBearing: boolean;
   collapsed: boolean;
   compositionRoot: boolean;
+  /** Seed flag only: `singularity.disabled === true` in this plugin's
+   *  package.json. The dependent-closure cascade is derived, not stored here. */
+  disabled: boolean;
   runtimes: Record<Runtime, boolean>;
   children: PluginNode[];
   facets: Record<string, unknown>;
@@ -216,13 +219,15 @@ async function collectCoreFields(dir: string, pluginsRoot: string): Promise<Coll
     (webSrc ? parseBoolField(webSrc, "collapsed") : false) ||
     (serverSrc ? parseBoolField(serverSrc, "collapsed") : false) ||
     (centralSrc ? parseBoolField(centralSrc, "collapsed") : false);
-  // package.json collapsed and compositionRoot markers.
+  // package.json collapsed, compositionRoot, and disabled markers.
   let compositionRoot = false;
+  let disabled = false;
   if (pkgSrc) {
     try {
       const pkg = JSON.parse(pkgSrc);
       if (pkg.singularity?.collapsed === true) collapsed = true;
       if (pkg.singularity?.compositionRoot === true) compositionRoot = true;
+      if (pkg.singularity?.disabled === true) disabled = true;
     // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {}
   }
@@ -248,6 +253,7 @@ async function collectCoreFields(dir: string, pluginsRoot: string): Promise<Coll
       loadBearing,
       collapsed,
       compositionRoot,
+      disabled,
       runtimes: {
         web: !!webIndex,
         server: !!serverIndex,

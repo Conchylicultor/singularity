@@ -14,7 +14,7 @@ import { join } from "path";
 import { buildPluginTree, type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { classifyEdges } from "./classify-edges";
-import { resolveComposition } from "./resolve-composition";
+import { resolveComposition, disabledClosure } from "./resolve-composition";
 import { flattenManifest } from "./flatten-manifest";
 import { explainInclusion } from "./explain";
 import { impactOfPruning, impactOfSelecting } from "./impact";
@@ -247,4 +247,80 @@ test("flattenManifest ignores unknown extends references inertly", () => {
   };
   const flat = flattenManifest(m, [m]);
   expect([...flat.selectedContributors].map(String)).toEqual(["ui.theme-toggle"]);
+});
+
+// ── disabledClosure: reverse + subtree fixpoint (direction is load-bearing) ───
+
+/**
+ * Build a minimal synthetic EdgeGraph from explicit hard edges + a containment map.
+ * Only the maps disabledClosure reads (`hardReverse`, `subtree`) are load-bearing;
+ * the rest are seeded empty so the shape matches the real EdgeGraph by construction.
+ */
+function syntheticGraph(
+  nodes: string[],
+  hardEdges: [from: string, to: string][],
+  subtree: Record<string, string[]>,
+): EdgeGraph {
+  const ids = nodes.map(asPluginId);
+  const empty = () => new Map(ids.map((id) => [id, [] as ReturnType<typeof asPluginId>[]]));
+  const hardForward = empty();
+  const hardReverse = empty();
+  const subtreeMap = empty();
+  for (const [from, to] of hardEdges) {
+    hardForward.get(asPluginId(from))!.push(asPluginId(to));
+    hardReverse.get(asPluginId(to))!.push(asPluginId(from));
+  }
+  for (const [parent, kids] of Object.entries(subtree)) {
+    subtreeMap.set(asPluginId(parent), kids.map(asPluginId));
+  }
+  return {
+    hardForward,
+    hardReverse,
+    softForward: empty(),
+    softReverse: empty(),
+    subtree: subtreeMap,
+    edges: hardEdges.map(([from, to]) => ({
+      from: asPluginId(from),
+      to: asPluginId(to),
+      kind: "hard" as const,
+    })),
+  };
+}
+
+test("disabledClosure: pulls in transitive importers + descendants, leaves dependencies and unrelated nodes untouched", () => {
+  // Import edge A → B means "A imports B" (so A breaks if B is disabled).
+  //   dep      → seed  (seed imports dep — dep is a DEPENDENCY, must NOT be disabled)
+  //   importer → seed  (importer imports seed — must be disabled)
+  //   far      → importer (transitive importer — must be disabled)
+  //   unrelated stands alone.
+  // seed also has a child (subtree) that must be disabled.
+  const graph = syntheticGraph(
+    ["seed", "seed.child", "dep", "importer", "far", "unrelated"],
+    [
+      ["seed", "dep"], // seed imports dep
+      ["importer", "seed"], // importer imports seed
+      ["far", "importer"], // far imports importer
+    ],
+    { seed: ["seed.child"] },
+  );
+
+  const closure = disabledClosure([asPluginId("seed")], graph);
+
+  // 1. Transitive importers + descendants are pulled in.
+  expect(closure.has(asPluginId("seed"))).toBe(true);
+  expect(closure.has(asPluginId("seed.child"))).toBe(true); // descendant
+  expect(closure.has(asPluginId("importer"))).toBe(true); // direct importer
+  expect(closure.has(asPluginId("far"))).toBe(true); // transitive importer
+
+  // 2. A pure DEPENDENCY of the seed is NOT disabled — proves the reverse direction
+  //    (we walk hardReverse, not hardForward).
+  expect(closure.has(asPluginId("dep"))).toBe(false);
+
+  // 3. An unrelated plugin is untouched.
+  expect(closure.has(asPluginId("unrelated"))).toBe(false);
+
+  // Exactly the expected set, nothing more.
+  expect([...closure].map(String).sort()).toEqual(
+    ["far", "importer", "seed", "seed.child"].sort(),
+  );
 });

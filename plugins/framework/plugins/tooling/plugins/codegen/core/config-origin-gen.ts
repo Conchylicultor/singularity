@@ -11,6 +11,7 @@ import {
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { computeDisabledIds } from "./disabled-ids";
 
 interface DiscoveredConfig {
   hierarchyPath: string;
@@ -33,9 +34,16 @@ async function discoverConfigs(root: string): Promise<DiscoveredConfig[]> {
   const tree = await buildEnrichedTree(root);
   registerBarrelStubs(root);
 
+  // A disabled plugin is omitted from the registry, so its config_v2
+  // descriptors never register at runtime. Emitting their origins would make
+  // `pruneOrphanedConfigFiles` delete user override files (a generated origin
+  // with no live descriptor reads as orphaned). Skip the whole disabled closure.
+  const disabled = computeDisabledIds(tree);
+
   const results: DiscoveredConfig[] = [];
 
   for (const node of tree.byDir.values()) {
+    if (disabled.has(node.id)) continue;
     const barrelPath = join(node.dir, "server", "index.ts");
     if (!existsSync(barrelPath)) continue;
 

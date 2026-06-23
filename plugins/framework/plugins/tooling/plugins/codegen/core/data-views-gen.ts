@@ -7,6 +7,7 @@ import {
   readIfExists,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { computeDisabledIds } from "./disabled-ids";
 
 /**
  * Generates the data-views manifest consumed by the data-view primitive: the
@@ -72,9 +73,16 @@ export async function collectDataViews(root: string): Promise<DataViewEntry[]> {
   const tree = await buildPluginTree(resolve(root, "plugins"), {
     skipBarrelImport: true,
   });
+  // A disabled plugin's data-view descriptor never registers at runtime (its
+  // barrel is omitted from the registry), so emitting its `config/<pluginId>/`
+  // origin would orphan user overrides under `pruneOrphanedConfigFiles`. Skip
+  // the disabled closure — the data-view descriptor is a config_v2 origin keyed
+  // by the DEFINING plugin, exactly the orphan-prune hazard.
+  const disabled = computeDisabledIds(tree);
   const definingPath = new Map<string, string>();
 
   for (const node of tree.byDir.values()) {
+    if (disabled.has(node.id)) continue;
     const webDir = join(node.dir, "web");
     if (!existsSync(webDir)) continue;
     const files: string[] = [];

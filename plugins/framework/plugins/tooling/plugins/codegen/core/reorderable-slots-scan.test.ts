@@ -38,6 +38,7 @@ function fixtureTree(files: Record<string, { id: string; web: Record<string, str
       loadBearing: false,
       collapsed: false,
       compositionRoot: false,
+      disabled: false,
       runtimes: { web: true, server: false, central: false },
       children: [],
       facets: {},

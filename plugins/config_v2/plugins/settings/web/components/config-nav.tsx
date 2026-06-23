@@ -80,6 +80,8 @@ export function ConfigNav() {
           name: reg.pluginName,
           id: reg.pluginId,
           loadBearing: false,
+          disabledSeed: false,
+          disabled: false,
           collapsed: false,
           runtimes: { web: true, server: false, central: false },
           children: [],

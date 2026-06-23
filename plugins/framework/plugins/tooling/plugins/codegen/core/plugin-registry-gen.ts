@@ -3,6 +3,8 @@ import { dirname, join, resolve } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { findMarkerCalls, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { computeDisabledIds } from "./disabled-ids";
 
 export interface DiscoveredCollectedDir extends CollectedDirDef {
   ownerDir: string;
@@ -135,9 +137,17 @@ function hasDefaultExport(file: string): boolean {
   );
 }
 
-async function collectEntries(root: string, dir: string): Promise<CollectedRawEntry[]> {
+async function collectEntries(
+  root: string,
+  dir: string,
+): Promise<{ entries: CollectedRawEntry[]; disabled: Set<string> }> {
   const pluginsRoot = resolve(root, "plugins");
   const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
+  // Closed disabled-id set computed from the SAME barrel-free tree the entries
+  // come from — no second tree build. Applied unconditionally below so the
+  // `plugins-registry-in-sync` check (which never passes `bundle`) re-derives
+  // the identical filtered output from the committed `package.json` flags.
+  const disabled = computeDisabledIds(tree);
   const entries: CollectedRawEntry[] = [];
   for (const node of tree.byDir.values()) {
     const indexFile = join(node.dir, dir, "index.ts");
@@ -150,7 +160,7 @@ async function collectEntries(root: string, dir: string): Promise<CollectedRawEn
     });
   }
   entries.sort((a, b) => a.importPath.localeCompare(b.importPath));
-  return entries;
+  return { entries, disabled };
 }
 
 // ── Dependency graph ───────────────────────────────────────────────
@@ -247,11 +257,17 @@ export async function renderCollectedDirRegistry(opts: {
   bundle?: Set<string>;
 }): Promise<string> {
   const { root, def, bundle } = opts;
-  const allEntries = await collectEntries(root, def.dir);
+  const { entries: allEntries, disabled } = await collectEntries(root, def.dir);
   const deps = buildDepsForDir(root, allEntries, def.dir);
   const exportName = `${def.dir}Entries`;
 
-  const entries = bundle ? allEntries.filter((e) => bundle.has(e.id)) : allEntries;
+  // The disabled-closure filter is UNCONDITIONAL (driven by the committed
+  // `singularity.disabled` seeds), never the optional `bundle` — so the
+  // `plugins-registry-in-sync` check, which re-renders without `bundle`, sees
+  // the identical filtered output. `survivingPaths` is derived from the
+  // post-filter `entries`, so `dependsOn` is pruned to survivors.
+  const entries = (bundle ? allEntries.filter((e) => bundle.has(e.id)) : allEntries)
+    .filter((e) => !disabled.has(asPluginId(e.id)));
   const survivingPaths = new Set(entries.map((e) => e.pluginPath));
 
   const lines: string[] = [];
@@ -266,8 +282,10 @@ export async function renderCollectedDirRegistry(opts: {
   lines.push("");
   lines.push(`export const ${exportName}: CollectedEntry[] = [`);
   for (const e of entries) {
-    let entryDeps = deps.get(e.pluginPath) ?? [];
-    if (bundle) entryDeps = entryDeps.filter((d) => survivingPaths.has(d));
+    // Always prune `dependsOn` to surviving paths: the disabled filter can drop
+    // a dependency unconditionally (not only under `bundle`), and a dangling
+    // dep on a non-emitted plugin would break the loader's topo-sort.
+    const entryDeps = (deps.get(e.pluginPath) ?? []).filter((d) => survivingPaths.has(d));
     const depsLiteral = entryDeps.length > 0
       ? `[${entryDeps.map((d) => JSON.stringify(d)).join(", ")}]`
       : "[]";

@@ -2,6 +2,10 @@ import {
   buildPluginTree,
   type PluginNode as TreePluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import {
+  classifyEdges,
+  disabledClosure,
+} from "@plugins/plugin-meta/plugins/closure/core";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
@@ -23,6 +27,12 @@ export const handleTree = implement(getPluginTree, async () => {
     buildPluginTree(PLUGINS_DIR, { skipBarrelImport: true }),
   );
 
+  const graph = classifyEdges(tree);
+  const seeds = [...tree.byDir.values()]
+    .filter((n) => n.disabled)
+    .map((n) => n.id);
+  const disabledIds = disabledClosure(seeds, graph);
+
   function toApiNode(node: TreePluginNode): PluginNode {
     return {
       path: node.path,
@@ -30,6 +40,8 @@ export const handleTree = implement(getPluginTree, async () => {
       id: node.id,
       description: node.description,
       loadBearing: node.loadBearing,
+      disabledSeed: node.disabled,
+      disabled: disabledIds.has(node.id),
       collapsed: node.collapsed,
       runtimes: node.runtimes,
       children: node.children.map(toApiNode),

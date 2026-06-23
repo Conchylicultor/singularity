@@ -552,6 +552,10 @@
       "name": "@singularity/plugin-apps-studio-explorer-collapsed",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/studio/plugins/explorer/plugins/disabled": {
+      "name": "@singularity/plugin-apps-studio-explorer-disabled",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/studio/plugins/explorer/plugins/expand-collapse": {
       "name": "@singularity/plugin-apps-studio-explorer-expand-collapse",
       "version": "0.0.1",
@@ -4111,6 +4115,8 @@
     "@singularity/plugin-apps-studio-explorer-child-count": ["@singularity/plugin-apps-studio-explorer-child-count@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/child-count"],
 
     "@singularity/plugin-apps-studio-explorer-collapsed": ["@singularity/plugin-apps-studio-explorer-collapsed@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/collapsed"],
+
+    "@singularity/plugin-apps-studio-explorer-disabled": ["@singularity/plugin-apps-studio-explorer-disabled@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/disabled"],
 
     "@singularity/plugin-apps-studio-explorer-expand-collapse": ["@singularity/plugin-apps-studio-explorer-expand-collapse@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/expand-collapse"],
 

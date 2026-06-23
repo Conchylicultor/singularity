@@ -10,6 +10,8 @@ import {
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { collectRenderSlotsStatic } from "./reorderable-slots-scan";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { computeDisabledIds } from "./disabled-ids";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 
 /**
@@ -79,10 +81,15 @@ async function collectReorderableSlotSet(
   const tree = await buildPluginTree(resolve(root, "plugins"), {
     skipBarrelImport: true,
   });
-  return collectRenderSlotsStatic(tree).map(({ slotId, pluginId }) => ({
-    slotId,
-    pluginId,
-  }));
+  // A slot owned by a disabled plugin never registers at runtime (the owner's
+  // barrel is omitted from the registry); its config_v2 directive would orphan
+  // user overrides. Drop slots whose DEFINING plugin is in the disabled closure.
+  // `classifyEdges` runs on this barrel-free tree (facets are populated), so the
+  // set is deterministic and matches the registry phase.
+  const disabled = computeDisabledIds(tree);
+  return collectRenderSlotsStatic(tree)
+    .filter(({ pluginId }) => !disabled.has(asPluginId(pluginId)))
+    .map(({ slotId, pluginId }) => ({ slotId, pluginId }));
 }
 
 /**
@@ -97,6 +104,11 @@ async function collectReorderableSlots(
   root: string,
 ): Promise<ReorderableSlotsData> {
   const tree = await buildEnrichedTree(root);
+  // Drop catalog entries contributed by disabled plugins: their barrels never
+  // load, so listing them in an enabled slot's materialized default would point
+  // the origin hash at contributions that don't register. (The slot SET itself
+  // is already disabled-filtered inside `collectReorderableSlotSet`.)
+  const disabled = computeDisabledIds(tree);
 
   // (1) The reorderable-slot set — deterministic static scan.
   const slots = await collectReorderableSlotSet(root);
@@ -105,6 +117,7 @@ async function collectReorderableSlots(
   // (2) Catalog: every runtime contribution targeting a reorderable slot.
   const catalog = new Map<string, CatalogItem[]>();
   for (const node of tree.byDir.values()) {
+    if (disabled.has(node.id)) continue;
     const data = getFacet(node, contributionsFacetDef);
     if (!data) continue;
     for (const c of data.runtime) {

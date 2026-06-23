@@ -23,6 +23,28 @@ export function hardClosure(seeds: Iterable<PluginId>, graph: EdgeGraph): Set<Pl
 }
 
 /**
+ * Transitive disabled closure of a seed set over the REVERSE + subtree directions.
+ * Disabling a plugin must also disable everything that would break without it:
+ * its DESCENDANTS (`subtree` — a child makes no sense without its parent) and its
+ * transitive IMPORTERS (`hardReverse` — they crash at module-eval when the imported
+ * barrel is gone). This is the mirror of {@link hardClosure}, which walks
+ * `hardForward` (what a plugin needs); here we walk the opposite direction (who
+ * needs this plugin). The visited-set makes it cycle- and self-edge-safe.
+ */
+export function disabledClosure(seeds: Iterable<PluginId>, graph: EdgeGraph): Set<PluginId> {
+  const out = new Set<PluginId>();
+  const stack = [...seeds];
+  while (stack.length) {
+    const x = stack.pop()!;
+    if (out.has(x)) continue;
+    out.add(x);
+    for (const d of graph.subtree.get(x) ?? []) if (!out.has(d)) stack.push(d); // descendants
+    for (const r of graph.hardReverse.get(x) ?? []) if (!out.has(r)) stack.push(r); // importers
+  }
+  return out;
+}
+
+/**
  * Expand declared entry points to the actual seed set: each entry plus its whole
  * subtree (containment). A no-runtime umbrella entry contributes nothing on its
  * own, so its sub-plugins are seeded here. Unknown ids (no `subtree` entry) pass

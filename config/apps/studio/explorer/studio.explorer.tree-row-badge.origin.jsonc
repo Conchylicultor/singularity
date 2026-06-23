@@ -1,4 +1,4 @@
-// @hash 4bbbf4c32e6d
+// @hash 4b81d1ce3581
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -6,6 +6,7 @@
   "items": [
     "apps.studio.explorer.child-count:child-count",
     "apps.studio.explorer.collapsed:collapsed",
+    "apps.studio.explorer.disabled:disabled",
     "apps.studio.explorer.expand-collapse:expand-collapse",
     "apps.studio.explorer.load-bearing:load-bearing",
     "apps.studio.explorer.membership:membership"

@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "fs";
 import {
   buildEnrichedTree,
+  computeDisabledIds,
   pluginClaudeMdPath,
   pluginCompactDocPath,
   pluginDetailsDocPath,
@@ -60,10 +61,11 @@ const check: Check = {
     }
 
     const tree = await buildEnrichedTree(root);
+    const disabled = computeDisabledIds(tree);
     for (const info of tree.byDir.values()) {
       const file = pluginClaudeMdPath(info);
       const existing = existsSync(file) ? readFileSync(file, "utf8") : null;
-      const expected = renderPluginClaudeMd(info, existing, root, tree.facets);
+      const expected = renderPluginClaudeMd(info, existing, root, tree.facets, disabled);
       if (existing !== expected) {
         return {
           ok: false,
