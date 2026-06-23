@@ -50,7 +50,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
     } finally {
       setSending(false);
     }
-  }, [conversation.id, disabled, sending, clearDraft, draftRef]);
+  }, [conversation.id, disabled, sending, clearDraft]);
 
   const placeholder = disabled
     ? live.waitingFor

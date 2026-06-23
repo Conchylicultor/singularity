@@ -291,7 +291,7 @@ function SelectionLayer({
       e.preventDefault();
       return true;
     },
-    [handles, rowsRef, selectedRef],
+    [handles],
   );
 
   const onCopy = useCallback(
@@ -310,7 +310,7 @@ function SelectionLayer({
         clearSelection();
       }
     },
-    [writeClipboard, bulkDelete, clearSelection, selectedRef],
+    [writeClipboard, bulkDelete, clearSelection],
   );
 
   const onPaste = useCallback(
@@ -356,7 +356,7 @@ function SelectionLayer({
         headRef.current ?? focusedBlockId ?? roots[roots.length - 1] ?? null;
       void paste({ blocks: forest, afterId });
     },
-    [handles, paste, focusedBlockId, headRef, rowsRef, selectedRef],
+    [handles, paste, focusedBlockId, headRef],
   );
 
   // Nudge the whole selection up/down by one slot among its siblings.
@@ -394,7 +394,7 @@ function SelectionLayer({
       }
       bulkMove({ ids: roots, parentId: first.parentId, afterId });
     },
-    [bulkMove, rowsRef, selectedRef],
+    [bulkMove],
   );
 
   // ---- Keyboard (block-selection mode; container must be the focus) --------
@@ -470,7 +470,6 @@ function SelectionLayer({
       neighbor,
       applyRange,
       moveSelection,
-      selectedRef,
     ],
   );
 
@@ -702,7 +701,7 @@ function SelectionLayer({
       const idx = siblings.findIndex((s) => s.id === target.id);
       return { afterId: siblings[idx - 1]?.id ?? null, parentId: targetRow.parentId };
     },
-    [rowsRef],
+    [],
   );
 
   const onFileDragOver = useCallback((e: React.DragEvent) => {

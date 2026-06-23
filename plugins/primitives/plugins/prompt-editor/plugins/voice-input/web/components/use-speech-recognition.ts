@@ -110,7 +110,7 @@ export function useSpeechRecognition(
 
     recognition.start();
     setListening(true);
-  }, [listening, callbackRef]);
+  }, [listening]);
 
   return {
     isListening: listening,

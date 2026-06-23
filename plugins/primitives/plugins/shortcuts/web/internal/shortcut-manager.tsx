@@ -35,7 +35,7 @@ export function ShortcutManager() {
         }
       }
     }
-  }, [shortcuts, shortcutsRef]);
+  }, [shortcuts]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -75,7 +75,7 @@ export function ShortcutManager() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [shortcutsRef]);
+  }, []);
 
   return null;
 }

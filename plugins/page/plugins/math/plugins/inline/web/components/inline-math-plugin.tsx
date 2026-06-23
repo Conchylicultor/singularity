@@ -163,7 +163,7 @@ export function InlineMathPlugin(_: BlockTextPluginProps) {
       unregisterEscape();
       unregisterBlur();
     };
-  }, [lexicalEditor, openRef, queryRef, commitRef]);
+  }, [lexicalEditor]);
 
   if (!open || !caret) return null;
 

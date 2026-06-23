@@ -1109,7 +1109,7 @@ function makePaneObject(
       } else {
         openPaneFn(paneObject, paramsRef.current, { mode, side, input: inputRef.current });
       }
-    }, [store, targetSlot, action, openPaneFn, mode, side, paramsRef, inputRef]);
+    }, [store, targetSlot, action, openPaneFn, mode, side]);
 
     return { isOpen, toggle };
   }

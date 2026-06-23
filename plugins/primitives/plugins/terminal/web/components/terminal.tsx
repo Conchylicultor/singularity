@@ -43,7 +43,7 @@ export function TerminalView({ command }: { command?: string[] }) {
           };
       ws.send(JSON.stringify(msg));
     },
-    [commandRef],
+    [],
   );
 
   const wsHandle = useReconnectingWebSocket({

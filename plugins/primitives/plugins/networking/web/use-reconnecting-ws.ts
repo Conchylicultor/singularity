@@ -105,10 +105,9 @@ export function useReconnectingWebSocket(
       }
       handleRef.current = null;
     };
-    // `optsRef` is a stable useLatestRef handle (identity never changes); listed
-    // only to satisfy exhaustive-deps. The effect intentionally re-runs only on
-    // url/enabled — every other opt is read live off `optsRef.current`.
-  }, [opts.url, opts.enabled, optsRef]);
+    // The effect intentionally re-runs only on url/enabled — every other opt is
+    // read live off the stable `optsRef.current`.
+  }, [opts.url, opts.enabled]);
 
   return handleRef;
 }

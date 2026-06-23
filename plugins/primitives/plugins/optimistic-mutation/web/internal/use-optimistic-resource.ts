@@ -95,19 +95,17 @@ export function useOptimisticResource<
         return next.length === prev.length ? prev : next;
       });
     });
-    // `isConfirmedByRef` is a stable useLatestRef handle (identity never
-    // changes); listed only to satisfy exhaustive-deps. The subscription stays
-    // mounted for the resource's lifetime and reads the freshest predicate off
-    // `.current` at call time.
-  }, [queryClient, targetKey, isConfirmedByRef]);
+    // The subscription stays mounted for the resource's lifetime and reads the
+    // freshest predicate off the stable `isConfirmedByRef.current` at call time.
+  }, [queryClient, targetKey]);
 
   const data = useMemo(
-    // applyRef (stable useLatestRef handle) is read through `.current` at compute
-    // time; recompute is intentionally keyed on base/pending only — apply identity
-    // churn must NOT invalidate the overlay. `applyRef` is listed for exhaustive-deps.
+    // `applyRef` (stable useLatestRef handle) is read through `.current` at
+    // compute time; recompute is intentionally keyed on base/pending only — apply
+    // identity churn must NOT invalidate the overlay.
     // eslint-disable-next-line react-hooks/refs -- intentional latest-reducer read inside the overlay memo (see above); the read is render-phase by design and the ref is stable
     () => replay(base, pending, applyRef.current),
-    [base, pending, applyRef],
+    [base, pending],
   );
 
   const dispatch = useCallback(
@@ -135,10 +133,8 @@ export function useOptimisticResource<
   // deps (mutate/onError) churn between renders.
   const dispatchRef = useLatestRef(dispatch);
 
-  // `dispatchRef` is a stable useLatestRef handle (identity never changes); the
-  // empty intent stands — listing it satisfies exhaustive-deps without churning
-  // `retry`'s identity (which useReportSync/the result memo depend on staying
-  // stable).
+  // `retry` keeps a stable identity (useReportSync / the result memo depend on it
+  // staying stable) and reads the freshest dispatch off `dispatchRef.current`.
   const retry = useCallback(
     (opId: string) => {
       let entry: { opId: string; vars: Vars } | undefined;
@@ -148,20 +144,19 @@ export function useOptimisticResource<
       });
       if (entry) dispatchRef.current(entry.vars);
     },
-    [dispatchRef],
+    [],
   );
 
   // Re-run only THIS hook's own failed ops. Held in a ref + stable wrapper so the
   // identity handed to useReportSync never churns (the indicator pulls it
   // imperatively), yet it always sees the latest failed list.
   const failedRef = useLatestRef(failed);
-  // `failedRef` is a stable useLatestRef handle (identity never changes); listed
-  // only to satisfy exhaustive-deps. `retryAll` stays stable across renders (it
-  // re-derives only when `retry` does, i.e. never), reading the freshest failed
-  // list off `.current` — so the identity handed to useReportSync never churns.
+  // `retryAll` stays stable across renders (it re-derives only when `retry` does,
+  // i.e. never), reading the freshest failed list off the stable
+  // `failedRef.current` — so the identity handed to useReportSync never churns.
   const retryAll = useCallback(() => {
     failedRef.current.forEach((f) => retry(f.opId));
-  }, [retry, failedRef]);
+  }, [retry]);
 
   const inFlight = useMemo(
     () => pending.map((op) => ({ opId: op.opId, vars: op.vars })),

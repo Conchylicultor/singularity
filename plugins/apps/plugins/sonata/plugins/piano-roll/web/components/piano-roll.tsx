@@ -341,7 +341,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             getPlaybackBeats: () => cursor.getBeat(),
           })
         : null,
-    [pixi, cursor, projectionRef, laneSizeRef],
+    [pixi, cursor],
   );
 
   // --- Imperative cursor path. The playhead advances ~60fps via the cursor
@@ -383,7 +383,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
         tempo.beatToSeconds(beat) * PX_PER_SECOND * ts * spreadRef.current;
       el.style.transform = `translateY(${offset}px)`;
     }
-  }, [sceneRef, tempoRef, tempoScaleRef, laneSizeRef, spreadRef]);
+  }, []);
 
   // Drive the imperative path on every cursor change — no React render. The
   // store tells us whether the change was a seek so we re-anchor onsets.
@@ -461,8 +461,6 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     setConfig,
     play,
     stop,
-    spreadRef,
-    isPlayingRef,
   ]);
 
   // Re-sync after any reactive change (scene ready, resize, tempo, zoom) and on

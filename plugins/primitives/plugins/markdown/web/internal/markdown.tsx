@@ -26,9 +26,8 @@ function MarkdownRenderer({ children }: { children: string }) {
 
   // Base map built ONCE: every base tag — including `code` — gets a permanent
   // identity, so react-markdown never remounts them on a re-render. The
-  // accessors read `ref.current`, so live data is reflected in place. `ref` is a
-  // stable useLatestRef handle (identity never changes) — listed only to satisfy
-  // exhaustive-deps; the map is still built exactly once.
+  // accessors read the stable `ref.current`, so live data is reflected in place
+  // while the map is still built exactly once.
   const base = useMemo(
     () =>
       stripNodeProp(
@@ -39,7 +38,7 @@ function MarkdownRenderer({ children }: { children: string }) {
           () => ref.current.inlineCodeHandlers,
         ),
       ),
-    [ref],
+    [],
   );
 
   // Overrides re-wrap only when the override map actually changes; `code` lives

@@ -114,7 +114,7 @@ export function MarkdownShortcutPlugin({
         }
       });
     });
-  }, [lexicalEditor, rulesRef, editorRef, blockTypeRef]);
+  }, [lexicalEditor]);
 
   return null;
 }

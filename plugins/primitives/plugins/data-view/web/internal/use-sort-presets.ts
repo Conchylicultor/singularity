@@ -72,14 +72,13 @@ export function useSortPresets(storageKey: string): SortPresetsController {
     });
   }, [persistedJson]);
 
-  // `setConfigRef` is a stable useLatestRef handle (identity never changes);
-  // listed only to satisfy exhaustive-deps. `commit` stays referentially stable
-  // and writes through the freshest setConfig off `.current`.
+  // `commit` stays referentially stable and writes through the freshest
+  // setConfig off the stable `setConfigRef.current`.
   const commit = useCallback((next: SortPreset[]) => {
     pendingRef.current = true;
     setMirror(next);
     setConfigRef.current("sortPresets", next);
-  }, [setConfigRef]);
+  }, []);
 
   // The config truth has caught up to (or past) our optimistic write → drop the
   // pending guard so the reconcile effect resumes following external truth.

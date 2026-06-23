@@ -1,0 +1,50 @@
+diff --git a/cjs/eslint-plugin-react-hooks.development.js b/cjs/eslint-plugin-react-hooks.development.js
+index 7b02d8e88471334ee23ec70e53b84f79429e1bbe..a6aa9f8177fcb70bf11d7fdf4bf67161aecb685d 100644
+--- a/cjs/eslint-plugin-react-hooks.development.js
++++ b/cjs/eslint-plugin-react-hooks.development.js
+@@ -71,6 +71,10 @@ const rule$1 = {
+     create(context) {
+         const rawOptions = context.options && context.options[0];
+         const settings = context.settings || {};
++        const rhSettings = settings['react-hooks'];
++        const stableHooks = new Set(
++            rhSettings && Array.isArray(rhSettings.stableHooks) ? rhSettings.stableHooks : [],
++        );
+         const additionalHooks = rawOptions && rawOptions.additionalHooks
+             ? new RegExp(rawOptions.additionalHooks)
+             : getAdditionalEffectHooksFromSettings(settings);
+@@ -220,6 +224,9 @@ const rule$1 = {
+                 const definitionNode = def.node;
+                 const id = definitionNode.id;
+                 const { name } = callee;
++                if (stableHooks.has(name) && id.type === 'Identifier') {
++                    return true;
++                }
+                 if (name === 'useRef' && id.type === 'Identifier') {
+                     return true;
+                 }
+diff --git a/cjs/eslint-plugin-react-hooks.production.js b/cjs/eslint-plugin-react-hooks.production.js
+index 3c95a916f6556aabaac34d57087ace63ed7caa6a..21a0cb0de431f584ad26b67f1d3b70ed63032a98 100644
+--- a/cjs/eslint-plugin-react-hooks.production.js
++++ b/cjs/eslint-plugin-react-hooks.production.js
+@@ -67,6 +67,10 @@ const rule$1 = {
+     create(context) {
+         const rawOptions = context.options && context.options[0];
+         const settings = context.settings || {};
++        const rhSettings = settings['react-hooks'];
++        const stableHooks = new Set(
++            rhSettings && Array.isArray(rhSettings.stableHooks) ? rhSettings.stableHooks : [],
++        );
+         const additionalHooks = rawOptions && rawOptions.additionalHooks
+             ? new RegExp(rawOptions.additionalHooks)
+             : getAdditionalEffectHooksFromSettings(settings);
+@@ -216,6 +220,9 @@ const rule$1 = {
+                 const definitionNode = def.node;
+                 const id = definitionNode.id;
+                 const { name } = callee;
++                if (stableHooks.has(name) && id.type === 'Identifier') {
++                    return true;
++                }
+                 if (name === 'useRef' && id.type === 'Identifier') {
+                     return true;
+                 }

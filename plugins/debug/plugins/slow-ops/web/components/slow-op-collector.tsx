@@ -43,7 +43,7 @@ export function SlowOpCollector() {
       );
     });
     return () => cancelAnimationFrame(id);
-  }, [cfgRef]);
+  }, []);
 
   // Element signal: live-state resources hand us their mount → settle duration.
   useEffect(() => {
@@ -78,7 +78,7 @@ export function SlowOpCollector() {
       );
     });
     return () => registerSlowResourceReporter(null);
-  }, [cfgRef]);
+  }, []);
 
   return null;
 }

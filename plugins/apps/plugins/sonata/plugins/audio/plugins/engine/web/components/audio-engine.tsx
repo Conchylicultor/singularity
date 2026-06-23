@@ -262,7 +262,7 @@ export function AudioEngine() {
       handle?.cancel();
       for (const manager of managers) manager.allOff();
     };
-  }, [isPlaying, audibleScore, trackInstrumentMap, seekEpoch, cursorRef]);
+  }, [isPlaying, audibleScore, trackInstrumentMap, seekEpoch]);
 
   // Aggregate status: "Loading…" until every in-use manager is loaded, the
   // error if any failed, "Ready" otherwise. Keyed on `inUseKey` so it

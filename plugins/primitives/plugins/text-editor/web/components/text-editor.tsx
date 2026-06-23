@@ -150,7 +150,7 @@ function InitialSelectionPlugin({
     });
     // Mount-only: apply the captured selection once. `editor` is stable and the
     // refs are stable useLatestRef handles, so the effect never re-runs.
-  }, [editor, selectionRef, extensionsRef]);
+  }, [editor]);
   return null;
 }
 
@@ -257,7 +257,7 @@ function ValueSyncPlugin({
     queueMicrotask(() => {
       selfWriteRef.current = false;
     });
-  }, [editor, value, extensionsRef]);
+  }, [editor, value]);
 
   useEffect(() => {
     return editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
@@ -268,7 +268,7 @@ function ValueSyncPlugin({
       lastSerializedRef.current = md;
       onChangeRef.current(md);
     });
-  }, [editor, extensionsRef, onChangeRef]);
+  }, [editor]);
 
   return null;
 }

@@ -54,7 +54,7 @@ export function Column({ entry, isFirst, isLast, dragHandleProps }: ColumnProps)
       // width: split the space 50/50 so both columns start roughly equal.
       setWidthRef.current(Math.round(capturedWidthRef.current / 2));
     }
-  }, [isLast, paneId, tabId, setWidthRef]);
+  }, [isLast, paneId, tabId]);
 
   const paneLayout = useMemo(
     () => ({

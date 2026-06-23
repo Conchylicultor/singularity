@@ -154,10 +154,9 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   const pendingRef = useRef<ViewConfigRow[] | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // `setConfigRef` is a stable useLatestRef handle (identity never changes);
-  // listed only to satisfy exhaustive-deps. `flush` stays referentially stable
-  // (scheduleWrite + the unmount effect depend on it) and writes through the
-  // freshest setConfig off `.current`.
+  // `flush` stays referentially stable (scheduleWrite + the unmount effect depend
+  // on it) and writes through the freshest setConfig off the stable
+  // `setConfigRef.current`.
   const flush = useCallback(() => {
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current);
@@ -167,7 +166,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
     if (next === null) return;
     pendingRef.current = null;
     setConfigRef.current("views", next);
-  }, [setConfigRef]);
+  }, []);
 
   const scheduleWrite = useCallback(
     (next: ViewConfigRow[]) => {

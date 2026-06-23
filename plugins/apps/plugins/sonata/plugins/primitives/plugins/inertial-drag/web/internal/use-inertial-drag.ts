@@ -81,7 +81,7 @@ export function useInertialDrag(config: InertialDragConfig): InertialDragHandle 
   const axisPixel = useCallback(
     (e: { clientX: number; clientY: number }): number =>
       configRef.current.axis === "y" ? e.clientY : e.clientX,
-    [configRef],
+    [],
   );
 
   /** Map a pixel position to the clamped unit value, reporting a bound-hit. */
@@ -90,7 +90,7 @@ export function useInertialDrag(config: InertialDragConfig): InertialDragHandle 
     const { unitsPerPixel, bounds } = configRef.current;
     const raw = g.originValue + (pixel - g.startPixel) * unitsPerPixel;
     return clampToBounds(raw, bounds);
-  }, [configRef]);
+  }, []);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent<Element>) => {
@@ -107,7 +107,7 @@ export function useInertialDrag(config: InertialDragConfig): InertialDragHandle 
       configRef.current.onGrab?.();
       setPhase("dragging");
     },
-    [axisPixel, cancelFling, tracker, configRef],
+    [axisPixel, cancelFling, tracker],
   );
 
   const onPointerMove = useCallback(
@@ -119,7 +119,7 @@ export function useInertialDrag(config: InertialDragConfig): InertialDragHandle 
       configRef.current.onScrub(value);
       tracker.sample(e.timeStamp, pixel);
     },
-    [axisPixel, toValue, tracker, configRef],
+    [axisPixel, toValue, tracker],
   );
 
   const release = useCallback(
@@ -168,7 +168,7 @@ export function useInertialDrag(config: InertialDragConfig): InertialDragHandle 
       };
       flingRaf.current = requestAnimationFrame(step);
     },
-    [axisPixel, toValue, tracker, configRef],
+    [axisPixel, toValue, tracker],
   );
 
   // Cancel any in-flight fling on unmount.

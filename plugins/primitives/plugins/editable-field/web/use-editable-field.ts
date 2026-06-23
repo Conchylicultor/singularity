@@ -174,13 +174,11 @@ export function useEditableField<T extends string>(
   // (the sync-status indicator pulls it imperatively, so churn would thrash).
   const draftRef = useLatestRef(draft);
 
-  // `draftRef` is a stable useLatestRef handle (identity never changes); listed
-  // only to satisfy exhaustive-deps. `retry` stays referentially stable (the
-  // sync-status indicator pulls it imperatively) and reads the latest draft off
-  // `.current`.
+  // `retry` stays referentially stable (the sync-status indicator pulls it
+  // imperatively) and reads the latest draft off the stable `draftRef.current`.
   const retry = useCallback(() => {
     void runSave(draftRef.current);
-  }, [runSave, draftRef]);
+  }, [runSave]);
 
   // Auto-report to the universal sync-status indicator. Harmless no-op when no
   // <SyncStatusProvider> is above (unit tests, non-surface mounts).

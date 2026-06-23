@@ -34,10 +34,9 @@ export function useColorDrag(
       el.addEventListener("pointerup", onUp);
       el.addEventListener("pointercancel", onUp);
     },
-    // `cbRef` is a stable useLatestRef handle (identity never changes); listed
-    // only to satisfy exhaustive-deps. `onPointerDown` stays stable and reads the
-    // freshest `onChange` off `cbRef.current` at emit time.
-    [elRef, cbRef],
+    // `onPointerDown` stays stable and reads the freshest `onChange` off the
+    // stable `cbRef.current` at emit time.
+    [elRef],
   );
 
   return { onPointerDown };

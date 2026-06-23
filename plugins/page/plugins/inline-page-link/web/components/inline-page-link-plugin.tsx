@@ -211,7 +211,7 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
       unregisterEscape();
       unregisterBlur();
     };
-  }, [lexicalEditor, openRef, optionsRef, activeIndexRef, handleSelectRef]);
+  }, [lexicalEditor]);
 
   if (!open || !caret) return null;
 

@@ -158,6 +158,17 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
         "@typescript-eslint": tsPlugin as unknown as ESLint.Plugin,
         "react-hooks": reactHooks as unknown as ESLint.Plugin,
       },
+      settings: {
+        "react-hooks": {
+          // Hooks whose return is referentially stable for the component's whole
+          // lifetime, so exhaustive-deps treats them like a bare useRef (neither
+          // required nor flagged in a dep array). Consumed by our patch to
+          // isStableKnownHookValue (patches/eslint-plugin-react-hooks@*.patch).
+          // Append a name here when a new stable-returning primitive lands — that
+          // is the ONLY step a future primitive needs.
+          stableHooks: ["useLatestRef", "useEventCallback"],
+        },
+      },
       rules: {
         "@typescript-eslint/no-floating-promises": "off",
         "@typescript-eslint/no-misused-promises": ["error", {
@@ -173,6 +184,10 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
         // explicit "error" pins below win the merge.
         ...compilerDiagnosticRulesAsWarn(),
         "react-hooks/rules-of-hooks": "error",
+        // exhaustive-deps treats the `settings["react-hooks"].stableHooks` list
+        // above as known-stable returns (like a bare useRef), via our patch to
+        // isStableKnownHookValue (patches/eslint-plugin-react-hooks@*.patch) —
+        // so useLatestRef/useEventCallback refs need not be listed in dep arrays.
         "react-hooks/exhaustive-deps": "error",
         // Coverage-blocking React Compiler rules — RATCHETED warn→error once the
         // codebase was driven to zero (2026-06-23). These are the diagnostics

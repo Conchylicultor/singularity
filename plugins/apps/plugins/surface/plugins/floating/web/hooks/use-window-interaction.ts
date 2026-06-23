@@ -149,7 +149,7 @@ export function useWindowKeyboardInteraction(
       window.removeEventListener("keydown", onKey, { capture: true });
       window.removeEventListener("pointerdown", onPointerDown);
     };
-  }, [mode, setGeo, getBounds, geoRef]);
+  }, [mode, setGeo, getBounds]);
 
   return { mode, begin, commit };
 }

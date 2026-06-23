@@ -334,7 +334,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     // Assert the (now possibly seeded) in-memory route into the URL so it
     // mirrors the focused tab and `useActiveApp` (URL-driven) resolves to it.
     next.store.setRoute(next.store.getRoute(), /* replace */ true);
-  }, [appsRef]);
+  }, []);
 
   const focusTab = useCallback(
     (tabId: string) => {
@@ -368,7 +368,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       persist();
       return tabId;
     },
-    [activate, persist, appsRef],
+    [activate, persist],
   );
 
   // Swap a tab's app in place (keeps the tabId + position), seeding `route` into
@@ -395,7 +395,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       setFocusedTabId(tabId);
       persist();
     },
-    [activate, persist, appsRef],
+    [activate, persist],
   );
 
   const replaceTabApp = useCallback(
@@ -433,7 +433,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       // consistent with the rail's in-place app switch.
       replaceTabAppWithRoute(focusedRef.current, resolved.app.id, route);
     },
-    [replaceTabAppWithRoute, appsRef],
+    [replaceTabAppWithRoute],
   );
 
   // Push focus changes into the shortcuts focused-surface signal (push-based, no
@@ -496,7 +496,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       }
       persist();
     },
-    [activate, persist, setTabTitle, appsRef],
+    [activate, persist, setTabTitle],
   );
 
   // Reorder the open-tab set: move `activeId` to `overId`'s position. Pure array

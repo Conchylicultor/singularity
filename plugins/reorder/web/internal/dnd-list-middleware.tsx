@@ -360,7 +360,7 @@ function ReorderInner({
         }),
       );
     },
-    [commitTreeRef, entriesRef, hiddenKeysRef],
+    [],
   );
 
   const restoreItem = useCallback(
@@ -372,7 +372,7 @@ function ReorderInner({
         }),
       );
     },
-    [commitTreeRef, entriesRef, hiddenKeysRef],
+    [],
   );
 
   // --- Drag reorder ----------------------------------------------------------
@@ -408,7 +408,7 @@ function ReorderInner({
     commitTreeRef.current(
       materializeTree([...next, ...tail], hiddenKeysRef.current),
     );
-  }, [commitTreeRef, entriesRef, hiddenKeysRef]);
+  }, []);
 
   // --- Inserts (registry-driven) --------------------------------------------
 
@@ -421,7 +421,7 @@ function ReorderInner({
       tree.push(create());
       commitTreeRef.current(tree);
     },
-    [commitTreeRef, entriesRef, hiddenKeysRef],
+    [],
   );
 
   const inserts = useMemo(() => {
@@ -444,7 +444,7 @@ function ReorderInner({
     (id: string) => {
       commitTreeRef.current(mapNodeById(itemsRef.current, id, () => null));
     },
-    [commitTreeRef, itemsRef],
+    [],
   );
 
   const onRemoveNodeRef = useLatestRef(onRemoveNode);
@@ -498,7 +498,7 @@ function ReorderInner({
       );
       commitTreeRef.current(next);
     },
-    [commitTreeRef, entriesRef, itemsRef],
+    [],
   );
 
   const patchNodeRef = useLatestRef(patchNode);
@@ -575,7 +575,7 @@ function ReorderInner({
         }),
       };
     },
-    [editMode, renderItem, nodeTypes, onRemoveNodeRef, patchNodeRef],
+    [editMode, renderItem, nodeTypes],
   );
 
   const entries = useMemo<ReorderEntry[]>(() => {
@@ -630,7 +630,7 @@ function ReorderInner({
         </div>
       );
     },
-    [renderItem, entriesRef],
+    [renderItem],
   );
 
   // --- Constrained-space regime ----------------------------------------------

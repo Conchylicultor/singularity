@@ -46,13 +46,14 @@ export function useReportSync({
   // Hold retry in a ref so its identity churn never feeds the effect deps.
   const retryRef = useLatestRef(retry);
 
-  // Register the retry ref in the sink so the indicator can pull it.
+  // Register the retry ref in the sink so the indicator can pull it. `retryRef`
+  // is a stable useLatestRef handle, so it stays out of the deps.
   useEffect(() => {
     sink.retries.set(id, retryRef);
     return () => {
       sink.retries.delete(id);
     };
-  }, [sink, id, retryRef]);
+  }, [sink, id]);
 
   // Update the store entry whenever the reported phase/label/savedAt changes.
   // No cleanup here: removing-then-reapplying on a phase change would drop the

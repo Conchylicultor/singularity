@@ -58,7 +58,7 @@ export function useUndoRedoShortcuts(opts?: UndoRedoShortcutsOptions): void {
         handler: () => latest.current.api.redo(),
       },
     ];
-  }, [latest]);
+  }, []);
 
   useSurfaceShortcuts(descriptors);
 }

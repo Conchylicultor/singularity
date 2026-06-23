@@ -270,7 +270,7 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
       unregisterEscape();
       unregisterBlur();
     };
-  }, [lexicalEditor, visibleRef, filteredRef, activeIndexRef, handleSelectRef]);
+  }, [lexicalEditor]);
 
   if (!visible || !caret) return null;
 

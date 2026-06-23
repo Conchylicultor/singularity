@@ -111,7 +111,10 @@ export function SeekHoldController() {
       // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional latest-value read at cleanup: endScrubRef (a useLatestRef) must call the CURRENT endScrub verb, not one snapshotted at effect-setup, so an instrument/song swap mid-hold still ends the right scrub.
       if (scrubbing) endScrubRef.current();
     };
-  }, [seekBarRef, startScrubRef, endScrubRef, surfaceIdRef, hasSongRef]);
+    // Install the window listeners once: every live value (transport verbs,
+    // surface id, song gate) is read off its stable useLatestRef handle, so the
+    // effect never re-runs and an in-flight hold is never dropped.
+  }, []);
 
   return null;
 }

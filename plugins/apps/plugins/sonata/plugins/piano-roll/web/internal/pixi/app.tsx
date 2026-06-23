@@ -192,7 +192,9 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
         app.destroy(true, { children: true });
       });
     };
-  }, [onSceneReadyRef, onContextLostRef]);
+    // Mount-once: the app lifecycle owns init/teardown. The callbacks are read
+    // off their stable useLatestRef handles, so they never re-run this effect.
+  }, []);
 
   // Each concern is its own effect so a change touches exactly one scene call.
   // Declaration order matters on the first scene-ready pass: size before score

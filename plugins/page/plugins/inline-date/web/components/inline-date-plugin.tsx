@@ -212,7 +212,7 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
       unregisterEscape();
       unregisterBlur();
     };
-  }, [lexicalEditor, openRef, optionsRef, activeIndexRef, insertRef]);
+  }, [lexicalEditor]);
 
   if (!open || !caret) return null;
 

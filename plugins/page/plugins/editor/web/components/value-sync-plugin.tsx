@@ -54,7 +54,7 @@ export function ValueSyncPlugin({
       lastSerializedRef.current = json;
       onChangeRef.current(json);
     });
-  }, [editor, onChangeRef]);
+  }, [editor]);
 
   return null;
 }
