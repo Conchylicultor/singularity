@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-imperative-dialog",
+  "description": "Imperative dialog primitive: openDialog() mounts a modal from any callback via a single Core.Root host.",
+  "private": true,
+  "version": "0.0.1"
+}

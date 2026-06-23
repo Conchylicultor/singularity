@@ -1,7 +1,17 @@
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
+import {
+  createSongRow,
+  updateSongMeta,
+} from "@plugins/apps/plugins/sonata/plugins/library/server";
 import { UgFetchError } from "../../core";
-import { fetchUgTab } from "../../shared/endpoints";
+import {
+  fetchUgTab,
+  createUltimateGuitarSong,
+  getSongUltimateGuitar,
+  updateUltimateGuitarSong,
+} from "../../shared/endpoints";
 import { fetchUgTabContent } from "./ug-client";
+import { songUltimateGuitar } from "./tables";
 
 /** HTTP status for each classified UG fetch failure. */
 function statusForKind(kind: UgFetchError["kind"]): number {
@@ -36,3 +46,63 @@ export const handleFetchUgTab = implement(fetchUgTab, async ({ body }) => {
     throw err;
   }
 });
+
+/**
+ * Create a UG-backed song. Writes the generic song row (library helper) then
+ * this source's extension row (the full UgTab). No attachment.
+ */
+export const handleCreateUltimateGuitarSong = implement(
+  createUltimateGuitarSong,
+  async ({ body }) => {
+    const { durationSec, endBeat, ...tab } = body;
+    const id = await createSongRow({
+      title: tab.songName,
+      composer: tab.artistName || null,
+      durationSec,
+      endBeat,
+    });
+    await songUltimateGuitar.upsert(id, tab);
+    return { id, title: tab.songName };
+  },
+);
+
+/** Fetch one song's persisted UgTab, or null. */
+export const handleGetSongUltimateGuitar = implement(
+  getSongUltimateGuitar,
+  async ({ params }) => {
+    const row = await songUltimateGuitar.get(params.id);
+    if (!row) return null;
+    return {
+      tabId: row.tabId,
+      songName: row.songName,
+      artistName: row.artistName,
+      type: row.type,
+      key: row.key,
+      capo: row.capo,
+      tuning: row.tuning,
+      content: row.content,
+      urlWeb: row.urlWeb,
+    };
+  },
+);
+
+/**
+ * Persist an edit: upsert the extension row (full UgTab), then sync the parent
+ * song's generic metadata (title ← songName, composer ← artistName, recomputed
+ * duration/endBeat) via the library helper.
+ */
+export const handleUpdateUltimateGuitarSong = implement(
+  updateUltimateGuitarSong,
+  async ({ params, body }) => {
+    const { durationSec, endBeat, ...tab } = body;
+    await songUltimateGuitar.upsert(params.id, tab);
+    await updateSongMeta({
+      id: params.id,
+      title: tab.songName,
+      composer: tab.artistName || null,
+      durationSec,
+      endBeat,
+    });
+    return { ok: true as const };
+  },
+);

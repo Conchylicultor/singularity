@@ -1,13 +1,27 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { fetchUgTab } from "../shared/endpoints";
-import { handleFetchUgTab } from "./internal/routes";
+import {
+  fetchUgTab,
+  createUltimateGuitarSong,
+  getSongUltimateGuitar,
+  updateUltimateGuitarSong,
+} from "../shared/endpoints";
+import {
+  handleFetchUgTab,
+  handleCreateUltimateGuitarSong,
+  handleGetSongUltimateGuitar,
+  handleUpdateUltimateGuitarSong,
+} from "./internal/routes";
 
 export { fetchUgTabContent } from "./internal/ug-client";
+export { songUltimateGuitar } from "./internal/tables";
 
 export default {
   description:
-    "Fetches the raw Ultimate Guitar tab for a pasted UG tab URL via UG's private mobile API (Task 1: fetch only — no persistence, no markup parsing). Resolves the URL to a numeric tab id, signs the request, and fails loudly on auth/format/network breakage.",
+    "Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration).",
   httpRoutes: {
     [fetchUgTab.route]: handleFetchUgTab,
+    [createUltimateGuitarSong.route]: handleCreateUltimateGuitarSong,
+    [getSongUltimateGuitar.route]: handleGetSongUltimateGuitar,
+    [updateUltimateGuitarSong.route]: handleUpdateUltimateGuitarSong,
   },
 } satisfies ServerPluginDefinition;

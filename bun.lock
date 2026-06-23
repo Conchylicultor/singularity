@@ -2799,6 +2799,10 @@
       "name": "@singularity/plugin-primitives-icon-picker",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/imperative-dialog": {
+      "name": "@singularity/plugin-primitives-imperative-dialog",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/inline-text": {
       "name": "@singularity/plugin-primitives-inline-text",
       "version": "0.0.1",
@@ -5185,6 +5189,8 @@
     "@singularity/plugin-primitives-icon-button": ["@singularity/plugin-primitives-icon-button@workspace:plugins/primitives/plugins/icon-button"],
 
     "@singularity/plugin-primitives-icon-picker": ["@singularity/plugin-primitives-icon-picker@workspace:plugins/primitives/plugins/icon-picker"],
+
+    "@singularity/plugin-primitives-imperative-dialog": ["@singularity/plugin-primitives-imperative-dialog@workspace:plugins/primitives/plugins/imperative-dialog"],
 
     "@singularity/plugin-primitives-inline-text": ["@singularity/plugin-primitives-inline-text@workspace:plugins/primitives/plugins/inline-text"],
 
