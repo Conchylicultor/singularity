@@ -158,7 +158,11 @@ async function main(): Promise<void> {
   }
 
   // pg_ctl start -w: forks PG, waits for readiness, then exits.
-  // -o flags pin PG to Unix socket only (no TCP).
+  // -o flags: app traffic stays on the Unix socket; a loopback-only TCP
+  // listener (listen_addresses=127.0.0.1) + wal_level=logical make the cluster
+  // consumable by logical-replication clients (e.g. Zero's zero-cache), which
+  // cannot traverse PgBouncer nor replicate over a Unix socket. Both GUCs are
+  // postmaster-start-only, so they take effect only on a full cluster restart.
   // PGHOST/PGPORT/PGUSER in env so pg_ctl's -w probe finds the socket.
   console.log(`pg: starting (socket=${PG_SOCKET_DIR}, port=${PG_PORT})`);
   const result = spawnSync(
@@ -167,7 +171,7 @@ async function main(): Promise<void> {
       "start",
       "-D", PG_DATA_DIR,
       "-l", PG_LOG_FILE,
-      "-o", `-k ${PG_SOCKET_DIR} -p ${PG_PORT} -c max_connections=${MAX_CONNECTIONS} -c listen_addresses=`,
+      "-o", `-k ${PG_SOCKET_DIR} -p ${PG_PORT} -c max_connections=${MAX_CONNECTIONS} -c listen_addresses=127.0.0.1 -c wal_level=logical`,
       "-w",
       "-t", String(READY_TIMEOUT_SEC),
     ],
