@@ -1,6 +1,6 @@
 # class-token-walk-in-sync
 
-Fails if the five `no-adhoc-*` class lint rules drift from a byte-identical copy
+Fails if the six `no-adhoc-*` class lint rules drift from a byte-identical copy
 of the shared class-token walk (`collectTokens`). The walk is **duplicated, not
 imported**: lint rule files dual-load under jiti (which can't resolve
 `@plugins/*`) and Bun, so no cross-plugin import works for them — this check is
@@ -9,8 +9,8 @@ what keeps the copies in lockstep instead.
 Each copy is fenced by `// >>> shared:class-token-walk … >>>` /
 `// <<< shared:class-token-walk <<<` sentinel lines; the check discovers every
 file carrying the start sentinel (via `git grep -l`), asserts that set exactly
-equals the known `EXPECTED` five, and compares the text strictly between the
-markers byte-for-byte. A 6th rule adopting the sentinel, a copy losing it, or a
+equals the known `EXPECTED` six, and compares the text strictly between the
+markers byte-for-byte. A 7th rule adopting the sentinel, a copy losing it, or a
 drifted body all fail loudly.
 
 Fix by re-stamping the differing rule with the exact block from

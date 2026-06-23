@@ -11,7 +11,7 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-// The five `no-adhoc-*` class rules that carry a byte-identical copy of the
+// The six `no-adhoc-*` class rules that carry a byte-identical copy of the
 // shared class-token walk. The walk is DUPLICATED (not imported) on purpose:
 // lint rule files are dual-loaded under jiti — which can't resolve `@plugins/*`
 // — and Bun, so no cross-plugin import works for them. This check is what keeps
@@ -22,6 +22,7 @@ const EXPECTED = [
   "plugins/primitives/plugins/css/plugins/radius/lint/no-adhoc-radius.ts",
   "plugins/primitives/plugins/css/plugins/z-layers/lint/no-adhoc-zindex.ts",
   "plugins/primitives/plugins/css/plugins/control-size/lint/no-adhoc-control.ts",
+  "plugins/primitives/plugins/css/plugins/control-size/lint/no-adhoc-density.ts",
   "plugins/primitives/plugins/css/plugins/icon-auto/lint/no-adhoc-slot-icon-size.ts",
 ].sort();
 
@@ -68,7 +69,7 @@ function extractBlock(src: string): string | null {
 const check: Check = {
   id: "class-token-walk-in-sync",
   description:
-    "The five no-adhoc-* class rules must carry a byte-identical copy of the shared class-token walk (it can't be imported — lint rules dual-load under jiti, which can't resolve @plugins/*).",
+    "The six no-adhoc-* class rules must carry a byte-identical copy of the shared class-token walk (it can't be imported — lint rules dual-load under jiti, which can't resolve @plugins/*).",
   async run() {
     const root = await getRoot();
     const found = await discoverFiles(root);
