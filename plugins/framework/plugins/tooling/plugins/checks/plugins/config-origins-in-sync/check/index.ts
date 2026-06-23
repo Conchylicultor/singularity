@@ -108,16 +108,24 @@ const check: Check = {
       .split("\n")
       .filter(Boolean);
 
-    // Orphan pass: any `*.origin.jsonc` on disk that `renderConfigOriginContent`
-    // did not produce is no longer backed by a `defineConfig` (its descriptor was
-    // moved or removed). `./singularity build` now prunes these via
-    // `pruneOrphanedConfigFiles`, so a normal build self-heals — but this pass
-    // remains the guard for orphans committed WITHOUT a build (e.g. a descriptor
-    // deleted and pushed straight from a hand edit). `expected` keys are relative
-    // to configDir; `allConfigFiles` are relative to root — normalize via relative().
+    // Orphan pass: any `*.origin.jsonc` present in the WORKING TREE that
+    // `renderConfigOriginContent` did not produce is no longer backed by a
+    // `defineConfig` (its descriptor was moved or removed). `./singularity build`
+    // prunes these via `pruneOrphanedConfigFiles`, which — like every other
+    // codegen step — mutates the working tree only (staging is `push`'s
+    // `git add -A` job, never the build's). So orphan-ness must be judged on
+    // working-tree presence, not the git index: a file `pruneOrphanedConfigFiles`
+    // unlinked is still listed by `--cached` (the index entry lingers until the
+    // deletion is committed), and flagging it there would make the build's prune
+    // unable to self-heal — the exact contradiction this `existsSync` guard
+    // closes, mirroring the working-tree guard the override-hash pass below
+    // already applies. A committed orphan never built is still caught: it remains
+    // checked out on disk. `expected` keys are relative to configDir;
+    // `allConfigFiles` are relative to root — normalize via relative().
     const orphans: string[] = [];
     for (const relFromRoot of allConfigFiles) {
       if (!relFromRoot.endsWith(".origin.jsonc")) continue;
+      if (!existsSync(join(root, relFromRoot))) continue;
       const relPath = relative(configDir, join(root, relFromRoot));
       if (!expected.has(relPath)) orphans.push(relFromRoot);
     }
