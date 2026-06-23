@@ -16,8 +16,12 @@
  *    unrecognised (e.g. `"N.C."`) — so a later chord/lyric keeps its alignment.
  *  - A lyric-only line still occupies one bar, so the songsheet scrolls through
  *    it rather than collapsing it to a zero-width instant.
- *  - A line with non-empty lyric emits a `lyric` annotation spanning its whole
- *    bar range, carrying the RAW lyric text (leading columns align chords).
+ *  - A line with a lyric OR chords emits a `lyric` annotation spanning its whole
+ *    bar range — so chord-only / instrumental lines render in the songsheet too.
+ *    It carries the RAW lyric text (leading columns align chords) plus the line's
+ *    chords as `{ symbol, charOffset, beat }` (every parsed symbol, recognised or
+ *    not, so the printed page is faithful even where the harmony timeline drops a
+ *    symbol).
  *  - A named section emits a `section` annotation spanning all its lines; an
  *    implicit (`name:""`) section emits none but still emits its chords/lyrics.
  *
@@ -31,6 +35,7 @@ import type {
   Annotation,
   ChordData,
   KeySignature,
+  LyricChord,
   LyricData,
   Note,
   Score,
@@ -71,11 +76,20 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
 
     for (const line of section.lines) {
       const lineStart = cursor;
+      // The line's chords as printed-page data — every parsed symbol, recognised
+      // or not, anchored to its visible column. This is the faithful songsheet
+      // line; the chord/note timeline below keeps only the recognised harmony.
+      const lineChords: LyricChord[] = [];
 
       if (line.chords.length > 0) {
         for (const chord of line.chords) {
           const start = cursor;
           const end = start + UG_BEATS_PER_BAR;
+          lineChords.push({
+            symbol: chord.symbol,
+            charOffset: chord.charOffset,
+            beat: start,
+          });
           const data = parseChordSymbol(chord.symbol);
           if (data) {
             annotations.push({
@@ -96,13 +110,15 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
         cursor += UG_BEATS_PER_BAR;
       }
 
-      if (line.lyric.trim().length > 0) {
+      if (line.lyric.trim().length > 0 || lineChords.length > 0) {
         annotations.push({
           type: "lyric",
           start: lineStart,
           end: cursor,
-          // RAW lyric — leading columns are load-bearing for chord alignment.
-          data: { text: line.lyric },
+          // RAW lyric — leading columns are load-bearing for chord alignment —
+          // plus the chords printed over it by column (possibly text:"" for a
+          // chord-only / instrumental line).
+          data: { text: line.lyric, chords: lineChords },
           source: "authored",
         } satisfies Annotation<"lyric", LyricData>);
       }

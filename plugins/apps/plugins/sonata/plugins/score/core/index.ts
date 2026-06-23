@@ -24,6 +24,7 @@ export type {
   VoicingData,
   SectionData,
   LyricData,
+  LyricChord,
   Capability,
   Projection,
   KeyLane,

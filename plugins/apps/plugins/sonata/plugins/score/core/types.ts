@@ -104,11 +104,25 @@ export type ChordData = {
 };
 export type VoicingData = { label?: string }; // targets notes via target.noteIds
 export type SectionData = { name: string };
-// A run of lyric text over its beat range — one line/phrase/syllable of words a
-// songsheet renders under the chords. The `Annotation.start`/`end` carry the
-// timing (synthesized for sources, like UG, that ship no timing of their own);
-// `text` is the literal words. Sources with no lyrics simply emit none.
-export type LyricData = { text: string };
+/** A chord printed over a lyric line at a visible character column. */
+export type LyricChord = {
+  /** Chord symbol as written/displayed, verbatim (e.g. "Cmaj7", "N.C."). */
+  symbol: string;
+  /** 0-based visible column in `text` where the chord sits (may exceed text.length). */
+  charOffset: number;
+  /** Beat the chord sounds on — syncs the active-chord highlight to the cursor. */
+  beat: number;
+};
+
+// A faithful songsheet line over its beat range — one line/phrase of words a
+// songsheet renders WITH the chords printed over it by column. The
+// `Annotation.start`/`end` carry the timing (synthesized for sources, like UG,
+// that ship no timing of their own); `text` is the literal words (leading
+// columns load-bearing for chord alignment) and `chords` are the chord symbols
+// printed above it, each anchored to a visible character column. A chord-only /
+// instrumental line is a songsheet line too: `text` is empty, `chords`
+// populated. Sources with no lyrics simply emit none.
+export type LyricData = { text: string; chords: LyricChord[] };
 
 /**
  * Typed, time-ranged meaning layered on top of the notes.

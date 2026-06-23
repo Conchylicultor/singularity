@@ -60,6 +60,11 @@ describe("synthesizeScore — chord-per-bar timing", () => {
     expect(lyrics).toHaveLength(1);
     expect(lyrics[0]!.data.text).toBe("hello world");
     expect([lyrics[0]!.start, lyrics[0]!.end]).toEqual([0, 8]);
+    // The songsheet line carries both chords by column, with their sounding beat.
+    expect(lyrics[0]!.data.chords).toEqual([
+      { symbol: "C", charOffset: 0, beat: 0 },
+      { symbol: "G", charOffset: 1, beat: 4 },
+    ]);
 
     const sections = byType(score, "section") as SectionAnnotation[];
     expect(sections).toHaveLength(1);
@@ -86,6 +91,25 @@ describe("synthesizeScore — chord-per-bar timing", () => {
     expect(lyrics).toHaveLength(1);
     expect(lyrics[0]!.data.text).toBe("just words here");
     expect([lyrics[0]!.start, lyrics[0]!.end]).toEqual([4, 8]);
+    // A lyric-only line carries no chords.
+    expect(lyrics[0]!.data.chords).toEqual([]);
+  });
+
+  it("emits a songsheet line for a chord-only line (empty text, chords populated)", () => {
+    const score = synthesizeScore(
+      tab([section("Intro", [line("", "C", "G")])]),
+    );
+
+    const lyrics = byType(score, "lyric") as LyricAnnotation[];
+    // Chord-only / instrumental line still produces a songsheet line so it
+    // renders (and scrolls) — text empty, chords carried by column + beat.
+    expect(lyrics).toHaveLength(1);
+    expect(lyrics[0]!.data.text).toBe("");
+    expect([lyrics[0]!.start, lyrics[0]!.end]).toEqual([0, 8]);
+    expect(lyrics[0]!.data.chords).toEqual([
+      { symbol: "C", charOffset: 0, beat: 0 },
+      { symbol: "G", charOffset: 1, beat: 4 },
+    ]);
   });
 
   it("emits no section annotation for an implicit (name:'') section", () => {

@@ -417,6 +417,10 @@
       "name": "@singularity/plugin-apps-sonata-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/songsheet": {
+      "name": "@singularity/plugin-apps-sonata-songsheet",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/sources": {
       "name": "@singularity/plugin-apps-sonata-sources",
       "version": "0.0.1",
@@ -4061,6 +4065,8 @@
     "@singularity/plugin-apps-sonata-score": ["@singularity/plugin-apps-sonata-score@workspace:plugins/apps/plugins/sonata/plugins/score"],
 
     "@singularity/plugin-apps-sonata-shell": ["@singularity/plugin-apps-sonata-shell@workspace:plugins/apps/plugins/sonata/plugins/shell"],
+
+    "@singularity/plugin-apps-sonata-songsheet": ["@singularity/plugin-apps-sonata-songsheet@workspace:plugins/apps/plugins/sonata/plugins/songsheet"],
 
     "@singularity/plugin-apps-sonata-sources": ["@singularity/plugin-apps-sonata-sources@workspace:plugins/apps/plugins/sonata/plugins/sources"],
 

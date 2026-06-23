@@ -22,6 +22,7 @@
   - **`rich`** [8 sub-plugins] — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
   - **`score`**
   - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.
+  - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.
   - **`sources`** [4 sub-plugins] — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
   - **`theory`** — Music-theory primitives for Sonata: the chord vocabulary (quality↔intervals↔symbol) and a chord-symbol parser shared by chord analyzers and chord-authoring sources.
   - **`track-mixer`** — Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track). Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / muted / hidden) and serves the reactive rollup consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
