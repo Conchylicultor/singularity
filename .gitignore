@@ -21,6 +21,8 @@ dist.old.*/
 # are listed without a slash (the anchored path covers the live `dist` symlink).
 plugins/framework/plugins/web-core/dist
 dist.swap.*
+# `VITE_ANALYZE=1` bundle-analysis treemap output (generated, never committed).
+dist.stats.html
 /gateway/gateway
 **/.build.lock
 

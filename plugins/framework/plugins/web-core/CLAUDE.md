@@ -31,6 +31,30 @@ deleted, so a stray `@/` import is now an unresolved-module error at build time.
 
 Always go through `./singularity build` from the repo root — it runs `bun run build` here as part of the deploy.
 
+### Bundle analysis (eager boot bytes)
+
+The frontend boot cost is dominated by the **eager set** — the entry chunk plus its
+static-import chunks (the `<script>` + `<link rel="modulepreload">` list in
+`dist/index.html`). To see exactly what's in it:
+
+```bash
+cd plugins/framework/plugins/web-core
+VITE_ANALYZE=1 VITE_OUT_DIR=/tmp/dist-analyze bunx vite build   # skips tsc; just the bundle
+# → writes web/dist.stats.html (treemap, gzip + brotli per chunk). Open it.
+# eager set = grep -oE '(src|href)="[^"]*\.js"' /tmp/dist-analyze/index.html
+```
+
+`manualChunks` (in `vite.config.ts`) deliberately splits **only react core**. Do NOT
+group a *partially-lazy* heavy library (react-icons, shiki, react-markdown, lexical,
+…) into one named chunk: Rollup's default chunking already splits such a package into
+an eager-used slice and lazy-used slices, and forcing the whole package into one chunk
+**unions** them onto the boot path — measured to balloon the eager set from ~715 KB
+gzip to ~2.4 MB. Only group libraries that are fully eager regardless (react/react-dom/
+scheduler), where isolating them is a pure cross-deploy caching win with zero eager cost.
+
+This is the static-bytes counterpart to the **Debug → Boot Profile** pane (the
+request→first-paint *timeline*) and the Boot Gantt.
+
 ### Tests
 
 The vitest DOM suites here (`web/__tests__/`) need the browser stack (jsdom + the `@plugins` alias + `.css` imports + React rendering), which `bun:test` can't provide. They are discovered and run by the **repo-wide** vitest project (root `vitest.config.ts` + `test/setup.ts`), not a per-plugin config — see the root `CLAUDE.md` Testing section. Two suites live here: `plugin-render.test.tsx` (full plugin-graph load smoke) and `commands.test.tsx` (`defineCommand` handler-stack ordering, which needs real React mount/unmount).
