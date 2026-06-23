@@ -1177,6 +1177,13 @@
       "tag": "20260623_170648_a390fbb6__add_task_effort",
       "hash": "a390fbb6",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1782237457000,
+      "tag": "20260623_175737_98fd1f12__add_boot_traces",
+      "hash": "98fd1f12",
+      "breakpoints": true
     }
   ]
 }

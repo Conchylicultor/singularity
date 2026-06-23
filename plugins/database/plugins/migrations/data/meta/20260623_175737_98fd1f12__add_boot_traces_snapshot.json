@@ -1,6 +1,6 @@
 {
-  "id": "80f3f8fe-9758-4066-9baf-1626e4ef5797",
-  "prevId": "a340cdc3-67d5-42fd-ab81-2da34458fbc9",
+  "id": "08398d08-d7d6-494e-a3e2-41478f710419",
+  "prevId": "cca76060-ad10-4998-98e2-abdb9411131a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -3931,6 +3931,59 @@
         "tasks_ext_auto_start_parent_id_tasks_id_fk": {
           "name": "tasks_ext_auto_start_parent_id_tasks_id_fk",
           "tableFrom": "tasks_ext_auto_start",
+          "tableTo": "tasks",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.tasks_ext_effort": {
+      "name": "tasks_ext_effort",
+      "schema": "",
+      "columns": {
+        "parent_id": {
+          "name": "parent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "level": {
+          "name": "level",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "tasks_ext_effort_parent_id_tasks_id_fk": {
+          "name": "tasks_ext_effort_parent_id_tasks_id_fk",
+          "tableFrom": "tasks_ext_effort",
           "tableTo": "tasks",
           "columnsFrom": [
             "parent_id"
