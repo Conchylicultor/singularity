@@ -102,6 +102,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
     - **`pgbouncer`** [load-bearing] — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
+    - **`zero`** — Umbrella for the Rocicorp Zero sync-engine infrastructure: shared constants (core), the zero-cache supervised service (cache-service), and the generic client provider + adapter (client). Domain-agnostic — no concrete schema.
+      - Plugins:
+        - **`cache-service`** — zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.
+        - **`client`** — Generic, schema-parameterized Zero client: the ZeroRoot provider wrapper, the useZeroResource (ResourceResult-shaped) adapter, and a raw useZeroQuery re-export. No concrete schema.
 
 - **`debug`** — Debug tools umbrella plugin.
   - Plugins:
@@ -134,6 +138,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
     - **`slow-ops`** [2 sub-plugins] — Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one task per distinct slow operation.
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
+    - **`zero-test`** — Temporary verification harness: a Debug → Zero Test pane that renders the pilot tasks slice live through the Zero client adapter. Deleted once a real migration begins.
 
 - **`fields`** [68 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce). Storage-dimension registry: owns the fields.storage server slot where each field type contributes its Drizzle column builder, keyed by type token.
 

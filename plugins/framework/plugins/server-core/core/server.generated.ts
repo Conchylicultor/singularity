@@ -115,6 +115,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "database/plugins/migrations", id: "database.migrations", loader: () => import("@plugins/database/plugins/migrations/server"), dependsOn: ["database/plugins/derived-views", "primitives/plugins/log-channels"] },
   { pluginPath: "database/plugins/pgbouncer", id: "database.pgbouncer", loader: () => import("@plugins/database/plugins/pgbouncer/server"), dependsOn: [] },
   { pluginPath: "database/plugins/query", id: "database.query", loader: () => import("@plugins/database/plugins/query/server"), dependsOn: ["database/plugins/admin", "infra/plugins/mcp", "tasks/plugins/tasks-core"] },
+  { pluginPath: "database/plugins/zero/plugins/cache-service", id: "database.zero.cache-service", loader: () => import("@plugins/database/plugins/zero/plugins/cache-service/server"), dependsOn: [] },
   { pluginPath: "database", id: "database", loader: () => import("@plugins/database/server"), dependsOn: ["database/plugins/derived-tables", "database/plugins/derived-views", "database/plugins/migrations", "infra/plugins/runtime-profiler", "primitives/plugins/log-channels"] },
   { pluginPath: "debug/plugins/boot-profile", id: "debug.boot-profile", loader: () => import("@plugins/debug/plugins/boot-profile/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/entities", "infra/plugins/jobs"] },
   { pluginPath: "debug/plugins/broadcasts", id: "debug.broadcasts", loader: () => import("@plugins/debug/plugins/broadcasts/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/worktree"] },
