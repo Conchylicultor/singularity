@@ -47,10 +47,28 @@ function MarkdownRenderer({ children }: { children: string }) {
     [base, strippedOverrides],
   );
 
-  return (
-    <ReactMarkdownLib remarkPlugins={REMARK_PLUGINS} components={components}>
-      {children}
-    </ReactMarkdownLib>
+  // Memoize the rendered tree on its stable inputs. react-markdown's `Markdown`
+  // is not itself memoized, so without this a parent re-render (e.g. the idle
+  // conversation-view churning ~5/s off a no-op live-state push) re-creates this
+  // element, re-runs the full markdown parse + every `transform`, and reconciles
+  // the whole subtree — producing childList DOM churn on `<p>`/`<a>` and every
+  // other tag even when nothing changed. Pinning the element to a stable
+  // reference makes React skip the subtree entirely on such re-renders (true
+  // no-op). The only inputs that change the output are the source string
+  // (`children`) and the merged component map (`components`, which already
+  // collapses the base map + overrides); transforms / inline-code handlers are
+  // read off `ref.current` and only ever change alongside `overrides` (→
+  // `components`) or a new `children`, so those two deps invalidate the memo
+  // exactly when the output would differ. Live inline widgets (active-data
+  // chips) inside the frozen tree still update themselves via their own
+  // subscriptions; they don't depend on this component re-rendering.
+  return useMemo(
+    () => (
+      <ReactMarkdownLib remarkPlugins={REMARK_PLUGINS} components={components}>
+        {children}
+      </ReactMarkdownLib>
+    ),
+    [children, components],
   );
 }
 
