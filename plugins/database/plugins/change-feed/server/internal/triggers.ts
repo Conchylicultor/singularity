@@ -10,15 +10,17 @@ import {
   rebuildDerivedTables,
   feedExemptTables,
 } from "@plugins/database/plugins/derived-tables/server";
+import { excludedTableNames } from "./exclusion";
 
 const log = Log.channel("change-feed", { persist: true });
 
-// Tables we never want a change-feed trigger on. Keep this minimal: a trigger on
-// an unread table is harmless (the runtime finds no resource depending on it and
-// drops the change). We only exclude the migrations bookkeeping table — it is
-// written by the migration runner inside `onReadyBlocking`, never read by a
-// live-state loader, and triggering on it adds pure noise. graphile_worker lives
-// in its own schema, so it is already excluded by the public-schema filter.
+// Infrastructure tables the change-feed must NEVER trigger on — its own plumbing,
+// independent of any feature plugin's opt-out. Keep this minimal.
+//
+// We exclude the migrations bookkeeping table — written by the migration runner
+// inside `onReadyBlocking`, never read by a live-state loader, so triggering on it
+// adds pure noise. graphile_worker lives in its own schema, so it is already
+// excluded by the public-schema filter.
 //
 // `live_state_changelog` and `live_state_snapshot` (the L2 persisted-
 // materialization tables) are denylisted because `live_state_notify()` writes the
@@ -34,15 +36,19 @@ const log = Log.channel("change-feed", { persist: true });
 // (derived-tables contributions): a rollup is a pure read-cache fed by its
 // source's change, never an independent write surface — a NOTIFY trigger on it
 // would double-route the source change through the rollup's id space and defeat
-// the correctly-scoped source-driven recompute. Built at CALL time (not module
-// load) so the contribution set is read after collectContributions has run, the
-// same way rebuildDerivedViews reads View.getContributions() lazily.
+// the correctly-scoped source-driven recompute. `excludedTableNames()` adds the
+// tables a feature plugin opted out via the `ExcludeFromChangeFeed` contribution
+// (e.g. high-churn observability counters) — keeping THIS plugin from naming any
+// consumer table (collection-consumer separation). Both are built at CALL time
+// (not module load) so the contribution sets are read after collectContributions
+// has run, the same way rebuildDerivedViews reads View.getContributions() lazily.
 function buildDenylist(): Set<string> {
   return new Set<string>([
     MIGRATIONS_TABLE_NAME,
     LIVE_STATE_CHANGELOG_TABLE,
     LIVE_STATE_SNAPSHOT_TABLE,
     ...feedExemptTables(),
+    ...excludedTableNames(),
   ]);
 }
 
@@ -149,9 +155,15 @@ function triggerName(table: string, op: "i" | "u" | "d"): string {
   return `live_state_${table}_${op}`;
 }
 
-// Every public-schema user table minus the denylist.
-async function listPublicTables(db: NodePgDatabase): Promise<string[]> {
-  const denylist = buildDenylist();
+// Every public-schema user table minus the exclusion set (infra denylist ∪
+// derived-table rollups ∪ feature-contributed `ExcludeFromChangeFeed` tables).
+// The caller passes the set (built once via `buildDenylist()`) so the same
+// snapshot drives table enumeration, the stale-trigger drop, and the coverage
+// check within one rebuild.
+async function listPublicTables(
+  db: NodePgDatabase,
+  exclude: Set<string>,
+): Promise<string[]> {
   const res = await db.execute<{ relname: string }>(
     drizzleSql.raw(
       `SELECT relname FROM pg_stat_user_tables WHERE schemaname = 'public' ORDER BY relname`,
@@ -159,7 +171,7 @@ async function listPublicTables(db: NodePgDatabase): Promise<string[]> {
   );
   return res.rows
     .map((r) => r.relname)
-    .filter((t) => !denylist.has(t));
+    .filter((t) => !exclude.has(t));
 }
 
 // The single-column primary key of a table, or "" for composite/no PK
@@ -203,7 +215,19 @@ export function getCoveredTables(): readonly string[] {
 // never imports @plugins/database/server — that would cycle (database/server
 // calls into the change-feed plugin's onReadyBlocking).
 export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
-  const tables = await listPublicTables(db);
+  // Infra plumbing + derived-table rollups + feature `ExcludeFromChangeFeed`
+  // opt-outs, all unioned (contributions collected by the framework before this
+  // onReadyBlocking hook runs). One snapshot drives enumeration, the stale-trigger
+  // drop below, and the coverage check.
+  const exclude = buildDenylist();
+  const optedOut = excludedTableNames();
+  if (optedOut.size > 0) {
+    log.publish(
+      `[change-feed] ${optedOut.size} table(s) opted out of the feed via ExcludeFromChangeFeed: ${[...optedOut].sort().join(", ")}`,
+    );
+  }
+
+  const tables = await listPublicTables(db, exclude);
 
   const triggers: TableTrigger[] = [];
   for (const table of tables) {
@@ -220,6 +244,33 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
     await tx.execute(drizzleSql.raw(CHANGELOG_TABLE_DDL));
 
     await tx.execute(drizzleSql.raw(NOTIFY_FUNCTION_DDL));
+
+    // Drop any live_state_* triggers lingering on a now-excluded table — e.g. a
+    // table that had a feed on prior boots and was just opted out via
+    // ExcludeFromChangeFeed. Catalog-driven (find-then-drop by name) so it names
+    // no specific table and self-heals a rename/drift, mirroring how the rest of
+    // this layer is rebuilt from the live schema rather than tracked.
+    if (exclude.size > 0) {
+      const existing = await tx.execute<{ tgname: string; relname: string }>(
+        drizzleSql.raw(
+          `SELECT t.tgname, c.relname
+           FROM pg_trigger t
+           JOIN pg_class c ON c.oid = t.tgrelid
+           JOIN pg_namespace n ON n.oid = c.relnamespace
+           WHERE n.nspname = 'public'
+             AND NOT t.tgisinternal
+             AND t.tgname LIKE 'live_state_%'`,
+        ),
+      );
+      for (const { tgname, relname } of existing.rows) {
+        if (!exclude.has(relname)) continue;
+        await tx.execute(
+          drizzleSql.raw(
+            `DROP TRIGGER IF EXISTS ${quoteIdent(tgname)} ON ${quoteIdent(relname)}`,
+          ),
+        );
+      }
+    }
 
     for (const { table, pkCol } of triggers) {
       const tbl = quoteIdent(table);
@@ -280,7 +331,7 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
     `[change-feed] installed live_state triggers on ${coveredTables.length} table(s)`,
   );
 
-  await warnOnCoverageGaps(db);
+  await warnOnCoverageGaps(db, exclude);
 }
 
 // Boot-time coverage check (replaces a separate ./singularity check, which can't
@@ -289,8 +340,11 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
 // by-construction coverage this should always be empty; a non-empty result means
 // something drifted (a trigger failed to create, or a table appeared between the
 // enumerate and the check) and is the loud signal to investigate.
-async function warnOnCoverageGaps(db: NodePgDatabase): Promise<void> {
-  const tables = await listPublicTables(db);
+async function warnOnCoverageGaps(
+  db: NodePgDatabase,
+  exclude: Set<string>,
+): Promise<void> {
+  const tables = await listPublicTables(db, exclude);
   const gaps: string[] = [];
   for (const table of tables) {
     const res = await db.execute<{ tgname: string }>(

@@ -1,8 +1,10 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2, watchConfig } from "@plugins/config_v2/server";
+import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
 import { slowOpConfig } from "../core";
 import { submitClientSlowOp } from "../shared/endpoints";
+import { _slowOps } from "./internal/tables";
 import { slowOpsResource } from "./internal/resources";
 import { slowOpKind } from "./internal/slow-op-kind";
 import { handleClientSlowOp } from "./internal/handle-client-slow-op";
@@ -21,6 +23,17 @@ export default {
     Resource.Declare(slowOpsResource),
     ConfigV2.Register({ descriptor: slowOpConfig }),
     slowOpKind,
+    // A deduped slow-op aggregate UPDATEs a hot row on every threshold-exceeding
+    // span — thousands/min under load. Wiring per-statement live-state
+    // invalidation onto it made slow_ops the single largest source of change-feed
+    // churn (a self-amplifying loop: slow app → more slow-op writes → more notify
+    // cascade → slower app). The Slow Ops pane hydrates on open instead of
+    // live-ticking. See ./internal/resources and the change-feed exclusion doc.
+    ExcludeFromChangeFeed({
+      table: _slowOps,
+      reason:
+        "High-churn deduped observability counter; live-ticking it amplifies the very slowness it records. Pane hydrates on open.",
+    }),
   ],
   httpRoutes: {
     [submitClientSlowOp.route]: handleClientSlowOp,

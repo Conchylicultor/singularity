@@ -11,6 +11,9 @@ import { startListener, stopListener } from "./internal/listener";
 import { buildViewDeps } from "./internal/view-deps";
 
 export { rebuildTriggers, getCoveredTables } from "./internal/triggers";
+// Opt a high-churn observability table out of the L4 change-feed (see
+// ./internal/exclusion for the trade this makes).
+export { ExcludeFromChangeFeed } from "./internal/exclusion";
 export { parseLiveStatePayload } from "./internal/parse-payload";
 export type { DbChange } from "./internal/parse-payload";
 // The single source of change routing — reused by the L2 cold-boot catch-up

@@ -26,7 +26,7 @@ and `research/2026-06-14-global-cold-load-instant-boot.md`.
   - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `SlowOpCollector`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.registerSlowResourceReporter`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelEntries`, `reports.recordReport`, `reports.ReportKind`
+  - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelEntries`, `reports.recordReport`, `reports.ReportKind`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
   - Exports: Types: `RecordSlowOpInput`; Values: `_slowOps`, `readSlowOpMarkers`, `recordSlowOp`, `slowOpsResource`
   - Resources: `slow-ops` (push)
