@@ -19,6 +19,7 @@ import {
   type RouteDef,
 } from "../core";
 import { Pane as PaneSlots } from "./slots";
+import { useRenderSync } from "./use-render-sync";
 
 export type { InferParams } from "../core";
 
@@ -1318,7 +1319,7 @@ export const Pane = { define, Register: PaneSlots.Register };
 export function useSyncPaneRegistry(): void {
   const store = usePaneStore();
   const contributions = PaneSlots.Register.useContributions();
-  useMemo(() => {
+  useRenderSync(() => {
     registry.clear();
     const seen = new Set<string>();
     // Maps a normalized segment pattern → the paneId that first claimed it, so a
@@ -1352,7 +1353,6 @@ export function useSyncPaneRegistry(): void {
     // (via the window listener) before any panes are registered, so the
     // route stays empty until this re-sync.
     store.handleLocationChange();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `store` identity is stable per surface; re-running on registry contribution change is what matters
   }, [contributions]);
 }
 
@@ -1445,7 +1445,7 @@ export function useIndexMatch(basePath: string): PaneMatch | null {
  */
 export function usePaneRoute(basePath: string): PaneMatch | null {
   const store = usePaneStore();
-  useMemo(() => {
+  useRenderSync(() => {
     store.setBasePath(basePath);
   }, [store, basePath]);
   useSyncPaneRegistry();

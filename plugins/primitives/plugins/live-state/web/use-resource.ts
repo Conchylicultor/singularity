@@ -196,7 +196,7 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
 
   // Measure mount→settle so a domain plugin can report slow resources. Reported
   // once, the first time `pending` flips true→false (see effect below).
-  const startRef = useRef(performance.now());
+  const startRef = useRef<number | null>(null);
   const reportedRef = useRef(false);
 
   const schema = resource.schema;
@@ -205,6 +205,7 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
 
   // Refcount sub/unsub on mount/unmount.
   useEffect(() => {
+    startRef.current = performance.now();
     notifications.observe(key, p, origin, schema, resource.keyed?.keyOf);
     return () => notifications.unobserve(key, p, origin);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; callers pass small flat objects
@@ -254,7 +255,7 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   useEffect(() => {
     if (!pending && !reportedRef.current) {
       reportedRef.current = true;
-      reportSlowResource({ key, params: p, durationMs: performance.now() - startRef.current });
+      reportSlowResource({ key, params: p, durationMs: startRef.current === null ? 0 : performance.now() - startRef.current });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; mirrors the observe effect above
   }, [pending, key, JSON.stringify(p)]);

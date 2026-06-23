@@ -4,6 +4,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import type { FieldDef } from "../../../core";
 import { useResolveFieldIcon } from "../../internal/use-field-icon";
+import { DynamicIcon } from "../../internal/dynamic-icon";
 import { FieldSearchList } from "./field-search-list";
 
 /**
@@ -25,7 +26,7 @@ export function FieldPicker<TRow>(props: {
   const [open, setOpen] = useState(false);
   const resolveIcon = useResolveFieldIcon();
   const current = props.fields.find((f) => f.id === props.value);
-  const CurrentIcon = current ? resolveIcon(current.type ?? "text") : undefined;
+  const currentIcon = current ? resolveIcon(current.type ?? "text") : undefined;
 
   return (
     <InlinePopover
@@ -38,7 +39,7 @@ export function FieldPicker<TRow>(props: {
           variant="outline"
           aria-label={props.label ?? "Filter field"}
         >
-          {CurrentIcon ? <CurrentIcon /> : null}
+          <DynamicIcon icon={currentIcon} />
           <span className="truncate">{current?.label ?? "Select field"}</span>
           <MdExpandMore />
         </Button>

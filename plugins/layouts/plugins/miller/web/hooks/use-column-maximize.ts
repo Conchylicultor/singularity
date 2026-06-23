@@ -62,8 +62,9 @@ export function useColumnMaximize(paneId: string): [isMaximized: boolean, toggle
     () => false,
   );
   const toggle = () => {
-    s.maximizedId = isMaximized ? null : paneId;
-    notify(s);
+    const next = stateFor(store);
+    next.maximizedId = isMaximized ? null : paneId;
+    notify(next);
   };
 
   return [isMaximized, toggle];

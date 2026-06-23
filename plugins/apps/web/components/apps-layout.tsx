@@ -1,4 +1,4 @@
-import { useEffect, useMemo } from "react";
+import { useEffect } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -10,6 +10,7 @@ import {
 import {
   setBasePath,
   useSyncPaneRegistry,
+  useRenderSync,
 } from "@plugins/primitives/plugins/pane/web";
 import type { RailFramingProps } from "../../core";
 import { Apps } from "../slots";
@@ -139,8 +140,7 @@ export function AppsLayout() {
   // surface mounts no pane renderer. Renderers still re-sync (idempotent) and
   // own how an opened pane actually paints. This drives the *live* store (the
   // focused tab's), which `setBasePath`/`useSyncPaneRegistry` target.
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- synchronous write before useSyncPaneRegistry, mirrors the renderer preamble
-  useMemo(() => {
+  useRenderSync(() => {
     setBasePath(basePath);
   }, [basePath]);
   useSyncPaneRegistry();

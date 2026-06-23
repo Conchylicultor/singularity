@@ -1,6 +1,5 @@
 import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useCallback, useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -36,19 +35,19 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
   const task = useTask(taskId);
   const tasksResult = useResource(tasksResource);
 
-  const deps = useMemo(() => task?.dependencies ?? [], [task?.dependencies]);
+  const deps = task?.dependencies ?? [];
 
-  const folderCandidate = useMemo(() => {
+  const folderCandidate = (() => {
     if (!task?.folderId || tasksResult.pending) return null;
     if (task.folderId === CONVERSATIONS_META_TASK_ID) return null;
     if (deps.includes(task.folderId)) return null;
     return tasksResult.data.find((t) => t.id === task.folderId) ?? null;
-  }, [task?.folderId, deps, tasksResult]);
+  })();
 
-  const addFolderAsDep = useCallback(async () => {
+  const addFolderAsDep = async () => {
     if (!folderCandidate) return;
     await fetchEndpoint(addTaskDependency, { id: taskId }, { body: { dependsOnTaskId: folderCandidate.id } });
-  }, [taskId, folderCandidate]);
+  };
 
   if (!task) return null;
   if (tasksResult.pending) return <Loading variant="rows" />;

@@ -120,11 +120,9 @@ export function useActiveDataLinkify(): (children: ReactNode) => ReactNode {
         .map((c) => ({ pattern: c.pattern, Component: UNSAFE_unsealSlotComponent(c.component) })),
     [contributions],
   );
-  return useMemo(() => {
-    if (contribs.length === 0) return (c: ReactNode) => c;
-    return (children: ReactNode) => {
-      warnIfOpaqueRoot(children);
-      return walk(children, contribs);
-    };
-  }, [contribs]);
+  if (contribs.length === 0) return (c: ReactNode) => c;
+  return (children: ReactNode) => {
+    warnIfOpaqueRoot(children);
+    return walk(children, contribs);
+  };
 }

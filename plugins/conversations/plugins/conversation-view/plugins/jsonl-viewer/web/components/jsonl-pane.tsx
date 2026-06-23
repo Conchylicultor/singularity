@@ -194,22 +194,22 @@ function JsonlPaneInner({
     }
     return null;
   }, [events]);
-  // Derive when "working" started: last event's timestamp, or now if none
-  const workingStartAtRef = useRef<number | null>(null);
-  const wasWorkingRef = useRef(false);
-  if (isWorking) {
-    if (!wasWorkingRef.current) {
-      // Transition into working: seed from last event or now
-      const lastEvent = events.length ? events[events.length - 1] : null;
-      const lastAt = lastEvent?.at ?? null;
-      workingStartAtRef.current = lastAt ? new Date(lastAt).getTime() : Date.now();
+  // Derive when "working" started: last event's timestamp, or now if none.
+  // Seeded once per working transition (snapshot of the last event present at
+  // the rising edge), kept out of render so we never read the clock during render.
+  const [workingStartAt, setWorkingStartAt] = useState<number | null>(null);
+  useEffect(() => {
+    if (isWorking) {
+      if (workingStartAt == null) {
+        const last = events.length ? events[events.length - 1] : null;
+        const lastAt = last?.at ?? null;
+        setWorkingStartAt(lastAt ? new Date(lastAt).getTime() : Date.now());
+      }
+    } else {
+      setWorkingStartAt(null);
     }
-    wasWorkingRef.current = true;
-  } else {
-    wasWorkingRef.current = false;
-    workingStartAtRef.current = null;
-  }
-  const workingStartAt = workingStartAtRef.current ?? Date.now();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot events once per working transition
+  }, [isWorking]);
 
   const sticky = useStickyScroll({
     resetKey: conversation.id,
@@ -253,14 +253,14 @@ function JsonlPaneInner({
           <Text as="div" variant="caption" className="text-muted-foreground">
             <Stack gap="none" className="px-md py-sm">
               <span>No transcript yet. Claude may not have written its session log.</span>
-              {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+              {isWorking && workingStartAt != null && <WorkingIndicator startAt={workingStartAt} />}
               {showPending && <PendingTurnEcho text={pending!.text} />}
             </Stack>
           </Text>
         ) : (
           <LastAssistantProvider event={lastAssistantEvent}>
             <EventSections events={visibleEvents}>
-              {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+              {isWorking && workingStartAt != null && <WorkingIndicator startAt={workingStartAt} />}
               {!isWorking && !!conversation.waitingFor && (
                 <JsonlViewer.PendingPrompt.Dispatch
                   conversationId={conversation.id}

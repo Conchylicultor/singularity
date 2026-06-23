@@ -17,7 +17,6 @@
  * (see use-resource.ts) — a gate built on one can wedge as pending forever.
  * For a select-based readiness read, pass `gate: true` to useResource instead.
  */
-import { useMemo } from "react";
 
 /**
  * Anything gateable on readiness: a `useResource` result (discriminated
@@ -79,6 +78,5 @@ export function combineResources<T extends Record<string, GateInput>>(
 export function useCombinedResources<T extends Record<string, GateInput>>(
   inputs: T,
 ): CombinedResources<T> {
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- the input values ARE the dependencies; key set is static per call site
-  return useMemo(() => combineResources(inputs), Object.values(inputs));
+  return combineResources(inputs);
 }

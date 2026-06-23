@@ -1,3 +1,4 @@
+import { createElement } from "react";
 import type { ReactNode } from "react";
 import { MdClose } from "react-icons/md";
 import { DecoratorNode, type LexicalNode, type NodeKey } from "lexical";
@@ -103,8 +104,8 @@ function ActiveDataInlineChip({ text, nodeKey }: { text: string; nodeKey: NodeKe
     ),
   );
   if (!match) return <>{text}</>;
-  const Component = UNSAFE_unsealSlotComponent(match.component);
-  const chip = <Component content={text} attrs={{}} />;
+  // UNSAFE: unseal the slot component to render it outside the slot pipeline
+  const chip = createElement(UNSAFE_unsealSlotComponent(match.component), { content: text, attrs: {} });
 
   if (!editor.isEditable()) return chip;
 

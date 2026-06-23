@@ -97,6 +97,8 @@ export function useVirtualRows<T>({
   scrollToIndex,
   keepMounted,
 }: UseVirtualRowsOptions<T>): UseVirtualRowsResult {
+  "use no memo";
+  // "use no memo" -- @tanstack/react-virtual returns a mutable Virtualizer whose state mutates outside React's render cycle (incompatible-library); compiling it risks stale windowed rows.
   const measureRef = useRef<HTMLDivElement>(null);
   const [scrollEl, setScrollEl] = useState<HTMLElement | null>(null);
   const [scrollMargin, setScrollMargin] = useState(0);
@@ -144,6 +146,7 @@ export function useVirtualRows<T>({
     );
   }, []);
 
+  // eslint-disable-next-line react-hooks/incompatible-library -- @tanstack/react-virtual is genuinely compiler-incompatible (returns a mutable Virtualizer mutated outside render); this hook is the sanctioned exempt, opted out of compilation via the "use no memo" directive above.
   const virtualizer = useVirtualizer({
     count: items.length,
     getScrollElement: () => scrollEl,

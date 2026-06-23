@@ -254,11 +254,11 @@ const IDLE_WORK_PER_BACKEND = [
 ];
 const IDLE_WORK_MAIN_ONLY = ["host-sampler 10s", "crons"];
 
-function BackendRow({ series }: { series: HealthSeries }): ReactElement {
+function BackendRow({ series, now }: { series: HealthSeries; now: number }): ReactElement {
   const latest = series.samples.length
     ? series.samples.reduce((a, b) => (a.sampledAt > b.sampledAt ? a : b))
     : null;
-  const ageMs = latest ? Date.now() - latest.sampledAt : Infinity;
+  const ageMs = latest ? now - latest.sampledAt : Infinity;
   const stale = ageMs > STALE_AGE_MS;
   const depth = latest?.heavyReadDepth ?? 0;
   return (
@@ -290,7 +290,9 @@ function BackendRow({ series }: { series: HealthSeries }): ReactElement {
   );
 }
 
-function BackendsSection({ series }: { series: HealthSeries[] }): ReactElement | null {
+function BackendsSection(
+  { series, now }: { series: HealthSeries[]; now: number },
+): ReactElement | null {
   const rows = useMemo(
     () => [...series].sort((a, b) => a.worktree.localeCompare(b.worktree)),
     [series],
@@ -301,7 +303,7 @@ function BackendsSection({ series }: { series: HealthSeries[] }): ReactElement |
       <SectionLabel>Backends</SectionLabel>
       <Stack gap="2xs">
         {rows.map((s) => (
-          <BackendRow key={s.worktree} series={s} />
+          <BackendRow key={s.worktree} series={s} now={now} />
         ))}
       </Stack>
       <Text variant="caption" tone="muted">
@@ -343,7 +345,7 @@ function HostSection({ samples }: { samples: HostSample[] }): ReactElement | nul
 }
 
 export function HealthMonitorPanel(): ReactElement {
-  const { data, error } = useEndpoint(
+  const { data, error, dataUpdatedAt } = useEndpoint(
     getHealthData,
     {},
     { query: { windowMs: WINDOW_MS }, refetchInterval: POLL_MS },
@@ -368,7 +370,7 @@ export function HealthMonitorPanel(): ReactElement {
     <Inset pad="lg">
       <Stack gap="xl">
         <HostSection samples={data.hostSamples} />
-        <BackendsSection series={data.series} />
+        <BackendsSection series={data.series} now={dataUpdatedAt} />
         {data.series.length === 0 ? (
           <Placeholder>No health samples yet — the sampler warms up within ~10s.</Placeholder>
         ) : (

@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   useEndpoint,
   useEndpointMutation,
@@ -62,6 +62,14 @@ export function EmitPane() {
   const [durationMin, setDurationMin] = useState<number>(
     DEFAULT_EMIT_DURATION_MS / 60_000,
   );
+
+  // Ticks ~1/s so StatusView's remaining-time countdown stays live without
+  // calling Date.now() inside render (React Compiler purity requirement).
+  const [nowMs, setNowMs] = useState(() => Date.now());
+  useEffect(() => {
+    const id = setInterval(() => { setNowMs(Date.now()); }, 1000);
+    return () => { clearInterval(id); };
+  }, []);
 
   // Manual key wins when typed (free-text fallback for an off-screen resource).
   const effectiveKey = manualKey.trim() || selectedKey;
@@ -205,7 +213,7 @@ export function EmitPane() {
 
           <Stack as="section" gap="sm">
             <SectionLabel>Status</SectionLabel>
-            <StatusView status={status.data} />
+            <StatusView status={status.data} nowMs={nowMs} />
           </Stack>
         </Stack>
       </Inset>
@@ -215,6 +223,7 @@ export function EmitPane() {
 
 function StatusView({
   status,
+  nowMs,
 }: {
   status:
     | {
@@ -226,6 +235,7 @@ function StatusView({
         lastSubscriberCount: number;
       }
     | undefined;
+  nowMs: number;
 }) {
   if (!status) return <Placeholder>Loading…</Placeholder>;
   if (!status.active) {
@@ -236,7 +246,7 @@ function StatusView({
     );
   }
 
-  const remainingMs = status.endsAtMs ? status.endsAtMs - Date.now() : 0;
+  const remainingMs = status.endsAtMs ? status.endsAtMs - nowMs : 0;
   const remainingS = Math.max(0, Math.round(remainingMs / 1000));
   const noSubscribers = status.lastSubscriberCount === 0;
 

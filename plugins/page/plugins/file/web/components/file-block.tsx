@@ -9,6 +9,7 @@ import {
   MdPictureAsPdf,
   MdSwapHoriz,
 } from "react-icons/md";
+import { createElement } from "react";
 import type { ComponentType } from "react";
 import { AttachmentUpload } from "@plugins/page/plugins/attachment-block/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
@@ -69,7 +70,7 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
     );
   }
 
-  const Icon = iconForMime(mime);
+  const iconEl = createElement(iconForMime(mime), { className: "size-6 shrink-0 text-muted-foreground" });
   const name = filename ?? "File";
 
   return (
@@ -82,7 +83,7 @@ export function FileBlock({ block, isFocused, editor }: BlockRendererProps) {
           download={name}
           className="flex items-center gap-md"
         >
-          <Icon className="size-6 shrink-0 text-muted-foreground" />
+          {iconEl}
           <Stack gap="none" className="min-w-0 flex-1">
             <Text variant="label" className="truncate">
               {name}

@@ -9,6 +9,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FieldDef } from "../../../core";
 import { useResolveFieldIcon } from "../../internal/use-field-icon";
+import { DynamicIcon } from "../../internal/dynamic-icon";
 
 /**
  * Notion-style search-first field picker: a "Filter by…" typeahead over the
@@ -49,13 +50,13 @@ export function FieldSearchList<TRow>(props: {
             </Text>
           ) : (
             filtered.map((field) => {
-              const Icon = resolveIcon(field.type ?? "text");
+              const icon = resolveIcon(field.type ?? "text");
               return (
                 <Row
                   key={field.id}
                   size="sm"
                   hover="muted"
-                  icon={Icon ? <Icon /> : undefined}
+                  icon={icon ? <DynamicIcon icon={icon} /> : undefined}
                   onClick={() => props.onPick(field.id)}
                 >
                   <span className="truncate">{field.label}</span>

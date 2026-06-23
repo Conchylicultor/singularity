@@ -1,6 +1,5 @@
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
@@ -54,8 +53,7 @@ export function useFlushAll() {
 
 export function useRegisterFlush(fn: FlushFn) {
   const { register } = useContext(TaskDetailFlushCtx);
-  const stable = useCallback(fn, [fn]);
-  useEffect(() => register(stable), [register, stable]);
+  useEffect(() => register(fn), [register, fn]);
 }
 
 export const TaskNavigateProvider = TaskNavigateCtx.Provider;

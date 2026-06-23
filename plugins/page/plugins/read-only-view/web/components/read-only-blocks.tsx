@@ -367,23 +367,25 @@ function ForestView({
   handles: BlockHandle<unknown>[];
   diff?: Map<string, BlockDiffKind>;
 }) {
-  let ordinal = 0;
-  let prevType: string | null = null;
+  const ordinals: number[] = [];
+  let prev: string | null = null;
+  let n = 0;
+  for (const node of forest) {
+    n = node.type === prev ? n + 1 : 1;
+    prev = node.type;
+    ordinals.push(n);
+  }
   return (
     <>
-      {forest.map((node, i) => {
-        ordinal = node.type === prevType ? ordinal + 1 : 1;
-        prevType = node.type;
-        return (
-          <NodeView
-            key={node.id ?? i}
-            node={node}
-            ordinal={ordinal}
-            handles={handles}
-            diff={diff}
-          />
-        );
-      })}
+      {forest.map((node, i) => (
+        <NodeView
+          key={node.id ?? i}
+          node={node}
+          ordinal={ordinals[i] ?? 1}
+          handles={handles}
+          diff={diff}
+        />
+      ))}
     </>
   );
 }

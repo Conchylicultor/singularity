@@ -60,20 +60,18 @@ export function SurfaceBody() {
   // chrome (tab bar `+`, drag-out, theme scope, use-tabs default) can read them
   // back without ever importing or naming a specific placement. Direction stays
   // surface → apps (apps never imports surface).
-  useMemo(
-    () =>
-      registerPlacementCapabilities({
-        defaultId,
-        tearOffId: sorted.find((d) => d.tearOffTarget)?.id,
-        newTabFollows: new Set(
-          sorted.filter((d) => d.newTabFollows).map((d) => d.id),
-        ),
-        appThemeScope: new Set(
-          sorted.filter((d) => d.themeScope === "app").map((d) => d.id),
-        ),
-      }),
-    [sorted, defaultId],
-  );
+  useEffect(() => {
+    registerPlacementCapabilities({
+      defaultId,
+      tearOffId: sorted.find((d) => d.tearOffTarget)?.id,
+      newTabFollows: new Set(
+        sorted.filter((d) => d.newTabFollows).map((d) => d.id),
+      ),
+      appThemeScope: new Set(
+        sorted.filter((d) => d.themeScope === "app").map((d) => d.id),
+      ),
+    });
+  }, [sorted, defaultId]);
 
   // Heal any tab whose stored placement isn't a registered id back to the
   // default. A tab seeded before this registry populated stores "" as its

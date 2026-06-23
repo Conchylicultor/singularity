@@ -174,6 +174,25 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
         ...compilerDiagnosticRulesAsWarn(),
         "react-hooks/rules-of-hooks": "error",
         "react-hooks/exhaustive-deps": "error",
+        // Coverage-blocking React Compiler rules — RATCHETED warn→error once the
+        // codebase was driven to zero (2026-06-23). These are the diagnostics
+        // that make the compiler SILENTLY BAIL on (skip memoizing) a component;
+        // enforcing them at error keeps compiler coverage complete — a new bail
+        // fails `./singularity check` instead of silently eroding coverage.
+        // Genuine exemptions opt out at the site: a `"use no memo"` directive
+        // and/or an inline `// eslint-disable-next-line react-hooks/<rule> -- …`
+        // (e.g. the @tanstack/react-virtual incompatibility in primitives/
+        // virtual-rows). The high-volume `react-hooks/refs` +
+        // `set-state-in-effect` stay "warn" (correctness/style; the compiler
+        // still compiles them) until their own burndown completes — see
+        // research/2026-06-23-global-react-compiler-compliance.md.
+        "react-hooks/purity": "error",
+        "react-hooks/immutability": "error",
+        "react-hooks/use-memo": "error",
+        "react-hooks/void-use-memo": "error",
+        "react-hooks/static-components": "error",
+        "react-hooks/preserve-manual-memoization": "error",
+        "react-hooks/incompatible-library": "error",
         "no-constant-binary-expression": "error",
         "eqeqeq": ["error", "smart"],
         "no-template-curly-in-string": "error",

@@ -1,7 +1,8 @@
-import { useContext, useMemo } from "react";
+import { useContext } from "react";
 import {
   PaneBasePathContext,
   setBasePath,
+  useRenderSync,
   useRoute,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
@@ -25,8 +26,7 @@ import { MillerColumns } from "./miller-columns";
  */
 export function PaneOverlayHost() {
   const basePath = useContext(PaneBasePathContext);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- synchronous write before useSyncPaneRegistry
-  useMemo(() => {
+  useRenderSync(() => {
     setBasePath(basePath);
   }, [basePath]);
   useSyncPaneRegistry();

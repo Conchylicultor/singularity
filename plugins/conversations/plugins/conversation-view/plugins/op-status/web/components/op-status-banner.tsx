@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { MdExpandLess, MdExpandMore, MdHourglassEmpty } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
@@ -43,10 +43,9 @@ function useTitleBySlug(): Record<string, string> {
   // (structural sharing deep-compares the Record), not on every status flip in
   // the conversations list. One select per keyed sub-resource keeps the lists
   // independent.
-  const select = useCallback(titleMapOf, []);
-  const active = useResource(conversationsActiveResource, undefined, { select });
-  const gone = useResource(conversationsGoneResource, undefined, { select });
-  const system = useResource(conversationsSystemResource, undefined, { select });
+  const active = useResource(conversationsActiveResource, undefined, { select: titleMapOf });
+  const gone = useResource(conversationsGoneResource, undefined, { select: titleMapOf });
+  const system = useResource(conversationsSystemResource, undefined, { select: titleMapOf });
   return useMemo(() => {
     if (active.pending || gone.pending || system.pending) return EMPTY_TITLES;
     // Spread order matches the previous [...system, ...recentGone, ...active]:
