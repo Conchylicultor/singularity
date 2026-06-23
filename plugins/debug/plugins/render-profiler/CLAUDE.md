@@ -15,9 +15,23 @@ always-on cost is one empty-`Set` check per commit.
 - The bridge installs/augments `window.__REACT_DEVTOOLS_GLOBAL_HOOK__` with a
   `__commitSubscribers` Set. The profiler subscribes only while a session runs.
 - On each commit it reads `root.current`, walks the tree, and finds **initiators**:
-  the topmost component fiber with the `PerformedWork` flag along each path (a
-  rendered fiber whose ancestors did NOT render re-rendered on its own state /
+  the topmost component fiber that actually rendered this commit along each path
+  (a rendered fiber whose ancestors did NOT render re-rendered on its own state /
   context / external store — not propagation).
+- **`PerformedWork` alone is NOT "rendered this commit".** React sets the flag
+  when a render fn runs but does NOT clear it on a fiber whose subtree *bails out*
+  (no work-in-progress is built), so a fiber that mounted once and only ever
+  bails after keeps the flag set *forever*. A flag-only test therefore reported
+  every stable subtree — the whole `Core.Root` controller set (mount once, return
+  null) and every idle component — as re-rendering on **every** commit triggered
+  by **any** unrelated component (the tell: `commitCount === totalCommits`). The
+  fix (`fiberRenderedThisCommit`) gates on **object identity across commits**:
+  React double-buffers fibers, so a genuine render swaps `current` ↔ `alternate`
+  and the committed fiber is a *new object*, whereas a bailed/skipped fiber is the
+  *same object* (with its stale flag). The walk threads `prevSeen` (last commit's
+  component fibers) ⇄ `currentSeen`; a fiber still in `prevSeen` did not render.
+  The first observed commit only seeds the baseline (no history), so attribution
+  is accurate from the second commit on.
 - For each initiator it diffs the hook `memoizedState` linked list (and
   `dependencies` contexts) against the fiber's `alternate` to name the changed
   hook(s) — `useSyncExternalStore` (the live-state / `useQuery` culprit),

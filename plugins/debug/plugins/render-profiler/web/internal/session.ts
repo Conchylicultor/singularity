@@ -8,7 +8,7 @@ import {
   type ProfilerStartOptions,
   type RemountStat,
 } from "../../core";
-import type { FiberRoot } from "./react-types";
+import type { Fiber, FiberRoot } from "./react-types";
 import {
   collectCommit,
   getComponentName,
@@ -31,6 +31,15 @@ const remounts = new Map<string, RemountStat>();
 // positions to detect remounts. Swapped EVERY commit (not on the throttled
 // flush) or the diff goes stale and reports phantom remounts.
 let prevPositions = new Map<string, PositionOccupant>();
+// Previous commit's component fibers by identity; threaded into collectCommit so
+// it can tell a genuine render from a stale PerformedWork flag on a persisted
+// (bailed/skipped) fiber. Swapped EVERY commit, like prevPositions.
+let prevSeen = new WeakSet<Fiber>();
+// The first observed commit only seeds the baselines (prevSeen / prevPositions):
+// with no prior tree we cannot tell a genuine render from a fiber that already
+// carried PerformedWork before the session started, so we attribute nothing for
+// it and report accurately from the second commit on.
+let primed = false;
 let remountTruncated = false;
 let totalCommits = 0;
 let startedAtMs: number | null = null;
@@ -134,11 +143,23 @@ interface CommitInitiator {
 
 function onCommit(root: FiberRoot): void {
   if (!running) return;
+
+  const { initiators, currentPositions, remounts: detected, truncated, currentSeen } =
+    collectCommit(root, prevPositions, prevSeen);
+
+  // Swap the per-commit baselines EVERY commit (not on the throttled flush), or
+  // the diffs go stale and report phantom renders / remounts.
+  prevSeen = currentSeen;
+
+  // First observed commit: seed baselines only, attribute nothing (see `primed`).
+  if (!primed) {
+    primed = true;
+    prevPositions = currentPositions;
+    return;
+  }
+
   // One commit per onCommit call — the headline "commits/s" rate.
   totalCommits += 1;
-
-  const { initiators, currentPositions, remounts: detected, truncated } =
-    collectCommit(root, prevPositions);
   if (truncated) remountTruncated = true;
 
   // Dedupe by signature WITHIN this commit: a repeated list row (e.g. 180
@@ -234,6 +255,8 @@ export function startSession(opts?: ProfilerStartOptions): void {
   stats.clear();
   remounts.clear();
   prevPositions = new Map();
+  prevSeen = new WeakSet();
+  primed = false;
   remountTruncated = false;
   totalCommits = 0;
   bridgeMissing = false;

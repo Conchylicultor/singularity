@@ -59,13 +59,36 @@ export function isComponentFiber(fiber: Fiber): boolean {
 }
 
 /**
- * Did this fiber render this commit? Only meaningful for component fibers; the
- * `PerformedWork` flag is set when the component ran its render fn (not on
- * bailout) and survives into the committed tree.
+ * Did this component fiber actually run its render fn THIS commit?
+ *
+ * The `PerformedWork` flag alone is NOT sufficient and produces a false
+ * positive on every stable subtree: React sets `PerformedWork` when the render
+ * fn runs, but it does NOT clear it on a fiber whose subtree *bails out* (when
+ * an ancestor short-circuits and no work-in-progress is built, the fiber is
+ * never touched). So a fiber that rendered once at mount and has only ever been
+ * skipped since keeps `PerformedWork` set in `flags` *forever* — and a full-tree
+ * walk on every commit would re-report it as a fresh render. This is exactly the
+ * `Core.Root` controller set (mount once, return null, never re-render): the old
+ * flag-only test reported all ~20 of them as re-rendering on *every* commit
+ * triggered by *any* unrelated component.
+ *
+ * The authoritative discriminator is **object identity across commits**. React
+ * double-buffers fibers: a genuine render swaps `current` ↔ `alternate`, so the
+ * committed fiber is a *different object* than the one at that position last
+ * commit; a bailed/skipped fiber is the *same object* (with its stale flag).
+ * `prevSeen` holds the component fibers visited last commit, so a fiber still
+ * present there did not render this commit — regardless of its `PerformedWork`
+ * flag. (A bail-out that *does* build a work-in-progress resets `flags` to none
+ * via `createWorkInProgress`, so the flag check already excludes it; this guard
+ * covers the no-work-in-progress skip that leaves the flag stale.)
  */
-export function didFiberRender(fiber: Fiber): boolean {
+export function fiberRenderedThisCommit(
+  fiber: Fiber,
+  prevSeen: WeakSet<Fiber>,
+): boolean {
   if (!isComponentFiber(fiber)) return false;
-  return (fiber.flags & PerformedWork) !== 0;
+  if ((fiber.flags & PerformedWork) === 0) return false;
+  return !prevSeen.has(fiber);
 }
 
 /**
@@ -132,6 +155,13 @@ export interface CommitWalkResult {
   remounts: RemountDetection[];
   /** True when `currentPositions` hit POSITION_MAP_CAP and stopped inserting. */
   truncated: boolean;
+  /**
+   * Every component fiber visited this commit, by object identity. Threaded back
+   * in as `prevSeen` next commit so `fiberRenderedThisCommit` can tell a genuine
+   * render (a freshly-swapped fiber object) from a stale `PerformedWork` flag on
+   * a bailed/skipped fiber (the same object as last commit).
+   */
+  currentSeen: WeakSet<Fiber>;
 }
 
 /** A position is worth recording only for component / host-element / fragment fibers. */
@@ -169,6 +199,10 @@ function siblingHasKey(fiber: Fiber, key: string): boolean {
  *    component fiber, deeper renders on that path are propagation (we mark
  *    `ancestorRendered` true for the subtree), but sibling subtrees keep their
  *    own per-path flag, so multiple independent updates in one commit surface.
+ *    "Rendered" is `fiberRenderedThisCommit` — `PerformedWork` set AND a fiber
+ *    object not seen last commit (`prevSeen`), so a stable subtree carrying a
+ *    stale `PerformedWork` flag is NOT mistaken for a re-render (see that fn).
+ *    Every component fiber visited is added to `currentSeen` for next commit.
  *
  * 2. **Remounts.** Every fiber gets a purely **index-based** `positionKey`
  *    (`parent + "/i:" + fiber.index`) — React's authoritative per-parent slot.
@@ -191,15 +225,17 @@ function siblingHasKey(fiber: Fiber, key: string): boolean {
 export function collectCommit(
   root: FiberRoot,
   prevPositions: Map<string, PositionOccupant>,
+  prevSeen: WeakSet<Fiber> = new WeakSet(),
 ): CommitWalkResult {
   const initiators: CommitInitiatorFiber[] = [];
   const currentPositions = new Map<string, PositionOccupant>();
   const remounts: RemountDetection[] = [];
+  const currentSeen = new WeakSet<Fiber>();
   let truncated = false;
 
   const start = root?.current;
   if (!start) {
-    return { initiators, currentPositions, remounts, truncated };
+    return { initiators, currentPositions, remounts, truncated, currentSeen };
   }
 
   // Explicit stack of per-path state — clearer and correct vs. return-pointer
@@ -222,8 +258,11 @@ export function collectCommit(
     let childPath = path;
 
     if (isComponentFiber(fiber)) {
+      // Record this fiber's object identity so next commit can recognize it as
+      // persisted (not re-rendered) if it carries a stale PerformedWork flag.
+      currentSeen.add(fiber);
       const name = getComponentName(fiber);
-      if (didFiberRender(fiber)) {
+      if (fiberRenderedThisCommit(fiber, prevSeen)) {
         // First rendered component on this path is the initiator; deeper renders
         // are propagation. Either way, the subtree now has a rendered ancestor.
         if (!ancestorRendered) {
@@ -294,5 +333,5 @@ export function collectCommit(
     }
   }
 
-  return { initiators, currentPositions, remounts, truncated };
+  return { initiators, currentPositions, remounts, truncated, currentSeen };
 }

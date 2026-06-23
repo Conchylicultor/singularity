@@ -83,9 +83,9 @@ const X = comp("X");
 
 /** Two-pass diff: walk prev to seed positions, then walk current against them. */
 function diff(prevTop: Fiber, currTop: Fiber) {
-  const pass1 = collectCommit(rootOf(prevTop), new Map());
+  const pass1 = collectCommit(rootOf(prevTop), new Map(), new WeakSet());
   const prev: Map<string, PositionOccupant> = pass1.currentPositions;
-  return collectCommit(rootOf(currTop), prev);
+  return collectCommit(rootOf(currTop), prev, pass1.currentSeen);
 }
 
 describe("remount detection", () => {
@@ -235,9 +235,10 @@ describe("remount detection", () => {
     expect(remounts).toHaveLength(0);
   });
 
-  test("bailed-out initiator (alternate null, NOT placed) ⇒ counted as update, not mount", () => {
-    // Same bail-out fiber as a top-level initiator: it must report as an UPDATE
-    // (isMount false), not a phantom mount, every commit.
+  test("bailed-out initiator (alternate null, NOT placed) ⇒ first sight is an update, not a mount", () => {
+    // Same bail-out fiber as a top-level initiator. On the FIRST commit we
+    // observe it (empty prevSeen) we have no history, so it reports — but as an
+    // UPDATE (isMount false), never a phantom mount.
     const top = fib({
       tag: FunctionComponent,
       type: A,
@@ -245,9 +246,42 @@ describe("remount detection", () => {
       mounted: false,
       placed: false,
     });
-    const { initiators } = collectCommit(rootOf(top), new Map());
+    const { initiators } = collectCommit(rootOf(top), new Map(), new WeakSet());
     expect(initiators).toHaveLength(1);
     expect(initiators[0]?.isMount).toBe(false);
+  });
+
+  test("stale PerformedWork on a PERSISTED fiber ⇒ NOT re-reported after first commit", () => {
+    // The Core.Root false-positive class at the initiator level. A controller
+    // renders once at mount (PerformedWork set) and then only ever bails out, so
+    // React keeps the SAME fiber object with the flag still set. The walk must
+    // recognize the identical object (via prevSeen) as not-rendered-this-commit
+    // — otherwise every commit triggered by ANY unrelated component re-reports
+    // all ~20 stable controllers as phantom re-renders.
+    const stale = fib({
+      tag: FunctionComponent,
+      type: A,
+      rendered: true,
+      mounted: false,
+      placed: false,
+    });
+    // Same fiber OBJECT walked across two commits (React reuses it on bail-out).
+    const pass1 = collectCommit(rootOf(stale), new Map(), new WeakSet());
+    expect(pass1.initiators).toHaveLength(1); // first sight: no history, reported
+    const pass2 = collectCommit(rootOf(stale), pass1.currentPositions, pass1.currentSeen);
+    expect(pass2.initiators).toHaveLength(0); // persisted object, stale flag: suppressed
+  });
+
+  test("genuine re-render (fiber object swaps each commit) ⇒ reported every commit", () => {
+    // React double-buffers: a real re-render swaps current↔alternate, so the
+    // committed fiber is a NEW object each commit. It must keep reporting even
+    // though it was 'seen' (at a different object) last commit.
+    const c1 = fib({ tag: FunctionComponent, type: A, rendered: true, mounted: true });
+    const p1 = collectCommit(rootOf(c1), new Map(), new WeakSet());
+    expect(p1.initiators).toHaveLength(1);
+    const c2 = fib({ tag: FunctionComponent, type: A, rendered: true, mounted: true });
+    const p2 = collectCommit(rootOf(c2), p1.currentPositions, p1.currentSeen);
+    expect(p2.initiators).toHaveLength(1);
   });
 
   test("freshly-placed initiator (alternate null + Placement) ⇒ counted as mount", () => {
@@ -257,7 +291,7 @@ describe("remount detection", () => {
       rendered: true,
       mounted: false, // placed defaults to true (a genuine mount)
     });
-    const { initiators } = collectCommit(rootOf(top), new Map());
+    const { initiators } = collectCommit(rootOf(top), new Map(), new WeakSet());
     expect(initiators).toHaveLength(1);
     expect(initiators[0]?.isMount).toBe(true);
   });
