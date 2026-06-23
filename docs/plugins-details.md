@@ -1870,9 +1870,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
       - Server:
         - Uses: `database.db`, `database/admin.connectionString`, `database/derived-tables.feedExemptTables`, `database/derived-tables.rebuildDerivedTables`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
-        - Exports: Types: `DbChange`; Values: `getCoveredTables`, `parseLiveStatePayload`, `rebuildTriggers`, `routeChange`
+        - Exports: Types: `DbChange`; Values: `ExcludeFromChangeFeed`, `getCoveredTables`, `parseLiveStatePayload`, `rebuildTriggers`, `routeChange`
       - Cross-plugin:
-        - Imported by: `database/live-state-snapshot`
+        - Imported by: `database/live-state-snapshot`, `debug/slow-ops`, `reports`
     - **`derived-tables`** — Rebuilds trigger-maintained materialized rollup tables from source on every boot. A rollup is derived state (declared via the DerivedTable contribution), kept current incrementally by STATEMENT triggers — a hand-rolled IVM for aggregates too expensive to recompute live yet not expressible as a plain view.
       - Server:
         - Uses: `primitives/log-channels.Log`
@@ -2128,7 +2128,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `SlowOpCollector`
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.registerSlowResourceReporter`
       - Server:
-        - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelEntries`, `reports.recordReport`, `reports.ReportKind`
+        - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelEntries`, `reports.recordReport`, `reports.ReportKind`
         - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
         - Exports: Types: `RecordSlowOpInput`; Values: `_slowOps`, `readSlowOpMarkers`, `recordSlowOp`, `slowOpsResource`
         - Resources: `slow-ops` (push)
@@ -4359,7 +4359,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `infra/endpoints.fetchEndpoint`, `primitives/slot-render.defineDispatchSlot`, `primitives/tab-id.getTabId`
     - Exports: Types: `ReportContext`; Values: `report`, `Reports`
   - Server:
-    - Uses: `build.getServerBuildId`, `database.db`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`, `tasks/container-tasks.ContainerTask`, `tasks/tasks-core.createTask`, `tasks/tasks-core.ensureMetaTask`, `tasks/tasks-core.getTask`
+    - Uses: `build.getServerBuildId`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`, `tasks/container-tasks.ContainerTask`, `tasks/tasks-core.createTask`, `tasks/tasks-core.ensureMetaTask`, `tasks/tasks-core.getTask`
     - DB schema: `plugins/reports/server/internal/tables.ts`
     - Exports: Types: `ReportKindSpec`, `ReportKindVariant`, `ReportNoiseInput`, `ReportNoiseRuleSpec`, `ReportRow`; Values: `_reports`, `recordReport`, `ReportKind`, `ReportNoiseRule`, `REPORTS_META_TASK_ID`, `reportsResource`
     - Resources: `reports` (push)
