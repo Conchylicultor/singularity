@@ -28,6 +28,7 @@ import {
   PGBOUNCER_SOCKET_DIR,
   PGBOUNCER_PORT,
 } from "@plugins/database/plugins/pgbouncer/server";
+import { ZERO_CACHE_PORT } from "@plugins/database/plugins/zero/core";
 
 // Progress sink. The launcher runs in a CLI process whose human-facing output
 // belongs on the terminal, but this plugin must not assume stdout (a packaged
@@ -106,6 +107,33 @@ export function pgbouncerConnection() {
   return { host: PGBOUNCER_SOCKET_DIR, port: PGBOUNCER_PORT };
 }
 
+// zero-cache is gated on an EXPLICIT opt-in env switch, default OFF — NOT on
+// package presence (`@rocicorp/zero` is always committed for the client bundle,
+// so a presence gate would auto-start zero-cache for everyone on merge). With
+// the env unset, ensureDatabaseConfig writes the exact same database.json it
+// writes today — zero churn, nothing changes for anyone else.
+export function zeroCacheEnabled(): boolean {
+  return process.env.SINGULARITY_ZERO_CACHE === "1";
+}
+
+export function zeroCacheService(repoRoot: string) {
+  return {
+    name: "zero-cache",
+    start: [
+      "bun",
+      "run",
+      join(
+        repoRoot,
+        "plugins/database/plugins/zero/plugins/cache-service/scripts/start.ts",
+      ),
+    ],
+    // The supervisor's tcp ready-probe (gateway/supervisor.go). 127.0.0.1, not
+    // localhost — the start script binds the loopback IPv4 port.
+    ready: { tcp: `127.0.0.1:${ZERO_CACHE_PORT}` },
+    watchdog: { intervalSec: 2 },
+  };
+}
+
 export function ensureDatabaseConfig(repoRoot: string, log: LogFn = noop): void {
   // Upgrade existing config: add pgbouncer service if packages are now installed.
   if (existsSync(DATABASE_CONFIG_PATH)) {
@@ -113,14 +141,28 @@ export function ensureDatabaseConfig(repoRoot: string, log: LogFn = noop): void 
       const existing = JSON.parse(readFileSync(DATABASE_CONFIG_PATH, "utf-8"));
       const services: Array<{ name: string }> = existing.services ?? [];
       const hasPgBouncer = services.some((s) => s.name === "pgbouncer");
+      const hasZeroCache = services.some((s) => s.name === "zero-cache");
+      let changed = false;
+      let nextServices = services;
       if (!hasPgBouncer && hasPgBouncerPackage(repoRoot)) {
         existing.pgbouncer = pgbouncerConnection();
-        existing.services = [...services, pgbouncerService(repoRoot)];
+        nextServices = [...nextServices, pgbouncerService(repoRoot)];
+        changed = true;
+        log("Updated database config: added PgBouncer");
+      }
+      // Opt-in (default OFF): only ever append zero-cache when the env switch is
+      // set. With it unset, this branch is inert and the file is left untouched.
+      if (!hasZeroCache && zeroCacheEnabled()) {
+        nextServices = [...nextServices, zeroCacheService(repoRoot)];
+        changed = true;
+        log("Updated database config: added zero-cache");
+      }
+      if (changed) {
+        existing.services = nextServices;
         writeFileSync(
           DATABASE_CONFIG_PATH,
           JSON.stringify(existing, null, 2) + "\n",
         );
-        log("Updated database config: added PgBouncer");
       }
     } catch (err) {
       if (err instanceof SyntaxError) return;
@@ -160,6 +202,7 @@ export function ensureDatabaseConfig(repoRoot: string, log: LogFn = noop): void 
             watchdog: { intervalSec: 2 },
           },
           ...(hasPgBouncer ? [pgbouncerService(repoRoot)] : []),
+          ...(zeroCacheEnabled() ? [zeroCacheService(repoRoot)] : []),
         ],
       }
     : {

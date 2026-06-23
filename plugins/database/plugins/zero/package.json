@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-database-zero",
+  "description": "Umbrella for the Rocicorp Zero sync-engine infrastructure: shared constants (core), the zero-cache supervised service (cache-service), and the generic client provider + adapter (client). Domain-agnostic — no concrete schema.",
+  "private": true,
+  "version": "0.0.1"
+}

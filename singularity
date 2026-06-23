@@ -1,5 +1,18 @@
 #!/bin/sh
 set -e
 cd "$(dirname "$0")"
+
+# Native-module ABI pin for @rocicorp/zero-sqlite3 (a trustedDependency, built
+# during `bun install`). Its only consumer — the supervised zero-cache service —
+# runs under Node 24 (zero-cache cannot run under Bun and breaks on Node 25).
+# bun runs lifecycle scripts with the host `node` on PATH (Node 25 here), so
+# without this pin prebuild-install fetches the Node-25 ABI binary
+# (NODE_MODULE_VERSION 141) and loading it under Node 24 (137) crashes zero-cache
+# with ERR_DLOPEN_FAILED. prebuild-install reads npm_config_runtime/npm_config_target
+# from the env (bun does NOT honor .npmrc target/runtime). Any 24.x target yields
+# the same ABI (137); production hardening / per-host detection is deferred to Stage 2.
+export npm_config_runtime=node
+export npm_config_target=24.17.0
+
 bun install --silent
 exec bun plugins/framework/plugins/cli/bin/index.ts "$@"

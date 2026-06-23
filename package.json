@@ -2,6 +2,7 @@
   "name": "singularity",
   "private": true,
   "workspaces": ["plugins/**"],
+  "trustedDependencies": ["@rocicorp/zero-sqlite3"],
   "scripts": {
     "playwright": "playwright",
     "test:dom": "vitest run",

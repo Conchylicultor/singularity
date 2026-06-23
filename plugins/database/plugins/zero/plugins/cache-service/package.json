@@ -1,0 +1,8 @@
+{
+  "name": "@singularity/plugin-database-zero-cache-service",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "@rocicorp/zero": "1.6.2"
+  }
+}
