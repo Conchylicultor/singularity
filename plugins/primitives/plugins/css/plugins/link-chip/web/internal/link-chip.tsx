@@ -1,7 +1,8 @@
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import type { DensityControlled } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 
-export interface LinkChipProps {
+export interface LinkChipProps extends DensityControlled {
   /** Click handler. Callers own `e.stopPropagation()` — the primitive does not add it. */
   onClick: (e: React.MouseEvent) => void;
   /** StatusDot or icon, rendered before children. */

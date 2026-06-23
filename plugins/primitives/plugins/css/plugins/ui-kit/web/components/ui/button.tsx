@@ -10,6 +10,7 @@ import {
   iconSizeFor,
   buttonTextClassFor,
   type ControlSize,
+  type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/control-size"
 
 const buttonVariants = cva(
@@ -67,6 +68,7 @@ const buttonVariants = cva(
  */
 type ButtonOwnProps = ButtonPrimitive.Props &
   Omit<VariantProps<typeof buttonVariants>, "size"> &
+  DensityControlled &
   { aspect?: "text" | "icon" | "inline"; loading?: boolean }
 
 function Button({

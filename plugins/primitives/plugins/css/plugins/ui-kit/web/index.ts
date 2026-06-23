@@ -13,6 +13,7 @@ export {
   buttonTextClassFor,
   type ControlSize,
   type ButtonIconSize,
+  type DensityControlled,
 } from "./theme/control-size";
 
 export { SingleLineProvider, useSingleLine } from "./theme/single-line";

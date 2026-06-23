@@ -2,6 +2,7 @@ import {
   cn,
   useControlSize,
   textStepFor,
+  type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 
@@ -24,7 +25,7 @@ const VARIANT_CLASS: Record<BadgeVariant, string> = {
   info: "bg-info/15 text-info",
 };
 
-export interface BadgeProps {
+export interface BadgeProps extends DensityControlled {
   /** Semantic color variant. Default "muted". Ignored when `colorClass` is set. */
   variant?: BadgeVariant;
   /** Corner treatment. Default "rect" (rounded rectangle); "pill" → fully rounded. */
@@ -40,13 +41,6 @@ export interface BadgeProps {
   className?: string;
   title?: string;
   children: React.ReactNode;
-  /**
-   * `size` is intentionally never settable — a chip derives its text size SOLELY
-   * from ambient control density (useControlSize). The index signature below would
-   * otherwise let a stray `size` through; typing it as `never` makes passing one a
-   * compile error.
-   */
-  size?: never;
   /** Permissive passthrough for the rendered element (onClick, type, disabled, …). */
   [key: string]: unknown;
 }

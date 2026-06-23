@@ -19,24 +19,41 @@ font, radius, and icon size stay per-primitive.
 
 ## Enforcement
 
-`lint/no-adhoc-control.ts` fails `./singularity check` on the three ways a control
-diverges from the scale:
+Two lint rules in `lint/` keep the scale the single source of truth, split by
+concern:
+
+**`no-adhoc-control.ts`** fails `./singularity check` on the two ways a control is
+*fabricated* outside the sanctioned primitives:
 
 - importing `buttonVariants` to paint a non-button element like a button (Check A),
+  and
 - a raw `<button>`/`<a>` carrying the hand-rolled fingerprint (fixed height +
-  horizontal padding + rounded) (Check B), and
-- a fixed `h-*`/`size-*` class on the `<Button>`/`<IconButton>` primitives
-  themselves (Check C) — `className="size-6"` *is* the `xs` control height
-  written by hand, the same per-instance density escape relocated to the class
-  string. Height is ambient, so a per-instance override desyncs the control from
-  its neighbors. Only digit-led `h-`/`size-` match; `min-h-0`, `h-auto`,
-  `h-full`, and fixed *width* (`w-N`) stay legal — only height is owned by the
-  scale. Set density once on the region via `<ControlSizeProvider size>` (or a
-  slot's `controlSize`) instead.
+  horizontal padding + rounded) (Check B).
 
-Don't hand-roll a sized button — reach for `<Button>` / `<ButtonGroup>` so size
-comes from the shared scale, and set density on the containing region rather than
-per control.
+**`no-adhoc-density.ts`** fails on a *per-instance density override* on a
+density-participating control primitive — the relocated escape that desyncs a
+control from its neighbours. It is **registry-driven**: one closed allowlist,
+`DENSITY_PRIMITIVES` (`Button`, `IconButton`, `PaneIconAction`, `Badge`,
+`ToggleChip`, `SegmentedControl`, `LinkChip`, `FilterChip`, `Avatar`, `StatusDot`,
+`BouncingDots`), matched by JSX tag name. On any of them it flags two shapes:
+
+- a `size=` prop, and
+- a fixed height class in `className` — digit-led `h-*`/`size-*`, or the named
+  scale `control-*`/`control-icon-*`. `className="size-6"` *is* the control height
+  written by hand. Only height matches; `min-h-0`, `h-auto`, `h-full`, `size-full`,
+  fixed *width* (`w-N`), margins, and colours stay legal.
+
+Height/size is ambient — set it once on the region via `<ControlSizeProvider size>`
+(or a slot's `controlSize`), never per control; don't hand-roll a sized button,
+reach for `<Button>` / `<ButtonGroup>`. A genuine fixed-size exception (custom
+chrome, or a density-deriving primitive applying the derived scale to a composed
+primitive — e.g. `ToggleChip` on its inner `<Badge>`) escapes per-site via
+`// eslint-disable-next-line control-size/no-adhoc-density -- <reason>`.
+
+This is the registry counterpart of the runtime contract: each participating
+primitive intersects the shared `DensityControlled = { size?: never }` type
+(exported from ui-kit), so the "no `size` prop" lock has one home instead of a
+hand-written `size?: never` per primitive.
 
 ## Density from context (toolbar-enforced size)
 
@@ -53,13 +70,16 @@ named by a density `ControlSize = "xs" | "sm" | "md" | "lg"`. Size should be set
   `ToggleChip` → its `sm`. Mixed controls in one toolbar share a height, keep
   their shapes.
 - **No control has a `size` prop** — `Badge`, `ToggleChip`, `SegmentedControl`,
+  `LinkChip`, `FilterChip`, `Avatar`, `StatusDot`, `BouncingDots`,
   `IconButton`/`PaneIconAction`, and `Button` all derive density *only* from
   ambient density (`useControlSize`); passing `size` is a compile error on every
-  one of them (plugged with `size?: never` so it can't sneak through onto the
-  underlying element). There is no per-instance density escape hatch anywhere in
-  the app. `Button`'s **shape** (text vs square-icon vs inline) is selected via
-  an explicit `aspect` prop (`"text"` default | `"icon"` | `"inline"`), which
-  carries no density.
+  one of them. The lock has one home: each intersects the shared
+  `DensityControlled = { size?: never }` type (from ui-kit) instead of a
+  hand-written `size?: never`, and the `no-adhoc-density` lint rule rejects the
+  same override (prop *or* fixed height class) at call sites repo-wide. There is
+  no per-instance density escape hatch anywhere in the app. `Button`'s **shape**
+  (text vs square-icon vs inline) is selected via an explicit `aspect` prop
+  (`"text"` default | `"icon"` | `"inline"`), which carries no density.
 
 Region primitives declare intrinsic density so consumers don't have to: `Bar`
 (toolbars/headers) wraps its contents in `sm` by default; `DataTable` wraps in

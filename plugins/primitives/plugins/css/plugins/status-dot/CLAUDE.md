@@ -15,7 +15,7 @@ no-provider default is `md`.
 
 - Description: Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
 - Web:
-  - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.useControlSize`
+  - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.DensityControlled`, `primitives/css/ui-kit.useControlSize`
   - Exports: Types: `StatusDotProps`; Values: `StatusDot`
 - Cross-plugin:
   - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/task-link`, `apps/agent-manager/welcome`, `apps/agent-manager/worktree-switcher`, `apps/deploy/servers`, `build/build-info`, `config_v2/settings`, `conversations/agents`, `conversations/conversation-ui/item`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/jsonl-viewer/task-notification`, `conversations/conversation-view/tasks-panel`, `debug/health-monitor`, `debug/live-state-health`, `debug/profiling/push/push-gantt`, `infra/health`, `reorder/edit-mode`, `shell/global-action-bar`, `tasks/attempt-view`, `tasks/task-status`

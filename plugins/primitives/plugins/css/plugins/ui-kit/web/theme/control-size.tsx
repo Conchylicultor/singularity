@@ -15,6 +15,16 @@ import { createContext, useContext, type ReactNode } from "react"
  */
 export type ControlSize = "xs" | "sm" | "md" | "lg"
 
+/**
+ * Marker contract for a density-participating control: it derives its size from
+ * ambient `ControlSize` (via `useControlSize`), so it must NOT accept a
+ * per-instance `size`. Intersect a primitive's props with this (or
+ * `extends DensityControlled` for an interface) instead of hand-writing
+ * `size?: never`, so the "no size prop" contract has ONE home. Enforced at call
+ * sites by the `control-size/no-adhoc-density` lint rule.
+ */
+export type DensityControlled = { size?: never }
+
 /** The `Button` cva size tokens for the square icon-shape, per density. */
 export type ButtonIconSize = "icon-xs" | "icon-sm" | "icon" | "icon-lg"
 

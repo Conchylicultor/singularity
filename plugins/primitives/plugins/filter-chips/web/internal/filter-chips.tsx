@@ -2,8 +2,9 @@ import { useCallback, useMemo, useState } from "react";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import type { DensityControlled } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
-export interface FilterChipProps {
+export interface FilterChipProps extends DensityControlled {
   active: boolean;
   onClick: () => void;
   children: React.ReactNode;

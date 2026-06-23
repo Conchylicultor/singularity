@@ -1,4 +1,4 @@
-import { cn, type ControlSize, useControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, type ControlSize, type DensityControlled, useControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type React from "react";
 
@@ -31,7 +31,7 @@ const VARIANT_CLASS: Record<
   },
 };
 
-export interface ToggleChipProps {
+export interface ToggleChipProps extends DensityControlled {
   /** Whether the chip reads as selected/on. Drives the active vs inactive color pair. */
   active: boolean;
   /** Color treatment. "solid" = filled-primary (controls); "ghost" = accent (filters). Default "solid". */
@@ -44,13 +44,6 @@ export interface ToggleChipProps {
   className?: string;
   title?: string;
   children: React.ReactNode;
-  /**
-   * `size` is intentionally never settable — a chip derives its size SOLELY from
-   * ambient control density (useControlSize). The index signature below would
-   * otherwise let a stray `size` spread through onto Badge; typing it as `never`
-   * makes passing one a compile error.
-   */
-  size?: never;
   /** Permissive passthrough for the rendered element (onClick, href, …). */
   [key: string]: unknown;
 }
@@ -84,6 +77,7 @@ export function ToggleChip({
       type={isButton ? "button" : undefined}
       disabled={isButton ? disabled : undefined}
       aria-pressed={ariaPressed}
+      // eslint-disable-next-line control-size/no-adhoc-density -- ToggleChip IS the density-deriving primitive: control-xs/control-sm here is the height it maps from ambient density (chipSizeForDensity), applied to the composed Badge shell — not a per-instance consumer override.
       className={cn(
         // ToggleChip's identity over the shared chip shell: a control that
         // height-matches the buttons beside it, with hover/disabled transitions.
@@ -106,7 +100,7 @@ export interface SegmentedOption<T extends string> {
   title?: string;
 }
 
-export interface SegmentedControlProps<T extends string> {
+export interface SegmentedControlProps<T extends string> extends DensityControlled {
   options: readonly SegmentedOption<T>[];
   value: T;
   onChange: (id: T) => void;

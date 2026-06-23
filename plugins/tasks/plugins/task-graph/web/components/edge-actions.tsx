@@ -58,7 +58,7 @@ export function EdgeActions({ sourceTaskId, targetTaskId, targetFolderId, onNavi
       <Button
         variant="ghost"
         aspect="icon"
-        // eslint-disable-next-line control-size/no-adhoc-control -- custom-chrome graph-node action, intentional fixed 24px
+        // eslint-disable-next-line control-size/no-adhoc-density -- custom-chrome graph-node action, intentional fixed 24px
         className="bg-background text-foreground hover:bg-primary hover:text-primary-foreground size-6 rounded-full border shadow-sm"
         disabled={inserting}
         onClick={handleInsert}
@@ -69,7 +69,7 @@ export function EdgeActions({ sourceTaskId, targetTaskId, targetFolderId, onNavi
       <Button
         variant="ghost"
         aspect="icon"
-        // eslint-disable-next-line control-size/no-adhoc-control -- custom-chrome graph-node action, intentional fixed 24px
+        // eslint-disable-next-line control-size/no-adhoc-density -- custom-chrome graph-node action, intentional fixed 24px
         className="bg-background text-foreground hover:bg-destructive hover:text-destructive-foreground size-6 rounded-full border shadow-sm"
         disabled={deleting}
         onClick={handleDelete}

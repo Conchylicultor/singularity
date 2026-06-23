@@ -56,7 +56,7 @@ color palette.
 
 - Description: Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
 - Web:
-  - Uses: `primitives/css/cluster.Cluster`, `primitives/css/row.Row`, `primitives/css/text.SectionLabel`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/css/ui-kit.useControlSize`, `primitives/icon-picker.IconPicker`, `primitives/icon-picker.SvgIcon`
+  - Uses: `primitives/css/cluster.Cluster`, `primitives/css/row.Row`, `primitives/css/text.SectionLabel`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.DensityControlled`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/css/ui-kit.useControlSize`, `primitives/icon-picker.IconPicker`, `primitives/icon-picker.SvgIcon`
   - Exports: Types: `AvatarColor`, `AvatarPickerProps`, `AvatarProps`, `AvatarSpec`; Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`
 - Server:
   - Uses: `primitives/icon-picker.resolveIconSvgNodes`

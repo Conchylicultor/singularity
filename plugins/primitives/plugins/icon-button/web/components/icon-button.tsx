@@ -1,4 +1,7 @@
-import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  Button,
+  type DensityControlled,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentProps, ComponentType, ReactNode } from "react";
 import {
   WithTooltip,
@@ -7,7 +10,8 @@ import {
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 
 export interface IconButtonProps
-  extends Omit<ComponentProps<typeof Button>, "children" | "size"> {
+  extends Omit<ComponentProps<typeof Button>, "children" | "size">,
+    DensityControlled {
   icon: ComponentType<{ className?: string }>;
   label: string;
   tooltip?: ReactNode;

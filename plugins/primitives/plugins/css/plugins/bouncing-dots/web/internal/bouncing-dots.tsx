@@ -2,16 +2,11 @@ import {
   cn,
   useControlSize,
   type ControlSize,
+  type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
-export interface BouncingDotsProps {
+export interface BouncingDotsProps extends DensityControlled {
   className?: string;
-  /**
-   * `size` is intentionally never settable — the dots derive their size SOLELY
-   * from ambient control density (useControlSize). Deliberate sizing is a
-   * `<ControlSizeProvider size>` around the region, never a per-instance prop.
-   */
-  size?: never;
 }
 
 // Staggered delays give the classic left-to-right bounce wave.

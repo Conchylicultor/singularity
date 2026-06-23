@@ -2,17 +2,12 @@ import {
   cn,
   useControlSize,
   type ControlSize,
+  type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
-export interface StatusDotProps {
+export interface StatusDotProps extends DensityControlled {
   colorClass: string;
   className?: string;
-  /**
-   * `size` is intentionally never settable — the dot derives its size SOLELY
-   * from ambient control density (useControlSize). Deliberate sizing is a
-   * `<ControlSizeProvider size>` around the region, never a per-instance prop.
-   */
-  size?: never;
 }
 
 const SIZE_MAP: Record<ControlSize, string> = {

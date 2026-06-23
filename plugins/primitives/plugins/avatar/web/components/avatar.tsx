@@ -2,13 +2,14 @@ import {
   cn,
   useControlSize,
   type ControlSize,
+  type DensityControlled,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { forwardRef } from "react";
 import { SvgIcon } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { avatarColorClass } from "../internal/colors";
 
-export interface AvatarProps {
+export interface AvatarProps extends DensityControlled {
   icon?: string | null;
   color?: string | null;
   svgNodes?: SvgNode[] | null;
@@ -27,12 +28,6 @@ export interface AvatarProps {
   colorless?: boolean;
   className?: string;
   title?: string;
-  /**
-   * `size` is intentionally never settable — the disc derives its size SOLELY
-   * from ambient control density (useControlSize). Deliberate sizing is a
-   * `<ControlSizeProvider size>` around the region, never a per-instance prop.
-   */
-  size?: never;
 }
 
 const SIZE_MAP: Record<ControlSize, { box: string; icon: string; dot: string; ring: string }> = {
