@@ -48,6 +48,8 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 
 When a plugin collects sub-plugin contributions (e.g. facets, checks, collected dirs), consumers must use only the **generic collection API** — never import or name individual contributors. The collection plugin owns the registry and generic interface; each contributor implements the internal details. Adding or removing a contributor updates all consumers automatically with zero code changes. If a consumer needs to reference a specific contributor, the abstraction is leaking — redesign the generic API instead.
 
+This pattern applies to *genuinely open* sets — ones where future plugins must add entries without editing your code. For a **closed list** both runtimes need (types, constants, a dropdown's options, a validation allowlist), prefer plain data in `core/` rather than introducing a slot and the web↔server codegen bridge it implies for a set you can enumerate today.
+
 ### Plugin boundary rules (enforced by `./singularity check plugin-boundaries`)
 
 - **One barrel per runtime.** `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry point. No `api.ts`, no deep paths.

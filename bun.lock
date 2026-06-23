@@ -580,6 +580,22 @@
       "name": "@singularity/plugin-apps-studio-membership-tint",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/studio/plugins/release": {
+      "name": "@singularity/plugin-apps-studio-release",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/release/plugins/release-artifact": {
+      "name": "@singularity/plugin-apps-studio-release-release-artifact",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/release/plugins/release-info": {
+      "name": "@singularity/plugin-apps-studio-release-release-info",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/release/plugins/release-logs": {
+      "name": "@singularity/plugin-apps-studio-release-release-logs",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/studio/plugins/shell": {
       "name": "@singularity/plugin-apps-studio-shell",
       "version": "0.0.1",
@@ -3017,6 +3033,10 @@
         "@tanstack/react-virtual": "^3.13.0",
       },
     },
+    "plugins/release": {
+      "name": "@singularity/plugin-release",
+      "version": "0.0.1",
+    },
     "plugins/reorder": {
       "name": "@singularity/plugin-reorder",
       "version": "0.0.1",
@@ -4433,6 +4453,14 @@
 
     "@singularity/plugin-apps-studio-membership-tint": ["@singularity/plugin-apps-studio-membership-tint@workspace:plugins/apps/plugins/studio/plugins/membership-tint"],
 
+    "@singularity/plugin-apps-studio-release": ["@singularity/plugin-apps-studio-release@workspace:plugins/apps/plugins/studio/plugins/release"],
+
+    "@singularity/plugin-apps-studio-release-release-artifact": ["@singularity/plugin-apps-studio-release-release-artifact@workspace:plugins/apps/plugins/studio/plugins/release/plugins/release-artifact"],
+
+    "@singularity/plugin-apps-studio-release-release-info": ["@singularity/plugin-apps-studio-release-release-info@workspace:plugins/apps/plugins/studio/plugins/release/plugins/release-info"],
+
+    "@singularity/plugin-apps-studio-release-release-logs": ["@singularity/plugin-apps-studio-release-release-logs@workspace:plugins/apps/plugins/studio/plugins/release/plugins/release-logs"],
+
     "@singularity/plugin-apps-studio-shell": ["@singularity/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
 
     "@singularity/plugin-apps-surface": ["@singularity/plugin-apps-surface@workspace:plugins/apps/plugins/surface"],
@@ -5580,6 +5608,8 @@
     "@singularity/plugin-primitives-view-switcher": ["@singularity/plugin-primitives-view-switcher@workspace:plugins/primitives/plugins/view-switcher"],
 
     "@singularity/plugin-primitives-virtual-rows": ["@singularity/plugin-primitives-virtual-rows@workspace:plugins/primitives/plugins/virtual-rows"],
+
+    "@singularity/plugin-release": ["@singularity/plugin-release@workspace:plugins/release"],
 
     "@singularity/plugin-reorder": ["@singularity/plugin-reorder@workspace:plugins/reorder"],
 

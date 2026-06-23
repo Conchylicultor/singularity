@@ -67,6 +67,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`membership`** — Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.
         - **`graph`** — Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
         - **`membership-tint`** — Single source of truth for the membership-state tint + legend (shared by the Explorer membership band and the Studio graph pane).
+        - **`release`** — Studio Release pane: pick a composition + target, run a local release, watch live progress, and preview the artifact.
+          - Plugins:
+            - **`release-artifact`** — Artifact path plus local preview (start/stop + live link) section in the release detail pane.
+            - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
+            - **`release-logs`** — Live + persisted release log stream section in the release detail pane.
         - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
     - **`surface`** — Generic per-tab surface dispatcher: renders every open tab at once positioned by its own placement, dispatched through the Surface.Placement registry. Owns the multi-placement body and the placement control; each placement (docked / floating / solo) is a self-contained sub-plugin.
       - Plugins:
@@ -350,6 +355,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`undo-redo`** — Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
     - **`view-switcher`** — Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher. Pure chrome — selection state stays with the caller.
     - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's flat/tree views.
+
+- **`release`** — Local composition release lifecycle engine: run, observe, preview F4 artifacts.
 
 - **`reorder`** [load-bearing] — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Plugins:

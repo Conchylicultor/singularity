@@ -1,0 +1,10 @@
+// @hash a1d5a4f2b689
+{
+  // Release detail sections, top-to-bottom: run metadata first, then the live
+  // log stream, then the artifact + local-preview controls.
+  "items": [
+    "apps.studio.release.release-info:info",
+    "apps.studio.release.release-logs:logs",
+    "apps.studio.release.release-artifact:artifact"
+  ]
+}

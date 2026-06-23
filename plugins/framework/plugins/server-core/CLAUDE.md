@@ -216,6 +216,7 @@ The server is spawned and supervised by the gateway (`bun bin/index.ts` with `SO
 - **No middleware** — plugins own their paths entirely; shared concerns (auth, logging) can be added as utilities later
 - **Route matching** — literal paths are matched exactly (O(1) map). Paths with `:param` segments (e.g. `GET /api/conversations/:id`) are matched linearly in registration order; captured params are passed as the second argument to the handler
 - **Internal/public separation** — `index.ts` is the only public barrel (default export = plugin definition, named exports = public API); `internal/` is never imported by other plugins
+- **Shared web/server code defaults to `core/`** — plain data/logic both runtimes need (types, constants, closed lists, arg-builders) lives in the plugin's `core/`, not a slot. Reach for a slot (and its codegen + `*-in-sync` bridge) only for an open, runtime-collected set. See [`web-sdk/CLAUDE.md`](../web-sdk/CLAUDE.md) → "Sharing code between web and server".
 - **Plugin dependencies go in their own `package.json`** — resolved via bun workspaces
 - **Bun runs TypeScript directly** — no build step needed
 

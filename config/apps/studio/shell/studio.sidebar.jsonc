@@ -1,9 +1,10 @@
-// @hash ce0ee4701778
+// @hash 76c4ba22f264
 {
   "items": [
     "apps.studio.explorer:explorer",
     "apps.studio.contributions:contributions",
     "apps.studio.compositions:compositions",
-    "apps.studio.graph:graph"
+    "apps.studio.graph:graph",
+    "apps.studio.release:release"
   ]
 }

@@ -11,6 +11,16 @@ There are only two primitives: **slots** and **contributions**.
 
 Plugins never import from each other's internals. They only import **slot definitions** (which are lightweight typed factories).
 
+## Sharing code between web and server
+
+Before reaching for a slot, ask: is this **plain shared data/logic**, or a **genuinely open, runtime-collected set**?
+
+**Default → `core/`.** Types, constants, pure functions, and *closed lists* that both runtimes need go in the plugin's `core/` (importable from `web/`, `server/`, and cross-plugin). One definition, one source of truth, zero sync machinery. A dropdown's options, a validation allowlist, an enum, an arg-builder — these are all `core/`.
+
+**Exception → slot + codegen.** Use a slot only when the set must be **open** (other plugins add entries) *and* collected at runtime. A slot lives in one runtime; bridging its contributions to the other runtime is what the generated registries solve, at the cost of a `*-in-sync` check. Don't pay that for a list you can fully enumerate today — that's an asymmetry you create, then have to patch.
+
+Rule of thumb: *if you can write the whole list in one array today, it's `core/`; if a future plugin must add to it without editing your code, it's a slot.*
+
 ## How It Works
 
 ### Defining a slot

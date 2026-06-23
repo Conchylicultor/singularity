@@ -55,6 +55,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "plugin-view.section", pluginId: "plugin-meta.plugin-view" },
   { slotId: "profiling.section", pluginId: "debug.profiling" },
   { slotId: "prompt-editor.floating-action", pluginId: "primitives.prompt-editor" },
+  { slotId: "release-detail.section", pluginId: "apps.studio.release" },
   { slotId: "review.section", pluginId: "review" },
   { slotId: "settings.rail-badge", pluginId: "apps.settings.shell" },
   { slotId: "settings.sidebar", pluginId: "apps.settings.shell" },
