@@ -11,6 +11,7 @@ excluded — it is derived from other plugins' apiUses, not authored here.
 ## Plugin reference
 
 - Description: Diff renderer for the cross-refs facet (PR review).
+- Disabled: cascade
 - Web:
   - Contributes: `PluginChangesSlots.DiffRenderer` "Uses"
   - Uses: `review/plugin-changes.PluginChangesSlots`

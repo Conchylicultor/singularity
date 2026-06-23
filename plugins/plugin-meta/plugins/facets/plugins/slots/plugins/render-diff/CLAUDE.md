@@ -7,6 +7,7 @@ Contributes a `PluginChanges.DiffRenderer` for the slots facet so PR review pane
 ## Plugin reference
 
 - Description: Diff renderer for the slots facet (PR review).
+- Disabled: cascade
 - Web:
   - Contributes: `PluginChangesSlots.DiffRenderer` "Slots"
   - Uses: `review/plugin-changes.PluginChangesSlots`

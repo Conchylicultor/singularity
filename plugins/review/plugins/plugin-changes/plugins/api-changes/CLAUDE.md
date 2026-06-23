@@ -5,6 +5,7 @@
 ## Plugin reference
 
 - Description: API surface diff section for per-plugin review cards.
+- Disabled: cascade
 - Web:
   - Contributes: `PluginChangesSlots.Section` → `ApiChangesSection`
   - Uses: `primitives/css/badge.Badge`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `review/plugin-changes.FacetDiff`, `review/plugin-changes.PluginChangesSlots`, `review/plugin-changes.usePluginFacetDiffs`

@@ -9,6 +9,7 @@ Contributes a `PluginChanges.DiffRenderer` for the exports facet so PR review pa
 ## Plugin reference
 
 - Description: Diff renderer for the exports facet (PR review).
+- Disabled: cascade
 - Web:
   - Contributes: `PluginChangesSlots.DiffRenderer` "Exports"
   - Uses: `review/plugin-changes.PluginChangesSlots`

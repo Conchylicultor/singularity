@@ -10,6 +10,7 @@ diff a plugin's contributions between the worktree and main.
 ## Plugin reference
 
 - Description: Diff renderer for the contributions facet (PR review).
+- Disabled: cascade
 - Web:
   - Contributes: `PluginChangesSlots.DiffRenderer` "Contributions"
   - Uses: `review/plugin-changes.PluginChangesSlots`

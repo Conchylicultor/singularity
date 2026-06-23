@@ -12,6 +12,7 @@ commands diff.
 ## Plugin reference
 
 - Description: Diff renderer for the commands facet (PR review).
+- Disabled: cascade
 - Web:
   - Contributes: `PluginChangesSlots.DiffRenderer` "Commands"
   - Uses: `review/plugin-changes.PluginChangesSlots`

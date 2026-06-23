@@ -1,8 +1,7 @@
-// @hash 0b04b459506f
+// @hash 04e93470479c
 {
   "items": [
     "review.code-review:code-review",
-    "review.config-defaults:config-defaults",
-    "review.plugin-changes:plugin-changes"
+    "review.config-defaults:config-defaults"
   ]
 }

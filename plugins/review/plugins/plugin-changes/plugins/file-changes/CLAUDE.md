@@ -5,6 +5,7 @@
 ## Plugin reference
 
 - Description: File-level diff section for per-plugin review cards.
+- Disabled: cascade
 - Web:
   - Contributes: `PluginChangesSlots.Section` → `FileChangesSection`
   - Uses: `conversations.useConversationById`, `conversations/conversation-view/code.gitStatusBadge`, `primitives/collapsible.CollapsibleChevron`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/badge.Badge`, `primitives/css/clip.Clip`, `primitives/css/text.Text`, `primitives/diff-view.DiffOrImageView`, `primitives/loading.Loading`, `review/plugin-changes.PluginChangesSlots`

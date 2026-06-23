@@ -12,6 +12,7 @@ legacy `tableStrings()`.
 ## Plugin reference
 
 - Description: Diff renderer for the db-schema facet (PR review).
+- Disabled: cascade
 - Web:
   - Contributes: `PluginChangesSlots.DiffRenderer` "Tables"
   - Uses: `review/plugin-changes.PluginChangesSlots`

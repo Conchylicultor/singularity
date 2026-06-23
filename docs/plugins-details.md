@@ -3451,7 +3451,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `PluginViewSlots.Section` "commands" → `CommandsDetailSection`
                 - Uses: `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`
-            - **`render-diff`** — Diff renderer for the commands facet (PR review).
+            - **`render-diff`** (disabled — cascade) — Diff renderer for the commands facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Commands"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -3470,7 +3470,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `PluginViewSlots.Section` "contributions" → `ContributionsDetailSection`
                 - Uses: `plugin-meta/plugin-view.PluginLink`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`
-            - **`render-diff`** — Diff renderer for the contributions facet (PR review).
+            - **`render-diff`** (disabled — cascade) — Diff renderer for the contributions facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Contributions"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -3489,7 +3489,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `PluginViewSlots.Section` "cross-refs" → `CrossRefsDetailSection`
                 - Uses: `plugin-meta/plugin-view.ExportRuntime`, `plugin-meta/plugin-view.PluginLink`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.RUNTIME_COLORS`, `plugin-meta/plugin-view.Section`, `plugin-meta/plugin-view.SubHeading`, `primitives/css/cluster.Cluster`, `primitives/css/inline.Inline`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`
-            - **`render-diff`** — Diff renderer for the cross-refs facet (PR review).
+            - **`render-diff`** (disabled — cascade) — Diff renderer for the cross-refs facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Uses"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -3506,7 +3506,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `PluginViewSlots.Section` "db-schema" → `DbSchemaDetailSection`
                 - Uses: `plugin-meta/plugin-view.PluginLink`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `plugin-meta/plugin-view.SubHeading`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`
-            - **`render-diff`** — Diff renderer for the db-schema facet (PR review).
+            - **`render-diff`** (disabled — cascade) — Diff renderer for the db-schema facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Tables"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -3523,7 +3523,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `PluginViewSlots.Section` "exports" → `ExportsDetailSection`
                 - Uses: `plugin-meta/plugin-view.ConsumerList`, `plugin-meta/plugin-view.ExportRuntime`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.RUNTIME_COLORS`, `plugin-meta/plugin-view.Section`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/badge.Badge`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`
-            - **`render-diff`** — Diff renderer for the exports facet (PR review).
+            - **`render-diff`** (disabled — cascade) — Diff renderer for the exports facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Exports"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -3540,7 +3540,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `PluginViewSlots.Section` "registrations" → `RegistrationsDetailSection`
                 - Uses: `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.RUNTIME_COLORS`, `plugin-meta/plugin-view.Section`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`
-            - **`render-diff`** — Diff renderer for the registrations facet (PR review).
+            - **`render-diff`** (disabled — cascade) — Diff renderer for the registrations facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Registrations"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -3557,7 +3557,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `PluginViewSlots.Section` "resources" → `ResourcesDetailSection`
                 - Uses: `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`
-            - **`render-diff`** — Diff renderer for the resources facet (PR review).
+            - **`render-diff`** (disabled — cascade) — Diff renderer for the resources facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Resources"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -3574,7 +3574,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `PluginViewSlots.Section` "routes" → `RoutesDetailSection`
                 - Uses: `plugin-meta/plugin-view.PluginLink`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/css/cluster.Cluster`, `primitives/css/inline.Inline`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`
-            - **`render-diff`** — Diff renderer for the routes facet (PR review).
+            - **`render-diff`** (disabled — cascade) — Diff renderer for the routes facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Routes"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -3593,7 +3593,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `PluginViewSlots.Section` "slots" → `SlotsDetailSection`
                 - Uses: `plugin-meta/plugin-view.PluginLink`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/css/cluster.Cluster`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`
-            - **`render-diff`** — Diff renderer for the slots facet (PR review).
+            - **`render-diff`** (disabled — cascade) — Diff renderer for the slots facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Slots"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -3610,7 +3610,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `PluginViewSlots.Section` "structure" → `StructureDetailSection`
                 - Uses: `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/css/badge.Badge`, `primitives/css/spacing.Stack`
-            - **`render-diff`** — Diff renderer for the structure facet (PR review).
+            - **`render-diff`** (disabled — cascade) — Diff renderer for the structure facet (PR review).
               - Web:
                 - Contributes: `PluginChangesSlots.DiffRenderer` "Structure"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
@@ -4364,7 +4364,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
-    - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `Staging.DiffRenderer` → `ReorderDiffRenderer`
+    - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `Staging.DiffRenderer` → `ReorderDiffRenderer`
     - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `config_v2/staging.Staging`, `config_v2/staging.useStageDefault`, `config_v2/staging.useStagedValue`, `primitives/css/badge.Badge`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/slot-render.registerSlotListMiddleware`, `primitives/sortable-list.rectSortingStrategy`, `reorder/editor.ReorderAreaContext`, `reorder/editor.ReorderEditor`, `reorder/editor.ReorderEntry`, `reorder/editor.SortableReorderItem`, `reorder/node-types.useReorderNodeTypes`
     - Exports: Types: `ReorderDiffEntry`, `ReorderLayout`, `ReorderScope`, `ReorderTreesDiff`; Values: `diffReorderTrees`, `getEditMode`, `getReorderScope`, `ReorderLayoutContext`, `setEditMode`, `setReorderScope`, `useEditMode`, `useReorderScope`
   - Server:
@@ -4473,7 +4473,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `ReviewSlots.Section` "config-defaults" → `ConfigDefaultsSection`
         - Uses: `config_v2/staging.GenericConfigDiff`, `config_v2/staging.StagedConfigDefault`, `config_v2/staging.stagedConfigDefaultsResource`, `config_v2/staging.useApplyAllConfigDefaults`, `config_v2/staging.useApplyConfigDefault`, `config_v2/staging.useDiscardConfigDefault`, `config_v2/staging.useStagingDiffRenderers`, `infra/endpoints.useEndpoint`, `primitives/css/card.Card`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `review.ReviewSlots`
-    - **`plugin-changes`** — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
+    - **`plugin-changes`** (disabled) — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
       - Web:
         - Slots: `PluginChangesSlots.Section` ← `review.plugin-changes.api-changes`, `review.plugin-changes.file-changes`, `PluginChangesSlots.DiffRenderer` ← `plugin-meta.facets.commands.render-diff`, `plugin-meta.facets.contributions.render-diff`, `plugin-meta.facets.cross-refs.render-diff`, `plugin-meta.facets.db-schema.render-diff`, `plugin-meta.facets.exports.render-diff`, `plugin-meta.facets.registrations.render-diff`, `plugin-meta.facets.resources.render-diff`, `plugin-meta.facets.routes.render-diff`, `plugin-meta.facets.slots.render-diff`, `plugin-meta.facets.structure.render-diff`
         - Contributes: `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
@@ -4489,11 +4489,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `plugin-meta/facets/commands/render-diff`, `plugin-meta/facets/contributions/render-diff`, `plugin-meta/facets/cross-refs/render-diff`, `plugin-meta/facets/db-schema/render-diff`, `plugin-meta/facets/exports/render-diff`, `plugin-meta/facets/registrations/render-diff`, `plugin-meta/facets/resources/render-diff`, `plugin-meta/facets/routes/render-diff`, `plugin-meta/facets/slots/render-diff`, `plugin-meta/facets/structure/render-diff`, `review/plugin-changes/api-changes`, `review/plugin-changes/file-changes`
       - Plugins:
-        - **`api-changes`** — API surface diff section for per-plugin review cards.
+        - **`api-changes`** (disabled — cascade) — API surface diff section for per-plugin review cards.
           - Web:
             - Contributes: `PluginChangesSlots.Section` → `ApiChangesSection`
             - Uses: `primitives/css/badge.Badge`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `review/plugin-changes.FacetDiff`, `review/plugin-changes.PluginChangesSlots`, `review/plugin-changes.usePluginFacetDiffs`
-        - **`file-changes`** — File-level diff section for per-plugin review cards.
+        - **`file-changes`** (disabled — cascade) — File-level diff section for per-plugin review cards.
           - Web:
             - Contributes: `PluginChangesSlots.Section` → `FileChangesSection`
             - Uses: `conversations.useConversationById`, `conversations/conversation-view/code.gitStatusBadge`, `primitives/collapsible.CollapsibleChevron`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/badge.Badge`, `primitives/css/clip.Clip`, `primitives/css/text.Text`, `primitives/diff-view.DiffOrImageView`, `primitives/loading.Loading`, `review/plugin-changes.PluginChangesSlots`

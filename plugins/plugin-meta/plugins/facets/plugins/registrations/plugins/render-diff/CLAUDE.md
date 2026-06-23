@@ -12,6 +12,7 @@ legacy `registrationStrings()` existed — this defines the registrations diff.
 ## Plugin reference
 
 - Description: Diff renderer for the registrations facet (PR review).
+- Disabled: cascade
 - Web:
   - Contributes: `PluginChangesSlots.DiffRenderer` "Registrations"
   - Uses: `review/plugin-changes.PluginChangesSlots`
