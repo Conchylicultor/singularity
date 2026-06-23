@@ -1,50 +1,63 @@
 import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
-import { SlowOpReportPayloadSchema } from "../../core";
+import {
+  SlowOpReportPayloadSchema,
+  type SlowOpReportPayload,
+} from "../../core";
 
-// Bell re-alert cooldown for the slow-op rollup: re-alert at most once per
-// minute while slowness persists. All slow ops within a window collapse onto
-// that window's single notification row, so a burst surfaces one alert.
+// Bell re-alert cooldown for a slow op: re-alert at most once per minute while
+// that operation stays slow. Repeats of the same op within a window collapse
+// onto that window's single notification row, so a burst surfaces one alert.
 const SLOW_OP_NOTIF_COOLDOWN_MS = 60_000;
 
-// The slow-op report kind. Unlike crash (one task per distinct fingerprint),
-// slow ops dedup onto a SINGLE rollup task via a fixed fingerprint — slow ops
-// are metrics that hide structural issues, so they want one ranked overview,
-// not scattered sibling tasks. The live ranked data lives in the slow_ops store
-// / Debug → Slow Ops; this task is just a pointer + the latest tripping op.
+// The slow-op report kind. Dedups per distinct `${operationKind}:${operation}`,
+// so each slow operation gets its own task pointing straight at the offending op
+// — keeping its own count, caller history, and context — while distinct slow ops
+// get distinct tasks (a slow loader for resource X is a different bug than a slow
+// HTTP route Y). The live ranked breakdown across all ops still lives in the
+// slow_ops store / Debug → Slow Ops; each task drills into one of them.
 export const slowOpKind = ReportKind({
   kind: "slow-op",
   schema: SlowOpReportPayloadSchema,
-  fingerprint: () => "slow-op:rollup",
+  fingerprint: (d: SlowOpReportPayload) =>
+    `slow-op:${d.operationKind}:${d.operation}`,
   meta: {
     tag: "[slow-op]",
-    notif: "Slow operations detected",
+    notif: "Slow operation detected",
     variant: "warning",
-    // Slow ops are a recurring metric on a singleton fingerprint, not a one-shot
-    // incident: re-alert the bell at most once per window while slowness
-    // persists. All slow ops within a window collapse onto that window's single
-    // notification row, so a cold-start burst surfaces one alert, not a storm.
+    // A slow op is a recurring metric, not a one-shot incident: re-alert the
+    // bell at most once per window while it stays slow. Repeats of the same op
+    // within a window collapse onto that window's single notification row, so a
+    // burst surfaces one alert, not a storm.
     notifCooldownMs: SLOW_OP_NOTIF_COOLDOWN_MS,
   },
-  renderTask: (row: ReportRow) => ({
-    title: "[slow-op] Slow operations detected",
-    description: renderDescription(row),
-  }),
+  renderTask: (row: ReportRow) => {
+    const d = SlowOpReportPayloadSchema.parse(row.data);
+    return {
+      title: `[slow-op] ${d.operationKind} ${d.operation} — ${Math.round(d.durationMs)}ms`,
+      description: renderDescription(row, d),
+    };
+  },
 });
 
-function renderDescription(row: ReportRow): string {
+function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
   const lines: string[] = [];
   lines.push(
-    "One or more operations have been exceeding their configured slow-op threshold.",
+    `The \`${d.operationKind}\` operation \`${d.operation}\` has been exceeding ` +
+      `its configured slow-op threshold of ${d.thresholdMs}ms.`,
   );
   lines.push("");
+  lines.push(`**Operation:** \`${d.operationKind}\` \`${d.operation}\``);
+  lines.push(`**Latest duration:** ${Math.round(d.durationMs)}ms`);
+  lines.push(`**Threshold:** ${d.thresholdMs}ms`);
+  lines.push("");
   lines.push(
-    "See the live ranked breakdown (by total time, with caller attribution) in **Debug → Slow Ops**.",
+    "See this op's full ranked breakdown — total time, max, and caller " +
+      "attribution — in **Debug → Slow Ops**.",
   );
   lines.push("");
   lines.push(`**Occurrences:** ${row.count}`);
   lines.push(`**Worktree:** ${row.worktree}`);
-  if (row.message) lines.push(`**Latest:** ${row.message}`);
   lines.push(`**First seen:** ${row.firstSeenAt.toISOString()}`);
   lines.push(`**Last seen:** ${row.lastSeenAt.toISOString()}`);
   return lines.join("\n");

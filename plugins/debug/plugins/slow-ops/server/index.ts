@@ -18,7 +18,7 @@ export { readSlowOpMarkers } from "./internal/read-markers";
 
 export default {
   description:
-    "Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one rollup task.",
+    "Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one task per distinct slow operation.",
   contributions: [
     Resource.Declare(slowOpsResource),
     ConfigV2.Register({ descriptor: slowOpConfig }),

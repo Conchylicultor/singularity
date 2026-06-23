@@ -104,8 +104,8 @@ function mergeSample(
 // THE single ingest funnel for every slow-op signal — the server span hook and
 // the client endpoint both collapse here. Upserts the deduped aggregate by
 // (operationKind, operation, worktree), merges the caller attribution, notifies
-// the live resource, and fires the singleton rollup report (fire-and-forget so
-// a slow report path never blocks recording). Failures propagate loudly.
+// the live resource, and fires the per-operation report (fire-and-forget so a
+// slow report path never blocks recording). Failures propagate loudly.
 export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
   const { operationKind, operation, durationMs, thresholdMs, source, caller, waits } =
     input;
@@ -195,8 +195,9 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
     } satisfies SlowOpMarker),
   );
 
-  // Fire-and-forget the singleton rollup report. The fixed fingerprint collapses
-  // every slow-op onto one task; its message reflects the latest tripping op.
+  // Fire-and-forget the per-operation report. The fingerprint keys on
+  // (operationKind, operation), so each distinct slow op gets its own task; the
+  // message reflects this op's latest tripping duration.
   const durationRounded = Math.round(durationMs);
   void recordReport({
     kind: "slow-op",
