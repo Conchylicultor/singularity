@@ -1,6 +1,7 @@
 import { describe, expect, test } from "bun:test";
 import {
   PerformedWork,
+  Placement,
   FunctionComponent,
   HostComponent,
   Fragment as FragmentTag,
@@ -13,7 +14,11 @@ import { collectCommit, type PositionOccupant } from "./fiber-walk";
 //
 // Plain objects matching the `Fiber` interface, with only the fields the walk
 // reads. `rendered` sets the PerformedWork flag; `mounted` sets `alternate`
-// (null = freshly mounted this commit, a truthy object = reused in place).
+// (null = freshly mounted this commit, a truthy object = reused in place);
+// `placed` sets React's `Placement` flag (the fiber was inserted/moved in the
+// host tree this commit). A genuine mount carries both `alternate === null` and
+// `Placement`, so `placed` defaults to `!mounted` — pass it explicitly to model
+// the bail-out case (a never-re-rendered fiber: alternate null, NOT placed).
 
 interface FiberSpec {
   tag: number;
@@ -25,16 +30,19 @@ interface FiberSpec {
   rendered?: boolean;
   /** false ⇒ freshly mounted (alternate === null); true ⇒ reused in place. */
   mounted?: boolean;
+  /** Fiber inserted/moved in the host tree this commit (Placement). Defaults to `!mounted`. */
+  placed?: boolean;
   children?: Fiber[];
 }
 
 function fib(spec: FiberSpec): Fiber {
+  const placed = spec.placed ?? !spec.mounted;
   const fiber: Fiber = {
     tag: spec.tag,
     type: spec.type,
     key: spec.key ?? null,
     index: spec.index ?? 0,
-    flags: spec.rendered ? PerformedWork : 0,
+    flags: (spec.rendered ? PerformedWork : 0) | (placed ? Placement : 0),
     memoizedState: null,
     memoizedProps: null,
     dependencies: null,
@@ -194,6 +202,64 @@ describe("remount detection", () => {
       toType: "A",
       cause: "key-change",
     });
+  });
+
+  test("bailed-out child (alternate null, NOT placed) ⇒ ZERO remounts", () => {
+    // The Core.Root false-positive class: a child mounts once via
+    // mountChildFibers (alternate === null) and then only ever bails out, so
+    // React never builds it a work-in-progress alternate. It stays
+    // `alternate === null` forever while its DOM/effects are untouched — NOT a
+    // remount. The Placement flag is absent, which is how we tell it apart from
+    // a genuine mount. (Modeled across two commits: same name+slot, alternate
+    // null both times, never placed.)
+    const prev = fib({
+      tag: FunctionComponent,
+      type: comp("Root"),
+      rendered: true,
+      mounted: true,
+      children: [
+        fib({ tag: FunctionComponent, type: A, index: 0, mounted: false, placed: false, rendered: true }),
+      ],
+    });
+    const curr = fib({
+      tag: FunctionComponent,
+      type: comp("Root"),
+      rendered: true,
+      mounted: true,
+      children: [
+        fib({ tag: FunctionComponent, type: A, index: 0, mounted: false, placed: false, rendered: true }),
+      ],
+    });
+
+    const { remounts } = diff(prev, curr);
+    expect(remounts).toHaveLength(0);
+  });
+
+  test("bailed-out initiator (alternate null, NOT placed) ⇒ counted as update, not mount", () => {
+    // Same bail-out fiber as a top-level initiator: it must report as an UPDATE
+    // (isMount false), not a phantom mount, every commit.
+    const top = fib({
+      tag: FunctionComponent,
+      type: A,
+      rendered: true,
+      mounted: false,
+      placed: false,
+    });
+    const { initiators } = collectCommit(rootOf(top), new Map());
+    expect(initiators).toHaveLength(1);
+    expect(initiators[0]?.isMount).toBe(false);
+  });
+
+  test("freshly-placed initiator (alternate null + Placement) ⇒ counted as mount", () => {
+    const top = fib({
+      tag: FunctionComponent,
+      type: A,
+      rendered: true,
+      mounted: false, // placed defaults to true (a genuine mount)
+    });
+    const { initiators } = collectCommit(rootOf(top), new Map());
+    expect(initiators).toHaveLength(1);
+    expect(initiators[0]?.isMount).toBe(true);
   });
 
   test("keyed reorder [A,B] → [B,A] (all reused) ⇒ ZERO remounts", () => {

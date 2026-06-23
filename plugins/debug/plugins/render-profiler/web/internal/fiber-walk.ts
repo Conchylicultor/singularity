@@ -2,6 +2,7 @@ import {
   type Fiber,
   type FiberRoot,
   PerformedWork,
+  Placement,
   FunctionComponent,
   ClassComponent,
   ForwardRef,
@@ -65,6 +66,30 @@ export function isComponentFiber(fiber: Fiber): boolean {
 export function didFiberRender(fiber: Fiber): boolean {
   if (!isComponentFiber(fiber)) return false;
   return (fiber.flags & PerformedWork) !== 0;
+}
+
+/**
+ * True iff this fiber was *freshly inserted into the host tree this commit* — a
+ * genuine mount/remount, as opposed to a fiber that re-rendered or persisted in
+ * place.
+ *
+ * `alternate === null` alone is NOT sufficient and produces false positives: a
+ * fiber mounts once via `mountChildFibers` (alternate null) and, if it then only
+ * ever **bails out** (never re-renders — the common case for a `Core.Root`
+ * controller or an idle subtree under a re-rendering ancestor), React never
+ * creates a work-in-progress alternate for it, so it keeps `alternate === null`
+ * *forever* while its DOM node and effects stay put. Treating that as a mount
+ * reported every commit as a phantom remount of the whole stable subtree.
+ *
+ * React's `Placement` flag is the authoritative discriminator: it is set only
+ * when the commit actually inserts (or moves) the fiber in the host tree. A
+ * brand-new fiber (`alternate === null`) that also carries `Placement` was truly
+ * mounted this commit; one without it is a stable, never-touched fiber. We keep
+ * the `alternate === null` half too, so a reused-but-moved keyed fiber (which
+ * carries `Placement` but has an alternate) is never mistaken for a mount.
+ */
+export function isFreshlyPlaced(fiber: Fiber): boolean {
+  return fiber.alternate === null && (fiber.flags & Placement) !== 0;
 }
 
 interface StackEntry {
@@ -148,14 +173,20 @@ function siblingHasKey(fiber: Fiber, key: string): boolean {
  * 2. **Remounts.** Every fiber gets a purely **index-based** `positionKey`
  *    (`parent + "/i:" + fiber.index`) — React's authoritative per-parent slot.
  *    Positions *inside a rendered subtree* are recorded (with the occupant's
- *    `key`). A fiber with `alternate === null` (freshly mounted) at a slot the
- *    *previous* commit also occupied is a candidate remount; we then decide
- *    remount-vs-benign-reorder by asking whether the prev occupant was actually
- *    destroyed: if it was keyed and that key still appears among the new fiber's
- *    current siblings, it merely moved (suppress); otherwise it was rebuilt
- *    (remount). This catches BOTH causes with zero false positives — an
- *    index-only key would flag a list prepend, while a key-only key would miss
- *    identity-churning `key={uuid()}` remounts.
+ *    `key`). A **freshly-placed** fiber (`isFreshlyPlaced`: `alternate === null`
+ *    AND React's `Placement` flag set) at a slot the *previous* commit also
+ *    occupied is a candidate remount; we then decide remount-vs-benign-reorder
+ *    by asking whether the prev occupant was actually destroyed: if it was keyed
+ *    and that key still appears among the new fiber's current siblings, it merely
+ *    moved (suppress); otherwise it was rebuilt (remount). Requiring `Placement`
+ *    (not just `alternate === null`) is load-bearing: a fiber that mounted once
+ *    and has since only ever bailed out keeps `alternate === null` forever, so
+ *    the `alternate`-only test reported every stable idle subtree (e.g. the whole
+ *    `Core.Root` controller set) as a phantom remount on each re-render. This now
+ *    catches all real causes with zero false positives — an index-only key would
+ *    flag a list prepend, a key-only key would miss identity-churning
+ *    `key={uuid()}` remounts, and an alternate-only mount test would flag stable
+ *    bailed-out fibers.
  */
 export function collectCommit(
   root: FiberRoot,
@@ -199,7 +230,7 @@ export function collectCommit(
           initiators.push({
             fiber,
             ancestorPath: path.slice(-ANCESTOR_PATH_CAP),
-            isMount: fiber.alternate === null,
+            isMount: isFreshlyPlaced(fiber),
           });
         }
         childAncestorRendered = true;
@@ -215,8 +246,11 @@ export function collectCommit(
     // commit (a remount needs its parent to have re-rendered).
     if (childAncestorRendered && isRecordablePosition(fiber)) {
       const name = getComponentName(fiber);
-      // Detect a remount BEFORE recording the new occupant.
-      if (fiber.alternate === null) {
+      // Detect a remount BEFORE recording the new occupant. A remount needs a
+      // genuinely-new fiber that React actually placed this commit — NOT merely
+      // `alternate === null`, which a never-re-rendered (bailed-out) fiber also
+      // satisfies indefinitely without any real mount. See `isFreshlyPlaced`.
+      if (isFreshlyPlaced(fiber)) {
         const prev = prevPositions.get(positionKey);
         // prev absent ⇒ genuinely new slot (list growth / first render) — a real
         // mount, not a remount.

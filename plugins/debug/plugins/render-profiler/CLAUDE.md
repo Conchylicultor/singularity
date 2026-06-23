@@ -24,23 +24,35 @@ always-on cost is one empty-`Set` check per commit.
   `useState/useReducer`, or `context`.
 - Aggregated by signature (ancestor path + name + changed-hook descriptor) →
   `component X, hook #N (kind), ~N.N commits/s`.
-- **Mount vs update.** Each initiator is split into `mountCount` / `updateCount`
-  (a fresh `fiber.alternate === null` is a mount, otherwise an in-place update),
-  so a cheap re-render is told apart from a destroy-and-rebuild.
+- **Mount vs update.** Each initiator is split into `mountCount` / `updateCount`.
+  A mount is a fiber that was *freshly placed* this commit (`isFreshlyPlaced`:
+  `alternate === null` AND React's `Placement` flag set); anything else is an
+  in-place update — so a cheap re-render is told apart from a destroy-and-rebuild.
+- **`alternate === null` alone is NOT a mount.** A fiber mounts once via
+  `mountChildFibers` (alternate null) and, if it then only ever **bails out**
+  (never re-renders — the common case for an idle `Core.Root` controller or any
+  stable subtree under a re-rendering ancestor), React never builds it a
+  work-in-progress alternate, so it keeps `alternate === null` *forever* while its
+  DOM node and effects are untouched. The authoritative discriminator is the
+  `Placement` flag, which the commit sets only when a fiber is actually
+  inserted/moved in the host tree. Gating mount/remount on `isFreshlyPlaced` (both
+  conditions) is what stops the profiler from reporting every stable idle subtree
+  as a phantom remount on each re-render.
 - **Remount attribution.** The same DFS gives every fiber a purely **index-based**
   `positionKey` (`parent + "/i:" + fiber.index` — React's authoritative per-parent
-  slot), recording the occupant's `key` alongside it. A fiber that freshly mounted
-  (`alternate === null`) at a slot the *previous* commit also occupied is a
-  candidate remount; it is suppressed as a benign reorder only when the prev
-  occupant was keyed AND that key still appears among the new fiber's current
-  siblings (it moved, wasn't destroyed) — an on-demand `fiber.return.child` scan,
-  no extra map. Otherwise it's a real remount, with cause `element-type` (the
-  element type flipped, e.g. `Fragment→div`) or `key-change` (same type, identity
-  churn — the classic `key={uuid()}` bug). This catches BOTH causes with zero
-  false positives: a keyed list prepend `[A,B]→[X,A,B]` reports zero remounts (A's
-  key is still a current sibling), while a key change `[Foo(v1)]→[Foo(v2)]` is
-  caught (v1 is gone). Aggregated by position into a ranked `top remounts + cause`
-  report (`remountTruncated` flags the 20k position-map cap).
+  slot), recording the occupant's `key` alongside it. A *freshly-placed* fiber
+  (`isFreshlyPlaced`) at a slot the *previous* commit also occupied is a candidate
+  remount; it is suppressed as a benign reorder only when the prev occupant was
+  keyed AND that key still appears among the new fiber's current siblings (it
+  moved, wasn't destroyed) — an on-demand `fiber.return.child` scan, no extra map.
+  Otherwise it's a real remount, with cause `element-type` (the element type
+  flipped, e.g. `Fragment→div`) or `key-change` (same type, identity churn — the
+  classic `key={uuid()}` bug). This catches both causes with zero false positives:
+  a keyed list prepend `[A,B]→[X,A,B]` reports zero remounts (A's key is still a
+  current sibling), a key change `[Foo(v1)]→[Foo(v2)]` is caught (v1 is gone), and
+  a stable bailed-out subtree reports nothing (not placed). Aggregated by position
+  into a ranked `top remounts + cause` report (`remountTruncated` flags the 20k
+  position-map cap).
 
 ## Use it
 

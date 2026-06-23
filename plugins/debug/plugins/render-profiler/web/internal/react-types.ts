@@ -8,6 +8,16 @@ import type { ProfilerReport, ProfilerStartOptions } from "../../core";
 /** `PerformedWork` — set when a component runs its render fn (not on bailout). */
 export const PerformedWork = 0b1;
 
+/**
+ * `Placement` — set when React actually inserts (or moves) this fiber in the
+ * host tree this commit. THE authoritative "freshly mounted into the DOM"
+ * signal: a brand-new fiber that React placed carries it; a fiber that merely
+ * re-rendered (or persisted untouched) does not. Used alongside
+ * `alternate === null` to tell a real mount/remount from a fiber that mounted
+ * once and has since only ever bailed out — see `isFreshlyPlaced`.
+ */
+export const Placement = 0b10;
+
 // WorkTag values (react-reconciler ReactWorkTags).
 export const FunctionComponent = 0;
 export const ClassComponent = 1;
