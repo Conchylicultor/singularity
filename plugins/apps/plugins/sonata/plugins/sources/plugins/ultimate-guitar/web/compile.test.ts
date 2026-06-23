@@ -12,6 +12,7 @@ import type {
   UgTab,
 } from "../core";
 import {
+  collectUnrecognisedChords,
   compile,
   synthesizeScore,
   UG_BEATS_PER_BAR,
@@ -149,6 +150,35 @@ describe("synthesizeScore — chord-per-bar timing", () => {
     expect(score.tracks).toEqual([{ id: UG_TRACK, name: "Ultimate Guitar" }]);
     expect(score.meta.key).toBeUndefined();
     expect(score.meta.title).toBeUndefined();
+  });
+});
+
+describe("collectUnrecognisedChords — dropped-chord surfacing", () => {
+  it("returns the symbols synthesizeScore drops, deduped in first-seen order", () => {
+    const parsed = tab([
+      section("Verse", [line("", "N.C.", "C", "???", "G")]),
+      section("Chorus", [line("", "N.C.", "Am")]), // "N.C." repeats → deduped
+    ]);
+
+    expect(collectUnrecognisedChords(parsed)).toEqual(["N.C.", "???"]);
+  });
+
+  it("agrees with synthesizeScore about what is dropped", () => {
+    const parsed = tab([section("Verse", [line("", "N.C.", "G")])]);
+
+    const dropped = collectUnrecognisedChords(parsed);
+    const kept = (
+      byType(synthesizeScore(parsed), "chord") as ChordAnnotation[]
+    ).map((c) => c.data.symbol);
+
+    expect(dropped).toEqual(["N.C."]);
+    expect(kept).toEqual(["G"]);
+  });
+
+  it("returns an empty list when every chord is recognised", () => {
+    expect(
+      collectUnrecognisedChords(tab([section("Verse", [line("", "C", "G/B")])])),
+    ).toEqual([]);
   });
 });
 

@@ -9,16 +9,21 @@
  * the input available to load a different one.
  *
  * Failures are surfaced visibly in a `role="alert"` red line — never swallowed.
+ * That includes compile-time chord drops: chord symbols `theory.parseChordSymbol`
+ * can't recognise are skipped from the synthesized Score (the bar still
+ * advances), so the loader surfaces the dropped set the way the chord-grid
+ * loader surfaces its `skipped` list.
  * Persistence (storing the loaded tab against a library song) is a later task,
  * so today this loader is reachable only from the in-player editor section.
  */
 
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { UgTabSchema, type UgTab } from "../core";
+import { parseUgTab, UgParseError, UgTabSchema, type UgTab } from "../core";
 import { fetchUgTab } from "../shared/endpoints";
+import { collectUnrecognisedChords } from "./compile";
 
 interface Props {
   raw?: unknown;
@@ -40,6 +45,28 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
   const [url, setUrl] = useState(loaded?.urlWeb ?? "");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Compile feedback for the loaded tab: the chord symbols the synthesizer
+  // would drop (unrecognised), plus any loud markup-parse failure. Re-derives
+  // from the loaded tab the same way the chord-grid loader re-parses its text —
+  // shares compile's recognise-gate so the two can't disagree. Malformed markup
+  // (the same throw compile would raise) is surfaced, never swallowed.
+  const { unrecognised, parseError } = useMemo<{
+    unrecognised: string[];
+    parseError: string | null;
+  }>(() => {
+    if (!loaded) return { unrecognised: [], parseError: null };
+    try {
+      return {
+        unrecognised: collectUnrecognisedChords(parseUgTab(loaded)),
+        parseError: null,
+      };
+    } catch (err) {
+      if (err instanceof UgParseError)
+        return { unrecognised: [], parseError: err.message };
+      throw err;
+    }
+  }, [loaded]);
 
   // `Button` auto-pends on a promise-returning onClick (spinner + double-click
   // guard), so we return the promise to it rather than void-swallowing it.
@@ -77,6 +104,15 @@ export function UltimateGuitarLoader({ raw, onRaw }: Props) {
               {loaded.key ? `Key ${loaded.key}` : null}
               {loaded.key && loaded.capo > 0 ? " · " : null}
               {loaded.capo > 0 ? `Capo ${loaded.capo}` : null}
+            </span>
+          ) : null}
+          {parseError ? (
+            <span className="text-caption text-destructive" role="alert">
+              {parseError}
+            </span>
+          ) : unrecognised.length > 0 ? (
+            <span className="text-caption text-destructive" role="alert">
+              Unrecognised chords (dropped): {unrecognised.join(", ")}
             </span>
           ) : null}
         </Stack>

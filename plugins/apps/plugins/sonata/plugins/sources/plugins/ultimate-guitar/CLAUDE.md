@@ -106,13 +106,19 @@ surfacing as crash tasks, not just toasts.
   client (`fetchUgTabContent`).
 - `server/internal/routes.ts` — `implement()` handler; maps `UgFetchError.kind`
   → `HttpError`.
-- `web/compile.ts` — `compile(raw)` + the pure `synthesizeScore(parsed)` and
-  the timing constants (`UG_TRACK`, `UG_NOTE_PREFIX`, `UG_BEATS_PER_BAR`,
+- `web/compile.ts` — `compile(raw)` + the pure `synthesizeScore(parsed)`,
+  `collectUnrecognisedChords(parsed)` (the deduped set of chord symbols
+  `synthesizeScore` drops because `theory.parseChordSymbol` can't recognise
+  them — same recognise-gate, so the two can't disagree), and the timing
+  constants (`UG_TRACK`, `UG_NOTE_PREFIX`, `UG_BEATS_PER_BAR`,
   `UG_DEFAULT_TEMPO_BPM`). Co-located `compile.test.ts` (bun:test).
 - `web/constants.ts` — `UG_SOURCE_ID` (the `rawById` key shared by the source
   registration + editor section).
 - `web/loader.tsx` — `UltimateGuitarLoader`: paste-URL + fetch UI (the fetched
-  `UgTab` is the persisted `raw`); errors surfaced in a `role="alert"` line.
+  `UgTab` is the persisted `raw`); fetch/markup errors **and** the
+  unrecognised-chord set (`collectUnrecognisedChords`) surfaced in a
+  `role="alert"` line — never silently dropped, mirroring chord-grid's
+  `skipped`.
 - `web/components/ug-editor-section.tsx` — `UltimateGuitarEditorSection`: the
   in-player editor, gated to UG songs (no server persistence yet).
 - `web/index.ts` — the player-side barrel: `Sonata.Source` + editor

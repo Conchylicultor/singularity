@@ -141,6 +141,33 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
 }
 
 /**
+ * Collect the chord symbols this tab would *drop* on compile — the ones
+ * `parseChordSymbol` can't recognise (e.g. `"N.C."`, exotic suffixes).
+ * `synthesizeScore` still advances a bar for each (timing is preserved) but
+ * emits no chord/note for them, so without surfacing these a tab can quietly
+ * play with missing chords. Mirrors chord-grid's `skipped` list.
+ *
+ * Returns the deduplicated set in first-seen order. Shares the exact
+ * recognise-gate (`parseChordSymbol`) with `synthesizeScore`, so the two can
+ * never disagree about which symbols are dropped.
+ */
+export function collectUnrecognisedChords(parsed: ParsedTab): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const section of parsed.sections) {
+    for (const line of section.lines) {
+      for (const chord of line.chords) {
+        if (parseChordSymbol(chord.symbol) === null && !seen.has(chord.symbol)) {
+          seen.add(chord.symbol);
+          out.push(chord.symbol);
+        }
+      }
+    }
+  }
+  return out;
+}
+
+/**
  * Slot-facing compile: validate the raw UG tab shape (loud failure on
  * mismatch), parse its markup, and synthesize the `Score`.
  */
