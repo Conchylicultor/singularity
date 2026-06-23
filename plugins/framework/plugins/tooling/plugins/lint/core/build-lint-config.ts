@@ -86,6 +86,50 @@ export interface BuildLintConfigOptions {
   typeSource: ParserTypeSource;
 }
 
+/**
+ * React Compiler / Rules-of-React diagnostic rules, set WARN-FIRST.
+ *
+ * The React Compiler auto-memoizes components, but it *silently bails* on any
+ * component that breaks the Rules of React — such components compile to plain
+ * pass-throughs with no memoization. These eslint rules are the ONLY way to
+ * find and count those silent bails, so the warning COUNT is the compiler's
+ * coverage / silent-bail metric driving the adopt-vs-not decision.
+ *
+ * They ship in `eslint-plugin-react-hooks`'s `recommended-latest` flat config
+ * (the standalone `eslint-plugin-react-compiler` is deprecated; its rules were
+ * merged into eslint-plugin-react-hooks v6+). We read them off the installed
+ * version programmatically — never hardcode the list, which drifts per version.
+ *
+ * Severity policy during evaluation:
+ *   - Every compiler diagnostic rule is forced to "warn" so `./singularity
+ *     check`'s eslint stays GREEN across ~540 plugins (warnings don't fail it).
+ *   - `rules-of-hooks` + `exhaustive-deps` are RE-PINNED to "error" below
+ *     (after the spread, so they win) — they were already enforced and stay so.
+ *   - `preserve-manual-memoization` stays "warn" for now; the plan promotes it
+ *     to "error" later if its warn-count is ~0 (it protects the existing manual
+ *     useMemo/useCallback sites from compiler/manual conflict).
+ *
+ * Fails loudly (below) on version skew rather than silently enabling nothing.
+ */
+function compilerDiagnosticRulesAsWarn(): Record<string, Linter.RuleEntry> {
+  const recommended = (
+    reactHooks as unknown as {
+      configs?: { "recommended-latest"?: { rules?: Record<string, unknown> } };
+    }
+  ).configs?.["recommended-latest"];
+  if (!recommended?.rules) {
+    throw new Error(
+      "[eslint] eslint-plugin-react-hooks: configs['recommended-latest'].rules is missing — " +
+        "version skew (expected v6+ where the React Compiler diagnostics ship there). " +
+        "Cannot enable the compiler rules; refusing to silently enable nothing.",
+    );
+  }
+  // Spread every rule from recommended-latest, forcing each to "warn".
+  return Object.fromEntries(
+    Object.keys(recommended.rules).map((ruleId) => [ruleId, "warn"] as const),
+  );
+}
+
 /** Build the full flat config array (base + plugin rules + per-rule exemptions). */
 export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Linter.Config[]> {
   const { root, typeSource } = opts;
@@ -124,6 +168,10 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
           allowConstantLoopConditions: true,
         }],
         "@typescript-eslint/await-thenable": "error",
+        // React Compiler / Rules-of-React diagnostics, warn-first (see
+        // compilerDiagnosticRulesAsWarn above). Spread FIRST so the two
+        // explicit "error" pins below win the merge.
+        ...compilerDiagnosticRulesAsWarn(),
         "react-hooks/rules-of-hooks": "error",
         "react-hooks/exhaustive-deps": "error",
         "no-constant-binary-expression": "error",

@@ -1886,6 +1886,13 @@
       "name": "@singularity/plugin-framework-tooling-lint-reactive-server-io",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/react-compiler": {
+      "name": "@singularity/plugin-framework-tooling-react-compiler",
+      "version": "0.0.1",
+      "devDependencies": {
+        "babel-plugin-react-compiler": "1.0.0",
+      },
+    },
     "plugins/framework/plugins/web-core": {
       "name": "@singularity/web",
       "version": "0.0.1",
@@ -4746,6 +4753,8 @@
 
     "@singularity/plugin-framework-tooling-lint-reactive-server-io": ["@singularity/plugin-framework-tooling-lint-reactive-server-io@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io"],
 
+    "@singularity/plugin-framework-tooling-react-compiler": ["@singularity/plugin-framework-tooling-react-compiler@workspace:plugins/framework/plugins/tooling/plugins/react-compiler"],
+
     "@singularity/plugin-framework-web-sdk": ["@singularity/plugin-framework-web-sdk@workspace:plugins/framework/plugins/web-sdk"],
 
     "@singularity/plugin-fullscreen": ["@singularity/plugin-fullscreen@workspace:plugins/fullscreen"],
@@ -5633,6 +5642,8 @@
     "axe-core": ["axe-core@4.11.4", "", {}, "sha512-KunSNx+TVpkAw/6ULfhnx+HWRecjqZGTOyquAoWHYLRSdK1tB5Ihce1ZW+UY3fj33bYAFWPu7W/GRSmmrCGuxA=="],
 
     "axobject-query": ["axobject-query@4.1.0", "", {}, "sha512-qIj0G9wZbMGNLjLmg1PT6v2mE9AH2zlnADJD/2tC6E00hgmhUOfEB6greHPAfLRSufHqROIUTkw6E+M3lH0PTQ=="],
+
+    "babel-plugin-react-compiler": ["babel-plugin-react-compiler@1.0.0", "", { "dependencies": { "@babel/types": "^7.26.0" } }, "sha512-Ixm8tFfoKKIPYdCCKYTsqv+Fd4IJ0DQqMyEimo+pxUOMUR9cVPlwTrFt9Avu+3cb6Zp3mAzl+t1MrG2fxxKsxw=="],
 
     "bail": ["bail@2.0.2", "", {}, "sha512-0xO6mYd7JB2YesxDKplafRpsiOzPt9V02ddPCLbY1xYGPOX24NTyN50qnUxgCPcSoYMhKpAuBTjQoRZCAkUDRw=="],
 

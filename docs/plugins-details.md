@@ -2779,6 +2779,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
+        - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
     - **`web-core`**
       - Web:
         - Uses: `primitives/css/text.Text`, `primitives/css/ui-kit`, `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`, `primitives/perfs/boot-trace.markBootInstant`, `primitives/perfs/boot-trace.startBootSpan`

@@ -16,6 +16,32 @@ type ReactBabelObject = Exclude<
 >;
 type BabelPluginItem = NonNullable<ReactBabelObject["plugins"]>[number];
 
+// A contribution's default export may return EITHER a bare `BabelPluginItem`
+// (back-compat) OR an ordered wrapper `{ order?: number; plugin }`. The numeric
+// `order` is the ONLY ordering knob the consumer reads — it never names an
+// individual contributor (collection-consumer separation). Lower `order` runs
+// FIRST in Babel's plugin list; a bare return normalizes to `order: 0`.
+// Convention: reserve a low value like `-100` for "must run first" transforms
+// (e.g. a whole-program compiler that other JSX-stamping transforms must follow).
+type OrderedBabelContribution = { order?: number; plugin: BabelPluginItem };
+type ViteContributionReturn = BabelPluginItem | OrderedBabelContribution;
+
+// Robustly discriminate the ordered wrapper from a bare `BabelPluginItem`. A bare
+// item can be a string, a function, a tuple `[plugin, options]` (array), or a
+// plugin object `{ name, visitor }`. The wrapper is the only non-array object that
+// carries a `plugin` key — a plugin object has `name`/`visitor` but no `plugin`,
+// so it correctly falls through to the bare branch.
+function isOrderedContribution(
+  ret: ViteContributionReturn,
+): ret is OrderedBabelContribution {
+  return (
+    typeof ret === "object" &&
+    ret !== null &&
+    !Array.isArray(ret) &&
+    "plugin" in ret
+  );
+}
+
 // Discover every plugin's `vite/index.ts` build contribution generically — never
 // naming an individual contributor (collection-consumer separation). Each such
 // module default-exports a factory `({ repoRoot }) => babelPlugin`; the results
@@ -62,13 +88,28 @@ export default defineConfig(async () => {
   const pluginsRoot = path.resolve(__dirname, "../../../");
   const webSdkCore = path.resolve(__dirname, "../web-sdk/core");
 
-  const babelPlugins: BabelPluginItem[] = [];
+  // Collect every contribution as a normalized `{ order, plugin }` record, then
+  // STABLE-sort ascending by `order` so the final Babel plugin list is
+  // deterministic regardless of filesystem discovery order. The discovery walk
+  // (`findViteContributions`) yields filesystem order; without this sort, ordering
+  // would be incidental — which breaks transforms that REQUIRE a relative position
+  // (e.g. a whole-program compiler that must precede JSX-stamping transforms).
+  // `Array.prototype.sort` is stable in modern V8/Bun, so contributions sharing an
+  // `order` keep their discovery order.
+  const ordered: { order: number; plugin: BabelPluginItem }[] = [];
   for (const file of findViteContributions(pluginsRoot)) {
     const mod = (await import(file)) as {
-      default: (opts: { repoRoot: string }) => BabelPluginItem;
+      default: (opts: { repoRoot: string }) => ViteContributionReturn;
     };
-    babelPlugins.push(mod.default({ repoRoot }));
+    const ret = mod.default({ repoRoot });
+    ordered.push(
+      isOrderedContribution(ret)
+        ? { order: ret.order ?? 0, plugin: ret.plugin }
+        : { order: 0, plugin: ret },
+    );
   }
+  ordered.sort((a, b) => a.order - b.order);
+  const babelPlugins: BabelPluginItem[] = ordered.map((o) => o.plugin);
 
   return {
     root: path.resolve(__dirname, "./web"),
