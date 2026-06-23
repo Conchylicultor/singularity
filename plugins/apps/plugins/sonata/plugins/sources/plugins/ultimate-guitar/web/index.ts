@@ -11,7 +11,7 @@ import { UltimateGuitarEditorSection } from "./components/ug-editor-section";
 
 export default {
   description:
-    "Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (chord-per-bar timing synthesis → annotations + voiced notes, sections, lyrics, synthesized 4/4 tempo). Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section.",
+    "Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → annotations + voiced notes, sections, lyrics, synthesized 4/4 tempo). Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section.",
   contributions: [
     Sonata.Source({
       id: UG_SOURCE_ID,

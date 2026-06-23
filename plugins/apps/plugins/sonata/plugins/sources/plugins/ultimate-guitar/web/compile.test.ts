@@ -6,6 +6,7 @@ import type {
   SectionAnnotation,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type {
+  ParsedChord,
   ParsedLine,
   ParsedSection,
   ParsedTab,
@@ -16,17 +17,20 @@ import {
   compile,
   synthesizeScore,
   UG_BEATS_PER_BAR,
+  UG_CHARS_PER_BAR,
   UG_DEFAULT_TEMPO_BPM,
   UG_TRACK,
 } from "./compile";
 
 // --- builders ---------------------------------------------------------------
 
-function line(lyric: string, ...chords: string[]): ParsedLine {
-  return {
-    lyric,
-    chords: chords.map((symbol, i) => ({ symbol, charOffset: i })),
-  };
+/** A chord pinned to an explicit lyric column — timing is proportional to it. */
+function ch(symbol: string, charOffset: number): ParsedChord {
+  return { symbol, charOffset };
+}
+
+function line(lyric: string, ...chords: ParsedChord[]): ParsedLine {
+  return { lyric, chords };
 }
 
 function section(name: string, lines: ParsedLine[]): ParsedSection {
@@ -40,12 +44,18 @@ function tab(sections: ParsedSection[], key: string | null = null): ParsedTab {
 const byType = <T extends string>(score: { annotations: Annotation[] }, type: T) =>
   score.annotations.filter((a) => a.type === type);
 
+const duration = (a: { start: number; end: number }) => a.end - a.start;
+
 // --- tests ------------------------------------------------------------------
 
-describe("synthesizeScore — chord-per-bar timing", () => {
-  it("lays a 2-chord verse line out across two bars with a spanning lyric", () => {
+describe("synthesizeScore — lyric-proportional, bar-quantized timing", () => {
+  it("places two chords proportionally to their column across whole bars", () => {
+    // A 24-char lyric → round(24/12) = 2 bars = 8 beats. Chords at columns 0 and
+    // 12 land at the proportional beats 0 and (12/24)·8 = 4.
+    const lyric = "twenty four characters!!"; // exactly 24 visible chars
+    expect(lyric.length).toBe(24);
     const score = synthesizeScore(
-      tab([section("Verse", [line("hello world", "C", "G")])]),
+      tab([section("Verse", [line(lyric, ch("C", 0), ch("G", 12))])]),
       "Song",
     );
 
@@ -54,16 +64,17 @@ describe("synthesizeScore — chord-per-bar timing", () => {
     expect(chords[0]!.data.symbol).toBe("C");
     expect([chords[0]!.start, chords[0]!.end]).toEqual([0, 4]);
     expect(chords[1]!.data.symbol).toBe("G");
+    // The last chord sustains to the line's (bar-quantized) end.
     expect([chords[1]!.start, chords[1]!.end]).toEqual([4, 8]);
 
     const lyrics = byType(score, "lyric") as LyricAnnotation[];
     expect(lyrics).toHaveLength(1);
-    expect(lyrics[0]!.data.text).toBe("hello world");
+    expect(lyrics[0]!.data.text).toBe(lyric);
     expect([lyrics[0]!.start, lyrics[0]!.end]).toEqual([0, 8]);
     // The songsheet line carries both chords by column, with their sounding beat.
     expect(lyrics[0]!.data.chords).toEqual([
       { symbol: "C", charOffset: 0, beat: 0 },
-      { symbol: "G", charOffset: 1, beat: 4 },
+      { symbol: "G", charOffset: 12, beat: 4 },
     ]);
 
     const sections = byType(score, "section") as SectionAnnotation[];
@@ -75,46 +86,95 @@ describe("synthesizeScore — chord-per-bar timing", () => {
     expect(score.notes.every((n) => n.track === UG_TRACK)).toBe(true);
   });
 
-  it("advances exactly one bar on a lyric-only line and emits its lyric", () => {
+  it("gives a chord covering more columns a proportionally longer duration", () => {
+    // Columns 0, 4, 20 over a 24-char lyric (2 bars / 8 beats): the middle chord
+    // spans columns 4→20 (16 cols) and so must last far longer than the first,
+    // which spans 0→4 (4 cols) — the whole point of matching the lyrics.
+    const lyric = "twenty four characters!!";
     const score = synthesizeScore(
       tab([
         section("Verse", [
-          line(""), // chord-only would be empty; this is a pure lyric line below
-          line("just words here"),
+          line(lyric, ch("C", 0), ch("Am", 4), ch("G", 20)),
+        ]),
+      ]),
+    );
+
+    const chords = byType(score, "chord") as ChordAnnotation[];
+    expect(chords).toHaveLength(3);
+    expect(chords.map((c) => c.data.symbol)).toEqual(["C", "Am", "G"]);
+    // 8 beats over 24 cols → 1/3 beat per col.
+    expect(chords[0]!.start).toBeCloseTo(0);
+    expect(chords[1]!.start).toBeCloseTo((4 / 24) * 8);
+    expect(chords[2]!.start).toBeCloseTo((20 / 24) * 8);
+    expect(chords[2]!.end).toBe(8); // last chord → line end
+    // Wider column span ⇒ longer sounding duration.
+    expect(duration(chords[1]!)).toBeGreaterThan(duration(chords[0]!));
+    // Chords are contiguous (each sustains until the next change).
+    expect(chords[0]!.end).toBeCloseTo(chords[1]!.start);
+    expect(chords[1]!.end).toBeCloseTo(chords[2]!.start);
+  });
+
+  it("scales line duration by sung length — longer lines get more bars", () => {
+    const short = synthesizeScore(
+      tab([section("V", [line("short", ch("C", 0))])]),
+    );
+    // ~48 chars → round(48/12) = 4 bars.
+    const longText =
+      "a much much longer line of lyrics that keeps going on!!!";
+    const long = synthesizeScore(
+      tab([section("V", [line(longText, ch("C", 0))])]),
+    );
+
+    const shortLyric = (byType(short, "lyric") as LyricAnnotation[])[0]!;
+    const longLyric = (byType(long, "lyric") as LyricAnnotation[])[0]!;
+    // Both land on a whole-bar boundary…
+    expect(duration(shortLyric) % UG_BEATS_PER_BAR).toBe(0);
+    expect(duration(longLyric) % UG_BEATS_PER_BAR).toBe(0);
+    // …but the longer line lasts longer.
+    expect(duration(longLyric)).toBeGreaterThan(duration(shortLyric));
+    expect(duration(longLyric)).toBe(
+      Math.round(longText.length / UG_CHARS_PER_BAR) * UG_BEATS_PER_BAR,
+    );
+  });
+
+  it("advances one bar on a blank line and scales a lyric-only line by length", () => {
+    const score = synthesizeScore(
+      tab([
+        section("Verse", [
+          line(""), // blank line (no chords, no lyric)
+          line("just words here"), // 15 chars → round(15/12) = 1 bar
         ]),
       ]),
     );
 
     const lyrics = byType(score, "lyric") as LyricAnnotation[];
-    // First line is blank (no chords, empty lyric) → occupies a bar, no lyric.
-    // Second line is lyric-only → one lyric annotation spanning [4, 8].
+    // Blank line occupies a bar but emits no lyric; the lyric-only line follows.
     expect(lyrics).toHaveLength(1);
     expect(lyrics[0]!.data.text).toBe("just words here");
     expect([lyrics[0]!.start, lyrics[0]!.end]).toEqual([4, 8]);
-    // A lyric-only line carries no chords.
     expect(lyrics[0]!.data.chords).toEqual([]);
   });
 
   it("emits a songsheet line for a chord-only line (empty text, chords populated)", () => {
+    // Chord-only / instrumental line: width comes from the chord columns. Cols
+    // 0 and 12 → width 13 → 1 bar (4 beats).
     const score = synthesizeScore(
-      tab([section("Intro", [line("", "C", "G")])]),
+      tab([section("Intro", [line("", ch("C", 0), ch("G", 12))])]),
     );
 
     const lyrics = byType(score, "lyric") as LyricAnnotation[];
-    // Chord-only / instrumental line still produces a songsheet line so it
-    // renders (and scrolls) — text empty, chords carried by column + beat.
     expect(lyrics).toHaveLength(1);
     expect(lyrics[0]!.data.text).toBe("");
-    expect([lyrics[0]!.start, lyrics[0]!.end]).toEqual([0, 8]);
+    expect([lyrics[0]!.start, lyrics[0]!.end]).toEqual([0, 4]);
     expect(lyrics[0]!.data.chords).toEqual([
       { symbol: "C", charOffset: 0, beat: 0 },
-      { symbol: "G", charOffset: 1, beat: 4 },
+      { symbol: "G", charOffset: 12, beat: (12 / 13) * 4 },
     ]);
   });
 
   it("emits no section annotation for an implicit (name:'') section", () => {
     const score = synthesizeScore(
-      tab([section("", [line("intro lyric", "C")])]),
+      tab([section("", [line("intro lyric", ch("C", 0))])]),
     );
 
     expect(byType(score, "section")).toHaveLength(0);
@@ -123,33 +183,38 @@ describe("synthesizeScore — chord-per-bar timing", () => {
     expect(byType(score, "lyric")).toHaveLength(1);
   });
 
-  it("skips an unrecognised chord but still advances the bar", () => {
+  it("skips an unrecognised chord but keeps the next chord's proportional slot", () => {
+    // "N.C." at col 0 is unrecognised → no chord/note. "G" at col 8 must still
+    // land at its own proportional beat, unaffected by the dropped symbol.
     const score = synthesizeScore(
-      tab([section("Verse", [line("", "N.C.", "G")])]),
+      tab([section("Verse", [line("", ch("N.C.", 0), ch("G", 8))])]),
     );
 
     const chords = byType(score, "chord") as ChordAnnotation[];
-    // "N.C." is unrecognised → no event; "G" must still land on bar 2.
     expect(chords).toHaveLength(1);
     expect(chords[0]!.data.symbol).toBe("G");
-    expect([chords[0]!.start, chords[0]!.end]).toEqual([4, 8]);
+    // width = 9 (last col 8 + 1) → round(9/12) = 1 bar = 4 beats.
+    expect(chords[0]!.start).toBeCloseTo((8 / 9) * 4);
+    expect(chords[0]!.end).toBe(4);
   });
 
   it("parses a slash chord into a chord annotation + notes", () => {
     const score = synthesizeScore(
-      tab([section("Verse", [line("", "G/B")])]),
+      tab([section("Verse", [line("", ch("G/B", 0))])]),
     );
 
     const chords = byType(score, "chord") as ChordAnnotation[];
     expect(chords).toHaveLength(1);
     expect(chords[0]!.data.symbol).toBe("G/B");
     expect(chords[0]!.data.bass).toBe(11);
+    // A single chord fills its whole (1-bar) line.
+    expect([chords[0]!.start, chords[0]!.end]).toEqual([0, 4]);
     expect(score.notes.length).toBeGreaterThan(0);
   });
 
   it("sets tempoMap / timeSigMap and parses meta.key + meta.title", () => {
     const score = synthesizeScore(
-      tab([section("Verse", [line("la", "Am")])], "Am"),
+      tab([section("Verse", [line("la", ch("Am", 0))])], "Am"),
       "My Song",
     );
 
@@ -180,15 +245,18 @@ describe("synthesizeScore — chord-per-bar timing", () => {
 describe("collectUnrecognisedChords — dropped-chord surfacing", () => {
   it("returns the symbols synthesizeScore drops, deduped in first-seen order", () => {
     const parsed = tab([
-      section("Verse", [line("", "N.C.", "C", "???", "G")]),
-      section("Chorus", [line("", "N.C.", "Am")]), // "N.C." repeats → deduped
+      section("Verse", [
+        line("", ch("N.C.", 0), ch("C", 4), ch("???", 8), ch("G", 12)),
+      ]),
+      // "N.C." repeats → deduped
+      section("Chorus", [line("", ch("N.C.", 0), ch("Am", 8))]),
     ]);
 
     expect(collectUnrecognisedChords(parsed)).toEqual(["N.C.", "???"]);
   });
 
   it("agrees with synthesizeScore about what is dropped", () => {
-    const parsed = tab([section("Verse", [line("", "N.C.", "G")])]);
+    const parsed = tab([section("Verse", [line("", ch("N.C.", 0), ch("G", 8))])]);
 
     const dropped = collectUnrecognisedChords(parsed);
     const kept = (
@@ -201,7 +269,9 @@ describe("collectUnrecognisedChords — dropped-chord surfacing", () => {
 
   it("returns an empty list when every chord is recognised", () => {
     expect(
-      collectUnrecognisedChords(tab([section("Verse", [line("", "C", "G/B")])])),
+      collectUnrecognisedChords(
+        tab([section("Verse", [line("", ch("C", 0), ch("G/B", 8))])]),
+      ),
     ).toEqual([]);
   });
 });

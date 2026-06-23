@@ -10,10 +10,14 @@ Ultimate Guitar (UG) input source for Sonata. The source pipeline so far:
   its chords as `symbol` + `charOffset` over the lyric).
 - **Task 5 — compile + player-side source.**
   - `web/compile.ts` synthesizes a `Score` from a parsed tab. UG ships no
-    timing, so the compiler *owns* a chord-per-bar timeline (one bar per chord,
-    synthesized 4/4 at a default tempo): recognised chords become
-    `source:"authored"` chord annotations → voiced notes, plus `section` and
-    `lyric` annotations.
+    timing, so the compiler *owns* a **lyric-proportional, bar-quantized**
+    timeline (synthesized 4/4 at a default tempo): each line gets a whole number
+    of bars from its *sung width* (lyric length / last chord column, via
+    `UG_CHARS_PER_BAR`), and within the line chords are placed proportionally to
+    their lyric column (`charOffset`), each sustaining until the next chord — so
+    the chord rhythm tracks the words instead of a flat bar-per-chord metronome.
+    Recognised chords become `source:"authored"` chord annotations → voiced
+    notes, plus `section` and `lyric` annotations.
   - `web/index.ts` registers the source player-side: a `Sonata.Source`
     (`Ultimate Guitar`, wiring the URL loader + `compile`) and an in-player
     editor `Sonata.Section` (`area: "editor"`). `web/loader.tsx` pastes a UG URL
@@ -133,7 +137,8 @@ surfacing as crash tasks, not just toasts.
   `synthesizeScore` drops because `theory.parseChordSymbol` can't recognise
   them — same recognise-gate, so the two can't disagree), and the timing
   constants (`UG_TRACK`, `UG_NOTE_PREFIX`, `UG_BEATS_PER_BAR`,
-  `UG_DEFAULT_TEMPO_BPM`). Co-located `compile.test.ts` (bun:test).
+  `UG_DEFAULT_TEMPO_BPM`, `UG_CHARS_PER_BAR`). Co-located `compile.test.ts`
+  (bun:test).
 - `web/constants.ts` — `UG_SOURCE_ID` (the `rawById` key shared by the source
   registration + editor section).
 - `web/loader.tsx` — `UltimateGuitarLoader`: paste-URL + fetch UI (the fetched
@@ -160,7 +165,7 @@ surfacing as crash tasks, not just toasts.
 
 ## Plugin reference
 
-- Description: Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (chord-per-bar timing synthesis → annotations + voiced notes, sections, lyrics, synthesized 4/4 tempo). Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section. Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration).
+- Description: Player-side Ultimate Guitar source for Sonata: paste a UG tab URL, fetch its raw tab, and compile() the chord/lyric markup into a playable Score (lyric-proportional, bar-quantized timing synthesis → annotations + voiced notes, sections, lyrics, synthesized 4/4 tempo). Persists the loaded tab to a per-song side-table, hydrates it on open, and contributes the library 'Import from Ultimate Guitar' URL-paste affordance plus an in-player editor section. Ultimate Guitar source server: fetches raw tabs from UG's private mobile API (fails loudly), and owns the sonata_songs_ext_ultimate_guitar side-table — creating UG-backed songs from a fetched tab and persisting edits (syncing the parent song's title/duration).
 - Web:
   - Contributes: `Sonata.Source` "Ultimate Guitar", `Library.Source` "ultimate-guitar", `Sonata.Section` "Ultimate Guitar" → `UltimateGuitarEditorSection`
   - Uses: `apps/sonata/library.Library`, `apps/sonata/library.openSongImperative`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/css/card.Card`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.DialogDescription`, `primitives/css/ui-kit.DialogTitle`, `primitives/imperative-dialog.openDialog`

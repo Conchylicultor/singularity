@@ -8,14 +8,21 @@
  * this compiler **synthesizes** a timeline and therefore *owns* the tempo and
  * time-signature maps.
  *
- * Timing model — **chord-per-bar** with one global beat cursor:
+ * Timing model — **lyric-proportional, bar-quantized** with one global beat
+ * cursor:
  *
  *  - Every bar is `UG_BEATS_PER_BAR` beats (4/4), at `UG_DEFAULT_TEMPO_BPM`.
- *  - A line with chords lays each chord out across exactly one bar, in order.
- *    The cursor advances one bar per chord — even when a chord symbol is
- *    unrecognised (e.g. `"N.C."`) — so a later chord/lyric keeps its alignment.
- *  - A lyric-only line still occupies one bar, so the songsheet scrolls through
- *    it rather than collapsing it to a zero-width instant.
+ *  - Each line is given a whole number of bars from its *sung width* (the longer
+ *    of its lyric length and its last chord's column), via `UG_CHARS_PER_BAR` —
+ *    so longer lines last longer. Lines always land on a bar boundary (the meter
+ *    stays intact) but their length tracks how much is actually sung.
+ *  - Within a line, chords are placed *proportionally to their lyric column*
+ *    (`charOffset`), each sustaining until the next chord's column (the last one
+ *    to the line's end). So the chord rhythm matches the words instead of a flat
+ *    one-bar-per-chord metronome. An unrecognised symbol (e.g. `"N.C."`) still
+ *    occupies its proportional slot, so later chords keep their place.
+ *  - A blank line (no lyric, no chords) still occupies one bar, so the songsheet
+ *    scrolls through it rather than collapsing it to a zero-width instant.
  *  - A line with a lyric OR chords emits a `lyric` annotation spanning its whole
  *    bar range — so chord-only / instrumental lines render in the songsheet too.
  *    It carries the RAW lyric text (leading columns align chords) plus the line's
@@ -50,7 +57,12 @@ import {
   findVoicing,
   type ChordEvent,
 } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
-import { parseUgTab, UgTabSchema, type ParsedTab } from "../core";
+import {
+  parseUgTab,
+  UgTabSchema,
+  type ParsedLine,
+  type ParsedTab,
+} from "../core";
 
 /** Track id for the single synthesized UG track. */
 export const UG_TRACK = "ug0";
@@ -60,6 +72,37 @@ export const UG_NOTE_PREFIX = "ug";
 export const UG_BEATS_PER_BAR = 4;
 /** Synthesized tempo — UG carries no tempo of its own. */
 export const UG_DEFAULT_TEMPO_BPM = 100;
+/**
+ * Lyric characters that map to one synthesized bar. Sets how a line's *sung
+ * width* becomes its duration: bar count = round(width / this). ~12 chars/bar
+ * at 100 BPM 4/4 ≈ a natural singing rate.
+ */
+export const UG_CHARS_PER_BAR = 12;
+
+/**
+ * A line's *sung width* in visible columns: the longer of its trimmed lyric and
+ * its last chord's column (+1 so a trailing chord still owns a sliver of time).
+ * Trailing whitespace is dropped — it isn't sung and would inflate the bar count.
+ */
+function sungWidth(line: ParsedLine): number {
+  const lyricWidth = line.lyric.replace(/\s+$/u, "").length;
+  const lastChordCol =
+    line.chords.length > 0
+      ? line.chords[line.chords.length - 1]!.charOffset + 1
+      : 0;
+  return Math.max(lyricWidth, lastChordCol);
+}
+
+/**
+ * Whole-bar duration for a line of the given sung width and chord count.
+ * Bar-quantized: every line lands on a bar boundary so the global meter stays
+ * intact. At least one bar, and never so few that chords average below a beat.
+ */
+function lineBarCount(width: number, chordCount: number): number {
+  const fromWidth = Math.round(width / UG_CHARS_PER_BAR);
+  const fromChords = Math.ceil(chordCount / UG_BEATS_PER_BAR);
+  return Math.max(1, fromWidth, fromChords);
+}
 
 /**
  * Synthesize a `Score` from an already-parsed UG tab. Pure and testable — feed
@@ -81,34 +124,43 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
       // line; the chord/note timeline below keeps only the recognised harmony.
       const lineChords: LyricChord[] = [];
 
-      if (line.chords.length > 0) {
-        for (const chord of line.chords) {
-          const start = cursor;
-          const end = start + UG_BEATS_PER_BAR;
-          lineChords.push({
-            symbol: chord.symbol,
-            charOffset: chord.charOffset,
-            beat: start,
-          });
-          const data = parseChordSymbol(chord.symbol);
-          if (data) {
-            annotations.push({
-              type: "chord",
-              start,
-              end,
-              data,
-              source: "authored",
-            } satisfies Annotation<"chord", ChordData>);
-            events.push({ data, start, end });
-          }
-          // Advance regardless of parse success so later chords/lyrics keep
-          // their alignment (e.g. an unrecognised "N.C." still costs a bar).
-          cursor = end;
+      // Bar-quantized line duration, then chords laid out *proportionally* to
+      // their lyric column within it — so the chord rhythm tracks the words, not
+      // a flat bar-per-chord metronome. `width > 0` whenever there are chords, so
+      // the division below is safe (a blank, chord-less line just advances a bar).
+      const width = sungWidth(line);
+      const lineBeats =
+        lineBarCount(width, line.chords.length) * UG_BEATS_PER_BAR;
+      const lineEnd = lineStart + lineBeats;
+
+      line.chords.forEach((chord, i) => {
+        const start = lineStart + (chord.charOffset / width) * lineBeats;
+        const next = line.chords[i + 1];
+        // A chord sustains until the next chord's column — the last one to the
+        // line's end. An unrecognised symbol still claims its slot (no chord/note
+        // emitted) so the following chord keeps its proportional place.
+        const end = next
+          ? lineStart + (next.charOffset / width) * lineBeats
+          : lineEnd;
+        lineChords.push({
+          symbol: chord.symbol,
+          charOffset: chord.charOffset,
+          beat: start,
+        });
+        const data = parseChordSymbol(chord.symbol);
+        if (data) {
+          annotations.push({
+            type: "chord",
+            start,
+            end,
+            data,
+            source: "authored",
+          } satisfies Annotation<"chord", ChordData>);
+          events.push({ data, start, end });
         }
-      } else {
-        // Lyric-only line: still occupies exactly one bar.
-        cursor += UG_BEATS_PER_BAR;
-      }
+      });
+
+      cursor = lineEnd;
 
       if (line.lyric.trim().length > 0 || lineChords.length > 0) {
         annotations.push({
