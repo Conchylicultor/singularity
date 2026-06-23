@@ -33,8 +33,7 @@ the shared `FieldDef` schema.
   `DataViewProps.creators`, render a trailing dashed "+" card (after the row map)
   firing that creator's `onSelect`. With zero or multiple creators the card is
   omitted — a single dashed card can't express an N-way choice, so multi-creator
-  surfaces rely on the toolbar `+` menu. Outer grid padding is gated on
-  `!embedded` like the rest of the grid. The gallery also renders a minimal
+  surfaces rely on the toolbar `+` menu. The gallery also renders a minimal
   creators CTA (one `Button` per creator) below `emptyState` when the data source
   is confirmed-empty (after the loading guard).
 

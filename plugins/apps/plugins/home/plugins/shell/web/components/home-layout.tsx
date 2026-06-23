@@ -10,7 +10,6 @@ export function HomeLayout() {
     <Stack gap="none" className="relative h-full bg-background">
       <Column
         gap="none"
-        scrollBody={false}
         className="mx-auto h-full w-full max-w-5xl px-2xl py-2xl"
         header={
           // eslint-disable-next-line spacing/no-adhoc-spacing -- header offset from section area; sibling rhythm in a padded full-surface container, not a uniform gap
@@ -24,13 +23,9 @@ export function HomeLayout() {
             </Text>
           </header>
         }
-        // The section area owns bounded height so a full-surface section (e.g.
-        // the app-cards DataView) can fill it and scroll internally.
-        body={
-          <Stack gap="none" className="h-full">
-            <Home.Section.Render />
-          </Stack>
-        }
+        // The DataView is now natural-height; the column body owns the single
+        // scroll (scrollBody default), keeping the centered max-w-5xl layout.
+        body={<Home.Section.Render />}
       />
       {/* Bespoke full-surface layout: mount the pane overlay so global actions
           that open panes (e.g. the theme customizer) sync the registry and

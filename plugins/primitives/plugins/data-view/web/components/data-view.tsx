@@ -6,7 +6,8 @@ import type {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type {
@@ -27,6 +28,7 @@ import {
 import { useFilterController } from "../internal/use-filter-controller";
 import { useSortController } from "../internal/use-sort-controller";
 import { useSortPresets } from "../internal/use-sort-presets";
+import { useScrollAncestorGuard } from "../internal/use-scroll-ancestor-guard";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
 import { CreatorsControl } from "./creators-control";
@@ -76,10 +78,13 @@ function DataViewInner<TRow>({
     selection,
     itemActions,
     creators,
-    mode = "surface",
   } = props;
 
-  const embedded = mode === "embedded";
+  // DataView is always natural-height and never owns a scroller — the pane owns
+  // exactly one scroll (via `<PaneScroll>`). Dev-only structural guard fires if
+  // the enclosing pane forgot to provide that scroll (kept in its own hook so the
+  // effect's DOM walk stays out of this component's React Compiler analysis).
+  const rootRef = useScrollAncestorGuard(props.storageKey);
 
   const viewVariants = useViewVariants(contributions);
 
@@ -144,31 +149,29 @@ function DataViewInner<TRow>({
   // the pane from crashing if a config is authored-but-empty.
   if (!activeInstance) {
     return (
-      <Column
-        fill={!embedded}
-        header={
-          // eslint-disable-next-line layout/no-adhoc-layout -- horizontal toolbar row; no named-slot primitive maps to a variable-content control set
-          <div className="flex items-center gap-sm px-sm pb-sm">
-            {title ? (
-              <Text as="div" variant="label">
-                {title}
-              </Text>
-            ) : null}
-            {actions ? <div className="ml-auto">{actions}</div> : null}
-            <div className={actions ? undefined : "ml-auto"}>
-              <CreatorsControl creators={creators} />
-            </div>
+      <Stack gap="none" ref={rootRef}>
+        <Sticky
+          edge="top"
+          // eslint-disable-next-line layout/no-adhoc-layout -- horizontal toolbar row of variable-content controls; no named-slot primitive maps
+          className={cn("bg-background flex items-center gap-sm px-sm pb-sm")}
+        >
+          {title ? (
+            <Text as="div" variant="label">
+              {title}
+            </Text>
+          ) : null}
+          {actions ? <div className="ml-auto">{actions}</div> : null}
+          <div className={actions ? undefined : "ml-auto"}>
+            <CreatorsControl creators={creators} />
           </div>
-        }
-        body={
-          <div className="p-md">
-            <Placeholder>
-              No views configured — author{" "}
-              <code>config/&lt;plugin&gt;/{props.storageKey}.jsonc</code>
-            </Placeholder>
-          </div>
-        }
-      />
+        </Sticky>
+        <div className="p-md">
+          <Placeholder>
+            No views configured — author{" "}
+            <code>config/&lt;plugin&gt;/{props.storageKey}.jsonc</code>
+          </Placeholder>
+        </div>
+      </Stack>
     );
   }
 
@@ -195,79 +198,70 @@ function DataViewInner<TRow>({
     loadingState,
     itemActions: itemActions as DataViewRenderProps<unknown>["itemActions"],
     hasChildren,
-    embedded,
     creators,
   };
 
   return (
-    <Column
-      fill={!embedded}
-      scrollBody={!embedded}
-      header={
-        // pr-14 reserves the top-right gutter for the global floating action bar
-        // (fixed top-2 right-3, ~44px footprint) so right-aligned controls stay
-        // visible and clickable rather than sitting under it.
-        <div
-          // horizontal toolbar row of variable-content controls; no named-slot primitive maps; pr-14 reserves the fixed ~44px floating-action-bar gutter, a layout dimension the ramp can't express
-          // eslint-disable-next-line layout/no-adhoc-layout, spacing/no-adhoc-spacing
-          className={cn(
-            "flex shrink-0 items-center gap-sm pb-sm pl-sm",
-            !embedded && "pr-14",
-          )}
-        >
-          {title ? (
-            <Text as="div" variant="label">
-              {title}
-            </Text>
-          ) : null}
-          <SearchInput
-            value={activeState.query}
-            onChange={(e) => viewModel.setQuery(activeViewId, e.target.value)}
-            placeholder="Search…"
-            wrapperClassName="ml-auto w-48"
+    // `Stack gap="none"` = a plain `flex flex-col` block box (no `min-h-0 flex-1`)
+    // that establishes this DataView's own sticky containing block and lets the
+    // body grow to natural height — the pane (via `<PaneScroll>`) owns the scroll.
+    <Stack gap="none" ref={rootRef}>
+      <Sticky
+        edge="top"
+        // horizontal toolbar row of variable-content controls; no named-slot primitive maps. `bg-background` so rows don't show through the pinned bar
+        // eslint-disable-next-line layout/no-adhoc-layout
+        className={cn("bg-background flex items-center gap-sm pb-sm pl-sm")}
+      >
+        {title ? (
+          <Text as="div" variant="label">
+            {title}
+          </Text>
+        ) : null}
+        <SearchInput
+          value={activeState.query}
+          onChange={(e) => viewModel.setQuery(activeViewId, e.target.value)}
+          placeholder="Search…"
+          wrapperClassName="ml-auto w-48"
+        />
+        {/* The filter builder: a pill trigger ("Filter" / "N rules") opening
+            the Notion-style nested AND/OR popover builder. Rendered only when
+            the schema has at least one filterable field. */}
+        {/* The sort + filter builders sit adjacent as a matched pair: each is
+            a pill trigger ("Sort" / "N sorts", "Filter" / "N rules") opening
+            its Notion-style popover. Each renders only when the schema has at
+            least one eligible field. */}
+        {hasSort ? (
+          <SortBuilderTrigger
+            controller={sortController}
+            presets={sortPresets}
           />
-          {/* The filter builder: a pill trigger ("Filter" / "N rules") opening
-              the Notion-style nested AND/OR popover builder. Rendered only when
-              the schema has at least one filterable field. */}
-          {/* The sort + filter builders sit adjacent as a matched pair: each is
-              a pill trigger ("Sort" / "N sorts", "Filter" / "N rules") opening
-              its Notion-style popover. Each renders only when the schema has at
-              least one eligible field. */}
-          {hasSort ? (
-            <SortBuilderTrigger
-              controller={sortController}
-              presets={sortPresets}
-            />
-          ) : null}
-          {hasFilters ? (
-            <FilterBuilderTrigger controller={filterController} />
-          ) : null}
-          {actions}
-          <CreatorsControl creators={creators} />
-          <EditableViewSwitcher
-            instances={instances}
-            activeId={activeViewId}
-            onSelect={viewModel.setActiveView}
-            actions={viewModel.actions}
-            viewVariants={viewVariants}
-          />
-        </div>
-      }
-      body={
-        // One density for every view type, so a row's controls and decorations
-        // (avatars, status dots, chips, buttons) look identical whether the same
-        // data is shown as a table, tree, list, or gallery. The table view's
-        // `data-table` primitive already defaults to `xs`; declaring it here once
-        // brings tree/list/gallery in line instead of each falling through to the
-        // ambient `md` default.
-        <ControlSizeProvider size="xs">
-          {renderIsolated(
-            DataViewSlots.View.id,
-            activeInstance.viewType as unknown as Contribution,
-            renderProps,
-          )}
-        </ControlSizeProvider>
-      }
-    />
+        ) : null}
+        {hasFilters ? (
+          <FilterBuilderTrigger controller={filterController} />
+        ) : null}
+        {actions}
+        <CreatorsControl creators={creators} />
+        <EditableViewSwitcher
+          instances={instances}
+          activeId={activeViewId}
+          onSelect={viewModel.setActiveView}
+          actions={viewModel.actions}
+          viewVariants={viewVariants}
+        />
+      </Sticky>
+      {/* One density for every view type, so a row's controls and decorations
+          (avatars, status dots, chips, buttons) look identical whether the same
+          data is shown as a table, tree, list, or gallery. The table view's
+          `data-table` primitive already defaults to `xs`; declaring it here once
+          brings tree/list/gallery in line instead of each falling through to the
+          ambient `md` default. */}
+      <ControlSizeProvider size="xs">
+        {renderIsolated(
+          DataViewSlots.View.id,
+          activeInstance.viewType as unknown as Contribution,
+          renderProps,
+        )}
+      </ControlSizeProvider>
+    </Stack>
   );
 }

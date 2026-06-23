@@ -5,7 +5,7 @@ import {
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane, PaneScroll } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
@@ -94,31 +94,33 @@ export function PrototypeGallery() {
   );
 
   const renderList = (rows: PrototypeMeta[], loading: boolean) => (
-    <DataView<PrototypeMeta>
-      title="Prototypes"
-      rows={rows}
-      fields={fields}
-      rowKey={(p) => p.name}
-      views={["gallery"]}
-      defaultView="gallery"
-      storageKey={PROTOTYPES_VIEW}
-      loading={loading}
-      selectedRowId={selectedName}
-      onRowActivate={(p) =>
-        openPane(prototypeDetailPane, { name: p.name }, { mode: "push" })
-      }
-      actions={newButton}
-      emptyState="No prototypes yet. Add one under prototypes/<slug>/."
-      viewOptions={{
-        gallery: {
-          minCardWidth: 224,
-          cover: (p: PrototypeMeta) => ({
-            kind: "node",
-            node: <ThemeSwatch meta={p} />,
-          }),
-        },
-      }}
-    />
+    <PaneScroll>
+      <DataView<PrototypeMeta>
+        title="Prototypes"
+        rows={rows}
+        fields={fields}
+        rowKey={(p) => p.name}
+        views={["gallery"]}
+        defaultView="gallery"
+        storageKey={PROTOTYPES_VIEW}
+        loading={loading}
+        selectedRowId={selectedName}
+        onRowActivate={(p) =>
+          openPane(prototypeDetailPane, { name: p.name }, { mode: "push" })
+        }
+        actions={newButton}
+        emptyState="No prototypes yet. Add one under prototypes/<slug>/."
+        viewOptions={{
+          gallery: {
+            minCardWidth: 224,
+            cover: (p: PrototypeMeta) => ({
+              kind: "node",
+              node: <ThemeSwatch meta={p} />,
+            }),
+          },
+        }}
+      />
+    </PaneScroll>
   );
 
   return matchResource(result, {

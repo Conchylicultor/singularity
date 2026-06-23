@@ -258,7 +258,6 @@ export function ClusterView(): ReactElement {
           rowKey={(r) => r.key}
           storageKey={CLUSTER_AGG}
           title="Cluster Aggregate"
-          mode="embedded"
           defaultView="table"
           emptyState="No slow operations recorded across the cluster"
         />
@@ -269,7 +268,6 @@ export function ClusterView(): ReactElement {
           rowKey={(r) => r.key}
           storageKey={CLUSTER_TIMELINE}
           title="Contention Timeline"
-          mode="embedded"
           defaultView="table"
           emptyState="No contention samples captured yet"
         />

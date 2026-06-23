@@ -8,6 +8,7 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { PaneScroll } from "./pane-scroll";
 import { PaneMatchContext, type PaneMatch, type PaneObject } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
@@ -128,7 +129,16 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
           )}
         </Bar>
       }
-      body={<ContentScope>{children}</ContentScope>}
+      // The pane body owns exactly one scroll, expressed via the shared
+      // `PaneScroll` scaffold (`<Scroll axis="y" fill h-full>`) instead of
+      // Column's managed `Scroll` body — identical scrolling, one sanctioned
+      // idiom. `scrollBody={false}` so Column doesn't add a second scroll.
+      scrollBody={false}
+      body={
+        <PaneScroll>
+          <ContentScope>{children}</ContentScope>
+        </PaneScroll>
+      }
     />
   );
 }

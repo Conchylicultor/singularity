@@ -4,7 +4,7 @@ import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/p
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { PaneScroll } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { getCodeTree } from "@plugins/code-explorer/plugins/code-api/core";
@@ -30,10 +30,7 @@ export function FileTreeView({ worktree }: FileTreeViewProps) {
       id="code-explorer-group"
     >
       <ResizablePanel id="tree" defaultSize={25} minSize={15}>
-        {/* No outer Scroll: the surface-mode DataView owns its own scroll and a
-            pinned search/filter toolbar — wrapping it in a Scroll would nest two
-            scrollers and break row virtualization. */}
-        <Stack gap="none" className="h-full min-h-0 border-r">
+        <PaneScroll className="border-r">
           {isLoading ? (
             <Loading variant="rows" />
           ) : error ? (
@@ -51,7 +48,7 @@ export function FileTreeView({ worktree }: FileTreeViewProps) {
               onSelect={setSelectedPath}
             />
           )}
-        </Stack>
+        </PaneScroll>
       </ResizablePanel>
       <ResizableHandle withHandle />
       <ResizablePanel id="preview" defaultSize={75} minSize={30}>

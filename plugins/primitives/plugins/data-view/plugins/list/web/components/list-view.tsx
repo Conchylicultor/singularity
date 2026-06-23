@@ -1,5 +1,4 @@
 import { type ReactNode } from "react";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -65,10 +64,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
 
   if (rows.length === 0) {
     return (
-      <Center
-        axis="both"
-        className={cn(props.embedded ? "py-xl" : "h-full p-xl")}
-      >
+      <Center axis="both" className="py-xl">
         <Text as="div" variant="body" className="text-muted-foreground">
           {props.emptyState}
         </Text>
@@ -166,8 +162,8 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   };
 
   // Window the render once the list is long enough to matter; otherwise keep the
-  // plain `.map`. VirtualRows discovers the scroll ancestor itself, so this works
-  // whether the data-view owns its scroll or is embedded inside a larger one.
+  // plain `.map`. VirtualRows discovers the scroll ancestor itself — the pane's
+  // single PaneScroll — so windowing is correct without threading a ref.
   const virtualize = rows.length > VIRTUALIZE_THRESHOLD;
   const estimateSize = (options.size ?? "md") === "sm" ? 36 : 44;
 
@@ -185,7 +181,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   }
 
   return (
-    <Stack gap="none" className={cn(!props.embedded && "p-sm")}>
+    <Stack gap="none" className="p-sm">
       {rows.map((row, i) => renderRow(row, i))}
     </Stack>
   );

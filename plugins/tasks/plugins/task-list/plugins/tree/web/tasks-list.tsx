@@ -75,7 +75,6 @@ function TasksListInner({
       // Embedded: the tab host (tabbed-view) already owns the scroll surface, so
       // the data-view must not nest a second scroller. The tree view windows its
       // rows against that outer scroller (VirtualRows discovers it).
-      mode="embedded"
       storageKey={TASKS_LIST_VIEW}
       selectedRowId={selectedId}
       onRowActivate={(t) => onSelect(t.id)}

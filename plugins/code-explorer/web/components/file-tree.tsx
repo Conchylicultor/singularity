@@ -123,20 +123,12 @@ interface FileTreeProps {
   files: readonly string[];
   selectedPath: string;
   onSelect: (path: string) => void;
-  /**
-   * Placement axis threaded straight to DataView. `"surface"` (default) owns its
-   * own scroll + pinned toolbar — for the full-pane explorer. `"embedded"` grows
-   * to natural height and lets a host scroller take over — for the bounded
-   * plugin-detail section.
-   */
-  mode?: "surface" | "embedded";
 }
 
 export function FileTree({
   files,
   selectedPath,
   onSelect,
-  mode = "surface",
 }: FileTreeProps) {
   const rows = useMemo(() => buildFileRows(files), [files]);
 
@@ -236,7 +228,6 @@ export function FileTree({
       rowKey={(r) => r.id}
       views={["tree"]}
       storageKey={FILE_TREE_VIEW}
-      mode={mode}
       hierarchy={hierarchy}
       selectedRowId={selectedPath || undefined}
       onRowActivate={handleActivate}

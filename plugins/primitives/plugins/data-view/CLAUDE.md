@@ -252,36 +252,39 @@ The settings config nav is the worked example — its `modified` (bool), `confli
 (bool), and `source` (enum) fields are pure filter dimensions over a hierarchy that
 only ever renders the config name, having replaced an earlier ad-hoc "Modified" chip.
 
-## Placement mode
+## Placement: always natural-height, never owns a scroll
 
-`<DataView>` accepts a `mode?: "surface" | "embedded"` axis controlling how it
-claims vertical space:
+`<DataView>` has **no placement mode** — it is **always natural-height** and
+**never owns a scroller**. The root is a plain block box (`<Stack gap="none">` =
+`flex flex-col`, *no* `min-h-0 flex-1`), so the body grows to its natural content
+height and the **enclosing pane owns exactly one scroll**, provided by
+`<PaneScroll>` (`@plugins/primitives/plugins/pane/web`). The single-scroll model
+removes the whole class of nested/severed-scroll bugs — a DataView dropped into a
+flex-severed wrapper can no longer balloon to full content height and starve the
+scroll.
 
-- **`"surface"`** (default): the full-surface layout. The root is
-  `flex min-h-0 flex-1 flex-col` and the body wrapper is
-  `min-h-0 flex-1 overflow-y-auto`, so the view fills a **bounded-height** flex
-  ancestor and owns its own internal scroll. The toolbar also reserves the
-  `pr-14` floating-action-bar gutter. Use when `<DataView>` is the pane's main
-  content.
-- **`"embedded"`**: auto-height. The root drops `min-h-0 flex-1` and the body
-  wrapper drops `min-h-0 flex-1 overflow-y-auto`, so content grows to its
-  **natural height** and the **host pane** scrolls — never the view. The
-  floating-action-bar gutter is dropped too. Use when `<DataView>` is stacked
-  among siblings inside a vertically-scrolling page (a section in a detail pane).
-  Dropping a `"surface"` DataView into an auto-height context collapses its body
-  to ~0px, which is why this mode exists.
+- **The toolbar is a `<Sticky edge="top">` header.** It pins against the pane's
+  scroll viewport, staying visible whether the DataView is the pane's sole
+  content or one of several stacked sections. The `<Stack gap="none">` root is
+  each DataView's own sticky **containing block**, so stacked DataViews hand off
+  automatically — when a section scrolls out its toolbar un-pins with it, no
+  `active` toggling or computed `top` offsets. The toolbar carries
+  `bg-background` so rows never show through the pinned bar.
+- **The pane provides the scroll.** A pane body is one `<PaneScroll>` viewport;
+  every header within it (the DataView toolbar, a section's stats header) is a
+  `<Sticky>`. `PaneChrome` routes its body through `<PaneScroll>` for free; a
+  bespoke `chrome:false` host must supply its own `<PaneScroll>` (or equivalent
+  `overflow-y` scroller) around the DataView.
 
-The toolbar, filter bar, and view switcher render in **both** modes — `mode` is
-the placement/height axis only, not a headless-chrome axis.
+**Dev-mode structural guard.** On mount `<DataView>` walks up from its root for a
+scroll ancestor (`overflow-y ∈ {auto, scroll, overlay}`) before reaching the
+document scroller; if none is found it `console.error`s
+`[DataView <storageKey>] no scroll ancestor — the pane must provide a <PaneScroll>`.
+This catches a pane that forgot its `<PaneScroll>` loudly (dev only,
+non-fatal — `console.error`, never throw, to stay safe for overlay/SSR edges).
 
-**View contract.** The host threads the derived `embedded` boolean into every
-view via `DataViewRenderProps.embedded`. Views must **gate their own
-full-surface outer padding / forced heights on `!props.embedded`** so an embedded
-host doesn't paint surface-sized whitespace or `h-full` blocks that collapse.
-Today only the gallery view needs this (grid `p-xl` and the empty-state
-`h-full` are gated); table and tree views have no full-surface padding to drop
-and are mode-agnostic. New view children should follow the same `!props.embedded`
-gating convention.
+The toolbar, filter bar, and view switcher always render — there is no
+headless-chrome axis.
 
 ## Row virtualization (`VirtualRows`)
 
@@ -299,19 +302,14 @@ supported) behind a small API: `items`, `estimateSize`, `getKey`,
 **It self-discovers the scroll container** — `findScrollParent` walks up to the
 nearest ancestor whose `overflow-y` is `auto`/`scroll`/`overlay` (fallback: the
 document scroller), then measures `scrollMargin` (the list's offset within that
-scroller) so windowing is correct even when a toolbar / tab strip sits above the
-list. This is deliberately *not* a threaded-in ref: it makes windowing work
-whether the data-view owns its scroll (`surface`) or is embedded inside a larger
-scroller (`embedded`, e.g. a `defineTabbedView` tab or a detail pane).
+scroller) so windowing is correct even when a sticky toolbar / tab strip sits
+above the list. This is deliberately *not* a threaded-in ref: since the DataView
+never owns its own scroll, windowing binds to the pane's single `<PaneScroll>`
+(or any outer scroller the host provides), and the sticky toolbar's height is
+folded into the measured `scrollMargin` automatically.
 
-**Mode caveat — avoid nested scrollers.** A `surface` data-view dropped inside a
-host that *already* scrolls (e.g. a tabbed-view tab, whose content wrapper is a
-bounded `overflow-y-auto` block) does not bound: its own `overflow-y-auto` body
-grows to full content height and never scrolls, so windowing would measure the
-whole list. **Use `mode="embedded"` in that case** — the data-view then adds no
-scroller and `VirtualRows` windows against the host's real scroller (the Tasks
-Recent and Tree tabs are the worked examples). The **list** and **tree** views
-virtualize today; the tree windows inside the `primitives/tree` `TreeList` once a
+The **list** and **tree** views virtualize today; the tree windows inside the
+`primitives/tree` `TreeList` once a
 DFS-flattened list exceeds **100 *visible* (expanded) rows** (below that the
 recursive render runs byte-for-byte unchanged), reusing the same shared primitive
 via `scrollToIndex` for selection reveal. **table** and **gallery** are the
@@ -326,7 +324,7 @@ and `research/2026-06-18-tree-view-virtualization.md`).
 - Web:
   - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
   - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`
-  - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/data-view/view-core.buildViewConfigContributions`, `primitives/data-view/view-core.buildViewDescriptors`, `primitives/data-view/view-core.EditableViewSwitcher`, `primitives/data-view/view-core.useViewModel`, `primitives/data-view/view-core.useViewVariants`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/tooltip.WithTooltip`
+  - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/surface.Surface`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/data-view/view-core.buildViewConfigContributions`, `primitives/data-view/view-core.buildViewDescriptors`, `primitives/data-view/view-core.EditableViewSwitcher`, `primitives/data-view/view-core.useViewModel`, `primitives/data-view/view-core.useViewVariants`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/tooltip.WithTooltip`
   - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `FieldCellProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortController`, `SortPreset`, `SortRule`, `TableCellProps`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DataView`, `DataViewSlots`, `defineDataView`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`, `useSortController`
 - Server:
   - Uses: `primitives/data-view/view-core.buildViewConfigRegistrations`

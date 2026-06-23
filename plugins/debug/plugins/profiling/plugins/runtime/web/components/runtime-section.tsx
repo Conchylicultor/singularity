@@ -241,7 +241,6 @@ export function RuntimeSection(): ReactElement | null {
           Reset window
         </Button>
       }
-      mode="embedded"
       defaultView="table"
       emptyState="No runtime spans recorded"
     />

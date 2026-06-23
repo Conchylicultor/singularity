@@ -31,7 +31,6 @@ export function FileTreeSection({ node }: { node: PluginNode }) {
     <Section title="Files">
       <Scroll axis="both" className="max-h-96 rounded-md border">
         <FileTree
-          mode="embedded"
           files={files}
           selectedPath={selected}
           onSelect={(rel) => {

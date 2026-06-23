@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane, PaneScroll } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
@@ -17,7 +17,6 @@ import {
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { configDetailPane } from "../internal/panes";
 import { pruneConfigTree } from "../internal/prune-config-tree";
 import { flattenConfigTree, type ConfigNavRow } from "../internal/flatten-config-tree";
@@ -200,7 +199,7 @@ export function ConfigNav() {
   );
 
   return (
-    <Stack gap="none" className="h-full min-h-0">
+    <PaneScroll>
       <DataView<ConfigNavRow>
         rows={rows}
         fields={fields}
@@ -214,6 +213,6 @@ export function ConfigNav() {
         searchAccessor={(r) => r.searchText}
         viewOptions={{ tree: treeOptions }}
       />
-    </Stack>
+    </PaneScroll>
   );
 }

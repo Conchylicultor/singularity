@@ -52,6 +52,7 @@ export type {
   PaneStore,
 } from "./pane";
 export { PaneChrome, PaneActionsSlot } from "./components/pane-chrome";
+export { PaneScroll, type PaneScrollProps } from "./components/pane-scroll";
 export { PaneIconAction } from "./components/pane-icon-action";
 export { PaneResolveGuard } from "./components/pane-resolve-guard";
 export { useRenderSync } from "./use-render-sync";

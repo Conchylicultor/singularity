@@ -7,7 +7,6 @@ import {
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
-import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Explorer } from "../slots";
 import { PluginTreeProvider } from "../context";
@@ -179,25 +178,18 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
 
   return (
     <PluginTreeProvider value={ctxValue}>
-      <Column
-        fill
-        className="h-full"
-        scrollBody={false}
-        body={
-          <DataView<ExplorerRow>
-            rows={rows}
-            fields={fields}
-            rowKey={(r) => r.id}
-            views={["tree", "table"]}
-            defaultView="tree"
-            storageKey={EXPLORER_VIEW}
-            hierarchy={hierarchy}
-            selectedRowId={selected ?? undefined}
-            onRowActivate={(r) => onSelect(r.id)}
-            searchAccessor={(r) => r.searchText}
-            viewOptions={{ tree: treeOptions }}
-          />
-        }
+      <DataView<ExplorerRow>
+        rows={rows}
+        fields={fields}
+        rowKey={(r) => r.id}
+        views={["tree", "table"]}
+        defaultView="tree"
+        storageKey={EXPLORER_VIEW}
+        hierarchy={hierarchy}
+        selectedRowId={selected ?? undefined}
+        onRowActivate={(r) => onSelect(r.id)}
+        searchAccessor={(r) => r.searchText}
+        viewOptions={{ tree: treeOptions }}
       />
     </PluginTreeProvider>
   );

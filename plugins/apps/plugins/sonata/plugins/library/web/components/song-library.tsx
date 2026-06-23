@@ -164,7 +164,6 @@ export function SongLibrary() {
   return (
     <Column
       fill
-      scrollBody={false}
       className="h-full"
       header={
         songs.error ? (

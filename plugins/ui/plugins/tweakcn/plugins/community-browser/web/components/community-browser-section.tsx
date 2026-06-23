@@ -130,7 +130,6 @@ export function CommunityBrowserSection({ search }: { search: string }) {
   return (
     <Stack gap="md">
       <DataView<CatalogTheme>
-        mode="embedded"
         storageKey={COMMUNITY_BROWSER_VIEW}
         rows={hostFilteredThemes}
         fields={fields}

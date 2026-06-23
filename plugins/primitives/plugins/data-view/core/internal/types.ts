@@ -205,9 +205,6 @@ export interface DataViewRenderProps<TRow> {
    *  `hierarchy.getParentId` over `rows`. Flat views (table/gallery) call this
    *  for a correct `hasChildren`; the tree uses its own node count. */
   hasChildren?: (rowId: string) => boolean;
-  /** True when the host is embedded (auto-height); views drop full-surface
-   *  outer padding / forced heights. */
-  embedded?: boolean;
   /**
    * Typed create affordances, threaded from `DataViewProps.creators`. Views may
    * opt into them (the gallery renders a trailing "+" card for a single creator
@@ -365,11 +362,4 @@ export interface DataViewProps<TRow> {
    * — a `CreateOption` carries only `id`/`label`/`icon`/`description`/`onSelect`.
    */
   creators?: CreateOption[];
-  /**
-   * Placement / height. `"surface"` (default): fills a bounded-height flex
-   * ancestor, owns its internal scroll, reserves the floating-action-bar gutter.
-   * `"embedded"`: grows to natural content height, no internal scroll, no gutter —
-   * the host pane scrolls. Use when stacked among siblings in a scrolling page.
-   */
-  mode?: "surface" | "embedded";
 }

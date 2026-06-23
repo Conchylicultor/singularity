@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { MdAdd } from "react-icons/md";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -152,7 +152,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         align="center"
         justify="center"
         gap="md"
-        className={cn(props.embedded ? "py-xl" : "h-full p-xl")}
+        className="py-xl"
       >
         <Text as="div" variant="body" className="text-muted-foreground">
           {props.emptyState}
@@ -286,7 +286,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       <Grid
         minCellWidth={`${minCardWidth}px`}
         gap="lg"
-        className={cn(!props.embedded && "p-xl")}
+        className="p-xl"
       >
         {cells.map((cell) => (
           <div key={cellKey(cell)} className="contents">
@@ -308,7 +308,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const estimateRowHeight = options.cover || coverField ? 240 : 132;
 
   return (
-    <div className={cn(!props.embedded && "p-xl")}>
+    <div className="p-xl">
       <Grid
         ref={probeRef}
         aria-hidden

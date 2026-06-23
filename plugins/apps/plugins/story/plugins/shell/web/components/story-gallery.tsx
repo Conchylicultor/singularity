@@ -59,7 +59,6 @@ export function StoryGallery() {
   return (
     <Column
       fill
-      scrollBody={false}
       className="bg-background text-foreground"
       body={
         <DataView<Block>
