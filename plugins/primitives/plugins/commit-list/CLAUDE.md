@@ -12,7 +12,7 @@
   - Uses: `infra/paths.GIT`
   - Exports: Values: `LOG_FORMAT`, `parseGitLog`, `runGit`
 - Cross-plugin:
-  - Imported by: `build`, `build/build-commits`, `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`
+  - Imported by: `build`, `build/build-commits`, `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `review/plugin-changes`
 - Core:
   - Exports: Types: `CommitRow`; Values: `CommitRowSchema`
 

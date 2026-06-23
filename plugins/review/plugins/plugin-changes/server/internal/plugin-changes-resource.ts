@@ -6,10 +6,10 @@ import {
   getEditedFiles,
 } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
 import { PluginChangesSchema, type PluginChangesResponse } from "../../core/protocol";
 import { computePluginChanges } from "./compute-plugin-diff";
 import { getMainPluginsDir } from "./main-plugins-dir";
+import { getMainPluginTree, getWorktreePluginTree } from "./plugin-tree-cache";
 
 type Params = { conversationId: string };
 
@@ -36,9 +36,15 @@ async function computeWorktreePluginChanges(conversationId: string): Promise<Plu
   ]);
 
   const worktreePluginsDir = join(conversation.worktreePath, "plugins");
-  const plugins = await withHeavyReadSlot(() =>
-    computePluginChanges(worktreePluginsDir, mainPluginsDir, editedFiles),
-  );
+  // Each side is memoized on its own cheap signature (main → main sha, worktree
+  // → edited-files generation) and owns its withHeavyReadSlot internally, so an
+  // unchanged side is a pure hit that takes no slot. Steady-state recomputes
+  // rebuild at most one tree.
+  const [worktreeTree, mainTree] = await Promise.all([
+    getWorktreePluginTree(conversation.worktreePath, worktreePluginsDir),
+    getMainPluginTree(mainPluginsDir),
+  ]);
+  const plugins = computePluginChanges(worktreeTree, mainTree, editedFiles);
   return { plugins };
 }
 

@@ -6,6 +6,7 @@ import { resolveParentSha, getRangeFiles } from "@plugins/code-explorer/server";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
+import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { getPluginChanges } from "../../core/endpoints";
 import { computePluginChanges } from "./compute-plugin-diff";
 import { getMainRoot } from "./main-plugins-dir";
@@ -58,11 +59,14 @@ async function handlePush(pushId: string): Promise<PluginChangesResponse> {
     ]);
 
     try {
-      const plugins = await computePluginChanges(
-        join(headDir, "plugins"),
-        join(baseDir, "plugins"),
-        editedFiles,
-      );
+      // base/head are immutable historical shas, but distinct per push range —
+      // not worth a memo (unbounded growth). This path is already deduped +
+      // concurrency-capped, so just build both trees inside the one slot.
+      const [headTree, baseTree] = await Promise.all([
+        buildPluginTree(join(headDir, "plugins"), { skipBarrelImport: true }),
+        buildPluginTree(join(baseDir, "plugins"), { skipBarrelImport: true }),
+      ]);
+      const plugins = computePluginChanges(headTree, baseTree, editedFiles);
       return { plugins };
     } finally {
       await Promise.all([

@@ -1270,7 +1270,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
           - Server:
             - Uses: `infra/git-read-cache.createGitStateMemo`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`
-            - Exports: Values: `editedFilesResource`, `getEditedFiles`
+            - Exports: Values: `currentGeneration`, `editedFilesResource`, `getEditedFiles`
           - Core:
             - Uses: `primitives/live-state.resourceDescriptor`
             - Exports: Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`; Values: `EditedFileSchema`, `editedFilesResource`
@@ -2939,7 +2939,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `FileWatcher`, `FileWatcherOptions`; Values: `createFileWatcher`
     - **`git-read-cache`** — Git-state-keyed result memo: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree.
       - Cross-plugin:
-        - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`
+        - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `review/plugin-changes`
       - Server:
         - Exports: Types: `GitStateMemo`; Values: `createGitStateMemo`
     - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. Emits the git.refAdvanced trigger event (main only) and notifies the refHeadResource live-state resource on every advance.
@@ -3702,7 +3702,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/paths.GIT`
         - Exports: Values: `LOG_FORMAT`, `parseGitLog`, `runGit`
       - Cross-plugin:
-        - Imported by: `build`, `build/build-commits`, `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`
+        - Imported by: `build`, `build/build-commits`, `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `review/plugin-changes`
       - Core:
         - Exports: Types: `CommitRow`; Values: `CommitRowSchema`
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
@@ -4430,7 +4430,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.useEndpoint`, `primitives/collapsible.ExpandAllButton`, `primitives/collapsible.useExpandAll`, `primitives/css/badge.Badge`, `primitives/css/badge.formatStatusLabel`, `primitives/css/card.Card`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/slot-render.defineRenderSlot`, `review.ReviewSlots`
         - Exports: Types: `FacetDiff`; Values: `PluginChangesSlots`, `usePluginFacetDiffs`
       - Server:
-        - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `conversations/conversation-view/code.editedFilesResource`, `conversations/conversation-view/code.getEditedFiles`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/git-watcher.refHeadResource`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.GIT`, `infra/paths.REPO_ROOT`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.listPushesByPushId`
+        - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `conversations/conversation-view/code.currentGeneration`, `conversations/conversation-view/code.editedFilesResource`, `conversations/conversation-view/code.getEditedFiles`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/git-read-cache.createGitStateMemo`, `infra/git-watcher.lastKnownMainSha`, `infra/git-watcher.refHeadResource`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.GIT`, `infra/paths.REPO_ROOT`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.listPushesByPushId`
         - Resources: `review.plugin-changes` (push)
         - Routes: `GET /api/review/plugin-changes`
       - Core:

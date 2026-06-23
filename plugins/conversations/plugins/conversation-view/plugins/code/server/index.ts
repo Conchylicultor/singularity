@@ -4,6 +4,7 @@ import { editedFilesResource } from "./internal/edited-files-resource";
 
 export { getEditedFiles } from "./internal/get-edited-files";
 export { editedFilesResource } from "./internal/edited-files-resource";
+export { currentGeneration } from "./internal/edited-files-cache";
 
 export default {
   description:

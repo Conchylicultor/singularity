@@ -104,7 +104,7 @@ primitive and Stage 2.1).
 
 - Description: Git-state-keyed result memo: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree.
 - Cross-plugin:
-  - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`
+  - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `review/plugin-changes`
 - Server:
   - Exports: Types: `GitStateMemo`; Values: `createGitStateMemo`
 

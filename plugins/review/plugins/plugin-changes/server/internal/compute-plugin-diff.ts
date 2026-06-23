@@ -1,6 +1,6 @@
-import {
-  buildPluginTree,
-  type PluginNode,
+import type {
+  PluginNode,
+  PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import type { PluginChangeDiff } from "../../core/protocol";
@@ -27,16 +27,15 @@ function findPluginPath(
   return null;
 }
 
-export async function computePluginChanges(
-  worktreePluginsDir: string,
-  mainPluginsDir: string,
+// Pure diffing logic over two already-built plugin trees. The (expensive,
+// synchronous) buildPluginTree calls live in the callers, which memoize each
+// side independently (see plugin-tree-cache.ts) so an unchanged side is never
+// rebuilt.
+export function computePluginChanges(
+  worktreeTree: PluginTree,
+  mainTree: PluginTree,
   editedFiles: EditedFile[],
-): Promise<PluginChangeDiff[]> {
-  const [worktreeTree, mainTree] = await Promise.all([
-    buildPluginTree(worktreePluginsDir, { skipBarrelImport: true }),
-    buildPluginTree(mainPluginsDir, { skipBarrelImport: true }),
-  ]);
-
+): PluginChangeDiff[] {
   const worktreeNodes = flattenTree(worktreeTree.roots);
   const mainNodes = flattenTree(mainTree.roots);
 
