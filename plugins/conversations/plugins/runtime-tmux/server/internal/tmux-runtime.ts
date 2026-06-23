@@ -4,6 +4,11 @@ import type {
 } from "@plugins/conversations/server";
 import { resolveCliFlag } from "@plugins/conversations/plugins/model-provider/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  resolveEffortFlag,
+  resolveEffortSettings,
+  type EffortLevel,
+} from "@plugins/conversations/plugins/effort-provider/core";
 import { CLAUDE, TMUX } from "@plugins/infra/plugins/paths/server";
 import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
 import { recordReport } from "@plugins/reports/server";
@@ -643,6 +648,7 @@ export const tmuxRuntime: ConversationRuntime = {
     opts?: {
       prompt?: string;
       model?: ConversationModel;
+      effort?: EffortLevel;
       resumeSessionId?: string;
       forkSession?: boolean;
     },
@@ -659,7 +665,20 @@ export const tmuxRuntime: ConversationRuntime = {
       throw new Error("tmux runtime requires SINGULARITY_WORKTREE to route MCP back to the parent server");
     }
     const cliFlag = opts?.model ? resolveCliFlag(opts.model) : undefined;
-    const claudeBase = cliFlag ? `${CLAUDE} --model ${cliFlag}` : CLAUDE;
+    // Thinking mode: levels low..max ride `--effort <flag>`; `ultracode` is not a
+    // valid flag value, so it rides `--settings '{"ultracode":true}'` (xhigh +
+    // dynamic-workflow orchestration). At most one channel is set per level.
+    const effortFlag = opts?.effort ? resolveEffortFlag(opts.effort) : undefined;
+    const effortSettings = opts?.effort ? resolveEffortSettings(opts.effort) : undefined;
+    const claudeBase = [
+      CLAUDE,
+      cliFlag && `--model ${cliFlag}`,
+      effortFlag && `--effort ${effortFlag}`,
+      // JSON contains no single quotes, so single-quote wrapping is shell-safe.
+      effortSettings && `--settings '${JSON.stringify(effortSettings)}'`,
+    ]
+      .filter(Boolean)
+      .join(" ");
     const cmdParts: string[] = [claudeBase];
     if (opts?.resumeSessionId) {
       cmdParts.push(`--resume ${opts.resumeSessionId}`);

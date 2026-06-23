@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
+import { EffortLevelSchema } from "@plugins/conversations/plugins/effort-provider/core";
 
 // --- Body schemas ---
 
@@ -12,6 +13,7 @@ export const CreateConversationBodySchema = z.object({
   model: z.string().optional(),
   forkFromConversationId: z.string().optional(),
   prepromptId: z.string().optional(),
+  effort: EffortLevelSchema.optional(),
 });
 export type CreateConversationBody = z.infer<typeof CreateConversationBodySchema>;
 

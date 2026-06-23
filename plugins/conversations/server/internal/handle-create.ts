@@ -18,6 +18,7 @@ export const handleCreate = implement(createConversationEndpoint, async ({ body 
       model,
       forkFromConversationId: body.forkFromConversationId,
       prepromptId: body.prepromptId,
+      effort: body.effort,
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);

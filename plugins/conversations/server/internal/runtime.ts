@@ -1,5 +1,6 @@
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import {
   getConversationRuntime,
   getConversationClaudeSessionId,
@@ -31,6 +32,7 @@ export interface ConversationRuntime {
     opts?: {
       prompt?: string;
       model?: ConversationModel;
+      effort?: EffortLevel;
       resumeSessionId?: string;
       forkSession?: boolean;
     },

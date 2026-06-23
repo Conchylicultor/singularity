@@ -1,4 +1,4 @@
-// @hash 134dcd76c411
+// @hash 8d947c0ad049
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
@@ -9,6 +9,7 @@
     "tasks.task-dependencies:dependents",
     "tasks.task-events:events",
     "tasks.task-attachments:attachments",
-    "tasks.task-preprompt:preprompt"
+    "tasks.task-preprompt:preprompt",
+    "tasks.task-effort:effort"
   ]
 }

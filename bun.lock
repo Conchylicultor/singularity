@@ -1119,6 +1119,10 @@
       "name": "@singularity/plugin-conversations-conversations-view-queue",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/effort-provider": {
+      "name": "@singularity/plugin-conversations-effort-provider",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/hibernation": {
       "name": "@singularity/plugin-conversations-hibernation",
       "version": "0.0.1",
@@ -3166,6 +3170,10 @@
         "modern-screenshot": "^4.6.0",
       },
     },
+    "plugins/tasks/plugins/task-effort": {
+      "name": "@singularity/plugin-tasks-task-effort",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/task-events": {
       "name": "@singularity/plugin-tasks-task-events",
       "version": "0.0.1",
@@ -4390,6 +4398,8 @@
 
     "@singularity/plugin-conversations-conversations-view-queue": ["@singularity/plugin-conversations-conversations-view-queue@workspace:plugins/conversations/plugins/conversations-view/plugins/queue"],
 
+    "@singularity/plugin-conversations-effort-provider": ["@singularity/plugin-conversations-effort-provider@workspace:plugins/conversations/plugins/effort-provider"],
+
     "@singularity/plugin-conversations-hibernation": ["@singularity/plugin-conversations-hibernation@workspace:plugins/conversations/plugins/hibernation"],
 
     "@singularity/plugin-conversations-model-provider": ["@singularity/plugin-conversations-model-provider@workspace:plugins/conversations/plugins/model-provider"],
@@ -5335,6 +5345,8 @@
     "@singularity/plugin-tasks-task-detail": ["@singularity/plugin-tasks-task-detail@workspace:plugins/tasks/plugins/task-detail"],
 
     "@singularity/plugin-tasks-task-draft-form": ["@singularity/plugin-tasks-task-draft-form@workspace:plugins/tasks/plugins/task-draft-form"],
+
+    "@singularity/plugin-tasks-task-effort": ["@singularity/plugin-tasks-task-effort@workspace:plugins/tasks/plugins/task-effort"],
 
     "@singularity/plugin-tasks-task-events": ["@singularity/plugin-tasks-task-events@workspace:plugins/tasks/plugins/task-events"],
 

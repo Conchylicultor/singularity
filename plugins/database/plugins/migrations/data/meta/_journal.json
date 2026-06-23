@@ -1170,6 +1170,13 @@
       "tag": "20260622_182645_0a1660d1__fix_build_notification_link_prefix",
       "hash": "0a1660d1",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1782234408000,
+      "tag": "20260623_170648_a390fbb6__add_task_effort",
+      "hash": "a390fbb6",
+      "breakpoints": true
     }
   ]
 }

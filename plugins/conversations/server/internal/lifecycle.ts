@@ -22,10 +22,20 @@ import { SYSTEM_META_TASK_ID } from "./meta-system";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
 import { resolvePreprompt } from "@plugins/conversations/plugins/preprompts/server";
 import { getTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
+import { getTaskEffort } from "@plugins/tasks/plugins/task-effort/server";
+import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
 import { assertNotContainerTask } from "@plugins/tasks/plugins/container-tasks/server";
 import { wrapPreprompt } from "@plugins/conversations/plugins/transcript-watcher/core";
 
 const DEFAULT_RUNTIME = "tmux";
+
+// The per-task thinking mode (effort), applied to Claude Code at launch and on
+// resume. Read live from the task side-table (no per-conversation snapshot), so
+// changing a task's mode re-applies on the next launch/resume under it.
+async function resolveTaskEffort(taskId: string | undefined): Promise<EffortLevel | undefined> {
+  if (!taskId) return undefined;
+  return (await getTaskEffort(taskId))?.level;
+}
 
 // Three independent id namespaces, each self-describing in logs and URLs.
 // Legacy rows may still carry the pre-rename `claude-…` prefix; matchers that
@@ -48,6 +58,7 @@ export async function createConversation(
     kind?: ConversationKind;
     forkFromConversationId?: string;
     prepromptId?: string;
+    effort?: EffortLevel;
   } = {},
 ): Promise<Conversation> {
   const runtimeId = opts.runtimeId ?? DEFAULT_RUNTIME;
@@ -188,10 +199,16 @@ export async function createConversation(
       : wrapPreprompt(preprompt);
   }
 
+  // Thinking mode: an explicit opts.effort (ad-hoc launch input) wins; otherwise
+  // the launching task's default. Threaded to the runtime as CLI args; no prompt
+  // mutation (unlike preprompt, ultracode rides --settings, not the transcript).
+  const effort = opts.effort ?? (await resolveTaskEffort(effectiveTaskId));
+
   try {
     await runtime.create(conversationId, worktreePath, {
       prompt: resolvedPrompt,
       model,
+      effort,
       resumeSessionId,
       forkSession: !!opts.forkFromConversationId,
     });
@@ -253,6 +270,7 @@ async function respawnResume(row: Conversation): Promise<void> {
   await runtime.create(row.id, row.worktreePath, {
     resumeSessionId: row.claudeSessionId!,
     model: row.model,
+    effort: await resolveTaskEffort(row.taskId),
   });
 }
 
