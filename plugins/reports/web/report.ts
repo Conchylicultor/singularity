@@ -1,9 +1,16 @@
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import type { ReportBody } from "../shared/types";
-import { submitReport, type ReportResult } from "../shared/endpoints";
+import { submitReport, investigateReport, type ReportResult } from "../shared/endpoints";
 
 export type { ReportResult };
+
+// On-demand: turn a recorded report into an investigation task. Idempotent on
+// the server (re-calling returns the existing live task). Resolves to the task
+// id, which the caller binds a launched conversation to.
+export async function investigate(reportId: string): Promise<{ taskId: string }> {
+  return await fetchEndpoint(investigateReport, { id: reportId });
+}
 
 // The caller-supplied portion of a report: the browser picks the kind, the
 // source (client-reportable only — enforced by ReportBodySchema's enum), the
@@ -13,8 +20,10 @@ export type ClientReportBody = Omit<ReportBody, "clientId" | "buildId">;
 
 // Shape of the `context` value the reports plugin's boundary reporter returns.
 // Action contributors (e.g. launch-fix) cast `context: unknown` down to this
-// type to read the recorded report's taskId.
+// type. A report no longer auto-creates a task, so the Fix button investigates
+// the report on demand via `reportId`; `taskId` stays null until then.
 export interface ReportContext {
+  reportId: string | null;
   taskId: string | null;
 }
 

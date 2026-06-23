@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { report } from "./report";
+export { report, investigate } from "./report";
 export type { ReportContext } from "./report";
 export { Reports } from "./slots";
 

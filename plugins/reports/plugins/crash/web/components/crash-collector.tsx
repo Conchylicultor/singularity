@@ -51,7 +51,10 @@ export function CrashCollector() {
           label: r.label,
         },
       });
-      return promise.then((result) => ({ taskId: result?.taskId ?? null }));
+      return promise.then((result) => ({
+        reportId: result?.reportId ?? null,
+        taskId: result?.taskId ?? null,
+      }));
     });
 
     return () => {

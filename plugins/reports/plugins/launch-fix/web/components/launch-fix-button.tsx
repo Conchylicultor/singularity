@@ -1,6 +1,7 @@
 import { MdAutoFixHigh } from "react-icons/md";
 import type { BoundaryErrorReport } from "@plugins/primitives/plugins/error-boundary/web";
 import type { ReportContext } from "@plugins/reports/web";
+import { investigate } from "@plugins/reports/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
@@ -14,8 +15,11 @@ export function LaunchFixButton({
   report: BoundaryErrorReport;
   context: unknown;
 }) {
-  const taskId = (context as ReportContext | null)?.taskId ?? null;
-  const disabled = taskId === null;
+  // Reports no longer auto-create a task, so the Fix button investigates the
+  // recorded crash report on demand: it creates (or reuses) the investigation
+  // task at launch time, then launches a conversation bound to it.
+  const reportId = (context as ReportContext | null)?.reportId ?? null;
+  const disabled = reportId === null;
 
   return (
     <LaunchAgentPopover
@@ -51,7 +55,11 @@ export function LaunchFixButton({
           linkTo: conversationRoute.link(agentManagerApp, { convId: conv.id }),
         });
       }}
-      getRequest={(userText) => {
+      getRequest={async (userText) => {
+        // Investigate first so the launched conversation is bound to the report's
+        // task (idempotent server-side: re-clicking reuses the existing task).
+        // A null reportId can't reach here — the trigger is disabled.
+        const { taskId } = await investigate(reportId!);
         const parts: string[] = [];
         parts.push(`## Crash report\n`);
         if (report.slot || report.label) {
@@ -73,7 +81,7 @@ export function LaunchFixButton({
           parts.push(`\n## Context\n\n${extra}`);
         }
         return {
-          taskId: taskId ?? undefined,
+          taskId,
           prompt: parts.join("\n"),
         };
       }}

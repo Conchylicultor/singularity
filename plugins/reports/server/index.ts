@@ -1,6 +1,7 @@
 import { Resource, setErrorReporter } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleReport } from "./internal/handle-report";
+import { handleInvestigate } from "./internal/handle-investigate";
 import { reportsResource } from "./internal/resources";
 import { recordReport } from "./internal/record-report";
 import { ensureReportsMetaTask, REPORTS_META_TASK_ID } from "./internal/meta-reports";
@@ -9,7 +10,7 @@ import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/ser
 import { _reports } from "./internal/tables";
 import { backfillNoiseClassification } from "./internal/backfill-noise";
 import { flushBufferedReports, installProcessHooks } from "./internal/process-hooks";
-import { submitReport } from "../shared/endpoints";
+import { submitReport, investigateReport } from "../shared/endpoints";
 
 export { _reports } from "./internal/tables";
 export { reportsResource } from "./internal/resources";
@@ -24,6 +25,7 @@ export default {
   description: "Records server/frontend crashes and files deduped tasks.",
   httpRoutes: {
     [submitReport.route]: handleReport,
+    [investigateReport.route]: handleInvestigate,
   },
   contributions: [
     Resource.Declare(reportsResource),

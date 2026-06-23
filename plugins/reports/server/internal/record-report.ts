@@ -1,30 +1,21 @@
-import { eq, sql } from "drizzle-orm";
+import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/core";
 import { getServerBuildId } from "@plugins/build/server";
-import { createTask, getTask } from "@plugins/tasks/plugins/tasks-core/server";
-import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
-import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
+import { reportDetailRoute } from "@plugins/reports/core";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { _reports } from "./tables";
 import { bumpWindowAndCheck } from "./velocity";
 import { isNoiseReport } from "./noise-rules";
-import { REPORTS_META_TASK_ID } from "./meta-reports";
 import { ReportKind } from "./report-kinds";
 import type { ReportInput } from "../../shared/types";
 
 export interface RecordReportResult {
+  reportId: string | null;
   taskId: string | null;
-  wasNew: boolean;
   rateLimited: boolean;
 }
-
-// Appended to every report-filed task (crash, slow-op, endpoint-error, …). The
-// agent that picks one up is about to debug, so point them at the debugging map
-// first — it routes them to the right surface (durable slow-op store, runtime
-// profiler, pg_stat_activity) instead of guessing.
-const DEBUG_SKILL_HINT =
-  "> Before debugging, read the `debug` skill (`.claude/skills/debug/SKILL.md`) — the map of logs, profiling, slow-ops, crashes, and DB surfaces.";
 
 // The generic one-line summary is unbounded (an aggregated error can be hundreds
 // of KB). Clamp it at the ingestion boundary so nothing downstream — the row,
@@ -43,10 +34,6 @@ function clamp(value: string, max: number): string {
   return `${value.slice(0, head)}\n… [truncated ${omitted} chars] …\n${value.slice(value.length - tail)}`;
 }
 
-// Per-(fingerprint|worktree) in-process mutex. Serialising at the JS layer
-// avoids DB row locks saturating the connection pool under cold-start bursts.
-const taskCreationLocks = new Map<string, Promise<void>>();
-
 // The noise pipeline classifies on a small, generic shape. Crash-shaped fields
 // (errorType / stack) that noise rules inspect live in the kind's `data` payload;
 // we surface them here as plain strings if present. A kind that has no such
@@ -61,10 +48,11 @@ function noiseFieldsFrom(data: Record<string, unknown>): {
 }
 
 // Single entry point used by the HTTP handler, the boot-time flush, and the
-// process-level crash hooks. Every source collapses here so dedup + task-creation
-// logic lives in one place. The engine is fully generic: it looks up the matching
-// ReportKindSpec and delegates schema validation, fingerprinting, presentation,
-// and task rendering to it. It never names a kind.
+// process-level crash hooks. Every source collapses here so dedup lives in one
+// place. The engine is fully generic: it looks up the matching ReportKindSpec
+// and delegates schema validation, fingerprinting, and presentation to it. It
+// never names a kind. No report auto-creates a task — investigation tasks are
+// filed on demand by investigateReport().
 export async function recordReport(
   input: ReportInput,
 ): Promise<RecordReportResult> {
@@ -156,28 +144,27 @@ export async function recordReport(
   });
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!row) return { taskId: null, wasNew: false, rateLimited: limited };
+  if (!row) return { reportId: null, taskId: null, rateLimited: limited };
 
   // Gate on the per-call `limited`, NOT the persisted `row.rateLimited`. The
-  // throttle is ephemeral by design (see velocity.ts) — it suppresses task/bell
+  // throttle is ephemeral by design (see velocity.ts) — it suppresses bell
   // churn only while a fingerprint is actively bursting. `row.rateLimited` is an
   // OR-accumulated display flag ("was ever rate-limited") that is never reset, so
   // gating on it would permanently mute any long-lived singleton fingerprint
   // (e.g. the slow-op rollup) after its first burst.
   if (limited) {
-    // Keep the row's count accurate but don't churn the task or the bus.
-    return { taskId: row.taskId, wasNew: false, rateLimited: true };
+    // Keep the row's count accurate but don't churn the bus.
+    return { reportId: row.id, taskId: row.taskId, rateLimited: true };
   }
 
-  const outcome = await ensureTaskForReport(row.id, `${fp}|${worktree}`, spec);
-  // Mirror the task title's "[Stale tab]" marker into the bell so the
-  // notification itself reads as benign version-skew at a glance.
+  // Mirror a "[Stale tab]" marker into the bell so the notification itself reads
+  // as benign version-skew at a glance.
   const stalePrefix = staleOrigin ? "[Stale tab] " : "";
   const desc = `${stalePrefix}${row.message}`;
   // Notification dedup granularity is the kind's re-arm policy. Without a
   // cooldown (default) the bell row is keyed by the stable report id — one row
   // per fingerprint that updates in place and never resurfaces once read (right
-  // for crashes: one tracked task per distinct crash). With a cooldown, the key
+  // for crashes: one tracked report per distinct crash). With a cooldown, the key
   // also carries the current time bucket, so each window starts a fresh unread
   // row while reports inside the window collapse onto it — re-alert without spam
   // (right for slow ops: a recurring metric, not a one-shot incident).
@@ -192,67 +179,16 @@ export async function recordReport(
     variant: spec.meta.variant,
     muted: row.noise,
     dedupeKey: notifDedupeKey,
-    linkTo: outcome.taskId ? taskDetailRoute.link(agentManagerApp, { taskId: outcome.taskId }) : null,
+    // Deep-link to the report's detail sidepane in Debug → Reports, never a task.
+    // Investigation tasks are filed on demand from that pane.
+    linkTo: reportDetailRoute.link(debugApp, { reportId: row.id }),
     metadata: {
       reportId: row.id,
-      taskId: outcome.taskId,
       source: row.source,
       fingerprint: fp,
       clientId: clientId ?? null,
       buildId: buildId ?? null,
     },
   });
-  return { ...outcome, rateLimited: false };
-}
-
-async function ensureTaskForReport(
-  reportId: string,
-  lockKey: string,
-  spec: { meta: { tag: string }; renderTask: (row: typeof _reports.$inferSelect) => { title: string; description: string } },
-): Promise<{ taskId: string | null; wasNew: boolean }> {
-  // Serialize concurrent callers for the same fingerprint. A request arriving
-  // while another is mid-creation waits on the prior promise, then re-reads the
-  // row and observes the task already linked.
-  while (taskCreationLocks.has(lockKey)) {
-    await taskCreationLocks.get(lockKey);
-  }
-  let release!: () => void;
-  const inflight = new Promise<void>((r) => (release = r));
-  taskCreationLocks.set(lockKey, inflight);
-
-  try {
-    // The task-creation DB work (select + getTask + createTask + update) is part
-    // of the observability subsystem's own I/O — suppress its spans so they never
-    // re-feed the slow-op recorder. The suppression ALS propagates through every
-    // awaited query, including the cross-plugin getTask/createTask DB calls.
-    return await runWithoutProfiling(async () => {
-      const [latest] = await db
-        .select()
-        .from(_reports)
-        .where(eq(_reports.id, reportId))
-        .limit(1);
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-      if (!latest) return { taskId: null, wasNew: false };
-
-      const linked = latest.taskId ? await getTask(latest.taskId) : null;
-      const needsTask = !linked || linked.status === "dropped";
-      if (!needsTask) return { taskId: latest.taskId, wasNew: false };
-
-      const { title, description } = spec.renderTask(latest);
-      const task = await createTask({
-        folderId: REPORTS_META_TASK_ID,
-        title,
-        description: `${description}\n\n${DEBUG_SKILL_HINT}`,
-        author: "reports-plugin",
-      });
-      await db
-        .update(_reports)
-        .set({ taskId: task.id, updatedAt: new Date() })
-        .where(eq(_reports.id, latest.id));
-      return { taskId: task.id, wasNew: true };
-    });
-  } finally {
-    taskCreationLocks.delete(lockKey);
-    release();
-  }
+  return { reportId: row.id, taskId: row.taskId, rateLimited: false };
 }

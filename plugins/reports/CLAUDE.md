@@ -8,18 +8,18 @@
 - Web:
   - Slots: `Reports.KindView` ← `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `reports.crash`
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/slot-render.defineDispatchSlot`, `primitives/tab-id.getTabId`
-  - Exports: Types: `ReportContext`; Values: `report`, `Reports`
+  - Exports: Types: `ReportContext`; Values: `investigate`, `report`, `Reports`
 - Server:
-  - Uses: `build.getServerBuildId`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`, `tasks/container-tasks.ContainerTask`, `tasks/tasks-core.createTask`, `tasks/tasks-core.ensureMetaTask`, `tasks/tasks-core.getTask`
+  - Uses: `build.getServerBuildId`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`, `tasks/container-tasks.ContainerTask`, `tasks/tasks-core.createTask`, `tasks/tasks-core.ensureMetaTask`, `tasks/tasks-core.getTask`
   - DB schema: `plugins/reports/server/internal/tables.ts`
   - Exports: Types: `ReportKindSpec`, `ReportKindVariant`, `ReportNoiseInput`, `ReportNoiseRuleSpec`, `ReportRow`; Values: `_reports`, `recordReport`, `ReportKind`, `ReportNoiseRule`, `REPORTS_META_TASK_ID`, `reportsResource`
   - Resources: `reports` (push)
-  - Routes: `POST /api/reports`
+  - Routes: `POST /api/reports`, `POST /api/reports/:id/investigate`
 - Core:
-  - Uses: `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `Report`; Values: `ReportSchema`, `reportsResource`
+  - Uses: `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
+  - Exports: Types: `Report`; Values: `reportDetailRoute`, `ReportSchema`, `reportsResource`, `reportsRootRoute`
 - Cross-plugin:
-  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `infra/health`, `reports/crash`, `reports/endpoint-errors`, `reports/noise-rules`, `reports/render-loop`
+  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `infra/health`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/render-loop`
 - Sub-plugins:
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
