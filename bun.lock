@@ -1854,6 +1854,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-context-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/element-type-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-element-type-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/hover-reveal-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-hover-reveal-safety",
       "version": "0.0.1",
@@ -4705,6 +4709,8 @@
     "@singularity/plugin-framework-tooling-lint-button-safety": ["@singularity/plugin-framework-tooling-lint-button-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/button-safety"],
 
     "@singularity/plugin-framework-tooling-lint-context-safety": ["@singularity/plugin-framework-tooling-lint-context-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/context-safety"],
+
+    "@singularity/plugin-framework-tooling-lint-element-type-safety": ["@singularity/plugin-framework-tooling-lint-element-type-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/element-type-safety"],
 
     "@singularity/plugin-framework-tooling-lint-hover-reveal-safety": ["@singularity/plugin-framework-tooling-lint-hover-reveal-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/hover-reveal-safety"],
 
