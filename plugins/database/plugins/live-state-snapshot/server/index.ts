@@ -4,8 +4,7 @@ import {
   recomputeResource,
 } from "@plugins/framework/plugins/server-core/core";
 import { seedReadSetIndex } from "@plugins/infra/plugins/runtime-profiler/core";
-import { awaitDbReady, db } from "@plugins/database/server";
-import { migrationsReady } from "@plugins/database/plugins/migrations/server";
+import { db } from "@plugins/database/server";
 import { ensureSnapshotTable } from "./internal/tables-ddl";
 import {
   shouldPersist,
@@ -32,16 +31,16 @@ export default {
   register: [liveStateChangelogPruneJob],
   // Create the snapshot table and INJECT the persist hooks into the resource
   // runtime here — before the ready barrier flips and before any flush could try
-  // to persist. `onReadyBlocking` hooks run in PARALLEL, so we explicitly await
-  // `awaitDbReady` + `migrationsReady` (the snapshot read/write needs a live DB).
-  // The changelog table is created by change-feed's own onReadyBlocking
+  // to persist. The `onReadyBlocking` phase is graph-driven by `dependsOn`, and
+  // this plugin imports `db` (→ `dependsOn` edge to `database`), so this hook runs
+  // AFTER `database`'s `onReadyBlocking` (which awaits `awaitDbReady` + runs the
+  // migrations) — the DB is live and migrated by the time we read/write the
+  // snapshot. The changelog table is created by change-feed's own onReadyBlocking
   // (rebuildTriggers), inside its trigger-rebuild txn; we never touch it here.
   //
   // The hooks read the boot-injected holder lazily, so installing them now (rather
   // than racing onReady) means a persist can never fire with the holder unset.
   async onReadyBlocking() {
-    await awaitDbReady();
-    await migrationsReady;
     await ensureSnapshotTable(db);
     setLiveStateSnapshotHooks({ shouldPersist, captureWatermark, persistSnapshot });
     // Seed the in-memory loader→table read-set index from the durable

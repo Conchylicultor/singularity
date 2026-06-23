@@ -82,13 +82,17 @@ export interface ServerPluginDefinition {
   register?: Registration[];
   /**
    * Runs after the socket binds but BEFORE the server reports ready and before
-   * any plugin's `onReady`. The framework awaits ALL plugins' `onReadyBlocking`
-   * as a hard barrier, then flips the readiness flag (`isServerReady`) that
-   * `GET /api/health/ready` reports and the gateway gates its hot-swap on.
-   * Use ONLY for work that must complete before the backend can correctly
-   * serve requests — DB migrations + pool warmup, registry init. Everything
-   * else (pollers, watchers, reconcilers) belongs in `onReady`. A
-   * `loadBearing` plugin's rejection aborts boot. Because this is a barrier,
+   * any plugin's `onReady`. The phase is graph-driven by `dependsOn` (exactly
+   * like `onReady`): a plugin's blocking hook starts only after all its
+   * `dependsOn` parents' blocking hooks have resolved — so a DB-touching plugin
+   * (which necessarily imports `database`) auto-sequences after migrations with
+   * no per-plugin workaround. The whole phase is still a hard barrier: the
+   * framework awaits every plugin's `onReadyBlocking`, then flips the readiness
+   * flag (`isServerReady`) that `GET /api/health/ready` reports and the gateway
+   * gates its hot-swap on. Use ONLY for work that must complete before the
+   * backend can correctly serve requests — DB migrations + pool warmup, registry
+   * init. Everything else (pollers, watchers, reconcilers) belongs in `onReady`.
+   * A `loadBearing` plugin's rejection aborts boot. Because this is a barrier,
    * every `onReady` is guaranteed to observe a migrated DB and a ready registry.
    */
   onReadyBlocking?: () => void | Promise<void>;

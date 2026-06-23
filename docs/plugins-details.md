@@ -1946,7 +1946,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations`
     - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, with a bounded changelog catch-up that recomputes only the resources whose tables changed during downtime.
       - Server:
-        - Uses: `database.awaitDbReady`, `database.db`, `database/change-feed.routeChange`, `database/migrations.migrationsReady`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
+        - Uses: `database.db`, `database/change-feed.routeChange`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
         - DB schema: `plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`
         - Exports: Values: `readPersistedSnapshots`
         - Register: `defineJob('database.live-state-changelog-prune')`
@@ -1957,7 +1957,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `database/derived-views.rebuildDerivedViews`, `primitives/log-channels.Log`
         - Exports: Values: `dryRunPendingMigrations`, `migrationsReady`, `runMigrations`
       - Cross-plugin:
-        - Imported by: `database`, `database/live-state-snapshot`
+        - Imported by: `database`
       - Structure:
         - Non-standard folders: `data/`
         - Loose top-level files: `drizzle.config.ts`

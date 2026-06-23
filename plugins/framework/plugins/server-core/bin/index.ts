@@ -250,33 +250,56 @@ Bun.serve<WsData>({
 endSocketBind();
 console.log(`Server listening on ${socketPath}`);
 
+// Run a lifecycle phase graph-driven by `dependsOn`: each plugin's `hook` starts
+// only after all its `dependsOn` parents' hooks have resolved. `topoSortPlugins`
+// guarantees every plugin appears after its deps in `ordered`, so
+// `resolved.get(d.id)` is always defined when we reach a dependent. The per-plugin
+// try/catch lives INSIDE the `.then` callback: a non-loadBearing failure is caught
+// → its promise resolves → dependents still proceed; only a `loadBearing` rejection
+// re-throws → its promise rejects → the final `Promise.all` aborts boot. Shared by
+// the `onReadyBlocking` and `onReady` phases.
+async function runGraphPhase(
+  ordered: LoadedServerPlugin[],
+  hook: "onReadyBlocking" | "onReady",
+): Promise<void> {
+  const resolved = new Map<string, Promise<void>>();
+  for (const p of ordered) {
+    const deps = (p.dependsOn ?? []).map((d) => resolved.get(d.id)!);
+    const ready = Promise.all(deps).then(async () => {
+      const fn = p[hook];
+      if (!fn) return;
+      const end = profilerStart(`${hook}:${p.id}`, hook, p.id, p.id);
+      try {
+        await fn.call(p);
+      } catch (err) {
+        console.error(`[plugin.${p.id}] ${hook} failed`, err);
+        if (p.loadBearing) throw err;
+      } finally {
+        end();
+      }
+    });
+    resolved.set(p.id, ready);
+  }
+  await Promise.all(resolved.values());
+}
+
 // ── onReadyBlocking ─────────────────────────────────────────────
 // Hard barrier between socket-bind and serving-ready. Plugins that MUST finish
 // before the backend can correctly serve requests (DB migrations + pool warm,
-// config registry init) run here. We await ALL of them, then flip the readiness
-// flag — `GET /api/health/ready` returns 200 only after this point, and the
-// gateway gates its hot-swap on that probe (so the old backend keeps serving
-// until the new one is genuinely ready). Background `onReady` work runs after,
-// now guaranteed to observe a migrated DB and a ready registry. Runs in
-// parallel; a load-bearing plugin's rejection aborts boot (same contract as
+// config registry init) run here. The phase is graph-driven by `dependsOn`
+// (exactly like `onReady` below): each plugin's blocking hook starts only after
+// all its `dependsOn` parents' blocking hooks have resolved, so DB-touching
+// plugins auto-sequence after `database`'s migrations. Once the whole phase
+// resolves we flip the readiness flag — `GET /api/health/ready` returns 200 only
+// after this point, and the gateway gates its hot-swap on that probe (so the old
+// backend keeps serving until the new one is genuinely ready). Background
+// `onReady` work runs after, now guaranteed to observe a migrated DB and a ready
+// registry. A load-bearing plugin's rejection aborts boot (same contract as
 // `onAllReady`).
 {
   const end = profilerStart("onReadyBlocking", "onReadyBlocking", "Blocking Ready");
   try {
-    await Promise.all(
-      ordered.map(async (p) => {
-        if (!p.onReadyBlocking) return;
-        const pe = profilerStart(`onReadyBlocking:${p.id}`, "onReadyBlocking", p.id, p.id);
-        try {
-          await p.onReadyBlocking();
-        } catch (err) {
-          console.error(`[plugin.${p.id}] onReadyBlocking failed`, err);
-          if (p.loadBearing) throw err;
-        } finally {
-          pe();
-        }
-      }),
-    );
+    await runGraphPhase(ordered, "onReadyBlocking");
   } finally {
     end();
   }
@@ -290,27 +313,7 @@ markServerReady();
 // Plugins with no dependencies start immediately. `topoSortPlugins`
 // guarantees every plugin appears after its deps in `ordered`, so
 // `resolved.get(d.id)` is always defined when we reach a dependent.
-{
-  const resolved = new Map<string, Promise<void>>();
-  for (const p of ordered) {
-    const deps = (p.dependsOn ?? []).map((d) => resolved.get(d.id)!);
-    const ready = Promise.all(deps).then(async () => {
-      if (p.onReady) {
-        const end = profilerStart(`onReady:${p.id}`, "onReady", p.id, p.id);
-        try {
-          await p.onReady();
-        } catch (err) {
-          console.error(`[plugin.${p.id}] onReady failed`, err);
-          if (p.loadBearing) throw err;
-        } finally {
-          end();
-        }
-      }
-    });
-    resolved.set(p.id, ready);
-  }
-  await Promise.all(resolved.values());
-}
+await runGraphPhase(ordered, "onReady");
 recordMemoryCheckpoint("after-onReady");
 
 // ── onAllReady ──────────────────────────────────────────────────
