@@ -24,6 +24,8 @@ export function WaitWorkRow({
   durationMs,
   workMs,
   detail,
+  waitClass = "bg-categorical-4/40",
+  workClass = "bg-categorical-4",
 }: {
   id: string;
   phase: string;
@@ -32,6 +34,10 @@ export function WaitWorkRow({
   durationMs: number;
   workMs?: number;
   detail?: string;
+  /** Color of the muted wait segment (must be a literal Tailwind class). */
+  waitClass?: string;
+  /** Color of the solid work segment (must be a literal Tailwind class). */
+  workClass?: string;
 }): ReactElement {
   const { toLeftPct, toWidthPct, totalMs } = useGanttContainerContext();
   const { hovered, setHovered } = useProfilingContext();
@@ -62,7 +68,8 @@ export function WaitWorkRow({
         <div
           // eslint-disable-next-line layout/no-adhoc-layout -- wait segment positioned by runtime ms→% offsets (left/width inline style)
           className={cn(
-            "absolute top-0 h-full rounded-md bg-categorical-4/40 transition-opacity",
+            "absolute top-0 h-full rounded-md transition-opacity",
+            waitClass,
             isHovered ? "opacity-100" : "opacity-70",
           )}
           style={{
@@ -73,7 +80,8 @@ export function WaitWorkRow({
         <div
           // eslint-disable-next-line layout/no-adhoc-layout -- work segment positioned by runtime ms→% offsets (left/width inline style)
           className={cn(
-            "absolute top-0 h-full rounded-md bg-categorical-4 transition-opacity",
+            "absolute top-0 h-full rounded-md transition-opacity",
+            workClass,
             isHovered ? "opacity-100" : "opacity-70",
           )}
           style={{

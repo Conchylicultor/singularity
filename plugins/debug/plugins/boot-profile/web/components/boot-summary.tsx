@@ -3,7 +3,10 @@ import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/we
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { formatDuration } from "@plugins/debug/plugins/profiling/web";
-import type { BootTrace } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
+import {
+  bootWindowEnd,
+  type BootTrace,
+} from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 
 interface SummaryRow {
   label: string;
@@ -34,6 +37,54 @@ function spanEnd(trace: BootTrace, id: string): number | null {
   return span ? span.startMs + span.durationMs : null;
 }
 
+interface StatRow {
+  label: string;
+  value: string;
+}
+
+const STAT_COLUMNS: ColumnDef<StatRow>[] = [
+  { id: "label", header: "Cost", value: (r) => r.label },
+  {
+    id: "value",
+    header: "",
+    align: "end",
+    width: "14rem",
+    value: (r) => r.value,
+    cell: (r) => <span className="font-mono tabular-nums">{r.value}</span>,
+  },
+];
+
+function formatBytes(bytes: number): string {
+  if (bytes >= 1024 * 1024) return `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+  return `${Math.round(bytes / 1024)} KB`;
+}
+
+/** Bundle/main-thread cost headline — the levers behind the pre-paint window. */
+function costRows(trace: BootTrace): StatRow[] {
+  const scripts = trace.assets.filter((a) => a.initiatorType === "script");
+  const jsBytes = scripts.reduce((sum, a) => sum + a.transferSize, 0);
+  const biggest = trace.assets.reduce<BootTrace["assets"][number] | null>(
+    (max, a) => (max === null || a.transferSize > max.transferSize ? a : max),
+    null,
+  );
+  const windowEnd = bootWindowEnd(trace);
+  const bootTasks =
+    windowEnd > 0 ? trace.longTasks.filter((t) => t.startMs <= windowEnd) : trace.longTasks;
+  const busyMs = bootTasks.reduce((sum, t) => sum + t.durationMs, 0);
+
+  return [
+    { label: "JS shipped", value: `${formatBytes(jsBytes)} · ${scripts.length} chunks` },
+    {
+      label: "Biggest chunk",
+      value: biggest ? `${biggest.name.split("/").pop()} · ${formatBytes(biggest.transferSize)}` : "—",
+    },
+    {
+      label: "Main thread busy (before paint)",
+      value: bootTasks.length > 0 ? `${formatDuration(busyMs)} · ${bootTasks.length} tasks` : "—",
+    },
+  ];
+}
+
 /**
  * Headline "request → first paint" decomposition in one glance: TTFB, response
  * end, plugin load, boot tasks, first React commit, first-contentful-paint.
@@ -54,14 +105,25 @@ export function BootSummary({ trace }: { trace: BootTrace }): ReactElement {
 
   return (
     <Inset pad="lg">
-      <Stack as="section" gap="sm">
-        <SectionLabel>Boot milestones (request → first paint)</SectionLabel>
-        <DataTable
-          data={rows}
-          columns={COLUMNS}
-          rowKey={(r) => r.label}
-          emptyLabel="No boot trace captured."
-        />
+      <Stack as="section" gap="lg">
+        <Stack gap="sm">
+          <SectionLabel>Boot milestones (request → first paint)</SectionLabel>
+          <DataTable
+            data={rows}
+            columns={COLUMNS}
+            rowKey={(r) => r.label}
+            emptyLabel="No boot trace captured."
+          />
+        </Stack>
+        <Stack gap="sm">
+          <SectionLabel>Boot cost (the pre-paint blind spot)</SectionLabel>
+          <DataTable
+            data={costRows(trace)}
+            columns={STAT_COLUMNS}
+            rowKey={(r) => r.label}
+            emptyLabel="No assets captured."
+          />
+        </Stack>
       </Stack>
     </Inset>
   );
