@@ -1866,7 +1866,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Server:
-    - Uses: `database/derived-views.rebuildDerivedViews`, `database/migrations.runMigrations`, `primitives/log-channels.Log`
+    - Uses: `database/derived-tables.rebuildDerivedTables`, `database/derived-views.rebuildDerivedViews`, `database/migrations.runMigrations`, `primitives/log-channels.Log`
     - Exports: Values: `awaitDbReady`, `db`, `isTransientDbError`
   - Core:
     - Uses: `infra/paths.SINGULARITY_DIR`
@@ -1882,7 +1882,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `backup/sources/databases`, `database/change-feed`, `database/fork`, `database/query`, `debug/profiling/push`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `infra/jobs`, `infra/launcher`
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
       - Server:
-        - Uses: `database.db`, `database/admin.connectionString`, `database/derived-tables.feedExemptTables`, `database/derived-tables.rebuildDerivedTables`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
+        - Uses: `database.db`, `database/admin.connectionString`, `database/derived-tables.feedExemptTables`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
         - Exports: Types: `DbChange`; Values: `ExcludeFromChangeFeed`, `getCoveredTables`, `parseLiveStatePayload`, `rebuildTriggers`, `routeChange`
       - Cross-plugin:
         - Imported by: `database/live-state-snapshot`, `debug/slow-ops`, `reports`
@@ -1891,7 +1891,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/log-channels.Log`
         - Exports: Values: `DerivedTable`, `feedExemptTables`, `rebuildDerivedTables`
       - Cross-plugin:
-        - Imported by: `conversations/agents`, `database/change-feed`
+        - Imported by: `conversations/agents`, `database`, `database/change-feed`, `tasks/tasks-core`
       - Core:
         - Exports: Types: `DerivedRollupSpec`
     - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
@@ -1901,7 +1901,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `conversations/agents`, `database`, `database/change-feed`, `database/migrations`, `tasks/tasks-core`
       - Core:
-        - Exports: Types: `RegisteredView`; Values: `compileCreateView`, `DERIVED_VIEW_STATE_TABLE_NAME`, `IMPERATIVE_PUBLIC_TABLES`, `LIVE_STATE_CHANGELOG_TABLE`, `LIVE_STATE_SNAPSHOT_TABLE`, `MIGRATIONS_TABLE_NAME`, `TASK_LATEST_CONVERSATION_TABLE`, `topoSortViews`
+        - Exports: Types: `RegisteredView`; Values: `ATTEMPT_CONV_AGG_TABLE`, `ATTEMPT_PUSH_AGG_TABLE`, `compileCreateView`, `DERIVED_VIEW_STATE_TABLE_NAME`, `IMPERATIVE_PUBLIC_TABLES`, `LIVE_STATE_CHANGELOG_TABLE`, `LIVE_STATE_SNAPSHOT_TABLE`, `MIGRATIONS_TABLE_NAME`, `TASK_LATEST_CONVERSATION_TABLE`, `topoSortViews`
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Cross-plugin:
         - Imported by: `infra/launcher`
@@ -4799,8 +4799,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `tasks`
     - **`tasks-core`** — Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Server:
-        - Uses: `database.db`, `database/derived-views.View`, `infra/attachments.Attachments`, `infra/events.defineTriggerEvent`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.isCanonicalWorktreePath`, `primitives/rank.nextRankUnder`, `primitives/rank.RankExecutor`
-        - DB schema: `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`, `plugins/tasks/plugins/tasks-core/server/internal/schema-attachments.ts`, `plugins/tasks/plugins/tasks-core/server/internal/schema.ts`, `plugins/tasks/plugins/tasks-core/server/internal/tables-events.ts`, `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`, `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
+        - Uses: `database.db`, `database/derived-tables.DerivedTable`, `database/derived-views.View`, `infra/attachments.Attachments`, `infra/events.defineTriggerEvent`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.isCanonicalWorktreePath`, `primitives/rank.nextRankUnder`, `primitives/rank.RankExecutor`
+        - DB schema: `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`, `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`, `plugins/tasks/plugins/tasks-core/server/internal/schema-attachments.ts`, `plugins/tasks/plugins/tasks-core/server/internal/schema.ts`, `plugins/tasks/plugins/tasks-core/server/internal/tables-events.ts`, `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`, `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
         - Exports: Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationStatusChangedPayload`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskListItem`, `TaskStatus`, `TaskStatusChangedPayload`, `UpdateConversationPatch`, `UpdateTaskPatch`; Values: `_attempts`, `_conversations`, `_conversationStatusChangedTriggers`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `conversationAttachments`, `conversationCascadeSignatures`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `conversationsActiveResource`, `ConversationSchema`, `conversationsGoneResource`, `conversationsGoneStatsResource`, `conversationsSystemResource`, `conversationStatusChanged`, `createAttempt`, `createTask`, `deleteAttempt`, `deleteConversationRow`, `dropTaskTree`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankInFolder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `getTaskDependencyIds`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listArmedDependentsOf`, `listAttempts`, `listAttemptsForTask`, `listBlockingDepIds`, `listConversationsForDisplay`, `listConversationsForInfra`, `listDependentIds`, `listGoneConversations`, `listHibernationCandidates`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `markConversationGone`, `maybeDropTaskOnExit`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `removeTaskDependency`, `setConversationHibernated`, `taskAttachments`, `taskDependsOn`, `taskDetailResource`, `TaskListItemSchema`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `touchConversationViewed`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
         - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`, `defineTriggerEvent('conversation.statusChanged')`
       - Core:

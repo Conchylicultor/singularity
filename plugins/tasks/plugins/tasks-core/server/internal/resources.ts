@@ -88,8 +88,9 @@ export const pushesResource = defineResource(pushesDescriptor, {
 });
 
 export const attemptsResource = defineResource(attemptsDescriptor, {
-  // A direct `attempts` change scopes to that attempt id; conversation changes
-  // arrive scoped through the affectedMap edge below (conv → attempt).
+  // A direct `attempts` change scopes to that attempt id; conversation and push
+  // changes arrive scoped through the affectedMap edges below (conv → attempt,
+  // push → attempt).
   identityTable: "attempts",
   dependsOn: [
     {
@@ -114,6 +115,23 @@ export const attemptsResource = defineResource(attemptsDescriptor, {
           .selectDistinct({ attemptId: conversations.attemptId })
           .from(conversations)
           .where(inArray(conversations.id, [...convIds]));
+        return rows.map((r) => r.attemptId);
+      },
+    },
+    {
+      // Push changes flip an attempt's derived status (in_progress → pushed /
+      // completed) and finished_at. Previously `attempts_v` referenced `pushes`
+      // directly, so a push change routed to it through the view→base-table graph;
+      // now `attempts_v` reads the `attempt_push_agg` rollup (feed-exempt, no NOTIFY),
+      // so this explicit edge carries the invalidation. `pushesResource`'s loader
+      // reads the whole `pushes` table, so the L4 feed delivers every push change
+      // here scoped to its id; the affectedMap maps push ids → their attempt ids.
+      resource: pushesResource,
+      affectedMap: async (pushIds) => {
+        const rows = await db
+          .selectDistinct({ attemptId: pushes.attemptId })
+          .from(pushes)
+          .where(inArray(pushes.id, [...pushIds]));
         return rows.map((r) => r.attemptId);
       },
     },

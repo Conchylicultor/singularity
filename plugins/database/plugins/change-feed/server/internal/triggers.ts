@@ -6,10 +6,7 @@ import {
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
 } from "@plugins/database/plugins/derived-views/core";
-import {
-  rebuildDerivedTables,
-  feedExemptTables,
-} from "@plugins/database/plugins/derived-tables/server";
+import { feedExemptTables } from "@plugins/database/plugins/derived-tables/server";
 import { excludedTableNames } from "./exclusion";
 
 const log = Log.channel("change-feed", { persist: true });
@@ -312,17 +309,6 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
       );
     }
 
-    // Trigger-maintained materialized rollups (derived-tables): create each
-    // rollup table + maintenance function + triggers + reconcile, INSIDE this
-    // same transaction, AFTER the per-table NOTIFY-trigger loop. Race-free home
-    // (onReadyBlocking hooks have no topo order) — and because `listPublicTables`
-    // was snapshotted BEFORE this txn, the rollup tables didn't exist when the
-    // feed's trigger set was computed, so no live_state NOTIFY trigger is ever
-    // installed on them (and feedExemptTables() in the DENYLIST keeps the
-    // post-txn coverage check from flagging them). Mirrors why the L2 changelog
-    // table is created here. See
-    // research/2026-06-23-global-agent-launches-incremental-materialization.md §7.
-    await rebuildDerivedTables(tx);
   });
 
   coveredTables = triggers.map((t) => t.table);

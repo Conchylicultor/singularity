@@ -1,6 +1,8 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { View } from "@plugins/database/plugins/derived-views/server";
+import { DerivedTable } from "@plugins/database/plugins/derived-tables/server";
+import { attemptConvAggSpec, attemptPushAggSpec } from "./internal/rollup-spec";
 import {
   tasksResource,
   taskDetailResource,
@@ -179,7 +181,7 @@ export default {
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
-  contributions: [Resource.Declare(tasksResource, { bootCritical: true }), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource, { bootCritical: true }), Resource.Declare(pushesResource, { bootCritical: true }), Resource.Declare(conversationsActiveResource, { bootCritical: true }), Resource.Declare(conversationsSystemResource, { bootCritical: true }), Resource.Declare(conversationsGoneResource, { bootCritical: true }), Resource.Declare(conversationsGoneStatsResource, { bootCritical: true }), View({ view: attempts, identityTable: "attempts" }), View({ view: conversations, identityTable: "conversations" }), View({ view: taskBlocking, dependsOn: ["attempts_v"] }), View({ view: tasks, dependsOn: ["attempts_v", "task_blocking_v"], identityTable: "tasks" })],
+  contributions: [Resource.Declare(tasksResource, { bootCritical: true }), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource, { bootCritical: true }), Resource.Declare(pushesResource, { bootCritical: true }), Resource.Declare(conversationsActiveResource, { bootCritical: true }), Resource.Declare(conversationsSystemResource, { bootCritical: true }), Resource.Declare(conversationsGoneResource, { bootCritical: true }), Resource.Declare(conversationsGoneStatsResource, { bootCritical: true }), DerivedTable(attemptConvAggSpec), DerivedTable(attemptPushAggSpec), View({ view: attempts, identityTable: "attempts" }), View({ view: conversations, identityTable: "conversations" }), View({ view: taskBlocking, dependsOn: ["attempts_v"] }), View({ view: tasks, dependsOn: ["attempts_v", "task_blocking_v"], identityTable: "tasks" })],
   register: [pushLanded, taskStatusChanged, conversationStatusChanged],
   onReady: sweepOrphanedAttempts,
 } satisfies ServerPluginDefinition;

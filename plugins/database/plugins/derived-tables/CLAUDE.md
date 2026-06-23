@@ -60,7 +60,7 @@ waits for a 2nd case — measure first.
   - Uses: `primitives/log-channels.Log`
   - Exports: Values: `DerivedTable`, `feedExemptTables`, `rebuildDerivedTables`
 - Cross-plugin:
-  - Imported by: `conversations/agents`, `database/change-feed`
+  - Imported by: `conversations/agents`, `database`, `database/change-feed`, `tasks/tasks-core`
 - Core:
   - Exports: Types: `DerivedRollupSpec`
 

@@ -1,6 +1,7 @@
 import { eq, getTableColumns, sql } from "drizzle-orm";
 import { boolean, pgView, text } from "drizzle-orm/pg-core";
 import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./tables";
+import { _attemptConvAgg, _attemptPushAgg } from "./rollup-table";
 
 // Derived (plain, non-materialized) views. These live in `views.ts` — NOT
 // `schema.ts`/`tables.ts` — so the drizzle codegen glob never sees them: they
@@ -21,65 +22,48 @@ import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./
 // under drizzle-kit (it dropped views in snapshot, not dependency, order); that
 // constraint is gone now that plain views are derived code.
 //
-// Set-at-a-time (one grouped scan of conversations + one of pushes, hash-joined)
-// replaces per-attempt correlated subqueries: ~37x fewer buffer reads for
-// attempts_v (9.8k → 263) and ~50x for tasks_v (36k → 717). That per-query CPU
-// drop is what stops the live-state cascade fan-out from saturating the shared
-// Postgres. tasks_v aggregating over attempts_v inlines to the same grouped-scan
-// plan (plain views + single-reference CTEs are folded by the planner), so the
-// win is preserved.
+// The two per-attempt aggregates are now read from trigger-maintained rollup
+// tables (attempt_conv_agg / attempt_push_agg — see rollup-spec.ts) instead of
+// the two inline CTEs that grouped over ALL conversations + ALL pushes. attempts_v
+// is `bootCritical` (persisted), and the live-state runtime forces a persisted
+// resource to ALWAYS FULL-recompute (no scoping), so the view re-ran on every
+// fire — the full grouped scans ballooned to 8-10s under contention. The rollups
+// hold the SAME aggregated columns the CTEs produced, kept current incrementally
+// by STATEMENT triggers on the source tables, so the FULL recompute collapses to a
+// flat LEFT JOIN over two tiny pre-rolled tables. The status / active / finished_at
+// logic below is UNCHANGED — a missing rollup row reads as NULL via the LEFT JOIN,
+// exactly as a missing CTE group did (preserving the pending / abandoned / active
+// semantics for attempts with no conversations / pushes). tasks_v aggregates over
+// attempts_v and inherits the same cheap join. See
+// plugins/database/plugins/derived-tables/CLAUDE.md and the agent-launches rollup.
 export const attempts = pgView("attempts_v").as((qb) => {
-  const convAgg = qb.$with("conv_agg").as(
-    qb
-      .select({
-        attemptId: _conversations.attemptId,
-        // Constant marker: present (true) iff the attempt has ≥1 conversation.
-        // After a LEFT JOIN a missing row reads as NULL = "no conversation".
-        hasConv: sql<boolean>`true`.as("has_conv"),
-        hasLiveConv: sql<boolean>`bool_or(${_conversations.status} NOT IN ('gone', 'done'))`.as(
-          "has_live_conv",
-        ),
-        maxEndedAt: sql<Date | null>`max(${_conversations.endedAt})`.as("max_ended_at"),
-      })
-      .from(_conversations)
-      .groupBy(_conversations.attemptId),
-  );
-  const pushAgg = qb.$with("push_agg").as(
-    qb
-      .select({
-        attemptId: pushes.attemptId,
-        hasPush: sql<boolean>`true`.as("has_push"),
-        minPushAt: sql<Date | null>`min(${pushes.createdAt})`.as("min_push_at"),
-      })
-      .from(pushes)
-      .groupBy(pushes.attemptId),
-  );
   return qb
-    .with(convAgg, pushAgg)
     .select({
       ...getTableColumns(_attempts),
       status: sql<"pending" | "in_progress" | "pushed" | "completed" | "abandoned">`
         CASE
-          WHEN ${convAgg.hasConv} IS NULL                              THEN 'pending'
-          WHEN ${convAgg.hasLiveConv} AND ${pushAgg.hasPush} IS NULL    THEN 'in_progress'
-          WHEN ${convAgg.hasLiveConv} AND ${pushAgg.hasPush}           THEN 'pushed'
-          WHEN ${pushAgg.hasPush}                                       THEN 'completed'
+          WHEN ${_attemptConvAgg.hasConv} IS NULL                              THEN 'pending'
+          WHEN ${_attemptConvAgg.hasLiveConv} AND ${_attemptPushAgg.hasPush} IS NULL    THEN 'in_progress'
+          WHEN ${_attemptConvAgg.hasLiveConv} AND ${_attemptPushAgg.hasPush}           THEN 'pushed'
+          WHEN ${_attemptPushAgg.hasPush}                                       THEN 'completed'
           ELSE                                                               'abandoned'
         END
       `.as("status"),
-      active: sql<boolean>`(${convAgg.hasConv} IS NULL OR ${convAgg.hasLiveConv})`.as("active"),
+      active: sql<boolean>`(${_attemptConvAgg.hasConv} IS NULL OR ${_attemptConvAgg.hasLiveConv})`.as(
+        "active",
+      ),
       finishedAt: sql<Date | null>`
         CASE
-          WHEN ${pushAgg.hasPush} AND NOT COALESCE(${convAgg.hasLiveConv}, false)   THEN ${pushAgg.minPushAt}
-          WHEN ${convAgg.hasConv} AND NOT COALESCE(${convAgg.hasLiveConv}, false)
-            AND ${pushAgg.hasPush} IS NULL                                          THEN ${convAgg.maxEndedAt}
+          WHEN ${_attemptPushAgg.hasPush} AND NOT COALESCE(${_attemptConvAgg.hasLiveConv}, false)   THEN ${_attemptPushAgg.minPushAt}
+          WHEN ${_attemptConvAgg.hasConv} AND NOT COALESCE(${_attemptConvAgg.hasLiveConv}, false)
+            AND ${_attemptPushAgg.hasPush} IS NULL                                          THEN ${_attemptConvAgg.maxEndedAt}
           ELSE                                                                           NULL
         END
       `.as("finished_at"),
     })
     .from(_attempts)
-    .leftJoin(convAgg, eq(convAgg.attemptId, _attempts.id))
-    .leftJoin(pushAgg, eq(pushAgg.attemptId, _attempts.id));
+    .leftJoin(_attemptConvAgg, eq(_attemptConvAgg.attemptId, _attempts.id))
+    .leftJoin(_attemptPushAgg, eq(_attemptPushAgg.attemptId, _attempts.id));
 });
 
 // Transitive dependency-blocking, computed once as a shared derived view so the

@@ -71,6 +71,31 @@ export const LIVE_STATE_SNAPSHOT_TABLE = "live_state_snapshot";
 export const TASK_LATEST_CONVERSATION_TABLE = "task_latest_conversation";
 
 /**
+ * A trigger-maintained materialized rollup ("hand-rolled IVM"): the per-attempt
+ * conversation aggregate (has-conversation / has-live-conversation / max ended_at)
+ * backing `attempts_v`, maintained incrementally by STATEMENT triggers on
+ * `conversations` and rebuilt from source on boot. Created imperatively by
+ * `rebuildDerivedTables` (via the `DerivedTable` contribution in
+ * `plugins/tasks/plugins/tasks-core/server/internal/rollup-spec.ts`). Not present
+ * in the drizzle snapshot; the orphaned-db-tables check treats it as declared.
+ * The constant must appear literally on the `CREATE TABLE` line in that spec (the
+ * imperative-create-table-allowlisted check enforces this).
+ */
+export const ATTEMPT_CONV_AGG_TABLE = "attempt_conv_agg";
+
+/**
+ * A trigger-maintained materialized rollup ("hand-rolled IVM"): the per-attempt
+ * push aggregate (has-push / min created_at) backing `attempts_v`, maintained
+ * incrementally by STATEMENT triggers on `pushes` and rebuilt from source on
+ * boot. Created imperatively by `rebuildDerivedTables` (via the `DerivedTable`
+ * contribution in `plugins/tasks/plugins/tasks-core/server/internal/rollup-spec.ts`).
+ * Not present in the drizzle snapshot; the orphaned-db-tables check treats it as
+ * declared. The constant must appear literally on the `CREATE TABLE` line in that
+ * spec (the imperative-create-table-allowlisted check enforces this).
+ */
+export const ATTEMPT_PUSH_AGG_TABLE = "attempt_push_agg";
+
+/**
  * The full allowlist of public tables created imperatively (outside drizzle).
  * The orphaned-db-tables check subtracts these from the live-table set so they
  * are never flagged as orphans.
@@ -81,4 +106,6 @@ export const IMPERATIVE_PUBLIC_TABLES: readonly string[] = [
   LIVE_STATE_CHANGELOG_TABLE,
   LIVE_STATE_SNAPSHOT_TABLE,
   TASK_LATEST_CONVERSATION_TABLE,
+  ATTEMPT_CONV_AGG_TABLE,
+  ATTEMPT_PUSH_AGG_TABLE,
 ];
