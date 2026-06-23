@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { createPortal } from "react-dom";
 import {
   $createTextNode,
@@ -42,10 +43,8 @@ export function InlineMathPlugin(_: BlockTextPluginProps) {
   // Esc-dismissal latch: stays closed until the `$$` trigger is removed.
   const dismissedRef = useRef(false);
 
-  const openRef = useRef(open);
-  openRef.current = open;
-  const queryRef = useRef(query);
-  queryRef.current = query;
+  const openRef = useLatestRef(open);
+  const queryRef = useLatestRef(query);
 
   function close() {
     setOpen(false);
@@ -124,8 +123,7 @@ export function InlineMathPlugin(_: BlockTextPluginProps) {
     });
     close();
   }
-  const commitRef = useRef(commit);
-  commitRef.current = commit;
+  const commitRef = useLatestRef(commit);
 
   // Keyboard: registered ABOVE KeyboardPlugin (CRITICAL > HIGH) so Enter commits
   // when the popover is open, but falls through (return false) when closed.
@@ -165,7 +163,7 @@ export function InlineMathPlugin(_: BlockTextPluginProps) {
       unregisterEscape();
       unregisterBlur();
     };
-  }, [lexicalEditor]);
+  }, [lexicalEditor, openRef, queryRef, commitRef]);
 
   if (!open || !caret) return null;
 

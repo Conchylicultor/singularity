@@ -625,15 +625,20 @@ function QueueRow({
   onSendToBottom: (id: string) => Promise<void>;
   onStepDown: (id: string) => Promise<void>;
 }): ReactNode {
-  const draggable = useDraggable({
+  const {
+    setNodeRef: setDragRef,
+    attributes: dragAttributes,
+    listeners: dragListeners,
+    isDragging,
+  } = useDraggable({
     id: `queue-conv-${conv.id}`,
     data: { kind: "drag-conv", convId: conv.id } as const,
   });
-  const beforeDrop = useDroppable({
+  const { setNodeRef: setBeforeRef, isOver: isOverBefore } = useDroppable({
     id: `queue-before-${conv.id}`,
     data: { zone: "before", targetId: conv.id } as DropData,
   });
-  const afterDrop = useDroppable({
+  const { setNodeRef: setAfterRef, isOver: isOverAfter } = useDroppable({
     id: `queue-after-${conv.id}`,
     data: { zone: "after", targetId: conv.id } as DropData,
   });
@@ -645,19 +650,19 @@ function QueueRow({
         offset="xs"
         outset
         stretch
-        ref={beforeDrop.setNodeRef}
+        ref={setBeforeRef}
         className={cn(
           "h-2",
-          dragInProgress && beforeDrop.isOver && "bg-primary/40",
+          dragInProgress && isOverBefore && "bg-primary/40",
         )}
       />
       <div
-        ref={draggable.setNodeRef}
-        {...draggable.attributes}
-        {...draggable.listeners}
+        ref={setDragRef}
+        {...dragAttributes}
+        {...dragListeners}
         className={cn(
           "relative",
-          draggable.isDragging && "opacity-40",
+          isDragging && "opacity-40",
           isTop && "rounded-md ring-1 ring-border shadow-md bg-sidebar",
         )}
       >
@@ -710,10 +715,10 @@ function QueueRow({
         offset="xs"
         outset
         stretch
-        ref={afterDrop.setNodeRef}
+        ref={setAfterRef}
         className={cn(
           "h-2",
-          dragInProgress && afterDrop.isOver && "bg-primary/40",
+          dragInProgress && isOverAfter && "bg-primary/40",
         )}
       />
     </li>

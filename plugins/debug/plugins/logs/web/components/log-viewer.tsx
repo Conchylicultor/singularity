@@ -1,5 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ReconnectingEventSource, useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
@@ -34,8 +35,7 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
   const lastSeqRef = useRef<number>(0);
 
   const selected = channels.find((c) => channelKey(c) === selectedKey) ?? null;
-  const selectedRef = useRef<ChannelRef | null>(selected);
-  selectedRef.current = selected;
+  const selectedRef = useLatestRef(selected);
 
   useEffect(() => {
     const gatewayChannels: ChannelRef[] = [];

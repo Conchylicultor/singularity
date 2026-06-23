@@ -6,7 +6,10 @@ export type {
   UseStickyScrollOptions,
 } from "./use-sticky-scroll";
 export { JumpToBottomButton } from "./jump-to-bottom-button";
-export type { JumpToBottomButtonProps } from "./jump-to-bottom-button";
+export type {
+  JumpToBottomButtonProps,
+  JumpToBottomView,
+} from "./jump-to-bottom-button";
 
 export default {
   description:

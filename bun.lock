@@ -2807,6 +2807,10 @@
       "name": "@singularity/plugin-primitives-inline-text",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/latest-ref": {
+      "name": "@singularity/plugin-primitives-latest-ref",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/launch": {
       "name": "@singularity/plugin-primitives-launch",
       "version": "0.0.1",
@@ -5193,6 +5197,8 @@
     "@singularity/plugin-primitives-imperative-dialog": ["@singularity/plugin-primitives-imperative-dialog@workspace:plugins/primitives/plugins/imperative-dialog"],
 
     "@singularity/plugin-primitives-inline-text": ["@singularity/plugin-primitives-inline-text@workspace:plugins/primitives/plugins/inline-text"],
+
+    "@singularity/plugin-primitives-latest-ref": ["@singularity/plugin-primitives-latest-ref@workspace:plugins/primitives/plugins/latest-ref"],
 
     "@singularity/plugin-primitives-launch": ["@singularity/plugin-primitives-launch@workspace:plugins/primitives/plugins/launch"],
 

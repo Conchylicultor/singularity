@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   getFocusedSurfaceId,
   isEditableTarget,
@@ -43,16 +44,11 @@ export function SeekHoldController() {
   // stale and we never re-install the listeners (which would drop an in-flight
   // hold). `useSonata()` verbs are referentially stable, but the song-open gate
   // is not — refs keep the single listener correct across opens.
-  const seekBarRef = useRef(seekBar);
-  seekBarRef.current = seekBar;
-  const startScrubRef = useRef(startScrub);
-  startScrubRef.current = startScrub;
-  const endScrubRef = useRef(endScrub);
-  endScrubRef.current = endScrub;
-  const surfaceIdRef = useRef(surfaceId);
-  surfaceIdRef.current = surfaceId;
-  const hasSongRef = useRef(currentSongId != null);
-  hasSongRef.current = currentSongId != null;
+  const seekBarRef = useLatestRef(seekBar);
+  const startScrubRef = useLatestRef(startScrub);
+  const endScrubRef = useLatestRef(endScrub);
+  const surfaceIdRef = useLatestRef(surfaceId);
+  const hasSongRef = useLatestRef(currentSongId != null);
 
   useEffect(() => {
     // The key currently driving a press (so keyup matches its own keydown) and
@@ -112,9 +108,10 @@ export function SeekHoldController() {
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
       // Unmounting mid-hold (app closed) must not strand a running scrub.
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional latest-value read at cleanup: endScrubRef (a useLatestRef) must call the CURRENT endScrub verb, not one snapshotted at effect-setup, so an instrument/song swap mid-hold still ends the right scrub.
       if (scrubbing) endScrubRef.current();
     };
-  }, []);
+  }, [seekBarRef, startScrubRef, endScrubRef, surfaceIdRef, hasSongRef]);
 
   return null;
 }

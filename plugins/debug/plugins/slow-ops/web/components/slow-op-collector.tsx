@@ -1,4 +1,5 @@
-import { useEffect, useRef } from "react";
+import { useEffect } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { registerSlowResourceReporter } from "@plugins/primitives/plugins/live-state/web";
@@ -14,8 +15,7 @@ export function SlowOpCollector() {
   // Keep the latest thresholds in a ref so the reporter closures (registered
   // once on mount) always read live values without re-registering on each
   // config change.
-  const cfgRef = useRef(cfg);
-  cfgRef.current = cfg;
+  const cfgRef = useLatestRef(cfg);
 
   // Page-load signal: measure first-content paint in a post-paint frame.
   useEffect(() => {
@@ -43,7 +43,7 @@ export function SlowOpCollector() {
       );
     });
     return () => cancelAnimationFrame(id);
-  }, []);
+  }, [cfgRef]);
 
   // Element signal: live-state resources hand us their mount → settle duration.
   useEffect(() => {
@@ -78,7 +78,7 @@ export function SlowOpCollector() {
       );
     });
     return () => registerSlowResourceReporter(null);
-  }, []);
+  }, [cfgRef]);
 
   return null;
 }

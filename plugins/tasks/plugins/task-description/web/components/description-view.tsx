@@ -1,7 +1,7 @@
 import { ControlSizeProvider, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { MdEdit } from "react-icons/md";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import {
@@ -32,11 +32,16 @@ export function DescriptionView({
 }) {
   const [editing, setEditing] = useState(false);
   // Selection (raw-string char range) captured from a display-mode drag, handed
-  // to the editor so it opens with that span already selected.
-  const pendingSelectionRef = useRef<{ start: number; end: number } | null>(null);
+  // to the editor so it opens with that span already selected. Held in state
+  // (not a ref) so it can seed the editor's initialSelection prop without a
+  // render-phase ref read; set alongside `editing` so they batch into one mount.
+  const [pendingSelection, setPendingSelection] = useState<{
+    start: number;
+    end: number;
+  } | null>(null);
 
   const enterEdit = (selection: { start: number; end: number } | null) => {
-    pendingSelectionRef.current = selection;
+    setPendingSelection(selection);
     setEditing(true);
   };
 
@@ -49,7 +54,7 @@ export function DescriptionView({
           // not when moving between Lexical's internal nodes.
           if (e.currentTarget.contains(e.relatedTarget as Node | null)) return;
           setEditing(false);
-          pendingSelectionRef.current = null;
+          setPendingSelection(null);
           onBlur?.();
         }}
       >
@@ -60,7 +65,7 @@ export function DescriptionView({
           autoFocus
           minRows={8}
           namespace="task-description"
-          initialSelection={pendingSelectionRef.current}
+          initialSelection={pendingSelection}
         />
       </div>
     );

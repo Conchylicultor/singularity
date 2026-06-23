@@ -4,13 +4,13 @@ import {
   useCallback,
   useContext,
   useMemo,
-  useRef,
   useSyncExternalStore,
   type ComponentType,
   type ReactNode,
 } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { SurfaceIdContext } from "@plugins/primitives/plugins/surface-id/web";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   fillSegment,
   normalizeSegmentPattern,
@@ -1072,15 +1072,13 @@ function makePaneObject(
     const callerInstanceId = useContext(PaneInstanceContext);
     const route = useRouteSlots();
     const openPaneFn = useOpenPane();
-    const paramsRef = useRef(params);
-    paramsRef.current = params;
+    const paramsRef = useLatestRef(params);
 
     const action = opts?.action ?? "close";
     const mode = opts?.mode ?? "push";
     const side = opts?.side;
     const input = opts?.input;
-    const inputRef = useRef(input);
-    inputRef.current = input;
+    const inputRef = useLatestRef(input);
 
     const callerIndex =
       callerInstanceId !== undefined
@@ -1111,7 +1109,7 @@ function makePaneObject(
       } else {
         openPaneFn(paneObject, paramsRef.current, { mode, side, input: inputRef.current });
       }
-    }, [store, targetSlot, action, openPaneFn, mode, side]);
+    }, [store, targetSlot, action, openPaneFn, mode, side, paramsRef, inputRef]);
 
     return { isOpen, toggle };
   }

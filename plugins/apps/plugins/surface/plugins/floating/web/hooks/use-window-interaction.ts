@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   clampToBounds,
   MIN_H,
@@ -45,8 +46,7 @@ export function useWindowKeyboardInteraction(
 
   // Latest geo, so the entry effect can snapshot the *current* box without
   // re-running on every geometry nudge (which would clobber the rollback origin).
-  const geoRef = useRef(geo);
-  geoRef.current = geo;
+  const geoRef = useLatestRef(geo);
 
   // The box to restore on Escape, captured once when a mode begins.
   const originRef = useRef<{ x: number; y: number; w: number; h: number } | null>(
@@ -149,7 +149,7 @@ export function useWindowKeyboardInteraction(
       window.removeEventListener("keydown", onKey, { capture: true });
       window.removeEventListener("pointerdown", onPointerDown);
     };
-  }, [mode, setGeo, getBounds]);
+  }, [mode, setGeo, getBounds, geoRef]);
 
   return { mode, begin, commit };
 }

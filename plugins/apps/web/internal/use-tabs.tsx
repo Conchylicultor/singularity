@@ -9,6 +9,7 @@ import {
   useSyncExternalStore,
   type ReactNode,
 } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   createPaneStore,
   parseUrl,
@@ -251,8 +252,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   const initialApp = useActiveApp();
 
   // Stable refs so callbacks read the latest apps without re-creating.
-  const appsRef = useRef(apps);
-  appsRef.current = apps;
+  const appsRef = useLatestRef(apps);
 
   const [{ tabs: initialTabs, focusedTabId: initialFocus }] = useState(() =>
     bootTabs(apps, initialApp?.id ?? defaultApp(apps)?.id ?? ""),
@@ -277,9 +277,17 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   );
 
   // Latest tabs/focus in refs for the persistence subscriptions + actions.
+  // HYBRID, not useLatestRef: these are ALSO written authoritatively inside the
+  // action callbacks (tabsRef.current = nextTabs / focusedRef.current = tabId in
+  // focusTab/openTab/closeTab/moveTab/setPlacement/replaceTabAppWithRoute) so a
+  // callback's mutation is visible to the next callback in the SAME tick before
+  // React re-renders. A useLatestRef render-sync would clobber those in-flight
+  // writes on the next render, so the render-sync stays explicit and documented.
   const tabsRef = useRef(tabs);
+  // eslint-disable-next-line react-hooks/refs -- intentional render-sync of a hybrid ref also written imperatively inside the action callbacks; see the note above.
   tabsRef.current = tabs;
   const focusedRef = useRef(focusedTabId);
+  // eslint-disable-next-line react-hooks/refs -- intentional render-sync of a hybrid ref also written imperatively inside the action callbacks; see the note above.
   focusedRef.current = focusedTabId;
 
   const persist = useCallback(() => {
@@ -289,6 +297,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // One-time: point the imperative live store at the initially-focused tab's
   // store. (bootTabs already created it `live`; this wires the module pointer.)
   const wiredRef = useRef(false);
+  // eslint-disable-next-line react-hooks/refs -- intentional run-once guard read+written during render: wires the module-level live-store pointer to the initially-focused tab exactly once on mount (a one-shot init, not a latest-value sync).
   if (!wiredRef.current) {
     wiredRef.current = true;
     const focused = initialTabs.find((t) => t.tabId === initialFocus);
@@ -325,7 +334,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     // Assert the (now possibly seeded) in-memory route into the URL so it
     // mirrors the focused tab and `useActiveApp` (URL-driven) resolves to it.
     next.store.setRoute(next.store.getRoute(), /* replace */ true);
-  }, []);
+  }, [appsRef]);
 
   const focusTab = useCallback(
     (tabId: string) => {
@@ -359,7 +368,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       persist();
       return tabId;
     },
-    [activate, persist],
+    [activate, persist, appsRef],
   );
 
   // Swap a tab's app in place (keeps the tabId + position), seeding `route` into
@@ -386,7 +395,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       setFocusedTabId(tabId);
       persist();
     },
-    [activate, persist],
+    [activate, persist, appsRef],
   );
 
   const replaceTabApp = useCallback(
@@ -424,7 +433,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       // consistent with the rail's in-place app switch.
       replaceTabAppWithRoute(focusedRef.current, resolved.app.id, route);
     },
-    [replaceTabAppWithRoute],
+    [replaceTabAppWithRoute, appsRef],
   );
 
   // Push focus changes into the shortcuts focused-surface signal (push-based, no
@@ -487,7 +496,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       }
       persist();
     },
-    [activate, persist, setTabTitle],
+    [activate, persist, setTabTitle, appsRef],
   );
 
   // Reorder the open-tab set: move `activeId` to `overId`'s position. Pure array

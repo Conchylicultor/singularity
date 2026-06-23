@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { runsOf, type RichText } from "../../core";
 import { runsToLexical, serializeBlockRuns } from "../internal/block-text-extensions";
@@ -24,8 +25,7 @@ export function ValueSyncPlugin({
   const [editor] = useLexicalComposerContext();
   const selfWriteRef = useRef(false);
   const lastSerializedRef = useRef<string | null>(null);
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  const onChangeRef = useLatestRef(onChange);
 
   useEffect(() => {
     if (lastSerializedRef.current === value) return;
@@ -54,7 +54,7 @@ export function ValueSyncPlugin({
       lastSerializedRef.current = json;
       onChangeRef.current(json);
     });
-  }, [editor]);
+  }, [editor, onChangeRef]);
 
   return null;
 }

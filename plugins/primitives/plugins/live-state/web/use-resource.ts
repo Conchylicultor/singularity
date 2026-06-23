@@ -5,6 +5,7 @@ import {
   useQuery,
   type NonUndefinedGuard,
 } from "@tanstack/react-query";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
 import { reportSlowResource } from "./slow-resource-reporter";
 import { dateAwareReplaceEqualDeep } from "./internal/structural-sharing";
@@ -266,14 +267,18 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     ? select(q.data as T)
     : q.data) as T | S;
   const error = q.error as Error | null;
-  const refetchRef = useRef(q.refetch);
-  refetchRef.current = q.refetch;
+  const refetchRef = useLatestRef(q.refetch);
 
+  // `refetchRef` is a stable useLatestRef handle (identity never changes); listed
+  // only to satisfy exhaustive-deps. It does NOT widen recompute — the result
+  // identity stays exactly as stable as before (recomputes only on
+  // pending/data/error), and the returned `refetch` reads the freshest
+  // `q.refetch` off `refetchRef.current` at call time.
   return useMemo(
     (): ResourceResult<T | S> =>
       pending
         ? { pending: true, error, refetch: () => refetchRef.current().then(() => {}) }
         : { pending: false, data, error, refetch: () => refetchRef.current().then(() => {}) },
-    [pending, data, error],
+    [pending, data, error, refetchRef],
   );
 }

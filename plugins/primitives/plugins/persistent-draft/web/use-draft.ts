@@ -58,17 +58,14 @@ export function useDraft<T>(
   const sKey = buildKey(key, options?.scope);
   const ttl = options?.ttl ?? DEFAULT_TTL;
 
-  // Resolve initialValue once (same semantics as useState lazy init).
-  const resolvedInitialRef = useRef<{ v: T } | null>(null);
-  if (resolvedInitialRef.current === null) {
-    resolvedInitialRef.current = {
-      v:
-        typeof initialValue === "function"
-          ? (initialValue as () => T)()
-          : initialValue,
-    };
-  }
-  const resolvedInitial = resolvedInitialRef.current.v;
+  // Resolve initialValue once via useState lazy-init: a stable value (its setter
+  // is never called) that can seed the storage read and the effect deps without
+  // a render-phase ref read.
+  const [resolvedInitial] = useState<T>(() =>
+    typeof initialValue === "function"
+      ? (initialValue as () => T)()
+      : initialValue,
+  );
 
   const [value, setValueState] = useState<T>(() =>
     readFromStorage(sKey, resolvedInitial, ttl),

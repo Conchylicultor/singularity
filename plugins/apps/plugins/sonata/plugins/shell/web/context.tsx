@@ -23,6 +23,7 @@ import {
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { inferKeys } from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Sonata } from "./slots";
 import { useCursorApi } from "./cursor-store";
 import { useKeyAutoDetect } from "./key-mode-store";
@@ -305,8 +306,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // out until the entire song is visible. Read through a ref so the stable
   // setSpread callback always clamps against the current floor.
   const [spreadMin, setSpreadMinState] = useState(MIN_SPREAD);
-  const spreadMinRef = useRef(MIN_SPREAD);
-  spreadMinRef.current = spreadMin;
+  const spreadMinRef = useLatestRef(spreadMin);
   // Bumped on every seek so the audio scheduler can restart from the new cursor.
   const [seekEpoch, setSeekEpoch] = useState(0);
 
@@ -318,15 +318,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
 
   // `setRaw` writes the *active* source's slot. Read the active id from a ref so
   // the callback stays stable (loaders depend on its identity in effects).
-  const activeSourceIdRef = useRef(activeSourceId);
-  activeSourceIdRef.current = activeSourceId;
+  const activeSourceIdRef = useLatestRef(activeSourceId);
   const setRaw = useCallback(
     (raw: unknown) => {
       const id = activeSourceIdRef.current;
       if (!id) return;
       setSourceRaw(id, raw);
     },
-    [setSourceRaw],
+    [setSourceRaw, activeSourceIdRef],
   );
 
   // Bulk, source-agnostic raw write (does NOT touch activeSourceId). Used by the
@@ -411,17 +410,13 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     startScoreSec: number;
   } | null>(null);
   const clockRef = useRef<TransportClock>(wallClock);
-  const scoreRef = useRef(score);
-  scoreRef.current = score;
-  const tempoIndexRef = useRef(tempoIndex);
-  tempoIndexRef.current = tempoIndex;
+  const scoreRef = useLatestRef(score);
+  const tempoIndexRef = useLatestRef(tempoIndex);
   // Live mirrors so stable callbacks (seek, re-anchor, clock swaps, store
   // actions) read current values WITHOUT depending on them and re-anchoring.
   // The cursor's live value comes from the store via `cursor.getBeat()`.
-  const isPlayingRef = useRef(isPlaying);
-  isPlayingRef.current = isPlaying;
-  const tempoScaleRef = useRef(tempoScale);
-  tempoScaleRef.current = tempoScale;
+  const isPlayingRef = useLatestRef(isPlaying);
+  const tempoScaleRef = useLatestRef(tempoScale);
 
   // Anchor the transport at `beat` against the active clock's `now()`. Used at
   // play, on every clock swap, and on seek / tempo change so they all compose.
@@ -433,7 +428,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       startBeat: beat,
       startScoreSec: tempoIndexRef.current.beatToSeconds(beat),
     };
-  }, []);
+  }, [tempoIndexRef]);
 
   const registerClock = useCallback(
     (clock: TransportClock) => {
@@ -446,7 +441,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
         }
       };
     },
-    [reanchor, cursor],
+    [reanchor, cursor, isPlayingRef],
   );
 
   const stop = useCallback(() => {
@@ -458,7 +453,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     // 0% is a frozen transport — there is nothing to advance, so don't start.
     if (tempoScaleRef.current === 0) return;
     setIsPlaying(true);
-  }, []);
+  }, [scoreRef, tempoScaleRef]);
 
   // Open-song lifecycle. The player surface calls `setCurrentSong` on mount —
   // each open is a fresh `mode:"root"` pane instance, so this fires once per open
@@ -492,7 +487,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       // from the pre-seek position while only the visual cursor jumps.
       setSeekEpoch((n) => n + 1);
     },
-    [reanchor, cursor],
+    [reanchor, cursor, scoreRef],
   );
 
   // Relative seek (keyboard arrows) delegates to the absolute primitive.
@@ -524,7 +519,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       const next = nextLine(grid, here, end);
       seekTo(here > (cur + next) / 2 ? cur : prevLine(grid, cur));
     },
-    [seekTo, cursor],
+    [seekTo, cursor, scoreRef, tempoScaleRef],
   );
 
   // --- Press-and-hold repeat. ----------------------------------------------
@@ -584,7 +579,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       scrubRafRef.current = requestAnimationFrame(step);
     };
     scrubRafRef.current = requestAnimationFrame(step);
-  }, [cursor]);
+  }, [cursor, isPlayingRef, scoreRef, tempoScaleRef]);
 
   const endScrub = useCallback(() => {
     if (scrubRafRef.current === null) return;
@@ -622,7 +617,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // Clamps against the live (dynamic) floor so zoom-out can reach "fit the song".
   const setSpread = useCallback((next: number) => {
     setSpreadState(Math.max(spreadMinRef.current, Math.min(MAX_SPREAD, next)));
-  }, []);
+  }, [spreadMinRef]);
 
   // The renderer feeds the "fit whole song" floor; cap at the default (short
   // songs already fit well above it) and reject non-positive / non-finite input.
@@ -698,9 +693,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     };
     // Re-anchor only on play/stop transitions (and clock swaps, handled in
     // registerClock) — not on every cursor change; the loop owns cursorBeat
-    // while playing. `reanchor` and `cursor` are both stable (memoized), so this
-    // effect still only re-runs on the play/stop transition.
-  }, [isPlaying, reanchor, cursor]);
+    // while playing. `reanchor` and `cursor` are both stable (memoized), and the
+    // `scoreRef` / `tempoIndexRef` latest-value handles have stable identity, so
+    // this effect still only re-runs on the play/stop transition.
+  }, [isPlaying, reanchor, cursor, scoreRef, tempoIndexRef]);
 
   // Stable transport verbs the controls plugin registers as per-surface, focus-
   // scoped keyboard shortcuts (Space / ↑ / ↓ and the ←/→ seek-hold controller),
@@ -708,11 +704,11 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // library and never cross between two open Sonata windows.
   const togglePlay = useCallback(() => {
     isPlayingRef.current ? stop() : play();
-  }, [play, stop]);
+  }, [play, stop, isPlayingRef]);
 
   const nudgeTempo = useCallback(
     (delta: number) => setTempoScale(tempoScaleRef.current + delta),
-    [setTempoScale],
+    [setTempoScale, tempoScaleRef],
   );
 
   const loadedSourceIds = useMemo(

@@ -1,4 +1,4 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   DndContext,
   PointerSensor,
@@ -65,10 +65,13 @@ export function SortableList({
   const [activeId, setActiveId] = useState<string | null>(null);
   const [optimisticItems, setOptimisticItems] = useState<string[] | null>(null);
 
-  // Clear optimistic state when canonical items update (server roundtrip complete)
-  const prevItemsRef = useRef(items);
-  if (prevItemsRef.current !== items) {
-    prevItemsRef.current = items;
+  // Clear optimistic state when canonical items update (server roundtrip
+  // complete). The previous-items watermark is held in state, not a ref, so the
+  // compare + reset happens cleanly during render (React's "adjusting state
+  // when a prop changes" pattern) without reading/writing a ref mid-render.
+  const [prevItems, setPrevItems] = useState(items);
+  if (prevItems !== items) {
+    setPrevItems(items);
     if (optimisticItems) setOptimisticItems(null);
   }
 

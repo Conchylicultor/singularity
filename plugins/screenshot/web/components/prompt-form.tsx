@@ -1,14 +1,14 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { LaunchControl, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { saveScreenshotFile } from "../../shared/endpoints";
 
 export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | null | Promise<Blob | null> }) {
   const [text, setText] = useState("");
-  const textRef = useRef(text);
-  textRef.current = text;
+  const textRef = useLatestRef(text);
 
   // The screenshot blob is uploaded via the existing `/api/screenshots/:id/file`
   // path (returns a server-side disk path) and appended to the prompt as

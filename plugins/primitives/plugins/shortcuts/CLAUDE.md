@@ -9,7 +9,7 @@
 - Web:
   - Slots: `Shortcuts.Shortcut` ← `apps.surface.floating`, `apps.surface.solo`, `reorder.edit-mode`
   - Contributes: `Core.Root` → `ShortcutManager`
-  - Uses: `primitives/surface-id.useSurfaceTabId`
+  - Uses: `primitives/latest-ref.useLatestRef`, `primitives/surface-id.useSurfaceTabId`
   - Exports: Types: `ShortcutDescriptor`; Values: `defineShortcut`, `formatShortcutLabel`, `getFocusedSurfaceId`, `isEditableTarget`, `setFocusedSurfaceId`, `Shortcuts`, `subscribeFocusedSurface`, `useFocusedSurfaceId`, `useSurfaceShortcuts`
 - Cross-plugin:
   - Imported by: `apps`, `apps/sonata/controls`, `apps/surface/floating`, `apps/surface/solo`, `primitives/icon-button`, `primitives/launch`, `primitives/undo-redo`, `reorder/edit-mode`, `tasks/task-draft-form`

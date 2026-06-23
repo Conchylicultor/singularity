@@ -1,11 +1,11 @@
-import { useCallback, useRef } from "react";
+import { useCallback } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 
 export function useColorDrag(
   elRef: React.RefObject<HTMLElement | null>,
   onChange: (x: number, y: number) => void,
 ): { onPointerDown: React.PointerEventHandler } {
-  const cbRef = useRef(onChange);
-  cbRef.current = onChange;
+  const cbRef = useLatestRef(onChange);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
@@ -34,7 +34,10 @@ export function useColorDrag(
       el.addEventListener("pointerup", onUp);
       el.addEventListener("pointercancel", onUp);
     },
-    [elRef],
+    // `cbRef` is a stable useLatestRef handle (identity never changes); listed
+    // only to satisfy exhaustive-deps. `onPointerDown` stays stable and reads the
+    // freshest `onChange` off `cbRef.current` at emit time.
+    [elRef, cbRef],
   );
 
   return { onPointerDown };

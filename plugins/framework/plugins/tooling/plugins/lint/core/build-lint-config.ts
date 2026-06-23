@@ -182,10 +182,19 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
         // Genuine exemptions opt out at the site: a `"use no memo"` directive
         // and/or an inline `// eslint-disable-next-line react-hooks/<rule> -- …`
         // (e.g. the @tanstack/react-virtual incompatibility in primitives/
-        // virtual-rows). The high-volume `react-hooks/refs` +
-        // `set-state-in-effect` stay "warn" (correctness/style; the compiler
-        // still compiles them) until their own burndown completes — see
-        // research/2026-06-23-global-react-compiler-compliance.md.
+        // virtual-rows). `react-hooks/refs` was likewise RATCHETED warn→error in
+        // Phase 2 (2026-06-23) once its burndown hit zero: the latest-value-ref
+        // idiom moved into the `useLatestRef`/`useEventCallback` primitive
+        // (primitives/latest-ref), which carries the one sanctioned disable;
+        // @dnd-kit / auto-scroll library refs are destructured at the call site
+        // (member access on a ref-bearing hook return is what trips the rule);
+        // genuine anti-patterns were refactored; and the few intentional
+        // render-time machines (use-tab-presence, use-cursor-pagination, the
+        // build-once markdown/overlay memos) carry an inline `react-hooks/refs`
+        // disable. Only the high-volume `set-state-in-effect` stays "warn"
+        // (correctness/style; the compiler still compiles it) until its own
+        // burndown completes — see
+        // research/2026-06-23-global-react-compiler-refs-burndown.md.
         "react-hooks/purity": "error",
         "react-hooks/immutability": "error",
         "react-hooks/use-memo": "error",
@@ -193,6 +202,7 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
         "react-hooks/static-components": "error",
         "react-hooks/preserve-manual-memoization": "error",
         "react-hooks/incompatible-library": "error",
+        "react-hooks/refs": "error",
         "no-constant-binary-expression": "error",
         "eqeqeq": ["error", "smart"],
         "no-template-curly-in-string": "error",

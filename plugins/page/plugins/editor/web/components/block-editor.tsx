@@ -31,6 +31,7 @@ import {
   useMultiSelect,
 } from "@plugins/primitives/plugins/multi-select/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { UndoRedoProvider, useUndoRedoShortcuts } from "@plugins/primitives/plugins/undo-redo/web";
 import { textOf, type Block, type SerializedBlock } from "../../core";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
@@ -221,10 +222,8 @@ function SelectionLayer({
 
   // Keep the live selection reachable from imperative DOM event handlers
   // (clipboard) without re-subscribing them on every selection change.
-  const selectedRef = useRef(selectedIds);
-  selectedRef.current = selectedIds;
-  const rowsRef = useRef(rows);
-  rowsRef.current = rows;
+  const selectedRef = useLatestRef(selectedIds);
+  const rowsRef = useLatestRef(rows);
 
   const focusContainer = useCallback(() => {
     containerRef.current?.focus();
@@ -292,7 +291,7 @@ function SelectionLayer({
       e.preventDefault();
       return true;
     },
-    [handles],
+    [handles, rowsRef, selectedRef],
   );
 
   const onCopy = useCallback(
@@ -311,7 +310,7 @@ function SelectionLayer({
         clearSelection();
       }
     },
-    [writeClipboard, bulkDelete, clearSelection],
+    [writeClipboard, bulkDelete, clearSelection, selectedRef],
   );
 
   const onPaste = useCallback(
@@ -357,7 +356,7 @@ function SelectionLayer({
         headRef.current ?? focusedBlockId ?? roots[roots.length - 1] ?? null;
       void paste({ blocks: forest, afterId });
     },
-    [handles, paste, focusedBlockId],
+    [handles, paste, focusedBlockId, headRef, rowsRef, selectedRef],
   );
 
   // Nudge the whole selection up/down by one slot among its siblings.
@@ -395,7 +394,7 @@ function SelectionLayer({
       }
       bulkMove({ ids: roots, parentId: first.parentId, afterId });
     },
-    [bulkMove],
+    [bulkMove, rowsRef, selectedRef],
   );
 
   // ---- Keyboard (block-selection mode; container must be the focus) --------
@@ -471,6 +470,7 @@ function SelectionLayer({
       neighbor,
       applyRange,
       moveSelection,
+      selectedRef,
     ],
   );
 
@@ -583,9 +583,17 @@ function SelectionLayer({
   const [fileDropTarget, setFileDropTarget] = useState<DropTarget | null>(null);
   const [fileDragging, setFileDragging] = useState(false);
   // Resolved selection roots + their subtree when dragging a multi-selection.
-  const bulkDragRef = useRef<{ roots: string[]; subtree: Set<string> } | null>(
-    null,
-  );
+  // The ref is the synchronous source of truth for the in-flight pointer
+  // handlers (`currentTarget` reads it within the same dnd-kit event, before any
+  // re-render); the mirrored STATE drives render so rows re-highlight when the
+  // bulk set changes (reading the ref in render would leave a stale highlight).
+  type BulkDrag = { roots: string[]; subtree: Set<string> } | null;
+  const bulkDragRef = useRef<BulkDrag>(null);
+  const [bulkDrag, setBulkDrag] = useState<BulkDrag>(null);
+  const setBulkDragState = useCallback((next: BulkDrag) => {
+    bulkDragRef.current = next;
+    setBulkDrag(next);
+  }, []);
 
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   const collisionDetection = useCallback<CollisionDetection>((args) => {
@@ -614,9 +622,9 @@ function SelectionLayer({
     if (id && selectedIds.has(id)) {
       const roots = selectionRoots(rows, selectedIds);
       const subtree = new Set(roots.flatMap((r) => subtreeIds(rows, r)));
-      bulkDragRef.current = { roots, subtree };
+      setBulkDragState({ roots, subtree });
     } else {
-      bulkDragRef.current = null;
+      setBulkDragState(null);
     }
   };
 
@@ -633,7 +641,7 @@ function SelectionLayer({
     const bulk = bulkDragRef.current;
     setDropTarget(null);
     setActiveId(null);
-    bulkDragRef.current = null;
+    setBulkDragState(null);
     if (!dragged || !target) return;
 
     if (bulk) {
@@ -670,7 +678,7 @@ function SelectionLayer({
   const onDragCancel = () => {
     setDropTarget(null);
     setActiveId(null);
-    bulkDragRef.current = null;
+    setBulkDragState(null);
   };
 
   // ---- External file drop (OS drag-and-drop → attachment block) ------------
@@ -694,7 +702,7 @@ function SelectionLayer({
       const idx = siblings.findIndex((s) => s.id === target.id);
       return { afterId: siblings[idx - 1]?.id ?? null, parentId: targetRow.parentId };
     },
-    [],
+    [rowsRef],
   );
 
   const onFileDragOver = useCallback((e: React.DragEvent) => {
@@ -849,7 +857,7 @@ function SelectionLayer({
                   ordinal={f.ordinal}
                   isDragging={
                     activeId === f.block.id ||
-                    (bulkDragRef.current?.subtree.has(f.block.id) ?? false)
+                    (bulkDrag?.subtree.has(f.block.id) ?? false)
                   }
                   dropZone={
                     activeDropTarget?.id === f.block.id ? activeDropTarget.zone : null
@@ -879,7 +887,7 @@ function SelectionLayer({
               className="bg-background/90 border-accent text-muted-foreground rounded-md border px-sm py-xs shadow"
             >
               <MdDragIndicator className="size-4" />
-              {bulkDragRef.current && selectedCount > 1 ? (
+              {bulkDrag && selectedCount > 1 ? (
                 <Text variant="body">{`${selectedCount} blocks`}</Text>
               ) : null}
             </Stack>

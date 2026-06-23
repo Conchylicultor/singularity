@@ -211,11 +211,14 @@ function JsonlPaneInner({
     // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot events once per working transition
   }, [isWorking]);
 
-  const sticky = useStickyScroll({
-    resetKey: conversation.id,
-    forceScrollKey: isWorking ? 1 : 0,
-  });
-  const { scrollIfPinned } = sticky;
+  // Destructure at the call site: react-hooks/refs taints the handle object
+  // (it carries scrollRef), so member access on it during render is flagged;
+  // plain destructured locals are clean.
+  const { scrollRef, scrollIfPinned, isPinned, hasUnread, jumpToBottom } =
+    useStickyScroll({
+      resetKey: conversation.id,
+      forceScrollKey: isWorking ? 1 : 0,
+    });
 
   useEffect(() => {
     scrollIfPinned();
@@ -245,7 +248,7 @@ function JsonlPaneInner({
     <div className="relative min-h-0 flex-1 isolate">
       <Scroll
         axis="both"
-        ref={sticky.scrollRef}
+        ref={scrollRef}
         data-pane-scroll
         className={`h-full transition-opacity ${isGone ? "opacity-50" : ""}`}
       >
@@ -287,7 +290,7 @@ function JsonlPaneInner({
       )}
       <JsonlViewer.Overlay.Render />
       <JumpToBottomButton
-        handle={sticky}
+        handle={{ isPinned, hasUnread, jumpToBottom }}
         // eslint-disable-next-line layout/no-adhoc-layout -- off-ramp corner pin on an external Button (self-renders null when hidden); bottom-12/right-4 are off the spacing ramp
         className="absolute bottom-12 right-4 z-nav"
       />

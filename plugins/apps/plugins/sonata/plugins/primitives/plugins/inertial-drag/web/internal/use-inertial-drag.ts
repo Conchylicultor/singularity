@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   createVelocityTracker,
   flingPosition,
@@ -60,8 +61,7 @@ function clampToBounds(
 export function useInertialDrag(config: InertialDragConfig): InertialDragHandle {
   // Read live config through a ref so the returned handlers stay stable across
   // renders (the surface re-attaches nothing on every config change).
-  const configRef = useRef(config);
-  configRef.current = config;
+  const configRef = useLatestRef(config);
 
   const [phase, setPhase] = useState<InertialDragHandle["phase"]>("idle");
 
@@ -81,7 +81,7 @@ export function useInertialDrag(config: InertialDragConfig): InertialDragHandle 
   const axisPixel = useCallback(
     (e: { clientX: number; clientY: number }): number =>
       configRef.current.axis === "y" ? e.clientY : e.clientX,
-    [],
+    [configRef],
   );
 
   /** Map a pixel position to the clamped unit value, reporting a bound-hit. */
@@ -90,7 +90,7 @@ export function useInertialDrag(config: InertialDragConfig): InertialDragHandle 
     const { unitsPerPixel, bounds } = configRef.current;
     const raw = g.originValue + (pixel - g.startPixel) * unitsPerPixel;
     return clampToBounds(raw, bounds);
-  }, []);
+  }, [configRef]);
 
   const onPointerDown = useCallback(
     (e: React.PointerEvent<Element>) => {
@@ -107,7 +107,7 @@ export function useInertialDrag(config: InertialDragConfig): InertialDragHandle 
       configRef.current.onGrab?.();
       setPhase("dragging");
     },
-    [axisPixel, cancelFling, tracker],
+    [axisPixel, cancelFling, tracker, configRef],
   );
 
   const onPointerMove = useCallback(
@@ -119,7 +119,7 @@ export function useInertialDrag(config: InertialDragConfig): InertialDragHandle 
       configRef.current.onScrub(value);
       tracker.sample(e.timeStamp, pixel);
     },
-    [axisPixel, toValue, tracker],
+    [axisPixel, toValue, tracker, configRef],
   );
 
   const release = useCallback(
@@ -168,7 +168,7 @@ export function useInertialDrag(config: InertialDragConfig): InertialDragHandle 
       };
       flingRaf.current = requestAnimationFrame(step);
     },
-    [axisPixel, toValue, tracker],
+    [axisPixel, toValue, tracker, configRef],
   );
 
   // Cancel any in-flight fling on unmount.

@@ -91,9 +91,13 @@ function ParamInput({
   setConfig: (key: "preset" | "overrides", value: unknown) => void;
 }) {
   const [localValue, setLocalValue] = useState(String(value));
+  const [focused, setFocused] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  if (String(value) !== localValue && document.activeElement !== inputRef.current) {
+  // Mirror the incoming value into the local draft unless the user is editing
+  // (focus tracked as state — reading inputRef.current during render is a
+  // react-hooks/refs violation). inputRef is still used by onKeyDown to blur.
+  if (String(value) !== localValue && !focused) {
     setLocalValue(String(value));
   }
 
@@ -119,7 +123,8 @@ function ParamInput({
         className="flex-1 text-caption font-mono bg-transparent border border-transparent rounded-md px-xs py-2xs focus:border-border focus:bg-background focus:outline-none"
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
-        onBlur={commit}
+        onFocus={() => setFocused(true)}
+        onBlur={() => { setFocused(false); commit(); }}
         onKeyDown={(e) => { if (e.key === "Enter") inputRef.current?.blur(); }}
       />
       <button

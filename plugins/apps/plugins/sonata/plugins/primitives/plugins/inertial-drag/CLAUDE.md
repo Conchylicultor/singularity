@@ -22,10 +22,11 @@ it does not fling). Both are `bun test`-covered.
 ## Plugin reference
 
 - Description: 1-D pointer drag-to-scrub hook with exponential-friction release momentum (flick → coast → settle).
+- Web:
+  - Uses: `primitives/latest-ref.useLatestRef`
+  - Exports: Types: `InertialDragConfig`, `InertialDragHandle`; Values: `useInertialDrag`
 - Cross-plugin:
   - Imported by: `apps/sonata/piano-roll`
-- Web:
-  - Exports: Types: `InertialDragConfig`, `InertialDragHandle`; Values: `useInertialDrag`
 - Core:
   - Exports: Types: `VelocityTracker`; Values: `createVelocityTracker`, `flingPosition`, `flingRest`, `flingVelocity`
 

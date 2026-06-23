@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 
 interface SpeechRecognitionResult {
   readonly isFinal: boolean;
@@ -59,8 +60,7 @@ export function useSpeechRecognition(
   const [error, setError] = useState<string | null>(null);
   const recognitionRef = useRef<SpeechRecognitionLike | null>(null);
   const mountedRef = useRef(true);
-  const callbackRef = useRef(onFinalResult);
-  callbackRef.current = onFinalResult;
+  const callbackRef = useLatestRef(onFinalResult);
 
   useEffect(() => {
     mountedRef.current = true;
@@ -110,7 +110,7 @@ export function useSpeechRecognition(
 
     recognition.start();
     setListening(true);
-  }, [listening]);
+  }, [listening, callbackRef]);
 
   return {
     isListening: listening,

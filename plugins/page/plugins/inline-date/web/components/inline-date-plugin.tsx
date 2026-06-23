@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { createPortal } from "react-dom";
 import { MdCalendarToday, MdNotificationsActive } from "react-icons/md";
 import {
@@ -49,12 +50,9 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
   const options = menu.options;
 
   // Refs let the stable Lexical command callbacks read fresh state.
-  const openRef = useRef(open);
-  openRef.current = open;
-  const optionsRef = useRef(options);
-  optionsRef.current = options;
-  const activeIndexRef = useRef(activeIndex);
-  activeIndexRef.current = activeIndex;
+  const openRef = useLatestRef(open);
+  const optionsRef = useLatestRef(options);
+  const activeIndexRef = useLatestRef(activeIndex);
 
   function close() {
     setOpen(false);
@@ -145,8 +143,7 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
     setOpen(false);
     setActiveIndex(0);
   }
-  const insertRef = useRef(insertMention);
-  insertRef.current = insertMention;
+  const insertRef = useLatestRef(insertMention);
 
   // Keyboard: registered ABOVE KeyboardPlugin (CRITICAL > HIGH) so menu nav wins
   // when open, but falls through (return false) to split/focus-nav when closed.
@@ -215,7 +212,7 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
       unregisterEscape();
       unregisterBlur();
     };
-  }, [lexicalEditor]);
+  }, [lexicalEditor, openRef, optionsRef, activeIndexRef, insertRef]);
 
   if (!open || !caret) return null;
 

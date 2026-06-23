@@ -3,6 +3,7 @@ import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core"
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { Rank } from "@plugins/primitives/plugins/rank/web";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { ViewConfigRow, ViewTypeMeta } from "../../core";
 import { buildInstanceFromRow } from "./resolve-instances";
@@ -148,12 +149,15 @@ export function useViewsConfig<T extends ViewTypeMeta>(
   );
 
   // Freshest setConfig + key for the debounced flush.
-  const setConfigRef = useRef(setConfig);
-  setConfigRef.current = setConfig;
+  const setConfigRef = useLatestRef(setConfig);
 
   const pendingRef = useRef<ViewConfigRow[] | null>(null);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
+  // `setConfigRef` is a stable useLatestRef handle (identity never changes);
+  // listed only to satisfy exhaustive-deps. `flush` stays referentially stable
+  // (scheduleWrite + the unmount effect depend on it) and writes through the
+  // freshest setConfig off `.current`.
   const flush = useCallback(() => {
     if (timerRef.current !== null) {
       clearTimeout(timerRef.current);
@@ -163,7 +167,7 @@ export function useViewsConfig<T extends ViewTypeMeta>(
     if (next === null) return;
     pendingRef.current = null;
     setConfigRef.current("views", next);
-  }, []);
+  }, [setConfigRef]);
 
   const scheduleWrite = useCallback(
     (next: ViewConfigRow[]) => {

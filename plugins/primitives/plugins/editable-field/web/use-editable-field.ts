@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 
 export interface UseEditableFieldOptions<T extends string> {
   value: T;
@@ -171,12 +172,15 @@ export function useEditableField<T extends string>(
 
   // Keep the latest draft in a ref so `retry` can stay referentially stable
   // (the sync-status indicator pulls it imperatively, so churn would thrash).
-  const draftRef = useRef<T>(draft);
-  draftRef.current = draft;
+  const draftRef = useLatestRef(draft);
 
+  // `draftRef` is a stable useLatestRef handle (identity never changes); listed
+  // only to satisfy exhaustive-deps. `retry` stays referentially stable (the
+  // sync-status indicator pulls it imperatively) and reads the latest draft off
+  // `.current`.
   const retry = useCallback(() => {
     void runSave(draftRef.current);
-  }, [runSave]);
+  }, [runSave, draftRef]);
 
   // Auto-report to the universal sync-status indicator. Harmless no-op when no
   // <SyncStatusProvider> is above (unit tests, non-surface mounts).

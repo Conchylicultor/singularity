@@ -1,9 +1,10 @@
-import { useEffect, useRef } from "react";
+import { useCallback, useEffect, useRef } from "react";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { ClientMessage, ServerMessage } from "../../shared/protocol";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/terminal`;
@@ -21,8 +22,7 @@ export function TerminalView({ command }: { command?: string[] }) {
   // Flushed as a `session.resize` once the server acknowledges the session,
   // so the PTY dims always converge to what xterm is actually rendering.
   const pendingResizeRef = useRef<{ cols: number; rows: number } | null>(null);
-  const commandRef = useRef(command);
-  commandRef.current = command;
+  const commandRef = useLatestRef(command);
 
   // Single source of truth for "tell the server about the current dims".
   // - No session yet → send `session.create` (spawns the PTY at this size).
@@ -30,22 +30,21 @@ export function TerminalView({ command }: { command?: string[] }) {
   // Any resize that arrives before `session.created` is parked in
   // `pendingResizeRef` and flushed on ack. On WS reconnect the old PTY is
   // gone; `sessionIdRef` is reset in onOpen so we cleanly re-create.
-  const syncDims = (
-    ws: { send: (data: string) => void },
-    cols: number,
-    rows: number,
-  ) => {
-    const sessionId = sessionIdRef.current;
-    const msg: ClientMessage = sessionId
-      ? { type: "session.resize", sessionId, cols, rows }
-      : {
-          type: "session.create",
-          cols,
-          rows,
-          ...(commandRef.current && { command: commandRef.current }),
-        };
-    ws.send(JSON.stringify(msg));
-  };
+  const syncDims = useCallback(
+    (ws: { send: (data: string) => void }, cols: number, rows: number) => {
+      const sessionId = sessionIdRef.current;
+      const msg: ClientMessage = sessionId
+        ? { type: "session.resize", sessionId, cols, rows }
+        : {
+            type: "session.create",
+            cols,
+            rows,
+            ...(commandRef.current && { command: commandRef.current }),
+          };
+      ws.send(JSON.stringify(msg));
+    },
+    [commandRef],
+  );
 
   const wsHandle = useReconnectingWebSocket({
     url: WS_URL,
@@ -131,7 +130,7 @@ export function TerminalView({ command }: { command?: string[] }) {
       terminalRef.current = null;
       term.dispose();
     };
-  }, [wsHandle]);
+  }, [wsHandle, syncDims]);
 
   return (
     <div className="h-full w-full p-sm" style={{ background: THEME.background }}>

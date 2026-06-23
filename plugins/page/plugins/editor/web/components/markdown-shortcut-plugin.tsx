@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { $createParagraphNode, $createTextNode, $getRoot } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import type { Block } from "../../core";
@@ -54,12 +55,9 @@ export function MarkdownShortcutPlugin({
     return out.sort((a, b) => b.prefix.length - a.prefix.length);
   }, [contributions]);
 
-  const rulesRef = useRef(rules);
-  rulesRef.current = rules;
-  const editorRef = useRef(editor);
-  editorRef.current = editor;
-  const blockTypeRef = useRef(block.type);
-  blockTypeRef.current = block.type;
+  const rulesRef = useLatestRef(rules);
+  const editorRef = useLatestRef(editor);
+  const blockTypeRef = useLatestRef(block.type);
 
   useEffect(() => {
     // Seed with the current text so the initial DB-load update is treated as the
@@ -116,7 +114,7 @@ export function MarkdownShortcutPlugin({
         }
       });
     });
-  }, [lexicalEditor]);
+  }, [lexicalEditor, rulesRef, editorRef, blockTypeRef]);
 
   return null;
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   Sonata,
   useCursorApi,
@@ -51,8 +52,7 @@ export function AudioEngine() {
   // straight at the play instant, NOT a render input — see below). `cursor` is
   // stable (memoized on the store), so the ref simply mirrors it.
   const cursor = useCursorApi();
-  const cursorRef = useRef(cursor);
-  cursorRef.current = cursor;
+  const cursorRef = useLatestRef(cursor);
 
   // Muted tracks are dropped from the play-list before scheduling. Deriving a
   // filtered score (rather than passing the set down) keeps `startScheduling`
@@ -262,7 +262,7 @@ export function AudioEngine() {
       handle?.cancel();
       for (const manager of managers) manager.allOff();
     };
-  }, [isPlaying, audibleScore, trackInstrumentMap, seekEpoch]);
+  }, [isPlaying, audibleScore, trackInstrumentMap, seekEpoch, cursorRef]);
 
   // Aggregate status: "Loading…" until every in-use manager is loaded, the
   // error if any failed, "Ready" otherwise. Keyed on `inUseKey` so it

@@ -1,4 +1,4 @@
-import { useRef, type ComponentType } from "react";
+import { useLayoutEffect, useRef, useState, type ComponentType } from "react";
 import { MdWebAsset } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -27,51 +27,88 @@ const GHOST_LIFT = 14;
  * coords by subtracting the backdrop's own rect — read live each render from this
  * overlay's own offset parent (the backdrop), which is stable for a drag.
  */
+/**
+ * The layout measurements the overlay paints from. Read from the live DOM in a
+ * `useLayoutEffect` (after commit, before paint) rather than during render, and
+ * stored in state — so the overlay renders from committed values and never reads
+ * a rect during render. Re-measured on every `session` change (the drag channel
+ * mints a fresh object on every pointermove), so the visuals track the pointer.
+ */
+interface DragMeasurements {
+  /** Backdrop-origin x/y (the overlay root's own rect) to map viewport→backdrop. */
+  ox: number;
+  oy: number;
+  /** The hovered strip's drop-zone rect (for the merge ring), if any. */
+  stripRect?: { left: number; top: number; width: number; height: number };
+  /** The insertion caret x (right edge of the last chip before the index, etc.). */
+  caretX?: number;
+}
+
 export function TabDragOverlay() {
   const session = useTabDragSession();
   const rootRef = useRef<HTMLDivElement>(null);
+  const [measured, setMeasured] = useState<DragMeasurements>({ ox: 0, oy: 0 });
+
+  // Measure after layout (committed values only — never a rect read in render).
+  // Keyed on `session`: the drag channel mints a fresh session object on every
+  // pointermove, so this re-measures each move and the overlay tracks the live
+  // pointer / drop target, one synchronous pre-paint commit later (no flicker).
+  const drop = session?.drop ?? null;
+  useLayoutEffect(() => {
+    if (!session) return;
+    // The overlay root fills the backdrop (inset-0), so its own rect IS the
+    // backdrop box — subtract it to map viewport coords into backdrop space.
+    const originRect = rootRef.current?.getBoundingClientRect();
+    const ox = originRect?.left ?? 0;
+    const oy = originRect?.top ?? 0;
+
+    // The hovered strip's drop-zone rect (for the merge ring), if any.
+    const stripEl =
+      drop?.kind === "strip"
+        ? document.querySelector<HTMLElement>(
+            `[data-floating-window-id="${drop.windowId}"]`,
+          )
+        : null;
+    const stripRect = stripEl?.getBoundingClientRect();
+
+    // The insertion caret x: the right edge of the last chip before the index, or
+    // the strip's left edge when inserting first. Read from the live chip rects in
+    // the hovered strip so it tracks the exact gap the tab would land in.
+    let caretX: number | undefined;
+    if (drop?.kind === "strip" && stripRect && stripEl) {
+      const chips = stripEl.querySelectorAll<HTMLElement>(
+        "[data-floating-tab-id]",
+      );
+      if (chips.length > 0) {
+        const before = chips[Math.min(drop.index, chips.length) - 1];
+        caretX = before
+          ? before.getBoundingClientRect().right
+          : chips[0]!.getBoundingClientRect().left;
+      } else {
+        caretX = stripRect.left;
+      }
+    }
+
+    setMeasured({
+      ox,
+      oy,
+      stripRect: stripRect
+        ? {
+            left: stripRect.left,
+            top: stripRect.top,
+            width: stripRect.width,
+            height: stripRect.height,
+          }
+        : undefined,
+      caretX,
+    });
+  }, [session, drop]);
 
   if (!session) return null;
 
-  // The overlay root fills the backdrop (inset-0), so its own rect IS the
-  // backdrop box — subtract it to map viewport coords into backdrop space.
-  const originRect = rootRef.current?.getBoundingClientRect();
-  const ox = originRect?.left ?? 0;
-  const oy = originRect?.top ?? 0;
-
-  const drop = session.drop;
+  const { ox, oy, stripRect, caretX } = measured;
   const Icon: ComponentType<{ className?: string }> = session.icon ?? MdWebAsset;
   const onDesktop = drop?.kind === "desktop";
-
-  // The hovered strip's drop-zone rect (for the merge ring), if any.
-  const stripRect =
-    drop?.kind === "strip"
-      ? document
-          .querySelector<HTMLElement>(
-            `[data-floating-window-id="${drop.windowId}"]`,
-          )
-          ?.getBoundingClientRect()
-      : undefined;
-
-  // The insertion caret x: the right edge of the last chip before the index, or
-  // the strip's left edge when inserting first. Read from the live chip rects in
-  // the hovered strip so it tracks the exact gap the tab would land in.
-  let caretX: number | undefined;
-  if (drop?.kind === "strip" && stripRect) {
-    const chips = document
-      .querySelector<HTMLElement>(
-        `[data-floating-window-id="${drop.windowId}"]`,
-      )
-      ?.querySelectorAll<HTMLElement>("[data-floating-tab-id]");
-    if (chips && chips.length > 0) {
-      const before = chips[Math.min(drop.index, chips.length) - 1];
-      caretX = before
-        ? before.getBoundingClientRect().right
-        : chips[0]!.getBoundingClientRect().left;
-    } else {
-      caretX = stripRect.left;
-    }
-  }
 
   return (
     <div

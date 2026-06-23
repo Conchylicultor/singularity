@@ -72,7 +72,7 @@ route Cmd+Z through their own keyboard plugin and call `undo()` / `redo()` direc
 
 - Description: Surface-scoped client-side undo/redo command-history stack: a UndoRedoProvider per surface tab holding past/future stacks of {undo,redo} thunks, with time-windowed coalescing, a max-depth cap, a re-entrancy guard so replayed patches aren't re-recorded, and an optional useUndoRedoShortcuts (mod+z / mod+shift+z / mod+y) convenience binding.
 - Web:
-  - Uses: `primitives/scoped-store.defineScopedStore`, `primitives/shortcuts.useSurfaceShortcuts`
+  - Uses: `primitives/latest-ref.useLatestRef`, `primitives/scoped-store.defineScopedStore`, `primitives/shortcuts.useSurfaceShortcuts`
   - Exports: Types: `HistoryEntry`, `UndoRedoApi`, `UndoRedoProviderProps`, `UndoRedoShortcutsOptions`; Values: `UndoRedoProvider`, `useUndoRedo`, `useUndoRedoShortcuts`
 - Cross-plugin:
   - Imported by: `page/editor`

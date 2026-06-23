@@ -1,5 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useMemo, useRef } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
@@ -139,18 +140,17 @@ function InitialSelectionPlugin({
   extensions: readonly NodeExtension[];
 }) {
   const [editor] = useLexicalComposerContext();
-  const extensionsRef = useRef(extensions);
-  extensionsRef.current = extensions;
-  const selectionRef = useRef(selection);
-  selectionRef.current = selection;
+  const extensionsRef = useLatestRef(extensions);
+  const selectionRef = useLatestRef(selection);
   useEffect(() => {
     editor.focus();
     editor.update(() => {
       const { start, end } = selectionRef.current;
       $selectMarkdownRange(start, end, extensionsRef.current);
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: apply the captured selection once
-  }, []);
+    // Mount-only: apply the captured selection once. `editor` is stable and the
+    // refs are stable useLatestRef handles, so the effect never re-runs.
+  }, [editor, selectionRef, extensionsRef]);
   return null;
 }
 
@@ -244,12 +244,10 @@ function ValueSyncPlugin({
   const [editor] = useLexicalComposerContext();
   const selfWriteRef = useRef(false);
   const lastSerializedRef = useRef<string | null>(null);
-  const onChangeRef = useRef(onChange);
-  onChangeRef.current = onChange;
+  const onChangeRef = useLatestRef(onChange);
   // Read fresh inside effects so the (boot-stable) extension set is never a
   // dependency that would re-run the markdown sync.
-  const extensionsRef = useRef(extensions);
-  extensionsRef.current = extensions;
+  const extensionsRef = useLatestRef(extensions);
 
   useEffect(() => {
     if (lastSerializedRef.current === value) return;
@@ -259,7 +257,7 @@ function ValueSyncPlugin({
     queueMicrotask(() => {
       selfWriteRef.current = false;
     });
-  }, [editor, value]);
+  }, [editor, value, extensionsRef]);
 
   useEffect(() => {
     return editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
@@ -270,7 +268,7 @@ function ValueSyncPlugin({
       lastSerializedRef.current = md;
       onChangeRef.current(md);
     });
-  }, [editor]);
+  }, [editor, extensionsRef, onChangeRef]);
 
   return null;
 }

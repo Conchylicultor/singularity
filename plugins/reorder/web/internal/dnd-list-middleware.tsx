@@ -25,6 +25,7 @@ import {
   type ReorderEntry,
 } from "@plugins/reorder/plugins/editor/web";
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useStageDefault } from "@plugins/config_v2/plugins/staging/web";
 import { reorderDescriptors, reorderPluginIdForSlot } from "./descriptors";
 import { useStagedTree } from "./staged-tree";
@@ -316,21 +317,15 @@ function ReorderInner({
 
   // --- Refs for handlers -----------------------------------------------------
 
-  const entriesRef = useRef(state.entries);
-  entriesRef.current = state.entries;
+  const entriesRef = useLatestRef(state.entries);
   // `itemsRef` feeds the verbatim raw-tree maps (remove/patch by id). It must
   // mirror the DISPLAYED tree so an everyone-scope edit composes from the
   // currently-staged order, matching `entriesRef` (also derived from
   // `effectiveItems`).
-  const itemsRef = useRef(effectiveItems);
-  itemsRef.current = effectiveItems;
-  const hiddenKeysRef = useRef<string[]>([]);
-  hiddenKeysRef.current = useMemo(
-    () => state.hidden.map((c) => contributionKey(c)!),
-    [state.hidden],
+  const itemsRef = useLatestRef(effectiveItems);
+  const hiddenKeysRef = useLatestRef(
+    useMemo(() => state.hidden.map((c) => contributionKey(c)!), [state.hidden]),
   );
-  const nodeTypesRef = useRef(nodeTypes);
-  nodeTypesRef.current = nodeTypes;
 
   // --- Write sink: personal (user config) vs. everyone (staged git default) --
   // Every in-app edit funnels its freshly-materialized tree through this single
@@ -352,28 +347,33 @@ function ReorderInner({
     },
     [scope, slotId, setConfig, stageDefault],
   );
-  const commitTreeRef = useRef(commitTree);
-  commitTreeRef.current = commitTree;
+  const commitTreeRef = useLatestRef(commitTree);
 
   // --- Hide / restore (config-backed) ---------------------------------------
 
-  const hideItem = useCallback((key: string) => {
-    if (hiddenKeysRef.current.includes(key)) return;
-    commitTreeRef.current(
-      materializeTree(entriesRef.current, hiddenKeysRef.current, {
-        hideKey: key,
-      }),
-    );
-  }, []);
+  const hideItem = useCallback(
+    (key: string) => {
+      if (hiddenKeysRef.current.includes(key)) return;
+      commitTreeRef.current(
+        materializeTree(entriesRef.current, hiddenKeysRef.current, {
+          hideKey: key,
+        }),
+      );
+    },
+    [commitTreeRef, entriesRef, hiddenKeysRef],
+  );
 
-  const restoreItem = useCallback((key: string) => {
-    if (!hiddenKeysRef.current.includes(key)) return;
-    commitTreeRef.current(
-      materializeTree(entriesRef.current, hiddenKeysRef.current, {
-        restoreKey: key,
-      }),
-    );
-  }, []);
+  const restoreItem = useCallback(
+    (key: string) => {
+      if (!hiddenKeysRef.current.includes(key)) return;
+      commitTreeRef.current(
+        materializeTree(entriesRef.current, hiddenKeysRef.current, {
+          restoreKey: key,
+        }),
+      );
+    },
+    [commitTreeRef, entriesRef, hiddenKeysRef],
+  );
 
   // --- Drag reorder ----------------------------------------------------------
 
@@ -408,38 +408,46 @@ function ReorderInner({
     commitTreeRef.current(
       materializeTree([...next, ...tail], hiddenKeysRef.current),
     );
-  }, []);
+  }, [commitTreeRef, entriesRef, hiddenKeysRef]);
 
   // --- Inserts (registry-driven) --------------------------------------------
+
+  // Append the freshly-materialized tree with one new node and commit it. A
+  // stable callback so the `inserts` memo below holds no ref reads in its body
+  // (the latest entries/hidden/commit are read here, off render).
+  const doInsert = useCallback(
+    (create: () => ReorderNode) => {
+      const tree = materializeTree(entriesRef.current, hiddenKeysRef.current);
+      tree.push(create());
+      commitTreeRef.current(tree);
+    },
+    [commitTreeRef, entriesRef, hiddenKeysRef],
+  );
 
   const inserts = useMemo(() => {
     const out: Array<{ label: string; onInsert: () => void }> = [];
     for (const nt of nodeTypes.values()) {
       const insert = nt.insert;
       if (!insert) continue;
+      // eslint-disable-next-line react-hooks/refs -- not a render-phase ref read: `onInsert` is a deferred click handler, and `doInsert` reads the latest entries/hidden/commit via stable refs only when it FIRES. Reading those values directly in this memo would churn `inserts` identity on every live-state push and re-render every draggable item app-wide (the stability `editorProps` deliberately holds).
       out.push({
         label: insert.label,
-        onInsert: () => {
-          const tree = materializeTree(
-            entriesRef.current,
-            hiddenKeysRef.current,
-          );
-          tree.push(insert.create());
-          commitTreeRef.current(tree);
-        },
+        onInsert: () => doInsert(insert.create),
       });
     }
     return out;
-  }, [nodeTypes]);
+  }, [nodeTypes, doInsert]);
 
   // --- Remove a node by id ---------------------------------------------------
 
-  const onRemoveNode = useCallback((id: string) => {
-    commitTreeRef.current(mapNodeById(itemsRef.current, id, () => null));
-  }, []);
+  const onRemoveNode = useCallback(
+    (id: string) => {
+      commitTreeRef.current(mapNodeById(itemsRef.current, id, () => null));
+    },
+    [commitTreeRef, itemsRef],
+  );
 
-  const onRemoveNodeRef = useRef(onRemoveNode);
-  onRemoveNodeRef.current = onRemoveNode;
+  const onRemoveNodeRef = useLatestRef(onRemoveNode);
 
   // --- Patch a node's payload by id (e.g. header collapse toggle) ------------
   // Addresses the node by `id`; a container without an `id` (hand-authored)
@@ -490,17 +498,16 @@ function ReorderInner({
       );
       commitTreeRef.current(next);
     },
-    [],
+    [commitTreeRef, entriesRef, itemsRef],
   );
 
-  const patchNodeRef = useRef(patchNode);
-  patchNodeRef.current = patchNode;
+  const patchNodeRef = useLatestRef(patchNode);
 
   // --- Map state into the editor's presentational entries --------------------
 
   const renderNode = useCallback(
     (data: ReorderNodeData): ReorderEntry | null => {
-      const nodeType = nodeTypesRef.current.get(data.type);
+      const nodeType = nodeTypes.get(data.type);
       if (!nodeType) return null; // unknown type → fail-soft skip
       const parsed = nodeType.schema.safeParse(data.payload);
       const payload = parsed.success ? parsed.data : {};
@@ -518,7 +525,7 @@ function ReorderInner({
         if (!collapsed) {
           children = (data.members ?? []).map((m) => {
             if (isNodeData(m)) {
-              const memberType = nodeTypesRef.current.get(m.type);
+              const memberType = nodeTypes.get(m.type);
               if (!memberType) return null;
               const memberParsed = memberType.schema.safeParse(m.payload);
               const memberId = m.id ?? fallbackNodeId(m);
@@ -568,13 +575,14 @@ function ReorderInner({
         }),
       };
     },
-    [editMode, renderItem],
+    [editMode, renderItem, nodeTypes, onRemoveNodeRef, patchNodeRef],
   );
 
   const entries = useMemo<ReorderEntry[]>(() => {
     const out: ReorderEntry[] = [];
     for (const entry of state.entries) {
       if (isNodeData(entry)) {
+        // eslint-disable-next-line react-hooks/refs -- not a render-phase ref read: `renderNode` reads patchNode/onRemoveNode via stable refs only inside the onPatch/onRemove handlers it returns (fired on user action), never during this memo pass. The refs keep those handlers stable so `entries` identity doesn't churn every live-state push.
         const mapped = renderNode(entry);
         if (mapped) out.push(mapped);
         continue;
@@ -622,7 +630,7 @@ function ReorderInner({
         </div>
       );
     },
-    [renderItem],
+    [renderItem, entriesRef],
   );
 
   // --- Constrained-space regime ----------------------------------------------

@@ -1,4 +1,5 @@
 import { useLayoutEffect, useMemo, useRef } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   PaneLayoutContext,
   PaneResolveGuard,
@@ -44,8 +45,7 @@ export function Column({ entry, isFirst, isLast, dragHandleProps }: ColumnProps)
     }
   });
 
-  const setWidthRef = useRef(setWidth);
-  setWidthRef.current = setWidth;
+  const setWidthRef = useLatestRef(setWidth);
   const paneId = entry.pane.id;
 
   useLayoutEffect(() => {
@@ -54,7 +54,7 @@ export function Column({ entry, isFirst, isLast, dragHandleProps }: ColumnProps)
       // width: split the space 50/50 so both columns start roughly equal.
       setWidthRef.current(Math.round(capturedWidthRef.current / 2));
     }
-  }, [isLast, paneId, tabId]);
+  }, [isLast, paneId, tabId, setWidthRef]);
 
   const paneLayout = useMemo(
     () => ({

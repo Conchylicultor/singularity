@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { SortPreset, SortRule } from "../../core";
 import { dataViewDescriptors } from "./descriptors";
 import { readSortPresets } from "./sort-presets";
@@ -54,8 +55,7 @@ export function useSortPresets(storageKey: string): SortPresetsController {
   const [mirror, setMirror] = useState<SortPreset[]>(() => persisted);
 
   // Freshest setConfig for the immediate writes.
-  const setConfigRef = useRef(setConfig);
-  setConfigRef.current = setConfig;
+  const setConfigRef = useLatestRef(setConfig);
 
   // True only between an optimistic local mutation and the config catching up,
   // so the reconcile effect doesn't clobber the optimistic value mid-flight.
@@ -72,11 +72,14 @@ export function useSortPresets(storageKey: string): SortPresetsController {
     });
   }, [persistedJson]);
 
+  // `setConfigRef` is a stable useLatestRef handle (identity never changes);
+  // listed only to satisfy exhaustive-deps. `commit` stays referentially stable
+  // and writes through the freshest setConfig off `.current`.
   const commit = useCallback((next: SortPreset[]) => {
     pendingRef.current = true;
     setMirror(next);
     setConfigRef.current("sortPresets", next);
-  }, []);
+  }, [setConfigRef]);
 
   // The config truth has caught up to (or past) our optimistic write → drop the
   // pending guard so the reconcile effect resumes following external truth.

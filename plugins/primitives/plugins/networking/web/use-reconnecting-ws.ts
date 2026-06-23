@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { publishWsStatus, type WsStatus } from "./ws-status-bus";
 
 export interface ReconnectingWsOptions {
@@ -22,8 +23,7 @@ export function useReconnectingWebSocket(
   opts: ReconnectingWsOptions,
 ): { current: ReconnectingWsHandle | null } {
   const handleRef = useRef<ReconnectingWsHandle | null>(null);
-  const optsRef = useRef(opts);
-  optsRef.current = opts;
+  const optsRef = useLatestRef(opts);
 
   useEffect(() => {
     if (opts.enabled === false) return;
@@ -105,7 +105,10 @@ export function useReconnectingWebSocket(
       }
       handleRef.current = null;
     };
-  }, [opts.url, opts.enabled]);
+    // `optsRef` is a stable useLatestRef handle (identity never changes); listed
+    // only to satisfy exhaustive-deps. The effect intentionally re-runs only on
+    // url/enabled — every other opt is read live off `optsRef.current`.
+  }, [opts.url, opts.enabled, optsRef]);
 
   return handleRef;
 }

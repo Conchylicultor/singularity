@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { createPortal } from "react-dom";
 import {
   $getNodeByKey,
@@ -71,12 +72,9 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
 
   // Refs let the (stable) Lexical command callbacks read fresh state — the
   // closures capture stale values otherwise (mirrors keyboard-plugin's editorRef).
-  const visibleRef = useRef(visible);
-  visibleRef.current = visible;
-  const filteredRef = useRef(filtered);
-  filteredRef.current = filtered;
-  const activeIndexRef = useRef(activeIndex);
-  activeIndexRef.current = activeIndex;
+  const visibleRef = useLatestRef(visible);
+  const filteredRef = useLatestRef(filtered);
+  const activeIndexRef = useLatestRef(activeIndex);
 
   function close() {
     setOpen(false);
@@ -199,8 +197,7 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
     setOpen(false);
     setActiveIndex(0);
   }
-  const handleSelectRef = useRef(handleSelect);
-  handleSelectRef.current = handleSelect;
+  const handleSelectRef = useLatestRef(handleSelect);
 
   // Keyboard: registered ABOVE KeyboardPlugin (CRITICAL > HIGH) so menu nav wins
   // when visible, but falls through (return false) to split/focus-nav otherwise.
@@ -273,7 +270,7 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
       unregisterEscape();
       unregisterBlur();
     };
-  }, [lexicalEditor]);
+  }, [lexicalEditor, visibleRef, filteredRef, activeIndexRef, handleSelectRef]);
 
   if (!visible || !caret) return null;
 

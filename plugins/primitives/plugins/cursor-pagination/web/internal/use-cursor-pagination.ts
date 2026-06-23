@@ -38,6 +38,7 @@ export function useCursorPagination<T>(
   } = opts;
 
   const frozenCursorRef = useRef<string | null>(null);
+  // eslint-disable-next-line react-hooks/refs -- intentional frozen-cursor capture: read in render to seed a stable useInfiniteQuery; freezing across refetch is the design
   if (cursor !== null && frozenCursorRef.current === null) {
     frozenCursorRef.current = cursor;
   }
@@ -48,15 +49,18 @@ export function useCursorPagination<T>(
     hasNextPage,
     isFetchingNextPage,
   } = useInfiniteQuery({
+    // eslint-disable-next-line react-hooks/refs -- intentional frozen-cursor capture: read in render to seed a stable useInfiniteQuery; freezing across refetch is the design
     queryKey: [...queryKey, frozenCursorRef.current],
     queryFn: async ({ pageParam }) =>
       fetchPage(pageParam as string, pageSize),
+    // eslint-disable-next-line react-hooks/refs -- intentional frozen-cursor capture: read in render to seed a stable useInfiniteQuery; freezing across refetch is the design
     initialPageParam: frozenCursorRef.current ?? "",
     getNextPageParam: (lastPage) => {
       if (!lastPage.hasMore) return undefined;
       const tail = lastPage.items[lastPage.items.length - 1];
       return tail ? getCursor(tail) : undefined;
     },
+    // eslint-disable-next-line react-hooks/refs -- intentional frozen-cursor capture: read in render to seed a stable useInfiniteQuery; freezing across refetch is the design
     enabled: enabled && frozenCursorRef.current !== null,
     staleTime: Infinity,
   });

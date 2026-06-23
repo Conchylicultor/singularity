@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { createPortal } from "react-dom";
 import {
   $createTextNode,
@@ -56,12 +57,9 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
   const options = pageOptionsResult.pending ? [] : pageOptionsResult.options;
 
   // Refs let the stable Lexical command callbacks read fresh state.
-  const openRef = useRef(open);
-  openRef.current = open;
-  const optionsRef = useRef(options);
-  optionsRef.current = options;
-  const activeIndexRef = useRef(activeIndex);
-  activeIndexRef.current = activeIndex;
+  const openRef = useLatestRef(open);
+  const optionsRef = useLatestRef(options);
+  const activeIndexRef = useLatestRef(activeIndex);
 
   function close() {
     setOpen(false);
@@ -144,8 +142,7 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
       void createLinkedPage(option.title).then((id) => insertLink(id));
     }
   }
-  const handleSelectRef = useRef(handleSelect);
-  handleSelectRef.current = handleSelect;
+  const handleSelectRef = useLatestRef(handleSelect);
 
   // Keyboard: registered ABOVE KeyboardPlugin (CRITICAL > HIGH) so menu nav wins
   // when open, but falls through (return false) to split/focus-nav when closed.
@@ -214,7 +211,7 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
       unregisterEscape();
       unregisterBlur();
     };
-  }, [lexicalEditor]);
+  }, [lexicalEditor, openRef, optionsRef, activeIndexRef, handleSelectRef]);
 
   if (!open || !caret) return null;
 

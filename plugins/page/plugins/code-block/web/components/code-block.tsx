@@ -1,5 +1,6 @@
 import { cn, Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import type { BundledLanguage } from "shiki";
@@ -49,8 +50,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   // Language persists immediately on select; a ref keeps the (separately
   // debounced) code save closure pointed at the latest value.
   const [language, setLanguage] = useState<string | undefined>(parsed.language);
-  const languageRef = useRef(language);
-  languageRef.current = language;
+  const languageRef = useLatestRef(language);
 
   const field = useEditableField({
     value: parsed.code,

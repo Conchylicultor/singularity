@@ -77,7 +77,7 @@ tested directly (`overlay.test.ts`); the hook is a thin React shell over it.
 
 - Description: Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay), with coarse and content-based confirmation and automatic rollback on reject.
 - Web:
-  - Uses: `primitives/live-state.queryKeyFor`, `primitives/live-state.useResource`, `primitives/sync-status.useReportSync`
+  - Uses: `primitives/latest-ref.useLatestRef`, `primitives/live-state.queryKeyFor`, `primitives/live-state.useResource`, `primitives/sync-status.useReportSync`
   - Exports: Types: `UseOptimisticResourceArgs`, `UseOptimisticResourceResult`; Values: `OpNoLongerApplies`, `useOptimisticResource`
 - Cross-plugin:
   - Imported by: `config_v2/staging`, `conversations/conversations-view/queue`, `page/editor`

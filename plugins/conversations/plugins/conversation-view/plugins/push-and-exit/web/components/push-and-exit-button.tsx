@@ -1,5 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { IconType } from "react-icons";
 import { MdDeleteForever, MdLogout, MdPlayArrow, MdPlaylistAdd, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
 import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -84,8 +85,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
 
   const [draft, setDraft, clearDraft] = useDraft("conversation:prompt", "", { scope: convId });
   const [busy, setBusy] = useState(false);
-  const draftRef = useRef(draft);
-  draftRef.current = draft;
+  const draftRef = useLatestRef(draft);
 
   const filesResult = useEditedFiles(convId);
   const pushesResult = useResource(pushesResource);

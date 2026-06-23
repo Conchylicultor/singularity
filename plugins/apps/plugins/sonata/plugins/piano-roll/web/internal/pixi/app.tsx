@@ -20,6 +20,7 @@
  * every other interaction stays on the DOM lane wrapper.
  */
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Application } from "pixi.js";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import type { Note } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -124,10 +125,8 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
   // below re-fire once init settles and push the then-current props.
   const [scene, setScene] = useState<PianoRollScene | null>(null);
   // Latest callbacks without retriggering the init effect.
-  const onSceneReadyRef = useRef(props.onSceneReady);
-  onSceneReadyRef.current = props.onSceneReady;
-  const onContextLostRef = useRef(props.onContextLost);
-  onContextLostRef.current = props.onContextLost;
+  const onSceneReadyRef = useLatestRef(props.onSceneReady);
+  const onContextLostRef = useLatestRef(props.onContextLost);
 
   useEffect(() => {
     let disposed = false;
@@ -185,6 +184,7 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
         // instance never published (disposed flag), and its late cleanup must
         // not clobber the second instance's live handle.
         if (liveScene) {
+          // eslint-disable-next-line react-hooks/exhaustive-deps -- intentional latest-value read at teardown: onSceneReadyRef (a useLatestRef) must signal the CURRENT parent callback that the scene is gone, not one snapshotted at mount.
           onSceneReadyRef.current(null);
           setScene(null);
           liveScene.destroy();
@@ -192,7 +192,7 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
         app.destroy(true, { children: true });
       });
     };
-  }, []);
+  }, [onSceneReadyRef, onContextLostRef]);
 
   // Each concern is its own effect so a change touches exactly one scene call.
   // Declaration order matters on the first scene-ready pass: size before score

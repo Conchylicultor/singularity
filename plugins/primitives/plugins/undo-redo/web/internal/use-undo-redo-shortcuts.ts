@@ -1,6 +1,7 @@
-import { useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { useSurfaceShortcuts } from "@plugins/primitives/plugins/shortcuts/web";
 import type { ShortcutDescriptor } from "@plugins/primitives/plugins/shortcuts/web";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useUndoRedo } from "./use-undo-redo";
 
 export interface UndoRedoShortcutsOptions {
@@ -24,8 +25,7 @@ export interface UndoRedoShortcutsOptions {
 export function useUndoRedoShortcuts(opts?: UndoRedoShortcutsOptions): void {
   const api = useUndoRedo();
 
-  const latest = useRef({ api, when: opts?.when });
-  latest.current = { api, when: opts?.when };
+  const latest = useLatestRef({ api, when: opts?.when });
 
   const descriptors = useMemo<Omit<ShortcutDescriptor, "surfaceId">[]>(() => {
     const gate = (): boolean => latest.current.when?.() ?? true;
@@ -58,7 +58,7 @@ export function useUndoRedoShortcuts(opts?: UndoRedoShortcutsOptions): void {
         handler: () => latest.current.api.redo(),
       },
     ];
-  }, []);
+  }, [latest]);
 
   useSurfaceShortcuts(descriptors);
 }

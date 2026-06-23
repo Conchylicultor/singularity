@@ -46,27 +46,44 @@ export type RowChromeProps<T extends TreeItem> = {
 export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
   const { node, depth, children, actions, icon, menu, accent, className } =
     props;
-  const r = useTreeRow(node);
+  const {
+    addBelow,
+    addChild: addChildAction,
+    childRef,
+    dragSource,
+    hasChildren,
+    isOpen,
+    isSelected,
+    toggleExpanded,
+    select,
+    isDragging,
+    isOverChild,
+    beforeRef,
+    afterRef,
+    isOverBefore,
+    isOverAfter,
+  } = useTreeRow(node);
+  const { ref: dragRef, attributes: dragAttributes, listeners: dragListeners } =
+    dragSource;
   const ctx = useTreeListContext<T>();
   const Row = ctx.Row;
 
   const menuItems =
     typeof menu === "function"
-      ? menu({ addBelow: r.addBelow, addChild: r.addChild })
+      ? menu({ addBelow, addChild: addChildAction })
       : menu;
 
   // The whole row is the drag source (Notion-style: no grip handle). Merge the
   // draggable ref with the child-drop ref onto the single row element — but only
   // when the tree can reorder, so a read-only tree's rows aren't draggable at all
   // (no inert pickup, matching its missing `onMove`).
-  const { childRef, dragSource } = r;
   const canReorder = ctx.canReorder;
   const rowRef = useCallback(
     (el: HTMLDivElement | null) => {
       childRef(el);
-      if (canReorder) dragSource.ref(el);
+      if (canReorder) dragRef(el);
     },
-    [childRef, dragSource, canReorder],
+    [childRef, dragRef, canReorder],
   );
 
   // The "more" menu — formerly opened from the grip handle — now lives as a
@@ -103,7 +120,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
         icon={MdAdd}
         label="Add child"
         variant="ghost"
-        onClick={() => r.addChild()}
+        onClick={() => addChildAction()}
       />
     </ControlSizeProvider>
   ) : null;
@@ -122,17 +139,17 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
       <div className="relative">
         <TreeRowChrome
           depth={depth}
-          hasChildren={r.hasChildren}
-          isOpen={r.isOpen}
-          selected={r.isSelected}
-          onToggle={r.toggleExpanded}
-          onSelect={r.select}
+          hasChildren={hasChildren}
+          isOpen={isOpen}
+          selected={isSelected}
+          onToggle={toggleExpanded}
+          onSelect={select}
           rowRef={rowRef}
-          dragAttributes={canReorder ? dragSource.attributes : undefined}
-          dragListeners={canReorder ? dragSource.listeners : undefined}
+          dragAttributes={canReorder ? dragAttributes : undefined}
+          dragListeners={canReorder ? dragListeners : undefined}
           className={cn(
-            r.isDragging && "opacity-40",
-            r.isOverChild && "bg-accent ring-primary/40 ring-1",
+            isDragging && "opacity-40",
+            isOverChild && "bg-accent ring-primary/40 ring-1",
             className,
           )}
           actions={trailing}
@@ -159,21 +176,21 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
             {accent}
           </div>
         )}
-        <Pin ref={r.beforeRef} to="top" stretch decorative className="h-[6px]">
-          {r.isOverBefore && (
+        <Pin ref={beforeRef} to="top" stretch decorative className="h-[6px]">
+          {isOverBefore && (
             // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
             <div className="bg-primary absolute inset-x-1 top-0 h-[2px] rounded-full" />
           )}
         </Pin>
-        <Pin ref={r.afterRef} to="bottom" stretch decorative className="h-[6px]">
-          {r.isOverAfter && (
+        <Pin ref={afterRef} to="bottom" stretch decorative className="h-[6px]">
+          {isOverAfter && (
             // eslint-disable-next-line layout/no-adhoc-layout -- DnD drop-indicator bar, inset on both x edges (Pin has no inset-both-edges anchor)
             <div className="bg-primary absolute inset-x-1 bottom-0 h-[2px] rounded-full" />
           )}
         </Pin>
       </div>
       {/* In windowed mode the flat list already contains every visible descendant in paint order, so recursing here would double-render. */}
-      {!ctx.windowed && r.isOpen && (
+      {!ctx.windowed && isOpen && (
         <div>
           {node.children.map((child) => (
             <Row

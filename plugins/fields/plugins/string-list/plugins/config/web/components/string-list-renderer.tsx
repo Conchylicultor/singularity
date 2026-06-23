@@ -1,5 +1,5 @@
 import { Button, Input, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useCallback, useRef, useState } from "react";
+import { useCallback, useState } from "react";
 import { MdAdd, MdDragIndicator, MdClose } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -126,10 +126,12 @@ function StringRow({
 }) {
   // Local edit buffer: typing updates `local`; we flush to `onChange` on blur so
   // a controlled re-render mid-keystroke can't fight the cursor. While unfocused
-  // the row mirrors the external value (reorder, external edit).
+  // the row mirrors the external value (reorder, external edit). `focused` is
+  // state (not a ref) so the render-phase value→local sync below reads it without
+  // touching a ref during render.
   const [local, setLocal] = useState(value);
-  const focused = useRef(false);
-  if (!focused.current && local !== value) setLocal(value);
+  const [focused, setFocused] = useState(false);
+  if (!focused && local !== value) setLocal(value);
 
   return (
     <SortableItem
@@ -153,12 +155,10 @@ function StringRow({
           <Input
             value={local}
             placeholder={placeholder}
-            onFocus={() => {
-              focused.current = true;
-            }}
+            onFocus={() => setFocused(true)}
             onChange={(e) => setLocal(e.target.value)}
             onBlur={() => {
-              focused.current = false;
+              setFocused(false);
               onChange(local);
             }}
             className="min-w-0 flex-1"

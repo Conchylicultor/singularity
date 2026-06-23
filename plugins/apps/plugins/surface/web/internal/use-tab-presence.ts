@@ -57,31 +57,43 @@ export function useTabPresence(
 
   // Reopen guard: any retained id that has reappeared in the live store is no
   // longer exiting — clear its timer and drop it so it renders live again.
+  // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
   for (const id of [...retained.keys()]) {
     if (liveIds.has(id)) {
+      // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
       clearTimeout(retained.get(id)!.timer);
+      // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
       retained.delete(id);
     }
   }
 
   // For every id present last render but absent now, retain it (if its placement
   // opts into an exit tween) so its Chrome can animate out before unmounting.
+  // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
   for (let i = 0; i < prevTabs.length; i++) {
     const tab = prevTabs[i]!;
+    // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
     if (liveIds.has(tab.tabId)) continue;
+    // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
     if (!prevLiveIds.has(tab.tabId)) continue; // already gone before this render
+    // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
     if (retained.has(tab.tabId)) continue; // already retained
+    // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
     const def = byId.get(tab.placement) ?? byId.get(defaultId);
     const duration = def?.exitDurationMs;
     if (!duration || duration <= 0) continue; // instant unmount (docked / solo)
+    // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
     const timer = setTimeout(() => {
       retainedRef.current.delete(tab.tabId);
       bump();
     }, duration);
+    // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
     retained.set(tab.tabId, { tab, index: i, timer });
   }
 
+  // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
   prevTabsRef.current = tabs;
+  // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
   prevLiveIdsRef.current = liveIds;
 
   // Clear every pending teardown timer on unmount (no dangling timers).
@@ -96,6 +108,7 @@ export function useTabPresence(
   // Render list: live tabs in store order, then splice each retained exiting tab
   // back at its last-known index so it animates out where it sat.
   const out: TabPresence[] = tabs.map((tab) => ({ tab, exiting: false }));
+  // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
   const exiting = [...retained.values()].sort((a, b) => a.index - b.index);
   for (const r of exiting) {
     const at = Math.min(Math.max(0, r.index), out.length);

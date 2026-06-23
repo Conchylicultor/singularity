@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type CSSProperties, useCallback, useRef } from "react";
+import { type CSSProperties, useCallback, useEffect, useRef } from "react";
 import { MdClose, MdDragIndicator } from "react-icons/md";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
@@ -154,8 +154,12 @@ export function TaskDraftCard({
   // only path that deserializes node patterns like `<ui-context/>` into chips.
   // Drives the head-card action slot (e.g. the element picker). `textRef` reads
   // the latest text so the callback identity stays stable across keystrokes.
+  // Synced in an effect (not during render): `insertText` only ever fires from a
+  // user action — well after commit — so the post-commit ref value is current.
   const textRef = useRef(text);
-  textRef.current = text;
+  useEffect(() => {
+    textRef.current = text;
+  }, [text]);
   const insertText = useCallback(
     (snippet: string) => {
       const cur = textRef.current;

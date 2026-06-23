@@ -12,6 +12,7 @@ import {
   useRef,
   useState,
 } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   bars,
   buildTempoIndex,
@@ -321,16 +322,15 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // instead its accessors read these refs, which mirror the freshest
   // projection/lane values every render. Closing over `projection` directly
   // would hand effects a stale snapshot after the first resize.
-  const projectionRef = useRef(projection);
-  projectionRef.current = projection;
-  const laneSizeRef = useRef(lane);
-  laneSizeRef.current = lane;
+  const projectionRef = useLatestRef(projection);
+  const laneSizeRef = useLatestRef(lane);
 
   // FX bridge — one per scene. See fx-context.ts for the accessor/budget design.
   const fx = useMemo(
     () =>
       pixi
-        ? createFxContext({
+        ? // eslint-disable-next-line react-hooks/refs -- the refs are captured into deferred accessor closures (getProjection/getLaneSize), NEVER read during this render; they're read later when an FX effect calls the accessor, so the context stays identity-stable across resize.
+          createFxContext({
             scene: pixi.scene,
             app: pixi.app,
             getProjection: () => projectionRef.current,
@@ -341,7 +341,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             getPlaybackBeats: () => cursor.getBeat(),
           })
         : null,
-    [pixi, cursor],
+    [pixi, cursor, projectionRef, laneSizeRef],
   );
 
   // --- Imperative cursor path. The playhead advances ~60fps via the cursor
@@ -352,19 +352,14 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // React renders. This component re-renders only on real input changes (score,
   // lane size, tempo, track view).
   const scrollLayerRef = useRef<HTMLDivElement | null>(null);
-  const sceneRef = useRef<PianoRollScene | null>(pixi?.scene ?? null);
-  sceneRef.current = pixi?.scene ?? null;
-  const tempoRef = useRef(tempo);
-  tempoRef.current = tempo;
-  const tempoScaleRef = useRef(tempoScale);
-  tempoScaleRef.current = tempoScale;
+  const sceneRef = useLatestRef(pixi?.scene ?? null);
+  const tempoRef = useLatestRef(tempo);
+  const tempoScaleRef = useLatestRef(tempoScale);
   // Live zoom, read imperatively by the per-frame DOM offset and the wheel
   // handler (which must not re-attach on every zoom tick).
-  const spreadRef = useRef(spread);
-  spreadRef.current = spread;
+  const spreadRef = useLatestRef(spread);
   // Play state read imperatively by the wheel-seek pause/resume bridge.
-  const isPlayingRef = useRef(isPlaying);
-  isPlayingRef.current = isPlaying;
+  const isPlayingRef = useLatestRef(isPlaying);
 
   const applyCursor = useCallback((beat: number, seek = false) => {
     const scene = sceneRef.current;
@@ -388,7 +383,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
         tempo.beatToSeconds(beat) * PX_PER_SECOND * ts * spreadRef.current;
       el.style.transform = `translateY(${offset}px)`;
     }
-  }, []);
+  }, [sceneRef, tempoRef, tempoScaleRef, laneSizeRef, spreadRef]);
 
   // Drive the imperative path on every cursor change — no React render. The
   // store tells us whether the change was a seek so we re-anchor onsets.
@@ -466,6 +461,8 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     setConfig,
     play,
     stop,
+    spreadRef,
+    isPlayingRef,
   ]);
 
   // Re-sync after any reactive change (scene ready, resize, tempo, zoom) and on

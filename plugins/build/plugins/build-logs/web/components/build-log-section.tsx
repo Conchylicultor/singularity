@@ -111,8 +111,8 @@ function LiveLogs(): ReactElement {
   const [entries, setEntries] = useState<LogEntryWire[]>([]);
   const lastSeqRef = useRef<number>(0);
 
-  const stickyScroll = useStickyScroll({ resetKey: "build" });
-  const { scrollIfPinned } = stickyScroll;
+  const { scrollRef, scrollIfPinned, isPinned, hasUnread, jumpToBottom } =
+    useStickyScroll({ resetKey: "build" });
 
   useEffect(() => {
     scrollIfPinned();
@@ -177,7 +177,7 @@ function LiveLogs(): ReactElement {
       </div>
       <Scroll
         axis="y"
-        ref={stickyScroll.scrollRef}
+        ref={scrollRef}
         className={`min-h-48 max-h-96 rounded-md border bg-muted/30 px-md py-sm ${monoLogClass}`}
       >
         {entries.length === 0 && (
@@ -205,7 +205,7 @@ function LiveLogs(): ReactElement {
       </Scroll>
       {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}
       <Pin to="bottom" style={{ bottom: "0.25rem" }}>
-        <JumpToBottomButton handle={stickyScroll} />
+        <JumpToBottomButton handle={{ isPinned, hasUnread, jumpToBottom }} />
       </Pin>
     </Stack>
   );

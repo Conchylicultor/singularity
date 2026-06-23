@@ -36,7 +36,7 @@ never stamped a save. The persistent `savedAt` value can't be coalesced away.
 
 - Description: Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
 - Web:
-  - Uses: `primitives/sync-status.useReportSync`
+  - Uses: `primitives/latest-ref.useLatestRef`, `primitives/sync-status.useReportSync`
   - Exports: Types: `EditableField`, `UseEditableFieldOptions`; Values: `useEditableField`
 - Cross-plugin:
   - Imported by: `apps/pages/page-tree`, `apps/story/shell`, `conversations/agents`, `conversations/conversation-view/notes`, `conversations/conversations-view/grouped`, `page/code-block`, `page/editor`, `page/math/equation`, `tasks/task-description`, `tasks/task-header`

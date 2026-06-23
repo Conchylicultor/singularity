@@ -34,17 +34,21 @@ export function GroupContainer({
   trailingAction?: ReactNode;
   children: ReactNode;
 }) {
-  const droppable = useDroppable({ id: droppableId, data: dropData });
+  // Destructure the dnd-kit return at the call site: react-hooks/refs taints
+  // the ref-bearing hook-return OBJECT and flags member access during render
+  // (`droppable.isOver`/`.setNodeRef`), but plain destructured locals are clean
+  // — mirrors the SortableItem/useTreeRow precedent.
+  const { setNodeRef, isOver } = useDroppable({ id: droppableId, data: dropData });
 
   const effectiveExpanded = dragInProgress ? false : expanded;
 
   return (
     <div
-      ref={droppable.setNodeRef}
+      ref={setNodeRef}
       className={cn(
         "group/box rounded-md transition-colors",
         "hover:bg-muted/30",
-        droppable.isOver && "bg-accent/40 ring-1 ring-primary/60",
+        isOver && "bg-accent/40 ring-1 ring-primary/60",
       )}
     >
       {/* eslint-disable-next-line badge/no-adhoc-chip -- group header row, awaiting Row primitive */}

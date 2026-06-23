@@ -90,10 +90,10 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
   const lastSeqRef = useRef<number>(0);
   const selectedRef = useRef("build");
 
-  const stickyScroll = useStickyScroll({
-    resetKey: "build",
-  });
-  const { scrollIfPinned } = stickyScroll;
+  const { scrollRef, scrollIfPinned, isPinned, hasUnread, jumpToBottom } =
+    useStickyScroll({
+      resetKey: "build",
+    });
 
   useEffect(() => {
     scrollIfPinned();
@@ -164,7 +164,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
       <Scroll
         axis="y"
         fill={variant === "pane"}
-        ref={stickyScroll.scrollRef}
+        ref={scrollRef}
         className={cn(logViewerClass, variant === "popover" ? "h-48" : "min-h-48")}
       >
         {entries.length === 0 && (
@@ -192,7 +192,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
       </Scroll>
       {/* Off-ramp bottom-1 (0.25rem) offset, not on the spacing ramp. */}
       <Pin to="bottom" style={{ bottom: "0.25rem" }}>
-        <JumpToBottomButton handle={stickyScroll} />
+        <JumpToBottomButton handle={{ isPinned, hasUnread, jumpToBottom }} />
       </Pin>
     </Stack>
   );

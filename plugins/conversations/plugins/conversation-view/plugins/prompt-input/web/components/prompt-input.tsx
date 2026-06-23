@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { Conversation as ConversationRecord } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   isDraftEmpty,
@@ -29,8 +30,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
   }, [promptInsert]);
 
   // Latest-draft ref so the send handler doesn't capture stale state.
-  const draftRef = useRef(draft);
-  draftRef.current = draft;
+  const draftRef = useLatestRef(draft);
 
   const send = useCallback(async () => {
     const current = draftRef.current;
@@ -50,7 +50,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
     } finally {
       setSending(false);
     }
-  }, [conversation.id, disabled, sending, clearDraft]);
+  }, [conversation.id, disabled, sending, clearDraft, draftRef]);
 
   const placeholder = disabled
     ? live.waitingFor

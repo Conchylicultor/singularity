@@ -1,4 +1,5 @@
-import { useContext, useEffect, useId, useRef } from "react";
+import { useContext, useEffect, useId } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { SyncStatusSinkContext } from "./sink-context";
 import { applyReport, removeReport, type SyncPhase } from "./store";
 
@@ -43,8 +44,7 @@ export function useReportSync({
   const sink = useContext(SyncStatusSinkContext);
 
   // Hold retry in a ref so its identity churn never feeds the effect deps.
-  const retryRef = useRef<(() => void) | undefined>(retry);
-  retryRef.current = retry;
+  const retryRef = useLatestRef(retry);
 
   // Register the retry ref in the sink so the indicator can pull it.
   useEffect(() => {
@@ -52,7 +52,7 @@ export function useReportSync({
     return () => {
       sink.retries.delete(id);
     };
-  }, [sink, id]);
+  }, [sink, id, retryRef]);
 
   // Update the store entry whenever the reported phase/label/savedAt changes.
   // No cleanup here: removing-then-reapplying on a phase change would drop the

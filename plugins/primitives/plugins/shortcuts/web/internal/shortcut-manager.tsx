@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useMemo } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Shortcuts } from "../slots";
 import { getCachedCombo, matchesEvent } from "./parse-keys";
 import { comboHasModifier, isEditableTarget } from "./editable-target";
@@ -14,8 +15,7 @@ export function ShortcutManager() {
     () => [...staticShortcuts, ...dynamicShortcuts],
     [staticShortcuts, dynamicShortcuts],
   );
-  const shortcutsRef = useRef(shortcuts);
-  shortcutsRef.current = shortcuts;
+  const shortcutsRef = useLatestRef(shortcuts);
 
   useEffect(() => {
     if (import.meta.env.DEV) {
@@ -35,7 +35,7 @@ export function ShortcutManager() {
         }
       }
     }
-  }, [shortcuts]);
+  }, [shortcuts, shortcutsRef]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
@@ -75,7 +75,7 @@ export function ShortcutManager() {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, []);
+  }, [shortcutsRef]);
 
   return null;
 }

@@ -7,6 +7,7 @@ import {
   useSyncExternalStore,
 } from "react";
 import type { DependencyList, ReactNode } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 
 /**
  * Per-`<Provider>`-instance external store — the sanctioned replacement for the
@@ -144,10 +145,8 @@ export function defineScopedStore<S>(
     isEqual: (a: T, b: T) => boolean = Object.is,
   ): T {
     const store = useStoreApi();
-    const selectorRef = useRef(selector);
-    selectorRef.current = selector;
-    const isEqualRef = useRef(isEqual);
-    isEqualRef.current = isEqual;
+    const selectorRef = useLatestRef(selector);
+    const isEqualRef = useLatestRef(isEqual);
 
     // Cache keyed on the store's STATE identity keeps getSnapshot referentially
     // stable while the store hasn't moved (valid because setState bails on an
