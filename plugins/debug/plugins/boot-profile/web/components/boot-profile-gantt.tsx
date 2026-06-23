@@ -1,11 +1,9 @@
 import {
-  useEffect,
   useMemo,
   useState,
   type ReactElement,
 } from "react";
-import { MdRefresh, MdReplay } from "react-icons/md";
-import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -19,8 +17,6 @@ import {
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
 import {
-  getBootTrace,
-  subscribeBootTrace,
   bootWindowEnd,
   type BootPhase,
   type BootSpan,
@@ -402,96 +398,78 @@ function AssetsGroup({
   );
 }
 
-export function BootProfileGantt(): ReactElement {
+/**
+ * Pure presentational Gantt of a boot trace. Takes the trace as a prop and is a
+ * pure function of it (`deriveTrace` reads no `performance.*` / store state), so
+ * a live capture and a DB-loaded snapshot render byte-for-byte identically.
+ * Live-store plumbing and the Refresh/Reload controls live in the live wrapper
+ * (panes.tsx); the optional `header` slot lets a host inject its own chrome
+ * (live controls or a saved-snapshot banner).
+ */
+export function BootProfileGantt({
+  trace,
+  header,
+}: {
+  trace: BootTrace;
+  header?: ReactElement;
+}): ReactElement {
   const [hovered, setHovered] = useState<Span | null>(null);
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [trace, setTrace] = useState<BootTrace | null>(null);
 
-  useEffect(() => {
-    setTrace(getBootTrace());
-  }, [refreshKey]);
-
-  // Re-read when the store notifies — late paint timing (FCP / first-paint), the
-  // first React commit, or new boot spans. Push-based (PerformanceObserver +
-  // subscriber set), so no polling. Fires a bounded number of times during boot.
-  useEffect(() => subscribeBootTrace(() => setTrace(getBootTrace())), []);
-
+  // refreshKey is part of ProfilingContextValue but consumed by no renderer; a
+  // static 0 satisfies the contract now that re-reads are driven by the trace prop.
   const ctxValue = useMemo(
-    () => ({ hovered, setHovered, refreshKey }),
-    [hovered, setHovered, refreshKey],
+    () => ({ hovered, setHovered, refreshKey: 0 }),
+    [hovered, setHovered],
   );
 
-  const derived = useMemo(
-    () => (trace ? deriveTrace(trace) : null),
-    [trace],
-  );
+  const derived = useMemo(() => deriveTrace(trace), [trace]);
 
   return (
     <ProfilingContext.Provider value={ctxValue}>
       <Column
         className="h-full"
-        header={
-          // eslint-disable-next-line layout/no-adhoc-layout -- header strip mirrors gantt-view.tsx
-          <div className="flex items-center gap-sm border-b px-lg py-sm">
-            {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible spacer pushing buttons to the right (mirrors gantt-view.tsx) */}
-            <div className="flex-1" />
-            <Button variant="ghost" onClick={() => setRefreshKey((k) => k + 1)}>
-              <MdRefresh className="size-3.5" />
-              Refresh
-            </Button>
-            <Button variant="ghost" onClick={() => window.location.reload()}>
-              <MdReplay className="size-3.5" />
-              Reload & re-measure
-            </Button>
-          </div>
-        }
+        header={header}
         body={
-          derived && trace ? (
-            <div className="divide-y">
-              <BootSummary trace={trace} />
-              <GanttContainer title="Browser Boot" totalMs={derived.totalMs}>
-                {PHASE_ORDER.map((phase) => {
-                  const config = PHASE_CONFIG[phase];
-                  if (phase === "resources") {
-                    return (
-                      <ResourcesGroup
-                        key={phase}
-                        config={config}
-                        resources={derived.resources}
-                      />
-                    );
-                  }
-                  if (phase === "assets") {
-                    return (
-                      <AssetsGroup
-                        key={phase}
-                        config={config}
-                        assets={derived.assets}
-                        dropped={derived.assetsDropped}
-                      />
-                    );
-                  }
-                  const spans = derived.byPhase.get(phase);
-                  if (!spans || spans.length === 0) return null;
-                  const visible = [...spans].sort(
-                    (a, b) => b.durationMs - a.durationMs,
-                  );
+          <div className="divide-y">
+            <BootSummary trace={trace} />
+            <GanttContainer title="Browser Boot" totalMs={derived.totalMs}>
+              {PHASE_ORDER.map((phase) => {
+                const config = PHASE_CONFIG[phase];
+                if (phase === "resources") {
                   return (
-                    <PhaseGroup
+                    <ResourcesGroup
                       key={phase}
                       config={config}
-                      allSpans={spans}
-                      spans={visible}
+                      resources={derived.resources}
                     />
                   );
-                })}
-              </GanttContainer>
-            </div>
-          ) : (
-            <Text as="div" variant="caption" className="px-lg py-sm text-muted-foreground">
-              No boot trace captured.
-            </Text>
-          )
+                }
+                if (phase === "assets") {
+                  return (
+                    <AssetsGroup
+                      key={phase}
+                      config={config}
+                      assets={derived.assets}
+                      dropped={derived.assetsDropped}
+                    />
+                  );
+                }
+                const spans = derived.byPhase.get(phase);
+                if (!spans || spans.length === 0) return null;
+                const visible = [...spans].sort(
+                  (a, b) => b.durationMs - a.durationMs,
+                );
+                return (
+                  <PhaseGroup
+                    key={phase}
+                    config={config}
+                    allSpans={spans}
+                    spans={visible}
+                  />
+                );
+              })}
+            </GanttContainer>
+          </div>
         }
         footer={<SpanDetail span={hovered} />}
       />

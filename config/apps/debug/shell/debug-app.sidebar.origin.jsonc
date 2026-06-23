@@ -1,4 +1,4 @@
-// @hash 270fa396b1af
+// @hash cbe4b4fceda7
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -7,6 +7,7 @@
     "backup:backup",
     "conversations.recover:conversations-recover",
     "debug.boot-profile:boot-profile",
+    "debug.boot-profile:boot-profiles-list",
     "debug.broadcasts:broadcasts",
     "debug.claude-cli-calls:claude-cli-calls",
     "debug.health-monitor:health-monitor",

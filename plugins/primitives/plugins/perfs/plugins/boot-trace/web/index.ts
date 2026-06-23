@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export type { BootPhase, BootSpan, NavTiming, LongTask, AssetTiming, BootTrace } from "./internal/store";
+export type { BootPhase, BootSpan, NavTiming, LongTask, AssetTiming, BootTrace } from "../core";
 export {
   startBootSpan,
   markBootInstant,
