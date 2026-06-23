@@ -19,6 +19,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "code-explorer.file-tree", pluginId: "code-explorer" },
   { id: "config_v2.settings.nav", pluginId: "config_v2.settings" },
   { id: "debug.profiling.runtime", pluginId: "debug.profiling.runtime" },
+  { id: "debug.reports", pluginId: "debug.reports" },
   { id: "debug.slow-ops.cluster-aggregate", pluginId: "debug.slow-ops.cluster" },
   { id: "debug.slow-ops.cluster-timeline", pluginId: "debug.slow-ops.cluster" },
   { id: "debug.slow-ops.local", pluginId: "debug.slow-ops.pane" },

@@ -1,5 +1,5 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useMemo } from "react";
+import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
@@ -7,12 +7,11 @@ import { useStaleFrontend } from "@plugins/build/web";
 import { reportsResource } from "@plugins/reports/core";
 import type { Report } from "@plugins/reports/core";
 import { Reports } from "@plugins/reports/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
+
+// Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
+const REPORTS_VIEW = defineDataView("debug.reports");
 
 export function ReportsView({
   selectedId,
@@ -22,103 +21,187 @@ export function ReportsView({
   onSelect: (id: string) => void;
 }) {
   const result = useResource(reportsResource);
-  const { serverBuildId } = useStaleFrontend();
+  // One render path for both states (mirrors the sonata library): while
+  // loading, DataView renders its own skeleton via `loading` and the field
+  // schema is still built from the (empty) rows.
+  return matchResource(result, {
+    pending: () => (
+      <ReportsTable rows={[]} loading selectedId={selectedId} onSelect={onSelect} />
+    ),
+    error: () => (
+      <ReportsTable rows={[]} loading selectedId={selectedId} onSelect={onSelect} />
+    ),
+    ready: (rows) => (
+      <ReportsTable
+        rows={rows}
+        loading={false}
+        selectedId={selectedId}
+        onSelect={onSelect}
+      />
+    ),
+  });
+}
 
-  if (result.pending) return <Loading />;
-  const rows = result.data;
+function ReportsTable({
+  rows,
+  loading,
+  selectedId,
+  onSelect,
+}: {
+  rows: Report[];
+  loading: boolean;
+  selectedId?: string;
+  onSelect: (id: string) => void;
+}) {
+  // Enum options derived from the live rows so the filter chip lists exactly
+  // the kinds / sources currently present.
+  const fields: FieldDef<Report>[] = useMemo(() => {
+    const distinct = (pick: (r: Report) => string) =>
+      [...new Set(rows.map(pick))].sort().map((v) => ({ value: v, label: v }));
 
-  if (rows.length === 0) {
-    return (
-      <ControlSizeProvider size="xs">
-        <Center className="h-full">
-          <Text as="div" variant="body" className="text-muted-foreground">
-            No reports recorded yet.
-          </Text>
-        </Center>
-      </ControlSizeProvider>
-    );
-  }
+    return [
+      {
+        id: "kind",
+        label: "Kind",
+        type: "enum",
+        value: (r) => r.kind,
+        options: distinct((r) => r.kind),
+        cell: (r) => (
+          <Badge variant="muted" className="font-mono">
+            {r.kind}
+          </Badge>
+        ),
+        sortable: true,
+        filterable: true,
+        width: "10rem",
+      },
+      {
+        id: "source",
+        label: "Source",
+        type: "enum",
+        value: (r) => r.source,
+        options: distinct((r) => r.source),
+        cell: (r) => (
+          <Badge variant="muted" className="font-mono">
+            {r.source}
+          </Badge>
+        ),
+        sortable: true,
+        filterable: true,
+        width: "10rem",
+      },
+      {
+        id: "noise",
+        label: "Noise",
+        type: "bool",
+        value: (r) => r.noise,
+        cell: (r) => (r.noise ? <Badge variant="warning">noise</Badge> : null),
+        sortable: false,
+        filterable: true,
+        width: "6rem",
+      },
+      {
+        id: "rateLimited",
+        label: "Rate-limited",
+        type: "bool",
+        value: (r) => r.rateLimited,
+        cell: (r) =>
+          r.rateLimited ? <Badge variant="destructive">rate-limited</Badge> : null,
+        sortable: false,
+        filterable: true,
+        width: "8rem",
+      },
+      {
+        id: "count",
+        label: "×",
+        type: "int",
+        value: (r) => r.count,
+        cell: (r) =>
+          r.count > 1 ? (
+            <span className="tabular-nums text-muted-foreground">×{r.count}</span>
+          ) : null,
+        sortable: true,
+        align: "end",
+        width: "4rem",
+      },
+      {
+        id: "lastSeen",
+        label: "When",
+        type: "date",
+        value: (r) => r.lastSeenAt,
+        cell: (r) => (
+          <span className="text-muted-foreground">
+            <RelativeTime date={r.lastSeenAt} />
+          </span>
+        ),
+        sortable: true,
+        width: "7rem",
+      },
+      {
+        id: "context",
+        label: "",
+        type: "text",
+        // Presentational-only: the attribution badges depend on client hooks,
+        // so this field carries no comparable value and is excluded from
+        // search / filter / sort.
+        value: () => "",
+        cell: (r) => <AttributionBadges report={r} />,
+        sortable: false,
+        filterable: false,
+        width: "auto",
+      },
+      {
+        id: "summary",
+        label: "Summary",
+        type: "text",
+        // `value` returns the human message so full-text search matches the
+        // summary; the visible cell still routes through the per-kind slot.
+        value: (r) => r.message,
+        cell: (r) => <Reports.KindView.Dispatch report={r} />,
+        primary: true,
+        sortable: false,
+        width: "minmax(0,2fr)",
+      },
+    ];
+  }, [rows]);
 
   return (
-    <ControlSizeProvider size="xs">
-      <Stack gap="none" className="h-full">
-        <Scroll axis="both" fill>
-          <ul className="divide-y">
-            {rows.map((c: Report) => (
-              <ReportRow
-                key={c.id}
-                report={c}
-                serverBuildId={serverBuildId}
-                selected={c.id === selectedId}
-                onSelect={onSelect}
-              />
-            ))}
-          </ul>
-        </Scroll>
-      </Stack>
-    </ControlSizeProvider>
+    <DataView<Report>
+      rows={rows}
+      fields={fields}
+      rowKey={(r) => r.id}
+      views={["table", "list"]}
+      defaultView="table"
+      storageKey={REPORTS_VIEW}
+      loading={loading}
+      selectedRowId={selectedId}
+      onRowActivate={(r) => onSelect(r.id)}
+      emptyState={<>No reports recorded yet.</>}
+    />
   );
 }
 
-function ReportRow({
-  report: c,
-  serverBuildId,
-  selected,
-  onSelect,
-}: {
-  report: Report;
-  serverBuildId: string | null;
-  selected: boolean;
-  onSelect: (id: string) => void;
-}) {
+/**
+ * Tab / build attribution badges, lifted verbatim from the old `ReportRow`.
+ * A standalone component because `FieldDef.cell` is a plain `(row) => ReactNode`
+ * and cannot call hooks itself.
+ */
+function AttributionBadges({ report: c }: { report: Report }) {
   const tabId = getTabId();
+  const { serverBuildId } = useStaleFrontend();
   return (
-    <li>
-      <button
-        type="button"
-        aria-current={selected ? true : undefined}
-        onClick={() => onSelect(c.id)}
-        className={cn(
-          "w-full px-md py-sm text-left transition-colors",
-          selected ? "bg-accent" : "hover:bg-accent",
+    <>
+      {c.lastClientId != null &&
+        (c.lastClientId === tabId ? (
+          <Badge variant="info">this tab</Badge>
+        ) : (
+          <Badge variant="muted">another tab</Badge>
+        ))}
+      {c.lastBuildId != null &&
+        serverBuildId != null &&
+        c.lastBuildId !== serverBuildId && (
+          <Badge variant="warning">outdated tab</Badge>
         )}
-      >
-        <Stack gap="xs">
-          <Text as="div" variant="caption">
-            <Cluster>
-              <Badge variant="muted" className="font-mono">
-                {c.kind}
-              </Badge>
-              <Badge variant="muted" className="font-mono">
-                {c.source}
-              </Badge>
-              {c.noise && <Badge variant="warning">noise</Badge>}
-              {c.rateLimited && <Badge variant="destructive">rate-limited</Badge>}
-              {c.lastClientId != null &&
-                (c.lastClientId === tabId ? (
-                  <Badge variant="info">this tab</Badge>
-                ) : (
-                  <Badge variant="muted">another tab</Badge>
-                ))}
-              {c.lastBuildId != null &&
-                serverBuildId != null &&
-                c.lastBuildId !== serverBuildId && (
-                  <Badge variant="warning">outdated tab</Badge>
-                )}
-              {c.count > 1 && (
-                <span className="tabular-nums text-muted-foreground">×{c.count}</span>
-              )}
-              <span className="text-muted-foreground">
-                <RelativeTime date={c.lastSeenAt} />
-              </span>
-            </Cluster>
-          </Text>
-          <Text as="div" variant="body" className="truncate text-foreground">
-            {/* Per-kind summary, dispatched by report.kind. */}
-            <Reports.KindView.Dispatch report={c} />
-          </Text>
-        </Stack>
-      </button>
-    </li>
+    </>
   );
 }
