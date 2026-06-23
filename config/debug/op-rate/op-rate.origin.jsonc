@@ -1,0 +1,17 @@
+// @hash f4a104b904c4
+{
+  // When off, the monitor job returns early and files no op-rate reports.
+  "enabled": true,
+  // File an op-rate report when an HTTP request label is called more than this many times within one monitor window.
+  "httpPerWindow": 500,
+  // File an op-rate report when a resource loader label runs more than this many times within one monitor window.
+  "loaderPerWindow": 500,
+  // File an op-rate report when a WS-subscription origin entry fires more than this many times within one monitor window.
+  "subPerWindow": 500,
+  // File an op-rate report when a push/cascade origin entry fires more than this many times within one monitor window.
+  "pushPerWindow": 500,
+  // File an op-rate report when a live-state notify-flush cycle runs more than this many times within one monitor window (internally high-count).
+  "flushPerWindow": 1000,
+  // File an op-rate report when a database query label runs more than this many times within one monitor window (leaf-level, naturally high).
+  "dbPerWindow": 5000
+}

@@ -63,7 +63,7 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         durationMs: span.durationMs,
         thresholdMs: threshold,
         source: "server-slow-op",
-        parent: span.parent,
+        caller: span.parent,
         waits: span.waits,
       });
     },

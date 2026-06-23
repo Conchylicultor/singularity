@@ -2,7 +2,6 @@ import { eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
   runWithoutProfiling,
-  type SpanRef,
   type WaitBreakdown,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/server";
@@ -11,7 +10,12 @@ import {
   getContentionSnapshot,
   type ContentionSnapshot,
 } from "@plugins/infra/plugins/contention/server";
-import type { CallerBreakdown, SlowOpMarker, SlowOpSample } from "../../core";
+import type {
+  CallerBreakdown,
+  CallerRef,
+  SlowOpMarker,
+  SlowOpSample,
+} from "../../core";
 
 // The only two report sources a slow-op originates from. Kept as a local literal
 // union rather than imported, since reports' ReportSource lives in its private
@@ -35,26 +39,27 @@ export interface RecordSlowOpInput {
   // The report source attributed to the rollup report (server-slow-op vs
   // client-slow-op). The funnel doesn't infer it — the caller knows its origin.
   source: SlowOpSource;
-  // The immediate enclosing request/loader span, when known (server spans). The
-  // caller-attribution fix: this is what the whole refactor exists to capture.
-  // Client signals (page-load, element) have no parent and pass null.
-  parent?: SpanRef | null;
+  // Who issued this operation, when known. The caller-attribution fix: this is
+  // what the whole refactor exists to capture. Server spans pass their immediate
+  // enclosing span (a SpanRef); client `element` signals pass their route
+  // ({ kind: "route", label }); page-load passes nothing.
+  caller?: CallerRef | null;
   // Per-layer wait charged to this entry span (gate/lock → ms), when it waited.
   // Merged per layer into the row's durable `waits` so the wait-vs-work split
   // survives restart. Only entry spans (loader/http/sub/push) carry it.
   waits?: WaitBreakdown;
 }
 
-// Merge a caller (parent span) into the existing breakdown list: bump an
-// existing entry matched by (kind,label), else append a fresh one.
+// Merge a caller into the existing breakdown list: bump an existing entry
+// matched by (kind,label), else append a fresh one.
 function mergeCaller(
   callers: CallerBreakdown[],
-  parent: SpanRef,
+  caller: CallerRef,
   durationMs: number,
 ): CallerBreakdown[] {
   const next = callers.map((c) => ({ ...c }));
   const existing = next.find(
-    (c) => c.kind === parent.kind && c.label === parent.label,
+    (c) => c.kind === caller.kind && c.label === caller.label,
   );
   if (existing) {
     existing.count += 1;
@@ -62,8 +67,8 @@ function mergeCaller(
     if (durationMs > existing.maxMs) existing.maxMs = durationMs;
   } else {
     next.push({
-      kind: parent.kind,
-      label: parent.label,
+      kind: caller.kind,
+      label: caller.label,
       count: 1,
       totalMs: durationMs,
       maxMs: durationMs,
@@ -102,7 +107,7 @@ function mergeSample(
 // the live resource, and fires the singleton rollup report (fire-and-forget so
 // a slow report path never blocks recording). Failures propagate loudly.
 export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
-  const { operationKind, operation, durationMs, thresholdMs, source, parent, waits } =
+  const { operationKind, operation, durationMs, thresholdMs, source, caller, waits } =
     input;
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
 
@@ -159,9 +164,9 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
       // A second read-modify-write within the same row-locked transaction so
       // both ring merges stay race-safe. recentSamples is ALWAYS updated (every
       // slow op gets a contention sample); callers is merged additionally only
-      // when a parent span is known (client signals pass null).
-      const callers = parent
-        ? mergeCaller(row.callers, parent, durationMs)
+      // when a caller is known (page-load passes null).
+      const callers = caller
+        ? mergeCaller(row.callers, caller, durationMs)
         : row.callers;
       const nextWaits = waits ? mergeWaits(row.waits, waits) : row.waits;
       const recentSamples = mergeSample(

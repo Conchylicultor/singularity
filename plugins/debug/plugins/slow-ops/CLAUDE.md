@@ -4,6 +4,10 @@ Durable, deduped store + recorder for slow operations, fed by server `onSlowSpan
 and the `POST /api/slow-ops/client` endpoint. Viewer: the `pane` sub-plugin
 (Debug → Slow Ops).
 
+Client `element` signals attribute to their route — they pass
+`caller: { kind: "route", label: location.pathname }`, which the recorder merges
+into the row's `callers` so the pane shows e.g. `↳ route:/agents/c/123 ×N`.
+
 ## Cold-start slowness is UX truth — don't suppress it
 
 The `element` signal measures a resource's mount → first-data settle = the
@@ -33,7 +37,7 @@ and `research/2026-06-14-global-cold-load-instant-boot.md`.
   - Routes: `POST /api/slow-ops/client`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/float/config.floatField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `infra/contention.ContentionSnapshotSchema`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `CallerBreakdown`, `SlowOp`, `SlowOpMarker`, `SlowOpReportPayload`, `SlowOpSample`; Values: `CallerBreakdownSchema`, `loadSeverity`, `slowOpConfig`, `slowOpFields`, `SlowOpMarkerSchema`, `SlowOpReportPayloadSchema`, `SlowOpSampleSchema`, `SlowOpSchema`, `slowOpsResource`
+  - Exports: Types: `CallerBreakdown`, `CallerRef`, `SlowOp`, `SlowOpMarker`, `SlowOpReportPayload`, `SlowOpSample`; Values: `CallerBreakdownSchema`, `CallerRefSchema`, `loadSeverity`, `slowOpConfig`, `slowOpFields`, `SlowOpMarkerSchema`, `SlowOpReportPayloadSchema`, `SlowOpSampleSchema`, `SlowOpSchema`, `slowOpsResource`
 - Cross-plugin:
   - Imported by: `debug/health-monitor`
 - Sub-plugins:

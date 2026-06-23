@@ -3,7 +3,8 @@ import { submitClientSlowOp } from "../../shared/endpoints";
 import { recordSlowOp } from "./record-slow-op";
 
 // Client slow-op signals (page-load, element-settle) funnel into the same store
-// as server spans, with no parent (client signals have no enclosing span).
+// as server spans. They carry no enclosing server span, but the `element` signal
+// supplies its own route caller (page-load passes none); forward it through.
 export const handleClientSlowOp = implement(
   submitClientSlowOp,
   async ({ body }) => {
@@ -13,7 +14,7 @@ export const handleClientSlowOp = implement(
       durationMs: body.durationMs,
       thresholdMs: body.thresholdMs,
       source: "client-slow-op",
-      parent: null,
+      caller: body.caller ?? null,
     });
     return { ok: true };
   },

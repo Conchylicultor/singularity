@@ -25,6 +25,12 @@ export const CallerBreakdownSchema = z.object({
 });
 export type CallerBreakdown = z.infer<typeof CallerBreakdownSchema>;
 
+// The identity subset of a CallerBreakdown — who issued an operation, before
+// any per-occurrence counts are merged in. A SpanRef (server span parent) is
+// structurally assignable to it; client signals supply { kind: "route", ... }.
+export const CallerRefSchema = z.object({ kind: z.string(), label: z.string() });
+export type CallerRef = z.infer<typeof CallerRefSchema>;
+
 // Per-layer wait charged to this operation (gate/lock name → summed ms): the
 // durable wait-vs-work split. Mirrors the profiler's in-memory `waits`; merged
 // per layer on each occurrence. `{}` when the op never waited on a gate.

@@ -115,6 +115,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`live-state-health`** — Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.
     - **`logs`** — System logs pane, opened from the Debug sidebar.
     - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
+    - **`op-rate`** — Op-rate report renderer: a one-line Debug → Reports summary for the op-rate kind, plus the per-kind threshold config registration. Op-rate monitor: a cheap per-worktree scheduled job that diffs the runtime profiler's per-op call counts each tick and files one deduped report per hot op when its calls-in-window cross a per-kind threshold, through the existing reports engine.
     - **`profiling`** — Gantt chart of build steps and server startup phases.
       - Plugins:
         - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.

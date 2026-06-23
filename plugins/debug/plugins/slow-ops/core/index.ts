@@ -3,6 +3,7 @@ export {
   slowOpFields,
   SlowOpSchema,
   CallerBreakdownSchema,
+  CallerRefSchema,
   SlowOpSampleSchema,
   SlowOpMarkerSchema,
   loadSeverity,
@@ -10,6 +11,7 @@ export {
 export type {
   SlowOp,
   CallerBreakdown,
+  CallerRef,
   SlowOpSample,
   SlowOpMarker,
 } from "./resources";
