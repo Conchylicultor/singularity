@@ -75,11 +75,21 @@ internal sub-plugin split is a Stage-1 decision.
 Each stage is a future task that designs and implements itself. Order matters: each builds on
 the last and is independently shippable/reversible.
 
-### Stage 0 — Spike (throwaway, single DB)
+### Stage 0 — Spike (throwaway, single DB) — ✅ DONE (2026-06-23)
 Prove Zero runs in our world at all. Enable `wal_level=logical` on the embedded cluster, run
 one `zero-cache` against the **main DB only**, sync one tiny table slice (e.g. `tasks`),
 render one leaf pane via ZQL. Everything else stays on live-state. Goal: validate the
 mechanics and surface surprises before committing. Disposable.
+
+> **Outcome: GO.** Logical replication runs against the embedded cluster (TCP connect, slot,
+> initial COPY of all 80 tables, live streaming). zero-cache runs as a Node sidecar; the browser
+> client connects cross-origin. The only unproven piece is the final client `useQuery`
+> subscription (a Stage-1 wiring detail). Key surprises: **`rank_text` is unsupported and silently
+> dropped** (our ordering primitive — high Stage-3 impact); **zero-cache needs Node 22/24, not Bun
+> and not Node 25**; **a leftover replication slot retains WAL and blocks fork teardown** (high
+> Stage-2 impact). Full writeup + evidence:
+> [`2026-06-23-database-zero-spike-single-db.md`](./2026-06-23-database-zero-spike-single-db.md).
+> The `wal_level=logical` + loopback-TCP prerequisite landed self-contained and is on `main`.
 
 ### Stage 1 — The `zero` plugin skeleton (self-contained, opt-in)
 Stand up the real plugin home: Zero schema definition, zero-cache service registration, the
