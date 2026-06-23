@@ -1,8 +1,10 @@
-// @hash 0fe922c813ad
+// @hash 26a8b7db03cf
 {
   "items": [
     "plugin-meta.plugin-health:health",
     "plugin-meta.plugin-view.inclusion:inclusion",
+    "plugin-meta.plugin-view.dependencies:dependencies",
+    "plugin-meta.plugin-view.dependencies:dependents",
     "plugin-meta.plugin-view.sub-plugins:sub-plugins",
     "plugin-meta.plugin-view.runtimes:runtimes",
     "plugin-meta.plugin-view.source-path:source-path",

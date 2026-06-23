@@ -1,4 +1,4 @@
-// @hash 0fe922c813ad
+// @hash 26a8b7db03cf
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -15,6 +15,8 @@
     "plugin-meta.facets.slots.render-detail:slots",
     "plugin-meta.facets.structure.render-detail:structure",
     "plugin-meta.plugin-health:health",
+    "plugin-meta.plugin-view.dependencies:dependencies",
+    "plugin-meta.plugin-view.dependencies:dependents",
     "plugin-meta.plugin-view.file-tree:file-tree",
     "plugin-meta.plugin-view.inclusion:inclusion",
     "plugin-meta.plugin-view.runtimes:runtimes",
