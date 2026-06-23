@@ -26,18 +26,11 @@ per-page-load trace from the `primitives/perfs/boot-trace` client store
   segment (server loader/read time) via the custom `WaitWorkRow`.
 - `paint` — first-paint, first-contentful-paint, first React commit.
 
-<<<<<<< .merge_file_RTWPBU
 A summary strip surfaces two tables: **milestones** (TTFB, response end, plugins
 loaded, boot tasks done, first React commit, first-contentful-paint) and **boot
 cost** (JS shipped + chunk count, biggest chunk, main-thread busy before paint) —
 the levers behind the pre-paint window. The trace is ephemeral (current tab's
 boot); **Reload & re-measure** re-runs boot, **Refresh** re-reads the store.
-=======
-A summary strip surfaces the headline numbers (TTFB, response end, plugins
-loaded, boot tasks done, first React commit, first-contentful-paint). The live
-trace is ephemeral (current tab's boot); **Reload & re-measure** re-runs boot,
-**Refresh** re-reads the store.
->>>>>>> .merge_file_EWvLVh
 
 ## Permalinks (persist & share a captured trace)
 
