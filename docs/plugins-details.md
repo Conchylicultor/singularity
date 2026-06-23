@@ -479,7 +479,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Slots: `SonataProgress.Marker` ← `apps.sonata.progress.bars`, `apps.sonata.progress.keys`, `apps.sonata.progress.sections`
                 - Contributes: `Sonata.Transport` "progress-bar" → `ProgressBar`
-                - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorBeat`, `apps/sonata/shell.useSonata`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/slot-render.renderIsolated`
+                - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/slot-render.renderIsolated`
                 - Exports: Values: `RAIL_THICKNESS`, `railBandClass`, `SonataProgress`
               - Cross-plugin:
                 - Imported by: `apps/sonata/progress/bars`, `apps/sonata/progress/keys`, `apps/sonata/progress/sections`
