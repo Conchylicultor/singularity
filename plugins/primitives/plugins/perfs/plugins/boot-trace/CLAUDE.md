@@ -21,7 +21,7 @@ clip long tasks to the boot window.
 - Cross-plugin:
   - Imported by: `debug/boot-profile`, `framework/web-core`, `infra/boot-snapshot`
 - Web:
-  - Exports: Types: `AssetTiming`, `BootPhase`, `BootSpan`, `BootTrace`, `LongTask`, `NavTiming`; Values: `bootWindowEnd`, `getBootTrace`, `markBootInstant`, `recordBootSpan`, `startBootSpan`, `subscribeBootTrace`
+  - Exports: Types: `AssetTiming`, `BootPhase`, `BootSpan`, `BootTrace`, `LongTask`, `NavTiming`; Values: `bootWindowEnd`, `getBootTrace`, `markBootInstant`, `recordBootSpan`, `refreshBootTrace`, `startBootSpan`, `subscribeBootTrace`, `useBootTrace`
 - Core:
   - Exports: Types: `AssetTiming`, `BootPhase`, `BootSpan`, `BootTrace`, `LongTask`, `NavTiming`
 

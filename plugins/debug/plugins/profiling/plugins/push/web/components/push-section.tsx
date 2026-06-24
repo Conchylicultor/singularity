@@ -1,35 +1,24 @@
-import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 import { useProfilingContext } from "@plugins/debug/plugins/profiling/web";
 import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ShellCommands } from "@plugins/shell/web";
-import {
-  PushGantt,
-  type PushData,
-} from "@plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt/web";
+import { PushGantt } from "@plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt/web";
 import { buildProfileDetailPane } from "@plugins/debug/plugins/profiling/plugins/build/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { pushDetailPane } from "../panes";
 import { getPushProfiling } from "../../shared/endpoints";
 
 export function PushSection(): ReactElement | null {
   const { refreshKey } = useProfilingContext();
-  const [data, setData] = useState<PushData | null>(null);
+  const { data, refetch } = useEndpoint(getPushProfiling, {});
   const openPane = useOpenPane();
 
-  const load = useCallback(async () => {
-    try {
-      setData(await fetchEndpoint(getPushProfiling, {}));
-    } catch (err) {
-      if (err instanceof TypeError) return;
-      throw err;
-    }
-  }, []);
-
+  // refetch is not a state setter, so this effect is clean (no set-state-in-effect).
   useEffect(() => {
-    void load();
-  }, [load, refreshKey]);
+    void refetch();
+  }, [refetch, refreshKey]);
 
   if (!data || data.groups.length === 0) return null;
 

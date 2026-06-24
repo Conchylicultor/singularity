@@ -131,6 +131,7 @@ export function WorktreeCleanupPanel() {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- async NDJSON stream load: load() flushes setEntries in mid-stream batches as worktree rows arrive and sets loading/listError around the fan-out, with an AbortController (loadAbort ref) guarding stale/unmount writes. useEndpoint/useResource can't consume a progressive NDJSON stream, so this can't be derived in render.
     void load();
   }, [load]);
 

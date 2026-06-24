@@ -1,5 +1,5 @@
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -14,14 +14,17 @@ interface FileTreeViewProps {
   worktree: string;
 }
 
+// Self-keyed wrapper: remounting the inner body on `worktree` re-initializes its
+// `useState("")` selection naturally, so switching worktrees drops the previous
+// selection without mirroring `worktree` into state via an effect. Keyed here (on
+// the shared component) so neither consumer can forget the remount.
 export function FileTreeView({ worktree }: FileTreeViewProps) {
+  return <FileTreeViewInner key={worktree} worktree={worktree} />;
+}
+
+function FileTreeViewInner({ worktree }: FileTreeViewProps) {
   const { data: treeData, isLoading, error } = useEndpoint(getCodeTree, { worktree });
   const [selectedPath, setSelectedPath] = useState<string>("");
-
-  // Reset selection when worktree changes
-  useEffect(() => {
-    setSelectedPath("");
-  }, [worktree]);
 
   return (
     <ResizablePanelGroup

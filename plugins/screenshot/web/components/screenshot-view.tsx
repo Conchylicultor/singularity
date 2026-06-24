@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   DrawCanvas,
   applyStrokes,
@@ -87,6 +87,7 @@ export function ScreenshotView({ id }: { id: string }) {
   }, [id]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- poll-on-mount: reload() is a self-contained 30s poll-with-retry (BroadcastChannel-raced, 404-backoff) that writes imageBlob/error; no data-fetching primitive (useEndpoint/useResource) covers this retry-loop pattern, and the fetch must be kicked off on mount/reload
     void reload();
   }, [reload]);
 
@@ -188,17 +189,15 @@ function ImageStage({
   onStrokesChange,
   drawSettings,
 }: ImageStageProps) {
-  const [url, setUrl] = useState<string | null>(null);
+  // Derive the object URL in render so it exists on the first paint (no extra
+  // null→url render cycle); a cleanup-only effect revokes it when it changes.
+  const url = useMemo(() => URL.createObjectURL(blob), [blob]);
   const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
   const [displayedRect, setDisplayedRect] = useState<DOMRect | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const containerRef = useRef<HTMLElement | null>(null);
 
-  useEffect(() => {
-    const u = URL.createObjectURL(blob);
-    setUrl(u);
-    return () => URL.revokeObjectURL(u);
-  }, [blob]);
+  useEffect(() => () => URL.revokeObjectURL(url), [url]);
 
   // Track the rendered image rectangle (for mapping pointer events to image px).
   useEffect(() => {
@@ -227,19 +226,17 @@ function ImageStage({
 
   return (
     <Center as="div" ref={containerRef} className="relative h-full w-full p-lg">
-      {url && (
-        <img
-          ref={imgRef}
-          src={url}
-          alt="Screenshot"
-          draggable={false}
-          className="max-h-full max-w-full object-contain shadow-lg"
-          onLoad={(e) => {
-            const t = e.currentTarget;
-            setNaturalSize({ w: t.naturalWidth, h: t.naturalHeight });
-          }}
-        />
-      )}
+      <img
+        ref={imgRef}
+        src={url}
+        alt="Screenshot"
+        draggable={false}
+        className="max-h-full max-w-full object-contain shadow-lg"
+        onLoad={(e) => {
+          const t = e.currentTarget;
+          setNaturalSize({ w: t.naturalWidth, h: t.naturalHeight });
+        }}
+      />
       {tool === "crop" && naturalSize && displayedRect && (
         <CropOverlay
           displayed={displayedRect}

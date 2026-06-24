@@ -63,6 +63,7 @@ function SummaryPaneInner({
     if (lastSeenIdRef.current === latest.id) return;
     lastSeenIdRef.current = latest.id;
     if (pendingSince !== null) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- optimistic-cleanup: clears the user-set optimistic pendingSince marker when server truth (a new latest.id pushed over live-state) confirms the summary arrived; this is a response to an external resource push, not a derivable render value.
       setPendingSince(null);
       // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- per-tab user-initiated (pendingSince gating), not a cross-tab broadcast reaction.
       toast({ type: "summary", title: "Summary ready", description: "A new conversation summary is available", variant: "success" });
@@ -72,6 +73,7 @@ function SummaryPaneInner({
   // Timeout fallback so a stuck spawn surfaces.
   useEffect(() => {
     if (pendingSince === null) return;
+    /* eslint-disable react-hooks/set-state-in-effect -- timeout watchdog state machine: a setTimeout drives the pending→idle transition after PENDING_TIMEOUT_MS so a wedged Sonnet spawn surfaces; the timer is the mechanism (cleared on re-run), not a derivable render value. */
     const remaining = pendingSince + PENDING_TIMEOUT_MS - Date.now();
     if (remaining <= 0) {
       setPendingSince(null);
@@ -82,6 +84,7 @@ function SummaryPaneInner({
       setPendingSince(null);
       toast({ type: "summary", title: "Summarisation timed out", description: "No summary returned in time", variant: "error" });
     }, remaining);
+    /* eslint-enable react-hooks/set-state-in-effect */
     return () => clearTimeout(t);
   }, [pendingSince]);
 

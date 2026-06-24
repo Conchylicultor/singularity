@@ -220,6 +220,7 @@ export function useFloatingWindowStyle(
   // React to a minimize/restore flip. Reduced-motion (or an inactive member)
   // jumps straight to the resting phase; otherwise enter the matching tween.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- animation phase machine: a minimize/restore flip in geo.minimized drives a timed CSS tween (from→to over N ms via the phase-timer effect). The phase + play arm are temporal tween stages, not derivable in render; the prevMinimized ref gates this to an actual edge so it fires once per flip. */
     if (geo.minimized === prevMinimized.current) return;
     prevMinimized.current = geo.minimized;
     if (reduced || !isActive) {
@@ -228,6 +229,7 @@ export function useFloatingWindowStyle(
     }
     setPlay(false);
     setPhase(geo.minimized ? "minimizing" : "restoring");
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [geo.minimized, isActive, reduced]);
 
   // Enter the close exit tween when the host flags this (whole-)window closing.
@@ -236,9 +238,11 @@ export function useFloatingWindowStyle(
   // disappearance (acceptable). Only arm once (guard on the resting `normal`
   // phase) so a re-render can't restart the tween.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- animation phase machine: the host flagging `closing` arms a one-shot exit tween (setPlay(false) renders the "from" frame, setPhase("closing") enters the exit stage; the phase-timer effect flips play to tween to "to"). These are temporal tween stages keyed off an external close signal, not derivable in render; the phase guards prevent a re-render from restarting the tween. */
     if (!closing || !isActive || reduced) return;
     setPlay(false);
     setPhase("closing");
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [closing, isActive, reduced]);
 
   // One-shot phase timers. A single deferred settle per transient phase (not a

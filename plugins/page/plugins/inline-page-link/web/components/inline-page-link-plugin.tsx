@@ -50,6 +50,10 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
   // Esc-dismissal latch: stays closed until the `[[` trigger is removed.
   const dismissedRef = useRef(false);
 
+  // The last query reflected into state, so the update listener can reset the
+  // active row exactly when the query changes (replacing a query-keyed effect).
+  const lastQueryRef = useRef("");
+
   const pageOptionsResult = usePageOptions(query, { allowCreate: true });
   // Use settled options for keyboard navigation; [] while pending is safe here
   // because commands return false (no-op) when the list is empty, and the menu
@@ -95,6 +99,16 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
           close();
           return;
         }
+        // Reset the active row whenever the query changes, co-located with the
+        // setQuery write (this is the editor update-listener callback, not
+        // render) so the first option is highlighted synchronously — no
+        // render-behind flash and no separate query-keyed effect. The keyboard
+        // handlers clamp via optionsRef, so a stale index on an async list grow
+        // never indexes out of range.
+        if (lastQueryRef.current !== q) {
+          lastQueryRef.current = q;
+          setActiveIndex(0);
+        }
         setQuery(q);
         setOpen(!dismissedRef.current);
         const domRect = window.getSelection()?.getRangeAt(0).getBoundingClientRect();
@@ -104,11 +118,6 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
     sync();
     return lexicalEditor.registerUpdateListener(sync);
   }, [lexicalEditor]);
-
-  // Reset the active row whenever the option set changes.
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query, options.length]);
 
   function insertLink(pageId: string) {
     lexicalEditor.update(() => {

@@ -11,6 +11,7 @@ type ImgStatus = "loading" | "ok" | "missing";
 function useImageStatus(src: string): ImgStatus {
   const [status, setStatus] = useState<ImgStatus>("loading");
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- HTMLImageElement load lifecycle: resets to "loading" on src change before the DOM Image fires onload/onerror, then transitions to ok/missing from those callbacks; the Image API has no useSyncExternalStore-compatible subscribe/getSnapshot shape, and the prior handlers are nulled in cleanup so without this reset a stale "ok" would flash on src change
     setStatus("loading");
     const img = new Image();
     img.onload = () => setStatus("ok");

@@ -139,6 +139,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       return !row || row.expanded === v;
     });
     if (stale.length === 0) return;
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- optimistic-cleanup: diffs local optimisticExpanded overrides against server truth (the rows prop) on each push and drops entries the server has confirmed, so the real value takes over; this is the canonical clear-optimistic-state-on-confirmation pattern — the rows prop is not live-state-backed here so useOptimisticResource doesn't apply, and no render-time derivation can decide which overrides became stale
     setOptimisticExpanded((prev) => {
       const next = new Map(prev);
       stale.forEach(([id]) => next.delete(id));
@@ -311,6 +312,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     while (cur) {
       const parent = byId.get(cur);
       if (!parent) break;
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- reveal-on-select: expands collapsed ancestors of selectedId so the row is visible; wrappedOnToggleExpanded fires setOptimisticExpanded (optimistic) AND the onToggleExpanded server callback, so it is a controlled imperative side-effect, not derivable in render; the walk needs the full rows map and is gated idempotent by the lastRevealedId ref to avoid re-running
       if (!parent.expanded) void wrappedOnToggleExpanded(cur, true);
       cur = parent.parentId;
     }

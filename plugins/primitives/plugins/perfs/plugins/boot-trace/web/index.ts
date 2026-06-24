@@ -7,6 +7,8 @@ export {
   recordBootSpan,
   getBootTrace,
   subscribeBootTrace,
+  useBootTrace,
+  refreshBootTrace,
   bootWindowEnd,
 } from "./internal/store";
 

@@ -29,13 +29,8 @@ function currentWorktreeName(): string | null {
 export function LogViewer({ initialChannel }: { initialChannel?: string }) {
   const [channels, setChannels] = useState<ChannelRef[]>([]);
   const [selectedKey, setSelectedKey] = useState<string | null>(null);
-  const [entries, setEntries] = useState<LogEntryWire[]>([]);
-  const viewportRef = useRef<HTMLDivElement>(null);
-  const stickToBottomRef = useRef(true);
-  const lastSeqRef = useRef<number>(0);
 
   const selected = channels.find((c) => channelKey(c) === selectedKey) ?? null;
-  const selectedRef = useLatestRef(selected);
 
   useEffect(() => {
     const gatewayChannels: ChannelRef[] = [];
@@ -72,6 +67,52 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
       });
   }, [initialChannel]);
 
+  return (
+    <Stack gap="lg" className="h-full p-xl">
+      <Stack role="tablist" direction="row" gap="xs" align="center" className="border-b">
+        {channels.map((c) => {
+          const key = channelKey(c);
+          const active = key === selectedKey;
+          return (
+            <button
+              key={key}
+              type="button"
+              role="tab"
+              aria-selected={active}
+              onClick={() => setSelectedKey(key)}
+              className={cn(
+                "relative -mb-px px-md py-xs text-body border-b-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                active
+                  ? "border-foreground text-foreground"
+                  : "border-transparent text-muted-foreground hover:text-foreground",
+              )}
+            >
+              {c.label}
+            </button>
+          );
+        })}
+      </Stack>
+
+      {/* Keyed on selectedKey: switching channels remounts LogChannelView, which
+          naturally re-initializes its entries + WS/SSE subscriptions for the new
+          channel — no effect-based reset needed. */}
+      {selected && <LogChannelView key={selectedKey} selected={selected} />}
+    </Stack>
+  );
+}
+
+// Per-channel log display. Owns the entries buffer, the WS (backend) / SSE
+// (gateway) subscription, and the stick-to-bottom scroll. Remounted by the
+// parent on every channel switch (keyed by selectedKey), so its state resets
+// without any in-component reset effect.
+function LogChannelView({ selected }: { selected: ChannelRef }) {
+  const [entries, setEntries] = useState<LogEntryWire[]>([]);
+  const viewportRef = useRef<HTMLDivElement>(null);
+  const stickToBottomRef = useRef(true);
+  const lastSeqRef = useRef<number>(0);
+
+  const selectedRef = useLatestRef(selected);
+
   useEffect(() => {
     const viewport = viewportRef.current;
     if (!viewport) return;
@@ -92,23 +133,16 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
     viewport.scrollTop = viewport.scrollHeight;
   }, [entries]);
 
-  // Reset on channel change
-  useEffect(() => {
-    lastSeqRef.current = 0;
-    stickToBottomRef.current = true;
-    setEntries([]);
-  }, [selectedKey]);
-
-  const isBackendSource = selected?.source === "backend";
-  const isGatewaySource = selected?.source === "gateway";
+  const isBackendSource = selected.source === "backend";
+  const isGatewaySource = selected.source === "gateway";
 
   // Backend-sourced channels: WebSocket to the app's /ws/logs.
-  const wsHandle = useReconnectingWebSocket({
+  useReconnectingWebSocket({
     url: WS_URL,
     enabled: isBackendSource,
     onOpen: (ws) => {
       const sel = selectedRef.current;
-      if (!sel || sel.source !== "backend") return;
+      if (sel.source !== "backend") return;
       const msg: ClientMessage = {
         type: "subscribe",
         channel: sel.id,
@@ -143,21 +177,10 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
     },
   });
 
-  // Re-subscribe when channel changes on an already-open socket
-  useEffect(() => {
-    if (!isBackendSource) return;
-    const handle = wsHandle.current;
-    if (!handle) return;
-    // isBackendSource guarantees selected is non-null and source === "backend"
-    const backendSelected = selected as Extract<ChannelRef, { source: "backend" }>;
-    const msg: ClientMessage = { type: "subscribe", channel: backendSelected.id };
-    handle.send(JSON.stringify(msg));
-  }, [selectedKey, wsHandle, isBackendSource, selected]);
-
   // Gateway-sourced channel: SSE stream of backend stdout/stderr.
   useEffect(() => {
     if (!isGatewaySource) return;
-    // isGatewaySource guarantees selected is non-null and source === "gateway"
+    // isGatewaySource guarantees selected.source === "gateway"
     const gatewaySelected = selected as Extract<ChannelRef, { source: "gateway" }>;
     const url = `/gateway/worktrees/${encodeURIComponent(gatewaySelected.worktree)}/logs`;
     const es = new ReconnectingEventSource({
@@ -179,54 +202,28 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
     });
 
     return () => es.close();
-  }, [selectedKey, isGatewaySource, selected]);
+  }, [isGatewaySource, selected]);
 
   return (
-    <Stack gap="lg" className="h-full p-xl">
-      <Stack role="tablist" direction="row" gap="xs" align="center" className="border-b">
-        {channels.map((c) => {
-          const key = channelKey(c);
-          const active = key === selectedKey;
-          return (
-            <button
-              key={key}
-              type="button"
-              role="tab"
-              aria-selected={active}
-              onClick={() => setSelectedKey(key)}
-              className={cn(
-                "relative -mb-px px-md py-xs text-body border-b-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-                active
-                  ? "border-foreground text-foreground"
-                  : "border-transparent text-muted-foreground hover:text-foreground",
-              )}
-            >
-              {c.label}
-            </button>
-          );
-        })}
-      </Stack>
-
-      <Scroll
-        fill
-        ref={viewportRef}
-        className="rounded-md border bg-muted/30 p-lg font-mono text-caption"
-      >
-        {entries.map((entry) => (
-          <div
-            key={entry.seq}
-            className={cn(
-              "flex gap-sm",
-              entry.stream === "stderr" ? "text-destructive" : "text-foreground",
-            )}
-          >
-            <span className="shrink-0 text-muted-foreground">
-              {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
-            </span>
-            <span>{entry.line}</span>
-          </div>
-        ))}
-      </Scroll>
-    </Stack>
+    <Scroll
+      fill
+      ref={viewportRef}
+      className="rounded-md border bg-muted/30 p-lg font-mono text-caption"
+    >
+      {entries.map((entry) => (
+        <div
+          key={entry.seq}
+          className={cn(
+            "flex gap-sm",
+            entry.stream === "stderr" ? "text-destructive" : "text-foreground",
+          )}
+        >
+          <span className="shrink-0 text-muted-foreground">
+            {new Date(entry.timestamp).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit", hour12: false })}
+          </span>
+          <span>{entry.line}</span>
+        </div>
+      ))}
+    </Scroll>
   );
 }

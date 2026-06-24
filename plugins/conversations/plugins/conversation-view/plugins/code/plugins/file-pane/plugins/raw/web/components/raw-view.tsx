@@ -1,11 +1,10 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import type { ShikiTransformer } from "shiki";
 import {
-  getHighlighter,
   languageForPath,
   SHIKI_LANGS,
-  themeForMode,
   useDarkMode,
+  useHighlightedHtml,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useFileContent } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -42,43 +41,35 @@ export function RawView({
 }) {
   const state = useFileContent(worktree, path);
   const dark = useDarkMode();
-  const [html, setHtml] = useState<string | null>(null);
-  const [highlightError, setHighlightError] = useState<string | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
   const content = state.kind === "ok" ? state.content : null;
 
-  useEffect(() => {
-    if (content === null) {
-      setHtml(null);
-      return;
-    }
-    let cancelled = false;
-    const lang = languageForPath(path);
-    const resolvedLang = SHIKI_LANGS.includes(lang) ? lang : "text";
-    const theme = themeForMode(dark);
+  const lang = languageForPath(path);
+  const resolvedLang = SHIKI_LANGS.includes(lang) ? lang : "text";
 
-    getHighlighter(resolvedLang)
-      .then((hl) => {
-        if (cancelled) return;
-        const transformers: ShikiTransformer[] = [LINE_NUMBERS_TRANSFORMER];
-        if (line != null) transformers.push(makeHighlightTransformer(line));
-        const out = hl.codeToHtml(content, { lang: resolvedLang, theme, transformers });
-        const styledHtml = line != null
-          ? `<style>.shiki .line[data-highlighted]{background-color:rgba(250,200,50,0.18);display:block;width:100%}</style>${out}`
-          : out;
-        setHtml(styledHtml);
-        setHighlightError(null);
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setHighlightError(String(err));
-      });
+  // Stable per `line` so the shared highlight effect only re-runs on real input
+  // changes. The optional highlight transformer + the `<style>` post-process
+  // only apply when a target line is requested.
+  const transformers = useMemo<ShikiTransformer[]>(() => {
+    const t: ShikiTransformer[] = [LINE_NUMBERS_TRANSFORMER];
+    if (line != null) t.push(makeHighlightTransformer(line));
+    return t;
+  }, [line]);
+  const postProcess = useMemo(
+    () =>
+      line != null
+        ? (out: string) =>
+            `<style>.shiki .line[data-highlighted]{background-color:rgba(250,200,50,0.18);display:block;width:100%}</style>${out}`
+        : undefined,
+    [line],
+  );
 
-    return () => {
-      cancelled = true;
-    };
-  }, [content, path, dark, line]);
+  const { html, error: highlightError } = useHighlightedHtml(
+    content ?? "",
+    content === null ? null : resolvedLang,
+    { dark, transformers, postProcess },
+  );
 
   useEffect(() => {
     if (line == null || !containerRef.current) return;

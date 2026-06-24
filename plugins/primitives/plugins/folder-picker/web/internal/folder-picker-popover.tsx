@@ -1,5 +1,5 @@
 import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { MdCancel, MdCheckCircle, MdFolderOpen } from "react-icons/md";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -25,11 +25,11 @@ export function FolderPickerPopover({
   onChange,
   placeholder,
 }: FolderPickerPopoverProps) {
+  // `local` is seeded from `value` and re-initialized naturally on external
+  // value changes by the caller remounting this component with `key={value}`
+  // (the directory-path field renderer) — so no mirror effect is needed.
   const [local, setLocal] = useState(value);
   const [open, setOpen] = useState(false);
-
-  // Re-sync when the committed value changes underneath us (external edit).
-  useEffect(() => setLocal(value), [value]);
 
   const commit = (next: string) => {
     if (next !== value) onChange(next);

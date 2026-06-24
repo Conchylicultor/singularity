@@ -7,6 +7,7 @@
 // The boot-trace data model lives in the cross-runtime core leaf so server-side
 // persistence (boot-profile permalinks) can import the shapes without importing
 // a web barrel. Re-exported from the web barrel for existing web consumers.
+import { useMemo, useSyncExternalStore } from "react";
 import type {
   BootPhase,
   BootSpan,
@@ -24,7 +25,15 @@ let firstCommitMs: number | null = null;
 // spans arrive. Hoisted function declarations let the boot-time IIFEs below call
 // notify() even though they appear earlier in source order.
 const listeners = new Set<() => void>();
+// Monotonic version bumped on every notify(). It is the stable
+// `useSyncExternalStore` snapshot: getBootTrace() returns a fresh object on each
+// call (new array spreads + capturedAt), so a useSyncExternalStore getSnapshot
+// can't return it directly without looping — the version is the change token, and
+// callers re-read getBootTrace() keyed on it.
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: this module-level store captures the ONE boot trace of the current page load (alongside the existing module-level `spans` / `longTasks` / `firstCommitMs`), filled by framework boot instrumentation before any surface mounts. There is no per-surface boot — every mount of the boot-profile pane reads the same single trace, so the version counter is intentionally global.
+let version = 0;
 function notify(): void {
+  version += 1;
   for (const l of listeners) l();
 }
 
@@ -38,6 +47,21 @@ export function subscribeBootTrace(cb: () => void): () => void {
   return () => {
     listeners.delete(cb);
   };
+}
+
+/** The change token for the store — bumped on every notify(). */
+export function getBootTraceVersion(): number {
+  return version;
+}
+
+/**
+ * Force a re-read of the trace. Navigation/Paint/Asset timing are read lazily at
+ * getBootTrace() call time, so a manual refresh just needs to bump the version
+ * and notify — subscribers then re-pull the freshly-read timing. Drives the
+ * boot-profile "Refresh" button without any component-local state.
+ */
+export function refreshBootTrace(): void {
+  notify();
 }
 
 /** Explicit push (used for resource wait/work spans carrying a server `workMs`). */
@@ -129,6 +153,24 @@ export function getBootTrace(): BootTrace {
     assets: readAssets(),
     capturedAt: performance.now(),
   };
+}
+
+/**
+ * Live boot trace as a React hook. Subscribes to the store via
+ * useSyncExternalStore (the version is the stable snapshot — getBootTrace()
+ * itself returns a fresh object each call), then re-assembles the trace whenever
+ * the version advances (late paint timing, first commit, new spans, or a manual
+ * refreshBootTrace()). Replaces the useEffect(setTrace(getBootTrace())) mirror.
+ */
+export function useBootTrace(): BootTrace {
+  // `v` is the change token (getBootTrace() returns a fresh object each call, so
+  // it can't be the snapshot). Re-assemble the trace only when the version
+  // advances — getBootTrace reads the latest mutable store + lazily-read timing.
+  const v = useSyncExternalStore(subscribeBootTrace, getBootTraceVersion, () => 0);
+  return useMemo(() => {
+    void v; // version is the cache key: re-read the mutable store on each advance
+    return getBootTrace();
+  }, [v]);
 }
 
 // --- First React commit capture (one-shot, at module eval time) --------------

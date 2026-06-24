@@ -1,6 +1,6 @@
 import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -47,7 +47,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
       {(agents) => {
         const agent = agents.find((a) => a.id === agentId) ?? null;
         if (!agent) return <Loading />;
-        return <AgentDetailInner agentId={agentId} agent={agent} />;
+        return <AgentDetailInner key={agentId} agentId={agentId} agent={agent} />;
       }}
     </ResourceView>
   );
@@ -58,10 +58,6 @@ function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent })
   const visibleModels = useVisibleModels();
   const [model, setModel] = useState<string | null>(agent.model ?? null);
   const [launching, setLaunching] = useState(false);
-
-  useEffect(() => {
-    setModel(agent.model ?? null);
-  }, [agent.model]);
 
   const save = useCallback(
     async (patch: Patch) => {

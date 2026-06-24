@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { MdFolder, MdInsertDriveFile } from "react-icons/md";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -132,26 +132,21 @@ export function FileTree({
 }: FileTreeProps) {
   const rows = useMemo(() => buildFileRows(files), [files]);
 
-  // Locally-tracked expand state (empty = all collapsed). Pre-opens the selected
-  // file's ancestors so an externally-driven selection is always revealed.
-  const [expanded, setExpanded] = useState<Set<string>>(
-    () => new Set(ancestorsOf(selectedPath)),
-  );
+  // Locally-tracked user-driven expand state (empty = all collapsed). The
+  // selected file's ancestors are *derived* on top of this set during render
+  // (see `effectiveExpanded`) so an externally-driven selection is always
+  // revealed without an extra render cycle.
+  const [expanded, setExpanded] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    if (!selectedPath) return;
-    setExpanded((prev) => {
-      const next = new Set(prev);
-      let changed = false;
-      for (const dir of ancestorsOf(selectedPath)) {
-        if (!next.has(dir)) {
-          next.add(dir);
-          changed = true;
-        }
-      }
-      return changed ? next : prev;
-    });
-  }, [selectedPath]);
+  // The set actually rendered: the user's toggles unioned with the selection's
+  // ancestor directories. Derived in render (no state mirror, no effect) so a
+  // selection change reveals the file in the same commit it arrives.
+  const effectiveExpanded = useMemo(() => {
+    if (!selectedPath) return expanded;
+    const s = new Set(expanded);
+    for (const dir of ancestorsOf(selectedPath)) s.add(dir);
+    return s;
+  }, [expanded, selectedPath]);
 
   const toggle = useCallback((id: string) => {
     setExpanded((prev) => {
@@ -166,7 +161,7 @@ export function FileTree({
     () => ({
       getParentId: (r) => r.parentId,
       getRank: (r) => r.rank,
-      isExpanded: (r) => expanded.has(r.id),
+      isExpanded: (r) => effectiveExpanded.has(r.id),
       onToggleExpanded: (id, next) =>
         setExpanded((prev) => {
           const set = new Set(prev);
@@ -175,7 +170,7 @@ export function FileTree({
           return set;
         }),
     }),
-    [expanded],
+    [effectiveExpanded],
   );
 
   // `name` is the primary (only-rendered-in-tree) field; `kind` is filter-only —

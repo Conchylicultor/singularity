@@ -20,6 +20,7 @@ export function useWorkflowTrace(script: string, args: unknown): TraceState {
   });
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async trace-execution of the workflow script (a local async computation, not a network endpoint, so useResource/useEndpoint don't apply); the cancelled guard prevents stale setState and no cleaner primitive owns this. */
     if (!script) {
       setState({ graph: null, status: "fallback" });
       return;
@@ -32,6 +33,7 @@ export function useWorkflowTrace(script: string, args: unknown): TraceState {
         graph ? { graph, status: "ready" } : { graph: null, status: "fallback" },
       );
     });
+    /* eslint-enable react-hooks/set-state-in-effect */
     return () => {
       cancelled = true;
     };

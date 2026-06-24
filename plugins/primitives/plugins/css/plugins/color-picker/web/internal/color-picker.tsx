@@ -30,6 +30,7 @@ export function ColorPicker({
     if (value !== lastEmitted.current) {
       const parsed = Color.fromCss(value);
       if (parsed && !parsed.equals(color)) {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- lastEmitted echo-guard: the effect adopts an EXTERNAL `value` change only, suppressing the round-trip echo of our own emits (parent re-passes our oklch string as `value`). Going fully-controlled (derive color from `value` each render) is unsafe here: config-backed callers (fields/color/config, theme-customizer) write `value` asynchronously, so deriving would lag/fight the slider position — the documented fallback in the burndown plan.
         setColor(parsed);
       }
       lastEmitted.current = value;

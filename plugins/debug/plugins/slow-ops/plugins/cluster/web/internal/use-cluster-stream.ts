@@ -92,6 +92,7 @@ export function useClusterStream(): ClusterStream {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- NDJSON streaming accumulator: reload() drives setWorktrees/setTotal/setStatus/setError from the cluster fan-out's {total}→{worktree}…→{end} frames with a total-scaled batched flush; the AbortController guards stale/unmount writes. No request/response primitive (useEndpoint) handles a progressive NDJSON stream, so this can't be derived in render.
     void reload();
   }, [reload]);
 

@@ -89,6 +89,7 @@ function useTextDiffData(oldText: string, newText: string, path: string) {
   const [tokens, setTokens] = useState<DiffTokens | null>(null);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async Shiki tokenization with cancel guard: tokenizing two in-memory strings requires loading getHighlighter() (async) so the result cannot be derived synchronously in render; no HTTP endpoint is involved so useEndpoint/useResource do not apply; the cancel flag drops stale results, matching useDiffTokens */
     if (!hunks || hunks.length === 0) {
       setTokens(null);
       return;
@@ -115,6 +116,7 @@ function useTextDiffData(oldText: string, newText: string, path: string) {
     });
 
     return () => { cancelled = true; };
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [hunks, oldText, newText, path, dark]);
 
   return { files, hunks, tokens };

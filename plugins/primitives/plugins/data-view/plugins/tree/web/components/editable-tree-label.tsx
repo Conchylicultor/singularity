@@ -1,4 +1,5 @@
 import { useEffect, useState, type ReactNode } from "react";
+import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   useResolveCellEditor,
   type FieldDef,
@@ -34,15 +35,17 @@ export function EditableTreeLabel<TNode extends TreeItem>(props: {
   const { shouldAutoFocus, consumeAutoFocus } = useTreeRow(node);
   const ctx = useTreeListContext();
   const [editing, setEditing] = useState(false);
+  const editingRef = useLatestRef(editing);
 
   // A freshly-created row auto-opens into edit mode; the slot editor autofocuses
-  // its input on mount.
+  // its input on mount. `editing` is read via a latest-ref (not a dep) so the
+  // effect doesn't re-fire when its own setEditing(true) flips `editing`.
   useEffect(() => {
-    if (shouldAutoFocus && !editing) {
+    if (shouldAutoFocus && !editingRef.current) {
       setEditing(true);
       consumeAutoFocus();
     }
-  }, [shouldAutoFocus, editing, consumeAutoFocus]);
+  }, [shouldAutoFocus, editingRef, consumeAutoFocus]);
 
   if (editing) {
     const value = field.value?.(row);

@@ -272,29 +272,70 @@ export function DiffView({
   from?: string;
 }) {
   const state = useFileDiff(worktree, path, base, head, from);
+
+  if (state.kind === "loading") {
+    return <Loading />;
+  }
+  if (state.kind === "error") {
+    const message =
+      state.status === 404
+        ? "File not found."
+        : state.status === 413
+          ? "Diff is too large to preview."
+          : state.message || "Failed to load diff.";
+    return <Placeholder tone="error">{message}</Placeholder>;
+  }
+
+  // Self-keyed inner body: remounting on file identity re-initializes
+  // expandedHunks / totalLines / fileContentRef to null, replacing the prior
+  // reset effect. The remount stays owned by the primitive so no consumer can
+  // forget the key.
+  const instanceKey = [worktree, path, base ?? "", head ?? "", from ?? ""].join(":");
+  return (
+    <DiffBody
+      key={instanceKey}
+      worktree={worktree}
+      path={path}
+      base={base}
+      head={head}
+      from={from}
+      diff={state.diff}
+    />
+  );
+}
+
+function DiffBody({
+  worktree,
+  path,
+  base,
+  head,
+  from,
+  diff,
+}: {
+  worktree: string;
+  path: string;
+  base?: string;
+  head?: string;
+  from?: string;
+  diff: string;
+}) {
   const dark = useDarkMode();
   const basePath = from ?? path;
 
   const files = useMemo<FileData[]>(() => {
-    if (state.kind !== "ok" || state.diff.length === 0) return [];
+    if (diff.length === 0) return [];
     try {
-      return parseDiff(state.diff);
+      return parseDiff(diff);
     } catch (err) {
       if (!(err instanceof Error)) throw err;
       return [];
     }
-  }, [state]);
+  }, [diff]);
 
   const baseHunks = files[0]?.hunks ?? null;
   const [expandedHunks, setExpandedHunks] = useState<HunkData[] | null>(null);
   const [totalLines, setTotalLines] = useState<number | null>(null);
   const fileContentRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    setExpandedHunks(null);
-    setTotalLines(null);
-    fileContentRef.current = null;
-  }, [state]);
 
   useEffect(() => {
     if (!baseHunks) return;
@@ -334,20 +375,7 @@ export function DiffView({
     [worktree, basePath, base, baseHunks],
   );
 
-  if (state.kind === "loading") {
-    return <Loading />;
-  }
-  if (state.kind === "error") {
-    const message =
-      state.status === 404
-        ? "File not found."
-        : state.status === 413
-          ? "Diff is too large to preview."
-          : state.message || "Failed to load diff.";
-    return <Placeholder tone="error">{message}</Placeholder>;
-  }
-
-  if (state.diff.length === 0 || files.length === 0) {
+  if (diff.length === 0 || files.length === 0) {
     return <Placeholder>No changes vs {base ?? "HEAD"}.</Placeholder>;
   }
 

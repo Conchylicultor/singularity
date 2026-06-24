@@ -141,6 +141,11 @@ export function CompositionsView() {
   // The config item id of the manifest currently loaded into the draft store;
   // null when the draft is a brand-new (unsaved) composition.
   const [editingId, setEditingId] = useState<string | null>(null);
+  // A cleared draft (no active composition) can never carry an editing id — so a
+  // later Save can't accidentally overwrite a no-longer-loaded manifest. Derived
+  // in render rather than mirrored via an effect: `editingId` state holds only
+  // the explicit selection; this guard is applied wherever it's consumed.
+  const effectiveEditingId = active ? editingId : null;
 
   // Open the tinted Explorer tree as a sibling column whenever a composition is
   // active or being compared, so the controls and the closure tint are visible
@@ -188,8 +193,8 @@ export function CompositionsView() {
   }
 
   function deleteDraft(): void {
-    if (editingId === null) return;
-    remove(editingId);
+    if (effectiveEditingId === null) return;
+    remove(effectiveEditingId);
     setEditingId(null);
     clearActive();
   }
@@ -227,12 +232,6 @@ export function CompositionsView() {
     if (active || compare) ensureExplorerBeside();
   }, [active, compare, ensureExplorerBeside]);
 
-  // A cleared draft can never carry an editing id — drop it so a later Save
-  // doesn't accidentally overwrite a no-longer-loaded manifest.
-  useEffect(() => {
-    if (!active && editingId !== null) setEditingId(null);
-  }, [active, editingId]);
-
   return (
     <Inset pad="md">
       <Stack gap="lg">
@@ -266,7 +265,7 @@ export function CompositionsView() {
           <DraftSection
             items={items}
             active={active}
-            editingId={editingId}
+            editingId={effectiveEditingId}
             membership={membership}
             resolved={resolved}
             allIds={allIds}

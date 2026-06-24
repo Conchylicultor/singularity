@@ -1,11 +1,11 @@
-import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 import {
   GanttSection,
   groupByPhase,
   useProfilingContext,
   type PhaseConfig,
 } from "@plugins/debug/plugins/profiling/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
@@ -191,20 +191,12 @@ function MemorySummary({
 
 export function BootSection(): ReactElement | null {
   const { refreshKey } = useProfilingContext();
-  const [data, setData] = useState<ProfilingData | null>(null);
+  const { data, refetch } = useEndpoint(getBootProfiling, {});
 
-  const load = useCallback(async () => {
-    try {
-      setData(await fetchEndpoint(getBootProfiling, {}));
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch {
-      // debug tool — silent on fetch errors
-    }
-  }, []);
-
+  // refetch is not a state setter, so this effect is clean (no set-state-in-effect).
   useEffect(() => {
-    void load();
-  }, [load, refreshKey]);
+    void refetch();
+  }, [refetch, refreshKey]);
 
   if (!data || data.spans.length === 0) return null;
 

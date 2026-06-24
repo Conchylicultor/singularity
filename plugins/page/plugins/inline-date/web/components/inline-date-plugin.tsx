@@ -46,6 +46,10 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
   // Esc-dismissal latch: stays closed until the `@` trigger is removed.
   const dismissedRef = useRef(false);
 
+  // The last query reflected into state, so the update listener can reset the
+  // active row exactly when the query changes (replacing a query-keyed effect).
+  const lastQueryRef = useRef("");
+
   const menu = useMemo(() => buildMenu(query, new Date()), [query]);
   const options = menu.options;
 
@@ -102,6 +106,14 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
           close();
           return;
         }
+        // Reset the active row whenever the query changes, co-located with the
+        // setQuery write (this is the editor update-listener callback, not
+        // render) so the first option is highlighted synchronously — no
+        // render-behind flash and no separate query-keyed effect.
+        if (lastQueryRef.current !== q) {
+          lastQueryRef.current = q;
+          setActiveIndex(0);
+        }
         setQuery(q);
         setOpen(!dismissedRef.current);
         const domRect = window.getSelection()?.getRangeAt(0).getBoundingClientRect();
@@ -111,11 +123,6 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
     sync();
     return lexicalEditor.registerUpdateListener(sync);
   }, [lexicalEditor]);
-
-  // Reset the active row whenever the option set changes.
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query, options.length]);
 
   function insertMention(option: DateOption) {
     const iso = option.date.toISOString();

@@ -108,6 +108,7 @@ export function useDiffTokens(
   const [tokens, setTokens] = useState<DiffTokens | null>(null);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- Promise.all of two fetchEndpoint(getFileContent) calls + async getHighlighter, joined then tokenized, with a cancel guard: this combined fetch+highlight+tokenize pipeline produces shiki token arrays (not a plain response body) and does not map to a single useEndpoint/useResource invocation; the async result cannot be derived synchronously in render */
     if (!hunks || hunks.length === 0) {
       setTokens(null);
       return;
@@ -149,6 +150,7 @@ export function useDiffTokens(
     return () => {
       cancelled = true;
     };
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [hunks, path, dark, worktree, base, head, from]);
 
   return tokens;

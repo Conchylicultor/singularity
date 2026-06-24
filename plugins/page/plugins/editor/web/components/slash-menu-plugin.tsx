@@ -59,6 +59,10 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
   // trigger is removed from the text before the caret.
   const dismissedRef = useRef(false);
 
+  // The last query reflected into state, so the update listener can reset the
+  // active row exactly when the query changes (replacing a query-keyed effect).
+  const lastQueryRef = useRef("");
+
   // The portaled menu element, so a click-outside test can exclude clicks that
   // land on the menu itself (row clicks go through onMouseDown+preventDefault).
   const menuRef = useRef<HTMLElement | null>(null);
@@ -121,6 +125,14 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
           close();
           return;
         }
+        // Reset the active row whenever the query changes, co-located with the
+        // setQuery write (this is the editor update-listener callback, not
+        // render) so the highlight starts at the top synchronously — no
+        // render-behind flash and no separate query-keyed effect.
+        if (lastQueryRef.current !== q) {
+          lastQueryRef.current = q;
+          setActiveIndex(0);
+        }
         setQuery(q);
         setOpen(!dismissedRef.current);
         const domRect = window.getSelection()?.getRangeAt(0).getBoundingClientRect();
@@ -130,11 +142,6 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
     sync();
     return lexicalEditor.registerUpdateListener(sync);
   }, [lexicalEditor]);
-
-  // Reset the active row whenever the filtered list changes.
-  useEffect(() => {
-    setActiveIndex(0);
-  }, [query, insertable.length]);
 
   // Dismiss on a genuine click anywhere outside the menu. The editor's own
   // BLUR_COMMAND only fires when focus actually leaves the contenteditable, so a

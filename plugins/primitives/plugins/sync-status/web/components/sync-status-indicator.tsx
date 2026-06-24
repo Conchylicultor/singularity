@@ -88,6 +88,7 @@ function useDelayed(value: boolean, delayMs: number): boolean {
   const [shown, setShown] = useState(false);
   useEffect(() => {
     if (!value) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- animation-temporal-machine: delay-before-show timer (rising/falling edge). The falling-edge setShown(false) and the deferred rising-edge setShown(true) (via setTimeout) are the intended temporal transition that must cause a re-render; the value is not derivable from props at render time (it depends on how long `value` has stayed true) and there is no external store to subscribe to
       setShown(false);
       return;
     }

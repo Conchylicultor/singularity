@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
 
 export type FileContentState =
@@ -11,35 +10,27 @@ export function useFileContent(
   worktree: string,
   path: string,
 ): FileContentState {
-  const [state, setState] = useState<FileContentState>({ kind: "loading" });
+  const { data, isLoading, error } = useEndpoint(
+    getFileContent,
+    { worktree },
+    { query: { path } },
+  );
 
-  useEffect(() => {
-    let cancelled = false;
-    setState({ kind: "loading" });
-    fetchEndpoint(getFileContent, { worktree }, { query: { path } })
-      .then(({ content }) => {
-        if (cancelled) return;
-        setState({ kind: "ok", content });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        if (err instanceof EndpointError) {
-          setState({
-            kind: "error",
-            status: err.status,
-            message:
-              typeof err.body === "string"
-                ? err.body
-                : `HTTP ${err.status}`,
-          });
-        } else {
-          setState({ kind: "error", status: 0, message: String(err) });
-        }
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [worktree, path]);
-
-  return state;
+  // Map the query result onto the existing FileContentState union: consumers
+  // branch on `state.status` (404/413/415), so the EndpointError status must be
+  // preserved. `isLoading` is true only while the current (worktree, path) key
+  // has no cached data, matching the prior per-input loading reset.
+  if (isLoading || (!data && !error)) return { kind: "loading" };
+  if (error) {
+    if (error instanceof EndpointError) {
+      return {
+        kind: "error",
+        status: error.status,
+        message:
+          typeof error.body === "string" ? error.body : `HTTP ${error.status}`,
+      };
+    }
+    return { kind: "error", status: 0, message: String(error) };
+  }
+  return { kind: "ok", content: data!.content };
 }

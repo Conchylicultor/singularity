@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import {
   GanttContainer,
   ProfilingContext,
@@ -7,7 +7,7 @@ import {
   formatDuration,
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -16,10 +16,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import type {
-  PushDetail,
-  PushStep,
-} from "../../shared/endpoints";
+import type { PushStep } from "../../shared/endpoints";
 import { getPushDetail } from "../../shared/endpoints";
 import { pushDetailPane } from "../panes";
 
@@ -85,22 +82,7 @@ function PushStepsGantt({
 export function PushDetailBody(): ReactElement {
   const { pushId } = pushDetailPane.useParams();
   const openPane = useOpenPane();
-  const [data, setData] = useState<PushDetail | null>(null);
-  const [error, setError] = useState(false);
-
-  const load = useCallback(async () => {
-    try {
-      const result = await fetchEndpoint(getPushDetail, { pushId });
-      setData(result);
-    } catch (err) {
-      if (err instanceof TypeError) return;
-      setError(true);
-    }
-  }, [pushId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { data, error } = useEndpoint(getPushDetail, { pushId });
 
   const branchShort = data?.branch.replace(/^claude-web\//, "") ?? pushId;
 

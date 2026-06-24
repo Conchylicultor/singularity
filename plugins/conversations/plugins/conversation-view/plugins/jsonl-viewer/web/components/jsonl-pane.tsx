@@ -199,6 +199,7 @@ function JsonlPaneInner({
   // the rising edge), kept out of render so we never read the clock during render.
   const [workingStartAt, setWorkingStartAt] = useState<number | null>(null);
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- rising-edge snapshot: fires only on the isWorking transition (dep array is intentionally [isWorking]) to freeze workingStartAt once at transition time; a render-derived value can't capture the clock once per edge without re-snapshotting on every new event. */
     if (isWorking) {
       if (workingStartAt == null) {
         const last = events.length ? events[events.length - 1] : null;
@@ -208,6 +209,7 @@ function JsonlPaneInner({
     } else {
       setWorkingStartAt(null);
     }
+    /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps -- snapshot events once per working transition
   }, [isWorking]);
 

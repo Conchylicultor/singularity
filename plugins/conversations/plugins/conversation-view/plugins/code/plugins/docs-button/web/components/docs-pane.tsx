@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -73,14 +73,14 @@ function DocsPaneBody({
     return [...byPath.values()].sort((a, b) => a.path.localeCompare(b.path));
   }, [files, pushedDocs, attemptId]);
 
-  const [selectedPath, setSelectedPath] = useState<string | null>(null);
-
-  useEffect(() => {
-    const first = docs[0];
-    if (!first) return;
-    if (selectedPath && docs.some((f) => f.path === selectedPath)) return;
-    setSelectedPath(first.path);
-  }, [docs, selectedPath]);
+  // Keep state only for the user's explicit pick; derive the effective selection
+  // during render so it stays consistent with the current `docs` list (defaulting
+  // to the first doc) without an effect-driven double-render.
+  const [explicitPath, setExplicitPath] = useState<string | null>(null);
+  const selectedPath =
+    explicitPath && docs.some((f) => f.path === explicitPath)
+      ? explicitPath
+      : (docs[0]?.path ?? null);
 
   const selected = docs.find((f) => f.path === selectedPath) ?? null;
 
@@ -116,7 +116,7 @@ function DocsPaneBody({
                     path={f.path}
                     status={f.status}
                     selected={f.path === selectedPath}
-                    onSelect={() => setSelectedPath(f.path)}
+                    onSelect={() => setExplicitPath(f.path)}
                   />
                 ))
               )}

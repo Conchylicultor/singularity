@@ -14,6 +14,7 @@ const DirPathRenderer: FieldRendererComponent<string> = ({
   <Stack gap="xs" className="py-md">
     <FieldHeader field={field} />
     <FolderPickerPopover
+      key={value}
       value={value}
       onChange={onChange}
       placeholder={field.meta.placeholder}

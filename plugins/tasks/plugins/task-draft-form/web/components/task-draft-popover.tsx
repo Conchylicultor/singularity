@@ -126,11 +126,107 @@ function TaskDraftFormContent({
     return t ? t.dependencies.length > 0 : false;
   }, [tasks, effectiveRelateTaskId, effectiveRelateMode]);
 
-  const [insertBeforeIds, setInsertBeforeIds] = useState<Set<string>>(new Set());
+  // The insertBefore selection (which existing children the new follow-up should
+  // be inserted before) defaults to ALL children, and must re-default whenever
+  // the children list changes while still honoring explicit user toggles in
+  // between. That reset-on-change-but-user-editable semantic is owned by the
+  // keyed <InsertBeforeForm> child below: its key is the children-id signature,
+  // so a children change remounts it and re-seeds the Set from the new default,
+  // and user edits persist (no setState-in-effect needed).
+  const childIdsKey = relateTaskChildren.map((c) => c.id).join(",");
 
-  useEffect(() => {
-    setInsertBeforeIds(new Set(relateTaskChildren.map((c) => c.id)));
-  }, [relateTaskChildren]);
+  return (
+    <InsertBeforeForm
+      key={childIdsKey}
+      cards={cards}
+      setCards={setCards}
+      autoFocusId={autoFocusId}
+      setAutoFocusId={setAutoFocusId}
+      submitting={submitting}
+      setSubmitting={setSubmitting}
+      url={url}
+      setOpen={setOpen}
+      resetForm={resetForm}
+      relate={relate}
+      hasAmbientRelate={hasAmbientRelate}
+      activeRelate={activeRelate}
+      relateMode={relateMode}
+      ambientRelateMode={ambientRelateMode}
+      setRelateMode={setRelateMode}
+      setAmbientRelateMode={setAmbientRelateMode}
+      standalone={standalone}
+      setStandalone={setStandalone}
+      captures={captures}
+      target={target}
+      relateTaskChildren={relateTaskChildren}
+      relateTaskHasDeps={relateTaskHasDeps}
+      heading={heading}
+      footerStart={footerStart}
+      onSuccess={onSuccess}
+    />
+  );
+}
+
+// Owns the insertBefore selection Set. Mounted with a `key` of the children-id
+// signature so a children change remounts it — re-seeding `insertBeforeIds` from
+// the all-children default while preserving user toggles until the next change.
+function InsertBeforeForm({
+  cards,
+  setCards,
+  autoFocusId,
+  setAutoFocusId,
+  submitting,
+  setSubmitting,
+  url,
+  setOpen,
+  resetForm,
+  relate,
+  hasAmbientRelate,
+  activeRelate,
+  relateMode,
+  ambientRelateMode,
+  setRelateMode,
+  setAmbientRelateMode,
+  standalone,
+  setStandalone,
+  captures,
+  target,
+  relateTaskChildren,
+  relateTaskHasDeps,
+  heading,
+  footerStart,
+  onSuccess,
+}: {
+  cards: CardDraft[];
+  setCards: React.Dispatch<React.SetStateAction<CardDraft[]>>;
+  autoFocusId: string | null;
+  setAutoFocusId: (id: string | null) => void;
+  submitting: boolean;
+  setSubmitting: (v: boolean) => void;
+  url: string;
+  setOpen: (next: boolean) => void;
+  resetForm: () => void;
+  relate: TaskDraftRelate | undefined;
+  hasAmbientRelate: boolean;
+  activeRelate: { taskId: string } | null;
+  relateMode: TaskChainRelateMode | undefined;
+  ambientRelateMode: TaskChainRelateMode | undefined;
+  setRelateMode: (v: TaskChainRelateMode | undefined) => void;
+  setAmbientRelateMode: (v: TaskChainRelateMode | undefined) => void;
+  standalone: boolean;
+  setStandalone: (v: boolean) => void;
+  captures: CaptureKind[];
+  target: TaskChainTarget;
+  relateTaskChildren: { id: string; title: string }[];
+  relateTaskHasDeps: boolean;
+  heading: string | undefined;
+  footerStart: ReactNode;
+  onSuccess: ((taskIds: string[]) => void) | undefined;
+}) {
+  // Seed from the all-children default; the remount-on-children-change re-seeds.
+  const [insertBeforeIds, setInsertBeforeIds] = useState<Set<string>>(
+    () => new Set(relateTaskChildren.map((c) => c.id)),
+  );
 
   const submit = async () => {
     if (submitting) return;
@@ -279,6 +375,7 @@ export function TaskDraftPopover({
       if (!seen.has(c.localId)) newest = c.localId;
     }
     seenIdsRef.current = new Set(cards.map((c) => c.localId));
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- new-card detector: diffs the live cards against the previous render's seenIdsRef to find the just-added card and auto-focus it; depends on historical (prior-render) identity, so it cannot be derived in render or replaced by a primitive
     if (newest) setAutoFocusId(newest);
   }, [cards, setCards]);
 

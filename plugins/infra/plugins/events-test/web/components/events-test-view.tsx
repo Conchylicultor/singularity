@@ -83,6 +83,7 @@ export function EventsTestView() {
 
   // Initial load + light poll so oneShot deletions and new log entries show.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional 1s poll for debug test panel: refresh() writes triggers/log state from two endpoint reads; there is no live-state resource for the events-test endpoints to subscribe to, so a deriving-in-render path does not exist
     void refresh();
     const iv = setInterval(() => { void refresh(); }, 1000);
     return () => clearInterval(iv);

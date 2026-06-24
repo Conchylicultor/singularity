@@ -1,5 +1,5 @@
 import { Button, cn, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore, type RefObject, type ReactNode } from "react";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -33,6 +33,37 @@ export const ReorderAreaContext = createContext<ReorderAreaCtxValue | null>(
 // can't infer "wants to fill" without the flag, but we CAN detect the symptom
 // after mount and surface the missing opt-in loudly. Warn once per contribution.
 const warnedMissingFill = new Set<string>();
+
+// Tracks whether the ref'd element has zero child nodes via a MutationObserver,
+// read through useSyncExternalStore so it never sets state in an effect. While
+// `enabled` is false the subscription is a no-op and the snapshot is `false`
+// (matching the prior reset-to-false-when-not-in-edit-mode behavior).
+function useIsEmpty(
+  ref: RefObject<HTMLElement | null>,
+  enabled: boolean,
+): boolean {
+  const subscribe = useCallback(
+    (onChange: () => void) => {
+      if (!enabled) return () => {};
+      const el = ref.current;
+      if (!el) return () => {};
+      const observer = new MutationObserver(onChange);
+      observer.observe(el, { childList: true });
+      return () => observer.disconnect();
+    },
+    [ref, enabled],
+  );
+  const getSnapshot = useCallback(() => {
+    // Default to false (not-empty) when disabled or before the ref attaches —
+    // matching the prior useState(false) initial, so the empty-placeholder never
+    // flashes on the first edit-mode render before the content div is committed.
+    if (!enabled) return false;
+    const el = ref.current;
+    if (!el) return false;
+    return el.childNodes.length === 0;
+  }, [ref, enabled]);
+  return useSyncExternalStore(subscribe, getSnapshot, () => false);
+}
 
 // Descend past layout-neutral `display:contents` wrappers (e.g. the element-
 // picker marker span) to the contribution's first real box.
@@ -68,23 +99,7 @@ export function SortableReorderItem({
   const ctx = useContext(ReorderAreaContext);
   const isHorizontal = ctx?.orientation === "horizontal";
   const contentRef = useRef<HTMLDivElement>(null);
-  const [isEmpty, setIsEmpty] = useState(false);
-
-  useLayoutEffect(() => {
-    if (!editMode) {
-      setIsEmpty(false);
-      return;
-    }
-    const el = contentRef.current;
-    if (!el) return;
-
-    const check = () => setIsEmpty(el.childNodes.length === 0);
-    check();
-
-    const observer = new MutationObserver(check);
-    observer.observe(el, { childList: true });
-    return () => observer.disconnect();
-  }, [editMode]);
+  const isEmpty = useIsEmpty(contentRef, editMode);
 
   // Loud detection of a missing `fill` opt-in: if the contribution's root box
   // declares `flex-grow` (it wants to fill its host's height and scroll), but

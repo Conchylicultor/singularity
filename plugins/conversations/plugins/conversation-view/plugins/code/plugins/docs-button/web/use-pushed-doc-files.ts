@@ -23,6 +23,7 @@ export function usePushedDocFiles(attemptId: string): EditedFile[] | null {
   useEffect(() => {
     if (pushIdsKey === null) return;
     const ids = pushIdsKey ? pushIdsKey.split(",") : [];
+    /* eslint-disable react-hooks/set-state-in-effect -- async fan-out: a single useResource/useEndpoint cannot express the Promise.all over a dynamic set of push ids merged & deduped by path; the cancelled-flag guard makes the late setResult safe. */
     if (ids.length === 0) {
       setResult({ key: "", files: [] });
       return;
@@ -44,6 +45,7 @@ export function usePushedDocFiles(attemptId: string): EditedFile[] | null {
       }
       setResult({ key: pushIdsKey, files: [...byPath.values()] });
     });
+    /* eslint-enable react-hooks/set-state-in-effect */
 
     return () => {
       cancelled = true;

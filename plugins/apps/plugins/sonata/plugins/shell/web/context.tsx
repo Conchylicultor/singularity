@@ -289,6 +289,12 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const [songOpenEpoch, setSongOpenEpoch] = useState(0);
 
   const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
+  // The effective active source defaults to the first contributed one until the
+  // user explicitly picks one — derived in render rather than mirrored into
+  // `activeSourceId` via an effect, so there is never a frame where no source is
+  // selected (and no extra render cycle). `activeSourceId` holds only the user's
+  // explicit pick (null = "no pick yet, fall back to the first source").
+  const effectiveSourceId = activeSourceId ?? sources[0]?.id ?? null;
   const [activeDisplayId, setActiveDisplayId] = useState<string | null>(null);
   // Raw input keyed by source id — each source keeps its own input so they
   // accumulate and merge, rather than one active source replacing another.
@@ -318,7 +324,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
 
   // `setRaw` writes the *active* source's slot. Read the active id from a ref so
   // the callback stays stable (loaders depend on its identity in effects).
-  const activeSourceIdRef = useLatestRef(activeSourceId);
+  // Mirror the *effective* id so writes target the defaulted first source even
+  // before the user makes an explicit pick.
+  const activeSourceIdRef = useLatestRef(effectiveSourceId);
   const setRaw = useCallback(
     (raw: unknown) => {
       const id = activeSourceIdRef.current;
@@ -337,13 +345,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     (m: Record<string, unknown>) => setRawById(m),
     [],
   );
-
-  // Default the active source/display to the first contributed one.
-  useEffect(() => {
-    if (activeSourceId === null && sources.length > 0) {
-      setActiveSourceId(sources[0]!.id);
-    }
-  }, [activeSourceId, sources]);
 
   // Compose the Score: compile every source with input, merge them (in source
   // contribution order), then merge analyzer output. A source that authors no
@@ -390,6 +391,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // reset the playhead — only loading or editing input does.
   useEffect(() => {
     cursor.setBeat(0, { seek: true });
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional transport reset on score change: loading/editing new content imperatively rewinds the cursor (cursor.setBeat) and stops playback; this is a genuine side-effect (paired with the imperative cursor write), not derivable in render
     setIsPlaying(false);
   }, [baseScore, cursor]);
 
@@ -627,12 +629,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  // When the floor rises again (shorter song, slower tempo), pull an out-of-range
-  // live spread back within [floor, MAX] so the wheel/renderer never show a value
-  // below the reachable minimum.
-  useEffect(() => {
-    setSpreadState((s) => Math.max(spreadMin, Math.min(MAX_SPREAD, s)));
-  }, [spreadMin]);
+  // When the floor rises again (shorter song, slower tempo), an earlier-written
+  // raw `spread` may fall below the new reachable minimum. Re-clamp into
+  // [floor, MAX] in render rather than via an effect that re-writes the state —
+  // so the wheel/renderer never show a value below the reachable minimum and
+  // there's no extra render cycle. `spread` state still holds the user's intent;
+  // `setSpread` clamps against the floor at write time (this handles a *later*
+  // floor rise).
+  const effectiveSpread = Math.max(spreadMin, Math.min(MAX_SPREAD, spread));
 
   // A tempo change rescales `score` mid-flight; re-anchor at the current cursor so
   // the visual transport doesn't jump (audio re-anchors via its score-dep effect).
@@ -643,6 +647,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // 0% speed freezes the transport: pause so neither the cursor nor the audio
   // advances. Stepping the speed back up requires pressing play again.
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional: freeze transport at 0% tempo (a 0× scale cannot advance the cursor); this is a transport state transition triggered by the user dialing tempo to 0 while playing, not derivable in render (isPlaying is imperative play/pause state)
     if (tempoScale === 0) setIsPlaying(false);
   }, [tempoScale]);
 
@@ -716,7 +721,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     [rawById],
   );
 
-  const activeRaw = activeSourceId ? rawById[activeSourceId] : undefined;
+  const activeRaw = effectiveSourceId ? rawById[effectiveSourceId] : undefined;
 
   // Source-keyed raw read. Recreated when `rawById` changes so consumers re-render
   // with fresh raw (e.g. the chord-grid editor reflecting a hydrated song).
@@ -739,10 +744,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       songOpenEpoch,
       isPlaying,
       tempoScale,
-      spread,
+      spread: effectiveSpread,
       spreadMin,
       spreadMax: MAX_SPREAD,
-      activeSourceId,
+      activeSourceId: effectiveSourceId,
       activeDisplayId,
       seekEpoch,
       loadedSourceIds,
@@ -777,9 +782,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       songOpenEpoch,
       isPlaying,
       tempoScale,
-      spread,
+      effectiveSpread,
       spreadMin,
-      activeSourceId,
+      effectiveSourceId,
       activeDisplayId,
       seekEpoch,
       loadedSourceIds,

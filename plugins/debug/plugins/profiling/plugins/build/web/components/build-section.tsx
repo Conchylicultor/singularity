@@ -1,35 +1,21 @@
-import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 import {
   GanttSection,
   groupByPhase,
   useProfilingContext,
-  type Span,
 } from "@plugins/debug/plugins/profiling/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { BUILD_PHASE_ORDER, BUILD_PHASE_CONFIG } from "../phases";
 import { getBuildProfiling } from "../../shared/endpoints";
 
-interface BuildData {
-  spans: Span[];
-  totalMs: number;
-}
-
 export function BuildSection(): ReactElement | null {
   const { refreshKey } = useProfilingContext();
-  const [data, setData] = useState<BuildData | null>(null);
+  const { data, refetch } = useEndpoint(getBuildProfiling, {});
 
-  const load = useCallback(async () => {
-    try {
-      setData(await fetchEndpoint(getBuildProfiling, {}));
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch {
-      // debug tool — silent on fetch errors
-    }
-  }, []);
-
+  // refetch is not a state setter, so this effect is clean (no set-state-in-effect).
   useEffect(() => {
-    void load();
-  }, [load, refreshKey]);
+    void refetch();
+  }, [refetch, refreshKey]);
 
   if (!data || data.spans.length === 0) return null;
 

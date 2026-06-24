@@ -1,5 +1,4 @@
-import { useEffect, useState } from "react";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { resolveFile } from "../../shared/endpoints";
 
 export type ResolvedFileState =
@@ -13,34 +12,23 @@ export function useResolvedFile(
   worktree: string,
   path: string,
 ): ResolvedFileState {
-  const [state, setState] = useState<ResolvedFileState>({ status: "loading" });
+  const { data, isLoading, error } = useEndpoint(
+    resolveFile,
+    { worktree },
+    { query: { path } },
+  );
 
-  useEffect(() => {
-    let cancelled = false;
-    setState({ status: "loading" });
-    fetchEndpoint(resolveFile, { worktree }, { query: { path } })
-      .then((result) => {
-        if (cancelled) return;
-        if (result.kind === "exact") {
-          setState({ status: "exact", path });
-        } else if (result.kind === "resolved") {
-          if (result.matches.length === 1) {
-            setState({ status: "resolved", path: result.matches[0]! });
-          } else {
-            setState({ status: "ambiguous", matches: result.matches });
-          }
-        } else {
-          setState({ status: "not-found" });
-        }
-      })
-      .catch(() => {
-        if (cancelled) return;
-        setState({ status: "not-found" });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [worktree, path]);
+  // No data for the current (worktree, path) key yet → still resolving. A
+  // failed resolve is treated as "not found" (the prior cancel-flag effect did
+  // the same), so any error collapses to the not-found branch.
+  if (isLoading || (!data && !error)) return { status: "loading" };
+  if (!data) return { status: "not-found" };
 
-  return state;
+  if (data.kind === "exact") return { status: "exact", path };
+  if (data.kind === "resolved") {
+    return data.matches.length === 1
+      ? { status: "resolved", path: data.matches[0]! }
+      : { status: "ambiguous", matches: data.matches };
+  }
+  return { status: "not-found" };
 }

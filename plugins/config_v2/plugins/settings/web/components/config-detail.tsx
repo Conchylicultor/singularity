@@ -1,5 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useMemo, useCallback, useState, useEffect } from "react";
+import { useMemo, useCallback, useState } from "react";
 import { MdWarning, MdCode, MdTune, MdUndo, MdDifference, MdMerge, MdLayersClear } from "react-icons/md";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -47,7 +47,9 @@ export function ConfigDetail() {
     return <Placeholder>Config not found</Placeholder>;
   }
 
-  return <ConfigDetailInner registration={registration} />;
+  // key on storePath so ConfigDetailInner remounts (and scopeId re-inits to Base)
+  // whenever a different descriptor opens — no props-to-state mirror effect needed.
+  return <ConfigDetailInner key={registration.storePath} registration={registration} />;
 }
 
 // All-or-nothing gate over values + conflicts + tiers — none is boot-hydrated
@@ -64,11 +66,6 @@ function ConfigDetailInner({
   registration: ReturnType<typeof useConfigRegistrations>[number];
 }) {
   const [scopeId, setScopeId] = useState<string | undefined>(undefined);
-
-  // Reset to Base whenever a different descriptor opens in the pane.
-  useEffect(() => {
-    setScopeId(undefined);
-  }, [registration.storePath]);
 
   const valuesRes = useResource(configV2Resource, {
     path: registration.storePath,
@@ -89,6 +86,9 @@ function ConfigDetailInner({
         <Loading />
       ) : (
         <ConfigDetailBody
+          // Re-key on path+scope so the body remounts (transient UI flags re-init
+          // to false) on a fresh editing context — no props-to-state mirror effect.
+          key={registration.storePath + ":" + (scopeId ?? "")}
           registration={registration}
           scopeId={scopeId}
           onSelectScope={setScopeId}
@@ -121,13 +121,6 @@ function ConfigDetailBody({
   const [confirmReset, setConfirmReset] = useState(false);
   const defaults = registration.descriptor.defaults as Record<string, unknown>;
   const conflictEntry = conflict;
-
-  // Re-collapse transient UI when the descriptor OR the selected scope changes —
-  // a fresh scope is a fresh editing context.
-  useEffect(() => {
-    setConfirmReset(false);
-    setShowDiff(false);
-  }, [registration.storePath, scopeId]);
 
   // During a conflict the app resolves config to the origin (origin takes
   // precedence until reconciled), so `useConfig` returns the origin values.

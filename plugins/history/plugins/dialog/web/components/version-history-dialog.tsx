@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import type { ReactNode } from "react";
 import {
   Button,
@@ -93,21 +93,20 @@ export function VersionHistoryDialog({
   });
   const list = useMemo(() => versions ?? [], [versions]);
 
-  const [activeId, setActiveId] = useState<string | null>(null);
+  // The user's explicit click (null = no explicit pick yet). The effective
+  // active id is derived in render: the explicit pick if it still exists in the
+  // list, otherwise the newest version. Deriving it (instead of mirroring into
+  // state via an effect) keeps selection consistent with the current list with
+  // no render-behind lag — on first open or after a restore inserts a row, the
+  // newest is selected immediately.
+  const [selectedId, setSelectedId] = useState<string | null>(null);
   // Version pending a restore confirmation (null = no confirmation open).
   const [pendingRestore, setPendingRestore] = useState<Version | null>(null);
 
-  // Default-select the newest version whenever the list (re)loads and the
-  // current selection is gone (first open, or after a restore inserts a row).
-  useEffect(() => {
-    if (list.length === 0) {
-      setActiveId(null);
-      return;
-    }
-    if (!activeId || !list.some((v) => v.id === activeId)) {
-      setActiveId(list[0]!.id);
-    }
-  }, [list, activeId]);
+  const activeId =
+    selectedId !== null && list.some((v) => v.id === selectedId)
+      ? selectedId
+      : (list[0]?.id ?? null);
 
   const activeVersion = useMemo(
     () => list.find((v) => v.id === activeId) ?? null,
@@ -188,7 +187,7 @@ export function VersionHistoryDialog({
                                 key={version.id}
                                 version={version}
                                 selected={version.id === activeId}
-                                onSelect={() => setActiveId(version.id)}
+                                onSelect={() => setSelectedId(version.id)}
                                 onRestore={() => setPendingRestore(version)}
                               />
                             ))}

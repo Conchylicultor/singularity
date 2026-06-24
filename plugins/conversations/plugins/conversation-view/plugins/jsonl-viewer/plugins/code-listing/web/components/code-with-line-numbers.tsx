@@ -1,14 +1,13 @@
-import { useEffect, useState } from "react";
+import { useMemo } from "react";
 import type { ShikiTransformer } from "shiki";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
-  getHighlighter,
   languageForPath,
   SHIKI_LANGS,
-  themeForMode,
   useDarkMode,
+  useHighlightedHtml,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 
 function parseCatN(content: string): { startLine: number; lines: string[] } {
@@ -61,37 +60,17 @@ export function CodeWithLineNumbers({
   const { startLine, lines } = parseCatN(content);
   const code = lines.join("\n");
   const dark = useDarkMode();
-  const [html, setHtml] = useState<string | null>(null);
 
   const lang = languageForPath(filePath);
   const resolvedLang = SHIKI_LANGS.includes(lang) ? lang : "text";
 
-  useEffect(() => {
-    if (!code) {
-      setHtml(null);
-      return;
-    }
-    let cancelled = false;
-    const theme = themeForMode(dark);
-
-    getHighlighter(resolvedLang)
-      .then((hl) => {
-        if (cancelled) return;
-        const out = hl.codeToHtml(code, {
-          lang: resolvedLang,
-          theme,
-          transformers: [makeLineNumberTransformer(startLine)],
-        });
-        setHtml(out);
-      })
-      .catch(() => {
-        if (!cancelled) setHtml(null);
-      });
-
-    return () => {
-      cancelled = true;
-    };
-  }, [code, resolvedLang, dark, startLine]);
+  // Stable across renders for a given startLine so the shared highlight effect
+  // doesn't re-run on unrelated parent re-renders.
+  const transformers = useMemo<ShikiTransformer[]>(
+    () => [makeLineNumberTransformer(startLine)],
+    [startLine],
+  );
+  const { html } = useHighlightedHtml(code, resolvedLang, { dark, transformers });
 
   if (!code) {
     return (

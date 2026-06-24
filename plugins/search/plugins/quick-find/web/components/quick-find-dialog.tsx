@@ -52,24 +52,45 @@ export function QuickFindDialog({
   onSelect,
   renderIcon,
 }: QuickFindDialogProps) {
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent>
+        {/* Self-key the body on `open` so query + activeIdx re-initialize on every
+            open via a fresh mount — no props-to-state reset effect. */}
+        <QuickFindDialogBody
+          key={open ? "open" : "closed"}
+          open={open}
+          onOpenChange={onOpenChange}
+          sources={sources}
+          placeholder={placeholder}
+          onSelect={onSelect}
+          renderIcon={renderIcon}
+        />
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function QuickFindDialogBody({
+  open,
+  onOpenChange,
+  sources,
+  placeholder = "Search…",
+  onSelect,
+  renderIcon,
+}: QuickFindDialogProps) {
   const [query, setQuery] = useState("");
+  // Set only by keyboard nav / hover; reset to 0 in the query onChange (where
+  // new results originate) and clamped in render for the async-arrival edge case.
   const [activeIdx, setActiveIdx] = useState(0);
   const activeRef = useRef<HTMLButtonElement>(null);
-
-  // Reset transient state every time the dialog opens.
-  useEffect(() => {
-    if (open) {
-      setQuery("");
-      setActiveIdx(0);
-    }
-  }, [open]);
 
   const { data: results, isFetching } = useSearch(query, { sources, enabled: open });
   const list = useMemo(() => results ?? [], [results]);
 
-  useEffect(() => {
-    setActiveIdx(0);
-  }, [results]);
+  // Derive the effective active index — never index past the current list, and
+  // collapse to 0 when empty. Replaces the reset-to-0-on-results effect.
+  const safeActiveIdx = list.length > 0 ? Math.min(activeIdx, list.length - 1) : 0;
 
   const select = useCallback(
     (result: SearchResult) => {
@@ -84,75 +105,75 @@ export function QuickFindDialog({
       if (list.length === 0) return;
       if (e.key === "ArrowDown") {
         e.preventDefault();
-        setActiveIdx((i) => (i + 1) % list.length);
+        setActiveIdx((i) => (Math.min(i, list.length - 1) + 1) % list.length);
       } else if (e.key === "ArrowUp") {
         e.preventDefault();
-        setActiveIdx((i) => (i - 1 + list.length) % list.length);
+        setActiveIdx((i) => (Math.min(i, list.length - 1) - 1 + list.length) % list.length);
       } else if (e.key === "Enter") {
         e.preventDefault();
-        const chosen = list[activeIdx];
+        const chosen = list[safeActiveIdx];
         if (chosen) select(chosen);
       }
     },
-    [list, activeIdx, select],
+    [list, safeActiveIdx, select],
   );
 
   useEffect(() => {
     activeRef.current?.scrollIntoView({ block: "nearest" });
-  }, [activeIdx]);
+  }, [safeActiveIdx]);
 
   const hasQuery = query.trim().length > 0;
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <Clip className="w-full max-w-lg rounded-xl">
-        <Surface level="overlay" className="w-full rounded-xl shadow-2xl">
-          <div className="border-b p-sm">
-            <SearchInput
-              autoFocus
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              onKeyDown={handleKeyDown}
-              placeholder={placeholder}
-            />
-          </div>
+    <Clip className="w-full max-w-lg rounded-xl">
+    <Surface level="overlay" className="w-full rounded-xl shadow-2xl">
+      <div className="border-b p-sm">
+        <SearchInput
+          autoFocus
+          value={query}
+          onChange={(e) => {
+            setQuery(e.target.value);
+            // First result highlighted after each keystroke (results refresh).
+            setActiveIdx(0);
+          }}
+          onKeyDown={handleKeyDown}
+          placeholder={placeholder}
+        />
+      </div>
 
-          <ScrollArea className="max-h-80">
-            <div className="p-xs">
-              {!hasQuery ? (
-                <Placeholder>Type to search.</Placeholder>
-              ) : isFetching && list.length === 0 ? (
-                <Loading variant="rows" />
-              ) : list.length === 0 ? (
-                <Placeholder>No results.</Placeholder>
-              ) : (
-                list.map((result, idx) => (
-                  <Row
-                    key={`${result.source}:${result.entityId}`}
-                    ref={idx === activeIdx ? activeRef : undefined}
-                    selected={idx === activeIdx}
-                    icon={renderIcon?.(result)}
-                    onMouseEnter={() => setActiveIdx(idx)}
-                    onClick={() => select(result)}
-                  >
-                    {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of Row's flex so the title truncates */}
-                    <Stack gap="2xs" align="start" className="min-w-0">
-                      <Text as="span" variant="body" className="truncate">
-                        {result.title || "Untitled"}
-                      </Text>
-                      {result.snippet && result.snippet !== result.title && (
-                        <Snippet snippet={result.snippet} />
-                      )}
-                    </Stack>
-                  </Row>
-                ))
-              )}
-            </div>
-          </ScrollArea>
-        </Surface>
-        </Clip>
-      </DialogContent>
-    </Dialog>
+      <ScrollArea className="max-h-80">
+        <div className="p-xs">
+          {!hasQuery ? (
+            <Placeholder>Type to search.</Placeholder>
+          ) : isFetching && list.length === 0 ? (
+            <Loading variant="rows" />
+          ) : list.length === 0 ? (
+            <Placeholder>No results.</Placeholder>
+          ) : (
+            list.map((result, idx) => (
+              <Row
+                key={`${result.source}:${result.entityId}`}
+                ref={idx === safeActiveIdx ? activeRef : undefined}
+                selected={idx === safeActiveIdx}
+                icon={renderIcon?.(result)}
+                onMouseEnter={() => setActiveIdx(idx)}
+                onClick={() => select(result)}
+              >
+                {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of Row's flex so the title truncates */}
+                <Stack gap="2xs" align="start" className="min-w-0">
+                  <Text as="span" variant="body" className="truncate">
+                    {result.title || "Untitled"}
+                  </Text>
+                  {result.snippet && result.snippet !== result.title && (
+                    <Snippet snippet={result.snippet} />
+                  )}
+                </Stack>
+              </Row>
+            ))
+          )}
+        </div>
+      </ScrollArea>
+    </Surface>
+    </Clip>
   );
 }

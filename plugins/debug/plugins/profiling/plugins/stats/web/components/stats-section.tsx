@@ -1,18 +1,12 @@
-import { useCallback, useEffect, useState, type ReactElement } from "react";
+import { useEffect, type ReactElement } from "react";
 import {
   GanttSection,
   groupByPhase,
   useProfilingContext,
-  type Span,
   type PhaseConfig,
 } from "@plugins/debug/plugins/profiling/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getStatsProfiling } from "../../shared/endpoints";
-
-interface StatsData {
-  spans: Span[];
-  totalMs: number;
-}
 
 const PHASE_ORDER = [
   "stats:commits",
@@ -28,20 +22,12 @@ const PHASE_CONFIG: Record<string, PhaseConfig> = {
 
 export function StatsSection(): ReactElement | null {
   const { refreshKey } = useProfilingContext();
-  const [data, setData] = useState<StatsData | null>(null);
+  const { data, refetch } = useEndpoint(getStatsProfiling, {});
 
-  const load = useCallback(async () => {
-    try {
-      setData(await fetchEndpoint(getStatsProfiling, {}));
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch {
-      // debug tool — silent on fetch errors
-    }
-  }, []);
-
+  // refetch is not a state setter, so this effect is clean (no set-state-in-effect).
   useEffect(() => {
-    void load();
-  }, [load, refreshKey]);
+    void refetch();
+  }, [refetch, refreshKey]);
 
   if (!data || data.spans.length === 0) return null;
 

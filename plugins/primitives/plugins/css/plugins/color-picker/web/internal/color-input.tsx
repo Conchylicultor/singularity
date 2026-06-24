@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { Color } from "./color";
 
@@ -21,11 +21,40 @@ export interface ColorInputProps {
 
 export function ColorInput({ color, onChange, className }: ColorInputProps) {
   const [format, setFormat] = useDraft<ColorFormat>("color-picker-format", "hex", { ttl: 365 * 24 * 60 * 60 * 1000 });
-  const [draft, setDraft] = useState(() => colorToString(color, format));
+  // The text-input `draft` state is re-initialized from the canonical color by
+  // remounting the editable field whenever the color or format changes (the key
+  // below), instead of mirroring `color`/`format` into state via an effect.
+  // `commit()` already fires `onChange` synchronously on blur/Enter before the
+  // parent color updates, so no in-progress edit is lost across the remount.
+  return (
+    <ColorInputField
+      key={`${color.toOklch()}:${format}`}
+      color={color}
+      format={format}
+      onChange={onChange}
+      onCycleFormat={() => {
+        const idx = FORMATS.indexOf(format);
+        setFormat(FORMATS[(idx + 1) % FORMATS.length]!);
+      }}
+      className={className}
+    />
+  );
+}
 
-  useEffect(() => {
-    setDraft(colorToString(color, format));
-  }, [color, format]);
+function ColorInputField({
+  color,
+  format,
+  onChange,
+  onCycleFormat,
+  className,
+}: {
+  color: Color;
+  format: ColorFormat;
+  onChange: (color: Color) => void;
+  onCycleFormat: () => void;
+  className?: string;
+}) {
+  const [draft, setDraft] = useState(() => colorToString(color, format));
 
   const commit = useCallback(() => {
     const parsed = Color.fromCss(draft);
@@ -35,11 +64,6 @@ export function ColorInput({ color, onChange, className }: ColorInputProps) {
       setDraft(colorToString(color, format));
     }
   }, [draft, color, format, onChange]);
-
-  const cycleFormat = useCallback(() => {
-    const idx = FORMATS.indexOf(format);
-    setFormat(FORMATS[(idx + 1) % FORMATS.length]!);
-  }, [format, setFormat]);
 
   return (
     <div className={cn("flex items-center gap-sm", className)}>
@@ -60,7 +84,7 @@ export function ColorInput({ color, onChange, className }: ColorInputProps) {
       />
       <button
         type="button"
-        onClick={cycleFormat}
+        onClick={onCycleFormat}
         className="w-9 shrink-0 text-center text-3xs font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground cursor-pointer select-none"
       >
         {FORMAT_LABELS[format]}

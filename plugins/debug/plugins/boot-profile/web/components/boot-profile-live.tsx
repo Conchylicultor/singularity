@@ -1,4 +1,4 @@
-import { useEffect, useState, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { MdRefresh, MdReplay, MdLink } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -6,8 +6,8 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
   getBootTrace,
-  subscribeBootTrace,
-  type BootTrace,
+  refreshBootTrace,
+  useBootTrace,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { saveBootTrace } from "../../shared/endpoints";
 import { BootProfileGantt } from "./boot-profile-gantt";
@@ -16,17 +16,11 @@ import { BootProfileGantt } from "./boot-profile-gantt";
 // Reload / Copy permalink controls. The Gantt itself is pure (takes `trace`),
 // so the same renderer paints both this live capture and a DB-loaded snapshot.
 export function BootProfileLive(): ReactElement {
-  const [refreshKey, setRefreshKey] = useState(0);
-  const [trace, setTrace] = useState<BootTrace | null>(null);
-
-  useEffect(() => {
-    setTrace(getBootTrace());
-  }, [refreshKey]);
-
-  // Re-read when the store notifies — late paint timing (FCP / first-paint), the
-  // first React commit, or new boot spans. Push-based (PerformanceObserver +
-  // subscriber set), so no polling. Fires a bounded number of times during boot.
-  useEffect(() => subscribeBootTrace(() => setTrace(getBootTrace())), []);
+  // Live trace via useSyncExternalStore — the store owns the subscription to late
+  // paint timing (FCP / first-paint), the first React commit, and new boot spans
+  // (push-based PerformanceObserver + subscriber set, no polling). The Refresh
+  // button calls refreshBootTrace() to re-pull the lazily-read timing.
+  const trace = useBootTrace();
 
   const save = useEndpointMutation(saveBootTrace);
   const onCopyPermalink = async (): Promise<void> => {
@@ -56,7 +50,7 @@ export function BootProfileLive(): ReactElement {
         <MdLink className="size-3.5" />
         {save.isPending ? "Saving…" : "Copy permalink"}
       </Button>
-      <Button variant="ghost" onClick={() => setRefreshKey((k) => k + 1)}>
+      <Button variant="ghost" onClick={() => refreshBootTrace()}>
         <MdRefresh className="size-3.5" />
         Refresh
       </Button>
@@ -67,7 +61,7 @@ export function BootProfileLive(): ReactElement {
     </div>
   );
 
-  if (!trace) {
+  if (trace.spans.length === 0) {
     return (
       <Text as="div" variant="caption" className="px-lg py-sm text-muted-foreground">
         No boot trace captured.

@@ -1,15 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import {
-  PushGantt,
-  type PushData,
-} from "@plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt/web";
+import { PushGantt } from "@plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt/web";
 import { pushDetailPane, getPushProfiling } from "@plugins/debug/plugins/profiling/plugins/push/web";
 import { buildProfileDetailPane } from "@plugins/debug/plugins/profiling/plugins/build/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { convPushProfilingPane } from "../panes";
@@ -21,23 +17,13 @@ export function PushProfilingPaneBody() {
   const conversation = useConversationById(convId ?? null);
   const attemptId = conversation?.attemptId;
 
-  const [data, setData] = useState<PushData | null>(null);
   const openPane = useOpenPane();
 
-  const load = useCallback(async () => {
-    if (!attemptId) return;
-    try {
-      const result = await fetchEndpoint(getPushProfiling, {}, { query: { worktree: attemptId } });
-      setData(result);
-    } catch (err) {
-      if (err instanceof TypeError) return;
-      throw err;
-    }
-  }, [attemptId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
+  const { data } = useEndpoint(
+    getPushProfiling,
+    {},
+    { query: { worktree: attemptId }, enabled: !!attemptId },
+  );
 
   if (!attemptId) return null;
 

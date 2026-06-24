@@ -77,16 +77,29 @@ export function CommandPaletteDialog({
   onClose,
   items,
 }: CommandPaletteDialogProps) {
+  // The stateful body is mounted only while `open` — so it naturally remounts
+  // (re-initializing `query`/`activeIdx` via `useState`) on every closed→open
+  // transition, replacing the old mirror-`open`-into-state effect. The Dialog
+  // shell stays mounted so its close animation is preserved.
+  return (
+    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
+      <DialogContent>
+        {open && <CommandPaletteBody onClose={onClose} items={items} />}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function CommandPaletteBody({
+  onClose,
+  items,
+}: {
+  onClose: () => void;
+  items: CommandPaletteItem[];
+}) {
   const [query, setQuery] = useState("");
   const [activeIdx, setActiveIdx] = useState(0);
   const activeRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    if (open) {
-      setQuery("");
-      setActiveIdx(0);
-    }
-  }, [open]);
 
   const { filtered, groups } = useMemo(() => {
     if (!query) {
@@ -138,9 +151,7 @@ export function CommandPaletteDialog({
   let flatIdx = 0;
 
   return (
-    <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
-      <DialogContent>
-        <Surface level="overlay" className="w-full max-w-lg shadow-2xl">
+    <Surface level="overlay" className="w-full max-w-lg shadow-2xl">
         <Clip className="rounded-xl">
           <div className="flex items-center gap-sm border-b px-md py-sm">
             <MdSearch className="size-4 shrink-0 text-muted-foreground" />
@@ -239,9 +250,7 @@ export function CommandPaletteDialog({
             </Stack>
           </Text>
         </Clip>
-        </Surface>
-      </DialogContent>
-    </Dialog>
+    </Surface>
   );
 }
 

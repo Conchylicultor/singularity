@@ -3,13 +3,11 @@ import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
-import type { BundledLanguage } from "shiki";
 import {
-  getHighlighter,
   resolveLang,
   SHIKI_LANGS,
-  themeForMode,
   useDarkMode,
+  useHighlightedHtml,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
@@ -65,30 +63,10 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
     [language, code],
   );
   const resolved = resolveLang(language ?? detected);
-  const [html, setHtml] = useState<string | null>(null);
-
-  // Re-highlight on every keystroke. The highlighter + its grammars are cached
-  // module-side, so after first load this resolves effectively synchronously;
-  // the `cancelled` flag drops stale results from earlier keystrokes.
-  useEffect(() => {
-    if (!resolved) {
-      setHtml(null);
-      return;
-    }
-    let cancelled = false;
-    const theme = themeForMode(dark);
-    getHighlighter(resolved)
-      .then((hl) => {
-        if (cancelled) return;
-        setHtml(hl.codeToHtml(code, { lang: resolved as BundledLanguage, theme }));
-      })
-      .catch(() => {
-        if (!cancelled) setHtml(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [code, resolved, dark]);
+  // Re-highlight on every keystroke via the shared async-Shiki primitive (its
+  // cancel guard drops stale results from earlier keystrokes). No cacheKey: the
+  // editor recomputes per keystroke, matching the pre-hook behavior.
+  const { html } = useHighlightedHtml(code, resolved, { dark });
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 

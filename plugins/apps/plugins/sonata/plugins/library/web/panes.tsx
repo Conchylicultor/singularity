@@ -81,6 +81,7 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
 
   useEffect(() => {
     let cancelled = false;
+    /* eslint-disable react-hooks/set-state-in-effect -- async hydration with cancellation flag: fans out over the dynamic plugin-contributed Library.Source registry (Promise.all of per-source hydrate), so a single useResource/useEndpoint cannot express it; setHydratedFor(null) resets the settle gate before the await and setRawMap/setHydratedFor(songId) commit only after the cancel guard, which is genuinely stateful (no derive-in-render equivalent). */
     setHydratedFor(null);
     void (async () => {
       const rawMap: Record<string, unknown> = {};
@@ -94,6 +95,7 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
       setRawMap(rawMap);
       setHydratedFor(songId);
     })();
+    /* eslint-enable react-hooks/set-state-in-effect */
     return () => {
       cancelled = true;
     };

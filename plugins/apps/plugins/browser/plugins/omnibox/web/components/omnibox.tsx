@@ -1,22 +1,43 @@
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import type { FormEvent } from "react";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useBrowserNav } from "@plugins/apps/plugins/browser/plugins/shell/web";
 import { normalizeInput } from "../normalize";
 
 /**
- * The address bar. A controlled input synced to the current URL; Enter
+ * The address bar. A controlled input seeded from the current URL; Enter
  * normalizes the input and navigates (or goes home on empty). Reuses the
  * SearchInput primitive for its leading search affordance + clear button.
+ *
+ * The input's draft state is owned by a self-keyed inner component
+ * ({@link OmniboxInput}) keyed on `current`: whenever the active URL changes
+ * (back/forward/home/link nav), the inner component remounts and re-seeds its
+ * `useState` from the new URL — replacing the old "mirror prop into state via
+ * effect" pattern. The remount discards any in-progress typed text, which is
+ * the intended behavior (the address bar should reflect the live URL).
  */
 export function Omnibox() {
   const { current, navigate, goHome } = useBrowserNav();
-  const [value, setValue] = useState(current);
+  return (
+    <OmniboxInput
+      key={current}
+      current={current}
+      navigate={navigate}
+      goHome={goHome}
+    />
+  );
+}
 
-  // Reflect the active URL whenever it changes (back/forward/home/link nav).
-  useEffect(() => {
-    setValue(current);
-  }, [current]);
+function OmniboxInput({
+  current,
+  navigate,
+  goHome,
+}: {
+  current: string;
+  navigate: (url: string) => void;
+  goHome: () => void;
+}) {
+  const [value, setValue] = useState(current);
 
   const submit = (e: FormEvent) => {
     e.preventDefault();

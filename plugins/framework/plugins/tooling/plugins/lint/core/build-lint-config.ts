@@ -206,10 +206,17 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
         // genuine anti-patterns were refactored; and the few intentional
         // render-time machines (use-tab-presence, use-cursor-pagination, the
         // build-once markdown/overlay memos) carry an inline `react-hooks/refs`
-        // disable. Only the high-volume `set-state-in-effect` stays "warn"
-        // (correctness/style; the compiler still compiles it) until its own
-        // burndown completes — see
-        // research/2026-06-23-global-react-compiler-refs-burndown.md.
+        // disable. `react-hooks/set-state-in-effect` was likewise RATCHETED
+        // warn→error on 2026-06-24 once its burndown hit zero: anti-patterns
+        // were refactored (props-to-state → key= remount, default-selection /
+        // derived state → derive in render), fetch/subscription effects migrated
+        // to useEndpoint / useSyncExternalStore or the shared useHighlightedHtml
+        // primitive, and the genuinely-stateful remainder (animation/temporal
+        // machines, NDJSON streams, optimistic-cleanup, primitive internals)
+        // carries an inline `react-hooks/set-state-in-effect` disable. ALL
+        // react-hooks compiler diagnostics are now enforced at error — see
+        // research/2026-06-24-global-react-compiler-set-state-burndown.md (and the
+        // refs burndown research/2026-06-23-global-react-compiler-refs-burndown.md).
         "react-hooks/purity": "error",
         "react-hooks/immutability": "error",
         "react-hooks/use-memo": "error",
@@ -218,6 +225,7 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
         "react-hooks/preserve-manual-memoization": "error",
         "react-hooks/incompatible-library": "error",
         "react-hooks/refs": "error",
+        "react-hooks/set-state-in-effect": "error",
         "no-constant-binary-expression": "error",
         "eqeqeq": ["error", "smart"],
         "no-template-curly-in-string": "error",

@@ -52,6 +52,7 @@ function HealthSectionInner({
   const [enriched, setEnriched] = useState<ReviewWithMeta[]>([]);
 
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async fetch+merge on live-state node.id/reviews change: setEnriched is driven by parallel staleness + per-review task reads; the cancelled-flag guards unmount/stale writes. No deriving-in-render path exists (the data is fetched, not pushed), and a single useResource cannot express the per-review Promise.all fan-out. */
     if (pluginReviews.length === 0) {
       setEnriched([]);
       return;
@@ -91,6 +92,7 @@ function HealthSectionInner({
     return () => {
       cancelled = true;
     };
+    /* eslint-enable react-hooks/set-state-in-effect */
     // eslint-disable-next-line react-hooks/exhaustive-deps -- pluginReviews is derived inline; use stable node.id as the key
   }, [node.id, reviews]);
 

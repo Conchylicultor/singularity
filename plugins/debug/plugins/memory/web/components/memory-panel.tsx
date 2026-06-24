@@ -1,6 +1,6 @@
 import { ControlSizeProvider, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useState, useEffect, useCallback, useMemo } from "react";
+import { useState, useMemo } from "react";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { MdRefresh } from "react-icons/md";
@@ -9,7 +9,7 @@ import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getEndpointErrorMessage, useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { listMemoryFiles, readMemoryFile } from "../../shared/endpoints";
 
 type MemoryFile = {
@@ -31,40 +31,23 @@ function displayName(name: string): string {
 }
 
 export function MemoryPanel() {
-  const [files, setFiles] = useState<MemoryFile[]>([]);
-  const [dir, setDir] = useState<string>("");
-  const [selected, setSelected] = useState<string | null>(null);
-  const [content, setContent] = useState<string | null>(null);
-  const [loadingContent, setLoadingContent] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  // The user's explicit pick (null until they click a file). The effective
+  // selection derives the first file as a default in render — no effect.
+  const [picked, setPicked] = useState<string | null>(null);
 
-  const loadList = useCallback(async () => {
-    try {
-      const data = await fetchEndpoint(listMemoryFiles, {});
-      setFiles(data.files);
-      setDir(data.dir);
-      if (data.files.length > 0 && selected === null) {
-        setSelected(data.files[0]?.name ?? null);
-      }
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch {
-      // non-fatal
-    }
-  }, [selected]);
+  const listQuery = useEndpoint(listMemoryFiles, {});
+  const files: MemoryFile[] = useMemo(() => listQuery.data?.files ?? [], [listQuery.data]);
+  const dir = listQuery.data?.dir ?? "";
+  const selected = picked ?? files[0]?.name ?? null;
 
-  useEffect(() => { void loadList(); }, [loadList]);
-
-  useEffect(() => {
-    if (!selected) { setContent(null); return; }
-    setLoadingContent(true);
-    setError(null);
-    fetchEndpoint(readMemoryFile, { name: selected })
-      .then((data) => {
-        setContent(data.content);
-      })
-      .catch((e: unknown) => setError(String(e)))
-      .finally(() => setLoadingContent(false));
-  }, [selected]);
+  const contentQuery = useEndpoint(
+    readMemoryFile,
+    { name: selected ?? "" },
+    { enabled: selected !== null },
+  );
+  const content = selected !== null ? (contentQuery.data?.content ?? null) : null;
+  const loadingContent = selected !== null && contentQuery.isLoading;
+  const error = contentQuery.error ? getEndpointErrorMessage(contentQuery.error) : null;
 
   const grouped = useMemo(() => {
     const order: MemoryFile["type"][] = ["index", "feedback", "project", "user", "reference", "other"];
@@ -94,7 +77,7 @@ export function MemoryPanel() {
               icon={MdRefresh}
               label="Refresh"
               variant="ghost"
-              onClick={() => loadList()}
+              onClick={() => void listQuery.refetch()}
             />
           </ControlSizeProvider>
         </div>
@@ -110,7 +93,7 @@ export function MemoryPanel() {
                 <button
                   key={f.name}
                   type="button"
-                  onClick={() => setSelected(f.name)}
+                  onClick={() => setPicked(f.name)}
                   className={cn(
                     "w-full px-md py-xs text-left text-caption transition-colors hover:bg-muted/50 flex items-center gap-xs min-w-0",
                     selected === f.name && "bg-muted font-medium",
