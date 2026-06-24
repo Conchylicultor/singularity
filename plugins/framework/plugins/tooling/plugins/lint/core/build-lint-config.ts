@@ -100,14 +100,16 @@ export interface BuildLintConfigOptions {
  * merged into eslint-plugin-react-hooks v6+). We read them off the installed
  * version programmatically — never hardcode the list, which drifts per version.
  *
- * Severity policy during evaluation:
- *   - Every compiler diagnostic rule is forced to "warn" so `./singularity
- *     check`'s eslint stays GREEN across ~540 plugins (warnings don't fail it).
- *   - `rules-of-hooks` + `exhaustive-deps` are RE-PINNED to "error" below
- *     (after the spread, so they win) — they were already enforced and stay so.
- *   - `preserve-manual-memoization` stays "warn" for now; the plan promotes it
- *     to "error" later if its warn-count is ~0 (it protects the existing manual
- *     useMemo/useCallback sites from compiler/manual conflict).
+ * Severity policy — FINAL STATE (warn-first ratchet complete, 2026-06-24):
+ *   - Every recommended-latest rule is spread in at "warn" first.
+ *   - EVERY currently-known rule is then RE-PINNED to "error" below (the explicit
+ *     keys come after the spread, so they win). The burndown program drove the
+ *     whole web tree to zero, so all 17 rules are now enforced — a new violation
+ *     fails `./singularity check` instead of silently eroding compiler coverage.
+ *   - The "warn" spread therefore now only matters as the ON-RAMP for a rule a
+ *     FUTURE eslint-plugin-react-hooks version adds: a newly-shipped rule lands at
+ *     "warn" by default (green check + a triageable count) rather than instantly
+ *     breaking the build, preserving the warn-first-then-ratchet discipline.
  *
  * Fails loudly (below) on version skew rather than silently enabling nothing.
  */
@@ -213,8 +215,7 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
         // to useEndpoint / useSyncExternalStore or the shared useHighlightedHtml
         // primitive, and the genuinely-stateful remainder (animation/temporal
         // machines, NDJSON streams, optimistic-cleanup, primitive internals)
-        // carries an inline `react-hooks/set-state-in-effect` disable. ALL
-        // react-hooks compiler diagnostics are now enforced at error — see
+        // carries an inline `react-hooks/set-state-in-effect` disable. See
         // research/2026-06-24-global-react-compiler-set-state-burndown.md (and the
         // refs burndown research/2026-06-23-global-react-compiler-refs-burndown.md).
         "react-hooks/purity": "error",
@@ -226,6 +227,22 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
         "react-hooks/incompatible-library": "error",
         "react-hooks/refs": "error",
         "react-hooks/set-state-in-effect": "error",
+        // Final 6 diagnostics RATCHETED warn→error on 2026-06-24. Their scan count
+        // was ALREADY 0 (no burndown needed — the coverage / refs / set-state-in-
+        // effect phases left the whole web tree clean), so all six promote together.
+        // `set-state-in-render` (unconditional render-phase setState = re-render
+        // loop) and `unsupported-syntax` (the compiler SILENTLY BAILS on it = lost
+        // coverage) are the bug/coverage-bearing ones; `globals` / `error-boundaries`
+        // / `config` / `gating` are rare-but-correct guards (`gating` is permanently
+        // 0 — we don't use compiler feature-gating). With these, ALL react-hooks
+        // compiler diagnostics are now enforced at error — completing the compliance
+        // program; see research/2026-06-24-global-react-compiler-final-rules-ratchet.md.
+        "react-hooks/set-state-in-render": "error",
+        "react-hooks/unsupported-syntax": "error",
+        "react-hooks/globals": "error",
+        "react-hooks/error-boundaries": "error",
+        "react-hooks/config": "error",
+        "react-hooks/gating": "error",
         "no-constant-binary-expression": "error",
         "eqeqeq": ["error", "smart"],
         "no-template-curly-in-string": "error",
