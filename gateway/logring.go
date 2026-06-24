@@ -1,6 +1,7 @@
 package main
 
 import (
+	"strings"
 	"sync"
 )
 
@@ -95,5 +96,24 @@ func (r *logRing) Subscribe() (snapshot []logEntry, ch <-chan logEntry, unsub fu
 		}
 		r.mu.Unlock()
 	}
+}
+
+// Tail returns up to the last n entries whose Stream has the given prefix, in
+// chronological order. Used to surface a crashed sidecar's own output.
+func (r *logRing) Tail(n int, streamPrefix string) []logEntry {
+	r.mu.Lock()
+	defer r.mu.Unlock()
+
+	matches := make([]logEntry, 0, r.size)
+	for i := 0; i < r.size; i++ {
+		e := r.buf[(r.head+i)%r.capacity]
+		if strings.HasPrefix(e.Stream, streamPrefix) {
+			matches = append(matches, e)
+		}
+	}
+	if n < len(matches) {
+		matches = matches[len(matches)-n:]
+	}
+	return matches
 }
 

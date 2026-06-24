@@ -13,76 +13,80 @@
  * NOT a trustedDependency (bun never builds it during install), and this script
  * builds it in a single subprocess whose env carries the pin and nothing else.
  *
- * Wired as the root `postinstall` (alongside e2e/ensure-chromium.mjs) so the
- * binary is provisioned by the same mechanism — `bun install` — that provisions
- * the package, and they can never drift. Steady state is a noop: one resolve +
- * one stat, then exit.
+ * Invoked via the cache-service `provision/index.ts` contribution, which the
+ * framework provisioning runner drives from the root `postinstall` (alongside
+ * e2e/ensure-chromium.mjs) — so the binary is provisioned by the same mechanism
+ * — `bun install` — that provisions the package, and they can never drift. This
+ * module no longer auto-runs on import; the runner orchestrates it. Steady state
+ * is a noop: one resolve + one stat, then return.
  */
 import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
 import { ZERO_NODE_BUILD_TARGET } from "../shared/internal/node-runtime";
 
-// The ABI to build for is the SAME single major the supervised zero-cache
-// service requires at runtime (resolveNode → major ZERO_NODE_MAJOR). Both read
-// from node-runtime.ts so the build target and the accepted runtime can never
-// drift apart. Any 24.x target yields the same ABI (NODE_MODULE_VERSION 137).
-const ZERO_SQLITE3_NODE_TARGET = ZERO_NODE_BUILD_TARGET;
+export async function ensureZeroSqlite3(): Promise<void> {
+  // The ABI to build for is the SAME single major the supervised zero-cache
+  // service requires at runtime (resolveNode → major ZERO_NODE_MAJOR). Both read
+  // from node-runtime.ts so the build target and the accepted runtime can never
+  // drift apart. Any 24.x target yields the same ABI (NODE_MODULE_VERSION 137).
+  const ZERO_SQLITE3_NODE_TARGET = ZERO_NODE_BUILD_TARGET;
 
-// scripts/ -> cache-service plugin root, the resolution base for its deps.
-// zero-sqlite3 is a transitive dep of @rocicorp/zero (the cache-service's direct
-// dep), not of the plugin itself, so resolve it RELATIVE TO @rocicorp/zero —
-// the only place bun's isolated store layout guarantees it's reachable from.
-const pluginRoot = dirname(import.meta.dir);
-const zeroDir = dirname(
-  Bun.resolveSync("@rocicorp/zero/package.json", pluginRoot),
-);
-const pkgJsonPath = Bun.resolveSync(
-  "@rocicorp/zero-sqlite3/package.json",
-  zeroDir,
-);
-const pkgDir = dirname(pkgJsonPath);
-
-// The artifact prebuild-install/node-gyp produce — also the path the package's
-// own install script probes for idempotency. Present ⇒ already built.
-const binary = join(pkgDir, "build", "Release", "better_sqlite3.node");
-if (existsSync(binary)) process.exit(0);
-
-const installCmd = JSON.parse(readFileSync(pkgJsonPath, "utf-8")).scripts
-  ?.install;
-if (typeof installCmd !== "string") {
-  throw new Error(
-    `ensure-zero-sqlite3: ${pkgJsonPath} has no scripts.install to run`,
+  // scripts/ -> cache-service plugin root, the resolution base for its deps.
+  // zero-sqlite3 is a transitive dep of @rocicorp/zero (the cache-service's direct
+  // dep), not of the plugin itself, so resolve it RELATIVE TO @rocicorp/zero —
+  // the only place bun's isolated store layout guarantees it's reachable from.
+  const pluginRoot = dirname(import.meta.dir);
+  const zeroDir = dirname(
+    Bun.resolveSync("@rocicorp/zero/package.json", pluginRoot),
   );
-}
-
-// Run the package's OWN install command verbatim (so we never drift from
-// upstream's build chain) in its dir, with every ancestor node_modules/.bin on
-// PATH so prebuild-install/node-gyp resolve — and the ABI pin scoped to THIS
-// subprocess only.
-const binDirs: string[] = [];
-for (let dir = pkgDir; ; ) {
-  binDirs.push(join(dir, "node_modules", ".bin"));
-  const parent = dirname(dir);
-  if (parent === dir) break;
-  dir = parent;
-}
-
-console.log(`ensure-zero-sqlite3: building ${binary} (Node ${ZERO_SQLITE3_NODE_TARGET} ABI)`);
-const result = spawnSync(installCmd, {
-  shell: true,
-  cwd: pkgDir,
-  stdio: "inherit",
-  env: {
-    ...process.env,
-    npm_config_runtime: "node",
-    npm_config_target: ZERO_SQLITE3_NODE_TARGET,
-    PATH: `${binDirs.join(":")}:${process.env.PATH ?? ""}`,
-  },
-});
-
-if (result.status !== 0) {
-  throw new Error(
-    `ensure-zero-sqlite3: build failed (exit ${result.status ?? "signal " + result.signal}) — \`${installCmd}\` in ${pkgDir}`,
+  const pkgJsonPath = Bun.resolveSync(
+    "@rocicorp/zero-sqlite3/package.json",
+    zeroDir,
   );
+  const pkgDir = dirname(pkgJsonPath);
+
+  // The artifact prebuild-install/node-gyp produce — also the path the package's
+  // own install script probes for idempotency. Present ⇒ already built.
+  const binary = join(pkgDir, "build", "Release", "better_sqlite3.node");
+  if (existsSync(binary)) return;
+
+  const installCmd = JSON.parse(readFileSync(pkgJsonPath, "utf-8")).scripts
+    ?.install;
+  if (typeof installCmd !== "string") {
+    throw new Error(
+      `ensure-zero-sqlite3: ${pkgJsonPath} has no scripts.install to run`,
+    );
+  }
+
+  // Run the package's OWN install command verbatim (so we never drift from
+  // upstream's build chain) in its dir, with every ancestor node_modules/.bin on
+  // PATH so prebuild-install/node-gyp resolve — and the ABI pin scoped to THIS
+  // subprocess only.
+  const binDirs: string[] = [];
+  for (let dir = pkgDir; ; ) {
+    binDirs.push(join(dir, "node_modules", ".bin"));
+    const parent = dirname(dir);
+    if (parent === dir) break;
+    dir = parent;
+  }
+
+  console.log(`ensure-zero-sqlite3: building ${binary} (Node ${ZERO_SQLITE3_NODE_TARGET} ABI)`);
+  const result = spawnSync(installCmd, {
+    shell: true,
+    cwd: pkgDir,
+    stdio: "inherit",
+    env: {
+      ...process.env,
+      npm_config_runtime: "node",
+      npm_config_target: ZERO_SQLITE3_NODE_TARGET,
+      PATH: `${binDirs.join(":")}:${process.env.PATH ?? ""}`,
+    },
+  });
+
+  if (result.status !== 0) {
+    throw new Error(
+      `ensure-zero-sqlite3: build failed (exit ${result.status ?? "signal " + result.signal}) — \`${installCmd}\` in ${pkgDir}`,
+    );
+  }
 }

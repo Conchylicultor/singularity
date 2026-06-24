@@ -2836,7 +2836,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `CodegenStep`, `DiscoveredCollectedDir`, `GenerateDocsOptions`, `OriginAnnotationsPreparer`, `OriginAnnotationsProvider`, `OriginDefaultsPreparer`, `OriginDefaultsProvider`, `PreBarrelManifest`, `RegenCodegenOptions`, `ReorderableSlotEntry`; Values: `barrelStubsPath`, `buildEnrichedTree`, `clearCompositionRegistries`, `collectAllPlugins`, `collectDataViews`, `collectedDirCompositionRegistryPath`, `collectedDirRegistryPath`, `collectTokenGroupVars`, `computeDisabledIds`, `customUtilitiesManifestPath`, `dataViewsManifestPath`, `discoverCollectedDirs`, `extractRuntimeImportSpecifiers`, `generateBarrelStubs`, `generateCompositionRegistry`, `generateConfigOrigins`, `generateCustomUtilities`, `generateDataViews`, `generatePluginDocs`, `generatePluginRegistry`, `generateReorderableSlots`, `generateTokenGroupVars`, `loadConfigDescriptorsByOriginPath`, `parseCustomUtilities`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `preBarrelManifests`, `propagateConfigToUser`, `regenerateManifestCodegen`, `regenerateRegistryCodegen`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderCustomUtilities`, `renderDataViewsManifest`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderReorderableSlotsManifest`, `renderTokenGroupVarsManifest`, `reorderableSlotsManifestPath`, `resolveImportSpecifier`, `resolveOriginAnnotations`, `resolveOriginDefaults`, `setDefaultOriginAnnotations`, `setDefaultOriginAnnotationsPreparer`, `setDefaultOriginDefaults`, `setDefaultOriginDefaultsPreparer`, `standardPluginDirs`, `tokenGroupVarsManifestPath`, `writePreBarrelManifest`
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
-            - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/web-sdk`, `improve/element-picker`, `plugin-meta/facets`, `primitives/css/layout-harness`
+            - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/tooling/provision`, `framework/web-sdk`, `improve/element-picker`, `plugin-meta/facets`, `primitives/css/layout-harness`
           - Core:
             - Exports: Types: `CollectedDirDef`, `CollectedEntry`, `LoadCollectedDirOptions`; Values: `defineCollectedDir`, `isCollectedDirDef`, `loadCollectedDir`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
@@ -2855,6 +2855,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
+        - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
+          - Core:
+            - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+            - Exports: Types: `CollectedEntry`; Values: `provisionCollectedDir`, `provisionEntries`
         - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
     - **`web-core`**
       - Web:

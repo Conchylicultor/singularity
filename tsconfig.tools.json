@@ -16,6 +16,7 @@
     "*.config.ts",
     "plugins/**/lint/*.ts",
     "plugins/**/scripts/*.ts",
+    "plugins/**/provision/*.ts",
     "plugins/**/vite/*.ts",
     "plugins/**/*.config.ts",
     "plugins/infra/plugins/launcher/bin/*.ts"

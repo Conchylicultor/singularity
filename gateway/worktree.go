@@ -598,6 +598,17 @@ func (w *Worktree) EnsureZeroCache(ctx context.Context) (*zeroCache, error) {
 		}
 		w.mu.Unlock()
 		wrapped := fmt.Errorf("%w: %v", ErrSpawnFailed, readyErr)
+		// Surface the sidecar's own stdout/stderr tail so the real cause (e.g.
+		// the resolveNode message) rides along in the 502 body and the log,
+		// instead of an opaque "exited before ready".
+		if tail := w.logBuf.Tail(20, "zero-"); len(tail) > 0 {
+			lines := make([]string, len(tail))
+			for i, e := range tail {
+				lines[i] = e.Line
+			}
+			joined := strings.Join(lines, "\n")
+			wrapped = fmt.Errorf("%w\n--- zero-cache output (last %d lines) ---\n%s", wrapped, len(tail), joined)
+		}
 		slog.Warn("zero-cache spawn failed", "worktree", w.Name, "err", wrapped)
 		return nil, wrapped
 	}

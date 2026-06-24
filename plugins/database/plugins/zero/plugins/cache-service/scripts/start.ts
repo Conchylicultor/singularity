@@ -28,8 +28,9 @@ import { rm, mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { spawnSync, spawn } from "node:child_process";
 import { Client } from "pg";
+import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 import { dropZeroSlotsAndPublications } from "../shared/internal/slot-sql";
-import { ZERO_NODE_MAJOR } from "../shared/internal/node-runtime";
+import { ZERO_NODE_MAJOR, zeroNodeCacheDir } from "../shared/internal/node-runtime";
 
 // ─── env contract (gateway-provided; fail loud if absent) ────────────────────
 
@@ -62,14 +63,19 @@ function dbNameFromDsn(dsn: string): string {
  * Resolve a Node executable whose major is exactly ZERO_NODE_MAJOR — the single
  * major the @rocicorp/zero-sqlite3 native addon is built for (see node-runtime.ts).
  * A different major (e.g. 22, with a different ABI) would load that addon with
- * ERR_DLOPEN_FAILED, so we reject it here rather than crash later. An explicit
- * override wins; otherwise probe `node` on PATH and validate its major version.
- * Fails loud with a clear, actionable message if no compatible runtime is found.
+ * ERR_DLOPEN_FAILED, so we reject it here rather than crash later. Candidate
+ * order: an explicit SINGULARITY_ZERO_NODE override wins; then the managed cache
+ * provisioned at install time (ensure-zero-node.ts); then `node` on PATH. Each is
+ * probed and its major validated. Fails loud with a clear, actionable message if
+ * no compatible runtime is found.
  */
 function resolveNode(): string {
+  const managedNode = join(zeroNodeCacheDir(SINGULARITY_DIR), "bin", "node");
+
   const candidates: string[] = [];
   const override = process.env.SINGULARITY_ZERO_NODE;
   if (override) candidates.push(override);
+  candidates.push(managedNode);
   candidates.push("node");
 
   for (const candidate of candidates) {
@@ -90,8 +96,10 @@ function resolveNode(): string {
   throw new Error(
     `zero-cache: no compatible Node runtime found. zero-cache requires Node ` +
       `v${ZERO_NODE_MAJOR} (the major @rocicorp/zero-sqlite3's native addon is ` +
-      `built for; NOT Bun). Install Node ${ZERO_NODE_MAJOR} and put it on PATH, ` +
-      `or set SINGULARITY_ZERO_NODE to its absolute path. ` +
+      `built for; NOT Bun). The managed runtime should have been provisioned to ` +
+      `${managedNode} by \`bun install\` (ensure-zero-node.ts) — re-run \`bun install\` ` +
+      `if it is missing. Otherwise install Node ${ZERO_NODE_MAJOR} and put it on ` +
+      `PATH, or set SINGULARITY_ZERO_NODE to its absolute path. ` +
       `(probed: ${candidates.join(", ")})`,
   );
 }
