@@ -2,6 +2,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { JsonlViewer } from "../slots";
 
 const EventActionContext = createContext<JsonlEvent | null>(null);
@@ -28,6 +29,11 @@ export function EventActionProvider({
  * only that line (body full width below), and never spills onto the next turn —
  * opacity-only reveal means no reflow. Pass `floating` for the headerless text/
  * image renderers so the buttons stay legible over prose.
+ *
+ * The reveal (opacity ⇄ pointer-events ⇄ select-none coupling) is owned by the
+ * `hover-reveal` primitive's {@link hoverRevealTarget}, keyed on the row's
+ * `hoverRevealGroup` set by `EventRow` — so the cluster is never a live
+ * click-target nor part of a Ctrl+A / drag selection over the transcript.
  */
 export function RowActions({
   className,
@@ -47,7 +53,8 @@ export function RowActions({
       gap="xs"
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid action strip; stays whole when hosted in a non-Frame flex parent (floating headerless renderers)
       className={cn(
-        "shrink-0 opacity-0 pointer-events-none transition-opacity group-hover/row:opacity-100 group-hover/row:pointer-events-auto focus-within:opacity-100 focus-within:pointer-events-auto",
+        "shrink-0",
+        hoverRevealTarget,
         floating && "rounded-lg border border-border/60 bg-background/90 px-xs py-2xs shadow-md backdrop-blur-sm",
         className,
       )}

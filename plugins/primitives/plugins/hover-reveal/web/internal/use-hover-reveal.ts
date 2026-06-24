@@ -47,7 +47,9 @@ export function useHoverReveal(): {
 
 /**
  * The canonical class for a hover-reveal target. Owns the opacity↔pointer-events
- * coupling so a hidden control is never left as a live click-target. Pass
+ * coupling so a hidden control is never left as a live click-target. `select-none`
+ * is unconditional: a revealed affordance is chrome, never selectable content, so
+ * it stays out of any text-selection range (Ctrl+A or drag) over the row. Pass
  * `alwaysVisible` to opt a target out of hiding (e.g. a pinned row action).
  */
 export function hoverRevealClass(
@@ -55,7 +57,7 @@ export function hoverRevealClass(
   opts?: { alwaysVisible?: boolean },
 ): string {
   return cn(
-    "transition-opacity",
+    "transition-opacity select-none",
     revealed || opts?.alwaysVisible
       ? "opacity-100"
       : "pointer-events-none opacity-0",

@@ -27,12 +27,14 @@ export const rowActionsAnchor = "group/row-actions relative";
  * Coupled opacity↔pointer-events reveal, keyed on the primitive's own
  * `group/row-actions`. Hidden is always BOTH `opacity-0` AND
  * `pointer-events-none`, so the invisible cluster never intercepts clicks on the
- * row beneath it. Revealed on row hover and while focus is anywhere inside the
- * row (keyboard reachability). Group names must be literal for Tailwind's JIT, so
- * this lives as a static string rather than an interpolated group.
+ * row beneath it. `select-none` is unconditional: action buttons are chrome, never
+ * selectable content, so the cluster stays out of any text-selection range (Ctrl+A
+ * or drag) over the row. Revealed on row hover and while focus is anywhere inside
+ * the row (keyboard reachability). Group names must be literal for Tailwind's JIT,
+ * so this lives as a static string rather than an interpolated group.
  */
 const revealClasses =
-  "opacity-0 pointer-events-none transition-opacity " +
+  "opacity-0 pointer-events-none select-none transition-opacity " +
   "group-hover/row-actions:opacity-100 group-hover/row-actions:pointer-events-auto " +
   "group-focus-within/row-actions:opacity-100 group-focus-within/row-actions:pointer-events-auto";
 
