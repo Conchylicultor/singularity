@@ -76,7 +76,7 @@ function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
   const { window: win, isActive, setGeo, bringToFront } = useTabWindow(tabId);
   const windows = useFloatingWindows();
   const { desktops, activeDesktopId } = useDesktops();
-  const { tabs, titles, focusTab, closeTab } = useTabs();
+  const { tabs, titles, focusTab, closeTab, openTab } = useTabs();
   const apps = Apps.App.useContributions();
   const { setContainerStyle, setContentInsetStyle, setContainerPointerDownCapture } =
     usePlacementStyle();
@@ -191,6 +191,16 @@ function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
     [win.id, focusTab],
   );
 
+  // The tab-strip `+`: open a fresh Home tab (matching the docked tab bar's `+`)
+  // and immediately merge it into THIS window so it joins as a new member rather
+  // than minting its own singleton window. `openTab` only mutates the apps store;
+  // the merge runs synchronously before the new tab's chrome mounts, so its
+  // `readWindowForTab` resolves to this window instead of auto-creating one.
+  const onNewTab = useCallback(() => {
+    const newTabId = openTab("home", "floating");
+    mergeTabIntoWindow(newTabId, win.id);
+  }, [openTab, win.id]);
+
   const onCloseWindow = useCallback(() => {
     // Close every member; pruneWindows then deletes the now-empty window.
     for (const memberId of win.members) closeTab(memberId);
@@ -251,6 +261,7 @@ function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
       members={memberRows}
       onSelectMember={onSelectMember}
       onCloseMember={closeTab}
+      onNewTab={onNewTab}
       onCloseWindow={onCloseWindow}
       onTogglePin={togglePin}
       mergeTargets={mergeTargets}

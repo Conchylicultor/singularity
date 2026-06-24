@@ -4,10 +4,14 @@ import {
   type ComponentType,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { MdClose, MdWebAsset } from "react-icons/md";
+import { MdAdd, MdClose, MdWebAsset } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   endTabDrag,
@@ -43,6 +47,8 @@ interface WindowTabStripProps {
   onSelect: (tabId: string) => void;
   /** Close a single member (the chip ×). */
   onCloseMember: (tabId: string) => void;
+  /** Open a fresh tab as a new member of this window (the trailing `+`). */
+  onNewTab: () => void;
   /** Commit ops for a finished chip drag (reorder / merge / split). */
   commit: TabDragCommit;
 }
@@ -107,6 +113,7 @@ export function WindowTabStrip({
   activeTabId,
   onSelect,
   onCloseMember,
+  onNewTab,
   commit,
 }: WindowTabStripProps) {
   const session = useTabDragSession();
@@ -242,6 +249,17 @@ export function WindowTabStrip({
           </Badge>
         );
       })}
+      {/* Trailing new-tab affordance (browser `+`): opens a fresh tab as a new
+          member of this window. Stops the pointer on pointer-down so the click
+          never starts the titlebar move-drag underneath, mirroring the chips. */}
+      <ControlSizeProvider size="sm">
+        <IconButton
+          icon={MdAdd}
+          label="New tab"
+          onPointerDown={stop}
+          onClick={onNewTab}
+        />
+      </ControlSizeProvider>
     </Stack>
   );
 }

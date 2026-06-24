@@ -59,6 +59,8 @@ interface WindowChromeProps {
   onSelectMember: (tabId: string) => void;
   /** Close one member (chip ×). */
   onCloseMember: (tabId: string) => void;
+  /** Open a fresh tab as a new member of this window (the tab-strip `+`). */
+  onNewTab: () => void;
   /** Close the WHOLE window (every member) — the right-side titlebar X. */
   onCloseWindow: () => void;
   /** Toggle this window's always-on-top flag (re-ranks z in the geometry store). */
@@ -100,6 +102,7 @@ export function WindowChrome({
   members,
   onSelectMember,
   onCloseMember,
+  onNewTab,
   onCloseWindow,
   onTogglePin,
   mergeTargets,
@@ -319,6 +322,7 @@ export function WindowChrome({
             activeTabId={win.activeTabId}
             onSelect={onSelectMember}
             onCloseMember={onCloseMember}
+            onNewTab={onNewTab}
             commit={dragCommit}
           />
         </div>
