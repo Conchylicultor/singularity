@@ -272,9 +272,10 @@ scroll.
   `bg-background` so rows never show through the pinned bar.
 - **The pane provides the scroll.** A pane body is one `<PaneScroll>` viewport;
   every header within it (the DataView toolbar, a section's stats header) is a
-  `<Sticky>`. `PaneChrome` routes its body through `<PaneScroll>` for free; a
-  bespoke `chrome:false` host must supply its own `<PaneScroll>` (or equivalent
-  `overflow-y` scroller) around the DataView.
+  `<Sticky>`. `PaneChrome` routes its body through `<PaneScroll>` for free, so a
+  DataView rendered as `PaneChrome` children scrolls for free; a non-pane host
+  must supply its own `<PaneScroll>` (or equivalent `overflow-y` scroller) around
+  the DataView.
 
 **Dev-mode structural guard.** On mount `<DataView>` walks up from its root for a
 scroll ancestor (`overflow-y ∈ {auto, scroll, overlay}`) before reaching the

@@ -191,14 +191,22 @@ Modes:
 
 ## Chrome
 
-**Every pane should wrap its body in `<PaneChrome pane={…}>`** — that's
-the convention. PaneChrome renders a standard header: the title,
-optional left-side actions, optional right-side actions, a promote
-button (detach from ancestors and make root), and a × close button on
-the far right. Both promote and close only show
-when `depth > 0`. Panes whose body is its own UI
-(sidebar lists, list of cards, etc.) and don't need a chrome header may
-opt out with `chrome: false` in `Pane.define`.
+**Every pane wraps its body in `<PaneChrome pane={…}>`** — that's the
+convention, and there is no opt-out: `PaneChrome` ALWAYS renders a
+header `Bar` plus exactly one body scroll (`PaneScroll`), so a pane can
+never strand its own scrolling. PaneChrome renders a standard header:
+the title, optional left-side actions, optional right-side actions, a
+promote button (detach from ancestors and make root), and a × close
+button on the far right. Both promote and close only show when
+`depth > 0`.
+
+A pane whose body is its own UI (a sidebar list, a card grid, a
+`DataView`) simply gives `<PaneChrome>` a `title` and renders the body
+directly as children — the body is natural-height and the chrome's
+`PaneScroll` scrolls it. A pane that needs a **rich custom header**
+(transport / view-switcher / volume) opts into `chrome.header` (see
+**Custom header** below) — the header content changes, but the bar
+height, the body wrapper, and the single scroll do not.
 
 ```tsx
 function TaskDetailBody() {
@@ -248,11 +256,12 @@ it is a `<Sticky>`** (from
 `@plugins/primitives/plugins/css/plugins/sticky/web`), so toolbars and section
 headers pin against this one viewport instead of each owning a nested scroller.
 
-`PaneChrome` already routes its body through `PaneScroll`, so any pane wrapped
+`PaneChrome` always routes its body through `PaneScroll`, so any pane wrapped
 in `<PaneChrome>` gets the one sanctioned scroll for free and should not add its
-own `overflow-*`. Bespoke `chrome: false` hosts that need their own scroll
-should reach for `<PaneScroll>` rather than re-deriving `overflow-y-auto
-min-h-0 flex-1`. `PaneScroll` forwards `ref` (for a host that needs the
+own `overflow-*`. A body with an inner header + scrollable region (so the
+chrome's `PaneScroll` is naturally inert) should still reach for `<PaneScroll>`
+on the inner region rather than re-deriving `overflow-y-auto min-h-0 flex-1`.
+`PaneScroll` forwards `ref` (for a host that needs the
 scroll-container element, e.g. an `IntersectionObserver` root) and the rest of
 `Scroll`'s surface (`hideScrollbar`, `isolate`, `as`, `className`).
 
@@ -339,15 +348,49 @@ Pane.define({
 Use this for compact side-panels that have their own expand action
 (e.g. an Action button that opens the full detail pane as root).
 
-### Opting out
+### Custom header (`chrome.header`)
+
+A pane with a rich toolbar (a back button + title on the left, transport
+/ view-switcher / volume widgets on the right) opts into a custom header
+instead of the default `title + Actions`. Build the header with
+`definePaneToolbar` (from
+`@plugins/primitives/plugins/pane-toolbar/web`), which exposes two
+**reorderable** render-slot zones (`Start` / `End`), and wire it in via
+`chrome: { header }`:
 
 ```ts
-Pane.define({ id: "tasks-root", path: "/tasks", component: TasksRoot, chrome: false });
+// once, at module scope (so the slots register at import):
+export const MyToolbar = definePaneToolbar("myapp.toolbar");
+
+// other plugins contribute items to either zone:
+MyToolbar.Start({ id: "back", component: BackButton });
+MyToolbar.End({ id: "volume", component: VolumeControl });
+
+// the pane opts in:
+export const myPane = Pane.define({
+  id: "my-pane",
+  segment: "my/:id",
+  component: MyPaneBody,
+  chrome: { header: MyToolbar },
+});
+
+// the body renders directly under PaneChrome — NO header inside it:
+function MyPaneBody() {
+  return (
+    <PaneChrome pane={myPane}>
+      <MyContent />
+    </PaneChrome>
+  );
+}
 ```
 
-Use this for panes whose body is its own UI (sidebar lists, raw
-content) and doesn't need the standard header. The pane component
-renders directly inside its column with no chrome wrapper.
+`PaneChrome` renders the `Start`/`End` zones INSIDE its standard
+`<Bar tier="pane">` (same height as every other pane header), in place
+of the default `title` / Actions, then the promote/close buttons. There
+is **no overflow-collapse** for a custom header: rich End widgets
+(transport, volume slider, jog wheel) never fold into a "⋯" popover.
+Hand-rolling a `border-b` header bar inside a pane body is banned by the
+`no-adhoc-pane-toolbar` lint rule — route it through `chrome.header`.
 
 ## Router
 
@@ -391,10 +434,10 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register` ← `active-data.plugin-link`, `apps.agent-manager.welcome`, `apps.deploy.servers`, `apps.pages.page-tree`, `apps.pages.welcome`, `apps.prototypes.gallery`, `apps.settings.accounts`, `apps.settings.config`, `apps.sonata.library`, `apps.story.shell`, `apps.studio.compositions`, `apps.studio.contributions`, `apps.studio.contributions.tables`, `apps.studio.explorer`, `apps.studio.graph`, `apps.studio.release`, `auth.google.setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2.settings`, `conversations.agents`, `conversations.conversation-view`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.code.file-pane`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.terminal-pane`, `conversations.recover`, `conversations.summary`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.profiling.build`, `debug.profiling.push`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.slow-ops.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `plugin-meta.plugin-view`, `primitives.css.layout-harness`, `review`, `screenshot`, `stats`, `tasks.attempt-view`, `tasks.task-detail`, `ui.theme-engine.theme-customizer`
-  - Uses: `primitives/bar.Bar`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/scroll.ScrollProps`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/select-scope.ContentScope`, `primitives/slot-render.renderIsolated`, `primitives/surface-id.SurfaceIdContext`, `primitives/tooltip.WithTooltip`
-  - Exports: Types: `InferParams`, `MatchEntry`, `OpenPaneFn`, `PaneChromeConfig`, `PaneInput`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneRouteEntry`, `PaneScrollProps`, `PaneSlot`, `PaneStore`, `PaneToggleOpts`, `ResolveHook`, `SurfaceChrome`, `TypeMarker`; Values: `buildRouteUrl`, `clearRoute`, `createPaneStore`, `defaultStore`, `getBasePath`, `getRoute`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `PaneScroll`, `PaneStoreContext`, `PaneSurfaceAppContext`, `PaneSurfaceProvider`, `parseUrl`, `reorderRoute`, `restoreRoute`, `setBasePath`, `setLiveStore`, `stripBasePath`, `SurfaceChromeContext`, `type`, `useCurrentPane`, `useIndexMatch`, `useOpenPane`, `usePaneMatch`, `usePaneRoute`, `usePaneStore`, `usePaneTitle`, `usePathname`, `useRenderSync`, `useRoute`, `useSurfaceAppId`, `useSyncPaneRegistry`
+  - Uses: `primitives/bar.Bar`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/scroll.ScrollProps`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/select-scope.ContentScope`, `primitives/slot-render.renderIsolated`, `primitives/surface-id.SurfaceIdContext`, `primitives/tooltip.WithTooltip`
+  - Exports: Types: `InferParams`, `MatchEntry`, `OpenPaneFn`, `PaneChromeConfig`, `PaneHeaderZones`, `PaneInput`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneRouteEntry`, `PaneScrollProps`, `PaneSlot`, `PaneStore`, `PaneToggleOpts`, `PaneToolbarItem`, `ResolveHook`, `SurfaceChrome`, `TypeMarker`; Values: `buildRouteUrl`, `clearRoute`, `createPaneStore`, `defaultStore`, `getBasePath`, `getRoute`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `PaneScroll`, `PaneStoreContext`, `PaneSurfaceAppContext`, `PaneSurfaceProvider`, `parseUrl`, `reorderRoute`, `restoreRoute`, `setBasePath`, `setLiveStore`, `stripBasePath`, `SurfaceChromeContext`, `ToolbarItem`, `type`, `useCurrentPane`, `useIndexMatch`, `useOpenPane`, `usePaneMatch`, `usePaneRoute`, `usePaneStore`, `usePaneTitle`, `usePathname`, `useRenderSync`, `useRoute`, `useSurfaceAppId`, `useSyncPaneRegistry`
 - Cross-plugin:
-  - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `apps`, `apps/agent-manager/shell`, `apps/agent-manager/welcome`, `apps/browser/shell`, `apps/debug/shell`, `apps/deploy/servers`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/pages/content-search`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/pages/starred`, `apps/pages/welcome`, `apps/pages/welcome/quick-create`, `apps/pages/welcome/recent-pages`, `apps/prototypes/gallery`, `apps/prototypes/shell`, `apps/settings/accounts`, `apps/settings/appearance`, `apps/settings/config`, `apps/settings/shell`, `apps/sonata/library`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables`, `apps/studio/explorer`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/studio/release`, `apps/studio/shell`, `apps/workflows/shell`, `auth`, `auth/google`, `auth/google/setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/agents`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/file-path`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/open-app`, `conversations/conversation-view/push-profiling`, `conversations/conversation-view/terminal-pane`, `conversations/conversation-view/vscode`, `conversations/conversations-view`, `conversations/pane-restore`, `conversations/recover`, `conversations/summary`, `debug/boot-profile`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/live-state-churn/emit`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/profiling/build`, `debug/profiling/push`, `debug/queue`, `debug/read-set`, `debug/render-profiler`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `debug/zero-test`, `infra/events-test`, `layouts/full-pane`, `layouts/host`, `layouts/miller`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/sub-plugins`, `primitives/app-shell`, `primitives/css/layout-harness`, `primitives/launch`, `reports`, `review`, `screenshot`, `stats`, `stats/cost`, `tasks/attempt-view`, `tasks/task-dependencies`, `tasks/task-detail`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-header`, `tasks/tasks-core`, `ui/theme-engine/theme-customizer`
+  - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `apps`, `apps/agent-manager/shell`, `apps/agent-manager/welcome`, `apps/browser/shell`, `apps/debug/shell`, `apps/deploy/servers`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/pages/content-search`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/pages/starred`, `apps/pages/welcome`, `apps/pages/welcome/quick-create`, `apps/pages/welcome/recent-pages`, `apps/prototypes/gallery`, `apps/prototypes/shell`, `apps/settings/accounts`, `apps/settings/appearance`, `apps/settings/config`, `apps/settings/shell`, `apps/sonata/library`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables`, `apps/studio/explorer`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/studio/release`, `apps/studio/shell`, `apps/workflows/shell`, `auth`, `auth/google`, `auth/google/setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/agents`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/file-path`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/open-app`, `conversations/conversation-view/push-profiling`, `conversations/conversation-view/terminal-pane`, `conversations/conversation-view/vscode`, `conversations/conversations-view`, `conversations/pane-restore`, `conversations/recover`, `conversations/summary`, `debug/boot-profile`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/live-state-churn/emit`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/profiling/build`, `debug/profiling/push`, `debug/queue`, `debug/read-set`, `debug/render-profiler`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `debug/zero-test`, `infra/events-test`, `layouts/full-pane`, `layouts/host`, `layouts/miller`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/sub-plugins`, `primitives/app-shell`, `primitives/css/layout-harness`, `primitives/launch`, `primitives/pane-toolbar`, `reports`, `review`, `screenshot`, `stats`, `stats/cost`, `tasks/attempt-view`, `tasks/task-dependencies`, `tasks/task-detail`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-header`, `tasks/tasks-core`, `ui/theme-engine/theme-customizer`
 - Core:
   - Exports: Types: `AppRef`, `InferParams`, `RouteDef`; Values: `defineApp`, `defineRoute`, `fillSegment`, `normalizeSegmentPattern`
 

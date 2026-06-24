@@ -93,8 +93,7 @@ Pane.define({
 ```
 
 `width` is the column's default width in pixels (top-level on
-`Pane.define`, separate from chrome so `chrome: false` panes can still
-set it). Defaults to 400. The leaf column ignores its own width and
+`Pane.define`, separate from the `chrome` config). Defaults to 400. The leaf column ignores its own width and
 flex-grows to fill remaining space. Users can drag the divider between
 columns to resize at runtime. Width state is **per-surface** (keyed by the
 column's `PaneStore` via a `WeakMap`), so two mounted surfaces (desktop

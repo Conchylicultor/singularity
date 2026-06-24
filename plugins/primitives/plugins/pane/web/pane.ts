@@ -20,6 +20,9 @@ import {
 } from "../core";
 import { Pane as PaneSlots } from "./slots";
 import { useRenderSync } from "./use-render-sync";
+import type { PaneHeaderZones } from "./components/pane-header-item";
+
+export type { PaneHeaderZones, PaneToolbarItem } from "./components/pane-header-item";
 
 export type { InferParams } from "../core";
 
@@ -107,6 +110,16 @@ export function type<T>(): TypeMarker<T> {
 
 export interface PaneChromeConfig<Params> {
   title?: string | ((params: Params) => string);
+  /**
+   * Opt into a custom header. When set, `PaneChrome` renders these reorderable
+   * `Start`/`End` render-slot zones INSIDE its standard `<Bar tier="pane">`
+   * instead of the default `title` + Actions — with NO overflow-collapse, so
+   * rich widgets (transport / volume / jog-wheel) never fold into a "⋯"
+   * popover. Build the zones with `definePaneToolbar` (pane-toolbar). The
+   * promote/close buttons still render after the End zone. When omitted,
+   * `PaneChrome` keeps the default header layout.
+   */
+  header?: PaneHeaderZones;
   history?: boolean;
   /**
    * Show a close button (leftmost) that calls `pane.close()`. Defaults to
@@ -132,8 +145,8 @@ export interface PaneChromeConfig<Params> {
 }
 
 interface NormalizedChrome {
-  enabled: boolean;
   title?: string | ((params: Record<string, string>) => string);
+  header?: PaneHeaderZones;
   history: boolean;
   close: boolean;
   promote: boolean;
@@ -543,7 +556,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     params: Record<string, string>,
     implOpts?: { root?: boolean; input?: PaneInput },
   ): void {
-    const replace = internal.chrome.enabled && !internal.chrome.history;
+    const replace = !internal.chrome.history;
     const route = currentRoute;
     const ownParams = extractOwnParams(internal, params);
     const input = implOpts?.input ?? {};
@@ -587,7 +600,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     const idx = route.findIndex((s) => s.instanceId === instanceId);
     if (idx <= 0) return;
     const newRoute = route.slice(0, idx);
-    const replace = internal.chrome.enabled && !internal.chrome.history;
+    const replace = !internal.chrome.history;
     setRoute(newRoute, replace);
   }
 
@@ -1139,14 +1152,11 @@ function makePaneObject(
 }
 
 function normalizeChrome<Params>(
-  chrome: PaneChromeConfig<Params> | false | undefined,
+  chrome: PaneChromeConfig<Params> | undefined,
 ): NormalizedChrome {
-  if (chrome === false) {
-    return { enabled: false, history: false, close: false, promote: false, keepMountedWhenCollapsed: false };
-  }
   return {
-    enabled: true,
     title: chrome?.title as NormalizedChrome["title"],
+    header: chrome?.header,
     history: chrome?.history ?? true,
     close: chrome?.close ?? true,
     promote: chrome?.promote ?? true,
@@ -1176,7 +1186,7 @@ type DefineArgs<Path extends string, ParentParams, Input> = {
   component: ComponentType;
   /** Declares the typed shape of caller-provided input data (runtime no-op, type-level only). */
   input?: TypeMarker<Input>;
-  chrome?: PaneChromeConfig<ParentParams & InferParams<Path>> | false;
+  chrome?: PaneChromeConfig<ParentParams & InferParams<Path>>;
   /**
    * Self-contained title resolver for tab labels and the browser document
    * title (see {@link PaneInternal.useTitle}). A React hook: it may call global
@@ -1220,7 +1230,7 @@ type RouteDefineArgs<Params extends Record<string, string>, Input> = {
   component: ComponentType;
   /** Declares the typed shape of caller-provided input data (runtime no-op, type-level only). */
   input?: TypeMarker<Input>;
-  chrome?: PaneChromeConfig<Params> | false;
+  chrome?: PaneChromeConfig<Params>;
   useTitle?: (params: Params, input: Input) => string | undefined;
   /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
   width?: number;
@@ -1293,7 +1303,7 @@ function define(
     segment,
     appPath: args.appPath,
     component: args.component,
-    chrome: normalizeChrome(args.chrome as PaneChromeConfig<unknown> | false | undefined),
+    chrome: normalizeChrome(args.chrome as PaneChromeConfig<unknown> | undefined),
     width: args.width,
     actionsSlot,
     resolve,
@@ -1519,8 +1529,7 @@ export function useOpenPane(): OpenPaneFn {
 
       const callerPaneId = currentRoute[callerIndex]!.paneId;
       const ownParams = extractOwnParams(targetInternal, params);
-      const replace =
-        targetInternal.chrome.enabled && !targetInternal.chrome.history;
+      const replace = !targetInternal.chrome.history;
 
       // swap: update the caller's slot in-place (same column), truncating
       // children. Used when internal navigation within a pane wants to swap

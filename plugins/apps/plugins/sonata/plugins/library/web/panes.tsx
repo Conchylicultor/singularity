@@ -1,5 +1,5 @@
 import { type ReactElement, useEffect, useState } from "react";
-import { Pane, type } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
@@ -24,15 +24,23 @@ import { SectionPane } from "./components/section-pane";
 /**
  * The library index pane — Sonata's landing surface at bare `/sonata`. Empty
  * segment + `appPath` makes it the app's index pane (the empty route resolves
- * here via `useIndexMatch`). `chrome:false` because the gallery is its own UI.
+ * here via `useIndexMatch`). Standard chrome with a "Library" title; the
+ * `Sonata.Home` gallery owns its scroll inside the chrome's single `PaneScroll`.
  */
 export const sonataLibraryPane = Pane.define({
   id: "sonata-library",
   segment: "",
   appPath: "/sonata",
-  chrome: false,
-  component: SonataLibrarySurface,
+  component: SonataLibraryBody,
 });
+
+function SonataLibraryBody(): ReactElement {
+  return (
+    <PaneChrome pane={sonataLibraryPane} title="Library">
+      <SonataLibrarySurface />
+    </PaneChrome>
+  );
+}
 
 /**
  * The player pane at `/sonata/song/:songId` — a real URL that survives reload
@@ -45,7 +53,7 @@ export const sonataLibraryPane = Pane.define({
 export const sonataPlayerPane = Pane.define({
   id: "sonata-player",
   segment: "song/:songId",
-  chrome: false,
+  chrome: { header: SonataToolbar },
   input: type<{ title: string }>(),
   resolve: useSonataPlayerResolve,
   component: SonataPlayerSurface,
@@ -110,10 +118,11 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
 }
 
 /**
- * The player surface — a full-surface pane: the `Sonata.Toolbar` host (← Library
- * + title + display picker on the left, transport/volume on the right), the
- * `Sonata.Transport` strip, the active display (`Sonata.Display.Dispatch`), and
- * the collapsible `SectionPane`.
+ * The player surface. `SonataToolbar` (← Library + title + display picker on the
+ * left, transport/volume/jog wheel on the right) is the pane header via
+ * `chrome: { header: SonataToolbar }`; the surface body is the `Sonata.Transport`
+ * strip (body top), the active display (`Sonata.Display.Dispatch`), and the
+ * collapsible `SectionPane`.
  */
 function SonataPlayerSurface(): ReactElement {
   const { songId } = sonataPlayerPane.useParams();
@@ -142,51 +151,53 @@ function SonataPlayerSurface(): ReactElement {
   const effectiveDisplayId = activeDisplayId ?? displays[0]?.id ?? null;
 
   return (
-    <Column
-      fill
-      scrollBody={false}
-      className="h-full bg-background text-foreground"
-      header={
-        <>
-          {/* Toolbar: the PaneToolbar host renders both zones — Start (← Library,
-              title, display picker; contributed by this plugin) and End (transport,
-              volume; contributed by transport-bar / engine). Both reorderable. */}
-          <SonataToolbar.Host />
-
-          {/* Transport strip: full-width progression bar (and future transport
-              widgets). Renders nothing when no contributor is present. */}
+    // The toolbar (Start: ← Library, title, display picker; End: transport,
+    // volume, jog wheel — contributed by transport-bar / engine / piano-roll) IS
+    // the pane header: `PaneChrome` renders `SonataToolbar`'s zones via
+    // `chrome: { header: SonataToolbar }` on `sonataPlayerPane`. The full-width
+    // Transport progress strip moves OUT of the header INTO the body top (the
+    // first child below), and the display + Section panels fill the rest. The
+    // body is a single `h-full` column under the chrome's inert `PaneScroll`.
+    <PaneChrome pane={sonataPlayerPane}>
+      <Column
+        fill
+        scrollBody={false}
+        className="h-full bg-background text-foreground"
+        header={
+          /* Transport strip: full-width progression bar (and future transport
+             widgets). Renders nothing when no contributor is present. */
           <Sonata.Transport.Render>
             {(t) => <t.component key={t.id} />}
           </Sonata.Transport.Render>
-        </>
-      }
-      body={
-        /* Main area: the active display + free-floating Section panels. */
-        <Stack direction="row" gap="none" align="stretch" className="h-full">
-          <Clip fill>
-            {effectiveDisplayId ? (
-              <Sonata.Display.Dispatch
-                score={score}
-                // Displays scale geometry by this to cancel the scale folded into
-                // `score`; floor it so a frozen 0% (which scales `score` by the
-                // same floor) cancels to a finite layout instead of NaN.
-                tempoScale={Math.max(tempoScale, TEMPO_MATH_FLOOR)}
-                activeDisplayId={effectiveDisplayId}
-              />
-            ) : (
-              <Center className="h-full p-2xl">
-                <Text as="div" variant="body" tone="muted">
-                  No display selected.
-                </Text>
-              </Center>
-            )}
-          </Clip>
+        }
+        body={
+          /* Main area: the active display + free-floating Section panels. */
+          <Stack direction="row" gap="none" align="stretch" className="h-full">
+            <Clip fill>
+              {effectiveDisplayId ? (
+                <Sonata.Display.Dispatch
+                  score={score}
+                  // Displays scale geometry by this to cancel the scale folded into
+                  // `score`; floor it so a frozen 0% (which scales `score` by the
+                  // same floor) cancels to a finite layout instead of NaN.
+                  tempoScale={Math.max(tempoScale, TEMPO_MATH_FLOOR)}
+                  activeDisplayId={effectiveDisplayId}
+                />
+              ) : (
+                <Center className="h-full p-2xl">
+                  <Text as="div" variant="body" tone="muted">
+                    No display selected.
+                  </Text>
+                </Center>
+              )}
+            </Clip>
 
-          {/* Free-floating panels (current-chord readout, controls, …),
-              collapsible to a thin rail. */}
-          <SectionPane />
-        </Stack>
-      }
-    />
+            {/* Free-floating panels (current-chord readout, controls, …),
+                collapsible to a thin rail. */}
+            <SectionPane />
+          </Stack>
+        }
+      />
+    </PaneChrome>
   );
 }

@@ -1,28 +1,26 @@
 import { BlockEditor } from "@plugins/page/plugins/editor/web";
-import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { StoryRender } from "@plugins/apps/plugins/story/plugins/render/web";
 import { storyDetailPane } from "../panes";
-import { StoryToolbar } from "../toolbar";
 import { StoryEditorProvider, useStoryEditor } from "../context";
 
 /**
  * The focused editor surface. All view state (`view`/`split`) lives in
  * {@link StoryEditorProvider} so the toolbar elements can be zero-prop render-slot
- * contributions to {@link StoryToolbar} (← Stories, title, view switcher) while
- * the body below reads the same state. The bar is routed through the PaneToolbar
- * primitive — hand-rolling a `border-b` header here is banned by the
- * `no-adhoc-pane-toolbar` lint rule.
+ * contributions to `StoryToolbar` (← Stories, title, view switcher) while the
+ * body below reads the same state. The toolbar IS the pane header — `PaneChrome`
+ * renders `StoryToolbar`'s Start/End zones via `chrome: { header: StoryToolbar }`
+ * on `storyDetailPane`, so no header bar is hand-rolled here. The split panels
+ * live under the chrome's inert `PaneScroll` (the body root fills it exactly) and
+ * keep their own independent y-scroll.
  */
 export function StoryEditor() {
   const { pageId } = storyDetailPane.useParams();
   return (
     <StoryEditorProvider pageId={pageId}>
-      <Column
-        className="h-full min-h-0 bg-background text-foreground"
-        scrollBody={false}
-        header={<StoryToolbar.Host />}
-        body={<StoryEditorBody />}
-      />
+      <PaneChrome pane={storyDetailPane}>
+        <StoryEditorBody />
+      </PaneChrome>
     </StoryEditorProvider>
   );
 }
@@ -32,8 +30,8 @@ function StoryEditorBody() {
   const { pageId, view, split, activeRendererId } = useStoryEditor();
 
   return (
-    // eslint-disable-next-line layout/no-adhoc-layout -- horizontal split row; no Column/Frame/Grid primitive models a flex-fill row of independent y-scroll panels
-    <div className="flex min-h-0 flex-1">
+    // eslint-disable-next-line layout/no-adhoc-layout -- horizontal split row filling the chrome's inert PaneScroll (h-full) so the panels keep their own independent y-scroll; no Column/Frame/Grid primitive models a flex-fill row of independent y-scroll panels
+    <div className="flex h-full min-h-0 bg-background text-foreground">
       {split ? (
         <>
           {/* eslint-disable-next-line layout/no-adhoc-layout -- left split panel: fills half-row with independent y-scroll */}

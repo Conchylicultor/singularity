@@ -128,7 +128,8 @@ export function SongLibrary() {
           views={["gallery", "table"]}
           defaultView="gallery"
           storageKey={LIBRARY_VIEW}
-          title="Library"
+          // The "Library" title is owned by the enclosing `PaneChrome` (the pane
+          // header), so the DataView omits its own to avoid a duplicate.
           loading={loading}
           actions={
             rows.length > 0 ? (

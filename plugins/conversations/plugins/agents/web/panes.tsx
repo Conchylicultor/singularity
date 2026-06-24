@@ -3,8 +3,7 @@ import { useResource, matchResource } from "@plugins/primitives/plugins/live-sta
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { AgentSideBody } from "./components/agent-side-body";
 import { agentsResource, type Agent } from "../shared/resources";
 import { Agents as AgentsSlots } from "./slots";
@@ -16,8 +15,6 @@ export const agentsRootPane = Pane.define({
   id: "agents-root",
   segment: "agents",
   component: AgentsRoot,
-  // No chrome; the agents list is its own UI.
-  chrome: false,
   width: 320,
 });
 
@@ -60,16 +57,18 @@ function AgentsRoot(): ReactElement {
   const selectedSystemId = systemAgentDetailPane.useRouteEntry()?.params.systemId;
 
   return (
-    <Scroll axis="both" className="h-full p-lg">
-      <AgentsList
-        selectedId={selectedUserId}
-        selectedSystemId={selectedSystemId}
-      />
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the slot section from the agents list above */}
-      <Stack gap="lg" className="mt-6">
-        <AgentsSlots.List.Render />
-      </Stack>
-    </Scroll>
+    <PaneChrome pane={agentsRootPane} title="Agents">
+      <Inset pad="lg">
+        <AgentsList
+          selectedId={selectedUserId}
+          selectedSystemId={selectedSystemId}
+        />
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the slot section from the agents list above */}
+        <Stack gap="lg" className="mt-6">
+          <AgentsSlots.List.Render />
+        </Stack>
+      </Inset>
+    </PaneChrome>
   );
 }
 

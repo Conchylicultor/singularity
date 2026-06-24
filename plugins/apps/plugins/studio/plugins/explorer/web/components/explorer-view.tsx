@@ -1,4 +1,4 @@
-import { useOpenPane, PaneScroll } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
@@ -39,11 +39,11 @@ export function ExplorerView() {
 
   const { plugins, totals } = treeData!;
 
-  // The pane owns the single scroll via `<PaneScroll>`. The stats band scrolls
-  // with the content (not sticky) so it doesn't collide with the tree's own
-  // sticky DataView toolbar, which pins to the top once the stats scroll past.
+  // PaneChrome owns the single scroll. The stats band scrolls with the content
+  // (not sticky) so it doesn't collide with the tree's own sticky DataView
+  // toolbar, which pins to the top once the stats scroll past.
   return (
-    <PaneScroll>
+    <>
       <div className="border-b px-lg py-md">
         <Stack gap="xs">
           <Stat value={totals.plugins} label="plugins" />
@@ -56,7 +56,7 @@ export function ExplorerView() {
         selected={selectedId}
         onSelect={(id) => openPane(pluginViewPane, { pluginId: id }, { mode: "push" })}
       />
-    </PaneScroll>
+    </>
   );
 }
 

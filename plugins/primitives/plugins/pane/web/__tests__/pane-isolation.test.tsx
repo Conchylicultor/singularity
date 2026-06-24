@@ -28,7 +28,6 @@ const testPane = Pane.define({
   id: "iso-test",
   segment: "iso/:id",
   resolve: false,
-  chrome: false,
   component: () => null,
 });
 

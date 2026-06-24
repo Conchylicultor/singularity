@@ -15,7 +15,6 @@ export const serversRootPane = Pane.define({
   segment: "",
   appPath: "/deploy",
   component: ServersRoot,
-  chrome: false,
   width: 320,
 });
 
@@ -44,9 +43,9 @@ export const serverDetailPane = Pane.define({
 
 function ServersRoot() {
   return (
-    <Stack gap="none" className="h-full">
+    <PaneChrome pane={serversRootPane} title="Servers">
       <ServersList />
-    </Stack>
+    </PaneChrome>
   );
 }
 

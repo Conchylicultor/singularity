@@ -209,7 +209,7 @@ export function ReleaseLauncher({
   };
 
   return (
-    <Stack gap="none" className="h-full">
+    <Stack gap="none">
       <ReleaseControls pending={trigger.isPending} onRun={handleRun} />
       <ReleaseHistoryList selectedRunId={selectedRunId} onRunClick={onRunClick} />
     </Stack>

@@ -78,8 +78,8 @@ function TabTitleReporter({ tabId }: { tabId: string }) {
  * through the same {@link LeafTitleReporter}/`usePaneTitle` path. This is what
  * lets two same-app index tabs show their index pane's title instead of the bare
  * app name. The base path is read from `PaneBasePathContext`, which this tab's
- * `PaneSurfaceProvider` already provides. Index panes without a title (e.g.
- * `chrome: false`) clear it, so the tab bar still falls back to the app name.
+ * `PaneSurfaceProvider` already provides. Index panes without a configured
+ * title clear it, so the tab bar still falls back to the app name.
  */
 function IndexTitleReporter({ tabId }: { tabId: string }) {
   const basePath = useContext(PaneBasePathContext);

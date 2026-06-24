@@ -9,8 +9,9 @@ import { StoryViewSwitcher } from "./story-view-switcher";
  * The story editor toolbar contributions. Each is a self-contained, zero-prop
  * component that reads the shared editor state from `useStoryEditor()` — so they
  * drop straight into the render-slot host (no hand-rolled bar). Registered in
- * the shell barrel; rendered by `<StoryToolbar.Host/>` in the editor surface.
- * Mirrors Sonata's `player-toolbar-items.tsx`.
+ * the shell barrel; rendered by `PaneChrome` as the editor pane's header (the
+ * pane sets `chrome: { header: StoryToolbar }`). Mirrors Sonata's
+ * `player-toolbar-items.tsx`.
  */
 
 /** ← Stories — clears the route back to the story gallery index pane. */

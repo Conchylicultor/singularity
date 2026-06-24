@@ -5,7 +5,6 @@ export const contributionsPane = Pane.define({
   id: "contributions",
   segment: "contributions",
   component: ContributionsBody,
-  chrome: false,
   width: 700,
 });
 

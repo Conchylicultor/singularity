@@ -15,9 +15,8 @@ pane *is* the screen. Back/forward is plain browser history; `clearRoute()`
 returns to the app's index pane (empty route → index).
 
 Because the route is depth-1, there is no column stack to arrange — the renderer reads
-the active pane and renders it through `PaneResolveGuard`, which honors
-`chrome:false` and gates on `resolve().found` (loading / not-found) just like
-Miller. No new async machinery.
+the active pane and renders it through `PaneResolveGuard`, which gates on
+`resolve().found` (loading / not-found) just like Miller. No new async machinery.
 
 ## Public API
 

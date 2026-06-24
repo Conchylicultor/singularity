@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useOpenPane, PaneScroll } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   DataView,
   defineDataView,
@@ -48,28 +48,26 @@ export function ServersList() {
   // skeleton (`loading`) and the chrome (search / + Add) stays stable — the
   // "No servers registered" empty state requires confirmed-empty.
   const renderList = (servers: Server[], loading: boolean) => (
-    <PaneScroll>
-      <DataView<Server>
-        rows={servers}
-        fields={fields}
-        rowKey={(s) => s.id}
-        views={["list"]}
-        defaultView="list"
-        storageKey={SERVERS_VIEW}
-        loading={loading}
-        selectedRowId={selectedId}
-        onRowActivate={(s) => openPane(serverDetailPane, { serverId: s.id }, { mode: "push" })}
-        actions={
-          <Button
-            variant="default"
-            onClick={() => openPane(addServerPane, {}, { mode: "push" })}
-          >
-            + Add
-          </Button>
-        }
-        emptyState="No servers registered. Add one to get started."
-      />
-    </PaneScroll>
+    <DataView<Server>
+      rows={servers}
+      fields={fields}
+      rowKey={(s) => s.id}
+      views={["list"]}
+      defaultView="list"
+      storageKey={SERVERS_VIEW}
+      loading={loading}
+      selectedRowId={selectedId}
+      onRowActivate={(s) => openPane(serverDetailPane, { serverId: s.id }, { mode: "push" })}
+      actions={
+        <Button
+          variant="default"
+          onClick={() => openPane(addServerPane, {}, { mode: "push" })}
+        >
+          + Add
+        </Button>
+      }
+      emptyState="No servers registered. Add one to get started."
+    />
   );
 
   return matchResource(result, {

@@ -1,8 +1,7 @@
 import { type ReactElement } from "react";
-import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { PagesWelcome } from "./slots";
 
 export const pagesRootPane = Pane.define({
@@ -15,24 +14,18 @@ export const pagesRootPane = Pane.define({
   segment: "",
   appPath: "/pages",
   component: PagesRoot,
-  chrome: false,
 });
 
 function PagesRoot(): ReactElement {
-  // The Miller leaf column fills the surface and ignores its own width, so the
-  // landing scrolls vertically and centers its content with a max-width column.
+  // PaneChrome owns the vertical scroll; the body centers its content with a
+  // max-width column.
   return (
-    <Scroll className="h-full">
+    <PaneChrome pane={pagesRootPane} title="Pages">
       <Inset x="2xl" y="2xl" className="mx-auto w-full max-w-2xl">
         <Stack gap="2xl">
-          <Stack gap="2xs">
-            <Text as="h1" variant="title">
-              Pages
-            </Text>
-            <Text as="p" variant="body" tone="muted">
-              Create a page or jump back into a recent one.
-            </Text>
-          </Stack>
+          <Text as="p" variant="body" tone="muted">
+            Create a page or jump back into a recent one.
+          </Text>
           <Stack gap="2xl">
             <PagesWelcome.Section.Render>
               {(s) => <s.component />}
@@ -40,6 +33,6 @@ function PagesRoot(): ReactElement {
           </Stack>
         </Stack>
       </Inset>
-    </Scroll>
+    </PaneChrome>
   );
 }

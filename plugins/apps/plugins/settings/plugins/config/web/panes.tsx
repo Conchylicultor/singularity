@@ -14,7 +14,6 @@ export const settingsConfigIndexPane = Pane.define({
   segment: "",
   appPath: SETTINGS_APP_PATH,
   component: SettingsConfigIndexBody,
-  chrome: false,
   width: 300,
 });
 

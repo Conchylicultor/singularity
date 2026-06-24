@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { useOpenPane, PaneScroll } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
@@ -199,20 +199,18 @@ export function ConfigNav() {
   );
 
   return (
-    <PaneScroll>
-      <DataView<ConfigNavRow>
-        rows={rows}
-        fields={fields}
-        rowKey={(r) => r.id}
-        views={["tree"]}
-        storageKey={CONFIG_NAV_VIEW}
-        loading={isPending}
-        hierarchy={hierarchy}
-        selectedRowId={selectedRowId}
-        onRowActivate={handleActivate}
-        searchAccessor={(r) => r.searchText}
-        viewOptions={{ tree: treeOptions }}
-      />
-    </PaneScroll>
+    <DataView<ConfigNavRow>
+      rows={rows}
+      fields={fields}
+      rowKey={(r) => r.id}
+      views={["tree"]}
+      storageKey={CONFIG_NAV_VIEW}
+      loading={isPending}
+      hierarchy={hierarchy}
+      selectedRowId={selectedRowId}
+      onRowActivate={handleActivate}
+      searchAccessor={(r) => r.searchText}
+      viewOptions={{ tree: treeOptions }}
+    />
   );
 }

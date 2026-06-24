@@ -10,7 +10,8 @@ import { Picker } from "./display-picker";
  * self-contained, zero-prop component that reads the open-song / display state
  * from `useSonata()` and the display registry from `Sonata.Display` — so they
  * drop straight into the render-slot host (no hand-rolled bar). Registered in
- * the plugin barrel; rendered by `<Sonata.Toolbar.Host/>` in the player surface.
+ * the plugin barrel; rendered by `PaneChrome` as the player pane's header (the
+ * pane sets `chrome: { header: SonataToolbar }`).
  */
 
 /** ← Library — clears the route back to the library index pane. */

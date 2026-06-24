@@ -31,14 +31,12 @@ const conversationPaneDef = Pane.define({
   id: "conversation",
   segment: "c/:convId",
   resolve: false,
-  chrome: false,
   component: () => null,
 });
 const filePaneDef = Pane.define({
   id: "file-pane",
   segment: "f/:path",
   resolve: false,
-  chrome: false,
   component: () => null,
 });
 

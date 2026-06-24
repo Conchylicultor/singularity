@@ -11,6 +11,16 @@ import {
   usePaneRoute,
 } from "@plugins/primitives/plugins/pane/web";
 
+// A full-pane surface is the only column, so it IS both the surface start and
+// end edge — a full-surface pane's header hosts the sidebar toggle and reserves
+// the floating-action-bar safe area. There is no maximize/drag in full-pane.
+// Module-level constant so the context value keeps a stable identity.
+const FULL_PANE_LAYOUT_CTX = {
+  onDoubleClickHeader: () => {},
+  atSurfaceStart: true,
+  atSurfaceEnd: true,
+} as const;
+
 /**
  * Full-surface layout renderer: paints only the **active pane**
  * (`match.panes.at(-1)`) filling the whole surface — no columns, no
@@ -32,8 +42,7 @@ export function FullPane({ match: provided }: { match?: PaneMatch }) {
   if (!active) return null;
   const body = (
     <PaneInstanceContext.Provider value={active.instanceId}>
-      {/* No maximize/drag in full-pane — the layout context stays empty. */}
-      <PaneLayoutContext.Provider value={null}>
+      <PaneLayoutContext.Provider value={FULL_PANE_LAYOUT_CTX}>
         <PluginErrorBoundary slot="layouts.full-pane" label={active.pane.id}>
           <div className="h-full min-h-0" data-pane-id={active.pane.id}>
             {/* Forward the pane id across portals so popovers/menus opened from

@@ -5,7 +5,6 @@ export const compositionsPane = Pane.define({
   id: "compositions",
   segment: "compositions",
   component: CompositionsBody,
-  chrome: false,
   width: 380,
 });
 

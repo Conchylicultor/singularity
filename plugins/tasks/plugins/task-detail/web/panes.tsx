@@ -16,8 +16,6 @@ import { TasksPaneContext } from "./tasks-pane-context";
 export const tasksRootPane = Pane.define({
   route: tasksRootRoute,
   component: TasksRoot,
-  // No chrome; the tasks list is its own UI.
-  chrome: false,
   width: 320,
 });
 
@@ -42,11 +40,13 @@ function TasksRoot(): ReactElement {
   const selectedId = taskDetailPane.useRouteEntry()?.params.taskId;
 
   return (
-    <Tasks.Host
-      className="h-full p-lg"
-      selectedId={selectedId}
-      onSelect={(id) => openPane(taskDetailPane, { taskId: id }, { mode: "push" })}
-    />
+    <PaneChrome pane={tasksRootPane} title="Tasks">
+      <Tasks.Host
+        className="h-full p-lg"
+        selectedId={selectedId}
+        onSelect={(id) => openPane(taskDetailPane, { taskId: id }, { mode: "push" })}
+      />
+    </PaneChrome>
   );
 }
 

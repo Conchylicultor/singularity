@@ -48,7 +48,7 @@
   - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay), with coarse and content-based confirmation and automatic rollback on reject.
   - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
   - **`pane`** — Unified pane primitive: Pane.define and chrome components.
-  - **`pane-toolbar`** — Factory for full-surface pane toolbars: a sanctioned render-slot header host with reorderable start/end zones. Use instead of hand-rolling a header bar.
+  - **`pane-toolbar`** — Factory for a pane's custom header: reorderable start/end render-slot zones wired into PaneChrome via chrome.header. Use instead of hand-rolling a header bar.
   - **`perfs`** — Umbrella for client-side performance primitives.
   - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
   - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.

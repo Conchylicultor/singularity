@@ -1,16 +1,23 @@
-import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { PrototypeGallery } from "./components/prototype-gallery";
 import { PrototypeDetail } from "./components/prototype-detail";
 
-/** The gallery root pane: bare `/prototypes`. Its body is its own UI (no chrome). */
+/** The gallery root pane: bare `/prototypes`. */
 export const prototypesGalleryPane = Pane.define({
   id: "prototypes-gallery",
   segment: "",
   appPath: "/prototypes",
-  component: PrototypeGallery,
-  chrome: false,
+  component: PrototypesGalleryBody,
   width: 360,
 });
+
+function PrototypesGalleryBody() {
+  return (
+    <PaneChrome pane={prototypesGalleryPane} title="Prototypes">
+      <PrototypeGallery />
+    </PaneChrome>
+  );
+}
 
 /** Focus / Compare detail for one prototype. */
 export const prototypeDetailPane = Pane.define({

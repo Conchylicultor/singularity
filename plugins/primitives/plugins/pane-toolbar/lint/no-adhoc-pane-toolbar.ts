@@ -7,14 +7,15 @@ const createRule = ESLintUtils.RuleCreator(
 /**
  * Toolbar-host guardrail.
  *
- * A full-surface (`chrome: false`) pane has no built-in toolbar, so the easy
- * (wrong) move is to hand-roll a `<div className="… border-b … pr-floating-bar">`
- * header with the back button / title / actions written inline. That bar is then
- * invisible to the slot system: not extensible, not error-isolated, not
- * reorderable — exactly the drift this rule prevents. The sanctioned home is the
- * `definePaneToolbar` factory (`@plugins/primitives/plugins/pane-toolbar/web`),
- * whose `Host` owns the one toolbar `<header>` and renders reorderable slot
- * zones; app-level toolbars route through `AppShellLayout`'s `toolbarSlot`.
+ * A pane that wants a rich custom header is tempted to hand-roll a
+ * `<div className="… border-b … pr-floating-bar">` header with the back button /
+ * title / actions written inline. That bar is then invisible to the slot system:
+ * not extensible, not error-isolated, not reorderable — exactly the drift this
+ * rule prevents. The sanctioned home is the `definePaneToolbar` factory
+ * (`@plugins/primitives/plugins/pane-toolbar/web`), which exposes reorderable
+ * `Start`/`End` slot zones; wire them in via `chrome: { header: Toolbar }` on the
+ * `Pane.define`, and `PaneChrome` renders them as the standard pane header.
+ * App-level toolbars route through `AppShellLayout`'s `toolbarSlot`.
  *
  * Detection signature: a class-name carrying BOTH `border-b` and
  * `pr-floating-bar`. `pr-floating-bar` reserves space under the top-right
@@ -112,7 +113,8 @@ export default createRule({
         "Hand-rolled toolbar bar (`border-b` + `pr-floating-bar`) is banned — a toolbar must " +
         "route through a render-slot host so its items are contributions (extensible, " +
         "error-isolated, reorderable). Use `definePaneToolbar` from " +
-        "@plugins/primitives/plugins/pane-toolbar/web for a full-surface pane, or " +
+        "@plugins/primitives/plugins/pane-toolbar/web and wire it into the pane via " +
+        "`chrome: { header: Toolbar }` (PaneChrome renders the zones as the pane header), or " +
         "`AppShellLayout`'s `toolbarSlot` for an app-level bar — never a hand-written header.",
     },
   },

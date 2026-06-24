@@ -85,6 +85,7 @@ export function ContributionsView() {
   return (
     <Column
       fill
+      scrollBody={false}
       className="h-full"
       header={
         <>

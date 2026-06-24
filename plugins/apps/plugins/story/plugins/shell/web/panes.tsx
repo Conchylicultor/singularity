@@ -1,21 +1,30 @@
-import { Pane, type } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, type } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pagesResource } from "@plugins/page/plugins/editor/core";
 import { StoryGallery } from "./components/story-gallery";
 import { StoryEditor } from "./components/story-editor";
+import { StoryToolbar } from "./toolbar";
 
 /**
  * The gallery index pane — Story's landing surface at bare `/story`. Empty
  * segment + `appPath` makes it the app's index pane (the empty route resolves
- * here). `chrome:false` because the gallery is its own UI.
+ * here). Standard chrome with a "Stories" title; the `DataView` body owns its
+ * own virtualization inside the chrome's single `PaneScroll`.
  */
 export const storyGalleryPane = Pane.define({
   id: "story-gallery",
   segment: "",
   appPath: "/story",
-  chrome: false,
-  component: StoryGallery,
+  component: StoryGalleryBody,
 });
+
+function StoryGalleryBody() {
+  return (
+    <PaneChrome pane={storyGalleryPane} title="Stories">
+      <StoryGallery />
+    </PaneChrome>
+  );
+}
 
 /**
  * The editor pane at `/story/s/:pageId` — a real URL that survives reload and
@@ -27,7 +36,7 @@ export const storyGalleryPane = Pane.define({
 export const storyDetailPane = Pane.define({
   id: "story-detail",
   segment: "s/:pageId",
-  chrome: false,
+  chrome: { header: StoryToolbar },
   input: type<{ title: string }>(),
   resolve: useStoryDetailResolve,
   component: StoryEditor,

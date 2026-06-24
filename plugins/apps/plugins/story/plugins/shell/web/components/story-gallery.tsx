@@ -9,7 +9,6 @@ import {
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { storiesResource } from "@plugins/apps/plugins/story/plugins/marker/web";
 import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
-import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { storyDetailPane } from "../panes";
 import { createStory } from "../internal/create-story";
@@ -17,8 +16,10 @@ import { createStory } from "../internal/create-story";
 const STORY_GALLERY_VIEW = defineDataView("story.gallery");
 
 /**
- * The gallery surface: a prominent header + a `DataView` over story-marked pages,
- * which brings search, sort, and view-state persistence for free.
+ * The gallery surface: a `DataView` over story-marked pages, which brings search,
+ * sort, and view-state persistence for free. Rendered inside `PaneChrome` (which
+ * owns the "Stories" title and the single body scroll), so this returns the
+ * `DataView` directly — natural-height, scrolled by the chrome's `PaneScroll`.
  *
  * Joins the story marks against the page resource — for each mark we find its
  * page by id. Marks whose page is missing are **skipped** rather than crashing:
@@ -57,13 +58,8 @@ export function StoryGallery() {
   }
 
   return (
-    <Column
-      fill
-      className="bg-background text-foreground"
-      body={
-        <DataView<Block>
-          title="Stories"
-          loading={all.pending}
+    <DataView<Block>
+      loading={all.pending}
           creators={[
             {
               id: "story",
@@ -114,7 +110,5 @@ export function StoryGallery() {
             },
           }}
         />
-      }
-    />
   );
 }

@@ -7,7 +7,6 @@ export const graphCanvasPane = Pane.define({
   id: "graph",
   segment: "graph",
   component: GraphBody,
-  chrome: false,
   width: 900,
   input: type<{ focusId?: PluginId }>(),
 });

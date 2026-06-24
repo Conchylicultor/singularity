@@ -8,7 +8,9 @@ import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PaneScroll } from "./pane-scroll";
+import { ToolbarItem, type PaneHeaderZones } from "./pane-header-item";
 import { PaneMatchContext, type PaneMatch, type PaneObject } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 import { SurfaceChromeContext } from "../surface-chrome-context";
@@ -51,9 +53,12 @@ interface PaneChromeProps {
  * Standard pane header: title, optional `position="left"` actions, optional
  * `position="right"` actions, an optional expand button, and a × close button
  * on the far right. The close button is shown by default for panes with a
- * parent (opt out via `chrome: { close: false }`). Pane authors who want a
- * fully custom header layout can opt out (`chrome: false` in `Pane.define`)
- * and compose the pieces (`<PaneActionsSlot/>`) themselves.
+ * parent (opt out via `chrome: { close: false }`). A pane that wants a rich
+ * custom header (transport / view-switcher / volume) opts into
+ * `chrome: { header }` (a `definePaneToolbar` Start/End zone pair); PaneChrome
+ * then renders those zones in this same bar instead of the title/Actions, with
+ * NO overflow-collapse. The body wrapper and single scroll are unchanged either
+ * way.
  */
 export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill, children }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
@@ -63,7 +68,6 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
   const { contentOwnsTopChrome, leadingControl } = useContext(SurfaceChromeContext);
   const doClose = pane.useClose();
   const doPromote = pane.usePromote();
-  if (!chrome.enabled) return <>{children}</>;
   const resolvedTitle = title ?? fallbackTitle;
   // Surface-edge chrome: only when this pane header IS the surface's top chrome.
   // The first top-row header hosts the leading control (sidebar toggle); the
@@ -83,31 +87,37 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
           {...layoutCtx?.dragHandleProps}
         >
           {showLeading && leadingControl}
-          {resolvedTitle != null &&
-            resolvedTitle !== "" &&
-            (typeof resolvedTitle === "string" ? (
-              // eslint-disable-next-line layout/no-adhoc-layout -- string pane title: min-w-0 truncate leaf inside Bar's flex row so a long title ellipsizes rather than crushing siblings
-              <Text as="span" variant="label" className="min-w-0 truncate">
-                {resolvedTitle}
-              </Text>
-            ) : (
-              // Node titles get the SAME `label` typography baseline as string
-              // titles, so a title node inherits the canonical pane-title size
-              // instead of drifting to the ambient body size. The size is
-              // enforced by the container (CSS inheritance), so title nodes need
-              // not — and should not — set their own size; per-segment weight/
-              // color (e.g. breadcrumb) still applies on top.
-              // eslint-disable-next-line layout/no-adhoc-layout -- node title needs inline-flex baseline alignment for breadcrumb-style multi-segment compositions
-              <Text as="div" variant="label" className="flex min-w-0 items-center">
-                {resolvedTitle}
-              </Text>
-            ))}
-          <PaneActionsSlot pane={pane} position="left" />
-          {hideRightActions ? (
-            // eslint-disable-next-line layout/no-adhoc-layout -- explicit flex-grow spacer to push expand/close buttons to far right inside Bar's flex row
-            <div className="flex-1" />
+          {chrome.header ? (
+            <CustomHeader header={chrome.header} />
           ) : (
-            <OverflowActionsBar pane={pane} extraActions={actions} />
+            <>
+              {resolvedTitle != null &&
+                resolvedTitle !== "" &&
+                (typeof resolvedTitle === "string" ? (
+                  // eslint-disable-next-line layout/no-adhoc-layout -- string pane title: min-w-0 truncate leaf inside Bar's flex row so a long title ellipsizes rather than crushing siblings
+                  <Text as="span" variant="label" className="min-w-0 truncate">
+                    {resolvedTitle}
+                  </Text>
+                ) : (
+                  // Node titles get the SAME `label` typography baseline as string
+                  // titles, so a title node inherits the canonical pane-title size
+                  // instead of drifting to the ambient body size. The size is
+                  // enforced by the container (CSS inheritance), so title nodes need
+                  // not — and should not — set their own size; per-segment weight/
+                  // color (e.g. breadcrumb) still applies on top.
+                  // eslint-disable-next-line layout/no-adhoc-layout -- node title needs inline-flex baseline alignment for breadcrumb-style multi-segment compositions
+                  <Text as="div" variant="label" className="flex min-w-0 items-center">
+                    {resolvedTitle}
+                  </Text>
+                ))}
+              <PaneActionsSlot pane={pane} position="left" />
+              {hideRightActions ? (
+                // eslint-disable-next-line layout/no-adhoc-layout -- explicit flex-grow spacer to push expand/close buttons to far right inside Bar's flex row
+                <div className="flex-1" />
+              ) : (
+                <OverflowActionsBar pane={pane} extraActions={actions} />
+              )}
+            </>
           )}
           {chrome.promote && doPromote && (
             <Button
@@ -140,6 +150,25 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
         </PaneScroll>
       }
     />
+  );
+}
+
+/**
+ * Custom-header content: the pane's reorderable `Start`/`End` zones rendered
+ * inside the standard `<Bar tier="pane">` (same `ml-auto` End-cluster layout the
+ * retired `definePaneToolbar.Host` used). NO overflow-collapse — rich End
+ * widgets (transport / volume / jog-wheel) never fold behind a "⋯" popover.
+ * `promote`/`close` still render after this in `PaneChrome`.
+ */
+function CustomHeader({ header }: { header: PaneHeaderZones }) {
+  const { Start, End } = header;
+  return (
+    <>
+      <Start.Render>{(item) => <ToolbarItem {...item} />}</Start.Render>
+      <Stack direction="row" align="center" gap="sm" className="ml-auto">
+        <End.Render>{(item) => <ToolbarItem {...item} />}</End.Render>
+      </Stack>
+    </>
   );
 }
 

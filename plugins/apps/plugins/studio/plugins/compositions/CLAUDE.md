@@ -5,7 +5,7 @@ either **live-edit** a working draft over the closure engine or **compare** two
 compositions side-by-side, entirely client-side.
 
 Registers a `Studio.Sidebar` entry + a `Pane.Register` pane (`compositions`,
-`chrome:false`, width 380). The pane reads `useCompositionData()` from
+titled "Compositions", width 380). The pane reads `useCompositionData()` from
 [`composition/web`](../../../../../plugin-meta/plugins/composition/CLAUDE.md) and
 drives the same active-composition store the Increment-1 Explorer band and
 plugin-view inclusion section already consume.

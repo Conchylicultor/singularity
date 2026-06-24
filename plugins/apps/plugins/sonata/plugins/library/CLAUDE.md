@@ -9,8 +9,12 @@ them without a `shell → library` import that would cycle with the existing
 `library → shell` dependency on `useSonata`).
 
 - `sonataLibraryPane` — index pane at bare `/sonata` (`segment: ""`,
-  `appPath: "/sonata"`, `chrome: false`). Renders the gallery via `Sonata.Home`.
-- `sonataPlayerPane` — player pane at `/sonata/song/:songId` (`chrome: false`).
+  `appPath: "/sonata"`, standard chrome titled "Library"). Renders the gallery via
+  `Sonata.Home` inside `PaneChrome`.
+- `sonataPlayerPane` — player pane at `/sonata/song/:songId`
+  (`chrome: { header: SonataToolbar }` — the `SonataToolbar` Start/End zones ARE
+  the pane header, rendered by `PaneChrome`; the full-width Transport progress
+  strip lives at the body top, above the display).
   Carries the optimistic title in `input`; its `resolve` hook
   (`useSonataPlayerResolve`) hydrates every `Library.Source`'s raw for the song
   (so direct nav / reload restores it) and gates on the song existing. The
@@ -48,7 +52,7 @@ component where the caller-aware context store is correct.
 - Web:
   - Slots: `Library.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`, `Library.CardMeta` ← `apps.sonata.playback-history`, `apps.sonata.sources.midi`, `apps.sonata.sources.midi.folders`, `Library.Sort` ← `apps.sonata.playback-history`
   - Contributes: `Sonata.Home` "library" → `SongLibrary`, `SonataToolbar.Start` "back" → `BackToLibrary`, `SonataToolbar.Start` "title" → `SongTitle`, `SonataToolbar.Start` "display-picker" → `DisplayPicker`, `Pane.Register` "sonata-library", `Pane.Register` "sonata-player"
-  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.TEMPO_MATH_FLOOR`, `apps/sonata/shell.useSonata`, `infra/endpoints.useEndpointMutation`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/column.Column`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/icon-button.IconButton`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/persistent-draft.useDraft`, `primitives/relative-time.formatRelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`
+  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.TEMPO_MATH_FLOOR`, `apps/sonata/shell.useSonata`, `infra/endpoints.useEndpointMutation`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/column.Column`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/icon-button.IconButton`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/persistent-draft.useDraft`, `primitives/relative-time.formatRelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `SortOrderProps`; Values: `Library`, `openSongImperative`, `useOpenSong`
 - Server:
   - Uses: `database.db`, `infra/attachments.Attachments`, `infra/endpoints.implement`

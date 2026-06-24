@@ -5,7 +5,6 @@ export const explorerPane = Pane.define({
   id: "explorer",
   segment: "explorer",
   component: ExplorerBody,
-  chrome: false,
   width: 360,
 });
 

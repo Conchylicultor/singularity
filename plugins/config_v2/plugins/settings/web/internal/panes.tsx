@@ -6,7 +6,6 @@ export const configNavPane = Pane.define({
   id: "config-v2-nav",
   segment: "config",
   component: ConfigNavBody,
-  chrome: false,
   width: 300,
 });
 

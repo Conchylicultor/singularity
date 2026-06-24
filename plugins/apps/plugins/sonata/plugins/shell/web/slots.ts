@@ -185,13 +185,16 @@ export const Sonata = {
 };
 
 /**
- * The player's top toolbar, hosted by the PaneToolbar primitive — the sanctioned
- * render-slot header host for full-surface (`chrome: false`) panes. `.Start`
- * (left: ← Library, title, display picker) and `.End` (right: transport, volume)
- * are both **reorderable** render-slot zones; the player surface renders `.Host`.
- * Hand-rolling a toolbar `<div>` is banned by the `no-adhoc-pane-toolbar` lint
- * rule. Nesting depth no longer matters: the build's slot facet does a
- * full-depth runtime walk over the barrel exports, so `.Start`/`.End` are
- * discovered as reorderable whether this lives top-level or nested under a group.
+ * The player's top toolbar, defined via the PaneToolbar primitive — the
+ * sanctioned render-slot header for a pane. `.Start` (left: ← Library, title,
+ * display picker) and `.End` (right: transport, volume, jog wheel) are both
+ * **reorderable** render-slot zones; `sonataPlayerPane` wires it in via
+ * `chrome: { header: SonataToolbar }`, so `PaneChrome` renders the zones as the
+ * standard pane header (no overflow-collapse — rich widgets never fold into a
+ * "⋯" popover). Hand-rolling a toolbar `<div>` is banned by the
+ * `no-adhoc-pane-toolbar` lint rule. Nesting depth no longer matters: the
+ * build's slot facet does a full-depth runtime walk over the barrel exports, so
+ * `.Start`/`.End` are discovered as reorderable whether this lives top-level or
+ * nested under a group.
  */
 export const SonataToolbar = definePaneToolbar("sonata.toolbar");

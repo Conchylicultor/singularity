@@ -50,8 +50,11 @@ export type {
   OpenPaneFn,
   ResolveHook,
   PaneStore,
+  PaneHeaderZones,
+  PaneToolbarItem,
 } from "./pane";
 export { PaneChrome, PaneActionsSlot } from "./components/pane-chrome";
+export { ToolbarItem } from "./components/pane-header-item";
 export { PaneScroll, type PaneScrollProps } from "./components/pane-scroll";
 export { PaneIconAction } from "./components/pane-icon-action";
 export { PaneResolveGuard } from "./components/pane-resolve-guard";

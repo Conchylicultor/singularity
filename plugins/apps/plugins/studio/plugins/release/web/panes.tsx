@@ -7,7 +7,6 @@ export const releasePane = Pane.define({
   id: "release",
   segment: "release",
   component: ReleasePaneBody,
-  chrome: false,
   width: 380,
 });
 
