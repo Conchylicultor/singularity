@@ -1,18 +1,18 @@
 /**
- * Chord-grid loader: a text editor for chord symbols + a voicing picker.
+ * Chord-grid loader: a text editor for chord symbols.
  *
- * Authors the grid (e.g. `Amaj9 Am9 (E E6)`) and chooses how chords become notes.
- * Fully **controlled** by the shell's persisted `raw` — there is no local state,
- * so switching the visible source and back never loses what was typed. Every
- * edit emits `{ text, voicingId, octave }` to the shell, which compiles it.
- * Parse problems (unrecognised tokens) are surfaced visibly — never swallowed.
+ * Authors the grid (e.g. `Amaj9 Am9 (E E6)`). Fully **controlled** by the
+ * shell's persisted `raw` — there is no local state, so switching the visible
+ * source and back never loses what was typed. Every edit emits `{ text }` to the
+ * shell, which compiles it. Parse problems (unrecognised tokens) are surfaced
+ * visibly — never swallowed. How chords become notes is the global voicing
+ * config's concern, not this per-song editor's.
  */
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { asChordGridRaw, type ChordGridRaw } from "./compile";
-import { VOICINGS } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { parseGrid } from "./parse-grid";
 
 interface Props {
@@ -21,12 +21,10 @@ interface Props {
 }
 
 const PLACEHOLDER = "Amaj9 Am9 (E E6) (E E6)\nCmaj7 Am7 Dm9 G13";
-const MIN_OCTAVE = 1;
-const MAX_OCTAVE = 7;
 
 export function ChordGridLoader({ raw, onRaw }: Props) {
   const current = asChordGridRaw(raw);
-  const { text, voicingId, octave } = current;
+  const { text } = current;
 
   // Live parse feedback (recognised chord count + skipped tokens).
   const { events, skipped } = useMemo(() => parseGrid(text), [text]);
@@ -35,59 +33,18 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
 
   return (
     <Stack gap="md">
-      <Stack direction="row" wrap align="end" gap="lg">
-        {/* eslint-disable-next-line layout/no-adhoc-layout -- flex-1: the chord-grid label grows to fill the wrapping Stack row; Stack has no per-child grow prop */}
-        <Stack as="label" gap="xs" className="flex-1">
-          <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Chord grid
-          </span>
-          <textarea
-            value={text}
-            onChange={(e) => update({ text: e.target.value })}
-            placeholder={PLACEHOLDER}
-            rows={3}
-            spellCheck={false}
-            className="w-full resize-y rounded-md border border-border bg-background px-md py-sm font-mono text-body outline-none focus:border-primary"
-          />
-        </Stack>
-
-        <Stack as="label" gap="xs">
-          <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Voicing
-          </span>
-          <select
-            value={voicingId}
-            onChange={(e) => update({ voicingId: e.target.value })}
-            className="rounded-md border border-border bg-background px-sm py-xs text-caption outline-none focus:border-primary"
-          >
-            {VOICINGS.map((v) => (
-              <option key={v.id} value={v.id}>
-                {v.label}
-              </option>
-            ))}
-          </select>
-        </Stack>
-
-        <Stack as="label" gap="xs">
-          <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Octave
-          </span>
-          <input
-            type="number"
-            min={MIN_OCTAVE}
-            max={MAX_OCTAVE}
-            value={octave}
-            onChange={(e) =>
-              update({
-                octave: Math.max(
-                  MIN_OCTAVE,
-                  Math.min(MAX_OCTAVE, Number(e.target.value) || 4),
-                ),
-              })
-            }
-            className="w-16 rounded-md border border-border bg-background px-sm py-xs text-caption outline-none focus:border-primary"
-          />
-        </Stack>
+      <Stack as="label" gap="xs">
+        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+          Chord grid
+        </span>
+        <textarea
+          value={text}
+          onChange={(e) => update({ text: e.target.value })}
+          placeholder={PLACEHOLDER}
+          rows={3}
+          spellCheck={false}
+          className="w-full resize-y rounded-md border border-border bg-background px-md py-sm font-mono text-body outline-none focus:border-primary"
+        />
       </Stack>
 
       {/* eslint-disable-next-line layout/no-adhoc-layout -- asymmetric two-axis wrap gaps (gap-x-md / gap-y-xs) on a wrapping row; no primitive expresses a per-axis gap split */}

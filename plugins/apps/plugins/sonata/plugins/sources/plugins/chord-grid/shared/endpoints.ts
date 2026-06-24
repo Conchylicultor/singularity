@@ -12,8 +12,6 @@ export const CreateChordGridSongBodySchema = z.object({
   title: z.string(),
   composer: z.string().nullable(),
   chordText: z.string(),
-  voicingId: z.string(),
-  octave: z.number(),
   durationSec: z.number(),
   endBeat: z.number(),
 });
@@ -36,8 +34,6 @@ export const getSongChordGrid = defineEndpoint({
   response: z
     .object({
       chordText: z.string(),
-      voicingId: z.string(),
-      octave: z.number(),
     })
     .nullable(),
 });
@@ -51,8 +47,6 @@ export const getSongChordGrid = defineEndpoint({
 export const UpdateChordGridSongBodySchema = z.object({
   title: z.string(),
   chordText: z.string(),
-  voicingId: z.string(),
-  octave: z.number(),
   durationSec: z.number(),
   endBeat: z.number(),
 });

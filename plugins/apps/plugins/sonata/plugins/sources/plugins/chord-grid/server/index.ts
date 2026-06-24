@@ -14,7 +14,7 @@ export { songChordGrid } from "./internal/tables";
 
 export default {
   description:
-    "Owns the sonata_songs_ext_chord_grid side-table: per-song chord text, voicing, and octave. Creates chord-grid–backed songs and persists edits (syncing the parent song's title/duration).",
+    "Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs and persists edits (syncing the parent song's title/duration).",
   httpRoutes: {
     [createChordGridSong.route]: handleCreateChordGridSong,
     [getSongChordGrid.route]: handleGetSongChordGrid,

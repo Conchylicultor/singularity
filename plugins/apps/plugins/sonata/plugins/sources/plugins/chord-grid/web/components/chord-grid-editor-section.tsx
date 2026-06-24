@@ -58,8 +58,6 @@ export function ChordGridEditorSection() {
           body: {
             title,
             chordText: raw.text,
-            voicingId: raw.voicingId,
-            octave: raw.octave,
             durationSec: beatToSeconds(score, endBeat),
             endBeat,
           },

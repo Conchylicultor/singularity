@@ -23,6 +23,8 @@ import {
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { inferKeys } from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import { reVoiceChords, voicingConfig } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
+import { useConfig } from "@plugins/config_v2/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Sonata } from "./slots";
 import { useCursorApi } from "./cursor-store";
@@ -272,6 +274,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // pipeline ignores the authored key and infers it from the notes — see
   // `baseScore`.
   const keyAutoDetect = useKeyAutoDetect();
+  // Global chord-voicing config (realistic toggle / strategy / octave). Read
+  // reactively here so toggling it re-derives the score below — chord notes are
+  // (re)generated from authored chord annotations in `baseScore`.
+  const voicing = useConfig(voicingConfig);
   // The per-surface cursor store's imperative facade. Resolves to the
   // `<CursorStoreProvider>` mounted in `SonataLayout` (wrapping this provider),
   // so every surface gets its own playhead. Memoized on the stable store, so it
@@ -357,6 +363,12 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       .map((s) => s.compile(rawById[s.id]));
     if (compiled.length === 0) return emptyScore();
     const merged = mergeScores(compiled);
+    // Regenerate chord notes from authored chord annotations under the global
+    // voicing config (realistic voice-leading / strategy / octave). Runs BEFORE
+    // key inference + spelling so the chord notes exist for key detection and
+    // get enharmonic spellings. No-op when there are no authored chord
+    // annotations (returns the score unchanged).
+    const voiced = reVoiceChords(merged, voicing);
     // Two pure pre-analysis steps establish key context: inferKeys derives the
     // tonal centre(s) from the notes (when no key is authored), then spellScore
     // fills each note's enharmonic `spelling` from the key in force. Order
@@ -365,11 +377,11 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     // `force` ignores any authored key (strips meta.key + authored key
     // annotations) so the song is treated as keyless and the key is inferred —
     // the per-song "auto-detect key" override.
-    const keyed = inferKeys(merged, { force: keyAutoDetect }); // theory/core
+    const keyed = inferKeys(voiced, { force: keyAutoDetect }); // theory/core
     const spelled = spellScore(keyed); // score/core
     const derived = analyzers.flatMap((a) => a.analyze(spelled));
     return mergeAnnotations(spelled, derived);
-  }, [sources, analyzers, rawById, keyAutoDetect]);
+  }, [sources, analyzers, rawById, keyAutoDetect, voicing]);
 
   // Fold the tempo scale into the tempo map ONCE here, so every consumer — the
   // transport loop below, the audio scheduler, and the displays — reads a single

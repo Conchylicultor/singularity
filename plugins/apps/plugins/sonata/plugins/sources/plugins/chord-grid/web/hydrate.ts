@@ -11,5 +11,5 @@ import type { ChordGridRaw } from "./compile";
 export async function hydrate(songId: string): Promise<ChordGridRaw | undefined> {
   const row = await fetchEndpoint(getSongChordGrid, { id: songId });
   if (!row) return undefined;
-  return { text: row.chordText, voicingId: row.voicingId, octave: row.octave };
+  return { text: row.chordText };
 }

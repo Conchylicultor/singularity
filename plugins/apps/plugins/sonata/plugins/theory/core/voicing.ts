@@ -32,3 +32,60 @@ export function invertVoicing(pitches: readonly number[], k: number): number[] {
   for (let i = 0; i < k && i < p.length; i++) p[i] = p[i]! + 12;
   return p.sort((a, b) => a - b);
 }
+
+/**
+ * Distance of a candidate voicing to a previous one: the sum, over each note in
+ * `cand`, of its distance to the nearest note in `prev` (an asymmetric
+ * nearest-neighbour cost). This rewards landing each new note close to *some*
+ * note the hand already played — the intuition behind smooth voice-leading —
+ * and is cheap to evaluate over the small candidate set below.
+ */
+function voicingDistance(cand: readonly number[], prev: readonly number[]): number {
+  let total = 0;
+  for (const c of cand) {
+    let best = Infinity;
+    for (const p of prev) {
+      const d = Math.abs(c - p);
+      if (d < best) best = d;
+    }
+    total += best;
+  }
+  return total;
+}
+
+/**
+ * Voice-lead a chord's root-position pitches toward the previous chord's voiced
+ * pitches, choosing the octave/inversion placement nearest to `prev`. The
+ * pitch-class set is unchanged — only octave and inversion choice — so key
+ * inference is unaffected.
+ *
+ * Candidates are every inversion of the chord (via {@link invertVoicing}) over a
+ * small window of whole-chord octave shifts (−1, 0, +1 octave on top of each
+ * inversion). The winner minimizes {@link voicingDistance} to `prev`; ties break
+ * toward the lower (earlier-enumerated) candidate, keeping the result
+ * deterministic. `prev === null` (the first chord) returns root position,
+ * sorted ascending.
+ */
+export function nearestVoicing(
+  rootPositionPitches: number[],
+  prev: number[] | null,
+): number[] {
+  const root = [...rootPositionPitches].sort((a, b) => a - b);
+  if (prev === null) return root;
+  if (root.length === 0) return root;
+
+  let bestCand = root;
+  let bestDist = Infinity;
+  for (let k = 0; k < root.length; k++) {
+    const inv = invertVoicing(root, k);
+    for (const shift of [-12, 0, 12]) {
+      const cand = inv.map((p) => p + shift).sort((a, b) => a - b);
+      const dist = voicingDistance(cand, prev);
+      if (dist < bestDist) {
+        bestDist = dist;
+        bestCand = cand;
+      }
+    }
+  }
+  return bestCand;
+}

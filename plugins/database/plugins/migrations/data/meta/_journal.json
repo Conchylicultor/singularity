@@ -1198,6 +1198,13 @@
       "tag": "20260623_214706_65791202__release_runs",
       "hash": "65791202",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1782307973000,
+      "tag": "20260624_133253_6b69bff6__drop_chord_grid_voicing_octave",
+      "hash": "6b69bff6",
+      "breakpoints": true
     }
   ]
 }

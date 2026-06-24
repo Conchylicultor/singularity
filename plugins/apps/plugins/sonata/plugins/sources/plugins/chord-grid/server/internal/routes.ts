@@ -27,8 +27,6 @@ export const handleCreateChordGridSong = implement(
     });
     await songChordGrid.upsert(id, {
       chordText: body.chordText,
-      voicingId: body.voicingId,
-      octave: body.octave,
     });
     return { id, title: body.title };
   },
@@ -46,8 +44,6 @@ export const handleGetSongChordGrid = implement(
     if (!row) return null;
     return {
       chordText: row.chordText,
-      voicingId: row.voicingId,
-      octave: row.octave,
     };
   },
 );
@@ -61,8 +57,6 @@ export const handleUpdateChordGridSong = implement(
   async ({ params, body }) => {
     await songChordGrid.upsert(params.id, {
       chordText: body.chordText,
-      voicingId: body.voicingId,
-      octave: body.octave,
     });
     await updateSongMeta({
       id: params.id,

@@ -18,7 +18,10 @@ import type {
   ChordData,
   Note,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { chordPitches } from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import {
+  chordPitches,
+  nearestVoicing,
+} from "@plugins/apps/plugins/sonata/plugins/theory/core";
 
 /** A parsed, timed chord (quarter-note beats) — the input to every voicing. */
 export interface ChordEvent {
@@ -39,6 +42,13 @@ export interface VoicingOptions {
   idPrefix: string;
   /** MIDI velocity for struck notes (default 80). */
   velocity?: number;
+  /**
+   * "Realistic" mode: voice-lead each chord to the nearest inversion of the
+   * previous one (via `nearestVoicing`) and add a low bass root. When falsy
+   * (the default) each chord plays in root position with no bass — the original
+   * behaviour, byte-for-byte (same note ids/shape, no `voice` set).
+   */
+  voiceLead?: boolean;
 }
 
 export interface Voicing {
@@ -49,56 +59,152 @@ export interface Voicing {
 
 const DEFAULT_VELOCITY = 80;
 
+/** Octave the bass root sits in — roughly 1–2 octaves below the voiced chord. */
+const BASS_OCTAVE = 2;
+
+/**
+ * Place a bass pitch-class in the low register: the given pitch-class at
+ * `BASS_OCTAVE` (C2 = MIDI 36). Carries the chord root (or the slash-chord bass
+ * when present) under the voiced upper structure.
+ */
+function lowBassPitch(pc: number): number {
+  return 12 * (BASS_OCTAVE + 1) + (((pc % 12) + 12) % 12);
+}
+
+/** One placed chord: the voiced upper structure plus an optional bass root. */
+interface PlacedVoicing {
+  pitches: number[];
+  bass: number | null;
+}
+
+/**
+ * Shared placement loop for every strategy. For each event it computes the
+ * root-position tone set via `tonesOf`, then either voice-leads it to the
+ * previous chord with a bass root (`voiceLead` on) or leaves it in root position
+ * with no bass (off). Strategies own the *rhythm* over `pitches`; this owns the
+ * *pitch placement*, so voice-leading is one orthogonal modifier shared by all.
+ */
+function placeVoicings(
+  events: ChordEvent[],
+  opts: VoicingOptions,
+  tonesOf: (ev: ChordEvent) => number[],
+): PlacedVoicing[] {
+  let prevVoiced: number[] | null = null;
+  return events.map((ev) => {
+    const tones = tonesOf(ev);
+    if (opts.voiceLead) {
+      const pitches = nearestVoicing(tones, prevVoiced);
+      prevVoiced = pitches;
+      return { pitches, bass: lowBassPitch(ev.data.bass ?? ev.data.root) };
+    }
+    return { pitches: tones, bass: null };
+  });
+}
+
+/**
+ * Emit the bass note for a placed chord, or `[]` when there is none. The bass is
+ * a block note spanning the full chord duration on the same track, `voice: 0`,
+ * with a `-b`-suffixed id so it never collides with the upper-structure notes.
+ */
+function bassNote(
+  ev: ChordEvent,
+  placed: PlacedVoicing,
+  i: number,
+  { track, idPrefix, velocity = DEFAULT_VELOCITY }: VoicingOptions,
+): Note[] {
+  if (placed.bass === null) return [];
+  return [
+    {
+      id: `${idPrefix}-${i}-b`,
+      pitch: placed.bass,
+      start: ev.start,
+      duration: ev.end - ev.start,
+      velocity,
+      track,
+      voice: 0,
+    },
+  ];
+}
+
+/** Upper-structure voice for a note: 1 in realistic mode, undefined otherwise. */
+function upperVoice(opts: VoicingOptions): number | undefined {
+  return opts.voiceLead ? 1 : undefined;
+}
+
 export const VOICINGS: Voicing[] = [
   {
     id: "block-triad",
     label: "Block triad",
-    voice: (events, { octave, track, idPrefix, velocity = DEFAULT_VELOCITY }) =>
-      events.flatMap((ev, i) =>
-        // Triad only: root + 3rd + 5th; drops any 7th / extensions.
-        chordPitches(ev.data, octave)
-          .slice(0, 3)
-          .map((pitch, k) => ({
-            id: `${idPrefix}-${i}-${k}`,
-            pitch,
-            start: ev.start,
-            duration: ev.end - ev.start,
-            velocity,
-            track,
-          })),
-      ),
-  },
-  {
-    id: "block-full",
-    label: "Block (full chord)",
-    voice: (events, { octave, track, idPrefix, velocity = DEFAULT_VELOCITY }) =>
-      events.flatMap((ev, i) =>
-        chordPitches(ev.data, octave).map((pitch, k) => ({
+    voice: (events, opts) => {
+      const { track, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
+      // Triad only: root + 3rd + 5th; drops any 7th / extensions.
+      const placed = placeVoicings(events, opts, (ev) =>
+        chordPitches(ev.data, opts.octave).slice(0, 3),
+      );
+      const voice = upperVoice(opts);
+      return events.flatMap((ev, i) => [
+        ...placed[i]!.pitches.map((pitch, k) => ({
           id: `${idPrefix}-${i}-${k}`,
           pitch,
           start: ev.start,
           duration: ev.end - ev.start,
           velocity,
           track,
+          voice,
         })),
-      ),
+        ...bassNote(ev, placed[i]!, i, opts),
+      ]);
+    },
+  },
+  {
+    id: "block-full",
+    label: "Block (full chord)",
+    voice: (events, opts) => {
+      const { track, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
+      const placed = placeVoicings(events, opts, (ev) =>
+        chordPitches(ev.data, opts.octave),
+      );
+      const voice = upperVoice(opts);
+      return events.flatMap((ev, i) => [
+        ...placed[i]!.pitches.map((pitch, k) => ({
+          id: `${idPrefix}-${i}-${k}`,
+          pitch,
+          start: ev.start,
+          duration: ev.end - ev.start,
+          velocity,
+          track,
+          voice,
+        })),
+        ...bassNote(ev, placed[i]!, i, opts),
+      ]);
+    },
   },
   {
     id: "arpeggio-up",
     label: "Arpeggio (up)",
-    voice: (events, { octave, track, idPrefix, velocity = DEFAULT_VELOCITY }) =>
-      events.flatMap((ev, i) => {
-        const tones = chordPitches(ev.data, octave);
+    voice: (events, opts) => {
+      const { track, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
+      const placed = placeVoicings(events, opts, (ev) =>
+        chordPitches(ev.data, opts.octave),
+      );
+      const voice = upperVoice(opts);
+      return events.flatMap((ev, i) => {
+        const tones = placed[i]!.pitches;
         const step = (ev.end - ev.start) / tones.length;
-        return tones.map((pitch, k) => ({
-          id: `${idPrefix}-${i}-${k}`,
-          pitch,
-          start: ev.start + step * k,
-          duration: step,
-          velocity,
-          track,
-        }));
-      }),
+        return [
+          ...tones.map((pitch, k) => ({
+            id: `${idPrefix}-${i}-${k}`,
+            pitch,
+            start: ev.start + step * k,
+            duration: step,
+            velocity,
+            track,
+            voice,
+          })),
+          ...bassNote(ev, placed[i]!, i, opts),
+        ];
+      });
+    },
   },
 ];
 

@@ -6,7 +6,6 @@ import {
   scoreEndBeat,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { openSongImperative } from "@plugins/apps/plugins/sonata/plugins/library/web";
-import { DEFAULT_VOICING_ID } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { compile, type ChordGridRaw } from "../compile";
 import { createChordGridSong } from "../../shared/endpoints";
 
@@ -20,8 +19,6 @@ import { createChordGridSong } from "../../shared/endpoints";
  */
 const STARTER: ChordGridRaw = {
   text: "| C  G | Am  F |",
-  voicingId: DEFAULT_VOICING_ID,
-  octave: 4,
 };
 
 export const chordGridCreateOption: CreateOption = {
@@ -39,8 +36,6 @@ export const chordGridCreateOption: CreateOption = {
           title: "New Chord Grid",
           composer: null,
           chordText: STARTER.text,
-          voicingId: STARTER.voicingId,
-          octave: STARTER.octave,
           durationSec: beatToSeconds(score, endBeat),
           endBeat,
         },

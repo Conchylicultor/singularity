@@ -1,0 +1,7 @@
+// @hash 81ce60e0d32f
+{
+  "realistic": true,
+  // Allowed values: "block-triad", "block-full", "arpeggio-up"
+  "strategyId": "block-triad",
+  "octave": 4
+}

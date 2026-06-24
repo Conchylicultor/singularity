@@ -32,10 +32,12 @@
  *  - A named section emits a `section` annotation spanning all its lines; an
  *    implicit (`name:""`) section emits none but still emits its chords/lyrics.
  *
- * Recognised chords become `source:"authored"` chord annotations + `ChordEvent`s;
- * the selected voicing strategy *derives* the literal notes from those events.
- * Capo is intentionally ignored here (it's surfaced on the extension row, not
- * transposed into the Score). The key string is parsed into `meta.key`.
+ * Recognised chords become `source:"authored"` chord annotations. The chord
+ * *notes* are not produced here — the shell's reactive re-voicing step
+ * regenerates them from those annotations under the global voicing config, so
+ * this source emits annotations only. Capo is intentionally ignored here (it's
+ * surfaced on the extension row, not transposed into the Score). The key string
+ * is parsed into `meta.key`.
  */
 
 import type {
@@ -44,7 +46,6 @@ import type {
   KeySignature,
   LyricChord,
   LyricData,
-  Note,
   Score,
   SectionData,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -53,21 +54,12 @@ import {
   parseKeySignature,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import {
-  DEFAULT_VOICING_ID,
-  findVoicing,
-  type ChordEvent,
-} from "@plugins/apps/plugins/sonata/plugins/voicing/core";
-import {
   parseUgTab,
   UgTabSchema,
   type ParsedLine,
   type ParsedTab,
 } from "../core";
 
-/** Track id for the single synthesized UG track. */
-export const UG_TRACK = "ug0";
-/** Note-id prefix for voiced UG notes. */
-export const UG_NOTE_PREFIX = "ug";
 /** Bar length in quarter-note beats (4/4). */
 export const UG_BEATS_PER_BAR = 4;
 /** Synthesized tempo — UG carries no tempo of its own. */
@@ -110,7 +102,6 @@ function lineBarCount(width: number, chordCount: number): number {
  */
 export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
   const annotations: Annotation[] = [];
-  const events: ChordEvent[] = [];
 
   let cursor = 0; // global beat cursor
 
@@ -121,7 +112,7 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
       const lineStart = cursor;
       // The line's chords as printed-page data — every parsed symbol, recognised
       // or not, anchored to its visible column. This is the faithful songsheet
-      // line; the chord/note timeline below keeps only the recognised harmony.
+      // line; the chord-annotation timeline below keeps only the recognised harmony.
       const lineChords: LyricChord[] = [];
 
       // Bar-quantized line duration, then chords laid out *proportionally* to
@@ -137,7 +128,7 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
         const start = lineStart + (chord.charOffset / width) * lineBeats;
         const next = line.chords[i + 1];
         // A chord sustains until the next chord's column — the last one to the
-        // line's end. An unrecognised symbol still claims its slot (no chord/note
+        // line's end. An unrecognised symbol still claims its slot (no chord
         // emitted) so the following chord keeps its proportional place.
         const end = next
           ? lineStart + (next.charOffset / width) * lineBeats
@@ -156,7 +147,6 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
             data,
             source: "authored",
           } satisfies Annotation<"chord", ChordData>);
-          events.push({ data, start, end });
         }
       });
 
@@ -187,12 +177,6 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
     }
   }
 
-  const notes: Note[] = findVoicing(DEFAULT_VOICING_ID).voice(events, {
-    octave: 4,
-    track: UG_TRACK,
-    idPrefix: UG_NOTE_PREFIX,
-  });
-
   const key: KeySignature | null = parseKeySignature(parsed.key);
 
   return {
@@ -200,10 +184,12 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
       ...(title !== undefined ? { title } : {}),
       ...(key !== null ? { key } : {}),
     },
-    tracks: [{ id: UG_TRACK, name: "Ultimate Guitar" }],
+    // No tracks / notes — the shell's re-voicing step owns chord-note
+    // generation from these `source:"authored"` chord annotations.
+    tracks: [],
     tempoMap: [{ beat: 0, bpm: UG_DEFAULT_TEMPO_BPM }],
     timeSigMap: [{ beat: 0, numerator: 4, denominator: 4 }],
-    notes,
+    notes: [],
     annotations,
   };
 }
@@ -212,8 +198,8 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
  * Collect the chord symbols this tab would *drop* on compile — the ones
  * `parseChordSymbol` can't recognise (e.g. `"N.C."`, exotic suffixes).
  * `synthesizeScore` still advances a bar for each (timing is preserved) but
- * emits no chord/note for them, so without surfacing these a tab can quietly
- * play with missing chords. Mirrors chord-grid's `skipped` list.
+ * emits no chord annotation for them, so without surfacing these a tab can
+ * quietly play with missing chords. Mirrors chord-grid's `skipped` list.
  *
  * Returns the deduplicated set in first-seen order. Shares the exact
  * recognise-gate (`parseChordSymbol`) with `synthesizeScore`, so the two can

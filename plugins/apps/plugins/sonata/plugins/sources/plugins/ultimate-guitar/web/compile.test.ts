@@ -19,7 +19,6 @@ import {
   UG_BEATS_PER_BAR,
   UG_CHARS_PER_BAR,
   UG_DEFAULT_TEMPO_BPM,
-  UG_TRACK,
 } from "./compile";
 
 // --- builders ---------------------------------------------------------------
@@ -82,8 +81,9 @@ describe("synthesizeScore — lyric-proportional, bar-quantized timing", () => {
     expect(sections[0]!.data.name).toBe("Verse");
     expect([sections[0]!.start, sections[0]!.end]).toEqual([0, 8]);
 
-    expect(score.notes.length).toBeGreaterThan(0);
-    expect(score.notes.every((n) => n.track === UG_TRACK)).toBe(true);
+    // Annotations only — the shell's re-voicing step owns chord-note generation.
+    expect(score.notes).toEqual([]);
+    expect(score.tracks).toEqual([]);
   });
 
   it("gives a chord covering more columns a proportionally longer duration", () => {
@@ -198,7 +198,7 @@ describe("synthesizeScore — lyric-proportional, bar-quantized timing", () => {
     expect(chords[0]!.end).toBe(4);
   });
 
-  it("parses a slash chord into a chord annotation + notes", () => {
+  it("parses a slash chord into a chord annotation carrying the bass", () => {
     const score = synthesizeScore(
       tab([section("Verse", [line("", ch("G/B", 0))])]),
     );
@@ -209,7 +209,6 @@ describe("synthesizeScore — lyric-proportional, bar-quantized timing", () => {
     expect(chords[0]!.data.bass).toBe(11);
     // A single chord fills its whole (1-bar) line.
     expect([chords[0]!.start, chords[0]!.end]).toEqual([0, 4]);
-    expect(score.notes.length).toBeGreaterThan(0);
   });
 
   it("sets tempoMap / timeSigMap and parses meta.key + meta.title", () => {
@@ -236,7 +235,7 @@ describe("synthesizeScore — lyric-proportional, bar-quantized timing", () => {
     expect(score.timeSigMap).toEqual([
       { beat: 0, numerator: 4, denominator: 4 },
     ]);
-    expect(score.tracks).toEqual([{ id: UG_TRACK, name: "Ultimate Guitar" }]);
+    expect(score.tracks).toEqual([]);
     expect(score.meta.key).toBeUndefined();
     expect(score.meta.title).toBeUndefined();
   });
@@ -301,7 +300,7 @@ describe("compile — UgTab round-trip", () => {
     expect((byType(score, "lyric") as LyricAnnotation[])[0]!.data.text).toBe(
       "hello there friend",
     );
-    expect(score.notes.length).toBeGreaterThan(0);
+    expect(score.notes).toEqual([]);
   });
 
   it("throws on a malformed raw shape (loud failure)", () => {

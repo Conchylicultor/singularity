@@ -11,3 +11,5 @@
 
 export type { ChordEvent, Voicing, VoicingOptions } from "./voicing";
 export { VOICINGS, DEFAULT_VOICING_ID, findVoicing } from "./voicing";
+export { voicingConfig } from "./config";
+export { reVoiceChords, CHORD_TRACK } from "./revoice";
