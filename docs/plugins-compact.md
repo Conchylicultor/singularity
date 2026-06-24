@@ -77,6 +77,12 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`docked`** — Docked surface placement — the default full-area tab that fills the surface below the tab strip.
         - **`floating`** — Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store, window chrome, and keyboard window-management shortcuts (tile / minimize / close / cycle).
+          - Plugins:
+            - **`wallpaper`** — Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper: provider registry, search/import/upload endpoints, the machine-global wallpaper store, and the global wallpaper config registration.
+              - Plugins:
+                - **`from-url`** — From-URL wallpaper source: contributes the From URL tab to the desktop wallpaper picker, emitting a pasted image URL the picker imports (and the server validates) via the import-url endpoint.
+                - **`openverse`** — Openverse wallpaper source: contributes the Openverse tab to the desktop wallpaper picker, reusing the shared search panel over the server-side `openverse` provider. Openverse wallpaper search provider: maps a query to open-license image results via the Openverse API (SSRF-guarded safeFetch), registered into the generic wallpaper provider registry.
+                - **`upload`** — Upload wallpaper source: contributes the Upload tab to the desktop wallpaper picker, emitting a local image file the picker funnels through the upload endpoint.
         - **`solo`** — Solo (fullscreen) surface placement — a single tab full-app over everything, with a hover exit button and an Esc shortcut back to the default placement.
     - **`workflows`** [4 sub-plugins] — Workflows app.
 

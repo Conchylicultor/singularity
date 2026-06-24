@@ -1,13 +1,32 @@
 # floating
 
-## Design: the desktop is a passive backdrop
+## Design: the desktop is a calm backdrop (wallpaper + a context menu)
 
-Floating placement is "desktop mode" — windows over a wallpaper. The wallpaper
-({@link DesktopWallpaper}) is a **passive backdrop and nothing more**: it is
-`pointer-events-none` + `aria-hidden`, hosts no desktop icons, shortcuts,
-context menus, drag-to-create, or app launcher, and carries no click/pointer
-handlers. Clicking empty desktop does nothing by design. This is deliberate, not
-incidental — keep it that way.
+Floating placement is "desktop mode" — windows over a wallpaper. The backdrop
+({@link DesktopBackdrop}) composes the wallpaper itself ({@link DesktopWallpaper}
+— a full-bleed configurable image, or the default theme-driven gradient SVG),
+the desktop right-click {@link DesktopContextMenu}, and the corner
+{@link WallpaperAttribution} credit. The wallpaper layer stays
+`pointer-events-none` + `aria-hidden`; a **left-click** on the empty desktop
+still does nothing. What the desktop now supports (an intentional, documented
+revision of the old "passive backdrop, no context menus" invariant) is exactly
+two things:
+
+- **A configurable wallpaper image.** Right-click → "Change wallpaper…" opens a
+  picker sourcing images from a pluggable provider registry (Openverse search,
+  upload, paste-URL — see `plugins/wallpaper/`). The choice persists **globally**
+  (`wallpaperConfig`, no `scope: "app"`): the floating desktop renders against the
+  global `:root` theme, so the wallpaper is a property of the desktop itself, one
+  setting shared across apps and worktrees. Images are mirrored locally and served
+  same-origin; config holds only metadata + CC-BY attribution.
+- **A desktop context menu.** A transparent capture layer in the **backdrop**
+  (below windows, so a right-click on a window still hits that window's own system
+  menu — only the empty desktop reaches the desktop menu) offers "Change
+  wallpaper…" and "Reset to default".
+
+Still OFF the desktop, deliberately: **no desktop icons, shortcuts,
+drag-to-create, or app launcher**. The context menu is a wallpaper affordance, not
+a launcher surface.
 
 Why no desktop icons/launcher here:
 
@@ -27,8 +46,9 @@ Why no desktop icons/launcher here:
   "the desktop is calm, the window is the subject" read.
 
 For future work: anything launcher- or icon-shaped belongs in Home / the app-rail,
-behind their existing slots — never painted onto this backdrop. The wallpaper
-component should stay a pure, theme-driven, non-interactive SVG.
+behind their existing slots — never painted onto this backdrop. New desktop
+affordances beyond the wallpaper + its context menu need the same scrutiny: the
+desktop stays calm, the window stays the subject.
 
 ## Virtual desktops (workspaces)
 
@@ -81,6 +101,8 @@ last desktop creates a new one; moving before the first clamps).
 - Description: Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store, window chrome, and keyboard window-management shortcuts (tile / minimize / close / cycle).
 - Web:
   - Contributes: `Surface.Placement`, `Shortcuts.Shortcut` "floating.snap-left (ctrl+alt+arrowleft)", `Shortcuts.Shortcut` "floating.snap-right (ctrl+alt+arrowright)", `Shortcuts.Shortcut` "floating.snap-up (ctrl+alt+arrowup)", `Shortcuts.Shortcut` "floating.snap-down (ctrl+alt+arrowdown)", `Shortcuts.Shortcut` "floating.minimize (mod+m)", `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)", `Shortcuts.Shortcut` "floating.close (mod+w)", `Shortcuts.Shortcut` "floating.cycle-next (mod+`)", `Shortcuts.Shortcut` "floating.cycle-prev (mod+shift+~)", `Shortcuts.Shortcut` "floating.cycle-prev-backquote (mod+shift+`)", `Shortcuts.Shortcut` "floating.desktop-next (ctrl+alt+pagedown)", `Shortcuts.Shortcut` "floating.desktop-prev (ctrl+alt+pageup)", `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)", `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-  - Uses: `apps.Apps`, `apps.getFocusedPlacement`, `apps.Tab`, `apps.useTabs`, `apps/surface.PlacementChromeProps`, `apps/surface.PlacementDef`, `apps/surface.Surface`, `apps/surface.usePlacementStyle`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/cluster.Cluster`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuCheckboxItem`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuShortcut`, `primitives/css/ui-kit.DropdownMenuSub`, `primitives/css/ui-kit.DropdownMenuSubContent`, `primitives/css/ui-kit.DropdownMenuSubTrigger`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/shortcuts.defineShortcut`, `primitives/shortcuts.formatShortcutLabel`, `primitives/shortcuts.getFocusedSurfaceId`, `primitives/tab-id.getTabId`, `primitives/tooltip.WithTooltip`
+  - Uses: `apps.Apps`, `apps.getFocusedPlacement`, `apps.Tab`, `apps.useTabs`, `apps/surface.PlacementChromeProps`, `apps/surface.PlacementDef`, `apps/surface.Surface`, `apps/surface.usePlacementStyle`, `apps/surface/floating/wallpaper.DesktopContextMenu`, `apps/surface/floating/wallpaper.WallpaperAttribution`, `config_v2.useConfig`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/cluster.Cluster`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuCheckboxItem`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuShortcut`, `primitives/css/ui-kit.DropdownMenuSub`, `primitives/css/ui-kit.DropdownMenuSubContent`, `primitives/css/ui-kit.DropdownMenuSubTrigger`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/shortcuts.defineShortcut`, `primitives/shortcuts.formatShortcutLabel`, `primitives/shortcuts.getFocusedSurfaceId`, `primitives/tab-id.getTabId`, `primitives/tooltip.WithTooltip`
+- Sub-plugins:
+  - **`wallpaper`** — Floating desktop wallpaper: the Wallpaper.Provider source registry, the picker dialog + shared search panel, the desktop right-click context menu, the corner attribution credit, and the global wallpaper config web registration. Floating desktop wallpaper: provider registry, search/import/upload endpoints, the machine-global wallpaper store, and the global wallpaper config registration.
 
 <!-- AUTOGENERATED:END -->

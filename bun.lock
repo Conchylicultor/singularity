@@ -616,6 +616,22 @@
       "name": "@singularity/plugin-apps-surface-floating",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper": {
+      "name": "@singularity/plugin-apps-surface-floating-wallpaper",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper/plugins/from-url": {
+      "name": "@singularity/plugin-apps-surface-floating-wallpaper-from-url",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper/plugins/openverse": {
+      "name": "@singularity/plugin-apps-surface-floating-wallpaper-openverse",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper/plugins/upload": {
+      "name": "@singularity/plugin-apps-surface-floating-wallpaper-upload",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/surface/plugins/solo": {
       "name": "@singularity/plugin-apps-surface-solo",
       "version": "0.0.1",
@@ -4482,6 +4498,14 @@
     "@singularity/plugin-apps-surface-docked": ["@singularity/plugin-apps-surface-docked@workspace:plugins/apps/plugins/surface/plugins/docked"],
 
     "@singularity/plugin-apps-surface-floating": ["@singularity/plugin-apps-surface-floating@workspace:plugins/apps/plugins/surface/plugins/floating"],
+
+    "@singularity/plugin-apps-surface-floating-wallpaper": ["@singularity/plugin-apps-surface-floating-wallpaper@workspace:plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper"],
+
+    "@singularity/plugin-apps-surface-floating-wallpaper-from-url": ["@singularity/plugin-apps-surface-floating-wallpaper-from-url@workspace:plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper/plugins/from-url"],
+
+    "@singularity/plugin-apps-surface-floating-wallpaper-openverse": ["@singularity/plugin-apps-surface-floating-wallpaper-openverse@workspace:plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper/plugins/openverse"],
+
+    "@singularity/plugin-apps-surface-floating-wallpaper-upload": ["@singularity/plugin-apps-surface-floating-wallpaper-upload@workspace:plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper/plugins/upload"],
 
     "@singularity/plugin-apps-surface-solo": ["@singularity/plugin-apps-surface-solo@workspace:plugins/apps/plugins/surface/plugins/solo"],
 

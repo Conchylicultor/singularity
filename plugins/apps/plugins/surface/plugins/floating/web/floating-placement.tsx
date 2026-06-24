@@ -24,7 +24,7 @@ import {
   type WindowMember,
 } from "./components/window-tab-strip";
 import { type MergeTarget } from "./components/window-system-menu";
-import { DesktopWallpaper } from "./components/desktop-wallpaper";
+import { DesktopBackdrop } from "./components/desktop-backdrop";
 import { FloatingForeground } from "./components/floating-foreground";
 import { CLOSE_MS, useFloatingWindowStyle } from "./hooks/use-window-motion";
 
@@ -50,7 +50,7 @@ export const floatingDef: PlacementDef = {
   // focus (focused lifts, unfocused recedes), so the active window reads as elevated.
   containerClassName:
     "absolute overflow-hidden rounded-lg border bg-background",
-  Backdrop: DesktopWallpaper,
+  Backdrop: DesktopBackdrop,
   Foreground: FloatingForeground,
   Chrome: FloatingChrome,
 };
