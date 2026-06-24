@@ -24,7 +24,7 @@
  * `node` on PATH and FAIL LOUD if none is found.
  */
 import { existsSync } from "node:fs";
-import { rm } from "node:fs/promises";
+import { rm, mkdir } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { spawnSync, spawn } from "node:child_process";
 import { Client } from "pg";
@@ -141,6 +141,10 @@ async function main(): Promise<void> {
     await preflight.end();
   }
   await rm(ZERO_REPLICA_FILE, { force: true });
+  // zqlite opens the replica with the parent dir assumed to exist (it does NOT
+  // create it). The per-worktree replica dir (<worktree>/zero/) is fresh on a
+  // first cold start, so create it before zero-cache opens the SQLite replica.
+  await mkdir(dirname(ZERO_REPLICA_FILE), { recursive: true });
 
   const node = resolveNode();
   const cacheBin = resolveZeroCacheBin();
