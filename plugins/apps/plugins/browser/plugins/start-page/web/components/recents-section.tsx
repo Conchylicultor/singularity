@@ -27,7 +27,6 @@ export function RecentsSection() {
             {recents.map((r) => (
               <Row
                 key={r.url}
-                as="button"
                 hover="muted"
                 title={r.url}
                 icon={<Favicon url={r.url} size={16} />}

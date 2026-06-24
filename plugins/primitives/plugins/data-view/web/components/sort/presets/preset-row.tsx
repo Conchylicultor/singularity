@@ -44,7 +44,6 @@ export function PresetRow<TRow>(props: {
 
   return (
     <Row
-      as="button"
       size="sm"
       hover="muted"
       disabled={!applicable}

@@ -74,7 +74,6 @@ function DependentChip({
   return (
     <li>
       <Row
-        as="div"
         bordered
         size="sm"
         hover="muted"

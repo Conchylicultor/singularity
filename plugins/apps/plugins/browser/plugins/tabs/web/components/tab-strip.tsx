@@ -35,7 +35,6 @@ export function TabStrip() {
         {tabs.map((tab) => (
           <Row
             key={tab.id}
-            as="button"
             size="sm"
             hover="muted"
             selected={tab.active}

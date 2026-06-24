@@ -56,7 +56,6 @@ export function SectionHeaderRow({
 
   return (
     <Row
-      as="button"
       aria-expanded={open}
       aria-controls={ctx?.contentId}
       onClick={onClick}

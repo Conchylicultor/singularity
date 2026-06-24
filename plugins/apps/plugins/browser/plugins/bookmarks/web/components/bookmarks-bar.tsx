@@ -32,7 +32,6 @@ export function BookmarksBar() {
             {bookmarks.map((b) => (
               <Row
                 key={b.id}
-                as="button"
                 size="sm"
                 hover="muted"
                 className="w-auto"

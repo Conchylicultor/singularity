@@ -156,7 +156,6 @@ function SymbolRow({ row }: { row: SymbolRow }) {
 
   return (
     <Row
-      as="div"
       size="sm"
       icon={
         <Badge

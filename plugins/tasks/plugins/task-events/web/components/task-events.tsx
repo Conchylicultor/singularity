@@ -80,7 +80,6 @@ export function TaskEvents({ taskId }: { taskId: string }) {
               return (
                 <li key={push.id}>
                   <Row
-                    as={url ? "a" : "div"}
                     href={url ?? undefined}
                     target={url ? "_blank" : undefined}
                     rel={url ? "noreferrer" : undefined}
@@ -146,7 +145,6 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                         return (
                           <li key={c.id}>
                             <Row
-                              as="div"
                               selected={isActive}
                               onClick={() => {
                                 if (activeConvId === c.id && activeConvEntry) {

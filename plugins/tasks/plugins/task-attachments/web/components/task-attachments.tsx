@@ -46,7 +46,6 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
           ) : (
             <Row
               key={a.id}
-              as="a"
               href={`/api/attachments/${a.id}`}
               download={a.filename}
               bordered

@@ -238,8 +238,6 @@ function BuildHistoryList({
         {visible.map((run) => (
           <Row
             key={run.id}
-            as="div"
-            role={onRunClick ? "button" : undefined}
             onClick={onRunClick ? () => onRunClick(run.id) : undefined}
             selected={selectedRunId === run.id}
             size="sm"

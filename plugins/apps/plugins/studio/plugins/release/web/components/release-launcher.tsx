@@ -176,8 +176,6 @@ function ReleaseHistoryList({
         {runs.map((run) => (
           <Row
             key={run.id}
-            as="div"
-            role="button"
             onClick={() => onRunClick(run.id)}
             selected={selectedRunId === run.id}
             size="sm"

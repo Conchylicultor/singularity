@@ -220,7 +220,7 @@ export function ShadowSection({ search }: { search: string }) {
         <CollapsibleContent className="ml-2 mt-1">
           <Stack gap="xs">
             {/* Color row */}
-            <Row as="div" hover="muted" className="gap-sm">
+            <Row hover="muted" className="gap-sm">
               <Text as="span" variant="label" className="w-16 shrink-0">Color</Text>
               <div className="flex items-center gap-sm flex-1">
                 <ColorPickerPopover
@@ -260,7 +260,7 @@ export function ShadowSection({ search }: { search: string }) {
             {PARAM_FIELDS.map(({ key, label }) => {
               const isOverridden = overrides[key] !== "";
               return (
-                <Row key={key} as="div" hover="muted" className="gap-sm">
+                <Row key={key} hover="muted" className="gap-sm">
                   <Text as="span" variant="label" className="w-16 shrink-0">
                     {label}
                   </Text>
