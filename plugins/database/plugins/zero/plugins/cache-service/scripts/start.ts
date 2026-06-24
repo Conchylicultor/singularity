@@ -12,6 +12,12 @@
  *   ZERO_PORT          — the gateway-allocated loopback port zero-cache listens on
  *   ZERO_REPLICA_FILE  — abs path to the per-worktree SQLite replica
  *
+ * We also derive ZERO_APP_ID from the fork DB name and inject it into the
+ * zero-cache child. It is the isolation key that gives each worktree its own
+ * replication slot + metadata/CVR/CDC schemas, so concurrent worktree zero-caches
+ * on the shared cluster never collide on the cluster-global slot name. See
+ * shared/internal/app-id.ts.
+ *
  * Process model: this script runs FOREGROUND. It does the clean-slate pre-flight
  * (drop any pre-existing Zero slot/publication + stale replica on the target DB),
  * then spawns the Node zero-cache in the FOREGROUND (not detached) and awaits its
@@ -30,6 +36,7 @@ import { spawnSync, spawn } from "node:child_process";
 import { Client } from "pg";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 import { dropZeroSlotsAndPublications } from "../shared/internal/slot-sql";
+import { zeroAppId } from "../shared/internal/app-id";
 import { ZERO_NODE_MAJOR, zeroNodeCacheDir } from "../shared/internal/node-runtime";
 
 // ─── env contract (gateway-provided; fail loud if absent) ────────────────────
@@ -131,6 +138,7 @@ function resolveZeroCacheBin(): string {
 
 async function main(): Promise<void> {
   const dbName = dbNameFromDsn(ZERO_UPSTREAM_DB);
+  const ZERO_APP_ID = zeroAppId(dbName);
 
   // Clean-slate pre-flight (the drop-and-recopy semantics): drop any pre-existing
   // Zero slot(s) + publications on the target fork and delete the stale replica,
@@ -158,7 +166,7 @@ async function main(): Promise<void> {
   const cacheBin = resolveZeroCacheBin();
 
   console.log(
-    `zero-cache: starting (port=${ZERO_PORT}, replica=${ZERO_REPLICA_FILE}, upstream=${dbName})`,
+    `zero-cache: starting (app=${ZERO_APP_ID}, port=${ZERO_PORT}, replica=${ZERO_REPLICA_FILE}, upstream=${dbName})`,
   );
 
   // Foreground (NOT detached): the gateway owns this process and pgroup-kills it.
@@ -173,6 +181,7 @@ async function main(): Promise<void> {
       ZERO_UPSTREAM_DB,
       ZERO_REPLICA_FILE,
       ZERO_PORT,
+      ZERO_APP_ID,
     },
   });
 

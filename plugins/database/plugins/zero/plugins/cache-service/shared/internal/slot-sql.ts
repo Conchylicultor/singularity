@@ -6,9 +6,11 @@
 // script would pull the endpoints codec (BodyInit/FormData — DOM types) into the
 // no-DOM tools program; this seam avoids that by taking a plain query runner.
 
-// Zero names its logical replication slots with a `zero` prefix (e.g. `zero_<…>`)
-// and its publications `_zero_metadata_0` / `_zero_public_0`. We match the whole
-// family so a slot/publication created by any zero-cache version is reclaimed.
+// Zero names its logical replication slots after its app id and its publications
+// `_<app-id>_metadata_0` / `_<app-id>_public_0`. Every worktree's app id nests
+// under the literal `zero` prefix (`zero_<worktree>` — see app-id.ts), and the
+// legacy default app id is plain `zero`, so the `zero%` / `\_zero%` family covers
+// every slot/publication any zero-cache version + worktree app id can create.
 const ZERO_SLOT_LIKE = "zero%";
 const ZERO_PUBLICATION_LIKE = "\\_zero%";
 
