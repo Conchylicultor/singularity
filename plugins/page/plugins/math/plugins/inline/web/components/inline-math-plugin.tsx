@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { createPortal } from "react-dom";
 import {
   $createTextNode,
   $getSelection,
@@ -12,11 +11,11 @@ import {
   KEY_ESCAPE_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { FloatingSurface } from "@plugins/primitives/plugins/floating-surface/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import type { BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
+import { caretAnchor, type BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
 import { KatexMath } from "@plugins/page/plugins/math/plugins/render/web";
 import { $createInlineMathNode } from "./inline-math-node";
 
@@ -38,7 +37,6 @@ export function InlineMathPlugin(_: BlockTextPluginProps) {
 
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const [caret, setCaret] = useState<{ left: number; top: number } | null>(null);
 
   // Esc-dismissal latch: stays closed until the `$$` trigger is removed.
   const dismissedRef = useRef(false);
@@ -49,10 +47,9 @@ export function InlineMathPlugin(_: BlockTextPluginProps) {
   function close() {
     setOpen(false);
     setQuery("");
-    setCaret(null);
   }
 
-  // Derive open-state + query + caret position from the editor on every update.
+  // Derive open-state + query from the editor on every update.
   useEffect(() => {
     function sync() {
       lexicalEditor.getEditorState().read(() => {
@@ -90,8 +87,6 @@ export function InlineMathPlugin(_: BlockTextPluginProps) {
         }
         setQuery(q);
         setOpen(!dismissedRef.current);
-        const domRect = window.getSelection()?.getRangeAt(0).getBoundingClientRect();
-        if (domRect) setCaret({ left: domRect.left, top: domRect.bottom });
       });
     }
     sync();
@@ -165,15 +160,8 @@ export function InlineMathPlugin(_: BlockTextPluginProps) {
     };
   }, [lexicalEditor]);
 
-  if (!open || !caret) return null;
-
-  return createPortal(
-    <Surface
-      level="overlay"
-      // eslint-disable-next-line layout/no-adhoc-layout -- floating menu positioned via JS-computed caret coords
-      className="z-popover fixed w-72 p-sm"
-      style={{ left: caret.left, top: caret.top + 4 }}
-    >
+  return (
+    <FloatingSurface open={open} anchor={caretAnchor()} reposition={query} width="lg" padding="sm">
       <Stack gap="sm">
         <Center className="min-h-6">
           {query === "" ? (
@@ -188,7 +176,6 @@ export function InlineMathPlugin(_: BlockTextPluginProps) {
           ↵ to insert
         </Text>
       </Stack>
-    </Surface>,
-    document.body,
+    </FloatingSurface>
   );
 }

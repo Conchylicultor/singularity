@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { createPortal } from "react-dom";
 import {
   $getNodeByKey,
   $getSelection,
@@ -14,7 +13,8 @@ import {
   KEY_ESCAPE_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { FloatingSurface } from "@plugins/primitives/plugins/floating-surface/web";
+import { caretAnchor } from "../internal/caret-anchor";
 import type { BlockHandle } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import {
@@ -37,9 +37,9 @@ const TRIGGER = "/";
  * text node, or immediately after whitespace. A `/` followed by a space is a
  * literal slash and never opens the menu.
  *
- * Because the trigger is mid-line, the menu is portaled to `document.body` and
- * positioned at the caret rect (mirroring the `[[` page-mention menu) rather
- * than anchored to the block.
+ * Because the trigger is mid-line, the menu renders through `FloatingSurface`,
+ * caret-anchored via `caretAnchor()` (mirroring the `[[` page-mention menu)
+ * rather than anchored to the block.
  *
  * On select, the `/query` is stripped and the block is converted in place to
  * the chosen type, keeping the text around the slash (Notion's model: `/`
@@ -49,11 +49,10 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
   const [lexicalEditor] = useLexicalComposerContext();
   const insertable = useInsertableBlocks();
 
-  // Open-state + query + caret position derived from the live editor text.
+  // Open-state + query derived from the live editor text.
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
-  const [caret, setCaret] = useState<{ left: number; top: number } | null>(null);
 
   // The Esc-dismissal latch: once set, the menu stays closed until the `/`
   // trigger is removed from the text before the caret.
@@ -63,16 +62,12 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
   // active row exactly when the query changes (replacing a query-keyed effect).
   const lastQueryRef = useRef("");
 
-  // The portaled menu element, so a click-outside test can exclude clicks that
-  // land on the menu itself (row clicks go through onMouseDown+preventDefault).
-  const menuRef = useRef<HTMLElement | null>(null);
-
   const filtered = filterBlockTypes(insertable, query);
 
-  // The menu is only interactive when it has a position and at least one match;
+  // The menu is only interactive when it's open with at least one match;
   // otherwise keyboard nav must fall through (e.g. arrows/Enter while a no-match
   // query is showing nothing should navigate/split, not get swallowed).
-  const visible = open && !!caret && filtered.length > 0;
+  const visible = open && filtered.length > 0;
 
   // Refs let the (stable) Lexical command callbacks read fresh state — the
   // closures capture stale values otherwise (mirrors keyboard-plugin's editorRef).
@@ -83,10 +78,9 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
   function close() {
     setOpen(false);
     setQuery("");
-    setCaret(null);
   }
 
-  // Track the text and recompute open-state + query + caret on every update.
+  // Track the text and recompute open-state + query on every update.
   useEffect(() => {
     function sync() {
       lexicalEditor.getEditorState().read(() => {
@@ -135,29 +129,11 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
         }
         setQuery(q);
         setOpen(!dismissedRef.current);
-        const domRect = window.getSelection()?.getRangeAt(0).getBoundingClientRect();
-        if (domRect) setCaret({ left: domRect.left, top: domRect.bottom });
       });
     }
     sync();
     return lexicalEditor.registerUpdateListener(sync);
   }, [lexicalEditor]);
-
-  // Dismiss on a genuine click anywhere outside the menu. The editor's own
-  // BLUR_COMMAND only fires when focus actually leaves the contenteditable, so a
-  // click on a non-focusable region (sidebar, padding, another block) wouldn't
-  // close the menu. Latch dismissed so it stays closed until the `/` is removed.
-  // Row clicks land on the menu element and are excluded.
-  useEffect(() => {
-    if (!visible) return;
-    function onPointerDown(e: PointerEvent) {
-      if (menuRef.current?.contains(e.target as Node)) return;
-      dismissedRef.current = true;
-      setOpen(false);
-    }
-    document.addEventListener("pointerdown", onPointerDown, true);
-    return () => document.removeEventListener("pointerdown", onPointerDown, true);
-  }, [visible]);
 
   function handleSelect(handle: BlockHandle<unknown>) {
     // Convert the current block to the chosen type, dropping the `/query`
@@ -279,15 +255,21 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
     };
   }, [lexicalEditor]);
 
-  if (!visible || !caret) return null;
-
-  return createPortal(
-    <Surface
-      ref={menuRef}
-      level="overlay"
-      // eslint-disable-next-line layout/no-adhoc-layout -- scroll body of JS-positioned floating menu (fixed + overflow entangled on one root)
-      className="z-popover fixed max-h-80 w-56 overflow-y-auto p-xs"
-      style={{ left: caret.left, top: caret.top + 4 }}
+  return (
+    <FloatingSurface
+      open={visible}
+      anchor={caretAnchor()}
+      reposition={query}
+      width="sm"
+      padding="xs"
+      maxHeight="lg"
+      // Outside-press dismiss: latch dismissed so it stays closed until the `/`
+      // is removed. The primitive's capture-phase listener excludes the surface
+      // itself, so row clicks (onMouseDown+preventDefault) never close it.
+      onDismiss={() => {
+        dismissedRef.current = true;
+        setOpen(false);
+      }}
     >
       <BlockTypeList
         blocks={filtered}
@@ -295,7 +277,6 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
         onSelect={handleSelect}
         onHoverIndex={setActiveIndex}
       />
-    </Surface>,
-    document.body,
+    </FloatingSurface>
   );
 }

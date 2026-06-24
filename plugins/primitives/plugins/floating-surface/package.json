@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-primitives-floating-surface",
+  "description": "FloatingSurface: focus-less caret-anchored floating surface positioned via Floating UI over ViewportOverlay + Surface.",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "@floating-ui/react-dom": "^2.1.8"
+  }
+}

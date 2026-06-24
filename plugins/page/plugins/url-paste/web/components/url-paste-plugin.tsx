@@ -1,4 +1,4 @@
-import { useEffect, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useEffect, useState } from "react";
 import {
   $getSelection,
   $isRangeSelection,
@@ -8,11 +8,10 @@ import {
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { MdBookmark, MdLink, MdSmartDisplay } from "react-icons/md";
-import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { FloatingSurface } from "@plugins/primitives/plugins/floating-surface/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { textOf } from "@plugins/page/plugins/editor/core";
-import type { BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
+import { caretAnchor, type BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
 import { BOOKMARK_TYPE } from "@plugins/page/plugins/bookmark/core";
 import { EMBED_TYPE } from "@plugins/page/plugins/embed/core";
 
@@ -39,9 +38,7 @@ function bareUrl(text: string): string | null {
  */
 export function UrlPastePlugin({ block, editor }: BlockTextPluginProps) {
   const [lexical] = useLexicalComposerContext();
-  const [menu, setMenu] = useState<{ url: string; left: number; top: number } | null>(
-    null,
-  );
+  const [menu, setMenu] = useState<{ url: string } | null>(null);
 
   useEffect(() => {
     return lexical.registerCommand<ClipboardEvent>(
@@ -54,15 +51,7 @@ export function UrlPastePlugin({ block, editor }: BlockTextPluginProps) {
         if (textOf(block).trim() !== "") return false;
 
         event.preventDefault();
-        // Anchor the menu at the caret. A collapsed selection in an EMPTY block
-        // yields an all-zero rect, so fall back to the block's editable element.
-        const sel = window.getSelection();
-        const caret = sel && sel.rangeCount ? sel.getRangeAt(0).getBoundingClientRect() : null;
-        const anchor =
-          caret && (caret.width || caret.height || caret.left || caret.top)
-            ? caret
-            : lexical.getRootElement()?.getBoundingClientRect();
-        setMenu({ url, left: anchor?.left ?? 0, top: anchor?.bottom ?? 0 });
+        setMenu({ url });
         return true;
       },
       COMMAND_PRIORITY_LOW,
@@ -95,34 +84,24 @@ export function UrlPastePlugin({ block, editor }: BlockTextPluginProps) {
   }
 
   return (
-    // The overlay root is the outside-click backdrop (closes the menu); it
-    // self-portals to document.body so the caret-anchored Surface is positioned
-    // against the real viewport, never a transformed editor ancestor.
-    <ViewportOverlay
-      layer="popover"
-      onMouseDown={(e: ReactMouseEvent) => {
-        e.preventDefault();
-        setMenu(null);
-      }}
+    // Caret-anchored. A collapsed selection in an EMPTY block yields an all-zero
+    // rect, so the anchor falls back to the block's editable element.
+    <FloatingSurface
+      open={!!menu}
+      anchor={caretAnchor(() => lexical.getRootElement()?.getBoundingClientRect() ?? null)}
+      width="sm"
+      padding="xs"
+      onDismiss={() => setMenu(null)}
     >
-      <Surface
-        level="overlay"
-        // eslint-disable-next-line layout/no-adhoc-layout -- floating menu positioned via JS-computed caret coords
-        className="fixed w-56 p-xs"
-        style={{ left: menu.left, top: menu.top + 4 }}
-        // Keep clicks inside the menu from reaching the backdrop (which closes).
-        onMouseDown={(e: ReactMouseEvent) => e.stopPropagation()}
-      >
-        <Row icon={<MdBookmark />} onClick={() => editor.convertTo(BOOKMARK_TYPE, { url })}>
-          Create bookmark
-        </Row>
-        <Row icon={<MdSmartDisplay />} onClick={() => editor.convertTo(EMBED_TYPE, { url })}>
-          Create embed
-        </Row>
-        <Row icon={<MdLink />} onClick={insertPlainLink}>
-          Plain link
-        </Row>
-      </Surface>
-    </ViewportOverlay>
+      <Row icon={<MdBookmark />} onClick={() => editor.convertTo(BOOKMARK_TYPE, { url })}>
+        Create bookmark
+      </Row>
+      <Row icon={<MdSmartDisplay />} onClick={() => editor.convertTo(EMBED_TYPE, { url })}>
+        Create embed
+      </Row>
+      <Row icon={<MdLink />} onClick={insertPlainLink}>
+        Plain link
+      </Row>
+    </FloatingSurface>
   );
 }

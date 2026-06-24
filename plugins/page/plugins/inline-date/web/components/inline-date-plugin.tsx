@@ -1,6 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { createPortal } from "react-dom";
 import { MdCalendarToday, MdNotificationsActive } from "react-icons/md";
 import {
   $createTextNode,
@@ -18,8 +17,8 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import type { BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
+import { FloatingSurface } from "@plugins/primitives/plugins/floating-surface/web";
+import { caretAnchor, type BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
 import { $createDateMentionNode } from "./date-mention-node";
 import { buildMenu, type DateOption } from "../internal/date-options";
 
@@ -28,8 +27,8 @@ const TRIGGER = "@";
 /**
  * Inline, Notion-style `@` date/reminder typeahead. Mirrors the inline page-link
  * (`[[`) plugin: open-state + query are derived from the live editor text (focus
- * never leaves the editor); arrows/Enter navigate, Esc dismisses; the menu is
- * portaled and positioned at the caret rect since `@` appears mid-line.
+ * never leaves the editor); arrows/Enter navigate, Esc dismisses; the menu
+ * renders through `FloatingSurface`, caret-anchored since `@` appears mid-line.
  *
  * The query is parsed by chrono into a concrete instant. Selecting the "date" row
  * inserts a `[[date:<iso>]]` chip; the "reminder" row mints a UUID and inserts a
@@ -41,7 +40,6 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
-  const [caret, setCaret] = useState<{ left: number; top: number } | null>(null);
 
   // Esc-dismissal latch: stays closed until the `@` trigger is removed.
   const dismissedRef = useRef(false);
@@ -61,10 +59,9 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
   function close() {
     setOpen(false);
     setQuery("");
-    setCaret(null);
   }
 
-  // Derive open-state + query + caret position from the editor on every update.
+  // Derive open-state + query from the editor on every update.
   useEffect(() => {
     function sync() {
       lexicalEditor.getEditorState().read(() => {
@@ -116,8 +113,6 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
         }
         setQuery(q);
         setOpen(!dismissedRef.current);
-        const domRect = window.getSelection()?.getRangeAt(0).getBoundingClientRect();
-        if (domRect) setCaret({ left: domRect.left, top: domRect.bottom });
       });
     }
     sync();
@@ -221,15 +216,8 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
     };
   }, [lexicalEditor]);
 
-  if (!open || !caret) return null;
-
-  return createPortal(
-    <Surface
-      level="overlay"
-      // eslint-disable-next-line layout/no-adhoc-layout -- floating menu positioned via JS-computed caret coords
-      className="z-popover fixed w-72 p-xs"
-      style={{ left: caret.left, top: caret.top + 4 }}
-    >
+  return (
+    <FloatingSurface open={open} anchor={caretAnchor()} reposition={query} width="lg" padding="xs">
       {menu.hint ? (
         <Text as="div" variant="body" className="text-muted-foreground px-sm py-xs">
           Keep typing a date…
@@ -258,7 +246,6 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
           ))}
         </Stack>
       )}
-    </Surface>,
-    document.body,
+    </FloatingSurface>
   );
 }

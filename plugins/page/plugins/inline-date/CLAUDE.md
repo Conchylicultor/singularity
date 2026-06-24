@@ -6,7 +6,7 @@
 
 - Description: Inline @ date mentions: type @ in any text block to drop a date chip or schedule a reminder; stored as a [[date:<iso>]] / [[reminder:<id>:<iso>]] token. Schedules and fires reminder notifications for inline `[[reminder:<id>:<iso>]]` tokens; reconciled from block text on every page.blocksChanged.
 - Web:
-  - Uses: `page/editor.registerBlockTextExtension`, `primitives/css/center.Center`, `primitives/css/link-chip.LinkChip`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/latest-ref.useLatestRef`
+  - Uses: `page/editor.BlockTextPluginProps`, `page/editor.caretAnchor`, `page/editor.registerBlockTextExtension`, `primitives/css/center.Center`, `primitives/css/link-chip.LinkChip`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/floating-surface.FloatingSurface`, `primitives/latest-ref.useLatestRef`
 - Server:
   - Uses: `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.blocksChanged`, `shell/notifications.recordNotification`
   - DB schema: `plugins/page/plugins/inline-date/server/internal/tables.ts`

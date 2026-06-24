@@ -2820,6 +2820,13 @@
       "name": "@singularity/plugin-primitives-floating-action",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/floating-surface": {
+      "name": "@singularity/plugin-primitives-floating-surface",
+      "version": "0.0.1",
+      "dependencies": {
+        "@floating-ui/react-dom": "^2.1.8",
+      },
+    },
     "plugins/primitives/plugins/folder-picker": {
       "name": "@singularity/plugin-primitives-folder-picker",
       "version": "0.0.1",
@@ -5509,6 +5516,8 @@
     "@singularity/plugin-primitives-filter-chips": ["@singularity/plugin-primitives-filter-chips@workspace:plugins/primitives/plugins/filter-chips"],
 
     "@singularity/plugin-primitives-floating-action": ["@singularity/plugin-primitives-floating-action@workspace:plugins/primitives/plugins/floating-action"],
+
+    "@singularity/plugin-primitives-floating-surface": ["@singularity/plugin-primitives-floating-surface@workspace:plugins/primitives/plugins/floating-surface"],
 
     "@singularity/plugin-primitives-folder-picker": ["@singularity/plugin-primitives-folder-picker@workspace:plugins/primitives/plugins/folder-picker"],
 

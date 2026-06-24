@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { createPortal } from "react-dom";
 import {
   $createTextNode,
   $getSelection,
@@ -15,9 +14,9 @@ import {
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { FloatingSurface } from "@plugins/primitives/plugins/floating-surface/web";
 import {
+  caretAnchor,
   usePageOptions,
   PageOptionsList,
   type BlockTextPluginProps,
@@ -33,7 +32,7 @@ const TRIGGER = "[[";
  * menu: open-state + query are derived from the live editor text (focus never
  * leaves the editor); arrows/Enter navigate, Esc dismisses. Unlike the slash menu
  * — which can anchor to the block because `/` is always leading — `[[` is
- * mid-line, so the menu is portaled and positioned at the caret rect.
+ * mid-line, so the menu renders through `FloatingSurface`, caret-anchored.
  *
  * On select, the `[[query` is replaced with an inline page-link node (+ a trailing
  * space); for "Create '<query>'" a new page is created first. The node persists as
@@ -45,7 +44,6 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
-  const [caret, setCaret] = useState<{ left: number; top: number } | null>(null);
 
   // Esc-dismissal latch: stays closed until the `[[` trigger is removed.
   const dismissedRef = useRef(false);
@@ -68,10 +66,9 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
   function close() {
     setOpen(false);
     setQuery("");
-    setCaret(null);
   }
 
-  // Derive open-state + query + caret position from the editor on every update.
+  // Derive open-state + query from the editor on every update.
   useEffect(() => {
     function sync() {
       lexicalEditor.getEditorState().read(() => {
@@ -111,8 +108,6 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
         }
         setQuery(q);
         setOpen(!dismissedRef.current);
-        const domRect = window.getSelection()?.getRangeAt(0).getBoundingClientRect();
-        if (domRect) setCaret({ left: domRect.left, top: domRect.bottom });
       });
     }
     sync();
@@ -222,29 +217,26 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
     };
   }, [lexicalEditor]);
 
-  if (!open || !caret) return null;
-
-  return createPortal(
-    <Surface
-      level="overlay"
-      // eslint-disable-next-line layout/no-adhoc-layout -- floating menu positioned via JS-computed caret coords
-      className="z-popover fixed w-72 p-xs"
-      style={{ left: caret.left, top: caret.top + 4 }}
+  return (
+    <FloatingSurface
+      open={open}
+      anchor={caretAnchor()}
+      reposition={query}
+      width="lg"
+      padding="xs"
+      maxHeight="md"
     >
-      <Scroll className="max-h-64">
-        {pageOptionsResult.pending ? (
-          <Loading variant="rows" />
-        ) : (
-          <PageOptionsList
-            options={pageOptionsResult.options}
-            activeIndex={activeIndex}
-            onSelect={(id) => insertLink(id)}
-            onCreate={(title) => void createLinkedPage(title).then((id) => insertLink(id))}
-            onHoverIndex={setActiveIndex}
-          />
-        )}
-      </Scroll>
-    </Surface>,
-    document.body,
+      {pageOptionsResult.pending ? (
+        <Loading variant="rows" />
+      ) : (
+        <PageOptionsList
+          options={pageOptionsResult.options}
+          activeIndex={activeIndex}
+          onSelect={(id) => insertLink(id)}
+          onCreate={(title) => void createLinkedPage(title).then((id) => insertLink(id))}
+          onHoverIndex={setActiveIndex}
+        />
+      )}
+    </FloatingSurface>
   );
 }

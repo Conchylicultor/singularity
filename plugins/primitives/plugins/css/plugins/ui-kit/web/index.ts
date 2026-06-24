@@ -7,8 +7,10 @@ export { SURFACE_LEVELS, type SurfaceLevel } from "./theme/surface";
 export {
   POPOVER_WIDTH,
   POPOVER_PADDING,
+  POPOVER_MAX_HEIGHT,
   type PopoverWidth,
   type PopoverPadding,
+  type PopoverMaxHeight,
 } from "./theme/popover-width";
 
 export {

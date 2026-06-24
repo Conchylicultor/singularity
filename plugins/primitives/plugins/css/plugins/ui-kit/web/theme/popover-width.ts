@@ -39,3 +39,20 @@ export const POPOVER_PADDING: Record<PopoverPadding, string> = {
   md: "p-md",
   lg: "p-lg",
 };
+
+// Max-height is its own axis (co-located with width/padding so `PopoverContent`
+// can later adopt the same role; consumed now by `FloatingSurface`). Each token
+// bundles a `max-h-*` cap with `overflow-y-auto` so a tall menu scrolls inside the
+// surface instead of overflowing the viewport. `none` opts out (size to content).
+// `overflow-y-auto` is invisible to `no-adhoc-layout`: the rule scans `className`
+// attrs and `cn()` args, and this value is only reached as a dynamic member
+// expression `POPOVER_MAX_HEIGHT[maxHeight]` inside `cn()`.
+
+export type PopoverMaxHeight = "none" | "sm" | "md" | "lg" | "xl";
+export const POPOVER_MAX_HEIGHT: Record<PopoverMaxHeight, string> = {
+  none: "",
+  sm: "max-h-48 overflow-y-auto",
+  md: "max-h-64 overflow-y-auto",
+  lg: "max-h-80 overflow-y-auto",
+  xl: "max-h-96 overflow-y-auto",
+};

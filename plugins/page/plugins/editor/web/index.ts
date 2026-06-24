@@ -26,6 +26,7 @@ export {
 export { registerBlockPasteHandler } from "./internal/block-paste-handlers";
 export type { BlockPasteHandler } from "./internal/block-paste-handlers";
 export { OPEN_LINK_POPOVER_COMMAND } from "./internal/link-command";
+export { caretAnchor } from "./internal/caret-anchor";
 export { isValidLinkUrl, normalizeLinkUrl } from "./internal/link-url";
 export type {
   BlockTextExtension,
