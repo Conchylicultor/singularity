@@ -8,7 +8,7 @@
 - Web:
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/css/clip.Clip`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`
-  - Exports: Types: `KeyboardProps`, `KeyHighlight`, `KeyLane`, `KeyStyle`; Values: `isBlackPitch`, `Keyboard`, `keyLayout`
+  - Exports: Types: `KeyboardProps`, `KeyHighlight`, `KeyLane`, `KeyStyle`; Values: `isBlackPitch`, `Keyboard`, `keyboardStyleConfig`, `keyLayout`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:

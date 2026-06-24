@@ -36,5 +36,13 @@ export default {
     // live value is shared via the Sonata transport context.
     SonataToolbar.End({ id: "spread", component: SpreadWheel }),
     ConfigV2.WebRegister({ descriptor: pianoRollConfig }),
+    // Surface the roll's display prefs in the player's view-options chip. Only
+    // `showNoteNames` — `spread` is driven live by the toolbar jog wheel above,
+    // so a second zoom control would be redundant.
+    Sonata.ViewOption({
+      id: "piano-roll",
+      config: pianoRollConfig,
+      fields: ["showNoteNames"],
+    }),
   ],
 } satisfies PluginDefinition;

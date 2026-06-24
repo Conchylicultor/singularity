@@ -7,6 +7,7 @@ import {
   defineWrapperSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import { definePaneToolbar } from "@plugins/primitives/plugins/pane-toolbar/web";
+import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type {
   Annotation,
   Capability,
@@ -169,6 +170,22 @@ export const Sonata = {
   // reads shared cursor/Score context via `useSonata()`. Display-agnostic: any
   // display hosts it with `.Render`; capability-free since it needs no projection.
   Hud: defineRenderSlot<{ component: ComponentType }>("sonata.hud", {
+    docLabel: (p) => p.id,
+  }),
+
+  // VIEW OPTIONS — global display prefs surfaced as quick controls inside a
+  // player HUD chip (note names, key labels, key style, …). Each contributor
+  // hands a config_v2 descriptor (optionally a `fields` subset); the host chip
+  // renders those fields generically via FieldRenderer. Collection-consumer
+  // clean — the host reads the slot and never names a contributor. Lives here
+  // (not piano-roll) so leaf contributors like the keyboard primitive's config
+  // can be surfaced without the display ⇄ primitive import cycle.
+  ViewOption: defineSlot<{
+    id: string;
+    config: ConfigDescriptor;
+    /** Optional subset/order of field keys; default = all descriptor fields. */
+    fields?: string[];
+  }>("sonata.view-option", {
     docLabel: (p) => p.id,
   }),
 

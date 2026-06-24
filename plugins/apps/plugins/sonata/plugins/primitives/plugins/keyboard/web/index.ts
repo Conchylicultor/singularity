@@ -7,6 +7,10 @@ export type { KeyboardProps, KeyHighlight } from "./internal/keyboard";
 export { keyLayout, isBlackPitch } from "./internal/key-layout";
 export type { KeyLane } from "./internal/key-layout";
 export type { KeyStyle } from "../shared/config";
+// The key-style descriptor is surfaced as a Sonata player view-option by
+// piano-keyboard (the keyboard primitive stays a leaf — it never imports the app
+// shell). Exported here so that consumer can hand it to the ViewOption slot.
+export { keyboardStyleConfig } from "../shared/config";
 
 export default {
   description:

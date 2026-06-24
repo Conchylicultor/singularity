@@ -52,6 +52,7 @@ import { FxHost } from "../internal/fx/fx-host";
 import { ProjectionProvider } from "./projection-context";
 import { OverlayHost } from "./overlay-host";
 import { FxToggle } from "./fx-toggle";
+import { ViewOptionsToggle } from "./view-options-toggle";
 import { PitchAxisHost } from "./pitch-axis-host";
 
 /** Props the shell's `Sonata.Display.Dispatch` passes to the chosen display. The
@@ -547,8 +548,10 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             <Sonata.Hud.Render>
               {(h) => <h.component key={h.id} />}
             </Sonata.Hud.Render>
-            {/* Host-owned FX popover — sits with the HUD chips; re-enables its
-                own pointer events (the cluster is pointer-events-none). */}
+            {/* Host-owned FX + display-options popovers — sit with the HUD
+                chips; re-enable their own pointer events (the cluster is
+                pointer-events-none). */}
+            <ViewOptionsToggle />
             <FxToggle />
           </Stack>
         </Pin>
