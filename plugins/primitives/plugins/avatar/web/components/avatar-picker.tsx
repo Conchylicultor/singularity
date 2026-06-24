@@ -40,7 +40,7 @@ export function AvatarPicker({
       >
         {children}
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-sm" align="start">
+      <PopoverContent width="xl" padding="sm" align="start">
 
         {/* Color row */}
         <SectionLabel className="px-xs pt-xs pb-xs text-3xs">

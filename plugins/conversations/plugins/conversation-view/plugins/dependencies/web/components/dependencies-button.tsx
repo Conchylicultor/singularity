@@ -226,7 +226,8 @@ function DependenciesButtonInner({
           open={blockedByOpen}
           onOpenChange={setBlockedByOpen}
           align="end"
-          contentClassName="w-96 p-sm"
+          width="2xl"
+          padding="sm"
           trigger={
             <Button variant="ghost" aria-label="Blocked by">
               {hasBlockedBy && (
@@ -260,7 +261,8 @@ function DependenciesButtonInner({
           open={blockingOpen}
           onOpenChange={setBlockingOpen}
           align="end"
-          contentClassName="w-96 p-sm"
+          width="2xl"
+          padding="sm"
           trigger={
             <Button variant="ghost" aria-label="Blocking">
               <span className={cn("text-3xs", hasBlocking ? "text-muted-foreground" : "text-muted-foreground/40")}>

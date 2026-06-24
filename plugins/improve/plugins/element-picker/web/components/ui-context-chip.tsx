@@ -45,7 +45,7 @@ export function UiContextChip({ meta }: { meta: UiContextMeta }) {
   );
 
   return (
-    <InlinePopover trigger={trigger} contentClassName="w-80" tooltip="UI element context">
+    <InlinePopover trigger={trigger} width="xl" tooltip="UI element context">
       <Inset pad="sm">
         <Stack gap="sm">
           <Stack direction="row" gap="2xs" align="center" className="min-w-0">

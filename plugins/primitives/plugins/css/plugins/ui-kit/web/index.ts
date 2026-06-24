@@ -5,6 +5,13 @@ export { cn } from "./lib/utils";
 export { SURFACE_LEVELS, type SurfaceLevel } from "./theme/surface";
 
 export {
+  POPOVER_WIDTH,
+  POPOVER_PADDING,
+  type PopoverWidth,
+  type PopoverPadding,
+} from "./theme/popover-width";
+
+export {
   ControlSizeProvider,
   useControlSize,
   iconSizeFor,

@@ -88,7 +88,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
                       onOpenChange={setSettingsOpen}
                       align="end"
                       trigger={chip}
-                      contentClassName="w-72"
+                      width="lg"
                     >
                       <ViewSettingsPopover
                         instance={r}

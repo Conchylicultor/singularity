@@ -60,7 +60,8 @@ function ColorSwatch({
   return (
     <InlinePopover
       tooltip="Track color"
-      contentClassName="w-auto p-sm"
+      width="content"
+      padding="sm"
       trigger={
         <button
           type="button"
@@ -136,7 +137,8 @@ function InstrumentPicker({
       open={open}
       onOpenChange={setOpen}
       tooltip="Track instrument"
-      contentClassName="w-60 p-sm"
+      width="sm"
+      padding="sm"
       trigger={
         <button
           type="button"

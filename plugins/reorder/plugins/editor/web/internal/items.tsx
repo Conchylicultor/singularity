@@ -286,7 +286,8 @@ export function RestoreButton({
             : "Add"}
         </Button>
       }
-      contentClassName="w-56 p-none"
+      width="sm"
+      padding="none"
     >
       {hasHidden && (
           <div className="p-xs">

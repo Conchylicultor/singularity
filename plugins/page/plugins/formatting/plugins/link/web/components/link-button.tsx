@@ -103,7 +103,7 @@ export function LinkButton() {
     <InlinePopover
       open={open}
       onOpenChange={(next) => (next ? openPopover() : closePopover())}
-      contentClassName="w-72"
+      width="lg"
       trigger={
         <IconButton
           icon={MdLink}

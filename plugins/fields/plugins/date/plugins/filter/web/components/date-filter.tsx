@@ -121,7 +121,7 @@ function AnchorChooser({
     <InlinePopover
       open={open}
       onOpenChange={setOpen}
-      contentClassName="w-64"
+      width="md"
       trigger={
         <Button variant="outline">
           <MdCalendarToday />

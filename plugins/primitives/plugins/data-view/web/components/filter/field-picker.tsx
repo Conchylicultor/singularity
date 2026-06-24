@@ -33,7 +33,7 @@ export function FieldPicker<TRow>(props: {
       open={open}
       onOpenChange={setOpen}
       align="start"
-      contentClassName="w-72"
+      width="lg"
       trigger={
         <Button
           variant="outline"

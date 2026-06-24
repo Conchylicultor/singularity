@@ -135,7 +135,8 @@ function AddScopeButton({
   return (
     <InlinePopover
       tooltip="Customize for an app"
-      contentClassName="w-56 p-1"
+      width="sm"
+      padding="2xs"
       trigger={
         <ToggleChip active={false} variant="ghost" icon={<MdAdd />}>
           App

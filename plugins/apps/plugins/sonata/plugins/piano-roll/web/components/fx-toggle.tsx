@@ -50,7 +50,8 @@ export function FxToggle() {
         align="end"
         side="bottom"
         tooltip="Visual effects"
-        contentClassName="w-60 p-sm"
+        width="sm"
+        padding="sm"
         trigger={
           <ToggleChip
             active={open}

@@ -58,7 +58,7 @@ export function ExitCommitPopover({ children }: { children: ReactNode }) {
           tabIndex={-1}
           className="size-0"
         />
-        <PopoverContent align="end" className="w-64">
+        <PopoverContent align="end" width="md">
           <Stack gap="sm">
             <Text variant="label">Apply layout for everyone?</Text>
             <Text variant="caption" tone="muted">

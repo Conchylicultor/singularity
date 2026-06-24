@@ -227,7 +227,8 @@ export function BellButton() {
         </span>
       }
       align="end"
-      contentClassName="w-80 p-none"
+      width="xl"
+      padding="none"
     >
         <div className="flex items-center justify-between px-md py-sm border-b">
           <Text variant="body" className="font-semibold">Notifications</Text>

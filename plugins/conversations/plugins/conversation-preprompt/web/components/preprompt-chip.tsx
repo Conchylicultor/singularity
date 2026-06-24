@@ -32,7 +32,8 @@ export function PrepromptChip() {
           <span className="max-w-32 truncate">{record.title}</span>
         </Badge>
       }
-      contentClassName="w-80 p-sm"
+      width="xl"
+      padding="sm"
     >
       <ConfigPopoverHeader
         label="Preprompt instructions"

@@ -61,7 +61,7 @@ export function ChangeCoverPopover({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger render={trigger} />
-      <PopoverContent className="w-80 p-sm" align="start">
+      <PopoverContent width="xl" padding="sm" align="start">
         <Stack gap="sm">
           <input
             ref={inputRef}

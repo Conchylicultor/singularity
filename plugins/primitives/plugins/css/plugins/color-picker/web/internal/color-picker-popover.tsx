@@ -34,7 +34,9 @@ export function ColorPickerPopover({
         {trigger}
       </PopoverTrigger>
       <PopoverContent
-        className={cn("w-auto p-none", contentClassName)}
+        width="content"
+        padding="none"
+        className={contentClassName}
         align="start"
       >
         <ColorPicker {...pickerProps} />

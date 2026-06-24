@@ -41,7 +41,8 @@ export function BlockActionsMenu({
       }}
       align={align}
       side={side}
-      contentClassName="w-56 p-xs"
+      width="sm"
+      padding="xs"
       trigger={trigger}
     >
       <Stack gap="xs">

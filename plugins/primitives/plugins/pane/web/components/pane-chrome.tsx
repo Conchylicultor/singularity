@@ -321,8 +321,10 @@ function OverflowActionsBar({
             <PopoverContent
               side="bottom"
               align="end"
+              width="content"
+              padding="xs"
               // eslint-disable-next-line layout/no-adhoc-layout -- min-w-0 lets the popover shrink to its content width; sizing concern on the popover surface, not a layout region
-              className="w-auto min-w-0 p-xs"
+              className="min-w-0"
             >
               {/* eslint-disable-next-line layout/no-adhoc-layout -- flex column of overflow action items inside Popover; Column needs named slots but this is a flat list */}
               <div className="flex flex-col">

@@ -33,7 +33,7 @@ export function PageIconPicker({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger render={trigger} />
-      <PopoverContent className="w-80 p-sm" align="start">
+      <PopoverContent width="xl" padding="sm" align="start">
         <IconPicker
           value={value.icon}
           onSelect={({ key, svgNodes }) => {

@@ -27,7 +27,7 @@ export function SortBuilderTrigger<TRow>(props: {
       open={open}
       onOpenChange={setOpen}
       align="end"
-      contentClassName="w-[24rem] max-w-[90vw]"
+      width="2xl"
       trigger={
         <Button
           variant={active ? "secondary" : "ghost"}

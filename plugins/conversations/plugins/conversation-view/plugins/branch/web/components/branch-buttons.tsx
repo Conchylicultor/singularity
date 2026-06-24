@@ -61,7 +61,7 @@ export function BranchButtons({
         </Button>
       }
       tooltip="Fork this session into a background conversation"
-      contentClassName="w-[480px]"
+      width="3xl"
     >
       <Stack gap="md" className="p-md">
         <Text as="div" variant="label">Branch from this conversation</Text>

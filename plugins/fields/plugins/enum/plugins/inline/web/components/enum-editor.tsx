@@ -30,7 +30,7 @@ export function EnumEditor(props: CellEditorProps): ReactNode {
         // Dismissed without choosing an option ⇒ cancel.
         if (!next && !chosen.current) props.onCancel();
       }}
-      contentClassName="w-48"
+      width="xs"
       trigger={
         <span className="truncate text-body">{current?.label ?? selected}</span>
       }

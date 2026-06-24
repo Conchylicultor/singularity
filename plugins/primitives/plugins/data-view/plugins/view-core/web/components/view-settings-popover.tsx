@@ -48,7 +48,7 @@ export function ViewSettingsPopover<T extends ViewTypeMeta>({
   };
 
   return (
-    <Stack gap="md" className="w-72">
+    <Stack gap="md">
       <Stack gap="2xs">
         <SectionLabel>Name</SectionLabel>
         <Input

@@ -83,7 +83,8 @@ export function CategoryChipToolbar() {
           {label}
         </Badge>
       }
-      contentClassName="w-56 p-xs"
+      width="sm"
+      padding="xs"
     >
         <ConfigPopoverHeader
           label="Set category"

@@ -36,7 +36,7 @@ export function SavePresetAffordance(props: {
         if (!next) setName("");
       }}
       align="start"
-      contentClassName="w-64"
+      width="md"
       trigger={
         <Button
           variant="ghost"

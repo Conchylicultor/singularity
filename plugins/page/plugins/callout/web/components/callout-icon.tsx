@@ -61,7 +61,7 @@ export function CalloutIcon({
           <PageIcon nodes={iconSvgNodes} fallback={MdLightbulb} className="size-5" />
         </Center>
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-sm" align="start">
+      <PopoverContent width="xl" padding="sm" align="start">
         {/* Color row */}
         <SectionLabel className="px-xs pt-xs pb-xs text-3xs">Color</SectionLabel>
         <Stack direction="row" gap="xs" wrap className="px-xs pb-sm">

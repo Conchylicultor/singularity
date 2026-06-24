@@ -49,7 +49,7 @@ function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
       description="Launch an agent to diagnose and fix the failing build."
       placeholder="Extra context (optional) — e.g. what changed, suspected cause…"
       align="start"
-      width="w-[480px]"
+      width="3xl"
       onLaunched={(conv) => {
         toast({
           type: "build",

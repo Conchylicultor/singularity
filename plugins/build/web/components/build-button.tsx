@@ -98,7 +98,8 @@ function BuildButtonInner({
         </Button>
       }
       align="end"
-      contentClassName="w-[480px] p-none"
+      width="3xl"
+      padding="none"
     >
       <div className="flex items-center justify-between border-b px-md py-sm">
         <Text as="span" variant="label">Builds</Text>

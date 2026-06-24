@@ -83,7 +83,7 @@ export function ColorButton() {
     <InlinePopover
       open={open}
       onOpenChange={(next) => (next ? openPopover() : closePopover())}
-      contentClassName="w-56"
+      width="sm"
       trigger={
         <IconButton
           icon={MdFormatColorText}

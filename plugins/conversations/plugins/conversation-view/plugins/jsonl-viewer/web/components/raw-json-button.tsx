@@ -19,7 +19,8 @@ export function RawJsonAction({ event }: { event: JsonlEvent }) {
         </button>
       }
       align="end"
-      contentClassName="w-[640px] max-w-[90vw] p-none"
+      width="4xl"
+      padding="none"
     >
       <Scroll axis="both" className="max-h-[60vh] rounded-md bg-muted/40 p-md">
         <Text as="pre" variant="caption">

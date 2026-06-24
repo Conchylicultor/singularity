@@ -711,7 +711,8 @@ function ReorderInner({
               <MdTune className="size-3.5" />
             </Button>
           }
-          contentClassName="w-72 p-2"
+          width="lg"
+          padding="xs"
         >
           <ReorderEditor {...editorProps} editMode orientation="vertical" />
         </InlinePopover>

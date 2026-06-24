@@ -69,7 +69,7 @@ export function TagsEditor(props: CellEditorProps): ReactNode {
         if (!next) finish(true);
         else setOpen(true);
       }}
-      contentClassName="w-64"
+      width="md"
       trigger={
         <Clip className="whitespace-nowrap">
           <Stack direction="row" gap="xs">

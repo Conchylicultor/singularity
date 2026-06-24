@@ -42,7 +42,8 @@ function PagePicker({
       trigger={trigger}
       open={open}
       onOpenChange={setOpen}
-      contentClassName="w-72 p-sm"
+      width="lg"
+      padding="sm"
     >
       <Stack gap="sm">
         <SearchInput

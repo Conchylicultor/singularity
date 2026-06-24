@@ -73,7 +73,8 @@ export function FolderPickerPopover({
         onOpenChange={setOpen}
         align="end"
         tooltip="Browse folders"
-        contentClassName="w-80 p-none"
+        width="xl"
+        padding="none"
         trigger={<IconButton icon={MdFolderOpen} label="Browse folders" />}
       >
         <FolderPicker

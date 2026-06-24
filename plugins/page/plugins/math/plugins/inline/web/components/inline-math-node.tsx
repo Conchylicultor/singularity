@@ -117,7 +117,8 @@ function InlineMathView({
         setDraft(expression);
         setOpen(next);
       }}
-      contentClassName="w-72 p-sm"
+      width="lg"
+      padding="sm"
       trigger={
         <span
           role="button"

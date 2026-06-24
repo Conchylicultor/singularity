@@ -1,6 +1,7 @@
 import { useId, useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import type { PopoverWidth } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
@@ -15,7 +16,7 @@ export type LaunchAgentPopoverProps = {
   placeholder?: string;
   getRequest: (userText: string) => LaunchRequest | Promise<LaunchRequest>;
   align?: "start" | "end";
-  width?: string;
+  width?: PopoverWidth;
   disabled?: boolean;
   onLaunched?: (conversation: Conversation) => void;
   /** Whether to show the preprompt picker. Defaults to `true`. */
@@ -29,7 +30,7 @@ export function LaunchAgentPopover({
   placeholder = "Extra context (optional)…",
   getRequest,
   align = "start",
-  width = "w-[420px]",
+  width = "3xl",
   disabled,
   onLaunched,
   showPreprompt = true,
@@ -46,8 +47,9 @@ export function LaunchAgentPopover({
       onOpenChange={setOpen}
       trigger={trigger}
       align={align}
+      width={width}
       // eslint-disable-next-line spacing/no-adhoc-spacing -- space-y between popover sections passed as a className string to InlinePopover (no flex container to host a Stack)
-      contentClassName={`${width} max-w-[90vw] space-y-3 p-md`}
+      contentClassName="space-y-3"
     >
       <Stack gap="xs">
         <Text as="div" variant="label">

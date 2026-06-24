@@ -74,7 +74,7 @@ export function ChipSelectFilterInput(
     <InlinePopover
       open={open}
       onOpenChange={setOpen}
-      contentClassName="w-64"
+      width="md"
       trigger={
         <Button variant="outline" aria-label="Select filter values">
           {summary === null ? (

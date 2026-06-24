@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactElement } from "react";
 import { InlinePopover, type InlinePopoverProps } from "@plugins/primitives/plugins/popover/web";
+import type { PopoverWidth, PopoverPadding } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { BlockHandle } from "../../core";
@@ -16,13 +17,15 @@ export function BlockTypeMenu({
   onSelect,
   align = "start",
   side = "bottom",
-  contentClassName = "w-56 p-xs",
+  width = "sm",
+  padding = "xs",
 }: {
   trigger: ReactElement;
   onSelect: (block: BlockHandle<unknown>) => void;
   align?: InlinePopoverProps["align"];
   side?: InlinePopoverProps["side"];
-  contentClassName?: string;
+  width?: PopoverWidth;
+  padding?: PopoverPadding;
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
@@ -55,7 +58,8 @@ export function BlockTypeMenu({
       }}
       align={align}
       side={side}
-      contentClassName={contentClassName}
+      width={width}
+      padding={padding}
       trigger={trigger}
     >
       <Stack gap="xs">

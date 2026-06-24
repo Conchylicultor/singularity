@@ -25,7 +25,7 @@ export function AddSortAffordance<TRow>(props: {
         open={open}
         onOpenChange={setOpen}
         align="start"
-        contentClassName="w-72"
+        width="lg"
         trigger={
           <Button variant="ghost" aria-label="Add sort">
             <MdAdd />

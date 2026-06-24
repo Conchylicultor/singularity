@@ -59,7 +59,7 @@ export function EntryEditor({
           open={open}
           onOpenChange={setOpen}
           align="end"
-          contentClassName="w-80"
+          width="xl"
           trigger={
             <Button variant="outline">
               <MdAdd />
