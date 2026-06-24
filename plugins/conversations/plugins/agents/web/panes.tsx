@@ -4,6 +4,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { AgentSideBody } from "./components/agent-side-body";
 import { agentsResource, type Agent } from "../shared/resources";
 import { Agents as AgentsSlots } from "./slots";
@@ -86,13 +87,13 @@ function AgentDetailBody(): ReactElement {
       <Stack gap="lg" className="px-xl pb-xl">
         <AgentsSlots.View.Render>
           {(v) => (
-            <section className="bg-card rounded-lg border p-lg">
+            <Surface level="raised" as="section" className="p-lg">
               {v.title ? (
                 // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the section title from its body
                 <Text as="h2" variant="label" className="mb-4">{v.title}</Text>
               ) : null}
               <v.component agentId={id} />
-            </section>
+            </Surface>
           )}
         </AgentsSlots.View.Render>
       </Stack>

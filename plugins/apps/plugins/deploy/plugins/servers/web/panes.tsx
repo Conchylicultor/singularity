@@ -3,6 +3,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Deploy } from "@plugins/apps/plugins/deploy/plugins/shell/web";
 import { serversResource, type Server } from "../shared";
 import { ServersList } from "./components/servers-list";
@@ -96,11 +97,11 @@ function ServerDetailContent({ serverId, server }: { serverId: string; server: S
       <Stack gap="lg" className="p-lg">
         <Deploy.Section.Render>
           {(s) => (
-            <section key={s.id} className="bg-card rounded-lg border p-lg">
+            <Surface key={s.id} level="raised" as="section" className="p-lg">
               {/* eslint-disable-next-line spacing/no-adhoc-spacing -- section title offset inside a bg/border/padded card, not a flex-gap sibling */}
               <Text as="h2" variant="label" className="mb-3">{s.title}</Text>
               <s.component serverId={serverId} />
-            </section>
+            </Surface>
           )}
         </Deploy.Section.Render>
       </Stack>

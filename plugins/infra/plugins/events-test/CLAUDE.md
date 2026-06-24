@@ -8,7 +8,7 @@
 - Web:
   - Slots: `eventsTestPane.Actions`
   - Contributes: `Pane.Register` "events-test", `DebugApp.Sidebar` "Events Test" → `component`
-  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Input`, `primitives/pane.openPane`, `primitives/pane.Pane`, `shell/notifications.toast`
+  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Input`, `primitives/pane.openPane`, `primitives/pane.Pane`, `shell/notifications.toast`
   - Exports: Values: `eventsTestPane`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `infra/events.deleteTrigger`, `infra/events.deleteTriggersFor`, `infra/events.trigger`, `infra/jobs.defineJob`, `infra/jobs.UNSAFE_sweepStuckLocks`

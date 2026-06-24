@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 export const CANVAS_NODE_TYPE = "graphCanvas";
 
@@ -43,7 +43,14 @@ export function CanvasNode({ data }: NodeProps<CanvasFlowNode>) {
     <div
       title={title ?? label}
       className={cn(
-        "bg-card text-foreground relative flex h-9 items-center gap-sm rounded-md border border-border px-sm text-caption shadow-sm transition-colors",
+        // The raised-surface chrome (rounded + border + bg-card + shadow) routed
+        // through the single source of truth, so a preset swap re-themes nodes
+        // with every other card. We use the class map directly (not <Surface>) to
+        // avoid the component's baked-in Ctrl+A select-scope, which is unwanted on
+        // an interactive xyflow node. tintClass/ringClass intentionally trail so a
+        // node's accent overrides the base border/bg.
+        SURFACE_LEVELS.raised,
+        "text-foreground relative flex h-9 items-center gap-sm px-sm text-caption transition-colors",
         "hover:border-foreground/40 focus:outline-none cursor-pointer",
         tintClass,
         ringClass,

@@ -41,6 +41,12 @@ ruleTester.run(
       `const a = <div className="rounded-md border bg-card p-card" />;`,
       // Not a contained surface: bg-card without the full raised fingerprint.
       `const a = <div className="bg-card p-3" />;`,
+      // `p-none` (zero padding) is NOT card padding — excluded from the ramp.
+      `const a = <div className="rounded-md border bg-card p-none" />;`,
+      // Layout components (Stack/SortableItem) are skipped by the host-tag gate,
+      // even when a surface recipe is smuggled through their className. Known
+      // limitation: route these through <Surface> / SURFACE_LEVELS instead.
+      `const a = <Stack className="rounded-md border bg-card p-lg" />;`,
       // base / sunken are NOT linted — bg-background / bg-muted are ambiguous.
       `const a = <div className="bg-background rounded-md border p-3 shadow-sm" />;`,
       `const a = <div className="bg-muted rounded-md border p-3" />;`,
@@ -58,6 +64,18 @@ ruleTester.run(
       // raised across split cn() fragments.
       {
         code: `const a = <div className={cn("rounded-md border", "bg-card", "p-2")} />;`,
+        errors: [{ messageId: "adhocRaised" }],
+      },
+      // raised with named-ramp padding (`p-lg`) — the word-valued spacing utility
+      // is real card padding and must complete the fingerprint.
+      {
+        code: `const a = <div className="rounded-lg border bg-card p-lg" />;`,
+        errors: [{ messageId: "adhocRaised" }],
+      },
+      // raised on a semantic block container (`<section>`) — the section-as-card
+      // escape hatch is now closed.
+      {
+        code: `const a = <section className="rounded-lg border border-border bg-card p-lg" />;`,
         errors: [{ messageId: "adhocRaised" }],
       },
       // overlay fingerprint.

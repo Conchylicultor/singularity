@@ -1,4 +1,4 @@
-import { Button, Input, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, Input, cn, SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useState } from "react";
 import { MdAdd, MdDragIndicator, MdClose } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -139,7 +139,8 @@ function StringRow({
       handle
       className={({ isDragging }) =>
         cn(
-          "flex items-center gap-sm rounded-md border border-border bg-card p-sm",
+          SURFACE_LEVELS.raised,
+          "flex items-center gap-sm p-sm",
           isDragging && "opacity-40",
         )
       }

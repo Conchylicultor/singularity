@@ -43,6 +43,11 @@ const SHADOW = /^shadow(-(2xs|xs|sm|md|lg|xl|2xl))?$/;
 // padding tokens (raised fingerprint).
 const P_NUM = /^p-\d/; // p-3, p-2, …
 const P_ARBITRARY = /^p-\[/; // p-[…]
+// Named density-ramp padding (`p-sm`…`p-2xl`) — the sanctioned word-valued
+// spacing utilities (see no-adhoc-spacing, which *allows* these). They ARE card
+// padding; omitting them let a `bg-card` + rounded + border + `p-lg` card slip the
+// raised fingerprint. `p-none` (zero) is excluded — a zero-padded box isn't padded.
+const P_RAMP = /^p-(2xs|xs|sm|md|lg|xl|2xl)$/;
 const PX = /^px-/;
 const PY = /^py-/;
 // named padding token (`p-card`) — the sanctioned token escape, parallel to `p-row`.
@@ -94,7 +99,11 @@ function baseClass(token: string): string {
   return idx === -1 ? token : token.slice(idx + 1);
 }
 
-const HOST_TAGS = new Set(["span", "div", "button", "a"]);
+// Intrinsic host tags a surface recipe can land on. Includes the semantic block
+// containers (`section`/`article`/`li`) that legitimately ARE cards — a raised
+// `<section className="bg-card rounded-lg border p-lg">` is exactly the open-coded
+// recipe this rule exists to redirect, and omitting them was a real escape hatch.
+const HOST_TAGS = new Set(["span", "div", "button", "a", "section", "article", "li"]);
 
 export default createRule({
   name: "no-adhoc-surface",
@@ -127,9 +136,13 @@ export default createRule({
       JSXAttribute(node) {
         if (node.name.type !== "JSXIdentifier" || node.name.name !== "className") return;
 
-        // Host-tag gate: require an intrinsic {span, div, button, a}. Skips
-        // component elements (`<Surface>`, `<PopoverContent>`, base-ui `*.Popup`
-        // — they render through a primitive) and other intrinsics for free.
+        // Host-tag gate: require an intrinsic from HOST_TAGS (span/div/button/a
+        // + the semantic block containers section/article/li). Skips component
+        // elements (`<Surface>`, `<PopoverContent>`, base-ui `*.Popup` — they
+        // render through a primitive). NOTE: this also skips layout components
+        // like `<Stack>`/`<SortableItem>`, so a surface recipe smuggled through
+        // their `className` is invisible here — route those through `<Surface>`
+        // or `SURFACE_LEVELS` directly rather than open-coding on a layout box.
         const tag = node.parent.name;
         if (tag.type !== "JSXIdentifier" || !HOST_TAGS.has(tag.name)) return;
 
@@ -152,7 +165,7 @@ export default createRule({
           if (BG_CARD.test(t)) hasCardBg = true;
           if (BG_POPOVER.test(t)) hasPopoverBg = true;
           if (SHADOW.test(t)) hasShadow = true;
-          if (P_NUM.test(t) || P_ARBITRARY.test(t)) hasPadding = true;
+          if (P_NUM.test(t) || P_ARBITRARY.test(t) || P_RAMP.test(t)) hasPadding = true;
           if (PX.test(t)) hasPx = true;
           if (PY.test(t)) hasPy = true;
           if (t === P_CARD) pCardEscape = true;

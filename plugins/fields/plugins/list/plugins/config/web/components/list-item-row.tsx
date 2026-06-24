@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback } from "react";
 import { MdDragIndicator, MdClose } from "react-icons/md";
@@ -24,7 +24,8 @@ export function ListItemRow<F extends FieldsRecord>({
       handle
       className={({ isDragging }) =>
         cn(
-          "flex items-start gap-sm rounded-md border border-border bg-card p-sm",
+          SURFACE_LEVELS.raised,
+          "flex items-start gap-sm p-sm",
           isDragging && "opacity-40",
         )
       }

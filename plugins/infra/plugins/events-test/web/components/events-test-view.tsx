@@ -4,6 +4,7 @@ import { MdBolt, MdDelete, MdRefresh, MdSend } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -495,13 +496,15 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <Stack as="section" gap="md" className="rounded-lg border border-border bg-card p-lg">
-      <div className="flex items-center justify-between gap-sm">
-        <Text as="h2" variant="label">{title}</Text>
-        {action}
-      </div>
-      <Stack gap="md">{children}</Stack>
-    </Stack>
+    <Surface level="raised" as="section" className="p-lg">
+      <Stack gap="md">
+        <div className="flex items-center justify-between gap-sm">
+          <Text as="h2" variant="label">{title}</Text>
+          {action}
+        </div>
+        <Stack gap="md">{children}</Stack>
+      </Stack>
+    </Surface>
   );
 }
 

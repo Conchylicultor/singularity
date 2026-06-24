@@ -1,6 +1,7 @@
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Stats } from "../slots";
 import { StatsProvider, useShowEmptyDays } from "./stats-context";
 
@@ -40,10 +41,12 @@ function StatsContent() {
         ) : (
           <Stats.Chart.Render>
             {(item) => (
-              <Stack gap="lg" as="section" className="bg-card rounded-lg border p-lg">
-                <Text as="h2" variant="label">{item.title}</Text>
-                <item.component />
-              </Stack>
+              <Surface level="raised" as="section" className="p-lg">
+                <Stack gap="lg">
+                  <Text as="h2" variant="label">{item.title}</Text>
+                  <item.component />
+                </Stack>
+              </Surface>
             )}
           </Stats.Chart.Render>
         )}
