@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useMemo, useRef } from "react";
+import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import dagre from "dagre";
 import {
   Background,
@@ -241,25 +242,15 @@ function GraphCanvasInner({
   );
 
   // Re-fit on container resize (initial settle, pane/sidebar toggles, window
-  // resize) and whenever the node set / focus changes.
-  useEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    let frame: number | null = null;
-    const refit = () => {
-      if (frame !== null) cancelAnimationFrame(frame);
-      frame = requestAnimationFrame(() => {
-        void fitView({ padding: 0.15, maxZoom: 1 });
-      });
-    };
-    refit();
-    const ro = new ResizeObserver(refit);
-    ro.observe(el);
-    return () => {
-      ro.disconnect();
-      if (frame !== null) cancelAnimationFrame(frame);
-    };
-  }, [fitKey, focusId, fitView]);
+  // resize) and whenever the node set / focus changes. The primitive RAF-
+  // debounces resize callbacks and runs the initial fit synchronously on mount.
+  useResizeObserver(
+    containerRef,
+    () => {
+      void fitView({ padding: 0.15, maxZoom: 1 });
+    },
+    { deps: [fitKey, focusId, fitView] },
+  );
 
   return (
     <div ref={containerRef} className="bg-muted/30 size-full">

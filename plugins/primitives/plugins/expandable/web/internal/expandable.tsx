@@ -1,5 +1,4 @@
 import {
-  useLayoutEffect,
   useRef,
   useState,
   type CSSProperties,
@@ -7,6 +6,7 @@ import {
 } from "react";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 
 export interface ExpandableProps {
   /** The content to clamp. */
@@ -61,28 +61,15 @@ export function Expandable({
   // Overflow detection: ResizeObserver on the measured content box, deferred
   // via requestAnimationFrame. No timers, no polling. Fires again when async
   // media (images) load and grow the content.
-  useLayoutEffect(() => {
-    const content = contentRef.current;
-    if (!content) return;
-
-    let rafId: number | null = null;
-    const recompute = () => {
+  useResizeObserver(
+    contentRef,
+    () => {
+      const content = contentRef.current;
+      if (!content) return;
       setOverflowing(content.offsetHeight > collapsedHeight + 1);
-    };
-    const schedule = () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(recompute);
-    };
-
-    const ro = new ResizeObserver(schedule);
-    ro.observe(content);
-    recompute();
-
-    return () => {
-      ro.disconnect();
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
-  }, [collapsedHeight]);
+    },
+    { deps: [collapsedHeight] },
+  );
 
   const clamped = overflowing && !expanded;
   const clipStyle: CSSProperties = clamped

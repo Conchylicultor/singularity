@@ -4,7 +4,6 @@ import {
   Fragment,
   useCallback,
   useContext,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -26,6 +25,7 @@ import {
 } from "@plugins/reorder/plugins/editor/web";
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import { useStageDefault } from "@plugins/config_v2/plugins/staging/web";
 import { reorderDescriptors, reorderPluginIdForSlot } from "./descriptors";
 import { useStagedTree } from "./staged-tree";
@@ -272,34 +272,21 @@ function ReorderInner({
   // a real width is known, so we don't flash a collapse-into-popover on mount.
   const [hostWidth, setHostWidth] = useState<number | null>(null);
   // Measure the host (the sentinel's parent) for BOTH flex-direction and width.
-  // ResizeObserver + rAF, no timers (repo rule; mirrors collapsible-wrap).
-  useLayoutEffect(() => {
-    const parent = sentinelRef.current?.parentElement;
-    if (!parent) return;
-
-    const recompute = () => {
+  // The primitive RAF-debounces resizes and runs the initial measure
+  // synchronously (no timers; repo rule). The getter resolves the parent at
+  // observe time, since the sentinel may not be mounted on the first render.
+  useResizeObserver(
+    () => sentinelRef.current?.parentElement,
+    () => {
+      const parent = sentinelRef.current?.parentElement;
+      if (!parent) return;
       const dir = getComputedStyle(parent).flexDirection;
       setOrientation(
         dir === "row" || dir === "row-reverse" ? "horizontal" : "vertical",
       );
       setHostWidth(parent.clientWidth);
-    };
-
-    let rafId: number | null = null;
-    const schedule = () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(recompute);
-    };
-
-    const ro = new ResizeObserver(schedule);
-    ro.observe(parent);
-    recompute();
-
-    return () => {
-      ro.disconnect();
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
-  }, []);
+    },
+  );
 
   const state = useMemo(
     () => applyTree(contributions, effectiveItems),

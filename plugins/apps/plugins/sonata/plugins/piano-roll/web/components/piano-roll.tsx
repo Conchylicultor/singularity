@@ -13,6 +13,7 @@ import {
   useState,
 } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import {
   bars,
   buildTempoIndex,
@@ -93,34 +94,6 @@ const WHEEL_IDLE_MS = 180;
  *  fills ~92% of the lane at max zoom-out, leaving a small gap above it. */
 const FIT_MARGIN = 0.92;
 
-/** Observe an element's pixel size via ResizeObserver (no polling). */
-function useElementSize(): [
-  React.RefObject<HTMLDivElement | null>,
-  { width: number; height: number },
-] {
-  const ref = useRef<HTMLDivElement | null>(null);
-  const [size, setSize] = useState({ width: 0, height: 0 });
-
-  useLayoutEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const observer = new ResizeObserver((entries) => {
-      const entry = entries[0];
-      if (!entry) return;
-      const { width, height } = entry.contentRect;
-      setSize((prev) =>
-        prev.width === width && prev.height === height
-          ? prev
-          : { width, height },
-      );
-    });
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, []);
-
-  return [ref, size];
-}
-
 /**
  * The cursor scroll layer: one `translateY` over the cursor-INVARIANT overlay
  * content, mirroring the canvas scene's `setScroll` so DOM overlays and canvas
@@ -153,7 +126,18 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   const cursor = useCursorApi();
 
   // We measure the LANE (above the keyboard); its height drives the time axis.
-  const [laneRef, lane] = useElementSize();
+  // `useElementSize` hands back a callback ref; we also mirror the node into
+  // state so the native wheel listener below can attach to the live element
+  // (the size hook owns measurement, but doesn't expose the node).
+  const [sizeRef, lane] = useElementSize<HTMLDivElement>();
+  const [laneEl, setLaneEl] = useState<HTMLDivElement | null>(null);
+  const laneRef = useCallback(
+    (node: HTMLDivElement | null) => {
+      sizeRef(node);
+      setLaneEl(node);
+    },
+    [sizeRef],
+  );
 
   // Synthesia-style note-name labels (opt-in). Spelling follows the score's key
   // signature so accidentals read in-key (Eb vs D#), matching the keyboard below.
@@ -398,7 +382,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // preventDefault) so the page never scrolls under the gesture. Live zoom +
   // play-state are read from refs so a 60fps gesture never re-attaches.
   useEffect(() => {
-    const el = laneRef.current;
+    const el = laneEl;
     if (!el || !hasNotes) return;
 
     let idle: number | null = null;
@@ -451,7 +435,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
       if (idle !== null) window.clearTimeout(idle);
     };
   }, [
-    laneRef,
+    laneEl,
     hasNotes,
     cursor,
     tempo,

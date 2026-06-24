@@ -1,4 +1,5 @@
-import { useCallback, useRef, useState } from "react";
+import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
+import { useCallback, useState } from "react";
 
 /**
  * Measure the live column count of a responsive `auto-fill` card grid.
@@ -24,32 +25,21 @@ export function useGridColumns(minCardWidthPx: number): {
   columns: number;
 } {
   const [columns, setColumns] = useState(0);
-  const elRef = useRef<HTMLElement | null>(null);
-  const observerRef = useRef<ResizeObserver | null>(null);
+  const [el, setEl] = useState<HTMLElement | null>(null);
+  const probeRef = useCallback((node: HTMLElement | null) => setEl(node), []);
 
-  const measure = useCallback(() => {
-    const el = elRef.current;
-    if (!el) return;
-    const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
-    // The probe carries no padding, so clientWidth is the content width the
-    // cards get. Mirrors the browser's own `auto-fill` track count.
-    const width = el.clientWidth;
-    const count = Math.floor((width + gap) / (minCardWidthPx + gap));
-    setColumns(Math.max(1, count));
-  }, [minCardWidthPx]);
-
-  const probeRef = useCallback(
-    (el: HTMLElement | null) => {
-      observerRef.current?.disconnect();
-      observerRef.current = null;
-      elRef.current = el;
+  useResizeObserver(
+    () => el,
+    () => {
       if (!el) return;
-      measure();
-      const observer = new ResizeObserver(measure);
-      observer.observe(el);
-      observerRef.current = observer;
+      const gap = parseFloat(getComputedStyle(el).columnGap) || 0;
+      // The probe carries no padding, so clientWidth is the content width the
+      // cards get. Mirrors the browser's own `auto-fill` track count.
+      const width = el.clientWidth;
+      const count = Math.floor((width + gap) / (minCardWidthPx + gap));
+      setColumns(Math.max(1, count));
     },
-    [measure],
+    { deps: [el, minCardWidthPx] },
   );
 
   return { probeRef, columns };

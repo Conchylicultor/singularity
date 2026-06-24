@@ -6,7 +6,7 @@
 
 - Description: Progressively hides children that don't fit the container width. Exposes ResponsiveOverflow component and useResponsiveOverflow hook.
 - Web:
-  - Uses: `primitives/css/ui-kit.cn`
+  - Uses: `primitives/css/ui-kit.cn`, `primitives/element-size.useResizeObserver`
   - Exports: Types: `ResponsiveOverflowProps`, `UseResponsiveOverflowHandle`, `UseResponsiveOverflowOptions`; Values: `ResponsiveOverflow`, `useResponsiveOverflow`
 - Cross-plugin:
   - Imported by: `apps`, `conversations/conversation-view/prompt-templates`

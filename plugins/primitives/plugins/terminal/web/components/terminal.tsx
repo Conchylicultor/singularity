@@ -5,6 +5,7 @@ import { WebLinksAddon } from "@xterm/addon-web-links";
 import "@xterm/xterm/css/xterm.css";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import type { ClientMessage, ServerMessage } from "../../shared/protocol";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/terminal`;
@@ -17,6 +18,7 @@ const THEME = {
 export function TerminalView({ command }: { command?: string[] }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const terminalRef = useRef<Terminal | null>(null);
+  const fitAddonRef = useRef<FitAddon | null>(null);
   const sessionIdRef = useRef<string | null>(null);
   // Holds the latest {cols,rows} observed before `session.created` arrives.
   // Flushed as a `session.resize` once the server acknowledges the session,
@@ -94,6 +96,7 @@ export function TerminalView({ command }: { command?: string[] }) {
     terminalRef.current = term;
 
     const fitAddon = new FitAddon();
+    fitAddonRef.current = fitAddon;
     term.loadAddon(fitAddon);
     term.loadAddon(new WebLinksAddon());
 
@@ -120,17 +123,18 @@ export function TerminalView({ command }: { command?: string[] }) {
       if (ws) syncDims(ws, cols, rows);
     });
 
-    const observer = new ResizeObserver(() => fitAddon.fit());
-    observer.observe(container);
-
     return () => {
-      observer.disconnect();
       inputDisposable.dispose();
       resizeDisposable.dispose();
       terminalRef.current = null;
+      fitAddonRef.current = null;
       term.dispose();
     };
   }, [wsHandle, syncDims]);
+
+  // Re-fit the terminal whenever its container resizes. The fitAddon lives in a
+  // ref so this observation is decoupled from the terminal lifecycle effect.
+  useResizeObserver(containerRef, () => fitAddonRef.current?.fit());
 
   return (
     <div className="h-full w-full p-sm" style={{ background: THEME.background }}>

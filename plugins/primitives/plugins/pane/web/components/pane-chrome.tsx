@@ -1,6 +1,7 @@
 import { Button, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
-import { Fragment, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { Fragment, useContext, useRef, useState, type ReactNode } from "react";
+import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import { createPortal } from "react-dom";
 import { MdClose, MdMoreHoriz, MdOpenInFull } from "react-icons/md";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
@@ -227,15 +228,20 @@ function OverflowActionsBar({
 
   const containerRef = useRef<HTMLDivElement>(null);
   const measureRef = useRef<HTMLDivElement>(null);
-  // Start fully expanded; useLayoutEffect corrects before first paint.
+  // Start fully expanded; the synchronous initial measure corrects before first paint.
   const [visibleCount, setVisibleCount] = useState(totalCount);
 
-  useLayoutEffect(() => {
-    const container = containerRef.current;
-    const measure = measureRef.current;
-    if (!container || !measure) return;
+  // The primitive runs this synchronously on mount (no-flash initial measure)
+  // and RAF-debounced on every container resize — so the setState never lands
+  // during the layout phase mutating the toolbar DOM and re-firing the observer
+  // (the ResizeObserver loop Chrome warns about).
+  useResizeObserver(
+    containerRef,
+    () => {
+      const container = containerRef.current;
+      const measure = measureRef.current;
+      if (!container || !measure) return;
 
-    const recompute = () => {
       const available = container.offsetWidth;
       const items = Array.from(measure.children) as HTMLElement[];
 
@@ -269,26 +275,9 @@ function OverflowActionsBar({
         }
       }
       setVisibleCount(count);
-    };
-
-    // Defer observer-triggered recomputes to the next animation frame so that
-    // the setState call doesn't land during the layout phase — which would
-    // mutate the toolbar DOM, change the container width, and immediately
-    // re-fire the observer (the ResizeObserver loop Chrome warns about).
-    // The direct recompute() call below stays synchronous for the no-flash
-    // initial measurement inside useLayoutEffect.
-    let rafId: number | null = null;
-    const ro = new ResizeObserver(() => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(recompute);
-    });
-    ro.observe(container);
-    recompute();
-    return () => {
-      ro.disconnect();
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
-  }, [totalCount]);
+    },
+    { deps: [totalCount] },
+  );
 
   const visibleSlot = slotActions.slice(0, Math.min(visibleCount, slotActions.length));
   const overflowSlot = slotActions.slice(Math.min(visibleCount, slotActions.length));

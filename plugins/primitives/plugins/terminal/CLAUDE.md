@@ -6,7 +6,7 @@
 
 - Description: Exposes view factories for terminal panes; no web contributions yet.
 - Web:
-  - Uses: `primitives/latest-ref.useLatestRef`, `primitives/networking.useReconnectingWebSocket`
+  - Uses: `primitives/element-size.useResizeObserver`, `primitives/latest-ref.useLatestRef`, `primitives/networking.useReconnectingWebSocket`
   - Exports: Values: `terminalPane`
 - Server:
   - Uses: `infra/paths.HOME_DIR`

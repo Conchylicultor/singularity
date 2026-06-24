@@ -177,6 +177,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
+            - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
         - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
     - **`web-core`**
@@ -305,6 +306,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
     - **`diff-view`** — Generic side-by-side / text diff renderer primitive. Exposes TextDiff (two in-memory strings), DiffView/DiffOrImageView (worktree file vs a git ref), DiffRenderer, and the shiki token helpers.
     - **`editable-field`** — Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
+    - **`element-size`** — Element-size ResizeObserver idiom as a primitive: useElementSize(target?) reactively measures an element's size (callback ref, getBoundingClientRect, supports attach-one-node-measure-another via a target getter), and useResizeObserver(target, onResize, {debounce, deps}) is the substrate — synchronous initial measure, RAF-debounced resize callbacks, auto cleanup. The single sanctioned home for the hand-rolled ResizeObserver-for-size idiom.
     - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a registerBoundaryReporter() hook for opt-in crash reporting.
     - **`expandable`** — Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
     - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.

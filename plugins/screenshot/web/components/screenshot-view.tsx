@@ -10,6 +10,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import { getScreenshot } from "../../shared/endpoints";
 import { ToolsPane, type Tool, type DrawSettings } from "./tools-pane";
 import { CropOverlay, type CropRect } from "./crop-overlay";
@@ -200,8 +201,10 @@ function ImageStage({
   useEffect(() => () => URL.revokeObjectURL(url), [url]);
 
   // Track the rendered image rectangle (for mapping pointer events to image px).
-  useEffect(() => {
-    const measure = () => {
+  // Observes both the container and the image; no-ops until both are mounted.
+  useResizeObserver(
+    [containerRef, imgRef],
+    () => {
       const img = imgRef.current;
       const container = containerRef.current;
       if (!img || !container) return;
@@ -216,13 +219,9 @@ function ImageStage({
           imgRect.height,
         ),
       );
-    };
-    measure();
-    const ro = new ResizeObserver(measure);
-    if (containerRef.current) ro.observe(containerRef.current);
-    if (imgRef.current) ro.observe(imgRef.current);
-    return () => ro.disconnect();
-  }, [url, naturalSize]);
+    },
+    { deps: [url, naturalSize] },
+  );
 
   return (
     <Center as="div" ref={containerRef} className="relative h-full w-full p-lg">

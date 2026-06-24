@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-lint-resize-observer-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "resize-observer-safety lint rule: no-raw-resize-observer"
+}

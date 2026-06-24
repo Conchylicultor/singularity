@@ -1,6 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import {
-  useLayoutEffect,
   useRef,
   useState,
   type ReactNode,
@@ -63,6 +63,101 @@ function suppressSiblingGrow(
   }
 }
 
+/**
+ * Walk up to find an ancestor whose width tracks available layout space, not
+ * its content. Content-sized ancestors (flex-grow: 0) shrink with the container
+ * and never trigger re-expansion. The first ancestor with flex-grow > 0 fills
+ * its flex parent and will resize when the viewport or layout changes. Pure DOM
+ * walk — deterministic, so re-deriving it per call is behavior-identical to
+ * computing it once.
+ */
+function findObservedAncestor(container: HTMLElement): HTMLElement | null {
+  let node: HTMLElement | null = container.parentElement;
+  while (node) {
+    const s = getComputedStyle(node);
+    if (s.display !== "contents" && s.flexGrow !== "0") return node;
+    node = node.parentElement;
+  }
+  return null;
+}
+
+/**
+ * The width available to the container. With an explicit `constraint` element,
+ * its width is authoritative. Otherwise temporarily make the entire chain from
+ * container to the observed ancestor "greedy" (flex: 1 1 0), and suppress
+ * flex-grow on competing siblings (e.g. reorder spacers). The flex engine then
+ * gives the container exactly the available space. Mutate → forced reflow
+ * (offsetWidth) → restore in one synchronous block — the browser never paints
+ * the intermediate state.
+ *
+ * Module-level (operates on explicit elements, never the hook's props/refs) so
+ * the React Compiler doesn't read its DOM mutations as render-time prop writes.
+ */
+function measureAvailable(
+  container: HTMLElement,
+  observedAncestor: HTMLElement | null,
+  constraint: HTMLElement | null,
+): number {
+  if (constraint) return constraint.offsetWidth;
+  if (!observedAncestor) return container.offsetWidth;
+
+  const saved: { el: HTMLElement; css: string }[] = [];
+  const save = (el: HTMLElement) => saved.push({ el, css: el.style.cssText });
+
+  let node: HTMLElement | null = container;
+  while (node && node !== observedAncestor) {
+    if (getComputedStyle(node).display !== "contents") {
+      save(node);
+      node.style.flex = "1 1 0";
+      node.style.minWidth = "0";
+      // Suppress flex-grow on siblings in the same flex context so they don't
+      // compete for space during measurement.
+      suppressSiblingGrow(node, saved);
+    }
+    node = node.parentElement;
+  }
+  const w = container.offsetWidth;
+  for (const { el, css } of saved) el.style.cssText = css;
+  return w;
+}
+
+/**
+ * How many of `measure`'s children fit within the container's available width,
+ * accounting for the inter-item `gap`. Module-level for the same reason as
+ * {@link measureAvailable}.
+ */
+function computeVisibleCount(
+  container: HTMLElement,
+  measure: HTMLElement,
+  constraint: HTMLElement | null,
+  gap: number,
+): number {
+  const observedAncestor = constraint ? null : findObservedAncestor(container);
+  const available = measureAvailable(container, observedAncestor, constraint);
+  const items = Array.from(measure.children) as HTMLElement[];
+  if (items.length === 0) return 0;
+
+  const totalW = items.reduce(
+    (acc, el, i) => acc + el.offsetWidth + (i > 0 ? gap : 0),
+    0,
+  );
+  if (totalW <= available) return items.length;
+
+  let used = 0;
+  let fitCount = 0;
+  for (const [i, item] of items.entries()) {
+    const gapBefore = i > 0 ? gap : 0;
+    const next = used + gapBefore + item.offsetWidth;
+    if (next <= available) {
+      used = next;
+      fitCount = i + 1;
+    } else {
+      break;
+    }
+  }
+  return fitCount;
+}
+
 export function useResponsiveOverflow({
   count,
   gap = 4,
@@ -72,117 +167,29 @@ export function useResponsiveOverflow({
   const measureRef = useRef<HTMLDivElement>(null);
   const [visibleCount, setVisibleCount] = useState(count);
 
-  useLayoutEffect(() => {
+  const recompute = () => {
     const container = containerRef.current;
     const measure = measureRef.current;
     if (!container || !measure) return;
     if (constraintRef && !constraintRef.current) return;
 
     const constraint = constraintRef?.current ?? null;
+    setVisibleCount(computeVisibleCount(container, measure, constraint, gap));
+  };
 
-    // Walk up to find an ancestor whose width tracks available layout
-    // space, not its content.  Content-sized ancestors (flex-grow: 0)
-    // shrink with the container and never trigger re-expansion.  The
-    // first ancestor with flex-grow > 0 fills its flex parent and will
-    // resize when the viewport or layout changes.
-    let observedAncestor: HTMLElement | null = null;
-    if (!constraint) {
-      let node: HTMLElement | null = container.parentElement;
-      while (node) {
-        const s = getComputedStyle(node);
-        if (s.display !== "contents" && s.flexGrow !== "0") {
-          observedAncestor = node;
-          break;
-        }
-        node = node.parentElement;
-      }
-    }
-
-    const measureAvailable = (): number => {
-      if (constraint) return constraint.offsetWidth;
-      if (!observedAncestor) return container.offsetWidth;
-
-      // Temporarily make the entire chain from container to the observed
-      // ancestor "greedy" (flex: 1 1 0), and suppress flex-grow on
-      // competing siblings (e.g. reorder spacers).  The flex engine then
-      // gives the container exactly the available space.  Mutate → forced
-      // reflow (offsetWidth) → restore in one synchronous block — the
-      // browser never paints the intermediate state.
-      const saved: { el: HTMLElement; css: string }[] = [];
-      const save = (el: HTMLElement) =>
-        saved.push({ el, css: el.style.cssText });
-
-      let node: HTMLElement | null = container;
-      while (node && node !== observedAncestor) {
-        if (getComputedStyle(node).display !== "contents") {
-          save(node);
-          node.style.flex = "1 1 0";
-          node.style.minWidth = "0";
-
-          // Suppress flex-grow on siblings in the same flex context so
-          // they don't compete for space during measurement.
-          suppressSiblingGrow(node, saved);
-        }
-        node = node.parentElement;
-      }
-      const w = container.offsetWidth;
-      for (const { el, css } of saved) el.style.cssText = css;
-      return w;
-    };
-
-    const recompute = () => {
-      const available = measureAvailable();
-      const items = Array.from(measure.children) as HTMLElement[];
-
-      if (items.length === 0) {
-        setVisibleCount(0);
-        return;
-      }
-
-      const totalW = items.reduce(
-        (acc, el, i) => acc + el.offsetWidth + (i > 0 ? gap : 0),
-        0,
-      );
-      if (totalW <= available) {
-        setVisibleCount(items.length);
-        return;
-      }
-
-      let used = 0;
-      let fitCount = 0;
-      for (const [i, item] of items.entries()) {
-        const gapBefore = i > 0 ? gap : 0;
-        const next = used + gapBefore + item.offsetWidth;
-        if (next <= available) {
-          used = next;
-          fitCount = i + 1;
-        } else {
-          break;
-        }
-      }
-      setVisibleCount(fitCount);
-    };
-
-    let rafId: number | null = null;
-    const scheduleRecompute = () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(recompute);
-    };
-    const ro = new ResizeObserver(scheduleRecompute);
-
-    if (constraint) {
-      ro.observe(constraint);
-    } else {
-      ro.observe(container);
-      if (observedAncestor) ro.observe(observedAncestor);
-    }
-
-    recompute();
-    return () => {
-      ro.disconnect();
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
-  }, [count, gap, constraintRef]);
+  useResizeObserver(
+    () => {
+      const container = containerRef.current;
+      if (!container) return null;
+      if (constraintRef && !constraintRef.current) return null;
+      const constraint = constraintRef?.current ?? null;
+      if (constraint) return constraint;
+      const ancestor = findObservedAncestor(container);
+      return ancestor ? [container, ancestor] : container;
+    },
+    recompute,
+    { deps: [count, gap, constraintRef] },
+  );
 
   return { containerRef, measureRef, visibleCount };
 }

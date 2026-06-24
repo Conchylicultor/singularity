@@ -2,13 +2,13 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import {
   useCallback,
-  useLayoutEffect,
   useMemo,
   useRef,
   useState,
   type CSSProperties,
   type ReactNode,
 } from "react";
+import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import {
   useEditMode,
@@ -94,11 +94,11 @@ export function CollapsibleWrap({
   // requestAnimationFrame. No timers/polling. We track both the 1-row clamp
   // height (the box's fixed layout height in BOTH states) and the full content
   // height (used to size the expanded popover backdrop).
-  useLayoutEffect(() => {
-    const wrap = wrapRef.current;
-    if (!wrap) return;
-
-    const recompute = () => {
+  useResizeObserver(
+    wrapRef,
+    () => {
+      const wrap = wrapRef.current;
+      if (!wrap) return;
       // The reorder middleware wraps each contribution; in view mode those
       // wrappers are `display:contents` (offsetHeight 0). Walk through them to
       // the real boxes and take a uniform (global-max) row height.
@@ -113,23 +113,9 @@ export function CollapsibleWrap({
       setClampHeight(clamp);
       setContentHeight(wrap.scrollHeight);
       setOverflowing(wrap.scrollHeight > clamp + 1);
-    };
-
-    let rafId: number | null = null;
-    const schedule = () => {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = requestAnimationFrame(recompute);
-    };
-
-    const ro = new ResizeObserver(schedule);
-    ro.observe(wrap);
-    recompute();
-
-    return () => {
-      ro.disconnect();
-      if (rafId !== null) cancelAnimationFrame(rafId);
-    };
-  }, [rows, gap, expanded]);
+    },
+    { deps: [rows, gap, expanded] },
+  );
 
   const collapse = useCallback(() => setUserExpanded(false), []);
   const expand = useCallback(() => setUserExpanded(true), []);

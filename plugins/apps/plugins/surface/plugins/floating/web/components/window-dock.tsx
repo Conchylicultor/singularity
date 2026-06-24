@@ -12,7 +12,7 @@ import {
   windowForTab,
   type FloatingWindow,
 } from "../hooks/use-floating-windows";
-import { useElementSize } from "../hooks/use-element-size";
+import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import { WorkspacePager } from "./workspace-pager";
 
 /**

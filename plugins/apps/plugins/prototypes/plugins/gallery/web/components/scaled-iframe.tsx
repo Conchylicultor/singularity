@@ -1,4 +1,5 @@
-import { useLayoutEffect, useRef, useState } from "react";
+import { useMemo } from "react";
+import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import { prototypeUrl, type PrototypeMeta } from "@plugins/apps/plugins/prototypes/plugins/files/core";
 
 /**
@@ -22,28 +23,19 @@ export function ScaledIframe({
   version: number;
   title?: string;
 }) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [containerRef, { width, height }] = useElementSize<HTMLDivElement>();
   // Default to 1 (not 0): the iframe must ALWAYS mount so it loads, even before
   // the container is measured — gating it behind a measured scale meant a 0-size
   // mount (a ResizeObserver timing race) left the frame permanently absent. The
   // observer only ever refines the scale down to fit; overflow-hidden clips the
   // at-most-one-frame overshoot before it settles.
-  const [scale, setScale] = useState(1);
-
-  useLayoutEffect(() => {
-    const el = containerRef.current;
-    if (!el) return;
-    const compute = () => {
-      const { width, height } = el.getBoundingClientRect();
-      if (width === 0 || height === 0) return;
-      const s = Math.min(width / meta.viewport.w, height / meta.viewport.h, 1);
-      setScale(s);
-    };
-    compute();
-    const ro = new ResizeObserver(compute);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [meta.viewport.w, meta.viewport.h]);
+  const scale = useMemo(
+    () =>
+      width && height
+        ? Math.min(width / meta.viewport.w, height / meta.viewport.h, 1)
+        : 1,
+    [width, height, meta.viewport.w, meta.viewport.h],
+  );
 
   const src = prototypeUrl(meta.name, { v: version });
 

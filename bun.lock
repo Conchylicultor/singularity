@@ -1959,6 +1959,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-reactive-server-io",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/resize-observer-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-resize-observer-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/provision": {
       "name": "@singularity/plugin-framework-tooling-provision",
       "version": "0.0.1",
@@ -2818,6 +2822,10 @@
     },
     "plugins/primitives/plugins/editable-field": {
       "name": "@singularity/plugin-primitives-editable-field",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/element-size": {
+      "name": "@singularity/plugin-primitives-element-size",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/error-boundary": {
@@ -5149,6 +5157,8 @@
 
     "@singularity/plugin-framework-tooling-lint-reactive-server-io": ["@singularity/plugin-framework-tooling-lint-reactive-server-io@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io"],
 
+    "@singularity/plugin-framework-tooling-lint-resize-observer-safety": ["@singularity/plugin-framework-tooling-lint-resize-observer-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/resize-observer-safety"],
+
     "@singularity/plugin-framework-tooling-provision": ["@singularity/plugin-framework-tooling-provision@workspace:plugins/framework/plugins/tooling/plugins/provision"],
 
     "@singularity/plugin-framework-tooling-react-compiler": ["@singularity/plugin-framework-tooling-react-compiler@workspace:plugins/framework/plugins/tooling/plugins/react-compiler"],
@@ -5540,6 +5550,8 @@
     "@singularity/plugin-primitives-diff-view": ["@singularity/plugin-primitives-diff-view@workspace:plugins/primitives/plugins/diff-view"],
 
     "@singularity/plugin-primitives-editable-field": ["@singularity/plugin-primitives-editable-field@workspace:plugins/primitives/plugins/editable-field"],
+
+    "@singularity/plugin-primitives-element-size": ["@singularity/plugin-primitives-element-size@workspace:plugins/primitives/plugins/element-size"],
 
     "@singularity/plugin-primitives-error-boundary": ["@singularity/plugin-primitives-error-boundary@workspace:plugins/primitives/plugins/error-boundary"],
 
