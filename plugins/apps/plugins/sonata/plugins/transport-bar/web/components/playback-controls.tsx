@@ -1,12 +1,10 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useRef } from "react";
 import {
-  MdAdd,
   MdFastForward,
   MdFastRewind,
   MdPause,
   MdPlayArrow,
-  MdRemove,
 } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -21,16 +19,7 @@ import {
   scoreEndBeat,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-
-/**
- * One stepper press, as an authored-tempo fraction (5% = 0.05). Matches the
- * transport's 0.05 rounding grid so repeated taps land on tidy percentages.
- */
-const SPEED_STEP = 0.05;
-const MIN_SCALE = 0;
-const MAX_SCALE = 4;
-
-const asPercent = (scale: number) => `${Math.round(scale * 100)}%`;
+import { TempoWheel } from "./tempo-wheel";
 
 /**
  * The tempo in effect at `beat`, in BPM. Derived from the canonical
@@ -137,43 +126,15 @@ function SeekButton({
   );
 }
 
-/** A square ghost stepper button (− / +) for the speed control. */
-function StepButton({
-  icon: Icon,
-  label,
-  disabled,
-  onClick,
-}: {
-  icon: typeof MdAdd;
-  label: string;
-  disabled: boolean;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      aria-label={label}
-      title={label}
-      disabled={disabled}
-      onClick={onClick}
-      className="size-6 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
-    >
-      <Center className="size-full">
-        <Icon className="size-3.5" />
-      </Center>
-    </button>
-  );
-}
-
 /**
- * Sonata toolbar transport: a play/pause button and a Synthesia-style speed
- * stepper (`[− xx% +]`) with the live BPM beside it. All drive the shared
- * transport (`useSonata`) — the single owner of play state and tempo — so they
- * stay in lock-step with the keyboard controls (Space, ↑/↓).
+ * Sonata toolbar transport: a play/pause button and a jog-wheel speed control
+ * (`[wheel | xx%]`, matching the piano-roll zoom wheel) with the live BPM beside
+ * it. All drive the shared transport (`useSonata`) — the single owner of play
+ * state and tempo — so they stay in lock-step with the keyboard controls
+ * (Space, ↑/↓).
  */
 export function PlaybackControls() {
-  const { isPlaying, play, stop, tempoScale, setTempoScale, score } =
-    useSonata();
+  const { isPlaying, play, stop, tempoScale, score } = useSonata();
 
   // Nothing to play until a source has loaded a Score with span; 0% is a frozen
   // transport, so play is unavailable there too.
@@ -216,28 +177,8 @@ export function PlaybackControls() {
         disabled={!hasScore}
       />
 
-      {/* Speed stepper: [− xx% +]. ↑/↓ keyboard shortcuts nudge the same value. */}
-      <Stack direction="row" gap="none" align="center" className="rounded-md border border-border">
-        <StepButton
-          icon={MdRemove}
-          label="Slow down"
-          disabled={tempoScale <= MIN_SCALE}
-          onClick={() => setTempoScale(tempoScale - SPEED_STEP)}
-        />
-        <Text
-          as="span"
-          variant="caption"
-          className="min-w-[3rem] border-x border-border px-xs text-center font-medium tabular-nums"
-        >
-          {asPercent(tempoScale)}
-        </Text>
-        <StepButton
-          icon={MdAdd}
-          label="Speed up"
-          disabled={tempoScale >= MAX_SCALE}
-          onClick={() => setTempoScale(tempoScale + SPEED_STEP)}
-        />
-      </Stack>
+      {/* Speed jog wheel: [wheel | xx%]. ↑/↓ keyboard shortcuts nudge the same value. */}
+      <TempoWheel />
 
       {/* Live playback BPM (reflects the current speed). */}
       <Text

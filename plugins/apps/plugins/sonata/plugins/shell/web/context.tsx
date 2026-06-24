@@ -3,6 +3,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useLayoutEffect,
   useMemo,
   useRef,
   useState,
@@ -617,17 +618,18 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Continuous (clamp only, no grid) so a jog-wheel / pinch drag scrubs smoothly
+  // with fine-grained control and a clean release fling — the same shape as
+  // `setSpread`. The tidy 0.05 grid lives in `nudgeTempo`, where repeated
+  // *relative* additions are the only thing that would accrue float drift.
   const setTempoScale = useCallback((scale: number) => {
-    const clamped = Math.max(
-      MIN_TEMPO_SCALE,
-      Math.min(MAX_TEMPO_SCALE, scale),
+    setTempoScaleState(
+      Math.max(MIN_TEMPO_SCALE, Math.min(MAX_TEMPO_SCALE, scale)),
     );
-    // Round to a tidy 0.05 grid so repeated nudges don't accrue float drift.
-    setTempoScaleState(Math.round(clamped * 20) / 20);
   }, []);
 
-  // Continuous (unlike tempo's 0.05 grid) so a jog-wheel / pinch drag is smooth;
-  // the persisted config field carries the tidy step for the settings editor.
+  // Continuous (like the tempo scrub) so a jog-wheel / pinch drag is smooth; the
+  // persisted config field carries the tidy step for the settings editor.
   // Clamps against the live (dynamic) floor so zoom-out can reach "fit the song".
   const setSpread = useCallback((next: number) => {
     setSpreadState(Math.max(spreadMinRef.current, Math.min(MAX_SPREAD, next)));
@@ -650,9 +652,20 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // floor rise).
   const effectiveSpread = Math.max(spreadMin, Math.min(MAX_SPREAD, spread));
 
-  // A tempo change rescales `score` mid-flight; re-anchor at the current cursor so
-  // the visual transport doesn't jump (audio re-anchors via its score-dep effect).
-  useEffect(() => {
+  // A tempo change rescales `score` (and `tempoIndex`) mid-flight; re-anchor at
+  // the current cursor so the visual transport doesn't jump.
+  //
+  // This MUST be a layout effect, not a passive one. `scoreRef`/`tempoIndexRef`
+  // are `useLatestRef`s that flip to the new tempo *during render*, but the
+  // anchor (`anchorRef.startScoreSec`, in score-seconds of the OLD tempo) is only
+  // corrected here. A passive `useEffect` can run a frame AFTER the next rAF
+  // transport tick, leaving that tick to invert new-tempo seconds against an
+  // old-tempo anchor — a beat jump proportional to the absolute song position
+  // (large, very visible, and continuous while the speed wheel is dragged).
+  // A layout effect runs synchronously in the commit phase, before the next
+  // tick, so the anchor and the index the tick reads always agree. (audio
+  // re-anchors via its own score-dep effect.)
+  useLayoutEffect(() => {
     reanchor(cursor.getBeat());
   }, [score, reanchor, cursor]);
 
@@ -723,8 +736,12 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     isPlayingRef.current ? stop() : play();
   }, [play, stop]);
 
+  // ↑/↓ keyboard steps: snap the result onto the tidy 0.05 grid so taps land on
+  // round percentages (and never accrue float drift), even when the wheel left
+  // tempo on a fine off-grid value.
   const nudgeTempo = useCallback(
-    (delta: number) => setTempoScale(tempoScaleRef.current + delta),
+    (delta: number) =>
+      setTempoScale(Math.round((tempoScaleRef.current + delta) * 20) / 20),
     [setTempoScale],
   );
 

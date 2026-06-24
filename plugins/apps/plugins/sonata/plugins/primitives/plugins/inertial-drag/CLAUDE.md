@@ -26,7 +26,7 @@ it does not fling). Both are `bun test`-covered.
   - Uses: `primitives/latest-ref.useLatestRef`
   - Exports: Types: `InertialDragConfig`, `InertialDragHandle`; Values: `useInertialDrag`
 - Cross-plugin:
-  - Imported by: `apps/sonata/piano-roll`
+  - Imported by: `apps/sonata/piano-roll`, `apps/sonata/transport-bar`
 - Core:
   - Exports: Types: `VelocityTracker`; Values: `createVelocityTracker`, `flingPosition`, `flingRest`, `flingVelocity`
 
