@@ -67,9 +67,9 @@ interface WindowChromeProps {
   /** Toggle this window's always-on-top flag (re-ranks z in the geometry store). */
   onTogglePin: () => void;
   /**
-   * Take the active tab full-screen: switch it to the solo placement AND enter
-   * native browser fullscreen, so the app fills the physical screen with no
-   * browser or app chrome — distinct from maximize, which only fills the surface.
+   * Take the active tab full-screen: switch it to the solo placement — a single
+   * tab full-app over everything (sidebar/rail hidden) — distinct from maximize,
+   * which only fills the surface within the desktop chrome.
    */
   onFullscreen: () => void;
   /** Other open windows the active tab can be merged into ("Merge into ▸"). */
@@ -361,8 +361,8 @@ export function WindowChrome({
             />
             <IconButton
               icon={MdFullscreen}
-              // True OS fullscreen of just this app — not maximize (which only
-              // fills the surface). Exit via the solo overlay button or Esc.
+              // Solo (full-app over everything) — not maximize (which only fills
+              // the surface). Exit via the solo overlay button or Esc.
               label="Fullscreen"
               onClick={onFullscreen}
             />

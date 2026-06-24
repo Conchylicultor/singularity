@@ -2585,10 +2585,6 @@
       "name": "@singularity/plugin-primitives-breadcrumb",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/browser-fullscreen": {
-      "name": "@singularity/plugin-primitives-browser-fullscreen",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/collapsible": {
       "name": "@singularity/plugin-primitives-collapsible",
       "version": "0.0.1",
@@ -5414,8 +5410,6 @@
     "@singularity/plugin-primitives-bar": ["@singularity/plugin-primitives-bar@workspace:plugins/primitives/plugins/bar"],
 
     "@singularity/plugin-primitives-breadcrumb": ["@singularity/plugin-primitives-breadcrumb@workspace:plugins/primitives/plugins/breadcrumb"],
-
-    "@singularity/plugin-primitives-browser-fullscreen": ["@singularity/plugin-primitives-browser-fullscreen@workspace:plugins/primitives/plugins/browser-fullscreen"],
 
     "@singularity/plugin-primitives-collapsible": ["@singularity/plugin-primitives-collapsible@workspace:plugins/primitives/plugins/collapsible"],
 

@@ -6,7 +6,6 @@ import {
   type PlacementChromeProps,
   type PlacementDef,
 } from "@plugins/apps/plugins/surface/web";
-import { requestBrowserFullscreen } from "@plugins/primitives/plugins/browser-fullscreen/web";
 import {
   createDesktop,
   mergeTabIntoWindow,
@@ -146,11 +145,9 @@ function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
   const togglePin = useCallback(() => toggleWindowPin(win.id), [win.id]);
 
   // Take this window's active tab full-screen: focus it (so it's the visible solo
-  // tab), switch it to the solo placement (clean full-viewport fill), and request
-  // native browser fullscreen — together a true OS fullscreen of just this app.
-  // The solo overlay's exit button / Esc leaves both (see the solo plugin).
+  // tab) and switch it to the solo placement — a single tab full-app over
+  // everything. The solo overlay's exit button / Esc returns to the default.
   const onFullscreen = useCallback(() => {
-    void requestBrowserFullscreen();
     focusTab(win.activeTabId);
     setPlacement(win.activeTabId, "solo");
   }, [focusTab, setPlacement, win.activeTabId]);
