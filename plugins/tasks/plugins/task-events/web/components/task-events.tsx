@@ -1,5 +1,6 @@
 import { MdOpenInNew } from "react-icons/md";
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -145,6 +146,7 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                         return (
                           <li key={c.id}>
                             <Row
+                              as="div"
                               selected={isActive}
                               onClick={() => {
                                 if (activeConvId === c.id && activeConvEntry) {
@@ -155,6 +157,18 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                                   }, { mode: "push" });
                                 }
                               }}
+                              actions={
+                                <IconButton
+                                  icon={MdOpenInNew}
+                                  label="Open as page"
+                                  tooltip="Open in a new page"
+                                  onClick={() => {
+                                    openPane(conversationPane, {
+                                      convId: c.id,
+                                    }, { mode: "root" });
+                                  }}
+                                />
+                              }
                             >
                               <ConversationItem conv={c} />
                             </Row>
