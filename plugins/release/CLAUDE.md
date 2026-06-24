@@ -56,7 +56,7 @@ nothing remote is built here.
 
 - Description: Local composition release lifecycle engine: run, observe, preview F4 artifacts.
 - Server:
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.currentWorktreeName`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `primitives/log-channels.Log`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `primitives/log-channels.Log`
   - DB schema: `plugins/release/server/internal/tables.ts`
   - Exports: Values: `_releaseRuns`, `triggerRelease`
   - Routes: `POST /api/release`, `POST /api/release/runs/:id/preview`, `POST /api/release/runs/:id/preview/stop`, `GET /api/release/runs/:id/logs`

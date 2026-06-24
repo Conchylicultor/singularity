@@ -6,6 +6,7 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
+import { execFileSync } from "node:child_process";
 import { join } from "node:path";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 import { DATABASE_CONFIG_PATH } from "@plugins/database/core";
@@ -23,10 +24,12 @@ import {
   PG_SOCKET_DIR,
   PG_PORT,
   PG_USER,
+  pgPostmasterPidFile,
 } from "@plugins/database/plugins/embedded/server";
 import {
   PGBOUNCER_SOCKET_DIR,
   PGBOUNCER_PORT,
+  pgbouncerPidFileUnder,
 } from "@plugins/database/plugins/pgbouncer/server";
 import { ZERO_CACHE_PORT } from "@plugins/database/plugins/zero/core";
 
@@ -46,7 +49,17 @@ const LOGS_DIR = join(SINGULARITY_DIR, "logs");
 // panics and any crash before slog is wired up. Truncated on each start so it
 // can't grow unbounded; the last crash survives until the next launch.
 const GATEWAY_STDIO_LOG = join(LOGS_DIR, "gateway-stdio.log");
-const PID_FILE = join(SINGULARITY_DIR, "gateway.pid");
+
+/**
+ * The gateway pidfile under an arbitrary install root. Used by teardown to find a
+ * preview's gateway (rooted at its `/tmp/sgp-XXXXXX` data dir, not the dev
+ * `SINGULARITY_DIR`). `PID_FILE` is the same path under this process's root.
+ */
+export function gatewayPidFile(root: string): string {
+  return join(root, "gateway.pid");
+}
+
+const PID_FILE = gatewayPidFile(SINGULARITY_DIR);
 
 export function readPid(): number | null {
   try {
@@ -371,10 +384,14 @@ export function spawnGatewayDaemon(opts: {
   return gw.pid;
 }
 
-const PG_READY_TIMEOUT_MS = 30_000;
+// Generous: a preview's PG is a from-scratch `initdb` running ALONGSIDE the full
+// dev stack (CPU/IO contention), so the cold cluster-create path can exceed 30s.
+// This launcher constant is release/preview-only — distinct from the database
+// plugin's own `awaitPgReady`, so dev boot is unaffected.
+const PG_READY_TIMEOUT_MS = 90_000;
 
 /**
- * Poll the admin pool (`SELECT 1`) until PG is reachable, to a ~30s deadline.
+ * Poll the admin pool (`SELECT 1`) until PG is reachable, to a ~90s deadline.
  * The admin pool connects DIRECT to PG (5433 socket), independent of PgBouncer,
  * so this gates on the cluster being up before any DB is created. Fails loud on
  * deadline.
@@ -497,4 +514,105 @@ export async function bootSelfContainedApp(opts: {
   log(`Registered app "${name}"; waiting for backend to become ready...`);
 
   await awaitAppReady(name, port);
+}
+
+/** Read a numeric PID from the first line of a pidfile; null if absent/invalid. */
+function readPidFile(path: string): number | null {
+  let raw: string;
+  try {
+    raw = readFileSync(path, "utf-8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  const first = raw.split("\n", 1)[0]?.trim() ?? "";
+  const n = parseInt(first, 10);
+  return Number.isNaN(n) ? null : n;
+}
+
+/** Signal a pid, treating "already gone" (ESRCH) as success. */
+function signalPid(pid: number, signal: NodeJS.Signals): void {
+  try {
+    process.kill(pid, signal);
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
+  }
+}
+
+/**
+ * Best-effort kill of whatever process is LISTENing on `port`. A teardown backstop
+ * for processes detached into their own session (the gateway via `unref()`, PG via
+ * `pg_ctl` fork+setsid) that a pidfile read might miss. `lsof` exits status 1 when
+ * nothing matches — the expected "nothing to kill" case.
+ */
+function killListenerOnPort(port: number): void {
+  let out: string;
+  try {
+    out = execFileSync("lsof", ["-ti", `tcp:${port}`, "-sTCP:LISTEN"], {
+      encoding: "utf8",
+    });
+  } catch (err) {
+    if ((err as { status?: number }).status === 1) return; // no listener
+    throw err;
+  }
+  for (const pid of out.split("\n").filter(Boolean)) {
+    signalPid(Number(pid), "SIGTERM");
+  }
+}
+
+const GATEWAY_STOP_TIMEOUT_MS = 10_000;
+
+/**
+ * Tear down a self-contained app stack rooted at `root` (a preview's `/tmp/sgp-*`
+ * data dir). The whole stack is detached after boot — the gateway is `unref()`'d
+ * into its own session, `pg_ctl` fork+setsids PG, and `pgbouncer -d` daemonizes —
+ * so none sit in a killable process group. We kill each via its pidfile under
+ * `root`, in a watchdog-safe order:
+ *
+ *   1. Gateway FIRST: SIGTERM and wait for exit. This stops the gateway's service
+ *      watchdog (which would otherwise restart PG/PgBouncer on their ~2s probe) AND
+ *      triggers the gateway's graceful shutdown, which kills the app backend.
+ *      Backstop: killListenerOnPort(httpPort).
+ *   2. PgBouncer: SIGTERM (Unix-socket-only — no TCP port to backstop).
+ *   3. Postgres: SIGQUIT (immediate shutdown — the data dir is discarded, so no
+ *      graceful drain is needed). Backstop: killListenerOnPort(pgPort) — PG
+ *      TCP-binds the loopback override port.
+ *
+ * Idempotent: a missing pidfile or already-dead process is a no-op, so it is safe
+ * to call on an orphan stack or twice on the same one. `httpPort`/`pgPort` are the
+ * port backstops; omit them (e.g. an orphan-dir sweep where the ports are unknown)
+ * to rely on the pidfiles alone.
+ */
+export async function teardownSelfContainedApp(
+  opts: { root: string; httpPort?: number; pgPort?: number },
+  log: LogFn = noop,
+): Promise<void> {
+  const { root, httpPort, pgPort } = opts;
+
+  // 1. Gateway — kill and wait, so the supervisor watchdog is gone before we touch
+  // PG/PgBouncer (else it would restart them out from under us).
+  const gwPid = readPidFile(gatewayPidFile(root));
+  if (gwPid !== null && isRunning(gwPid)) {
+    signalPid(gwPid, "SIGTERM");
+    await retryUntil(async () => (isRunning(gwPid) ? null : true), {
+      delay: exponential({ initial: 50, max: 500 }),
+      deadline: GATEWAY_STOP_TIMEOUT_MS,
+      onDeadline: () => {
+        signalPid(gwPid, "SIGKILL");
+        return true;
+      },
+    });
+  }
+  if (httpPort !== undefined) killListenerOnPort(httpPort);
+
+  // 2. PgBouncer.
+  const pgbPid = readPidFile(pgbouncerPidFileUnder(root));
+  if (pgbPid !== null) signalPid(pgbPid, "SIGTERM");
+
+  // 3. Postgres — immediate shutdown; the cluster is thrown away.
+  const pgPid = readPidFile(pgPostmasterPidFile(root));
+  if (pgPid !== null) signalPid(pgPid, "SIGQUIT");
+  if (pgPort !== undefined) killListenerOnPort(pgPort);
+
+  log(`Tore down self-contained app at ${root}`);
 }

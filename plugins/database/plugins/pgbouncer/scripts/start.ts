@@ -14,7 +14,11 @@ import {
 
 // Duplicated from embedded/shared — standalone scripts can't use @plugins
 // aliases, and shared/ is plugin-private so cross-plugin imports are forbidden.
-const PG_PORT = 5433;
+// The upstream port must honor SINGULARITY_PG_PORT so a preview's PgBouncer dials
+// the same per-instance port its embedded PG bound (see embedded/shared paths.ts).
+const PG_PORT = process.env.SINGULARITY_PG_PORT
+  ? Number(process.env.SINGULARITY_PG_PORT)
+  : 5433;
 const PG_USER = "singularity";
 const PG_SOCKET_DIR = PGBOUNCER_SOCKET_DIR; // same dir
 

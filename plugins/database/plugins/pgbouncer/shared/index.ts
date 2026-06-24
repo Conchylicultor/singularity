@@ -5,4 +5,5 @@ export {
   PGBOUNCER_USERLIST_FILE,
   PGBOUNCER_LOG_FILE,
   PGBOUNCER_PID_FILE,
+  pgbouncerPidFileUnder,
 } from "./internal/paths";

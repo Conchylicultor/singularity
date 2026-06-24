@@ -3,6 +3,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 export {
   PGBOUNCER_PORT,
   PGBOUNCER_SOCKET_DIR,
+  pgbouncerPidFileUnder,
 } from "../shared";
 
 export default {

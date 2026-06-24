@@ -28,7 +28,8 @@ export default {
     // namespace so inherited main rows aren't reaped into phantom state) and
     // clear the release_runs_inflight_uniq lock for the next release.
     await reconcileOrphanReleases();
-    // Drop any preview whose launcher died across the restart.
-    reconcileOrphanPreviews();
+    // Drop any preview whose gateway died across the restart, and reap orphan
+    // /tmp/sgp-* stacks left running by a prior backend lifetime.
+    await reconcileOrphanPreviews();
   },
 } satisfies ServerPluginDefinition;

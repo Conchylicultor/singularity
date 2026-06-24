@@ -13,6 +13,8 @@ export {
   spawnGatewayDaemon,
   awaitPgReady,
   bootSelfContainedApp,
+  teardownSelfContainedApp,
+  gatewayPidFile,
 } from "./internal/boot";
 
 export default {

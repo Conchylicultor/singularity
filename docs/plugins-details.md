@@ -1934,9 +1934,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `infra/launcher`
       - Server:
-        - Exports: Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
+        - Exports: Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `pgPostmasterPidFile`
       - Shared:
-        - Exports: Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
+        - Exports: Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`, `pgPostmasterPidFile`
     - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the singularity DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
       - Server:
         - Uses: `database/admin.countActiveConnections`, `database/admin.dropDatabase`, `database/admin.forkDatabase`, `database/admin.listDatabases`, `infra/jobs.defineJob`, `shell/notifications.recordNotification`
@@ -1965,9 +1965,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `infra/launcher`
       - Server:
-        - Exports: Values: `PGBOUNCER_PORT`, `PGBOUNCER_SOCKET_DIR`
+        - Exports: Values: `PGBOUNCER_PORT`, `PGBOUNCER_SOCKET_DIR`, `pgbouncerPidFileUnder`
       - Shared:
-        - Exports: Values: `PGBOUNCER_CONFIG_FILE`, `PGBOUNCER_LOG_FILE`, `PGBOUNCER_PID_FILE`, `PGBOUNCER_PORT`, `PGBOUNCER_SOCKET_DIR`, `PGBOUNCER_USERLIST_FILE`
+        - Exports: Values: `PGBOUNCER_CONFIG_FILE`, `PGBOUNCER_LOG_FILE`, `PGBOUNCER_PID_FILE`, `PGBOUNCER_PORT`, `PGBOUNCER_SOCKET_DIR`, `PGBOUNCER_USERLIST_FILE`, `pgbouncerPidFileUnder`
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.
       - Server:
         - Uses: `database/admin.databaseExists`, `database/admin.openShortLivedClient`, `infra/mcp.Mcp`, `tasks/tasks-core.getConversation`
@@ -3070,8 +3070,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/transcript-retention`, `database/fork`, `database/live-state-snapshot`, `debug/boot-profile`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/worktree-cleanup`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `page/attachment-block`, `page/inline-date`, `page/links`, `shell/notifications`, `tasks`, `tasks/task-title`
     - **`launcher`**
       - Server:
-        - Uses: `database/admin.ensureDatabase`, `database/admin.getAdminPool`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `database/pgbouncer.PGBOUNCER_PORT`, `database/pgbouncer.PGBOUNCER_SOCKET_DIR`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.writeWorktreeSpec`
-        - Exports: Values: `awaitPgReady`, `bootSelfContainedApp`, `buildOrLocateGateway`, `ensureDatabaseConfig`, `hasPgBouncerPackage`, `isGatewayListening`, `isRunning`, `pgbouncerConnection`, `pgbouncerService`, `readPid`, `spawnGatewayDaemon`, `writeReleaseDatabaseConfig`
+        - Uses: `database/admin.ensureDatabase`, `database/admin.getAdminPool`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `database/embedded.pgPostmasterPidFile`, `database/pgbouncer.PGBOUNCER_PORT`, `database/pgbouncer.PGBOUNCER_SOCKET_DIR`, `database/pgbouncer.pgbouncerPidFileUnder`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.writeWorktreeSpec`
+        - Exports: Values: `awaitPgReady`, `bootSelfContainedApp`, `buildOrLocateGateway`, `ensureDatabaseConfig`, `gatewayPidFile`, `hasPgBouncerPackage`, `isGatewayListening`, `isRunning`, `pgbouncerConnection`, `pgbouncerService`, `readPid`, `spawnGatewayDaemon`, `teardownSelfContainedApp`, `writeReleaseDatabaseConfig`
+      - Cross-plugin:
+        - Imported by: `release`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/push-and-exit`, `conversations/summary`, `database/query`, `debug/profiling/runtime`, `plugin-meta/plugin-health`, `tasks`
@@ -4428,7 +4430,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`release`** — Local composition release lifecycle engine: run, observe, preview F4 artifacts.
   - Server:
-    - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.currentWorktreeName`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `primitives/log-channels.Log`
+    - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `primitives/log-channels.Log`
     - DB schema: `plugins/release/server/internal/tables.ts`
     - Exports: Values: `_releaseRuns`, `triggerRelease`
     - Routes: `POST /api/release`, `POST /api/release/runs/:id/preview`, `POST /api/release/runs/:id/preview/stop`, `GET /api/release/runs/:id/logs`

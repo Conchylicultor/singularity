@@ -8,4 +8,5 @@ export {
   PG_PORT,
   PG_SOCKET_DIR,
   PG_USER,
+  pgPostmasterPidFile,
 } from "./internal/paths";

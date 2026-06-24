@@ -8,8 +8,8 @@ export const handlePreview = implement(previewEndpoint, async ({ params }) => {
   await startPreview(runId);
 });
 
-export const handleStopPreview = implement(stopPreviewEndpoint, ({ params }) => {
+export const handleStopPreview = implement(stopPreviewEndpoint, async ({ params }) => {
   const runId = params.id;
   if (!runId) throw new HttpError(400, "Missing id");
-  stopPreview(runId);
+  await stopPreview(runId);
 });

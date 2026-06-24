@@ -1,16 +1,28 @@
-import { mkdtempSync, rmSync } from "node:fs";
-import { execFileSync } from "node:child_process";
+import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { connect } from "node:net";
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import {
+  teardownSelfContainedApp,
+  gatewayPidFile,
+  isRunning,
+} from "@plugins/infra/plugins/launcher/server";
 import { _releaseRuns } from "./tables";
-import { isPidAlive } from "./run-release";
 import { releaseLog } from "./release-log";
 import { previews, previewStateResource } from "./preview-state-resource";
 
 // Never collide with the dev gateway (9000) or the baked release port (9100).
 const PREVIEW_PORT_FLOOR = 9101;
+// Per-instance embedded-PG TCP port floor. PG binds a loopback TCP listener
+// (listen_addresses=127.0.0.1, for Zero logical replication) that would collide
+// with the dev cluster's 5433, so each preview gets a free port from here up.
+const PREVIEW_PG_PORT_FLOOR = 5500;
+// Where preview data roots live. Literal `/tmp` (NOT os.tmpdir(), the long
+// /var/folders/... path on macOS): the embedded PG/gateway open Unix sockets under
+// this root, capped at 104 bytes, so the prefix must be short.
+const PREVIEW_TMP_DIR = "/tmp";
+const PREVIEW_DIR_PREFIX = "sgp-";
 
 /**
  * Probe upward from `from` for a free TCP port. Uses a connect attempt: a refused
@@ -37,10 +49,11 @@ async function pickFreePort(from: number): Promise<number> {
 
 /**
  * Start a local preview of a finished release artifact. Spawns the staged
- * `launch` binary, which self-roots SINGULARITY_DIR under the data dir we hand
- * it. The data root MUST be short because the embedded PG/gateway open Unix
- * sockets under it (104-byte path limit) — `/tmp/sgp-XXXXXX` is short by
- * construction, the canonical mitigation.
+ * `launch` binary, which self-roots SINGULARITY_DIR under the data dir we hand it
+ * and binds its embedded PG to the free `SINGULARITY_PG_PORT` we pick — so the
+ * whole stack runs isolated alongside the dev environment. The data root MUST be
+ * short because the embedded PG/gateway open Unix sockets under it (104-byte path
+ * limit) — `/tmp/sgp-XXXXXX` is short by construction, the canonical mitigation.
  */
 export async function startPreview(runId: string): Promise<void> {
   if (previews.get(runId)?.status === "running") return;
@@ -61,16 +74,19 @@ export async function startPreview(runId: string): Promise<void> {
   }
 
   const port = await pickFreePort(PREVIEW_PORT_FLOOR);
-  // Literal `/tmp` (NOT os.tmpdir(), which is the long /var/folders/... path on
-  // macOS): the embedded PG/gateway open Unix sockets under this root, capped at
-  // 104 bytes, so the root must be short. `/tmp/sgp-XXXXXX` is short by design.
-  const dataRoot = mkdtempSync("/tmp/sgp-");
+  const pgPort = await pickFreePort(PREVIEW_PG_PORT_FLOOR);
+  const dataRoot = mkdtempSync(join(PREVIEW_TMP_DIR, PREVIEW_DIR_PREFIX));
 
   const proc = Bun.spawn([join(run.artifactPath, "launch")], {
     detached: true,
     stdout: "pipe",
     stderr: "pipe",
-    env: { ...process.env, SINGULARITY_DIR: dataRoot, PORT: String(port) },
+    env: {
+      ...process.env,
+      SINGULARITY_DIR: dataRoot,
+      PORT: String(port),
+      SINGULARITY_PG_PORT: String(pgPort),
+    },
   });
 
   const url = `http://${run.composition}.localhost:${port}`;
@@ -78,11 +94,14 @@ export async function startPreview(runId: string): Promise<void> {
     runId,
     pid: proc.pid,
     port,
+    pgPort,
     url,
     dataRoot,
     status: "running",
   });
-  releaseLog.publish(`Preview ${runId} started on ${url} (data: ${dataRoot})`);
+  releaseLog.publish(
+    `Preview ${runId} started on ${url} (pg :${pgPort}, data: ${dataRoot})`,
+  );
   previewStateResource.notify();
 
   // Stream the launcher's output into the release log so the UI surfaces preview
@@ -107,52 +126,38 @@ async function streamPreviewOutput(
 }
 
 /**
- * Best-effort kill of whatever process is LISTENing on `port`. The launcher
- * daemonizes its gateway into its OWN session (so it survives the launcher's
- * exit), which means it is NOT in the launcher's process group and a group-kill
- * misses it — leaving an orphan gateway. Killing by port reaches it. lsof is
- * present on macOS/Linux; it exits non-zero (status 1) when nothing matches,
- * which is the expected "nothing to kill" case.
+ * Whether a preview's stack is still alive, keyed on its LONG-LIVED gateway (the
+ * `launch` process exits right after boot, so its pid is useless here). The gateway
+ * pidfile is written during boot under the data root; if it's absent the preview is
+ * still starting, so treat that as alive (don't reap a booting stack).
  */
-function killListenerOnPort(port: number): void {
-  let out: string;
+function gatewayAlive(dataRoot: string): boolean {
+  let raw: string;
   try {
-    out = execFileSync("lsof", ["-ti", `tcp:${port}`, "-sTCP:LISTEN"], {
-      encoding: "utf8",
-    });
+    raw = readFileSync(gatewayPidFile(dataRoot), "utf-8");
   } catch (err) {
-    if ((err as { status?: number }).status === 1) return; // no listener
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return true;
     throw err;
   }
-  for (const pid of out.split("\n").filter(Boolean)) {
-    try {
-      process.kill(Number(pid), "SIGTERM");
-    } catch (killErr) {
-      if ((killErr as NodeJS.ErrnoException).code !== "ESRCH") throw killErr;
-    }
-  }
+  const pid = parseInt(raw.split("\n", 1)[0]?.trim() ?? "", 10);
+  return Number.isNaN(pid) ? true : isRunning(pid);
 }
 
 /**
- * Stop a running preview: kill the launcher's process group AND the gateway
- * daemon listening on the preview port (which the launcher detaches into its own
- * session — see killListenerOnPort), remove the mkdtemp data root, and flip the
- * resource to "stopped". Idempotent — a missing or already-dead preview is a no-op.
+ * Stop a running preview: tear down its entire self-contained stack (gateway,
+ * backend, PgBouncer, embedded PG — all detached into their own sessions, so this
+ * goes through the launcher's pidfile-based teardown rather than a process-group
+ * kill), remove the data root, and flip the resource to "stopped". Idempotent — a
+ * missing or already-dead preview is a no-op.
  */
-export function stopPreview(runId: string): void {
+export async function stopPreview(runId: string): Promise<void> {
   const entry = previews.get(runId);
   if (!entry) return;
-  if (isPidAlive(entry.pid)) {
-    try {
-      // Negative pid → signal the whole process group (detached spawn is a group
-      // leader), so the launcher's in-group children (e.g. PG) die with it.
-      process.kill(-entry.pid, "SIGTERM");
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
-    }
-  }
-  // The gateway is daemonized into its own session, outside the group above.
-  killListenerOnPort(entry.port);
+  await teardownSelfContainedApp({
+    root: entry.dataRoot,
+    httpPort: entry.port,
+    pgPort: entry.pgPort,
+  });
   rmSync(entry.dataRoot, { recursive: true, force: true });
   previews.delete(runId);
   releaseLog.publish(`Preview ${runId} stopped`);
@@ -160,18 +165,43 @@ export function stopPreview(runId: string): void {
 }
 
 /**
- * Reap previews whose launcher process died (e.g. across a backend restart, or a
- * crashed launcher). Drops dead entries from the in-memory map and removes their
- * data dirs so no phantom "running" preview survives. Called on boot.
+ * Reap orphan previews on boot. Two passes:
+ *   1. In-memory entries whose gateway died → drop and remove their data dir.
+ *   2. Filesystem sweep: any leftover `/tmp/sgp-*` data root NOT backing an active
+ *      entry is an orphan stack from a prior backend lifetime (the previews map is
+ *      in-memory, so a dev restart leaves running gateways/PG holding ports with no
+ *      record). Tear each down via the launcher and remove the dir.
  */
-export function reconcileOrphanPreviews(): void {
+export async function reconcileOrphanPreviews(): Promise<void> {
   let changed = false;
+  const activeRoots = new Set<string>();
   for (const [runId, entry] of previews) {
-    if (!isPidAlive(entry.pid)) {
-      rmSync(entry.dataRoot, { recursive: true, force: true });
-      previews.delete(runId);
-      changed = true;
+    if (gatewayAlive(entry.dataRoot)) {
+      activeRoots.add(entry.dataRoot);
+      continue;
     }
+    rmSync(entry.dataRoot, { recursive: true, force: true });
+    previews.delete(runId);
+    changed = true;
   }
+
+  let dirs: string[];
+  try {
+    dirs = readdirSync(PREVIEW_TMP_DIR).filter((n) =>
+      n.startsWith(PREVIEW_DIR_PREFIX),
+    );
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") dirs = [];
+    else throw err;
+  }
+  for (const name of dirs) {
+    const root = join(PREVIEW_TMP_DIR, name);
+    if (activeRoots.has(root)) continue;
+    // Ports unknown for an orphan dir — pidfile-based teardown suffices.
+    await teardownSelfContainedApp({ root });
+    rmSync(root, { recursive: true, force: true });
+    releaseLog.publish(`Reaped orphan preview stack at ${root}`);
+  }
+
   if (changed) previewStateResource.notify();
 }
