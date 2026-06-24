@@ -121,6 +121,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
   // Fire the search whenever the debounced query changes, aborting the prior
   // request so a slow earlier response can never overwrite a newer one.
   useEffect(() => {
+    /* eslint-disable react-hooks/set-state-in-effect -- async-fetch with cancel guard: debounced UG catalog search hits a POST endpoint (useEndpoint is GET-only, so it cannot express this); the synchronous setState calls are pre-fetch loading-state resets and an AbortController drops stale responses */
     if (debouncedQuery.length === 0) {
       setResults([]);
       setSearching(false);
@@ -136,6 +137,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
     )
       .then((res) => {
         setResults(res.results);
+        setActiveIdx(0);
         setSearching(false);
       })
       .catch((err) => {
@@ -145,6 +147,7 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
         setError(err instanceof Error ? err.message : String(err));
       });
     return () => controller.abort();
+    /* eslint-enable react-hooks/set-state-in-effect */
   }, [debouncedQuery]);
 
   // Client-side type filter: "Chords" keeps anything whose UG type contains
@@ -158,11 +161,10 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
     [results, typeFilter],
   );
 
-  // Reset the active row whenever the visible list changes.
-  useEffect(() => {
-    setActiveIdx(0);
-  }, [filtered]);
-
+  // The active row resets to the top wherever the visible list actually changes
+  // — when fresh search results arrive (in the fetch .then above) and when the
+  // type filter toggles (in its onChange below) — so no setState-in-effect is
+  // needed to mirror `filtered`.
   useEffect(() => {
     activeRef.current?.scrollIntoView({ block: "nearest" });
   }, [activeIdx]);
@@ -259,7 +261,10 @@ export function UgImportDialog({ onClose }: { onClose: () => void }) {
             variant="ghost"
             options={TYPE_OPTIONS}
             value={typeFilter}
-            onChange={setTypeFilter}
+            onChange={(v) => {
+              setTypeFilter(v);
+              setActiveIdx(0);
+            }}
           />
         ) : null}
 
