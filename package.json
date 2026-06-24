@@ -2,11 +2,10 @@
   "name": "singularity",
   "private": true,
   "workspaces": ["plugins/**"],
-  "trustedDependencies": ["@rocicorp/zero-sqlite3"],
   "scripts": {
     "playwright": "playwright",
     "test:dom": "vitest run",
-    "postinstall": "bun e2e/ensure-chromium.mjs"
+    "postinstall": "bun e2e/ensure-chromium.mjs && bun plugins/database/plugins/zero/plugins/cache-service/scripts/ensure-zero-sqlite3.ts"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",

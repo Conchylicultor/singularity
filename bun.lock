@@ -3388,9 +3388,6 @@
       "version": "0.0.1",
     },
   },
-  "trustedDependencies": [
-    "@rocicorp/zero-sqlite3",
-  ],
   "patchedDependencies": {
     "eslint-plugin-react-hooks@7.1.1": "patches/eslint-plugin-react-hooks@7.1.1.patch",
   },
