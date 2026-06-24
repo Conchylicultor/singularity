@@ -7,8 +7,9 @@
  * Mirrors the embedded/pgbouncer start-script template (binary resolution,
  * idempotent reattach via a port ping, spawnSync, exit 0) with one critical
  * difference: zero-cache CANNOT run under Bun. It needs the native
- * @rocicorp/zero-sqlite3 binary and a Node v22/24 runtime (NOT Node 25, which
- * throws EBADENGINE and breaks Zero's tsx tooling). There is no Node-spawn
+ * @rocicorp/zero-sqlite3 binary and the EXACT Node major that binary was built
+ * for (ZERO_NODE_MAJOR — Node 25 throws EBADENGINE and breaks Zero's tsx
+ * tooling; a mismatched major loads the addon with ERR_DLOPEN_FAILED). There is no Node-spawn
  * precedent in the repo, so this script resolves a compatible `node` on PATH
  * and FAILS LOUD if none is found — the host-Node dependency is a Stage-1 risk.
  *
@@ -24,17 +25,20 @@ import {
   ZERO_REPLICA_FILE,
   ZERO_UPSTREAM_DB,
 } from "../shared";
+import { ZERO_NODE_MAJOR } from "../shared/internal/node-runtime";
 
 const READY_TIMEOUT_MS = 60_000;
 const ZERO_LOG_FILE = join(ZERO_DIR, "zero-cache.log");
 
-// ─── Node runtime resolution (must be 22 or 24, NOT bun, NOT 25) ────────────
+// ─── Node runtime resolution (must be ZERO_NODE_MAJOR, NOT bun) ──────────────
 
 /**
- * Resolve a Node 22/24 executable. zero-cache requires Node >=22 and breaks on
- * Node 25 (EBADENGINE + tsx ERR_MODULE_NOT_FOUND). An explicit override wins;
- * otherwise probe `node` on PATH and validate its major version. Fails loud
- * with a clear, actionable message if no compatible runtime is found.
+ * Resolve a Node executable whose major is exactly ZERO_NODE_MAJOR — the single
+ * major the @rocicorp/zero-sqlite3 native addon is built for (see node-runtime.ts).
+ * A different major (e.g. 22, with a different ABI) would load that addon with
+ * ERR_DLOPEN_FAILED, so we reject it here rather than crash later. An explicit
+ * override wins; otherwise probe `node` on PATH and validate its major version.
+ * Fails loud with a clear, actionable message if no compatible runtime is found.
  */
 function resolveNode(): string {
   const candidates: string[] = [];
@@ -48,19 +52,20 @@ function resolveNode(): string {
     const version = probe.stdout.trim(); // e.g. "v22.11.0"
     const major = Number.parseInt(version.replace(/^v/, "").split(".")[0] ?? "", 10);
     if (Number.isNaN(major)) continue;
-    if (major === 22 || major === 24) {
+    if (major === ZERO_NODE_MAJOR) {
       console.log(`zero-cache: using Node ${version} (${candidate})`);
       return candidate;
     }
     console.log(
-      `zero-cache: skipping Node ${version} (${candidate}) — need major 22 or 24`,
+      `zero-cache: skipping Node ${version} (${candidate}) — need major ${ZERO_NODE_MAJOR}`,
     );
   }
 
   throw new Error(
-    "zero-cache: no compatible Node runtime found. zero-cache requires Node " +
-      "v22 or v24 (NOT Bun, NOT Node 25). Install Node 22/24 and put it on " +
-      "PATH, or set SINGULARITY_ZERO_NODE to its absolute path. " +
+    `zero-cache: no compatible Node runtime found. zero-cache requires Node ` +
+      `v${ZERO_NODE_MAJOR} (the major @rocicorp/zero-sqlite3's native addon is ` +
+      `built for; NOT Bun). Install Node ${ZERO_NODE_MAJOR} and put it on PATH, ` +
+      `or set SINGULARITY_ZERO_NODE to its absolute path. ` +
       `(probed: ${candidates.join(", ")})`,
   );
 }

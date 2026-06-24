@@ -21,10 +21,13 @@
 import { existsSync, readFileSync } from "node:fs";
 import { spawnSync } from "node:child_process";
 import { dirname, join } from "node:path";
+import { ZERO_NODE_BUILD_TARGET } from "../shared/internal/node-runtime";
 
-// Any 24.x target yields the same ABI (NODE_MODULE_VERSION 137), which is what
-// the supervised zero-cache service (resolveNode → major 22/24) loads under.
-const ZERO_SQLITE3_NODE_TARGET = "24.17.0";
+// The ABI to build for is the SAME single major the supervised zero-cache
+// service requires at runtime (resolveNode → major ZERO_NODE_MAJOR). Both read
+// from node-runtime.ts so the build target and the accepted runtime can never
+// drift apart. Any 24.x target yields the same ABI (NODE_MODULE_VERSION 137).
+const ZERO_SQLITE3_NODE_TARGET = ZERO_NODE_BUILD_TARGET;
 
 // scripts/ -> cache-service plugin root, the resolution base for its deps.
 // zero-sqlite3 is a transitive dep of @rocicorp/zero (the cache-service's direct
