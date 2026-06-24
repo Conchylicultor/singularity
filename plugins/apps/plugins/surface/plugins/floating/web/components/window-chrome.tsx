@@ -9,6 +9,7 @@ import {
   MdRemove,
   MdCropSquare,
   MdFilterNone,
+  MdFullscreen,
   MdOutlinePushPin,
   MdPushPin,
   MdWebAsset,
@@ -65,6 +66,12 @@ interface WindowChromeProps {
   onCloseWindow: () => void;
   /** Toggle this window's always-on-top flag (re-ranks z in the geometry store). */
   onTogglePin: () => void;
+  /**
+   * Take the active tab full-screen: switch it to the solo placement AND enter
+   * native browser fullscreen, so the app fills the physical screen with no
+   * browser or app chrome — distinct from maximize, which only fills the surface.
+   */
+  onFullscreen: () => void;
   /** Other open windows the active tab can be merged into ("Merge into ▸"). */
   mergeTargets: MergeTarget[];
   /** Merge the active tab into a target window. */
@@ -105,6 +112,7 @@ export function WindowChrome({
   onNewTab,
   onCloseWindow,
   onTogglePin,
+  onFullscreen,
   mergeTargets,
   onMergeInto,
   onSplit,
@@ -350,6 +358,13 @@ export function WindowChrome({
               icon={geo.snap === "maximize" ? MdFilterNone : MdCropSquare}
               label={geo.snap === "maximize" ? "Restore" : "Maximize"}
               onClick={toggleMaximize}
+            />
+            <IconButton
+              icon={MdFullscreen}
+              // True OS fullscreen of just this app — not maximize (which only
+              // fills the surface). Exit via the solo overlay button or Esc.
+              label="Fullscreen"
+              onClick={onFullscreen}
             />
             <IconButton
               icon={MdClose}

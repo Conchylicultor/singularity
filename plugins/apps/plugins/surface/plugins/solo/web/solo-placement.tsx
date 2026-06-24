@@ -1,6 +1,8 @@
+import { useEffect } from "react";
 import { MdFullscreen, MdFullscreenExit } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { exitBrowserFullscreen } from "@plugins/primitives/plugins/browser-fullscreen/web";
 import type {
   PlacementChromeProps,
   PlacementDef,
@@ -34,6 +36,14 @@ export const soloDef: PlacementDef = {
  * style push needed. Gated on `focused` so only the visible solo tab shows it.
  */
 function SoloExitOverlay({ focused, onExitToDefault }: PlacementChromeProps) {
+  // Leaving solo always leaves native browser fullscreen too — a single cleanup
+  // that fires however solo is exited (Esc, this button, the placement picker, or
+  // closing the tab), since this Chrome unmounts with the solo placement. Guarded
+  // (no-op when not fullscreen), so a solo tab entered via the placement picker
+  // without fullscreen is unaffected; only the floating "Fullscreen" button's
+  // solo + fullscreen pair gets unwound symmetrically.
+  useEffect(() => () => void exitBrowserFullscreen(), []);
+
   if (!focused) return null;
   return (
     <Pin

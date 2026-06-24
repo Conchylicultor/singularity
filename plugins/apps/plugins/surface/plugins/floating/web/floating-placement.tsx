@@ -6,6 +6,7 @@ import {
   type PlacementChromeProps,
   type PlacementDef,
 } from "@plugins/apps/plugins/surface/web";
+import { requestBrowserFullscreen } from "@plugins/primitives/plugins/browser-fullscreen/web";
 import {
   createDesktop,
   mergeTabIntoWindow,
@@ -76,7 +77,7 @@ function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
   const { window: win, isActive, setGeo, bringToFront } = useTabWindow(tabId);
   const windows = useFloatingWindows();
   const { desktops, activeDesktopId } = useDesktops();
-  const { tabs, titles, focusTab, closeTab, openTab } = useTabs();
+  const { tabs, titles, focusTab, closeTab, openTab, setPlacement } = useTabs();
   const apps = Apps.App.useContributions();
   const { setContainerStyle, setContentInsetStyle, setContainerPointerDownCapture } =
     usePlacementStyle();
@@ -143,6 +144,16 @@ function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
   }, [setContainerPointerDownCapture, bringToFront]);
 
   const togglePin = useCallback(() => toggleWindowPin(win.id), [win.id]);
+
+  // Take this window's active tab full-screen: focus it (so it's the visible solo
+  // tab), switch it to the solo placement (clean full-viewport fill), and request
+  // native browser fullscreen — together a true OS fullscreen of just this app.
+  // The solo overlay's exit button / Esc leaves both (see the solo plugin).
+  const onFullscreen = useCallback(() => {
+    void requestBrowserFullscreen();
+    focusTab(win.activeTabId);
+    setPlacement(win.activeTabId, "solo");
+  }, [focusTab, setPlacement, win.activeTabId]);
 
   // Inactive members render no chrome (one titlebar per window). Their container
   // is display:none anyway, so they paint nothing.
@@ -264,6 +275,7 @@ function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
       onNewTab={onNewTab}
       onCloseWindow={onCloseWindow}
       onTogglePin={togglePin}
+      onFullscreen={onFullscreen}
       mergeTargets={mergeTargets}
       onMergeInto={onMergeInto}
       onSplit={onSplit}

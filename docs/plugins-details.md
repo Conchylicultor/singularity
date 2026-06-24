@@ -859,11 +859,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`floating`** — Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store, window chrome, and keyboard window-management shortcuts (tile / minimize / close / cycle).
           - Web:
             - Contributes: `Surface.Placement`, `Shortcuts.Shortcut` "floating.snap-left (ctrl+alt+arrowleft)", `Shortcuts.Shortcut` "floating.snap-right (ctrl+alt+arrowright)", `Shortcuts.Shortcut` "floating.snap-up (ctrl+alt+arrowup)", `Shortcuts.Shortcut` "floating.snap-down (ctrl+alt+arrowdown)", `Shortcuts.Shortcut` "floating.minimize (mod+m)", `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)", `Shortcuts.Shortcut` "floating.close (mod+w)", `Shortcuts.Shortcut` "floating.cycle-next (mod+`)", `Shortcuts.Shortcut` "floating.cycle-prev (mod+shift+~)", `Shortcuts.Shortcut` "floating.cycle-prev-backquote (mod+shift+`)", `Shortcuts.Shortcut` "floating.desktop-next (ctrl+alt+pagedown)", `Shortcuts.Shortcut` "floating.desktop-prev (ctrl+alt+pageup)", `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)", `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-            - Uses: `apps.Apps`, `apps.getFocusedPlacement`, `apps.Tab`, `apps.useTabs`, `apps/surface.PlacementChromeProps`, `apps/surface.PlacementDef`, `apps/surface.Surface`, `apps/surface.usePlacementStyle`, `primitives/css/badge.Badge`, `primitives/css/cluster.Cluster`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuCheckboxItem`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuShortcut`, `primitives/css/ui-kit.DropdownMenuSub`, `primitives/css/ui-kit.DropdownMenuSubContent`, `primitives/css/ui-kit.DropdownMenuSubTrigger`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/shortcuts.defineShortcut`, `primitives/shortcuts.formatShortcutLabel`, `primitives/shortcuts.getFocusedSurfaceId`, `primitives/tab-id.getTabId`, `primitives/tooltip.WithTooltip`
+            - Uses: `apps.Apps`, `apps.getFocusedPlacement`, `apps.Tab`, `apps.useTabs`, `apps/surface.PlacementChromeProps`, `apps/surface.PlacementDef`, `apps/surface.Surface`, `apps/surface.usePlacementStyle`, `primitives/browser-fullscreen.requestBrowserFullscreen`, `primitives/css/badge.Badge`, `primitives/css/cluster.Cluster`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuCheckboxItem`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuShortcut`, `primitives/css/ui-kit.DropdownMenuSub`, `primitives/css/ui-kit.DropdownMenuSubContent`, `primitives/css/ui-kit.DropdownMenuSubTrigger`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/shortcuts.defineShortcut`, `primitives/shortcuts.formatShortcutLabel`, `primitives/shortcuts.getFocusedSurfaceId`, `primitives/tab-id.getTabId`, `primitives/tooltip.WithTooltip`
         - **`solo`** — Solo (fullscreen) surface placement — a single tab full-app over everything, with a hover exit button and an Esc shortcut back to the default placement.
           - Web:
             - Contributes: `Surface.Placement`, `Shortcuts.Shortcut` "surface.exit-solo (Escape)"
-            - Uses: `apps.getDefaultPlacement`, `apps.getFocusedPlacement`, `apps.setFocusedTabPlacement`, `apps/surface.Surface`, `primitives/css/pin.Pin`, `primitives/icon-button.IconButton`, `primitives/shortcuts.defineShortcut`
+            - Uses: `apps.getDefaultPlacement`, `apps.getFocusedPlacement`, `apps.setFocusedTabPlacement`, `apps/surface.Surface`, `primitives/browser-fullscreen.exitBrowserFullscreen`, `primitives/css/pin.Pin`, `primitives/icon-button.IconButton`, `primitives/shortcuts.defineShortcut`
     - **`workflows`** — Workflows app.
       - Plugins:
         - **`engine`** — Core engine infrastructure. Defines the Workflows.StepType slot. Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.
@@ -2876,7 +2876,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`fullscreen`** — Toolbar toggle to enter / exit browser fullscreen.
   - Web:
     - Contributes: `ActionBar.Item` → `FullscreenToggle`
-    - Uses: `primitives/icon-button.IconButton`, `shell/action-bar.ActionBar`
+    - Uses: `primitives/browser-fullscreen.toggleBrowserFullscreen`, `primitives/browser-fullscreen.useBrowserFullscreen`, `primitives/icon-button.IconButton`, `shell/action-bar.ActionBar`
 
 - **`history`** — Umbrella for the reusable version-history primitive: the domain-agnostic versioning engine substrate (more sub-plugins to follow).
   - Plugins:
@@ -3776,6 +3776,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/pages/page-tree`, `plugin-meta/plugin-view`, `primitives/filepath-breadcrumb`
       - Web:
         - Exports: Types: `BreadcrumbProps`, `BreadcrumbSegment`; Values: `Breadcrumb`
+    - **`browser-fullscreen`** — Native browser fullscreen (Fullscreen API) control: useBrowserFullscreen() reactive state plus request/exit/toggle helpers.
+      - Cross-plugin:
+        - Imported by: `apps/surface/floating`, `apps/surface/solo`, `fullscreen`
+      - Web:
+        - Exports: Values: `exitBrowserFullscreen`, `isBrowserFullscreen`, `requestBrowserFullscreen`, `toggleBrowserFullscreen`, `useBrowserFullscreen`
     - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
       - Web:
         - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SingleLineProvider`
