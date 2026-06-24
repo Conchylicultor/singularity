@@ -1,4 +1,4 @@
-// @hash 03cdef3f7b5d
+// @hash a4b2c198979a
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -7,6 +7,7 @@
     "apps.app-rail-framing:app-rail-framing",
     "ui.segmented-progress-bar:segmented-progress-bar",
     "ui.sidebar-framing:sidebar-framing",
+    "ui.tab-bar.customizer:tab-bar",
     "ui.tokens.categorical:categorical",
     "ui.tokens.chart:chart",
     "ui.tokens.color-adjust:color-adjust",

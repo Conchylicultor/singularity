@@ -4,15 +4,14 @@ import {
   type ComponentType,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { MdAdd, MdClose, MdWebAsset } from "react-icons/md";
-import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { MdAdd, MdWebAsset } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   cn,
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Tab } from "@plugins/ui/plugins/tab-bar/web";
 import {
   endTabDrag,
   startTabDrag,
@@ -87,12 +86,14 @@ function resolveDrop(x: number, y: number): TabDragDrop {
  * The in-window tab strip rendered inside {@link WindowChrome}'s titlebar: one
  * chip per member (app icon + truncated title + close ×). A single-member window
  * shows exactly one chip — visually clean, like a browser with one tab. The
- * active member reads raised (`bg-background` + border); inactive members dim.
+ * active member's look is owned by the active tab-bar theme variant (default
+ * `chip` = accent-filled pill); inactive members dim.
  *
  * Clicking a chip shows + focuses that member; the chip × closes that member
- * alone (the right-side titlebar control closes the whole window). Every chip —
- * and its × — stops the pointer on pointer-down so neither ever starts the
- * titlebar move-drag underneath.
+ * alone (the right-side titlebar control closes the whole window). Every chip
+ * stops the pointer on pointer-down so it never starts the titlebar move-drag
+ * underneath; the close × stops the pointer internally (handled by the
+ * primitive's {@link TabCloseButton}).
  *
  * A chip body is also **draggable** (browser-style): pressing and moving past a
  * small threshold starts a cross-window drag (mirroring the titlebar move-drag
@@ -103,9 +104,9 @@ function resolveDrop(x: number, y: number): TabDragDrop {
  * plain click (no threshold crossed) still selects, so Phase 1's click-to-
  * activate is preserved.
  *
- * Chips compose {@link Badge} (the canonical chip shell) directly rather than
- * `ToggleChip`, because the strip needs a nested close button inside the chip,
- * which the toggle pill doesn't model.
+ * Chips compose the themable {@link Tab} primitive, which renders the active
+ * tab-bar variant (icon + label + trailing close ×) and owns active/collapsed
+ * styling — the strip no longer paints its own chip shell or close button.
  */
 export function WindowTabStrip({
   windowId,
@@ -160,7 +161,7 @@ export function WindowTabStrip({
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
         window.removeEventListener("pointercancel", onCancel);
-        if (!dragging) return; // a plain click — let the chip's onClick select.
+        if (!dragging) return; // a plain click — let the chip's onActivate select.
         draggedRef.current = true; // swallow the trailing synthetic click.
         const drop = resolveDrop(ev.clientX, ev.clientY);
         endTabDrag();
@@ -199,7 +200,9 @@ export function WindowTabStrip({
   );
 
   return (
-    <Stack direction="row" gap="2xs" align="center">
+    // `border-b` gives the `underline` / `connected` tab variants a bottom border
+    // to merge into inside the titlebar.
+    <Stack direction="row" gap="2xs" align="center" className="border-b">
       {members.map((member) => {
         const active = member.tabId === activeTabId;
         const Icon = member.icon ?? MdWebAsset;
@@ -208,45 +211,30 @@ export function WindowTabStrip({
           session?.tabId === member.tabId &&
           session.sourceWindowId === windowId;
         return (
-          <Badge
+          // The dragged-opacity, data attr, pointer-down, and title all pass
+          // straight through to the variant root: `Tab`'s `className` merges into
+          // the variant chip styling (not replaces it), and `resolveDrop`'s
+          // hit-test + insertion-index read the real chip rect via the data attr.
+          <Tab
             key={member.tabId}
             data-floating-tab-id={member.tabId}
-            shape="rect"
-            icon={<Icon />}
-            colorClass={cn(
-              "max-w-40 cursor-grab border transition-colors",
-              active
-                ? "border-border bg-background text-foreground"
-                : "border-transparent bg-transparent text-muted-foreground hover:bg-muted/60 hover:text-foreground",
-              dragged && "opacity-40",
-            )}
+            icon={Icon}
+            label={member.title}
+            active={active}
             title={member.title}
-            onPointerDown={(e: ReactPointerEvent) => onChipPointerDown(e, member)}
-            onClick={() => {
+            className={cn(dragged && "opacity-40")}
+            onPointerDown={(e: ReactPointerEvent) =>
+              onChipPointerDown(e, member)
+            }
+            onActivate={() => {
               if (draggedRef.current) {
                 draggedRef.current = false;
                 return;
               }
               onSelect(member.tabId);
             }}
-          >
-            <Text className="max-w-28">{member.title}</Text>
-            {/* Per-tab close — stops the pointer so it neither selects the chip,
-                starts a chip-drag, nor starts a move-drag, then closes this
-                member alone. */}
-            <button
-              type="button"
-              aria-label={`Close ${member.title}`}
-              onPointerDown={stop}
-              onClick={(e) => {
-                e.stopPropagation();
-                onCloseMember(member.tabId);
-              }}
-              className="rounded-sm text-muted-foreground hover:text-foreground"
-            >
-              <MdClose className="icon-auto" />
-            </button>
-          </Badge>
+            onClose={() => onCloseMember(member.tabId)}
+          />
         );
       })}
       {/* Trailing new-tab affordance (browser `+`): opens a fresh tab as a new

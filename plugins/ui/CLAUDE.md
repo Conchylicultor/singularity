@@ -8,6 +8,7 @@
 - Sub-plugins:
   - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
   - **`sidebar-framing`** — Per-app sidebar framing region (flush / floating / inset). Contributes its variant-region host into AppShell.Framing.
+  - **`tab-bar`** — Themable tab bar: chip / underline / connected variants.
   - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
   - **`theme-toggle`** — Toolbar toggle for light/dark mode.
   - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.

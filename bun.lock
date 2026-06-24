@@ -3350,6 +3350,26 @@
       "name": "@singularity/plugin-ui-sidebar-framing-inset",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tab-bar": {
+      "name": "@singularity/plugin-ui-tab-bar",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tab-bar/plugins/chip": {
+      "name": "@singularity/plugin-ui-tab-bar-chip",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tab-bar/plugins/connected": {
+      "name": "@singularity/plugin-ui-tab-bar-connected",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tab-bar/plugins/customizer": {
+      "name": "@singularity/plugin-ui-tab-bar-customizer",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tab-bar/plugins/underline": {
+      "name": "@singularity/plugin-ui-tab-bar-underline",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/theme-engine": {
       "name": "@singularity/plugin-ui-theme-engine",
       "version": "0.0.1",
@@ -5792,6 +5812,16 @@
     "@singularity/plugin-ui-sidebar-framing-flush": ["@singularity/plugin-ui-sidebar-framing-flush@workspace:plugins/ui/plugins/sidebar-framing/plugins/flush"],
 
     "@singularity/plugin-ui-sidebar-framing-inset": ["@singularity/plugin-ui-sidebar-framing-inset@workspace:plugins/ui/plugins/sidebar-framing/plugins/inset"],
+
+    "@singularity/plugin-ui-tab-bar": ["@singularity/plugin-ui-tab-bar@workspace:plugins/ui/plugins/tab-bar"],
+
+    "@singularity/plugin-ui-tab-bar-chip": ["@singularity/plugin-ui-tab-bar-chip@workspace:plugins/ui/plugins/tab-bar/plugins/chip"],
+
+    "@singularity/plugin-ui-tab-bar-connected": ["@singularity/plugin-ui-tab-bar-connected@workspace:plugins/ui/plugins/tab-bar/plugins/connected"],
+
+    "@singularity/plugin-ui-tab-bar-customizer": ["@singularity/plugin-ui-tab-bar-customizer@workspace:plugins/ui/plugins/tab-bar/plugins/customizer"],
+
+    "@singularity/plugin-ui-tab-bar-underline": ["@singularity/plugin-ui-tab-bar-underline@workspace:plugins/ui/plugins/tab-bar/plugins/underline"],
 
     "@singularity/plugin-ui-theme-engine": ["@singularity/plugin-ui-theme-engine@workspace:plugins/ui/plugins/theme-engine"],
 

@@ -1,28 +1,26 @@
 import {
-  forwardRef,
   useEffect,
   useRef,
   type ComponentType,
-  type HTMLAttributes,
 } from "react";
 import { createPortal } from "react-dom";
-import { MdAdd, MdClose } from "react-icons/md";
+import { MdAdd } from "react-icons/md";
 import {
   cn,
   ControlSizeProvider,
   PortalThemeScopeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useResponsiveOverflow } from "@plugins/primitives/plugins/responsive-overflow/web";
 import {
   SortableList,
   SortableItem,
 } from "@plugins/primitives/plugins/sortable-list/web";
+import { Tab } from "@plugins/ui/plugins/tab-bar/web";
 import { Apps } from "../slots";
 import { useChromeThemeScope } from "../internal/use-chrome-theme-scope";
 import { useTabs } from "../internal/use-tabs";
@@ -37,15 +35,18 @@ const CHIP_GAP_PX = 2;
 
 /**
  * Horizontal tab bar above the app content (parallel to {@link AppRail}). One
- * chip per open tab — app icon + a label derived from the tab's active
+ * tab per open tab — app icon + a label derived from the tab's active
  * pane/route (falling back to the app name) — with an active highlight on the
- * focused tab; clicking focuses it. Hovering a tab reveals a trailing `×`.
+ * focused tab; clicking focuses it. Hovering a tab reveals a trailing `×`. The
+ * tab itself is the themable {@link Tab} primitive, which renders the active
+ * variant (chip / underline / connected); this bar no longer owns any chip
+ * markup — it only arranges, measures, and wires behavior.
  *
  * Overflow: tabs collapse to icon-only one at a time, only as the bar runs out
- * of space — the chips that fit keep their labels; the overflowing ones (from
+ * of space — the tabs that fit keep their labels; the overflowing ones (from
  * the right) drop to icons (the focused tab always keeps its label). A hidden
- * measure strip (via {@link useResponsiveOverflow}) reports how many full chips
- * fit; chips past that count collapse — measured independently of the rendered
+ * measure strip (via {@link useResponsiveOverflow}) reports how many full tabs
+ * fit; tabs past that count collapse — measured independently of the rendered
  * state, so there's no expand/collapse flip-flop. The `+` button is a
  * non-scrolling sibling of the strip so it's always reachable.
  */
@@ -107,14 +108,14 @@ export function AppTabBar() {
         axis="x"
         hideScrollbar
         ref={containerRef}
-        // eslint-disable-next-line layout/no-adhoc-layout -- flexible strip yields width to the trailing actions; min-w-0 lets the chips scroll instead of pushing them off-edge
+        // eslint-disable-next-line layout/no-adhoc-layout -- flexible strip yields width to the trailing actions; min-w-0 lets the tabs scroll instead of pushing them off-edge
         className="min-w-0"
       >
       <Stack direction="row" align="center" gap="2xs">
         <SortableList
           items={resolved.map(({ tab }) => tab.tabId)}
           onMove={(activeId, overId) => moveTab(activeId, overId)}
-          // Chrome-style tear-off: dragging a chip out of the strip floats the
+          // Chrome-style tear-off: dragging a tab out of the strip floats the
           // tab as a window (then focuses it so it lands on top).
           onDragOut={(id) => {
             setPlacement(id, tearOffPlacement() ?? getDefaultPlacement());
@@ -131,7 +132,7 @@ export function AppTabBar() {
               <SortableItem
                 key={tab.tabId}
                 id={tab.tabId}
-                // eslint-disable-next-line layout/no-adhoc-layout -- flexible chip leaf of the tab strip; min-w-0 lets the chip shrink/truncate instead of overflowing
+                // eslint-disable-next-line layout/no-adhoc-layout -- flexible tab leaf of the tab strip; min-w-0 lets the tab shrink/truncate instead of overflowing
                 className={(s) => cn("min-w-0", s.isDragging && "opacity-50")}
               >
                 {() => (
@@ -169,7 +170,10 @@ export function AppTabBar() {
           here and the global action bar pins itself to the right edge. */}
       <Apps.TabBarActions.Render />
       {/* Hidden full-label measure strip: drives the collapse decision without
-          affecting layout. Mirrors the responsive-overflow primitive's pattern. */}
+          affecting layout. Mirrors the responsive-overflow primitive's pattern.
+          Renders the same {@link Tab} variant as the visible strip (full label,
+          uncollapsed, with a no-op `onClose` so the measured tab includes the
+          trailing `×` width) so the measured width matches the rendered one. */}
       {resolved.length > 0 &&
         createPortal(
           <div
@@ -186,13 +190,14 @@ export function AppTabBar() {
             }}
           >
             {resolved.map(({ tab, app, label }) => (
-              <ChipShell
+              <Tab
                 key={tab.tabId}
-                appId={tab.appId}
+                data-app-tab={tab.appId}
                 icon={app.icon}
                 label={label}
                 active={false}
                 collapsed={false}
+                onClose={() => {}}
               />
             ))}
           </div>,
@@ -203,7 +208,7 @@ export function AppTabBar() {
   );
 }
 
-interface ChipProps {
+interface TabChipProps {
   appId: string;
   icon: ComponentType<{ className?: string }>;
   label: string;
@@ -214,60 +219,14 @@ interface ChipProps {
 }
 
 /**
- * Presentational chip markup shared by the interactive tab and the hidden
- * measure strip, so both have identical width. A `forwardRef` host element so
- * `WithTooltip`'s trigger can merge its ref/handlers (and {@link TabChip}'s
- * scroll-into-view ref) onto the root. `onActivate`/`onClose` are only wired by
- * the interactive {@link TabChip}; the measure strip renders it inert.
+ * One interactive tab; the focused tab scrolls itself into view. The themable
+ * {@link Tab} primitive can't forward a root ref (it dispatches to a sealed
+ * variant), so this wraps it in a tight {@link Line} box that owns the DOM
+ * handle: `WithTooltip`'s trigger anchors to that box and `scrollIntoView`
+ * targets it. The active/collapsed/icon/label/onActivate/onClose props pass
+ * straight through to the variant.
  */
-const ChipShell = forwardRef<
-  HTMLDivElement,
-  ChipProps & HTMLAttributes<HTMLDivElement>
->(function ChipShell(
-  { appId, icon: Icon, label, active, collapsed, onActivate, onClose, ...rest },
-  ref,
-) {
-  return (
-    <Line
-      as="div"
-      ref={ref}
-      data-app-tab={appId}
-      className={cn(
-        "group max-w-40 min-w-0 gap-xs rounded-md py-2xs pl-xs pr-2xs text-sidebar-foreground/70 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
-        active && "bg-sidebar-accent text-sidebar-accent-foreground",
-      )}
-      {...rest}
-    >
-      <button
-        type="button"
-        aria-pressed={active}
-        onClick={onActivate}
-        className="flex min-w-0 flex-1 items-center gap-xs"
-      >
-        <Icon className="size-4 shrink-0" />
-        {!collapsed && (
-          <Text variant="label">{label}</Text>
-        )}
-      </button>
-      {!collapsed && (
-        <button
-          type="button"
-          aria-label={`Close ${label}`}
-          onClick={onClose}
-          className={cn(
-            "flex size-4 shrink-0 items-center justify-center rounded-sm transition-[color,background-color,opacity] hover:bg-sidebar-foreground/10 hover:text-sidebar-accent-foreground group-hover:opacity-100 group-hover:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto",
-            active ? "opacity-70" : "opacity-0 pointer-events-none",
-          )}
-        >
-          <MdClose className="size-3.5" />
-        </button>
-      )}
-    </Line>
-  );
-});
-
-/** One interactive tab chip; the focused chip scrolls itself into view. */
-function TabChip(props: ChipProps) {
+function TabChip({ appId, ...props }: TabChipProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { active } = props;
   useEffect(() => {
@@ -277,7 +236,9 @@ function TabChip(props: ChipProps) {
   }, [active]);
   return (
     <WithTooltip content={props.label}>
-      <ChipShell {...props} ref={ref} />
+      <Line as="div" ref={ref} data-app-tab={appId}>
+        <Tab {...props} />
+      </Line>
     </WithTooltip>
   );
 }
