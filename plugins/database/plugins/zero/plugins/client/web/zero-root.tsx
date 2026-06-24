@@ -7,13 +7,17 @@ import { ZeroProvider } from "@rocicorp/zero/react";
 // client never pushing its desired query. Harmless if already loaded.
 import "@rocicorp/zero/bindings";
 import type { Schema } from "@rocicorp/zero";
-import { ZERO_CACHE_PORT } from "@plugins/database/plugins/zero/core";
 
 /**
  * Generic, schema-parameterized Zero provider wrapper. The consumer passes its
  * own concrete schema; this wires the cache URL and a fixed anonymous userID
  * (read-only Stage 1, no auth). Mount it locally around the surface that needs
  * Zero — it is opt-in by construction (no global mount).
+ *
+ * The server URL is **same-origin** `${origin}/zero`: the gateway forwards
+ * `/zero/*` (HTTP + WS) to this worktree's own zero-cache sidecar (Stage 2),
+ * stripping the `/zero` prefix. So Zero rides the existing per-subdomain proxy
+ * exactly like live-state's `/ws/notifications` — no CORS, no hardcoded host.
  */
 export function ZeroRoot<S extends Schema>({
   schema,
@@ -24,7 +28,7 @@ export function ZeroRoot<S extends Schema>({
 }) {
   return (
     <ZeroProvider
-      server={`http://localhost:${ZERO_CACHE_PORT}`}
+      server={`${window.location.origin}/zero`}
       schema={schema}
       userID="anon"
     >

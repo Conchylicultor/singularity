@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"syscall"
@@ -58,9 +59,19 @@ func (s State) String() string {
 
 // Spec is the on-disk schema parsed from ~/.singularity/worktrees/<name>.json.
 type Spec struct {
-	Server  string   `json:"server"`            // absolute path to the backend's working directory (cwd)
-	Web     string   `json:"web"`               // absolute path to web/dist
-	Command []string `json:"command,omitempty"` // optional: argv to spawn (release: compiled server binary). When empty, falls back to the bun convention.
+	Server    string         `json:"server"`              // absolute path to the backend's working directory (cwd)
+	Web       string         `json:"web"`                 // absolute path to web/dist
+	Command   []string       `json:"command,omitempty"`   // optional: argv to spawn (release: compiled server binary). When empty, falls back to the bun convention.
+	ZeroCache *ZeroCacheSpec `json:"zeroCache,omitempty"` // optional: per-worktree zero-cache sidecar. Absent when the feature is off.
+}
+
+// ZeroCacheSpec describes the per-worktree zero-cache sidecar process. The
+// server side (which knows PG_PORT/PG_USER) composes it and writes it into
+// spec.json; the gateway just execs it — it does NO Postgres work itself.
+type ZeroCacheSpec struct {
+	Command    []string `json:"command"`    // argv to spawn the zero-cache supervisor
+	UpstreamDb string   `json:"upstreamDb"` // ZERO_UPSTREAM_DB DSN for the worktree's fork
+	Cwd        string   `json:"cwd"`        // absolute working directory for the command
 }
 
 // WorktreeStatus is the public projection of a worktree's state, returned by
@@ -76,9 +87,10 @@ type WorktreeStatus struct {
 }
 
 var (
-	ErrBroken      = errors.New("worktree in broken cooldown")
-	ErrSpawnFailed = errors.New("backend spawn failed")
-	ErrStopping    = errors.New("worktree is stopping")
+	ErrBroken            = errors.New("worktree in broken cooldown")
+	ErrSpawnFailed       = errors.New("backend spawn failed")
+	ErrStopping          = errors.New("worktree is stopping")
+	ErrZeroCacheDisabled = errors.New("zero-cache not configured for this worktree")
 )
 
 // backend groups the per-process fields for one running backend instance.
@@ -98,6 +110,19 @@ type backend struct {
 	connMu    sync.Mutex
 	httpConns int
 	wsConns   int
+}
+
+// zeroCache groups the per-process fields for one running zero-cache sidecar.
+// It is independent of the backend: it listens on its own loopback TCP port,
+// owns its own replication slot + SQLite replica, and is deliberately left
+// running across backend hot restarts. The gateway owns only the process and
+// request routing; all slot/replica/Postgres cleanup is TS-owned elsewhere.
+type zeroCache struct {
+	cmd     *exec.Cmd
+	exitCh  chan struct{} // closed when cmd.Wait returns
+	port    int           // allocated loopback TCP port (127.0.0.1:<port>)
+	pidPath string        // <SocketsDir>/<name>.zero.pid sidecar
+	proxy   *httputil.ReverseProxy
 }
 
 func (b *backend) incHTTP() {
@@ -165,6 +190,13 @@ type Worktree struct {
 	brokenUntil  time.Time
 	readyCh      chan struct{} // signal-only; waiters re-check state
 	lastSpawnErr error
+
+	// activeZero is the running zero-cache sidecar, or nil. Guarded by mu.
+	activeZero *zeroCache
+	// zeroMu single-flights EnsureZeroCache so concurrent /zero/* requests
+	// don't spawn duplicate sidecars. Held only around the cold-start path,
+	// never during request proxying.
+	zeroMu sync.Mutex
 
 	// restartMu serializes concurrent Restart() calls.
 	restartMu sync.Mutex
@@ -484,6 +516,9 @@ func (w *Worktree) Stop(ctx context.Context) error {
 	}
 	if w.state != StateRunning {
 		w.mu.Unlock()
+		// The backend isn't running, but a zero-cache may be (its lifecycle is
+		// independent — /zero/* can spawn it without ever starting the backend).
+		w.stopZeroCache(ctx)
 		return nil
 	}
 	w.state = StateStopping
@@ -507,8 +542,201 @@ func (w *Worktree) Stop(ctx context.Context) error {
 	w.active = nil
 	w.state = StateIdle
 	w.mu.Unlock()
+
+	// Tear down the zero-cache alongside the backend on idle/unregister. Its
+	// slot+replica reclamation is TS-owned; the gateway only kills the process.
+	w.stopZeroCache(ctx)
+
 	slog.Info("backend stopped", "worktree", w.Name)
 	return nil
+}
+
+// ─── zero-cache sidecar lifecycle ────────────────────────────
+
+// zeroReadyTimeout bounds the wait for the zero-cache to accept connections.
+// The initial logical COPY can take several seconds on a fresh fork, so this is
+// generous compared to the backend's readiness timeout.
+const zeroReadyTimeout = 60 * time.Second
+
+// EnsureZeroCache lazily cold-starts the worktree's zero-cache sidecar and
+// returns it, mirroring Ensure/startBackend. Concurrent /zero/* callers are
+// single-flighted by zeroMu so only one process is ever spawned. If the spec
+// carries no zeroCache block, returns ErrZeroCacheDisabled (caller → 404).
+func (w *Worktree) EnsureZeroCache(ctx context.Context) (*zeroCache, error) {
+	spec := w.Spec()
+	if spec.ZeroCache == nil {
+		return nil, ErrZeroCacheDisabled
+	}
+
+	w.zeroMu.Lock()
+	defer w.zeroMu.Unlock()
+
+	// Fast path: an already-running sidecar (re-check under the single-flight
+	// lock so a racing caller that just spawned it is observed).
+	w.mu.Lock()
+	if zc := w.activeZero; zc != nil {
+		w.mu.Unlock()
+		return zc, nil
+	}
+	w.mu.Unlock()
+
+	zc, err := w.startZeroCache(spec.ZeroCache)
+	if err != nil {
+		return nil, fmt.Errorf("%w: %v", ErrSpawnFailed, err)
+	}
+
+	readyErr := waitZeroReady(zc.port, zeroReadyTimeout, zc.exitCh)
+	if readyErr != nil {
+		if zc.cmd != nil && zc.cmd.Process != nil {
+			signalZero(zc, syscall.SIGKILL, w.Name)
+			waitZeroExit(zc, w.Name, postKillTimeout)
+		}
+		_ = os.Remove(zc.pidPath)
+		w.mu.Lock()
+		if w.activeZero == zc {
+			w.activeZero = nil
+		}
+		w.mu.Unlock()
+		wrapped := fmt.Errorf("%w: %v", ErrSpawnFailed, readyErr)
+		slog.Warn("zero-cache spawn failed", "worktree", w.Name, "err", wrapped)
+		return nil, wrapped
+	}
+
+	zc.proxy = newZeroReverseProxy(zc.port)
+	slog.Info("zero-cache ready", "worktree", w.Name, "port", zc.port)
+	return zc, nil
+}
+
+// startZeroCache allocates a loopback port, spawns the zero-cache command with
+// the env contract, writes the pid sidecar, and registers the process on the
+// worktree. Returns a *zeroCache with cmd/exitCh/port populated; proxy is nil
+// until the caller confirms readiness. The exit goroutine clears activeZero so
+// a crashed sidecar is re-spawned on the next /zero/* request.
+func (w *Worktree) startZeroCache(spec *ZeroCacheSpec) (*zeroCache, error) {
+	if len(spec.Command) == 0 {
+		return nil, errors.New("zeroCache.command is empty")
+	}
+
+	port, err := allocLoopbackPort()
+	if err != nil {
+		return nil, fmt.Errorf("allocate zero-cache port: %w", err)
+	}
+
+	replicaFile := w.zeroReplicaPath()
+	pidPath := w.zeroPidPath()
+
+	cmd := exec.Command(spec.Command[0], spec.Command[1:]...)
+	cmd.Dir = spec.Cwd
+	cmd.Env = append(os.Environ(),
+		fmt.Sprintf("ZERO_UPSTREAM_DB=%s", spec.UpstreamDb),
+		fmt.Sprintf("ZERO_PORT=%d", port),
+		fmt.Sprintf("ZERO_REPLICA_FILE=%s", replicaFile),
+		fmt.Sprintf("SINGULARITY_WORKTREE=%s", w.Name),
+	)
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+
+	stdout, err := cmd.StdoutPipe()
+	if err != nil {
+		return nil, err
+	}
+	stderr, err := cmd.StderrPipe()
+	if err != nil {
+		return nil, err
+	}
+	now := time.Now()
+	marker := fmt.Sprintf("--- starting %s zero-cache (port %d) ---", w.Name, port)
+	fmt.Fprintf(w.logFile, "%s [gateway] %s\n", now.Format(time.RFC3339), marker)
+	w.logBuf.Append("gateway", marker, now.UnixMilli())
+	if err := cmd.Start(); err != nil {
+		return nil, err
+	}
+
+	zc := &zeroCache{
+		cmd:     cmd,
+		exitCh:  make(chan struct{}),
+		port:    port,
+		pidPath: pidPath,
+	}
+
+	// Durable pid sidecar so a future gateway generation can reap this
+	// sidecar at boot if we die before stopping it. Best-effort.
+	if err := writeZeroSidecar(pidPath, w.Name, cmd); err != nil {
+		slog.Warn("write zero-cache pid sidecar failed", "worktree", w.Name, "path", pidPath, "err", err)
+	}
+
+	// Publish before readiness so Stop can find and kill it mid-startup.
+	w.mu.Lock()
+	w.activeZero = zc
+	w.mu.Unlock()
+
+	log := slog.With("worktree", w.Name, "pid", cmd.Process.Pid, "port", port)
+	go pumpLog(stdout, "zero-stdout", w.logBuf, w.logFile)
+	go pumpLog(stderr, "zero-stderr", w.logBuf, w.logFile)
+	go func() {
+		err := cmd.Wait()
+		w.onZeroExit(zc, err)
+		close(zc.exitCh)
+	}()
+	log.Info("zero-cache spawned")
+	return zc, nil
+}
+
+// onZeroExit clears activeZero if the exiting sidecar is the current one, so a
+// crashed zero-cache is re-spawned on the next /zero/* request.
+func (w *Worktree) onZeroExit(zc *zeroCache, err error) {
+	w.mu.Lock()
+	isActive := (w.activeZero == zc)
+	w.mu.Unlock()
+	if !isActive {
+		return
+	}
+	slog.Warn("zero-cache exited", "worktree", w.Name, "err", err)
+	_ = os.Remove(zc.pidPath)
+	w.mu.Lock()
+	if w.activeZero == zc {
+		w.activeZero = nil
+	}
+	w.mu.Unlock()
+}
+
+// stopZeroCache terminates the worktree's zero-cache process group (SIGTERM →
+// grace → SIGKILL) and removes its pid sidecar. The gateway does NOT touch
+// Postgres or the replica file — only the process. Idempotent.
+func (w *Worktree) stopZeroCache(ctx context.Context) {
+	w.mu.Lock()
+	zc := w.activeZero
+	w.activeZero = nil
+	w.mu.Unlock()
+	if zc == nil {
+		return
+	}
+	if zc.cmd != nil && zc.cmd.Process != nil {
+		signalZero(zc, syscall.SIGTERM, w.Name)
+		select {
+		case <-zc.exitCh:
+		case <-time.After(w.cfg.ShutdownGrace):
+			signalZero(zc, syscall.SIGKILL, w.Name)
+			waitZeroExit(zc, w.Name, postKillTimeout)
+		}
+	}
+	if err := os.Remove(zc.pidPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+		slog.Warn("remove zero-cache pid sidecar failed", "worktree", w.Name, "path", zc.pidPath, "err", err)
+	}
+	slog.Info("zero-cache stopped", "worktree", w.Name)
+}
+
+// zeroReplicaPath is the per-worktree SQLite replica path the gateway hands the
+// sidecar via ZERO_REPLICA_FILE. RegistryDir is <dataDir>/worktrees, so the
+// per-worktree dir is <RegistryDir>/<name> — the same base spec.json lives in.
+// The gateway never reads or drops this file; start.ts creates the parent dir.
+func (w *Worktree) zeroReplicaPath() string {
+	return filepath.Join(w.cfg.RegistryDir, w.Name, "zero", "replica.db")
+}
+
+// zeroPidPath is the sidecar's durable pid record, a plain file (no sun_path
+// length concern — the sidecar uses a TCP port, not a socket).
+func (w *Worktree) zeroPidPath() string {
+	return filepath.Join(w.cfg.SocketsDir, w.Name+".zero.pid")
 }
 
 // TouchBackend resets the idle timer. Called after every backend-bound request.
@@ -558,7 +786,11 @@ func (w *Worktree) ShouldSweep(idleTimeout time.Duration) bool {
 	}
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	if w.state != StateRunning {
+	// Sweep when the worktree has been idle past the timeout AND either the
+	// backend or a zero-cache sidecar is still alive holding resources. A
+	// zero-cache can outlive its backend (e.g. backend idled out first), so a
+	// lone sidecar must still be reapable — Stop tears down both.
+	if w.state != StateRunning && w.activeZero == nil {
 		return false
 	}
 	if w.active != nil && w.active.conns() > 0 {
@@ -869,6 +1101,149 @@ func newReverseProxy(socketPath string) *httputil.ReverseProxy {
 		http.Error(w, "backend unavailable: "+err.Error(), http.StatusBadGateway)
 	}
 	return rp
+}
+
+// ─── zero-cache helpers ──────────────────────────────────────
+
+// allocLoopbackPort binds 127.0.0.1:0, reads back the kernel-assigned port, and
+// closes the listener — returning a free loopback port for the zero-cache to
+// rebind. There is a small TOCTOU window between close and the child's bind;
+// the child binds immediately on start, so in practice it is benign.
+func allocLoopbackPort() (int, error) {
+	l, err := net.Listen("tcp", "127.0.0.1:0")
+	if err != nil {
+		return 0, err
+	}
+	port := l.Addr().(*net.TCPAddr).Port
+	if err := l.Close(); err != nil {
+		return 0, err
+	}
+	return port, nil
+}
+
+// waitZeroReady polls a TCP connect to 127.0.0.1:<port> until the zero-cache
+// accepts connections, the process exits, or the deadline expires. zero-cache
+// has no readiness endpoint we depend on, so a completed connect is the gate.
+func waitZeroReady(port int, timeout time.Duration, exitCh <-chan struct{}) error {
+	addr := fmt.Sprintf("127.0.0.1:%d", port)
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		c, err := net.DialTimeout("tcp", addr, 1*time.Second)
+		if err == nil {
+			_ = c.Close()
+			return nil
+		}
+		select {
+		case <-exitCh:
+			return errors.New("zero-cache exited before ready")
+		case <-time.After(200 * time.Millisecond):
+		}
+	}
+	return fmt.Errorf("zero-cache readiness timeout after %s", timeout)
+}
+
+// signalZero sends sig to the zero-cache's process group, ESRCH-tolerant.
+func signalZero(zc *zeroCache, sig syscall.Signal, worktree string) {
+	if err := killGroup(zc.cmd, sig); err != nil && !errors.Is(err, syscall.ESRCH) {
+		slog.Warn("signal zero-cache failed",
+			"worktree", worktree, "signal", sig.String(), "pid", zeroPID(zc), "err", err)
+	}
+}
+
+// waitZeroExit blocks until the zero-cache's cmd.Wait goroutine closes exitCh,
+// bounded by timeout, logging loudly if the kill never lands.
+func waitZeroExit(zc *zeroCache, worktree string, timeout time.Duration) {
+	select {
+	case <-zc.exitCh:
+	case <-time.After(timeout):
+		slog.Error("zero-cache did not exit after SIGKILL; possible leak",
+			"worktree", worktree, "port", zc.port, "pid", zeroPID(zc))
+	}
+}
+
+// zeroPID returns the zero-cache's pid for logging, or -1 if unknown.
+func zeroPID(zc *zeroCache) int {
+	if zc == nil || zc.cmd == nil || zc.cmd.Process == nil {
+		return -1
+	}
+	return zc.cmd.Process.Pid
+}
+
+// newZeroReverseProxy builds a reverse proxy that dials the zero-cache over
+// loopback TCP. The leading /zero prefix is stripped before forwarding, since
+// zero-cache mounts its routes at root (/sync, /keepalive, /) with no base path.
+func newZeroReverseProxy(port int) *httputil.ReverseProxy {
+	target := &url.URL{Scheme: "http", Host: fmt.Sprintf("127.0.0.1:%d", port)}
+	rp := httputil.NewSingleHostReverseProxy(target)
+	origDirector := rp.Director
+	rp.Director = func(r *http.Request) {
+		origDirector(r)
+		stripZeroPrefix(r.URL)
+		r.Host = target.Host
+	}
+	rp.ErrorHandler = func(w http.ResponseWriter, r *http.Request, err error) {
+		slog.Warn("zero-cache proxy error", "err", err)
+		http.Error(w, "zero-cache unavailable: "+err.Error(), http.StatusBadGateway)
+	}
+	return rp
+}
+
+// stripZeroPrefix rewrites a request URL path so the /zero prefix zero-cache
+// never sees is removed: /zero/foo → /foo, /zero → /.
+func stripZeroPrefix(u *url.URL) {
+	rest := strings.TrimPrefix(u.Path, "/zero")
+	if rest == "" {
+		rest = "/"
+	}
+	u.Path = rest
+	if u.RawPath != "" {
+		u.RawPath = strings.TrimPrefix(u.RawPath, "/zero")
+		if u.RawPath == "" {
+			u.RawPath = "/"
+		}
+	}
+}
+
+// ─── zero-cache pid sidecar ──────────────────────────────────
+//
+// Mirrors the backend sidecar so the boot reconcile can reap an orphaned
+// zero-cache from a prior gateway generation. The pid file is a plain file at
+// <SocketsDir>/<name>.zero.pid (no socket, no sun_path length concern).
+
+func writeZeroSidecar(pidPath, worktree string, cmd *exec.Cmd) error {
+	if cmd == nil || cmd.Process == nil {
+		return errors.New("no process to record")
+	}
+	pid := cmd.Process.Pid
+	data, err := json.Marshal(backendSidecar{
+		PID:       pid,
+		PGID:      pid,
+		WallStart: time.Now().UTC().Format(time.RFC3339),
+		Worktree:  worktree,
+	})
+	if err != nil {
+		return err
+	}
+	tmp := pidPath + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, pidPath)
+}
+
+func readZeroSidecar(pidPath string) (*backendSidecar, error) {
+	data, err := os.ReadFile(pidPath)
+	if err != nil {
+		return nil, err
+	}
+	var sc backendSidecar
+	if err := json.Unmarshal(data, &sc); err != nil {
+		return nil, err
+	}
+	if sc.PID <= 0 || sc.PGID <= 0 {
+		return nil, fmt.Errorf("invalid zero sidecar: pid=%d pgid=%d", sc.PID, sc.PGID)
+	}
+	return &sc, nil
 }
 
 // pumpLog forwards one of a backend's output streams to the worktree's own log

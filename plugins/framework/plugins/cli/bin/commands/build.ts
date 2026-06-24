@@ -27,6 +27,7 @@ import { withHostSlot, type HostSlotKind } from "../host-semaphore";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
 import { appendBuildLog } from "../build-log-writer-global";
 import { markWorktreeOpStart, clearWorktreeOp, writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
+import { zeroCacheSpec } from "@plugins/infra/plugins/launcher/server";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
@@ -1039,6 +1040,9 @@ export function registerBuild(program: Command) {
         name,
         server: resolve(root, "plugins/framework/plugins/server-core"),
         web: livePath,
+        // Per-worktree zero-cache sidecar — present only under the
+        // SINGULARITY_ZERO_CACHE opt-in. `root` is this worktree's repo root.
+        zeroCache: zeroCacheSpec({ name, repoRoot: root }),
       });
       endSpan();
 

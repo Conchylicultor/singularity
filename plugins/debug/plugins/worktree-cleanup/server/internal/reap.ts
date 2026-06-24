@@ -1,6 +1,7 @@
 import { rm, stat } from "node:fs/promises";
 import { join } from "node:path";
 import { dropDatabase } from "@plugins/database/plugins/admin/server";
+import { dropZeroReplicationArtifacts } from "@plugins/database/plugins/zero/plugins/cache-service/server";
 import {
   ensureMainWorktreeRoot,
   isCanonicalWorktreePath,
@@ -37,6 +38,11 @@ export async function reapAttempt(
   }
 
   opts.onStep?.("database");
+  // Drop Zero's replication slot(s) + publications FIRST: DROP DATABASE WITH
+  // (FORCE) terminates backends but does NOT drop replication slots, and a
+  // leftover slot makes the drop fail. No-ops cleanly for worktrees that never
+  // ran Zero.
+  await dropZeroReplicationArtifacts(id);
   await dropDatabase(id);
 
   opts.onStep?.("config");

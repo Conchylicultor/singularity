@@ -5,8 +5,8 @@
 ## Plugin reference
 
 - Server:
-  - Uses: `database/admin.ensureDatabase`, `database/admin.getAdminPool`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `database/embedded.pgPostmasterPidFile`, `database/pgbouncer.PGBOUNCER_PORT`, `database/pgbouncer.PGBOUNCER_SOCKET_DIR`, `database/pgbouncer.pgbouncerPidFileUnder`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.writeWorktreeSpec`
-  - Exports: Values: `awaitPgReady`, `bootSelfContainedApp`, `buildOrLocateGateway`, `ensureDatabaseConfig`, `gatewayPidFile`, `hasPgBouncerPackage`, `isGatewayListening`, `isRunning`, `pgbouncerConnection`, `pgbouncerService`, `readPid`, `spawnGatewayDaemon`, `teardownSelfContainedApp`, `writeReleaseDatabaseConfig`
+  - Uses: `database/admin.ensureDatabase`, `database/admin.getAdminPool`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `database/embedded.pgPostmasterPidFile`, `database/pgbouncer.PGBOUNCER_PORT`, `database/pgbouncer.PGBOUNCER_SOCKET_DIR`, `database/pgbouncer.pgbouncerPidFileUnder`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.writeWorktreeSpec`, `infra/worktree.ZeroCacheSpec`
+  - Exports: Values: `awaitPgReady`, `bootSelfContainedApp`, `buildOrLocateGateway`, `ensureDatabaseConfig`, `gatewayPidFile`, `hasPgBouncerPackage`, `isGatewayListening`, `isRunning`, `pgbouncerConnection`, `pgbouncerService`, `readPid`, `spawnGatewayDaemon`, `teardownSelfContainedApp`, `writeReleaseDatabaseConfig`, `zeroCacheEnabled`, `zeroCacheSpec`
 - Cross-plugin:
   - Imported by: `release`
 

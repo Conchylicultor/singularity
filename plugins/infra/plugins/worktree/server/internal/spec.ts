@@ -2,6 +2,22 @@ import { mkdirSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { worktreesDir } from "./worktree-op";
 
+/**
+ * Optional per-worktree zero-cache sidecar descriptor. Present ONLY when the
+ * SINGULARITY_ZERO_CACHE opt-in is set (composed by the launcher's zeroCacheSpec
+ * helper). The gateway spawns `command` with cwd=`cwd` and env ZERO_UPSTREAM_DB=
+ * `upstreamDb` (plus a gateway-allocated ZERO_PORT and a per-worktree
+ * ZERO_REPLICA_FILE). On-disk JSON key is exactly `zeroCache`.
+ */
+export interface ZeroCacheSpec {
+  /** Spawn argv: `["bun","run",<abs start.ts within this worktree repo>]`. */
+  command: string[];
+  /** Upstream DSN zero-cache replicates from (loopback TCP to the fork DB). */
+  upstreamDb: string;
+  /** Working dir for the spawn — the worktree repo root. */
+  cwd: string;
+}
+
 export interface WorktreeSpec {
   /** Namespace = subdomain = SINGULARITY_WORKTREE. Spec dir basename. */
   name: string;
@@ -16,6 +32,12 @@ export interface WorktreeSpec {
    * (the Go gateway reads it via `json:"command"`).
    */
   command?: string[];
+  /**
+   * Optional per-worktree zero-cache sidecar. Omitted unless the
+   * SINGULARITY_ZERO_CACHE opt-in is set — so an opted-out spec serializes
+   * byte-for-byte as before.
+   */
+  zeroCache?: ZeroCacheSpec;
 }
 
 /**
@@ -34,17 +56,25 @@ export function writeWorktreeSpec({
   server,
   web,
   command,
+  zeroCache,
 }: WorktreeSpec): string {
   const dir = join(worktreesDir(), name);
   mkdirSync(dir, { recursive: true });
   const path = join(dir, "spec.json");
   // Build the spec object additively so absent keys are omitted entirely —
-  // a dev spec must serialize byte-for-byte as before (no `web`/`command`
-  // when unset), since the gateway treats a missing `command` as "use the
-  // bun bin/index.ts convention".
-  const spec: { server: string; web?: string; command?: string[] } = { server };
+  // a dev spec must serialize byte-for-byte as before (no `web`/`command`/
+  // `zeroCache` when unset), since the gateway treats a missing `command` as
+  // "use the bun bin/index.ts convention" and a missing `zeroCache` as
+  // "no zero-cache sidecar for this worktree".
+  const spec: {
+    server: string;
+    web?: string;
+    command?: string[];
+    zeroCache?: ZeroCacheSpec;
+  } = { server };
   if (web) spec.web = web;
   if (command) spec.command = command;
+  if (zeroCache) spec.zeroCache = zeroCache;
   writeFileSync(path, JSON.stringify(spec, null, 2) + "\n");
   return path;
 }

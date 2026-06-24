@@ -3,10 +3,12 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path"
 	"path/filepath"
@@ -54,6 +56,18 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	wt := p.reg.Get(worktreeName)
 	if wt == nil {
 		http.Error(w, "unknown worktree: "+worktreeName, http.StatusNotFound)
+		return
+	}
+
+	// /zero/* routes to the worktree's zero-cache sidecar (cold-started lazily
+	// on first hit). Checked before isBackendPath so it isn't mistaken for the
+	// backend. zero-cache mounts at root, so the /zero prefix is stripped.
+	if isZeroPath(r.URL.Path) {
+		if isWebSocketUpgrade(r) {
+			p.handleZeroCacheWebSocket(w, r, wt)
+		} else {
+			p.handleZeroCacheHTTP(w, r, wt)
+		}
 		return
 	}
 
@@ -163,6 +177,87 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 	wt.TouchBackend()
 	bk.incWS()
 	defer bk.decWS()
+
+	errc := make(chan error, 2)
+	go func() {
+		_, e := io.Copy(backendConn, clientConn)
+		errc <- e
+	}()
+	go func() {
+		_, e := io.Copy(clientConn, backendConn)
+		errc <- e
+	}()
+	<-errc
+}
+
+// handleZeroCacheHTTP cold-starts the worktree's zero-cache sidecar and proxies
+// the request to it over loopback TCP, stripping the /zero prefix (done by the
+// stored reverse proxy's director). A missing zeroCache spec → 404; any other
+// spawn/readiness failure → 502. The request keeps the worktree alive.
+func (p *Proxy) handleZeroCacheHTTP(w http.ResponseWriter, r *http.Request, wt *Worktree) {
+	zc, err := wt.EnsureZeroCache(r.Context())
+	if err != nil {
+		if errors.Is(err, ErrZeroCacheDisabled) {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	zc.proxy.ServeHTTP(w, r)
+	wt.TouchBackend()
+}
+
+// handleZeroCacheWebSocket cold-starts the zero-cache, hijacks the client
+// connection, and shuttles bytes to the sidecar over loopback TCP. The
+// forwarded request line has its /zero prefix stripped so zero-cache (which
+// mounts its sync route at root) sees the path it expects.
+func (p *Proxy) handleZeroCacheWebSocket(w http.ResponseWriter, r *http.Request, wt *Worktree) {
+	zc, err := wt.EnsureZeroCache(r.Context())
+	if err != nil {
+		if errors.Is(err, ErrZeroCacheDisabled) {
+			http.NotFound(w, r)
+			return
+		}
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+	if zc == nil {
+		http.Error(w, "zero-cache unavailable", http.StatusBadGateway)
+		return
+	}
+
+	dialCtx, cancel := context.WithTimeout(r.Context(), 3*time.Second)
+	defer cancel()
+	var d net.Dialer
+	backendConn, err := d.DialContext(dialCtx, "tcp", fmt.Sprintf("127.0.0.1:%d", zc.port))
+	if err != nil {
+		http.Error(w, "zero-cache dial: "+err.Error(), http.StatusBadGateway)
+		return
+	}
+	defer backendConn.Close()
+
+	hj, ok := w.(http.Hijacker)
+	if !ok {
+		http.Error(w, "hijack unsupported", http.StatusInternalServerError)
+		return
+	}
+	clientConn, _, err := hj.Hijack()
+	if err != nil {
+		return
+	}
+	defer clientConn.Close()
+
+	// Forward the request with the /zero prefix stripped from its request line.
+	// Clone so we don't mutate the original (which the caller may still read).
+	fwd := r.Clone(r.Context())
+	fwd.URL = cloneStrippedURL(r.URL)
+	fwd.RequestURI = ""
+	if err := fwd.Write(backendConn); err != nil {
+		return
+	}
+
+	wt.TouchBackend()
 
 	errc := make(chan error, 2)
 	go func() {
@@ -350,6 +445,31 @@ func parseWorktree(host string) string {
 
 func isBackendPath(p string) bool {
 	return strings.HasPrefix(p, "/api/") || strings.HasPrefix(p, "/ws/")
+}
+
+// isZeroPath reports whether a request targets the zero-cache sidecar. Matches
+// the prefixed root (/zero) and any sub-path (/zero/...).
+func isZeroPath(p string) bool {
+	return p == "/zero" || strings.HasPrefix(p, "/zero/")
+}
+
+// cloneStrippedURL returns a copy of u with the /zero prefix removed from its
+// path (/zero/foo → /foo, /zero → /), used to build the WS request line the
+// zero-cache (which mounts at root) expects.
+func cloneStrippedURL(u *url.URL) *url.URL {
+	c := *u
+	rest := strings.TrimPrefix(c.Path, "/zero")
+	if rest == "" {
+		rest = "/"
+	}
+	c.Path = rest
+	if c.RawPath != "" {
+		c.RawPath = strings.TrimPrefix(c.RawPath, "/zero")
+		if c.RawPath == "" {
+			c.RawPath = "/"
+		}
+	}
+	return &c
 }
 
 func isWebSocketUpgrade(r *http.Request) bool {

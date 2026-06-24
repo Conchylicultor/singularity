@@ -1,34 +1,60 @@
 #!/usr/bin/env bun
 /**
- * zero-cache lifecycle script. Invoked by the gateway's generic service
- * supervisor via the "start" command in database.json (gated on the
- * SINGULARITY_ZERO_CACHE opt-in — see boot.ts).
+ * Per-worktree zero-cache supervisor. Spawned by the gateway's worktree state
+ * machine (from the worktree spec's `zeroCache` block — see writeWorktreeSpec /
+ * the launcher), NOT by the global database.json service supervisor. The gateway
+ * owns this process's lifecycle: it sets cwd + env, tracks the `bun run start.ts`
+ * pid, and pgroup-kills it on idle/teardown.
  *
- * Mirrors the embedded/pgbouncer start-script template (binary resolution,
- * idempotent reattach via a port ping, spawnSync, exit 0) with one critical
- * difference: zero-cache CANNOT run under Bun. It needs the native
- * @rocicorp/zero-sqlite3 binary and the EXACT Node major that binary was built
- * for (ZERO_NODE_MAJOR — Node 25 throws EBADENGINE and breaks Zero's tsx
- * tooling; a mismatched major loads the addon with ERR_DLOPEN_FAILED). There is no Node-spawn
- * precedent in the repo, so this script resolves a compatible `node` on PATH
- * and FAILS LOUD if none is found — the host-Node dependency is a Stage-1 risk.
+ * Contract — the gateway provides ALL THREE of these env vars (we fail loud if
+ * any is missing):
+ *   ZERO_UPSTREAM_DB   — upstream DSN (loopback TCP to the worktree's fork DB)
+ *   ZERO_PORT          — the gateway-allocated loopback port zero-cache listens on
+ *   ZERO_REPLICA_FILE  — abs path to the per-worktree SQLite replica
  *
- * Exits 0 on success (zero-cache is running/daemonized), non-zero on failure.
+ * Process model: this script runs FOREGROUND. It does the clean-slate pre-flight
+ * (drop any pre-existing Zero slot/publication + stale replica on the target DB),
+ * then spawns the Node zero-cache in the FOREGROUND (not detached) and awaits its
+ * exit — so the gateway-tracked pid owns the node child via its process group,
+ * exactly like `bun bin/index.ts` owns a backend. Readiness is the gateway's
+ * concern now (it probes the port); there is no reattach/daemon logic here.
+ *
+ * zero-cache CANNOT run under Bun: it needs the @rocicorp/zero-sqlite3 native
+ * addon built for an EXACT Node major (ZERO_NODE_MAJOR). We resolve a compatible
+ * `node` on PATH and FAIL LOUD if none is found.
  */
-import { existsSync, mkdirSync, openSync } from "node:fs";
+import { existsSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { join, dirname } from "node:path";
 import { spawnSync, spawn } from "node:child_process";
-import { connect } from "node:net";
-import { ZERO_CACHE_PORT } from "@plugins/database/plugins/zero/core";
-import {
-  ZERO_DIR,
-  ZERO_REPLICA_FILE,
-  ZERO_UPSTREAM_DB,
-} from "../shared";
+import { Client } from "pg";
+import { dropZeroSlotsAndPublications } from "../shared/internal/slot-sql";
 import { ZERO_NODE_MAJOR } from "../shared/internal/node-runtime";
 
-const READY_TIMEOUT_MS = 60_000;
-const ZERO_LOG_FILE = join(ZERO_DIR, "zero-cache.log");
+// ─── env contract (gateway-provided; fail loud if absent) ────────────────────
+
+function requireEnv(name: string): string {
+  const value = process.env[name];
+  if (!value) {
+    throw new Error(
+      `zero-cache: ${name} is required (the gateway sets it when spawning the ` +
+        `worktree's zeroCache.command). Got: ${value ?? "<unset>"}`,
+    );
+  }
+  return value;
+}
+
+const ZERO_UPSTREAM_DB = requireEnv("ZERO_UPSTREAM_DB");
+const ZERO_PORT = requireEnv("ZERO_PORT");
+const ZERO_REPLICA_FILE = requireEnv("ZERO_REPLICA_FILE");
+
+// The target fork DB name = the last path segment of the upstream DSN. Used for
+// the pre-flight slot/publication cleanup DDL.
+function dbNameFromDsn(dsn: string): string {
+  const name = new URL(dsn).pathname.replace(/^\//, "");
+  if (!name) throw new Error(`zero-cache: no database in ZERO_UPSTREAM_DB (${dsn})`);
+  return name;
+}
 
 // ─── Node runtime resolution (must be ZERO_NODE_MAJOR, NOT bun) ──────────────
 
@@ -49,7 +75,7 @@ function resolveNode(): string {
   for (const candidate of candidates) {
     const probe = spawnSync(candidate, ["--version"], { encoding: "utf-8" });
     if (probe.status !== 0 || typeof probe.stdout !== "string") continue;
-    const version = probe.stdout.trim(); // e.g. "v22.11.0"
+    const version = probe.stdout.trim(); // e.g. "v24.17.0"
     const major = Number.parseInt(version.replace(/^v/, "").split(".")[0] ?? "", 10);
     if (Number.isNaN(major)) continue;
     if (major === ZERO_NODE_MAJOR) {
@@ -93,82 +119,66 @@ function resolveZeroCacheBin(): string {
   return bin;
 }
 
-// ─── TCP probe ──────────────────────────────────────────────────────────────
-
-function pingPort(timeoutMs: number): Promise<boolean> {
-  return new Promise((resolve) => {
-    const sock = connect(ZERO_CACHE_PORT, "127.0.0.1");
-    const timer = setTimeout(() => {
-      sock.destroy();
-      resolve(false);
-    }, timeoutMs);
-    sock.on("connect", () => {
-      clearTimeout(timer);
-      sock.destroy();
-      resolve(true);
-    });
-    sock.on("error", () => {
-      clearTimeout(timer);
-      resolve(false);
-    });
-  });
-}
-
 // ─── main lifecycle ───────────────────────────────────────────────────────
 
 async function main(): Promise<void> {
-  // Reattach: if zero-cache is already listening, nothing to do.
-  if (await pingPort(1500)) {
-    console.log("zero-cache: already running; reattaching");
-    return;
+  const dbName = dbNameFromDsn(ZERO_UPSTREAM_DB);
+
+  // Clean-slate pre-flight (the drop-and-recopy semantics): drop any pre-existing
+  // Zero slot(s) + publications on the target fork and delete the stale replica,
+  // so this start always begins from a deterministic fresh initial COPY. We use
+  // our OWN `pg` client over the upstream DSN (not the admin server barrel) so
+  // this tools-target script stays off the DOM-typed server import graph — the
+  // drop SQL itself is shared verbatim with the reap hook + idle sweep.
+  console.log(`zero-cache: cleaning stale Zero slot/replica for ${dbName}`);
+  const preflight = new Client({ connectionString: ZERO_UPSTREAM_DB });
+  await preflight.connect();
+  try {
+    await dropZeroSlotsAndPublications(dbName, (text, params) =>
+      preflight.query(text, params),
+    );
+  } finally {
+    await preflight.end();
   }
+  await rm(ZERO_REPLICA_FILE, { force: true });
 
   const node = resolveNode();
   const cacheBin = resolveZeroCacheBin();
 
-  mkdirSync(ZERO_DIR, { recursive: true });
-  const logFd = openSync(ZERO_LOG_FILE, "a");
-
   console.log(
-    `zero-cache: starting (port=${ZERO_CACHE_PORT}, replica=${ZERO_REPLICA_FILE})`,
+    `zero-cache: starting (port=${ZERO_PORT}, replica=${ZERO_REPLICA_FILE}, upstream=${dbName})`,
   );
-  // Detached + unref: zero-cache is a long-lived server, not a daemonizing
-  // process like pg_ctl/pgbouncer. The supervisor's watchdog (tcp probe)
-  // restarts it on failure, so we fire it off and let the port readiness loop
-  // below confirm it came up. stdout/stderr go to the log file.
+
+  // Foreground (NOT detached): the gateway owns this process and pgroup-kills it.
+  // Inherit stdio so the gateway captures zero-cache's output in the worktree log.
   const child = spawn(node, [cacheBin], {
-    detached: true,
-    stdio: ["ignore", logFd, logFd],
+    stdio: "inherit",
     env: {
       ...process.env,
-      // Stage-1 single-DB dev opt-in: zero-cache's production mode requires
-      // --admin-password (throws "missing --admin-password: required in
-      // production mode"). Production hardening / admin-password is explicitly
-      // deferred to Stage 2; for the Stage-0-proven single-DB dev path we run
-      // zero-cache in development mode.
+      // zero-cache's production mode requires --admin-password; we run dev mode
+      // (production hardening is deferred). See the Stage notes.
       NODE_ENV: "development",
       ZERO_UPSTREAM_DB,
       ZERO_REPLICA_FILE,
-      ZERO_PORT: String(ZERO_CACHE_PORT),
+      ZERO_PORT,
     },
   });
-  child.unref();
 
-  // Wait for port readiness.
-  const deadline = Date.now() + READY_TIMEOUT_MS;
-  while (Date.now() < deadline) {
-    if (await pingPort(500)) {
-      console.log("zero-cache: ready");
-      return;
-    }
-    await Bun.sleep(500);
-  }
-  throw new Error(
-    `zero-cache: did not become ready within ${READY_TIMEOUT_MS}ms (see ${ZERO_LOG_FILE})`,
-  );
+  const code: number = await new Promise((resolve, reject) => {
+    child.on("error", reject);
+    child.on("exit", (exitCode, signal) => {
+      if (signal) {
+        console.log(`zero-cache: exited via signal ${signal}`);
+        resolve(0);
+        return;
+      }
+      resolve(exitCode ?? 1);
+    });
+  });
+  process.exit(code);
 }
 
 main().catch((err) => {
-  console.error(err.message ?? err);
+  console.error(err instanceof Error ? (err.stack ?? err.message) : err);
   process.exit(1);
 });

@@ -14,7 +14,10 @@ import {
   ensureDatabase,
   getAdminPool,
 } from "@plugins/database/plugins/admin/server";
-import { writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
+import {
+  writeWorktreeSpec,
+  type ZeroCacheSpec,
+} from "@plugins/infra/plugins/worktree/server";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 // Canonical embedded-cluster constants — the single source of truth for where
 // PG/PgBouncer listen. Importing them (rather than re-deriving the paths here)
@@ -31,7 +34,6 @@ import {
   PGBOUNCER_PORT,
   pgbouncerPidFileUnder,
 } from "@plugins/database/plugins/pgbouncer/server";
-import { ZERO_CACHE_PORT } from "@plugins/database/plugins/zero/core";
 
 // Progress sink. The launcher runs in a CLI process whose human-facing output
 // belongs on the terminal, but this plugin must not assume stdout (a packaged
@@ -123,27 +125,44 @@ export function pgbouncerConnection() {
 // zero-cache is gated on an EXPLICIT opt-in env switch, default OFF — NOT on
 // package presence (`@rocicorp/zero` is always committed for the client bundle,
 // so a presence gate would auto-start zero-cache for everyone on merge). With
-// the env unset, ensureDatabaseConfig writes the exact same database.json it
-// writes today — zero churn, nothing changes for anyone else.
+// the env unset, no spec carries a `zeroCache` block and database.json is
+// byte-identical to today — zero churn, nothing changes for anyone else.
+//
+// Stage 2: zero-cache is a PER-WORKTREE sidecar owned by the gateway's worktree
+// state machine (spawned from the worktree spec's `zeroCache` block), NOT a
+// global `database.json` service. This gate is consulted at spec-composition
+// time (zeroCacheSpec below), not when writing database.json.
 export function zeroCacheEnabled(): boolean {
   return process.env.SINGULARITY_ZERO_CACHE === "1";
 }
 
-export function zeroCacheService(repoRoot: string) {
+/**
+ * Compose the optional per-worktree `zeroCache` spec block, or `undefined` when
+ * the opt-in is unset (so the spec serializes byte-for-byte as before).
+ *
+ * `command` = `bun run <abs start.ts within THIS worktree repo>`; `cwd` = the
+ * worktree repo root; `upstreamDb` = a loopback-TCP DSN to the worktree's fork
+ * DB, built directly from the embedded constants (PG_USER@127.0.0.1:PG_PORT/<name>
+ * — NOT pgbouncer, NOT the unix socket, `127.0.0.1` literally, no `?schema`).
+ * The gateway adds ZERO_PORT (allocated) + ZERO_REPLICA_FILE (per-worktree) when
+ * it spawns the command.
+ */
+export function zeroCacheSpec(opts: {
+  name: string;
+  repoRoot: string;
+}): ZeroCacheSpec | undefined {
+  if (!zeroCacheEnabled()) return undefined;
   return {
-    name: "zero-cache",
-    start: [
+    command: [
       "bun",
       "run",
       join(
-        repoRoot,
+        opts.repoRoot,
         "plugins/database/plugins/zero/plugins/cache-service/scripts/start.ts",
       ),
     ],
-    // The supervisor's tcp ready-probe (gateway/supervisor.go). 127.0.0.1, not
-    // localhost — the start script binds the loopback IPv4 port.
-    ready: { tcp: `127.0.0.1:${ZERO_CACHE_PORT}` },
-    watchdog: { intervalSec: 2 },
+    upstreamDb: `postgresql://${PG_USER}@127.0.0.1:${PG_PORT}/${opts.name}`,
+    cwd: opts.repoRoot,
   };
 }
 
@@ -154,7 +173,6 @@ export function ensureDatabaseConfig(repoRoot: string, log: LogFn = noop): void 
       const existing = JSON.parse(readFileSync(DATABASE_CONFIG_PATH, "utf-8"));
       const services: Array<{ name: string }> = existing.services ?? [];
       const hasPgBouncer = services.some((s) => s.name === "pgbouncer");
-      const hasZeroCache = services.some((s) => s.name === "zero-cache");
       let changed = false;
       let nextServices = services;
       if (!hasPgBouncer && hasPgBouncerPackage(repoRoot)) {
@@ -163,13 +181,9 @@ export function ensureDatabaseConfig(repoRoot: string, log: LogFn = noop): void 
         changed = true;
         log("Updated database config: added PgBouncer");
       }
-      // Opt-in (default OFF): only ever append zero-cache when the env switch is
-      // set. With it unset, this branch is inert and the file is left untouched.
-      if (!hasZeroCache && zeroCacheEnabled()) {
-        nextServices = [...nextServices, zeroCacheService(repoRoot)];
-        changed = true;
-        log("Updated database config: added zero-cache");
-      }
+      // zero-cache is no longer a global database.json service (Stage 2): it is
+      // a per-worktree gateway-owned sidecar, composed into the worktree spec's
+      // `zeroCache` block (see zeroCacheSpec). Nothing to add here.
       if (changed) {
         existing.services = nextServices;
         writeFileSync(
@@ -215,7 +229,6 @@ export function ensureDatabaseConfig(repoRoot: string, log: LogFn = noop): void 
             watchdog: { intervalSec: 2 },
           },
           ...(hasPgBouncer ? [pgbouncerService(repoRoot)] : []),
-          ...(zeroCacheEnabled() ? [zeroCacheService(repoRoot)] : []),
         ],
       }
     : {
@@ -510,7 +523,13 @@ export async function bootSelfContainedApp(opts: {
 
   // Spec last: the gateway's fsnotify watcher only discovers the namespace once
   // its DB exists, so the backend's boot migrator never races DB creation.
-  writeWorktreeSpec({ name, server, web, command });
+  writeWorktreeSpec({
+    name,
+    server,
+    web,
+    command,
+    zeroCache: zeroCacheSpec({ name, repoRoot }),
+  });
   log(`Registered app "${name}"; waiting for backend to become ready...`);
 
   await awaitAppReady(name, port);

@@ -15,6 +15,8 @@ export {
   bootSelfContainedApp,
   teardownSelfContainedApp,
   gatewayPidFile,
+  zeroCacheEnabled,
+  zeroCacheSpec,
 } from "./internal/boot";
 
 export default {

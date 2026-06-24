@@ -381,12 +381,42 @@ func reconcileOrphanBackends(dir string, reg *Registry) {
 	}
 	wg.Wait()
 
+	// Reap orphaned zero-cache sidecars from a prior gateway generation. Unlike
+	// backends, the zero-cache binds a TCP port (no socket file to probe), so the
+	// <name>.zero.pid record is the sole orphan signal: kill the recorded process
+	// group (releasing its port + slot) and remove the sidecar. Boot-only — the
+	// gateway owns zero sidecars at this point, so any recorded pid is an orphan.
+	for _, e := range entries {
+		name := e.Name()
+		if !strings.HasSuffix(name, ".zero.pid") {
+			continue
+		}
+		p := filepath.Join(dir, name)
+		sc, err := readZeroSidecar(p)
+		if err != nil || sc == nil {
+			slog.Warn("orphan zero-cache sidecar unreadable; removing", "path", p, "err", err)
+		} else if processAlive(sc.PID) {
+			slog.Warn("reaping orphan zero-cache from prior gateway generation",
+				"path", p, "pid", sc.PID, "pgid", sc.PGID, "wallStart", sc.WallStart)
+			reapPgid(sc.PGID, sc.PID, reconcileKillGrace, p)
+		}
+		if rmErr := os.Remove(p); rmErr != nil && !errors.Is(rmErr, os.ErrNotExist) {
+			slog.Warn("remove orphan zero-cache sidecar failed", "path", p, "err", rmErr)
+		} else {
+			slog.Info("removed orphan zero-cache sidecar", "path", p)
+		}
+	}
+
 	// GC orphan *.pid sidecars whose socket file is already gone (the live
 	// branches above remove sidecars alongside their sockets, so those are
 	// already handled).
 	for _, e := range entries {
 		name := e.Name()
 		if !strings.HasSuffix(name, ".pid") {
+			continue
+		}
+		// .zero.pid sidecars are handled above (no associated socket file).
+		if strings.HasSuffix(name, ".zero.pid") {
 			continue
 		}
 		sockName := strings.TrimSuffix(name, ".pid")
