@@ -60,7 +60,7 @@ export const compositionsConfig = defineConfig({
             "tasks.task-list.recent",
             "ui.theme-toggle",
           ],
-          extends: ["self-improvement"],
+          extends: ["self-improvement", "served-baseline"],
         },
         {
           id: "agent-manager-lean",
@@ -73,7 +73,7 @@ export const compositionsConfig = defineConfig({
             "tasks.task-list.recent",
             "ui.theme-toggle",
           ],
-          extends: [],
+          extends: ["served-baseline"],
         },
 
         // ── Apps: lean baseline (entry only) for every other top-level app ──────
@@ -81,7 +81,7 @@ export const compositionsConfig = defineConfig({
         app("pages", "a3", "apps.pages"),
         app("settings", "a4", "apps.settings"),
         app("studio", "a5", "apps.studio"),
-        app("sonata", "a6", "apps.sonata", ["served-baseline"]),
+        app("sonata", "a6", "apps.sonata"),
         app("story", "a7", "apps.story"),
         app("debug", "a8", "apps.debug"),
         app("deploy", "a9", "apps.deploy"),
@@ -146,10 +146,11 @@ export const compositionsConfig = defineConfig({
 
 /**
  * A lean app baseline: entry = the app shell umbrella, nothing soft opted in.
- * `extendsList` lets an app pull in a reusable baseline (e.g. `served-baseline`)
- * when it is built as a self-contained, gateway-served composition.
+ * Every app is a self-contained, gateway-served composition, so it `extends`
+ * `served-baseline` by default — the liveness/readiness endpoint the gateway
+ * probes plus the base theme/token groups. `extraExtends` adds further packs.
  */
-function app(name: string, rank: string, entry: string, extendsList: string[] = []) {
+function app(name: string, rank: string, entry: string, extraExtends: string[] = []) {
   return {
     id: name,
     rank,
@@ -157,7 +158,7 @@ function app(name: string, rank: string, entry: string, extendsList: string[] = 
     category: "app" as const,
     entryPoints: [entry],
     selectedContributors: [] as string[],
-    extends: extendsList,
+    extends: ["served-baseline", ...extraExtends],
   };
 }
 

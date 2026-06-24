@@ -1,4 +1,4 @@
-// @hash f1841fe37e3a
+// @hash 75f17b871e44
 {
   "manifests": [
     {
@@ -15,7 +15,8 @@
         "ui.theme-toggle"
       ],
       "extends": [
-        "self-improvement"
+        "self-improvement",
+        "served-baseline"
       ]
     },
     {
@@ -31,7 +32,9 @@
         "tasks.task-list.recent",
         "ui.theme-toggle"
       ],
-      "extends": []
+      "extends": [
+        "served-baseline"
+      ]
     },
     {
       "id": "home",
@@ -42,7 +45,9 @@
         "apps.home"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [
+        "served-baseline"
+      ]
     },
     {
       "id": "pages",
@@ -53,7 +58,9 @@
         "apps.pages"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [
+        "served-baseline"
+      ]
     },
     {
       "id": "settings",
@@ -64,7 +71,9 @@
         "apps.settings"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [
+        "served-baseline"
+      ]
     },
     {
       "id": "studio",
@@ -75,7 +84,9 @@
         "apps.studio"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [
+        "served-baseline"
+      ]
     },
     {
       "id": "sonata",
@@ -99,7 +110,9 @@
         "apps.story"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [
+        "served-baseline"
+      ]
     },
     {
       "id": "debug",
@@ -110,7 +123,9 @@
         "apps.debug"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [
+        "served-baseline"
+      ]
     },
     {
       "id": "deploy",
@@ -121,7 +136,9 @@
         "apps.deploy"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [
+        "served-baseline"
+      ]
     },
     {
       "id": "file-explorer",
@@ -132,7 +149,9 @@
         "apps.file-explorer"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [
+        "served-baseline"
+      ]
     },
     {
       "id": "workflows",
@@ -143,7 +162,9 @@
         "apps.workflows"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [
+        "served-baseline"
+      ]
     },
     {
       "id": "data",
