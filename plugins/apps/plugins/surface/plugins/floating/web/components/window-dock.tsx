@@ -1,8 +1,6 @@
 import { useMemo } from "react";
 import { Apps, useTabs, type Tab } from "@plugins/apps/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import {
   bringWindowToFront,
@@ -12,16 +10,24 @@ import {
   windowForTab,
   type FloatingWindow,
 } from "../hooks/use-floating-windows";
+import { useElementSize } from "../hooks/use-element-size";
+import { WindowMinimap } from "./window-minimap";
 import { WorkspacePager } from "./workspace-pager";
 
 /**
  * The desktop dock (taskbar) for floating windows — the floating placement's
  * {@link PlacementDef.Foreground}, rendered once above all windows whenever the
  * floating Foreground is mounted. A macOS-style centered, translucent bar: one
- * chip per **window on the active virtual desktop** (active member's app icon +
- * title, suffixed ` (N)` when the window groups several tabs). The focused (and
- * visible) window reads as active; minimized windows dim, since they have fully
- * left the desktop. It is the restore target once a window is minimized.
+ * {@link WindowMinimap} thumbnail per **window on the active virtual desktop** —
+ * a small framed rectangle standing in for the whole desktop, with a smaller
+ * rect inside marking where that window sits on it (its x/y/w/h, or its snap
+ * tile), and the app icon centered in the rect for identification. The dock thus
+ * reads as a spatial map of the desktop (which window is where, how big, snapped
+ * or free) rather than a label list — the full title moves to the hover tooltip,
+ * macOS-dock style. The focused (and visible) window's thumbnail lights up with a
+ * primary ring; a grouped window shows a member-count badge; minimized windows
+ * dim and draw their rect outline-only, since they have fully left the desktop.
+ * It is the restore target once a window is minimized.
  *
  * Its LEFT segment hosts the {@link WorkspacePager} — the per-desktop pager —
  * separated from the window chips by a thin divider, so the whole thing reads as
@@ -34,16 +40,27 @@ import { WorkspacePager } from "./workspace-pager";
  *
  * Click follows the taskbar convention: the already-focused, non-minimized
  * window minimizes (toggles back to the dock); any other (or a minimized) window
- * un-minimizes, raises to front, and focuses its active member. Each chip is a
- * {@link ToggleChip} (the canonical stateful pill — icon + truncating label +
- * active state) so the dock writes no raw layout mechanics; the chips wrap via
- * {@link Cluster}.
+ * un-minimizes, raises to front, and focuses its active member. Each thumbnail is
+ * a plain `<button>` wrapping the {@link WindowMinimap} (carrying the dock's
+ * click, `aria-label`, and `aria-pressed`); the thumbnails wrap via {@link
+ * Cluster}.
+ *
+ * The minimap needs the desktop's pixel size to place a free-floating window's
+ * rect (a snapped window resolves resolution-independently). We measure the dock
+ * anchor's `offsetParent` — the desktop backdrop, a `position: relative` box —
+ * via {@link useElementSize}'s `ResizeObserver`, defaulting to `{0,0}` until the
+ * first measure (the minimap renders icon-only for that frame).
  */
 export function WindowDock({ tabIds }: { tabIds: string[] }) {
   const { tabs, titles, focusedTabId, focusTab } = useTabs();
   const map = useFloatingWindows();
   const { activeDesktopId } = useDesktops();
   const apps = Apps.App.useContributions();
+
+  // Measure the desktop backdrop (the anchor's offsetParent) so the minimaps can
+  // scale a free window's pixel box into a fraction of the desktop.
+  const [anchorRef, { width: desktopW, height: desktopH }] =
+    useElementSize<HTMLDivElement>((el) => el.offsetParent);
 
   // tabId → Tab, so each chip can resolve its app (icon / tooltip) from appId.
   const byTabId = useMemo(() => {
@@ -76,8 +93,11 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
     // genuinely-positioned element — no layout primitive models a within-surface
     // (non-portaled) floating bar (viewport-overlay portals to <body>, escaping
     // the surface bounds), so the absolute anchor escapes the layout gate here.
-    // eslint-disable-next-line layout/no-adhoc-layout -- genuine one-off: bottom-center desktop dock anchor; no positioning primitive models a within-surface floating bar
-    <div className="pointer-events-none absolute bottom-3 left-1/2 z-overlay -translate-x-1/2">
+    <div
+      ref={anchorRef}
+      // eslint-disable-next-line layout/no-adhoc-layout -- genuine one-off: bottom-center desktop dock anchor; no positioning primitive models a within-surface floating bar
+      className="pointer-events-none absolute bottom-3 left-1/2 z-overlay -translate-x-1/2"
+    >
       <Cluster
         gap="xs"
         className="pointer-events-auto rounded-lg border bg-muted/70 px-sm py-xs shadow-lg backdrop-blur"
@@ -114,16 +134,26 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
 
           return (
             <WithTooltip key={win.id} content={label}>
-              <ToggleChip
-                active={active}
-                variant="ghost"
-                icon={Icon ? <Icon /> : undefined}
+              {/* A plain button wrapping the minimap thumbnail: the always-visible
+                  text label is intentionally dropped (macOS-dock style) — the
+                  minimap's icon-in-rect plus this tooltip carry identification. */}
+              <button
+                type="button"
                 onClick={onClick}
-                title={label}
-                className={cn("max-w-40", minimized && "opacity-60")}
+                aria-label={label}
+                aria-pressed={active}
+                className="rounded-md"
               >
-                {label}
-              </ToggleChip>
+                <WindowMinimap
+                  geo={win.geo}
+                  desktopW={desktopW}
+                  desktopH={desktopH}
+                  icon={Icon}
+                  active={active}
+                  minimized={minimized}
+                  count={win.members.length}
+                />
+              </button>
             </WithTooltip>
           );
         })}
