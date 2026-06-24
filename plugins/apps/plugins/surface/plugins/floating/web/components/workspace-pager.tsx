@@ -3,7 +3,6 @@ import { MdAdd, MdClose } from "react-icons/md";
 import { useTabs } from "@plugins/apps/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
@@ -19,31 +18,48 @@ import {
   useDesktops,
   useFloatingWindows,
   type Desktop,
+  type FloatingWindow,
 } from "../hooks/use-floating-windows";
+import { DesktopMinimap } from "./desktop-minimap";
 
 /**
- * The virtual-desktop (workspace) pager — a compact row of numbered pills
+ * The virtual-desktop (workspace) pager — a compact row of **miniature desktops**
  * composed into the LEFT of the floating dock bar (one cohesive bottom shelf, the
- * KDE / ChromeOS pattern). It honours the passive-backdrop invariant: it
- * organizes windows and lives in chrome (the dock), it is never an app launcher
- * and is never painted onto the wallpaper.
+ * KDE / ChromeOS pattern). Each pill is a {@link DesktopMinimap}: a small frame
+ * standing in for that desktop, with every window on it drawn at its real
+ * position/size, so the switcher reads as a spatial overview rather than a bare
+ * `1 / 2 / 3` index (the macOS Spaces / Win11 Task View thumbnail idiom). It
+ * honours the passive-backdrop invariant: it organizes windows and lives in
+ * chrome (the dock), it is never an app launcher and is never painted onto the
+ * wallpaper.
  *
- * One {@link ToggleChip} per desktop (numbered 1..N), active when it's the live
- * desktop; clicking switches to it and focuses its topmost window. A pill reveals
- * a small × on hover (only when more than one desktop exists) to remove it. A
- * trailing "+" pill creates a desktop and switches to it. State (desktop list +
- * counts) comes straight from the window store, so the pager re-renders with it.
+ * One pill per desktop, active when it's the live desktop; clicking switches to
+ * it and focuses its topmost window. A pill reveals a small × on hover (only when
+ * more than one desktop exists) to remove it. A trailing "+" creates a desktop
+ * and switches to it. The desktop list + each desktop's windows come straight
+ * from the window store, so the pager (and every thumbnail) re-renders with it.
+ * `desktopW`/`desktopH` (the measured backdrop, threaded from {@link WindowDock})
+ * scale each free window into a desktop fraction inside the thumbnails.
  */
-export function WorkspacePager() {
+export function WorkspacePager({
+  desktopW,
+  desktopH,
+}: {
+  desktopW: number;
+  desktopH: number;
+}) {
   const { desktops, activeDesktopId } = useDesktops();
   const windows = useFloatingWindows();
-  const { focusTab } = useTabs();
+  const { focusedTabId, focusTab } = useTabs();
 
-  // Window count per desktop, for each pill's tooltip ("Desktop N · k window(s)").
-  const counts = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const win of windows.values())
-      m.set(win.desktopId, (m.get(win.desktopId) ?? 0) + 1);
+  // Windows grouped by desktop, so each thumbnail draws only its own windows.
+  const byDesktop = useMemo(() => {
+    const m = new Map<string, FloatingWindow[]>();
+    for (const win of windows.values()) {
+      const list = m.get(win.desktopId);
+      if (list) list.push(win);
+      else m.set(win.desktopId, [win]);
+    }
     return m;
   }, [windows]);
 
@@ -62,7 +78,10 @@ export function WorkspacePager() {
           desktop={desktop}
           index={index}
           active={desktop.id === activeDesktopId}
-          windowCount={counts.get(desktop.id) ?? 0}
+          windows={byDesktop.get(desktop.id) ?? []}
+          desktopW={desktopW}
+          desktopH={desktopH}
+          focusedTabId={focusedTabId}
           removable={desktops.length > 1}
           onSwitch={() => {
             setActiveDesktop(desktop.id);
@@ -79,40 +98,60 @@ export function WorkspacePager() {
 }
 
 /**
- * One desktop pill: the numbered switch chip with a hover-revealed × delete
- * affordance. The reveal uses the {@link useHoverReveal} primitive so the hidden
- * × is never a live click-target beside the visible number.
+ * One desktop pill: a clickable {@link DesktopMinimap} thumbnail with a
+ * hover-revealed × delete affordance. The thumbnail carries the active read (its
+ * own primary ring); this wrapper carries the click + `aria-pressed` and the
+ * tooltip ("Desktop N · k window(s)"). The reveal uses {@link useHoverReveal} so
+ * the hidden × is never a live click-target beside the thumbnail.
  */
 function DesktopPill({
   desktop,
   index,
   active,
-  windowCount,
+  windows,
+  desktopW,
+  desktopH,
+  focusedTabId,
   removable,
   onSwitch,
 }: {
   desktop: Desktop;
   index: number;
   active: boolean;
-  windowCount: number;
+  windows: FloatingWindow[];
+  desktopW: number;
+  desktopH: number;
+  focusedTabId: string | null;
   removable: boolean;
   onSwitch: () => void;
 }) {
   const { revealed, groupProps } = useHoverReveal();
   const label = `Desktop ${index + 1}`;
-  const tooltip = `${label} · ${windowCount} window${windowCount === 1 ? "" : "s"}`;
+  const count = windows.filter((w) => !w.geo.minimized).length;
+  const tooltip = `${label} · ${count} window${count === 1 ? "" : "s"}`;
 
   return (
     <Stack direction="row" align="center" gap="2xs" {...groupProps}>
       <WithTooltip content={tooltip}>
-        <ToggleChip
-          active={active}
-          variant="ghost"
+        {/* A plain button wrapping the mini-desktop thumbnail: the thumbnail shows
+            active state (primary ring) and the desktop's windows; this carries the
+            switch click + a11y. The bare number moves to the tooltip / aria-label. */}
+        <button
+          type="button"
           onClick={onSwitch}
-          title={tooltip}
+          aria-label={tooltip}
+          aria-pressed={active}
+          className="rounded-md"
         >
-          {index + 1}
-        </ToggleChip>
+          <DesktopMinimap
+            windows={windows}
+            desktopW={desktopW}
+            desktopH={desktopH}
+            active={active}
+            focusedTabId={focusedTabId}
+            index={index}
+          />
+        </button>
       </WithTooltip>
       {removable && (
         <span className={hoverRevealClass(revealed)}>

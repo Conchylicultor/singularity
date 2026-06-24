@@ -1,6 +1,8 @@
 import { useMemo } from "react";
 import { Apps, useTabs, type Tab } from "@plugins/apps/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import {
   bringWindowToFront,
@@ -11,25 +13,19 @@ import {
   type FloatingWindow,
 } from "../hooks/use-floating-windows";
 import { useElementSize } from "../hooks/use-element-size";
-import { WindowMinimap } from "./window-minimap";
 import { WorkspacePager } from "./workspace-pager";
 
 /**
  * The desktop dock (taskbar) for floating windows — the floating placement's
  * {@link PlacementDef.Foreground}, rendered once above all windows whenever the
  * floating Foreground is mounted. A macOS-style centered, translucent bar: one
- * {@link WindowMinimap} thumbnail per **window on the active virtual desktop** —
- * a small framed rectangle standing in for the whole desktop, with a smaller
- * rect inside marking where that window sits on it (its x/y/w/h, or its snap
- * tile), and the app icon centered in the rect for identification. The dock thus
- * reads as a spatial map of the desktop (which window is where, how big, snapped
- * or free) rather than a label list — the full title moves to the hover tooltip,
- * macOS-dock style. The focused (and visible) window's thumbnail lights up with a
- * primary ring; a grouped window shows a member-count badge; minimized windows
- * dim and draw their rect outline-only, since they have fully left the desktop.
- * It is the restore target once a window is minimized.
+ * chip per **window on the active virtual desktop** (active member's app icon +
+ * title, suffixed ` (N)` when the window groups several tabs). The focused (and
+ * visible) window reads as active; minimized windows dim, since they have fully
+ * left the desktop. It is the restore target once a window is minimized.
  *
- * Its LEFT segment hosts the {@link WorkspacePager} — the per-desktop pager —
+ * Its LEFT segment hosts the {@link WorkspacePager} — the per-desktop pager,
+ * whose pills are miniature desktops (each window drawn at its real position) —
  * separated from the window chips by a thin divider, so the whole thing reads as
  * one cohesive bottom shelf (KDE / ChromeOS pattern) rather than two competing
  * centered bars. The pager organizes windows; like the dock it is still
@@ -38,18 +34,17 @@ import { WorkspacePager } from "./workspace-pager";
  * Foreground is mounted — even when the active desktop has zero windows, the user
  * must still see and switch desktops.
  *
+ * The pager's mini-desktops need the desktop's pixel size to place a free window
+ * (a snapped window resolves resolution-independently). We measure the dock
+ * anchor's `offsetParent` — the desktop backdrop, a `position: relative` box —
+ * via {@link useElementSize}'s `ResizeObserver` and hand it to the pager.
+ *
  * Click follows the taskbar convention: the already-focused, non-minimized
  * window minimizes (toggles back to the dock); any other (or a minimized) window
- * un-minimizes, raises to front, and focuses its active member. Each thumbnail is
- * a plain `<button>` wrapping the {@link WindowMinimap} (carrying the dock's
- * click, `aria-label`, and `aria-pressed`); the thumbnails wrap via {@link
- * Cluster}.
- *
- * The minimap needs the desktop's pixel size to place a free-floating window's
- * rect (a snapped window resolves resolution-independently). We measure the dock
- * anchor's `offsetParent` — the desktop backdrop, a `position: relative` box —
- * via {@link useElementSize}'s `ResizeObserver`, defaulting to `{0,0}` until the
- * first measure (the minimap renders icon-only for that frame).
+ * un-minimizes, raises to front, and focuses its active member. Each chip is a
+ * {@link ToggleChip} (the canonical stateful pill — icon + truncating label +
+ * active state) so the dock writes no raw layout mechanics; the chips wrap via
+ * {@link Cluster}.
  */
 export function WindowDock({ tabIds }: { tabIds: string[] }) {
   const { tabs, titles, focusedTabId, focusTab } = useTabs();
@@ -57,8 +52,8 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
   const { activeDesktopId } = useDesktops();
   const apps = Apps.App.useContributions();
 
-  // Measure the desktop backdrop (the anchor's offsetParent) so the minimaps can
-  // scale a free window's pixel box into a fraction of the desktop.
+  // Measure the desktop backdrop (the anchor's offsetParent) so the pager's
+  // mini-desktops can scale each free window's pixel box into a desktop fraction.
   const [anchorRef, { width: desktopW, height: desktopH }] =
     useElementSize<HTMLDivElement>((el) => el.offsetParent);
 
@@ -105,7 +100,7 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
         {/* Per-desktop workspace pager on the LEFT, then a thin divider, then the
             active desktop's window chips — one cohesive bottom shelf. The divider
             is dropped when there are no chips (empty active desktop = pager only). */}
-        <WorkspacePager />
+        <WorkspacePager desktopW={desktopW} desktopH={desktopH} />
         {windows.length > 0 && (
           // A 1px hairline separating the pager from the chips. No layout
           // primitive models an in-row divider; the smallest acceptable construct.
@@ -134,26 +129,16 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
 
           return (
             <WithTooltip key={win.id} content={label}>
-              {/* A plain button wrapping the minimap thumbnail: the always-visible
-                  text label is intentionally dropped (macOS-dock style) — the
-                  minimap's icon-in-rect plus this tooltip carry identification. */}
-              <button
-                type="button"
+              <ToggleChip
+                active={active}
+                variant="ghost"
+                icon={Icon ? <Icon /> : undefined}
                 onClick={onClick}
-                aria-label={label}
-                aria-pressed={active}
-                className="rounded-md"
+                title={label}
+                className={cn("max-w-40", minimized && "opacity-60")}
               >
-                <WindowMinimap
-                  geo={win.geo}
-                  desktopW={desktopW}
-                  desktopH={desktopH}
-                  icon={Icon}
-                  active={active}
-                  minimized={minimized}
-                  count={win.members.length}
-                />
-              </button>
+                {label}
+              </ToggleChip>
             </WithTooltip>
           );
         })}
