@@ -2,7 +2,7 @@ import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getPushProfiling } from "../../shared/endpoints";
 import { readContentionRecords } from "./read-contention";
 import { readBuildLogRecords } from "./read-build-log";
-import { resolveConversationTitles } from "./resolve-conversation-titles";
+import { resolveWorktreeTitles } from "./resolve-worktree-titles";
 
 interface PushEntry {
   pushId: string;
@@ -182,27 +182,26 @@ export const handlePushProfiling = implement(
       });
     }
 
-    // Each worktree's label should read as the human title of the conversation
-    // that drove it. Pushes are appended in chronological order, so the first
-    // push carrying a conversationId is "the first conversation that added an
-    // event". (Builds carry no conversationId, so only pushes attribute a row.)
-    const byWorktreeConvId = new Map<string, string | null>();
-    for (const [worktree, data] of byWorktree) {
-      const firstWithConv = data.pushes.find((p) => p.conversationId != null);
-      byWorktreeConvId.set(worktree, firstWithConv?.conversationId ?? null);
-    }
-
-    const titles = await resolveConversationTitles(
-      [...byWorktreeConvId.values()].filter((id): id is string => id != null),
-    );
+    // Each worktree's label reads as the human title of the task that drove it.
+    // The worktree id is the attempt id (basename invariant), and every attempt
+    // has a NOT-NULL task title — so resolve the label directly from the
+    // worktree id. This attributes build-only rows too (builds carry no
+    // conversationId) and prefers the stable task title over a per-conversation
+    // one. The conversationId is still derived per row, purely as the row-click
+    // navigation target into the conversation that ran the work.
+    const titles = await resolveWorktreeTitles([...byWorktree.keys()]);
 
     const groups: WorktreeGroup[] = [];
     for (const [worktree, data] of byWorktree) {
-      const conversationId = byWorktreeConvId.get(worktree) ?? null;
+      // Pushes are appended chronologically, so the first one carrying a
+      // conversationId is the first conversation that added an event.
+      const conversationId =
+        data.pushes.find((p) => p.conversationId != null)?.conversationId ??
+        null;
       groups.push({
         worktree,
         conversationId,
-        title: conversationId ? (titles.get(conversationId) ?? null) : null,
+        title: titles.get(worktree) ?? null,
         pushes: data.pushes,
         builds: data.builds,
       });
