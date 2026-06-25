@@ -17,6 +17,7 @@ experimental = true  # required for the [hooks] block below
 bun = "latest"
 go = "1.24"  # Go <1.24 omits LC_UUID; macOS 26 dyld then refuses to load the gateway binary
 tmux = "latest"
+rust = "stable"  # cargo + rustc for the Tauri desktop release shell (tauri/); end users need none of this
 
 [tasks.setup]
 description = "Bootstrap the base 'singularity' Postgres DB (idempotent)"

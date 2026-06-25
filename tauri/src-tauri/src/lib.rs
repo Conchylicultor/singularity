@@ -70,7 +70,17 @@ pub fn run() {
             // 104-byte limit even when app-data is a long macOS path.
             let data_dir = app.path().app_data_dir()?.join("data");
             std::fs::create_dir_all(&data_dir).ok();
-            let socket_dir = std::env::temp_dir().join(format!("equin-{}", manifest.composition));
+            // Socket dir must be SHORT: PG/PgBouncer Unix sockets have a 104-byte
+            // sun_path limit, and macOS `$TMPDIR` (what `std::env::temp_dir()`
+            // returns) is a long `/var/folders/…` path that erodes the budget.
+            // `/tmp` keeps `<dir>/equin-<app>/.s.PGSQL.<port>` comfortably under it.
+            // Only the ephemeral sockets live here; the cluster data stays in app-data.
+            let socket_base = if cfg!(unix) {
+                PathBuf::from("/tmp")
+            } else {
+                std::env::temp_dir()
+            };
+            let socket_dir = socket_base.join(format!("equin-{}", manifest.composition));
             std::fs::create_dir_all(&socket_dir).ok();
 
             app.manage(StackCtx {

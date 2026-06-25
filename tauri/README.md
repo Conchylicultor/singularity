@@ -39,9 +39,10 @@ src-tauri/
 
 ## Build prerequisites (build host only — NOT the end user)
 
-- **Rust toolchain** (`rustup` / `cargo`). The end-user machine needs none of
-  this — the produced `.app`/`.dmg`/`.deb` ships compiled binaries + uses the
-  system webview.
+- **Rust toolchain** (`cargo` / `rustc`). Managed via `mise` — it's declared in
+  the repo `mise.toml` (`rust = "stable"`), so `mise install` provisions it
+  alongside `bun`/`go`. The end-user machine needs none of this — the produced
+  `.app`/`.dmg`/`.deb` ships compiled binaries + uses the system webview.
 - **Platform webview SDK**: macOS — Xcode Command Line Tools (system WKWebView);
   Linux — `libwebkit2gtk-4.1-dev` + `libgtk-3-dev`.
 - **App icons** must exist under `src-tauri/icons/` before `tauri build`
@@ -57,9 +58,38 @@ src-tauri/
 
 ## Status
 
-The Rust shell + config are scaffolded but **not yet compiled/verified** — the
-repo's CI/dev host that produced this had no Rust toolchain. First build on a
-Rust-equipped host should: generate icons, `cargo`/`tauri` compile, and confirm
-the Tauri v2 webview API names used in `lib.rs` (`WebviewWindow::navigate`,
-`PathResolver::{resource_dir,app_data_dir}`, the `resources` → `bundle` mapping).
-Adjust those call sites if the installed Tauri 2.x revision differs.
+**Compiled and stack-verified on a Rust host (Tauri 2.11.3, Rust 1.96.0,
+macOS arm64).** `./singularity release --composition sonata --target tauri`
+produces `Sonata.app` (identifier `ai.equin.sonata`, embedded bundle + RELEASE.json).
+The Tauri-v2 API names in `lib.rs` all check out on 2.11.x — notably
+`WebviewWindow::navigate(&self, Url)` compiles with an immutable binding,
+`PathResolver::{resource_dir,app_data_dir}` resolve, and the
+`resources → bundle` mapping lands at `<resource_dir>/bundle`.
+
+The self-contained stack was verified by driving the `.app`'s embedded
+`launch`/`teardown` binaries with the exact env the shell sets: bare
+`http://localhost:<port>/` serves the composition SPA single-origin (gateway
+`-default-namespace` route), a row written to the app-data DB survives a full
+teardown + relaunch, the PG socket sits at `/tmp/equin-<app>/.s.PGSQL.<port>`
+(31 bytes, well under the 104-byte limit), and teardown leaves no orphaned
+gateway/postgres/pgbouncer processes.
+
+Not yet verified (needs a human on an interactive desktop session): the live
+WKWebView **window render** and **audio playback** — both require an Aqua GUI
+session, which a headless/automation shell lacks.
+
+### Known caveats
+
+- **`.dmg` bundling needs a GUI session.** `bundle_dmg.sh` drives Finder via
+  AppleScript to style the disk-image window; in a non-interactive shell that
+  AppleEvent times out (`-1712`) and the dmg step fails *after* `Sonata.app` is
+  already built. The `.app` is unaffected. Build the dmg from a logged-in
+  desktop session (with Automation/TCC permission), or restrict
+  `bundle.targets` to `["app"]` for headless builds.
+- **Embedded PG binds a fixed TCP port (5433).** The shell sets `SINGULARITY_DIR`
+  / `SINGULARITY_PG_SOCKET_DIR` / `PORT` but **not** `SINGULARITY_PG_PORT`, so the
+  embedded Postgres' loopback listener (`listen_addresses=127.0.0.1`, present for
+  Zero) defaults to 5433 — fine on a clean end-user machine, but it collides with
+  a running dev cluster or a second desktop instance. The web preview path sets a
+  free `SINGULARITY_PG_PORT` (`plugins/release/server/internal/preview-manager.ts`);
+  the desktop shell does not. See the F5 research doc's multi-instance note.
