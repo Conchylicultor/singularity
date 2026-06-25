@@ -439,6 +439,12 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`floating`** — Floating sidebar framing — the sidebar renders as a rounded, detached card.
         - **`flush`** — Flush sidebar framing — the default, pixel-identical to the original app shell.
         - **`inset`** — Inset sidebar framing — the main area floats as a rounded inset card.
+    - **`tab-bar`** — Themable tab bar: chip / underline / connected variants.
+      - Plugins:
+        - **`chip`** — Accent-filled pill tab (the canonical chip look).
+        - **`connected`** — Folder tab; the active tab merges into the content surface.
+        - **`customizer`** — Registers the tab-bar variant picker (chip / underline / connected) into the theme customizer.
+        - **`underline`** — Flat tab; the active tab is underlined flush with the bar.
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
       - Plugins:
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
