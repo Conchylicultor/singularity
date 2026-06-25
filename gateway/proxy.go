@@ -22,10 +22,16 @@ type Proxy struct {
 	reg    *Registry
 	routes *CentralRoutesStore
 	sup    *Supervisor
+	// defaultNamespace is the fallback worktree for requests that resolve to no
+	// namespace (bare localhost, no central-route match). Empty in dev/multi-app
+	// mode (such requests 404); set to the single app's name in a packaged
+	// single-app build (desktop/Tauri, single-origin web) so a webview with no
+	// `<name>.localhost` subdomain still reaches the backend.
+	defaultNamespace string
 }
 
-func NewProxy(reg *Registry, routes *CentralRoutesStore, sup *Supervisor) *Proxy {
-	return &Proxy{reg: reg, routes: routes, sup: sup}
+func NewProxy(reg *Registry, routes *CentralRoutesStore, sup *Supervisor, defaultNamespace string) *Proxy {
+	return &Proxy{reg: reg, routes: routes, sup: sup, defaultNamespace: defaultNamespace}
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
@@ -46,6 +52,15 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// this same mechanism since auth migrated to the central runtime.
 	if backend := p.routes.Get().Match(r.URL.Path); backend != "" {
 		worktreeName = backend
+	}
+
+	// Single-app fallback: a packaged build sets a default namespace so a
+	// subdomain-less request (a desktop webview at bare localhost / tauri://,
+	// or Windows where *.localhost does not resolve) still routes to the one
+	// app. Lowest precedence — an explicit subdomain or a central route wins.
+	// Empty default ⇒ today's behavior (such requests 404), so dev is unaffected.
+	if worktreeName == "" && p.defaultNamespace != "" {
+		worktreeName = p.defaultNamespace
 	}
 
 	if worktreeName == "" {

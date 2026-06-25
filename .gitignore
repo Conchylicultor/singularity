@@ -34,6 +34,14 @@ dist.stats.html
 # committed `<dir>.generated.ts`).
 *.composition.generated.ts
 
+# Tauri desktop shell — generated/staged artifacts (the Rust project itself is
+# committed; these are produced per-release or per-build).
+/tauri/src-tauri/target/
+/tauri/src-tauri/resources/bundle/
+/tauri/src-tauri/tauri.conf.override.json
+/tauri/src-tauri/gen/
+/tauri/src-tauri/icons/
+
 # Caches
 .cache/
 .eslintcache

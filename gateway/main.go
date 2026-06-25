@@ -27,6 +27,7 @@ type Config struct {
 	RegistryDir       string
 	SocketsDir        string
 	CentralRoutesFile string
+	DefaultNamespace  string
 }
 
 func parseFlags() Config {
@@ -54,6 +55,12 @@ func parseFlags() Config {
 	flag.StringVar(&cfg.SocketsDir, "sockets-dir", defaultSockets, "directory for per-worktree Unix sockets")
 	defaultCentralRoutes := filepath.Join(dataDir, "central-routes.json")
 	flag.StringVar(&cfg.CentralRoutesFile, "central-routes-file", defaultCentralRoutes, "path to the central routing manifest")
+	// Fallback namespace for subdomain-less requests. Empty ⇒ such requests 404
+	// (dev/multi-app). A packaged single-app build (desktop/Tauri, single-origin
+	// web) sets it to the app's name so a bare-localhost webview reaches the
+	// backend. Env-defaulted so the release launcher can pass it through inherited
+	// process env as well as the flag.
+	flag.StringVar(&cfg.DefaultNamespace, "default-namespace", os.Getenv("SINGULARITY_DEFAULT_NAMESPACE"), "fallback namespace for requests with no subdomain")
 
 	flag.Parse()
 	return cfg
@@ -154,7 +161,7 @@ func main() {
 
 	srv := &http.Server{
 		Addr:              cfg.Listen,
-		Handler:           NewProxy(reg, routes, sup),
+		Handler:           NewProxy(reg, routes, sup, cfg.DefaultNamespace),
 		ReadHeaderTimeout: 10 * time.Second,
 	}
 

@@ -23,6 +23,7 @@ export interface ReleaseTarget {
 // consumer changes.
 export const RELEASE_TARGETS: ReleaseTarget[] = [
   { id: "web", label: "Web", implemented: true, buildArgs: () => ["--target", "web"] },
+  { id: "tauri", label: "Desktop (Tauri)", implemented: true, buildArgs: () => ["--target", "tauri"] },
 ];
 
 export const releaseTargetById = (id: string): ReleaseTarget | undefined =>

@@ -36,6 +36,10 @@ const PG_START_ENTRY =
   "plugins/database/plugins/embedded/scripts/start.ts";
 const PGBOUNCER_START_ENTRY =
   "plugins/database/plugins/pgbouncer/scripts/start.ts";
+// Tauri-only: the desktop shell runs this on app exit to stop the detached
+// gateway + PG daemons it brought up via `launch`. The web self-extractor has
+// no host process to drive teardown, so it ships no teardown binary.
+const TEARDOWN_ENTRY = "plugins/infra/plugins/launcher/bin/teardown.ts";
 
 // The filtered registry the compiled backend's `@composition-server-registry`
 // alias is repointed at, so the bundler's closure IS the composition closure.
@@ -189,9 +193,9 @@ export function registerRelease(program: Command) {
       }) => {
         const root = REPO_ROOT;
 
-        if (opts.target !== "web") {
+        if (opts.target !== "web" && opts.target !== "tauri") {
           console.error(
-            `Unsupported --target "${opts.target}". Only "web" is supported; the "tauri" target is F5 (not yet implemented).`,
+            `Unsupported --target "${opts.target}". Supported targets: "web", "tauri".`,
           );
           process.exit(1);
         }
@@ -300,6 +304,15 @@ export function registerRelease(program: Command) {
           root,
         });
 
+        if (opts.target === "tauri") {
+          console.log("  • teardown (desktop exit hook)");
+          await compile({
+            entry: TEARDOWN_ENTRY,
+            outfile: join(out, "teardown"),
+            root,
+          });
+        }
+
         // ── 3. Vendor native binaries + web dist ─────────────────────────────
         console.log("\n[3/5] Vendoring native binaries + web dist...");
 
@@ -351,7 +364,22 @@ export function registerRelease(program: Command) {
           JSON.stringify(manifest, null, 2) + "\n",
         );
 
-        // ── 4. --dev: stop at the staged dir ─────────────────────────────────
+        // ── 4. Tauri target: wrap the staged bundle in the desktop shell ─────
+        // The staged tree (steps 1–3) is identical to the web bundle; the Tauri
+        // shell just embeds it as a resource and drives launch/teardown. Reads
+        // the app name + port from the staged RELEASE.json — no app-specific code.
+        if (opts.target === "tauri") {
+          await wrapTauri({
+            stagedDir: out,
+            root,
+            composition: opts.composition,
+            dev: !!opts.dev,
+            port,
+          });
+          return;
+        }
+
+        // ── 4. --dev: stop at the staged dir (web) ───────────────────────────
         if (opts.dev) {
           console.log("\n[done] Staged release (--dev):");
           console.log(`  ${out}`);
@@ -377,6 +405,62 @@ export function registerRelease(program: Command) {
         console.log(`Then: http://${opts.composition}.localhost:${port}`);
       },
     );
+}
+
+/**
+ * Wrap a staged self-contained bundle in the Tauri desktop shell and build (or
+ * dev-run) a host-platform app.
+ *
+ * The committed `tauri/` Rust project is generic — it reads the app name + port
+ * from the bundled `RELEASE.json` at runtime, so the only per-release inputs are
+ * the staged tree (copied into `src-tauri/resources/bundle/`) and a small config
+ * override (productName / identifier / window title) merged over the base
+ * `tauri.conf.json`. Requires a Rust toolchain + platform webview SDK on the
+ * build host (not on the end-user machine).
+ */
+async function wrapTauri(opts: {
+  stagedDir: string;
+  root: string;
+  composition: string;
+  dev: boolean;
+  port: number;
+}): Promise<void> {
+  const { stagedDir, root, composition, dev } = opts;
+  const tauriDir = join(root, "tauri");
+  const srcTauri = join(tauriDir, "src-tauri");
+  const bundleDir = join(srcTauri, "resources", "bundle");
+
+  if (!existsSync(srcTauri)) {
+    throw new Error(`Tauri project not found at ${srcTauri}.`);
+  }
+
+  // Embed the staged bundle as a Tauri resource (gitignored; replaced each build).
+  console.log("\n[tauri] Copying staged bundle into Tauri resources...");
+  rmSync(bundleDir, { recursive: true, force: true });
+  mkdirSync(dirname(bundleDir), { recursive: true });
+  cpSync(stagedDir, bundleDir, { recursive: true });
+
+  // Composition-specific config merged over the committed base conf via --config.
+  const safeId = composition.replace(/[^a-z0-9]/gi, "").toLowerCase();
+  const productName =
+    composition.charAt(0).toUpperCase() + composition.slice(1);
+  const override = {
+    productName,
+    identifier: `ai.equin.${safeId}`,
+    app: { windows: [{ title: productName }] },
+  };
+  const overridePath = join(srcTauri, "tauri.conf.override.json");
+  writeFileSync(overridePath, JSON.stringify(override, null, 2) + "\n");
+
+  const sub = dev ? "dev" : "build";
+  console.log(`\n[tauri] Running tauri ${sub} (host platform)...`);
+  await run(["bun", "x", "@tauri-apps/cli@2", sub, "--config", overridePath], {
+    cwd: tauriDir,
+  });
+
+  if (dev) return;
+  console.log("\n[done] Tauri desktop bundle built. Artifacts under:");
+  console.log(`  ${join(srcTauri, "target", "release", "bundle")}`);
 }
 
 /**

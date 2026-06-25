@@ -363,6 +363,13 @@ export function spawnGatewayDaemon(opts: {
   gatewayBin: string;
   port: number;
   logLevel: string;
+  /**
+   * Fallback namespace for subdomain-less requests, passed as
+   * `-default-namespace`. Set to the single app's name in a packaged build so a
+   * desktop webview at bare localhost reaches the backend; omitted in dev (such
+   * requests 404, today's behavior).
+   */
+  defaultNamespace?: string;
 }): number {
   mkdirSync(LOGS_DIR, { recursive: true });
   // Truncate ("w"): only holds raw stdout/stderr until slog takes over, plus
@@ -378,6 +385,9 @@ export function spawnGatewayDaemon(opts: {
       opts.logLevel,
       "-log-dir",
       LOGS_DIR,
+      ...(opts.defaultNamespace
+        ? ["-default-namespace", opts.defaultNamespace]
+        : []),
     ],
     {
       cwd: opts.gatewayDir,
@@ -515,7 +525,15 @@ export async function bootSelfContainedApp(opts: {
 
   const { gatewayDir, gatewayBin } = await buildOrLocateGateway(repoRoot, log);
   ensureDatabaseConfig(repoRoot, log);
-  const pid = spawnGatewayDaemon({ gatewayDir, gatewayBin, port, logLevel });
+  // A self-contained app is single-namespace: route subdomain-less requests
+  // (the desktop webview, single-origin web) to it via the gateway default.
+  const pid = spawnGatewayDaemon({
+    gatewayDir,
+    gatewayBin,
+    port,
+    logLevel,
+    defaultNamespace: name,
+  });
   log(`Gateway started (PID ${pid}); waiting for Postgres...`);
 
   await awaitPgReady();

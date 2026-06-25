@@ -24,7 +24,17 @@ export const MAX_CONNECTIONS = 500;
 
 export const PG_DIR = join(SINGULARITY_DIR, "postgres");
 export const PG_DATA_DIR = join(PG_DIR, `data-pg${PG_MAJOR}`);
-export const PG_SOCKET_DIR = join(PG_DIR, "socket");
+
+// The PG Unix socket directory. Decoupled from PG_DIR via an env override so a
+// packaged install whose data root is a long OS app-data path (macOS
+// `~/Library/Application Support/<bundle>/…`) can keep the socket under a SHORT
+// path and stay within the 104-byte `sun_path` limit, while the cluster *data*
+// stays in app-data. Sockets are ephemeral (remade on each PG start), so a short
+// `/tmp`-rooted dir is safe. Default unchanged ⇒ dev byte-identical. The pgbouncer
+// plugin reads the SAME env var so both agree on the socket dir. Frozen at import
+// time, like every path constant; the launcher sets it before this module loads.
+export const PG_SOCKET_DIR =
+  process.env.SINGULARITY_PG_SOCKET_DIR ?? join(PG_DIR, "socket");
 export const PG_LOG_FILE = join(PG_DIR, "postgres.log");
 
 /**

@@ -1,0 +1,27 @@
+[package]
+name = "equin-desktop"
+version = "0.1.0"
+description = "Equin desktop shell — packages a composed Singularity app as a self-contained desktop binary"
+edition = "2021"
+rust-version = "1.77"
+
+# The app logic lives in the lib so the same code drives desktop + (future) mobile
+# entry points; main.rs is a thin shim.
+[lib]
+name = "equin_desktop_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+codegen-units = 1
+lto = true
+opt-level = "s"
+panic = "abort"
+strip = true

@@ -1,0 +1,45 @@
+<!doctype html>
+<!--
+  Placeholder frontend. The real app is served by the local gateway; the Rust
+  shell navigates this window to http://localhost:<port>/ once the stack is ready.
+  This page is only shown during the brief startup window (and as a fallback if
+  bring-up fails). Intentionally uses NO class attributes — it is a standalone
+  Tauri-bundled file, not part of the Tailwind/Vite frontend, so it must not
+  author utility classes (the tailwind-scan-covers-classes check enforces this).
+-->
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Starting…</title>
+    <style>
+      html,
+      body {
+        margin: 0;
+        height: 100%;
+        background: #0b0b0c;
+        color: #d4d4d8;
+        font: 14px -apple-system, system-ui, sans-serif;
+      }
+      body {
+        display: grid;
+        place-items: center;
+      }
+      #dot {
+        animation: blink 1.2s infinite;
+      }
+      @keyframes blink {
+        0%,
+        100% {
+          opacity: 0.2;
+        }
+        50% {
+          opacity: 1;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div>Starting<span id="dot">…</span></div>
+  </body>
+</html>
