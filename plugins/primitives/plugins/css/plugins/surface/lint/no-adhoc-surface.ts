@@ -12,6 +12,13 @@ const createRule = ESLintUtils.RuleCreator(
  * flat, inconsistent depth. This rule fingerprints the two *disambiguable*
  * recipes and redirects them to a semantic level.
  *
+ * The gate is the *recipe*, not the host tag. The literal recipe is illegal on
+ * ANY host element — an intrinsic (`<div>`/`<section>`/`<nav>`/…), a capitalized
+ * layout component (`<Stack>`/`<SortableItem>`/…), or a member-expression tag
+ * (`<Foo.Bar>`). A surface recipe smuggled through a layout component's
+ * `className` is exactly the drift this rule exists to stop, so there is no
+ * tag-allowlist to fail open through (the former `HOST_TAGS` gate did just that).
+ *
  * Two fingerprints, each a co-occurrence of classes that may live in different
  * `cn()` fragments — so we aggregate every class token of one `className`
  * attribute into a single Set and test against it:
@@ -21,6 +28,21 @@ const createRule = ESLintUtils.RuleCreator(
  *                 former `no-adhoc-card` fingerprint, folded in here.)
  *   - `overlay` — `bg-popover` + a `shadow-*` + `rounded` →
  *                 `<Surface level="overlay">` / `PopoverContent`.
+ *
+ * Two legitimate homes for the recipe, both invisible to this gate:
+ *
+ *   1. The `SURFACE_LEVELS` member-access indirection — `cn(SURFACE_LEVELS.raised,
+ *      …)` reads the bundle off a member expression, never a string literal. This
+ *      is load-bearing: `collectTokens` harvests ONLY string-`Literal` /
+ *      `TemplateElement` values, so a map-driven class is opaque and the canonical
+ *      sanctioned surface flows straight through. The literal-only walk IS the
+ *      escape valve.
+ *   2. The surface-primitive *definition* files under `ui-kit/web/components/ui/`
+ *      — the shadcn primitives that open-code the recipe as literal strings on
+ *      base-ui `*.Popup` member tags (they ARE the implementation behind
+ *      `<Surface level="overlay">` / `PopoverContent`). They own the raw recipe and
+ *      are exempted by a file-glob in `lint/index.ts`, exactly as `no-adhoc-layout`
+ *      exempts the layout primitives that own raw mechanics.
  *
  * We DON'T fingerprint `base` (`bg-background`) or `sunken` (`bg-muted`): those
  * tokens legitimately appear on dividers, hover states, chips, drop-zones and
@@ -99,34 +121,30 @@ function baseClass(token: string): string {
   return idx === -1 ? token : token.slice(idx + 1);
 }
 
-// Intrinsic host tags a surface recipe can land on. Includes the semantic block
-// containers (`section`/`article`/`li`) that legitimately ARE cards — a raised
-// `<section className="bg-card rounded-lg border p-lg">` is exactly the open-coded
-// recipe this rule exists to redirect, and omitting them was a real escape hatch.
-const HOST_TAGS = new Set(["span", "div", "button", "a", "section", "article", "li"]);
-
 export default createRule({
   name: "no-adhoc-surface",
   meta: {
     type: "problem",
     docs: {
       description:
-        "Disallow ad-hoc surface markup (raised: rounded + border + bg-card + padding; overlay: bg-popover + shadow + rounded) — route through the <Surface> primitive (or <Card> / PopoverContent), which freeze the semantic elevation bundle.",
+        "Disallow the ad-hoc surface recipe (raised: rounded + border + bg-card + padding; overlay: bg-popover + shadow + rounded) on any host element — route through the <Surface> primitive (or <Card> / PopoverContent), which freeze the semantic elevation bundle.",
     },
     schema: [],
     messages: {
       adhocRaised:
-        "Ad-hoc raised-surface markup (rounded + border + the card-surface token `bg-card` + " +
-        "padding on a span/div/button/a) — route through `<Surface level=\"raised\">` " +
-        "(or `<Card>`) from `@plugins/primitives/plugins/css/plugins/surface/web`, which freezes the raised bundle " +
-        "and bakes in the Ctrl+A select-scope. If intentionally bespoke, render through a component, " +
+        "Ad-hoc raised-surface recipe (rounded + border + the card-surface token `bg-card` + " +
+        "padding) — flagged on any host element (intrinsic, layout component, or member tag). " +
+        "Route through `<Surface level=\"raised\">` (or `<Card>`) from " +
+        "`@plugins/primitives/plugins/css/plugins/surface/web`, which freezes the raised bundle " +
+        "and bakes in the Ctrl+A select-scope. If intentionally bespoke, " +
         "use the named padding token (`p-card`), or " +
         "`// eslint-disable-next-line surface/no-adhoc-surface -- <reason>`.",
       adhocOverlay:
-        "Ad-hoc overlay-surface markup (the `bg-popover` token + a shadow + rounded on a " +
-        "span/div/button/a) — route through `<Surface level=\"overlay\">` from " +
+        "Ad-hoc overlay-surface recipe (the `bg-popover` token + a shadow + rounded) — " +
+        "flagged on any host element (intrinsic, layout component, or member tag). " +
+        "Route through `<Surface level=\"overlay\">` from " +
         "`@plugins/primitives/plugins/css/plugins/surface/web` (or `PopoverContent`/`DropdownMenuContent`), which " +
-        "freeze the overlay bundle. If intentionally bespoke, render through a component or " +
+        "freeze the overlay bundle. If intentionally bespoke, " +
         "`// eslint-disable-next-line surface/no-adhoc-surface -- <reason>`.",
     },
   },
@@ -136,16 +154,11 @@ export default createRule({
       JSXAttribute(node) {
         if (node.name.type !== "JSXIdentifier" || node.name.name !== "className") return;
 
-        // Host-tag gate: require an intrinsic from HOST_TAGS (span/div/button/a
-        // + the semantic block containers section/article/li). Skips component
-        // elements (`<Surface>`, `<PopoverContent>`, base-ui `*.Popup` — they
-        // render through a primitive). NOTE: this also skips layout components
-        // like `<Stack>`/`<SortableItem>`, so a surface recipe smuggled through
-        // their `className` is invisible here — route those through `<Surface>`
-        // or `SURFACE_LEVELS` directly rather than open-coding on a layout box.
-        const tag = node.parent.name;
-        if (tag.type !== "JSXIdentifier" || !HOST_TAGS.has(tag.name)) return;
-
+        // No host-tag gate: the literal recipe is the violation on ANY host
+        // element. The sanctioned surfaces are invisible here for structural
+        // reasons, not because of an allowlist — `SURFACE_LEVELS.*` reads off a
+        // member expression `collectTokens` never harvests, and the shadcn
+        // primitive definition files are exempted by a file-glob in lint/index.ts.
         const raw = new Set<string>();
         collectTokens(node.value, raw);
         const tokens = new Set([...raw].map(baseClass));

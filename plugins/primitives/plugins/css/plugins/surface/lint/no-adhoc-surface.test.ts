@@ -2,11 +2,15 @@
  * Tests for the `no-adhoc-surface` lint rule. Run with `bun test` from the repo
  * root (or this file's directory).
  *
- * The rule fingerprints two open-coded surface recipes on intrinsic
- * span/div/button/a tags: `raised` (rounded + border + bg-card + padding — the
- * former no-adhoc-card) and `overlay` (bg-popover + shadow + rounded). It does
- * NOT lint `base` (bg-background) or `sunken` (bg-muted), which are ambiguous,
- * and skips capitalized component tags (`<Surface>`/`<Card>`/`<PopoverContent>`).
+ * The rule fingerprints two open-coded surface recipes — `raised` (rounded +
+ * border + bg-card + padding — the former no-adhoc-card) and `overlay`
+ * (bg-popover + shadow + rounded) — and flags the literal recipe on ANY host
+ * element (intrinsic, layout component, or member-expression tag). It does NOT
+ * lint `base` (bg-background) or `sunken` (bg-muted), which are ambiguous. The
+ * sanctioned surfaces flow through, structurally: the `SURFACE_LEVELS` member
+ * access is opaque to the literal-only token walk, and the shadcn primitive
+ * definition files are exempted by a file-glob in lint/index.ts. Per-site escapes
+ * are the `p-card` padding token and `// eslint-disable-next-line`.
  */
 
 import { RuleTester } from "eslint";
@@ -33,27 +37,27 @@ ruleTester.run(
   rule as unknown as Parameters<RuleTester["run"]>[1],
   {
     valid: [
-      // Routed through the primitives (capitalized host tag — skipped).
+      // A primitive with NO recipe tokens (just a padding override) is fine.
       `const a = <Surface level="raised" className="p-3" />;`,
-      `const a = <Card className="rounded-md border bg-card p-3" />;`,
-      `const a = <PopoverContent className="bg-popover rounded-lg shadow-md p-md" />;`,
+      // Partial overrides on a primitive stay valid — they don't re-spell the
+      // full recipe, they tweak one property of the bundle the primitive freezes.
+      `const a = <Card className="rounded-lg" />;`,
+      `const a = <Surface level="raised" className="bg-muted/30" />;`,
       // Raised escape: the named p-card padding token.
       `const a = <div className="rounded-md border bg-card p-card" />;`,
       // Not a contained surface: bg-card without the full raised fingerprint.
       `const a = <div className="bg-card p-3" />;`,
       // `p-none` (zero padding) is NOT card padding — excluded from the ramp.
       `const a = <div className="rounded-md border bg-card p-none" />;`,
-      // Layout components (Stack/SortableItem) are skipped by the host-tag gate,
-      // even when a surface recipe is smuggled through their className. Known
-      // limitation: route these through <Surface> / SURFACE_LEVELS instead.
-      `const a = <Stack className="rounded-md border bg-card p-lg" />;`,
+      // The canonical sanctioned surface: the shared bundle is read off a member
+      // expression, not a string literal, so the literal-only token walk treats
+      // it as opaque. This is the central escape — keep it green.
+      `const a = <div className={cn(SURFACE_LEVELS.overlay, "z-popover p-md")} />;`,
       // base / sunken are NOT linted — bg-background / bg-muted are ambiguous.
       `const a = <div className="bg-background rounded-md border p-3 shadow-sm" />;`,
       `const a = <div className="bg-muted rounded-md border p-3" />;`,
       // overlay needs all of bg-popover + shadow + rounded.
       `const a = <div className="bg-popover rounded-md p-xs" />;`,
-      // The shared map is read off a member expression, not a string literal.
-      `const a = <div className={cn(SURFACE_LEVELS.overlay, "z-popover p-md")} />;`,
     ],
     invalid: [
       // raised fingerprint (former no-adhoc-card).
@@ -78,6 +82,31 @@ ruleTester.run(
         code: `const a = <section className="rounded-lg border border-border bg-card p-lg" />;`,
         errors: [{ messageId: "adhocRaised" }],
       },
+      // raised on a non-previously-covered intrinsic (`<nav>`) — the gate is the
+      // recipe, not an allowlist of tags.
+      {
+        code: `const a = <nav className="rounded-md border bg-card p-lg" />;`,
+        errors: [{ messageId: "adhocRaised" }],
+      },
+      // raised smuggled through a layout component (`<Stack>`) — the whole point
+      // of dropping the host-tag gate: a recipe open-coded on a layout box is the
+      // drift this rule exists to stop.
+      {
+        code: `const a = <Stack className="rounded-md border bg-card p-lg" />;`,
+        errors: [{ messageId: "adhocRaised" }],
+      },
+      // raised spelled out on a primitive's own className — re-writing the full
+      // recipe defeats the bundle the primitive freezes, so it's flagged like any
+      // other host. (Partial overrides stay valid; see the valid cases above.)
+      {
+        code: `const a = <Card className="rounded-md border bg-card p-3" />;`,
+        errors: [{ messageId: "adhocRaised" }],
+      },
+      // raised on a member-expression tag — coverage is tag-agnostic.
+      {
+        code: `const a = <Foo.Bar className="rounded-md border bg-card p-3" />;`,
+        errors: [{ messageId: "adhocRaised" }],
+      },
       // overlay fingerprint.
       {
         code: `const a = <div className="bg-popover rounded-lg shadow-md p-xs" />;`,
@@ -85,6 +114,13 @@ ruleTester.run(
       },
       {
         code: `const a = <div className="rounded-xl border bg-popover text-popover-foreground shadow-2xl" />;`,
+        errors: [{ messageId: "adhocOverlay" }],
+      },
+      // overlay recipe re-spelled on a primitive's own className — flagged like
+      // any other host (route through <Surface level="overlay"> / PopoverContent
+      // and override one property, don't re-write the whole bundle).
+      {
+        code: `const a = <PopoverContent className="bg-popover rounded-lg shadow-md p-md" />;`,
         errors: [{ messageId: "adhocOverlay" }],
       },
     ],
