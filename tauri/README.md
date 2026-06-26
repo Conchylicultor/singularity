@@ -20,7 +20,11 @@ composition-specific code lives here.
 3. Writes `src-tauri/tauri.conf.override.json` (gitignored) with the composition's
    `productName` / `identifier` / window title, merged over `tauri.conf.json` via
    `--config`.
-4. Runs `bun x @tauri-apps/cli@2 build` (or `dev` with `--dev`).
+4. Builds the host-platform app. On macOS this is two steps: `bun x
+   @tauri-apps/cli@2 build --bundles app` produces `<Name>.app` (skipping Tauri's
+   headless-unsafe dmg step), then `bun x appdmg` packages the styled `<Name>.dmg`
+   itself. On other platforms it's the single default `tauri build`. (`--dev` runs
+   `tauri dev` with no bundling.)
 
 ## Layout
 
@@ -80,12 +84,15 @@ session, which a headless/automation shell lacks.
 
 ### Known caveats
 
-- **`.dmg` bundling needs a GUI session.** `bundle_dmg.sh` drives Finder via
-  AppleScript to style the disk-image window; in a non-interactive shell that
-  AppleEvent times out (`-1712`) and the dmg step fails *after* `Sonata.app` is
-  already built. The `.app` is unaffected. Build the dmg from a logged-in
-  desktop session (with Automation/TCC permission), or restrict
-  `bundle.targets` to `["app"]` for headless builds.
+- **`.dmg` bundling (RESOLVED — headless via `appdmg`).** Tauri's own dmg step
+  (`bundle_dmg.sh`) drives Finder via AppleScript to style the disk-image window;
+  in a non-interactive shell that AppleEvent times out (`-1712`) and the step
+  fails *after* `Sonata.app` is already built. The release no longer uses it: on
+  macOS it builds `--bundles app`, then packages the dmg with `appdmg`, which
+  writes the `.DS_Store` window layout directly (no Finder/AppleScript, no
+  `-1712`), so the whole release runs to completion headlessly. The dmg is still
+  **unsigned / un-notarized** — Gatekeeper behavior is unchanged; signing +
+  notarization remains a separate follow-up.
 - **Embedded PG port is picked per launch.** The embedded Postgres opens a
   loopback TCP listener (`listen_addresses=127.0.0.1`, present for Zero), which
   would default to 5433 and collide with a dev cluster or another desktop

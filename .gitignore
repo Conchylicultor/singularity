@@ -39,6 +39,7 @@ dist.stats.html
 /tauri/src-tauri/target/
 /tauri/src-tauri/resources/bundle/
 /tauri/src-tauri/tauri.conf.override.json
+/tauri/src-tauri/appdmg.spec.json
 /tauri/src-tauri/gen/
 /tauri/src-tauri/icons/
 

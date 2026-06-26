@@ -452,15 +452,99 @@ async function wrapTauri(opts: {
   const overridePath = join(srcTauri, "tauri.conf.override.json");
   writeFileSync(overridePath, JSON.stringify(override, null, 2) + "\n");
 
-  const sub = dev ? "dev" : "build";
-  console.log(`\n[tauri] Running tauri ${sub} (host platform)...`);
-  await run(["bun", "x", "@tauri-apps/cli@2", sub, "--config", overridePath], {
+  if (dev) {
+    console.log("\n[tauri] Running tauri dev (host platform)...");
+    await run(
+      ["bun", "x", "@tauri-apps/cli@2", "dev", "--config", overridePath],
+      { cwd: tauriDir },
+    );
+    return;
+  }
+
+  // macOS: build only the `.app` (`--bundles app`) so Tauri never attempts its
+  // Finder/AppleScript dmg step (which times out headlessly with -1712), then
+  // package the dmg ourselves with `appdmg` (writes the `.DS_Store` directly).
+  // Other platforms: the default bundles are all headless-safe.
+  if (process.platform === "darwin") {
+    console.log("\n[tauri] Running tauri build --bundles app (host platform)...");
+    await run(
+      [
+        "bun",
+        "x",
+        "@tauri-apps/cli@2",
+        "build",
+        "--config",
+        overridePath,
+        "--bundles",
+        "app",
+      ],
+      { cwd: tauriDir },
+    );
+
+    const dmgPath = await packageMacDmg({ srcTauri, productName });
+
+    console.log("\n[done] Tauri desktop bundle built. Artifacts:");
+    console.log(
+      `  ${join(srcTauri, "target/release/bundle/macos", `${productName}.app`)}`,
+    );
+    console.log(`  ${dmgPath}`);
+    return;
+  }
+
+  console.log("\n[tauri] Running tauri build (host platform)...");
+  await run(["bun", "x", "@tauri-apps/cli@2", "build", "--config", overridePath], {
     cwd: tauriDir,
   });
 
-  if (dev) return;
   console.log("\n[done] Tauri desktop bundle built. Artifacts under:");
   console.log(`  ${join(srcTauri, "target", "release", "bundle")}`);
+}
+
+/**
+ * Package an already-built macOS `.app` into a styled `.dmg` headlessly with
+ * `appdmg` (a Node tool that writes the `.DS_Store` window layout directly via
+ * `ds-store` and assembles with `hdiutil` — sending no AppleEvent to Finder, so
+ * it never hits the -1712 timeout that breaks Tauri's own dmg step in a headless
+ * shell). Invoked as `bun x appdmg <spec> <out>`, matching the existing
+ * `bun x @tauri-apps/cli@2` pattern. Returns the produced dmg path.
+ */
+async function packageMacDmg(opts: {
+  srcTauri: string;
+  productName: string;
+}): Promise<string> {
+  const { srcTauri, productName } = opts;
+
+  const appPath = join(
+    srcTauri,
+    "target/release/bundle/macos",
+    `${productName}.app`,
+  );
+  const icnsPath = join(srcTauri, "icons/icon.icns");
+  const dmgDir = join(srcTauri, "target/release/bundle/dmg");
+  const dmgOut = join(dmgDir, `${productName}.dmg`);
+  mkdirSync(dmgDir, { recursive: true });
+
+  // Generated, gitignored appdmg spec (mirrors tauri.conf.override.json).
+  const spec = {
+    title: productName,
+    icon: icnsPath,
+    window: { size: { width: 540, height: 380 } },
+    contents: [
+      { x: 140, y: 200, type: "file", path: appPath },
+      { x: 400, y: 200, type: "link", path: "/Applications" },
+    ],
+  };
+  const specPath = join(srcTauri, "appdmg.spec.json");
+  writeFileSync(specPath, JSON.stringify(spec, null, 2) + "\n");
+
+  // appdmg refuses to overwrite an existing dmg, so clear it for idempotent re-runs.
+  rmSync(dmgOut, { force: true });
+
+  console.log("\n[tauri] Packaging dmg headlessly (appdmg)...");
+  await run(["bun", "x", "appdmg@0.6.6", specPath, dmgOut], { cwd: srcTauri });
+
+  console.log(`\n[tauri] Packaged dmg: ${dmgOut}`);
+  return dmgOut;
 }
 
 /**
