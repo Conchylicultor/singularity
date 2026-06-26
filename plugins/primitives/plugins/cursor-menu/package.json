@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-cursor-menu",
+  "description": "CursorAnchoredMenu: a DropdownMenu whose zero-size anchor is body-portaled at a cursor point so position:fixed resolves against the viewport.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -1,20 +1,14 @@
 import { useState } from "react";
 import type { MouseEvent } from "react";
 import { MdImage, MdRestartAlt } from "react-icons/md";
+import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+  CursorAnchoredMenu,
+  type CursorAnchor,
+} from "@plugins/primitives/plugins/cursor-menu/web";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { wallpaperConfig } from "../../core";
 import { openWallpaperPicker } from "./wallpaper-picker";
-
-interface MenuAnchor {
-  x: number;
-  y: number;
-}
 
 /**
  * The desktop context menu host: a transparent full-surface capture layer that
@@ -26,11 +20,12 @@ interface MenuAnchor {
  *
  * The capture layer is mounted as the FIRST child of the floating backdrop (below
  * the dock + windows), so a right-click on a window hits that window's own system
- * menu instead — only the empty desktop reaches here. The anchored-menu pattern
- * (a zero-size fixed trigger at the cursor) is from `window-system-menu.tsx`.
+ * menu instead — only the empty desktop reaches here. The cursor-anchored menu
+ * itself is the shared {@link CursorAnchoredMenu} primitive, which body-portals its
+ * zero-size anchor so `position: fixed` escapes the backdrop's `transform-gpu`.
  */
 export function DesktopContextMenu() {
-  const [anchor, setAnchor] = useState<MenuAnchor | null>(null);
+  const [anchor, setAnchor] = useState<CursorAnchor | null>(null);
   const { state } = useConfig(wallpaperConfig);
   const setConfig = useSetConfig(wallpaperConfig);
 
@@ -78,41 +73,23 @@ function DesktopContextMenuContent({
   hasImage,
   onReset,
 }: {
-  anchor: MenuAnchor | null;
+  anchor: CursorAnchor | null;
   onClose: () => void;
   hasImage: boolean;
   onReset: () => void;
 }) {
   return (
-    <DropdownMenu
-      open={anchor !== null}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-    >
-      <DropdownMenuTrigger
-        aria-hidden
-        tabIndex={-1}
-        style={{
-          position: "fixed",
-          left: anchor?.x ?? 0,
-          top: anchor?.y ?? 0,
-          width: 0,
-          height: 0,
-        }}
-      />
-      <DropdownMenuContent align="start" side="bottom">
-        <DropdownMenuItem onClick={openWallpaperPicker}>
-          <MdImage />
-          Change wallpaper…
+    <CursorAnchoredMenu anchor={anchor} onClose={onClose}>
+      <DropdownMenuItem onClick={openWallpaperPicker}>
+        <MdImage />
+        Change wallpaper…
+      </DropdownMenuItem>
+      {hasImage && (
+        <DropdownMenuItem onClick={onReset}>
+          <MdRestartAlt />
+          Reset to default
         </DropdownMenuItem>
-        {hasImage && (
-          <DropdownMenuItem onClick={onReset}>
-            <MdRestartAlt />
-            Reset to default
-          </DropdownMenuItem>
-        )}
-      </DropdownMenuContent>
-    </DropdownMenu>
+      )}
+    </CursorAnchoredMenu>
   );
 }

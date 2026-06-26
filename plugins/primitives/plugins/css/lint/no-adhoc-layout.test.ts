@@ -54,6 +54,16 @@ ruleTester.run(
       // A non-className string that merely mentions a banned class — the
       // class-name-context scoping must not trip on it.
       { code: `const DOC = "flex is banned — use <Stack>";` },
+      // Inline `style` position: context keywords stay benign (mirrors the
+      // className path — only absolute/fixed/sticky are banned).
+      { code: `const el = <div style={{ position: "relative" }} />;` },
+      { code: `const el = <div style={{ position: "static" }} />;` },
+      // A dynamic (non-literal) position value can't be statically resolved.
+      { code: `const el = <div style={{ position: pos }} />;` },
+      // No `position` key at all — bare offsets are not flagged.
+      { code: `const el = <div style={{ top: 0, left: 0 }} />;` },
+      // Sanity: the className path still behaves alongside the style path.
+      { code: `const el = <div className="block" />;` },
     ],
     invalid: [
       // Flow / display.
@@ -113,6 +123,26 @@ ruleTester.run(
       {
         code: `const cls = cn("flex", "items-center");`,
         errors: [{ messageId: "adhocLayout" }, { messageId: "adhocLayout" }],
+      },
+      // Inline `style` position literals — the unguarded path the menu-shift bug
+      // shipped on. Scoped to the `position` property only.
+      {
+        code: `const el = <div style={{ position: "fixed" }} />;`,
+        errors: [{ messageId: "adhocStylePosition" }],
+      },
+      {
+        code: `const el = <div style={{ position: "absolute" }} />;`,
+        errors: [{ messageId: "adhocStylePosition" }],
+      },
+      {
+        code: `const el = <div style={{ position: "sticky" }} />;`,
+        errors: [{ messageId: "adhocStylePosition" }],
+      },
+      // Other style props alongside `position` don't add extra errors — only
+      // the `position` value is flagged.
+      {
+        code: `const el = <div style={{ position: "fixed", top: 0 }} />;`,
+        errors: [{ messageId: "adhocStylePosition" }],
       },
     ],
   },

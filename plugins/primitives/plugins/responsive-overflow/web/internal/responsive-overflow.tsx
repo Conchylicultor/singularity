@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { MeasureStrip } from "@plugins/primitives/plugins/css/plugins/measure-strip/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import {
   useRef,
@@ -6,7 +7,6 @@ import {
   type ReactNode,
   type RefObject,
 } from "react";
-import { createPortal } from "react-dom";
 
 export interface UseResponsiveOverflowOptions {
   count: number;
@@ -217,27 +217,11 @@ export function ResponsiveOverflow({
 
   return (
     <>
-      {children.length > 0 &&
-        createPortal(
-          <div
-            ref={measureRef}
-            style={{
-              position: "fixed",
-              top: -9999,
-              left: -9999,
-              display: "flex",
-              gap,
-              opacity: 0,
-              pointerEvents: "none",
-            }}
-            aria-hidden="true"
-          >
-            {children.map((child, i) => (
-              <div key={i}>{child}</div>
-            ))}
-          </div>,
-          document.body,
-        )}
+      <MeasureStrip ref={measureRef} gap={gap} enabled={children.length > 0}>
+        {children.map((child, i) => (
+          <div key={i}>{child}</div>
+        ))}
+      </MeasureStrip>
 
       <div
         ref={containerRef}

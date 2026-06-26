@@ -2,7 +2,7 @@ import { Button, Popover, PopoverContent, PopoverTrigger } from "@plugins/primit
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Fragment, useContext, useRef, useState, type ReactNode } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
-import { createPortal } from "react-dom";
+import { MeasureStrip } from "@plugins/primitives/plugins/css/plugins/measure-strip/web";
 import { MdClose, MdMoreHoriz, MdOpenInFull } from "react-icons/md";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
@@ -288,30 +288,14 @@ function OverflowActionsBar({
   return (
     <>
       {/* Off-screen measurement layer — renders all items to obtain their natural widths. */}
-      {totalCount > 0 &&
-        createPortal(
-          <div
-            ref={measureRef}
-            style={{
-              position: "fixed",
-              top: -9999,
-              left: -9999,
-              display: "flex",
-              gap: GAP,
-              opacity: 0,
-              pointerEvents: "none",
-            }}
-            aria-hidden="true"
-          >
-            {slotActions.map((a, i) => (
-              <Fragment key={i}>
-                {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
-              </Fragment>
-            ))}
-            {hasExtra && <div>{extraActions}</div>}
-          </div>,
-          document.body,
-        )}
+      <MeasureStrip ref={measureRef} gap={GAP} enabled={totalCount > 0}>
+        {slotActions.map((a, i) => (
+          <Fragment key={i}>
+            {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
+          </Fragment>
+        ))}
+        {hasExtra && <div>{extraActions}</div>}
+      </MeasureStrip>
 
       {/* Container takes all remaining space; items are right-aligned. */}
       <div

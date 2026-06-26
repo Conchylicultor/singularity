@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-css-measure-strip",
+  "description": "Off-screen body-portaled measurement strip: a hidden flex row for measuring children's natural widths before an overflow/collapse decision.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -12,17 +12,18 @@ import {
   MdWebAsset,
 } from "react-icons/md";
 import {
-  DropdownMenu,
   DropdownMenuCheckboxItem,
-  DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
   DropdownMenuSub,
   DropdownMenuSubContent,
   DropdownMenuSubTrigger,
-  DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  CursorAnchoredMenu,
+  type CursorAnchor,
+} from "@plugins/primitives/plugins/cursor-menu/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import type { Desktop, Geometry, WindowId } from "../hooks/use-floating-windows";
 
@@ -36,10 +37,7 @@ export interface MergeTarget {
 export const TOGGLE_PIN_SHORTCUT = "ctrl+alt+p";
 
 /** A viewport-space point the menu opens at (right-click cursor or icon corner). */
-export interface MenuAnchor {
-  x: number;
-  y: number;
-}
+export type MenuAnchor = CursorAnchor;
 
 interface WindowSystemMenuProps {
   /** The open point, or null when the menu is closed. */
@@ -74,9 +72,9 @@ interface WindowSystemMenuProps {
 /**
  * The Win32-style window system menu for a floating window: Restore / Move / Size
  * / Minimize / Maximize / Close. Opened by right-clicking the titlebar or clicking
- * the window icon, both of which feed an anchor point. Built on the design-system
- * {@link DropdownMenu}; the anchor is a zero-size fixed element placed at the open
- * point, so the menu positions itself off the cursor like a native context menu.
+ * the window icon, both of which feed an anchor point. Built on
+ * {@link CursorAnchoredMenu}, which pins a body-portaled zero-size anchor at the
+ * open point, so the menu positions itself off the cursor like a native context menu.
  *
  * Item availability mirrors the chrome's own state machine: Restore is live only
  * for a snapped/maximized window, Move/Size only when not maximized, Maximize only
@@ -106,122 +104,99 @@ export function WindowSystemMenu({
   const snapped = geo.snap !== null;
 
   return (
-    <DropdownMenu
-      open={anchor !== null}
-      onOpenChange={(open) => {
-        if (!open) onClose();
-      }}
-    >
-      {/* Zero-size anchor pinned at the open point (viewport coords from the
-          triggering pointer/element), so the menu drops from the cursor. */}
-      <DropdownMenuTrigger
-        aria-hidden
-        tabIndex={-1}
-        style={{
-          position: "fixed",
-          left: anchor?.x ?? 0,
-          top: anchor?.y ?? 0,
-          width: 0,
-          height: 0,
-        }}
-      />
-      <DropdownMenuContent align="start" side="bottom">
-        <DropdownMenuItem disabled={!snapped} onClick={onRestore}>
-          <MdFilterNone />
-          Restore
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={maximized} onClick={onMove}>
-          <MdOpenWith />
-          Move
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={maximized} onClick={onSize}>
-          <MdAspectRatio />
-          Size
-        </DropdownMenuItem>
-        <DropdownMenuItem onClick={onMinimize}>
-          <MdRemove />
-          Minimize
-          <DropdownMenuShortcut>
-            {formatShortcutLabel("mod+m")}
-          </DropdownMenuShortcut>
-        </DropdownMenuItem>
-        <DropdownMenuItem disabled={maximized} onClick={onMaximize}>
-          <MdCropSquare />
-          Maximize
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        <DropdownMenuCheckboxItem
-          checked={geo.pinned}
-          onClick={onTogglePin}
-        >
-          <MdPushPin />
-          Always on top
-          <DropdownMenuShortcut>
-            {formatShortcutLabel(TOGGLE_PIN_SHORTCUT)}
-          </DropdownMenuShortcut>
-        </DropdownMenuCheckboxItem>
-        <DropdownMenuSeparator />
-        {/* Grouping: fold the active tab into another window, or tear it back
-            out. Mirrors the (Phase 2) drag affordance as an accessible,
-            non-drag path. */}
-        {mergeTargets.length > 0 && (
-          <DropdownMenuSub>
-            <DropdownMenuSubTrigger>
-              <MdWebAsset />
-              Merge into
-            </DropdownMenuSubTrigger>
-            <DropdownMenuSubContent>
-              {mergeTargets.map((target) => (
-                <DropdownMenuItem
-                  key={target.id}
-                  onClick={() => onMergeInto(target.id)}
-                >
-                  <MdWebAsset />
-                  {target.title}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuSubContent>
-          </DropdownMenuSub>
-        )}
-        <DropdownMenuItem disabled={!canSplit} onClick={onSplit}>
-          <MdCallSplit />
-          Move tab to new window
-        </DropdownMenuItem>
-        <DropdownMenuSeparator />
-        {/* Send the whole window to another virtual desktop (or a new one). The
-            current desktop is checked + disabled; "New desktop" mints + moves. */}
+    <CursorAnchoredMenu anchor={anchor} onClose={onClose}>
+      <DropdownMenuItem disabled={!snapped} onClick={onRestore}>
+        <MdFilterNone />
+        Restore
+      </DropdownMenuItem>
+      <DropdownMenuItem disabled={maximized} onClick={onMove}>
+        <MdOpenWith />
+        Move
+      </DropdownMenuItem>
+      <DropdownMenuItem disabled={maximized} onClick={onSize}>
+        <MdAspectRatio />
+        Size
+      </DropdownMenuItem>
+      <DropdownMenuItem onClick={onMinimize}>
+        <MdRemove />
+        Minimize
+        <DropdownMenuShortcut>
+          {formatShortcutLabel("mod+m")}
+        </DropdownMenuShortcut>
+      </DropdownMenuItem>
+      <DropdownMenuItem disabled={maximized} onClick={onMaximize}>
+        <MdCropSquare />
+        Maximize
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuCheckboxItem checked={geo.pinned} onClick={onTogglePin}>
+        <MdPushPin />
+        Always on top
+        <DropdownMenuShortcut>
+          {formatShortcutLabel(TOGGLE_PIN_SHORTCUT)}
+        </DropdownMenuShortcut>
+      </DropdownMenuCheckboxItem>
+      <DropdownMenuSeparator />
+      {/* Grouping: fold the active tab into another window, or tear it back
+          out. Mirrors the (Phase 2) drag affordance as an accessible,
+          non-drag path. */}
+      {mergeTargets.length > 0 && (
         <DropdownMenuSub>
           <DropdownMenuSubTrigger>
-            <MdDesktopWindows />
-            Move to desktop
+            <MdWebAsset />
+            Merge into
           </DropdownMenuSubTrigger>
           <DropdownMenuSubContent>
-            {desktops.map((desktop, index) => (
-              <DropdownMenuCheckboxItem
-                key={desktop.id}
-                checked={desktop.id === currentDesktopId}
-                disabled={desktop.id === currentDesktopId}
-                onClick={() => onMoveToDesktop(desktop.id)}
+            {mergeTargets.map((target) => (
+              <DropdownMenuItem
+                key={target.id}
+                onClick={() => onMergeInto(target.id)}
               >
-                <MdDesktopWindows />
-                {`Desktop ${index + 1}`}
-              </DropdownMenuCheckboxItem>
+                <MdWebAsset />
+                {target.title}
+              </DropdownMenuItem>
             ))}
-            <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={onMoveToNewDesktop}>
-              <MdAdd />
-              New desktop
-            </DropdownMenuItem>
           </DropdownMenuSubContent>
         </DropdownMenuSub>
-        <DropdownMenuSeparator />
-        {/* Closes the WHOLE window (every member); per-tab close is the chip ×
-            and the `mod+w` shortcut, which act on the active member alone. */}
-        <DropdownMenuItem variant="destructive" onClick={onCloseWindow}>
-          <MdClose />
-          Close window
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+      )}
+      <DropdownMenuItem disabled={!canSplit} onClick={onSplit}>
+        <MdCallSplit />
+        Move tab to new window
+      </DropdownMenuItem>
+      <DropdownMenuSeparator />
+      {/* Send the whole window to another virtual desktop (or a new one). The
+          current desktop is checked + disabled; "New desktop" mints + moves. */}
+      <DropdownMenuSub>
+        <DropdownMenuSubTrigger>
+          <MdDesktopWindows />
+          Move to desktop
+        </DropdownMenuSubTrigger>
+        <DropdownMenuSubContent>
+          {desktops.map((desktop, index) => (
+            <DropdownMenuCheckboxItem
+              key={desktop.id}
+              checked={desktop.id === currentDesktopId}
+              disabled={desktop.id === currentDesktopId}
+              onClick={() => onMoveToDesktop(desktop.id)}
+            >
+              <MdDesktopWindows />
+              {`Desktop ${index + 1}`}
+            </DropdownMenuCheckboxItem>
+          ))}
+          <DropdownMenuSeparator />
+          <DropdownMenuItem onClick={onMoveToNewDesktop}>
+            <MdAdd />
+            New desktop
+          </DropdownMenuItem>
+        </DropdownMenuSubContent>
+      </DropdownMenuSub>
+      <DropdownMenuSeparator />
+      {/* Closes the WHOLE window (every member); per-tab close is the chip ×
+          and the `mod+w` shortcut, which act on the active member alone. */}
+      <DropdownMenuItem variant="destructive" onClick={onCloseWindow}>
+        <MdClose />
+        Close window
+      </DropdownMenuItem>
+    </CursorAnchoredMenu>
   );
 }

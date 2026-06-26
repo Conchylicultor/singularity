@@ -2700,6 +2700,10 @@
       "name": "@singularity/plugin-primitives-css-link-chip",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/measure-strip": {
+      "name": "@singularity/plugin-primitives-css-measure-strip",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/overlay": {
       "name": "@singularity/plugin-primitives-css-overlay",
       "version": "0.0.1",
@@ -2778,6 +2782,10 @@
     },
     "plugins/primitives/plugins/css/plugins/z-layers": {
       "name": "@singularity/plugin-primitives-css-z-layers",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/cursor-menu": {
+      "name": "@singularity/plugin-primitives-cursor-menu",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/cursor-pagination": {
@@ -5515,6 +5523,8 @@
 
     "@singularity/plugin-primitives-css-link-chip": ["@singularity/plugin-primitives-css-link-chip@workspace:plugins/primitives/plugins/css/plugins/link-chip"],
 
+    "@singularity/plugin-primitives-css-measure-strip": ["@singularity/plugin-primitives-css-measure-strip@workspace:plugins/primitives/plugins/css/plugins/measure-strip"],
+
     "@singularity/plugin-primitives-css-overlay": ["@singularity/plugin-primitives-css-overlay@workspace:plugins/primitives/plugins/css/plugins/overlay"],
 
     "@singularity/plugin-primitives-css-pin": ["@singularity/plugin-primitives-css-pin@workspace:plugins/primitives/plugins/css/plugins/pin"],
@@ -5548,6 +5558,8 @@
     "@singularity/plugin-primitives-css-viewport-overlay": ["@singularity/plugin-primitives-css-viewport-overlay@workspace:plugins/primitives/plugins/css/plugins/viewport-overlay"],
 
     "@singularity/plugin-primitives-css-z-layers": ["@singularity/plugin-primitives-css-z-layers@workspace:plugins/primitives/plugins/css/plugins/z-layers"],
+
+    "@singularity/plugin-primitives-cursor-menu": ["@singularity/plugin-primitives-cursor-menu@workspace:plugins/primitives/plugins/cursor-menu"],
 
     "@singularity/plugin-primitives-cursor-pagination": ["@singularity/plugin-primitives-cursor-pagination@workspace:plugins/primitives/plugins/cursor-pagination"],
 

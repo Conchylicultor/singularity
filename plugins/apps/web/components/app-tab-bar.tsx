@@ -3,7 +3,6 @@ import {
   useRef,
   type ComponentType,
 } from "react";
-import { createPortal } from "react-dom";
 import { MdAdd } from "react-icons/md";
 import {
   cn,
@@ -15,6 +14,7 @@ import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { MeasureStrip } from "@plugins/primitives/plugins/css/plugins/measure-strip/web";
 import { useResponsiveOverflow } from "@plugins/primitives/plugins/responsive-overflow/web";
 import {
   SortableList,
@@ -174,35 +174,19 @@ export function AppTabBar() {
           Renders the same {@link Tab} variant as the visible strip (full label,
           uncollapsed, with a no-op `onClose` so the measured tab includes the
           trailing `×` width) so the measured width matches the rendered one. */}
-      {resolved.length > 0 &&
-        createPortal(
-          <div
-            ref={measureRef}
-            aria-hidden
-            style={{
-              position: "fixed",
-              top: -9999,
-              left: -9999,
-              display: "flex",
-              gap: CHIP_GAP_PX,
-              opacity: 0,
-              pointerEvents: "none",
-            }}
-          >
-            {resolved.map(({ tab, app, label }) => (
-              <Tab
-                key={tab.tabId}
-                data-app-tab={tab.appId}
-                icon={app.icon}
-                label={label}
-                active={false}
-                collapsed={false}
-                onClose={() => {}}
-              />
-            ))}
-          </div>,
-          document.body,
-        )}
+      <MeasureStrip ref={measureRef} gap={CHIP_GAP_PX} enabled={resolved.length > 0}>
+        {resolved.map(({ tab, app, label }) => (
+          <Tab
+            key={tab.tabId}
+            data-app-tab={tab.appId}
+            icon={app.icon}
+            label={label}
+            active={false}
+            collapsed={false}
+            onClose={() => {}}
+          />
+        ))}
+      </MeasureStrip>
     </Stack>
     </PortalThemeScopeProvider>
   );

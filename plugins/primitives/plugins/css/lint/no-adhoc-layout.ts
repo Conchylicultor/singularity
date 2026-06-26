@@ -95,6 +95,18 @@ const CLASS_ATTRS = new Set(["className", "class"]);
 const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge"]);
 
 /**
+ * Read a static string from a `style` ObjectExpression property's KEY, so both
+ * `position` (Identifier) and `"position"` (string Literal) keys are matched.
+ * Returns null for computed/dynamic keys (which we can't statically resolve).
+ */
+function staticPropKey(prop: TSESTree.Property): string | null {
+  if (prop.computed) return null;
+  if (prop.key.type === "Identifier") return prop.key.name;
+  if (prop.key.type === "Literal" && typeof prop.key.value === "string") return prop.key.value;
+  return null;
+}
+
+/**
  * Recursively collect class tokens from a class-name value subtree into `out`.
  * Harvests only string `Literal` `.value`s and `TemplateElement.value.raw`s —
  * never identifiers from dynamic expressions — splitting each on whitespace.
@@ -157,6 +169,12 @@ export default createRule({
         "<Stack gap>/<Inset pad> from @plugins/primitives/plugins/css/plugins/spacing/web, or <Text> " +
         "inside a line container for the min-w-0 truncation leaf. A genuine one-off escapes per-site with " +
         "`// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
+      adhocStylePosition:
+        "Inline `position: \"{{value}}\"` is banned — anchor a cursor menu via CursorAnchoredMenu " +
+        "(@plugins/primitives/plugins/cursor-menu/web), measure off-screen via MeasureStrip " +
+        "(@plugins/primitives/plugins/css/plugins/measure-strip/web), or compose fixed/absolute through " +
+        "<Overlay>/<Pin>/ViewportOverlay. Genuine one-off: " +
+        "`// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
     },
   },
   defaultOptions: [],
@@ -170,12 +188,46 @@ export default createRule({
       }
     }
 
+    /**
+     * Scan an inline `style={{ … }}` object for a banned `position` literal.
+     *
+     * Why inline style is scanned at all: the class-token ban above only reads
+     * `className`/`cn()` strings, so the inline-`style` form
+     * (`style={{ position: "fixed" }}`) slipped through entirely. That is the
+     * exact unguarded path the desktop/window context-menu shift bug shipped on
+     * (a zero-size `position: fixed` anchor that resolved against a transformed
+     * ancestor instead of the viewport). We scope strictly to the `position`
+     * property's string value — `relative`/`static` stay benign via POSITION,
+     * and we deliberately ignore `top`/`left`/`inset`/etc. (legit offsets on a
+     * sanctioned fixed/absolute child), since `position` is the discriminating
+     * token. Dynamic values, spreads, and imperative `el.style.position` are not
+     * caught — the same literal-only limit as the class path.
+     */
+    function checkStyle(node: TSESTree.JSXAttribute) {
+      if (node.value?.type !== "JSXExpressionContainer") return;
+      const expr = node.value.expression;
+      if (expr.type !== "ObjectExpression") return;
+      for (const prop of expr.properties) {
+        if (prop.type !== "Property") continue;
+        if (staticPropKey(prop) !== "position") continue;
+        if (prop.value.type !== "Literal" || typeof prop.value.value !== "string") continue;
+        const value = prop.value.value;
+        if (POSITION.test(value)) {
+          context.report({ node: prop, messageId: "adhocStylePosition", data: { value } });
+        }
+      }
+    }
+
     return {
       JSXAttribute(node) {
-        if (node.name.type !== "JSXIdentifier" || !CLASS_ATTRS.has(node.name.name)) return;
-        const tokens = new Set<string>();
-        collectTokens(node.value, tokens);
-        checkTokens(node, tokens);
+        if (node.name.type !== "JSXIdentifier") return;
+        if (CLASS_ATTRS.has(node.name.name)) {
+          const tokens = new Set<string>();
+          collectTokens(node.value, tokens);
+          checkTokens(node, tokens);
+        } else if (node.name.name === "style") {
+          checkStyle(node);
+        }
       },
       CallExpression(node) {
         if (node.callee.type !== "Identifier" || !CLASS_BUILDERS.has(node.callee.name)) {
