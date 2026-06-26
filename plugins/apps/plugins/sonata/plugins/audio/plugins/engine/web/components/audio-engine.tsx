@@ -54,17 +54,27 @@ export function AudioEngine() {
   const cursor = useCursorApi();
   const cursorRef = useLatestRef(cursor);
 
-  // Muted tracks are dropped from the play-list before scheduling. Deriving a
-  // filtered score (rather than passing the set down) keeps `startScheduling`
-  // track-agnostic; its identity changes when the mute set changes, so the
-  // scheduling effect re-runs and the schedule reflects the new mute state.
+  // Live mirrors read inside effects without listing them as deps. `scoreRef`
+  // gives every effect the latest (tempo-scaled) score even though the rebuild
+  // effect intentionally does NOT depend on `score`; `isPlayingRef` lets the
+  // tempo-keyed retime effect gate on play state without re-firing on play/pause.
+  const scoreRef = useLatestRef(score);
+  const isPlayingRef = useLatestRef(isPlaying);
+
+  // Muted tracks are dropped from the play-list before scheduling. We derive the
+  // audible NOTE LIST (not a whole filtered score) keyed on `[score.notes,
+  // mutedIds]`: `scaleTempo` preserves the `score.notes` array reference, so this
+  // memo's identity is **stable across tempo changes** and only flips on a real
+  // note/mute change. That stability is what lets the rebuild effect ignore tempo
+  // churn (tempo is handled by the separate retime effect below) — so dragging the
+  // speed wheel no longer tears down and re-attacks every ringing note.
   const mutedIds = useMutedTrackIds();
-  const audibleScore = useMemo(
+  const audibleNotes = useMemo(
     () =>
       mutedIds.size === 0
-        ? score
-        : { ...score, notes: score.notes.filter((n) => !mutedIds.has(n.track)) },
-    [score, mutedIds],
+        ? score.notes
+        : score.notes.filter((n) => !mutedIds.has(n.track)),
+    [score.notes, mutedIds],
   );
 
   // Resolved trackId → instrumentId (override ?? GM-program match ?? default),
@@ -87,12 +97,12 @@ export function AudioEngine() {
   // every render and not when an unrelated track's note tally shifts.
   const inUseIds = useMemo(() => {
     const ids = new Set<string>();
-    for (const n of audibleScore.notes) {
+    for (const n of audibleNotes) {
       const id = trackInstrumentMap.get(n.track);
       if (id) ids.add(id);
     }
     return ids;
-  }, [audibleScore, trackInstrumentMap]);
+  }, [audibleNotes, trackInstrumentMap]);
   const inUseKey = useMemo(() => [...inUseIds].sort().join("|"), [inUseIds]);
 
   // Master volume is owned by the shared store (the panel slider writes it).
@@ -108,6 +118,10 @@ export function AudioEngine() {
   // track that resolves to it (safe: muted tracks are already filtered out
   // upstream, so a shared manager never sounds a muted track).
   const managersRef = useRef<Map<string, InstrumentVoices>>(new Map());
+  // The currently-running schedule, shared between the rebuild effect (which
+  // creates/cancels it) and the retime effect (which re-times its tail on a
+  // tempo-only change). Nulled on cancel so retime never lands on a dead handle.
+  const handleRef = useRef<ScheduleHandle | null>(null);
 
   // Create the context eagerly on mount; it starts suspended until a gesture.
   useEffect(() => {
@@ -210,15 +224,15 @@ export function AudioEngine() {
     // intentional deps.
   }, [inUseKey, inUseIds, instrumentById, setLoadError]);
 
-  // --- Scheduling effect: anchor on play, schedule upfront, allOff on stop. --
-  // Re-runs on `seekEpoch` too: a seek repositions the playback origin without
-  // changing `score`, so we must cancel the in-flight schedule and re-anchor
-  // from the new cursor — otherwise audio keeps playing from the pre-seek spot.
-  // It also re-runs when `audibleScore` changes (tempo, edits, or a mute toggle)
-  // or when `trackInstrumentMap` changes (a track's instrument changed) —
-  // re-scheduling from the current cursor so the new timbre takes effect live.
-  // Both inputs also drive `inUseIds`/the reconcile effect, which runs first and
-  // has the managers ready in the ref by the time this effect reads them.
+  // --- Rebuild effect: anchor on play, schedule upfront, allOff on stop. ------
+  // Re-runs on `seekEpoch` (a seek repositions the origin without changing the
+  // notes), on `audibleNotes` (an edit or mute toggle), and on `trackInstrumentMap`
+  // (a track's instrument changed) — each legitimately needs the in-flight schedule
+  // cancelled (allOff) and rebuilt from the current cursor. It deliberately does
+  // NOT depend on `score`: a tempo-only change keeps `audibleNotes` referentially
+  // stable, so this effect doesn't run and no ringing note is cut — the separate
+  // retime effect below re-times the tail instead. Tempo is read live via
+  // `scoreRef` so a rebuild that DOES fire still uses the current tempo.
   useEffect(() => {
     const ctx = ctxRef.current;
     if (!ctx) return;
@@ -248,21 +262,46 @@ export function AudioEngine() {
     void (async () => {
       await Promise.all(managers.map((m) => m.loaded));
       if (cancelled) return;
+      // Compose the play-list score from the live tempo + the (mute-filtered)
+      // audible notes. `score.notes` is reference-stable across tempo changes, so
+      // this object is the only place tempo and notes are joined for scheduling.
       handle = startScheduling(
-        audibleScore,
+        { ...scoreRef.current, notes: audibleNotes },
         fromBeat,
         audioAnchor,
         resolveVoices,
         ctx,
       );
+      handleRef.current = handle;
     })();
 
     return () => {
       cancelled = true;
       handle?.cancel();
+      if (handleRef.current === handle) handleRef.current = null;
       for (const manager of managers) manager.allOff();
     };
-  }, [isPlaying, audibleScore, trackInstrumentMap, seekEpoch]);
+  }, [isPlaying, audibleNotes, trackInstrumentMap, seekEpoch]);
+
+  // --- Retime effect: follow the speed jog-wheel without cutting any note. ----
+  // Keyed on `score` (which changes only via tempo or content). A pure tempo drag
+  // re-derives `score` ~60×/sec but leaves `audibleNotes` stable, so the rebuild
+  // effect stays put while this re-times the running schedule's not-yet-dispatched
+  // tail to the new tempo — leaving every sounding note untouched. We read the
+  // audio clock and cursor beat back-to-back so the audio re-anchors to exactly
+  // where the visual cursor just re-anchored (both derive from `ctx.currentTime`),
+  // staying locked. No-op when paused, when no schedule is running, or on a content
+  // change (the rebuild effect cleared `handleRef`, so this falls through and the
+  // rebuild owns the reschedule).
+  useEffect(() => {
+    if (!isPlayingRef.current) return;
+    const handle = handleRef.current;
+    const ctx = ctxRef.current;
+    if (!handle || !ctx) return;
+    const audioAnchor = ctx.currentTime;
+    const fromBeat = cursorRef.current.getBeat();
+    handle.retime(score, fromBeat, audioAnchor);
+  }, [score]);
 
   // Aggregate status: "Loading…" until every in-use manager is loaded, the
   // error if any failed, "Ready" otherwise. Keyed on `inUseKey` so it
