@@ -86,10 +86,10 @@ session, which a headless/automation shell lacks.
   already built. The `.app` is unaffected. Build the dmg from a logged-in
   desktop session (with Automation/TCC permission), or restrict
   `bundle.targets` to `["app"]` for headless builds.
-- **Embedded PG binds a fixed TCP port (5433).** The shell sets `SINGULARITY_DIR`
-  / `SINGULARITY_PG_SOCKET_DIR` / `PORT` but **not** `SINGULARITY_PG_PORT`, so the
-  embedded Postgres' loopback listener (`listen_addresses=127.0.0.1`, present for
-  Zero) defaults to 5433 — fine on a clean end-user machine, but it collides with
-  a running dev cluster or a second desktop instance. The web preview path sets a
-  free `SINGULARITY_PG_PORT` (`plugins/release/server/internal/preview-manager.ts`);
-  the desktop shell does not. See the F5 research doc's multi-instance note.
+- **Embedded PG port is picked per launch.** The embedded Postgres opens a
+  loopback TCP listener (`listen_addresses=127.0.0.1`, present for Zero), which
+  would default to 5433 and collide with a dev cluster or another desktop
+  instance. The shell now picks a free port at setup and passes it as
+  `SINGULARITY_PG_PORT` to both `launch` and `teardown` (mirroring the web
+  preview path, `plugins/release/server/internal/preview-manager.ts`), so the
+  desktop app coexists with a running dev cluster and other instances.

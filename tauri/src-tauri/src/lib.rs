@@ -35,6 +35,19 @@ struct StackCtx {
     data_dir: PathBuf,
     socket_dir: PathBuf,
     port: u16,
+    pg_port: u16,
+}
+
+/// Ask the OS for a free loopback TCP port (bind `:0`, read the assignment,
+/// release it). The embedded Postgres opens a loopback TCP listener for Zero, so
+/// without a per-instance port it always binds the default 5433 and collides
+/// with a dev cluster or another desktop instance. This mirrors how the web
+/// preview path hands each instance its own `SINGULARITY_PG_PORT`.
+fn pick_free_port() -> Option<u16> {
+    std::net::TcpListener::bind("127.0.0.1:0")
+        .ok()
+        .and_then(|l| l.local_addr().ok())
+        .map(|a| a.port())
 }
 
 fn read_manifest(bundle_dir: &std::path::Path) -> ReleaseManifest {
@@ -64,6 +77,10 @@ pub fn run() {
             let bundle_dir = app.path().resource_dir()?.join("bundle");
             let manifest = read_manifest(&bundle_dir);
             let port = manifest.port;
+            // Free loopback port for the embedded Postgres TCP listener, picked
+            // once and reused for teardown so we signal the stack we brought up.
+            let pg_port =
+                pick_free_port().expect("equin: no free TCP port for embedded Postgres");
 
             // Data in the OS app-data dir (persistent across launches); PG/PgBouncer
             // sockets on a SHORT /tmp path so the Unix socket path stays under the
@@ -88,6 +105,7 @@ pub fn run() {
                 data_dir: data_dir.clone(),
                 socket_dir: socket_dir.clone(),
                 port,
+                pg_port,
             });
 
             // Show the placeholder window immediately; bring the stack up off the UI
@@ -104,6 +122,7 @@ pub fn run() {
                         .env("SINGULARITY_DIR", &data_dir)
                         .env("SINGULARITY_PG_SOCKET_DIR", &socket_dir)
                         .env("PORT", port.to_string())
+                        .env("SINGULARITY_PG_PORT", pg_port.to_string())
                         .status();
                     if !matches!(status, Ok(s) if s.success()) {
                         eprintln!("equin: launch failed ({status:?}); app will not load");
@@ -130,6 +149,7 @@ pub fn run() {
                         .env("SINGULARITY_DIR", &ctx.data_dir)
                         .env("SINGULARITY_PG_SOCKET_DIR", &ctx.socket_dir)
                         .env("PORT", ctx.port.to_string())
+                        .env("SINGULARITY_PG_PORT", ctx.pg_port.to_string())
                         .status();
                 }
             }
