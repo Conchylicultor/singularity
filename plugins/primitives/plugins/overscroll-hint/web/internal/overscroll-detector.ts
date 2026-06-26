@@ -4,7 +4,14 @@
  * Gives the app a native-feeling elastic **rubber-band** when a wheel /
  * trackpad / touch gesture is fully **wasted** — nothing actually scrolls
  * because the surface isn't scrollable or is already pinned at the edge in that
- * direction. Like iOS/macOS overscroll, the surface follows the gesture *live*.
+ * direction. Like iOS/macOS overscroll, the content follows the gesture *live*.
+ *
+ * We translate the viewport's CONTENT (its element children), never the viewport
+ * box itself. Moving the box would drag its clip boundary over adjacent chrome
+ * (a toolbar/footer) and, because `transform` opens a stacking context, paint
+ * the overscrolled content *above* that chrome. Moving the content instead keeps
+ * the bounce inside the viewport's own `overflow` clip — the native model: the
+ * viewport stays put and clips, only the content inside it moves.
  *
  * The motion is a small continuous physics loop rather than a one-shot clip:
  *   - every wasted scroll event PUSHES the surface out, with resistance that
@@ -65,8 +72,16 @@ export function installOverscrollHint(): () => void {
   let pending: PendingGesture | null = null;
   let rafId: number | null = null;
 
-  // Physics state for the surface currently being rubber-banded.
+  // Physics state for the surface currently being rubber-banded. `el` is the
+  // scroll viewport we locked onto (kept for identity/axis tracking); `targets`
+  // are the viewport's CONTENT layers (its element children) we actually
+  // translate. Moving the content — not the viewport box — means the viewport's
+  // own `overflow` clips the bounce, so the rubber-band can never slide its clip
+  // boundary over adjacent chrome (a toolbar/footer) or paint above it via a
+  // transform-induced stacking context. This is the native model: the viewport
+  // stays put and clips; only the content inside it moves.
   let el: HTMLElement | null = null;
+  let targets: HTMLElement[] = [];
   let axis: Axis = "y";
   let offset = 0; // current signed displacement in px
   let touching = false; // finger down → hold (no decay) so it tracks 1:1
@@ -121,9 +136,17 @@ export function installOverscrollHint(): () => void {
     if (el && (el !== surface || axis !== gestureAxis)) {
       resetSurface();
     }
+
+    // Translate the viewport's content layers, not the viewport itself. A
+    // viewport with no element children (only text/pseudo content) has nothing
+    // to bounce safely, so we skip rather than fall back to moving the box.
+    const content = contentLayers(surface);
+    if (content.length === 0) return;
+
     el = surface;
+    targets = content;
     axis = gestureAxis;
-    el.style.willChange = "transform";
+    for (const t of targets) t.style.willChange = "transform";
 
     push(delta);
     apply();
@@ -143,9 +166,10 @@ export function installOverscrollHint(): () => void {
   }
 
   function apply(): void {
-    if (!el) return;
-    el.style.transform =
+    if (targets.length === 0) return;
+    const value =
       axis === "y" ? `translateY(${offset}px)` : `translateX(${offset}px)`;
+    for (const t of targets) t.style.transform = value;
   }
 
   function startLoop(): void {
@@ -182,13 +206,26 @@ export function installOverscrollHint(): () => void {
       cancelAnimationFrame(loopId);
       loopId = null;
     }
-    if (el) {
-      el.style.transform = "";
-      el.style.willChange = "";
+    for (const t of targets) {
+      t.style.transform = "";
+      t.style.willChange = "";
     }
+    targets = [];
     el = null;
     offset = 0;
     lastTs = null;
+  }
+
+  /**
+   * The viewport's content layers — its direct element children. Translating
+   * these (instead of the viewport box) keeps the bounce inside the viewport's
+   * `overflow` clip, so it never escapes over adjacent chrome. Text/pseudo
+   * children are skipped (only an element can carry a transform).
+   */
+  function contentLayers(surface: HTMLElement): HTMLElement[] {
+    return Array.from(surface.children).filter(
+      (c): c is HTMLElement => c instanceof HTMLElement,
+    );
   }
 
   function pickScrollSurface(start: Element | null, ax: Axis): Element | null {

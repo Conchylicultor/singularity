@@ -35,8 +35,15 @@ zoom / canvas pan) and pinch-zoom (`ctrlKey`) are ignored.
 
 `pickScrollSurface` walks up from the gesture target to the first element whose
 computed overflow on the gesture's dominant axis is `auto`/`scroll`/`overlay`
-(falling back to nearest `[data-pane-id]` → `<main>` → scrolling root). Its
-displacement is driven by a small continuous physics loop, not a clip:
+(falling back to nearest `[data-pane-id]` → `<main>` → scrolling root). The
+transform is applied to that viewport's **content layers** (its direct element
+children), never the viewport box itself: moving the box would drag its clip
+boundary over an adjacent toolbar/footer and — since `transform` opens a stacking
+context — paint the overscrolled content *above* that chrome. Moving the content
+keeps the bounce inside the viewport's own `overflow` clip, the native model
+(viewport stays put and clips; only content moves). A viewport with no element
+children has nothing to bounce safely and is skipped. Its displacement is driven
+by a small continuous physics loop, not a clip:
 
 - **Push.** Each wasted scroll event adds `−delta · PUSH_FACTOR · (1 − |offset|/MAX_PULL)`
   to the signed `offset`. The `(1 − |offset|/MAX_PULL)` term is the resistance:
