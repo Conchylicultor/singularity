@@ -1,7 +1,7 @@
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import type { PaneInput, PaneSlot, PaneStore } from "@plugins/primitives/plugins/pane/web";
-import type { Placement } from "../../core";
-import type { ActiveApp } from "./use-active-app";
+import type { Placement } from "@plugins/apps-core/core";
+import type { ActiveApp } from "@plugins/apps-core/web";
 
 /**
  * One open app tab. Each tab owns its own {@link PaneStore} (independent route

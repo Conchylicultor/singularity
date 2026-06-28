@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Toaster as Sonner, toast as sonnerToast } from "sonner";
 import { ShellCommands, type ToastArgs } from "@plugins/shell/web";
 import { useColorMode } from "@plugins/ui/plugins/theme-engine/web";
-import { useChromeThemeScope } from "@plugins/apps-core/web";
+import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 
 /** Mutable holder so the click handler can read the toast id assigned after `toast()` returns. */

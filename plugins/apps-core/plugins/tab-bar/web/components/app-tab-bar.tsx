@@ -21,14 +21,14 @@ import {
   SortableItem,
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { Tab } from "@plugins/ui/plugins/tab-bar/web";
-import { Apps } from "../slots";
-import { useChromeThemeScope } from "../internal/use-chrome-theme-scope";
-import { useTabs } from "../internal/use-tabs";
+import { Apps } from "@plugins/apps-core/web";
+import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import {
+  useTabs,
   getDefaultPlacement,
   placementIsNewTabFollows,
   tearOffPlacement,
-} from "../internal/placement-registry";
+} from "@plugins/apps-core/plugins/tabs/web";
 
 /** Chip gap in px (`gap-2xs` ≈ 0.125rem) — fed to the overflow measurer. */
 const CHIP_GAP_PX = 2;

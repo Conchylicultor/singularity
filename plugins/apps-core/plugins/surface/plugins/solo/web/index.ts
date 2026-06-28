@@ -3,7 +3,7 @@ import {
   getFocusedPlacement,
   setFocusedTabPlacement,
   getDefaultPlacement,
-} from "@plugins/apps-core/web";
+} from "@plugins/apps-core/plugins/tabs/web";
 import { Surface } from "@plugins/apps-core/plugins/surface/web";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
 import { soloDef } from "./solo-placement";

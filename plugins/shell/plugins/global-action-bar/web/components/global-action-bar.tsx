@@ -17,7 +17,7 @@ import {
   getFocusedPlacement,
   setFocusedTabPlacement,
   useFocusedPlacement,
-} from "@plugins/apps-core/web";
+} from "@plugins/apps-core/plugins/tabs/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { actionBarConfig } from "../../shared/config";
 import {

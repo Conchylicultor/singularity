@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { Apps, useTabs, type Tab } from "@plugins/apps-core/web";
+import { Apps } from "@plugins/apps-core/web";
+import { useTabs, type Tab } from "@plugins/apps-core/plugins/tabs/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";

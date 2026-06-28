@@ -1,7 +1,9 @@
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useActiveApp } from "./use-active-app";
-import { useFocusedPlacement } from "./use-tabs";
-import { placementHasAppThemeScope } from "./placement-registry";
+import { useActiveApp } from "@plugins/apps-core/web";
+import {
+  useFocusedPlacement,
+  placementHasAppThemeScope,
+} from "@plugins/apps-core/plugins/tabs/web";
 
 /**
  * The theme scope owned by the focused full-surface app — or `undefined` when no

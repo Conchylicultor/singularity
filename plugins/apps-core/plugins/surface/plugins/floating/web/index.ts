@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { getFocusedPlacement } from "@plugins/apps-core/web";
+import { getFocusedPlacement } from "@plugins/apps-core/plugins/tabs/web";
 import { Surface } from "@plugins/apps-core/plugins/surface/web";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
 import { ConfigV2 } from "@plugins/config_v2/web";

@@ -18,11 +18,14 @@ import {
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import { setFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
-import { type Placement } from "../../core";
-import { Apps } from "../slots";
+import { type Placement } from "@plugins/apps-core/core";
+import {
+  Apps,
+  useActiveApp,
+  defaultApp,
+  resolveAppForPath,
+} from "@plugins/apps-core/web";
 import { getDefaultPlacement } from "./placement-registry";
-import { useActiveApp } from "./use-active-app";
-import { defaultApp, resolveAppForPath } from "./resolve-app";
 import {
   appPathFor,
   loadPersistedTabs,

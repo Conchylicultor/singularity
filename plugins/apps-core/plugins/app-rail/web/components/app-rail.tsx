@@ -3,10 +3,9 @@ import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import { Apps } from "../slots";
-import { useActiveApp } from "../internal/use-active-app";
-import { useChromeThemeScope } from "../internal/use-chrome-theme-scope";
-import { useTabs } from "../internal/use-tabs";
+import { Apps, useActiveApp } from "@plugins/apps-core/web";
+import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
+import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 
 export function AppRail() {
   // Self-sufficient: the rail derives its own active-app highlight rather than

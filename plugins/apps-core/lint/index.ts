@@ -14,7 +14,7 @@ export default {
       // PERMANENT — pre-tab URL canonicalization (`/`→`/home`, unmatched path →
       // fallback namespace). Runs in AppsLayout BEFORE TabsProvider mounts, so
       // there is no live store / focused tab to route through yet.
-      "plugins/apps-core/web/components/apps-layout.tsx",
+      "plugins/apps-core/plugins/layout/web/components/apps-layout.tsx",
     ],
   },
 };

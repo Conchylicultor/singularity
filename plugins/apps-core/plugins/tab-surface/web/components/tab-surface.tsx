@@ -12,9 +12,12 @@ import {
   SyncStatusProvider,
   SyncStatusIndicator,
 } from "@plugins/primitives/plugins/sync-status/web";
-import { Apps } from "../slots";
-import { appPathFor, type Tab } from "../internal/tabs-store";
-import { useTabs } from "../internal/use-tabs";
+import { Apps } from "@plugins/apps-core/web";
+import {
+  appPathFor,
+  useTabs,
+  type Tab,
+} from "@plugins/apps-core/plugins/tabs/web";
 
 /**
  * The per-tab render core, shared by every surface arrangement. Mounts the tab's

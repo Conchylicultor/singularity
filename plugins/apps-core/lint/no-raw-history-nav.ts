@@ -4,7 +4,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * no-raw-history-nav
  *
  * Navigation must go through the sanctioned `navigate(url)` from
- * `@plugins/apps-core/web`, never a raw `window.history.pushState(...)` /
+ * `@plugins/apps-core/plugins/tabs/web`, never a raw `window.history.pushState(...)` /
  * `history.replaceState(...)`.
  *
  * With the tab model, each tab carries both an `appId` and a URL. A raw history
@@ -47,13 +47,13 @@ export default createRule({
     docs: {
       description:
         "Disallow raw history.pushState/replaceState — use navigate(url) from " +
-        "@plugins/apps-core/web so the focused tab's appId stays in sync with the URL.",
+        "@plugins/apps-core/plugins/tabs/web so the focused tab's appId stays in sync with the URL.",
     },
     schema: [],
     messages: {
       noRawHistoryNav:
         "Raw history.{{method}}() desyncs the focused tab's appId from the URL. " +
-        "Use navigate(url) from @plugins/apps-core/web instead — it resolves the " +
+        "Use navigate(url) from @plugins/apps-core/plugins/tabs/web instead — it resolves the " +
         "target app, opens-or-focuses its tab, and sets the route through the " +
         "live pane store (cross-app safe).",
     },

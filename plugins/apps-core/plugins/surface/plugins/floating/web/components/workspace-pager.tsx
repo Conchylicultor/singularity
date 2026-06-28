@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { MdAdd, MdClose } from "react-icons/md";
-import { useTabs } from "@plugins/apps-core/web";
+import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";

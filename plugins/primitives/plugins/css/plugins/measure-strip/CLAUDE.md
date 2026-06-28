@@ -37,7 +37,7 @@ duplication and the chance of one copy drifting.
 
 - Description: Off-screen body-portaled measurement strip: a hidden flex row for measuring children's natural widths before an overflow/collapse decision.
 - Cross-plugin:
-  - Imported by: `apps-core`, `primitives/pane`, `primitives/responsive-overflow`
+  - Imported by: `apps-core/tab-bar`, `primitives/pane`, `primitives/responsive-overflow`
 - Web:
   - Exports: Types: `MeasureStripProps`; Values: `MeasureStrip`
 

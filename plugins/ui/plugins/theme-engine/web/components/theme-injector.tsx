@@ -5,7 +5,8 @@ import {
   useMemo,
 } from "react";
 import { useConfig, useScopeMembership } from "@plugins/config_v2/web";
-import { useActiveApp, useRootThemeScope, Apps } from "@plugins/apps-core/web";
+import { useActiveApp, Apps } from "@plugins/apps-core/web";
+import { useRootThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import {
   appThemeScope,
   themeScopeSelectors,

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { type Tab } from "@plugins/apps-core/web";
+import { type Tab } from "@plugins/apps-core/plugins/tabs/web";
 import { type PlacementDef } from "../slots";
 
 /**

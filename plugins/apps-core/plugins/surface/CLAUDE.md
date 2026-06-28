@@ -8,7 +8,7 @@
 - Web:
   - Slots: `Surface.Placement` ← `apps-core.surface.docked`, `apps-core.surface.floating`, `apps-core.surface.solo`
   - Contributes: `Apps.Surface` "Surface" → `SurfaceBody`, `ActionBar.Item` → `ActionBarPlacementControl`
-  - Uses: `apps-core.Apps`, `apps-core.registerPlacementCapabilities`, `apps-core.setFocusedTabPlacement`, `apps-core.Tab`, `apps-core.TabSurface`, `apps-core.useFocusedPlacement`, `apps-core.useTabs`, `primitives/css/clip.Clip`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.PortalThemeScopeProvider`, `shell/action-bar.ActionBar`
+  - Uses: `apps-core.Apps`, `apps-core/tab-surface.TabSurface`, `apps-core/tabs.registerPlacementCapabilities`, `apps-core/tabs.setFocusedTabPlacement`, `apps-core/tabs.Tab`, `apps-core/tabs.useFocusedPlacement`, `apps-core/tabs.useTabs`, `primitives/css/clip.Clip`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.PortalThemeScopeProvider`, `shell/action-bar.ActionBar`
   - Exports: Types: `PlacementChromeProps`, `PlacementDef`, `PlacementStyleApi`; Values: `PlacementStyleProvider`, `Surface`, `usePlacementStyle`
 - Cross-plugin:
   - Imported by: `apps-core/surface/docked`, `apps-core/surface/floating`, `apps-core/surface/solo`

@@ -16,7 +16,7 @@
   - Uses: `config_v2.defineConfig`, `fields/dynamic-enum/config.dynamicEnumField`
   - Exports: Types: `TabProps`; Values: `tabBarConfig`
 - Cross-plugin:
-  - Imported by: `apps-core`, `apps-core/surface/floating`, `ui/tab-bar/chip`, `ui/tab-bar/connected`, `ui/tab-bar/customizer`, `ui/tab-bar/underline`
+  - Imported by: `apps-core/surface/floating`, `apps-core/tab-bar`, `ui/tab-bar/chip`, `ui/tab-bar/connected`, `ui/tab-bar/customizer`, `ui/tab-bar/underline`
 - Sub-plugins:
   - **`chip`** — Accent-filled pill tab (the canonical chip look).
   - **`connected`** — Folder tab; the active tab merges into the content surface.

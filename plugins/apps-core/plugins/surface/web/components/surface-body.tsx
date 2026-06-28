@@ -6,12 +6,12 @@ import {
   type PointerEvent,
 } from "react";
 import { createPortal } from "react-dom";
+import { TabSurface } from "@plugins/apps-core/plugins/tab-surface/web";
 import {
-  TabSurface,
   useTabs,
   registerPlacementCapabilities,
   type Tab,
-} from "@plugins/apps-core/web";
+} from "@plugins/apps-core/plugins/tabs/web";
 import { PortalThemeScopeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import {

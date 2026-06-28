@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import {
   useFocusedPlacement,
   setFocusedTabPlacement,
-} from "@plugins/apps-core/web";
+} from "@plugins/apps-core/plugins/tabs/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Surface } from "../slots";
 

@@ -89,6 +89,10 @@
       "name": "@singularity/plugin-apps-core",
       "version": "0.0.1",
     },
+    "plugins/apps-core/plugins/app-rail": {
+      "name": "@singularity/plugin-apps-core-app-rail",
+      "version": "0.0.1",
+    },
     "plugins/apps-core/plugins/app-rail-framing": {
       "name": "@singularity/plugin-apps-core-app-rail-framing",
       "version": "0.0.1",
@@ -99,6 +103,10 @@
     },
     "plugins/apps-core/plugins/app-rail-framing/plugins/rail": {
       "name": "@singularity/plugin-apps-core-app-rail-framing-rail",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/layout": {
+      "name": "@singularity/plugin-apps-core-layout",
       "version": "0.0.1",
     },
     "plugins/apps-core/plugins/surface": {
@@ -131,6 +139,22 @@
     },
     "plugins/apps-core/plugins/surface/plugins/solo": {
       "name": "@singularity/plugin-apps-core-surface-solo",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/tab-bar": {
+      "name": "@singularity/plugin-apps-core-tab-bar",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/tab-surface": {
+      "name": "@singularity/plugin-apps-core-tab-surface",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/tabs": {
+      "name": "@singularity/plugin-apps-core-tabs",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/theme-scope": {
+      "name": "@singularity/plugin-apps-core-theme-scope",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/agent-manager": {
@@ -4320,11 +4344,15 @@
 
     "@singularity/plugin-apps-core": ["@singularity/plugin-apps-core@workspace:plugins/apps-core"],
 
+    "@singularity/plugin-apps-core-app-rail": ["@singularity/plugin-apps-core-app-rail@workspace:plugins/apps-core/plugins/app-rail"],
+
     "@singularity/plugin-apps-core-app-rail-framing": ["@singularity/plugin-apps-core-app-rail-framing@workspace:plugins/apps-core/plugins/app-rail-framing"],
 
     "@singularity/plugin-apps-core-app-rail-framing-hidden": ["@singularity/plugin-apps-core-app-rail-framing-hidden@workspace:plugins/apps-core/plugins/app-rail-framing/plugins/hidden"],
 
     "@singularity/plugin-apps-core-app-rail-framing-rail": ["@singularity/plugin-apps-core-app-rail-framing-rail@workspace:plugins/apps-core/plugins/app-rail-framing/plugins/rail"],
+
+    "@singularity/plugin-apps-core-layout": ["@singularity/plugin-apps-core-layout@workspace:plugins/apps-core/plugins/layout"],
 
     "@singularity/plugin-apps-core-surface": ["@singularity/plugin-apps-core-surface@workspace:plugins/apps-core/plugins/surface"],
 
@@ -4341,6 +4369,14 @@
     "@singularity/plugin-apps-core-surface-floating-wallpaper-upload": ["@singularity/plugin-apps-core-surface-floating-wallpaper-upload@workspace:plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/upload"],
 
     "@singularity/plugin-apps-core-surface-solo": ["@singularity/plugin-apps-core-surface-solo@workspace:plugins/apps-core/plugins/surface/plugins/solo"],
+
+    "@singularity/plugin-apps-core-tab-bar": ["@singularity/plugin-apps-core-tab-bar@workspace:plugins/apps-core/plugins/tab-bar"],
+
+    "@singularity/plugin-apps-core-tab-surface": ["@singularity/plugin-apps-core-tab-surface@workspace:plugins/apps-core/plugins/tab-surface"],
+
+    "@singularity/plugin-apps-core-tabs": ["@singularity/plugin-apps-core-tabs@workspace:plugins/apps-core/plugins/tabs"],
+
+    "@singularity/plugin-apps-core-theme-scope": ["@singularity/plugin-apps-core-theme-scope@workspace:plugins/apps-core/plugins/theme-scope"],
 
     "@singularity/plugin-apps-debug": ["@singularity/plugin-apps-debug@workspace:plugins/apps/plugins/debug"],
 

@@ -1,6 +1,6 @@
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { RailFramingProps } from "@plugins/apps-core/core";
-import { AppRail } from "@plugins/apps-core/web";
+import { AppRail } from "@plugins/apps-core/plugins/app-rail/web";
 
 /**
  * The default rail: a 2.5rem icon rail beside the app content. Sets

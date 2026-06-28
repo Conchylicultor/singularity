@@ -1,5 +1,5 @@
 import { useEffect } from "react";
-import { useTabs } from "@plugins/apps-core/web";
+import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { setFloatingTabsBridge } from "../window-commands";
 
 /**

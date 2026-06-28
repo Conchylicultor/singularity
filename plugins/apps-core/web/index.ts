@@ -1,43 +1,26 @@
-import { Core, type PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { AppsLayout } from "./components/apps-layout";
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export {
   Apps,
   type RailFramingContribution,
   type SurfaceContribution,
 } from "./slots";
-export { AppRail } from "./components/app-rail";
-export { TabSurface } from "./components/tab-surface";
-export { AppTabsBody } from "./components/apps-layout";
-export { useActiveApp, type ActiveApp } from "./internal/use-active-app";
 export {
-  useChromeThemeScope,
-  useRootThemeScope,
-} from "./internal/use-chrome-theme-scope";
+  useActiveApp,
+  usePathname,
+  type ActiveApp,
+} from "./internal/use-active-app";
+export {
+  matchAppForPath,
+  defaultApp,
+  resolveAppForPath,
+  type ResolvedApp,
+} from "./internal/resolve-app";
 export { useCurrentAppId } from "./use-current-app-id";
-export { type Tab } from "./internal/tabs-store";
-export {
-  useTabs,
-  navigate,
-  setFocusedTabPlacement,
-  getFocusedPlacement,
-  useFocusedPlacement,
-  type TabsApi,
-} from "./internal/use-tabs";
-export {
-  registerPlacementCapabilities,
-  getDefaultPlacement,
-  useDefaultPlacement,
-  tearOffPlacement,
-  placementIsNewTabFollows,
-  placementHasAppThemeScope,
-  type PlacementCapabilities,
-} from "./internal/placement-registry";
 export type { Placement } from "../core";
 
 export default {
   description:
     "App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.",
   loadBearing: true,
-  contributions: [Core.Root({ component: AppsLayout })],
 } satisfies PluginDefinition;

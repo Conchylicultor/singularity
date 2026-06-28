@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo } from "react";
 import { MdWebAsset } from "react-icons/md";
-import { Apps, useTabs } from "@plugins/apps-core/web";
+import { Apps } from "@plugins/apps-core/web";
+import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import {
   usePlacementStyle,
   type PlacementChromeProps,
