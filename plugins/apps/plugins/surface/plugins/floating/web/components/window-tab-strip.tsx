@@ -200,9 +200,7 @@ export function WindowTabStrip({
   );
 
   return (
-    // `border-b` gives the `underline` / `connected` tab variants a bottom border
-    // to merge into inside the titlebar.
-    <Stack direction="row" gap="2xs" align="center" className="border-b">
+    <Stack direction="row" gap="2xs" align="center">
       {members.map((member) => {
         const active = member.tabId === activeTabId;
         const Icon = member.icon ?? MdWebAsset;
