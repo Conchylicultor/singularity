@@ -12,6 +12,7 @@ export {
   getRuntimeProfile,
   resetRuntimeProfile,
   onSlowSpan,
+  waitSplit,
 } from "./recorder";
 export type {
   SpanKind,

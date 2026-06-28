@@ -18,11 +18,25 @@ const firstSubscribeSchema = z
   })
   .nullable();
 
-const topLoaderSchema = z.object({
+// One runtime-profiler aggregate (loader or db), with its wait-vs-work split. `waits`
+// is the per-call amortized wait by gate/lock layer (e.g. `heavy-read-acquire`);
+// `workMs = avgMs − Σwaits` — a high `avgMs` with a high wait / low `workMs` is
+// head-of-line blocking, not a slow op. Values are rounded at the edge.
+const profileEntrySchema = z.object({
   label: z.string(),
-  avgMs: z.number(),
-  maxMs: z.number(),
   count: z.number(),
+  avgMs: z.number(),
+  workMs: z.number(),
+  maxMs: z.number(),
+  waits: z.record(z.string(), z.number()).optional(),
+});
+
+// Physical bloat of the `live_state_snapshot` table — the persisted-read cost only
+// reproduces against real dead-tuple bloat (warm mode against main).
+const bloatSchema = z.object({
+  tableBytes: z.number(),
+  deadTuples: z.number(),
+  liveTuples: z.number(),
 });
 
 // One full benchmark iteration measured in the target backend's own process.
@@ -30,6 +44,8 @@ export const iterResultSchema = z.object({
   bootSnapshot: z.object({
     totalMs: z.number(),
     perKey: z.record(z.string(), perKeySchema),
+    // Wall time of the single batched persisted-snapshot read (the L2 fast path).
+    persistedReadMs: z.number(),
   }),
   firstSubscribe: z.record(z.string(), firstSubscribeSchema),
   eventLoop: z.object({
@@ -38,8 +54,18 @@ export const iterResultSchema = z.object({
     meanMs: z.number(),
   }),
   runtimeProfile: z.object({
-    topLoaders: z.array(topLoaderSchema),
+    loaders: z.array(profileEntrySchema),
+    db: z.array(profileEntrySchema),
   }),
+  // Present only when this iteration ran under a host-gate load (loadConcurrency>0).
+  // `peakGateWaitMs` is the burst's own peak per-call heavy-read wait (acquire +
+  // local) across its loader entries — measured in-process, not the host queue gauge.
+  load: z
+    .object({
+      concurrency: z.number(),
+      peakGateWaitMs: z.number().optional(),
+    })
+    .optional(),
 });
 export type IterResult = z.infer<typeof iterResultSchema>;
 
@@ -52,6 +78,15 @@ export const bootBenchRunResponseSchema = z.object({
     cold: z.array(iterResultSchema).optional(),
     warm: z.array(iterResultSchema).optional(),
   }),
+  // Captured ONCE per mode at the start of its set (before any cold-clear delete,
+  // which churns the very table being measured). Bloat only reproduces in warm
+  // mode against an already-bloated DB (main).
+  snapshotBloat: z
+    .object({
+      cold: bloatSchema.optional(),
+      warm: bloatSchema.optional(),
+    })
+    .optional(),
 });
 export type BootBenchRunResponse = z.infer<typeof bootBenchRunResponseSchema>;
 
@@ -61,6 +96,9 @@ export const bootBenchRunBodySchema = z.object({
   mode: z.enum(["cold", "warm", "both"]).optional(),
   conversationId: z.string().optional(),
   attemptId: z.string().optional(),
+  // Occupants to hold on the host-wide `heavy-read` gate during the burst.
+  // 0 (default) = current isolated behavior.
+  loadConcurrency: z.number().int().nonnegative().optional(),
 });
 export type BootBenchRunBody = z.infer<typeof bootBenchRunBodySchema>;
 

@@ -2,7 +2,7 @@ import { z } from "zod";
 import { basename } from "path";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import { type SpanKind } from "@plugins/infra/plugins/runtime-profiler/core";
+import { type SpanKind, waitSplit } from "@plugins/infra/plugins/runtime-profiler/core";
 import { runtimeProfileSchema } from "../../shared/endpoints";
 
 const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push", "flush"];
@@ -93,31 +93,30 @@ Default: profiles the current conversation's worktree server. Pass \`worktree\` 
       }
     > = {};
 
-    // Sum the per-layer wait map (total ms across all records of this label).
-    const sumWaits = (waits?: Record<string, number>): number =>
-      waits ? Object.values(waits).reduce((a, b) => a + b, 0) : 0;
-
     for (const k of targetKinds) {
       result[k] = {
-        aggregates: profile.aggregates[k].slice(0, limit).map((agg) => ({
-          label: agg.label,
-          count: agg.count,
-          avgMs: Math.round(agg.totalMs / agg.count),
+        aggregates: profile.aggregates[k].slice(0, limit).map((agg) => {
           // Pure operation cost: average duration minus the average wait. The
           // direct lock-vs-work read — a high avgMs with a high waits/low workMs
           // is head-of-line blocking, not a slow resource.
-          workMs: Math.round((agg.totalMs - sumWaits(agg.waits)) / agg.count),
-          maxMs: agg.maxMs,
-          lastMs: agg.lastMs,
-          waits: agg.waits,
-          byParent: agg.byParent.map((pb) => ({
-            parentKind: pb.parent.kind,
-            parentLabel: pb.parent.label,
-            count: pb.count,
-            avgMs: Math.round(pb.totalMs / pb.count),
-            maxMs: pb.maxMs,
-          })),
-        })),
+          const ws = waitSplit(agg);
+          return {
+            label: agg.label,
+            count: agg.count,
+            avgMs: Math.round(ws.avgMs),
+            workMs: Math.round(ws.workMs),
+            maxMs: agg.maxMs,
+            lastMs: agg.lastMs,
+            waits: agg.waits,
+            byParent: agg.byParent.map((pb) => ({
+              parentKind: pb.parent.kind,
+              parentLabel: pb.parent.label,
+              count: pb.count,
+              avgMs: Math.round(pb.totalMs / pb.count),
+              maxMs: pb.maxMs,
+            })),
+          };
+        }),
         slowest: profile.slowest[k].slice(0, limit).map((s) => ({
           label: s.label,
           durationMs: s.durationMs,

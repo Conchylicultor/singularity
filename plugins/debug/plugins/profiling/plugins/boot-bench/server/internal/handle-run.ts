@@ -11,10 +11,14 @@ import { clearPersistedSnapshots } from "@plugins/database/plugins/live-state-sn
 import {
   getRuntimeProfile,
   resetRuntimeProfile,
+  waitSplit,
+  type Aggregate,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { bootBenchRun, type IterResult } from "../../shared/endpoints";
 import { resolveFixtures } from "./fixtures";
 import { resetEldProbe, readEldProbe } from "./eld-probe";
+import { startHostGateLoad } from "./load-generator";
+import { readSnapshotBloat, type SnapshotBloat } from "./snapshot-bloat";
 
 const DEFAULT_ITERATIONS = 10;
 const DEFAULT_WARMUP = 2;
@@ -27,13 +31,50 @@ const DEFAULT_WARMUP = 2;
 // no longer needed; do NOT replace it with a polling loop.
 const SETTLE_MS = 150;
 
-// How many top loaders (by average duration) to surface per iteration.
-const TOP_LOADERS = 8;
+type ProfileEntry = IterResult["runtimeProfile"]["loaders"][number];
+
+// Map every runtime-profiler aggregate (loader or db) to its wait-vs-work split,
+// rounding at the edge for readability (matching the runtime MCP tool). `waits`
+// holds the per-call amortized wait by layer; `workMs = avgMs − Σwaits`. Sorted by
+// avg duration desc. The boot burst touches only a handful of labels, so the full
+// (small) list is captured rather than a top-N slice.
+function toProfileEntries(aggs: Aggregate[]): ProfileEntry[] {
+  return aggs
+    .map((agg): ProfileEntry => {
+      const ws = waitSplit(agg);
+      const waits: Record<string, number> = {};
+      for (const layer in ws.waits) waits[layer] = Math.round(ws.waits[layer]!);
+      return {
+        label: agg.label,
+        count: agg.count,
+        avgMs: Math.round(ws.avgMs),
+        workMs: Math.round(ws.workMs),
+        maxMs: agg.maxMs,
+        waits: Object.keys(waits).length > 0 ? waits : undefined,
+      };
+    })
+    .sort((a, b) => b.avgMs - a.avgMs);
+}
+
+// Peak per-call heavy-read wait (acquire + local) across the burst's own loader
+// entries — the in-process proof the gate was contended this iteration. Read from
+// the measured profile, NOT the host queue-depth gauge (wrong tier — a host-wide
+// gauge can't be attributed to this burst).
+function peakGateWait(loaders: Aggregate[]): number {
+  let peak = 0;
+  for (const agg of loaders) {
+    const { waits } = waitSplit(agg);
+    const local = (waits["heavy-read-acquire"] ?? 0) + (waits["heavy-read-local"] ?? 0);
+    if (local > peak) peak = local;
+  }
+  return peak;
+}
 
 export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
   const iterations = body.iterations ?? DEFAULT_ITERATIONS;
   const warmup = body.warmup ?? DEFAULT_WARMUP;
   const mode = body.mode ?? "both";
+  const loadConcurrency = body.loadConcurrency ?? 0;
 
   const fixtures = await resolveFixtures(body);
 
@@ -52,6 +93,11 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
   async function runIteration(cold: boolean): Promise<IterResult> {
     if (cold) await clearPersistedSnapshots(bootCriticalKeys());
 
+    // Saturate the host-wide heavy-read gate BEFORE opening the measurement window
+    // so the burst is forced onto the real broker wait path. Occupants emit no
+    // spans (runWithoutProfiling) and release on stop().
+    const load = loadConcurrency > 0 ? await startHostGateLoad(loadConcurrency) : null;
+
     // Open clean measurement windows immediately before the burst.
     resetEldProbe();
     resetRuntimeProfile();
@@ -63,7 +109,11 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
       (async () => {
         const t = performance.now();
         const r = await assembleBootSnapshot();
-        return { totalMs: performance.now() - t, perKey: r.timings };
+        return {
+          totalMs: performance.now() - t,
+          perKey: r.timings,
+          persistedReadMs: r.persistedReadMs,
+        };
       })(),
       ...liveTargets.map(([key, params]) =>
         measureSubscribeCycle(key, params).then(
@@ -75,25 +125,34 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
     const eventLoop = readEldProbe();
     const profile = getRuntimeProfile();
 
+    // Release occupants AFTER reading the probes (the burst's waits are already
+    // recorded). Fails loudly if an occupant rejected.
+    if (load) await load.stop();
+
     const firstSubscribe: IterResult["firstSubscribe"] = {};
     for (const key of skippedKeys) firstSubscribe[key] = null;
     for (const [key, v] of subs) firstSubscribe[key] = v;
 
-    const topLoaders = profile.aggregates.loader
-      .map((agg) => ({
-        label: agg.label,
-        avgMs: agg.totalMs / agg.count,
-        maxMs: agg.maxMs,
-        count: agg.count,
-      }))
-      .sort((a, b) => b.avgMs - a.avgMs)
-      .slice(0, TOP_LOADERS);
+    const loaders = toProfileEntries(profile.aggregates.loader);
+    const db = toProfileEntries(profile.aggregates.db);
 
     return {
-      bootSnapshot: { totalMs: snap.totalMs, perKey: snap.perKey },
+      bootSnapshot: {
+        totalMs: snap.totalMs,
+        perKey: snap.perKey,
+        persistedReadMs: snap.persistedReadMs,
+      },
       firstSubscribe,
       eventLoop,
-      runtimeProfile: { topLoaders },
+      runtimeProfile: { loaders, db },
+      ...(load
+        ? {
+            load: {
+              concurrency: loadConcurrency,
+              peakGateWaitMs: peakGateWait(profile.aggregates.loader),
+            },
+          }
+        : {}),
     };
   }
 
@@ -109,11 +168,26 @@ export const handleBootBenchRun = implement(bootBenchRun, async ({ body }) => {
   }
 
   // WARM iterations run BEFORE any cold-clear (the snapshot is naturally warm on a
-  // running backend). Discard the first `warmup` of each set to absorb GC.
-  const warm =
-    mode === "cold" ? undefined : (await runSet(false, warmup + iterations)).slice(warmup);
-  const cold =
-    mode === "warm" ? undefined : (await runSet(true, warmup + iterations)).slice(warmup);
+  // running backend). Discard the first `warmup` of each set to absorb GC. Capture
+  // each mode's snapshot bloat ONCE at the start of its set — before any cold-clear
+  // DELETE churns `live_state_snapshot` (the very table being measured).
+  let warm: IterResult[] | undefined;
+  let warmBloat: SnapshotBloat | undefined;
+  if (mode !== "cold") {
+    warmBloat = await readSnapshotBloat();
+    warm = (await runSet(false, warmup + iterations)).slice(warmup);
+  }
 
-  return { fixtures, runs: { cold, warm } };
+  let cold: IterResult[] | undefined;
+  let coldBloat: SnapshotBloat | undefined;
+  if (mode !== "warm") {
+    coldBloat = await readSnapshotBloat();
+    cold = (await runSet(true, warmup + iterations)).slice(warmup);
+  }
+
+  return {
+    fixtures,
+    runs: { cold, warm },
+    snapshotBloat: { cold: coldBloat, warm: warmBloat },
+  };
 });

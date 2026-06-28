@@ -1,6 +1,6 @@
 import { describe, it, expect } from "bun:test";
-import { min, median, p95, stat, aggregateMode } from "./aggregate";
-import type { IterResult } from "../../shared/endpoints";
+import { min, median, p95, stat, aggregateMode, buildReport } from "./aggregate";
+import type { BootBenchRunResponse, IterResult } from "../../shared/endpoints";
 
 describe("min", () => {
   it("returns the smallest value, order-independent", () => {
@@ -52,14 +52,20 @@ describe("aggregateMode", () => {
     source: "persisted" | "loader",
     loaderMs: number,
     maxMs: number,
+    extra: Partial<IterResult> = {},
   ): IterResult => ({
-    bootSnapshot: { totalMs: total, perKey: { "edited-files": { source, workMs } } },
+    bootSnapshot: {
+      totalMs: total,
+      perKey: { "edited-files": { source, workMs } },
+      persistedReadMs: total / 10,
+    },
     firstSubscribe: {
       "edited-files": { onFirstSubscribeMs: 1, loaderMs },
       "commits-graph.delta": null,
     },
     eventLoop: { maxMs, p99Ms: 0, meanMs: 0 },
-    runtimeProfile: { topLoaders: [] },
+    runtimeProfile: { loaders: [], db: [] },
+    ...extra,
   });
 
   it("aggregates totals, per-key, first-subscribe, and event loop", () => {
@@ -70,6 +76,7 @@ describe("aggregateMode", () => {
     ]);
     expect(agg.iterations).toBe(3);
     expect(agg.bootSnapshotTotalMs.median).toBe(20);
+    expect(agg.bootSnapshotPersistedReadMs.median).toBe(2);
     expect(agg.bootSnapshotPerKey["edited-files"]!.source).toBe("loader");
     expect(agg.bootSnapshotPerKey["edited-files"]!.workMs.min).toBe(2);
     expect(agg.firstSubscribe["edited-files"]!.loaderMs.median).toBe(7);
@@ -86,7 +93,103 @@ describe("aggregateMode", () => {
     expect(agg.bootSnapshotPerKey["edited-files"]!.source).toBe("mixed");
   });
 
+  it("unions loaders/db by label with per-layer wait Stats", () => {
+    const agg = aggregateMode([
+      iter(10, 2, "loader", 5, 100, {
+        runtimeProfile: {
+          loaders: [
+            {
+              label: "edited-files",
+              count: 1,
+              avgMs: 100,
+              workMs: 20,
+              maxMs: 120,
+              waits: { "heavy-read-acquire": 80 },
+            },
+          ],
+          db: [{ label: "SELECT pushes", count: 2, avgMs: 3, workMs: 3, maxMs: 5 }],
+        },
+      }),
+      // Second iteration lacks the db label and adds a second loader label, so the
+      // union must keep both and aggregate each over only the iterations it appears.
+      iter(20, 4, "loader", 7, 200, {
+        runtimeProfile: {
+          loaders: [
+            {
+              label: "edited-files",
+              count: 1,
+              avgMs: 200,
+              workMs: 40,
+              maxMs: 220,
+              waits: { "heavy-read-acquire": 160, "heavy-read-local": 10 },
+            },
+            { label: "commits-graph.graph", count: 1, avgMs: 50, workMs: 50, maxMs: 50 },
+          ],
+          db: [],
+        },
+      }),
+    ]);
+
+    const edited = agg.loaders["edited-files"]!;
+    expect(edited.avgMs.median).toBe(150);
+    expect(edited.workMs.min).toBe(20);
+    // heavy-read-acquire appeared in both iterations; heavy-read-local in only one.
+    expect(edited.waits["heavy-read-acquire"]!.median).toBe(120);
+    expect(edited.waits["heavy-read-local"]!.min).toBe(10);
+    // A label present in only one iteration is still surfaced (union-by-label).
+    expect(agg.loaders["commits-graph.graph"]!.avgMs.median).toBe(50);
+    expect(agg.db["SELECT pushes"]!.avgMs.median).toBe(3);
+  });
+
+  it("carries the load summary when iterations ran under a host-gate load", () => {
+    const agg = aggregateMode([
+      iter(10, 2, "loader", 5, 100, { load: { concurrency: 4, peakGateWaitMs: 300 } }),
+      iter(20, 4, "loader", 7, 200, { load: { concurrency: 4, peakGateWaitMs: 500 } }),
+    ]);
+    expect(agg.load!.concurrency).toBe(4);
+    expect(agg.load!.peakGateWaitMs.median).toBe(400);
+  });
+
+  it("omits the load summary for an isolated set", () => {
+    const agg = aggregateMode([iter(10, 2, "loader", 5, 100)]);
+    expect(agg.load).toBeUndefined();
+  });
+
   it("throws on an empty iteration set", () => {
     expect(() => aggregateMode([])).toThrow();
+  });
+});
+
+describe("buildReport", () => {
+  const res: BootBenchRunResponse = {
+    fixtures: { conversationId: "c1", attemptId: "a1" },
+    runs: {
+      warm: [
+        {
+          bootSnapshot: {
+            totalMs: 10,
+            perKey: { "edited-files": { source: "persisted", workMs: 1 } },
+            persistedReadMs: 9,
+          },
+          firstSubscribe: { "edited-files": { onFirstSubscribeMs: 1, loaderMs: 2 } },
+          eventLoop: { maxMs: 5, p99Ms: 0, meanMs: 0 },
+          runtimeProfile: { loaders: [], db: [] },
+        },
+      ],
+    },
+    snapshotBloat: {
+      warm: { tableBytes: 12345, deadTuples: 678, liveTuples: 9 },
+    },
+  };
+
+  it("passes each mode's snapshotBloat through onto the aggregate", () => {
+    const report = buildReport(res);
+    expect(report.modes.warm!.snapshotBloat).toEqual({
+      tableBytes: 12345,
+      deadTuples: 678,
+      liveTuples: 9,
+    });
+    expect(report.modes.warm!.bootSnapshotPersistedReadMs.median).toBe(9);
+    expect(report.modes.cold).toBeUndefined();
   });
 });

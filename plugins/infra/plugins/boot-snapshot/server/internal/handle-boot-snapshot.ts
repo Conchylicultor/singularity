@@ -18,6 +18,8 @@ import { bootCriticalKeys } from "./boot-keys";
 export async function assembleBootSnapshot(): Promise<{
   resources: Record<string, unknown>;
   timings: Record<string, { source: "persisted" | "loader"; workMs: number }>;
+  /** Wall time of the single batched persisted-snapshot read (the L2 fast path). */
+  persistedReadMs: number;
 }> {
   const keys = bootCriticalKeys();
 
@@ -55,7 +57,7 @@ export async function assembleBootSnapshot(): Promise<{
       timings[k] = { source: "loader", workMs };
     }
   }
-  return { resources, timings };
+  return { resources, timings, persistedReadMs };
 }
 
 export const handleBootSnapshot = implement(bootSnapshot, () => assembleBootSnapshot());

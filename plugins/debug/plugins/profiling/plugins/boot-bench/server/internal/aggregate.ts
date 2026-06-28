@@ -39,9 +39,21 @@ export function stat(xs: number[]): Stat {
   return { min: min(xs), median: median(xs), p95: p95(xs) };
 }
 
+// Per runtime-profiler label (loader or db): each metric aggregated across the
+// iterations where that label appeared, plus a Stat per wait layer over the
+// iterations where that label charged that layer.
+export interface ProfileAggregate {
+  avgMs: Stat;
+  workMs: Stat;
+  maxMs: Stat;
+  waits: Record<string, Stat>;
+}
+
 export interface ModeAggregate {
   iterations: number;
   bootSnapshotTotalMs: Stat;
+  // The single batched persisted-snapshot read, aggregated across iterations.
+  bootSnapshotPersistedReadMs: Stat;
   // Per boot-critical key: where the value came from and the (amortized for
   // persisted) work cost across iterations.
   bootSnapshotPerKey: Record<string, { source: string; workMs: Stat }>;
@@ -52,6 +64,51 @@ export interface ModeAggregate {
     { loaderMs: Stat; onFirstSubscribeMs: Stat } | null
   >;
   eventLoopMaxMs: Stat;
+  // Per-label loader/db wait-vs-work aggregates (union-by-label across iterations).
+  loaders: Record<string, ProfileAggregate>;
+  db: Record<string, ProfileAggregate>;
+  // Present only when the set ran under a host-gate load (loadConcurrency>0).
+  load?: { concurrency: number; peakGateWaitMs: Stat };
+  // The mode's `live_state_snapshot` bloat, captured once at the start of the set
+  // (attached by buildReport — not aggregated over iterations).
+  snapshotBloat?: ModeBloat;
+}
+
+type ModeBloat = NonNullable<BootBenchRunResponse["snapshotBloat"]>["cold"];
+
+// Union-by-label aggregation of a per-iteration profile-entry list (loaders or db):
+// for each label seen in any iteration, aggregate avg/work/max over the iterations
+// where it appeared, and a Stat per wait layer over the iterations where it waited.
+function aggregateProfile(
+  iters: IterResult[],
+  pick: (it: IterResult) => IterResult["runtimeProfile"]["loaders"],
+): Record<string, ProfileAggregate> {
+  const labels = new Set<string>();
+  for (const it of iters) for (const e of pick(it)) labels.add(e.label);
+
+  const out: Record<string, ProfileAggregate> = {};
+  for (const label of labels) {
+    const avgMs: number[] = [];
+    const workMs: number[] = [];
+    const maxMs: number[] = [];
+    const waitsByLayer: Record<string, number[]> = {};
+    for (const it of iters) {
+      const e = pick(it).find((x) => x.label === label);
+      if (!e) continue;
+      avgMs.push(e.avgMs);
+      workMs.push(e.workMs);
+      maxMs.push(e.maxMs);
+      if (e.waits) {
+        for (const layer in e.waits) {
+          (waitsByLayer[layer] ??= []).push(e.waits[layer]!);
+        }
+      }
+    }
+    const waits: Record<string, Stat> = {};
+    for (const layer in waitsByLayer) waits[layer] = stat(waitsByLayer[layer]!);
+    out[label] = { avgMs: stat(avgMs), workMs: stat(workMs), maxMs: stat(maxMs), waits };
+  }
+  return out;
 }
 
 export function aggregateMode(iters: IterResult[]): ModeAggregate {
@@ -99,12 +156,29 @@ export function aggregateMode(iters: IterResult[]): ModeAggregate {
         : null;
   }
 
+  // Carry the per-iteration load summary through: concurrency is constant across a
+  // set, peakGateWaitMs aggregated over the iterations that ran under load.
+  const loadIters = iters
+    .map((it) => it.load)
+    .filter((l): l is NonNullable<IterResult["load"]> => l !== undefined);
+  const load =
+    loadIters.length > 0
+      ? {
+          concurrency: loadIters[0]!.concurrency,
+          peakGateWaitMs: stat(loadIters.map((l) => l.peakGateWaitMs ?? 0)),
+        }
+      : undefined;
+
   return {
     iterations: iters.length,
     bootSnapshotTotalMs: stat(iters.map((it) => it.bootSnapshot.totalMs)),
+    bootSnapshotPersistedReadMs: stat(iters.map((it) => it.bootSnapshot.persistedReadMs)),
     bootSnapshotPerKey,
     firstSubscribe,
     eventLoopMaxMs: stat(iters.map((it) => it.eventLoop.maxMs)),
+    loaders: aggregateProfile(iters, (it) => it.runtimeProfile.loaders),
+    db: aggregateProfile(iters, (it) => it.runtimeProfile.db),
+    ...(load ? { load } : {}),
   };
 }
 
@@ -115,13 +189,16 @@ export interface BootBenchReport {
 }
 
 export function buildReport(res: BootBenchRunResponse): BootBenchReport {
+  // Attach each mode's once-per-set bloat capture (not aggregated over iterations).
+  const cold = res.runs.cold ? aggregateMode(res.runs.cold) : undefined;
+  if (cold && res.snapshotBloat?.cold) cold.snapshotBloat = res.snapshotBloat.cold;
+  const warm = res.runs.warm ? aggregateMode(res.runs.warm) : undefined;
+  if (warm && res.snapshotBloat?.warm) warm.snapshotBloat = res.snapshotBloat.warm;
+
   return {
     fixtures: res.fixtures,
     scope:
       "live-server cold: clears the L2 persisted snapshot (no restart); excludes server-boot work (catch-up, derived-table rebuild, pool warm)",
-    modes: {
-      cold: res.runs.cold ? aggregateMode(res.runs.cold) : undefined,
-      warm: res.runs.warm ? aggregateMode(res.runs.warm) : undefined,
-    },
+    modes: { cold, warm },
   };
 }

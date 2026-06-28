@@ -2204,7 +2204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `getBootProfiling`
         - **`boot-bench`** — Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it.
           - Server:
-            - Uses: `database.db`, `database/live-state-snapshot.clearPersistedSnapshots`, `infra/boot-snapshot.assembleBootSnapshot`, `infra/boot-snapshot.bootCriticalKeys`, `infra/endpoints.implement`, `infra/mcp.Mcp`, `tasks/tasks-core.getConversation`
+            - Uses: `database.db`, `database/live-state-snapshot.clearPersistedSnapshots`, `infra/boot-snapshot.assembleBootSnapshot`, `infra/boot-snapshot.bootCriticalKeys`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadSlotCount`, `infra/mcp.Mcp`, `packages/host-semaphore.createHostSemaphore`, `tasks/tasks-core.getConversation`
             - Register: `mcpTool('benchmark_boot')`
             - Routes: `POST /api/debug/boot-bench/run`
         - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
@@ -3151,9 +3151,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
       - Server:
         - Uses: `packages/host-semaphore.createHostSemaphore`
-        - Exports: Values: `heavyReadQueueDepth`, `withHeavyReadSlot`
+        - Exports: Values: `heavyReadQueueDepth`, `heavyReadSlotCount`, `withHeavyReadSlot`
       - Cross-plugin:
-        - Imported by: `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `debug/health-monitor`, `plugin-meta/plugin-view`, `review/plugin-changes`
+        - Imported by: `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `debug/health-monitor`, `debug/profiling/boot-bench`, `plugin-meta/plugin-view`, `review/plugin-changes`
     - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
       - Server:
         - Uses: `database.db`, `database/admin.connectionString`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
@@ -3200,7 +3200,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `framework/server-core`, `infra/endpoints`
       - Core:
-        - Exports: Types: `Aggregate`, `EntryContext`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `WaitBreakdown`; Values: `chargeWait`, `currentCallerKind`, `getReadSetIndex`, `getRuntimeProfile`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `resetRuntimeProfile`, `runWithoutProfiling`, `seedReadSetIndex`
+        - Exports: Types: `Aggregate`, `EntryContext`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `WaitBreakdown`; Values: `chargeWait`, `currentCallerKind`, `getReadSetIndex`, `getRuntimeProfile`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `resetRuntimeProfile`, `runWithoutProfiling`, `seedReadSetIndex`, `waitSplit`
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
         - Imported by: `apps-core/surface/floating/wallpaper`, `apps-core/surface/floating/wallpaper/openverse`, `apps/browser/proxy`, `apps/sonata/sources/ultimate-guitar`, `page/bookmark`
@@ -3250,7 +3250,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/paths.SINGULARITY_DIR`
         - Exports: Types: `HostSemaphore`; Values: `createHostSemaphore`
       - Cross-plugin:
-        - Imported by: `infra/host-read-pool`
+        - Imported by: `debug/profiling/boot-bench`, `infra/host-read-pool`
     - **`inflight`**
       - Cross-plugin:
         - Imported by: `framework/resource-runtime`, `infra/endpoints`

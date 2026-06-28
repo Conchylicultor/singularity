@@ -15,14 +15,19 @@ export const benchmarkBootTool = Mcp.tool({
   description: `Repeatable cold-cache benchmark of the boot burst + live-state loaders in a worktree's RUNNING backend (no restart). Forces a truly cold boot by DELETING the L2 persisted snapshot rows for the boot-critical keys immediately before each cold iteration, so the boot-snapshot endpoint must recompute from loaders.
 
 Measures, per iteration, all in the target process (so the event-loop histogram and the loaders share one process — no network noise in the measured window):
-- boot-snapshot total time AND per-key { source: persisted|loader, workMs } (persisted workMs is the single batched read amortized ÷ N — directional, not per-key truth).
+- boot-snapshot total time, per-key { source: persisted|loader, workMs }, AND \`persistedReadMs\` (the single batched L2 read; persisted per-key workMs is that read amortized ÷ N — directional, not per-key truth).
 - edited-files first-subscribe latency (onFirstSubscribe + loader) for the conversation fixture.
 - commits-graph (.delta / .graph) first-subscribe latency for the attempt fixture.
 - event-loop lag (max) during the burst.
+- runtimeProfile.loaders AND runtimeProfile.db: every loader/db aggregate touched, each split into wait vs work. \`workMs\` = \`avgMs\` − Σ\`waits\` (per-call amortized wait by gate layer, e.g. \`heavy-read-acquire\` / \`heavy-read-local\`). A high \`avgMs\` with a high wait / low \`workMs\` is head-of-line blocking, NOT a slow op — this is the signal the contention root cause needs. Cross-reference: \`firstSubscribe[key].loaderMs\` is the end-to-end load latency; \`loaders[key].workMs\` + its \`waits\` is the SAME number split into work vs wait.
 
 Scope = live-server cold: it deliberately EXCLUDES server-boot work (catch-up, derived-table rebuild, pool warm), which is noisier. Run on an idle backend for clean cold numbers (a concurrent flushNotifies can re-persist rows mid-run).
 
 warm mode runs BEFORE any cold-clear (the snapshot is naturally warm on a running backend); cold per-key sources should be all "loader" and warm mostly "persisted" and faster. Discards the first \`warmup\` iterations of each set (GC settle). Returns per-mode { min, median, p95 } aggregates plus the resolved fixtures; the agent saves a baseline run and compares the after run itself.
+
+BLOAT: \`snapshotBloat.{cold,warm}\` reports the \`live_state_snapshot\` table's { tableBytes, deadTuples, liveTuples }, captured ONCE per mode at the start of its set. The persisted-read cost only reproduces against REAL dead-tuple bloat — i.e. warm mode against an already-bloated DB (run with \`worktree: "singularity"\` to hit main). Cold-clearing DELETEs churn the very table being measured, so a fresh worktree shows misleadingly low bloat + low \`persistedReadMs\`; the bloat is captured before any cold delete so it reflects the pre-run state.
+
+LOAD: \`loadConcurrency\` > 0 saturates the HOST-WIDE \`heavy-read\` gate with that many slot-holders during the burst, deterministically manufacturing the cross-worktree storm that serializes loaders. It contends with OTHER live worktrees for the duration of the run (realistic, bounded, auto-released). Use ≥ the host slot count to fully saturate; \`load.peakGateWaitMs\` (per mode) then rises materially vs an isolated run, proving the gate is contended. Default 0 = isolated.
 
 Default: benchmarks the current conversation's worktree server. Pass \`worktree\` to target a different worktree (e.g. "att-1778089188-7uvf" or "singularity" for main). Pass \`conversationId\`/\`attemptId\` to pin the exact same fixtures across a before/after pair.`,
   inputSchema: {
@@ -50,13 +55,21 @@ Default: benchmarks the current conversation's worktree server. Pass \`worktree\
       .string()
       .optional()
       .describe("Pin the commits-graph attempt fixture (else auto-resolved)."),
+    loadConcurrency: z
+      .number()
+      .int()
+      .nonnegative()
+      .optional()
+      .describe(
+        "Slot-holders to saturate the HOST-WIDE `heavy-read` gate during the burst (contends with other live worktrees for the run). Use ≥ the host slot count to fully saturate. Default 0 = isolated.",
+      ),
     worktree: z
       .string()
       .optional()
       .describe("Target worktree name. Defaults to the conversation's own worktree."),
   },
   async handler(
-    { iterations, warmup, mode, conversationId, attemptId, worktree },
+    { iterations, warmup, mode, conversationId, attemptId, loadConcurrency, worktree },
     { conversationId: ctxConversationId },
   ) {
     let worktreeName: string;
@@ -76,7 +89,14 @@ Default: benchmarks the current conversation's worktree server. Pass \`worktree\
     // the worktree's live backend (`w.active`). Running it in this process's own
     // runtime would benchmark a stale/orphaned process generation after a
     // hot-swap restart, and clear the wrong DB's snapshot.
-    const reqBody: BootBenchRunBody = { iterations, warmup, mode, conversationId, attemptId };
+    const reqBody: BootBenchRunBody = {
+      iterations,
+      warmup,
+      mode,
+      conversationId,
+      attemptId,
+      loadConcurrency,
+    };
     const url = `http://${worktreeName}.localhost:9000${extractPath(bootBenchRun.route)}`;
     const res = await fetch(url, {
       method: "POST",

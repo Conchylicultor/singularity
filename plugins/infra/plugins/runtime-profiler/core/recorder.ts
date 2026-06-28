@@ -79,6 +79,30 @@ export interface Aggregate {
   waits?: WaitBreakdown;
 }
 
+/**
+ * Split an aggregate's average per-call duration into work vs wait. `Aggregate.waits`
+ * is SUMMED across every record of the label (see `record()`), so dividing by `count`
+ * amortizes each layer's wait per call. Returns RAW floats (no rounding) — callers
+ * format. With no waits, `waitMs = 0` and `workMs = avgMs`.
+ */
+export function waitSplit(agg: Aggregate): {
+  avgMs: number;
+  workMs: number;
+  waitMs: number;
+  waits: Record<string, number>;
+} {
+  const avgMs = agg.totalMs / agg.count;
+  const waits: Record<string, number> = {};
+  if (agg.waits) {
+    for (const layer in agg.waits) {
+      waits[layer] = agg.waits[layer]! / agg.count;
+    }
+  }
+  let waitMs = 0;
+  for (const layer in waits) waitMs += waits[layer]!;
+  return { avgMs, workMs: avgMs - waitMs, waitMs, waits };
+}
+
 const MAX_LABEL_LEN = 500;
 const SLOWEST_CAP = 50;
 

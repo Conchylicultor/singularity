@@ -53,6 +53,13 @@ export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
   );
 }
 
+// The host-wide heavy-read gate's slot count (`floor(cpus/4)`, env-overridable).
+// Exposed so callers can size a same-named occupant pool to exactly saturate the
+// gate without re-deriving the formula.
+export function heavyReadSlotCount(): number {
+  return heavyReadSize();
+}
+
 // Queue-depth gauge for the host-wide heavy-read gate: how many callers are
 // currently parked waiting for a slot (0 = uncontended). Observability-only,
 // surfaced in the health-monitor Backends overview.
