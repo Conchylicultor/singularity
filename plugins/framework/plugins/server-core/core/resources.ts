@@ -263,6 +263,9 @@ export const {
   handleResourceHttp,
   withNotifyBatch,
   loadResourceByKey,
+  // Run + time one full first-subscribe lifecycle (onFirstSubscribe + loader read)
+  // then tear it down. Sibling to loadResourceByKey; powers the benchmark harness.
+  measureSubscribeCycle,
   // Re-emit a registered resource to its current subscribers without a DB change
   // (a real no-op push). Drives the live-state-churn deterministic-churn emitter.
   triggerResourcePush,

@@ -22,7 +22,7 @@ import { liveStateChangelogPruneJob } from "./internal/prune";
 // table (the transactional outbox) is owned by change-feed (it writes it from the
 // trigger function). See
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md.
-export { readPersistedSnapshots } from "./internal/persist";
+export { readPersistedSnapshots, clearPersistedSnapshots } from "./internal/persist";
 
 export default {
   description:

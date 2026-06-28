@@ -15,7 +15,10 @@ import { bootCriticalKeys } from "./boot-keys";
 // resource never bricks the snapshot; that key falls back to its normal WS
 // sub-ack. See
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.4.
-export const handleBootSnapshot = implement(bootSnapshot, async () => {
+export async function assembleBootSnapshot(): Promise<{
+  resources: Record<string, unknown>;
+  timings: Record<string, { source: "persisted" | "loader"; workMs: number }>;
+}> {
   const keys = bootCriticalKeys();
 
   const t0 = performance.now();
@@ -53,4 +56,6 @@ export const handleBootSnapshot = implement(bootSnapshot, async () => {
     }
   }
   return { resources, timings };
-});
+}
+
+export const handleBootSnapshot = implement(bootSnapshot, () => assembleBootSnapshot());

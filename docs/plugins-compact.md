@@ -136,6 +136,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`profiling`** — Gantt chart of build steps and server startup phases.
       - Plugins:
         - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
+        - **`boot-bench`** — Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it.
         - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
         - **`push`** — Push contention profiling for the Gantt debug pane. Push contention profiling data endpoint.
           - Plugins:

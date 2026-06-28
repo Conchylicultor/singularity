@@ -17,6 +17,7 @@ export {
   defineExternalResource,
   handleResourceHttp,
   loadResourceByKey,
+  measureSubscribeCycle,
   notificationsWsHandler,
   notifyStatsFor,
   onResourcePush,

@@ -631,6 +631,21 @@ export interface ResourceRuntime {
    */
   loadResourceByKey: (key: string, params?: ResourceParams) => Promise<unknown>;
   /**
+   * Run one full first-subscribe lifecycle for a registered resource and return
+   * its timing, then tear it back down. Mirrors `handleSub`'s 0→1 path
+   * byte-for-byte — `onFirstSubscribe` then the loader read through the same
+   * `getResourceValue` single-flight path — then invokes `onLastUnsubscribe` so
+   * the subcount-0 invariants/eviction are restored and a subsequent cold call
+   * recomputes. Generic (keyed only by string); the structural home for
+   * "simulate one first-subscribe" used by the benchmark harness and future debug
+   * tools. Throws on an unknown key (matches `loadResourceByKey`). The hooks fire
+   * exactly once each (symmetric), so no dangling subscription/watcher is left.
+   */
+  measureSubscribeCycle: (
+    key: string,
+    params?: ResourceParams,
+  ) => Promise<{ onFirstSubscribeMs: number; loaderMs: number }>;
+  /**
    * Re-emit a registered resource to its current subscribers WITHOUT a DB change:
    * schedules a notify so the loader re-runs and the keyed diff comes back empty,
    * producing a real no-op push. Sibling to `loadResourceByKey`. If `params` is
@@ -1866,6 +1881,35 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     return getResourceValue(entry, params ?? {});
   }
 
+  // Run one full first-subscribe lifecycle and time it, then tear it down.
+  // Mirrors `handleSub`'s 0→1 transition exactly: `onFirstSubscribe` first, then
+  // the loader read through the SAME `getResourceValue` single-flight path — then
+  // calls `onLastUnsubscribe` so the subcount-0 invariants/eviction are restored
+  // and the next cold call recomputes. The two hooks fire exactly once each
+  // (symmetric), so this leaves no dangling subscription/watcher. Generic — keyed
+  // only by string; never names a concrete resource. Throws on an unknown key
+  // (matches `loadResourceByKey`).
+  async function measureSubscribeCycle(
+    key: string,
+    params?: ResourceParams,
+  ): Promise<{ onFirstSubscribeMs: number; loaderMs: number }> {
+    const entry = registry.get(key);
+    if (!entry) throw new Error(`unknown resource key: ${key}`);
+    const p = params ?? {};
+    const t0 = performance.now();
+    await entry.onFirstSubscribe?.(p);
+    const onFirstSubscribeMs = performance.now() - t0;
+    const t1 = performance.now();
+    await getResourceValue(entry, p);
+    const loaderMs = performance.now() - t1;
+    // Teardown: restore subcount-0 invariants (keyed snapshot eviction, watcher
+    // release) so a later cold call recomputes. `onLastUnsubscribe` is typed sync
+    // (void), but wrap in Promise.resolve to await defensively in case a hook
+    // returns a thenable.
+    await Promise.resolve(entry.onLastUnsubscribe?.(p));
+    return { onFirstSubscribeMs, loaderMs };
+  }
+
   // Re-emit a registered resource to its current subscribers WITHOUT a DB change.
   // Schedules a notify (tagged "synthetic" so the self-verification counters and
   // the read-set-gap warning are left untouched) so the loader re-runs against an
@@ -2010,6 +2054,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     handleResourceHttp,
     withNotifyBatch,
     loadResourceByKey,
+    measureSubscribeCycle,
     triggerResourcePush,
     applyDbChange,
     recomputeResource,

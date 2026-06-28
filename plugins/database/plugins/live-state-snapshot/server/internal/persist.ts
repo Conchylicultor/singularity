@@ -127,3 +127,23 @@ export async function readPersistedSnapshots(
   for (const row of res.rows) out.set(row.resource_key, row.value);
   return out;
 }
+
+// Cold-boot benchmark hook: DELETE the param-less ("{}") persisted rows for the
+// given resource keys, returning the number of rows removed. Forces a truly cold
+// boot-snapshot read on the next request (the L2 fast path misses → falls back to
+// a from-scratch loader) WITHOUT a server restart. Lives here because this plugin
+// OWNS `live_state_snapshot`; consumers (boot-bench) call it generically by key
+// rather than issuing raw SQL against a table they don't own. `RETURNING` makes
+// the deleted-row count robust regardless of the driver's `rowCount` typing.
+export async function clearPersistedSnapshots(keys: string[]): Promise<number> {
+  if (keys.length === 0) return 0;
+  const res = await db.execute<{ resource_key: string }>(
+    drizzleSql`
+      DELETE FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
+      WHERE params_key = '{}'
+        AND resource_key IN (${drizzleSql.join(keys, drizzleSql`, `)})
+      RETURNING resource_key
+    `,
+  );
+  return res.rows.length;
+}

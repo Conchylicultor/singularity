@@ -1353,6 +1353,10 @@
       "name": "@singularity/plugin-debug-profiling-boot",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/profiling/plugins/boot-bench": {
+      "name": "@singularity/plugin-debug-profiling-boot-bench",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/profiling/plugins/build": {
       "name": "@singularity/plugin-debug-profiling-build",
       "version": "0.0.1",
@@ -4892,6 +4896,8 @@
     "@singularity/plugin-debug-profiling": ["@singularity/plugin-debug-profiling@workspace:plugins/debug/plugins/profiling"],
 
     "@singularity/plugin-debug-profiling-boot": ["@singularity/plugin-debug-profiling-boot@workspace:plugins/debug/plugins/profiling/plugins/boot"],
+
+    "@singularity/plugin-debug-profiling-boot-bench": ["@singularity/plugin-debug-profiling-boot-bench@workspace:plugins/debug/plugins/profiling/plugins/boot-bench"],
 
     "@singularity/plugin-debug-profiling-build": ["@singularity/plugin-debug-profiling-build@workspace:plugins/debug/plugins/profiling/plugins/build"],
 

@@ -14,6 +14,7 @@
   - Imported by: `build/build-profiling`, `debug/boot-profile`, `debug/profiling/boot`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/push/push-gantt`, `debug/profiling/runtime`, `debug/profiling/stats`
 - Sub-plugins:
   - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
+  - **`boot-bench`** — Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it.
   - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
   - **`push`** — Push contention profiling for the Gantt debug pane. Push contention profiling data endpoint.
   - **`runtime`** — Runtime HTTP/DB/loader profiling tables in the Gantt debug pane. Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.
