@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-enum-filter-sql",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Enum field type: server filter-sql capability — operator→SQL fragments mirroring the data-view enum filter predicates.",
+  "singularity": {
+    "collapsed": true
+  }
+}

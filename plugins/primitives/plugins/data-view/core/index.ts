@@ -1,6 +1,12 @@
 export { defineDataView } from "./internal/define-data-view";
 export type { DataViewId } from "./internal/define-data-view";
 
+export {
+  FilterGroupSchema,
+  FilterNodeSchema,
+  FilterRuleSchema,
+} from "./internal/filter-schema";
+
 export type {
   FieldValue,
   FilterFieldValue,
@@ -22,6 +28,8 @@ export type {
   FilterRule,
   FilterGroup,
   FilterNode,
+  ServerPage,
+  ServerDataSourceSpec,
   ItemActionProps,
   ItemActionsDescriptor,
 } from "./internal/types";

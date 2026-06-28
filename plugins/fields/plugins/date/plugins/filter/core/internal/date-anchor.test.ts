@@ -4,6 +4,7 @@ import {
   addUnits,
   resolveAnchorDay,
   formatAnchor,
+  withinRange,
   type DateAnchor,
 } from "./date-anchor";
 
@@ -83,6 +84,26 @@ describe("addUnits (calendar-safe)", () => {
 
   it("amount 0 → same start-of-day", () => {
     expect(addUnits(day("2026-01-15"), "day", 0)).toBe(day("2026-01-15"));
+  });
+});
+
+describe("withinRange", () => {
+  it("past → [today − N, today]; next → [today, today + N]", () => {
+    expect(withinRange({ unit: "day", amount: 3 }, "past", NOW)).toEqual([
+      day("2026-01-12"),
+      day("2026-01-15"),
+    ]);
+    expect(withinRange({ unit: "week", amount: 1 }, "next", NOW)).toEqual([
+      day("2026-01-15"),
+      day("2026-01-22"),
+    ]);
+  });
+
+  it("missing / non-positive amount → null (incomplete rule)", () => {
+    expect(withinRange(null, "past", NOW)).toBe(null);
+    expect(withinRange({ unit: "day" }, "next", NOW)).toBe(null);
+    expect(withinRange({ unit: "day", amount: 0 }, "past", NOW)).toBe(null);
+    expect(withinRange({ unit: "day", amount: -2 }, "next", NOW)).toBe(null);
   });
 });
 

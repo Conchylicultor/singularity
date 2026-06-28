@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-number-filter-sql",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Number field type: server filter-sql capability — operator→SQL fragments mirroring the data-view number filter predicates.",
+  "singularity": {
+    "collapsed": true
+  }
+}

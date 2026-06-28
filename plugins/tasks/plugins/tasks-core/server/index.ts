@@ -25,6 +25,10 @@ export {
   conversationAttachments,
 } from "./internal/schema-attachments";
 export { _tasks, _attempts, _conversations } from "./internal/tables";
+// The derived `conversations_v` relation (carries worktreePath / taskId / active
+// on top of the base columns). Exposed so the All-conversations query compiler can
+// bind its FieldColumnMap to the SAME view the live resources read.
+export { conversations as conversationsView } from "./internal/views";
 
 // Zod schemas and TS types
 export {

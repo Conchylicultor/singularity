@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-data-view-server-query",
+  "description": "Generic FilterGroup/SortRule → SQL compiler + null-aware keyset (cursor) pagination for server-delegated data-view sources. core: cursor codec + sort signature (browser-safe); server: drizzle filter/sort/seek compiler (field-type-agnostic via an injected operator resolver).",
+  "private": true,
+  "version": "0.0.1"
+}

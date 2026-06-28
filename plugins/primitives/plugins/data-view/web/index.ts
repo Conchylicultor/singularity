@@ -15,6 +15,8 @@ export type { FieldCellProps } from "./components/field-cell";
 export { FilterValueInput } from "./components/filter/filter-value-input";
 export { ChipSelectFilterInput } from "./components/filter/chip-select-filter-input";
 export { useFlatRows } from "./internal/use-flat-rows";
+export { useServerDataSource } from "./internal/use-server-data-source";
+export type { ServerDataSourceResult } from "./internal/use-server-data-source";
 export { evaluateNode, applyFilter } from "./internal/evaluate-filter";
 export { isFilterGroup } from "./internal/filter-shape";
 export { useFilterController } from "./internal/use-filter-controller";
@@ -48,6 +50,8 @@ export type {
   FilterRule,
   FilterGroup,
   FilterNode,
+  ServerPage,
+  ServerDataSourceSpec,
   ItemActionProps,
   ItemActionsDescriptor,
 } from "../core";

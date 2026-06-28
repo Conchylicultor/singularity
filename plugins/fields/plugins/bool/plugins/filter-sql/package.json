@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-bool-filter-sql",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Boolean field type: server filter-sql capability — operator→SQL fragments mirroring the data-view bool filter predicates.",
+  "singularity": {
+    "collapsed": true
+  }
+}

@@ -16,6 +16,7 @@ export interface DataViewEntry {
 
 export const dataViews: DataViewEntry[] = [
   { id: "agents-list", pluginId: "conversations.agents" },
+  { id: "all-conversations", pluginId: "conversations.all-conversations" },
   { id: "code-explorer.file-tree", pluginId: "code-explorer" },
   { id: "config_v2.settings.nav", pluginId: "config_v2.settings" },
   { id: "debug.profiling.runtime", pluginId: "debug.profiling.runtime" },

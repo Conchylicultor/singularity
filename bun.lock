@@ -813,6 +813,10 @@
       "name": "@singularity/plugin-conversations-agents",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/all-conversations": {
+      "name": "@singularity/plugin-conversations-all-conversations",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-category": {
       "name": "@singularity/plugin-conversations-conversation-category",
       "version": "0.0.1",
@@ -1472,6 +1476,10 @@
       "name": "@singularity/plugin-fields-bool-filter",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/bool/plugins/filter-sql": {
+      "name": "@singularity/plugin-fields-bool-filter-sql",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/bool/plugins/inline": {
       "name": "@singularity/plugin-fields-bool-inline",
       "version": "0.0.1",
@@ -1506,6 +1514,10 @@
     },
     "plugins/fields/plugins/date/plugins/filter": {
       "name": "@singularity/plugin-fields-date-filter",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/date/plugins/filter-sql": {
+      "name": "@singularity/plugin-fields-date-filter-sql",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/date/plugins/inline": {
@@ -1546,6 +1558,10 @@
     },
     "plugins/fields/plugins/enum/plugins/filter": {
       "name": "@singularity/plugin-fields-enum-filter",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/enum/plugins/filter-sql": {
+      "name": "@singularity/plugin-fields-enum-filter-sql",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/enum/plugins/inline": {
@@ -1624,6 +1640,10 @@
       "name": "@singularity/plugin-fields-number-filter",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/number/plugins/filter-sql": {
+      "name": "@singularity/plugin-fields-number-filter-sql",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/number/plugins/inline": {
       "name": "@singularity/plugin-fields-number-inline",
       "version": "0.0.1",
@@ -1690,6 +1710,10 @@
     },
     "plugins/fields/plugins/text/plugins/filter": {
       "name": "@singularity/plugin-fields-text-filter",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/text/plugins/filter-sql": {
+      "name": "@singularity/plugin-fields-text-filter-sql",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/text/plugins/inline": {
@@ -2839,6 +2863,10 @@
     },
     "plugins/primitives/plugins/data-view/plugins/list": {
       "name": "@singularity/plugin-primitives-data-view-list",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/data-view/plugins/server-query": {
+      "name": "@singularity/plugin-primitives-data-view-server-query",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/data-view/plugins/table": {
@@ -4668,6 +4696,8 @@
 
     "@singularity/plugin-conversations-agents": ["@singularity/plugin-conversations-agents@workspace:plugins/conversations/plugins/agents"],
 
+    "@singularity/plugin-conversations-all-conversations": ["@singularity/plugin-conversations-all-conversations@workspace:plugins/conversations/plugins/all-conversations"],
+
     "@singularity/plugin-conversations-conversation-category": ["@singularity/plugin-conversations-conversation-category@workspace:plugins/conversations/plugins/conversation-category"],
 
     "@singularity/plugin-conversations-conversation-preprompt": ["@singularity/plugin-conversations-conversation-preprompt@workspace:plugins/conversations/plugins/conversation-preprompt"],
@@ -4984,6 +5014,8 @@
 
     "@singularity/plugin-fields-bool-filter": ["@singularity/plugin-fields-bool-filter@workspace:plugins/fields/plugins/bool/plugins/filter"],
 
+    "@singularity/plugin-fields-bool-filter-sql": ["@singularity/plugin-fields-bool-filter-sql@workspace:plugins/fields/plugins/bool/plugins/filter-sql"],
+
     "@singularity/plugin-fields-bool-inline": ["@singularity/plugin-fields-bool-inline@workspace:plugins/fields/plugins/bool/plugins/inline"],
 
     "@singularity/plugin-fields-bool-storage": ["@singularity/plugin-fields-bool-storage@workspace:plugins/fields/plugins/bool/plugins/storage"],
@@ -5001,6 +5033,8 @@
     "@singularity/plugin-fields-date-config": ["@singularity/plugin-fields-date-config@workspace:plugins/fields/plugins/date/plugins/config"],
 
     "@singularity/plugin-fields-date-filter": ["@singularity/plugin-fields-date-filter@workspace:plugins/fields/plugins/date/plugins/filter"],
+
+    "@singularity/plugin-fields-date-filter-sql": ["@singularity/plugin-fields-date-filter-sql@workspace:plugins/fields/plugins/date/plugins/filter-sql"],
 
     "@singularity/plugin-fields-date-inline": ["@singularity/plugin-fields-date-inline@workspace:plugins/fields/plugins/date/plugins/inline"],
 
@@ -5021,6 +5055,8 @@
     "@singularity/plugin-fields-enum-config": ["@singularity/plugin-fields-enum-config@workspace:plugins/fields/plugins/enum/plugins/config"],
 
     "@singularity/plugin-fields-enum-filter": ["@singularity/plugin-fields-enum-filter@workspace:plugins/fields/plugins/enum/plugins/filter"],
+
+    "@singularity/plugin-fields-enum-filter-sql": ["@singularity/plugin-fields-enum-filter-sql@workspace:plugins/fields/plugins/enum/plugins/filter-sql"],
 
     "@singularity/plugin-fields-enum-inline": ["@singularity/plugin-fields-enum-inline@workspace:plugins/fields/plugins/enum/plugins/inline"],
 
@@ -5060,6 +5096,8 @@
 
     "@singularity/plugin-fields-number-filter": ["@singularity/plugin-fields-number-filter@workspace:plugins/fields/plugins/number/plugins/filter"],
 
+    "@singularity/plugin-fields-number-filter-sql": ["@singularity/plugin-fields-number-filter-sql@workspace:plugins/fields/plugins/number/plugins/filter-sql"],
+
     "@singularity/plugin-fields-number-inline": ["@singularity/plugin-fields-number-inline@workspace:plugins/fields/plugins/number/plugins/inline"],
 
     "@singularity/plugin-fields-number-table": ["@singularity/plugin-fields-number-table@workspace:plugins/fields/plugins/number/plugins/table"],
@@ -5095,6 +5133,8 @@
     "@singularity/plugin-fields-text-config": ["@singularity/plugin-fields-text-config@workspace:plugins/fields/plugins/text/plugins/config"],
 
     "@singularity/plugin-fields-text-filter": ["@singularity/plugin-fields-text-filter@workspace:plugins/fields/plugins/text/plugins/filter"],
+
+    "@singularity/plugin-fields-text-filter-sql": ["@singularity/plugin-fields-text-filter-sql@workspace:plugins/fields/plugins/text/plugins/filter-sql"],
 
     "@singularity/plugin-fields-text-inline": ["@singularity/plugin-fields-text-inline@workspace:plugins/fields/plugins/text/plugins/inline"],
 
@@ -5619,6 +5659,8 @@
     "@singularity/plugin-primitives-data-view-gallery": ["@singularity/plugin-primitives-data-view-gallery@workspace:plugins/primitives/plugins/data-view/plugins/gallery"],
 
     "@singularity/plugin-primitives-data-view-list": ["@singularity/plugin-primitives-data-view-list@workspace:plugins/primitives/plugins/data-view/plugins/list"],
+
+    "@singularity/plugin-primitives-data-view-server-query": ["@singularity/plugin-primitives-data-view-server-query@workspace:plugins/primitives/plugins/data-view/plugins/server-query"],
 
     "@singularity/plugin-primitives-data-view-table": ["@singularity/plugin-primitives-data-view-table@workspace:plugins/primitives/plugins/data-view/plugins/table"],
 

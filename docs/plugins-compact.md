@@ -108,7 +108,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`config_v2`** [4 sub-plugins] — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 
-- **`conversations`** [load-bearing] [108 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
+- **`conversations`** [load-bearing] [109 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 
 - **`database`** [load-bearing] — Core database infrastructure. Connection pooling and DB readiness.
   - Plugins:
@@ -161,7 +161,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
     - **`zero-test`** — Temporary verification harness: a Debug → Zero Test pane that renders the pilot tasks slice live through the Zero client adapter. Deleted once a real migration begins.
 
-- **`fields`** [68 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce). Storage-dimension registry: owns the fields.storage server slot where each field type contributes its Drizzle column builder, keyed by type token.
+- **`fields`** [73 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce). Storage-dimension registry: owns the fields.storage server slot where each field type contributes its Drizzle column builder, keyed by type token.
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
@@ -312,6 +312,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
+        - **`server-query`** — Generic FilterGroup/SortRule → SQL compiler + null-aware keyset (cursor) seek for server-delegated data-view sources. Field-type agnostic: operator SQL is supplied by an injected resolver, so this owns drizzle and the seek correctness, not any field type.
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
         - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.

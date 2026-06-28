@@ -1,10 +1,17 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { Fields, resolveFieldStorage } from "./internal/storage";
+export { resolveFieldStorage } from "./internal/storage";
 export type {
   StorageColumnBuilder,
   FieldStorageContribution,
 } from "./internal/storage";
+// `Fields` is composed in filter-sql.ts (Storage + FilterSql) so the barrel
+// re-exports a single capability namespace without any merge logic of its own.
+export { Fields, resolveFieldFilterSql } from "./internal/filter-sql";
+export type {
+  FilterSqlBuilder,
+  FieldFilterSqlContribution,
+} from "./internal/filter-sql";
 export { fieldsToColumns } from "./internal/fields-to-columns";
 
 export default {

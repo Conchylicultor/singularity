@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-text-filter-sql",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Text field type: server filter-sql capability — operator→SQL fragments mirroring the data-view text filter predicates.",
+  "singularity": {
+    "collapsed": true
+  }
+}

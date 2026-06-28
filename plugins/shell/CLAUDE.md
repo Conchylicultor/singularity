@@ -8,11 +8,11 @@
 - Load-bearing: yes
 - Web:
   - Commands: `Shell.Toast`
-  - Slots: `Shell.Sidebar` ← `code-explorer`, `conversations.agents`, `conversations.conversations-view`, `stats`, `tasks.task-detail`, `Shell.Toolbar`
+  - Slots: `Shell.Sidebar` ← `code-explorer`, `conversations.agents`, `conversations.all-conversations`, `conversations.conversations-view`, `stats`, `tasks.task-detail`, `Shell.Toolbar`
   - Uses: `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `ToastArgs`, `ToastVariant`; Values: `Shell`, `ShellCommands`
 - Cross-plugin:
-  - Imported by: `apps/agent-manager/shell`, `code-explorer`, `conversations/agents`, `conversations/conversation-view/push-profiling`, `conversations/conversations-view`, `debug/profiling/push`, `infra/health`, `shell/notifications`, `shell/toaster`, `stats`, `tasks/task-detail`
+  - Imported by: `apps/agent-manager/shell`, `code-explorer`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-view/push-profiling`, `conversations/conversations-view`, `debug/profiling/push`, `infra/health`, `shell/notifications`, `shell/toaster`, `stats`, `tasks/task-detail`
 - Sub-plugins:
   - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to; the global-action-bar plugin renders it.
   - **`global-action-bar`** — Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the persisted pin: a floating top-right overlay (Core.Root) when unpinned — visible in every placement mode including solo — and a docked right-aligned strip in the tab bar (Apps.TabBarActions) when pinned. Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.

@@ -1,7 +1,13 @@
 /**
  * Date-anchor operand model — the JSON-serializable shape stored in
- * `FilterRule.value` for date operators, plus the pure resolver that turns it
+ * `FilterRule.value` for date operators, plus the pure resolvers that turn it
  * into a start-of-(local)-day epoch ms against an injectable `now`.
+ *
+ * This module is the **browser-safe core** for the date filter: it holds the
+ * pure anchor math (no DOM, no drizzle) so BOTH the web filter predicates
+ * (`../../filter/web/internal/date-filter-logic.ts`) and the server SQL
+ * contributor (`../../filter-sql/server`) resolve operands through the exact
+ * same code — the day-granular truth table lives in ONE place.
  *
  * Backward compat: a legacy operand is a bare ISO `yyyy-mm-dd` string and keeps
  * resolving as an absolute date.
@@ -142,4 +148,39 @@ export function formatAnchor(operand: unknown): string {
     month: "short",
     day: "numeric",
   });
+}
+
+/** Inclusive date-range operand for the `is-between` operator. */
+export interface DateRange {
+  /** Inclusive lower bound — anchor or legacy ISO string. */
+  from?: DateAnchor | string;
+  /** Inclusive upper bound (whole-day) — anchor or legacy ISO string. */
+  to?: DateAnchor | string;
+}
+
+/** Operand for the relative-range (within) operators: a magnitude + unit. */
+export interface RelativeRange {
+  unit: DateUnit;
+  amount: number;
+}
+
+export const DEFAULT_RELATIVE_RANGE: RelativeRange = { unit: "week", amount: 1 };
+
+/**
+ * Resolve a within-operator operand to an inclusive `[lo, hi]` start-of-day
+ * window around today, or `null` for a missing/invalid operand (incomplete
+ * rule). `past` → [today − N, today]; `next` → [today, today + N].
+ */
+export function withinRange(
+  operand: unknown,
+  direction: "past" | "next",
+  now: number = Date.now(),
+): [number, number] | null {
+  const raw = (operand ?? {}) as Partial<RelativeRange>;
+  const amount = typeof raw.amount === "number" ? raw.amount : NaN;
+  const unit = raw.unit ?? DEFAULT_RELATIVE_RANGE.unit;
+  if (Number.isNaN(amount) || amount <= 0) return null;
+  const today = startOfDay(now);
+  const shifted = addUnits(today, unit, direction === "past" ? -amount : amount);
+  return direction === "past" ? [shifted, today] : [today, shifted];
 }

@@ -1,0 +1,1 @@
+CREATE INDEX IF NOT EXISTS "conversations_created_id_idx" ON "conversations" USING btree ("created_at","id");

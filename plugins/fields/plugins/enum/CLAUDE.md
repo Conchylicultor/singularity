@@ -39,6 +39,7 @@ token) matches descriptors built with the factory.
 - Sub-plugins:
   - **`config`** — Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
   - **`filter`** — Enum (select) field type: data-view filter operator set (is / is-any-of / is-empty …).
+  - **`filter-sql`** — Enum field type: server filter-sql capability — operator→SQL fragments mirroring the data-view enum filter predicates.
   - **`inline`** — Enum (select) field type: data-view inline cell editor (single-select chip popover).
   - **`table`** — Enum (select) field type: data-view table cell (read-only chip cell).
 

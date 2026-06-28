@@ -158,5 +158,10 @@ export const _conversations = pgTable(
   // The composite (attempt_id, status) serves both the bare attempt_id lookups
   // and the status-filtered ones; without it these are full seq scans of the
   // conversations table per attempt on every cascade.
-  (t) => [index("conversations_attempt_id_status_idx").on(t.attemptId, t.status)],
+  (t) => [
+    index("conversations_attempt_id_status_idx").on(t.attemptId, t.status),
+    // Backs the All-conversations DataView's default keyset (createdAt DESC, id
+    // ASC tiebreaker) so the global list pages index-only at scale.
+    index("conversations_created_id_idx").on(t.createdAt, t.id),
+  ],
 );

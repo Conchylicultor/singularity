@@ -25,6 +25,8 @@ import {
   useDataViewModel,
   type ViewModel,
 } from "../internal/use-data-view-model";
+import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";
+import { useServerDataSource } from "../internal/use-server-data-source";
 import { useFilterController } from "../internal/use-filter-controller";
 import { useSortController } from "../internal/use-sort-controller";
 import { useSortPresets } from "../internal/use-sort-presets";
@@ -109,6 +111,13 @@ function DataViewInner<TRow>({
   const activeViewId = activeInstance?.instance.id ?? "";
   const activeState = viewModel.stateFor(activeViewId);
 
+  // Optional server-delegated data source. Called unconditionally (the hook
+  // no-ops and returns `null` when `props.dataSource` is absent — the in-memory
+  // path). When present, filter/sort/search/paginate run server-side over the
+  // live `activeState`, so the accumulated pages replace `rows` and the client
+  // pipeline (`useFlatRows`) is neutralized into a pass-through below.
+  const server = useServerDataSource(activeState, props.dataSource);
+
   // Filter controller — the popover builder consumes the full surface (filter,
   // setFilter, filterableFields, resolveOperatorSet, ruleCount).
   const setActiveFilter = useCallback(
@@ -175,13 +184,25 @@ function DataViewInner<TRow>({
     );
   }
 
+  // Server-delegated substitution: when a `dataSource` drives this DataView, the
+  // SQL already applied sort/filter/search, so feed the accumulated server rows
+  // and neutralize the client pipeline (`useFlatRows` collapses to a pass-through
+  // when sort/filter/query are empty). Absent → the in-memory path is untouched.
+  const effectiveRows: readonly unknown[] = server
+    ? server.rows
+    : (rows as readonly unknown[]);
+  const effectiveState = server
+    ? { ...activeState, sort: [], filter: null, query: "" }
+    : activeState;
+  const effectiveLoading = server ? server.loading : loading;
+
   // The host passes RAW rows; each view applies the processing matching its own
   // semantics (gallery/table call `useFlatRows`, the tree feeds `TreeList`).
   const renderProps: DataViewRenderProps<unknown> = {
-    rows: rows as readonly unknown[],
+    rows: effectiveRows,
     fields: fields as DataViewRenderProps<unknown>["fields"],
     rowKey: rowKey as DataViewRenderProps<unknown>["rowKey"],
-    state: activeState,
+    state: effectiveState,
     setSort: (fieldId) => viewModel.setSort(activeViewId, fieldId),
     setFilter: (filter) => viewModel.setFilter(activeViewId, filter),
     onRowActivate: onRowActivate as DataViewRenderProps<unknown>["onRowActivate"],
@@ -194,7 +215,7 @@ function DataViewInner<TRow>({
     expanded: activeState.expanded,
     setExpanded: (id, next) => viewModel.setExpanded(activeViewId, id, next),
     emptyState,
-    loading,
+    loading: effectiveLoading,
     loadingState,
     itemActions: itemActions as DataViewRenderProps<unknown>["itemActions"],
     hasChildren,
@@ -262,6 +283,12 @@ function DataViewInner<TRow>({
           renderProps,
         )}
       </ControlSizeProvider>
+      {/* Server-delegated infinite scroll: an IntersectionObserver sentinel that
+          fetches the next page as it scrolls into view. Rendered only on the
+          server path with more pages pending; the in-memory path renders nothing. */}
+      {server?.hasMore ? (
+        <ScrollSentinel sentinelRef={server.sentinelRef} show />
+      ) : null}
     </Stack>
   );
 }

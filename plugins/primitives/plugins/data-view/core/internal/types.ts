@@ -323,6 +323,41 @@ export interface FilterGroup {
 
 export type FilterNode = FilterRule | FilterGroup;
 
+/**
+ * One page of a server-delegated query. `nextCursor` is the server-computed
+ * keyset cursor to seek the next page from (null when exhausted); `hasMore`
+ * gates whether `fetchPage` should be called again.
+ */
+export interface ServerPage<TRow> {
+  items: TRow[];
+  nextCursor: string | null;
+  hasMore: boolean;
+}
+
+/**
+ * Server-delegated data source. Present on `DataViewProps` → filter/sort/search/
+ * paginate run server-side; the host feeds accumulated pages through and
+ * neutralizes the client pipeline (`useFlatRows` becomes identity). Absent → the
+ * DataView stays 100% in-memory over `rows` (the default for every consumer).
+ *
+ * `fetchPage` is a factory (not pre-resolved rows): `DataViewInner` invokes it
+ * with the live `activeState` (sort/filter/query) it already owns plus the
+ * keyset `cursor` + `limit`, so `ViewState` stays the single source of truth and
+ * the consumer never touches it.
+ */
+export interface ServerDataSourceSpec<TRow> {
+  fetchPage: (args: {
+    sort: SortRule[];
+    filter: FilterGroup | null;
+    query: string;
+    cursor: string | null;
+    limit: number;
+  }) => Promise<ServerPage<TRow>>;
+  /** Changes when server truth changes — drives an in-place refetch of loaded pages. */
+  changeTick: unknown;
+  pageSize?: number;
+}
+
 export interface DataViewProps<TRow> {
   rows: readonly TRow[];
   fields: FieldDef<TRow>[];
@@ -362,4 +397,11 @@ export interface DataViewProps<TRow> {
    * — a `CreateOption` carries only `id`/`label`/`icon`/`description`/`onSelect`.
    */
   creators?: CreateOption[];
+  /**
+   * Optional server-delegated data source. Present → filter/sort/search/paginate
+   * run server-side (compiled to SQL) over the live `activeState` the host owns;
+   * the accumulated pages replace `rows` and the client pipeline collapses to a
+   * pass-through. Absent → the in-memory path over `rows` (unchanged default).
+   */
+  dataSource?: ServerDataSourceSpec<TRow>;
 }

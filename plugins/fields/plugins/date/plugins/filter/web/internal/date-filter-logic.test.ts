@@ -10,8 +10,8 @@ import {
   isNotEmpty,
   isWithinPast,
   isWithinNext,
-  withinRange,
 } from "./date-filter-logic";
+import { withinRange } from "../../core";
 
 // Use noon timestamps so local start-of-day truncation is unambiguous.
 const jan10 = new Date("2026-01-10T12:00:00");

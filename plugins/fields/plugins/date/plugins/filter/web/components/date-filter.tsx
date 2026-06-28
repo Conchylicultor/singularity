@@ -6,12 +6,13 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button, Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import type { DateRange, RelativeRange } from "../internal/date-filter-logic";
 import {
   formatAnchor,
   type DateAnchor,
   type DateUnit,
-} from "../internal/date-anchor";
+  type DateRange,
+  type RelativeRange,
+} from "../../core";
 
 // Shared native-control chrome (matches the prior date-filter inputs and the
 // Input primitive's border/bg/radius — native inputs are exempt from
