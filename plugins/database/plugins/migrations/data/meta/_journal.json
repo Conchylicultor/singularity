@@ -1212,6 +1212,20 @@
       "tag": "20260628_222157_c913d553__conversations_created_id_idx",
       "hash": "c913d553",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1782690028000,
+      "tag": "20260628_234028_972f1750__notifications_count_lastseen",
+      "hash": "972f1750",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1782690166000,
+      "tag": "20260628_234246_f5dcf6f6__dismiss_legacy_report_notifs",
+      "hash": "f5dcf6f6",
+      "breakpoints": true
     }
   ]
 }

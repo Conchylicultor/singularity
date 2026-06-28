@@ -80,7 +80,15 @@ function NotificationRow({ n, dismiss, onClose }: { n: Notification; dismiss: (i
         )}
         {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the metadata row from the description above */}
         <Stack direction="row" gap="sm" align="center" className="mt-0.5">
-          <RelativeTime date={n.createdAt} className="text-3xs text-muted-foreground" />
+          <RelativeTime date={n.lastSeenAt} className="text-3xs text-muted-foreground" />
+          {n.count > 1 && (
+            <span
+              className="text-3xs text-muted-foreground tabular-nums"
+              title={`Recurred ${n.count} times — collapsed into one entry`}
+            >
+              &times;{n.count > 99 ? "99+" : n.count}
+            </span>
+          )}
           {n.type && (
             <span className="text-3xs text-muted-foreground">{n.type}</span>
           )}

@@ -37,7 +37,23 @@ rather than inheriting it.
   maxes at **97 s** and owns 43,721 of 95,465 pool acquires. The git loaders are
   *victims* of pool exhaustion, not a cause. The planned git fix would have optimized
   a 17 ms path. **Root cause not yet confirmed beyond doubt — see that doc's open
-  questions.**
+  questions.** *Superseded by the next session: pool exhaustion is a downstream,
+  intermittent symptom, not the driver.*
+
+- **2026-06-29 (2) — [notifications unbounded resource = the driver (root cause confirmed)](./2026-06-29-notifications-unbounded-resource-root-cause.md).**
+  Answered all five open questions with converging profile + DB + code evidence.
+  The driver is a handful of **oversized monolithic `push` live-state resources** that
+  load an entire unbounded table as one blob and re-serialize/re-snapshot/re-deliver the
+  *whole* blob on every change — worst by 4× is **`notifications`: 1.88 MB, 21,803
+  undismissed rows, loaded with no `LIMIT`**. Its full-blob UPSERT bloated
+  `live_state_snapshot` TOAST to **112 MB** (4.95 s writes) and its delivery is the
+  slowest push (5.9 s). The blob grows forever because the **reports system files a
+  notification per report (~281/h)** and the TTL sweep never auto-dismisses
+  `warning`/`error` variants. Re-validated the prior session: this window's `[acquire]`
+  max is **81 ms**, not 44.6 s — pool exhaustion spikes only *during* these big-blob
+  storms (cold-boot fan-out + notifications churn), so it is a symptom. "Simple queries
+  take seconds" = pure wait (an 88 kB / 20-row table can't scan for 3 s). **Root cause
+  confirmed beyond doubt; fix plan in the doc, pending user go-ahead.**
 
 ## Causes — checklist
 
@@ -53,26 +69,36 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   2026-06-29: `heavy-read-acquire` = **17 ms total** across all loaders. Negligible.
   *The original git-off-critical-path plan targeted only this — hence "wrong path".*
 
-### Confirmed (symptoms, in impact order)
-- ✅ **DB-connection-pool exhaustion** — `loader-acquire` = **243,614 ms** total;
-  pool `[acquire]` max **44.6 s** over 95,465 acquires; many unrelated loaders all
-  max at the same ~14,404 ms instant (one shared starvation event).
-- ✅ **Live-state flush cascade (`flushNotifies`)** drives the pool demand —
-  max **97.2 s**, 1,621 cycles, **43,721** pool acquires parented to it.
-- ✅ **Slow connection-holders feed the loop** — `update conversations … last_viewed_at`
-  max 48.8 s, `select … attempts_v` max 47.5 s, `live_state_snapshot` UPSERT max 50.5 s.
+### Confirmed root cause (2026-06-29 session 2 — cause→effect ordered)
+- ✅ **DRIVER: oversized monolithic `push` live-state resources** load an entire
+  unbounded table as one blob and re-serialize + re-snapshot + re-deliver the *whole*
+  blob on every change. Worst by 4×: **`notifications` = 1.88 MB / 21,803 undismissed
+  rows, loaded with no `LIMIT`** (also `pushes` 437 kB, `attempts` 381 kB, `tasks`
+  369 kB).
+- ✅ **GROWTH: reports → notifications, no retention.** `recordReport` files a
+  notification per report (~281/h); the TTL job auto-dismisses only `info`/`success`,
+  never `warning`/`error` → 21,085 `report` rows accumulate since 2026-06-13. The
+  monitoring infra feeds the problem.
+- ✅ **EFFECT 1 — `live_state_snapshot` TOAST bloat is causal.** 149 MB = 160 kB heap +
+  **112 MB TOAST** for 20 live rows: the big jsonb values UPSERTed over and over. The
+  4.95 s snapshot write is the notifications-sized rewrite holding a connection mid-flush.
+- ✅ **EFFECT 2 — slow delivery + flush.** `deliver:notifications` 5.9 s max (slowest
+  push); worst `flushNotifies` 21.8 s; recurring ~828 ms steady-state flushes track the
+  constant notifications churn.
+- ✅ **EFFECT 3 — intermittent pool exhaustion (the prior session's "root cause").** Per-
+  backend Pool max 16 / loader gate 10; spikes only *during* the big-blob storms. This
+  window's `[acquire]` max = **81 ms** (not 44.6 s). "Simple queries take seconds" = pure
+  wait — an 88 kB / 20-row trigger table can't scan for 3 s (14 piled at boot, atMs 5.5 s).
 
-### Open — must be proven before any fix
-- 🔬 **What TRIGGERS the flush storms?** cold-boot fan-out (16 backends) vs live-state
-  churn (no-op pushes) vs the change-feed (STATEMENT triggers `pg_notify` per commit).
-  Unproven.
-- 🔬 **DB pool topology + size.** Is the embedded Postgres pool effectively shared
-  host-wide across all worktree backends (so one busy worktree starves all)? What are
-  the pgbouncer / `max_connections` limits? Unmeasured.
-- 🔬 **Is `live_state_snapshot` bloat (188 MB / 20 rows) causal** for the slow
-  snapshot writes that hold connections, or just correlated? Unproven.
+### Discarded as the *primary* cause (real but downstream / 2nd-order)
+- ❌ **DB-pool exhaustion as a chronic state** — 2026-06-29 (2): intermittent symptom of
+  the big-blob storms, not a standing condition (81 ms acquire between storms).
 - 🔬 **Per-worktree local heavy-read gate (size 2)** = 21,858 ms — real but 2nd-order;
-  revisit only after the pool root cause is fixed.
-- 🔬 **True cold-boot** path (server-boot work: catch-up, derived-table rebuild, pool
-  warm) is *excluded* by `benchmark_boot`; the headline 7 s came from a real cold
-  boot, so this window is still unmeasured.
+  revisit only after the big-blob resources are bounded.
+
+### Cold boot
+- ✅ **True cold-boot captured** — 2026-06-29 (2): the live profile starts at backend
+  boot; atMs 5–33 s is the fan-out (all resources re-subscribe at once) and reproduces
+  the original ~7 s+ symptom (21.8 s worst flush, the notifications mega-flush + the
+  14-query trigger herd). `benchmark_boot` still excludes server-boot work (catch-up,
+  derived-table rebuild) — secondary now that the driver is known.

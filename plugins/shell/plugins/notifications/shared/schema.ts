@@ -19,6 +19,8 @@ export const NotificationSchema = z.object({
   muted: z.boolean(),
   linkTo: z.string().nullable(),
   metadata: z.record(z.unknown()).nullable(),
+  count: z.number(),
+  lastSeenAt: z.coerce.date(),
   createdAt: z.coerce.date(),
 });
 export type Notification = z.infer<typeof NotificationSchema>;

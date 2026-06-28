@@ -161,24 +161,25 @@ export async function recordReport(
   // as benign version-skew at a glance.
   const stalePrefix = staleOrigin ? "[Stale tab] " : "";
   const desc = `${stalePrefix}${row.message}`;
-  // Notification dedup granularity is the kind's re-arm policy. Without a
-  // cooldown (default) the bell row is keyed by the stable report id — one row
-  // per fingerprint that updates in place and never resurfaces once read (right
-  // for crashes: one tracked report per distinct crash). With a cooldown, the key
-  // also carries the current time bucket, so each window starts a fresh unread
-  // row while reports inside the window collapse onto it — re-alert without spam
-  // (right for slow ops: a recurring metric, not a one-shot incident).
+  // The bell notification is always keyed by the stable report id — exactly one
+  // row per fingerprint, which updates in place. The kind's re-arm policy is the
+  // re-surface window, not the dedup key: without a cooldown (default) the row
+  // updates silently and never resurfaces once read (right for crashes: one
+  // tracked report per distinct crash); with a cooldown the row re-surfaces as a
+  // fresh unread alert once that long since it last surfaced, while reports in
+  // between only bump its count (right for slow ops: a recurring metric). This
+  // keeps the bell at one row per distinct problem instead of one per
+  // (report × time-bucket), which previously grew the undismissed set without
+  // bound. See research/perfs/2026-06-29-notifications-unbounded-resource-root-cause.md.
   const cooldownMs = spec.meta.notifCooldownMs;
-  const notifDedupeKey = cooldownMs
-    ? `${row.id}:${Math.floor(Date.now() / cooldownMs)}`
-    : row.id;
   void recordNotification({
     type: "report",
     title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
     description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
     variant: spec.meta.variant,
     muted: row.noise,
-    dedupeKey: notifDedupeKey,
+    dedupeKey: row.id,
+    resurfaceAfterMs: cooldownMs,
     // Deep-link to the report's detail sidepane in Debug → Reports, never a task.
     // Investigation tasks are filed on demand from that pane.
     linkTo: reportDetailRoute.link(debugApp, { reportId: row.id }),

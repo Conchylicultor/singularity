@@ -1,4 +1,4 @@
-import { and, eq, lt, inArray } from "drizzle-orm";
+import { and, eq, lt, or, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
@@ -20,14 +20,29 @@ export const ttlCleanupJob = defineJob({
       .where(and(eq(_notifications.dismissed, true), lt(_notifications.createdAt, dismissedCutoff)));
 
     const autoDismissCutoff = new Date(Date.now() - AUTO_DISMISS_TTL_MS);
+    // Auto-dismiss notifications that have gone quiet, so the undismissed set
+    // (and thus the live `notifications` blob) stays bounded:
+    //   - low-signal info/success rows, keyed on createdAt as before;
+    //   - report-type rows, keyed on lastSeenAt so a still-recurring problem
+    //     stays surfaced but a fingerprint that stopped firing falls away.
+    // The report rule closes the gap where warning/error reports (the bulk of
+    // the bell firehose) were never swept and accumulated without limit.
     await db
       .update(_notifications)
       .set({ dismissed: true })
       .where(
         and(
           eq(_notifications.dismissed, false),
-          inArray(_notifications.variant, ["info", "success"]),
-          lt(_notifications.createdAt, autoDismissCutoff),
+          or(
+            and(
+              inArray(_notifications.variant, ["info", "success"]),
+              lt(_notifications.createdAt, autoDismissCutoff),
+            ),
+            and(
+              eq(_notifications.type, "report"),
+              lt(_notifications.lastSeenAt, autoDismissCutoff),
+            ),
+          ),
         ),
       );
   },
