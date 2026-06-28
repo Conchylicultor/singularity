@@ -6,17 +6,13 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`active-data`** [5 sub-plugins] — Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify(). Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).
 
-- **`apps`** [load-bearing] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
+- **`apps`** — Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
         - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
         - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
         - **`worktree-switcher`** — Current worktree namespace label in the global action bar.
-    - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
-      - Plugins:
-        - **`hidden`** — Hidden app rail — no switcher; sidebar slides flush to the edge.
-        - **`rail`** — App-rail framing — the default 2.5rem icon rail.
     - **`browser`** [9 sub-plugins] — Minimal iframe-based web browser app.
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`deploy`** [2 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
@@ -73,6 +69,14 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
             - **`release-logs`** — Live + persisted release log stream section in the release detail pane.
         - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
+    - **`workflows`** [4 sub-plugins] — Workflows app.
+
+- **`apps-core`** [load-bearing] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
+  - Plugins:
+    - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
+      - Plugins:
+        - **`hidden`** — Hidden app rail — no switcher; sidebar slides flush to the edge.
+        - **`rail`** — App-rail framing — the default 2.5rem icon rail.
     - **`surface`** — Generic per-tab surface dispatcher: renders every open tab at once positioned by its own placement, dispatched through the Surface.Placement registry. Owns the multi-placement body and the placement control; each placement (docked / floating / solo) is a self-contained sub-plugin.
       - Plugins:
         - **`docked`** — Docked surface placement — the default full-area tab that fills the surface below the tab strip.
@@ -84,7 +88,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
                 - **`openverse`** — Openverse wallpaper source: contributes the Openverse tab to the desktop wallpaper picker, reusing the shared search panel over the server-side `openverse` provider. Openverse wallpaper search provider: maps a query to open-license image results via the Openverse API (SSRF-guarded safeFetch), registered into the generic wallpaper provider registry.
                 - **`upload`** — Upload wallpaper source: contributes the Upload tab to the desktop wallpaper picker, emitting a local image file the picker funnels through the upload endpoint.
         - **`solo`** — Solo (fullscreen) surface placement — a single tab full-app over everything, with a hover exit button and an Esc shortcut back to the default placement.
-    - **`workflows`** [4 sub-plugins] — Workflows app.
 
 - **`auth`** [load-bearing] [3 sub-plugins] — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 

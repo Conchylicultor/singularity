@@ -1,4 +1,4 @@
-import { Apps, type ActiveApp, useCurrentAppId, useTabs } from "@plugins/apps/web";
+import { Apps, type ActiveApp, useCurrentAppId, useTabs } from "@plugins/apps-core/web";
 import {
   DataView,
   defineDataView,

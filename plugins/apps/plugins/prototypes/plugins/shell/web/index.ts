@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps-core/web";
 import { MdDashboardCustomize } from "react-icons/md";
 import { prototypesApp } from "../core";
 import { PrototypesLayout } from "./components/prototypes-layout";

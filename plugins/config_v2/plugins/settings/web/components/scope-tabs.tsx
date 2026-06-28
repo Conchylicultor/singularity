@@ -1,6 +1,6 @@
 import { useCallback, useMemo, type ComponentType } from "react";
 import { MdAdd, MdLayers } from "react-icons/md";
-import { Apps } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps-core/web";
 import { scopeAppId, configV2ScopesResource, configV2ConflictResource, forkDescriptorScope } from "@plugins/config_v2/core";
 import type { ConfigV2ScopesMap } from "@plugins/config_v2/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";

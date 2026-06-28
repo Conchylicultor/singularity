@@ -1,5 +1,5 @@
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
-import { navigate } from "@plugins/apps/web";
+import { navigate } from "@plugins/apps-core/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Shell } from "@plugins/shell/web";

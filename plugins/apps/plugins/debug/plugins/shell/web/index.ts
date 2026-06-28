@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps-core/web";
 import { MdBugReport } from "react-icons/md";
 import { debugApp } from "../core";
 import { DebugLayout } from "./components/debug-layout";

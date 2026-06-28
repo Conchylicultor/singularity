@@ -1,7 +1,7 @@
 import type { ComponentType } from "react";
 import type { Contribution, Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { useConfig } from "@plugins/config_v2/web";
-import { useCurrentAppId } from "@plugins/apps/web";
+import { useCurrentAppId } from "@plugins/apps-core/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { VariantRegionCore } from "../../core";
 import type { VariantContribution } from "../slots";

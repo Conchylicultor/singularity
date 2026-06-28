@@ -83,6 +83,55 @@
     },
     "plugins/apps": {
       "name": "@singularity/plugin-apps",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core": {
+      "name": "@singularity/plugin-apps-core",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/app-rail-framing": {
+      "name": "@singularity/plugin-apps-core-app-rail-framing",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/app-rail-framing/plugins/hidden": {
+      "name": "@singularity/plugin-apps-core-app-rail-framing-hidden",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/app-rail-framing/plugins/rail": {
+      "name": "@singularity/plugin-apps-core-app-rail-framing-rail",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/surface": {
+      "name": "@singularity/plugin-apps-core-surface",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/surface/plugins/docked": {
+      "name": "@singularity/plugin-apps-core-surface-docked",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/surface/plugins/floating": {
+      "name": "@singularity/plugin-apps-core-surface-floating",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper": {
+      "name": "@singularity/plugin-apps-core-surface-floating-wallpaper",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/from-url": {
+      "name": "@singularity/plugin-apps-core-surface-floating-wallpaper-from-url",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/openverse": {
+      "name": "@singularity/plugin-apps-core-surface-floating-wallpaper-openverse",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/upload": {
+      "name": "@singularity/plugin-apps-core-surface-floating-wallpaper-upload",
+      "version": "0.0.1",
+    },
+    "plugins/apps-core/plugins/surface/plugins/solo": {
+      "name": "@singularity/plugin-apps-core-surface-solo",
+      "version": "0.0.1",
     },
     "plugins/apps/plugins/agent-manager": {
       "name": "@singularity/plugin-apps-agent-manager",
@@ -98,18 +147,6 @@
     },
     "plugins/apps/plugins/agent-manager/plugins/worktree-switcher": {
       "name": "@singularity/plugin-apps-agent-manager-worktree-switcher",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/app-rail-framing": {
-      "name": "@singularity/plugin-apps-app-rail-framing",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/app-rail-framing/plugins/hidden": {
-      "name": "@singularity/plugin-apps-app-rail-framing-hidden",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/app-rail-framing/plugins/rail": {
-      "name": "@singularity/plugin-apps-app-rail-framing-rail",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/browser": {
@@ -602,38 +639,6 @@
     },
     "plugins/apps/plugins/studio/plugins/shell": {
       "name": "@singularity/plugin-apps-studio-shell",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/surface": {
-      "name": "@singularity/plugin-apps-surface",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/surface/plugins/docked": {
-      "name": "@singularity/plugin-apps-surface-docked",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/surface/plugins/floating": {
-      "name": "@singularity/plugin-apps-surface-floating",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper": {
-      "name": "@singularity/plugin-apps-surface-floating-wallpaper",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper/plugins/from-url": {
-      "name": "@singularity/plugin-apps-surface-floating-wallpaper-from-url",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper/plugins/openverse": {
-      "name": "@singularity/plugin-apps-surface-floating-wallpaper-openverse",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper/plugins/upload": {
-      "name": "@singularity/plugin-apps-surface-floating-wallpaper-upload",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/surface/plugins/solo": {
-      "name": "@singularity/plugin-apps-surface-solo",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/workflows": {
@@ -4293,12 +4298,6 @@
 
     "@singularity/plugin-apps-agent-manager-worktree-switcher": ["@singularity/plugin-apps-agent-manager-worktree-switcher@workspace:plugins/apps/plugins/agent-manager/plugins/worktree-switcher"],
 
-    "@singularity/plugin-apps-app-rail-framing": ["@singularity/plugin-apps-app-rail-framing@workspace:plugins/apps/plugins/app-rail-framing"],
-
-    "@singularity/plugin-apps-app-rail-framing-hidden": ["@singularity/plugin-apps-app-rail-framing-hidden@workspace:plugins/apps/plugins/app-rail-framing/plugins/hidden"],
-
-    "@singularity/plugin-apps-app-rail-framing-rail": ["@singularity/plugin-apps-app-rail-framing-rail@workspace:plugins/apps/plugins/app-rail-framing/plugins/rail"],
-
     "@singularity/plugin-apps-browser": ["@singularity/plugin-apps-browser@workspace:plugins/apps/plugins/browser"],
 
     "@singularity/plugin-apps-browser-bookmarks": ["@singularity/plugin-apps-browser-bookmarks@workspace:plugins/apps/plugins/browser/plugins/bookmarks"],
@@ -4318,6 +4317,30 @@
     "@singularity/plugin-apps-browser-tabs": ["@singularity/plugin-apps-browser-tabs@workspace:plugins/apps/plugins/browser/plugins/tabs"],
 
     "@singularity/plugin-apps-browser-webview": ["@singularity/plugin-apps-browser-webview@workspace:plugins/apps/plugins/browser/plugins/webview"],
+
+    "@singularity/plugin-apps-core": ["@singularity/plugin-apps-core@workspace:plugins/apps-core"],
+
+    "@singularity/plugin-apps-core-app-rail-framing": ["@singularity/plugin-apps-core-app-rail-framing@workspace:plugins/apps-core/plugins/app-rail-framing"],
+
+    "@singularity/plugin-apps-core-app-rail-framing-hidden": ["@singularity/plugin-apps-core-app-rail-framing-hidden@workspace:plugins/apps-core/plugins/app-rail-framing/plugins/hidden"],
+
+    "@singularity/plugin-apps-core-app-rail-framing-rail": ["@singularity/plugin-apps-core-app-rail-framing-rail@workspace:plugins/apps-core/plugins/app-rail-framing/plugins/rail"],
+
+    "@singularity/plugin-apps-core-surface": ["@singularity/plugin-apps-core-surface@workspace:plugins/apps-core/plugins/surface"],
+
+    "@singularity/plugin-apps-core-surface-docked": ["@singularity/plugin-apps-core-surface-docked@workspace:plugins/apps-core/plugins/surface/plugins/docked"],
+
+    "@singularity/plugin-apps-core-surface-floating": ["@singularity/plugin-apps-core-surface-floating@workspace:plugins/apps-core/plugins/surface/plugins/floating"],
+
+    "@singularity/plugin-apps-core-surface-floating-wallpaper": ["@singularity/plugin-apps-core-surface-floating-wallpaper@workspace:plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper"],
+
+    "@singularity/plugin-apps-core-surface-floating-wallpaper-from-url": ["@singularity/plugin-apps-core-surface-floating-wallpaper-from-url@workspace:plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/from-url"],
+
+    "@singularity/plugin-apps-core-surface-floating-wallpaper-openverse": ["@singularity/plugin-apps-core-surface-floating-wallpaper-openverse@workspace:plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/openverse"],
+
+    "@singularity/plugin-apps-core-surface-floating-wallpaper-upload": ["@singularity/plugin-apps-core-surface-floating-wallpaper-upload@workspace:plugins/apps-core/plugins/surface/plugins/floating/plugins/wallpaper/plugins/upload"],
+
+    "@singularity/plugin-apps-core-surface-solo": ["@singularity/plugin-apps-core-surface-solo@workspace:plugins/apps-core/plugins/surface/plugins/solo"],
 
     "@singularity/plugin-apps-debug": ["@singularity/plugin-apps-debug@workspace:plugins/apps/plugins/debug"],
 
@@ -4532,22 +4555,6 @@
     "@singularity/plugin-apps-studio-release-release-logs": ["@singularity/plugin-apps-studio-release-release-logs@workspace:plugins/apps/plugins/studio/plugins/release/plugins/release-logs"],
 
     "@singularity/plugin-apps-studio-shell": ["@singularity/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
-
-    "@singularity/plugin-apps-surface": ["@singularity/plugin-apps-surface@workspace:plugins/apps/plugins/surface"],
-
-    "@singularity/plugin-apps-surface-docked": ["@singularity/plugin-apps-surface-docked@workspace:plugins/apps/plugins/surface/plugins/docked"],
-
-    "@singularity/plugin-apps-surface-floating": ["@singularity/plugin-apps-surface-floating@workspace:plugins/apps/plugins/surface/plugins/floating"],
-
-    "@singularity/plugin-apps-surface-floating-wallpaper": ["@singularity/plugin-apps-surface-floating-wallpaper@workspace:plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper"],
-
-    "@singularity/plugin-apps-surface-floating-wallpaper-from-url": ["@singularity/plugin-apps-surface-floating-wallpaper-from-url@workspace:plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper/plugins/from-url"],
-
-    "@singularity/plugin-apps-surface-floating-wallpaper-openverse": ["@singularity/plugin-apps-surface-floating-wallpaper-openverse@workspace:plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper/plugins/openverse"],
-
-    "@singularity/plugin-apps-surface-floating-wallpaper-upload": ["@singularity/plugin-apps-surface-floating-wallpaper-upload@workspace:plugins/apps/plugins/surface/plugins/floating/plugins/wallpaper/plugins/upload"],
-
-    "@singularity/plugin-apps-surface-solo": ["@singularity/plugin-apps-surface-solo@workspace:plugins/apps/plugins/surface/plugins/solo"],
 
     "@singularity/plugin-apps-workflows": ["@singularity/plugin-apps-workflows@workspace:plugins/apps/plugins/workflows"],
 

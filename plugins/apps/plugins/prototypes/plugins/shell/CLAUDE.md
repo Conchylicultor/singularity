@@ -14,7 +14,7 @@ Panes themselves are defined and registered in the sibling `gallery` plugin.
 - Description: App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.
 - Web:
   - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
-  - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`
+  - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`
 - Core:
   - Uses: `primitives/pane.defineApp`
   - Exports: Values: `prototypesApp`

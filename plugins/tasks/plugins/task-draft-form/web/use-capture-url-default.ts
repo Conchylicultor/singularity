@@ -1,4 +1,4 @@
-import { useCurrentAppId } from "@plugins/apps/web";
+import { useCurrentAppId } from "@plugins/apps-core/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { taskDraftConfig } from "../shared/config";
 

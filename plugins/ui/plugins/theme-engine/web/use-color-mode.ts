@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useConfig } from "@plugins/config_v2/web";
-import { useCurrentAppId } from "@plugins/apps/web";
+import { useCurrentAppId } from "@plugins/apps-core/web";
 import { themeEngineConfig } from "../core";
 
 export type ColorMode = "light" | "dark";

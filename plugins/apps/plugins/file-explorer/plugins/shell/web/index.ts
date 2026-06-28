@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps-core/web";
 import { MdFolder } from "react-icons/md";
 import { fileExplorerApp } from "../core";
 import { FileExplorerLayout } from "./components/file-explorer-layout";

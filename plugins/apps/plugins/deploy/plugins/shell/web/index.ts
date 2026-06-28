@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps-core/web";
 import { MdCloud } from "react-icons/md";
 import { deployApp } from "../core";
 import { DeployLayout } from "./components/deploy-layout";

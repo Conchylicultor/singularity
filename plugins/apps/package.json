@@ -1,4 +1,6 @@
 {
   "name": "@singularity/plugin-apps",
-  "private": true
+  "description": "Container for the installed apps (agent-manager, pages, settings, …). The switcher infrastructure lives in apps-core.",
+  "private": true,
+  "version": "0.0.1"
 }

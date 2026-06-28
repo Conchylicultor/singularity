@@ -8,7 +8,7 @@
 - Web:
   - Slots: `FileExplorer.Sidebar`, `FileExplorer.Toolbar`
   - Contributes: `Apps.App` "File Explorer" → `FileExplorerLayout`
-  - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+  - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `FileExplorer`
 - Core:
   - Uses: `primitives/pane.defineApp`

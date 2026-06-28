@@ -1,7 +1,7 @@
 import { MdPalette } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { navigate, useActiveApp } from "@plugins/apps/web";
+import { navigate, useActiveApp } from "@plugins/apps-core/web";
 import { themeCustomizerPane } from "../panes";
 
 /**

@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps-core/web";
 import { MdPiano } from "react-icons/md";
 import { sonataApp } from "../core";
 import { SonataLayout } from "./components/sonata-layout";

@@ -4,7 +4,7 @@ import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useConfig, useSetConfig, useConfigRegistrations, useScopeMembership } from "@plugins/config_v2/web";
 import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { setConfigField, forkScope, deleteScope } from "@plugins/config_v2/core";
-import { useCurrentAppId } from "@plugins/apps/web";
+import { useCurrentAppId } from "@plugins/apps-core/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";

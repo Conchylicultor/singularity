@@ -1,7 +1,7 @@
 import { MdLightMode, MdDarkMode } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useConfig, useSetConfig, useScopeMembership } from "@plugins/config_v2/web";
-import { useCurrentAppId } from "@plugins/apps/web";
+import { useCurrentAppId } from "@plugins/apps-core/web";
 import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
 
 export function ThemeToggle() {

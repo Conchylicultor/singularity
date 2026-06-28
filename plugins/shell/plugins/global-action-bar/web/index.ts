@@ -1,5 +1,5 @@
 import { Core, type PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps-core/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import {
   FloatingActionBarHost,

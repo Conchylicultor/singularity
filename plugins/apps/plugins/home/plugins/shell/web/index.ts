@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps-core/web";
 import { MdHome } from "react-icons/md";
 import { homeApp } from "../core";
 import { HomeLayout } from "./components/home-layout";

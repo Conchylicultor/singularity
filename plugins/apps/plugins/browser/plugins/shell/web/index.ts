@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps-core/web";
 import { MdPublic } from "react-icons/md";
 import { browserApp } from "../core";
 import { BrowserLayout } from "./components/browser-layout";

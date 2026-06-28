@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdSettings } from "react-icons/md";
-import { Apps } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps-core/web";
 import { settingsApp } from "../core";
 import { SettingsLayout } from "./components/settings-layout";
 import { SettingsRailBadge } from "./components/settings-rail-badge";

@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps-core/web";
 import { MdDescription } from "react-icons/md";
 import { pagesApp } from "../core";
 import { PagesLayout } from "./components/pages-layout";

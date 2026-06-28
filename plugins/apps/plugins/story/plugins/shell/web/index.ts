@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Apps } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps-core/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { MdAutoStories } from "react-icons/md";
 import { storyApp } from "../core";

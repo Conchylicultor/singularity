@@ -8,7 +8,7 @@
 - Web:
   - Slots: `WorkflowsApp.Sidebar`, `WorkflowsApp.Toolbar`
   - Contributes: `Apps.App` "Workflows" → `WorkflowsLayout`
-  - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+  - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `WorkflowsApp`
 - Core:
   - Uses: `primitives/pane.defineApp`

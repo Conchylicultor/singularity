@@ -1,4 +1,4 @@
-// @hash 63c4c42cfda5
+// @hash cd7afae3a25f
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -7,7 +7,7 @@
     "ui.sidebar-framing:sidebar-framing",
     "ui.segmented-progress-bar:segmented-progress-bar",
     "ui.tab-bar.customizer:tab-bar",
-    "apps.surface.floating:floating-titlebar",
+    "apps-core.surface.floating:floating-titlebar",
     "ui.tokens.shape:shape",
     "ui.tokens.sidebar-palette:sidebar-palette",
     "ui.tokens.type-scale:type-scale",
@@ -18,6 +18,6 @@
     "ui.tokens.color-palette:color-palette",
     "ui.tokens.color-adjust:color-adjust",
     "ui.tokens.font-family:font-family",
-    "apps.app-rail-framing:app-rail-framing"
+    "apps-core.app-rail-framing:app-rail-framing"
   ]
 }

@@ -8,7 +8,7 @@
 - Web:
   - Slots: `Settings.Sidebar` ← `apps.settings.accounts`, `apps.settings.appearance`, `apps.settings.config`, `Settings.RailBadge` ← `apps.settings.config`
   - Contributes: `Apps.App` "Settings" → `SettingsLayout`
-  - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+  - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Settings`, `SETTINGS_APP_PATH`
 - Core:
   - Uses: `primitives/pane.defineApp`

@@ -18,7 +18,7 @@ import { Button, ControlSizeProvider } from "@plugins/primitives/plugins/css/plu
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { conversationRoute } from "@plugins/conversations/core";
-import { navigate } from "@plugins/apps/web";
+import { navigate } from "@plugins/apps-core/web";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
 import { taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
 import { reportDetailPane } from "../panes";
