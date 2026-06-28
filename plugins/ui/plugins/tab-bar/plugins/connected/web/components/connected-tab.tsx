@@ -7,9 +7,13 @@ import { TabCloseButton } from "@plugins/ui/plugins/tab-bar/web";
 import type { TabProps } from "@plugins/ui/plugins/tab-bar/core";
 
 /**
- * The skeuomorphic folder tab. The active tab is a bordered, background-filled
- * folder with no bottom border, pulled down one pixel (`-mb-px`) so it overlaps
- * the strip's `border-b` and reads continuous with the content panel below.
+ * The skeuomorphic folder tab. The strip declares `fillHeight` (see the variant
+ * contribution), so every tab fills the strip's full height and the strip drops
+ * its bottom padding + `border-b`. The active tab is then a bordered,
+ * background-filled folder whose open bottom edge sits flush on the strip's
+ * bottom edge — i.e. directly on the content seam — so it reads as one
+ * continuous surface with the content panel below (the Chrome model: a
+ * content-colored notch in the recessed strip, no 1px-overlap trickery needed).
  * Inactive tabs stay flat and muted. Composes `Line` (the single-line shell +
  * ref forwarding) with `Text` as the direct-child truncation leaf, so the chip
  * needs no ad-hoc flex/min-w-0. The whole chip is the activate target
@@ -40,13 +44,16 @@ export function ConnectedTab({
       }}
       className={cn(
         hoverRevealGroup,
-        // A tab is a button, not document text: `select-none` mirrors a native
-        // <button> (which this `role="button"` div otherwise loses), so a
-        // press-and-drag — e.g. dragging a floating-window tab — never starts a
+        // h-full: fill the strip's full height so the active folder's bottom
+        // edge lands on the content seam (the strip is fillHeight — no centering
+        // moat below the tab).
+        // select-none: a tab is a button, not document text — mirror a native
+        // <button> (which this `role="button"` div otherwise loses) so a
+        // press-and-drag (e.g. dragging a floating-window tab) never starts a
         // text selection of the label.
-        "max-w-40 cursor-pointer select-none gap-xs py-2xs pl-xs pr-2xs transition-colors",
+        "h-full max-w-40 cursor-pointer select-none gap-xs py-2xs pl-xs pr-2xs transition-colors",
         active
-          ? "-mb-px rounded-t-md border border-b-0 bg-background text-foreground"
+          ? "rounded-t-md border border-b-0 bg-background text-foreground"
           : "text-muted-foreground hover:text-foreground",
         className,
       )}

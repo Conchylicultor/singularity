@@ -1,8 +1,7 @@
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { useConfig } from "@plugins/config_v2/web";
 import { TabBar as Slots } from "../slots";
-import { tabBarConfig } from "../internal/config";
+import { useActiveTabVariant } from "../internal/use-active-variant";
 import type { TabProps } from "../../core";
 
 /**
@@ -19,11 +18,7 @@ import type { TabProps } from "../../core";
  * in its own element instead.
  */
 export function Tab(props: TabProps) {
-  const contributions = Slots.Variant.useContributions();
-  const { variant: activeId } = useConfig(tabBarConfig);
-  // Select the configured variant, falling back to the first registered one.
-  const active =
-    contributions.find((c) => c.match === activeId) ?? contributions[0] ?? null;
+  const active = useActiveTabVariant();
   if (!active) return null;
   return renderIsolated(
     Slots.Variant.id,

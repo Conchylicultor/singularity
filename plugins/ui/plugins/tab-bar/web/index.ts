@@ -5,6 +5,7 @@ import { tabBarConfig } from "../core";
 import { TabBar } from "./slots";
 
 export { Tab } from "./components/tab";
+export { useActiveTabVariant } from "./internal/use-active-variant";
 export { TabCloseButton } from "./components/tab-close-button";
 export { TabBar as TabBarSlots } from "./slots";
 export type { TabVariantContribution } from "./slots";

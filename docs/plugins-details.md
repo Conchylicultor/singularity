@@ -961,7 +961,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps-core/surface.Surface`, `apps-core/tabs.getDefaultPlacement`, `apps-core/tabs.getFocusedPlacement`, `apps-core/tabs.setFocusedTabPlacement`, `primitives/css/pin.Pin`, `primitives/icon-button.IconButton`, `primitives/shortcuts.defineShortcut`
     - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
       - Web:
-        - Uses: `apps-core.Apps`, `apps-core/tabs.getDefaultPlacement`, `apps-core/tabs.placementIsNewTabFollows`, `apps-core/tabs.tearOffPlacement`, `apps-core/tabs.useTabs`, `apps-core/theme-scope.useChromeThemeScope`, `primitives/css/line.Line`, `primitives/css/measure-strip.MeasureStrip`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.PortalThemeScopeProvider`, `primitives/icon-button.IconButton`, `primitives/responsive-overflow.useResponsiveOverflow`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/tooltip.WithTooltip`, `ui/tab-bar.Tab`
+        - Uses: `apps-core.Apps`, `apps-core/tabs.getDefaultPlacement`, `apps-core/tabs.placementIsNewTabFollows`, `apps-core/tabs.tearOffPlacement`, `apps-core/tabs.useTabs`, `apps-core/theme-scope.useChromeThemeScope`, `primitives/css/line.Line`, `primitives/css/measure-strip.MeasureStrip`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.PortalThemeScopeProvider`, `primitives/icon-button.IconButton`, `primitives/responsive-overflow.useResponsiveOverflow`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/tooltip.WithTooltip`, `ui/tab-bar.Tab`, `ui/tab-bar.useActiveTabVariant`
         - Exports: Values: `AppTabBar`
       - Cross-plugin:
         - Imported by: `apps-core/layout`
@@ -5065,7 +5065,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `TabBarSlots.Variant` ← `ui.tab-bar.chip`, `ui.tab-bar.connected`, `ui.tab-bar.underline`
         - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "Tab bar variant"
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/css/center.Center`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/slot-render.renderIsolated`
-        - Exports: Types: `TabProps`, `TabVariantContribution`; Values: `Tab`, `TabBarSlots`, `TabCloseButton`
+        - Exports: Types: `TabProps`, `TabVariantContribution`; Values: `Tab`, `TabBarSlots`, `TabCloseButton`, `useActiveTabVariant`
       - Server:
         - Uses: `config_v2.ConfigV2`
       - Core:

@@ -20,7 +20,7 @@ import {
   SortableList,
   SortableItem,
 } from "@plugins/primitives/plugins/sortable-list/web";
-import { Tab } from "@plugins/ui/plugins/tab-bar/web";
+import { Tab, useActiveTabVariant } from "@plugins/ui/plugins/tab-bar/web";
 import { Apps } from "@plugins/apps-core/web";
 import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import {
@@ -67,6 +67,12 @@ export function AppTabBar() {
   // attribute). See useChromeThemeScope.
   const themeScope = useChromeThemeScope();
 
+  // The active variant decides the strip's vertical geometry. A "folder" variant
+  // (connected) fills tabs to full height and removes the strip's centering moat
+  // (bottom padding + border-b) so the active tab's bottom edge is the content
+  // seam; chip/underline keep centered, padded, bottom-bordered tabs.
+  const fillHeight = !!useActiveTabVariant()?.fillHeight;
+
   // The focused tab's placement determines what `+` spawns: a placement that
   // "follows" the focused tab (e.g. another floating window in desktop mode)
   // opens a "new window"; otherwise `+` opens a "new tab" in the default
@@ -101,17 +107,38 @@ export function AppTabBar() {
       align="center"
       gap="none"
       data-theme-scope={themeScope}
-      // eslint-disable-next-line layout/no-adhoc-layout -- rigid tab bar above the flexible tab body in AppsLayout's column; shrink-0 keeps its chrome height
-      className="shrink-0 border-b bg-background px-xs py-2xs"
+      // The tab strip is chrome frame (like the sidebar/rail), so it wears the
+      // recessed `--sidebar` surface — distinct from `--background`. That
+      // figure/ground gap is what lets the active "connected" tab (which is
+      // `bg-background`, matching the content surface directly below it) read as
+      // raised out of the strip and fused with the content. A same-as-content
+      // strip (e.g. bg-background) would erase the contrast; bg-muted is unsafe
+      // because some presets make `--muted` lighter than `--background`.
+      // When fillHeight, the strip drops its bottom padding AND its border-b so
+      // the full-height active tab's bottom edge IS the content seam (no moat,
+      // no line) — the recessed color step alone separates strip from content.
+      // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 keeps the rigid tab bar's chrome height above the flexible tab body
+      className={cn(
+        "shrink-0 bg-sidebar px-xs",
+        fillHeight ? "pt-2xs" : "border-b py-2xs",
+      )}
     >
       <Scroll
         axis="x"
         hideScrollbar
         ref={containerRef}
-        // eslint-disable-next-line layout/no-adhoc-layout -- flexible strip yields width to the trailing actions; min-w-0 lets the tabs scroll instead of pushing them off-edge
-        className="min-w-0"
+        // self-stretch (when fillHeight): the tab scroller fills the strip's full
+        // height so its tabs can stretch to the bottom seam; the trailing actions
+        // stay vertically centered (the strip itself is items-center).
+        // eslint-disable-next-line layout/no-adhoc-layout -- flexible strip yields width to the trailing actions; min-w-0 lets the tabs scroll instead of pushing them off-edge; self-stretch fills strip height for full-height folder tabs
+        className={cn("min-w-0", fillHeight && "self-stretch")}
       >
-      <Stack direction="row" align="center" gap="2xs">
+      <Stack
+        direction="row"
+        align={fillHeight ? "stretch" : "center"}
+        gap="2xs"
+        className={fillHeight ? "h-full" : undefined}
+      >
         <SortableList
           items={resolved.map(({ tab }) => tab.tabId)}
           onMove={(activeId, overId) => moveTab(activeId, overId)}
@@ -141,6 +168,7 @@ export function AppTabBar() {
                     icon={app.icon}
                     label={label}
                     active={active}
+                    fillHeight={fillHeight}
                     // Focused tab always keeps its label; other tabs go
                     // icon-only only once they overflow the bar (those past the
                     // count that fits at full width).
@@ -198,6 +226,9 @@ interface TabChipProps {
   label: string;
   active: boolean;
   collapsed: boolean;
+  /** Full-height strip (folder variant) — the wrapper fills the row so the
+   *  variant's own `h-full` can reach the bottom seam. */
+  fillHeight?: boolean;
   onActivate?: () => void;
   onClose?: () => void;
 }
@@ -210,7 +241,7 @@ interface TabChipProps {
  * targets it. The active/collapsed/icon/label/onActivate/onClose props pass
  * straight through to the variant.
  */
-function TabChip({ appId, ...props }: TabChipProps) {
+function TabChip({ appId, fillHeight, ...props }: TabChipProps) {
   const ref = useRef<HTMLDivElement>(null);
   const { active } = props;
   useEffect(() => {
@@ -220,7 +251,15 @@ function TabChip({ appId, ...props }: TabChipProps) {
   }, [active]);
   return (
     <WithTooltip content={props.label}>
-      <Line as="div" ref={ref} data-app-tab={appId}>
+      {/* h-full lets the inner variant fill the full-height strip down to the
+          content seam; fillHeight is a strip-geometry concern, so it stays here
+          and is never forwarded onto the variant (would leak to the DOM). */}
+      <Line
+        as="div"
+        ref={ref}
+        data-app-tab={appId}
+        className={fillHeight ? "h-full" : undefined}
+      >
         <Tab {...props} />
       </Line>
     </WithTooltip>
