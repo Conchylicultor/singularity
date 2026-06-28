@@ -40,7 +40,11 @@ export function ChipTab({
       }}
       className={cn(
         hoverRevealGroup,
-        "max-w-40 cursor-pointer gap-xs rounded-md py-2xs pl-xs pr-2xs transition-colors",
+        // A tab is a button, not document text: `select-none` mirrors a native
+        // <button> (which this `role="button"` div otherwise loses), so a
+        // press-and-drag — e.g. dragging a floating-window tab — never starts a
+        // text selection of the label.
+        "max-w-40 cursor-pointer select-none gap-xs rounded-md py-2xs pl-xs pr-2xs transition-colors",
         active
           ? "bg-accent text-accent-foreground"
           : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
