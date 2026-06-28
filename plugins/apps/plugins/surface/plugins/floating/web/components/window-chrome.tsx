@@ -14,11 +14,13 @@ import {
   MdPushPin,
   MdWebAsset,
 } from "react-icons/md";
+import { useConfig } from "@plugins/config_v2/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
+import { floatingChromeConfig } from "../../core";
 import {
   clampToBounds,
   type Bounds,
@@ -52,6 +54,8 @@ export const WINDOW_TITLEBAR_INSET = "2.25rem";
 interface WindowChromeProps {
   /** The window this chrome paints (one titlebar per window — the active member). */
   window: FloatingWindow;
+  /** The active member's app id — scopes the per-app titlebar style read. */
+  appId: string;
   focused: boolean;
   setGeo: (next: (g: Geometry) => Geometry) => void;
   /** Members in tab-strip order, resolved to title + app icon for the strip. */
@@ -104,6 +108,7 @@ interface WindowChromeProps {
  */
 export function WindowChrome({
   window: win,
+  appId,
   focused,
   setGeo,
   members,
@@ -124,6 +129,15 @@ export function WindowChrome({
 }: WindowChromeProps) {
   const geo = win.geo;
   const canSplit = win.members.length > 1;
+
+  // Seamless titlebar (per-app theme option): drop the bottom border and match
+  // the window body's `bg-background` so the bar fuses with the content (native,
+  // frameless look) instead of reading as a distinct `bg-muted` strip. Scoped to
+  // this window's own app so each app carries its own titlebar style (falls back
+  // to the base/global value until the app is forked).
+  const { seamlessTitlebar } = useConfig(floatingChromeConfig, {
+    scopeId: `app:${appId}`,
+  });
 
   const titlebarRef = useRef<HTMLDivElement>(null);
   const [menuAnchor, setMenuAnchor] = useState<MenuAnchor | null>(null);
@@ -296,8 +310,10 @@ export function WindowChrome({
           openMenuAt(e.clientX, e.clientY);
         }}
         // eslint-disable-next-line layout/no-adhoc-layout -- draggable window titlebar: top-edge-pinned, fixed height via style, hand-rolled flex row whose flex-1/shrink-0 children coordinate with the move-drag region; window chrome, not a primitive row
-        className={`absolute inset-x-0 top-0 z-raised flex shrink-0 items-center gap-xs border-b pr-sm pl-2xs py-xs cursor-grab ${
-          focused ? "bg-muted" : "bg-muted/40"
+        className={`absolute inset-x-0 top-0 z-raised flex shrink-0 items-center gap-xs pr-sm pl-2xs py-xs cursor-grab ${
+          seamlessTitlebar
+            ? "bg-background"
+            : `border-b ${focused ? "bg-muted" : "bg-muted/40"}`
         }`}
         style={{ height: WINDOW_TITLEBAR_INSET, touchAction: "none" }}
       >

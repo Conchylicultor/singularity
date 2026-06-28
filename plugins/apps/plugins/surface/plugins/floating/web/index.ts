@@ -2,6 +2,10 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { getFocusedPlacement } from "@plugins/apps/web";
 import { Surface } from "@plugins/apps/plugins/surface/web";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
+import { ConfigV2 } from "@plugins/config_v2/web";
+import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { floatingChromeConfig } from "../core";
+import { TitlebarStylePicker } from "./components/titlebar-style-picker";
 import { floatingDef } from "./floating-placement";
 import {
   closeFocusedWindow,
@@ -18,6 +22,14 @@ export default {
     "Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store, window chrome, and keyboard window-management shortcuts (tile / minimize / close / cycle).",
   contributions: [
     Surface.Placement(floatingDef),
+    // Window-chrome appearance config + its theme-customizer picker (Framed /
+    // Seamless titlebar). Global scope — desktop chrome shared across all apps.
+    ConfigV2.WebRegister({ descriptor: floatingChromeConfig }),
+    ThemeEngine.VariantGroup({
+      id: "floating-titlebar",
+      componentLabel: "Window titlebar",
+      component: TitlebarStylePicker,
+    }),
     // Keyboard window management — eligible only while the focused tab is a
     // floating window (`when` self-references this placement's own id, owned
     // here). Tiling uses the Ctrl+Alt window-manager modifier (free on macOS,

@@ -1,10 +1,11 @@
-// @hash a4b2c198979a
+// @hash 63c4c42cfda5
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
     "apps.app-rail-framing:app-rail-framing",
+    "apps.surface.floating:floating-titlebar",
     "ui.segmented-progress-bar:segmented-progress-bar",
     "ui.sidebar-framing:sidebar-framing",
     "ui.tab-bar.customizer:tab-bar",

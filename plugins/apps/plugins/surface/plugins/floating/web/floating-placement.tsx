@@ -72,7 +72,7 @@ export const floatingDef: PlacementDef = {
  * Focus-on-pointerdown is owned by the host; this only ADDS raise-to-front via
  * the registered pointer-down-capture handler.
  */
-function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
+function FloatingChrome({ tabId, appId, focused, exiting }: PlacementChromeProps) {
   const { window: win, isActive, setGeo, bringToFront } = useTabWindow(tabId);
   const windows = useFloatingWindows();
   const { desktops, activeDesktopId } = useDesktops();
@@ -264,6 +264,7 @@ function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
   return (
     <WindowChrome
       window={win}
+      appId={appId}
       focused={focused}
       setGeo={setGeo}
       members={memberRows}
