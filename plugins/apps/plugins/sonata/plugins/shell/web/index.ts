@@ -29,6 +29,11 @@ export {
   useKeyAutoDetect,
   useSetKeyAutoDetect,
 } from "./key-mode-store";
+export {
+  LaneInsetsProvider,
+  useLaneInsets,
+  type LaneInsets,
+} from "./lane-insets";
 
 export default {
   description:

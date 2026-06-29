@@ -44,6 +44,7 @@ export interface InstrumentVoices {
  *  - Analyzer (rich data)  — pure `(Score) => Annotation[]`; all run, merged in.
  *  - Overlay  (rich visual)— capability-filtered geometry, rendered via `renderIsolated`.
  *  - TransportOverlay (state visual) — capability-filtered, scroll-synced overlays driven by transport state (loop region).
+ *  - TransportEdge (state visual) — capability-filtered, screen-anchored edge-clamped overlays for off-screen transport boundaries (loop A/B edge indicator).
  *  - Instrument            — audio voice manager bound to a Web Audio context.
  *  - Toolbar               — action widgets on the right of the top toolbar (play/pause, speed, …).
  *  - Transport             — full-width horizontal strip below the toolbar (progress bar, …).
@@ -121,6 +122,19 @@ export const Sonata = {
     requires: Capability[];
     component: ComponentType<{ projection: Projection }>;
   }>("sonata.transport-overlay", { docLabel: (p) => p.id }),
+
+  // EDGE INDICATOR — screen-anchored (NOT scroll-synced) transport-state overlays
+  // clamped to the lane edges. Unlike TransportOverlay (which scrolls glued to the
+  // notes inside the scroll layer), the host mounts these OUTSIDE the scroll layer so
+  // they stay pinned at the lane's top/bottom edge — for indicating where an off-screen
+  // transport boundary (e.g. an A–B loop edge above/below the lookahead) sits.
+  // Capability-filtered like TransportOverlay; the component reads its own transport
+  // state via useSonata() and the live cursor via useCursorSelector().
+  TransportEdge: defineSlot<{
+    id: string;
+    requires: Capability[];
+    component: ComponentType<{ projection: Projection }>;
+  }>("sonata.transport-edge", { docLabel: (p) => p.id }),
 
   // PITCH AXIS — decorations rendered in a display's pitch-axis gutter (the
   // piano keyboard, future fretboards / pitch rulers). Capability-filtered like

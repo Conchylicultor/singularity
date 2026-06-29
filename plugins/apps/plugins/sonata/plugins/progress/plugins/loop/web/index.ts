@@ -3,6 +3,7 @@ import { SonataProgress } from "@plugins/apps/plugins/sonata/plugins/progress/pl
 import { Sonata, SonataToolbar } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { LoopRegion } from "./components/loop-region";
 import { LoopRollRegion } from "./components/loop-roll-region";
+import { LoopRollEdge } from "./components/loop-roll-edge";
 import { LoopToggle } from "./components/loop-toggle";
 import { LoopShortcuts } from "./components/loop-shortcuts";
 
@@ -15,6 +16,11 @@ export default {
       id: "loop",
       requires: ["time-axis"],
       component: LoopRollRegion,
+    }),
+    Sonata.TransportEdge({
+      id: "loop",
+      requires: ["time-axis"],
+      component: LoopRollEdge,
     }),
     SonataToolbar.End({ id: "loop-toggle", component: LoopToggle }),
     Sonata.Effect({ id: "loop-shortcuts", component: LoopShortcuts }),

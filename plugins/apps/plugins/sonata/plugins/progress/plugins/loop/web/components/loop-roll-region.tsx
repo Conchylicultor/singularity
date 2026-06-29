@@ -1,6 +1,7 @@
 import type { Projection } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { useLoopEdgeBuckets } from "../loop-edge-state";
 
 /**
  * The A–B practice loop, surfaced on the piano roll's falling-note timeline: a
@@ -23,6 +24,11 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 export function LoopRollRegion({ projection }: { projection: Projection }) {
   const { loop } = useSonata();
   const beatToY = projection.beatToY;
+  // Which boundaries have scrolled off-screen (so their content-space label is
+  // hidden — the screen-anchored edge chip stands in for it). Called BEFORE the
+  // early return so hook order stays stable; it early-returns empty internally
+  // when there's no loop / time axis.
+  const { top: edgeTop, bottom: edgeBottom } = useLoopEdgeBuckets(projection);
   // No region, or a display without a real time axis → render nothing.
   if (!loop || !beatToY) return null;
 
@@ -30,6 +36,10 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
   const yB = beatToY(loop.end); // B — higher on screen (more negative)
   const top = yB;
   const height = Math.max(0, yA - yB);
+
+  // A boundary is on-screen iff it's in neither edge bucket → show its label.
+  const aOn = !edgeTop.includes("A") && !edgeBottom.includes("A");
+  const bOn = !edgeTop.includes("B") && !edgeBottom.includes("B");
 
   return (
     <>
@@ -50,9 +60,11 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
         style={{ top, height }}
       />
       {/* B label tucked just below its top edge; A label just above its bottom
-          edge — both stay inside the band, clear of the lane edges. */}
-      <LoopLabel y={yB} label="B" enabled={loop.enabled} side="below" />
-      <LoopLabel y={yA} label="A" enabled={loop.enabled} side="above" />
+          edge — both stay inside the band, clear of the lane edges. Each shows
+          only while its boundary is on-screen; once a boundary scrolls past the
+          lookahead the edge chip (LoopRollEdge) stands in for the label. */}
+      {bOn ? <LoopLabel y={yB} label="B" enabled={loop.enabled} side="below" /> : null}
+      {aOn ? <LoopLabel y={yA} label="A" enabled={loop.enabled} side="above" /> : null}
     </>
   );
 }

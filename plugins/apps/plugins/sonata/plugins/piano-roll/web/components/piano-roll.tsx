@@ -23,6 +23,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
+  LaneInsetsProvider,
   Sonata,
   useCursorApi,
   useSonata,
@@ -53,6 +54,7 @@ import { FxHost } from "../internal/fx/fx-host";
 import { ProjectionProvider } from "./projection-context";
 import { OverlayHost } from "./overlay-host";
 import { TransportOverlayHost } from "./transport-overlay-host";
+import { TransportEdgeHost } from "./transport-edge-host";
 import { FxToggle } from "./fx-toggle";
 import { ViewOptionsToggle } from "./view-options-toggle";
 import { PitchAxisHost } from "./pitch-axis-host";
@@ -94,6 +96,15 @@ const WHEEL_IDLE_MS = 180;
 /** Headroom left when computing the "fit the whole song" zoom-out floor: the song
  *  fills ~92% of the lane at max zoom-out, leaving a small gap above it. */
 const FIT_MARGIN = 0.92;
+
+/**
+ * Vertical gap reserved BELOW the top-right HUD cluster, on top of its measured
+ * height, when computing the lane's top inset. Covers the HUD `<Pin>`'s
+ * `offset="sm"` top inset plus a small breathing gap, so a screen-anchored
+ * top-edge chip (the off-screen loop-boundary indicator) tucks just under the
+ * HUD rather than colliding with it.
+ */
+const HUD_EDGE_CLEARANCE = 16; // px
 
 /**
  * The cursor scroll layer: one `translateY` over the cursor-INVARIANT overlay
@@ -139,6 +150,13 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     },
     [sizeRef],
   );
+
+  // Measure the top-right HUD cluster so screen-anchored edge indicators can
+  // reserve its vertical zone — a boundary that sits under the HUD is bucketed
+  // "top" and its chip tucks just below the cluster (`topInset`) instead of
+  // colliding with it. `0` until the HUD has measured (no reservation yet).
+  const [hudSizeRef, hudSize] = useElementSize();
+  const topInset = hudSize.height > 0 ? hudSize.height + HUD_EDGE_CLEARANCE : 0;
 
   // Synthesia-style note-name labels (opt-in). Spelling follows the score's key
   // signature so accidentals read in-key (Eb vs D#), matching the keyboard below.
@@ -492,67 +510,79 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             : null,
         )}
       >
-        {/* The GPU note lane: grid, falling notes, and labels — under every
-            DOM layer (transparent canvas; the lane bg shows through). */}
-        <PianoRollCanvas
-          key={canvasNonce}
-          width={lane.width}
-          height={lane.height}
-          visuals={visuals}
-          bars={barMarkers}
-          pitchLines={pitchLines}
-          scoreNotes={score.notes}
-          showLabels={showNoteNames}
-          tempoScale={tempoScale}
-          spread={spread}
-          onSceneReady={setPixi}
-          onContextLost={handleContextLost}
-        />
+        {/* Publish the HUD-reserved top inset to the lane subtree, so BOTH the
+            scroll-synced loop band (TransportOverlayHost → LoopRollRegion) and
+            the screen-anchored edge indicator (TransportEdgeHost) bucket a
+            boundary sitting under the HUD as "top" and clear the cluster. */}
+        <LaneInsetsProvider insets={{ top: topInset }}>
+          {/* The GPU note lane: grid, falling notes, and labels — under every
+              DOM layer (transparent canvas; the lane bg shows through). */}
+          <PianoRollCanvas
+            key={canvasNonce}
+            width={lane.width}
+            height={lane.height}
+            visuals={visuals}
+            bars={barMarkers}
+            pitchLines={pitchLines}
+            scoreNotes={score.notes}
+            showLabels={showNoteNames}
+            tempoScale={tempoScale}
+            spread={spread}
+            onSceneReady={setPixi}
+            onContextLost={handleContextLost}
+          />
 
-        {/* Headless FX wiring — every PianoRollFx contribution, config-gated
-            and error-isolated. Renders no DOM; effects paint into the scene's
-            fx layers via the context. */}
-        {fx ? <FxHost fx={fx} /> : null}
+          {/* Headless FX wiring — every PianoRollFx contribution, config-gated
+              and error-isolated. Renders no DOM; effects paint into the scene's
+              fx layers via the context. */}
+          {fx ? <FxHost fx={fx} /> : null}
 
-        <ScrollLayer ref={scrollLayerRef}>{content}</ScrollLayer>
+          <ScrollLayer ref={scrollLayerRef}>{content}</ScrollLayer>
 
-        {/* Playback now-line: where falling notes land on the keyboard. Screen-
-            anchored, so it sits OUTSIDE the scroll layer (and above it). */}
-        <div
-          // eslint-disable-next-line layout/no-adhoc-layout -- now-line position is JS-computed from the measured lane size (top/width come from the ResizeObserver)
-          className="pointer-events-none absolute left-0 z-raised h-0.5 bg-primary"
-          style={{ top: lane.height, width: lane.width }}
-        />
+          {/* Playback now-line: where falling notes land on the keyboard. Screen-
+              anchored, so it sits OUTSIDE the scroll layer (and above it). */}
+          <div
+            // eslint-disable-next-line layout/no-adhoc-layout -- now-line position is JS-computed from the measured lane size (top/width come from the ResizeObserver)
+            className="pointer-events-none absolute left-0 z-raised h-0.5 bg-primary"
+            style={{ top: lane.height, width: lane.width }}
+          />
 
-        {/* HUD: screen-anchored heads-up chips (current key, …) pinned to the
-            lane's top-right corner — above the scroll layer and now-line, clear
-            of the chord overlay that hugs the left edge. Contributors read the
-            shared cursor via useSonata(); collection-consumer clean (renders the
-            generic Sonata.Hud slot, never naming a contributor). */}
-        <Pin to="top-right" offset="sm" layer="float" decorative>
-          <Stack gap="xs" align="end">
-            <Sonata.Hud.Render>
-              {(h) => <h.component key={h.id} />}
-            </Sonata.Hud.Render>
-            {/* Host-owned FX + display-options popovers — sit with the HUD
-                chips; re-enable their own pointer events (the cluster is
-                pointer-events-none). */}
-            <ViewOptionsToggle />
-            <FxToggle />
-          </Stack>
-        </Pin>
+          {/* Screen-anchored transport-edge indicators (the off-screen A–B loop
+              boundary arrow chips). Sits OUTSIDE the scroll layer so it stays
+              pinned to the lane edges; takes the projection as a prop. */}
+          <TransportEdgeHost projection={projection} />
 
-        {/* Empty-score affordance. */}
-        {score.notes.length === 0 ? (
-          // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed positioning context layered over the lane (sibling of the canvas/scroll layers); centers the empty-state message
-          <div className="pointer-events-none absolute inset-0">
-            <Center className="h-full w-full">
-              <Text as="span" variant="body" className="text-muted-foreground">
-                No notes to display. Load a source to see the piano roll.
-              </Text>
-            </Center>
-          </div>
-        ) : null}
+          {/* HUD: screen-anchored heads-up chips (current key, …) pinned to the
+              lane's top-right corner — above the scroll layer and now-line, clear
+              of the chord overlay that hugs the left edge. Contributors read the
+              shared cursor via useSonata(); collection-consumer clean (renders the
+              generic Sonata.Hud slot, never naming a contributor). The ref feeds
+              `topInset` so an edge chip tucks just below this cluster. */}
+          <Pin to="top-right" offset="sm" layer="float" decorative ref={hudSizeRef}>
+            <Stack gap="xs" align="end">
+              <Sonata.Hud.Render>
+                {(h) => <h.component key={h.id} />}
+              </Sonata.Hud.Render>
+              {/* Host-owned FX + display-options popovers — sit with the HUD
+                  chips; re-enable their own pointer events (the cluster is
+                  pointer-events-none). */}
+              <ViewOptionsToggle />
+              <FxToggle />
+            </Stack>
+          </Pin>
+
+          {/* Empty-score affordance. */}
+          {score.notes.length === 0 ? (
+            // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed positioning context layered over the lane (sibling of the canvas/scroll layers); centers the empty-state message
+            <div className="pointer-events-none absolute inset-0">
+              <Center className="h-full w-full">
+                <Text as="span" variant="body" className="text-muted-foreground">
+                  No notes to display. Load a source to see the piano roll.
+                </Text>
+              </Center>
+            </div>
+          ) : null}
+        </LaneInsetsProvider>
       </Clip>
 
       {/* Pitch-axis gutter: the piano keyboard (and any future pitch-axis
