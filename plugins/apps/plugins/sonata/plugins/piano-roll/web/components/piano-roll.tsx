@@ -52,6 +52,7 @@ import { createFxContext } from "../internal/fx/fx-context";
 import { FxHost } from "../internal/fx/fx-host";
 import { ProjectionProvider } from "./projection-context";
 import { OverlayHost } from "./overlay-host";
+import { TransportOverlayHost } from "./transport-overlay-host";
 import { FxToggle } from "./fx-toggle";
 import { ViewOptionsToggle } from "./view-options-toggle";
 import { PitchAxisHost } from "./pitch-axis-host";
@@ -465,6 +466,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     () => (
       <ProjectionProvider projection={projection}>
         <OverlayHost score={score} />
+        <TransportOverlayHost />
       </ProjectionProvider>
     ),
     [projection, score],

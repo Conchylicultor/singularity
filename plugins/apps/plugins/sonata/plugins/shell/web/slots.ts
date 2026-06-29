@@ -43,6 +43,7 @@ export interface InstrumentVoices {
  *  - Display  (display)    — single-active selector; a display *is* one component.
  *  - Analyzer (rich data)  — pure `(Score) => Annotation[]`; all run, merged in.
  *  - Overlay  (rich visual)— capability-filtered geometry, rendered via `renderIsolated`.
+ *  - TransportOverlay (state visual) — capability-filtered, scroll-synced overlays driven by transport state (loop region).
  *  - Instrument            — audio voice manager bound to a Web Audio context.
  *  - Toolbar               — action widgets on the right of the top toolbar (play/pause, speed, …).
  *  - Transport             — full-width horizontal strip below the toolbar (progress bar, …).
@@ -106,6 +107,20 @@ export const Sonata = {
       annotations: Annotation[];
     }>;
   }>("sonata.overlay", { docLabel: (p) => p.id }),
+
+  // STATE OVERLAY — projection-anchored, scroll-synced overlays driven by
+  // transport / shared state rather than score annotations (the A–B practice
+  // loop region; future selection bands, bookmarks, count-in markers). Like
+  // `Overlay` it anchors to the projection's geometry and scrolls WITH the
+  // content; unlike `Overlay` it is NOT annotation-gated — the host renders it
+  // whenever `requires ⊆ display.capabilities`, and the component reads its own
+  // state via `useSonata()`. Capability-filtered so it only mounts on displays
+  // that publish the geometry it needs (e.g. `"time-axis"`).
+  TransportOverlay: defineSlot<{
+    id: string;
+    requires: Capability[];
+    component: ComponentType<{ projection: Projection }>;
+  }>("sonata.transport-overlay", { docLabel: (p) => p.id }),
 
   // PITCH AXIS — decorations rendered in a display's pitch-axis gutter (the
   // piano keyboard, future fretboards / pitch rulers). Capability-filtered like
