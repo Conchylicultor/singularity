@@ -116,6 +116,7 @@ interface BlockEditorContextValue {
    * caret at that linear offset (used to restore the caret on a text undo/redo).
    */
   focusBlock: (id: string, caretOffset?: number) => void;
+  focusBlockBoundary: (id: string, edge: "start" | "end") => boolean;
   move: (id: string, dest: { parentId: string | null; rank: Rank }) => void;
   /** Bulk operations on a set of selected block ids (see server endpoints). */
   bulkDelete: (ids: string[]) => void;
@@ -244,6 +245,17 @@ export function BlockEditorProvider({
       else handle.focus();
     } else pendingFocusRef.current = id;
   }, []);
+
+  const focusBlockBoundary = useCallback(
+    (id: string, edge: "start" | "end"): boolean => {
+      const handle = focusHandlesRef.current.get(id);
+      if (!handle) return false;
+      if (handle.focusBoundary) handle.focusBoundary(edge);
+      else handle.focus();
+      return true;
+    },
+    [],
+  );
 
   // --- Unified undo/redo (single document-level stack) ----------------------
   // ONE stack covers both text and structure (there is no per-block Lexical
@@ -633,6 +645,7 @@ export function BlockEditorProvider({
       setRows,
       rowsRef,
       focusBlock,
+      focusBlockBoundary,
       move,
       bulkDelete,
       bulkMove,
@@ -658,6 +671,7 @@ export function BlockEditorProvider({
       setFlatOrder,
       setRows,
       focusBlock,
+      focusBlockBoundary,
       move,
       bulkDelete,
       bulkMove,

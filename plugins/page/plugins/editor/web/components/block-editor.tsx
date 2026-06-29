@@ -203,6 +203,7 @@ function SelectionLayer({
     paste,
     insert,
     focusBlock,
+    focusBlockBoundary,
     focusedBlockId,
   } = useBlockEditor();
   const { selectedIds, isActive, setRange, clearAll, selectAll } =
@@ -478,17 +479,20 @@ function SelectionLayer({
   const [marquee, setMarquee] = useState<{ top: number; height: number } | null>(
     null,
   );
-  const marqueeStartRef = useRef<{ id: string | null; y: number } | null>(null);
+  const marqueeStartRef = useRef<{ id: string | null; x: number; y: number } | null>(null);
   const marqueeMovedRef = useRef(false);
 
   // Notion-style click-to-edit on the empty editor background: a plain click
   // (no drag) routes the caret to a block instead of doing nothing. Above the
   // first block focuses it; the trailing zone below the last block focuses it
   // when it's an empty default-text block, otherwise appends a fresh paragraph;
-  // an empty page gets its first block. A click in a gap *between* blocks keeps
-  // the original behavior of clearing any selection.
+  // an empty page gets its first block. A click in the side margin beside a
+  // block (or a gap between blocks) lands the caret in the nearest block at the
+  // line edge closest to the click X — end for the right margin, start for the
+  // left; a block with no caret handle (image, etc.) is selected instead. Only a
+  // page with zero blocks falls through to clearing the selection.
   const onEmptyClick = useCallback(
-    (y: number) => {
+    (x: number, y: number) => {
       const fallback = defaultTextHandle(handles);
       const firstId = flat[0]?.block.id;
       const lastBlock = flat[flat.length - 1]?.block;
@@ -512,9 +516,17 @@ function SelectionLayer({
         }
         return;
       }
+      const row = rowAtPointer(y);
+      if (row) {
+        const rect = contentRef.current?.getBoundingClientRect();
+        const edge: "start" | "end" =
+          rect && x >= rect.left + rect.width / 2 ? "end" : "start";
+        if (!focusBlockBoundary(row.id, edge)) applyRange(row.id, row.id);
+        return;
+      }
       clearSelection();
     },
-    [flat, handles, focusBlock, insert, clearSelection],
+    [flat, handles, focusBlock, insert, clearSelection, applyRange, focusBlockBoundary],
   );
 
   const onPointerDown = useCallback(
@@ -531,7 +543,7 @@ function SelectionLayer({
         return;
       }
       const start = rowAtPointer(e.clientY);
-      marqueeStartRef.current = { id: start?.id ?? null, y: e.clientY };
+      marqueeStartRef.current = { id: start?.id ?? null, x: e.clientX, y: e.clientY };
       marqueeMovedRef.current = false;
       focusContainer();
 
@@ -555,8 +567,8 @@ function SelectionLayer({
         // A plain click (no drag) on the empty background routes the caret to a
         // block; a drag was a marquee selection and is left alone.
         if (!marqueeMovedRef.current) {
-          const startY = marqueeStartRef.current?.y;
-          if (startY != null) onEmptyClick(startY);
+          const s = marqueeStartRef.current;
+          if (s) onEmptyClick(s.x, s.y);
         }
         marqueeStartRef.current = null;
         setMarquee(null);
