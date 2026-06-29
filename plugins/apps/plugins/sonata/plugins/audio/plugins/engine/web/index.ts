@@ -4,6 +4,14 @@ import { AudioEngine } from "./components/audio-engine";
 import { AudioProvider } from "./components/audio-provider";
 import { VolumeControl } from "./components/volume-control";
 
+// Shared audio toolkit for sibling per-surface audio effects (the metronome):
+// the live graph handle and the loop-/tempo-aware look-ahead scheduler. Reusing
+// `startScheduling` gives clicks the same seamless A–B loop wrap and tempo-retime
+// behaviour as note playback for free.
+export { useAudioGraph, type AudioGraph } from "./audio-store";
+export { startScheduling } from "./scheduler";
+export type { LoopWindowBeats, ScheduleHandle } from "./scheduler";
+
 export default {
   description:
     "Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the top toolbar.",

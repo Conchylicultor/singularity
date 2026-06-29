@@ -19,6 +19,18 @@ import { defineScopedStore } from "@plugins/primitives/plugins/scoped-store/web"
 
 export type AudioStatus = "empty" | "loading" | "ready";
 
+/**
+ * The shared Web Audio graph handle the engine owns and publishes here. The
+ * engine is the SOLE owner of the `AudioContext` (its lifecycle must not be tied
+ * to mountable UI; see this plugin's `CLAUDE.md`); it merely publishes the live
+ * ctx so sibling per-surface effects in other slot branches — e.g. the metronome
+ * — can schedule click events on the *same* clock playback is anchored against.
+ * `null` until the engine's mount effect has created the context.
+ */
+export interface AudioGraph {
+  ctx: AudioContext;
+}
+
 export interface AudioState {
   /** Master volume 0..1, driven by the panel slider. */
   volume: number;
@@ -29,6 +41,9 @@ export interface AudioState {
   /** Level to restore on un-mute: the most recent non-zero volume. Kept in
    *  state (per-surface) so a click-to-mute survives the control remounting. */
   lastNonZeroVolume: number;
+  /** The engine's live audio graph (ctx), or null before it mounts. Published by
+   *  the engine; read by sibling audio effects (e.g. the metronome). */
+  graph: AudioGraph | null;
 }
 
 export const DEFAULT_VOLUME = 0.8;
@@ -38,6 +53,7 @@ const audioStore = defineScopedStore<AudioState>({
   status: "empty",
   loadError: null,
   lastNonZeroVolume: DEFAULT_VOLUME,
+  graph: null,
 });
 
 export const AudioStoreProvider = audioStore.Provider;
@@ -45,6 +61,15 @@ export const AudioStoreProvider = audioStore.Provider;
 /** Reactive read of the full audio state. */
 export function useAudioState(): AudioState {
   return audioStore.useStore();
+}
+
+/**
+ * Reactive read of the engine's shared audio graph (the live `AudioContext`), or
+ * null until the engine has mounted it. Sibling audio effects (the metronome)
+ * use it to schedule events on the same clock playback is anchored against.
+ */
+export function useAudioGraph(): AudioGraph | null {
+  return audioStore.useStore().graph;
 }
 
 /**
@@ -77,6 +102,9 @@ export function useAudioControls() {
       /** Engine → panel: publish (or clear) the latest load error. */
       setLoadError: (loadError: string | null) =>
         store.setState((s) => ({ ...s, loadError })),
+      /** Engine → siblings: publish (or clear, on teardown) the live audio graph. */
+      setGraph: (graph: AudioGraph | null) =>
+        store.setState((s) => ({ ...s, graph })),
     }),
     [store],
   );

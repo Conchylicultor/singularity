@@ -14,6 +14,7 @@ export {
   type SonataContextValue,
   type TransportClock,
   type LoopRange,
+  type CountInState,
 } from "./context";
 export {
   CursorStoreProvider,

@@ -1,0 +1,44 @@
+/*
+ * Count-in countdown overlay. A large display numeral inside a soft translucent
+ * disc, centered over the player while the lead-in plays. The numeral size is a
+ * deliberate display figure (well above the typography scale's `title` rung), so
+ * it lives here as a plain class rather than a `<Text variant>` token.
+ *
+ * Each new count re-mounts the `.count-in-number` (keyed on the value), replaying
+ * the one-shot `count-in-pop` per-beat pulse.
+ */
+.count-in-badge {
+  display: grid;
+  place-items: center;
+  width: 9rem;
+  height: 9rem;
+  border-radius: 9999px;
+  background: color-mix(in oklch, var(--background) 70%, transparent);
+  border: 1px solid color-mix(in oklch, var(--border) 80%, transparent);
+  box-shadow: var(--shadow-lg, 0 10px 30px rgb(0 0 0 / 0.25));
+  backdrop-filter: blur(6px);
+}
+
+.count-in-number {
+  font-size: 5rem;
+  line-height: 1;
+  font-weight: 700;
+  color: var(--primary);
+  font-variant-numeric: tabular-nums;
+  animation: count-in-pop 280ms ease-out;
+}
+
+@keyframes count-in-pop {
+  0% {
+    transform: scale(0.6);
+    opacity: 0.2;
+  }
+  45% {
+    transform: scale(1.12);
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}

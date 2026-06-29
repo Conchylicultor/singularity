@@ -126,7 +126,7 @@ export function AudioEngine() {
   const { volume } = useAudioState();
   // Imperative writers for the engine's health slice. Memoized-stable on the
   // store handle, so listing it in effect deps below doesn't re-run effects.
-  const { setStatus, setLoadError } = useAudioControls();
+  const { setStatus, setLoadError, setGraph } = useAudioControls();
 
   // --- Web Audio graph: AudioContext + master gain, owned in refs. ----------
   const ctxRef = useRef<AudioContext | null>(null);
@@ -149,6 +149,10 @@ export function AudioEngine() {
     ctxRef.current = ctx;
     masterRef.current = master;
 
+    // Publish the live graph so sibling per-surface audio effects (the metronome)
+    // can schedule click events on the SAME clock playback is anchored against.
+    setGraph({ ctx });
+
     // Register the AudioContext clock as the transport's authoritative time
     // source, so the visual cursor reads the *same* clock the audio is
     // scheduled against (no drift, correct across tab backgrounding). Stable for
@@ -166,6 +170,9 @@ export function AudioEngine() {
     const managers = managersRef.current;
     return () => {
       unregisterClock();
+      // Retract the published graph before tearing the context down so a sibling
+      // never schedules onto a closing context.
+      setGraph(null);
       document.removeEventListener("pointerdown", unlock);
       // Dispose every voice manager before tearing down the context.
       for (const manager of managers.values()) manager.dispose();
@@ -177,9 +184,10 @@ export function AudioEngine() {
       ctxRef.current = null;
       masterRef.current = null;
     };
-    // `registerClock` is stable (memoized in the provider), so this effect still
-    // runs once: create the AudioContext + register its clock on mount.
-  }, [registerClock]);
+    // `registerClock` is stable (memoized in the provider) and `setGraph` is
+    // memoized-stable on the store handle, so this effect still runs once:
+    // create the AudioContext + register its clock + publish the graph on mount.
+  }, [registerClock, setGraph]);
 
   // Master gain follows the volume slider live.
   useEffect(() => {

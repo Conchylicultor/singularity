@@ -1,13 +1,15 @@
-// @hash c47c47a14c62
+// @hash ab7ec0225ea4
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
-  // Trailing zone (right, ml-auto), left-to-right: volume, spread (zoom), loop, transport.
+  // Trailing zone (right, ml-auto), left-to-right: volume, spread (zoom), loop,
+  // metronome, transport (loop + metronome grouped as the practice controls).
   "items": [
     "apps.sonata.audio.engine:volume",
     "apps.sonata.piano-roll:spread",
     "apps.sonata.progress.loop:loop-toggle",
+    "apps.sonata.audio.metronome:metronome",
     "apps.sonata.transport-bar:playback"
   ]
 }

@@ -134,7 +134,10 @@ function SeekButton({
  * (Space, ↑/↓).
  */
 export function PlaybackControls() {
-  const { isPlaying, play, stop, tempoScale, score } = useSonata();
+  const { isPlaying, countIn, togglePlay, tempoScale, score } = useSonata();
+  // A pending count-in reads as "playing" on the button: it shows Pause and a
+  // click cancels the lead-in (togglePlay stops it).
+  const active = isPlaying || countIn !== null;
 
   // Nothing to play until a source has loaded a Score with span; 0% is a frozen
   // transport, so play is unavailable there too.
@@ -163,11 +166,11 @@ export function PlaybackControls() {
         disabled={!hasScore}
       />
       <IconButton
-        icon={isPlaying ? MdPause : MdPlayArrow}
-        label={isPlaying ? "Pause" : "Play"}
+        icon={active ? MdPause : MdPlayArrow}
+        label={active ? "Pause" : "Play"}
         shortcut="space"
-        disabled={!isPlaying && !canPlay}
-        onClick={isPlaying ? stop : play}
+        disabled={!active && !canPlay}
+        onClick={togglePlay}
       />
       <SeekButton
         direction={1}

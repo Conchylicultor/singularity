@@ -111,6 +111,25 @@ export interface LoopRange {
 }
 
 /**
+ * A pending count-in (metronome lead-in) before playback begins. While this is
+ * set, `isPlaying` stays false — so the transport rAF doesn't run and the cursor
+ * **parks at `startBeat` naturally** (no anchor/tick changes needed) — and the
+ * metronome plugin clicks out `beats` beats over `durationSec` against the audio
+ * clock, then calls `finishCountIn()` to begin real playback from `startBeat`.
+ * `null` when no count-in is in progress.
+ */
+export interface CountInState {
+  /** Beat playback will start from once the lead-in completes. */
+  startBeat: number;
+  /** Lead-in length in quarter-note beats (what the provider returned). */
+  beats: number;
+  /** Transport-clock time the lead-in started (audio-clock seconds). */
+  startedAtClockSec: number;
+  /** Lead-in duration in seconds at the start-beat tempo. */
+  durationSec: number;
+}
+
+/**
  * Smallest gap (in beats) between a loop's `start` and `end`, enforced in
  * `setLoop` so the two handles can never cross or collapse to a degenerate
  * zero-length range (which would make the rAF wrap thrash). Sibling of
@@ -179,6 +198,13 @@ export interface SonataContextValue {
    * play-through.
    */
   loop: LoopRange | null;
+  /**
+   * A pending count-in (metronome lead-in), or null. While set, playback has not
+   * yet started: the cursor parks at `startBeat` and the metronome clicks out the
+   * lead-in. The metronome reads this to schedule its clicks + drive the on-screen
+   * countdown; consumers should treat a non-null `countIn` as "about to play".
+   */
+  countIn: CountInState | null;
   /** Ids of sources that currently have raw input (so the UI can badge them). */
   loadedSourceIds: string[];
   /** The active source's persisted raw input, so its Loader can be controlled. */
@@ -280,6 +306,26 @@ export interface SonataContextValue {
   play: () => void;
   stop: () => void;
   /**
+   * Start playback, optionally preceded by a metronome count-in. If a count-in
+   * provider is registered and returns a positive lead-in, this parks the cursor
+   * and sets `countIn` (the metronome clicks it out and calls `finishCountIn`);
+   * otherwise it plays immediately. The play button + Space route through this so
+   * the lead-in only happens on a deliberate play (not scrub-release / auto-play).
+   */
+  playWithCountIn: () => void;
+  /**
+   * Begin real playback at the parked start beat once a count-in completes —
+   * called by the metronome off the audio clock. No-op if no count-in is pending.
+   */
+  finishCountIn: () => void;
+  /**
+   * Register the count-in length provider (the metronome). The provider returns
+   * the lead-in length in quarter-note beats for a play-from-the-current-cursor
+   * (0 = no count-in). Returns an unregister. Mirrors `registerClock`: a single
+   * provider, last registration wins.
+   */
+  registerCountIn: (provider: () => number) => () => void;
+  /**
    * Arm a one-shot "auto-play once the next loaded song's score is composed".
    * The library's background-play affordance calls this right after `setRawMap`
    * + `setCurrentSong`, so the song starts playing in place (no navigation) as
@@ -370,6 +416,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // changes (mirroring scoreRef/tempoIndexRef).
   const [loop, setLoopState] = useState<LoopRange | null>(null);
   const loopRef = useLatestRef(loop);
+  // A pending count-in lead-in (metronome), or null. State (not a ref) so the
+  // metronome engine + countdown HUD react to it. While set, `isPlaying` stays
+  // false, so the rAF below never runs and the cursor parks at the start beat.
+  const [countIn, setCountIn] = useState<CountInState | null>(null);
+  const countInRef = useLatestRef(countIn);
+  // The registered count-in length provider (the metronome), read at play time.
+  // Mirrors `clockRef`: a single provider, last registration wins.
+  const countInProviderRef = useRef<(() => number) | null>(null);
 
   // Source-keyed raw write (merges one key). The generic primitive both `setRaw`
   // and per-source editor sections build on; never touches `activeSourceId`.
@@ -511,6 +565,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   );
 
   const stop = useCallback(() => {
+    // Abort any pending count-in too, so Stop during the lead-in cancels it.
+    setCountIn(null);
     setIsPlaying(false);
   }, []);
 
@@ -520,6 +576,49 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     if (tempoScaleRef.current === 0) return;
     setIsPlaying(true);
   }, []);
+
+  // Register the count-in length provider (the metronome). Mirrors registerClock.
+  const registerCountIn = useCallback((provider: () => number) => {
+    countInProviderRef.current = provider;
+    return () => {
+      if (countInProviderRef.current === provider) {
+        countInProviderRef.current = null;
+      }
+    };
+  }, []);
+
+  // Begin real playback at the parked start beat once the lead-in completes.
+  // Called by the metronome off the audio clock (and a no-op if nothing pending).
+  const finishCountIn = useCallback(() => {
+    setCountIn(null);
+    play();
+  }, [play]);
+
+  // Start playback, optionally preceded by a metronome count-in. The play button
+  // + Space route through this; the internal resume paths (endScrub, auto-play-
+  // on-load) call play() directly so they never trigger a lead-in. Guards mirror
+  // play() so we never arm a count-in that then can't start (empty / frozen).
+  const playWithCountIn = useCallback(() => {
+    if (isPlayingRef.current) return;
+    if (scoreEndBeat(scoreRef.current) <= 0) return;
+    if (tempoScaleRef.current === 0) return;
+    const lead = countInProviderRef.current?.() ?? 0;
+    if (lead <= 0) {
+      play();
+      return;
+    }
+    const fromBeat = cursor.getBeat();
+    const idx = tempoIndexRef.current;
+    // Seconds per quarter-note at the start beat = the lead-in tempo.
+    const secPerQuarter =
+      idx.beatToSeconds(fromBeat + 1) - idx.beatToSeconds(fromBeat);
+    setCountIn({
+      startBeat: fromBeat,
+      beats: lead,
+      startedAtClockSec: clockRef.current.now(),
+      durationSec: lead * secPerQuarter,
+    });
+  }, [play, cursor]);
 
   const requestPlayOnLoad = useCallback(() => {
     playOnLoadRef.current = true;
@@ -539,6 +638,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     // inherits a stale practice loop.
     // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional transport reset on score change: clearing the loop is paired with the imperative cursor rewind above, not derivable in render
     setLoopState(null);
+    // A freshly loaded song never inherits a stale count-in (its lead-in belonged
+    // to the previous content). Paired with the imperative cursor rewind above.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional transport reset on score change (see above)
+    setCountIn(null);
     if (playOnLoadRef.current) {
       playOnLoadRef.current = false;
       // Re-base the transport to beat 0 BEFORE (re)starting. When the previous
@@ -582,6 +685,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     (beat: number) => {
       const end = scoreEndBeat(scoreRef.current);
       const next = Math.max(0, Math.min(end, beat));
+      // A seek aborts a pending count-in (you've repositioned; the lead-in is
+      // stale). No-op re-render when already null — React bails on the same value.
+      setCountIn(null);
       cursor.setBeat(next, { seek: true });
       reanchor(next);
       // Signal anchored consumers (the audio scheduler) to restart from `next`.
@@ -876,8 +982,11 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // each gated on a song being open (`currentSongId`) so they are inert on the
   // library and never cross between two open Sonata windows.
   const togglePlay = useCallback(() => {
-    isPlayingRef.current ? stop() : play();
-  }, [play, stop]);
+    // Playing OR counting in → stop (so a toggle during the lead-in cancels it);
+    // otherwise start, routing through the count-in path.
+    if (isPlayingRef.current || countInRef.current) stop();
+    else playWithCountIn();
+  }, [playWithCountIn, stop]);
 
   // ↑/↓ keyboard steps: snap the result onto the tidy 0.05 grid so taps land on
   // round percentages (and never accrue float drift), even when the wheel left
@@ -923,6 +1032,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       activeDisplayId,
       seekEpoch,
       loop,
+      countIn,
       loadedSourceIds,
       activeRaw,
       setActiveSource: setActiveSourceId,
@@ -947,6 +1057,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setSpreadFloor,
       play,
       stop,
+      playWithCountIn,
+      finishCountIn,
+      registerCountIn,
       requestPlayOnLoad,
       registerClock,
     }),
@@ -963,6 +1076,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       activeDisplayId,
       seekEpoch,
       loop,
+      countIn,
       loadedSourceIds,
       activeRaw,
       setRaw,
@@ -985,6 +1099,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setSpreadFloor,
       play,
       stop,
+      playWithCountIn,
+      finishCountIn,
+      registerCountIn,
       requestPlayOnLoad,
       registerClock,
     ],

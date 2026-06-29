@@ -1,0 +1,74 @@
+/*
+ * Click-volume slider in the metronome settings popover. Mirrors the engine's
+ * volume-slider treatment: a native `<input type="range">` stripped of its UA
+ * appearance, painted as a thin (3px) themed track with a small thumb.
+ *
+ * The filled portion is theme `--primary`, the rest `--border`. WebKit has no
+ * "progress" pseudo-element, so the fill is a hard-stop gradient driven by the
+ * `--fill` custom property (0–100, set inline from the live volume). Firefox has
+ * a real `::-moz-range-progress`, so it needs no gradient.
+ */
+.metronome-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 1rem; /* hit area; centers the thin track vertically */
+  background: transparent;
+  cursor: pointer;
+}
+
+.metronome-slider:focus-visible {
+  outline: none;
+}
+.metronome-slider:focus-visible::-webkit-slider-thumb {
+  box-shadow: 0 0 0 3px var(--ring);
+}
+.metronome-slider:focus-visible::-moz-range-thumb {
+  box-shadow: 0 0 0 3px var(--ring);
+}
+
+/* WebKit / Blink */
+.metronome-slider::-webkit-slider-runnable-track {
+  height: 3px;
+  border-radius: 9999px;
+  background: linear-gradient(
+    to right,
+    var(--primary) calc(var(--fill, 0) * 1%),
+    var(--border) calc(var(--fill, 0) * 1%)
+  );
+}
+.metronome-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 11px;
+  width: 11px;
+  margin-top: -4px; /* (3px track − 11px thumb) / 2 */
+  border-radius: 9999px;
+  background: var(--primary);
+  transition: transform 0.1s ease;
+}
+.metronome-slider:hover::-webkit-slider-thumb {
+  transform: scale(1.15);
+}
+
+/* Firefox */
+.metronome-slider::-moz-range-track {
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--border);
+}
+.metronome-slider::-moz-range-progress {
+  height: 3px;
+  border-radius: 9999px;
+  background: var(--primary);
+}
+.metronome-slider::-moz-range-thumb {
+  height: 11px;
+  width: 11px;
+  border: none;
+  border-radius: 9999px;
+  background: var(--primary);
+  transition: transform 0.1s ease;
+}
+.metronome-slider:hover::-moz-range-thumb {
+  transform: scale(1.15);
+}
