@@ -7,12 +7,12 @@
         "type": "tree",
         "filter": {
           "kind": "group",
-          "id": "default",
+          "id": "hide-completed",
           "conjunction": "and",
           "children": [
             {
               "kind": "rule",
-              "id": "hide-completed",
+              "id": "hide-completed-status",
               "fieldId": "status",
               "operatorId": "is-none-of",
               "value": ["done", "dropped"]
@@ -22,5 +22,25 @@
       }
     },
     { "name": "Recent", "view": { "type": "list", "sort": { "fieldId": "updatedAt", "direction": "desc" } } }
+  ],
+  "filterPresets": [
+    {
+      "id": "hide-completed",
+      "label": "Hide completed",
+      "group": {
+        "kind": "group",
+        "id": "hide-completed",
+        "conjunction": "and",
+        "children": [
+          {
+            "kind": "rule",
+            "id": "hide-completed-status",
+            "fieldId": "status",
+            "operatorId": "is-none-of",
+            "value": ["done", "dropped"]
+          }
+        ]
+      }
+    }
   ]
 }
