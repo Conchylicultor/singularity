@@ -98,6 +98,26 @@ export interface TransportClock {
   now(): number;
 }
 
+/**
+ * An A–B practice loop range, in beats. `enabled` gates whether the transport
+ * actually wraps at `end`; a defined-but-disabled loop stays visible (faded) so
+ * the user can keep the markers while playing straight through.
+ */
+export interface LoopRange {
+  start: number;
+  end: number;
+  enabled: boolean;
+}
+
+/**
+ * Smallest gap (in beats) between a loop's `start` and `end`, enforced in
+ * `setLoop` so the two handles can never cross or collapse to a degenerate
+ * zero-length range (which would make the rAF wrap thrash). Sibling of
+ * `TEMPO_MATH_FLOOR`: a tiny structural floor that keeps the transport math
+ * well-behaved.
+ */
+const LOOP_MIN_GAP = 1;
+
 export interface SonataContextValue {
   /**
    * The derived canonical model (empty before a source loads), with the current
@@ -150,6 +170,14 @@ export interface SonataContextValue {
    * cursor doesn't need it (it reads the anchor ref every frame).
    */
   seekEpoch: number;
+  /**
+   * The active A–B practice loop range (beats), or `null` when no region is
+   * set. When `loop.enabled`, the transport rAF wraps from `loop.end` back to
+   * `loop.start` instead of running to the song end. A defined-but-disabled
+   * loop stays in state (the marker shows it faded) so the bounds survive a
+   * play-through.
+   */
+  loop: LoopRange | null;
   /** Ids of sources that currently have raw input (so the UI can badge them). */
   loadedSourceIds: string[];
   /** The active source's persisted raw input, so its Loader can be controlled. */
@@ -230,6 +258,12 @@ export interface SonataContextValue {
   /** End an in-progress {@link startScrub}: commit the landing beat and, if
    *  playback was running when the hold began, resume it from there. */
   endScrub: () => void;
+  /**
+   * Set (or clear, with `null`) the A–B practice loop. Clamps `start`/`end`
+   * into the score span with a minimum gap so the handles never cross, and
+   * clears the loop on an empty score. Stable (reads the live score from a ref).
+   */
+  setLoop: (next: LoopRange | null) => void;
   /** Set the playback tempo multiplier (clamped to [0.25, 4]). */
   setTempoScale: (scale: number) => void;
   /** Set the piano-roll vertical zoom (clamped to [{@link spreadMin}, {@link
@@ -330,6 +364,11 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const spreadMinRef = useLatestRef(spreadMin);
   // Bumped on every seek so the audio scheduler can restart from the new cursor.
   const [seekEpoch, setSeekEpoch] = useState(0);
+  // A–B practice loop range (beats), or null when unset. The rAF tick reads it
+  // through a ref so the running loop never re-runs its effect when the range
+  // changes (mirroring scoreRef/tempoIndexRef).
+  const [loop, setLoopState] = useState<LoopRange | null>(null);
+  const loopRef = useLatestRef(loop);
 
   // Source-keyed raw write (merges one key). The generic primitive both `setRaw`
   // and per-source editor sections build on; never touches `activeSourceId`.
@@ -485,6 +524,11 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // own guards keep an empty/0% score from starting.
   useEffect(() => {
     cursor.setBeat(0, { seek: true });
+    // Drop any A–B loop: it belongs to the previous content's beat span. Cleared
+    // unconditionally (even when auto-playing) so a freshly loaded song never
+    // inherits a stale practice loop.
+    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional transport reset on score change: clearing the loop is paired with the imperative cursor rewind above, not derivable in render
+    setLoopState(null);
     if (playOnLoadRef.current) {
       playOnLoadRef.current = false;
       play();
@@ -642,6 +686,25 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     };
   }, []);
 
+  // Set / clear the A–B loop. Reads the live score from `scoreRef` so it stays
+  // stable. `null` clears; an empty score (`scoreEndBeat <= 0`) can't host a
+  // loop, so it clears too. Otherwise clamp both edges into [0, end] and keep a
+  // `LOOP_MIN_GAP` between them so the handles can never cross or collapse.
+  const setLoop = useCallback((next: LoopRange | null) => {
+    if (!next) {
+      setLoopState(null);
+      return;
+    }
+    const end = scoreEndBeat(scoreRef.current);
+    if (end <= 0) {
+      setLoopState(null);
+      return;
+    }
+    const start = Math.max(0, Math.min(next.start, end - LOOP_MIN_GAP));
+    const stop = Math.max(start + LOOP_MIN_GAP, Math.min(next.end, end));
+    setLoopState({ start, end: stop, enabled: next.enabled });
+  }, []);
+
   // Continuous (clamp only, no grid) so a jog-wheel / pinch drag scrubs smoothly
   // with fine-grained control and a clean release fling — the same shape as
   // `setSpread`. The tidy 0.05 grid lives in `nudgeTempo`, where repeated
@@ -729,6 +792,23 @@ export function SonataProvider({ children }: { children: ReactNode }) {
         endBeat,
         tempoIndexRef.current.secondsToBeat(elapsedSeconds),
       );
+      // A–B loop wrap: when an enabled loop is set and the cursor reaches its
+      // end, jump back to its start and keep playing — the practice cycle. This
+      // runs BEFORE the song-end stop check so a loop ending exactly at the song
+      // end still loops the tail rather than stopping. We inline the seek
+      // primitives (NOT `seekTo`, which isn't an effect dep) and self-schedule
+      // the next frame like the normal branch. `loopRef`/`reanchor`/`cursor`/
+      // `setSeekEpoch` are all stable refs/callbacks, so the effect deps
+      // `[isPlaying, reanchor, cursor]` are unchanged and the running loop is not
+      // cancelled (a wrap costs one re-render every few seconds, like a seek).
+      const loop = loopRef.current;
+      if (loop && loop.enabled && loop.end > loop.start && beat >= loop.end) {
+        cursor.setBeat(loop.start, { seek: true });
+        reanchor(loop.start);
+        setSeekEpoch((n) => n + 1); // audio restarts from loop.start
+        rafRef.current = requestAnimationFrame(tick);
+        return;
+      }
       if (beat >= endBeat) {
         cursor.setBeat(endBeat);
         setIsPlaying(false);
@@ -803,6 +883,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       activeSourceId: effectiveSourceId,
       activeDisplayId,
       seekEpoch,
+      loop,
       loadedSourceIds,
       activeRaw,
       setActiveSource: setActiveSourceId,
@@ -821,6 +902,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       seekBar,
       startScrub,
       endScrub,
+      setLoop,
       setTempoScale,
       setSpread,
       setSpreadFloor,
@@ -841,6 +923,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       effectiveSourceId,
       activeDisplayId,
       seekEpoch,
+      loop,
       loadedSourceIds,
       activeRaw,
       setRaw,
@@ -857,6 +940,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       seekBar,
       startScrub,
       endScrub,
+      setLoop,
       setTempoScale,
       setSpread,
       setSpreadFloor,

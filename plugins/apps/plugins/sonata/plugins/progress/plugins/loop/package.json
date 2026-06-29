@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-progress-loop",
+  "description": "Sonata A–B practice loop: a draggable loop region on the progression bar, a toolbar Loop toggle, and L/[/] shortcuts that cycle playback within [A, B].",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -13,6 +13,7 @@ export {
   TEMPO_MATH_FLOOR,
   type SonataContextValue,
   type TransportClock,
+  type LoopRange,
 } from "./context";
 export {
   CursorStoreProvider,

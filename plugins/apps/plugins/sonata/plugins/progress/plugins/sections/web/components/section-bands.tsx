@@ -1,9 +1,20 @@
+import { MdRepeat } from "react-icons/md";
 import type {
   Score,
   SectionAnnotation,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  cn,
+  ControlSizeProvider,
+  SingleLineProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 
 /**
  * Section-region marker. The Score's `section` annotations carry the song's
@@ -37,6 +48,9 @@ export function SectionBands({
   score: Score;
   beatToFraction: (beat: number) => number;
 }) {
+  // The quick-loop affordance drives the shared A–B loop straight onto a section.
+  const { setLoop, seekTo } = useSonata();
+
   // Narrow to the section annotations — they're the only structure we draw.
   const sections = score.annotations.filter(
     (a): a is SectionAnnotation => a.type === "section",
@@ -46,6 +60,9 @@ export function SectionBands({
   if (sections.length === 0) return null;
 
   return (
+    // The strip stays pointer-transparent so the rail seeks underneath; each
+    // band re-enables pointer events (pointer-events-auto) only for its own box,
+    // so hovering it reveals its loop button and a click still bubbles to seek.
     // eslint-disable-next-line layout/no-adhoc-layout -- decorative coordinate-driven section-band strip hosting JS fraction-positioned bands
     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2">
       {sections.map((a, idx) => {
@@ -55,7 +72,11 @@ export function SectionBands({
           <div
             key={`${a.start}-${a.end}-${a.data.name}-${idx}`}
             // eslint-disable-next-line layout/no-adhoc-layout -- JS fraction-positioned band (left/width from beatToFraction); flex/items-center/overflow-hidden vertically center + clip the label inside the coordinate-driven box
-            className={`absolute inset-y-0 flex items-center overflow-hidden whitespace-nowrap rounded-sm px-xs ${PALETTE[idx % PALETTE.length]}`}
+            className={cn(
+              "pointer-events-auto absolute inset-y-0 flex items-center overflow-hidden whitespace-nowrap rounded-sm px-xs",
+              hoverRevealGroup,
+              PALETTE[idx % PALETTE.length],
+            )}
             style={{ left: `${left * 100}%`, width: `${width * 100}%` }}
             title={a.data.name}
           >
@@ -65,6 +86,28 @@ export function SectionBands({
                 {a.data.name}
               </Text>
             </SingleLineProvider>
+            {/* Hover-revealed quick-loop: set the shared A–B loop to this section
+                and seek to its start. stopPropagation keeps the click from also
+                seeking via the rail underneath. */}
+            <div
+              // eslint-disable-next-line layout/no-adhoc-layout -- loop button pinned to the band's right edge
+              className={cn(
+                "absolute right-0 top-1/2 -translate-y-1/2",
+                hoverRevealTarget,
+              )}
+            >
+              <ControlSizeProvider size="xs">
+                <IconButton
+                  icon={MdRepeat}
+                  label="Loop this section"
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={() => {
+                    setLoop({ start: a.start, end: a.end, enabled: true });
+                    seekTo(a.start);
+                  }}
+                />
+              </ControlSizeProvider>
+            </div>
           </div>
         );
       })}
