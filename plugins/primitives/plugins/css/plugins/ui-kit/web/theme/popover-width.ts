@@ -15,12 +15,20 @@
 // CSS var on the popup, same as dropdown-menu.tsx) so no popover overflows a narrow
 // viewport. Padding is its own axis, mapped to the `p-*` @utility classes owned by
 // app.css, defaulting to `md` (preserves PopoverContent's previously baked-in padding).
+//
+// `fit` is the role for a popover whose content has a VARIABLE but bounded natural
+// width (e.g. a filter-rule row: `[field] [operator] [value-control]`). It grows to
+// its content (`w-max`) with a comfortable `min-w` floor and the same viewport cap.
+// Use it instead of a fixed `w-*` whenever a rigid child (a Button/Select trigger
+// that can't shrink) would otherwise be clipped when it doesn't fit the fixed box —
+// a fixed width can never hold a row of unbounded natural width without overflow.
 
-export type PopoverWidth = "content" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
+export type PopoverWidth = "content" | "fit" | "xs" | "sm" | "md" | "lg" | "xl" | "2xl" | "3xl" | "4xl";
 export type PopoverPadding = "none" | "2xs" | "xs" | "sm" | "md" | "lg";
 
 export const POPOVER_WIDTH: Record<PopoverWidth, string> = {
   content: "",
+  fit: "w-max min-w-64 max-w-(--available-width)",
   xs: "w-48 max-w-(--available-width)",
   sm: "w-56 max-w-(--available-width)",
   md: "w-64 max-w-(--available-width)",

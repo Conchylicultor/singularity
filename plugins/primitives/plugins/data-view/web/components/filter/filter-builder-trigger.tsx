@@ -24,7 +24,7 @@ export function FilterBuilderTrigger<TRow>(props: {
       open={open}
       onOpenChange={setOpen}
       align="end"
-      width="2xl"
+      width="fit"
       trigger={
         <Button
           variant={active ? "secondary" : "ghost"}
