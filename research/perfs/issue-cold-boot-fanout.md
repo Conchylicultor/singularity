@@ -5,6 +5,15 @@
 
 ## Current understanding
 
+> **2026-06-29 refinement (conversation-load 40 s session):** the herd also fires on **WS
+> reconnect**, not just backend boot, and the dominant wait is the **per-backend DB-pool loader
+> gate** (10 of 16 connections), *not* the host heavy-read git gate. The git loaders are fast in
+> isolation **even under host-gate saturation** (`benchmark_boot` load=8: `edited-files` 1.4 s,
+> `commits-graph.delta` 0.7 s) — they are **victims** of the simultaneous ~30-resource fan-out
+> saturating 10 loader slots + the single event loop, which is what produces the 40–75 s tails
+> (`[acquire]` max 75.9 s). Full session →
+> [`2026-06-29-conversation-load-40s-fanout-herd.md`](./2026-06-29-conversation-load-40s-fanout-herd.md).
+
 At backend boot every live-state resource re-subscribes at once. The git-derived loaders cold-miss
 (no warm memo) and contend on the **4-slot** host heavy-read gate, producing 9–18 s `edited-files` /
 `commits-graph` spans during the burst — this reproduces the original ~7 s+ symptom. The boot herd is
@@ -26,9 +35,16 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   worst flush — at the time the notifications mega-flush + the 14-query trigger herd; post-churn-fix it
   is the git-loader cold misses). `benchmark_boot` still excludes server-boot work (catch-up,
   derived-table rebuild) — secondary now that the steady-state driver is known.
-- 🔬 **Simultaneous fan-out as its own amplifier** — every resource re-subscribing at once is what
-  makes the git-loader cold misses contend on the 4-slot gate. Not yet traced to a structural fix
-  (stagger / prioritize first-paint-critical resources / warm the memo / widen the boot-window gate).
+- ✅ **Simultaneous fan-out is the amplifier — and it saturates the per-backend DB-pool loader
+  gate (10 slots) + the event loop, not the host git gate** — 2026-06-29 (conversation-load 40 s):
+  three converging lines (live profile, `slow_ops`, `benchmark_boot`). Loaders fast in isolation
+  even under host-gate saturation (1.4 s / 0.7 s); 8 stats endpoints + the conversation loaders all
+  max in one shared stall window (65–77 s and 35–46 s); `[acquire]` max 75.9 s. Fires on **WS
+  reconnect**, not just boot. Structural fix still open (admission control / stagger / snapshot-serve
+  non-boot-critical keys on reconnect). See the session doc.
+- 🔬 **Reconnect vs boot vs change-feed as the herd trigger** — the recurring (not one-off) sub
+  averages imply WS reconnects re-subscribing all resources. Instrument what enqueues each fan-out
+  burst before the fix.
 
 ## Sessions
 
@@ -46,3 +62,11 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   With the churn gone, the residual boot-herd outliers are now the git loaders: 9–18 s `edited-files`
   / `commits-graph.delta` cold misses at atMs 5–15 s, contending on the 4-slot gate. Steady state is
   well within budget; the boot herd is the next legitimate target if the cold-start goal is pursued.
+
+- **2026-06-29 — [conversation load 40 s = the fan-out herd](./2026-06-29-conversation-load-40s-fanout-herd.md).**
+  Fresh investigation of "loading a conversation takes 40+ s". Confirmed beyond doubt (live profile +
+  `slow_ops` + `benchmark_boot`) that the symptom is this herd: loaders are victims (fast in isolation
+  even under host-gate saturation), the real scarce resource is the **per-backend 10-slot DB loader
+  gate + the single event loop**, and it fires on **WS reconnect** as well as boot. Churn fix
+  re-validated as holding. No code changes; fix altitudes named (origin = bound the fan-out;
+  containment = widen the gate / parallelize `edited-files`' 4 serial git spawns, ~1.4 s even warm).

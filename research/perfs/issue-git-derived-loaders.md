@@ -49,6 +49,13 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   real git work per memo miss (4 serial git spawns). Open: is the watcher recompute *rate* legitimate,
   or amplified by no-change fs events (recompute pays full git cost *before* the unchanged-result
   early-return)? Phase-2 trace pending.
+  - 2026-06-29 (conversation-load 40 s session) **`benchmark_boot` confirms `edited-files` is ~1.4 s
+    even WARM** (cold 1.41 s, warm 1.34 s; `commits-graph.delta` 0.70/0.62 s) — the memo barely helps
+    on this fixture, so the 4 serial git spawns are the real per-conversation steady-state floor. But
+    1.4 s ≠ the 40 s symptom: that floor is **legitimate cost**, and the 40 s is the
+    [fan-out herd](./issue-cold-boot-fanout.md) (loaders are victims of the per-backend DB-pool gate,
+    not the host git gate). Parallelizing the 4 spawns is a *containment* win on the floor, independent
+    of the herd cure. See [`2026-06-29-conversation-load-40s-fanout-herd.md`](./2026-06-29-conversation-load-40s-fanout-herd.md).
 - 🔬 **Per-worktree local heavy-read gate (size 2 = `ceil(host/2)`)** = 21,858 ms (session 2) and now
   the live wait for `commits-graph.delta` (workMs 82 vs ~843 ms `heavy-read-local`). Real, and no
   longer 2nd-order now that the big-blob churn is bounded — the gate behind which the git loaders

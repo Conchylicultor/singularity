@@ -48,13 +48,29 @@ only early-returns the unchanged result **after** paying the full git compute �
 as the fixed churn, on the fs-watch axis. **Next:** Phase-2 trace of recompute rate vs real change
 rate. Full detail + sessions + checklist → **[`issue-git-derived-loaders.md`](./issue-git-derived-loaders.md)**.
 
+### Conversation load 40+ s → main-thread event-loop block (Ongoing — START HERE)
+
+"Loading a conversation takes 40+ s" was traced **past** DB-pool exhaustion, the git gate, and the
+fan-out herd (all measured to be victims/triggers, not the cost) to its real layer: the main backend's
+**single event loop is monopolized by one synchronous CPU operation for 10–46 s**, dozens of times a day
+(`health.jsonl` `eventLoopMaxMs` 45.8 s peak, `gcPreciseCount:0`, `heavyReadDepth:0`, PG idle at 3 active
+backends). The fan-out herd (every push auto-restarts main → fleet re-subscribe) is the **trigger**;
+the wall-clock is the block. **Exact synchronous culprit not yet named** (suspects: the live-state
+flush/push cascade — `flushNotifies` pure-work 10.5 s; the `stats/*` endpoints 65–77 s). Next step: one
+CPU profile during a stall. Full arc + discarded hypotheses (incl. why DB-pool/serve-stale were demoted)
+→ **[`2026-06-29-conversation-load-40s-eventloop-block-HANDOFF.md`](./2026-06-29-conversation-load-40s-eventloop-block-HANDOFF.md)**.
+
 ### Cold-boot fan-out (Ongoing)
 
-The remaining `< 1 s including cold start` violator. At backend boot every resource re-subscribes at
-once and the git loaders cold-miss (9–18 s) contending on the 4-slot gate; this reproduces the
-original ~7 s+ symptom. Overlaps the git-loader issue (the boot herd is when the loader cost is
-worst); `benchmark_boot` still excludes server-boot work. Secondary to the steady-state git-loader
-cost. Full detail + sessions + checklist → **[`issue-cold-boot-fanout.md`](./issue-cold-boot-fanout.md)**.
+The remaining `< 1 s including cold start` violator — and the cause of **"loading a conversation
+takes 40+ s"** (2026-06-29). At backend boot *and on every WS reconnect* all live-state resources
+re-subscribe at once; the scarce resource is the **per-backend 10-slot DB loader gate + the single
+event loop** (NOT the host git gate — loaders are fast in isolation even under host-gate saturation:
+`edited-files` 1.4 s, `commits-graph.delta` 0.7 s). The ~30-resource simultaneous fan-out saturates
+those 10 slots, queueing every loader's query into the 40–75 s tails (`[acquire]` max 75.9 s);
+the conversation's own loaders are downstream **victims**. Confirmed beyond doubt (live profile +
+`slow_ops` + `benchmark_boot`); the no-op churn fix re-validated as holding. Full detail + sessions
++ checklist → **[`issue-cold-boot-fanout.md`](./issue-cold-boot-fanout.md)**.
 
 ### Live-state no-op churn & unbounded `push` resources (Completed)
 
