@@ -1,19 +1,26 @@
+import { readdir } from "node:fs/promises";
 import { listAttempts, listTasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { listDatabases } from "@plugins/database/plugins/admin/server";
 import {
   ensureMainWorktreeRoot,
   isCanonicalWorktreePath,
   worktreePathFor,
+  worktreesDir,
 } from "@plugins/infra/plugins/worktree/server";
 import { dirExists } from "./reap";
 import { getGitHygiene, isSafeToReap, isTaskDeletable } from "./safety";
 
 export const AUTO_REAP_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 
-// Attempt id == fork DB name. This pattern matches only canonical worktree
-// forks: it excludes the main `singularity` DB and the `*__forking` temps
-// (which the database.fork-temp-sweep job owns).
-const FORK_DB_RE = /^att-\d+-[a-z0-9]+$/;
+// Canonical worktree-id shape (attempt id == fork DB name == registry entry
+// name): `att-<epoch>-<suffix>` / `claude-<epoch>-<suffix>`, plus the legacy
+// suffix-less `claude-<epoch>` form still present in the registry. The single
+// `-[a-z0-9]+` suffix group (no extra dashes) excludes the per-build data files
+// that share the dir (`<name>-build-profile.json`, `<name>-build-logs-<id>.json`)
+// and the reserved `singularity`/`central` namespaces and `*__forking` temps
+// (owned by the database.fork-temp-sweep job). One source of truth for both the
+// fork-DB orphan filter and the registry-file orphan filter below.
+const WORKTREE_NAME_RE = /^(att|claude)-\d+(-[a-z0-9]+)?$/;
 
 export interface ReapTarget {
   id: string;
@@ -54,7 +61,7 @@ export async function collectReapable(now: number): Promise<ReapTarget[]> {
   ]);
 
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
-  const dbSet = new Set(databases.filter((name) => FORK_DB_RE.test(name)));
+  const dbSet = new Set(databases.filter((name) => WORKTREE_NAME_RE.test(name)));
   const targets = new Map<string, ReapTarget>();
   const seenAttemptIds = new Set<string>();
 
@@ -99,12 +106,36 @@ export async function collectReapable(now: number): Promise<ReapTarget[]> {
     if (target) targets.set(target.id, target);
   }
 
-  // DB-only orphans: att-* fork DBs with no matching attempt row. Reap when the
-  // resolved worktree dir is absent (nothing to remove, just drop the DB).
+  // DB-only orphans: att-*/claude-* fork DBs with no matching attempt row. Reap
+  // when the resolved worktree dir is absent (nothing to remove, just drop DB).
   for (const id of dbSet) {
     if (seenAttemptIds.has(id) || targets.has(id)) continue;
     if (!(await dirExists(await worktreePathFor(id)))) {
       targets.set(id, { id });
+    }
+  }
+
+  // Registry-file orphans: a spec entry on disk (new <name>/ subdir or legacy
+  // flat <name>.json) whose git worktree dir is gone and which has no attempt
+  // row. These are the bulk of the stale backlog — they predate the attempt
+  // system or their rows were already deleted, so neither pass above sees them.
+  // Removing the spec file deregisters the namespace from the gateway and frees
+  // its fsnotify watch (reapAttempt's "registry" step).
+  const names: string[] = [];
+  try {
+    const entries = await readdir(worktreesDir(), { withFileTypes: true });
+    for (const e of entries) {
+      const name = e.isDirectory() ? e.name : e.name.replace(/\.json$/, "");
+      if (WORKTREE_NAME_RE.test(name)) names.push(name);
+    }
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
+
+  for (const name of new Set(names)) {
+    if (seenAttemptIds.has(name) || targets.has(name)) continue; // covered/active already
+    if (!(await dirExists(await worktreePathFor(name)))) {
+      targets.set(name, { id: name }); // no worktree dir: a true orphan
     }
   }
 

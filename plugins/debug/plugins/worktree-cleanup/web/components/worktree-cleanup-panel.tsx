@@ -21,11 +21,11 @@ import {
 } from "../../shared/endpoints";
 
 type DeleteEvent =
-  | { step: "worktree" | "database" }
+  | { step: "worktree" | "database" | "config" | "registry" }
   | { ok: true }
   | { ok: false; error: string };
 
-type DeletingStep = "worktree" | "database";
+type DeletingStep = "worktree" | "database" | "config" | "registry";
 
 function relativeAge(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -236,7 +236,7 @@ export function WorktreeCleanupPanel() {
 
       {/* Automatic-reaper policy note */}
       <Text as="div" variant="caption" className="px-lg py-sm text-muted-foreground border-b">
-        Orphaned forks are dropped hourly; worktrees are deleted automatically after 30 days. Use the controls below to reap early.
+        Orphaned forks, config dirs, and gateway registry entries are reclaimed hourly; worktrees are deleted automatically after 30 days. Use the controls below to reap early.
       </Text>
 
       {/* Bulk result banner */}
@@ -298,6 +298,8 @@ export function WorktreeCleanupPanel() {
 const STEP_LABEL: Record<DeletingStep, string> = {
   worktree: "Removing…",
   database: "Dropping DB…",
+  config: "Clearing config…",
+  registry: "Deregistering…",
 };
 
 function EntryRow({

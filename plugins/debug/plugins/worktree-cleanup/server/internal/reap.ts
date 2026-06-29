@@ -6,6 +6,7 @@ import {
   ensureMainWorktreeRoot,
   isCanonicalWorktreePath,
   removeWorktree,
+  removeWorktreeSpec,
 } from "@plugins/infra/plugins/worktree/server";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
@@ -21,13 +22,17 @@ export async function dirExists(path: string): Promise<boolean> {
 
 // The canonical reap sequence shared by the manual delete handlers and the
 // automatic reaper job: remove the git worktree (if its dir is still present),
-// drop the fork DB, and remove the worktree's config dir.
+// drop the fork DB, remove the worktree's config dir, and finally remove the
+// gateway registry entry (which deregisters the namespace + frees its watch).
 //
 // `onStep` lets the streaming delete handlers surface per-step progress to the
 // UI without duplicating the sequence; the background job passes nothing.
 export async function reapAttempt(
   id: string,
-  opts: { worktreePath?: string; onStep?: (step: "worktree" | "database" | "config") => void },
+  opts: {
+    worktreePath?: string;
+    onStep?: (step: "worktree" | "database" | "config" | "registry") => void;
+  },
 ): Promise<void> {
   if (opts.worktreePath) {
     const root = await ensureMainWorktreeRoot();
@@ -47,4 +52,9 @@ export async function reapAttempt(
 
   opts.onStep?.("config");
   await rm(join(SINGULARITY_DIR, "config", id), { recursive: true, force: true });
+
+  // Deleting the spec file is how the gateway deregisters (its fsnotify Remove
+  // handler calls registry.remove()) and frees the worktree's fsnotify watch.
+  opts.onStep?.("registry");
+  await removeWorktreeSpec(id);
 }

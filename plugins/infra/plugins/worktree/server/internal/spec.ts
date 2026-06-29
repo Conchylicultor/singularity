@@ -1,4 +1,5 @@
 import { mkdirSync, writeFileSync } from "node:fs";
+import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { worktreesDir } from "./worktree-op";
 
@@ -77,4 +78,19 @@ export function writeWorktreeSpec({
   if (zeroCache) spec.zeroCache = zeroCache;
   writeFileSync(path, JSON.stringify(spec, null, 2) + "\n");
   return path;
+}
+
+/**
+ * Deregister a namespace by removing its registry entry from disk — the mirror
+ * of `writeWorktreeSpec`. Deleting the spec file is the gateway's ONLY
+ * deregistration path: its fsnotify watcher fires a Remove event and calls
+ * `registry.remove()`, and tearing down the watched subdir also frees the
+ * gateway's per-worktree kqueue/inotify watch.
+ */
+export async function removeWorktreeSpec(name: string): Promise<void> {
+  const dir = worktreesDir();
+  // New layout: <worktreesDir>/<name>/ (spec.json + logs/ + ops/ + zero/replica.db).
+  await rm(join(dir, name), { recursive: true, force: true });
+  // Legacy layout: flat <worktreesDir>/<name>.json written by old CLI versions.
+  await rm(join(dir, `${name}.json`), { force: true });
 }
