@@ -183,7 +183,14 @@ export function AppShellLayout({
   const body = (
     <>
       {toolbar}
-      <Clip as="main" fill className="bg-muted/30">
+      {/* The content canvas inherits the framing surface (`--background`) rather
+          than painting its own tint. Sticky chrome inside the canvas (the
+          DataView toolbar, pane/section headers) masks scrolled content with
+          `bg-background`; a divergent canvas tint here (previously a translucent
+          `bg-muted/30`) made every pinned header a visibly different shade than
+          the surface it floats over. Keeping the canvas on `--background` is the
+          single masking contract every sticky header already assumes. */}
+      <Clip as="main" fill>
         <SurfaceChromeContext.Provider value={surfaceChrome}>
           {children}
         </SurfaceChromeContext.Provider>
