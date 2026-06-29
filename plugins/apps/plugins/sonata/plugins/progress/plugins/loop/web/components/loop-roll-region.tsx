@@ -33,17 +33,18 @@ export function LoopRollRegion({ projection }: { projection: Projection }) {
 
   return (
     <>
-      {/* The [A, B] span: a tinted band whose top/bottom 2px borders ARE the B
-          and A boundary lines (so the edges land pixel-exact on the bounds in a
-          single element). A clear primary wash + solid edges while looping; a
-          dashed, fill-less outline while the loop is defined-but-disabled, so an
-          off loop stays legible without washing the notes. */}
+      {/* The [A, B] span, drawn as a TRANSPARENT outline — no fill, since a wash
+          over the falling notes reads as distracting. The 2px border frames the
+          region: the left/right edges are the "inside a loop" side rails, and the
+          top/bottom edges are the B and A boundary lines (pixel-exact on the
+          bounds, all in one element). Solid while looping; dashed while the loop
+          is defined-but-disabled. */}
       <div
-        // eslint-disable-next-line layout/no-adhoc-layout -- JS pixel-positioned loop band (top/height from projection.beatToY); the border-y edges are the A/B boundary lines; spans the full lane width and scrolls with the content layer
+        // eslint-disable-next-line layout/no-adhoc-layout -- JS pixel-positioned loop band (top/height from projection.beatToY); the border edges are the side rails + A/B boundary lines; spans the full lane width and scrolls with the content layer
         className={cn(
-          "absolute inset-x-0 border-y-2",
+          "absolute inset-x-0 border-2",
           loop.enabled
-            ? "border-primary bg-primary/15"
+            ? "border-primary"
             : "border-dashed border-primary/45",
         )}
         style={{ top, height }}
