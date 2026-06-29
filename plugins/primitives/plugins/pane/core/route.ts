@@ -46,10 +46,25 @@ export interface AppRef {
   readonly id: string;
   /** App base path, e.g. "/agents", "/pages", or "/" for the root app. */
   readonly basePath: string;
+  /**
+   * MD icon key (snake_case, e.g. "piano", "bug_report") for this app's icon,
+   * resolvable server-side via `resolveIconSvgNodes`. Must match the `MdXxx`
+   * the web shell passes to `Apps.App({ icon: mdAppIcon(MdXxx) })` — enforced
+   * by the `app-icon:key-in-sync` check.
+   */
+  readonly iconKey: string;
 }
 
-export function defineApp(def: { id: string; basePath: string }): AppRef {
-  return Object.freeze({ id: def.id, basePath: def.basePath });
+export function defineApp(def: {
+  id: string;
+  basePath: string;
+  iconKey: string;
+}): AppRef {
+  return Object.freeze({
+    id: def.id,
+    basePath: def.basePath,
+    iconKey: def.iconKey,
+  });
 }
 
 // ---------------------------------------------------------------------------

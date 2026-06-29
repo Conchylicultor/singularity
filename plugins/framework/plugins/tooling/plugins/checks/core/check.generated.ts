@@ -13,6 +13,7 @@ export interface CollectedEntry {
 }
 
 export const checkEntries: CollectedEntry[] = [
+  { pluginPath: "apps-core/plugins/app-icon", id: "apps-core.app-icon", loader: () => import("@plugins/apps-core/plugins/app-icon/check"), dependsOn: ["primitives/plugins/icon-picker"] },
   { pluginPath: "apps/plugins/agent-manager/plugins/welcome", id: "apps.agent-manager.welcome", loader: () => import("@plugins/apps/plugins/agent-manager/plugins/welcome/check"), dependsOn: [] },
   { pluginPath: "config_v2", id: "config_v2", loader: () => import("@plugins/config_v2/check"), dependsOn: [] },
   { pluginPath: "conversations/plugins/model-provider", id: "conversations.model-provider", loader: () => import("@plugins/conversations/plugins/model-provider/check"), dependsOn: [] },

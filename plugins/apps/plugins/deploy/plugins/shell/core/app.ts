@@ -1,3 +1,3 @@
 import { defineApp } from "@plugins/primitives/plugins/pane/core";
 
-export const deployApp = defineApp({ id: "deploy", basePath: "/deploy" });
+export const deployApp = defineApp({ id: "deploy", basePath: "/deploy", iconKey: "cloud" });

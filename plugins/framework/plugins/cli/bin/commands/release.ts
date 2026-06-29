@@ -3,12 +3,24 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  readFileSync,
+  readdirSync,
   realpathSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join } from "node:path";
+import { Resvg } from "@resvg/resvg-js";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { asFsPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { buildPluginTree, type PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import {
+  compositionsConfig,
+  manifestItemToManifest,
+} from "@plugins/plugin-meta/plugins/composition/core";
+import { resolveIconSvgNodes } from "@plugins/primitives/plugins/icon-picker/server";
+import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
 
 // ── Staged bundle layout (the `--dev` output, also the pack input) ────────────
 //
@@ -77,6 +89,104 @@ async function run(
   if (code !== 0) {
     throw new Error(`Command failed (exit ${code}): ${cmd.join(" ")}`);
   }
+}
+
+/** Rasterize an SVG string to a PNG at `size`×`size` (pure-Wasm, no native deps). */
+function renderPng(svg: string, size = 512): Uint8Array {
+  return new Resvg(svg, { fitTo: { mode: "width", value: size } })
+    .render()
+    .asPng();
+}
+
+/**
+ * Statically parse the `iconKey` out of a plugin subtree's `defineApp({...})`
+ * call — no barrel import, no React, mirroring the facets static-parse approach.
+ *
+ * Recurses the entry app's `buildPluginTree` node (and descendants) looking for
+ * the shell `core/*.ts` file that holds `defineApp(`, then extracts the
+ * `iconKey: "..."` literal from that call's object argument. Distinguishes
+ * "found a `defineApp` but it has no `iconKey`" (a loud Error) from "no
+ * `defineApp` anywhere under this app" (returns null so the caller can throw a
+ * composition-level error).
+ *
+ * Assumption (documented per plan): exactly one `defineApp(...)` lives in an
+ * app's `core/`, and its `iconKey` is a string literal — true for every app
+ * shell `core/app.ts` (e.g. `defineApp({ id, basePath, iconKey: "piano" })`).
+ */
+function findDefineAppIconKey(node: PluginNode): string | null {
+  const coreDir = join(node.dir, "core");
+  if (existsSync(coreDir)) {
+    for (const f of readdirSync(coreDir)) {
+      if (!f.endsWith(".ts")) continue;
+      const src = readFileSync(join(coreDir, f), "utf8");
+      const call = src.match(/defineApp\s*\(\s*\{([\s\S]*?)\}\s*\)/);
+      const body = call?.[1];
+      if (body == null) continue;
+      const key = body.match(/iconKey:\s*["']([^"']+)["']/);
+      if (key?.[1] != null) return key[1];
+      throw new Error(
+        `release: ${join(coreDir, f)} calls defineApp(...) without an iconKey. ` +
+          `Add iconKey: "<md-name>" so the app is releasable.`,
+      );
+    }
+  }
+  for (const child of node.children) {
+    const found = findDefineAppIconKey(child);
+    if (found) return found;
+  }
+  return null;
+}
+
+/**
+ * Map a composition name → its entry app's `iconKey`, server-side, with no
+ * barrel execution. Mirrors the composition-resolution pattern in `build.ts`
+ * (`compositionsConfig.fields.manifests.defaultValue` → `manifestItemToManifest`
+ * → `entryPoints` like `["apps.sonata"]`; resolved against
+ * `buildPluginTree(..., { skipBarrelImport: true })`), then static-parses the
+ * entry app's `defineApp({...})`. Fails loudly — never silently defaults.
+ */
+async function resolveCompositionIconKey(opts: {
+  root: string;
+  composition: string;
+}): Promise<string> {
+  const { root, composition } = opts;
+
+  const items = compositionsConfig.fields.manifests.defaultValue;
+  const item = items.find((m) => m.id === composition);
+  if (!item) {
+    throw new Error(
+      `release: unknown composition "${composition}". Known: ${items
+        .map((m) => m.id)
+        .join(", ")}`,
+    );
+  }
+
+  const { entryPoints } = manifestItemToManifest(item);
+  if (entryPoints.length === 0) {
+    throw new Error(
+      `release: composition "${composition}" has no entry points; cannot derive an app icon.`,
+    );
+  }
+
+  const tree = await buildPluginTree(join(root, "plugins"), {
+    skipBarrelImport: true,
+  });
+
+  // Each entry point (e.g. "apps.sonata") is a dotted plugin id; its tree node is
+  // keyed by the fs-path encoding ("apps/plugins/sonata") in `byPath`.
+  for (const entry of entryPoints) {
+    const node = tree.byPath.get(asFsPath(asPluginId(entry)));
+    if (!node) continue;
+    const iconKey = findDefineAppIconKey(node);
+    if (iconKey) return iconKey;
+  }
+
+  throw new Error(
+    `release: composition "${composition}" (entry points ${entryPoints.join(
+      ", ",
+    )}) has no app shell core declaring defineApp({ iconKey }). ` +
+      `App compositions must point at an app whose shell core declares an iconKey.`,
+  );
 }
 
 /**
@@ -451,6 +561,37 @@ async function wrapTauri(opts: {
   };
   const overridePath = join(srcTauri, "tauri.conf.override.json");
   writeFileSync(overridePath, JSON.stringify(override, null, 2) + "\n");
+
+  // ── Generate the platform icon set from the composition's app icon ──────────
+  // Resolve the composition's entry app → iconKey → MD glyph nodes, render a
+  // 512px PNG, and hand it to `tauri icon` (writes the full set into icons/ next
+  // to tauri.conf.json). Always regenerate so a clean checkout (icons/ gitignored
+  // + absent) builds end-to-end, and the macOS dmg step's icon.icns is populated.
+  const iconKey = await resolveCompositionIconKey({ root, composition });
+  const svgNodes = resolveIconSvgNodes(iconKey);
+  if (!svgNodes)
+    throw new Error(
+      `release: app "${composition}" iconKey "${iconKey}" did not resolve to an icon.`,
+    );
+  const svg = appIconToSvg({ kind: "md", svgNodes });
+  const pngPath = join(tmpdir(), `${composition}-appicon-512.png`);
+  writeFileSync(pngPath, renderPng(svg, 512));
+  console.log("\n[tauri] Generating icon set from app icon...");
+  await run(["bun", "x", "@tauri-apps/cli@2", "icon", pngPath], {
+    cwd: tauriDir,
+  });
+  const iconsDir = join(srcTauri, "icons");
+  for (const f of [
+    "32x32.png",
+    "128x128.png",
+    "128x128@2x.png",
+    "icon.icns",
+    "icon.ico",
+  ]) {
+    if (!existsSync(join(iconsDir, f))) {
+      throw new Error(`release: tauri icon did not produce ${f} in ${iconsDir}`);
+    }
+  }
 
   if (dev) {
     console.log("\n[tauri] Running tauri dev (host platform)...");

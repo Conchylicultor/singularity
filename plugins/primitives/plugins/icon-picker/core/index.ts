@@ -9,3 +9,5 @@ export interface SvgNode {
   attr: Record<string, string>;
   child: SvgNode[];
 }
+
+export { svgNodesToString } from "./internal/svg-nodes-to-string";

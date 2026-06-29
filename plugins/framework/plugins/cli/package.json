@@ -6,6 +6,7 @@
     "singularity": "bin/index.ts"
   },
   "dependencies": {
+    "@resvg/resvg-js": "^2.6.2",
     "commander": "^13.1.0",
     "pg": "^8.13.0"
   },

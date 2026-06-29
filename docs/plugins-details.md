@@ -876,10 +876,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses: `primitives/icon-picker.extractSvgNodes`, `primitives/icon-picker.SvgIcon`
         - Exports: Values: `appIconComponent`, `AppIconView`, `DEFAULT_APP_ICON`, `mdAppIcon`
+      - Core:
+        - Uses: `primitives/icon-picker.svgNodesToString`
+        - Exports: Types: `AppIcon`, `AppIconSvgOptions`; Values: `appIconToSvg`
       - Cross-plugin:
         - Imported by: `apps-core/app-rail`, `apps-core/surface/floating`, `apps-core/tab-bar`, `apps/agent-manager/shell`, `apps/browser/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/prototypes/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `config_v2/settings`
-      - Core:
-        - Exports: Types: `AppIcon`
     - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
       - Web:
         - Uses: `apps-core.Apps`, `apps-core.useActiveApp`, `apps-core/app-icon.AppIconView`, `apps-core/tabs.useTabs`, `apps-core/theme-scope.useChromeThemeScope`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/tooltip.WithTooltip`
@@ -4328,7 +4329,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Exports: Values: `resolveIconSvgNodes`, `resolveIconSvgNodesJson`
       - Core:
-        - Exports: Types: `SvgNode`
+        - Exports: Types: `SvgNode`; Values: `svgNodesToString`
     - **`imperative-dialog`** — Imperative dialog primitive: openDialog(render) mounts a modal Dialog from any callback (create affordances, confirms) via a single Core.Root host — the toaster pattern for dialogs. Returns a promise that resolves when the dialog closes.
       - Web:
         - Contributes: `Core.Root` → `ImperativeDialogHost`

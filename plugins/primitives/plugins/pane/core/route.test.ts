@@ -1,8 +1,8 @@
 import { describe, expect, test } from "bun:test";
 import { defineApp, defineRoute } from "./route";
 
-const agents = defineApp({ id: "agent-manager", basePath: "/agents" });
-const rootApp = defineApp({ id: "home", basePath: "/" });
+const agents = defineApp({ id: "agent-manager", basePath: "/agents", iconKey: "chat_bubble" });
+const rootApp = defineApp({ id: "home", basePath: "/", iconKey: "home" });
 
 describe("route link builder", () => {
   test("root route links under the app base path", () => {

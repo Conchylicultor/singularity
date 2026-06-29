@@ -6,3 +6,6 @@ import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
  * branch and zero changes to existing `kind: "md"` authors.
  */
 export type AppIcon = { kind: "md"; svgNodes: SvgNode[] };
+
+export { appIconToSvg } from "./internal/app-icon-to-svg";
+export type { AppIconSvgOptions } from "./internal/app-icon-to-svg";
