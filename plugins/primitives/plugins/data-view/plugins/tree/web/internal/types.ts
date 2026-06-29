@@ -48,8 +48,6 @@ export interface TreeViewOptions<TRow> {
   addLabel?: string | null;
   /** Scope the tree to a subtree rooted at this id (hides the root Add button). */
   rootId?: string;
-  /** Hide fully-terminal subtrees (e.g. done/dropped) behind a toolbar toggle. */
-  hideTerminal?: { isTerminal: (row: TRow) => boolean };
   /** Show the expand-all/collapse-all toolbar button. */
   expandAll?: boolean;
   /** Extra content rendered on the left of the tree's own toolbar row. */

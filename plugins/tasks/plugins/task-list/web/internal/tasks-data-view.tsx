@@ -22,9 +22,6 @@ export async function createTaskRow(args: {
   return task.id;
 }
 
-export const isTerminal = (t: TaskListItem) =>
-  t.status === "done" || t.status === "dropped";
-
 // Filter chip choices are derived from the single status-metadata source, so the
 // labels never drift from the rest of the app.
 const STATUS_OPTIONS = (
@@ -82,7 +79,6 @@ export function buildTreeOptions({
         t.status === "dropped" && "text-muted-foreground/70 line-through italic",
         t.status === "done" && "text-muted-foreground",
       ),
-    hideTerminal: { isTerminal },
     expandAll: true,
     rootId: rootTaskId,
     addLabel: rootTaskId ? null : "Add",

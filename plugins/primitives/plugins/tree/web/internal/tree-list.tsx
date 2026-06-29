@@ -1,10 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import {
-  MdAdd,
-  MdFilterAlt,
-  MdFilterAltOff,
-} from "react-icons/md";
+import { MdAdd } from "react-icons/md";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import {
   DndContext,
@@ -30,7 +26,6 @@ import {
   MultiSelectProvider,
   SelectionBar,
 } from "@plugins/primitives/plugins/multi-select/web";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
@@ -70,11 +65,6 @@ export type TreeListProps<T extends TreeItem> = {
   dragOverlay?: (row: T) => ReactNode;
   toolbar?: {
     expandAll?: boolean;
-    hideTerminal?: {
-      isTerminal: (row: T) => boolean;
-      value?: boolean;
-      onValueChange?: (v: boolean) => void;
-    };
     search?: {
       accessor: (row: T) => string;
       /** Controlled query value. When set, used instead of TreeList's own state. */
@@ -119,9 +109,6 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     multiSelect,
   } = props;
 
-  const [internalHide, setInternalHide] = useState(true);
-  const hideTerminal = toolbar?.hideTerminal?.value ?? internalHide;
-  const setHideTerminal = toolbar?.hideTerminal?.onValueChange ?? setInternalHide;
   const [pendingFocusId, setPendingFocusId] = useState<string | null>(() =>
     pendingFocus.take(),
   );
@@ -200,14 +187,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     );
   }, [tree, effectiveQuery, searchAccessor]);
 
-  const isTerminal = toolbar?.hideTerminal?.isTerminal;
-  const visibleTree = useMemo(
-    () =>
-      hideTerminal && isTerminal
-        ? hideTerminalSubtrees(afterSearch, isTerminal)
-        : afterSearch,
-    [afterSearch, hideTerminal, isTerminal],
-  );
+  const visibleTree = afterSearch;
 
   // Flattened DFS of the painted tree: each visible row in paint order with its
   // depth, descending into a node's children only when expanded. Drives both the
@@ -319,8 +299,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   }, [selectedId, rows, wrappedOnToggleExpanded]);
 
   const showSearchInput = !!toolbar?.search && !hideSearchInput;
-  const hasToolbar =
-    showExpandAll || !!toolbar?.hideTerminal || !!toolbar?.start || showSearchInput;
+  const hasToolbar = showExpandAll || !!toolbar?.start || showSearchInput;
   const showRootAdd = !rootId && addLabel != null && canCreate && !!onCreate;
 
   const ctxValue = useMemo(
@@ -401,23 +380,6 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                     {showExpandAll && (
                       <ExpandAllButton allExpanded={allExpanded} onToggle={expandAll} />
                     )}
-                    {toolbar.hideTerminal && (
-                      <ToggleChip
-                        active={hideTerminal}
-                        variant="ghost"
-                        onClick={() => setHideTerminal(!hideTerminal)}
-                        title={hideTerminal ? "Show completed" : "Hide completed"}
-                        icon={
-                          hideTerminal ? (
-                            <MdFilterAlt className="size-4" />
-                          ) : (
-                            <MdFilterAltOff className="size-4" />
-                          )
-                        }
-                      >
-                        {hideTerminal ? "Completed hidden" : "Hide completed"}
-                      </ToggleChip>
-                    )}
                   </Stack>
                 </Stack>
               </Sticky>
@@ -481,20 +443,6 @@ function MaybeMultiSelect({
   return (
     <MultiSelectProvider orderedIds={orderedIds}>{children}</MultiSelectProvider>
   );
-}
-
-export function hideTerminalSubtrees<T extends TreeItem>(
-  tree: TreeNode<T>[],
-  isTerminal: (row: T) => boolean,
-): TreeNode<T>[] {
-  const fullyTerminal = (n: TreeNode<T>): boolean =>
-    isTerminal(n) && n.children.every(fullyTerminal);
-  return tree
-    .filter((n) => !fullyTerminal(n))
-    .map((n) => ({
-      ...n,
-      children: hideTerminalSubtrees(n.children, isTerminal),
-    }));
 }
 
 function filterSubtree<T extends TreeItem>(

@@ -294,9 +294,6 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
             hideInput: true,
           },
           expandAll: options.expandAll,
-          hideTerminal: options.hideTerminal && {
-            isTerminal: (r) => options.hideTerminal!.isTerminal(r.__row),
-          },
           start: options.toolbarStart,
         }}
       />
