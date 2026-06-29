@@ -1,0 +1,9 @@
+// @hash 7dedebcbe574
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.sonata.library:play"
+  ]
+}

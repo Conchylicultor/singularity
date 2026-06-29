@@ -4,7 +4,10 @@ import {
   defineDispatchSlot,
   defineRenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
-import type { CreateOption } from "@plugins/primitives/plugins/data-view/web";
+import {
+  defineItemActions,
+  type CreateOption,
+} from "@plugins/primitives/plugins/data-view/web";
 import type { Song } from "../core";
 import { NewestOrder } from "./components/newest-order";
 
@@ -38,6 +41,9 @@ export interface SortOrderProps {
  *    zero library or core-schema changes.
  *  - `CardMeta` — per-card metadata strip. Contributors render a snippet given
  *    the `song` (e.g. play count / last-played, MIDI track count). Headless-friendly.
+ *  - `SongActions` — trailing per-row actions for the library TABLE view
+ *    (Play/Pause background playback). The gallery uses its own `SongCard` button
+ *    (a custom `renderCard` bypasses `itemActions`), so this surfaces in the table.
  *  - `Sort` — gallery orderings. A dispatch slot keyed by the active sort id;
  *    the matched ordering component computes and renders the ordered grid. The
  *    built-in "Newest" is the fallback (the list is already newest-first), so
@@ -60,6 +66,13 @@ export const Library = {
     "sonata.library.card-meta",
     { docLabel: (p) => p.id },
   ),
+  /**
+   * Trailing per-row actions for the library table (Play/Pause). Minted here,
+   * contributed in `web/index.ts`, and passed to the gallery/table `DataView`.
+   * The gallery uses its own `SongCard` button (a custom `renderCard` bypasses
+   * `itemActions`), so this surfaces in the TABLE view's trailing column.
+   */
+  SongActions: defineItemActions<Song>("sonata.library.song-actions"),
   Sort: defineDispatchSlot<SortOrderProps, string, { id: string; label: string }>(
     "sonata.library.sort",
     {

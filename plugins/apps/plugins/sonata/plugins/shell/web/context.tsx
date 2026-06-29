@@ -244,6 +244,14 @@ export interface SonataContextValue {
 
   play: () => void;
   stop: () => void;
+  /**
+   * Arm a one-shot "auto-play once the next loaded song's score is composed".
+   * The library's background-play affordance calls this right after `setRawMap`
+   * + `setCurrentSong`, so the song starts playing in place (no navigation) as
+   * soon as the recomposed score is ready. Consumed exactly once by the
+   * score-change reset effect; a no-op if the score ends up empty.
+   */
+  requestPlayOnLoad: () => void;
 
   /**
    * Register the authoritative playback clock (e.g. the audio engine's
@@ -398,16 +406,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // allocation-free tempo-time source instead of re-sorting the tempo map.
   const tempoIndex = useMemo(() => buildTempoIndex(score), [score]);
 
-  // Reset the cursor whenever the composed Score changes (new/changed input).
-  // `baseScore` is referentially stable across mere source-picker switches
-  // (which don't change `rawById`), so switching the visible Loader does NOT
-  // reset the playhead — only loading or editing input does.
-  useEffect(() => {
-    cursor.setBeat(0, { seek: true });
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional transport reset on score change: loading/editing new content imperatively rewinds the cursor (cursor.setBeat) and stops playback; this is a genuine side-effect (paired with the imperative cursor write), not derivable in render
-    setIsPlaying(false);
-  }, [baseScore, cursor]);
-
   // --- Transport: a requestAnimationFrame loop (no polling). ----------------
   // We anchor at the playback clock's time + beat where playback started, then
   // each frame invert the tempo map: find the beat whose `beatToSeconds` equals
@@ -425,6 +423,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     startScoreSec: number;
   } | null>(null);
   const clockRef = useRef<TransportClock>(wallClock);
+  // One-shot "auto-play once the freshly-loaded score is composed" intent, set
+  // by the library's background-play affordance and consumed by the score-reset
+  // effect below. A ref (not state) so arming it never triggers a render.
+  const playOnLoadRef = useRef(false);
   const scoreRef = useLatestRef(score);
   const tempoIndexRef = useLatestRef(tempoIndex);
   // Live mirrors so stable callbacks (seek, re-anchor, clock swaps, store
@@ -469,6 +471,28 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     if (tempoScaleRef.current === 0) return;
     setIsPlaying(true);
   }, []);
+
+  const requestPlayOnLoad = useCallback(() => {
+    playOnLoadRef.current = true;
+  }, []);
+
+  // Reset the cursor whenever the composed Score changes (new/changed input).
+  // `baseScore` is referentially stable across mere source-picker switches
+  // (which don't change `rawById`), so switching the visible Loader does NOT
+  // reset the playhead — only loading or editing input does. If the library
+  // armed `requestPlayOnLoad` (background "Play" on a card/row), start playback
+  // from the top once the new score is composed instead of stopping; `play`'s
+  // own guards keep an empty/0% score from starting.
+  useEffect(() => {
+    cursor.setBeat(0, { seek: true });
+    if (playOnLoadRef.current) {
+      playOnLoadRef.current = false;
+      play();
+    } else {
+      // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional transport reset on score change: loading/editing new content imperatively rewinds the cursor (cursor.setBeat) and stops playback; this is a genuine side-effect (paired with the imperative cursor write), not derivable in render
+      setIsPlaying(false);
+    }
+  }, [baseScore, cursor, play]);
 
   // Open-song lifecycle. The player surface calls `setCurrentSong` on mount —
   // each open is a fresh `mode:"root"` pane instance, so this fires once per open
@@ -802,6 +826,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setSpreadFloor,
       play,
       stop,
+      requestPlayOnLoad,
       registerClock,
     }),
     [
@@ -837,6 +862,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setSpreadFloor,
       play,
       stop,
+      requestPlayOnLoad,
       registerClock,
     ],
   );

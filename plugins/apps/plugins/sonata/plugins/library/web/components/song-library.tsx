@@ -7,11 +7,13 @@ import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/we
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songsResource, updateSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
 import { useOpenSong } from "../hooks";
 import { SongCard, formatDuration } from "./song-card";
+import { NowPlayingBar } from "./now-playing-bar";
 
 const LIBRARY_VIEW = defineDataView("sonata.library");
 
@@ -33,6 +35,9 @@ const LIBRARY_VIEW = defineDataView("sonata.library");
 export function SongLibrary() {
   const songs = useResource(songsResource);
   const openSong = useOpenSong();
+  // The background-playing song (if any) — highlights its table row and feeds
+  // the now-playing footer below.
+  const { currentSongId } = useSonata();
   // Write-back for inline cell editing (title / composer) in the table view.
   // Fire-and-forget: the server's `updateSongMeta` pushes the live
   // `songsResource`, so the edited cell settles from server truth; a failed
@@ -128,6 +133,10 @@ export function SongLibrary() {
           views={["gallery", "table"]}
           defaultView="gallery"
           storageKey={LIBRARY_VIEW}
+          // Trailing per-row Play/Pause action (table view); the gallery uses its
+          // own SongCard button. Highlight the background-playing row.
+          itemActions={Library.SongActions}
+          selectedRowId={currentSongId ?? undefined}
           // The "Library" title is owned by the enclosing `PaneChrome` (the pane
           // header), so the DataView omits its own to avoid a duplicate.
           loading={loading}
@@ -180,6 +189,7 @@ export function SongLibrary() {
         error: () => renderLibrary([], true),
         ready: (rows) => renderLibrary(rows, false),
       })}
+      footer={<NowPlayingBar />}
     />
   );
 }

@@ -7,6 +7,8 @@ import {
   DisplayPicker,
   SongTitle,
 } from "./components/player-toolbar-items";
+import { PlaySongAction } from "./components/play-song-action";
+import { Library } from "./slots";
 import { sonataLibraryPane, sonataPlayerPane } from "./panes";
 
 export { Library } from "./slots";
@@ -23,6 +25,7 @@ export default {
     SonataToolbar.Start({ id: "back", component: BackToLibrary }),
     SonataToolbar.Start({ id: "title", component: SongTitle }),
     SonataToolbar.Start({ id: "display-picker", component: DisplayPicker }),
+    Library.SongActions({ id: "play", component: PlaySongAction }),
     Pane.Register({ pane: sonataLibraryPane }),
     Pane.Register({ pane: sonataPlayerPane }),
   ],

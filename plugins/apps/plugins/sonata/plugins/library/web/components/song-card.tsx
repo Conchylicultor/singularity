@@ -1,6 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
-import { MdDelete, MdMusicNote, MdPlayArrow } from "react-icons/md";
+import { MdDelete, MdMusicNote, MdPause, MdPlayArrow } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
@@ -10,6 +10,7 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { deleteSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
+import { useSonataPlayback } from "../use-playback";
 
 /** Format a duration in seconds as `m:ss`. */
 export function formatDuration(seconds: number): string {
@@ -32,6 +33,9 @@ export function SongCard({
   onOpen: (song: Song) => void;
 }) {
   const { mutate: deleteSongMutation } = useEndpointMutation(deleteSong);
+  const { togglePlaySong, currentSongId, isPlaying } = useSonataPlayback();
+  const isCurrent = currentSongId === song.id;
+  const isThisPlaying = isCurrent && isPlaying;
   return (
     <Card
       interactive
@@ -44,7 +48,11 @@ export function SongCard({
           onOpen(song);
         }
       }}
-      className={cn(hoverRevealGroup, "relative rounded-lg p-lg")}
+      className={cn(
+        hoverRevealGroup,
+        "relative rounded-lg p-lg",
+        isThisPlaying && "ring-2 ring-primary",
+      )}
     >
       <Stack gap="md">
         <div className="flex items-start gap-md">
@@ -71,13 +79,28 @@ export function SongCard({
               {formatDuration(song.durationSec)}
             </span>
           </Text>
-          <Center
-            aria-hidden
-            as="span"
-            className="size-7 rounded-full bg-primary/10 text-primary"
+          <button
+            type="button"
+            aria-label={isThisPlaying ? `Pause ${song.title}` : `Play ${song.title}`}
+            onClick={(e) => {
+              e.stopPropagation();
+              togglePlaySong(song);
+            }}
+            className={cn(
+              "size-7 rounded-full transition-colors",
+              isCurrent
+                ? "bg-primary text-primary-foreground"
+                : "bg-primary/10 text-primary hover:bg-primary/20",
+            )}
           >
-            <MdPlayArrow className="size-4" />
-          </Center>
+            <Center className="size-full">
+              {isThisPlaying ? (
+                <MdPause className="size-4" />
+              ) : (
+                <MdPlayArrow className="size-4" />
+              )}
+            </Center>
+          </button>
         </div>
 
         {/* Per-card metadata contributed by other plugins (e.g. play stats). */}
