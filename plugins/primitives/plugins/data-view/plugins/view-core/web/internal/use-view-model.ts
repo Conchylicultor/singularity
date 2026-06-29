@@ -5,7 +5,7 @@ import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { AddableViewType, ViewTypeMeta } from "../../core";
 import type { ResolvedViewInstance } from "./resolve-instances";
 import { useViewsConfig } from "./use-views-config";
-import { useActiveViewId } from "./use-active-view";
+import { useActiveViewId } from "@plugins/primitives/plugins/view-switcher/web";
 
 /**
  * Instance actions for the editable view-switcher (every view surface has

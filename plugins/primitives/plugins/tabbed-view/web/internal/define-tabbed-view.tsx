@@ -1,10 +1,13 @@
-import { type ComponentType, type ReactNode, useMemo, useState } from "react";
+import { type ComponentType, type ReactNode, useMemo } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
-import { ViewSwitcher } from "@plugins/primitives/plugins/view-switcher/web";
+import {
+  useActiveViewId,
+  ViewSwitcher,
+} from "@plugins/primitives/plugins/view-switcher/web";
 
 export interface TabContribution<ViewProps> {
   id: string;
@@ -22,8 +25,6 @@ export interface TabbedView<ViewProps> {
 export function defineTabbedView<ViewProps extends object>(
   id: string,
 ): TabbedView<ViewProps> {
-  const storageKey = `${id}:active-view`;
-
   const View = defineSlot<TabContribution<ViewProps>>(`${id}.view`, {
     docLabel: (p) => p.title,
   });
@@ -37,26 +38,10 @@ export function defineTabbedView<ViewProps extends object>(
       [views],
     );
 
-    const [activeViewId, setActiveViewId] = useState<string | null>(() => {
-      try {
-        return localStorage.getItem(storageKey);
-      } catch (err) {
-        if (!(err instanceof DOMException)) throw err;
-        return null;
-      }
-    });
+    const { activeViewId, setActiveView } = useActiveViewId(id);
 
     const activeView =
       ordered.find((v) => v.id === activeViewId) ?? ordered[0] ?? null;
-
-    const selectView = (viewId: string) => {
-      setActiveViewId(viewId);
-      try {
-        localStorage.setItem(storageKey, viewId);
-      } catch (err) {
-        if (!(err instanceof DOMException)) throw err;
-      }
-    };
 
     return (
       <Column
@@ -74,7 +59,7 @@ export function defineTabbedView<ViewProps extends object>(
                     icon: v.icon,
                   }))}
                   activeId={activeView.id}
-                  onSelect={selectView}
+                  onSelect={setActiveView}
                 />
               )}
             </Stack>

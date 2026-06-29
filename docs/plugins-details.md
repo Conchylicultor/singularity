@@ -4207,8 +4207,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `TreeRowNode`, `TreeViewOptions`
         - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
           - Web:
-            - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `config_v2/fields.FieldRenderer`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/popover.InlinePopover`, `primitives/rank.Rank`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
-            - Exports: Types: `ActiveViewState`, `ResolvedViewInstance`, `ViewActionsCore`, `ViewModelCore`, `ViewsConfigHandle`; Values: `buildInstanceFromRow`, `buildViewConfigContributions`, `buildViewDescriptors`, `EditableViewSwitcher`, `useActiveViewId`, `useViewModel`, `useViewsConfig`, `useViewVariants`, `ViewSettingsPopover`
+            - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `config_v2/fields.FieldRenderer`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/popover.InlinePopover`, `primitives/rank.Rank`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/view-switcher.useActiveViewId`
+            - Exports: Types: `ResolvedViewInstance`, `ViewActionsCore`, `ViewModelCore`, `ViewsConfigHandle`; Values: `buildInstanceFromRow`, `buildViewConfigContributions`, `buildViewDescriptors`, `EditableViewSwitcher`, `useViewModel`, `useViewsConfig`, `useViewVariants`, `ViewSettingsPopover`
           - Server:
             - Uses: `config_v2.ConfigV2`
             - Exports: Values: `buildViewConfigRegistrations`, `viewsDescriptor`
@@ -4538,7 +4538,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `getTabId`
     - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
       - Web:
-        - Uses: `primitives/css/column.Column`, `primitives/css/spacing.Stack`, `primitives/slot-render.renderIsolated`, `primitives/view-switcher.ViewSwitcher`
+        - Uses: `primitives/css/column.Column`, `primitives/css/spacing.Stack`, `primitives/slot-render.renderIsolated`, `primitives/view-switcher.useActiveViewId`, `primitives/view-switcher.ViewSwitcher`
         - Exports: Types: `TabbedView`, `TabContribution`; Values: `defineTabbedView`
       - Cross-plugin:
         - Imported by: `conversations/conversations-view`, `debug/slow-ops/pane`
@@ -4589,12 +4589,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `HistoryEntry`, `UndoRedoApi`, `UndoRedoProviderProps`, `UndoRedoShortcutsOptions`; Values: `UndoRedoProvider`, `useUndoRedo`, `useUndoRedoShortcuts`
       - Cross-plugin:
         - Imported by: `page/editor`
-    - **`view-switcher`** — Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher. Pure chrome — selection state stays with the caller.
+    - **`view-switcher`** — Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher (pure chrome — selection state stays with the caller), plus the opt-in device-local active-id helper useActiveViewId.
       - Web:
         - Uses: `primitives/css/toggle-chip.SegmentedControl`
-        - Exports: Types: `ViewSwitcherOption`, `ViewSwitcherProps`; Values: `ViewSwitcher`
+        - Exports: Types: `ActiveViewState`, `ViewSwitcherOption`, `ViewSwitcherProps`; Values: `useActiveViewId`, `ViewSwitcher`
       - Cross-plugin:
-        - Imported by: `primitives/tabbed-view`
+        - Imported by: `primitives/data-view/view-core`, `primitives/tabbed-view`
     - **`virtual-rows`** — Self-discovering windowed row renderer (@tanstack/react-virtual): renders only the rows intersecting the host's scroll viewport (+overscan) inside a full-height sizer, discovering the scroll container at runtime. Shared by data-view's flat/tree views.
       - Web:
         - Uses: `primitives/css/ui-kit.cn`
