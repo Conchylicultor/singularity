@@ -181,6 +181,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/safe-fetch", id: "infra.safe-fetch", loader: () => import("@plugins/infra/plugins/safe-fetch/server"), dependsOn: [] },
   { pluginPath: "infra/plugins/secrets", id: "infra.secrets", loader: () => import("@plugins/infra/plugins/secrets/server"), dependsOn: [] },
   { pluginPath: "infra/plugins/worktree", id: "infra.worktree", loader: () => import("@plugins/infra/plugins/worktree/server"), dependsOn: ["infra/plugins/paths"] },
+  { pluginPath: "integrations/plugins/gmail", id: "integrations.gmail", loader: () => import("@plugins/integrations/plugins/gmail/server"), dependsOn: ["config_v2"] },
   { pluginPath: "packages/plugins/host-semaphore", id: "packages.host-semaphore", loader: () => import("@plugins/packages/plugins/host-semaphore/server"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "page/plugins/attachment-block", id: "page.attachment-block", loader: () => import("@plugins/page/plugins/attachment-block/server"), dependsOn: ["database", "infra/plugins/attachments", "infra/plugins/events", "infra/plugins/jobs", "page/plugins/editor"] },
   { pluginPath: "page/plugins/bookmark", id: "page.bookmark", loader: () => import("@plugins/page/plugins/bookmark/server"), dependsOn: ["infra/plugins/attachments", "infra/plugins/endpoints", "infra/plugins/safe-fetch"] },

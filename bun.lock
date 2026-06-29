@@ -2202,6 +2202,14 @@
     "plugins/infra/plugins/worktree": {
       "name": "@singularity/plugin-infra-worktree",
     },
+    "plugins/integrations": {
+      "name": "@singularity/plugin-integrations",
+      "version": "0.0.1",
+    },
+    "plugins/integrations/plugins/gmail": {
+      "name": "@singularity/plugin-integrations-gmail",
+      "version": "0.0.1",
+    },
     "plugins/layouts": {
       "name": "@singularity/plugin-layouts",
       "version": "0.0.1",
@@ -5396,6 +5404,10 @@
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
 
     "@singularity/plugin-infra-worktree": ["@singularity/plugin-infra-worktree@workspace:plugins/infra/plugins/worktree"],
+
+    "@singularity/plugin-integrations": ["@singularity/plugin-integrations@workspace:plugins/integrations"],
+
+    "@singularity/plugin-integrations-gmail": ["@singularity/plugin-integrations-gmail@workspace:plugins/integrations/plugins/gmail"],
 
     "@singularity/plugin-layouts": ["@singularity/plugin-layouts@workspace:plugins/layouts"],
 

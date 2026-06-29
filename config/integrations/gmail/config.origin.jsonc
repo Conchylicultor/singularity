@@ -1,0 +1,5 @@
+// @hash 6e322ece5c0c
+{
+  // Request Gmail access on your Google connection. Once enabled, grant access from Settings → Accounts. Other plugins can then call the Gmail API with your token.
+  "enabled": false
+}

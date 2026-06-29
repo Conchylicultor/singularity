@@ -232,6 +232,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`secrets`** [load-bearing] — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
     - **`worktree`**
 
+- **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
+  - Plugins:
+    - **`gmail`** — Gmail access toggle and Google scope requirement. Surfaces the Gmail access toggle in Settings.
+
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:
     - **`full-pane`** — Full-pane layout renderer. Paints only the active pane (route.at(-1)) full-surface — the screen-stack navigation model, mounted by full-surface apps.
