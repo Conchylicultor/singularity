@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdSettings } from "react-icons/md";
+import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { Apps } from "@plugins/apps-core/web";
 import { settingsApp } from "../core";
 import { SettingsLayout } from "./components/settings-layout";
@@ -13,7 +14,7 @@ export default {
   contributions: [
     Apps.App({
       id: settingsApp.id,
-      icon: MdSettings,
+      icon: mdAppIcon(MdSettings),
       tooltip: "Settings",
       component: SettingsLayout,
       path: settingsApp.basePath,

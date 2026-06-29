@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 import { MdPiano } from "react-icons/md";
+import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { sonataApp } from "../core";
 import { SonataLayout } from "./components/sonata-layout";
 
@@ -34,7 +35,7 @@ export default {
   contributions: [
     Apps.App({
       id: sonataApp.id,
-      icon: MdPiano,
+      icon: mdAppIcon(MdPiano),
       tooltip: "Sonata",
       component: SonataLayout,
       path: sonataApp.basePath,

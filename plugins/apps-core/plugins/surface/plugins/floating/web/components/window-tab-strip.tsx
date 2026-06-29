@@ -1,10 +1,9 @@
 import {
   useCallback,
   useRef,
-  type ComponentType,
   type PointerEvent as ReactPointerEvent,
 } from "react";
-import { MdAdd, MdWebAsset } from "react-icons/md";
+import { MdAdd } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   cn,
@@ -12,6 +11,11 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Tab } from "@plugins/ui/plugins/tab-bar/web";
+import {
+  appIconComponent,
+  DEFAULT_APP_ICON,
+} from "@plugins/apps-core/plugins/app-icon/web";
+import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import {
   endTabDrag,
   startTabDrag,
@@ -24,7 +28,7 @@ import {
 export interface WindowMember {
   tabId: string;
   title: string;
-  icon: ComponentType<{ className?: string }> | undefined;
+  icon: AppIcon | undefined;
 }
 
 /** The commit operations a finished chip drag invokes (resolved by the host). */
@@ -203,7 +207,7 @@ export function WindowTabStrip({
     <Stack direction="row" gap="2xs" align="center">
       {members.map((member) => {
         const active = member.tabId === activeTabId;
-        const Icon = member.icon ?? MdWebAsset;
+        const Icon = appIconComponent(member.icon ?? DEFAULT_APP_ICON);
         // The dragged chip placeholders in its source strip while the drag is live.
         const dragged =
           session?.tabId === member.tabId &&

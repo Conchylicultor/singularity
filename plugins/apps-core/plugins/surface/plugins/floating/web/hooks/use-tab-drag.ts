@@ -1,4 +1,5 @@
-import { useSyncExternalStore, type ComponentType } from "react";
+import { useSyncExternalStore } from "react";
+import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
 
 /** Live pointer position, in viewport coordinates. */
 export interface DragPointer {
@@ -36,7 +37,7 @@ export interface TabDragSession {
   /** The drag ghost's label (the member's title). */
   label: string;
   /** The drag ghost's leading icon (the member's app icon), if any. */
-  icon?: ComponentType<{ className?: string }>;
+  icon?: AppIcon;
   /** Resolved drop target, or null before the first move resolves one. */
   drop: TabDragDrop | null;
 }

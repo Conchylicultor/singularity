@@ -8,7 +8,7 @@
 - Web:
   - Slots: `Pages.Sidebar` ← `apps.pages.content-search`, `apps.pages.page-tree`, `apps.pages.starred`
   - Contributes: `Apps.App` "Pages" → `PagesLayout`
-  - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+  - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Pages`
 - Core:
   - Uses: `primitives/pane.defineApp`

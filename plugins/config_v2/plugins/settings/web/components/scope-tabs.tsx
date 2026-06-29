@@ -1,6 +1,7 @@
-import { useCallback, useMemo, type ComponentType } from "react";
+import { useCallback, useMemo, type ReactNode } from "react";
 import { MdAdd, MdLayers } from "react-icons/md";
 import { Apps } from "@plugins/apps-core/web";
+import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import { scopeAppId, configV2ScopesResource, configV2ConflictResource, forkDescriptorScope } from "@plugins/config_v2/core";
 import type { ConfigV2ScopesMap } from "@plugins/config_v2/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -20,12 +21,12 @@ type AppContribution = ReturnType<typeof Apps.App.useContributions>[number];
 // isn't installed in this build).
 function resolveScope(scopeId: string, apps: AppContribution[]): {
   label: string;
-  Icon: ComponentType<{ className?: string }>;
+  icon: ReactNode;
 } {
   const rawId = scopeAppId(scopeId);
   const app = apps.find((a) => a.id === rawId);
-  if (app) return { label: app.tooltip, Icon: app.icon };
-  return { label: rawId ?? scopeId, Icon: MdLayers };
+  if (app) return { label: app.tooltip, icon: <AppIconView icon={app.icon} /> };
+  return { label: rawId ?? scopeId, icon: <MdLayers /> };
 }
 
 export function ScopeTabs({
@@ -59,12 +60,12 @@ export function ScopeTabs({
         onSelect={onSelect}
       />
       {scopes.map((sid) => {
-        const { label, Icon } = resolveScope(sid, apps);
+        const { label, icon } = resolveScope(sid, apps);
         return (
           <ScopeTab
             key={sid}
             label={label}
-            icon={<Icon />}
+            icon={icon}
             scopeId={sid}
             storePath={storePath}
             active={scopeId === sid}
@@ -154,7 +155,7 @@ function AddScopeButton({
                 key={app.id}
                 size="sm"
                 hover="muted"
-                icon={<app.icon />}
+                icon={<AppIconView icon={app.icon} />}
                 onClick={() => {
                   fork({ body: { storePath, scopeId: sid } });
                   onSelect(sid);

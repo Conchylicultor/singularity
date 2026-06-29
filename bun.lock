@@ -89,6 +89,10 @@
       "name": "@singularity/plugin-apps-core",
       "version": "0.0.1",
     },
+    "plugins/apps-core/plugins/app-icon": {
+      "name": "@singularity/plugin-apps-core-app-icon",
+      "version": "0.0.1",
+    },
     "plugins/apps-core/plugins/app-rail": {
       "name": "@singularity/plugin-apps-core-app-rail",
       "version": "0.0.1",
@@ -4371,6 +4375,8 @@
     "@singularity/plugin-apps-browser-webview": ["@singularity/plugin-apps-browser-webview@workspace:plugins/apps/plugins/browser/plugins/webview"],
 
     "@singularity/plugin-apps-core": ["@singularity/plugin-apps-core@workspace:plugins/apps-core"],
+
+    "@singularity/plugin-apps-core-app-icon": ["@singularity/plugin-apps-core-app-icon@workspace:plugins/apps-core/plugins/app-icon"],
 
     "@singularity/plugin-apps-core-app-rail": ["@singularity/plugin-apps-core-app-rail@workspace:plugins/apps-core/plugins/app-rail"],
 

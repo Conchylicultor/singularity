@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 import { MdExtension } from "react-icons/md";
+import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { studioApp } from "../core";
 import { StudioLayout } from "./components/studio-layout";
 
@@ -12,7 +13,7 @@ export default {
   contributions: [
     Apps.App({
       id: studioApp.id,
-      icon: MdExtension,
+      icon: mdAppIcon(MdExtension),
       tooltip: "Studio",
       component: StudioLayout,
       path: studioApp.basePath,

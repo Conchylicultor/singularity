@@ -1,4 +1,5 @@
 import { Apps, type ActiveApp, useCurrentAppId } from "@plugins/apps-core/web";
+import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import {
   DataView,
@@ -55,7 +56,7 @@ export function AppGrid() {
         gallery: {
           cover: (a: ActiveApp) => ({
             kind: "icon",
-            icon: <a.icon className="size-7" />,
+            icon: <AppIconView icon={a.icon} className="size-7" />,
           }),
           showCreateCard: true,
         },

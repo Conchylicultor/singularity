@@ -1,7 +1,10 @@
-import { useLayoutEffect, useRef, useState, type ComponentType } from "react";
-import { MdWebAsset } from "react-icons/md";
+import { useLayoutEffect, useRef, useState } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  AppIconView,
+  DEFAULT_APP_ICON,
+} from "@plugins/apps-core/plugins/app-icon/web";
 import { useTabDragSession } from "../hooks/use-tab-drag";
 
 /** Half the ghost width (px) so the chip rides centered under the cursor. */
@@ -107,7 +110,6 @@ export function TabDragOverlay() {
   if (!session) return null;
 
   const { ox, oy, stripRect, caretX } = measured;
-  const Icon: ComponentType<{ className?: string }> = session.icon ?? MdWebAsset;
   const onDesktop = drop?.kind === "desktop";
 
   return (
@@ -161,7 +163,7 @@ export function TabDragOverlay() {
       >
         <Badge
           shape="rect"
-          icon={<Icon />}
+          icon={<AppIconView icon={session.icon ?? DEFAULT_APP_ICON} />}
           colorClass={
             onDesktop
               ? "max-w-40 border-2 border-dashed border-primary/70 bg-background text-foreground shadow-lg"

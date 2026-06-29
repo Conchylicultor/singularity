@@ -22,6 +22,7 @@ import {
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { Tab, useActiveTabVariant } from "@plugins/ui/plugins/tab-bar/web";
 import { Apps } from "@plugins/apps-core/web";
+import { appIconComponent } from "@plugins/apps-core/plugins/app-icon/web";
 import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import {
   useTabs,
@@ -165,7 +166,7 @@ export function AppTabBar() {
                 {() => (
                   <TabChip
                     appId={tab.appId}
-                    icon={app.icon}
+                    icon={appIconComponent(app.icon)}
                     label={label}
                     active={active}
                     fillHeight={fillHeight}
@@ -207,7 +208,7 @@ export function AppTabBar() {
           <Tab
             key={tab.tabId}
             data-app-tab={tab.appId}
-            icon={app.icon}
+            icon={appIconComponent(app.icon)}
             label={label}
             active={false}
             collapsed={false}

@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 import { MdChatBubble } from "react-icons/md";
+import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { agentManagerApp } from "../core";
 import { AgentManagerLayout } from "./components/agent-manager-layout";
 
@@ -10,7 +11,7 @@ export default {
   contributions: [
     Apps.App({
       id: agentManagerApp.id,
-      icon: MdChatBubble,
+      icon: mdAppIcon(MdChatBubble),
       tooltip: "Agent Manager",
       component: AgentManagerLayout,
       path: agentManagerApp.basePath,

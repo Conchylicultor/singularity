@@ -1,6 +1,7 @@
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import type { AppIcon } from "@plugins/apps-core/plugins/app-icon/core";
 import type { RailFramingProps } from "../core";
 
 /** One framing host that wraps the rail + app content; see RailFramingProps. */
@@ -21,7 +22,8 @@ export interface SurfaceContribution {
 
 export const Apps = {
   App: defineRenderSlot<{
-    icon: ComponentType<{ className?: string }>;
+    /** The app's canonical serializable icon descriptor (see {@link AppIcon}). */
+    icon: AppIcon;
     tooltip: string;
     component: ComponentType;
     path: string;

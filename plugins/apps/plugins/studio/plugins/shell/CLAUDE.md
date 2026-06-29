@@ -10,7 +10,7 @@ App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar
 - Web:
   - Slots: `Studio.Sidebar` ← `apps.studio.compositions`, `apps.studio.contributions`, `apps.studio.explorer`, `apps.studio.graph`, `apps.studio.release`, `Studio.Toolbar`
   - Contributes: `Apps.App` "Studio" → `StudioLayout`
-  - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+  - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Studio`
 - Core:
   - Uses: `primitives/pane.defineApp`

@@ -6,7 +6,7 @@
 
 - Description: App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
 - Web:
-  - Uses: `apps-core.Apps`, `apps-core.useActiveApp`, `apps-core/tabs.useTabs`, `apps-core/theme-scope.useChromeThemeScope`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/tooltip.WithTooltip`
+  - Uses: `apps-core.Apps`, `apps-core.useActiveApp`, `apps-core/app-icon.AppIconView`, `apps-core/tabs.useTabs`, `apps-core/theme-scope.useChromeThemeScope`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/tooltip.WithTooltip`
   - Exports: Values: `AppRail`
 - Cross-plugin:
   - Imported by: `apps-core/app-rail-framing/rail`, `apps-core/layout`

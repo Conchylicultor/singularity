@@ -52,7 +52,7 @@ disc and the color palette) on top, and future pickers reuse the same block.
   - Uses: `primitives/css/center.Center`, `primitives/css/grid.Grid`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/loading.Loading`
   - Exports: Types: `FullIconCategory`, `FullIconEntry`, `FullIconSet`, `IconPickerProps`, `IconSelection`, `SvgIconProps`, `SvgNode`; Values: `extractSvgNodes`, `IconPicker`, `loadFullIconSet`, `SvgIcon`
 - Cross-plugin:
-  - Imported by: `apps/pages/page-tree`, `conversations/agents`, `page/callout`, `page/editor`, `primitives/avatar`
+  - Imported by: `apps-core/app-icon`, `apps/pages/page-tree`, `conversations/agents`, `page/callout`, `page/editor`, `primitives/avatar`
 - Server:
   - Exports: Values: `resolveIconSvgNodes`, `resolveIconSvgNodesJson`
 - Core:

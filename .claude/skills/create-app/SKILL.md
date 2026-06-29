@@ -13,6 +13,7 @@ description: >
 - The top-level app plugin must be **empty** — no slots, no components, no logic. It is a namespace only.
 - All app content goes in sub-plugins: `plugins/apps/plugins/<name>/plugins/<feature>/`
 - The app shell (layout, routing) is a sub-plugin, not the top-level plugin.
+- Author the `Apps.App` `icon` via `mdAppIcon` from `@plugins/apps-core/plugins/app-icon/web` (the serializable `AppIcon` descriptor), e.g. `icon: mdAppIcon(MdSomeIcon)` with the glyph imported from `react-icons/md`.
 
 ## Example structure
 

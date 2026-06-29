@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { MdAutoStories } from "react-icons/md";
+import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { storyApp } from "../core";
 import { StoryLayout } from "./components/story-layout";
 import { StoryToolbar } from "./toolbar";
@@ -20,7 +21,7 @@ export default {
   contributions: [
     Apps.App({
       id: storyApp.id,
-      icon: MdAutoStories,
+      icon: mdAppIcon(MdAutoStories),
       tooltip: "Story",
       component: StoryLayout,
       path: storyApp.basePath,

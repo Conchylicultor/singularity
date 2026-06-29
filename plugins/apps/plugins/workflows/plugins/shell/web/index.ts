@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 import { MdSchema } from "react-icons/md";
+import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { workflowsApp } from "../core";
 import { WorkflowsLayout } from "./components/workflows-layout";
 
@@ -12,7 +13,7 @@ export default {
   contributions: [
     Apps.App({
       id: workflowsApp.id,
-      icon: MdSchema,
+      icon: mdAppIcon(MdSchema),
       tooltip: "Workflows",
       component: WorkflowsLayout,
       path: workflowsApp.basePath,

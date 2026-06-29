@@ -7,7 +7,7 @@
 - Description: App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
 - Web:
   - Contributes: `Apps.App` "Agent Manager" → `AgentManagerLayout`
-  - Uses: `apps-core.Apps`, `apps-core/tabs.navigate`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/css/text.Text`, `shell.Shell`
+  - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `apps-core/tabs.navigate`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/css/text.Text`, `shell.Shell`
 - Core:
   - Uses: `primitives/pane.defineApp`
   - Exports: Values: `agentManagerApp`

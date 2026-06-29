@@ -8,7 +8,7 @@
 - Web:
   - Slots: `Deploy.Section`
   - Contributes: `Apps.App` "Deploy" → `DeployLayout`
-  - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+  - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Deploy`
 - Core:
   - Uses: `primitives/pane.defineApp`

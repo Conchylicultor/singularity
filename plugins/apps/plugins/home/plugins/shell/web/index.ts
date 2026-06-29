@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps-core/web";
 import { MdHome } from "react-icons/md";
+import { mdAppIcon } from "@plugins/apps-core/plugins/app-icon/web";
 import { homeApp } from "../core";
 import { HomeLayout } from "./components/home-layout";
 
@@ -12,7 +13,7 @@ export default {
   contributions: [
     Apps.App({
       id: homeApp.id,
-      icon: MdHome,
+      icon: mdAppIcon(MdHome),
       tooltip: "Home",
       component: HomeLayout,
       path: homeApp.basePath,

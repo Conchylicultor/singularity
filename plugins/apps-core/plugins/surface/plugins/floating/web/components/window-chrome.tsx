@@ -12,9 +12,12 @@ import {
   MdFullscreen,
   MdOutlinePushPin,
   MdPushPin,
-  MdWebAsset,
 } from "react-icons/md";
 import { useConfig } from "@plugins/config_v2/web";
+import {
+  appIconComponent,
+  DEFAULT_APP_ICON,
+} from "@plugins/apps-core/plugins/app-icon/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -283,7 +286,7 @@ export function WindowChrome({
   // The system-menu button icon = the active member's app icon (the strip shows
   // every member, so the titlebar icon just stands in for the window menu).
   const activeMember = members.find((m) => m.tabId === win.activeTabId);
-  const MenuIcon = activeMember?.icon ?? MdWebAsset;
+  const MenuIcon = appIconComponent(activeMember?.icon ?? DEFAULT_APP_ICON);
 
   return (
     <>

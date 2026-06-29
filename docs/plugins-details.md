@@ -54,7 +54,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
           - Web:
             - Contributes: `Apps.App` "Agent Manager" → `AgentManagerLayout`
-            - Uses: `apps-core.Apps`, `apps-core/tabs.navigate`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/css/text.Text`, `shell.Shell`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `apps-core/tabs.navigate`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/css/text.Text`, `shell.Shell`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports: Values: `agentManagerApp`
@@ -121,7 +121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `Browser.TabStrip` ← `apps.browser.tabs`, `Browser.NavControls` ← `apps.browser.navigation`, `Browser.Omnibox` ← `apps.browser.omnibox`, `Browser.Actions` ← `apps.browser.bookmarks`, `apps.browser.proxy`, `apps.browser.webview`, `Browser.SubBar` ← `apps.browser.bookmarks`, `Browser.Viewport` ← `apps.browser.webview`, `Browser.StartPage` ← `apps.browser.start-page`, `Browser.Effects` ← `apps.browser.history`
             - Contributes: `Apps.App` "Browser" → `BrowserLayout`
-            - Uses: `apps-core.Apps`, `primitives/bar.Bar`, `primitives/scoped-store.defineScopedStore`, `primitives/slot-render.defineMountSlot`, `primitives/slot-render.defineRenderSlot`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `primitives/bar.Bar`, `primitives/scoped-store.defineScopedStore`, `primitives/slot-render.defineMountSlot`, `primitives/slot-render.defineRenderSlot`
             - Exports: Types: `BrowserNavApi`, `BrowserProxyApi`, `BrowserTab`, `BrowserTabsApi`, `BrowserTabsState`, `BrowserTabSummary`, `FaviconProps`; Values: `Browser`, `BrowserTabsStore`, `Favicon`, `useBrowserNav`, `useBrowserProxy`, `useBrowserTabs`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -146,7 +146,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `DebugApp.Sidebar` ← `backup`, `conversations.recover`, `debug.boot-profile`, `debug.broadcasts`, `debug.claude-cli-calls`, `debug.health-monitor`, `debug.heap-snapshot`, `debug.live-state-churn.emit`, `debug.live-state-health`, `debug.logs`, `debug.memory`, `debug.profiling`, `debug.queue`, `debug.read-set`, `debug.render-profiler`, `debug.reports`, `debug.slow-ops.pane`, `debug.worktree-cleanup`, `debug.zero-test`, `infra.events-test`, `primitives.css.layout-harness`, `DebugApp.Toolbar`
             - Contributes: `Apps.App` "Debug" → `DebugLayout`
-            - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `DebugApp`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -173,7 +173,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `Deploy.Section`
             - Contributes: `Apps.App` "Deploy" → `DeployLayout`
-            - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `Deploy`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -186,7 +186,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `FileExplorer.Sidebar`, `FileExplorer.Toolbar`
             - Contributes: `Apps.App` "File Explorer" → `FileExplorerLayout`
-            - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `FileExplorer`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -196,12 +196,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
           - Web:
             - Contributes: `Home.Section` "Apps" → `AppGrid`
-            - Uses: `apps-core.ActiveApp`, `apps-core.Apps`, `apps-core.useCurrentAppId`, `apps-core/tabs.useTabs`, `apps/home/shell.Home`, `primitives/data-view.CreateOption`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/surface-id.useSurfaceTabId`
+            - Uses: `apps-core.ActiveApp`, `apps-core.Apps`, `apps-core.useCurrentAppId`, `apps-core/app-icon.AppIconView`, `apps-core/tabs.useTabs`, `apps/home/shell.Home`, `primitives/data-view.CreateOption`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/surface-id.useSurfaceTabId`
         - **`shell`** — App shell for Home. Registers the /home app entry and defines the Home.Section slot.
           - Web:
             - Slots: `Home.Section` ← `apps.home.app-cards`
             - Contributes: `Apps.App` "Home" → `HomeLayout`
-            - Uses: `apps-core.Apps`, `layouts/miller.PaneOverlayHost`, `primitives/css/column.Column`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/slot-render.defineRenderSlot`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.PaneOverlayHost`, `primitives/css/column.Column`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `Home`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -239,7 +239,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `Pages.Sidebar` ← `apps.pages.content-search`, `apps.pages.page-tree`, `apps.pages.starred`
             - Contributes: `Apps.App` "Pages" → `PagesLayout`
-            - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `Pages`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -293,7 +293,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.
           - Web:
             - Contributes: `Apps.App` "Prototypes" → `PrototypesLayout`
-            - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`
           - Core:
             - Uses: `primitives/pane.defineApp`
             - Exports: Values: `prototypesApp`
@@ -315,7 +315,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `Settings.Sidebar` ← `apps.settings.accounts`, `apps.settings.appearance`, `apps.settings.config`, `Settings.RailBadge` ← `apps.settings.config`
             - Contributes: `Apps.App` "Settings" → `SettingsLayout`
-            - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `Settings`, `SETTINGS_APP_PATH`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -512,7 +512,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `Sonata.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`, `Sonata.Display` ← `apps.sonata.piano-roll`, `apps.sonata.songsheet`, `Sonata.Analyzer` ← `apps.sonata.rich.chord-analyzer`, `Sonata.Overlay` ← `apps.sonata.rich.chord-overlay`, `Sonata.PitchAxis` ← `apps.sonata.piano-keyboard`, `Sonata.Instrument` ← `apps.sonata.audio.piano`, `apps.sonata.audio.soundfont`, `Sonata.Home` ← `apps.sonata.library`, `Sonata.SurfaceProvider` ← `apps.sonata.audio.engine`, `Sonata.Effect` ← `apps.sonata.audio.engine`, `apps.sonata.controls`, `apps.sonata.playback-history`, `apps.sonata.rich.key-mode`, `Sonata.Transport` ← `apps.sonata.progress.scrubber`, `Sonata.Hud` ← `apps.sonata.rich.key-chip`, `Sonata.ViewOption` ← `apps.sonata.piano-keyboard`, `apps.sonata.piano-roll`, `Sonata.Section` ← `apps.sonata.rich.chord-progression`, `apps.sonata.rich.chord-readout`, `apps.sonata.rich.circle-of-fifths`, `apps.sonata.rich.key-readout`, `apps.sonata.rich.voicing-controls`, `apps.sonata.sources.chord-grid`, `apps.sonata.sources.ultimate-guitar`, `apps.sonata.track-mixer`, `SonataToolbar.Start` ← `apps.sonata.library`, `SonataToolbar.End` ← `apps.sonata.audio.engine`, `apps.sonata.piano-roll`, `apps.sonata.transport-bar`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
-            - Uses: `apps-core.Apps`, `config_v2.useConfig`, `layouts/full-pane.FullPane`, `primitives/css/center.Center`, `primitives/css/text.Text`, `primitives/latest-ref.useLatestRef`, `primitives/pane-toolbar.definePaneToolbar`, `primitives/scoped-store.defineScopedStore`, `primitives/scoped-store.ScopedStore`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineMountSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.defineWrapperSlot`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `config_v2.useConfig`, `layouts/full-pane.FullPane`, `primitives/css/center.Center`, `primitives/css/text.Text`, `primitives/latest-ref.useLatestRef`, `primitives/pane-toolbar.definePaneToolbar`, `primitives/scoped-store.defineScopedStore`, `primitives/scoped-store.ScopedStore`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineMountSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.defineWrapperSlot`
             - Exports: Types: `CursorApi`, `CursorStore`, `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `TransportClock`; Values: `cursorApiFor`, `CursorStoreProvider`, `KeyModeStoreProvider`, `Sonata`, `SonataProvider`, `SonataToolbar`, `TEMPO_MATH_FLOOR`, `useCursorApi`, `useCursorBeat`, `useCursorSelector`, `useKeyAutoDetect`, `useSetKeyAutoDetect`, `useSonata`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -662,7 +662,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `StoryToolbar.Start` ← `apps.story.shell`, `StoryToolbar.End` ← `apps.story.shell`
             - Contributes: `Apps.App` "Story" → `StoryLayout`, `StoryToolbar.Start` "back" → `BackToStories`, `StoryToolbar.Start` "title" → `StoryTitleItem`, `StoryToolbar.End` "view-switcher" → `ViewSwitcherItem`, `Pane.Register` "story-gallery", `Pane.Register` "story-detail"
-            - Uses: `apps-core.Apps`, `apps/story/marker.markStory`, `apps/story/marker.storiesResource`, `apps/story/marker.useStories`, `apps/story/render.Story`, `apps/story/render.StoryRender`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `layouts/full-pane.FullPane`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `primitives/css/spacing.Stack`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/editable-field.useEditableField`, `primitives/icon-button.IconButton`, `primitives/live-state.ResourceView`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane-toolbar.definePaneToolbar`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/relative-time.formatRelativeTime`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `apps/story/marker.markStory`, `apps/story/marker.storiesResource`, `apps/story/marker.useStories`, `apps/story/render.Story`, `apps/story/render.StoryRender`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `layouts/full-pane.FullPane`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `primitives/css/spacing.Stack`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/editable-field.useEditableField`, `primitives/icon-button.IconButton`, `primitives/live-state.ResourceView`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane-toolbar.definePaneToolbar`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/relative-time.formatRelativeTime`
             - Exports: Values: `StoryToolbar`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -814,7 +814,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `Studio.Sidebar` ← `apps.studio.compositions`, `apps.studio.contributions`, `apps.studio.explorer`, `apps.studio.graph`, `apps.studio.release`, `Studio.Toolbar`
             - Contributes: `Apps.App` "Studio" → `StudioLayout`
-            - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `Studio`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -843,7 +843,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `WorkflowsApp.Sidebar`, `WorkflowsApp.Toolbar`
             - Contributes: `Apps.App` "Workflows" → `WorkflowsLayout`
-            - Uses: `apps-core.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `WorkflowsApp`
           - Core:
             - Uses: `primitives/pane.defineApp`
@@ -868,9 +868,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Exports: Types: `Placement`, `RailFramingProps`
   - Plugins:
+    - **`app-icon`** — Canonical, serializable app-icon descriptor (Material Design now, image variant later); composes icon-picker for author-time extraction and rendering.
+      - Web:
+        - Uses: `primitives/icon-picker.extractSvgNodes`, `primitives/icon-picker.SvgIcon`
+        - Exports: Values: `appIconComponent`, `AppIconView`, `DEFAULT_APP_ICON`, `mdAppIcon`
+      - Cross-plugin:
+        - Imported by: `apps-core/app-rail`, `apps-core/surface/floating`, `apps-core/tab-bar`, `apps/agent-manager/shell`, `apps/browser/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/prototypes/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `config_v2/settings`
+      - Core:
+        - Exports: Types: `AppIcon`
     - **`app-rail`** — App rail: the far-left icon strip that switches the focused tab between apps, deriving its own active-app highlight and chrome theme scope.
       - Web:
-        - Uses: `apps-core.Apps`, `apps-core.useActiveApp`, `apps-core/tabs.useTabs`, `apps-core/theme-scope.useChromeThemeScope`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/tooltip.WithTooltip`
+        - Uses: `apps-core.Apps`, `apps-core.useActiveApp`, `apps-core/app-icon.AppIconView`, `apps-core/tabs.useTabs`, `apps-core/theme-scope.useChromeThemeScope`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/tooltip.WithTooltip`
         - Exports: Values: `AppRail`
       - Cross-plugin:
         - Imported by: `apps-core/app-rail-framing/rail`, `apps-core/layout`
@@ -916,7 +924,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`floating`** — Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store, window chrome, and keyboard window-management shortcuts (tile / minimize / close / cycle).
           - Web:
             - Contributes: `Surface.Placement`, `ConfigV2.WebRegister`, `ThemeEngine.VariantGroup` "Window titlebar" → `TitlebarStylePicker`, `Shortcuts.Shortcut` "floating.snap-left (ctrl+alt+arrowleft)", `Shortcuts.Shortcut` "floating.snap-right (ctrl+alt+arrowright)", `Shortcuts.Shortcut` "floating.snap-up (ctrl+alt+arrowup)", `Shortcuts.Shortcut` "floating.snap-down (ctrl+alt+arrowdown)", `Shortcuts.Shortcut` "floating.minimize (mod+m)", `Shortcuts.Shortcut` "floating.toggle-pin (ctrl+alt+p)", `Shortcuts.Shortcut` "floating.close (mod+w)", `Shortcuts.Shortcut` "floating.cycle-next (mod+`)", `Shortcuts.Shortcut` "floating.cycle-prev (mod+shift+~)", `Shortcuts.Shortcut` "floating.cycle-prev-backquote (mod+shift+`)", `Shortcuts.Shortcut` "floating.desktop-next (ctrl+alt+pagedown)", `Shortcuts.Shortcut` "floating.desktop-prev (ctrl+alt+pageup)", `Shortcuts.Shortcut` "floating.window-to-next-desktop (ctrl+alt+shift+pagedown)", `Shortcuts.Shortcut` "floating.window-to-prev-desktop (ctrl+alt+shift+pageup)"
-            - Uses: `apps-core.Apps`, `apps-core/surface.PlacementChromeProps`, `apps-core/surface.PlacementDef`, `apps-core/surface.Surface`, `apps-core/surface.usePlacementStyle`, `apps-core/surface/floating/wallpaper.DesktopContextMenu`, `apps-core/surface/floating/wallpaper.WallpaperAttribution`, `apps-core/tabs.getFocusedPlacement`, `apps-core/tabs.Tab`, `apps-core/tabs.useTabs`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/cluster.Cluster`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenuCheckboxItem`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuShortcut`, `primitives/css/ui-kit.DropdownMenuSub`, `primitives/css/ui-kit.DropdownMenuSubContent`, `primitives/css/ui-kit.DropdownMenuSubTrigger`, `primitives/cursor-menu.CursorAnchor`, `primitives/cursor-menu.CursorAnchoredMenu`, `primitives/element-size.useElementSize`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/shortcuts.defineShortcut`, `primitives/shortcuts.formatShortcutLabel`, `primitives/shortcuts.getFocusedSurfaceId`, `primitives/tab-id.getTabId`, `primitives/tooltip.WithTooltip`, `ui/tab-bar.Tab`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.useThemeScopeId`
+            - Uses: `apps-core.Apps`, `apps-core/app-icon.appIconComponent`, `apps-core/app-icon.AppIconView`, `apps-core/app-icon.DEFAULT_APP_ICON`, `apps-core/surface.PlacementChromeProps`, `apps-core/surface.PlacementDef`, `apps-core/surface.Surface`, `apps-core/surface.usePlacementStyle`, `apps-core/surface/floating/wallpaper.DesktopContextMenu`, `apps-core/surface/floating/wallpaper.WallpaperAttribution`, `apps-core/tabs.getFocusedPlacement`, `apps-core/tabs.Tab`, `apps-core/tabs.useTabs`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/cluster.Cluster`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenuCheckboxItem`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuShortcut`, `primitives/css/ui-kit.DropdownMenuSub`, `primitives/css/ui-kit.DropdownMenuSubContent`, `primitives/css/ui-kit.DropdownMenuSubTrigger`, `primitives/cursor-menu.CursorAnchor`, `primitives/cursor-menu.CursorAnchoredMenu`, `primitives/element-size.useElementSize`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/shortcuts.defineShortcut`, `primitives/shortcuts.formatShortcutLabel`, `primitives/shortcuts.getFocusedSurfaceId`, `primitives/tab-id.getTabId`, `primitives/tooltip.WithTooltip`, `ui/tab-bar.Tab`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.useThemeScopeId`
           - Server:
             - Uses: `config_v2.ConfigV2`
           - Core:
@@ -961,7 +969,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps-core/surface.Surface`, `apps-core/tabs.getDefaultPlacement`, `apps-core/tabs.getFocusedPlacement`, `apps-core/tabs.setFocusedTabPlacement`, `primitives/css/pin.Pin`, `primitives/icon-button.IconButton`, `primitives/shortcuts.defineShortcut`
     - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
       - Web:
-        - Uses: `apps-core.Apps`, `apps-core/tabs.getDefaultPlacement`, `apps-core/tabs.placementIsNewTabFollows`, `apps-core/tabs.tearOffPlacement`, `apps-core/tabs.useTabs`, `apps-core/theme-scope.useChromeThemeScope`, `primitives/css/line.Line`, `primitives/css/measure-strip.MeasureStrip`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.PortalThemeScopeProvider`, `primitives/icon-button.IconButton`, `primitives/responsive-overflow.useResponsiveOverflow`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/tooltip.WithTooltip`, `ui/tab-bar.Tab`, `ui/tab-bar.useActiveTabVariant`
+        - Uses: `apps-core.Apps`, `apps-core/app-icon.appIconComponent`, `apps-core/tabs.getDefaultPlacement`, `apps-core/tabs.placementIsNewTabFollows`, `apps-core/tabs.tearOffPlacement`, `apps-core/tabs.useTabs`, `apps-core/theme-scope.useChromeThemeScope`, `primitives/css/line.Line`, `primitives/css/measure-strip.MeasureStrip`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.PortalThemeScopeProvider`, `primitives/icon-button.IconButton`, `primitives/responsive-overflow.useResponsiveOverflow`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/tooltip.WithTooltip`, `ui/tab-bar.Tab`, `ui/tab-bar.useActiveTabVariant`
         - Exports: Values: `AppTabBar`
       - Cross-plugin:
         - Imported by: `apps-core/layout`
@@ -1238,7 +1246,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `configDetailPane.Actions`, `configNavPane.Actions`
         - Contributes: `Pane.Register` "config-v2-nav", `Pane.Register` "config-v2-detail"
-        - Uses: `apps-core.Apps`, `config_v2.useConfigRegistrations`, `config_v2/fields.ConfigFieldContext`, `config_v2/fields.FieldRenderer`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SidebarMenu`, `primitives/css/ui-kit.SidebarMenuButton`, `primitives/css/ui-kit.SidebarMenuItem`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/data-view.HierarchyConfig`, `primitives/diff-view.TextDiff`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/syntax-highlight.HighlightedCode`
+        - Uses: `apps-core.Apps`, `apps-core/app-icon.AppIconView`, `config_v2.useConfigRegistrations`, `config_v2/fields.ConfigFieldContext`, `config_v2/fields.FieldRenderer`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SidebarMenu`, `primitives/css/ui-kit.SidebarMenuButton`, `primitives/css/ui-kit.SidebarMenuItem`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/data-view.HierarchyConfig`, `primitives/diff-view.TextDiff`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/syntax-highlight.HighlightedCode`
         - Exports: Values: `configDetailPane`, `ConfigNav`, `configNavPane`, `ConfigSidebarButton`
       - Server:
         - Uses: `config_v2.acknowledgeConflictByPath`, `config_v2.deleteOverrideByPath`, `config_v2.getRawFileContent`, `config_v2.mergeConflictByPath`, `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
@@ -4312,7 +4320,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/css/center.Center`, `primitives/css/grid.Grid`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/loading.Loading`
         - Exports: Types: `FullIconCategory`, `FullIconEntry`, `FullIconSet`, `IconPickerProps`, `IconSelection`, `SvgIconProps`, `SvgNode`; Values: `extractSvgNodes`, `IconPicker`, `loadFullIconSet`, `SvgIcon`
       - Cross-plugin:
-        - Imported by: `apps/pages/page-tree`, `conversations/agents`, `page/callout`, `page/editor`, `primitives/avatar`
+        - Imported by: `apps-core/app-icon`, `apps/pages/page-tree`, `conversations/agents`, `page/callout`, `page/editor`, `primitives/avatar`
       - Server:
         - Exports: Values: `resolveIconSvgNodes`, `resolveIconSvgNodesJson`
       - Core:

@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Apps } from "@plugins/apps-core/web";
+import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import { useTabs, type Tab } from "@plugins/apps-core/plugins/tabs/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
@@ -111,7 +112,6 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
         {windows.map((win) => {
           const tab = byTabId.get(win.activeTabId);
           const app = apps.find((a) => a.id === tab?.appId);
-          const Icon = app?.icon;
           const base = titles[win.activeTabId] ?? app?.tooltip ?? "Window";
           const label =
             win.members.length > 1 ? `${base} (${win.members.length})` : base;
@@ -133,7 +133,7 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
               <ToggleChip
                 active={active}
                 variant="ghost"
-                icon={Icon ? <Icon /> : undefined}
+                icon={app?.icon ? <AppIconView icon={app.icon} /> : undefined}
                 onClick={onClick}
                 title={label}
                 className={cn("max-w-40", minimized && "opacity-60")}

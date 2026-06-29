@@ -4,6 +4,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Apps, useActiveApp } from "@plugins/apps-core/web";
+import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
 import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import { useTabs } from "@plugins/apps-core/plugins/tabs/web";
 
@@ -38,7 +39,7 @@ export function AppRail() {
                   "bg-sidebar-accent text-sidebar-accent-foreground",
               )}
             >
-              <app.icon className="size-4" />
+              <AppIconView icon={app.icon} className="size-4" />
               {app.badge && (
                 <Pin to="top-right" offset="xs" decorative>
                   <app.badge />

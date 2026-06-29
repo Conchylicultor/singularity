@@ -8,7 +8,7 @@
 - Web:
   - Slots: `Browser.TabStrip` ← `apps.browser.tabs`, `Browser.NavControls` ← `apps.browser.navigation`, `Browser.Omnibox` ← `apps.browser.omnibox`, `Browser.Actions` ← `apps.browser.bookmarks`, `apps.browser.proxy`, `apps.browser.webview`, `Browser.SubBar` ← `apps.browser.bookmarks`, `Browser.Viewport` ← `apps.browser.webview`, `Browser.StartPage` ← `apps.browser.start-page`, `Browser.Effects` ← `apps.browser.history`
   - Contributes: `Apps.App` "Browser" → `BrowserLayout`
-  - Uses: `apps-core.Apps`, `primitives/bar.Bar`, `primitives/scoped-store.defineScopedStore`, `primitives/slot-render.defineMountSlot`, `primitives/slot-render.defineRenderSlot`
+  - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `primitives/bar.Bar`, `primitives/scoped-store.defineScopedStore`, `primitives/slot-render.defineMountSlot`, `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `BrowserNavApi`, `BrowserProxyApi`, `BrowserTab`, `BrowserTabsApi`, `BrowserTabsState`, `BrowserTabSummary`, `FaviconProps`; Values: `Browser`, `BrowserTabsStore`, `Favicon`, `useBrowserNav`, `useBrowserProxy`, `useBrowserTabs`
 - Core:
   - Uses: `primitives/pane.defineApp`
