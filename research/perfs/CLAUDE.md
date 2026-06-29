@@ -5,17 +5,30 @@ rule here is: *measure and confirm the root cause without doubt before changing 
 code.* Each session re-validates the prior session's conclusion against fresh data
 rather than inheriting it.
 
+> **MANDATORY:** before any perf investigation, profiling pass, or perf fix, agents
+> **MUST** follow the [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md)
+> skill. It encodes the method below as enforced phases + stopping gates (rate×cost,
+> trace-to-origin-not-hotspot, sufficiency/legitimacy/counterfactual gates,
+> containment-vs-cure altitudes). The summary below is the index; the skill is the procedure.
+
 ## Goal
 
 **Make the app feel instant: any page loads in < 1 s, including cold start.**
 
-## Method (non-negotiable)
+## Method (non-negotiable) — see the [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md) skill for the full procedure
 
 1. Reproduce and quantify with the `benchmark_boot` MCP tool **and** the live
    `get_runtime_profile` (aggregate `waits`, not just `avgMs`).
 2. Separate **work** from **wait** — a high `avgMs` with a high wait / low `workMs`
    is queueing, not a slow op. Find the *dominant* wait layer before theorizing.
-3. Only after the root cause is confirmed beyond doubt, write a fix plan.
+3. **Decompose every cost into `rate × cost-per-occurrence` and trace to the origin, not
+   the hotspot.** The biggest number is usually a downstream *amplifier*; amplitude is not
+   causality. A `no-op`/`redundant`/`unchanged` signal means look *upstream*. Stop only at an
+   event that *legitimately* should occur at that rate (the legitimacy gate) — not at the first
+   sufficient cause.
+4. Only after the root cause is confirmed beyond doubt (three converging lines of evidence),
+   write a fix plan — and name its altitude (containment = make it cheap / cure = make it not
+   happen).
 
 ## Sessions
 
@@ -52,8 +65,40 @@ rather than inheriting it.
   `warning`/`error` variants. Re-validated the prior session: this window's `[acquire]`
   max is **81 ms**, not 44.6 s — pool exhaustion spikes only *during* these big-blob
   storms (cold-boot fan-out + notifications churn), so it is a symptom. "Simple queries
-  take seconds" = pure wait (an 88 kB / 20-row table can't scan for 3 s). **Root cause
-  confirmed beyond doubt; fix plan in the doc, pending user go-ahead.**
+  take seconds" = pure wait (an 88 kB / 20-row table can't scan for 3 s). The fix (one
+  notification row per fingerprint) **landed on main** (`a8f9da4b6`).
+
+- **2026-06-29 (3) — [snapshot TOAST bloat + unconditional no-op persist (root cause confirmed)](./2026-06-29-snapshot-toast-bloat-noop-persist.md).**
+  Re-validated the landed notifications fix on main: `notifications` value **1.88 MB →
+  42 kB**, undismissed report rows **21,803 → 27**. But the multi-second flush stalls
+  persist one layer down. The new dominant event is a **22.4 s `flushNotifies` = one
+  `live_state_snapshot` UPSERT stalling 21.9 s** (avg 26 ms — a lone outlier) that
+  serial-blocks every co-flushed resource (their ~22 s "deliveries" are pure wait).
+  Cause: `live_state_snapshot` is **181 MB TOAST for 20 rows** (11 k dead TOAST tuples,
+  ~3 M lifetime UPDATEs) — pure bloat, never reclaimed because session 2's deferred
+  `VACUUM FULL` **was never run** (`last_vacuum = null`; bloat grew 112 → 181 MB). The
+  bloat is re-fed structurally: the runtime **UPSERTs the full value on every flush
+  unconditionally, including no-op pushes** (persist precedes the diff; 6 keyed
+  resources fire ~2 no-op pushes/s each = 32 k logged `live-state-noop`). Fix plan:
+  (1) one-time `VACUUM FULL`, (2) skip the persist when the value is unchanged. **Root
+  cause confirmed beyond doubt; pending user go-ahead.** *Refined by session 4: the
+  persist-skip is the tail; the no-op pushes themselves have an upstream origin.*
+
+- **2026-06-29 (4) — [no-op-push churn traced to its origin (the 1 Hz poller) + methodology](./2026-06-29-noop-push-churn-traced-to-origin.md).**
+  Re-validated session 2 (notifications fix landed: 1.88 MB → 42 kB, 21,803 → 27 undismissed).
+  Then traced the residual stalls *upstream* instead of optimizing the hotspot. The 22 s flush =
+  one 21.9 s `live_state_snapshot` UPSERT — but that is the most-*amplified* node, not the driver.
+  Walked the chain three hops past "solved": no-op recompute (×12/s) ← FULL-table invalidation ←
+  change-feed trigger firing on a **zero-row statement** ← `INSERT … ON CONFLICT DO NOTHING` that
+  fully conflicts ← the conversations poller re-adopting cross-worktree tmux sessions as "orphans"
+  ← **it polls every 1 s** (the origin — illegitimate per the no-polling rule). Evidence:
+  `live_state_changelog` `conversations` INSERT 2.62/s vs only 2,280 rows ever inserted; 32,107
+  `live-state-noop` across 6 resources. Layered fix in
+  `research/2026-06-29-global-noop-statement-invalidation-churn.md`: **boundary invariant**
+  (trigger never invalidates on zero rows — ready) + **origin cure** (fix the poller — needs one
+  more hop); persist-skip + one-time `VACUUM FULL` demoted to defense-in-depth. Extracted the
+  method into the mandatory [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md)
+  skill. **No code changes — handed off for implementation.**
 
 ## Causes — checklist
 
@@ -69,26 +114,42 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   2026-06-29: `heavy-read-acquire` = **17 ms total** across all loaders. Negligible.
   *The original git-off-critical-path plan targeted only this — hence "wrong path".*
 
-### Confirmed root cause (2026-06-29 session 2 — cause→effect ordered)
-- ✅ **DRIVER: oversized monolithic `push` live-state resources** load an entire
-  unbounded table as one blob and re-serialize + re-snapshot + re-deliver the *whole*
-  blob on every change. Worst by 4×: **`notifications` = 1.88 MB / 21,803 undismissed
-  rows, loaded with no `LIMIT`** (also `pushes` 437 kB, `attempts` 381 kB, `tasks`
-  369 kB).
-- ✅ **GROWTH: reports → notifications, no retention.** `recordReport` files a
-  notification per report (~281/h); the TTL job auto-dismisses only `info`/`success`,
-  never `warning`/`error` → 21,085 `report` rows accumulate since 2026-06-13. The
-  monitoring infra feeds the problem.
-- ✅ **EFFECT 1 — `live_state_snapshot` TOAST bloat is causal.** 149 MB = 160 kB heap +
-  **112 MB TOAST** for 20 live rows: the big jsonb values UPSERTed over and over. The
-  4.95 s snapshot write is the notifications-sized rewrite holding a connection mid-flush.
-- ✅ **EFFECT 2 — slow delivery + flush.** `deliver:notifications` 5.9 s max (slowest
-  push); worst `flushNotifies` 21.8 s; recurring ~828 ms steady-state flushes track the
-  constant notifications churn.
-- ✅ **EFFECT 3 — intermittent pool exhaustion (the prior session's "root cause").** Per-
-  backend Pool max 16 / loader gate 10; spikes only *during* the big-blob storms. This
-  window's `[acquire]` max = **81 ms** (not 44.6 s). "Simple queries take seconds" = pure
-  wait — an 88 kB / 20-row trigger table can't scan for 3 s (14 piled at boot, atMs 5.5 s).
+### Confirmed root cause (2026-06-29 session 4 — current, ORIGIN-first cause→effect)
+- ✅ **ORIGIN: the conversations poller re-issues a zero-row write ~2.6/s.** It runs on a
+  1 Hz `setInterval` (`conversations/server/internal/poller.ts:25,263`) and re-adopts
+  host-wide tmux sessions it can't reconcile (cross-worktree) as "orphans" via
+  `insertConversationOnConflictDoNothing` → `.onConflictDoNothing()` that fully conflicts
+  (0 rows inserted). Illegitimate per the repo's no-polling rule. Evidence:
+  `live_state_changelog` `conversations` INSERT 2.62/s vs `n_tup_ins` = 2,280 rows ever.
+- ✅ **AMPLIFIER 1 — change-feed trigger fires on zero-row statements.** `live_state_notify()`
+  is STATEMENT-level; an empty transition table still NOTIFYs, and `array_agg(pk)` over it is
+  NULL → routed as **FULL-for-table**, invalidating *every* resource reading `conversations`.
+- ✅ **AMPLIFIER 2 — invalidation → no-op recompute.** 6 keyed resources fire **~2 no-op
+  pushes/s each** (32 k logged `live-state-noop`): loader reruns, value identical, empty diff.
+- ✅ **AMPLIFIER 3 — unconditional full-value snapshot UPSERT (the persist tail).** `drainEntry`
+  persists the full ~0.4 MB blob even on a no-op (persist precedes the diff; no value compare;
+  `resource-runtime/core/runtime.ts` 1404–1419).
+- ✅ **EFFECT 1 — `live_state_snapshot` TOAST bloat.** **181 MB TOAST / 20 live rows** (11 k dead
+  TOAST tuples, ~3 M lifetime `n_tup_upd`); the deferred one-time `VACUUM FULL` was never run
+  (`last_vacuum = null`; grew 112 → 181 MB since session 2).
+- ✅ **EFFECT 2 — multi-second flush stalls (the headline symptom).** A single UPSERT into the
+  bloated TOAST stalled **21.9 s**; `flushNotifies` serializes, so it inflated every co-flushed
+  resource's delivery to ~22 s (pure wait). *This is the most-amplified node — fixated on by
+  sessions 1–3 — not the driver.*
+
+> Fix altitudes (see `research/2026-06-29-global-noop-statement-invalidation-churn.md`):
+> **boundary invariant** at AMPLIFIER 1 (trigger never invalidates on zero rows — kills the
+> whole class), **cure** at ORIGIN (fix the poller). AMPLIFIER 3's persist-skip + the one-time
+> `VACUUM FULL` are defense-in-depth.
+
+### Confirmed + FIXED (landed on main `a8f9da4b6`, 2026-06-29 session 2)
+- ✅ **`notifications` was a 1.88 MB unbounded monolith** (21,803 undismissed rows, no
+  `LIMIT`) — the worst single blob. **GROWTH:** `recordReport` filed a notification per
+  report (~281/h), deduped by `(reportId, timeBucket)` → ~26× row blow-up, never
+  auto-dismissed for `warning`/`error`. **Fix:** one notification row per fingerprint
+  (count + in-place re-surface) + TTL closes the warning/error gap. Re-validated session 3:
+  value **1.88 MB → 42 kB**, undismissed report rows **21,803 → 27**, `deliver:notifications`
+  max **5.9 s → 341 ms**.
 
 ### Discarded as the *primary* cause (real but downstream / 2nd-order)
 - ❌ **DB-pool exhaustion as a chronic state** — 2026-06-29 (2): intermittent symptom of
