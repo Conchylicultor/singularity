@@ -5,7 +5,7 @@
 # The `setup` task runs automatically after `mise install` to bootstrap the
 # base "singularity" Postgres DB:
 #   1. createdb singularity (if missing)
-#   2. apply server migrations directly (server/src/db/migrate.ts as a script)
+#   2. apply server migrations via `./singularity apply-migrations`
 # Both steps are idempotent. Step 2 unblocks the very first
 # `./singularity build --allow-main`, which otherwise deadlocks waiting for
 # __singularity_migrations to be populated.
@@ -38,11 +38,13 @@ else
   createdb singularity
 fi
 
-echo "setup: installing bun deps (needed for migrate.ts imports)..."
+echo "setup: installing bun deps (needed for the apply-migrations command imports)..."
 bun install --silent
 
 echo "setup: applying migrations to 'singularity' DB..."
-SINGULARITY_WORKTREE=singularity bun server/src/db/migrate.ts
+# Invoke the CLI bin directly (not the ./singularity wrapper) to avoid a
+# redundant second `bun install` — deps were just installed above.
+SINGULARITY_WORKTREE=singularity bun plugins/framework/plugins/cli/bin/index.ts apply-migrations
 '''
 
 [hooks]
