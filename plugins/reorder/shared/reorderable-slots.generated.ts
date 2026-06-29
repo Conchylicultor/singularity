@@ -64,6 +64,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "sonata.home", pluginId: "apps.sonata.shell" },
   { slotId: "sonata.hud", pluginId: "apps.sonata.shell" },
   { slotId: "sonata.library.card-meta", pluginId: "apps.sonata.library" },
+  { slotId: "sonata.library.fields", pluginId: "apps.sonata.library" },
   { slotId: "sonata.library.song-actions", pluginId: "apps.sonata.library" },
   { slotId: "sonata.section", pluginId: "apps.sonata.shell" },
   { slotId: "sonata.toolbar.end", pluginId: "apps.sonata.shell" },
