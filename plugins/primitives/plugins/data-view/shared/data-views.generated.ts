@@ -31,7 +31,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "sonata.library", pluginId: "apps.sonata.library" },
   { id: "story.gallery", pluginId: "apps.story.shell" },
   { id: "studio.explorer.tree", pluginId: "apps.studio.explorer" },
-  { id: "tasks-list", pluginId: "tasks.task-list.tree" },
-  { id: "tasks-recent", pluginId: "tasks.task-list.recent" },
+  { id: "tasks-list", pluginId: "tasks.task-list" },
+  { id: "tasks-subtree", pluginId: "tasks.task-list" },
   { id: "tweakcn.community-browser", pluginId: "ui.tweakcn.community-browser" },
 ];

@@ -1,4 +1,4 @@
-// @hash 75f17b871e44
+// @hash fb363cd055b4
 {
   "manifests": [
     {
@@ -11,7 +11,6 @@
       ],
       "selectedContributors": [
         "tasks.attempt-view",
-        "tasks.task-list.recent",
         "ui.theme-toggle"
       ],
       "extends": [
@@ -29,7 +28,6 @@
       ],
       "selectedContributors": [
         "tasks.attempt-view",
-        "tasks.task-list.recent",
         "ui.theme-toggle"
       ],
       "extends": [

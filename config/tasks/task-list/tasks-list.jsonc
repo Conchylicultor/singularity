@@ -1,0 +1,7 @@
+// @hash edfdc62ed108
+{
+  "views": [
+    { "name": "Tree", "view": { "type": "tree" } },
+    { "name": "Recent", "view": { "type": "list", "sort": { "fieldId": "updatedAt", "direction": "desc" } } }
+  ]
+}

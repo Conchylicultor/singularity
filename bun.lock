@@ -3367,14 +3367,6 @@
       "name": "@singularity/plugin-tasks-task-list",
       "version": "0.0.1",
     },
-    "plugins/tasks/plugins/task-list/plugins/recent": {
-      "name": "@singularity/plugin-tasks-task-list-recent",
-      "version": "0.0.1",
-    },
-    "plugins/tasks/plugins/task-list/plugins/tree": {
-      "name": "@singularity/plugin-tasks-task-list-tree",
-      "version": "0.0.1",
-    },
     "plugins/tasks/plugins/task-preprompt": {
       "name": "@singularity/plugin-tasks-task-preprompt",
       "version": "0.0.1",
@@ -5893,10 +5885,6 @@
     "@singularity/plugin-tasks-task-header": ["@singularity/plugin-tasks-task-header@workspace:plugins/tasks/plugins/task-header"],
 
     "@singularity/plugin-tasks-task-list": ["@singularity/plugin-tasks-task-list@workspace:plugins/tasks/plugins/task-list"],
-
-    "@singularity/plugin-tasks-task-list-recent": ["@singularity/plugin-tasks-task-list-recent@workspace:plugins/tasks/plugins/task-list/plugins/recent"],
-
-    "@singularity/plugin-tasks-task-list-tree": ["@singularity/plugin-tasks-task-list-tree@workspace:plugins/tasks/plugins/task-list/plugins/tree"],
 
     "@singularity/plugin-tasks-task-preprompt": ["@singularity/plugin-tasks-task-preprompt@workspace:plugins/tasks/plugins/task-preprompt"],
 

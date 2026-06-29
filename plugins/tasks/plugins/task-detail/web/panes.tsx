@@ -1,7 +1,8 @@
 import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane, type } from "@plugins/primitives/plugins/pane/web";
-import { Tasks } from "@plugins/tasks/plugins/task-list/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { TasksListView } from "@plugins/tasks/plugins/task-list/web";
 import { tasksResource, tasksRootRoute, taskDetailRoute } from "@plugins/tasks/plugins/tasks-core/core";
 import { useTask } from "@plugins/tasks/web";
 import { TaskDetailFlushProvider } from "./context";
@@ -41,11 +42,12 @@ function TasksRoot(): ReactElement {
 
   return (
     <PaneChrome pane={tasksRootPane} title="Tasks">
-      <Tasks.Host
-        className="h-full p-lg"
-        selectedId={selectedId}
-        onSelect={(id) => openPane(taskDetailPane, { taskId: id }, { mode: "push" })}
-      />
+      <Inset pad="lg">
+        <TasksListView
+          selectedId={selectedId}
+          onSelect={(id) => openPane(taskDetailPane, { taskId: id }, { mode: "push" })}
+        />
+      </Inset>
     </PaneChrome>
   );
 }

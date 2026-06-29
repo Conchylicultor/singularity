@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-tasks-task-list-recent",
-  "description": "Recency-sorted flat task list tab.",
-  "private": true,
-  "version": "0.0.1"
-}

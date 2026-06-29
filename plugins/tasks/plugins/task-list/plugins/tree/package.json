@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-tasks-task-list-tree",
-  "description": "Tree-view tab for the task list.",
-  "private": true,
-  "version": "0.0.1"
-}

@@ -57,7 +57,6 @@ export const compositionsConfig = defineConfig({
           entryPoints: ["apps.agent-manager"],
           selectedContributors: [
             "tasks.attempt-view",
-            "tasks.task-list.recent",
             "ui.theme-toggle",
           ],
           extends: ["self-improvement", "served-baseline"],
@@ -70,7 +69,6 @@ export const compositionsConfig = defineConfig({
           entryPoints: ["apps.agent-manager"],
           selectedContributors: [
             "tasks.attempt-view",
-            "tasks.task-list.recent",
             "ui.theme-toggle",
           ],
           extends: ["served-baseline"],
