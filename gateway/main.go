@@ -19,6 +19,7 @@ type Config struct {
 	ShutdownGrace     time.Duration
 	ReadyTimeout      time.Duration
 	SweepInterval     time.Duration
+	ReconcileInterval time.Duration
 	BrokenCooldown    time.Duration
 	LogLevel          string
 	LogFormat         string
@@ -37,6 +38,7 @@ func parseFlags() Config {
 	flag.DurationVar(&cfg.ShutdownGrace, "shutdown-grace", 5*time.Second, "grace period before SIGKILL")
 	flag.DurationVar(&cfg.ReadyTimeout, "ready-timeout", 15*time.Second, "max wait for backend readiness")
 	flag.DurationVar(&cfg.SweepInterval, "sweep-interval", 30*time.Second, "idle sweeper tick")
+	flag.DurationVar(&cfg.ReconcileInterval, "reconcile-interval", 10*time.Second, "registry-dir reconcile tick (registers worktrees the fsnotify watch missed, unregisters vanished ones)")
 	flag.DurationVar(&cfg.BrokenCooldown, "broken-cooldown", 10*time.Second, "wait before retrying a failed spawn")
 	flag.StringVar(&cfg.LogLevel, "log-level", "info", "log level: debug|info|warn|error")
 	flag.StringVar(&cfg.LogFormat, "log-format", "text", "log format: text|json")
@@ -139,6 +141,10 @@ func main() {
 		}
 	}()
 	go reg.Sweep(ctx)
+	// Periodic backstop for registry drift the fsnotify watch can miss under
+	// watch-FD pressure (thousands of worktree dirs). Registers worktrees whose
+	// spec.json appeared without a delivered event; unregisters vanished ones.
+	go reg.Reconcile(ctx)
 
 	// Start supervised services (e.g. embedded Postgres) before backends.
 	// Backends assume services are reachable; the supervisor must bring them

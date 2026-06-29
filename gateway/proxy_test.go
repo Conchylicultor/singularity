@@ -9,9 +9,10 @@ import (
 )
 
 // newTestProxy builds a Proxy with an empty registry and no central routes — so
-// any resolved namespace falls through to a `reg.Get(name) == nil` "unknown
-// worktree: <name>" 404. That message reveals WHICH namespace the router
-// resolved, which is exactly what these routing tests assert on.
+// any resolved namespace falls through to a `reg.Resolve(name) == nil` "unknown
+// worktree: <name>" 404 (RegistryDir is unset, so Resolve never touches disk).
+// That message reveals WHICH namespace the router resolved, which is exactly what
+// these routing tests assert on.
 func newTestProxy(t *testing.T, defaultNamespace string) *Proxy {
 	t.Helper()
 	cfg := &Config{SocketsDir: t.TempDir()}

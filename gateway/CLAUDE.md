@@ -46,6 +46,16 @@ Location: `~/.singularity/worktrees/<name>/spec.json`. Directory name = worktree
 
 Two fields, both required, both absolute paths. The gateway hardcodes the launch convention (`bun bin/index.ts`, `SOCKET_PATH` env var, 15s readiness timeout). No per-worktree overrides in v1. Other per-worktree files (build logs, profiling data) also live in the same subdirectory.
 
+### Discovery: dir-level watch + lazy resolve + periodic reconcile
+
+Registration is decoupled from fsnotify so it cannot silently fail at scale. Three layers (`registry.go`):
+
+1. **Single dir-level fsnotify watch** on the registry dir (1 FD). Catches subdir create/remove and legacy flat `<name>.json` create/write for low latency. It does **NOT** add a watch per worktree subdir — with thousands of worktree dirs that exhausts the macOS kqueue/open-file budget, and a dropped per-subdir `w.Add` loses the worktree forever (the build creates the subdir early for logs, then writes `spec.json` last, so the later write is the event that goes unobserved). That was the prior silent-failure bug.
+2. **Lazy `Registry.Resolve(name)`** on the request path (`proxy.go`). If a host has no registered worktree but `<name>/spec.json` exists on disk, it is loaded and registered on demand — so any worktree whose spec is on disk is reachable on its **first request**, regardless of watch health.
+3. **Periodic `Registry.Reconcile`** (`-reconcile-interval`, default 10s) re-scans the dir as a backstop: registers any `spec.json` the watch missed (keeping `GET /gateway/worktrees` eventually-consistent) and unregisters worktrees whose backing dir vanished (e.g. removed by `worktree-cleanup`). This is the watch+reconcile informer pattern; reconcile skips already-registered dirs so it stays cheap even with thousands.
+
+Net effect: `spec.json` on disk ⟺ worktree reachable. The watch is a latency optimization, never a correctness dependency.
+
 ## File Structure
 
 Flat single-package layout:
@@ -54,7 +64,7 @@ Flat single-package layout:
 gateway/
 ├── main.go        # Flags, wiring, signal handling, sockets-dir setup, service bring-up
 ├── worktree.go    # Worktree state machine (Idle→Starting→Running→Restarting→Stopping), spawn, lifecycle
-├── registry.go    # Map of worktrees, fsnotify file watcher, idle sweeper, stale-socket sweep
+├── registry.go    # Map of worktrees: dir-level fsnotify watch + lazy Resolve + periodic Reconcile, idle sweeper, stale-socket sweep
 ├── supervisor.go  # Generic service supervisor: start commands, readiness probes, watchdog
 └── proxy.go       # http.Handler: routing, static serving, HTTP/WS proxy, /gateway API
 ```

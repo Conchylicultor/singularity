@@ -44,11 +44,34 @@ func (r *Registry) HasName(name string) bool {
 	return ok
 }
 
-// Get returns the worktree with the given name, or nil if absent.
+// Get returns the worktree with the given name, or nil if absent. Pure
+// in-memory lookup — never touches disk.
 func (r *Registry) Get(name string) *Worktree {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
 	return r.byName[name]
+}
+
+// Resolve returns the worktree for name, registering it on demand from disk if a
+// spec.json exists but the in-memory registry has not caught it yet. This makes
+// request routing correct independent of fsnotify health: under watch-FD pressure
+// (thousands of worktree dirs) a create event can be dropped, but any worktree
+// whose spec.json is on disk is still reachable on its first request. Returns nil
+// for an invalid name or a name with no spec on disk. Idempotent and concurrency-
+// safe: loadFile's upsert collapses concurrent loads to a single registration.
+func (r *Registry) Resolve(name string) *Worktree {
+	if wt := r.Get(name); wt != nil {
+		return wt
+	}
+	if r.cfg.RegistryDir == "" || !nameRegex.MatchString(name) {
+		return nil
+	}
+	specPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
+	if _, err := os.Stat(specPath); err != nil {
+		return nil
+	}
+	r.loadFile(specPath)
+	return r.Get(name)
 }
 
 // List returns a snapshot of all known worktrees.
@@ -90,10 +113,22 @@ func (r *Registry) LoadAll() error {
 	return nil
 }
 
-// Watch blocks until ctx is done, calling Upsert/Remove in response to
-// fsnotify events. Watches for both new-style subdirectory spec.json and
-// legacy flat <name>.json files. Writes are debounced 100ms to handle
-// editors that perform write-rename-close.
+// Watch blocks until ctx is done, keeping the registry in sync via a SINGLE
+// fsnotify watch on the registry dir itself. It deliberately does NOT add a watch
+// per worktree subdirectory: with thousands of worktree dirs that exhausts the
+// kqueue/open-file budget on macOS, and a dropped per-subdir w.Add silently loses
+// the worktree forever (the later spec.json write produces no observable event).
+// Instead correctness is decoupled from the watch:
+//
+//   - the dir-level watch catches subdir create/remove for low-latency
+//     register/unregister of new-format <name>/spec.json worktrees,
+//   - legacy flat <name>.json files (direct children) are fully covered here, and
+//   - Resolve loads a spec on demand on first request, while Reconcile
+//     periodically re-scans the dir — so a worktree whose spec.json is written
+//     *after* its dir is created (the build creates the dir early for logs and
+//     writes spec.json last) is always picked up, by design.
+//
+// Writes are debounced 100ms to absorb non-atomic / partial writes.
 func (r *Registry) Watch(ctx context.Context) error {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -102,14 +137,6 @@ func (r *Registry) Watch(ctx context.Context) error {
 	defer w.Close()
 	if err := w.Add(r.cfg.RegistryDir); err != nil {
 		return err
-	}
-
-	// Watch each existing subdirectory for spec.json changes.
-	entries, _ := os.ReadDir(r.cfg.RegistryDir)
-	for _, e := range entries {
-		if e.IsDir() {
-			_ = w.Add(filepath.Join(r.cfg.RegistryDir, e.Name()))
-		}
 	}
 
 	debounce := make(map[string]*time.Timer)
@@ -124,10 +151,11 @@ func (r *Registry) Watch(ctx context.Context) error {
 				return nil
 			}
 
-			// New subdirectory created — start watching it and load its spec if present.
+			// A new worktree subdir appeared. Its spec.json may already be present
+			// (dev writes mkdir+spec back-to-back) — register it immediately. If
+			// spec.json is written later, Reconcile/Resolve picks it up.
 			if ev.Op&fsnotify.Create != 0 {
 				if info, err := os.Stat(ev.Name); err == nil && info.IsDir() {
-					_ = w.Add(ev.Name)
 					specPath := filepath.Join(ev.Name, "spec.json")
 					if _, serr := os.Stat(specPath); serr == nil {
 						r.loadFile(specPath)
@@ -136,47 +164,97 @@ func (r *Registry) Watch(ctx context.Context) error {
 				}
 			}
 
-			base := filepath.Base(ev.Name)
-			if !strings.HasSuffix(base, ".json") {
+			// A worktree subdir or legacy file disappeared — unregister it.
+			if ev.Op&(fsnotify.Remove|fsnotify.Rename) != 0 {
+				base := filepath.Base(ev.Name)
+				if strings.HasSuffix(base, ".json") {
+					r.remove(legacyNameFromPath(ev.Name))
+				} else {
+					r.remove(base) // bare subdir name
+				}
 				continue
 			}
 
-			if base == "spec.json" {
-				// New format: <name>/spec.json inside a subdirectory.
-				if ev.Op&(fsnotify.Create|fsnotify.Write) != 0 {
-					path := ev.Name
-					debounceMu.Lock()
-					if t, exists := debounce[path]; exists {
-						t.Stop()
-					}
-					debounce[path] = time.AfterFunc(100*time.Millisecond, func() {
-						r.loadFile(path)
-					})
-					debounceMu.Unlock()
-				} else if ev.Op&(fsnotify.Remove|fsnotify.Rename) != 0 {
-					r.remove(nameFromPath(ev.Name))
+			// Legacy format: flat <name>.json created/written directly in the
+			// registry dir. (New-format spec.json lives inside an unwatched subdir,
+			// so it never reaches us here — handled by Reconcile/Resolve.)
+			if filepath.Dir(ev.Name) == r.cfg.RegistryDir &&
+				strings.HasSuffix(ev.Name, ".json") &&
+				ev.Op&(fsnotify.Create|fsnotify.Write) != 0 {
+				path := ev.Name
+				debounceMu.Lock()
+				if t, exists := debounce[path]; exists {
+					t.Stop()
 				}
-			} else if filepath.Dir(ev.Name) == r.cfg.RegistryDir {
-				// Legacy format: flat <name>.json in the top-level directory.
-				if ev.Op&(fsnotify.Create|fsnotify.Write) != 0 {
-					path := ev.Name
-					debounceMu.Lock()
-					if t, exists := debounce[path]; exists {
-						t.Stop()
-					}
-					debounce[path] = time.AfterFunc(100*time.Millisecond, func() {
-						r.loadLegacyFile(path)
-					})
-					debounceMu.Unlock()
-				} else if ev.Op&(fsnotify.Remove|fsnotify.Rename) != 0 {
-					r.remove(legacyNameFromPath(ev.Name))
-				}
+				debounce[path] = time.AfterFunc(100*time.Millisecond, func() {
+					r.loadLegacyFile(path)
+				})
+				debounceMu.Unlock()
 			}
 		case werr, ok := <-w.Errors:
 			if !ok {
 				return nil
 			}
 			slog.Warn("watcher error", "err", werr)
+		}
+	}
+}
+
+// Reconcile blocks until ctx is done, periodically re-scanning the registry dir to
+// repair any drift the fsnotify watch missed. This is the backstop that makes
+// registration correct under watch-FD pressure (the watch+reconcile informer
+// pattern): it registers worktrees whose spec.json appeared without a delivered
+// event, and unregisters worktrees whose backing dir/file was removed out from
+// under us (e.g. by worktree-cleanup). fsnotify stays the low-latency fast path;
+// this is the periodic safety net.
+func (r *Registry) Reconcile(ctx context.Context) {
+	t := time.NewTicker(r.cfg.ReconcileInterval)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case <-t.C:
+			r.reconcileOnce()
+		}
+	}
+}
+
+func (r *Registry) reconcileOnce() {
+	entries, err := os.ReadDir(r.cfg.RegistryDir)
+	if err != nil {
+		slog.Warn("reconcile: read registry dir failed", "dir", r.cfg.RegistryDir, "err", err)
+		return
+	}
+	present := make(map[string]bool, len(entries))
+	for _, e := range entries {
+		if e.IsDir() {
+			name := e.Name()
+			present[name] = true
+			// Already registered → skip the stat/load. Steady state hits this for
+			// nearly every dir, so reconcile stays cheap even with thousands.
+			if r.Get(name) != nil {
+				continue
+			}
+			specPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
+			if _, serr := os.Stat(specPath); serr == nil {
+				r.loadFile(specPath)
+			}
+		} else if strings.HasSuffix(e.Name(), ".json") {
+			name := legacyNameFromPath(e.Name())
+			present[name] = true
+			if r.Get(name) == nil {
+				r.loadLegacyFile(filepath.Join(r.cfg.RegistryDir, e.Name()))
+			}
+		}
+	}
+	// Unregister worktrees whose backing dir/file vanished. Keyed on dir/file
+	// presence, NOT spec.json presence, so a non-atomic spec rewrite can never
+	// transiently evict a live worktree.
+	for _, wt := range r.List() {
+		if !present[wt.Name] {
+			slog.Info("reconcile: worktree dir gone, unregistering", "name", wt.Name)
+			r.remove(wt.Name)
 		}
 	}
 }

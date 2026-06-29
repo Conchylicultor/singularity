@@ -68,7 +68,10 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	wt := p.reg.Get(worktreeName)
+	// Resolve, not Get: a worktree whose spec.json is on disk but which the
+	// fsnotify watch never registered (FD pressure) is loaded on demand here, so
+	// the request is served instead of 404ing until the next reconcile tick.
+	wt := p.reg.Resolve(worktreeName)
 	if wt == nil {
 		http.Error(w, "unknown worktree: "+worktreeName, http.StatusNotFound)
 		return
@@ -333,7 +336,7 @@ func (p *Proxy) handleGatewayAPI(w http.ResponseWriter, r *http.Request) {
 			http.NotFound(w, r)
 			return
 		}
-		wt := p.reg.Get(name)
+		wt := p.reg.Resolve(name)
 		if wt == nil {
 			http.Error(w, "unknown worktree: "+name, http.StatusNotFound)
 			return
