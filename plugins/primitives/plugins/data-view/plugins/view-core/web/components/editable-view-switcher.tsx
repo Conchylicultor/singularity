@@ -86,7 +86,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
                     <InlinePopover
                       open={settingsOpen}
                       onOpenChange={setSettingsOpen}
-                      align="end"
+                      align="start"
                       trigger={chip}
                       width="lg"
                     >
@@ -115,7 +115,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
             </ControlSizeProvider>
           }
         />
-        <DropdownMenuContent align="end">
+        <DropdownMenuContent align="start">
           {actions.available.map((v) => {
             const Icon = v.icon;
             return (

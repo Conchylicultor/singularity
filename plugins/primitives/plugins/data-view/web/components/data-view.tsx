@@ -284,39 +284,9 @@ function DataViewInner<TRow>({
             {title}
           </Text>
         ) : null}
-        <SearchInput
-          value={activeState.query}
-          onChange={(e) => viewModel.setQuery(activeViewId, e.target.value)}
-          placeholder="Search…"
-          wrapperClassName="ml-auto w-48"
-        />
-        {/* The filter builder: a pill trigger ("Filter" / "N rules") opening
-            the Notion-style nested AND/OR popover builder. Rendered only when
-            the schema has at least one filterable field. */}
-        {/* The sort + filter builders sit adjacent as a matched pair: each is
-            a pill trigger ("Sort" / "N sorts", "Filter" / "N rules") opening
-            its Notion-style popover. Each renders only when the schema has at
-            least one eligible field. */}
-        {hasSort ? (
-          <SortBuilderTrigger
-            controller={sortController}
-            presets={sortPresets}
-          />
-        ) : null}
-        {hasFilters ? (
-          <FilterBuilderTrigger
-            controller={filterController}
-            presets={filterPresets}
-          />
-        ) : null}
-        {actions}
-        <CreatorsControl creators={creators} />
-        {customColumnsEnabled ? (
-          <DataViewSettingsButton
-            defs={customColumnDefs}
-            actions={customColumnActions}
-          />
-        ) : null}
+        {/* View switcher + its `+` add menu lead the toolbar (Notion-style):
+            the view list anchors the left edge, everything else clusters at the
+            right past the `ml-auto` spacer the search input carries. */}
         <EditableViewSwitcher
           instances={instances}
           activeId={activeViewId}
@@ -324,6 +294,39 @@ function DataViewInner<TRow>({
           actions={viewModel.actions}
           viewVariants={viewVariants}
         />
+        {/* `ml-auto` is the toolbar's spacer: it shoves the search input and the
+            whole trailing control cluster (filter/sort/config/new) to the right
+            edge, away from the leading view switcher. */}
+        <SearchInput
+          value={activeState.query}
+          onChange={(e) => viewModel.setQuery(activeViewId, e.target.value)}
+          placeholder="Search…"
+          wrapperClassName="ml-auto w-48"
+        />
+        {/* The filter + sort builders sit adjacent as a matched pair: each is a
+            pill trigger ("Filter" / "N rules", "Sort" / "N sorts") opening its
+            Notion-style popover. Each renders only when the schema has at least
+            one eligible field. */}
+        {hasFilters ? (
+          <FilterBuilderTrigger
+            controller={filterController}
+            presets={filterPresets}
+          />
+        ) : null}
+        {hasSort ? (
+          <SortBuilderTrigger
+            controller={sortController}
+            presets={sortPresets}
+          />
+        ) : null}
+        {actions}
+        {customColumnsEnabled ? (
+          <DataViewSettingsButton
+            defs={customColumnDefs}
+            actions={customColumnActions}
+          />
+        ) : null}
+        <CreatorsControl creators={creators} />
       </Sticky>
       {/* One density for every view type, so a row's controls and decorations
           (avatars, status dots, chips, buttons) look identical whether the same
