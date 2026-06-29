@@ -1196,6 +1196,10 @@
       "name": "@singularity/plugin-conversations-conversations-view-classic",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversations-view/plugins/data-view": {
+      "name": "@singularity/plugin-conversations-conversations-view-data-view",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversations-view/plugins/grouped": {
       "name": "@singularity/plugin-conversations-conversations-view-grouped",
       "version": "0.0.1",
@@ -4926,6 +4930,8 @@
     "@singularity/plugin-conversations-conversations-view": ["@singularity/plugin-conversations-conversations-view@workspace:plugins/conversations/plugins/conversations-view"],
 
     "@singularity/plugin-conversations-conversations-view-classic": ["@singularity/plugin-conversations-conversations-view-classic@workspace:plugins/conversations/plugins/conversations-view/plugins/classic"],
+
+    "@singularity/plugin-conversations-conversations-view-data-view": ["@singularity/plugin-conversations-conversations-view-data-view@workspace:plugins/conversations/plugins/conversations-view/plugins/data-view"],
 
     "@singularity/plugin-conversations-conversations-view-grouped": ["@singularity/plugin-conversations-conversations-view-grouped@workspace:plugins/conversations/plugins/conversations-view/plugins/grouped"],
 

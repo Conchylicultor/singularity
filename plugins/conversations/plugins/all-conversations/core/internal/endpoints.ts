@@ -16,6 +16,9 @@ export const QueryConversationsBodySchema = z.object({
   query: z.string(),
   cursor: z.string().nullable(),
   limit: z.number().int().positive().max(200),
+  // When true, the handler drops the hard `kind != 'system'` exclusion so system
+  // conversations are included (default false → byte-for-byte unchanged scope).
+  includeSystem: z.boolean().optional(),
 });
 export type QueryConversationsBody = z.infer<typeof QueryConversationsBodySchema>;
 

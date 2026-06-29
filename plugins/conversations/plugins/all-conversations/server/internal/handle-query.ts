@@ -62,7 +62,7 @@ export const handleQuery = implement(queryConversations, async ({ body }) => {
   }
 
   const where = and(
-    ne(conversations.kind, "system"),
+    body.includeSystem ? undefined : ne(conversations.kind, "system"),
     searchWhere(query),
     compileWhere(filter, COLUMN_MAP, resolver),
     seek,

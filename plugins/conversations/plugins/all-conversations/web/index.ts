@@ -6,6 +6,7 @@ import { Shell } from "@plugins/shell/web";
 import { allConversationsPane } from "./panes";
 
 export { allConversationsPane } from "./panes";
+export { conversationFieldDefs } from "./internal/fields";
 
 export default {
   description:

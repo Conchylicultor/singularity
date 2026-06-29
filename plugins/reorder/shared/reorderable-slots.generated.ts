@@ -39,6 +39,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "conversation.jsonl-viewer.row-action", pluginId: "conversations.conversation-view.jsonl-viewer" },
   { slotId: "conversation.prompt-bar", pluginId: "conversations.conversation-view" },
   { slotId: "conversation.prompt-input", pluginId: "conversations.conversation-view" },
+  { slotId: "conversations-sidebar-history-actions", pluginId: "conversations.conversations-view.data-view" },
   { slotId: "debug-app.sidebar", pluginId: "apps.debug.shell" },
   { slotId: "debug-app.toolbar", pluginId: "apps.debug.shell" },
   { slotId: "deploy.section", pluginId: "apps.deploy.shell" },

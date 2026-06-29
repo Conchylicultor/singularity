@@ -14,6 +14,7 @@
   - Imported by: `conversations/conversations-view/classic`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`
 - Sub-plugins:
   - **`classic`** — Registers today's tabbed Queue/Grouped/History conversation list as the `classic` sidebar variant (the default, and the only variant in Phase 0).
+  - **`data-view`** — Registers the sidebar History list as a server-delegated DataView (the `dataview` conversation-list variant), reusing the all-conversations query infra.
   - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
   - **`history`** — All conversations in historical order of creation.
   - **`queue`** — Stable-rank global priority queue of conversations awaiting user input. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
