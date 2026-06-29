@@ -17,10 +17,14 @@ import (
 )
 
 func TestWaitReadyOverUDS(t *testing.T) {
-	socketPath := filepath.Join(t.TempDir(), "ready.sock")
+	socketPath := filepath.Join(shortTempDir(t), "ready.sock")
 
-	// Start a listener after a short delay; waitReady should retry until it
-	// succeeds. Mirrors the real spawn race window.
+	// waitReady probes `GET /api/health/ready` over the socket and only returns
+	// once it sees 200/404, so the fake backend must actually speak HTTP — a bare
+	// accept-and-close would never satisfy the readiness contract.
+	//
+	// Bring the backend up after a short delay so waitReady exercises its retry
+	// loop against an absent-then-present socket, mirroring the real spawn race.
 	go func() {
 		time.Sleep(50 * time.Millisecond)
 		l, err := net.Listen("unix", socketPath)
@@ -29,17 +33,22 @@ func TestWaitReadyOverUDS(t *testing.T) {
 			return
 		}
 		t.Cleanup(func() { _ = l.Close() })
-		// Accept once so the dial inside waitReady completes cleanly.
-		go func() {
-			c, err := l.Accept()
-			if err == nil {
-				_ = c.Close()
-			}
-		}()
+
+		srv := &http.Server{
+			Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+				if r.URL.Path == "/api/health/ready" {
+					w.WriteHeader(http.StatusOK)
+					return
+				}
+				w.WriteHeader(http.StatusNotFound)
+			}),
+		}
+		t.Cleanup(func() { _ = srv.Close() })
+		_ = srv.Serve(l)
 	}()
 
 	exitCh := make(chan struct{})
-	if err := waitReady(socketPath, 1*time.Second, exitCh); err != nil {
+	if err := waitReady(socketPath, 2*time.Second, exitCh); err != nil {
 		t.Fatalf("waitReady: %v", err)
 	}
 }
