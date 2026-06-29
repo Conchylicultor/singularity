@@ -17,6 +17,8 @@ export default {
       title: "Gallery",
       icon: MdGridView,
       order: 0,
+      loadingVariant: "cards",
+      loadingCount: 8,
       // Per-instance options sub-form (ST4 demonstrator): a named gallery
       // instance can pick which field id supplies the card cover. The gallery
       // already reads `options.coverField`, so this round-trips end-to-end.

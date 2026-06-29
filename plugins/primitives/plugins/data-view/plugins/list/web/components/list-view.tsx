@@ -1,6 +1,5 @@
 import { type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
@@ -56,11 +55,6 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   const itemActions = props.itemActions as
     | ItemActionsDescriptor<unknown>
     | undefined;
-
-  // Loading wins over empty: emptyState requires confirmed-empty.
-  if (props.loading) {
-    return <>{props.loadingState ?? <Loading variant="rows" />}</>;
-  }
 
   if (rows.length === 0) {
     return (

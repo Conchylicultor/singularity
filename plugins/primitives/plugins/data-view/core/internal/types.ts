@@ -232,15 +232,10 @@ export interface DataViewRenderProps<TRow> {
   expanded?: Record<string, boolean>;
   /** Persist local expand state for a row (writes THIS view's ViewState). */
   setExpanded?: (id: string, next: boolean) => void;
+  /** Empty-state node, rendered only on confirmed-empty (`rows.length === 0`).
+   *  Views NEVER see a loading state — the host renders the skeleton itself and
+   *  skips `renderIsolated` while loading, so empty here always means empty. */
   emptyState?: ReactNode;
-  /**
-   * True while the backing data is still loading. Views render `loadingState`
-   * (default: a skeleton) and NEVER `emptyState` — empty requires
-   * confirmed-empty (`!loading && rows.length === 0`).
-   */
-  loading?: boolean;
-  /** Override the loading render; default is each view's own skeleton shape. */
-  loadingState?: ReactNode;
   /** Per-item action slot descriptor; views render `<itemActions.Row …/>` in
    *  their own trailing affordance (type-erased; views re-cast at the boundary). */
   itemActions?: ItemActionsDescriptor<TRow>;

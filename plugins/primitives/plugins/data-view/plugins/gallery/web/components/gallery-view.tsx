@@ -6,7 +6,6 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import {
   FieldCell,
@@ -137,11 +136,6 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const itemActions = props.itemActions as
     | ItemActionsDescriptor<unknown>
     | undefined;
-
-  // Loading wins over empty: emptyState requires confirmed-empty.
-  if (props.loading) {
-    return <>{props.loadingState ?? <Loading variant="cards" count={8} />}</>;
-  }
 
   // Documented cast boundary: creators arrives type-erased via render props.
   const creators = props.creators as CreateOption[] | undefined;

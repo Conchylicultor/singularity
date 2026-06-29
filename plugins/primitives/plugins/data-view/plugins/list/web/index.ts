@@ -14,6 +14,7 @@ export default {
       title: "List",
       icon: MdViewList,
       order: 3,
+      loadingVariant: "rows",
       component: ListView,
     }),
   ],

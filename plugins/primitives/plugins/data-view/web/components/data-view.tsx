@@ -10,6 +10,7 @@ import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type {
   DataViewProps,
   DataViewRenderProps,
@@ -261,8 +262,6 @@ function DataViewInner<TRow>({
     expanded: activeState.expanded,
     setExpanded: (id, next) => viewModel.setExpanded(activeViewId, id, next),
     emptyState,
-    loading: effectiveLoading,
-    loadingState,
     itemActions: itemActions as DataViewRenderProps<unknown>["itemActions"],
     hasChildren,
     creators,
@@ -334,12 +333,23 @@ function DataViewInner<TRow>({
           `data-table` primitive already defaults to `xs`; declaring it here once
           brings tree/list/gallery in line instead of each falling through to the
           ambient `md` default. */}
+      {/* The host owns the loading→empty precedence: while loading it renders the
+          view-type's declared skeleton and NEVER calls `renderIsolated`, so a view
+          child only ever renders in the confirmed-not-loading state (it can no
+          longer mishandle loading and let a skeleton-less empty state leak through). */}
       <ControlSizeProvider size="xs">
-        {renderIsolated(
-          DataViewSlots.View.id,
-          activeInstance.viewType as unknown as Contribution,
-          renderProps,
-        )}
+        {effectiveLoading
+          ? (loadingState ?? (
+              <Loading
+                variant={activeInstance.viewType.loadingVariant ?? "rows"}
+                count={activeInstance.viewType.loadingCount}
+              />
+            ))
+          : renderIsolated(
+              DataViewSlots.View.id,
+              activeInstance.viewType as unknown as Contribution,
+              renderProps,
+            )}
       </ControlSizeProvider>
       {/* Server-delegated infinite scroll: an IntersectionObserver sentinel that
           fetches the next page as it scrolls into view. Rendered only on the

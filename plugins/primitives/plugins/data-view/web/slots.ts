@@ -1,6 +1,7 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { ViewTypeMeta } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
+import type { LoadingVariant } from "@plugins/primitives/plugins/loading/web";
 import type { DataViewRenderProps } from "../core";
 import { Cell } from "./cell-slot";
 import { CellEditor } from "./cell-editor-slot";
@@ -18,6 +19,12 @@ export interface DataViewContribution extends ViewTypeMeta {
    *  sort — so the host hides the Sort pill for it (the Filter pill still shows;
    *  the tree DOES honor filter, subtree-preserving). */
   supportsSort?: boolean;
+  /** Skeleton shape the host renders while this view is loading (the host owns
+   *  the loading→empty precedence so view children never see a loading state).
+   *  Default "rows"; gallery declares "cards". */
+  loadingVariant?: LoadingVariant;
+  /** Skeleton item count for the loading variant (forwarded to <Loading count>). */
+  loadingCount?: number;
 }
 
 export const DataViewSlots = {

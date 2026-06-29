@@ -16,6 +16,7 @@ export default {
       order: 2,
       hierarchical: true,
       supportsSort: false,
+      loadingVariant: "rows",
       component: TreeView,
     }),
   ],

@@ -14,6 +14,8 @@ export default {
       title: "Table",
       icon: MdTableRows,
       order: 1,
+      loadingVariant: "rows",
+      loadingCount: 6,
       component: TableView,
     }),
   ],
