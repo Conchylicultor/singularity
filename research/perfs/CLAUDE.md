@@ -32,159 +32,39 @@ rather than inheriting it.
 
 ## Sessions
 
-- **2026-06-28 — [boot & git-loader slowness assessment](./2026-06-28-boot-and-git-loader-slowness-assessment.md).**
-  First pass. Concluded the bottleneck is server-side *work + contention*, not
-  client↔DB transport, so adopting Rocicorp Zero would not help. Named three root
-  causes: (A) git-derived loaders (`edited-files`, `commits-graph`) on the
-  first-subscribe critical path under the host heavy-read gate, (B) event-loop /
-  heavy-read-pool starvation, (C) `live_state_snapshot` table bloat. Created tasks to
-  benchmark and fix each. *Superseded in part by 2026-06-29: (A) turned out to be a
-  symptom, and (B) is specifically DB-connection-pool exhaustion.*
+> Each issue below keeps only a high-level paragraph; its own doc holds that issue's full session
+> log **and its own Causes — checklist** (✅ confirmed · ❌ discarded · 🔬 open). One doc per issue
+> (not a global log) so the history scales as issues accrue.
 
-- **2026-06-29 — [DB-pool exhaustion vs git loaders (root-cause hunt)](./2026-06-29-db-pool-exhaustion-flush-cascade-findings.md).**
-  Re-measured (A) before building the planned fix. In isolation the git loaders are
-  16–315 ms, not 7 s; under a fully-saturated host heavy-read gate they only reach
-  172–448 ms. The live profile shows the real bottleneck: across all loaders,
-  **DB-connection-pool wait (`loader-acquire`) = 243,614 ms** vs **host heavy-read
-  gate (`heavy-read-acquire`) = 17 ms**. `flushNotifies` (the live-state cascade)
-  maxes at **97 s** and owns 43,721 of 95,465 pool acquires. The git loaders are
-  *victims* of pool exhaustion, not a cause. The planned git fix would have optimized
-  a 17 ms path. **Root cause not yet confirmed beyond doubt — see that doc's open
-  questions.** *Superseded by the next session: pool exhaustion is a downstream,
-  intermittent symptom, not the driver.*
+### Git-derived loaders — `edited-files` / `commits-graph` (Ongoing)
 
-- **2026-06-29 (2) — [notifications unbounded resource = the driver (root cause confirmed)](./2026-06-29-notifications-unbounded-resource-root-cause.md).**
-  Answered all five open questions with converging profile + DB + code evidence.
-  The driver is a handful of **oversized monolithic `push` live-state resources** that
-  load an entire unbounded table as one blob and re-serialize/re-snapshot/re-deliver the
-  *whole* blob on every change — worst by 4× is **`notifications`: 1.88 MB, 21,803
-  undismissed rows, loaded with no `LIMIT`**. Its full-blob UPSERT bloated
-  `live_state_snapshot` TOAST to **112 MB** (4.95 s writes) and its delivery is the
-  slowest push (5.9 s). The blob grows forever because the **reports system files a
-  notification per report (~281/h)** and the TTL sweep never auto-dismisses
-  `warning`/`error` variants. Re-validated the prior session: this window's `[acquire]`
-  max is **81 ms**, not 44.6 s — pool exhaustion spikes only *during* these big-blob
-  storms (cold-boot fan-out + notifications churn), so it is a symptom. "Simple queries
-  take seconds" = pure wait (an 88 kB / 20-row table can't scan for 3 s). The fix (one
-  notification row per fingerprint) **landed on main** (`a8f9da4b6`).
+The dominant remaining real cost now that the churn is fixed — and the *original* cause (A), masked
+while the big-blob churn dominated. Fresh decomposition on `singularity`: `edited-files` is
+**work-bound** (~1.3–1.5 s of real git work per memo miss — 4 serial git spawns under the **4-slot**
+host heavy-read gate, `floor(cpus/4)` on an 18-CPU box); `commits-graph.delta` is **wait-bound**
+(workMs 82 vs ~843 ms waiting on that gate behind `edited-files` — a victim, not slow itself). Open
+rate-axis suspicion before any cost-axis fix: the @parcel watcher recomputes on *every* fs event and
+only early-returns the unchanged result **after** paying the full git compute — the same no-op shape
+as the fixed churn, on the fs-watch axis. **Next:** Phase-2 trace of recompute rate vs real change
+rate. Full detail + sessions + checklist → **[`issue-git-derived-loaders.md`](./issue-git-derived-loaders.md)**.
 
-- **2026-06-29 (3) — [snapshot TOAST bloat + unconditional no-op persist (root cause confirmed)](./2026-06-29-snapshot-toast-bloat-noop-persist.md).**
-  Re-validated the landed notifications fix on main: `notifications` value **1.88 MB →
-  42 kB**, undismissed report rows **21,803 → 27**. But the multi-second flush stalls
-  persist one layer down. The new dominant event is a **22.4 s `flushNotifies` = one
-  `live_state_snapshot` UPSERT stalling 21.9 s** (avg 26 ms — a lone outlier) that
-  serial-blocks every co-flushed resource (their ~22 s "deliveries" are pure wait).
-  Cause: `live_state_snapshot` is **181 MB TOAST for 20 rows** (11 k dead TOAST tuples,
-  ~3 M lifetime UPDATEs) — pure bloat, never reclaimed because session 2's deferred
-  `VACUUM FULL` **was never run** (`last_vacuum = null`; bloat grew 112 → 181 MB). The
-  bloat is re-fed structurally: the runtime **UPSERTs the full value on every flush
-  unconditionally, including no-op pushes** (persist precedes the diff; 6 keyed
-  resources fire ~2 no-op pushes/s each = 32 k logged `live-state-noop`). Fix plan:
-  (1) one-time `VACUUM FULL`, (2) skip the persist when the value is unchanged. **Root
-  cause confirmed beyond doubt; pending user go-ahead.** *Refined by session 4: the
-  persist-skip is the tail; the no-op pushes themselves have an upstream origin.*
+### Cold-boot fan-out (Ongoing)
 
-- **2026-06-29 (4) — [no-op-push churn traced to its origin (the 1 Hz poller) + methodology](./2026-06-29-noop-push-churn-traced-to-origin.md).**
-  Re-validated session 2 (notifications fix landed: 1.88 MB → 42 kB, 21,803 → 27 undismissed).
-  Then traced the residual stalls *upstream* instead of optimizing the hotspot. The 22 s flush =
-  one 21.9 s `live_state_snapshot` UPSERT — but that is the most-*amplified* node, not the driver.
-  Walked the chain three hops past "solved": no-op recompute (×12/s) ← FULL-table invalidation ←
-  change-feed trigger firing on a **zero-row statement** ← `INSERT … ON CONFLICT DO NOTHING` that
-  fully conflicts ← the conversations poller re-adopting cross-worktree tmux sessions as "orphans"
-  ← **it polls every 1 s** (the origin — illegitimate per the no-polling rule). Evidence:
-  `live_state_changelog` `conversations` INSERT 2.62/s vs only 2,280 rows ever inserted; 32,107
-  `live-state-noop` across 6 resources. Layered fix in
-  `research/2026-06-29-global-noop-statement-invalidation-churn.md`: **boundary invariant**
-  (trigger never invalidates on zero rows — ready) + **origin cure** (fix the poller — needs one
-  more hop); persist-skip + one-time `VACUUM FULL` demoted to defense-in-depth. Extracted the
-  method into the mandatory [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md)
-  skill. **No code changes — handed off for implementation.**
+The remaining `< 1 s including cold start` violator. At backend boot every resource re-subscribes at
+once and the git loaders cold-miss (9–18 s) contending on the 4-slot gate; this reproduces the
+original ~7 s+ symptom. Overlaps the git-loader issue (the boot herd is when the loader cost is
+worst); `benchmark_boot` still excludes server-boot work. Secondary to the steady-state git-loader
+cost. Full detail + sessions + checklist → **[`issue-cold-boot-fanout.md`](./issue-cold-boot-fanout.md)**.
 
-- **2026-06-29 (5) — [the layered fix implemented (boundary invariant + origin cure)](./2026-06-29-noop-churn-fix-implemented.md).**
-  Re-validated session 4 on fresh `singularity` data (did not inherit): `conversations` INSERT is
-  **4.0/sec, 1200/1201 NULL-id** (zero-row), `n_tup_ins` still flat at 2,285, `live_state_snapshot`
-  still 20 rows / 3.06 M lifetime UPDATEs / 155 MB / `last_vacuum=null` — the churn is still live and
-  neither prior fix had landed. Closed session 4's "one remaining hop": the misclassification is that
-  orphans are computed against the **active-only** `listConversationsForInfra` list, so a `done`
-  conversation with a lingering host-wide tmux session is an eternal orphan, re-adopted every tick
-  (**86 `done`/`poller` rows** confirm it). **Implemented both altitudes:** (1) the trigger
-  boundary invariant (zero-row statement → no notify, all tables — verified live via
-  `pg_get_functiondef`) and (2) the origin cure (`listExistingConversationIds` gate in the poller so
-  terminal sessions are adopted at most once). `build` + `check` green. **Not pushed**; behavioral
-  rate-drop confirmation deferred to `singularity` (orphan adoption is `isMain()`-only).
+### Live-state no-op churn & unbounded `push` resources (Completed)
 
-## Causes — checklist
-
-Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / needs proof
-
-### Discarded
-- ❌ **Client↔DB transport latency / adopt a sync engine (Zero)** — 2026-06-28: the
-  dominant cost is server-side work+contention; git/fs-derived resources can't live
-  in a Postgres replica anyway. Keep Zero only for future multi-device/offline sync.
-- ❌ **Git loaders' work is slow** — 2026-06-29: `edited-files` work = 16 ms
-  (prod, memo-warm), `commits-graph.delta` work ≈ 31 ms. Not the problem.
-- ❌ **Host-wide heavy-read gate (`withHeavyReadSlot`, size 4) is the contention** —
-  2026-06-29: `heavy-read-acquire` = **17 ms total** across all loaders. Negligible.
-  *The original git-off-critical-path plan targeted only this — hence "wrong path".*
-
-### Confirmed root cause + FIXED in branch (2026-06-29 session 5 — implemented, not pushed)
-> Both altitudes implemented on `claude-web/att-1782729129-nlnv`; `build`+`check` green. Behavioral
-> rate-drop confirmation deferred to `singularity` (orphan adoption is `isMain()`-only). The exact
-> misclassification (session 4's "one remaining hop") is now confirmed: orphans are computed
-> against the **active-only** infra list, so a `done` conversation with a lingering host-wide tmux
-> session is an eternal orphan (**86 `done`/`poller` rows** in `singularity`).
-- ✅ **ORIGIN: the conversations poller re-issues a zero-row write ~4/s** (re-measured; was 2.6/s).
-  It runs on a 1 Hz `setInterval` (`conversations/server/internal/poller.ts:25,263`) and re-adopts a
-  `done`-but-still-live host-wide tmux session as an "orphan" (it's missing from the active-only
-  `dbById`) via `insertConversationOnConflictDoNothing` → `.onConflictDoNothing()` that fully
-  conflicts (0 rows inserted). Evidence: `live_state_changelog` `conversations` INSERT 4.0/s,
-  1200/1201 NULL-id, vs `n_tup_ins` = 2,285 rows ever. **FIX:** `listExistingConversationIds(ids)`
-  gate — a session whose row exists in *any* status (incl. `done`) is adopted at most once.
-  *Lower-altitude residue: the 1 Hz poll itself still violates the no-polling rule — flagged, not
-  fixed (tmux death has no push signal today; event-driven adoption is a separate redesign).*
-- ✅ **AMPLIFIER 1 — change-feed trigger fires on zero-row statements.** `live_state_notify()`
-  is STATEMENT-level; an empty transition table still NOTIFYs, and `array_agg(pk)` over it is
-  NULL → routed as **FULL-for-table**, invalidating *every* resource reading `conversations`.
-  **FIX (boundary invariant, session 5):** early-return on `NOT EXISTS(SELECT 1 FROM new_rows/
-  old_rows)` before `pg_notify` + the changelog INSERT — kills the whole class for every table
-  (also covers the `job_steps`/`job_waits` zero-row DELETEs at 0.28/s each). Verified live via
-  `pg_get_functiondef`.
-- ✅ **AMPLIFIER 2 — invalidation → no-op recompute.** 6 keyed resources fire **~2 no-op
-  pushes/s each** (32 k logged `live-state-noop`): loader reruns, value identical, empty diff.
-- ✅ **AMPLIFIER 3 — unconditional full-value snapshot UPSERT (the persist tail).** `drainEntry`
-  persists the full ~0.4 MB blob even on a no-op (persist precedes the diff; no value compare;
-  `resource-runtime/core/runtime.ts` 1404–1419).
-- ✅ **EFFECT 1 — `live_state_snapshot` TOAST bloat.** **181 MB TOAST / 20 live rows** (11 k dead
-  TOAST tuples, ~3 M lifetime `n_tup_upd`); the deferred one-time `VACUUM FULL` was never run
-  (`last_vacuum = null`; grew 112 → 181 MB since session 2).
-- ✅ **EFFECT 2 — multi-second flush stalls (the headline symptom).** A single UPSERT into the
-  bloated TOAST stalled **21.9 s**; `flushNotifies` serializes, so it inflated every co-flushed
-  resource's delivery to ~22 s (pure wait). *This is the most-amplified node — fixated on by
-  sessions 1–3 — not the driver.*
-
-> Fix altitudes (see `research/2026-06-29-global-noop-statement-invalidation-churn.md`):
-> **boundary invariant** at AMPLIFIER 1 (trigger never invalidates on zero rows — kills the
-> whole class), **cure** at ORIGIN (fix the poller). AMPLIFIER 3's persist-skip + the one-time
-> `VACUUM FULL` are defense-in-depth.
-
-### Confirmed + FIXED (landed on main `a8f9da4b6`, 2026-06-29 session 2)
-- ✅ **`notifications` was a 1.88 MB unbounded monolith** (21,803 undismissed rows, no
-  `LIMIT`) — the worst single blob. **GROWTH:** `recordReport` filed a notification per
-  report (~281/h), deduped by `(reportId, timeBucket)` → ~26× row blow-up, never
-  auto-dismissed for `warning`/`error`. **Fix:** one notification row per fingerprint
-  (count + in-place re-surface) + TTL closes the warning/error gap. Re-validated session 3:
-  value **1.88 MB → 42 kB**, undismissed report rows **21,803 → 27**, `deliver:notifications`
-  max **5.9 s → 341 ms**.
-
-### Discarded as the *primary* cause (real but downstream / 2nd-order)
-- ❌ **DB-pool exhaustion as a chronic state** — 2026-06-29 (2): intermittent symptom of
-  the big-blob storms, not a standing condition (81 ms acquire between storms).
-- 🔬 **Per-worktree local heavy-read gate (size 2)** = 21,858 ms — real but 2nd-order;
-  revisit only after the big-blob resources are bounded.
-
-### Cold boot
-- ✅ **True cold-boot captured** — 2026-06-29 (2): the live profile starts at backend
-  boot; atMs 5–33 s is the fan-out (all resources re-subscribe at once) and reproduces
-  the original ~7 s+ symptom (21.8 s worst flush, the notifications mega-flush + the
-  14-query trigger herd). `benchmark_boot` still excludes server-boot work (catch-up,
-  derived-table rebuild) — secondary now that the driver is known.
+The headline symptom — multi-second flush stalls, "simple pages take seconds" — traced past two
+amplified hotspots (the `notifications` 1.88 MB mega-blob; the 181 MB `live_state_snapshot` TOAST
+bloat) to its origin: the conversations poller re-issuing a **zero-row write every 1 s**, which the
+STATEMENT-level change-feed trigger amplified into FULL-table invalidations → a ~12/s no-op recompute
++ full-blob snapshot-UPSERT storm. Both altitudes landed on main — the **boundary invariant** (trigger
+never notifies on a zero-row statement) and the **origin cure** (stop re-adopting `done`-but-live
+sessions), `1f6b27092`; plus the earlier notifications-growth fix `a8f9da4b6`. **Validated on
+`singularity`:** flush **22.4 s → 571 ms**, `conversations` INSERT **4.0/s → 0.003/s**,
+`live_state_snapshot` **155 MB → 14 MB**, `live-state-noop` accumulation stopped. Full arc + sessions
++ checklist → **[`issue-live-state-noop-churn.md`](./issue-live-state-noop-churn.md)**.
