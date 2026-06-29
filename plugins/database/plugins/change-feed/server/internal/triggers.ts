@@ -94,7 +94,25 @@ DECLARE
   pk_col text := TG_ARGV[0];
   ids text[];
   payload text;
+  has_rows boolean;
 BEGIN
+  -- A statement that touched zero rows changed no data — e.g. an
+  -- INSERT … ON CONFLICT DO NOTHING that fully conflicted, or an UPDATE/DELETE
+  -- matching no rows. The STATEMENT-level trigger still fires once; suppress it
+  -- here so a no-op statement never drives a (FULL-for-table) live-state
+  -- recompute. This cannot drop a real invalidation: no affected row ⇒ no data
+  -- change ⇒ nothing for the consumer to recompute or for catch-up to replay.
+  -- (EXECUTE — not a static reference — because new_rows/old_rows only exist for
+  -- the matching TG_OP, mirroring the dynamic array_agg below.)
+  IF TG_OP = 'DELETE' THEN
+    EXECUTE 'SELECT EXISTS (SELECT 1 FROM old_rows)' INTO has_rows;
+  ELSE
+    EXECUTE 'SELECT EXISTS (SELECT 1 FROM new_rows)' INTO has_rows;
+  END IF;
+  IF NOT has_rows THEN
+    RETURN NULL;
+  END IF;
+
   IF pk_col IS NOT NULL AND pk_col <> '' THEN
     IF TG_OP = 'DELETE' THEN
       EXECUTE format('SELECT array_agg(%I::text) FROM old_rows', pk_col) INTO ids;

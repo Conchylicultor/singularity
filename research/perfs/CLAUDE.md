@@ -100,6 +100,19 @@ rather than inheriting it.
   method into the mandatory [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md)
   skill. **No code changes — handed off for implementation.**
 
+- **2026-06-29 (5) — [the layered fix implemented (boundary invariant + origin cure)](./2026-06-29-noop-churn-fix-implemented.md).**
+  Re-validated session 4 on fresh `singularity` data (did not inherit): `conversations` INSERT is
+  **4.0/sec, 1200/1201 NULL-id** (zero-row), `n_tup_ins` still flat at 2,285, `live_state_snapshot`
+  still 20 rows / 3.06 M lifetime UPDATEs / 155 MB / `last_vacuum=null` — the churn is still live and
+  neither prior fix had landed. Closed session 4's "one remaining hop": the misclassification is that
+  orphans are computed against the **active-only** `listConversationsForInfra` list, so a `done`
+  conversation with a lingering host-wide tmux session is an eternal orphan, re-adopted every tick
+  (**86 `done`/`poller` rows** confirm it). **Implemented both altitudes:** (1) the trigger
+  boundary invariant (zero-row statement → no notify, all tables — verified live via
+  `pg_get_functiondef`) and (2) the origin cure (`listExistingConversationIds` gate in the poller so
+  terminal sessions are adopted at most once). `build` + `check` green. **Not pushed**; behavioral
+  rate-drop confirmation deferred to `singularity` (orphan adoption is `isMain()`-only).
+
 ## Causes — checklist
 
 Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / needs proof
@@ -114,16 +127,28 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   2026-06-29: `heavy-read-acquire` = **17 ms total** across all loaders. Negligible.
   *The original git-off-critical-path plan targeted only this — hence "wrong path".*
 
-### Confirmed root cause (2026-06-29 session 4 — current, ORIGIN-first cause→effect)
-- ✅ **ORIGIN: the conversations poller re-issues a zero-row write ~2.6/s.** It runs on a
-  1 Hz `setInterval` (`conversations/server/internal/poller.ts:25,263`) and re-adopts
-  host-wide tmux sessions it can't reconcile (cross-worktree) as "orphans" via
-  `insertConversationOnConflictDoNothing` → `.onConflictDoNothing()` that fully conflicts
-  (0 rows inserted). Illegitimate per the repo's no-polling rule. Evidence:
-  `live_state_changelog` `conversations` INSERT 2.62/s vs `n_tup_ins` = 2,280 rows ever.
+### Confirmed root cause + FIXED in branch (2026-06-29 session 5 — implemented, not pushed)
+> Both altitudes implemented on `claude-web/att-1782729129-nlnv`; `build`+`check` green. Behavioral
+> rate-drop confirmation deferred to `singularity` (orphan adoption is `isMain()`-only). The exact
+> misclassification (session 4's "one remaining hop") is now confirmed: orphans are computed
+> against the **active-only** infra list, so a `done` conversation with a lingering host-wide tmux
+> session is an eternal orphan (**86 `done`/`poller` rows** in `singularity`).
+- ✅ **ORIGIN: the conversations poller re-issues a zero-row write ~4/s** (re-measured; was 2.6/s).
+  It runs on a 1 Hz `setInterval` (`conversations/server/internal/poller.ts:25,263`) and re-adopts a
+  `done`-but-still-live host-wide tmux session as an "orphan" (it's missing from the active-only
+  `dbById`) via `insertConversationOnConflictDoNothing` → `.onConflictDoNothing()` that fully
+  conflicts (0 rows inserted). Evidence: `live_state_changelog` `conversations` INSERT 4.0/s,
+  1200/1201 NULL-id, vs `n_tup_ins` = 2,285 rows ever. **FIX:** `listExistingConversationIds(ids)`
+  gate — a session whose row exists in *any* status (incl. `done`) is adopted at most once.
+  *Lower-altitude residue: the 1 Hz poll itself still violates the no-polling rule — flagged, not
+  fixed (tmux death has no push signal today; event-driven adoption is a separate redesign).*
 - ✅ **AMPLIFIER 1 — change-feed trigger fires on zero-row statements.** `live_state_notify()`
   is STATEMENT-level; an empty transition table still NOTIFYs, and `array_agg(pk)` over it is
   NULL → routed as **FULL-for-table**, invalidating *every* resource reading `conversations`.
+  **FIX (boundary invariant, session 5):** early-return on `NOT EXISTS(SELECT 1 FROM new_rows/
+  old_rows)` before `pg_notify` + the changelog INSERT — kills the whole class for every table
+  (also covers the `job_steps`/`job_waits` zero-row DELETEs at 0.28/s each). Verified live via
+  `pg_get_functiondef`.
 - ✅ **AMPLIFIER 2 — invalidation → no-op recompute.** 6 keyed resources fire **~2 no-op
   pushes/s each** (32 k logged `live-state-noop`): loader reruns, value identical, empty diff.
 - ✅ **AMPLIFIER 3 — unconditional full-value snapshot UPSERT (the persist tail).** `drainEntry`

@@ -91,6 +91,7 @@ export {
 
 export {
   listConversationsForInfra,
+  listExistingConversationIds,
   listConversationsForDisplay,
   listActiveConversations,
   listActiveSystemConversations,

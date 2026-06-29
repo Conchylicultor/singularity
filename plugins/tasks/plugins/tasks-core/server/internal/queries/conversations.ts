@@ -73,6 +73,25 @@ export function listConversationsForInfra(): Promise<Conversation[]> {
   );
 }
 
+// Which of the given conversation ids already exist in the table, in ANY status
+// (including terminal `done`). The poller's orphan-adoption path needs this:
+// `listConversationsForInfra` is scoped to active rows, so a `done` conversation
+// whose tmux session lingers host-wide is absent from that list and would be
+// re-classified as an orphan — and re-adopted via INSERT … ON CONFLICT DO
+// NOTHING — every single tick. Checking existence against the full table (cheap:
+// bounded by the candidate id count, hits the PK) keeps terminal conversations
+// terminal. Returns a Set for O(1) membership.
+export async function listExistingConversationIds(
+  ids: readonly string[],
+): Promise<Set<string>> {
+  if (ids.length === 0) return new Set();
+  const rows = await db
+    .select({ id: _conversations.id })
+    .from(_conversations)
+    .where(inArray(_conversations.id, [...ids]));
+  return new Set(rows.map((r) => r.id));
+}
+
 // User-visible list, newest-first. Sidebar / list endpoint. Pass `taskIds` to
 // scope to just those tasks' conversations (Layer-2 scoped recompute — e.g.
 // agent-launches recomputing only the affected launches' latest conversation);

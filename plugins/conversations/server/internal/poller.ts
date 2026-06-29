@@ -1,5 +1,6 @@
 import {
   listConversationsForInfra,
+  listExistingConversationIds,
   updateConversation,
   updateTaskTitle,
   adoptOrphanConversation,
@@ -86,7 +87,16 @@ async function tick(): Promise<void> {
   // would phantom-clone every conversation it didn't spawn into its own
   // task/attempt/conversation rows.
   if (isMain()) {
-    const orphans = [...next.keys()].filter((id) => !dbById.has(id));
+    // `dbById` is the *active* (status <> 'done') set. A live host-wide tmux
+    // session whose conversation row exists but is terminal (`done`) is absent
+    // from it — so filtering on `dbById` alone re-classifies it as an orphan and
+    // re-adopts it (a zero-row INSERT … ON CONFLICT DO NOTHING) every tick,
+    // churning the change-feed. Re-check the candidates against the full table
+    // (any status) so a terminal conversation stays terminal and is adopted at
+    // most once.
+    const candidates = [...next.keys()].filter((id) => !dbById.has(id));
+    const existing = await listExistingConversationIds(candidates);
+    const orphans = candidates.filter((id) => !existing.has(id));
     if (orphans.length > 0) {
       for (const id of orphans) {
         const live = next.get(id)!;
