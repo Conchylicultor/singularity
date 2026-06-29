@@ -1,13 +1,8 @@
 import { useMemo, useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -17,7 +12,11 @@ import type { EditedFile } from "@plugins/conversations/plugins/conversation-vie
 import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { convDocsPane, isDocFile } from "../panes";
 import { usePushedDocFiles } from "../use-pushed-doc-files";
-import { DocRow } from "./doc-row";
+import { DocRow, DOC_ROW_HEIGHT_REM } from "./doc-row";
+
+// The list sizes to its content but never grows past this many rows — beyond it
+// the list scrolls, so it always claims the minimum vertical space it needs.
+const MAX_LIST_ROWS = 5;
 
 type DocFile = EditedFile & { worktree: string };
 
@@ -98,63 +97,60 @@ function DocsPaneBody({
     </Stack>
   );
 
-  const preview = selected ? (
-    <FilePaneView
-      worktree={selected.worktree}
-      path={selected.path}
-      status={selected.status}
-    />
-  ) : (
-    <Text as="div" variant="body" className="px-md py-sm text-muted-foreground">
-      Select a document above.
-    </Text>
-  );
-
   return (
     <PaneChrome pane={convDocsPane} title={title}>
-      {docs.length === 0 ? (
-        <Text
-          as="div"
-          variant="caption"
-          className="px-sm py-xs text-muted-foreground"
-        >
-          No design docs in the diff.
-        </Text>
-      ) : docs.length === 1 ? (
-        // A single doc needs no list — give the whole pane to the preview.
-        <Clip fill className="h-full">
-          {preview}
-        </Clip>
-      ) : (
-        // List ↑ / preview ↓ as a user-resizable split, so the list can claim
-        // as much (or as little) of the pane height as the user wants instead
-        // of being pinned to a fixed fraction.
-        <ResizablePanelGroup
-          orientation="vertical"
-          className="h-full"
-          id="conv-docs-split"
-        >
-          <ResizablePanel id="docs-list" defaultSize={40} minSize={15}>
-            <Scroll className="h-full py-xs">
-              {docs.map((f) => (
-                <DocRow
-                  key={f.path}
-                  path={f.path}
-                  status={f.status}
-                  selected={f.path === selectedPath}
-                  onSelect={() => setExplicitPath(f.path)}
-                />
-              ))}
+      <Column
+        fill
+        className="h-full"
+        header={
+          // A single doc needs no list — its name already shows in the preview
+          // header below; hide the list and give the whole pane to the preview.
+          docs.length !== 1 ? (
+            <Scroll
+              className="border-b"
+              style={{ maxHeight: `${DOC_ROW_HEIGHT_REM * MAX_LIST_ROWS}rem` }}
+            >
+              {docs.length === 0 ? (
+                <Text
+                  as="div"
+                  variant="caption"
+                  className="px-sm py-xs text-muted-foreground"
+                >
+                  No design docs in the diff.
+                </Text>
+              ) : (
+                docs.map((f) => (
+                  <DocRow
+                    key={f.path}
+                    path={f.path}
+                    status={f.status}
+                    selected={f.path === selectedPath}
+                    onSelect={() => setExplicitPath(f.path)}
+                  />
+                ))
+              )}
             </Scroll>
-          </ResizablePanel>
-          <ResizableHandle withHandle />
-          <ResizablePanel id="docs-preview" defaultSize={60} minSize={30}>
-            <Clip fill className="h-full">
-              {preview}
-            </Clip>
-          </ResizablePanel>
-        </ResizablePanelGroup>
-      )}
+          ) : undefined
+        }
+        body={
+          selected ? (
+            <FilePaneView
+              worktree={selected.worktree}
+              path={selected.path}
+              status={selected.status}
+            />
+          ) : (
+            <Text
+              as="div"
+              variant="body"
+              className="px-md py-sm text-muted-foreground"
+            >
+              Select a document above.
+            </Text>
+          )
+        }
+        scrollBody={false}
+      />
     </PaneChrome>
   );
 }

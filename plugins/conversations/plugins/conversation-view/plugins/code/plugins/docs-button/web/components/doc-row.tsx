@@ -5,6 +5,13 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { gitStatusDot } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 
+/**
+ * Fixed height of one doc row, in rem. Single source of truth shared with the
+ * docs pane, which caps the list to a multiple of this so "show N rows, then
+ * scroll" stays exact without a hand-tuned pixel max-height.
+ */
+export const DOC_ROW_HEIGHT_REM = 1.5;
+
 export function DocRow({
   path,
   status,
@@ -27,8 +34,9 @@ export function DocRow({
       disabled={muted}
       onClick={onSelect}
       aria-pressed={selected}
+      style={{ height: `${DOC_ROW_HEIGHT_REM}rem` }}
       className={cn(
-        "flex w-full items-center gap-xs px-sm py-2xs text-left text-caption hover:bg-muted/60 disabled:cursor-not-allowed",
+        "flex w-full items-center gap-xs px-sm text-left text-caption hover:bg-muted/60 disabled:cursor-not-allowed",
         muted && "opacity-60",
         selected && "bg-muted",
       )}
