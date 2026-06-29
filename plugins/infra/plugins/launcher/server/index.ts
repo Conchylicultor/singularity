@@ -13,6 +13,7 @@ export {
   spawnGatewayDaemon,
   awaitPgReady,
   bootSelfContainedApp,
+  seedReleaseAssetMirror,
   teardownSelfContainedApp,
   gatewayPidFile,
   zeroCacheEnabled,

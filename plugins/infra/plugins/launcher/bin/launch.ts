@@ -75,9 +75,8 @@ async function main(): Promise<void> {
 
   // Imported AFTER env is set, so the launcher's path constants freeze under the
   // release root.
-  const { bootSelfContainedApp, writeReleaseDatabaseConfig } = await import(
-    "@plugins/infra/plugins/launcher/server"
-  );
+  const { bootSelfContainedApp, writeReleaseDatabaseConfig, seedReleaseAssetMirror } =
+    await import("@plugins/infra/plugins/launcher/server");
 
   // Write the release database.json FIRST, so bootSelfContainedApp's internal
   // ensureDatabaseConfig sees the file already present and no-ops (a release has
@@ -90,6 +89,19 @@ async function main(): Promise<void> {
     },
     console.log,
   );
+
+  // Seed the asset-mirror cache from the bundle on first run (copy-if-absent),
+  // so offline cold starts have their pre-warmed assets before the backend
+  // serves any mirror request. Routed through the launcher/server barrel this
+  // bin already dynamic-imports (after the env freeze): a bin entrypoint may not
+  // statically import path-dependent code, and the boundary rules (R9) forbid a
+  // literal cross-plugin dynamic import — so the launcher owns the boot step and
+  // delegates the copy mechanics + dirname to asset-mirror.
+  seedReleaseAssetMirror({
+    bundleRoot,
+    dataDir: process.env.SINGULARITY_DIR!,
+    log: console.log,
+  });
 
   await bootSelfContainedApp({
     name,

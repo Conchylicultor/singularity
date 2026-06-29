@@ -325,10 +325,15 @@ export async function generatePluginRegistry(opts: {
 // committed `<dir>.generated.ts` files are never touched, so the build stays
 // byte-identical and `plugins-registry-in-sync` + `git status` stay clean.
 
-// The runtime registries the app actually loads at the import seam. Central is
+// The registries that need a composition-filtered (closure-restricted) sibling.
+// `web`/`server` are the runtime registries the app actually loads at the import
+// seam. `prewarm` is release-build-time-only — consumed by the asset-mirror
+// release runner to bake each closure mirror's files into the bundle, never
+// loaded by the served app — but it needs the same closure filtering so a
+// release only pre-warms mirrors in the composition's closure. Central is
 // dropped per the F1 requirements; check/lint are build-time-only and never
 // loaded into a served app.
-const COMPOSITION_RUNTIME_DIRS = new Set(["web", "server"]);
+const COMPOSITION_RUNTIME_DIRS = new Set(["web", "server", "prewarm"]);
 
 export function collectedDirCompositionRegistryPath(
   def: DiscoveredCollectedDir,

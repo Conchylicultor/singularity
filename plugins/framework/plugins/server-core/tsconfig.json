@@ -19,6 +19,7 @@
     "../../../../**/plugins/*/shared",
     "../../../../**/plugins/*/check",
     "../../../../**/plugins/*/facet",
-    "../../../../**/plugins/*/composition"
+    "../../../../**/plugins/*/composition",
+    "../../../../**/plugins/*/prewarm"
   ]
 }

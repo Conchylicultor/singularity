@@ -18,6 +18,7 @@ import {
   writeWorktreeSpec,
   type ZeroCacheSpec,
 } from "@plugins/infra/plugins/worktree/server";
+import { seedAssetMirrorCache } from "@plugins/infra/plugins/asset-mirror/server";
 import { retryUntil, exponential } from "@plugins/packages/plugins/retry/core";
 // Canonical embedded-cluster constants — the single source of truth for where
 // PG/PgBouncer listen. Importing them (rather than re-deriving the paths here)
@@ -652,4 +653,21 @@ export async function teardownSelfContainedApp(
   if (pgPort !== undefined) killListenerOnPort(pgPort);
 
   log(`Tore down self-contained app at ${root}`);
+}
+
+/**
+ * Seed the release bundle's pre-warmed asset-mirror cache into the app-data dir
+ * on first run (copy-if-absent). A launcher boot step so `launch.ts` — a bin
+ * entrypoint that must defer every path-dependent import past the env freeze and
+ * may only reach other plugins through this barrel it already dynamic-imports
+ * (the boundary rules forbid a literal cross-plugin dynamic import) — can trigger
+ * it. The `asset-mirror` subdir name + the copy mechanics live in asset-mirror;
+ * this only forwards.
+ */
+export function seedReleaseAssetMirror(opts: {
+  bundleRoot: string;
+  dataDir: string;
+  log?: LogFn;
+}): void {
+  seedAssetMirrorCache(opts);
 }

@@ -4,6 +4,8 @@ import { MIRROR_ROUTE_KEY } from "./internal/registry";
 
 export { defineAssetMirror } from "./internal/registry";
 export type { AssetMirrorSpec } from "./internal/registry";
+export { runAssetMirrorPrewarm } from "./internal/run-prewarm";
+export { seedAssetMirrorCache } from "./internal/seed-cache";
 
 export default {
   description:

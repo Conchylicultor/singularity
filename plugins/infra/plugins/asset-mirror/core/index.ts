@@ -8,3 +8,8 @@
  */
 
 export { ASSET_MIRROR_PREFIX, assetMirrorUrl } from "./url";
+export { assetMirrorPrewarmCollectedDir } from "./collected-dir";
+export { defineAssetMirrorPrewarm } from "./prewarm";
+export type { AssetMirrorPrewarm } from "./prewarm";
+export { prewarmEntries } from "./prewarm.generated";
+export type { CollectedEntry } from "./prewarm.generated";

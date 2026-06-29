@@ -2973,7 +2973,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `CodegenStep`, `DiscoveredCollectedDir`, `GenerateDocsOptions`, `OriginAnnotationsPreparer`, `OriginAnnotationsProvider`, `OriginDefaultsPreparer`, `OriginDefaultsProvider`, `PreBarrelManifest`, `RegenCodegenOptions`, `ReorderableSlotEntry`; Values: `barrelStubsPath`, `buildEnrichedTree`, `clearCompositionRegistries`, `collectAllPlugins`, `collectDataViews`, `collectedDirCompositionRegistryPath`, `collectedDirRegistryPath`, `collectTokenGroupVars`, `computeDisabledIds`, `customUtilitiesManifestPath`, `dataViewsManifestPath`, `discoverCollectedDirs`, `extractRuntimeImportSpecifiers`, `generateBarrelStubs`, `generateCompositionRegistry`, `generateConfigOrigins`, `generateCustomUtilities`, `generateDataViews`, `generatePluginDocs`, `generatePluginRegistry`, `generateReorderableSlots`, `generateTokenGroupVars`, `loadConfigDescriptorsByOriginPath`, `parseCustomUtilities`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `preBarrelManifests`, `propagateConfigToUser`, `regenerateManifestCodegen`, `regenerateRegistryCodegen`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderCustomUtilities`, `renderDataViewsManifest`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderReorderableSlotsManifest`, `renderTokenGroupVarsManifest`, `reorderableSlotsManifestPath`, `resolveImportSpecifier`, `resolveOriginAnnotations`, `resolveOriginDefaults`, `setDefaultOriginAnnotations`, `setDefaultOriginAnnotationsPreparer`, `setDefaultOriginDefaults`, `setDefaultOriginDefaultsPreparer`, `standardPluginDirs`, `tokenGroupVarsManifestPath`, `writePreBarrelManifest`
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
-            - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/tooling/provision`, `framework/web-sdk`, `improve/element-picker`, `plugin-meta/facets`, `primitives/css/layout-harness`
+            - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/tooling/provision`, `framework/web-sdk`, `improve/element-picker`, `infra/asset-mirror`, `plugin-meta/facets`, `primitives/css/layout-harness`
           - Core:
             - Exports: Types: `CollectedDirDef`, `CollectedEntry`, `LoadCollectedDirOptions`; Values: `defineCollectedDir`, `isCollectedDirDef`, `loadCollectedDir`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
@@ -3063,11 +3063,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`asset-mirror`** — Generic server-side asset mirror: plugins declare a remote asset source via defineAssetMirror; files are lazily downloaded on first request, cached on local disk, and served same-origin thereafter (offline-capable after one warm-up).
       - Server:
         - Uses: `infra/paths.SINGULARITY_DIR`
-        - Exports: Types: `AssetMirrorSpec`; Values: `defineAssetMirror`
-      - Cross-plugin:
-        - Imported by: `apps/sonata/audio/piano`, `apps/sonata/audio/soundfont`
+        - Exports: Types: `AssetMirrorSpec`; Values: `defineAssetMirror`, `runAssetMirrorPrewarm`, `seedAssetMirrorCache`
       - Core:
-        - Exports: Values: `ASSET_MIRROR_PREFIX`, `assetMirrorUrl`
+        - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+        - Exports: Types: `AssetMirrorPrewarm`, `CollectedEntry`; Values: `ASSET_MIRROR_PREFIX`, `assetMirrorPrewarmCollectedDir`, `assetMirrorUrl`, `defineAssetMirrorPrewarm`, `prewarmEntries`
+      - Cross-plugin:
+        - Imported by: `apps/sonata/audio/piano`, `apps/sonata/audio/soundfont`, `infra/launcher`
     - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
       - Web:
         - Uses: `infra/endpoints.fetchEndpoint`
@@ -3218,8 +3219,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/transcript-retention`, `database/fork`, `database/live-state-snapshot`, `database/zero/cache-service`, `debug/boot-profile`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/worktree-cleanup`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `page/attachment-block`, `page/inline-date`, `page/links`, `shell/notifications`, `tasks`, `tasks/task-title`
     - **`launcher`**
       - Server:
-        - Uses: `database/admin.ensureDatabase`, `database/admin.getAdminPool`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `database/embedded.pgPostmasterPidFile`, `database/pgbouncer.PGBOUNCER_PORT`, `database/pgbouncer.PGBOUNCER_SOCKET_DIR`, `database/pgbouncer.pgbouncerPidFileUnder`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.writeWorktreeSpec`, `infra/worktree.ZeroCacheSpec`
-        - Exports: Values: `awaitPgReady`, `bootSelfContainedApp`, `buildOrLocateGateway`, `ensureDatabaseConfig`, `gatewayPidFile`, `hasPgBouncerPackage`, `isGatewayListening`, `isRunning`, `pgbouncerConnection`, `pgbouncerService`, `readPid`, `spawnGatewayDaemon`, `teardownSelfContainedApp`, `writeReleaseDatabaseConfig`, `zeroCacheEnabled`, `zeroCacheSpec`
+        - Uses: `database/admin.ensureDatabase`, `database/admin.getAdminPool`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `database/embedded.pgPostmasterPidFile`, `database/pgbouncer.PGBOUNCER_PORT`, `database/pgbouncer.PGBOUNCER_SOCKET_DIR`, `database/pgbouncer.pgbouncerPidFileUnder`, `infra/asset-mirror.seedAssetMirrorCache`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.writeWorktreeSpec`, `infra/worktree.ZeroCacheSpec`
+        - Exports: Values: `awaitPgReady`, `bootSelfContainedApp`, `buildOrLocateGateway`, `ensureDatabaseConfig`, `gatewayPidFile`, `hasPgBouncerPackage`, `isGatewayListening`, `isRunning`, `pgbouncerConnection`, `pgbouncerService`, `readPid`, `seedReleaseAssetMirror`, `spawnGatewayDaemon`, `teardownSelfContainedApp`, `writeReleaseDatabaseConfig`, `zeroCacheEnabled`, `zeroCacheSpec`
       - Cross-plugin:
         - Imported by: `release`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.

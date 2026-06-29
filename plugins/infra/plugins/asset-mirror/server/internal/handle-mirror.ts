@@ -1,7 +1,6 @@
 import { join } from "node:path";
-import { mkdir, rename } from "node:fs/promises";
-import { randomUUID } from "node:crypto";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { mirrorFetchToDisk } from "./fetch-to-disk";
 import { mirrorRegistry } from "./registry";
 
 /** Shared, machine-wide cache root (one download per machine across all
@@ -52,30 +51,18 @@ export async function handleMirror(
   const diskPath = join(CACHE_ROOT, id, name);
 
   if (!(await Bun.file(diskPath).exists())) {
-    // Cache miss → fetch from the registered remote source, then cache it.
-    const upstream = `${remoteBase}/${encodeURIComponent(name)}`;
-    let res: Response;
+    // Cache miss → fetch from the registered remote source, then cache it. The
+    // shared `mirrorFetchToDisk` helper does the fetch + atomic tmp+rename and
+    // throws (fail loud) on any upstream failure; the route catches that to keep
+    // its external contract: log + 502, never a partial write.
     try {
-      res = await fetch(upstream);
+      await mirrorFetchToDisk({ remoteBaseUrl: remoteBase, file: name, diskPath });
     } catch (err) {
       console.error(
-        `[asset-mirror:${id}] upstream fetch threw for "${name}" (${upstream}): ${String(err)}`,
+        `[asset-mirror:${id}] upstream fetch failed for "${name}": ${String(err)}`,
       );
       return new Response("upstream fetch failed", { status: 502 });
     }
-    if (!res.ok) {
-      console.error(
-        `[asset-mirror:${id}] upstream ${res.status} for "${name}" (${upstream})`,
-      );
-      return new Response(`upstream ${res.status}`, { status: 502 });
-    }
-    const bytes = new Uint8Array(await res.arrayBuffer());
-    // Atomic write: temp file in the target dir, then rename, so concurrent
-    // requests for the same file never observe a half-written buffer.
-    await mkdir(join(CACHE_ROOT, id), { recursive: true });
-    const tmp = `${diskPath}.tmp.${randomUUID()}`;
-    await Bun.write(tmp, bytes);
-    await rename(tmp, diskPath);
   }
 
   return new Response(Bun.file(diskPath), {

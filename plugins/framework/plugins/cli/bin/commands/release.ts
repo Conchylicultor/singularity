@@ -21,6 +21,7 @@ import {
 } from "@plugins/plugin-meta/plugins/composition/core";
 import { resolveIconSvgNodes } from "@plugins/primitives/plugins/icon-picker/server";
 import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
+import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/server";
 
 // ── Staged bundle layout (the `--dev` output, also the pack input) ────────────
 //
@@ -473,6 +474,20 @@ export function registerRelease(program: Command) {
           join(out, "RELEASE.json"),
           JSON.stringify(manifest, null, 2) + "\n",
         );
+
+        // ── 3.5. Pre-warm asset-mirror caches for the composition closure ────
+        // Bakes out/asset-mirror/<id>/<file> into the staged tree so the bundle
+        // ships offline-ready audio/assets. Generic — it runs whatever the
+        // closure's `prewarm` contributions declare, no app-specific code. Runs
+        // here, before any target-specific packing, so it covers both --target
+        // web (packStagedTree tars it) and --target tauri (wrapTauri embeds the
+        // staged tree as a resource). Phase 1's `build --composition` already
+        // regenerated the filtered prewarm.composition.generated the runner reads.
+        console.log("\n[3.5] Pre-warming asset-mirror caches for the composition closure...");
+        await runAssetMirrorPrewarm({
+          destRoot: join(out, "asset-mirror"),
+          log: console.log,
+        });
 
         // ── 4. Tauri target: wrap the staged bundle in the desktop shell ─────
         // The staged tree (steps 1–3) is identical to the web bundle; the Tauri
