@@ -531,12 +531,21 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     setLoopState(null);
     if (playOnLoadRef.current) {
       playOnLoadRef.current = false;
+      // Re-base the transport to beat 0 BEFORE (re)starting. When the previous
+      // song was already playing, `isPlaying` stays true across the switch, so
+      // `play()` causes no play/pause transition and the rAF loop — still
+      // anchored to the previous song — would clobber the `setBeat(0)` above on
+      // its next tick. Re-anchoring here (and bumping `seekEpoch` so the audio
+      // scheduler restarts from the new cursor) makes every loaded song start
+      // from the top, whether or not playback was already running.
+      reanchor(0);
+      setSeekEpoch((n) => n + 1);
       play();
     } else {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional transport reset on score change: loading/editing new content imperatively rewinds the cursor (cursor.setBeat) and stops playback; this is a genuine side-effect (paired with the imperative cursor write), not derivable in render
       setIsPlaying(false);
     }
-  }, [baseScore, cursor, play]);
+  }, [baseScore, cursor, play, reanchor]);
 
   // Open-song lifecycle. The player surface calls `setCurrentSong` on mount —
   // each open is a fresh `mode:"root"` pane instance, so this fires once per open
