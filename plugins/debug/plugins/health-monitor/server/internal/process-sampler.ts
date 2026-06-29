@@ -8,8 +8,13 @@ import {
 import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
 import { physFootprintBytes } from "@plugins/framework/plugins/server-core/core";
 import { heavyReadQueueDepth } from "@plugins/infra/plugins/host-read-pool/server";
-import { SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import { SINGULARITY_DIR, currentWorktreeName, isMain } from "@plugins/infra/plugins/paths/server";
 import type { HealthSample } from "../../shared/schema";
+import {
+  startStallProfiler,
+  stopStallProfiler,
+  drainAndMaybeDump,
+} from "./stall-profiler";
 
 // Per-backend health sampler. Installed in the server plugin's `onReady` and
 // torn down in `onShutdown`. It samples this process's own event-loop lag, GC
@@ -36,6 +41,10 @@ let gcObserver: PerformanceObserver | null = null;
 let gcCount = 0;
 let gcTotalMs = 0;
 let lastHeapUsedBytes = 0;
+// Wall-time of the previous tick. A blocked loop fires its tick LATE, so the real
+// drain window (and the JSC sample count's denominator) is now - lastTickAt, not
+// the nominal interval. Used only on main where the stall profiler is armed.
+let lastTickAt = 0;
 
 function healthFilePath(): string {
   return join(SINGULARITY_DIR, "worktrees", currentWorktreeName(), "logs", "health.jsonl");
@@ -81,6 +90,15 @@ function tick(): void {
     // gauge; cheap synchronous read). Surfaces backend contention in the pane.
     heavyReadDepth: heavyReadQueueDepth(),
   };
+  // Drain the JSC sampler for this window BEFORE resetting the histogram so the
+  // drained samples and eventLoopMaxMs describe the same window. On a stall this
+  // dumps the dominant blocking stack; otherwise it just bounds memory. Main only
+  // (no-op elsewhere — the profiler is never armed off-main). windowMs is the
+  // actual elapsed wall-time, which on a stall is ~the block duration.
+  if (isMain()) {
+    drainAndMaybeDump(sample.eventLoopMaxMs, sample.sampledAt, sample.sampledAt - lastTickAt);
+  }
+  lastTickAt = sample.sampledAt;
   histogram.reset();
   gcCount = 0;
   gcTotalMs = 0;
@@ -107,6 +125,10 @@ export function startProcessSampler(): void {
     gcObserver.observe({ entryTypes: ["gc"] });
   }
   lastHeapUsedBytes = process.memoryUsage().heapUsed;
+  lastTickAt = Date.now();
+  // Arm the on-stall stack-trace flight recorder. Main only: stalls are a
+  // main-backend problem (mirrors the host sampler, which is also main-only).
+  if (isMain()) startStallProfiler();
   interval = setInterval(tick, SAMPLE_INTERVAL_MS);
 }
 
@@ -115,6 +137,7 @@ export function stopProcessSampler(): void {
     clearInterval(interval);
     interval = null;
   }
+  if (isMain()) stopStallProfiler();
   if (gcObserver) {
     gcObserver.disconnect();
     gcObserver = null;
