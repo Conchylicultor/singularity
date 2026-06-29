@@ -1192,6 +1192,10 @@
       "name": "@singularity/plugin-conversations-conversations-view",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversations-view/plugins/classic": {
+      "name": "@singularity/plugin-conversations-conversations-view-classic",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversations-view/plugins/grouped": {
       "name": "@singularity/plugin-conversations-conversations-view-grouped",
       "version": "0.0.1",
@@ -1202,6 +1206,10 @@
     },
     "plugins/conversations/plugins/conversations-view/plugins/queue": {
       "name": "@singularity/plugin-conversations-conversations-view-queue",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversations-view/plugins/sidebar-region": {
+      "name": "@singularity/plugin-conversations-conversations-view-sidebar-region",
       "version": "0.0.1",
     },
     "plugins/conversations/plugins/effort-provider": {
@@ -4913,11 +4921,15 @@
 
     "@singularity/plugin-conversations-conversations-view": ["@singularity/plugin-conversations-conversations-view@workspace:plugins/conversations/plugins/conversations-view"],
 
+    "@singularity/plugin-conversations-conversations-view-classic": ["@singularity/plugin-conversations-conversations-view-classic@workspace:plugins/conversations/plugins/conversations-view/plugins/classic"],
+
     "@singularity/plugin-conversations-conversations-view-grouped": ["@singularity/plugin-conversations-conversations-view-grouped@workspace:plugins/conversations/plugins/conversations-view/plugins/grouped"],
 
     "@singularity/plugin-conversations-conversations-view-history": ["@singularity/plugin-conversations-conversations-view-history@workspace:plugins/conversations/plugins/conversations-view/plugins/history"],
 
     "@singularity/plugin-conversations-conversations-view-queue": ["@singularity/plugin-conversations-conversations-view-queue@workspace:plugins/conversations/plugins/conversations-view/plugins/queue"],
+
+    "@singularity/plugin-conversations-conversations-view-sidebar-region": ["@singularity/plugin-conversations-conversations-view-sidebar-region@workspace:plugins/conversations/plugins/conversations-view/plugins/sidebar-region"],
 
     "@singularity/plugin-conversations-effort-provider": ["@singularity/plugin-conversations-effort-provider@workspace:plugins/conversations/plugins/effort-provider"],
 

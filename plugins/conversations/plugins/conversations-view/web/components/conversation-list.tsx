@@ -4,7 +4,11 @@ import { useOpenPane, usePaneStore } from "@plugins/primitives/plugins/pane/web"
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { closeConversation } from "@plugins/conversations/core";
-import { ConversationsView } from "../slots";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { conversationsSidebarRegionWeb } from "@plugins/conversations/plugins/conversations-view/plugins/sidebar-region/web";
+
+const { Region, Picker } = conversationsSidebarRegionWeb;
 
 export function ConversationList() {
   const openPane = useOpenPane();
@@ -31,12 +35,28 @@ export function ConversationList() {
     }
   };
 
+  // Shared chrome (launch button + variant picker) sits above the variant
+  // region, reproducing the rigid `px-sm pb-xs` header block the tabbed `Host`
+  // used to apply around the launch button. `scrollBody={false}` lets the
+  // variant own its single scroll (its own `Column`/`Scroll`), so the list
+  // scrolls internally and the variant's tab switcher stays rigid.
   return (
-    <ConversationsView.Host
-      activeId={activeId}
-      onNavigate={navigate}
-      onCloseConversation={handleCloseConversation}
-      header={<LaunchControl variant="outline" fullWidth />}
+    <Column
+      fill
+      header={
+        <Stack gap="xs" className="px-sm pb-xs">
+          <LaunchControl variant="outline" fullWidth />
+          <Picker />
+        </Stack>
+      }
+      scrollBody={false}
+      body={
+        <Region
+          activeId={activeId}
+          onNavigate={navigate}
+          onCloseConversation={handleCloseConversation}
+        />
+      }
     />
   );
 }

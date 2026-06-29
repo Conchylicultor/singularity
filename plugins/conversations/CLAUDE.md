@@ -101,9 +101,11 @@
       - **`vscode`** — Opens the conversation's worktree in VSCode.
   - **`conversations-view`** — Sidebar list of all conversations.
     - Plugins:
+      - **`classic`** — Registers today's tabbed Queue/Grouped/History conversation list as the `classic` sidebar variant (the default, and the only variant in Phase 0).
       - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
       - **`history`** — All conversations in historical order of creation.
       - **`queue`** — Stable-rank global priority queue of conversations awaiting user input. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
+      - **`sidebar-region`** — Variant region for the agent-manager conversation sidebar body (classic / future dataview). Owns the switch; the parent conversations-view mount point renders its Region + Picker.
   - **`effort-provider`** — Registry mapping thinking-mode (effort) levels to Claude CLI delivery (--effort flag / --settings ultracode) and display metadata. Reusable EffortSelect picker.
   - **`hibernation`** — Records conversation selection so idle hibernation can reset the idle timer and transparently resume. Idle-conversation hibernation policy: a scheduled idle-kill job, the viewed/resume endpoint, and the global hibernation config.
   - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
