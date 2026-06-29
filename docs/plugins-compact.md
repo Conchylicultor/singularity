@@ -311,6 +311,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
     - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
       - Plugins:
+        - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
         - **`server-query`** — Generic FilterGroup/SortRule → SQL compiler + null-aware keyset (cursor) seek for server-delegated data-view sources. Field-type agnostic: operator SQL is supplied by an injected resolver, so this owns drizzle and the seek correctness, not any field type.

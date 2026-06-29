@@ -2874,6 +2874,10 @@
       "name": "@singularity/plugin-primitives-data-view",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/data-view/plugins/custom-columns": {
+      "name": "@singularity/plugin-primitives-data-view-custom-columns",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/data-view/plugins/gallery": {
       "name": "@singularity/plugin-primitives-data-view-gallery",
       "version": "0.0.1",
@@ -5698,6 +5702,8 @@
     "@singularity/plugin-primitives-data-table": ["@singularity/plugin-primitives-data-table@workspace:plugins/primitives/plugins/data-table"],
 
     "@singularity/plugin-primitives-data-view": ["@singularity/plugin-primitives-data-view@workspace:plugins/primitives/plugins/data-view"],
+
+    "@singularity/plugin-primitives-data-view-custom-columns": ["@singularity/plugin-primitives-data-view-custom-columns@workspace:plugins/primitives/plugins/data-view/plugins/custom-columns"],
 
     "@singularity/plugin-primitives-data-view-gallery": ["@singularity/plugin-primitives-data-view-gallery@workspace:plugins/primitives/plugins/data-view/plugins/gallery"],
 

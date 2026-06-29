@@ -1,7 +1,16 @@
 import { buildViewDescriptors } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { customColumnsExtraFields } from "@plugins/primitives/plugins/data-view/plugins/custom-columns/core";
 import { dataViews } from "../../shared/data-views.generated";
 import { presetsExtraFields } from "../../shared/sort-presets-field";
+
+/**
+ * The sibling config fields merged into every per-id `viewsDescriptor`. ONE
+ * identity-stable module constant (the `viewsDescriptor` cache keys by id alone,
+ * so the extra-fields object must keep a stable reference per runtime). Keys are
+ * disjoint (`sortPresets` + `filterPresets` + `customColumns`) — merge, never replace.
+ */
+const extraFields = { ...presetsExtraFields, ...customColumnsExtraFields };
 
 /**
  * The per-DataView-id `views` descriptors for the web runtime. data-view owns the
@@ -18,7 +27,7 @@ import { presetsExtraFields } from "../../shared/sort-presets-field";
  */
 const { map, entries } = buildViewDescriptors(
   dataViews.map((v) => v.id),
-  presetsExtraFields,
+  extraFields,
 );
 
 const pluginIdById = new Map(dataViews.map((v) => [v.id, asPluginId(v.pluginId)]));

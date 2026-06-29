@@ -62,7 +62,16 @@ A now depends on the new task. A's old deps are rewired to the new task.
 Prefer **linear chains** over fan-out. Each downstream task picks up cold
 from the prior task's outcome, and intermediate work frequently surfaces
 issues that should reshape what comes after — a linear chain lets the next
-agent see the actual outcome instead of executing a stale plan.`,
+agent see the actual outcome instead of executing a stale plan.
+
+**Filing several follow-ups from your current work?** Chain them off your
+current task — do NOT fan them out as independent siblings. Leave \`target\`
+unset on the FIRST call (it defaults to the current conversation's task),
+then pass the previous call's returned \`task_id\` as \`target\` on each
+subsequent call. The whole chain then hangs off your current (still-open)
+task, so nothing autostarts until your work here completes — file them
+straight away with the default \`autostart\`; there is no need to ask the user
+first or to disable autostart to avoid launching agents prematurely.`,
   inputSchema: {
     title: z.string().min(1).describe("Short title for the task."),
     description: z

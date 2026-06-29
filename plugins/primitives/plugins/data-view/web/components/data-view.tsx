@@ -20,6 +20,10 @@ import {
   EditableViewSwitcher,
   useViewVariants,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
+import {
+  useCustomColumnDefs,
+  DataViewSettingsButton,
+} from "@plugins/primitives/plugins/data-view/plugins/custom-columns/web";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
   useDataViewModel,
@@ -32,6 +36,8 @@ import { useSortController } from "../internal/use-sort-controller";
 import { useSortPresets } from "../internal/use-sort-presets";
 import { useFilterPresets } from "../internal/use-filter-presets";
 import { CollectFieldExtensions } from "../internal/field-extensions";
+import { useCustomColumnFields } from "../internal/use-custom-column-fields";
+import { dataViewDescriptors } from "../internal/descriptors";
 import { useScrollAncestorGuard } from "../internal/use-scroll-ancestor-guard";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
@@ -80,7 +86,6 @@ function DataViewInner<TRow>({
 }): ReactNode {
   const {
     rows,
-    fields,
     rowKey,
     title,
     actions,
@@ -103,6 +108,29 @@ function DataViewInner<TRow>({
   const rootRef = useScrollAncestorGuard(props.storageKey);
 
   const viewVariants = useViewVariants(contributions);
+
+  // User-defined custom columns (ON by default; `customColumns={false}` opts a
+  // surface out). The host resolves the per-surface config descriptor (it owns
+  // `dataViewDescriptors`) and threads it DOWN into the child controller — the
+  // custom-columns child never imports data-view (cycle). The defs feed the
+  // bridge that turns them into ordinary `FieldDef`s appended to `props.fields`,
+  // so they flow through every view + sort/filter/search. Hooks run
+  // unconditionally; when opted out the bridge gets an empty defs list.
+  const descriptor = dataViewDescriptors.get(props.storageKey);
+  const customColumnsEnabled = props.customColumns !== false && descriptor != null;
+  const { defs: customColumnDefs, ...customColumnActions } =
+    useCustomColumnDefs(descriptor);
+  const customFields = useCustomColumnFields<TRow>({
+    storageKey: props.storageKey,
+    rowKey,
+    defs: customColumnsEnabled ? customColumnDefs : [],
+  });
+  // Appended custom columns flow into every view + sort/filter/search. Computed
+  // inline (the React Compiler auto-memoizes) — a manual `useMemo` here can't be
+  // preserved by the compiler and cascades into nearby memos.
+  const fields = customColumnsEnabled
+    ? [...props.fields, ...customFields]
+    : props.fields;
 
   // Derive the `hasChildren` predicate once from `hierarchy.getParentId` over
   // `rows` (absent hierarchy → always `false`). Flat views (table/gallery) use
@@ -283,6 +311,12 @@ function DataViewInner<TRow>({
         ) : null}
         {actions}
         <CreatorsControl creators={creators} />
+        {customColumnsEnabled ? (
+          <DataViewSettingsButton
+            defs={customColumnDefs}
+            actions={customColumnActions}
+          />
+        ) : null}
         <EditableViewSwitcher
           instances={instances}
           activeId={activeViewId}
