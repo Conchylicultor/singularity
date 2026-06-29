@@ -28,13 +28,14 @@ export function FilterBuilderTrigger<TRow>(props: {
       onOpenChange={setOpen}
       align="end"
       width="fit"
+      tooltip={label}
       trigger={
         <Button
           variant={active ? "secondary" : "ghost"}
-          aria-label="Filter"
+          aspect="icon"
+          aria-label={label}
         >
           <MdFilterList />
-          {label}
         </Button>
       }
     >

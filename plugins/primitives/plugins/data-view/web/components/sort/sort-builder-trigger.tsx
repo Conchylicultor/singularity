@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { MdSort } from "react-icons/md";
+import { MdSwapVert } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import type { SortController } from "../../internal/use-sort-controller";
@@ -28,13 +28,14 @@ export function SortBuilderTrigger<TRow>(props: {
       onOpenChange={setOpen}
       align="end"
       width="2xl"
+      tooltip={label}
       trigger={
         <Button
           variant={active ? "secondary" : "ghost"}
-          aria-label="Sort"
+          aspect="icon"
+          aria-label={label}
         >
-          <MdSort />
-          {label}
+          <MdSwapVert />
         </Button>
       }
     >
