@@ -681,8 +681,16 @@
       "name": "@singularity/plugin-apps-workflows",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/workflows/plugins/definitions": {
+      "name": "@singularity/plugin-apps-workflows-definitions",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/workflows/plugins/engine": {
       "name": "@singularity/plugin-apps-workflows-engine",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/workflows/plugins/executions": {
+      "name": "@singularity/plugin-apps-workflows-executions",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/workflows/plugins/shell": {
@@ -4683,7 +4691,11 @@
 
     "@singularity/plugin-apps-workflows": ["@singularity/plugin-apps-workflows@workspace:plugins/apps/plugins/workflows"],
 
+    "@singularity/plugin-apps-workflows-definitions": ["@singularity/plugin-apps-workflows-definitions@workspace:plugins/apps/plugins/workflows/plugins/definitions"],
+
     "@singularity/plugin-apps-workflows-engine": ["@singularity/plugin-apps-workflows-engine@workspace:plugins/apps/plugins/workflows/plugins/engine"],
+
+    "@singularity/plugin-apps-workflows-executions": ["@singularity/plugin-apps-workflows-executions@workspace:plugins/apps/plugins/workflows/plugins/executions"],
 
     "@singularity/plugin-apps-workflows-shell": ["@singularity/plugin-apps-workflows-shell@workspace:plugins/apps/plugins/workflows/plugins/shell"],
 

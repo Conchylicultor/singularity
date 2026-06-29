@@ -88,4 +88,5 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "ui.theme-engine.variant-group", pluginId: "ui.theme-engine" },
   { slotId: "workflows-app.sidebar", pluginId: "apps.workflows.shell" },
   { slotId: "workflows-app.toolbar", pluginId: "apps.workflows.shell" },
+  { slotId: "workflows.detail.section", pluginId: "apps.workflows.definitions" },
 ];

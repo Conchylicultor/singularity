@@ -1,4 +1,6 @@
-// @hash dfc9a7e375eb
+// @hash c0192c640831
 {
-  "items": []
+  "items": [
+    "apps.workflows.definitions:definitions"
+  ]
 }

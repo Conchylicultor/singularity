@@ -6,7 +6,9 @@
 
 - Description: Workflows app.
 - Sub-plugins:
+  - **`definitions`** — Sidebar list, welcome pane, and detail pane (editable name/description, read-only step list, extensible WorkflowsDetail.Section slot) for the Workflows app.
   - **`engine`** — Core engine infrastructure. Defines the Workflows.StepType slot. Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.
+  - **`executions`** — Executions section (run list + Run button) for the Workflows detail pane, plus the execution-detail pane rendering the per-step trace.
   - **`shell`** — App shell for the workflows app. Registers the /workflows app entry and defines WorkflowsApp.Sidebar/Toolbar slots.
   - **`steps`** — Umbrella for workflow step type plugins.
     - Plugins:

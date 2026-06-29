@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-workflows-executions",
+  "description": "Executions section (run list + Run button) for the Workflows detail pane, plus the execution-detail pane rendering the per-step trace.",
+  "private": true,
+  "version": "0.0.1"
+}

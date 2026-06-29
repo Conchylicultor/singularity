@@ -69,7 +69,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
             - **`release-logs`** — Live + persisted release log stream section in the release detail pane.
         - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
-    - **`workflows`** [4 sub-plugins] — Workflows app.
+    - **`workflows`** [6 sub-plugins] — Workflows app.
 
 - **`apps-core`** [load-bearing] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Plugins:

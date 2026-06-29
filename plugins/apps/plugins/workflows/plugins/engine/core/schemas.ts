@@ -4,9 +4,14 @@ export const DefinitionStepSchema = z.object({
   id: z.string(),
   pluginId: z.string(),
   label: z.string(),
-  config: z.record(z.unknown()).default({}),
-  next: z.string().nullable().default(null),
-  nextStepMapping: z.record(z.string()).nullable().default(null),
+  // No zod `.default()` here: this schema is the resource/wire contract, and the
+  // server always serializes complete step objects. Keeping input === output
+  // (every field required, `next`/`nextStepMapping` nullable) means the
+  // live-state resource's data type matches `z.infer` exactly, so consumers can
+  // assign a resource row straight to `WorkflowDefinition`.
+  config: z.record(z.unknown()),
+  next: z.string().nullable(),
+  nextStepMapping: z.record(z.string()).nullable(),
 });
 export type DefinitionStep = z.infer<typeof DefinitionStepSchema>;
 
