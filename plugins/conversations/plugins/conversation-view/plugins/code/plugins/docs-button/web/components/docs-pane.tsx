@@ -1,8 +1,13 @@
 import { useMemo, useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import {
+  ResizableHandle,
+  ResizablePanel,
+  ResizablePanelGroup,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -93,55 +98,63 @@ function DocsPaneBody({
     </Stack>
   );
 
+  const preview = selected ? (
+    <FilePaneView
+      worktree={selected.worktree}
+      path={selected.path}
+      status={selected.status}
+    />
+  ) : (
+    <Text as="div" variant="body" className="px-md py-sm text-muted-foreground">
+      Select a document above.
+    </Text>
+  );
+
   return (
     <PaneChrome pane={convDocsPane} title={title}>
-      <Column
-        fill
-        className="h-full"
-        header={
-          docs.length !== 1 ? (
-            <Scroll className="max-h-[40%] border-b py-xs">
-              {docs.length === 0 ? (
-                <Text
-                  as="div"
-                  variant="caption"
-                  className="px-sm py-xs text-muted-foreground"
-                >
-                  No design docs in the diff.
-                </Text>
-              ) : (
-                docs.map((f) => (
-                  <DocRow
-                    key={f.path}
-                    path={f.path}
-                    status={f.status}
-                    selected={f.path === selectedPath}
-                    onSelect={() => setExplicitPath(f.path)}
-                  />
-                ))
-              )}
+      {docs.length === 0 ? (
+        <Text
+          as="div"
+          variant="caption"
+          className="px-sm py-xs text-muted-foreground"
+        >
+          No design docs in the diff.
+        </Text>
+      ) : docs.length === 1 ? (
+        // A single doc needs no list — give the whole pane to the preview.
+        <Clip fill className="h-full">
+          {preview}
+        </Clip>
+      ) : (
+        // List ↑ / preview ↓ as a user-resizable split, so the list can claim
+        // as much (or as little) of the pane height as the user wants instead
+        // of being pinned to a fixed fraction.
+        <ResizablePanelGroup
+          orientation="vertical"
+          className="h-full"
+          id="conv-docs-split"
+        >
+          <ResizablePanel id="docs-list" defaultSize={40} minSize={15}>
+            <Scroll className="h-full py-xs">
+              {docs.map((f) => (
+                <DocRow
+                  key={f.path}
+                  path={f.path}
+                  status={f.status}
+                  selected={f.path === selectedPath}
+                  onSelect={() => setExplicitPath(f.path)}
+                />
+              ))}
             </Scroll>
-          ) : undefined
-        }
-        body={
-          selected ? (
-            <FilePaneView
-              worktree={selected.worktree}
-              path={selected.path}
-              status={selected.status}
-            />
-          ) : (
-            <Text
-              as="div"
-              variant="body"
-              className="px-md py-sm text-muted-foreground"
-            >
-              Select a document above.
-            </Text>
-          )
-        }
-        scrollBody={false}
-      />
+          </ResizablePanel>
+          <ResizableHandle withHandle />
+          <ResizablePanel id="docs-preview" defaultSize={60} minSize={30}>
+            <Clip fill className="h-full">
+              {preview}
+            </Clip>
+          </ResizablePanel>
+        </ResizablePanelGroup>
+      )}
     </PaneChrome>
   );
 }
