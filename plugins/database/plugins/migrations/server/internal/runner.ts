@@ -72,6 +72,50 @@ async function getAppliedHashes(db: NodePgDatabase): Promise<Set<string>> {
   return new Set(applied.rows.map((r) => r.hash));
 }
 
+// PURE (exported for unit testing): given the ordered migration list and the
+// hashes already in the ledger, decide which to apply and which to skip as
+// same-run duplicate-hash siblings. Mutates nothing.
+//
+// WHY skip-by-hash is correct: the ledger (__singularity_migrations) keys applied
+// state by the filename sha8, which is its PRIMARY KEY. Two files carrying the
+// same sha8 are byte-identical content (e.g. a `CREATE TABLE IF NOT EXISTS` that
+// legitimately recurs in schema history after an add then later remove). The
+// first occurrence applies and records its hash; the second carries the SAME
+// content, so re-running it would (a) be a no-op for the identical DDL and
+// (b) attempt a duplicate INSERT of the same PK → unique-constraint violation.
+// We therefore apply the first and skip the rest — but loudly (see callers),
+// never silently.
+export function planMigrations(
+  migrations: Migration[],
+  appliedHashes: ReadonlySet<string>,
+): { toApply: Migration[]; skippedDuplicates: { file: string; original: string }[] } {
+  const toApply: Migration[] = [];
+  const skippedDuplicates: { file: string; original: string }[] = [];
+  // hash → first file in THIS list that we plan to apply for that hash.
+  const firstFileForHash = new Map<string, string>();
+
+  for (const m of migrations) {
+    if (firstFileForHash.has(m.hash)) {
+      // A same-run sibling: an earlier file in this list already owns this hash.
+      // Identical content; skipping the second is a no-op (and avoids a
+      // duplicate-PK INSERT). Reported loudly by the caller.
+      skippedDuplicates.push({ file: m.file, original: firstFileForHash.get(m.hash)! });
+      continue;
+    }
+    if (appliedHashes.has(m.hash)) {
+      // Normal prior-boot skip: already in the ledger. Not a collision — record
+      // it as the owner so a later byte-identical sibling is still recognized as
+      // a duplicate of THIS file, but don't re-apply or report it.
+      firstFileForHash.set(m.hash, m.file);
+      continue;
+    }
+    firstFileForHash.set(m.hash, m.file);
+    toApply.push(m);
+  }
+
+  return { toApply, skippedDuplicates };
+}
+
 export async function runMigrations(db: NodePgDatabase): Promise<void> {
   try {
     const migrations = listMigrationFiles(MIGRATIONS_DIR);
@@ -94,8 +138,19 @@ export async function runMigrations(db: NodePgDatabase): Promise<void> {
       }
     }
 
-    for (const m of migrations) {
-      if (appliedHashes.has(m.hash)) continue;
+    const { toApply, skippedDuplicates } = planMigrations(migrations, appliedHashes);
+
+    // Loudly report every same-run duplicate-hash skip. Identical DDL, so this is
+    // a no-op for the DB, but it must never be silent ("fail loudly" rule): a
+    // surprise collision means two files share a sha8 and one is being ignored.
+    for (const { file, original } of skippedDuplicates) {
+      log.publish(
+        `[migrate] skipping ${file}: its sha8 hash is byte-identical to ${original}, which is being applied in this run. The ledger PK is the sha8, so re-applying would duplicate-key; the identical DDL makes the skip a no-op.`,
+        "stderr",
+      );
+    }
+
+    for (const m of toApply) {
       log.publish(`[migrate] applying ${m.file}`);
       await db.transaction(async (tx) => {
         await tx.execute(drizzleSql.raw(m.sqlText));
@@ -134,9 +189,11 @@ export async function dryRunPendingMigrations(
   db: NodePgDatabase,
 ): Promise<{ pending: number }> {
   const applied = await getAppliedHashes(db);
-  const pending = listMigrationFiles(MIGRATIONS_DIR).filter(
-    (m) => !applied.has(m.hash),
-  );
+  // Same skip-by-hash logic as runMigrations: two pending files sharing a sha8
+  // are byte-identical, and applying both in this single transaction would
+  // attempt a duplicate-PK INSERT and abort the dry-run. planMigrations drops
+  // the same-run duplicate so the dry-run mirrors real boot behavior.
+  const pending = planMigrations(listMigrationFiles(MIGRATIONS_DIR), applied).toApply;
   if (pending.length === 0) return { pending: 0 };
 
   try {

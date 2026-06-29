@@ -32,6 +32,9 @@ async function getRoot(): Promise<string> {
 // recorded in every deployed DB's __singularity_migrations, so they can never be
 // rehashed. A collision among only such files is frozen history with no safe fix,
 // so we never flag it — flagging it would make this check impossible to satisfy.
+// This is safe because the runner tolerates such a collision: identical-DDL
+// siblings are byte-identical content (the ledger PK is the sha8), so it applies
+// the first and skips the rest (logging a loud warning), never duplicate-keying.
 async function trackedBasenames(root: string): Promise<Set<string>> {
   for (const ref of ["origin/main", "main"]) {
     if ((await git(root, ["rev-parse", "--verify", ref])).code !== 0) continue;
@@ -57,10 +60,13 @@ const check: Check = {
     const tracked = await trackedBasenames(root);
 
     // The runner identifies applied migrations by the filename sha8 alone. Two
-    // files sharing a hash means the second is silently skipped: it inherits the
-    // first's __singularity_migrations row and never runs. Catch the collision
-    // here so it fails loudly instead of dropping a backfill on the floor — but
-    // only when a branch-local file is involved (the agent can regenerate it).
+    // files sharing a hash means the runner applies the first and skips the rest
+    // (the ledger PK is the sha8): correct only when the colliding files are
+    // byte-identical DDL. A branch-local collision usually is NOT intentional —
+    // it's a backfill that would never run. Catch it here so it fails loudly
+    // instead of dropping a backfill on the floor — but only when a branch-local
+    // file is involved (the agent can regenerate it); an all-tracked collision of
+    // frozen history is tolerated by the runner and not flagged (see above).
     const byHash = new Map<string, string[]>();
     for (const f of readdirSync(dir)) {
       const m = MIGRATION_RE.exec(f);
@@ -78,7 +84,7 @@ const check: Check = {
     return {
       ok: false,
       message:
-        "migration filename hash collision (the runner would silently skip all but the first):\n" +
+        "migration filename hash collision (the runner applies the first and skips the rest):\n" +
         collisions
           .map(([hash, files]) => `  ${hash}:\n${files.map((f) => `    ${f}`).join("\n")}`)
           .join("\n"),

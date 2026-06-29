@@ -6,9 +6,13 @@ same `sha8` token in their filename (`<ts>_<sha8>__<slug>.sql`).
 The runner (`plugins/database/plugins/migrations/server/internal/runner.ts`)
 keys applied-state by that `sha8` — it is the PRIMARY KEY of
 `__singularity_migrations`. If two files collide on the hash, the runner applies
-the first and **silently skips** the second (it inherits the first's applied
-row), so a backfill can vanish without error. This check turns that silent skip
-into a loud failure.
+the first and **skips** the rest, logging a loud `stderr` warning (a same-hash
+sibling is byte-identical DDL, so re-applying it would only duplicate-key the PK;
+the skip is a no-op for the identical content). That tolerance is what lets a
+frozen all-tracked collision boot cleanly. But a *branch-local* collision is
+almost never intentional — it's a backfill whose distinct content would never
+run — so this check still fails loudly whenever a branch-local file is involved
+(an all-tracked collision of immutable history is exempt; see `trackedBasenames`).
 
 Historically every `--custom` (data/backfill) migration hashed to the empty
 drizzle placeholder body and so claimed the identical hash `b3cc75fa`.
