@@ -29,6 +29,11 @@ export type {
   ItemActions,
   ItemActionContribution,
 } from "./internal/define-item-actions";
+export { defineFieldExtensions } from "./internal/field-extensions";
+export type {
+  FieldExtensions,
+  FieldExtensionContribution,
+} from "./internal/field-extensions";
 export type {
   FieldValue,
   FilterFieldValue,
@@ -38,6 +43,7 @@ export type {
   CreateOption,
   SortRule,
   SortPreset,
+  FilterPreset,
   ViewState,
   DataViewRenderProps,
   DataViewProps,
@@ -54,6 +60,8 @@ export type {
   ServerDataSourceSpec,
   ItemActionProps,
   ItemActionsDescriptor,
+  FieldExtensionProps,
+  FieldExtensionsDescriptor,
 } from "../core";
 
 export default {

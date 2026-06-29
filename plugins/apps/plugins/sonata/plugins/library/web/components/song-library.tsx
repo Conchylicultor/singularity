@@ -1,6 +1,5 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
-import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import type { CreateOption, FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -28,9 +27,11 @@ const LIBRARY_VIEW = defineDataView("sonata.library");
  * list is reactive via the live `songsResource`; the gallery view keeps the custom
  * `SongCard` (play affordance + hover-delete) via `viewOptions.gallery.renderCard`.
  *
- * Gallery orderings contributed via `Library.Sort` (e.g. play-based orderings
- * from `playback-history`) still apply: the active ordering produces the row
- * list that feeds `DataView`, and the ordering picker lives in the toolbar.
+ * Extra fields (e.g. play-count / last-played from `playback-history`) are
+ * injected via the `Library.Fields` extension factory passed as
+ * `fieldExtensions` — they appear in the Sort pill, the Filter pill, and as
+ * table columns for free, so prerecorded orderings are just named sort presets
+ * (authored in config) over those fields rather than bespoke toolbar chips.
  */
 export function SongLibrary() {
   const songs = useResource(songsResource);
@@ -44,15 +45,6 @@ export function SongLibrary() {
   // write surfaces via the global mutation toast (no local onError).
   const { mutate: saveSong } = useEndpointMutation(updateSong);
   const sources = Library.Source.useContributions();
-  // Active gallery ordering. "newest" is the built-in default (the list already
-  // arrives newest-first); extra orderings (e.g. play-based) are contributed to
-  // `Library.Sort` by other plugins and dispatched on below.
-  const [sort, setSort] = useState<string>("newest");
-  const sortContributions = Library.Sort.useContributions();
-  const sortOptions = [
-    { id: "newest", label: "Newest" },
-    ...sortContributions.map((c) => ({ id: c.id, label: c.label })),
-  ];
 
   const fields: FieldDef<Song>[] = useMemo(
     () => [
@@ -122,52 +114,37 @@ export function SongLibrary() {
   // skeleton (`loading`) and the chrome (title / search / add actions) stays
   // stable — the "No songs yet" empty state requires confirmed-empty.
   const renderLibrary = (rows: Song[], loading: boolean) => (
-    <Library.Sort.Dispatch
-      activeSortId={sort}
-      songs={rows}
-      render={(ordered) => (
-        <DataView<Song>
-          rows={ordered}
-          fields={fields}
-          rowKey={(s) => s.id}
-          views={["gallery", "table"]}
-          defaultView="gallery"
-          storageKey={LIBRARY_VIEW}
-          // Trailing per-row Play/Pause action (table view); the gallery uses its
-          // own SongCard button. Highlight the background-playing row.
-          itemActions={Library.SongActions}
-          selectedRowId={currentSongId ?? undefined}
-          // The "Library" title is owned by the enclosing `PaneChrome` (the pane
-          // header), so the DataView omits its own to avoid a duplicate.
-          loading={loading}
-          actions={
-            rows.length > 0 ? (
-              <SegmentedControl
-                options={sortOptions}
-                value={sort}
-                onChange={setSort}
-                variant="ghost"
-              />
-            ) : null
-          }
-          // Per-source create affordances (e.g. MIDI Import, New Chord Grid),
-          // mapped from the `Library.Source` registry into the data-view "+"
-          // menu. The library stays source-agnostic — it threads an opaque
-          // `createOption` and never names MIDI.
-          creators={sources
-            .map((s) => s.createOption)
-            .filter((c): c is CreateOption => Boolean(c))}
-          onRowActivate={(s) => void openSong(s)}
-          emptyState={<>No songs yet — add one to get started.</>}
-          viewOptions={{
-            gallery: {
-              renderCard: (s: Song) => (
-                <SongCard song={s} onOpen={(x) => void openSong(x)} />
-              ),
-            },
-          }}
-        />
-      )}
+    <DataView<Song>
+      rows={rows}
+      fields={fields}
+      fieldExtensions={Library.Fields}
+      rowKey={(s) => s.id}
+      views={["gallery", "table"]}
+      defaultView="gallery"
+      storageKey={LIBRARY_VIEW}
+      // Trailing per-row Play/Pause action (table view); the gallery uses its
+      // own SongCard button. Highlight the background-playing row.
+      itemActions={Library.SongActions}
+      selectedRowId={currentSongId ?? undefined}
+      // The "Library" title is owned by the enclosing `PaneChrome` (the pane
+      // header), so the DataView omits its own to avoid a duplicate.
+      loading={loading}
+      // Per-source create affordances (e.g. MIDI Import, New Chord Grid),
+      // mapped from the `Library.Source` registry into the data-view "+"
+      // menu. The library stays source-agnostic — it threads an opaque
+      // `createOption` and never names MIDI.
+      creators={sources
+        .map((s) => s.createOption)
+        .filter((c): c is CreateOption => Boolean(c))}
+      onRowActivate={(s) => void openSong(s)}
+      emptyState={<>No songs yet — add one to get started.</>}
+      viewOptions={{
+        gallery: {
+          renderCard: (s: Song) => (
+            <SongCard song={s} onOpen={(x) => void openSong(x)} />
+          ),
+        },
+      }}
     />
   );
 

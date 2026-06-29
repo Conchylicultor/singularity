@@ -4,9 +4,9 @@
 
 ## Plugin reference
 
-- Description: Per-song play count + last-played: records a play on playback start (Sonata.Effect), shows stats on each library card (Library.CardMeta), and adds Most/Recently played sort orderings (Library.Sort). Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
+- Description: Per-song play count + last-played: records a play on playback start (Sonata.Effect), shows stats on each library card (Library.CardMeta), and contributes Plays / Last-played fields (Library.Fields) so they appear in the DataView's sort, filter, and table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
 - Web:
-  - Contributes: `Sonata.Effect` "record-play" → `RecordPlayObserver`, `Library.CardMeta` "play-stats" → `PlayStats`, `Library.Sort` "Most played" → `MostPlayedOrder`, `Library.Sort` "Recently played" → `RecentlyPlayedOrder`
+  - Contributes: `Sonata.Effect` "record-play" → `RecordPlayObserver`, `Library.CardMeta` "play-stats" → `PlayStats`, `Library.Fields` "playback" → `PlaybackFields`
   - Uses: `apps/sonata/library.Library`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/relative-time.formatRelativeTime`
   - Exports: Values: `usePlaybackHistory`, `usePlaybackHistoryMap`
 - Server:

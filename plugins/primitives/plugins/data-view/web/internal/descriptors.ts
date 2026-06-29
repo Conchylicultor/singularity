@@ -1,7 +1,7 @@
 import { buildViewDescriptors } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { dataViews } from "../../shared/data-views.generated";
-import { sortPresetsExtraFields } from "../../shared/sort-presets-field";
+import { presetsExtraFields } from "../../shared/sort-presets-field";
 
 /**
  * The per-DataView-id `views` descriptors for the web runtime. data-view owns the
@@ -18,7 +18,7 @@ import { sortPresetsExtraFields } from "../../shared/sort-presets-field";
  */
 const { map, entries } = buildViewDescriptors(
   dataViews.map((v) => v.id),
-  sortPresetsExtraFields,
+  presetsExtraFields,
 );
 
 const pluginIdById = new Map(dataViews.map((v) => [v.id, asPluginId(v.pluginId)]));

@@ -1,7 +1,7 @@
 import { buildViewConfigRegistrations } from "@plugins/primitives/plugins/data-view/plugins/view-core/server";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { dataViews } from "../../shared/data-views.generated";
-import { sortPresetsExtraFields } from "../../shared/sort-presets-field";
+import { presetsExtraFields } from "../../shared/sort-presets-field";
 
 /**
  * One `ConfigV2.Register` contribution per DataView id, each planted under its
@@ -14,5 +14,5 @@ import { sortPresetsExtraFields } from "../../shared/sort-presets-field";
  */
 export const dataViewConfigRegistrations = buildViewConfigRegistrations(
   dataViews.map((v) => ({ id: v.id, pluginId: asPluginId(v.pluginId) })),
-  sortPresetsExtraFields,
+  presetsExtraFields,
 );

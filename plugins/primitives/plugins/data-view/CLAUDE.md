@@ -191,6 +191,56 @@ Each consumer calls `defineItemActions<Row>("<stable-id>")` once. The result is
 renders `<itemActions.Row row={…} hasChildren={…} />` in its own affordance. Each
 action component receives `ItemActionProps<Row>` (`{ row, hasChildren }`).
 
+## Field extensions
+
+Sometimes a `FieldDef` cannot be authored statically because its `value`
+projection must close over **hook-loaded data** owned by *another* plugin (e.g. a
+play-count keyed by row id living in another plugin's live resource).
+`FieldDef.value` is a *synchronous* `(row) => FieldValue` and cannot call hooks,
+so the field has to be produced from inside a mounted component.
+
+The mechanism is the **`defineFieldExtensions<TRow>(id)` factory** (web barrel),
+the sibling of `defineItemActions` — **not** a global slot (disjoint row types per
+consumer → a factory, per the same collection-vs-factory rule). Each consumer
+calls it once with a stable id; the result is **callable for contributions**
+(`MyFields({ id, component })`, like any `defineRenderSlot`) and — being a slot —
+is itself the `FieldExtensionsDescriptor` the host reads (its `id` +
+`useContributions`; no extra `.Row`-style member, unlike item-actions). Pass it to
+`<DataView fieldExtensions={MyFields} />`.
+
+A contribution is a **component** (not a plain `FieldDef[]`) typed
+`ComponentType<FieldExtensionProps<TRow>>`, where
+`FieldExtensionProps<TRow> = { render: (fields: FieldDef<TRow>[]) => ReactNode }`.
+The component loads whatever it needs via hooks, closes its field `value`
+projections over that data, and hands the fields back through `render`:
+
+```tsx
+function PlaybackFields({ render }: FieldExtensionProps<Song>) {
+  const map = usePlaybackHistoryMap();
+  const fields = useMemo<FieldDef<Song>[]>(() => [
+    { id: "playCount", label: "Plays", type: "int",
+      value: (s) => map.get(s.id)?.playCount ?? 0, sortable: true },
+  ], [map]);
+  return <>{render(fields)}</>;
+}
+MyFields({ id: "playback", component: PlaybackFields });
+```
+
+The host (`CollectFieldExtensions`, internal) reads `useContributions()` and
+**recursively folds** the contributors into nested render-callbacks — each mounts
+(error-boundary-isolated via `renderIsolated`), runs its own hooks, yields its
+`FieldDef[]`, and recurses to the next, finally calling
+`children([...base, ...extra])`. It is written as a recursive **component** (never
+a `.map` over contributed hooks, which `react-hooks/rules-of-hooks` rejects): the
+contribution set is fixed at build time, so recursion depth is stable and the
+per-component hook order never changes. The fold wraps the model + inner **before**
+the sort/filter controllers, so the merged `fields` reaches `useSortController`,
+`useFilterController`, and `renderProps.fields` uniformly — a contributed
+`int`/`date` field shows up in the Sort pill, the Filter pill, and the table
+columns for free. No `fieldExtensions` → the fold is a pass-through. This is the
+field-level generalization of the old single-active-component-yields-an-ordered-
+list render-callback pattern.
+
 ## Collection-consumer separation
 
 Consumers import **only** `DataView` + the core types from this umbrella and select
@@ -227,6 +277,17 @@ the shared `evaluateNode` / `applyFilter` evaluator (resolved per field type via
 `useResolveOperatorSet`). Flat views apply it inside `useFlatRows` (search → filter
 → sort); the tree view applies it subtree-preserving before handing rows to the tree
 primitive. Filter semantics are therefore identical across all views.
+
+**Filter presets** are the twin of the sort presets: a named, reusable
+`FilterGroup` saved in the sibling `filterPresets` key of the same per-surface
+config doc (via the `presetsExtraFields` seam injected into the views descriptor —
+view-core never names it). The filter pill's popover hosts the saved presets at the
+top (apply = write the preset's group verbatim into the live filter) and a
+`Save filter as preset` footer affordance, exactly like sort. The hook is
+`useFilterPresets(storageKey)` (mirror of `useSortPresets`); the readers
+`readFilterPresets` / `filterPresetMatchesGroup` live next to the sort readers.
+A preset's group is stored opaquely as a `jsonField<FilterGroup>` (validated as a
+whole through `FilterGroupSchema` on read), git-promotable like every config row.
 
 ### Typed fields are the generic extension point
 
@@ -325,14 +386,14 @@ and `research/2026-06-18-tree-view-virtualization.md`).
 - Web:
   - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
   - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`
-  - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/surface.Surface`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/cursor-pagination.ScrollSentinel`, `primitives/data-view/view-core.buildViewConfigContributions`, `primitives/data-view/view-core.buildViewDescriptors`, `primitives/data-view/view-core.EditableViewSwitcher`, `primitives/data-view/view-core.useViewModel`, `primitives/data-view/view-core.useViewVariants`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/tooltip.WithTooltip`
-  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `FieldCellProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `ServerDataSourceResult`, `ServerDataSourceSpec`, `ServerPage`, `SortController`, `SortPreset`, `SortRule`, `TableCellProps`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DataView`, `DataViewSlots`, `defineDataView`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`, `useServerDataSource`, `useSortController`
+  - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/surface.Surface`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/cursor-pagination.ScrollSentinel`, `primitives/data-view/view-core.buildViewConfigContributions`, `primitives/data-view/view-core.buildViewDescriptors`, `primitives/data-view/view-core.EditableViewSwitcher`, `primitives/data-view/view-core.useViewModel`, `primitives/data-view/view-core.useViewVariants`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `FieldCellProps`, `FieldDef`, `FieldExtensionContribution`, `FieldExtensionProps`, `FieldExtensions`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `ServerDataSourceResult`, `ServerDataSourceSpec`, `ServerPage`, `SortController`, `SortPreset`, `SortRule`, `TableCellProps`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DataView`, `DataViewSlots`, `defineDataView`, `defineFieldExtensions`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`, `useServerDataSource`, `useSortController`
 - Server:
   - Uses: `primitives/data-view/view-core.buildViewConfigRegistrations`
 - Cross-plugin:
   - Imported by: `apps/deploy/servers`, `apps/home/app-cards`, `apps/pages/page-tree`, `apps/prototypes/gallery`, `apps/sonata/library`, `apps/story/shell`, `apps/studio/explorer`, `code-explorer`, `config_v2/settings`, `conversations/agents`, `conversations/all-conversations`, `debug/profiling/runtime`, `debug/reports`, `debug/slow-ops/cluster`, `debug/slow-ops/pane`, `fields/bool/filter`, `fields/bool/inline`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/inline`, `fields/date/table`, `fields/enum/filter`, `fields/enum/inline`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/inline`, `fields/number/table`, `fields/tags/filter`, `fields/tags/inline`, `fields/tags/table`, `fields/text/filter`, `fields/text/inline`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/data-view/table`, `primitives/data-view/tree`, `tasks/task-list`, `ui/tweakcn/community-browser`
 - Core:
-  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `ServerDataSourceSpec`, `ServerPage`, `SortPreset`, `SortRule`, `TableCellProps`, `ViewState`; Values: `defineDataView`, `FilterGroupSchema`, `FilterNodeSchema`, `FilterRuleSchema`
+  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldExtensionProps`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `ServerDataSourceSpec`, `ServerPage`, `SortPreset`, `SortRule`, `TableCellProps`, `ViewState`; Values: `defineDataView`, `FilterGroupSchema`, `FilterNodeSchema`, `FilterRuleSchema`
 - Sub-plugins:
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
   - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.

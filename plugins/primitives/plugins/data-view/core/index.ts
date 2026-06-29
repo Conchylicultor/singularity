@@ -16,6 +16,7 @@ export type {
   CreateOption,
   SortRule,
   SortPreset,
+  FilterPreset,
   ViewState,
   DataViewRenderProps,
   DataViewProps,
@@ -32,4 +33,6 @@ export type {
   ServerDataSourceSpec,
   ItemActionProps,
   ItemActionsDescriptor,
+  FieldExtensionProps,
+  FieldExtensionsDescriptor,
 } from "./internal/types";

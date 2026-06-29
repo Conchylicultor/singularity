@@ -1,29 +1,12 @@
-import type { ComponentType, ReactNode } from "react";
+import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
+import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import {
-  defineDispatchSlot,
-  defineRenderSlot,
-} from "@plugins/primitives/plugins/slot-render/web";
-import {
+  defineFieldExtensions,
   defineItemActions,
   type CreateOption,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { Song } from "../core";
-import { NewestOrder } from "./components/newest-order";
-
-/**
- * Props an ordering component receives: the songs to order and a `render`
- * callback to hand back the ordered list. An ordering is a *component* (not a
- * plain comparator) so it can gather whatever data it needs via hooks — e.g.
- * `playback-history` reads its own live resource — without the library ever
- * importing or knowing about that data. Only the *active* ordering is rendered
- * (via the dispatch slot), so its hooks run exactly once (rules-of-hooks safe).
- */
-export interface SortOrderProps {
-  activeSortId: string;
-  songs: Song[];
-  render: (ordered: Song[]) => ReactNode;
-}
 
 /**
  * Extension seams the song library exposes:
@@ -44,10 +27,13 @@ export interface SortOrderProps {
  *  - `SongActions` — trailing per-row actions for the library TABLE view
  *    (Play/Pause background playback). The gallery uses its own `SongCard` button
  *    (a custom `renderCard` bypasses `itemActions`), so this surfaces in the table.
- *  - `Sort` — gallery orderings. A dispatch slot keyed by the active sort id;
- *    the matched ordering component computes and renders the ordered grid. The
- *    built-in "Newest" is the fallback (the list is already newest-first), so
- *    play-based orderings are pure additive contributions.
+ *  - `Fields` — extra DataView `FieldDef<Song>[]` injected by other plugins. A
+ *    field extension is a *component* (not plain data) so its `value` closure can
+ *    capture hook-loaded data — e.g. `playback-history` reads its own live
+ *    resource and yields play-count / last-played fields. Contributed fields show
+ *    up in the Sort pill, the Filter pill, and as table columns for free, so a
+ *    prerecorded "Most played" ordering is just a named `SortRule[]` over the
+ *    `playCount` field (a config sort preset) rather than a bespoke toggle chip.
  */
 export const Library = {
   Source: defineSlot<{
@@ -73,12 +59,5 @@ export const Library = {
    * `itemActions`), so this surfaces in the TABLE view's trailing column.
    */
   SongActions: defineItemActions<Song>("sonata.library.song-actions"),
-  Sort: defineDispatchSlot<SortOrderProps, string, { id: string; label: string }>(
-    "sonata.library.sort",
-    {
-      key: (props) => props.activeSortId,
-      fallback: NewestOrder,
-      docLabel: (c) => c.label,
-    },
-  ),
+  Fields: defineFieldExtensions<Song>("sonata.library.fields"),
 };

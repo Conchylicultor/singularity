@@ -1,4 +1,5 @@
 import { type ComponentType, type ReactNode } from "react";
+import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { DataViewId } from "./define-data-view";
 
@@ -83,6 +84,39 @@ export interface ItemActionsDescriptor<TRow> {
   Row: ComponentType<ItemActionProps<TRow>>;
 }
 
+/**
+ * Props a field-extension contribution receives. A contribution is a **component**
+ * (not a plain `FieldDef[]`) so it can gather hook-loaded data (e.g. a live
+ * resource keyed by row id) and close its field `value` projections over it,
+ * then hand the resulting fields back via `render`. The host folds each
+ * contributor's fields into the DataView's schema. The render-callback shape is
+ * the generic lift of Sonata's old `Library.Sort` ordering-component slot.
+ */
+export interface FieldExtensionProps<TRow> {
+  /** Hand the host this contributor's extra fields (called in render — the
+   *  component is mounted, so it may load hook-backed data first). */
+  render: (fields: FieldDef<TRow>[]) => ReactNode;
+}
+
+/**
+ * Minimal field-extensions surface the host consumes. `defineFieldExtensions`
+ * (web) returns a value satisfying this (the `RenderSlot`'s own `id` +
+ * `useContributions`) PLUS the callable contribution-registrar — mirroring
+ * `ItemActionsDescriptor`. The host (`CollectFieldExtensions`) reads
+ * `useContributions()` and mounts each contribution isolated under `id`.
+ */
+export interface FieldExtensionsDescriptor<TRow> {
+  /** Slot id — used as the `slotId` when the host mounts each contribution
+   *  isolated (error-boundary). */
+  id: string;
+  /** All contributed field-extension components (sealed, like any slot). */
+  useContributions: () => SealContributions<{
+    id: string;
+    component: ComponentType<FieldExtensionProps<TRow>>;
+    order?: number;
+  }>[];
+}
+
 export interface FieldDef<TRow> {
   id: string;
   label: string;
@@ -147,6 +181,15 @@ export interface SortPreset {
   id: string;
   label: string;
   rules: SortRule[];
+}
+
+/** A named, reusable filter — the twin of `SortPreset`. `group` is a full
+ *  `FilterGroup` tree applied verbatim into the live filter on click. */
+export interface FilterPreset {
+  /** Stable id (React key + delete/rename target; persisted in the config row). */
+  id: string;
+  label: string;
+  group: FilterGroup;
 }
 
 export interface ViewState {
@@ -390,6 +433,15 @@ export interface DataViewProps<TRow> {
   /** Per-item action slot descriptor minted by `defineItemActions`; views render
    *  each contributed action in their natural trailing affordance. */
   itemActions?: ItemActionsDescriptor<TRow>;
+  /**
+   * Optional cross-plugin field contribution surface minted by
+   * `defineFieldExtensions`. Present → the host folds every contributor's extra
+   * `FieldDef[]` into `fields` BEFORE the sort/filter controllers and the view
+   * render-props, so contributed fields appear in the Sort pill, Filter pill, and
+   * table columns for free. Each contributor is a component (it may load
+   * hook-backed data), so the merge happens through a render-callback fold.
+   */
+  fieldExtensions?: FieldExtensionsDescriptor<TRow>;
   /**
    * Typed create affordances. The host renders them in the toolbar (1 → a
    * `Button`, N → a "+" dropdown menu, with host-owned in-flight busy state) and

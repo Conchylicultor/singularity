@@ -30,6 +30,8 @@ import { useServerDataSource } from "../internal/use-server-data-source";
 import { useFilterController } from "../internal/use-filter-controller";
 import { useSortController } from "../internal/use-sort-controller";
 import { useSortPresets } from "../internal/use-sort-presets";
+import { useFilterPresets } from "../internal/use-filter-presets";
+import { CollectFieldExtensions } from "../internal/field-extensions";
 import { useScrollAncestorGuard } from "../internal/use-scroll-ancestor-guard";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
@@ -44,6 +46,18 @@ import { CreatorsControl } from "./creators-control";
  * view-switcher.
  */
 export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
+  // Fold any cross-plugin field contributions into `fields` BEFORE the model +
+  // controllers, so the merged schema reaches `useSortController`,
+  // `useFilterController`, and `renderProps.fields` uniformly (automatic once it
+  // is the `fields` prop). No `fieldExtensions` → the fold is a pass-through.
+  return (
+    <CollectFieldExtensions descriptor={props.fieldExtensions} base={props.fields}>
+      {(fields) => <DataViewWithModel {...props} fields={fields} />}
+    </CollectFieldExtensions>
+  );
+}
+
+function DataViewWithModel<TRow>(props: DataViewProps<TRow>): ReactNode {
   const contributions = DataViewSlots.View.useContributions();
   const viewModel = useDataViewModel(
     props.storageKey,
@@ -146,6 +160,10 @@ function DataViewInner<TRow>({
   // the same per-surface config doc (independent of the active instance, so call
   // unconditionally next to the sort controller).
   const sortPresets = useSortPresets(props.storageKey);
+  // Saved, shareable filter presets — the twin of sort presets, read from the
+  // sibling `filterPresets` key in the same per-surface config doc (call
+  // unconditionally next to the filter controller).
+  const filterPresets = useFilterPresets(props.storageKey);
   // The tree view orders by hierarchy rank and ignores ViewState.sort, so it
   // opts out via `supportsSort: false` — hide the Sort pill there (Filter still
   // shows; the tree honors filter). Default (undefined) = honors sort.
@@ -258,7 +276,10 @@ function DataViewInner<TRow>({
           />
         ) : null}
         {hasFilters ? (
-          <FilterBuilderTrigger controller={filterController} />
+          <FilterBuilderTrigger
+            controller={filterController}
+            presets={filterPresets}
+          />
         ) : null}
         {actions}
         <CreatorsControl creators={creators} />

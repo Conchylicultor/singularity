@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { FilterController } from "../../internal/use-filter-controller";
+import type { FilterPresetsController } from "../../internal/use-filter-presets";
 import type { FilterGroup } from "../../../core";
 import {
   addGroup,
@@ -23,6 +24,8 @@ import {
 } from "./add-filter-affordance";
 import { FieldSearchList } from "./field-search-list";
 import type { FilterEditorContext } from "./editor-context";
+import { PresetList } from "./presets/preset-list";
+import { SavePresetAffordance } from "./presets/save-preset-affordance";
 
 /**
  * Popover body. With no rules yet it IS the search-first `FieldSearchList`
@@ -35,9 +38,10 @@ import type { FilterEditorContext } from "./editor-context";
  */
 export function FilterBuilderPopover<TRow>(props: {
   controller: FilterController<TRow>;
+  presets: FilterPresetsController;
   onClose: () => void;
 }): ReactNode {
-  const { controller } = props;
+  const { controller, presets } = props;
 
   // The working root: the committed tree, or a transient empty root used to host
   // the empty state + add affordances before the first edit lands. This is the
@@ -91,9 +95,17 @@ export function FilterBuilderPopover<TRow>(props: {
   }, [controller, commit]);
 
   const hasContent = root.children.length > 0;
+  const hasPresets = presets.presets.length > 0;
 
   return (
     <Stack gap="sm">
+      <PresetList
+        presets={presets.presets}
+        activeFilter={controller.filter}
+        onApply={(preset) => controller.setFilter(preset.group)}
+        onDelete={presets.deletePreset}
+      />
+      {hasPresets ? <DropdownMenuSeparator /> : null}
       {hasContent ? (
         <>
           <FilterGroupEditor group={root} ctx={ctx} isRoot />
@@ -103,18 +115,25 @@ export function FilterBuilderPopover<TRow>(props: {
             onAddGroup={() => ctx.addGroup(root.id)}
           />
           <DropdownMenuSeparator />
-          <Button
-            variant="ghost"
-            // eslint-disable-next-line layout/no-adhoc-layout -- per-child start-alignment override in a stretch flex parent (no primitive for self-*)
-            className="self-start"
-            onClick={() => {
-              controller.setFilter(null);
-              props.onClose();
-            }}
-          >
-            <MdDelete />
-            Delete filter
-          </Button>
+          {/* Footer: Save preset packs left, Delete filter pins right. */}
+          <Stack direction="row" gap="sm" align="center" justify="between">
+            <SavePresetAffordance
+              disabled={controller.filter === null}
+              onSave={(label) => {
+                if (controller.filter) presets.savePreset(label, controller.filter);
+              }}
+            />
+            <Button
+              variant="ghost"
+              onClick={() => {
+                controller.setFilter(null);
+                props.onClose();
+              }}
+            >
+              <MdDelete />
+              Delete filter
+            </Button>
+          </Stack>
         </>
       ) : (
         <FieldSearchList

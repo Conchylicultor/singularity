@@ -1,4 +1,11 @@
-import type { FieldDef, SortPreset, SortRule } from "../../core";
+import type {
+  FieldDef,
+  FilterGroup,
+  FilterPreset,
+  SortPreset,
+  SortRule,
+} from "../../core";
+import { FilterGroupSchema } from "../../core";
 
 /**
  * Pure helpers for the saved sort presets feature. Kept dependency-free
@@ -42,6 +49,43 @@ export function readSortPresets(raw: unknown): SortPreset[] {
     presets.push({ id, label: r.label, rules });
   });
   return presets;
+}
+
+/**
+ * Read + normalize the raw config `filterPresets` value into `FilterPreset[]` —
+ * the twin of `readSortPresets`. The config listField injects an `id`/`rank` onto
+ * each preset row; we keep the preset `id` (delete/rename target). The `group`
+ * blob is validated as a whole through `FilterGroupSchema` (it is stored opaquely
+ * via `jsonField`), so a row with a missing/invalid group is skipped. Terse/
+ * legacy/absent input tolerated: a missing preset `id` falls back to a stable
+ * index-derived id; a non-array (or missing) top-level value yields `[]`.
+ */
+export function readFilterPresets(raw: unknown): FilterPreset[] {
+  if (!Array.isArray(raw)) return [];
+  const presets: FilterPreset[] = [];
+  raw.forEach((row, index) => {
+    if (typeof row !== "object" || row === null) return;
+    const r = row as Record<string, unknown>;
+    if (typeof r.label !== "string") return;
+    const parsed = FilterGroupSchema.safeParse(r.group);
+    if (!parsed.success) return;
+    const id = typeof r.id === "string" && r.id !== "" ? r.id : `preset-${index}`;
+    presets.push({ id, label: r.label, group: parsed.data });
+  });
+  return presets;
+}
+
+/**
+ * True when `filter` equals a preset's group by structural JSON identity — the
+ * active-indicator predicate (applying a preset writes its `group` verbatim, so
+ * the live filter then matches it exactly). The twin of `presetMatchesRules`.
+ */
+export function filterPresetMatchesGroup(
+  preset: FilterPreset,
+  filter: FilterGroup | null,
+): boolean {
+  if (filter === null) return false;
+  return JSON.stringify(preset.group) === JSON.stringify(filter);
 }
 
 /**
