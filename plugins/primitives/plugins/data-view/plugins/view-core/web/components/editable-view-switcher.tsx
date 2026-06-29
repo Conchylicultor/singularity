@@ -8,6 +8,10 @@ import {
   ControlSizeProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import {
+  useHoverReveal,
+  hoverRevealClass,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import {
@@ -41,6 +45,11 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
   viewVariants: Map<string, VariantEntry>;
 }): ReactNode {
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
+  // The `+` add-view button is chrome that only surfaces on hover/focus of the
+  // switcher — kept revealed while its menu is open so it never vanishes under
+  // the open dropdown when the pointer leaves.
+  const { revealed, groupProps } = useHoverReveal();
   const ids = instances.map((r) => r.instance.id);
 
   const onMove = (movedId: string, overId: string) => {
@@ -56,6 +65,7 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
       gap="xs"
       // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 keeps the whole switcher rigid in the toolbar's flex row (a standalone trailing control, not a Frame slot)
       className="shrink-0"
+      {...groupProps}
     >
       <SortableList items={ids} onMove={onMove} orientation="horizontal">
         <Stack direction="row" align="center" gap="xs">
@@ -107,29 +117,36 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
         </Stack>
       </SortableList>
 
-      <DropdownMenu>
-        <DropdownMenuTrigger
-          render={
-            <ControlSizeProvider size="sm">
-              <IconButton icon={MdAdd} label="Add view" />
-            </ControlSizeProvider>
-          }
-        />
-        <DropdownMenuContent align="start">
-          {actions.available.map((v) => {
-            const Icon = v.icon;
-            return (
-              <DropdownMenuItem
-                key={v.type}
-                onClick={() => actions.addView(v.type)}
-              >
-                <Icon className="size-4" />
-                {v.title}
-              </DropdownMenuItem>
-            );
-          })}
-        </DropdownMenuContent>
-      </DropdownMenu>
+      {/* The `+` add-view button is chrome that only surfaces on hover/focus of
+          the switcher (group via `groupProps` on the root), kept visible while
+          its menu is open. The reveal class sits on a `span` wrapper because the
+          DOM button is owned by base-ui's trigger; ambient size comes from the
+          surrounding `ControlSizeProvider`, with `IconButton` itself as the
+          trigger's `render` target (mirroring CreatorsControl) — a provider as
+          the render root would swallow base-ui's trigger wiring. */}
+      <ControlSizeProvider size="sm">
+        <span className={hoverRevealClass(revealed || addOpen)}>
+          <DropdownMenu open={addOpen} onOpenChange={setAddOpen}>
+            <DropdownMenuTrigger
+              render={<IconButton icon={MdAdd} label="Add view" />}
+            />
+            <DropdownMenuContent align="start">
+              {actions.available.map((v) => {
+                const Icon = v.icon;
+                return (
+                  <DropdownMenuItem
+                    key={v.type}
+                    onClick={() => actions.addView(v.type)}
+                  >
+                    <Icon className="size-4" />
+                    {v.title}
+                  </DropdownMenuItem>
+                );
+              })}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </span>
+      </ControlSizeProvider>
     </Stack>
   );
 }
