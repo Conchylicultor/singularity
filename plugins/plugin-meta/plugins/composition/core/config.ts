@@ -43,6 +43,12 @@ export const compositionsConfig = defineConfig({
         entryPoints: stringListField({ label: "Entry points" }),
         selectedContributors: stringListField({ label: "Contributors" }),
         extends: stringListField({ label: "Extends" }),
+        // The dual of `extends`: bundle NAMES this composition's hard closure must
+        // stay DISJOINT from. Engine-opaque metadata (NOT a `CompositionManifest`
+        // field — resolution stays additive-only); the `composition-closure` check
+        // enforces disjointness against each named bundle's containment. Lets an
+        // app declare it is self-contained (e.g. excludes `agent-runtime`/`auth`).
+        excludes: stringListField({ label: "Excludes" }),
       },
       default: [
         // ── Profiles: the agent-manager worked example (full vs. lean) ──────────
@@ -60,6 +66,7 @@ export const compositionsConfig = defineConfig({
             "ui.theme-toggle",
           ],
           extends: ["self-improvement", "served-baseline"],
+          excludes: [] as string[],
         },
         {
           id: "agent-manager-lean",
@@ -72,6 +79,7 @@ export const compositionsConfig = defineConfig({
             "ui.theme-toggle",
           ],
           extends: ["served-baseline"],
+          excludes: [] as string[],
         },
 
         // ── Apps: lean baseline (entry only) for every other top-level app ──────
@@ -79,6 +87,11 @@ export const compositionsConfig = defineConfig({
         app("pages", "a3", "apps.pages"),
         app("settings", "a4", "apps.settings"),
         app("studio", "a5", "apps.studio"),
+        // NOTE: no app `excludes` the `agent-runtime` bundle YET. Today EVERY
+        // served app's closure pulls it in via served-baseline → infra.health →
+        // reports → tasks/build → git-watcher (one hard edge). Opt apps in once
+        // that coupling is cut (filed follow-up). The guard mechanism is live and
+        // ready; see plugins/.../checks/.../composition-closure.
         app("sonata", "a6", "apps.sonata"),
         app("story", "a7", "apps.story"),
         app("debug", "a8", "apps.debug"),
@@ -102,6 +115,29 @@ export const compositionsConfig = defineConfig({
         subsystem("history", "aH", ["history.engine"]),
         subsystem("conversations", "aI", ["conversations"]),
         subsystem("tasks-domain", "aJ", ["tasks"]),
+        // The agent-runtime infra closure: what a self-contained app must NOT
+        // bundle. Reuses the conversations/tasks-domain subsystems via `extends`
+        // and adds the deep taproots (worktree / git-watcher / claude-cli) plus
+        // the agent-manager app shell. Apps exclude THIS bundle to assert
+        // self-containment. `auth` is a SEPARATE bundle (excluded on demand), not
+        // folded in here. Listing the taproots as entries is what lets the check
+        // catch transitive contamination: an app's hard closure surfaces any
+        // taproot it reaches, where it intersects this bundle's containment.
+        {
+          id: "agent-runtime",
+          rank: "aJ5",
+          name: "agent-runtime",
+          category: "subsystem" as const,
+          entryPoints: [
+            "infra.worktree",
+            "infra.git-watcher",
+            "infra.claude-cli",
+            "apps.agent-manager",
+          ],
+          selectedContributors: [] as string[],
+          extends: ["conversations", "tasks-domain"],
+          excludes: [] as string[],
+        },
         subsystem("page-editor", "aK", ["page"]),
         subsystem("fields", "aL", ["fields"]),
         subsystem("design-system", "aM", ["primitives.css"]),
@@ -148,7 +184,13 @@ export const compositionsConfig = defineConfig({
  * `served-baseline` by default — the liveness/readiness endpoint the gateway
  * probes plus the base theme/token groups. `extraExtends` adds further packs.
  */
-function app(name: string, rank: string, entry: string, extraExtends: string[] = []) {
+function app(
+  name: string,
+  rank: string,
+  entry: string,
+  extraExtends: string[] = [],
+  excludes: string[] = [],
+) {
   return {
     id: name,
     rank,
@@ -157,6 +199,7 @@ function app(name: string, rank: string, entry: string, extraExtends: string[] =
     entryPoints: [entry],
     selectedContributors: [] as string[],
     extends: ["served-baseline", ...extraExtends],
+    excludes,
   };
 }
 
@@ -170,6 +213,7 @@ function subsystem(name: string, rank: string, entries: string[]) {
     entryPoints: entries,
     selectedContributors: [] as string[],
     extends: [] as string[],
+    excludes: [] as string[],
   };
 }
 
@@ -183,5 +227,6 @@ function pack(name: string, rank: string, contributors: string[]) {
     entryPoints: [] as string[],
     selectedContributors: contributors,
     extends: [] as string[],
+    excludes: [] as string[],
   };
 }

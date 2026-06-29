@@ -68,6 +68,26 @@ selection is a genuine load-bearing soft option) by reading the committed
 git-layer config off disk — runtime-only (user-layer) manifests are not
 closure-checked until promoted to git.
 
+## `excludes` — the dual of `extends` (a check-time assertion, not engine input)
+
+Each manifest also carries `excludes: string[]` — composition NAMES whose plugins
+this composition's bundle must stay **disjoint** from. It is the mirror of
+`extends`: where `extends` unions a bundle IN, `excludes` asserts a bundle is
+ABSENT. This is the **self-containment guard** — an app excludes the
+agent/worktree/git infra bundles it must ship without (e.g. Sonata excludes
+`["agent-runtime", "auth"]`; `auth` is a separate bundle, forbidden on demand).
+
+`excludes` is **NOT** a `CompositionManifest` (engine) field — it is engine-opaque
+config metadata like `category` / `id` / `rank`, so `manifestItemToManifest` drops
+it and the additive-only resolution invariant above is untouched. It is read and
+enforced solely by the `composition-closure` check, which fails if the
+composition's resolved hard closure intersects the **containment** (entries +
+contributors + their subtrees) of any excluded bundle. The forbidden bundles are
+ordinary compositions in this config (the `agent-runtime` subsystem aggregates the
+worktree / git-watcher / claude-cli taproots and the agent-manager shell via
+`extends`) — so what counts as forbidden infra is plain editable data, never
+hardcoded in the check.
+
 ## Studio data: server + web runtimes
 
 Beyond the registry, this plugin ships the **Studio closure data**:

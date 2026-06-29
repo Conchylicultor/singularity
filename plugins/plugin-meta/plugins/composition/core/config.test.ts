@@ -67,6 +67,30 @@ test("each seed maps to a valid CompositionManifest via the mapper", () => {
   }
 });
 
+test("the agent-runtime bundle aggregates the agent/worktree/git taproots", () => {
+  const ar = byName("agent-runtime");
+  expect(ar.category).toBe("subsystem");
+  // The deep taproots a self-contained app must never reach, listed as entries
+  // so an app's hard closure surfaces them for the disjointness check.
+  for (const id of ["infra.worktree", "infra.git-watcher", "infra.claude-cli"]) {
+    expect(ar.entryPoints).toContain(id);
+  }
+  // Reuses the existing conversations/tasks-domain subsystems via `extends`.
+  expect([...ar.extends].sort()).toEqual(["conversations", "tasks-domain"]);
+});
+
+test("every seed carries `excludes` and each ref resolves to a real bundle", () => {
+  const names = new Set(seeds.map((s) => s.name));
+  for (const s of seeds) {
+    // The self-containment guard field is present on every seed (default []).
+    expect(Array.isArray(s.excludes)).toBe(true);
+    // Every declared exclusion names a real composition (the check enforces
+    // disjointness against it). No app opts in yet — see config.ts — but the
+    // mechanism stays validated.
+    for (const ref of s.excludes) expect(names.has(ref)).toBe(true);
+  }
+});
+
 test("the self-improvement pack holds exactly the self-improvement set", () => {
   const pack = manifestItemToManifest(byName("self-improvement"));
   expect([...pack.selectedContributors].map(String).sort()).toEqual(

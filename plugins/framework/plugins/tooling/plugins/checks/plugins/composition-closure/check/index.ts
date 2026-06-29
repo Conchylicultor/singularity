@@ -4,9 +4,11 @@ import { parse as parseJsonc } from "jsonc-parser";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   classifyEdges,
+  explainInclusion,
   flattenManifest,
   resolveComposition,
 } from "@plugins/plugin-meta/plugins/closure/core";
+import type { CompositionManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import {
   compositionsConfig,
   manifestItemToManifest,
@@ -72,7 +74,7 @@ const fail = (message: string, hint?: string): CheckResult => ({ ok: false, mess
 const check: Check = {
   id: "composition-closure",
   description:
-    "Every declared composition is valid: unique name, all entry/contributor ids resolve, and each selected contributor is a genuine, load-bearing soft option (no redundant selections).",
+    "Every declared composition is valid: unique name, all entry/contributor ids resolve, each selected contributor is a genuine load-bearing soft option (no redundant selections), and every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard).",
   async run() {
     const root = await getRoot();
     const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true });
@@ -162,6 +164,58 @@ const check: Check = {
           return fail(
             `composition "${m.name}" selects "${id}", which is not a genuine soft option`,
             "It is either not a soft contributor to this bundle, or it is already pulled in by another selection's hard closure. Remove it from selectedContributors (or from the extended pack).",
+          );
+        }
+      }
+    }
+
+    // 6. `excludes` — the dual of `extends`: each named bundle's CONTAINMENT
+    //    (its entries/contributors + their subtrees, NOT their hard deps) must be
+    //    DISJOINT from this composition's resolved hard-closure bundle. This is
+    //    the self-containment guard: an app excludes `agent-runtime` (and `auth`,
+    //    on demand) to assert its release pulls in no agent/worktree/git infra.
+    //    Containment (not the excluded bundle's own closure) keeps generic shared
+    //    infra usable, while taproots listed as the bundle's entries still catch
+    //    transitive contamination — the app's hard closure surfaces any taproot.
+    const byName = new Map<string, CompositionManifest>(
+      manifests.map((m) => [m.name, m]),
+    );
+    for (const item of values.manifests) {
+      const excludes = item.excludes ?? [];
+      if (excludes.length === 0) continue;
+
+      const appFlat = flattenManifest(manifestItemToManifest(item), manifests);
+      const appBundle = resolveComposition(graph, appFlat).bundle;
+
+      for (const ref of excludes) {
+        // Every `excludes` reference resolves to a real composition name.
+        const target = byName.get(ref);
+        if (!target) {
+          return fail(
+            `composition "${item.name}" excludes unknown composition "${ref}"`,
+            "`excludes` lists other composition NAMES (the bundles this composition must stay disjoint from, e.g. `agent-runtime`). Confirm the referenced composition exists.",
+          );
+        }
+
+        // The excluded bundle's containment: each entry/contributor plus its
+        // subtree (NOT its hard deps), unioned over the flattened bundle.
+        const targetFlat = flattenManifest(target, manifests);
+        const containment = new Set<PluginId>();
+        for (const id of [...targetFlat.entryPoints, ...targetFlat.selectedContributors]) {
+          containment.add(id);
+          for (const descendant of graph.subtree.get(id) ?? []) containment.add(descendant);
+        }
+
+        const offenders = [...appBundle].filter((p) => containment.has(p)).sort();
+        if (offenders.length > 0) {
+          const offender = offenders[0]!;
+          const path = explainInclusion(graph, appFlat, offender);
+          const trail = path
+            ? path.steps.map((s) => `${s.from} →(${s.kind}) ${s.to}`).join("\n    ")
+            : "(no path found)";
+          return fail(
+            `composition "${item.name}" excludes bundle "${ref}" but its closure includes ${offenders.length} plugin(s) from it: ${offenders.join(", ")}`,
+            `"${item.name}" declares it must stay disjoint from "${ref}" (self-containment), but "${offender}" is pulled into its bundle. Remove the dependency, or drop "${ref}" from this composition's \`excludes\`. Inclusion path for "${offender}":\n    ${trail}`,
           );
         }
       }

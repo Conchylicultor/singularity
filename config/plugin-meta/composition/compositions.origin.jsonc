@@ -1,4 +1,4 @@
-// @hash fb363cd055b4
+// @hash 0b4dd34d8a3f
 {
   "manifests": [
     {
@@ -16,7 +16,8 @@
       "extends": [
         "self-improvement",
         "served-baseline"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "agent-manager-lean",
@@ -32,7 +33,8 @@
       ],
       "extends": [
         "served-baseline"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "home",
@@ -45,7 +47,8 @@
       "selectedContributors": [],
       "extends": [
         "served-baseline"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "pages",
@@ -58,7 +61,8 @@
       "selectedContributors": [],
       "extends": [
         "served-baseline"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "settings",
@@ -71,7 +75,8 @@
       "selectedContributors": [],
       "extends": [
         "served-baseline"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "studio",
@@ -84,7 +89,8 @@
       "selectedContributors": [],
       "extends": [
         "served-baseline"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "sonata",
@@ -97,7 +103,8 @@
       "selectedContributors": [],
       "extends": [
         "served-baseline"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "story",
@@ -110,7 +117,8 @@
       "selectedContributors": [],
       "extends": [
         "served-baseline"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "debug",
@@ -123,7 +131,8 @@
       "selectedContributors": [],
       "extends": [
         "served-baseline"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "deploy",
@@ -136,7 +145,8 @@
       "selectedContributors": [],
       "extends": [
         "served-baseline"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "file-explorer",
@@ -149,7 +159,8 @@
       "selectedContributors": [],
       "extends": [
         "served-baseline"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "workflows",
@@ -162,7 +173,8 @@
       "selectedContributors": [],
       "extends": [
         "served-baseline"
-      ]
+      ],
+      "excludes": []
     },
     {
       "id": "data",
@@ -173,7 +185,8 @@
         "database"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "jobs-events",
@@ -186,7 +199,8 @@
         "infra.secrets"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "live-state",
@@ -198,7 +212,8 @@
         "primitives.networking"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "auth",
@@ -209,7 +224,8 @@
         "auth"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "search",
@@ -220,7 +236,8 @@
         "search.engine"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "history",
@@ -231,7 +248,8 @@
         "history.engine"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "conversations",
@@ -242,7 +260,8 @@
         "conversations"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "tasks-domain",
@@ -253,7 +272,26 @@
         "tasks"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
+    },
+    {
+      "id": "agent-runtime",
+      "rank": "aJ5",
+      "name": "agent-runtime",
+      "category": "subsystem",
+      "entryPoints": [
+        "infra.worktree",
+        "infra.git-watcher",
+        "infra.claude-cli",
+        "apps.agent-manager"
+      ],
+      "selectedContributors": [],
+      "extends": [
+        "conversations",
+        "tasks-domain"
+      ],
+      "excludes": []
     },
     {
       "id": "page-editor",
@@ -264,7 +302,8 @@
         "page"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "fields",
@@ -275,7 +314,8 @@
         "fields"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "design-system",
@@ -286,7 +326,8 @@
         "primitives.css"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "mcp",
@@ -297,7 +338,8 @@
         "infra.mcp"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "served-baseline",
@@ -316,7 +358,8 @@
         "ui.tokens.shadow"
       ],
       "selectedContributors": [],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "self-improvement",
@@ -331,7 +374,8 @@
         "reports.launch-fix",
         "screenshot.draw-on-app"
       ],
-      "extends": []
+      "extends": [],
+      "excludes": []
     },
     {
       "id": "theming",
@@ -344,7 +388,8 @@
         "ui.tweakcn",
         "ui.tweakcn.community-browser"
       ],
-      "extends": []
+      "extends": [],
+      "excludes": []
     }
   ]
 }

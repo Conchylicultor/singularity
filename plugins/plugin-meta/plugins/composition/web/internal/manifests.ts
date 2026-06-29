@@ -65,6 +65,10 @@ export function useManifestActions(): ManifestActions {
           rank: Rank.between(lastRank, null).toString(),
           // New drafts default to the `app` category; re-categorise via config edit.
           category: "app",
+          // `excludes` (the self-containment guard) isn't part of the editable
+          // draft yet — seed it empty; set it via config edit. The edit path above
+          // preserves any existing `excludes` through the `...item` spread.
+          excludes: [] as string[],
           ...fields,
         };
         next = [...items, newItem];

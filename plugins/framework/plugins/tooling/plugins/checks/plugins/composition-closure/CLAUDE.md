@@ -9,9 +9,34 @@ seeded defaults on a fresh checkout), builds the
 plugin tree + edge graph once, and for each composition enforces: unique `name`,
 every entry/contributor id resolves to a real plugin, every `extends` reference
 resolves to a real composition name, no redundant selections (already locked by
-the entries' hard closure), and every selected contributor is a genuine
-**load-bearing soft option** (deselecting it removes it from the bundle). Fails
-loudly naming the composition and offending id.
+the entries' hard closure), every selected contributor is a genuine
+**load-bearing soft option** (deselecting it removes it from the bundle), and
+every `excludes` bundle stays **disjoint** from the composition's hard closure.
+Fails loudly naming the composition and offending id.
+
+## `excludes` — the self-containment guard
+
+`excludes` is the **dual of `extends`**: a list of composition NAMES whose
+plugins this composition's bundle must NOT contain. An app declares it is
+self-contained (releasable standalone) by excluding the infra bundles it must
+stay free of — e.g. Sonata excludes `["agent-runtime", "auth"]`. `auth` is a
+separate bundle so it is forbidden **on demand**.
+
+For each composition with a non-empty `excludes`, the check computes its resolved
+hard-closure `bundle` and, for each named bundle, that bundle's **containment** —
+its (flattened) entries + contributors plus each one's `subtree`, but NOT their
+hard deps. If `bundle ∩ containment ≠ ∅` it fails, naming the offending
+plugin(s) and printing the `explainInclusion` path that pulls the first one in.
+
+Using *containment* (not the excluded bundle's own hard closure) keeps generic
+shared infra (`database`, `jobs`, …) usable by apps while still catching
+transitive contamination: the deep taproots (`infra.worktree`,
+`infra.git-watcher`, `infra.claude-cli`) are listed as the `agent-runtime`
+bundle's entries, so any app whose hard closure reaches one surfaces it in the
+bundle, where it intersects the containment. New agent-runtime infra is caught
+automatically once it depends on a listed taproot; a brand-new top-level
+agent-runtime root is added to the `agent-runtime` bundle's `entryPoints` (a
+config edit, like any composition).
 
 **Packs vs. flattening.** A composition with **no entry points** is a pure
 contributor SET (a pack) — it carries no bundle context, so the redundant /
