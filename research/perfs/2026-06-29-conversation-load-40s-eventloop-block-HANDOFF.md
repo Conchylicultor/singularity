@@ -1,7 +1,18 @@
 # HANDOFF: "loading a conversation takes 40+ s" → it's a main-thread event-loop block
 
 **Date:** 2026-06-29
-**Status:** Root LAYER confirmed beyond doubt; exact synchronous culprit NOT yet named. No code changed.
+**Status:** **Ongoing — hotspot named (`buildPluginTree`), deeper layer found, fix being designed.**
+The on-stall JSC flight recorder (`logs/stall-profiles.jsonl`) captured the block: topLeaf
+`readFileSync` 59.6 %, stack `readFileSync ← parseRawUses/parsePaneDefinitions ← extract ←
+buildPluginTree`, `sampleRateHz 176` (real in-process block, not CPU starvation); the runtime profile
+independently shows `GET /api/plugin-view/tree` at 10.3 s with `allow-files`/`viewed` queued right
+behind it (loaders = victims, as predicted here). The "Open question" below is **answered at the
+hotspot level**, and its suspect list (flush cascade / `stats/*`) was **wrong — both are victims**
+(`stats/cost` measured at 18 ms max block). **But the hotspot is not the root:** the per-call cost is
+reducible — `buildPluginTree` over-extracts all facets (4408 files, synchronous) for an endpoint whose
+hot callers need only the cheap structural skeleton. Root-cause arc + the (cache-first v1, then the
+structure-only) fix design →
+**[`2026-06-29-perfs-buildplugintree-eventloop-block-FIX.md`](./2026-06-29-perfs-buildplugintree-eventloop-block-FIX.md)**.
 **Read this first.** It supersedes the framing in
 [`2026-06-29-conversation-load-40s-fanout-herd.md`](./2026-06-29-conversation-load-40s-fanout-herd.md)
 (that doc's lower-layer findings are correct but it stopped two layers too low — see "Discarded/superseded" below).
@@ -60,7 +71,13 @@ jq -rc 'select(.t>=<today_ms>) | .line | fromjson
    (`benchmark_boot`: `edited-files` 1.4 s, `commits-graph.delta` 0.7 s even with the host git gate
    saturated).
 
-## Open question — the ONE thing left to find
+## Open question — the ONE thing left to find ✅ ANSWERED: `buildPluginTree`
+
+> **Resolved (see Status banner + the FIX doc).** The recorder named the block: `buildPluginTree`'s
+> synchronous `readFileSync` facet-extract walk, uncached on `GET /api/plugin-view/tree`. **None of
+> the leading suspects below were the cause** — they were victims of, or unrelated to, that block.
+> Kept verbatim as a record of how the wrong path almost persisted (the profile, not the suspect
+> list, settled it).
 
 **Which synchronous operation blocks the loop for tens of seconds?** Leading suspects (from data, unproven):
 - **Live-state flush/push cascade** — `flushNotifies` is pure event-loop work (no waits) and recently
