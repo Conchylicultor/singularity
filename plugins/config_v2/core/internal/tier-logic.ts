@@ -5,26 +5,54 @@ import type { JsonValue } from "./types";
 import type { FieldsRecord } from "@plugins/fields/core";
 import type { ConfigV2ValidationIssue } from "./resource";
 
+// A user override is "foreign" when it shares NO key with its descriptor's
+// current field set — a leftover from a prior config SHAPE (e.g. the dead
+// pre-`items` reorder `{ order, hidden }` format). Such a document can't be
+// honored (none of its keys map to a field) yet schema `.passthrough()` +
+// per-field default-backfill heals it to an effectively empty document, so it
+// would silently WIN over the propagated origin while its `// @hash` still
+// matches (it isn't hash-"stale"). For a reorder slot that means the slot drops
+// its authored order. `setConfig` always writes a FULL document, so any genuine
+// override carries at least one field key; only stale/foreign docs share none.
+// An empty `{}` makes no claim and is not treated as foreign.
+export function isForeignOverride(
+  content: JsonValue | undefined,
+  fieldKeys: string[],
+): boolean {
+  if (!content || typeof content !== "object" || Array.isArray(content)) return false;
+  const keys = Object.keys(content as Record<string, JsonValue>);
+  if (keys.length === 0) return false;
+  return !keys.some((k) => fieldKeys.includes(k));
+}
+
+// The override content iff the hash chain says it should be honored — present
+// and NOT stale relative to its origin. On a hash conflict the override was
+// written against a now-stale origin, so the origin takes precedence until the
+// user reconciles (acknowledge-conflict rewrites the hash, after which it wins
+// again). With no origin to defer to, the override still stands. Returns
+// undefined when there is no such override. Schema/foreign validity is a
+// separate concern, layered on by the callers.
+function nonStaleOverrideContent(
+  originData: { content: JsonValue; hash: string | null } | null,
+  overwrites: ConfigProxy,
+): JsonValue | undefined {
+  if (!overwrites.exists()) return undefined;
+  const ow = overwrites.read();
+  if (!ow) return undefined;
+  const stale =
+    originData !== null &&
+    ow.hash !== null &&
+    ow.hash !== computeHash(originData.content);
+  return stale ? undefined : ow.content;
+}
+
 export function effective(
   origin: ConfigProxy,
   overwrites: ConfigProxy,
 ): JsonValue | undefined {
   const originData = origin.read();
-  if (overwrites.exists()) {
-    const ow = overwrites.read();
-    if (ow) {
-      // On a hash conflict the override was written against a now-stale
-      // origin, so the origin takes precedence until the user manually
-      // reconciles the override (acknowledge-conflict rewrites the hash,
-      // after which the override wins again). With no origin to defer to,
-      // the override still stands.
-      const stale =
-        originData !== null &&
-        ow.hash !== null &&
-        ow.hash !== computeHash(originData.content);
-      if (!stale) return ow.content;
-    }
-  }
+  const ow = nonStaleOverrideContent(originData, overwrites);
+  if (ow !== undefined) return ow;
   if (!originData) return undefined;
   return originData.content;
 }
@@ -129,39 +157,89 @@ export function readTypedConfig<F extends FieldsRecord>(
   origin: ConfigProxy,
   overwrites: ConfigProxy,
 ): ConfigValues<F> {
-  const raw = effective(origin, overwrites);
-  // No document on disk at all is the legitimate "use defaults" case, not a
-  // validation failure — resolve silently.
-  if (raw === undefined) return { ...descriptor.defaults };
-  const result = descriptor.schema.safeParse(raw);
-  if (!result.success) {
-    // Fail loud in logs, but keep the app alive by resolving to defaults — the
-    // UI surfaces this as an "invalid" conflict (see validationIssues +
-    // computeAllConflicts) so the user can reset or fix the stored document.
-    console.warn(
-      `[config-v2] stored config for "${descriptor.name}" failed validation; ` +
-        `resolving to defaults. Issues: ${result.error.issues
-          .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-          .join("; ")}`,
-    );
-    return { ...descriptor.defaults };
+  const fieldKeys = Object.keys(descriptor.fields);
+  const originData = origin.read();
+
+  // Tier 1: a non-stale override wins — but only if it can actually be applied.
+  const ow = nonStaleOverrideContent(originData, overwrites);
+  if (ow !== undefined) {
+    if (isForeignOverride(ow, fieldKeys)) {
+      // A leftover from a prior config shape (no key maps to a field) can't be
+      // applied. Degrade to the ORIGIN (the propagated authored default), NOT
+      // the empty code defaults — for a reorder slot that keeps the authored
+      // order. Surfaced as a kind:"invalid" conflict (validationIssues) so the
+      // user can reset it.
+      console.warn(
+        `[config-v2] foreign override for "${descriptor.name}" ` +
+          `(keys ${Object.keys(ow as Record<string, JsonValue>).join(", ")} match no current field); ` +
+          `resolving to origin.`,
+      );
+    } else {
+      const result = descriptor.schema.safeParse(ow);
+      if (result.success) return result.data as ConfigValues<F>;
+      console.warn(
+        `[config-v2] override for "${descriptor.name}" failed validation; resolving to origin. ` +
+          `Issues: ${result.error.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`).join("; ")}`,
+      );
+    }
   }
-  return result.data as ConfigValues<F>;
+
+  // Tier 2: the propagated origin (git/code authored default).
+  if (originData) {
+    const result = descriptor.schema.safeParse(originData.content);
+    if (result.success) return result.data as ConfigValues<F>;
+    console.warn(
+      `[config-v2] origin for "${descriptor.name}" failed validation; resolving to defaults. ` +
+        `Issues: ${result.error.issues.map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`).join("; ")}`,
+    );
+  }
+
+  // Tier 3: code defaults. An absent document is the legitimate "use defaults"
+  // case (no warning above); a fall-through from an unusable tier warned already.
+  return { ...descriptor.defaults };
 }
 
-// Human-readable issues if the effective document fails the descriptor schema
-// even after default-backfill; null when it parses. Mirrors hasConflict: a pure
-// predicate the server re-runs to populate the conflicts resource.
+// Human-readable issues when the effective stored document cannot be applied as
+// the descriptor's current schema — null when it resolves cleanly. Mirrors
+// readTypedConfig's tiering so the surfaced conflict matches what the runtime
+// actually did: a non-stale override that is FOREIGN (shares no field — a
+// prior-shape leftover) or fails the schema is surfaced as invalid (the runtime
+// degraded to the origin); with no usable override, an invalid ORIGIN is
+// surfaced. A pure predicate the server re-runs to populate the conflicts
+// resource.
 export function validationIssues(
   descriptor: ConfigDescriptor,
   origin: ConfigProxy,
   overwrites: ConfigProxy,
 ): ConfigV2ValidationIssue[] | null {
-  const raw = effective(origin, overwrites);
-  if (raw === undefined) return null; // absent document ≠ invalid
-  const result = descriptor.schema.safeParse(raw);
+  const fieldKeys = Object.keys(descriptor.fields);
+  const originData = origin.read();
+  const ow = nonStaleOverrideContent(originData, overwrites);
+  if (ow !== undefined) {
+    if (isForeignOverride(ow, fieldKeys)) {
+      const keys = Object.keys(ow as Record<string, JsonValue>).join(", ");
+      // path [] (root) — the whole document is unusable; the UI drills the
+      // offending value out of overrideValues at the root.
+      return [
+        {
+          path: [],
+          message:
+            `This saved setting is from an earlier version and can no longer be applied ` +
+            `(unknown keys: ${keys}). Reset to defaults to restore the current layout.`,
+        },
+      ];
+    }
+    const result = descriptor.schema.safeParse(ow);
+    if (result.success) return null; // override is usable
+    // Keep the zod path as an array so the UI can drill the offending value out
+    // of the stored document; readTypedConfig joins it inline only for its log.
+    return result.error.issues.map((i) => ({ path: [...i.path], message: i.message }));
+  }
+  // No usable override → the effective value is the origin; surface only if the
+  // origin itself fails the schema. An absent document is the legitimate
+  // defaults case, not invalid.
+  if (!originData) return null;
+  const result = descriptor.schema.safeParse(originData.content);
   if (result.success) return null;
-  // Keep the zod path as an array so the UI can drill the offending value out of
-  // the stored document; readTypedConfig joins it inline only for its warn log.
   return result.error.issues.map((i) => ({ path: [...i.path], message: i.message }));
 }

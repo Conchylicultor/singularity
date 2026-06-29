@@ -497,26 +497,6 @@ function fileConfigProxy(filePath: string): ConfigProxy {
   };
 }
 
-// A user override that shares NO key with its descriptor's current field set is
-// a leftover from a prior config SHAPE (e.g. the dead pre-`items` reorder
-// `{ order, hidden }` format). Such a document can't be honored — none of its
-// keys map to a field — yet schema default-backfill heals it to an effectively
-// empty document that silently WINS over the propagated origin (its `// @hash`
-// still matches, so it isn't "stale"). For a reorder slot that means the slot
-// drops its authored order and falls back to natural order. `setConfig` always
-// writes a FULL document, so any genuine override carries at least one field
-// key; only stale/foreign docs share none. An empty `{}` makes no claim and is
-// left for normal handling.
-export function isForeignOverride(
-  content: JsonValue | undefined,
-  fieldKeys: string[],
-): boolean {
-  if (!content || typeof content !== "object" || Array.isArray(content)) return false;
-  const keys = Object.keys(content as Record<string, JsonValue>);
-  if (keys.length === 0) return false;
-  return !keys.some((k) => fieldKeys.includes(k));
-}
-
 export async function propagateConfigToUser(opts: {
   root: string;
   worktreeName: string;
@@ -547,22 +527,6 @@ export async function propagateConfigToUser(opts: {
     // in-sync override is about to go stale (see threeWayMerge / mergeConflict).
     const ancestorPath = join(userConfigDir, hierarchyPath, `${descriptor.name}.ancestor.jsonc`);
     const userAncestor = fileConfigProxy(ancestorPath);
-
-    // Self-healing cleanup: drop a leftover override from a prior config shape
-    // before propagating. If it shares no key with the descriptor's current
-    // fields it can't be honored and would silently shadow the propagated origin
-    // (see isForeignOverride) — deleting it reverts the slot to the authored
-    // origin value (e.g. a reorder slot's order).
-    const existingOverride = userOverwrites.exists() ? userOverwrites.read() : null;
-    if (existingOverride && isForeignOverride(existingOverride.content, Object.keys(descriptor.fields))) {
-      console.warn(
-        `[config-v2] dropping foreign user override for "${descriptor.name}" at ${hierarchyPath} ` +
-        `(keys [${Object.keys(existingOverride.content as Record<string, JsonValue>).join(", ")}] ` +
-        `match no current field) — reverting to origin.`,
-      );
-      unlinkSync(join(userConfigDir, hierarchyPath, `${descriptor.name}.jsonc`));
-      if (existsSync(ancestorPath)) unlinkSync(ancestorPath);
-    }
 
     const { conflict } = propagate(gitEffProxy, userOrigin, userOverwrites, userAncestor);
     if (conflict) {

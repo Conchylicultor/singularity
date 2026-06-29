@@ -175,9 +175,11 @@ function computeDescriptorConflict(storePath: string, scopeId?: string): ConfigV
     };
   }
 
-  // No hash conflict, but the effective document may still fail the current
+  // No hash conflict, but the stored override may still be unusable: a foreign
+  // leftover from a prior config shape, or a document that fails the current
   // schema (a field's type changed under stored data, a hand edit went wrong).
-  // The app resolves to defaults; surface it so the user can reset or fix it.
+  // The app degrades to the ORIGIN (authored default), not empty code defaults;
+  // surface it so the user can reset or fix it.
   const issues = validationIssues(descriptor, origin, overwrites);
   if (issues) {
     const stored = effective(origin, overwrites);
@@ -185,9 +187,13 @@ function computeDescriptorConflict(storePath: string, scopeId?: string): ConfigV
       stored && typeof stored === "object" && !Array.isArray(stored)
         ? (stored as Record<string, unknown>)
         : {};
+    const originData = origin.read();
+    const originValues = originData
+      ? (originData.content as Record<string, unknown>)
+      : (descriptor.defaults as Record<string, unknown>);
     return {
       kind: "invalid",
-      originValues: descriptor.defaults as Record<string, unknown>,
+      originValues,
       overrideValues,
       issues,
     };
