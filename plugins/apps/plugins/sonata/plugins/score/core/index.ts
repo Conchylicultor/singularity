@@ -48,6 +48,9 @@ export {
 export type { TempoIndex } from "./tempo-index";
 export { buildTempoIndex } from "./tempo-index";
 
+export type { LoopWindowSec } from "./loop-fold";
+export { foldLoopTime } from "./loop-fold";
+
 export type { ActiveNoteIndex } from "./active-note-index";
 export { buildActiveNoteIndex } from "./active-note-index";
 

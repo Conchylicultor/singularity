@@ -10,7 +10,11 @@ import {
   useMutedTrackIds,
   useTrackInstrumentMap,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
-import { startScheduling, type ScheduleHandle } from "../scheduler";
+import {
+  startScheduling,
+  type LoopWindowBeats,
+  type ScheduleHandle,
+} from "../scheduler";
 import { DEFAULT_VOLUME, useAudioControls, useAudioState } from "../audio-store";
 
 /**
@@ -45,7 +49,7 @@ import { DEFAULT_VOLUME, useAudioControls, useAudioState } from "../audio-store"
  * scheduling effect re-runs to play it.
  */
 export function AudioEngine() {
-  const { score, isPlaying, seekEpoch, registerClock } = useSonata();
+  const { score, isPlaying, seekEpoch, registerClock, loop } = useSonata();
 
   // Imperative per-surface cursor facade. Read through a ref inside the
   // scheduling effect so the effect's deps stay unchanged (the cursor is read
@@ -60,6 +64,19 @@ export function AudioEngine() {
   // tempo-keyed retime effect gate on play state without re-firing on play/pause.
   const scoreRef = useLatestRef(score);
   const isPlayingRef = useLatestRef(isPlaying);
+
+  // The active A–B loop window (beats), or null when no enabled region is set.
+  // Read through a ref inside the rebuild effect (the bounds are captured at the
+  // play instant), while a stable signature drives the effect's deps so the
+  // schedule rebuilds when the loop is toggled or its bounds move. A repeated
+  // wrap at a *stable* loop never changes this signature, so the seamless
+  // pre-scheduled loop (in `startScheduling`) is never torn down.
+  const loopWindow: LoopWindowBeats | null =
+    loop && loop.enabled && loop.end > loop.start
+      ? { start: loop.start, end: loop.end }
+      : null;
+  const loopRef = useLatestRef(loopWindow);
+  const loopKey = loopWindow ? `${loopWindow.start}:${loopWindow.end}` : "";
 
   // Muted tracks are dropped from the play-list before scheduling. We derive the
   // audible NOTE LIST (not a whole filtered score) keyed on `[score.notes,
@@ -271,6 +288,7 @@ export function AudioEngine() {
         audioAnchor,
         resolveVoices,
         ctx,
+        loopRef.current,
       );
       handleRef.current = handle;
     })();
@@ -281,7 +299,12 @@ export function AudioEngine() {
       if (handleRef.current === handle) handleRef.current = null;
       for (const manager of managers) manager.allOff();
     };
-  }, [isPlaying, audibleNotes, trackInstrumentMap, seekEpoch]);
+    // `loopKey` (the enabled-loop bounds signature) is in deps so toggling the
+    // loop or moving its bounds rebuilds from the current cursor with the new
+    // window — a deliberate edit. A repeated wrap at a stable loop leaves `loopKey`
+    // unchanged, so the pre-scheduled iterations in `startScheduling` keep playing
+    // with no teardown (the seamless-loop fix). `loopRef` is a stable latest-ref.
+  }, [isPlaying, audibleNotes, trackInstrumentMap, seekEpoch, loopKey]);
 
   // --- Retime effect: follow the speed jog-wheel without cutting any note. ----
   // Keyed on `score` (which changes only via tempo or content). A pure tempo drag
@@ -299,8 +322,9 @@ export function AudioEngine() {
     const ctx = ctxRef.current;
     if (!handle || !ctx) return;
     const audioAnchor = ctx.currentTime;
-    const fromBeat = cursorRef.current.getBeat();
-    handle.retime(score, fromBeat, audioAnchor);
+    // The scheduler re-derives its current position from the audio clock, so it
+    // needs only the new tempo + the re-anchor instant (loop-aware internally).
+    handle.retime(score, audioAnchor);
   }, [score]);
 
   // Aggregate status: "Loading…" until every in-use manager is loaded, the

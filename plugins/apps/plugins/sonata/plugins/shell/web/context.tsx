@@ -13,6 +13,7 @@ import {
   buildTempoIndex,
   emptyScore,
   currentLine,
+  foldLoopTime,
   mergeAnnotations,
   mergeScores,
   nextLine,
@@ -462,6 +463,12 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     startScoreSec: number;
   } | null>(null);
   const clockRef = useRef<TransportClock>(wallClock);
+  // Zero-based A–B loop iteration the cursor is currently in, tracked so the rAF
+  // tick can flag a wrap (iteration change) to the cursor store as a `seek` —
+  // making onset-driven consumers (the piano-roll FX) re-anchor instead of
+  // spraying every note between B and A. Reset to 0 on every (re)anchor, since a
+  // fresh anchor restarts the deterministic loop fold from iteration 0.
+  const loopIterRef = useRef(0);
   // One-shot "auto-play once the freshly-loaded score is composed" intent, set
   // by the library's background-play affordance and consumed by the score-reset
   // effect below. A ref (not state) so arming it never triggers a render.
@@ -484,6 +491,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       startBeat: beat,
       startScoreSec: tempoIndexRef.current.beatToSeconds(beat),
     };
+    // A fresh anchor restarts the loop fold; clear the iteration tracker so the
+    // next wrap (iter 0 → 1) is detected rather than mistaken for a continuation.
+    loopIterRef.current = 0;
   }, []);
 
   const registerClock = useCallback(
@@ -792,32 +802,40 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       // tempo changes (which rewrite the anchor / score) take effect seamlessly.
       const score = scoreRef.current;
       const endBeat = scoreEndBeat(score);
-      const elapsedSeconds =
+      const idx = tempoIndexRef.current;
+      const rawSeconds =
         clockRef.current.now() - anchor.startClockSec + anchor.startScoreSec;
 
-      // Invert seconds→beats in closed form (O(log n)) and clamp to the song
-      // end. The index isn't clamped to scoreEndBeat, so we clamp here.
-      const beat = Math.min(
-        endBeat,
-        tempoIndexRef.current.secondsToBeat(elapsedSeconds),
-      );
-      // A–B loop wrap: when an enabled loop is set and the cursor reaches its
-      // end, jump back to its start and keep playing — the practice cycle. This
-      // runs BEFORE the song-end stop check so a loop ending exactly at the song
-      // end still loops the tail rather than stopping. We inline the seek
-      // primitives (NOT `seekTo`, which isn't an effect dep) and self-schedule
-      // the next frame like the normal branch. `loopRef`/`reanchor`/`cursor`/
-      // `setSeekEpoch` are all stable refs/callbacks, so the effect deps
-      // `[isPlaying, reanchor, cursor]` are unchanged and the running loop is not
-      // cancelled (a wrap costs one re-render every few seconds, like a seek).
+      // A–B practice loop: fold the monotonic elapsed score-time into the [A, B)
+      // window deterministically (no teardown — the seamless-loop fix). The audio
+      // scheduler pre-schedules the same iterations from the same anchor + bounds,
+      // so the cursor and the sound wrap together with zero re-sync. A wrap is
+      // just a change in the fold's iteration count; on it we flag the cursor
+      // write as a `seek` so onset-driven FX re-anchor instead of spraying every
+      // note between B and A. The fold runs BEFORE the song-end stop so a loop
+      // ending exactly at the song end still cycles its tail rather than stopping.
       const loop = loopRef.current;
-      if (loop && loop.enabled && loop.end > loop.start && beat >= loop.end) {
-        cursor.setBeat(loop.start, { seek: true });
-        reanchor(loop.start);
-        setSeekEpoch((n) => n + 1); // audio restarts from loop.start
+      const win =
+        loop && loop.enabled && loop.end > loop.start
+          ? {
+              startSec: idx.beatToSeconds(loop.start),
+              endSec: idx.beatToSeconds(loop.end),
+            }
+          : null;
+      const folded = foldLoopTime(rawSeconds, win);
+
+      if (win) {
+        const beat = idx.secondsToBeat(folded.sec);
+        const wrapped = folded.iter !== loopIterRef.current;
+        loopIterRef.current = folded.iter;
+        cursor.setBeat(beat, wrapped ? { seek: true } : undefined);
         rafRef.current = requestAnimationFrame(tick);
         return;
       }
+
+      // Invert seconds→beats in closed form (O(log n)) and clamp to the song
+      // end. The index isn't clamped to scoreEndBeat, so we clamp here.
+      const beat = Math.min(endBeat, idx.secondsToBeat(folded.sec));
       if (beat >= endBeat) {
         cursor.setBeat(endBeat);
         setIsPlaying(false);
@@ -840,6 +858,18 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     // `scoreRef` / `tempoIndexRef` latest-value handles have stable identity, so
     // this effect still only re-runs on the play/stop transition.
   }, [isPlaying, reanchor, cursor]);
+
+  // Re-anchor when the A–B loop region changes mid-play. The deterministic loop
+  // fold is sensitive to the bounds, so without this a bounds change would snap
+  // the cursor to `rawSeconds mod newLoopLength` instead of continuing from the
+  // current position. Re-anchoring at the live cursor restarts the fold cleanly
+  // from here (iteration reset) — in lockstep with the audio engine, which
+  // rebuilds its schedule from the same cursor on the same change. A *stable*
+  // loop never re-runs this, so a repeated wrap stays anchor-stable and seamless.
+  // Only meaningful while playing; `reanchor`/`cursor` are stable.
+  useEffect(() => {
+    if (isPlayingRef.current) reanchor(cursor.getBeat());
+  }, [loop?.start, loop?.end, loop?.enabled, reanchor, cursor]);
 
   // Stable transport verbs the controls plugin registers as per-surface, focus-
   // scoped keyboard shortcuts (Space / ↑ / ↓ and the ←/→ seek-hold controller),
