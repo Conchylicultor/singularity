@@ -29,7 +29,7 @@ function AllConversationsView(): ReactElement {
   });
 
   return (
-    <PaneChrome pane={allConversationsPane} title="All conversations">
+    <PaneChrome pane={allConversationsPane} title="Conversation">
       <DataView<Conversation>
         storageKey={ALL_CONVERSATIONS_VIEW}
         rows={[]}

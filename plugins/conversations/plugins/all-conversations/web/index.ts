@@ -15,7 +15,7 @@ export default {
     Shell.Sidebar({
       id: "all-conversations",
       ...sidebarNavItem({
-        title: "All conversations",
+        title: "Conversation",
         icon: MdForum,
         onClick: () => openPane(allConversationsPane, {}, { mode: "root" }),
       }),

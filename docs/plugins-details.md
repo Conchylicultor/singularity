@@ -1310,7 +1310,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`all-conversations`** — All-conversations app pane: a server-delegated DataView (filter/sort/search/keyset over every conversation) reachable from the agent-manager sidebar. Global conversations query handler (filter/sort/search/keyset over conversations_v) + the scalar revision-tick live resource that keeps the All-conversations DataView window fresh.
       - Web:
         - Slots: `allConversationsPane.Actions`
-        - Contributes: `Pane.Register` "all-conversations", `Shell.Sidebar` "All conversations" → `component`
+        - Contributes: `Pane.Register` "all-conversations", `Shell.Sidebar` "Conversation" → `component`
         - Uses: `conversations/conversation-ui/item.ConvStatusDot`, `conversations/conversation-view.conversationPane`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/inline.Inline`, `primitives/css/text.Text`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`, `shell.Shell`
         - Exports: Values: `allConversationsPane`
       - Server:
