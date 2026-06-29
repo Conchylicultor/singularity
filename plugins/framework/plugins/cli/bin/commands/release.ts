@@ -99,6 +99,53 @@ function renderPng(svg: string, size = 512): Uint8Array {
     .asPng();
 }
 
+/** DMG background window geometry (points). Shared by the SVG and the appdmg spec. */
+const DMG_WINDOW = { width: 540, height: 380 } as const;
+const DMG_ICON_SIZE = 128;
+const DMG_ICON_Y = 170;
+const DMG_APP_X = 130;
+const DMG_APPLICATIONS_X = 410;
+
+/** XML-escape a string for safe interpolation into the SVG background. */
+function escapeXml(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;");
+}
+
+/**
+ * Render the styled DMG window background as a PNG (plus a `@2x` retina sibling
+ * for appdmg to fold into a multi-rep TIFF). Generated per release — no committed
+ * asset — so the backdrop auto-themes to each composition's name. The visible app
+ * + Applications icons are real Finder icons positioned on top by the appdmg spec;
+ * this image only supplies the backdrop, the drag arrow between the two drop
+ * spots, and the install caption.
+ */
+function writeDmgBackground(productName: string, outPath: string): void {
+  const { width: W, height: H } = DMG_WINDOW;
+  // Arrow spans the gap between the app icon's right edge and the Applications
+  // icon's left edge, centered on the icon row.
+  const y = DMG_ICON_Y;
+  const tail = DMG_APP_X + DMG_ICON_SIZE / 2 + 22;
+  const tip = DMG_APPLICATIONS_X - DMG_ICON_SIZE / 2 - 14;
+  const shaft = tip - 26;
+  const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${W}" height="${H}" viewBox="0 0 ${W} ${H}">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#fbfbfd"/>
+      <stop offset="1" stop-color="#ececf1"/>
+    </linearGradient>
+  </defs>
+  <rect width="${W}" height="${H}" fill="url(#bg)"/>
+  <path d="M${tail} ${y - 8} L${shaft} ${y - 8} L${shaft} ${y - 20} L${tip} ${y} L${shaft} ${y + 20} L${shaft} ${y + 8} L${tail} ${y + 8} Z" fill="#c2c2cc"/>
+  <text x="${W / 2}" y="${H - 42}" text-anchor="middle" font-family="Helvetica Neue, Helvetica, Arial, sans-serif" font-size="15" fill="#6e6e73">Drag ${escapeXml(productName)} to the Applications folder</text>
+</svg>`;
+  // @1x must match the window point-size so Finder draws it 1:1; @2x is double.
+  writeFileSync(outPath, renderPng(svg, W));
+  writeFileSync(outPath.replace(/\.png$/, "@2x.png"), renderPng(svg, W * 2));
+}
+
 /**
  * Statically parse the `iconKey` out of a plugin subtree's `defineApp({...})`
  * call — no barrel import, no React, mirroring the facets static-parse approach.
@@ -680,14 +727,26 @@ async function packageMacDmg(opts: {
   const dmgOut = join(dmgDir, `${productName}.dmg`);
   mkdirSync(dmgDir, { recursive: true });
 
+  // Generate the styled window background (themed to the product name). appdmg
+  // auto-detects the `@2x.png` sibling and folds both into a retina TIFF.
+  const bgPath = join(tmpdir(), `${productName}-dmg-bg.png`);
+  writeDmgBackground(productName, bgPath);
+
   // Generated, gitignored appdmg spec (mirrors tauri.conf.override.json).
   const spec = {
     title: productName,
     icon: icnsPath,
-    window: { size: { width: 540, height: 380 } },
+    background: bgPath,
+    "icon-size": DMG_ICON_SIZE,
+    window: { size: { ...DMG_WINDOW } },
     contents: [
-      { x: 140, y: 200, type: "file", path: appPath },
-      { x: 400, y: 200, type: "link", path: "/Applications" },
+      { x: DMG_APP_X, y: DMG_ICON_Y, type: "file", path: appPath },
+      {
+        x: DMG_APPLICATIONS_X,
+        y: DMG_ICON_Y,
+        type: "link",
+        path: "/Applications",
+      },
     ],
   };
   const specPath = join(srcTauri, "appdmg.spec.json");
