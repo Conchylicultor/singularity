@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-workflows-editor",
+  "description": "Visual step-graph editor for a workflow definition: add/delete steps, set the entry step, configure per-type config, and wire next/conditional routing on the graph-canvas.",
+  "private": true,
+  "version": "0.0.1"
+}

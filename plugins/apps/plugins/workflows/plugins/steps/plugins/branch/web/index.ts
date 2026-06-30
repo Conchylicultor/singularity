@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Workflows } from "@plugins/apps/plugins/workflows/plugins/engine/web";
 import { MdAltRoute } from "react-icons/md";
+import { BranchConfig } from "./components/branch-config";
 
 export default {
   description:
@@ -10,6 +11,7 @@ export default {
       pluginId: "branch",
       label: "Branch",
       icon: MdAltRoute,
+      configComponent: BranchConfig,
     }),
   ],
 } satisfies PluginDefinition;
