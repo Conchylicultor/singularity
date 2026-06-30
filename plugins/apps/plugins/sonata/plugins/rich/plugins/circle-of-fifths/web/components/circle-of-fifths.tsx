@@ -1,14 +1,17 @@
-import { useMemo } from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   useCursorSelector,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useLivePlay } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/live-play/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type {
   Annotation,
   ChordData,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+
+type ChordAnn = Annotation<"chord", ChordData>;
 
 /**
  * The twelve circle-of-fifths positions, clockwise from the top (12 o'clock).
@@ -37,6 +40,15 @@ const MINOR_PC = MAJOR_PC.map((pc) => (pc + 9) % 12);
 const MINOR_QUALITIES = new Set([
   "min", "min7", "min6", "min9", "halfdim7", "dim", "dim7",
 ]);
+
+/** MIDI pitch of each pitch class in octave 4 (MIDI 60 = C4); the register the
+ *  clicked tonic triad sounds in. */
+const BASE_MIDI = 60;
+/** Triad intervals above the tonic, in semitones. */
+const MAJOR_TRIAD = [0, 4, 7];
+const MINOR_TRIAD = [0, 3, 7];
+/** How long a clicked chord rings before its note-off, in ms. */
+const CHORD_RING_MS = 900;
 
 // --- Wheel geometry (SVG user units; viewBox is 160×160, centre at 80,80) ---
 const CX = 80;
@@ -75,14 +87,48 @@ function sector(rIn: number, rOut: number, a0: number, a1: number): string {
  * highlights the wedge for the chord under the playhead: a major-ish chord lights
  * its major key on the outer ring, a minor-ish chord lights its tonic on the
  * inner ring. Tracks the cursor as the transport advances.
+ *
+ * Every wedge is clickable: clicking it sounds that key's tonic triad (a major
+ * triad on the outer ring, the relative minor on the inner ring) through the
+ * live-play engine — a standalone audition of the chord that does NOT move the
+ * playhead or start the song.
  */
 export function CircleOfFifths() {
   const { score } = useSonata();
+  const live = useLivePlay();
+
+  // Pending note-off timers, cleared on unmount so a clicked chord never fires
+  // its release into an unmounted surface.
+  const timersRef = useRef<Set<ReturnType<typeof setTimeout>>>(new Set());
+  useEffect(() => {
+    const timers = timersRef.current;
+    return () => {
+      for (const t of timers) clearTimeout(t);
+      timers.clear();
+      live?.releaseAll();
+    };
+  }, [live]);
+
+  // Audition a chord: warm the voices, strike every pitch, then release after a
+  // short ring-out. Pure note-on/note-off — independent of the transport.
+  const playChord = useCallback(
+    (pitches: number[]) => {
+      if (!live) return;
+      live.warmup();
+      for (const p of pitches) live.press(p);
+      const t = setTimeout(() => {
+        for (const p of pitches) live.release(p);
+        timersRef.current.delete(t);
+      }, CHORD_RING_MS);
+      timersRef.current.add(t);
+    },
+    [live],
+  );
 
   const chords = useMemo(
     () =>
       score.annotations.filter(
-        (a): a is Annotation<"chord", ChordData> => a.type === "chord",
+        (a): a is ChordAnn => a.type === "chord",
       ),
     [score.annotations],
   );
@@ -121,63 +167,43 @@ export function CircleOfFifths() {
           role="img"
           aria-label="Circle of fifths"
         >
-          {MAJOR_LABELS.map((label, i) => {
-            const a0 = i * 30 - SEG_HALF;
-            const a1 = i * 30 + SEG_HALF;
-            const lit = i === majorPos;
-            const [lx, ly] = point(R_MAJOR_LABEL, i * 30);
-            return (
-              <g key={`maj-${i}`}>
-                <path
-                  d={sector(R_MID, R_OUT, a0, a1)}
-                  fill={lit ? "var(--primary)" : "var(--muted)"}
-                  stroke="var(--border)"
-                  strokeWidth={1}
-                />
-                <text
-                  x={lx}
-                  y={ly}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fontSize={9}
-                  fontWeight={lit ? 700 : 500}
-                  fill={lit ? "var(--primary-foreground)" : "var(--foreground)"}
-                >
-                  {label}
-                </text>
-              </g>
-            );
-          })}
+          {MAJOR_LABELS.map((label, i) => (
+            <Wedge
+              key={`maj-${i}`}
+              label={`${label} major`}
+              text={label}
+              rIn={R_MID}
+              rOut={R_OUT}
+              rLabel={R_MAJOR_LABEL}
+              index={i}
+              lit={i === majorPos}
+              fontSize={9}
+              baseFill="var(--muted)"
+              textFill="var(--foreground)"
+              onPlay={() =>
+                playChord(MAJOR_TRIAD.map((iv) => BASE_MIDI + MAJOR_PC[i]! + iv))
+              }
+            />
+          ))}
 
-          {MINOR_LABELS.map((label, i) => {
-            const a0 = i * 30 - SEG_HALF;
-            const a1 = i * 30 + SEG_HALF;
-            const lit = i === minorPos;
-            const [lx, ly] = point(R_MINOR_LABEL, i * 30);
-            return (
-              <g key={`min-${i}`}>
-                <path
-                  d={sector(R_IN, R_MID, a0, a1)}
-                  fill={lit ? "var(--primary)" : "var(--background)"}
-                  stroke="var(--border)"
-                  strokeWidth={1}
-                />
-                <text
-                  x={lx}
-                  y={ly}
-                  textAnchor="middle"
-                  dominantBaseline="central"
-                  fontSize={7}
-                  fontWeight={lit ? 700 : 500}
-                  fill={
-                    lit ? "var(--primary-foreground)" : "var(--muted-foreground)"
-                  }
-                >
-                  {label}
-                </text>
-              </g>
-            );
-          })}
+          {MINOR_LABELS.map((label, i) => (
+            <Wedge
+              key={`min-${i}`}
+              label={`${label.replace("m", "")} minor`}
+              text={label}
+              rIn={R_IN}
+              rOut={R_MID}
+              rLabel={R_MINOR_LABEL}
+              index={i}
+              lit={i === minorPos}
+              fontSize={7}
+              baseFill="var(--background)"
+              textFill="var(--muted-foreground)"
+              onPlay={() =>
+                playChord(MINOR_TRIAD.map((iv) => BASE_MIDI + MINOR_PC[i]! + iv))
+              }
+            />
+          ))}
 
           {/* Centre hole — the current chord symbol, or a dash before playback. */}
           <circle cx={CX} cy={CY} r={R_IN} fill="var(--card)" />
@@ -206,5 +232,66 @@ export function CircleOfFifths() {
         </Text>
       )}
     </Card>
+  );
+}
+
+/**
+ * One ring wedge: the annular sector plus its centred label. Always an
+ * interactive chord audition (pointer cursor + hover feedback + a `button`
+ * role); clicking it sounds the key's tonic triad via `onPlay`.
+ */
+function Wedge({
+  label,
+  text,
+  rIn,
+  rOut,
+  rLabel,
+  index,
+  lit,
+  fontSize,
+  baseFill,
+  textFill,
+  onPlay,
+}: {
+  label: string;
+  text: string;
+  rIn: number;
+  rOut: number;
+  rLabel: number;
+  index: number;
+  lit: boolean;
+  fontSize: number;
+  baseFill: string;
+  textFill: string;
+  onPlay: () => void;
+}) {
+  const a0 = index * 30 - SEG_HALF;
+  const a1 = index * 30 + SEG_HALF;
+  const [lx, ly] = point(rLabel, index * 30);
+  return (
+    <g
+      onClick={onPlay}
+      role="button"
+      aria-label={`Play ${label}`}
+      className="cursor-pointer transition-opacity hover:opacity-80"
+    >
+      <path
+        d={sector(rIn, rOut, a0, a1)}
+        fill={lit ? "var(--primary)" : baseFill}
+        stroke="var(--border)"
+        strokeWidth={1}
+      />
+      <text
+        x={lx}
+        y={ly}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={fontSize}
+        fontWeight={lit ? 700 : 500}
+        fill={lit ? "var(--primary-foreground)" : textFill}
+      >
+        {text}
+      </text>
+    </g>
   );
 }

@@ -375,7 +375,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `apps/sonata/audio/engine.useAudioGraph`, `apps/sonata/shell.InstrumentVoices`, `apps/sonata/shell.Sonata`, `primitives/latest-ref.useLatestRef`, `primitives/scoped-store.defineScopedStore`
                 - Exports: Types: `LivePlayApi`; Values: `useLivePlay`
               - Cross-plugin:
-                - Imported by: `apps/sonata/piano-keyboard`
+                - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/rich/circle-of-fifths`
             - **`metronome`** — Sonata metronome: a synthesized click track (continuous + count-in lead-in) scheduled on the engine's audio clock, with a toolbar control and an on-screen countdown. Server registration of the Sonata metronome config.
               - Web:
                 - Contributes: `Sonata.Effect` "metronome" → `MetronomeEngine`, `SonataToolbar.End` "metronome" → `MetronomeButton`, `Sonata.Hud` "count-in" → `CountInOverlay`, `ConfigV2.WebRegister`
@@ -539,7 +539,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`circle-of-fifths`** — Sonata Section: a small circle-of-fifths wheel — major keys on the outer ring, their relative minors on the inner ring — that highlights the chord under the playback cursor, reading the shared Score + cursor from useSonata().
               - Web:
                 - Contributes: `Sonata.Section` "Circle of fifths" → `CircleOfFifths`
-                - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorSelector`, `apps/sonata/shell.useSonata`, `primitives/css/card.Card`, `primitives/css/text.Text`
+                - Uses: `apps/sonata/audio/live-play.useLivePlay`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorSelector`, `apps/sonata/shell.useSonata`, `primitives/css/card.Card`, `primitives/css/text.Text`
             - **`key-chip`** — Sonata Hud: current-key chip overlaid on the display, tracking the playback cursor. Reads the shared Score + cursor via useSonata().
               - Web:
                 - Contributes: `Sonata.Hud` "key-chip" → `KeyChip`
