@@ -18,23 +18,17 @@ interface BuildProfile {
 function readBuildProfile(): BuildProfile | null {
   const name = process.env.SINGULARITY_WORKTREE;
   if (!name) return null;
-  const worktreesDir = join(SINGULARITY_DIR, "worktrees");
-  for (const path of [
-    join(worktreesDir, name, "build-profile.json"),
-    join(worktreesDir, `${name}-build-profile.json`),
-  ]) {
-    try {
-      return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;
-    } catch (err) {
-      if (
-        (err as NodeJS.ErrnoException).code !== "ENOENT" &&
-        !(err instanceof SyntaxError)
-      )
-        throw err;
-      continue;
-    }
+  const path = join(SINGULARITY_DIR, "worktrees", name, "build-profile.json");
+  try {
+    return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;
+  } catch (err) {
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      !(err instanceof SyntaxError)
+    )
+      throw err;
+    return null;
   }
-  return null;
 }
 
 export const handleBuildProfiling = implement(getBuildProfiling, () => {

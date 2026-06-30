@@ -17,23 +17,22 @@ interface BuildLogsFile {
 function readBuildRunLogs(buildId: string): BuildLogsFile | null {
   const name = process.env.SINGULARITY_WORKTREE;
   if (!name) return null;
-  const filename = `build-logs-${buildId}.json`;
-  const worktreesDir = join(SINGULARITY_DIR, "worktrees");
-  for (const path of [
-    join(worktreesDir, name, filename),
-    join(worktreesDir, `${name}-${filename}`),
-  ]) {
-    try {
-      return JSON.parse(readFileSync(path, "utf-8")) as BuildLogsFile;
-    } catch (err) {
-      if (
-        (err as NodeJS.ErrnoException).code !== "ENOENT" &&
-        !(err instanceof SyntaxError)
-      ) throw err;
-      continue;
-    }
+  const path = join(
+    SINGULARITY_DIR,
+    "worktrees",
+    name,
+    `build-logs-${buildId}.json`,
+  );
+  try {
+    return JSON.parse(readFileSync(path, "utf-8")) as BuildLogsFile;
+  } catch (err) {
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      !(err instanceof SyntaxError)
+    )
+      throw err;
+    return null;
   }
-  return null;
 }
 
 export const handleBuildRunLogs = implement(getBuildRunLogs, ({ params }) => {

@@ -61,23 +61,25 @@ async function isAnyReleaseAlive(composition: string): Promise<boolean> {
  */
 function resolveOrphanExitCode(releaseId: string): number {
   const name = currentWorktreeName();
-  const worktreesDir = join(SINGULARITY_DIR, "worktrees");
-  for (const path of [
-    join(worktreesDir, name, `release-logs-${releaseId}.json`),
-    join(worktreesDir, `${name}-release-logs-${releaseId}.json`),
-  ]) {
-    try {
-      const parsed = JSON.parse(readFileSync(path, "utf-8")) as { exitCode?: number };
-      return typeof parsed.exitCode === "number" ? parsed.exitCode : -1;
-    } catch (err) {
-      if (
-        (err as NodeJS.ErrnoException).code !== "ENOENT" &&
-        !(err instanceof SyntaxError)
-      ) throw err;
-      continue;
-    }
+  const path = join(
+    SINGULARITY_DIR,
+    "worktrees",
+    name,
+    `release-logs-${releaseId}.json`,
+  );
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf-8")) as {
+      exitCode?: number;
+    };
+    return typeof parsed.exitCode === "number" ? parsed.exitCode : -1;
+  } catch (err) {
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      !(err instanceof SyntaxError)
+    )
+      throw err;
+    return -1;
   }
-  return -1;
 }
 
 /**

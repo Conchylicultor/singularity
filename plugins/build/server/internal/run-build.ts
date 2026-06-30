@@ -67,29 +67,27 @@ async function isAnyBuildAlive(): Promise<boolean> {
  */
 function resolveOrphanExitCode(buildId: string): number {
   const name = currentWorktreeName();
-  const worktreesDir = join(SINGULARITY_DIR, "worktrees");
-  // Mirror handle-build-run-logs.ts: primary path plus the legacy `<name>-`
-  // flattened filename, so both layouts resolve.
-  for (const path of [
-    join(worktreesDir, name, `build-logs-${buildId}.json`),
-    join(worktreesDir, `${name}-build-logs-${buildId}.json`),
-  ]) {
-    try {
-      const parsed = JSON.parse(readFileSync(path, "utf-8")) as {
-        steps?: Array<{ success: boolean }>;
-      };
-      const steps = parsed.steps ?? [];
-      if (steps.length === 0) return -1;
-      return steps.every((s) => s.success) ? 0 : 1;
-    } catch (err) {
-      if (
-        (err as NodeJS.ErrnoException).code !== "ENOENT" &&
-        !(err instanceof SyntaxError)
-      ) throw err;
-      continue;
-    }
+  const path = join(
+    SINGULARITY_DIR,
+    "worktrees",
+    name,
+    `build-logs-${buildId}.json`,
+  );
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf-8")) as {
+      steps?: Array<{ success: boolean }>;
+    };
+    const steps = parsed.steps ?? [];
+    if (steps.length === 0) return -1;
+    return steps.every((s) => s.success) ? 0 : 1;
+  } catch (err) {
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      !(err instanceof SyntaxError)
+    )
+      throw err;
+    return -1;
   }
-  return -1;
 }
 
 /**

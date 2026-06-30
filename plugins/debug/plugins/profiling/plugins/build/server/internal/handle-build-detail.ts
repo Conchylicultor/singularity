@@ -24,24 +24,22 @@ function readProfile(worktree: string, buildId: string): BuildProfile | null {
   const name = sanitize(worktree);
   const id = sanitize(buildId);
   if (!name || !id) return null;
-  const filename = `build-profile-${id}.json`;
-  const worktreesDir = join(SINGULARITY_DIR, "worktrees");
-  for (const path of [
-    join(worktreesDir, name, filename),
-    join(worktreesDir, `${name}-${filename}`),
-  ]) {
-    try {
-      return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;
-    } catch (err) {
-      if (
-        (err as NodeJS.ErrnoException).code !== "ENOENT" &&
-        !(err instanceof SyntaxError)
-      )
-        throw err;
-      continue;
-    }
+  const path = join(
+    SINGULARITY_DIR,
+    "worktrees",
+    name,
+    `build-profile-${id}.json`,
+  );
+  try {
+    return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;
+  } catch (err) {
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      !(err instanceof SyntaxError)
+    )
+      throw err;
+    return null;
   }
-  return null;
 }
 
 export const handleBuildDetail = implement(
