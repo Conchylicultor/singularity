@@ -1,6 +1,6 @@
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildPluginTree, type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { findMarkerCalls, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -137,17 +137,36 @@ function hasDefaultExport(file: string): boolean {
   );
 }
 
-async function collectEntries(
-  root: string,
-  dir: string,
-): Promise<{ entries: CollectedRawEntry[]; disabled: Set<string> }> {
-  const pluginsRoot = resolve(root, "plugins");
-  const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
+// ── Registry-generation context ────────────────────────────────────
+//
+// The plugin tree and the disabled-id closure are pure functions of the
+// filesystem — IDENTICAL for every collected dir. Build them ONCE per generation
+// pass and thread the context through `renderCollectedDirRegistry`. This is what
+// keeps registry codegen O(tree) instead of O(tree × collectedDirs): there are
+// ~10 collected dirs (web, server, central, check, lint, facet, …), so a per-def
+// rebuild meant ~10 full 840-plugin tree walks (~12s, the dominant codegen cost).
+// Taking a prebuilt context — rather than a `root` the renderer rebuilds from —
+// makes that redundant build structurally impossible: the renderer literally
+// cannot trigger a tree walk.
+export interface RegistryGenContext {
+  root: string;
+  tree: PluginTree;
   // Closed disabled-id set computed from the SAME barrel-free tree the entries
-  // come from — no second tree build. Applied unconditionally below so the
+  // come from. Applied unconditionally by the renderer so the
   // `plugins-registry-in-sync` check (which never passes `bundle`) re-derives
   // the identical filtered output from the committed `package.json` flags.
-  const disabled = computeDisabledIds(tree);
+  disabled: Set<string>;
+}
+
+export async function buildRegistryGenContext(
+  root: string,
+): Promise<RegistryGenContext> {
+  const pluginsRoot = resolve(root, "plugins");
+  const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
+  return { root, tree, disabled: computeDisabledIds(tree) };
+}
+
+function collectEntries(tree: PluginTree, dir: string): CollectedRawEntry[] {
   const entries: CollectedRawEntry[] = [];
   for (const node of tree.byDir.values()) {
     const indexFile = join(node.dir, dir, "index.ts");
@@ -160,7 +179,7 @@ async function collectEntries(
     });
   }
   entries.sort((a, b) => a.importPath.localeCompare(b.importPath));
-  return { entries, disabled };
+  return entries;
 }
 
 // ── Dependency graph ───────────────────────────────────────────────
@@ -245,8 +264,8 @@ function buildDepsForDir(
 
 // ── Renderer ───────────────────────────────────────────────────────
 
-export async function renderCollectedDirRegistry(opts: {
-  root: string;
+export function renderCollectedDirRegistry(opts: {
+  ctx: RegistryGenContext;
   def: DiscoveredCollectedDir;
   // When provided, restrict the registry to the plugins in this bundle (the
   // dot-form PluginId set of a composition's hard closure). Each surviving
@@ -255,10 +274,11 @@ export async function renderCollectedDirRegistry(opts: {
   // byte-identical to the unfiltered registry, so the `plugins-registry-in-sync`
   // check (which never passes a bundle) is unaffected.
   bundle?: Set<string>;
-}): Promise<string> {
-  const { root, def, bundle } = opts;
-  const { entries: allEntries, disabled } = await collectEntries(root, def.dir);
-  const deps = buildDepsForDir(root, allEntries, def.dir);
+}): string {
+  const { ctx, def, bundle } = opts;
+  const { disabled } = ctx;
+  const allEntries = collectEntries(ctx.tree, def.dir);
+  const deps = buildDepsForDir(ctx.root, allEntries, def.dir);
   const exportName = `${def.dir}Entries`;
 
   // The disabled-closure filter is UNCONDITIONAL (driven by the committed
@@ -309,10 +329,11 @@ export function collectedDirRegistryPath(
 export async function generatePluginRegistry(opts: {
   root: string;
 }): Promise<void> {
+  const ctx = await buildRegistryGenContext(opts.root);
   const defs = discoverCollectedDirs(opts.root);
   for (const def of defs) {
     const file = collectedDirRegistryPath(def);
-    const next = await renderCollectedDirRegistry({ root: opts.root, def });
+    const next = renderCollectedDirRegistry({ ctx, def });
     const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
     if (next !== existing) writeFileSync(file, next);
   }
@@ -345,15 +366,12 @@ export async function generateCompositionRegistry(opts: {
   root: string;
   bundle: Set<string>;
 }): Promise<void> {
+  const ctx = await buildRegistryGenContext(opts.root);
   const defs = discoverCollectedDirs(opts.root);
   for (const def of defs) {
     if (!COMPOSITION_RUNTIME_DIRS.has(def.dir)) continue;
     const file = collectedDirCompositionRegistryPath(def);
-    const next = await renderCollectedDirRegistry({
-      root: opts.root,
-      def,
-      bundle: opts.bundle,
-    });
+    const next = renderCollectedDirRegistry({ ctx, def, bundle: opts.bundle });
     const existing = existsSync(file) ? readFileSync(file, "utf8") : "";
     if (next !== existing) writeFileSync(file, next);
   }

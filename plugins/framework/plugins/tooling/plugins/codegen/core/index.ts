@@ -19,8 +19,10 @@ export {
   generateCompositionRegistry,
   generatePluginRegistry,
   renderCollectedDirRegistry,
+  buildRegistryGenContext,
   standardPluginDirs,
   type DiscoveredCollectedDir,
+  type RegistryGenContext,
 } from "./plugin-registry-gen";
 
 // defineCollectedDir / CollectedDirDef / isCollectedDirDef now live in the

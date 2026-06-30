@@ -4,6 +4,7 @@ import {
   discoverCollectedDirs,
   renderCollectedDirRegistry,
   collectedDirRegistryPath,
+  buildRegistryGenContext,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -23,6 +24,7 @@ const check: Check = {
     "All collected dir registries (web, server, central, check, lint, ...) match the current plugin source",
   async run() {
     const root = await getRoot();
+    const ctx = await buildRegistryGenContext(root);
     const defs = discoverCollectedDirs(root);
     for (const def of defs) {
       const file = collectedDirRegistryPath(def);
@@ -34,7 +36,7 @@ const check: Check = {
           hint: "Run `./singularity build` to generate it.",
         };
       }
-      if (readFileSync(file, "utf8") !== await renderCollectedDirRegistry({ root, def })) {
+      if (readFileSync(file, "utf8") !== renderCollectedDirRegistry({ ctx, def })) {
         return {
           ok: false,
           message: `${rel} is out of sync with plugin source`,
