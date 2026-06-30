@@ -33,6 +33,7 @@ import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/we
 import { useServerDataSource } from "../internal/use-server-data-source";
 import { useFilterController } from "../internal/use-filter-controller";
 import { useSortController } from "../internal/use-sort-controller";
+import { useVisibleFieldsController } from "../internal/use-visible-fields-controller";
 import { useSortPresets } from "../internal/use-sort-presets";
 import { useFilterPresets } from "../internal/use-filter-presets";
 import { CollectFieldExtensions } from "../internal/field-extensions";
@@ -41,6 +42,7 @@ import { dataViewDescriptors } from "../internal/descriptors";
 import { useScrollAncestorGuard } from "../internal/use-scroll-ancestor-guard";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
+import { PropertiesTrigger } from "./properties-trigger";
 import { CreatorsControl } from "./creators-control";
 import { DataViewToolbar } from "./toolbar/data-view-toolbar";
 
@@ -199,6 +201,21 @@ function DataViewInner<TRow>({
   const activeSupportsSort = activeInstance?.viewType.supportsSort !== false;
   const hasSort = sortController.sortableFields.length > 0 && activeSupportsSort;
 
+  // Visible-fields controller — the per-view Properties pill governs which fields
+  // render in the body and in what order (display-only; sort/filter/search still
+  // use the full `fields`). Gated below on `fields.length > 1` (a single-field
+  // surface has nothing to configure).
+  const setActiveVisibleFields = useCallback(
+    (ids: string[] | null) => viewModel.setVisibleFields(activeViewId, ids),
+    [viewModel, activeViewId],
+  );
+  const visibleFieldsController = useVisibleFieldsController(
+    fields,
+    activeState.visibleFields ?? null,
+    setActiveVisibleFields,
+  );
+  const hasProperties = fields.length > 1;
+
   // Config is the single source of truth: zero authored view-instances → render
   // an honest placeholder rather than an empty shell. The build-time
   // `data-view:configs-authored` check is the real forcing function; this keeps
@@ -238,6 +255,10 @@ function DataViewInner<TRow>({
   const effectiveRows: readonly unknown[] = server
     ? server.rows
     : (rows as readonly unknown[]);
+  // Neutralize ONLY the server-owned dimensions (sort/filter/query already ran in
+  // SQL). `visibleFields` is display-only — it never touches the query — so the
+  // `...activeState` spread deliberately PRESERVES it so the views still honor
+  // Properties on the server-delegated path.
   const effectiveState = server
     ? { ...activeState, sort: [], filter: null, query: "" }
     : activeState;
@@ -303,6 +324,13 @@ function DataViewInner<TRow>({
         sortControl={
           hasSort ? (
             <SortBuilderTrigger controller={sortController} presets={sortPresets} />
+          ) : null
+        }
+        /* Properties pill — per-view-instance visible-fields (which fields show
+           in the body + their order); null when there is nothing to configure. */
+        propertiesControl={
+          hasProperties ? (
+            <PropertiesTrigger controller={visibleFieldsController} />
           ) : null
         }
         actions={actions}

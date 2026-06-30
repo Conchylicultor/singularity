@@ -33,6 +33,16 @@ The row body maps the `FieldDef` schema (shared `pickPrimaryField` heuristic):
 This is the list analog of the gallery's "title + stacked muted property rows":
 primary = label, others = subtitle, `align: "end"` floats to the trailing edge.
 
+**Which fields appear (and their order)** follows the view's per-instance
+`visibleFields` (`resolveBodyFields` over the schema; **default `null` = all
+fields**, schema order) — the same Properties dimension every view honors. The
+title/subtitle/trailing split is unchanged: the primary (picked via
+`pickPrimaryField` over the *visible* subset) is the label, `align: "end"` fields
+trail, and the remaining visible fields form the subtitle. Hiding or reordering
+fields via the toolbar "Properties" pill reshapes the subtitle/trailing accordingly;
+filter and sort still use the full schema. See the data-view CLAUDE.md "Per-view
+visible fields (Properties)" section.
+
 When `options.renderRow` is set it owns the whole body instead, but is still
 wrapped in the selectable/clickable `Row`.
 
@@ -59,7 +69,7 @@ wrapped in the selectable/clickable `Row`.
 - Description: List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
 - Web:
   - Contributes: `DataViewSlots.View` "List" → `ListView`
-  - Uses: `primitives/css/center.Center`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/virtual-rows.VirtualRows`
+  - Uses: `primitives/css/center.Center`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.resolveBodyFields`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/virtual-rows.VirtualRows`
   - Exports: Types: `ListViewOptions`
 - Core:
   - Exports: Types: `ListViewOptions`

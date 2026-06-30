@@ -23,6 +23,8 @@ export interface DataViewToolbarProps {
   onQueryChange: (next: string) => void;
   /** Sort trigger (icon button + builder popover), or null when unsupported. */
   sortControl: ReactNode | null;
+  /** Properties trigger (per-view visible fields + order), or null when there is nothing to configure. */
+  propertiesControl: ReactNode | null;
   /** Filter trigger, or null when the schema has no filterable field. */
   filterControl: ReactNode | null;
   /** Custom-columns "Fields" trigger, or null when opted out. */
@@ -50,6 +52,7 @@ export function DataViewToolbar({
   query,
   onQueryChange,
   sortControl,
+  propertiesControl,
   filterControl,
   fieldsControl,
   actions,
@@ -119,6 +122,9 @@ export function DataViewToolbar({
                     ? [{ label: "Filter", control: filterControl }]
                     : []),
                   ...(sortControl ? [{ label: "Sort", control: sortControl }] : []),
+                  ...(propertiesControl
+                    ? [{ label: "Properties", control: propertiesControl }]
+                    : []),
                   ...(fieldsControl
                     ? [{ label: "Fields", control: fieldsControl }]
                     : []),
@@ -139,6 +145,7 @@ export function DataViewToolbar({
             />
             {filterControl}
             {sortControl}
+            {propertiesControl}
             {actions}
             {fieldsControl}
             {creatorsControl}

@@ -199,6 +199,15 @@ export interface ViewState {
   query: string;
   /** The view's filter tree (root is always a group when present), or null. */
   filter: FilterGroup | null;
+  /**
+   * Per-view-instance visible-fields policy for BODY rendering (Notion
+   * "Properties"). `null`/`undefined` = unconfigured → show ALL fields in schema
+   * order (so later-added fields, incl. custom columns, auto-appear). An explicit
+   * ordered array = the VISIBLE field ids in body order; any id absent from the
+   * array is hidden. Display-only — it never touches sort/filter/search, which
+   * always operate on the full field schema.
+   */
+  visibleFields?: string[] | null;
   /** Local expand state for hierarchical views lacking server-persisted expansion. */
   expanded?: Record<string, boolean>;
 }

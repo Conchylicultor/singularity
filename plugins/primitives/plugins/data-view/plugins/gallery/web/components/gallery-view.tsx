@@ -10,6 +10,7 @@ import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import {
   FieldCell,
   pickPrimaryField,
+  resolveBodyFields,
   useFlatRows,
   useResolveCell,
   useResolveCellEditor,
@@ -127,7 +128,10 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     resolveOperatorSet,
     props.searchAccessor,
   );
-  const fields = props.fields;
+  // Body fields follow the view's Properties (visible-fields) policy; sort/filter/
+  // search above keep using the full `props.fields`. `null` → identity, so the
+  // cover/title/body picks are byte-for-byte the legacy schema-order behavior.
+  const vis = resolveBodyFields(props.fields, props.state.visibleFields);
   const options = (props.options ?? {}) as GalleryViewOptions<unknown>;
   const minCardWidth = options.minCardWidth ?? 200;
   // Live column count for the windowed path (measured off the probe grid below).
@@ -165,8 +169,8 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     );
   }
 
-  const coverField = pickCoverField(fields, options.coverField);
-  const titleField = pickPrimaryField(fields);
+  const coverField = pickCoverField(vis, options.coverField);
+  const titleField = pickPrimaryField(vis);
 
   // Single source of cell markup — shared verbatim by the plain and windowed
   // branches so the two render identically (the list view's `renderRow` twin).
@@ -204,7 +208,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     }
 
     const media = renderMedia(options, coverField, row);
-    const bodyFields = fields.filter(
+    const bodyFields = vis.filter(
       (f) => f.id !== titleField?.id && f.id !== coverField?.id,
     );
 

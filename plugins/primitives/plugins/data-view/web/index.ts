@@ -24,6 +24,7 @@ export type { FilterController } from "./internal/use-filter-controller";
 export { useSortController } from "./internal/use-sort-controller";
 export type { SortController } from "./internal/use-sort-controller";
 export { pickPrimaryField } from "./internal/pick-primary-field";
+export { resolveBodyFields } from "./internal/resolve-body-fields";
 export { defineItemActions } from "./internal/define-item-actions";
 export type {
   ItemActions,

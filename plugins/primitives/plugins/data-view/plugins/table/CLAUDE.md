@@ -29,7 +29,7 @@ load-bearing and stays untouched.
 - Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
-  - Uses: `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-table.SortState`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.FieldValue`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.SortRule`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`
+  - Uses: `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-table.SortState`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.FieldValue`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.resolveBodyFields`, `primitives/data-view.SortRule`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`
   - Exports: Types: `TableViewOptions`
 - Core:
   - Exports: Types: `TableViewOptions`

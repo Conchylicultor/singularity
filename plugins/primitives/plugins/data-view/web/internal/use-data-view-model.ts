@@ -39,6 +39,8 @@ export interface ViewModel {
   setSort: (id: string, fieldId: string) => void;
   /** Replace the whole sort-rule list for THIS view. */
   setSortRules: (id: string, rules: SortRule[]) => void;
+  /** Replace the per-view visible-fields policy for THIS view (null = show-all). */
+  setVisibleFields: (id: string, ids: string[] | null) => void;
   setFilter: (id: string, filter: FilterGroup | null) => void;
   setQuery: (id: string, q: string) => void;
   setExpanded: (id: string, k: string, v: boolean) => void;
@@ -62,6 +64,16 @@ function readSortRules(view: VariantValue | undefined): SortRule[] {
 }
 function readFilter(view: VariantValue | undefined): FilterGroup | null {
   return (view?.filter as FilterGroup | null | undefined) ?? null;
+}
+/**
+ * Read the per-view visible-fields policy off a row's raw variant value. Only an
+ * actual array is a configured policy; everything else (absent / null / legacy
+ * non-array) coerces to `null` = unconfigured (show-all).
+ */
+function readVisibleFields(view: VariantValue | undefined): string[] | null {
+  return Array.isArray(view?.visibleFields)
+    ? (view.visibleFields as string[])
+    : null;
 }
 
 /**
@@ -125,6 +137,15 @@ export function useDataViewModel(
     [core],
   );
 
+  const setVisibleFields = useCallback(
+    (id: string, ids: string[] | null) => {
+      core.updateView(id, { visibleFields: ids } as unknown as VariantValue, {
+        merge: true,
+      });
+    },
+    [core],
+  );
+
   const setFilter = useCallback(
     (id: string, filter: FilterGroup | null) => {
       core.updateView(id, { filter } as unknown as VariantValue, {
@@ -140,11 +161,12 @@ export function useDataViewModel(
       return {
         sort: sortFor(id),
         filter: filterFor(id),
+        visibleFields: readVisibleFields(core.viewFor(id)),
         query: local.query,
         expanded: local.expanded,
       };
     },
-    [ephemeral, sortFor, filterFor],
+    [ephemeral, sortFor, filterFor, core],
   );
 
   const actions = useMemo<ViewActions>(
@@ -168,11 +190,21 @@ export function useDataViewModel(
       stateFor,
       setSort,
       setSortRules,
+      setVisibleFields,
       setFilter,
       setQuery: ephemeral.setQuery,
       setExpanded: ephemeral.setExpanded,
       actions,
     }),
-    [core, stateFor, setSort, setSortRules, setFilter, ephemeral, actions],
+    [
+      core,
+      stateFor,
+      setSort,
+      setSortRules,
+      setVisibleFields,
+      setFilter,
+      ephemeral,
+      actions,
+    ],
   );
 }

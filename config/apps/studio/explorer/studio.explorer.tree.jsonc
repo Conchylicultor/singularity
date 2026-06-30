@@ -1,7 +1,7 @@
 // @hash 6ec84829688d
 {
   "views": [
-    { "name": "Tree", "view": { "type": "tree" } },
+    { "name": "Tree", "view": { "type": "tree", "visibleFields": ["name"] } },
     { "name": "Table", "view": { "type": "table" } },
     {
       "name": "Load-bearing",

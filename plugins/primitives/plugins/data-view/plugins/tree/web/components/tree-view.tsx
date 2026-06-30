@@ -2,6 +2,7 @@ import { useCallback, useMemo, type ReactNode } from "react";
 import {
   evaluateNode,
   pickPrimaryField,
+  resolveBodyFields,
   useResolveCell,
   useResolveOperatorSet,
   type DataViewRenderProps,
@@ -19,6 +20,7 @@ import {
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { TreeViewOptions } from "../internal/types";
 import { EditableTreeLabel } from "./editable-tree-label";
 
@@ -39,16 +41,20 @@ type Projected<TRow> = {
  * Default row: render the primary field through the same `data-view.cell`
  * resolution the table uses, swapping in an `EditableTreeLabel` (select-then-edit
  * over the shared `useResolveCellEditor` capability) when the primary field
- * declares `onEdit`/`onEditValues`.
+ * declares `onEdit`/`onEditValues`. The remaining visible (non-primary) fields
+ * render as read-only trailing chips — the tree's body now follows the view's
+ * Properties (visible-fields) policy like every other view, not label-only.
  */
 function DefaultRow<TRow>(props: {
   node: TreeNode<Projected<TRow>>;
   depth: number;
   primaryField: FieldDef<TRow> | undefined;
+  secondaryFields: FieldDef<TRow>[];
   options: TreeViewOptions<TRow>;
   itemActions: ItemActionsDescriptor<TRow> | undefined;
 }): ReactNode {
-  const { node, depth, primaryField, options, itemActions } = props;
+  const { node, depth, primaryField, secondaryFields, options, itemActions } =
+    props;
   const resolveCell = useResolveCell();
   const row = node.__row;
 
@@ -118,6 +124,23 @@ function DefaultRow<TRow>(props: {
       icon={leadingIcon ?? undefined}
     >
       {label}
+      {secondaryFields.length > 0 ? (
+        // Read-only secondary-field chips (the tree's body fields, in Properties
+        // order), sitting between the label and any persistent `options.trailing`.
+        // Rigid (never shrink) so the truncating label absorbs the slack.
+        // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 rigid trailing cluster beside the flexible label, the tree row owns its flex row
+        <Inline gap="xs" className="shrink-0">
+          {secondaryFields.map((f) => (
+            <span key={f.id}>
+              {resolveCell(
+                f as FieldDef<unknown>,
+                f.value?.(row) ?? null,
+                row,
+              ) ?? String(f.value?.(row) ?? "")}
+            </span>
+          ))}
+        </Inline>
+      ) : null}
       {trailing != null ? (
         <Center as="span" axis="both">
           {trailing}
@@ -153,7 +176,19 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
 
   const { rows, rowKey, expanded, setExpanded } = props;
 
-  const primaryField = useMemo(() => pickPrimaryField(fields), [fields]);
+  // Body fields follow the view's Properties (visible-fields) policy; sort/filter/
+  // search keep using the full `fields`. `null` → identity (= `fields`), so the
+  // label pick is unchanged and the secondary chips become every non-primary
+  // field (the show-all default — the whole point of the fix for the tree).
+  const vis = useMemo(
+    () => resolveBodyFields(fields, props.state.visibleFields),
+    [fields, props.state.visibleFields],
+  );
+  const primaryField = useMemo(() => pickPrimaryField(vis), [vis]);
+  const secondaryFields = useMemo(
+    () => vis.filter((f) => f.id !== primaryField?.id),
+    [vis, primaryField],
+  );
   const resolveOperatorSet = useResolveOperatorSet();
 
   // Project each raw row → a TreeItem-shaped row, keeping a map back to the
@@ -214,12 +249,13 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           node={rowProps.node}
           depth={rowProps.depth}
           primaryField={primaryField}
+          secondaryFields={secondaryFields}
           options={options}
           itemActions={itemActions}
         />
       );
     },
-    [hierarchy, options, primaryField, itemActions],
+    [hierarchy, options, primaryField, secondaryFields, itemActions],
   );
 
   const primaryAccessor = useCallback(

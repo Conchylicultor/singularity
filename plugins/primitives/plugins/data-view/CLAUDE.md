@@ -306,12 +306,54 @@ orders by hierarchy rank, ignoring `ViewState.sort`. It opts out by contributing
 Sort pill on the tree view while keeping the Filter pill. Default (flag omitted)
 = honors sort.
 
-In the **tree** view only the `primary` field renders, so non-primary fields are
-**filter-only**: invisible in the tree body but fully usable in the filter builder
-(set `filterable: false` to also keep them out of the full-text search accessor).
+Body rendering is **show-all by default** and governed per view-instance by
+`visibleFields` (see "Per-view visible fields (Properties)" below) — it is *not*
+tied to `primary`. With the `null` default every view, **including the tree**,
+renders all schema fields: the tree shows the primary field as the row label and
+every non-primary field as read-only trailing chips. A field is therefore visible
+in the body **and** usable in the filter builder unless a surface explicitly hides
+it. To keep a field **filter-only** (a pure filter dimension that never appears in
+the body), author a narrow `visibleFields` on that view that omits it (and set
+`filterable: false` to also keep it out of the full-text search accessor).
+
 The settings config nav is the worked example — its `modified` (bool), `conflict`
-(bool), and `source` (enum) fields are pure filter dimensions over a hierarchy that
-only ever renders the config name, having replaced an earlier ad-hoc "Modified" chip.
+(bool), and `source` (enum) fields are deliberate filter-only dimensions, so its
+tree view authors `visibleFields: ["label"]` (in
+`config/config_v2/settings/config_v2.settings.nav.jsonc`) to keep the body to just
+the config name while those three stay usable in the "Filter" pill. (The studio
+explorer tree and the code-explorer file tree author the same narrow
+`visibleFields: ["name"]` for the same reason — their badges/icons already convey
+the secondary dimensions.)
+
+## Per-view visible fields (Properties)
+
+Which fields a view renders in its **body**, and in what order, is a per-view-instance
+dimension — the visible-fields twin of `sort` / `filter`, stored in the **same `view`
+blob** as `visibleFields?: string[] | null`:
+
+- **`null` / absent (the default)** → **show all** schema fields, in schema order.
+  Newly added fields (including a freshly added custom column) auto-appear with zero
+  user action.
+- **explicit `string[]`** → exactly those field ids, in that order; everything else is
+  hidden. Order is meaningful — it is the body order (table columns, gallery/list
+  property rows, tree secondary chips). Like Notion, once a view is customized,
+  later-added fields stay hidden until toggled on.
+
+`visibleFields` governs **body rendering only**. Filter, sort, and search always
+operate on the **full** `FieldDef[]` schema — a hidden field stays filterable and
+sortable. The shared `resolveBodyFields(fields, visibleFields)` helper maps the blob
+to the ordered visible subset each view renders; the primary/title slot in
+gallery/list/tree is then `pickPrimaryField` over that **visible** subset (so a hidden
+title falls back to the next visible text field).
+
+Users edit this from the toolbar **"Properties"** pill (slotted by the Sort pill): a
+sortable, checkbox list to reorder / hide fields, plus a "Show all fields" reset (back
+to `null`). The pill is gated to surfaces with more than one field. Writes go to the
+view's config row exactly like sort/filter (`updateView(id, { visibleFields }, { merge: true })`),
+so the choice is durable and git-promotable. Surfaces that want a deliberately narrow
+body (e.g. a tree whose secondary dimensions are already shown as badges) author
+`visibleFields` directly in their committed `.jsonc` — see the config-nav worked
+example under "Filtering".
 
 ## Placement: always natural-height, never owns a scroll
 
@@ -386,8 +428,13 @@ and `research/2026-06-18-tree-view-virtualization.md`).
 - Web:
   - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
   - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`
+<<<<<<< .merge_file_gueHGx
   - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/surface.Surface`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/cursor-pagination.ScrollSentinel`, `primitives/data-view/custom-columns.DataViewSettingsButton`, `primitives/data-view/custom-columns.useCustomColumnDefs`, `primitives/data-view/custom-columns.useCustomColumnValues`, `primitives/data-view/custom-columns.useSetCustomColumnValue`, `primitives/data-view/view-core.buildViewConfigContributions`, `primitives/data-view/view-core.buildViewDescriptors`, `primitives/data-view/view-core.EditableViewSwitcher`, `primitives/data-view/view-core.useViewModel`, `primitives/data-view/view-core.useViewVariants`, `primitives/element-size.useElementSize`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
   - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `FieldCellProps`, `FieldDef`, `FieldExtensionContribution`, `FieldExtensionProps`, `FieldExtensions`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `ServerDataSourceResult`, `ServerDataSourceSpec`, `ServerPage`, `SortController`, `SortPreset`, `SortRule`, `TableCellProps`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DataView`, `DataViewSlots`, `defineDataView`, `defineFieldExtensions`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`, `useServerDataSource`, `useSortController`
+=======
+  - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/fill.Fill`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/selection-indicator.CheckboxIndicator`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/surface.Surface`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/cursor-pagination.ScrollSentinel`, `primitives/data-view/custom-columns.DataViewSettingsButton`, `primitives/data-view/custom-columns.useCustomColumnDefs`, `primitives/data-view/custom-columns.useCustomColumnValues`, `primitives/data-view/custom-columns.useSetCustomColumnValue`, `primitives/data-view/view-core.buildViewConfigContributions`, `primitives/data-view/view-core.buildViewDescriptors`, `primitives/data-view/view-core.EditableViewSwitcher`, `primitives/data-view/view-core.useViewModel`, `primitives/data-view/view-core.useViewVariants`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `FieldCellProps`, `FieldDef`, `FieldExtensionContribution`, `FieldExtensionProps`, `FieldExtensions`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `ServerDataSourceResult`, `ServerDataSourceSpec`, `ServerPage`, `SortController`, `SortPreset`, `SortRule`, `TableCellProps`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DataView`, `DataViewSlots`, `defineDataView`, `defineFieldExtensions`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `isFilterGroup`, `pickPrimaryField`, `resolveBodyFields`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`, `useServerDataSource`, `useSortController`
+>>>>>>> .merge_file_3idqit
 - Server:
   - Uses: `primitives/data-view/view-core.buildViewConfigRegistrations`
 - Cross-plugin:

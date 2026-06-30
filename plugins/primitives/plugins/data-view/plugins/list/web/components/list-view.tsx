@@ -6,6 +6,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   FieldCell,
   pickPrimaryField,
+  resolveBodyFields,
   useFlatRows,
   useResolveCell,
   useResolveCellEditor,
@@ -49,7 +50,10 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     resolveOperatorSet,
     props.searchAccessor,
   );
-  const fields = props.fields;
+  // Body fields follow the view's Properties (visible-fields) policy; the
+  // useFlatRows above keeps using the full `props.fields` for sort/filter/search.
+  // `null` → identity, so the title/subtitle/trailing split is unchanged.
+  const vis = resolveBodyFields(props.fields, props.state.visibleFields);
   const options = (props.options ?? {}) as ListViewOptions<unknown>;
   // Documented cast boundary: itemActions arrives type-erased.
   const itemActions = props.itemActions as
@@ -66,9 +70,9 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     );
   }
 
-  const titleField = pickPrimaryField(fields);
-  const trailingFields = fields.filter((f) => f.align === "end");
-  const subtitleFields = fields.filter(
+  const titleField = pickPrimaryField(vis);
+  const trailingFields = vis.filter((f) => f.align === "end");
+  const subtitleFields = vis.filter(
     (f) => f.id !== titleField?.id && f.align !== "end",
   );
 

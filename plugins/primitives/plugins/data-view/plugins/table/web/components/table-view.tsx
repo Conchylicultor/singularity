@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/data-table/web";
 import {
   FieldCell,
+  resolveBodyFields,
   useFlatRows,
   useResolveCell,
   useResolveCellEditor,
@@ -59,7 +60,12 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     | ItemActionsDescriptor<unknown>
     | undefined;
 
-  const columns: ColumnDef<unknown>[] = props.fields.map((f) => ({
+  // Body columns follow the view's Properties (visible-fields) policy: which
+  // fields and in what order. `null` → identity (`props.fields`), so a view with
+  // no Properties configured renders every column unchanged. Sort/filter/search
+  // above still run over the FULL `props.fields`.
+  const vis = resolveBodyFields(props.fields, props.state.visibleFields);
+  const columns: ColumnDef<unknown>[] = vis.map((f) => ({
     id: f.id,
     header: f.label,
     width: f.width,
