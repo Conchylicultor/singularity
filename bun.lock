@@ -1984,6 +1984,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-migration-hashes-unique",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/migration-metadata-consistent": {
+      "name": "@singularity/plugin-framework-tooling-checks-migration-metadata-consistent",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/migrations-in-sync": {
       "name": "@singularity/plugin-framework-tooling-checks-migrations-in-sync",
       "version": "0.0.1",
@@ -5405,6 +5409,8 @@
     "@singularity/plugin-framework-tooling-checks-keyed-resource-scope": ["@singularity/plugin-framework-tooling-checks-keyed-resource-scope@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/keyed-resource-scope"],
 
     "@singularity/plugin-framework-tooling-checks-migration-hashes-unique": ["@singularity/plugin-framework-tooling-checks-migration-hashes-unique@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/migration-hashes-unique"],
+
+    "@singularity/plugin-framework-tooling-checks-migration-metadata-consistent": ["@singularity/plugin-framework-tooling-checks-migration-metadata-consistent@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/migration-metadata-consistent"],
 
     "@singularity/plugin-framework-tooling-checks-migrations-in-sync": ["@singularity/plugin-framework-tooling-checks-migrations-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/migrations-in-sync"],
 

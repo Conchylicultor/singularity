@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
+import { cpSync, mkdtempSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { basename, join, relative, resolve } from "path";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 
@@ -47,23 +47,6 @@ const check: Check = {
     const root = await getRoot();
     const migrationsPluginDir = resolve(root, "plugins/database/plugins/migrations");
     const committed = resolve(migrationsPluginDir, "data");
-
-    const journalPath = join(committed, "meta/_journal.json");
-    if (existsSync(journalPath)) {
-      const journal = JSON.parse(readFileSync(journalPath, "utf8"));
-      const journalTags = new Set(
-        (journal.entries as Array<{ tag: string }>).map((e) => e.tag),
-      );
-      const onDiskTags = listSql(committed).map((f) => f.slice(0, -4));
-      const orphans = onDiskTags.filter((tag) => !journalTags.has(tag));
-      if (orphans.length > 0) {
-        return {
-          ok: false,
-          message: `Orphan .sql files with no journal entry: ${orphans.join(", ")}`,
-          hint: "Either delete the orphan file or regenerate migrations with ./singularity build --migration-name <slug>.",
-        };
-      }
-    }
 
     const tmp = mkdtempSync(join(migrationsPluginDir, ".check-"));
     try {

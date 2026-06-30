@@ -3123,6 +3123,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`inherited-theme-defaults-scoped`**
             - **`keyed-resource-scope`**
             - **`migration-hashes-unique`**
+            - **`migration-metadata-consistent`**
             - **`migrations-in-sync`**
             - **`no-db-backed-notify`**
             - **`no-hand-built-link-to`**

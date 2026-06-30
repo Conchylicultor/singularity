@@ -33,6 +33,7 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
   - **`inherited-theme-defaults-scoped`**
   - **`keyed-resource-scope`**
   - **`migration-hashes-unique`**
+  - **`migration-metadata-consistent`**
   - **`migrations-in-sync`**
   - **`no-db-backed-notify`**
   - **`no-hand-built-link-to`**
