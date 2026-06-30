@@ -462,25 +462,45 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     [],
   );
 
-  // Compose the Score: compile every source with input, merge them (in source
-  // contribution order), then merge analyzer output. A source that authors no
-  // tempo/time-sig (e.g. the chord grid emits empty maps) defers to one that
-  // does via `mergeScores`' first-non-empty rule — so a merged MIDI file owns
-  // the timeline with no special-casing here.
-  const baseScore = useMemo<Score>(() => {
+  // --- The score in two physically separate layers. -------------------------
+  //
+  // `contentScore` is the loaded TIMELINE and nothing else: compile every source
+  // that has input, then merge them (in source-contribution order). Its deps are
+  // restricted to the loaded input (`sources`, `rawById`), so by construction it
+  // holds NO pitch/spelling/key transform and its identity changes ONLY when the
+  // real content changes. This is what the playback-reset effect keys on — and
+  // the split is load-bearing precisely because a view-transform *physically
+  // cannot* live in this memo, so it can never re-trigger the rewind (see the
+  // reset effect below). A source that authors no tempo/time-sig (e.g. the chord
+  // grid emits empty maps) defers to one that does via `mergeScores`'
+  // first-non-empty rule — so a merged MIDI file owns the timeline here.
+  const contentScore = useMemo<Score>(() => {
     const compiled = sources
       .filter((s) => rawById[s.id] !== undefined)
       .map((s) => s.compile(rawById[s.id]));
     if (compiled.length === 0) return emptyScore();
-    const merged = mergeScores(compiled);
+    return mergeScores(compiled);
+  }, [sources, rawById]);
+
+  // `baseScore` layers the pure VIEW transforms on top of `contentScore`. Every
+  // step here PRESERVES the playable timeline (note onsets, durations, tempo
+  // map): it shifts pitches, re-voices chord notes onto the *existing* chord
+  // beats, infers the key, spells enharmonics, and analyzes — so the current
+  // playhead stays meaningful and these must NEVER rewind. Keeping them in their
+  // own memo (deps: the content node + the transform inputs) is what makes the
+  // no-rewind invariant structural: a transform added here cannot change
+  // `contentScore`'s identity, so the reset effect below stays inert to it.
+  const baseScore = useMemo<Score>(() => {
     // Shift the whole song by the per-song transpose offset BEFORE anything else
     // (re-voicing / key inference / spelling / chord analysis all operate on the
     // shifted pitches). No-op at 0 semitones — see `transposeScore`.
-    const transposed = transposeScore(merged, transposeSemitones);
+    const transposed = transposeScore(contentScore, transposeSemitones);
     // Regenerate chord notes from authored chord annotations under the global
     // voicing config (realistic voice-leading / strategy / octave). Runs BEFORE
     // key inference + spelling so the chord notes exist for key detection and
-    // get enharmonic spellings. No-op when there are no authored chord
+    // get enharmonic spellings. The new notes land on the authored chord
+    // annotations' *existing* beats, so the timeline span is unchanged — this
+    // belongs in the view layer. No-op when there are no authored chord
     // annotations (returns the score unchanged).
     const voiced = reVoiceChords(transposed, voicing);
     // Two pure pre-analysis steps establish key context: inferKeys derives the
@@ -493,9 +513,12 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     // the per-song "auto-detect key" override.
     const keyed = inferKeys(voiced, { force: keyAutoDetect }); // theory/core
     const spelled = spellScore(keyed); // score/core
+    // Analyzers read live note PITCHES (chord detection) and the inferred key, so
+    // they must run after transpose / voicing / inference — they are part of the
+    // view layer, not the content timeline.
     const derived = analyzers.flatMap((a) => a.analyze(spelled));
     return mergeAnnotations(spelled, derived);
-  }, [sources, analyzers, rawById, keyAutoDetect, transposeSemitones, voicing]);
+  }, [contentScore, analyzers, keyAutoDetect, transposeSemitones, voicing]);
 
   // Fold the tempo scale into the tempo map ONCE here, so every consumer — the
   // transport loop below, the audio scheduler, and the displays — reads a single
@@ -635,21 +658,24 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     playOnLoadRef.current = true;
   }, []);
 
-  // Reset the cursor whenever the loaded *input* changes (new/changed content).
+  // Reset the transport whenever the loaded CONTENT changes (new/changed song).
   //
-  // The trigger is `rawById` — the raw per-source input map — NOT the derived
-  // `baseScore`. `baseScore` is also recomputed by the pure *view transforms*
-  // layered on top of the same content (transpose, chord voicing, key
-  // auto-detect): those shift pitches / re-voice / re-spell but leave the
-  // TIMELINE (note onsets, durations, tempo map) identical, so the current
-  // playhead stays meaningful and must NOT rewind. Keying on `baseScore` made
-  // every such transform rewind to 0 and stop playback — e.g. nudging transpose
-  // mid-song restarted it. The audio engine and piano roll already re-derive
-  // from the new `score` and reschedule from the *live* cursor, so dropping this
-  // reset is all that's needed for transforms to apply seamlessly during
-  // playback. `rawById` changes only on a real input load/edit (and is stable
-  // across mere source-picker switches, which don't touch it), so loading or
-  // editing a song still rewinds + (re)arms play-on-load as before.
+  // The trigger is `contentScore` — the compiled + merged TIMELINE — NOT the
+  // derived `baseScore`. `baseScore` layers the pure *view transforms* on top of
+  // the same timeline (transpose, chord voicing, key auto-detect, spelling,
+  // analysis): those shift pitches / re-voice / re-spell but leave the TIMELINE
+  // (note onsets, durations, tempo map) identical, so the current playhead stays
+  // meaningful and must NOT rewind. Keying on `baseScore` made every such
+  // transform rewind to 0 and stop playback — e.g. nudging transpose mid-song
+  // restarted it. The content/view memo split makes this safe *structurally*: a
+  // transform physically cannot live in `contentScore`'s memo (its deps are the
+  // loaded input only), so it can never re-enter this reset. The audio engine and
+  // piano roll already re-derive from the new `score` and reschedule from the
+  // *live* cursor, so dropping this reset for transforms is all that's needed for
+  // them to apply seamlessly during playback. `contentScore` changes only on a
+  // real input load/edit (and is stable across mere source-picker switches, which
+  // don't touch it), so loading or editing a song still rewinds + (re)arms
+  // play-on-load as before.
   //
   // If the library armed `requestPlayOnLoad` (background "Play" on a card/row),
   // start playback from the top once the new score is composed instead of
@@ -681,15 +707,18 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional transport reset on score change: loading/editing new content imperatively rewinds the cursor (cursor.setBeat) and stops playback; this is a genuine side-effect (paired with the imperative cursor write), not derivable in render
       setIsPlaying(false);
     }
-    // Keyed on `rawById` (the loaded input), NOT `baseScore` — so pitch/voicing/
-    // key view-transforms that re-derive `baseScore` over the same timeline don't
-    // rewind or stop playback (they apply live). `play`/`reanchor` are stable.
-  }, [rawById, cursor, play, reanchor]);
+    // Keyed on `contentScore` (the loaded timeline), NOT `baseScore` — so the
+    // pitch/voicing/key view-transforms layered into `baseScore` over the same
+    // timeline don't rewind or stop playback (they apply live). `play`/`reanchor`
+    // are stable, and `contentScore`'s identity is stable across renders (its
+    // deps — the slot contributions + the raw map — change only on a real
+    // load/edit), so this never fires spuriously.
+  }, [contentScore, cursor, play, reanchor]);
 
   // Open-song lifecycle. The player surface calls `setCurrentSong` on mount —
   // each open is a fresh `mode:"root"` pane instance, so this fires once per open
   // and the epoch bump re-arms once-per-open effects (even for the same song).
-  // The existing `useEffect([baseScore])` auto-stops + rewinds when raw changes.
+  // The existing `useEffect([contentScore])` auto-stops + rewinds on content change.
   const setCurrentSong = useCallback((song: { id: string; title: string }) => {
     setCurrentSongId(song.id);
     setCurrentSongTitle(song.title);
