@@ -14,7 +14,7 @@
  * after the env is in place, so the constants freeze under the release root.
  */
 import { dirname, join } from "node:path";
-import { existsSync, readFileSync } from "node:fs";
+import { existsSync, mkdtempSync, readFileSync } from "node:fs";
 
 // `process.execPath` is the compiled `launch` binary; its dir is the bundle
 // root (the extracted bundle dir when packed, or the staged dir for `--dev`).
@@ -44,6 +44,12 @@ process.env.SINGULARITY_MIGRATIONS_DIR ??= join(
   "migrations",
   "data",
 );
+// Reroot the embedded-PG and PgBouncer Unix sockets onto a short `/tmp` path
+// (both read this single override). The data root above may be a long versioned
+// `<out>/data` (`releases/<wt>/<comp>-<target>/<run-id>/data`), which would blow
+// the 104-byte socket-path cap; the socket dir is decoupled so length never
+// constrains where a release is staged.
+process.env.SINGULARITY_PG_SOCKET_DIR ??= mkdtempSync(join("/tmp", "sgs-"));
 
 interface ReleaseManifest {
   composition: string;
@@ -51,6 +57,7 @@ interface ReleaseManifest {
   platform: string;
   builtAt: string;
   port: number;
+  runId?: string;
 }
 
 function readReleaseManifest(): ReleaseManifest {

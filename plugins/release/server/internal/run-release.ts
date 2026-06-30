@@ -4,7 +4,7 @@ import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { REPO_ROOT, SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { releaseTargetById } from "../../core/targets";
-import { releaseOutDir } from "./out-dir";
+import { releaseOutDir, newReleaseRunId } from "./out-dir";
 import { _releaseRuns } from "./tables";
 import { releaseLog } from "./release-log";
 
@@ -155,8 +155,8 @@ async function doRunRelease(composition: string, target: string): Promise<void> 
   await reconcileOrphanReleases();
 
   const startMs = Date.now();
-  const releaseId = `release-${startMs}-${Math.random().toString(36).slice(2, 8)}`;
-  const out = releaseOutDir(composition, target);
+  const releaseId = newReleaseRunId();
+  const out = releaseOutDir(composition, target, releaseId);
 
   // Claim the single in-flight slot atomically. Insert *before* spawning so the
   // claiming INSERT — guarded by release_runs_inflight_uniq — is what wins or

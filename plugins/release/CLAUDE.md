@@ -23,11 +23,15 @@ first UI consumer; the engine itself ships no web barrel.
   build, so it does **not** restart this backend (unlike build). The spawning
   backend survives the whole release; pid-liveness + boot reconcile gives
   restart-durability — ownership is *more* stable than build's.
-- **Short out-dir (socket-path footgun).** The embedded PG/gateway open Unix
-  sockets under the data root, capped at 104 bytes. `releaseOutDir` (in `shared/`)
-  roots the artifact under `<SINGULARITY_DIR>/releases/<worktree>/<comp>-<target>`
-  (stable, not timestamped → re-release overwrites). For **preview**, the data
-  root is a `/tmp/sgp-XXXXXX` mkdtemp — short by construction.
+- **Versioned out-dir.** `releaseOutDir` (in `server/internal/out-dir.ts`) roots
+  each release at `<SINGULARITY_DIR>/releases/<worktree>/<comp>-<target>/<run-id>/`
+  — versioned per run, not overwrite-in-place, so builds are kept and a `latest`
+  symlink (written by the CLI) points at the current `<run-id>`. The 104-byte
+  Unix-socket cap no longer constrains this path: `launcher/bin/launch.ts` reroots
+  both the embedded-PG and PgBouncer sockets onto a short `/tmp/sgs-XXXXXX` dir via
+  `SINGULARITY_PG_SOCKET_DIR`, so a long `<run-id>` is safe even for a direct
+  `<out>/launch`. For **preview**, the data root is a `/tmp/sgp-XXXXXX` mkdtemp —
+  short by construction.
 - **Preview** (`server/internal/preview-manager.ts`) spawns the staged `launch`
   binary with `SINGULARITY_DIR=<tmp>` + `PORT=<free>`, tracked in an in-memory
   Map projected into the `release.previews` external resource. Stop kills the
@@ -40,6 +44,26 @@ first UI consumer; the engine itself ships no web barrel.
   (`triggerReleaseEndpoint`, `previewEndpoint`, `stopPreviewEndpoint`,
   `releaseLogsEndpoint`), and the resources/schemas
   (`releaseHistoryResource`/`ReleaseRun`, `previewStateResource`/`Preview`).
+
+## Discovery
+
+For agent-run / standalone CLI releases, the **canonical filesystem path is the
+registry** — there is no DB query. To find releases:
+
+1. List `~/.singularity/releases/<worktree>/` — one `<comp>-<target>/` dir per
+   composition+target, each holding versioned `<run-id>/` dirs plus a `latest`
+   symlink.
+2. Follow `<comp>-<target>/latest` → the current `<run-id>/`.
+3. Read `<run-id>/RELEASE.json` — self-describing: `composition`, `target`,
+   `platform`, `builtAt`, `port`, `runId`.
+4. The shippable bundle lives inside `<run-id>/`:
+   - **tauri** → `<run-id>/bundle/<Name>.app` and `<Name>.dmg`
+   - **web** → `<run-id>/dist/<comp>-<target>-<platform>` (self-extracting binary)
+
+Standalone CLI releases are **deliberately NOT recorded in `release_runs`** —
+that table is the Studio engine's dev/preview history only. Discoverability for
+hand-run releases is the path + `latest` symlink + `RELEASE.json`, not a registry
+query, keeping the CLI cleanly DB-free.
 
 ## Deploy handoff note
 
@@ -58,7 +82,7 @@ nothing remote is built here.
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `primitives/log-channels.Log`
   - DB schema: `plugins/release/server/internal/tables.ts`
-  - Exports: Values: `_releaseRuns`, `triggerRelease`
+  - Exports: Values: `_releaseRuns`, `newReleaseRunId`, `releaseOutDir`, `triggerRelease`
   - Routes: `POST /api/release`, `POST /api/release/runs/:id/preview`, `POST /api/release/runs/:id/preview/stop`, `GET /api/release/runs/:id/logs`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`

@@ -7,12 +7,17 @@ import {
   readdirSync,
   realpathSync,
   rmSync,
+  symlinkSync,
   writeFileSync,
 } from "node:fs";
 import { tmpdir } from "node:os";
-import { dirname, join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { Resvg } from "@resvg/resvg-js";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import {
+  REPO_ROOT,
+  SINGULARITY_DIR,
+  currentWorktreeName,
+} from "@plugins/infra/plugins/paths/server";
 import { asFsPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { buildPluginTree, type PluginNode } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
@@ -25,7 +30,7 @@ import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/serve
 
 // ── Staged bundle layout (the `--dev` output, also the pack input) ────────────
 //
-//   <out>/
+//   <out>/                         = …/releases/<wt>/<comp>-<target>/<run-id>/
 //     launch                       compiled launcher binary (entrypoint)
 //     server                       compiled backend binary (gateway spawns this)
 //     gateway/gateway              prebuilt Go gateway binary
@@ -34,10 +39,13 @@ import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/serve
 //     pgbouncer/pgbouncer-start    compiled PgBouncer start binary
 //     pgbouncer/native/bin/pgbouncer  vendored PgBouncer native binary
 //     web/                         filtered Vite dist (served statically)
-//     RELEASE.json                 { composition, target, platform, builtAt, port }
+//     RELEASE.json                 { composition, target, platform, builtAt, port, runId }
+//     dist/<comp>-<target>-<platform>   web target: self-extracting binary (the shippable)
+//     bundle/<Name>.app, <Name>.dmg     tauri target: desktop bundle (the shippable)
 //
 // `launch` self-roots SINGULARITY_DIR under <out>/data and points the start
-// binaries at the vendored natives via env, so the bundle is fully isolated.
+// binaries at the vendored natives via env, so the bundle is fully isolated. The
+// sibling `<comp>-<target>/latest` symlink points at the current <run-id>.
 
 const DEFAULT_PORT = 9100;
 
@@ -60,6 +68,29 @@ const FILTERED_SERVER_REGISTRY =
   "plugins/framework/plugins/server-core/core/server.composition.generated.ts";
 const FILTERED_WEB_REGISTRY =
   "plugins/framework/plugins/web-sdk/core/web.composition.generated.ts";
+
+// The canonical twins live in `plugins/release/server/internal/out-dir.ts`, but
+// the CLI cannot import them through the `@plugins/release/server` barrel: that
+// barrel eagerly pulls in `@plugins/database/server`, which throws at import time
+// when `SINGULARITY_WORKTREE` is unset (e.g. during build-time docgen). The path
+// shape is plain, so we rebuild it inline here — KEEP IN SYNC with out-dir.ts.
+function newReleaseRunId(): string {
+  return `release-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+}
+
+function releaseOutDir(
+  composition: string,
+  target: string,
+  runId: string,
+): string {
+  return join(
+    SINGULARITY_DIR,
+    "releases",
+    currentWorktreeName(),
+    `${composition}-${target}`,
+    runId,
+  );
+}
 
 function platformTag(): string {
   const mapping: Record<string, Record<string, string>> = {
@@ -334,7 +365,7 @@ export function registerRelease(program: Command) {
     )
     .option(
       "--out <dir>",
-      "Output directory (default: dist/release/<name>-<target>-<timestamp>)",
+      "Output directory (default: the canonical versioned releases run dir for <name>-<target>)",
     )
     .option(
       "--port <port>",
@@ -365,13 +396,14 @@ export function registerRelease(program: Command) {
         }
 
         const platform = platformTag();
+        // Versioned, self-contained out dir under the canonical releases root
+        // (shared with the Studio engine). When the engine supplies `--out` it is
+        // already a `<…>/<run-id>` dir; derive the run-id from the dir name so
+        // both paths are handled uniformly.
         const out =
           opts.out ??
-          join(
-            root,
-            "dist/release",
-            `${opts.composition}-${opts.target}-${Date.now()}`,
-          );
+          releaseOutDir(opts.composition, opts.target, newReleaseRunId());
+        const runId = basename(out);
 
         console.log(`Releasing composition "${opts.composition}" (${platform})`);
         console.log(`  Output: ${out}`);
@@ -516,11 +548,19 @@ export function registerRelease(program: Command) {
           platform,
           builtAt: new Date().toISOString(),
           port,
+          runId,
         };
         writeFileSync(
           join(out, "RELEASE.json"),
           JSON.stringify(manifest, null, 2) + "\n",
         );
+
+        // Refresh the stable `latest` pointer alongside the versioned run dirs
+        // (`<comp>-<target>/latest → <run-id>`). Done once here so both `--dev`
+        // and packed/tauri flows — which all reach this point — share it.
+        const latest = join(dirname(out), "latest");
+        rmSync(latest, { force: true });
+        symlinkSync(runId, latest);
 
         // ── 3.5. Pre-warm asset-mirror caches for the composition closure ────
         // Bakes out/asset-mirror/<id>/<file> into the staged tree so the bundle
@@ -686,11 +726,24 @@ async function wrapTauri(opts: {
 
     const dmgPath = await packageMacDmg({ srcTauri, productName });
 
-    console.log("\n[done] Tauri desktop bundle built. Artifacts:");
-    console.log(
-      `  ${join(srcTauri, "target/release/bundle/macos", `${productName}.app`)}`,
+    // Copy the shippable .app + .dmg INTO <out>/bundle/ so the run dir is the
+    // single self-contained home for the artifact (cargo emits them under
+    // target/release/bundle, outside <out> otherwise).
+    const appSrc = join(
+      srcTauri,
+      "target/release/bundle/macos",
+      `${productName}.app`,
     );
-    console.log(`  ${dmgPath}`);
+    const bundleOut = join(stagedDir, "bundle");
+    mkdirSync(bundleOut, { recursive: true });
+    const appOut = join(bundleOut, `${productName}.app`);
+    const dmgOut = join(bundleOut, basename(dmgPath));
+    cpSync(appSrc, appOut, { recursive: true });
+    cpSync(dmgPath, dmgOut);
+
+    console.log("\n[done] Tauri desktop bundle built. Artifacts:");
+    console.log(`  ${appOut}`);
+    console.log(`  ${dmgOut}`);
     return;
   }
 
@@ -699,8 +752,15 @@ async function wrapTauri(opts: {
     cwd: tauriDir,
   });
 
+  // Copy the produced bundle tree INTO <out>/bundle/ so the run dir holds the
+  // shippable artifact (cargo emits it under target/release/bundle otherwise).
+  const bundleSrc = join(srcTauri, "target", "release", "bundle");
+  const bundleOut = join(stagedDir, "bundle");
+  mkdirSync(bundleOut, { recursive: true });
+  cpSync(bundleSrc, bundleOut, { recursive: true });
+
   console.log("\n[done] Tauri desktop bundle built. Artifacts under:");
-  console.log(`  ${join(srcTauri, "target", "release", "bundle")}`);
+  console.log(`  ${bundleOut}`);
 }
 
 /**
@@ -846,8 +906,13 @@ process.exit(child.status ?? 1);
 `;
   writeFileSync(bootstrapPath, bootstrap);
 
+  // The shippable binary lives INSIDE <out> (under dist/) so the run dir is
+  // self-contained — the tar + bootstrap temp files stay siblings of stagedDir
+  // (created before the tar runs, cleaned up below).
   const binaryName = `${composition}-${target}-${platform}`;
-  const binaryPath = join(dirname(stagedDir), binaryName);
+  const distDir = join(stagedDir, "dist");
+  mkdirSync(distDir, { recursive: true });
+  const binaryPath = join(distDir, binaryName);
 
   try {
     console.log("  • compile self-extracting binary");

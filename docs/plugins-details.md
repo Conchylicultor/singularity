@@ -4782,7 +4782,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `primitives/log-channels.Log`
     - DB schema: `plugins/release/server/internal/tables.ts`
-    - Exports: Values: `_releaseRuns`, `triggerRelease`
+    - Exports: Values: `_releaseRuns`, `newReleaseRunId`, `releaseOutDir`, `triggerRelease`
     - Routes: `POST /api/release`, `POST /api/release/runs/:id/preview`, `POST /api/release/runs/:id/preview/stop`, `GET /api/release/runs/:id/logs`
   - Core:
     - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
