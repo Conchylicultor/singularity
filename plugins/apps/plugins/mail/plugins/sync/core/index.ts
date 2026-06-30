@@ -1,0 +1,1 @@
+export { mailSyncEndpoint } from "./endpoints";
