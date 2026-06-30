@@ -635,13 +635,25 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     playOnLoadRef.current = true;
   }, []);
 
-  // Reset the cursor whenever the composed Score changes (new/changed input).
-  // `baseScore` is referentially stable across mere source-picker switches
-  // (which don't change `rawById`), so switching the visible Loader does NOT
-  // reset the playhead — only loading or editing input does. If the library
-  // armed `requestPlayOnLoad` (background "Play" on a card/row), start playback
-  // from the top once the new score is composed instead of stopping; `play`'s
-  // own guards keep an empty/0% score from starting.
+  // Reset the cursor whenever the loaded *input* changes (new/changed content).
+  //
+  // The trigger is `rawById` — the raw per-source input map — NOT the derived
+  // `baseScore`. `baseScore` is also recomputed by the pure *view transforms*
+  // layered on top of the same content (transpose, chord voicing, key
+  // auto-detect): those shift pitches / re-voice / re-spell but leave the
+  // TIMELINE (note onsets, durations, tempo map) identical, so the current
+  // playhead stays meaningful and must NOT rewind. Keying on `baseScore` made
+  // every such transform rewind to 0 and stop playback — e.g. nudging transpose
+  // mid-song restarted it. The audio engine and piano roll already re-derive
+  // from the new `score` and reschedule from the *live* cursor, so dropping this
+  // reset is all that's needed for transforms to apply seamlessly during
+  // playback. `rawById` changes only on a real input load/edit (and is stable
+  // across mere source-picker switches, which don't touch it), so loading or
+  // editing a song still rewinds + (re)arms play-on-load as before.
+  //
+  // If the library armed `requestPlayOnLoad` (background "Play" on a card/row),
+  // start playback from the top once the new score is composed instead of
+  // stopping; `play`'s own guards keep an empty/0% score from starting.
   useEffect(() => {
     cursor.setBeat(0, { seek: true });
     // Drop any A–B loop: it belongs to the previous content's beat span. Cleared
@@ -669,7 +681,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       // eslint-disable-next-line react-hooks/set-state-in-effect -- intentional transport reset on score change: loading/editing new content imperatively rewinds the cursor (cursor.setBeat) and stops playback; this is a genuine side-effect (paired with the imperative cursor write), not derivable in render
       setIsPlaying(false);
     }
-  }, [baseScore, cursor, play, reanchor]);
+    // Keyed on `rawById` (the loaded input), NOT `baseScore` — so pitch/voicing/
+    // key view-transforms that re-derive `baseScore` over the same timeline don't
+    // rewind or stop playback (they apply live). `play`/`reanchor` are stable.
+  }, [rawById, cursor, play, reanchor]);
 
   // Open-song lifecycle. The player surface calls `setCurrentSong` on mount —
   // each open is a fresh `mode:"root"` pane instance, so this fires once per open
