@@ -85,12 +85,11 @@ func (r *Registry) List() []*Worktree {
 	return out
 }
 
-// LoadAll scans cfg.RegistryDir once at startup, populating the registry.
-// Supports two layouts:
-//   - new: <name>/spec.json  (subdirectory per worktree)
-//   - legacy: <name>.json    (flat file, written by old CLI versions)
-//
-// Creates the directory if missing.
+// LoadAll scans cfg.RegistryDir once at startup, populating the registry from
+// each worktree's <name>/spec.json subdirectory. Non-directory entries — stray
+// build-profile/build-logs JSON artifacts and leftover flat legacy specs that
+// share the dir — are ignored: only the per-worktree subdir layout is a
+// worktree. Creates the directory if missing.
 func (r *Registry) LoadAll() error {
 	if err := os.MkdirAll(r.cfg.RegistryDir, 0o755); err != nil {
 		return fmt.Errorf("create registry dir: %w", err)
@@ -100,13 +99,12 @@ func (r *Registry) LoadAll() error {
 		return fmt.Errorf("read registry dir: %w", err)
 	}
 	for _, e := range entries {
-		if e.IsDir() {
-			specPath := filepath.Join(r.cfg.RegistryDir, e.Name(), "spec.json")
-			if _, err := os.Stat(specPath); err == nil {
-				r.loadFile(specPath)
-			}
-		} else if strings.HasSuffix(e.Name(), ".json") {
-			r.loadLegacyFile(filepath.Join(r.cfg.RegistryDir, e.Name()))
+		if !e.IsDir() {
+			continue
+		}
+		specPath := filepath.Join(r.cfg.RegistryDir, e.Name(), "spec.json")
+		if _, err := os.Stat(specPath); err == nil {
+			r.loadFile(specPath)
 		}
 	}
 	slog.Info("registry loaded", "count", len(r.byName), "dir", r.cfg.RegistryDir)
@@ -121,14 +119,11 @@ func (r *Registry) LoadAll() error {
 // Instead correctness is decoupled from the watch:
 //
 //   - the dir-level watch catches subdir create/remove for low-latency
-//     register/unregister of new-format <name>/spec.json worktrees,
-//   - legacy flat <name>.json files (direct children) are fully covered here, and
+//     register/unregister of <name>/spec.json worktrees, and
 //   - Resolve loads a spec on demand on first request, while Reconcile
 //     periodically re-scans the dir — so a worktree whose spec.json is written
 //     *after* its dir is created (the build creates the dir early for logs and
 //     writes spec.json last) is always picked up, by design.
-//
-// Writes are debounced 100ms to absorb non-atomic / partial writes.
 func (r *Registry) Watch(ctx context.Context) error {
 	w, err := fsnotify.NewWatcher()
 	if err != nil {
@@ -138,9 +133,6 @@ func (r *Registry) Watch(ctx context.Context) error {
 	if err := w.Add(r.cfg.RegistryDir); err != nil {
 		return err
 	}
-
-	debounce := make(map[string]*time.Timer)
-	var debounceMu sync.Mutex
 
 	for {
 		select {
@@ -164,32 +156,13 @@ func (r *Registry) Watch(ctx context.Context) error {
 				}
 			}
 
-			// A worktree subdir or legacy file disappeared — unregister it.
+			// A worktree subdir disappeared — unregister it by its bare name. A
+			// removed flat file (a build-profile/build-logs artifact, never a
+			// registered worktree) resolves to an unregistered name, so r.remove
+			// is a harmless no-op.
 			if ev.Op&(fsnotify.Remove|fsnotify.Rename) != 0 {
-				base := filepath.Base(ev.Name)
-				if strings.HasSuffix(base, ".json") {
-					r.remove(legacyNameFromPath(ev.Name))
-				} else {
-					r.remove(base) // bare subdir name
-				}
+				r.remove(filepath.Base(ev.Name))
 				continue
-			}
-
-			// Legacy format: flat <name>.json created/written directly in the
-			// registry dir. (New-format spec.json lives inside an unwatched subdir,
-			// so it never reaches us here — handled by Reconcile/Resolve.)
-			if filepath.Dir(ev.Name) == r.cfg.RegistryDir &&
-				strings.HasSuffix(ev.Name, ".json") &&
-				ev.Op&(fsnotify.Create|fsnotify.Write) != 0 {
-				path := ev.Name
-				debounceMu.Lock()
-				if t, exists := debounce[path]; exists {
-					t.Stop()
-				}
-				debounce[path] = time.AfterFunc(100*time.Millisecond, func() {
-					r.loadLegacyFile(path)
-				})
-				debounceMu.Unlock()
 			}
 		case werr, ok := <-w.Errors:
 			if !ok {
@@ -229,24 +202,23 @@ func (r *Registry) reconcileOnce() {
 	}
 	present := make(map[string]bool, len(entries))
 	for _, e := range entries {
-		if e.IsDir() {
-			name := e.Name()
-			present[name] = true
-			// Already registered → skip the stat/load. Steady state hits this for
-			// nearly every dir, so reconcile stays cheap even with thousands.
-			if r.Get(name) != nil {
-				continue
-			}
-			specPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
-			if _, serr := os.Stat(specPath); serr == nil {
-				r.loadFile(specPath)
-			}
-		} else if strings.HasSuffix(e.Name(), ".json") {
-			name := legacyNameFromPath(e.Name())
-			present[name] = true
-			if r.Get(name) == nil {
-				r.loadLegacyFile(filepath.Join(r.cfg.RegistryDir, e.Name()))
-			}
+		// Only <name>/spec.json subdirs are worktrees. Flat .json files sharing
+		// the dir (build-profile/build-logs artifacts, leftover legacy specs) are
+		// not worktrees and are skipped — re-attempting to parse them as specs is
+		// exactly what produced ~1.3k "failed to load legacy spec" warns per tick.
+		if !e.IsDir() {
+			continue
+		}
+		name := e.Name()
+		present[name] = true
+		// Already registered → skip the stat/load. Steady state hits this for
+		// nearly every dir, so reconcile stays cheap even with thousands.
+		if r.Get(name) != nil {
+			continue
+		}
+		specPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
+		if _, serr := os.Stat(specPath); serr == nil {
+			r.loadFile(specPath)
 		}
 	}
 	// Unregister worktrees whose backing dir/file vanished. Keyed on dir/file
@@ -347,30 +319,6 @@ func (r *Registry) loadFile(path string) {
 	r.upsert(name, spec)
 }
 
-// loadLegacyFile loads a flat <name>.json spec. If a new-style subdirectory
-// spec already registered this name, the legacy file is skipped.
-func (r *Registry) loadLegacyFile(path string) {
-	name := legacyNameFromPath(path)
-	if !nameRegex.MatchString(name) {
-		return
-	}
-	// New-style subdirectory takes precedence — skip legacy if it exists.
-	newPath := filepath.Join(r.cfg.RegistryDir, name, "spec.json")
-	if _, err := os.Stat(newPath); err == nil {
-		return
-	}
-	spec, err := loadSpec(path)
-	if err != nil {
-		slog.Warn("failed to load legacy spec", "path", path, "err", err)
-		return
-	}
-	if serverPathMissing(spec.Server) {
-		slog.Debug("skipping legacy worktree: backing server dir gone", "name", name, "server", spec.Server)
-		return
-	}
-	r.upsert(name, spec)
-}
-
 func (r *Registry) upsert(name string, spec *Spec) {
 	r.mu.Lock()
 	wt, exists := r.byName[name]
@@ -429,14 +377,9 @@ func loadSpec(path string) (*Spec, error) {
 	return &spec, nil
 }
 
-// nameFromPath extracts the worktree name from a new-style path: <dir>/<name>/spec.json
+// nameFromPath extracts the worktree name from a path: <dir>/<name>/spec.json
 func nameFromPath(p string) string {
 	return filepath.Base(filepath.Dir(p))
-}
-
-// legacyNameFromPath extracts the worktree name from a legacy path: <dir>/<name>.json
-func legacyNameFromPath(p string) string {
-	return strings.TrimSuffix(filepath.Base(p), ".json")
 }
 
 const (

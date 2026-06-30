@@ -29,15 +29,18 @@ func newTestRegistry(t *testing.T) (*Registry, string) {
 	return NewRegistry(cfg), regDir
 }
 
-// writeSpec writes a new-format <regDir>/<name>/spec.json with an absolute server
-// path (loadSpec requires server to be absolute).
+// writeSpec writes a <regDir>/<name>/spec.json with an absolute server path
+// (loadSpec requires server to be absolute) and creates that server dir on disk —
+// loadFile rejects a spec whose backing server dir is missing (serverPathMissing),
+// so the fixture must materialize it for the worktree to register.
 func writeSpec(t *testing.T, regDir, name string) {
 	t.Helper()
 	sub := filepath.Join(regDir, name)
-	if err := os.MkdirAll(sub, 0o755); err != nil {
+	server := filepath.Join(sub, "server")
+	if err := os.MkdirAll(server, 0o755); err != nil {
 		t.Fatal(err)
 	}
-	body := `{"server":"` + filepath.Join(sub, "server") + `"}`
+	body := `{"server":"` + server + `"}`
 	if err := os.WriteFile(filepath.Join(sub, "spec.json"), []byte(body), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -89,5 +92,47 @@ func TestReconcileRegistersAndUnregisters(t *testing.T) {
 	}
 	if reg.Get("beta") != nil {
 		t.Fatal("reconcile must unregister beta after its dir was removed")
+	}
+}
+
+// reconcileOnce must ignore flat .json files that share the registry dir — stray
+// build-profile/build-logs profiling artifacts and leftover flat legacy specs.
+// The legacy flat-spec layout was retired: only <name>/spec.json subdirs are
+// worktrees. Re-parsing these flat files as specs every tick is what produced the
+// "failed to load legacy spec" warn-flood this guards against.
+func TestReconcileIgnoresFlatJSON(t *testing.T) {
+	reg, regDir := newTestRegistry(t)
+	writeSpec(t, regDir, "alpha")
+
+	// A non-spec profiling artifact: parses as JSON but has no server field.
+	if err := os.WriteFile(
+		filepath.Join(regDir, "att-123-build-profile.json"),
+		[]byte(`{"spans":[],"totalDurationMs":0}`), 0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+	// A *valid* flat legacy spec with an existing server dir — under the old
+	// behavior this would have registered "legacy"; after retirement it must not.
+	legacyServer := filepath.Join(regDir, "legacy-server")
+	if err := os.MkdirAll(legacyServer, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(
+		filepath.Join(regDir, "legacy.json"),
+		[]byte(`{"server":"`+legacyServer+`"}`), 0o644,
+	); err != nil {
+		t.Fatal(err)
+	}
+
+	reg.reconcileOnce()
+
+	if reg.Get("alpha") == nil {
+		t.Fatal("reconcile must still register the subdir worktree alpha")
+	}
+	if reg.Get("att-123-build-profile") != nil {
+		t.Fatal("a flat build-profile artifact must never register as a worktree")
+	}
+	if reg.Get("legacy") != nil {
+		t.Fatal("a flat legacy spec must no longer register (legacy scan retired)")
 	}
 }
