@@ -17,6 +17,7 @@ import {
   makeKeySpeller,
   type KeySignature,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { tonicPc } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 
 /** The active key plus where it came from, for the source badge. */
 type ActiveKey = { key: KeySignature; source: "authored" | "derived" };
@@ -40,25 +41,6 @@ function sameActiveKey(a: ActiveKey | undefined, b: ActiveKey | undefined): bool
  */
 const KB_LOW = 60;
 const KB_HIGH = 95;
-
-/** Pitch class (0–11) of a tonic note name like "C", "F#", "Bb". */
-const LETTER_PC: Record<string, number> = {
-  C: 0,
-  D: 2,
-  E: 4,
-  F: 5,
-  G: 7,
-  A: 9,
-  B: 11,
-};
-function tonicPc(tonic: string): number {
-  let pc = LETTER_PC[tonic[0]?.toUpperCase() ?? "C"] ?? 0;
-  for (const ch of tonic.slice(1)) {
-    if (ch === "#" || ch === "♯") pc += 1;
-    else if (ch === "b" || ch === "♭") pc -= 1;
-  }
-  return ((pc % 12) + 12) % 12;
-}
 
 /** Tint for non-tonic scale notes — the theme accent, softened so the tonic
  *  (full accent) stands out as the tonal centre. */

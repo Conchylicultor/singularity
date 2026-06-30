@@ -173,6 +173,33 @@ export function tonicName(pc: number, mode: "major" | "minor"): string {
   return (mode === "major" ? MAJOR_NAMES : MINOR_NAMES)[pc]!;
 }
 
+/** Note letter → natural pitch-class. */
+const LETTER_PC: Record<string, number> = {
+  C: 0,
+  D: 2,
+  E: 4,
+  F: 5,
+  G: 7,
+  A: 9,
+  B: 11,
+};
+
+/**
+ * Inverse of `tonicName`: a bare note/tonic name (letter + accidentals, e.g.
+ * "C", "F#", "B♭") → its pitch-class in [0, 12). Unknown leading letters fall
+ * back to C(0); each `#`/`♯` shifts +1 and each `b`/`♭` −1. The single home for
+ * the name→pc parse, reused by `transposeScore`/`transposeKey` (sibling
+ * `transpose.ts`) and the key readout.
+ */
+export function tonicPc(name: string): number {
+  let pc = LETTER_PC[name[0]?.toUpperCase() ?? "C"] ?? 0;
+  for (const ch of name.slice(1)) {
+    if (ch === "#" || ch === "♯") pc += 1;
+    else if (ch === "b" || ch === "♭") pc -= 1;
+  }
+  return ((pc % 12) + 12) % 12;
+}
+
 // ---------------------------------------------------------------------------
 // inferKeys
 // ---------------------------------------------------------------------------

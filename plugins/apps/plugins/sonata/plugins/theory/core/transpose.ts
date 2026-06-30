@@ -27,37 +27,10 @@ import {
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { formatChordSymbol, formatSpelledChordSymbol } from "./chords";
-import { tonicName } from "./key-detect";
+import { tonicName, tonicPc } from "./key-detect";
 
 /** Reduce any integer to a pitch-class in [0, 12). */
 const pc12 = (pc: number): number => ((pc % 12) + 12) % 12;
-
-/** Note letter → natural pitch-class. */
-const LETTER_PC: Record<string, number> = {
-  C: 0,
-  D: 2,
-  E: 4,
-  F: 5,
-  G: 7,
-  A: 9,
-  B: 11,
-};
-
-/**
- * A bare note name (letter + accidentals, e.g. "C", "F#", "Bb", "E♭") → its
- * pitch-class. Unknown leading letters fall back to C(0); accidentals shift by
- * ±1 each. Shared by the key-tonic transpose and the songsheet chord-text shift
- * so the name→pc parse has one home here.
- */
-function notePc(name: string): number {
-  const letter = name[0]?.toUpperCase() ?? "C";
-  let pc = LETTER_PC[letter] ?? 0;
-  for (const ch of name.slice(1)) {
-    if (ch === "#" || ch === "♯") pc += 1;
-    else if (ch === "b" || ch === "♭") pc -= 1;
-  }
-  return pc12(pc);
-}
 
 /**
  * Transpose a key signature by `semitones`: shift its tonic's pitch-class
@@ -70,7 +43,7 @@ export function transposeKey(
   key: KeySignature,
   semitones: number,
 ): KeySignature {
-  const pc = pc12(notePc(key.tonic) + semitones);
+  const pc = pc12(tonicPc(key.tonic) + semitones);
   return { tonic: tonicName(pc, key.mode), mode: key.mode };
 }
 
@@ -85,7 +58,7 @@ function shiftNoteToken(
   semitones: number,
   speller: KeySpeller,
 ): string {
-  const pc = pc12(notePc(token) + semitones);
+  const pc = pc12(tonicPc(token) + semitones);
   const { step, alter } = speller.spell(pc);
   return step + accidentalGlyph(alter);
 }
