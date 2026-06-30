@@ -21,6 +21,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
         - **`shell`** — App shell for Home. Registers the /home app entry and defines the Home.Section slot.
+    - **`mail`** — Mail — a Gmail-class client.
+      - Plugins:
+        - **`mail-core`** — Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox).
+        - **`shell`** — App shell for Mail. Registers the /mail app entry, defines the Mail.Sidebar slot, and renders the capability-driven landing pane.
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged and seeding existing pages via a one-shot boot backfill.

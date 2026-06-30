@@ -12,6 +12,7 @@
   - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
   - **`file-explorer`** — File explorer app.
   - **`home`** — Home — app launcher and entry point.
+  - **`mail`** — Mail — a Gmail-class client.
   - **`pages`** — Notion-like pages app.
   - **`prototypes`** — Prototypes — browse, focus, compare, and iterate on throwaway UI design mockups served from the repo-root prototypes/ dir.
   - **`settings`** — Settings app.

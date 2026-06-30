@@ -1,10 +1,11 @@
-// @hash 4650ff7823dc
+// @hash 2f8e8439ad44
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "apps.home.shell:home",
     "apps.agent-manager.shell:agent-manager",
     "apps.pages.shell:pages",
+    "apps.mail.shell:mail",
     "apps.story.shell:story",
     "apps.workflows.shell:workflows",
     "apps.sonata.shell:sonata",

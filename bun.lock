@@ -257,6 +257,18 @@
       "name": "@singularity/plugin-apps-home-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/mail": {
+      "name": "@singularity/plugin-apps-mail",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/mail/plugins/mail-core": {
+      "name": "@singularity/plugin-apps-mail-mail-core",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/mail/plugins/shell": {
+      "name": "@singularity/plugin-apps-mail-shell",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages": {
       "name": "@singularity/plugin-apps-pages",
       "version": "0.0.1",
@@ -4494,6 +4506,12 @@
     "@singularity/plugin-apps-home-app-cards": ["@singularity/plugin-apps-home-app-cards@workspace:plugins/apps/plugins/home/plugins/app-cards"],
 
     "@singularity/plugin-apps-home-shell": ["@singularity/plugin-apps-home-shell@workspace:plugins/apps/plugins/home/plugins/shell"],
+
+    "@singularity/plugin-apps-mail": ["@singularity/plugin-apps-mail@workspace:plugins/apps/plugins/mail"],
+
+    "@singularity/plugin-apps-mail-mail-core": ["@singularity/plugin-apps-mail-mail-core@workspace:plugins/apps/plugins/mail/plugins/mail-core"],
+
+    "@singularity/plugin-apps-mail-shell": ["@singularity/plugin-apps-mail-shell@workspace:plugins/apps/plugins/mail/plugins/shell"],
 
     "@singularity/plugin-apps-pages": ["@singularity/plugin-apps-pages@workspace:plugins/apps/plugins/pages"],
 
