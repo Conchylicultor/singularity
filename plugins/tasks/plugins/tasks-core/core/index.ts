@@ -7,7 +7,7 @@ export {
   PushSchema,
   ConversationSchema,
   ConversationKindSchema,
-} from "../server/internal/schema";
+} from "./internal/schema";
 export type {
   Task,
   TaskListItem,
@@ -17,7 +17,7 @@ export type {
   Push,
   Conversation,
   ConversationKind,
-} from "../server/internal/schema";
+} from "./internal/schema";
 export { ConversationStatusSchema } from "./conversation-status";
 export type { ConversationStatus } from "./conversation-status";
 export {

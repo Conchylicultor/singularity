@@ -61,9 +61,18 @@ function applyDefault(b: any, def: ColumnDefault<unknown>, key: string): any {
 // Derive a Drizzle `pgTable` AND a zod wire schema from ONE `FieldsRecord`, so
 // `entity.table.$inferSelect` is identical by construction to
 // `z.infer<entity.schema>`. See the Stage C plan for the full derivation.
+// `const M` infers the `meta` literally. Without it, a bare string-literal
+// default on a union-typed (enum-branded) field — `{ default: "starting" }`
+// where the field value is `"starting" | "working" | …` — is contextually typed
+// against `ColumnDefault<union>` and TS widens the WHOLE `columns` object to the
+// `EntityMeta.columns` constraint shape (optional `default?`), collapsing
+// `DefaultedKeys` to `never` (every DB-defaulted column wrongly becomes required
+// on insert). `const` keeps each column meta at its narrow literal type so the
+// presence of `default` survives. (A non-enum default — bool / plain text — never
+// triggered the collapse, which is why slow_ops never caught it.)
 export function defineEntity<
   F extends FieldsRecord,
-  M extends EntityMeta<F> = EntityMeta<F>,
+  const M extends EntityMeta<F> = EntityMeta<F>,
 >(name: string, fields: F, meta: M = {} as M): Entity<F, DefaultedKeys<F, M>> {
   const builders: Record<string, unknown> = {};
 

@@ -335,6 +335,94 @@ test("DB-defaulted columns may be omitted from an insert", () => {
   expect(insertValues.worktree).toBe("main");
 });
 
+// ── Compile-time guard: nullable columns are optional on insert + `| null` on
+// select ────────────────────────────────────────────────────────────────────
+// A genuinely type-level-nullable field — `InferFieldValue` includes `null`, as
+// produced by `nullable(...)` — must be OPTIONAL on insert (omit ⇒ NULL) and
+// `T | null` on select, exactly like a hand-written nullable drizzle column. The
+// prior unconditional `NotNull` brand on `EntityColumns` wrongly forced it
+// REQUIRED on insert (mail-core never caught this — it has no partial inserts —
+// and the FK test below casts its nullability away). This locks the fix.
+function nullableTextFieldT(): FieldDef<string | null> {
+  return field(
+    textType as unknown as ReturnType<typeof defineFieldType<string | null>>,
+    z.string().nullable(),
+    null,
+  );
+}
+const nullableEnt = defineEntity(
+  "ent_nullable",
+  { id: field(textType, z.string(), ""), note: nullableTextFieldT() },
+  { primaryKey: "id" },
+);
+type _NullableInsert = (typeof nullableEnt.table)["$inferInsert"];
+type _NullableSelect = (typeof nullableEnt.table)["$inferSelect"];
+// `note` is OPTIONAL on insert…
+export type _NullableColOptionalOnInsert = Expect<
+  Equal<Extract<"note", OptionalKeys<_NullableInsert>>, "note">
+>;
+// …`string | null` on select…
+export type _NullableColSelectType = Expect<
+  Equal<_NullableSelect["note"], string | null>
+>;
+// …and the non-nullable `id` stays REQUIRED on insert.
+export type _NonNullColStaysRequired = Expect<
+  Equal<Extract<"id", RequiredKeys<_NullableInsert>>, "id">
+>;
+
+test("nullable columns may be omitted from an insert (default to NULL)", () => {
+  const insertValues: _NullableInsert = { id: "x" };
+  expect(insertValues.id).toBe("x");
+});
+
+// ── Compile-time guard: an enum-branded field's literal DB default stays
+// optional-on-insert (no `DefaultedKeys` collapse) ──────────────────────────
+// A field whose value type is a string-literal UNION (an enum-branded text
+// column, as `enumTextField` produces) carrying a bare-literal DB default
+// (`{ default: "a" }`) used to widen the WHOLE `meta.columns` object to the
+// constraint shape, collapsing `DefaultedKeys` to `never` and forcing EVERY
+// DB-defaulted column (incl. plain `defaultNow()` ones) required on insert. The
+// `const M` type param on `defineEntity` keeps the meta literal so this can't
+// happen. `field` casts mirror `enumTextField` (union value over the `text`
+// storage token).
+function enumBrandedField(): FieldDef<"a" | "b" | "c"> {
+  return field(
+    textType as unknown as ReturnType<typeof defineFieldType<"a" | "b" | "c">>,
+    z.enum(["a", "b", "c"]) as unknown as z.ZodType<"a" | "b" | "c">,
+    "a",
+  );
+}
+const enumDefaultEnt = defineEntity(
+  "ent_enum_default",
+  {
+    id: field(textType, z.string(), ""),
+    status: enumBrandedField(),
+    createdAt: field(dateType, z.coerce.date(), new Date(0)),
+  },
+  {
+    primaryKey: "id",
+    columns: { status: { default: "a" }, createdAt: { default: defaultNow() } },
+  },
+);
+type _EnumInsert = (typeof enumDefaultEnt.table)["$inferInsert"];
+// Both the enum-defaulted `status` AND the `defaultNow()` `createdAt` are
+// OPTIONAL on insert (the collapse would have made them required)…
+export type _EnumDefaultsOptional = Expect<
+  Equal<
+    Extract<"status" | "createdAt", OptionalKeys<_EnumInsert>>,
+    "status" | "createdAt"
+  >
+>;
+// …while the no-default `id` stays REQUIRED.
+export type _EnumNonDefaultRequired = Expect<
+  Equal<Extract<"id", RequiredKeys<_EnumInsert>>, "id">
+>;
+
+test("enum-branded literal DB default does not collapse insert optionality", () => {
+  const insertValues: _EnumInsert = { id: "x" };
+  expect(insertValues.id).toBe("x");
+});
+
 // ── Foreign keys: cascade / set-null / self-ref / composite junction ────────
 // A relational cluster (the mail-core shape that motivated FK support): a root
 // table, a child with a CASCADE FK + a nullable SELF FK (SET NULL), and a

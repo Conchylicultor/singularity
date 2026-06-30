@@ -212,11 +212,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`mail-core`** — Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox).
           - Server:
-            - Uses: `infra/attachments.Attachments`, `integrations/gmail.getGmailToken`
+            - Uses: `infra/attachments.Attachments`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `integrations/gmail.getGmailToken`
             - DB schema: `plugins/apps/plugins/mail/plugins/mail-core/server/internal/schema-attachments.ts`, `plugins/apps/plugins/mail/plugins/mail-core/server/internal/tables.ts`
             - Exports: Values: `_mailAccounts`, `_mailAttachments`, `_mailDrafts`, `_mailLabels`, `_mailMessageLabels`, `_mailMessages`, `_mailOutbox`, `_mailSyncState`, `_mailThreads`, `mailDraftAttachments`, `requireGmailToken`
           - Core:
-            - Exports: Types: `MailAccount`, `MailAddress`, `MailAttachment`, `MailDraft`, `MailLabel`, `MailLabelType`, `MailMessage`, `MailMessageLabel`, `MailOutboxItem`, `MailOutboxOpType`, `MailOutboxStatus`, `MailSyncState`, `MailSyncStatus`, `MailThread`; Values: `MAIL_LABEL_TYPES`, `MAIL_OUTBOX_OP_TYPES`, `MAIL_OUTBOX_STATUSES`, `MAIL_SYNC_STATUSES`
+            - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/bool/config.boolField`, `fields/date/config.dateField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.enumTextField`, `fields/text/config.textField`
+            - Exports: Types: `MailAccount`, `MailAddress`, `MailAttachment`, `MailDraft`, `MailLabel`, `MailLabelType`, `MailMessage`, `MailMessageLabel`, `MailOutboxItem`, `MailOutboxOpType`, `MailOutboxStatus`, `MailSyncState`, `MailSyncStatus`, `MailThread`; Values: `MAIL_LABEL_TYPES`, `MAIL_OUTBOX_OP_TYPES`, `MAIL_OUTBOX_STATUSES`, `MAIL_SYNC_STATUSES`, `mailAccountFields`, `MailAccountSchema`, `MailAddressSchema`, `mailAttachmentFields`, `MailAttachmentSchema`, `mailDraftFields`, `MailDraftSchema`, `mailLabelFields`, `MailLabelSchema`, `mailMessageFields`, `mailMessageLabelFields`, `MailMessageLabelSchema`, `MailMessageSchema`, `mailOutboxFields`, `MailOutboxItemSchema`, `mailSyncStateFields`, `MailSyncStateSchema`, `mailThreadFields`, `MailThreadSchema`
         - **`shell`** — App shell for Mail. Registers the /mail app entry, defines the Mail.Sidebar slot, and renders the capability-driven landing pane.
           - Web:
             - Slots: `Mail.Sidebar`
@@ -1426,7 +1427,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `conversations.Turn`, `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `conversations_ext_category`)
+        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_category`)
         - Exports: Values: `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`, `conversationCategoryConfig`
         - Register: `defineJob('conversation-category.classify')`
         - Resources: `conversation-categories` (push)
@@ -1443,7 +1444,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `conversations.conversationCreated`, `conversations/preprompts.resolvePrepromptItem`, `database.db`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/task-preprompt.getTaskPreprompt`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
         - DB schema: `plugins/conversations/plugins/conversation-preprompt/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)
+        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_preprompt`)
         - Exports: Values: `conversationPreprompt`, `conversationPrepromptsResource`, `recordConversationPreprompt`, `recordPrepromptJob`
         - Register: `defineJob('conversation-preprompt.record')`
         - Resources: `conversation-preprompts` (push)
@@ -1456,7 +1457,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `conversations.conversationTurnCompleted`, `database.db`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `infra/paths.GIT`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.pushLanded`
         - DB schema: `plugins/conversations/plugins/conversation-progress/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `conversations_ext_progress`)
+        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_progress`)
         - Exports: Values: `classifyProgressJob`, `conversationProgress`, `conversationProgressResource`, `markProgressPushedJob`
         - Register: `defineJob('conversation-progress.classify')`, `defineJob('conversation-progress.mark-pushed')`
         - Resources: `conversation-progress` (push)
@@ -1863,7 +1864,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._conversations`
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
-            - Entity extension of: `tasks/tasks-core` (table `conversations_ext_notes`)
+            - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_notes`)
             - Exports: Values: `conversationNotes`, `conversationNotesResource`
             - Resources: `conversation-notes` (push)
             - Routes: `PUT /api/conversation-notes/:conversationId`, `DELETE /api/conversation-notes/:conversationId`
@@ -1943,7 +1944,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
-            - Entity extension of: `tasks/tasks-core` (table `conversations_ext_turn_summary`)
+            - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_turn_summary`)
             - Exports: Values: `generateTurnSummaryJob`, `turnSummaries`, `turnSummariesResource`
             - Register: `defineJob('turn-summary.generate')`
             - Resources: `turn-summaries` (push)
@@ -1996,7 +1997,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `conversations.conversationCreated`, `conversations.userTurnSent`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core._attempts`, `tasks/tasks-core._conversations`, `tasks/tasks-core.conversationStatusChanged`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.hasBlockingDep`, `tasks/tasks-core.listBlockingDepIds`, `tasks/tasks-core.listDependentIds`, `tasks/tasks-core.taskStatusChanged`
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
-            - Entity extension of: `tasks/tasks-core` (table `conversations_ext_queue`)
+            - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_queue`)
             - Exports: Values: `conversationsQueue`, `endRank`, `findTaskIdForConversation`, `lockDeck`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `rankJoiningGroup`, `reseatGroupMembers`, `seedRankJob`, `upsertRank`
             - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.pin-revalidate')`, `defineJob('queue.advance-pin')`, `defineJob('queue.task-status-pin')`
             - Resources: `queue-ranks` (push)
@@ -2048,7 +2049,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/live-state.tolerantEnum`
         - Exports: Types: `ConversationModel`, `ModelMeta`, `ModelTier`; Values: `cliFlagFor`, `ConversationModelSchema`, `currentModelForTier`, `DEFAULT_MODEL`, `idForCliName`, `MODEL_REGISTRY`, `MODEL_TIERS`, `modelDisplayLabel`, `normalizeModel`, `registerModelCorruptionReporter`, `reportUnknownModel`, `SELECTABLE_MODELS`, `StoredModelSchema`
       - Cross-plugin:
-        - Imported by: `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-view/branch`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/launch-prompts`, `conversations/runtime-tmux`, `debug/claude-cli-calls`, `infra/claude-cli`, `primitives/launch`, `tasks`, `tasks/task-draft-form`, `tasks/task-header`
+        - Imported by: `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-view/branch`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/launch-prompts`, `conversations/runtime-tmux`, `debug/claude-cli-calls`, `infra/claude-cli`, `primitives/launch`, `tasks`, `tasks/task-draft-form`, `tasks/task-header`, `tasks/tasks-core`
     - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
       - Web:
         - Uses: `primitives/pane.getRoute`, `primitives/pane.PaneInput`
@@ -2488,14 +2489,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`fields`** — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce). Storage-dimension registry: owns the fields.storage server slot where each field type contributes its Drizzle column builder, keyed by type token.
   - Web:
-    - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
+    - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.rank`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Imported by: `config_v2`, `conversations/all-conversations`, `debug/boot-profile`, `debug/slow-ops`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/bool/filter-sql`, `fields/bool/storage`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/config`, `fields/date/filter-sql`, `fields/date/storage`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/enum/filter-sql`, `fields/float`, `fields/float/config`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/config`, `fields/int/storage`, `fields/json`, `fields/json/config`, `fields/json/storage`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/number/filter-sql`, `fields/object`, `fields/object/config`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/text/filter-sql`, `fields/text/storage`, `fields/uuid`, `fields/uuid/config`, `fields/uuid/storage`, `fields/variant`, `fields/variant/config`, `infra/entities`
+    - Imported by: `apps/mail/mail-core`, `config_v2`, `conversations/all-conversations`, `debug/boot-profile`, `debug/slow-ops`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/bool/filter-sql`, `fields/bool/storage`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/config`, `fields/date/filter-sql`, `fields/date/storage`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/enum/filter-sql`, `fields/float`, `fields/float/config`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/config`, `fields/int/storage`, `fields/json`, `fields/json/config`, `fields/json/storage`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/number/filter-sql`, `fields/object`, `fields/object/config`, `fields/rank`, `fields/rank/config`, `fields/rank/storage`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/text/filter-sql`, `fields/text/storage`, `fields/uuid`, `fields/uuid/config`, `fields/uuid/storage`, `fields/variant`, `fields/variant/config`, `infra/entities`, `tasks/tasks-core`
   - Server:
     - Exports: Types: `FieldFilterSqlContribution`, `FieldStorageContribution`, `FilterSqlBuilder`, `StorageColumnBuilder`; Values: `Fields`, `fieldsToColumns`, `resolveFieldFilterSql`, `resolveFieldStorage`
   - Core:
-    - Exports: Types: `FieldDef`, `FieldIdentity`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`; Values: `defineFieldIdentity`, `defineFieldType`, `fieldSchemaWithDefault`, `fieldsToZodObject`, `getFieldResolver`, `pickMeta`, `registerFieldResolver`, `resolveTypeChain`
+    - Exports: Types: `FieldDef`, `FieldIdentity`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`; Values: `defineFieldIdentity`, `defineFieldType`, `fieldSchemaWithDefault`, `fieldsToZodObject`, `getFieldResolver`, `nullable`, `pickMeta`, `registerFieldResolver`, `resolveTypeChain`
   - Plugins:
     - **`avatar`** — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
       - Web:
@@ -2532,7 +2533,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/bool.boolFieldType`
             - Exports: Types: `BoolFieldDef`; Values: `boolField`
           - Cross-plugin:
-            - Imported by: `apps-core/surface/floating`, `apps/sonata/voicing`, `conversations`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`
+            - Imported by: `apps-core/surface/floating`, `apps/mail/mail-core`, `apps/sonata/voicing`, `conversations`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `tasks/tasks-core`
         - **`filter`** — Boolean field type: data-view filter operator set (is checked/unchecked).
           - Web:
             - Contributes: `DataViewSlots.Filter` "bool"
@@ -2589,7 +2590,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/date.dateFieldType`
             - Exports: Types: `DateFieldDef`; Values: `dateField`
           - Cross-plugin:
-            - Imported by: `debug/boot-profile`, `debug/slow-ops`
+            - Imported by: `apps/mail/mail-core`, `debug/boot-profile`, `debug/slow-ops`, `tasks/tasks-core`
         - **`filter`** — Date field type: data-view filter operator set (is / before / after / between …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "date"
@@ -2738,7 +2739,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/int.intFieldType`
             - Exports: Types: `IntFieldDef`; Values: `intField`
           - Cross-plugin:
-            - Imported by: `apps-core/surface/floating/wallpaper`, `conversations`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/slow-ops`
+            - Imported by: `apps-core/surface/floating/wallpaper`, `apps/mail/mail-core`, `conversations`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/slow-ops`
         - **`storage`** — Integer field type: DB storage capability — maps to a Postgres integer column.
           - Server:
             - Uses: `fields.Fields`
@@ -2761,7 +2762,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/json.jsonFieldType`
             - Exports: Types: `JsonFieldDef`; Values: `jsonField`
           - Cross-plugin:
-            - Imported by: `debug/boot-profile`, `debug/slow-ops`
+            - Imported by: `apps/mail/mail-core`, `debug/boot-profile`, `debug/slow-ops`
         - **`storage`** — JSON field type: DB storage capability — maps to a Postgres jsonb column.
           - Server:
             - Uses: `fields.Fields`
@@ -2847,6 +2848,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `ObjectFieldDef`; Values: `isObjectFieldDef`, `objectField`
           - Cross-plugin:
             - Imported by: `apps-core/surface/floating/wallpaper`, `fields/variant/config`
+    - **`rank`** — Rank field type: identity only, extends text — a fractional-indexing string stored in the rank_text (C-collation) domain, reusing text's cell and filter via the extends chain.
+      - Web:
+        - Contributes: `Fields.Identity` "rank"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`, `fields/text.textFieldType`
+        - Exports: Values: `rankFieldType`, `rankIdentity`
+      - Cross-plugin:
+        - Imported by: `fields/rank/config`
+      - Plugins:
+        - **`config`** — Rank field factory (rankField) for building field records.
+          - Core:
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/rank.rankFieldType`
+            - Exports: Types: `RankFieldDef`; Values: `rankField`
+          - Cross-plugin:
+            - Imported by: `tasks/tasks-core`
+        - **`storage`** — Rank field type: DB storage capability — maps to the rank_text (C-collation) Postgres domain column.
+          - Server:
+            - Uses: `fields.Fields`
+            - DB schema: `plugins/fields/plugins/rank/plugins/storage/server/internal/storage.test.ts`
     - **`reorder-tree`** — Reorder-tree field type: identity only. The config-render capability and the reorderTreeField factory live in the plugins/config sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "reorder-tree"
@@ -2935,17 +2956,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `textFieldType`, `textIdentity`
       - Cross-plugin:
-        - Imported by: `fields/multiline-text`, `fields/text/config`, `fields/uuid`
+        - Imported by: `fields/multiline-text`, `fields/rank`, `fields/text/config`, `fields/uuid`
       - Plugins:
         - **`config`** — Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "text" → `TextRenderer`
             - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.Input`
           - Core:
-            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/text.textFieldType`
-            - Exports: Types: `TextFieldDef`; Values: `textField`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.FieldType`, `fields.pickMeta`, `fields/text.textFieldType`
+            - Exports: Types: `TextFieldDef`; Values: `enumTextField`, `textField`
           - Cross-plugin:
-            - Imported by: `apps-core/surface/floating/wallpaper`, `debug/boot-profile`, `debug/slow-ops`, `fields/variant/config`, `plugin-meta/composition`, `primitives/data-view/custom-columns`
+            - Imported by: `apps-core/surface/floating/wallpaper`, `apps/mail/mail-core`, `debug/boot-profile`, `debug/slow-ops`, `fields/variant/config`, `plugin-meta/composition`, `primitives/data-view/custom-columns`, `tasks/tasks-core`
         - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "text"
@@ -3249,7 +3270,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/infra/plugins/entities/server/internal/define-entity.ts`
         - Exports: Types: `ColumnDefault`, `DbDefault`, `DefaultedKeys`, `Entity`, `EntityColumnMeta`, `EntityColumns`, `EntityMeta`, `EntityReference`, `EntityRow`; Values: `defaultNow`, `defaultRandom`, `defineEntity`, `sqlDefault`
       - Cross-plugin:
-        - Imported by: `debug/boot-profile`, `debug/slow-ops`
+        - Imported by: `apps/mail/mail-core`, `debug/boot-profile`, `debug/slow-ops`, `tasks/tasks-core`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
       - Server:
         - Uses: `database.db`
@@ -3957,7 +3978,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks/task-preprompt.inheritTaskPreprompt`, `tasks/tasks-core._tasks`, `tasks/tasks-core.createTask`, `tasks/tasks-core.getConversation`
         - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_health_review`)
+        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_health_review`)
         - Exports: Values: `healthReviewExt`, `pluginHealthReviewsResource`
         - Register: `mcpTool('propose_task')`
         - Resources: `plugin-health-reviews` (push)
@@ -5074,7 +5095,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_auto_start`)
+        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_auto_start`)
         - Exports: Values: `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
         - Resources: `tasks-auto-start` (push)
       - Cross-plugin:
@@ -5130,7 +5151,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-effort/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_effort`)
+        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_effort`)
         - Exports: Values: `getTaskEffort`, `inheritTaskEffort`, `setTaskEffort`, `taskEffortsResource`, `tasksEffort`
         - Resources: `task-efforts` (push)
         - Routes: `PUT /api/task-efforts/:taskId`, `DELETE /api/task-efforts/:taskId`
@@ -5166,7 +5187,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_preprompt`)
+        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_preprompt`)
         - Exports: Values: `getTaskPreprompt`, `inheritTaskPreprompt`, `setTaskPreprompt`, `taskPrepromptsResource`, `tasksPreprompt`
         - Resources: `task-preprompts` (push)
         - Routes: `PUT /api/task-preprompts/:taskId`, `DELETE /api/task-preprompts/:taskId`
@@ -5189,16 +5210,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `tasks`
     - **`tasks-core`** — Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Server:
-        - Uses: `database.db`, `database/derived-tables.DerivedTable`, `database/derived-views.View`, `infra/attachments.Attachments`, `infra/events.defineTriggerEvent`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.isCanonicalWorktreePath`, `primitives/rank.nextRankUnder`, `primitives/rank.RankExecutor`
+        - Uses: `database.db`, `database/derived-tables.DerivedTable`, `database/derived-views.View`, `infra/attachments.Attachments`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/events.defineTriggerEvent`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.isCanonicalWorktreePath`, `primitives/rank.nextRankUnder`, `primitives/rank.RankExecutor`
         - DB schema: `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`, `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`, `plugins/tasks/plugins/tasks-core/server/internal/schema-attachments.ts`, `plugins/tasks/plugins/tasks-core/server/internal/schema.ts`, `plugins/tasks/plugins/tasks-core/server/internal/tables-events.ts`, `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`, `plugins/tasks/plugins/tasks-core/server/internal/views.ts`
         - Exports: Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationStatusChangedPayload`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskListItem`, `TaskStatus`, `TaskStatusChangedPayload`, `UpdateConversationPatch`, `UpdateTaskPatch`; Values: `_attempts`, `_conversations`, `_conversationStatusChangedTriggers`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `conversationAttachments`, `conversationCascadeSignatures`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `conversationsActiveResource`, `ConversationSchema`, `conversationsGoneResource`, `conversationsGoneStatsResource`, `conversationsSystemResource`, `conversationStatusChanged`, `conversationsView`, `createAttempt`, `createTask`, `deleteAttempt`, `deleteConversationRow`, `dropTaskTree`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankInFolder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `getTaskDependencyIds`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listArmedDependentsOf`, `listAttempts`, `listAttemptsForTask`, `listBlockingDepIds`, `listConversationsForDisplay`, `listConversationsForInfra`, `listDependentIds`, `listExistingConversationIds`, `listGoneConversations`, `listHibernationCandidates`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `markConversationGone`, `maybeDropTaskOnExit`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `removeTaskDependency`, `setConversationHibernated`, `taskAttachments`, `taskDependsOn`, `taskDetailResource`, `TaskListItemSchema`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `touchConversationViewed`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
         - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`, `defineTriggerEvent('conversation.statusChanged')`
       - Core:
-        - Uses: `primitives/live-state.keyedResourceDescriptor`, `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
+        - Uses: `conversations/model-provider.ConversationModelSchema`, `conversations/model-provider.StoredModelSchema`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/bool/config.boolField`, `fields/date/config.dateField`, `fields/rank/config.rankField`, `fields/text/config.enumTextField`, `fields/text/config.textField`, `primitives/live-state.keyedResourceDescriptor`, `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`, `primitives/rank.RankSchema`
         - Exports: Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationStatus`, `ConversationSummary`, `Push`, `Task`, `TaskListItem`, `TaskNode`, `TaskStatus`; Values: `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `conversationsActiveResource`, `ConversationSchema`, `conversationsGoneResource`, `conversationsGoneStatsResource`, `conversationsSystemResource`, `ConversationStatusSchema`, `ConversationSummarySchema`, `isSettled`, `pushesResource`, `PushSchema`, `RECENT_GONE_LIMIT`, `SETTLED_STATUSES`, `taskDetailResource`, `taskDetailRoute`, `TaskGraph`, `TaskListItemSchema`, `TaskSchema`, `tasksResource`, `tasksRootRoute`, `TaskStatusSchema`
       - Cross-plugin:
         - Imported by: `active-data`, `backup/sources/transcripts`, `code-explorer`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/allow-monitor`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/notes`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/summary`, `conversations/transcript-api`, `conversations/transcript-retention`, `conversations/transcript-watcher`, `database/query`, `debug/profiling/boot-bench`, `debug/profiling/runtime`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `improve`, `plugin-meta/plugin-health`, `reports`, `review/plugin-changes`, `stats/cost`, `stats/tasks`, `tasks`, `tasks/auto-start`, `tasks/task-effort`, `tasks/task-preprompt`, `tasks/task-title`
-        - Extended by: `conversations/conversation-category` (table `conversations_ext_category`), `conversations/conversation-view/notes` (table `conversations_ext_notes`), `conversations/conversation-preprompt` (table `conversations_ext_preprompt`), `conversations/conversation-progress` (table `conversations_ext_progress`), `conversations/conversations-view/queue` (table `conversations_ext_queue`), `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`), `tasks/auto-start` (table `tasks_ext_auto_start`), `tasks/task-effort` (table `tasks_ext_effort`), `plugin-meta/plugin-health` (table `tasks_ext_health_review`), `tasks/task-preprompt` (table `tasks_ext_preprompt`)
+        - Extended by: `tasks/auto-start` (table `tasks-core_ext_auto_start`), `conversations/conversation-category` (table `tasks-core_ext_category`), `tasks/task-effort` (table `tasks-core_ext_effort`), `plugin-meta/plugin-health` (table `tasks-core_ext_health_review`), `conversations/conversation-view/notes` (table `tasks-core_ext_notes`), `conversations/conversation-preprompt` (table `tasks-core_ext_preprompt`), `conversations/conversation-progress` (table `tasks-core_ext_progress`), `conversations/conversations-view/queue` (table `tasks-core_ext_queue`), `conversations/conversation-view/turn-summary` (table `tasks-core_ext_turn_summary`)
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:

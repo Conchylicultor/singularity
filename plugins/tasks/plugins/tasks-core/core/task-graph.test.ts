@@ -1,5 +1,5 @@
 import { describe, expect, test } from "bun:test";
-import type { TaskStatus } from "../server/internal/schema";
+import type { TaskStatus } from "./internal/schema";
 import { isSettled, SETTLED_STATUSES, TaskGraph, type TaskNode } from "./task-graph";
 
 // Minimal node factory. `deps` is `task.dependencies` (dependent → dependency).

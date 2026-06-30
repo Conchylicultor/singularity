@@ -166,7 +166,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
     - **`zero-test`** — Temporary verification harness: a Debug → Zero Test pane that renders the pilot tasks slice live through the Zero client adapter. Deleted once a real migration begins.
 
-- **`fields`** [73 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce). Storage-dimension registry: owns the fields.storage server slot where each field type contributes its Drizzle column builder, keyed by type token.
+- **`fields`** [76 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce). Storage-dimension registry: owns the fields.storage server slot where each field type contributes its Drizzle column builder, keyed by type token.
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:

@@ -12,7 +12,7 @@
 - Server:
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-effort/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_effort`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_effort`)
   - Exports: Values: `getTaskEffort`, `inheritTaskEffort`, `setTaskEffort`, `taskEffortsResource`, `tasksEffort`
   - Resources: `task-efforts` (push)
   - Routes: `PUT /api/task-efforts/:taskId`, `DELETE /api/task-efforts/:taskId`

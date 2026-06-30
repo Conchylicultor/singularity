@@ -30,8 +30,21 @@ export type DbDefault<T> =
   | { kind: "random" } //           .defaultRandom() (uuid only)
   | { kind: "sql"; sql: SQL }; //   .default(sql`...`)
 
-// Bare value is literal sugar.
-export type ColumnDefault<T> = T | DbDefault<T>;
+// A deeply-readonly view of `T`. `defineEntity` infers `meta` with a `const`
+// type parameter (so a bare-literal default on a union-typed field can't collapse
+// `DefaultedKeys` — see `define-entity.ts`), which makes a `{ default: [] }` /
+// `{ default: {} }` literal `readonly`. Accepting `ReadonlyDeep<T>` for the bare
+// default keeps those `[]` / `{}` ring defaults valid; the value is forwarded
+// verbatim to drizzle's `.default()` at runtime (readonly arrays/objects are fine
+// there).
+type ReadonlyDeep<T> = T extends (infer U)[]
+  ? readonly ReadonlyDeep<U>[]
+  : T extends object
+    ? { readonly [K in keyof T]: ReadonlyDeep<T[K]> }
+    : T;
+
+// Bare value is literal sugar (readonly-tolerant for `const`-inferred meta).
+export type ColumnDefault<T> = T | ReadonlyDeep<T> | DbDefault<T>;
 
 export interface EntityColumnMeta<T> {
   /** DB column name; default = snakeCase(key). */
@@ -91,21 +104,33 @@ export interface EntityReference {
 // brands those with `HasDefault`, which touches ONLY `$inferInsert` and leaves
 // the select type exact — so a loader inserting a row may omit DB-defaulted
 // columns (`id`, timestamps, `[]` rings) without a type error.
+//
+// `NotNull` is applied ONLY to non-nullable fields. A nullable field's value
+// type includes `null` (`nullable(...)` ⇒ `InferFieldValue = T | null`), and the
+// runtime (`define-entity.ts`) already skips `.notNull()` for it. Leaving the
+// builder un-`NotNull` is what makes drizzle treat the column as OPTIONAL on
+// insert (it defaults to NULL when omitted) while keeping the select type
+// `T | null` — the `$type` brand already carries the `null`, so select is
+// unchanged either way. Branding a nullable column `NotNull` (the prior
+// unconditional behaviour) wrongly forced it required on every insert.
+type EntityColumnBuilder<V> = $Type<
+  PgColumnBuilderBase<ColumnBuilderBaseConfig<ColumnDataType, string>>,
+  V
+>;
+type MaybeNotNull<V, B extends PgColumnBuilderBase> = [null] extends [V]
+  ? B
+  : NotNull<B>;
 export type EntityColumns<F extends FieldsRecord, D extends keyof F = never> = {
   [K in keyof F]: K extends D
     ? HasDefault<
-        NotNull<
-          $Type<
-            PgColumnBuilderBase<ColumnBuilderBaseConfig<ColumnDataType, string>>,
-            InferFieldValue<F[K]>
-          >
+        MaybeNotNull<
+          InferFieldValue<F[K]>,
+          EntityColumnBuilder<InferFieldValue<F[K]>>
         >
       >
-    : NotNull<
-        $Type<
-          PgColumnBuilderBase<ColumnBuilderBaseConfig<ColumnDataType, string>>,
-          InferFieldValue<F[K]>
-        >
+    : MaybeNotNull<
+        InferFieldValue<F[K]>,
+        EntityColumnBuilder<InferFieldValue<F[K]>>
       >;
 };
 
@@ -124,8 +149,10 @@ export type DefaultedKeys<F extends FieldsRecord, M extends EntityMeta<F>> =
 
 export interface EntityMeta<F extends FieldsRecord> {
   // Single key → `.primaryKey()` on the column; array → composite
-  // `primaryKey({ columns })`; absent → no PK (junction / view-like).
-  primaryKey?: (keyof F & string) | (keyof F & string)[];
+  // `primaryKey({ columns })`; absent → no PK (junction / view-like). The array
+  // is `readonly` so a `const`-inferred meta (see `defineEntity`) — which makes
+  // a `["a","b"]` literal a `readonly` tuple — still satisfies the constraint.
+  primaryKey?: (keyof F & string) | readonly (keyof F & string)[];
   columns?: { [K in keyof F]?: EntityColumnMeta<InferFieldValue<F[K]>> };
   // Passthrough to pgTable's 3rd-arg callback; `t` is keyed by JS property
   // name. Merged with the composite-PK entry inside `defineEntity`.

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { AttemptSchema, ConversationSchema } from "../server/internal/schema";
+import { AttemptSchema, ConversationSchema } from "./internal/schema";
 
 export const ConversationSummarySchema = ConversationSchema.pick({
   id: true,

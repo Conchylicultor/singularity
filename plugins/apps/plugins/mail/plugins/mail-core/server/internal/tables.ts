@@ -1,215 +1,202 @@
+import { type AnyPgColumn, index } from "drizzle-orm/pg-core";
 import {
-  type AnyPgColumn,
-  boolean,
-  index,
-  integer,
-  jsonb,
-  pgTable,
-  primaryKey,
-  text,
-  timestamp,
-} from "drizzle-orm/pg-core";
-
-import type {
-  MailAddress,
-  MailLabelType,
-  MailOutboxOpType,
-  MailOutboxStatus,
-  MailSyncStatus,
+  defineEntity,
+  defaultNow,
+} from "@plugins/infra/plugins/entities/server";
+import {
+  mailAccountFields,
+  mailSyncStateFields,
+  mailLabelFields,
+  mailThreadFields,
+  mailMessageFields,
+  mailMessageLabelFields,
+  mailAttachmentFields,
+  mailDraftFields,
+  mailOutboxFields,
 } from "../../core";
 
-// Physical tables for the mail app's local mirror of a Gmail mailbox. This file
-// is a load-order leaf: it must NOT import another plugin's schema/tables file
-// so cross-plugin schemas can depend on it without forming a cycle. Web-safe
-// domain types live in `core/`; drizzle ties jsonb/enum columns to them via
-// `.$type<...>()`. Every table is exported with a leading `_` so drizzle-kit's
+// Physical tables for the mail app's local mirror of a Gmail mailbox, derived
+// from the web-safe field records in `core/internal/fields.ts` via the
+// `defineEntity` primitive — so `entity.table.$inferSelect` is identical by
+// construction to the public `z.infer<...Schema>` (Stage E of the
+// fields-unified-entities roadmap). FK / cascade / index / default DDL lives in
+// the `meta` below; the field records stay name- and storage-agnostic.
+//
+// This file is a load-order leaf: it must NOT import another plugin's
+// schema/tables file so cross-plugin schemas can depend on it without forming a
+// cycle. Every table is re-exported with a leading `_` so drizzle-kit's
 // `schema*.ts` glob discovers it while the barrel exposes only the handle.
 //
-// All address columns use `*_addr(s)` DB names to avoid the SQL reserved words
-// `from`/`to`; the inferred TS property keys (`from`, `to`, `cc`, `bcc`,
-// `replyTo`) stay readable. See the task report for the rationale.
+// All address columns use bespoke `*_addr(s)` / `reply_to` DB names (set via
+// `columns.<key>.name`) to avoid the SQL reserved words `from`/`to`; the TS
+// property keys (`from`, `to`, `cc`, `bcc`, `replyTo`) stay readable.
 
-export const _mailAccounts = pgTable("mail_accounts", {
-  id: text("id").primaryKey(),
-  email: text("email").notNull(),
-  name: text("name"),
-  avatarUrl: text("avatar_url"),
-  signature: text("signature"),
-  connectedAt: timestamp("connected_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+const mailAccounts = defineEntity("mail_accounts", mailAccountFields, {
+  primaryKey: "id",
+  columns: {
+    createdAt: { default: defaultNow() },
+    updatedAt: { default: defaultNow() },
+  },
 });
 
-export const _mailSyncState = pgTable("mail_sync_state", {
-  accountId: text("account_id")
-    .primaryKey()
-    .references(() => _mailAccounts.id, { onDelete: "cascade" }),
-  historyId: text("history_id"),
-  lastFullSyncAt: timestamp("last_full_sync_at", { withTimezone: true }),
-  lastDeltaSyncAt: timestamp("last_delta_sync_at", { withTimezone: true }),
-  status: text("status").$type<MailSyncStatus>().notNull().default("idle"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+const mailSyncState = defineEntity("mail_sync_state", mailSyncStateFields, {
+  primaryKey: "accountId",
+  columns: {
+    accountId: {
+      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+    },
+    status: { default: "idle" },
+    createdAt: { default: defaultNow() },
+    updatedAt: { default: defaultNow() },
+  },
 });
 
-export const _mailLabels = pgTable(
-  "mail_labels",
-  {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
-      .notNull()
-      .references(() => _mailAccounts.id, { onDelete: "cascade" }),
-    name: text("name").notNull(),
-    type: text("type").$type<MailLabelType>().notNull(),
-    color: text("color"),
-    textColor: text("text_color"),
-    parentId: text("parent_id").references((): AnyPgColumn => _mailLabels.id, {
-      onDelete: "set null",
-    }),
-    messageListVisibility: text("message_list_visibility"),
-    labelListVisibility: text("label_list_visibility"),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+const mailLabels = defineEntity("mail_labels", mailLabelFields, {
+  primaryKey: "id",
+  columns: {
+    accountId: {
+      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+    },
+    parentId: {
+      references: {
+        column: (): AnyPgColumn => mailLabels.table.id,
+        onDelete: "set null",
+      },
+    },
+    createdAt: { default: defaultNow() },
+    updatedAt: { default: defaultNow() },
   },
-  (t) => [index("mail_labels_account_id_idx").on(t.accountId)],
-);
+  indexes: (t) => [index("mail_labels_account_id_idx").on(t.accountId)],
+});
 
-export const _mailThreads = pgTable(
-  "mail_threads",
-  {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
-      .notNull()
-      .references(() => _mailAccounts.id, { onDelete: "cascade" }),
-    subject: text("subject"),
-    snippet: text("snippet"),
-    participants: jsonb("participants").$type<MailAddress[]>().notNull().default([]),
-    lastMessageAt: timestamp("last_message_at", { withTimezone: true }),
-    messageCount: integer("message_count").notNull().default(0),
-    unread: boolean("unread").notNull().default(false),
-    starred: boolean("starred").notNull().default(false),
-    important: boolean("important").notNull().default(false),
-    hasAttachments: boolean("has_attachments").notNull().default(false),
-    labelIds: jsonb("label_ids").$type<string[]>().notNull().default([]),
-    historyId: text("history_id"),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+const mailThreads = defineEntity("mail_threads", mailThreadFields, {
+  primaryKey: "id",
+  columns: {
+    accountId: {
+      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+    },
+    participants: { default: [] },
+    messageCount: { default: 0 },
+    unread: { default: false },
+    starred: { default: false },
+    important: { default: false },
+    hasAttachments: { default: false },
+    labelIds: { default: [] },
+    createdAt: { default: defaultNow() },
+    updatedAt: { default: defaultNow() },
   },
-  (t) => [index("mail_threads_account_last_msg_idx").on(t.accountId, t.lastMessageAt)],
-);
+  indexes: (t) => [
+    index("mail_threads_account_last_msg_idx").on(t.accountId, t.lastMessageAt),
+  ],
+});
 
-export const _mailMessages = pgTable(
-  "mail_messages",
-  {
-    id: text("id").primaryKey(),
-    threadId: text("thread_id")
-      .notNull()
-      .references(() => _mailThreads.id, { onDelete: "cascade" }),
-    accountId: text("account_id")
-      .notNull()
-      .references(() => _mailAccounts.id, { onDelete: "cascade" }),
-    from: jsonb("from_addr").$type<MailAddress>().notNull(),
-    to: jsonb("to_addrs").$type<MailAddress[]>().notNull().default([]),
-    cc: jsonb("cc_addrs").$type<MailAddress[]>().notNull().default([]),
-    bcc: jsonb("bcc_addrs").$type<MailAddress[]>().notNull().default([]),
-    replyTo: jsonb("reply_to").$type<MailAddress[]>(),
-    subject: text("subject"),
-    snippet: text("snippet"),
-    headers: jsonb("headers").$type<Record<string, string>>().notNull().default({}),
-    bodyText: text("body_text"),
-    bodyHtml: text("body_html"),
-    internalDate: timestamp("internal_date", { withTimezone: true }),
-    unread: boolean("unread").notNull().default(false),
-    starred: boolean("starred").notNull().default(false),
-    isDraft: boolean("is_draft").notNull().default(false),
-    isSent: boolean("is_sent").notNull().default(false),
-    sizeEstimate: integer("size_estimate"),
-    historyId: text("history_id"),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+const mailMessages = defineEntity("mail_messages", mailMessageFields, {
+  primaryKey: "id",
+  columns: {
+    threadId: {
+      references: { column: () => mailThreads.table.id, onDelete: "cascade" },
+    },
+    accountId: {
+      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+    },
+    from: { name: "from_addr" },
+    to: { name: "to_addrs", default: [] },
+    cc: { name: "cc_addrs", default: [] },
+    bcc: { name: "bcc_addrs", default: [] },
+    replyTo: { name: "reply_to" },
+    headers: { default: {} },
+    unread: { default: false },
+    starred: { default: false },
+    isDraft: { default: false },
+    isSent: { default: false },
+    createdAt: { default: defaultNow() },
+    updatedAt: { default: defaultNow() },
   },
-  (t) => [
+  indexes: (t) => [
     index("mail_messages_thread_id_idx").on(t.threadId),
     index("mail_messages_account_id_idx").on(t.accountId),
   ],
-);
-
-export const _mailMessageLabels = pgTable(
-  "mail_message_labels",
-  {
-    messageId: text("message_id")
-      .notNull()
-      .references(() => _mailMessages.id, { onDelete: "cascade" }),
-    labelId: text("label_id")
-      .notNull()
-      .references(() => _mailLabels.id, { onDelete: "cascade" }),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [
-    primaryKey({ columns: [t.messageId, t.labelId] }),
-    index("mail_message_labels_label_id_idx").on(t.labelId),
-  ],
-);
-
-export const _mailAttachments = pgTable(
-  "mail_attachments",
-  {
-    id: text("id").primaryKey(),
-    messageId: text("message_id")
-      .notNull()
-      .references(() => _mailMessages.id, { onDelete: "cascade" }),
-    accountId: text("account_id")
-      .notNull()
-      .references(() => _mailAccounts.id, { onDelete: "cascade" }),
-    gmailAttachmentId: text("gmail_attachment_id").notNull(),
-    filename: text("filename").notNull(),
-    mimeType: text("mime_type").notNull(),
-    sizeBytes: integer("size_bytes").notNull().default(0),
-    inline: boolean("inline").notNull().default(false),
-    contentId: text("content_id"),
-    storedAttachmentId: text("stored_attachment_id"),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [index("mail_attachments_message_id_idx").on(t.messageId)],
-);
-
-export const _mailDrafts = pgTable("mail_drafts", {
-  id: text("id").primaryKey(),
-  accountId: text("account_id")
-    .notNull()
-    .references(() => _mailAccounts.id, { onDelete: "cascade" }),
-  threadId: text("thread_id").references(() => _mailThreads.id, {
-    onDelete: "set null",
-  }),
-  gmailDraftId: text("gmail_draft_id"),
-  inReplyToMessageId: text("in_reply_to_message_id"),
-  to: jsonb("to_addrs").$type<MailAddress[]>().notNull().default([]),
-  cc: jsonb("cc_addrs").$type<MailAddress[]>().notNull().default([]),
-  bcc: jsonb("bcc_addrs").$type<MailAddress[]>().notNull().default([]),
-  subject: text("subject"),
-  bodyHtml: text("body_html"),
-  bodyText: text("body_text"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const _mailOutbox = pgTable(
-  "mail_outbox",
+const mailMessageLabels = defineEntity(
+  "mail_message_labels",
+  mailMessageLabelFields,
   {
-    id: text("id").primaryKey(),
-    accountId: text("account_id")
-      .notNull()
-      .references(() => _mailAccounts.id, { onDelete: "cascade" }),
-    opType: text("op_type").$type<MailOutboxOpType>().notNull(),
-    targetType: text("target_type").notNull(),
-    targetId: text("target_id").notNull(),
-    payload: jsonb("payload").$type<Record<string, unknown>>().notNull().default({}),
-    status: text("status").$type<MailOutboxStatus>().notNull().default("pending"),
-    attempts: integer("attempts").notNull().default(0),
-    lastError: text("last_error"),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    primaryKey: ["messageId", "labelId"],
+    columns: {
+      messageId: {
+        references: { column: () => mailMessages.table.id, onDelete: "cascade" },
+      },
+      labelId: {
+        references: { column: () => mailLabels.table.id, onDelete: "cascade" },
+      },
+      createdAt: { default: defaultNow() },
+    },
+    indexes: (t) => [
+      index("mail_message_labels_label_id_idx").on(t.labelId),
+    ],
   },
-  (t) => [index("mail_outbox_account_status_idx").on(t.accountId, t.status)],
 );
+
+const mailAttachments = defineEntity("mail_attachments", mailAttachmentFields, {
+  primaryKey: "id",
+  columns: {
+    messageId: {
+      references: { column: () => mailMessages.table.id, onDelete: "cascade" },
+    },
+    accountId: {
+      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+    },
+    sizeBytes: { default: 0 },
+    inline: { default: false },
+    createdAt: { default: defaultNow() },
+    updatedAt: { default: defaultNow() },
+  },
+  indexes: (t) => [index("mail_attachments_message_id_idx").on(t.messageId)],
+});
+
+const mailDrafts = defineEntity("mail_drafts", mailDraftFields, {
+  primaryKey: "id",
+  columns: {
+    accountId: {
+      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+    },
+    threadId: {
+      references: { column: () => mailThreads.table.id, onDelete: "set null" },
+    },
+    to: { name: "to_addrs", default: [] },
+    cc: { name: "cc_addrs", default: [] },
+    bcc: { name: "bcc_addrs", default: [] },
+    createdAt: { default: defaultNow() },
+    updatedAt: { default: defaultNow() },
+  },
+});
+
+const mailOutbox = defineEntity("mail_outbox", mailOutboxFields, {
+  primaryKey: "id",
+  columns: {
+    accountId: {
+      references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
+    },
+    payload: { default: {} },
+    status: { default: "pending" },
+    attempts: { default: 0 },
+    createdAt: { default: defaultNow() },
+    updatedAt: { default: defaultNow() },
+  },
+  indexes: (t) => [
+    index("mail_outbox_account_status_idx").on(t.accountId, t.status),
+  ],
+});
+
+// drizzle-kit schema-glob discovery. Export names kept (`_mail*`) so the server
+// barrel re-exports and `schema-attachments.ts` (`_mailDrafts`) don't churn.
+export const _mailAccounts = mailAccounts.table;
+export const _mailSyncState = mailSyncState.table;
+export const _mailLabels = mailLabels.table;
+export const _mailThreads = mailThreads.table;
+export const _mailMessages = mailMessages.table;
+export const _mailMessageLabels = mailMessageLabels.table;
+export const _mailAttachments = mailAttachments.table;
+export const _mailDrafts = mailDrafts.table;
+export const _mailOutbox = mailOutbox.table;

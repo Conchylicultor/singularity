@@ -1736,6 +1736,18 @@
       "name": "@singularity/plugin-fields-object-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/rank": {
+      "name": "@singularity/plugin-fields-rank",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/rank/plugins/config": {
+      "name": "@singularity/plugin-fields-rank-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/rank/plugins/storage": {
+      "name": "@singularity/plugin-fields-rank-storage",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/reorder-tree": {
       "name": "@singularity/plugin-fields-reorder-tree",
       "version": "0.0.1",
@@ -5254,6 +5266,12 @@
     "@singularity/plugin-fields-object": ["@singularity/plugin-fields-object@workspace:plugins/fields/plugins/object"],
 
     "@singularity/plugin-fields-object-config": ["@singularity/plugin-fields-object-config@workspace:plugins/fields/plugins/object/plugins/config"],
+
+    "@singularity/plugin-fields-rank": ["@singularity/plugin-fields-rank@workspace:plugins/fields/plugins/rank"],
+
+    "@singularity/plugin-fields-rank-config": ["@singularity/plugin-fields-rank-config@workspace:plugins/fields/plugins/rank/plugins/config"],
+
+    "@singularity/plugin-fields-rank-storage": ["@singularity/plugin-fields-rank-storage@workspace:plugins/fields/plugins/rank/plugins/storage"],
 
     "@singularity/plugin-fields-reorder-tree": ["@singularity/plugin-fields-reorder-tree@workspace:plugins/fields/plugins/reorder-tree"],
 

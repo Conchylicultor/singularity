@@ -33,7 +33,7 @@ never the reverse) and the feature fully opt-in and removable.
 - Server:
   - Uses: `conversations.conversationCreated`, `conversations/preprompts.resolvePrepromptItem`, `database.db`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/task-preprompt.getTaskPreprompt`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
   - DB schema: `plugins/conversations/plugins/conversation-preprompt/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_preprompt`)
   - Exports: Values: `conversationPreprompt`, `conversationPrepromptsResource`, `recordConversationPreprompt`, `recordPrepromptJob`
   - Register: `defineJob('conversation-preprompt.record')`
   - Resources: `conversation-preprompts` (push)

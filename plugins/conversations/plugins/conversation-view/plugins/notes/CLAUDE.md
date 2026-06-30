@@ -11,7 +11,7 @@
 - Server:
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_notes`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_notes`)
   - Exports: Values: `conversationNotes`, `conversationNotesResource`
   - Resources: `conversation-notes` (push)
   - Routes: `PUT /api/conversation-notes/:conversationId`, `DELETE /api/conversation-notes/:conversationId`

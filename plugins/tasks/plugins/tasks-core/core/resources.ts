@@ -12,7 +12,7 @@ import {
   type TaskListItem,
   type Push,
   type Conversation,
-} from "../server/internal/schema";
+} from "./internal/schema";
 import { AttemptWithConversationsSchema, type AttemptWithConversations } from "./schemas";
 
 // Recent-gone window size (rows shown before "show more"). Lives in core so the

@@ -11,7 +11,7 @@
 - Server:
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks/task-preprompt.inheritTaskPreprompt`, `tasks/tasks-core._tasks`, `tasks/tasks-core.createTask`, `tasks/tasks-core.getConversation`
   - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_health_review`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_health_review`)
   - Exports: Values: `healthReviewExt`, `pluginHealthReviewsResource`
   - Register: `mcpTool('propose_task')`
   - Resources: `plugin-health-reviews` (push)

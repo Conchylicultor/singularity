@@ -1,4 +1,4 @@
-import type { TaskListItem, TaskStatus } from "../server/internal/schema";
+import type { TaskListItem, TaskStatus } from "./internal/schema";
 
 // A task is "settled" iff it is done or dropped: it neither blocks its dependents
 // nor is blocked by its dependencies. `held` is NOT settled. The single rule,

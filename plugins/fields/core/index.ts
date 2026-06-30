@@ -8,5 +8,6 @@ export type {
   InferFieldsObject,
 } from "./internal/field-spec";
 export { pickMeta } from "./internal/pick-meta";
+export { nullable } from "./internal/nullable";
 export { fieldsToZodObject, fieldSchemaWithDefault } from "./internal/schema-builder";
 export { registerFieldResolver, getFieldResolver } from "./internal/field-resolvers";

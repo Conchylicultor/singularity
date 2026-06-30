@@ -12,7 +12,7 @@
 - Server:
   - Uses: `conversations.conversationCreated`, `conversations.userTurnSent`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core._attempts`, `tasks/tasks-core._conversations`, `tasks/tasks-core.conversationStatusChanged`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.hasBlockingDep`, `tasks/tasks-core.listBlockingDepIds`, `tasks/tasks-core.listDependentIds`, `tasks/tasks-core.taskStatusChanged`
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_queue`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_queue`)
   - Exports: Values: `conversationsQueue`, `endRank`, `findTaskIdForConversation`, `lockDeck`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `rankJoiningGroup`, `reseatGroupMembers`, `seedRankJob`, `upsertRank`
   - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.pin-revalidate')`, `defineJob('queue.advance-pin')`, `defineJob('queue.task-status-pin')`
   - Resources: `queue-ranks` (push)

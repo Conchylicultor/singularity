@@ -44,7 +44,7 @@ unless the user clicks "Re-classify with Haiku".
 - Server:
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `conversations.Turn`, `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
   - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_category`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_category`)
   - Exports: Values: `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`, `conversationCategoryConfig`
   - Register: `defineJob('conversation-category.classify')`
   - Resources: `conversation-categories` (push)
