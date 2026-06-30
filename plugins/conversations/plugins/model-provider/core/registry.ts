@@ -6,6 +6,7 @@ export const ConversationModelSchema = z.enum([
   "opus-4-8",
   "opus-4-7",
   "opus-4-6",
+  "sonnet-5",
   "sonnet-4-6",
   "haiku-4-5",
 ]);
@@ -33,7 +34,8 @@ export const MODEL_REGISTRY: Record<ConversationModel, ModelMeta> = {
   "opus-4-8": { cliFlag: "claude-opus-4-8", label: "Opus 4.8", family: "opus", iconSize: "size-4" },
   "opus-4-7": { cliFlag: "claude-opus-4-7", label: "Opus 4.7", family: "opus", iconSize: "size-4", defaultHidden: true },
   "opus-4-6": { cliFlag: "claude-opus-4-6", label: "Opus 4.6", family: "opus", iconSize: "size-4", defaultHidden: true },
-  "sonnet-4-6": { cliFlag: "claude-sonnet-4-6", label: "Sonnet 4.6", family: "sonnet", iconSize: "size-3" },
+  "sonnet-5": { cliFlag: "claude-sonnet-5", label: "Sonnet 5", family: "sonnet", iconSize: "size-3" },
+  "sonnet-4-6": { cliFlag: "claude-sonnet-4-6", label: "Sonnet 4.6", family: "sonnet", iconSize: "size-3", defaultHidden: true },
   "haiku-4-5": { cliFlag: "claude-haiku-4-5", label: "Haiku 4.5", family: "haiku", printOnly: true, iconSize: "size-3" },
 };
 
@@ -123,7 +125,7 @@ export function currentModelForTier(tier: ModelTier): ConversationModel {
     case "opus":
       return "opus-4-8";
     case "sonnet":
-      return "sonnet-4-6";
+      return "sonnet-5";
     case "haiku":
       return "haiku-4-5";
   }
