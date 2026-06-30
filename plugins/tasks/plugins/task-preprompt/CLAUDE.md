@@ -12,7 +12,7 @@
 - Server:
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
-  - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_preprompt`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_preprompt`)
   - Exports: Values: `getTaskPreprompt`, `inheritTaskPreprompt`, `setTaskPreprompt`, `taskPrepromptsResource`, `tasksPreprompt`
   - Resources: `task-preprompts` (push)
   - Routes: `PUT /api/task-preprompts/:taskId`, `DELETE /api/task-preprompts/:taskId`

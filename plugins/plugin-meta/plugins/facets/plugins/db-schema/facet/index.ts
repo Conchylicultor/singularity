@@ -79,15 +79,54 @@ function parseEntityExtensionCalls(dbFiles: string[]): RawExtRef[] {
   return out;
 }
 
+// Recovers `varName → physical table name` for one schema source file. Two
+// declaration forms produce a physical table, and consumers import the bound
+// variable to extend it:
+//
+//   1. Raw drizzle:   `const _foo = pgTable("foo", …)`            → `_foo → foo`
+//   2. defineEntity:  `const fooEntity = defineEntity("foo", …)`  (infra/entities)
+//                     `export const _foo = fooEntity.table`        → `_foo → foo`
+//
+// For form (2) the `pgTable(...)` call is hidden inside `defineEntity`, so the
+// physical table surfaces as `<entity>.table`. We map the `.table` alias (the
+// name consumers actually import) to the entity's table name, and drop the
+// intermediate entity binding so a table is never reported twice.
+export function parseTableNames(src: string, out: Map<string, string>): void {
+  // Form (1): direct pgTable bindings.
+  const pgRe = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*pgTable\s*\(\s*["']([^"']+)["']/g;
+  let m: RegExpExecArray | null;
+  while ((m = pgRe.exec(src))) out.set(m[1]!, m[2]!);
+
+  // Form (2a): `const <entity> = defineEntity("name", …)` bindings.
+  const entityVarToName = new Map<string, string>();
+  const entityRe = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*defineEntity\s*\(\s*["']([^"']+)["']/g;
+  while ((m = entityRe.exec(src))) entityVarToName.set(m[1]!, m[2]!);
+
+  // Form (2b): `const <alias> = <entity>.table` re-exports — the alias is the
+  // importable handle; the entity var is intermediate.
+  const aliasSources = new Set<string>();
+  const aliasRe = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\.table\b/g;
+  while ((m = aliasRe.exec(src))) {
+    const name = entityVarToName.get(m[2]!);
+    if (name === undefined) continue;
+    out.set(m[1]!, name);
+    aliasSources.add(m[2]!);
+  }
+
+  // Inline `const <alias> = defineEntity("name", …).table` (no separate
+  // statement): the binding var is itself the usable handle. Keep every entity
+  // var not already consumed as a `.table` alias source.
+  for (const [v, name] of entityVarToName) {
+    if (!aliasSources.has(v)) out.set(v, name);
+  }
+}
+
 function parseTableNamesFromDbFiles(dbFiles: string[]): Map<string, string> {
   const out = new Map<string, string>();
   for (const f of dbFiles) {
     const raw = readIfExists(f);
     if (!raw) continue;
-    const src = stripTypes(raw);
-    const re = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*pgTable\s*\(\s*["']([^"']+)["']/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(src))) out.set(m[1]!, m[2]!);
+    parseTableNames(stripTypes(raw), out);
   }
   return out;
 }

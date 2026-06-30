@@ -1428,7 +1428,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `conversations.Turn`, `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
         - DB schema: `plugins/conversations/plugins/conversation-category/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_category`)
+        - Entity extension of: `tasks/tasks-core` (table `conversations_ext_category`)
         - Exports: Values: `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`, `conversationCategoryConfig`
         - Register: `defineJob('conversation-category.classify')`
         - Resources: `conversation-categories` (push)
@@ -1445,7 +1445,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `conversations.conversationCreated`, `conversations/preprompts.resolvePrepromptItem`, `database.db`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/task-preprompt.getTaskPreprompt`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
         - DB schema: `plugins/conversations/plugins/conversation-preprompt/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_preprompt`)
+        - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)
         - Exports: Values: `conversationPreprompt`, `conversationPrepromptsResource`, `recordConversationPreprompt`, `recordPrepromptJob`
         - Register: `defineJob('conversation-preprompt.record')`
         - Resources: `conversation-preprompts` (push)
@@ -1458,7 +1458,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `conversations.conversationTurnCompleted`, `database.db`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `infra/paths.GIT`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.pushLanded`
         - DB schema: `plugins/conversations/plugins/conversation-progress/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_progress`)
+        - Entity extension of: `tasks/tasks-core` (table `conversations_ext_progress`)
         - Exports: Values: `classifyProgressJob`, `conversationProgress`, `conversationProgressResource`, `markProgressPushedJob`
         - Register: `defineJob('conversation-progress.classify')`, `defineJob('conversation-progress.mark-pushed')`
         - Resources: `conversation-progress` (push)
@@ -1869,7 +1869,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._conversations`
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
-            - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_notes`)
+            - Entity extension of: `tasks/tasks-core` (table `conversations_ext_notes`)
             - Exports: Values: `conversationNotes`, `conversationNotesResource`
             - Resources: `conversation-notes` (push)
             - Routes: `PUT /api/conversation-notes/:conversationId`, `DELETE /api/conversation-notes/:conversationId`
@@ -1949,7 +1949,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`
-            - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_turn_summary`)
+            - Entity extension of: `tasks/tasks-core` (table `conversations_ext_turn_summary`)
             - Exports: Values: `generateTurnSummaryJob`, `turnSummaries`, `turnSummariesResource`
             - Register: `defineJob('turn-summary.generate')`
             - Resources: `turn-summaries` (push)
@@ -2002,7 +2002,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `conversations.conversationCreated`, `conversations.userTurnSent`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core._attempts`, `tasks/tasks-core._conversations`, `tasks/tasks-core.conversationStatusChanged`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.hasBlockingDep`, `tasks/tasks-core.listBlockingDepIds`, `tasks/tasks-core.listDependentIds`, `tasks/tasks-core.taskStatusChanged`
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/queue/server/internal/tables.ts`
-            - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_queue`)
+            - Entity extension of: `tasks/tasks-core` (table `conversations_ext_queue`)
             - Exports: Values: `conversationsQueue`, `endRank`, `findTaskIdForConversation`, `lockDeck`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `rankJoiningGroup`, `reseatGroupMembers`, `seedRankJob`, `upsertRank`
             - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.pin-revalidate')`, `defineJob('queue.advance-pin')`, `defineJob('queue.task-status-pin')`
             - Resources: `queue-ranks` (push)
@@ -3983,7 +3983,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks/task-preprompt.inheritTaskPreprompt`, `tasks/tasks-core._tasks`, `tasks/tasks-core.createTask`, `tasks/tasks-core.getConversation`
         - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_health_review`)
+        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_health_review`)
         - Exports: Values: `healthReviewExt`, `pluginHealthReviewsResource`
         - Register: `mcpTool('propose_task')`
         - Resources: `plugin-health-reviews` (push)
@@ -5100,7 +5100,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_auto_start`)
+        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_auto_start`)
         - Exports: Values: `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
         - Resources: `tasks-auto-start` (push)
       - Cross-plugin:
@@ -5156,7 +5156,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-effort/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_effort`)
+        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_effort`)
         - Exports: Values: `getTaskEffort`, `inheritTaskEffort`, `setTaskEffort`, `taskEffortsResource`, `tasksEffort`
         - Resources: `task-efforts` (push)
         - Routes: `PUT /api/task-efforts/:taskId`, `DELETE /api/task-efforts/:taskId`
@@ -5192,7 +5192,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
-        - Entity extension of: `tasks/tasks-core` (table `tasks-core_ext_preprompt`)
+        - Entity extension of: `tasks/tasks-core` (table `tasks_ext_preprompt`)
         - Exports: Values: `getTaskPreprompt`, `inheritTaskPreprompt`, `setTaskPreprompt`, `taskPrepromptsResource`, `tasksPreprompt`
         - Resources: `task-preprompts` (push)
         - Routes: `PUT /api/task-preprompts/:taskId`, `DELETE /api/task-preprompts/:taskId`
@@ -5224,7 +5224,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationStatus`, `ConversationSummary`, `Push`, `Task`, `TaskListItem`, `TaskNode`, `TaskStatus`; Values: `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `conversationsActiveResource`, `ConversationSchema`, `conversationsGoneResource`, `conversationsGoneStatsResource`, `conversationsSystemResource`, `ConversationStatusSchema`, `ConversationSummarySchema`, `isSettled`, `pushesResource`, `PushSchema`, `RECENT_GONE_LIMIT`, `SETTLED_STATUSES`, `taskDetailResource`, `taskDetailRoute`, `TaskGraph`, `TaskListItemSchema`, `TaskSchema`, `tasksResource`, `tasksRootRoute`, `TaskStatusSchema`
       - Cross-plugin:
         - Imported by: `active-data`, `backup/sources/transcripts`, `code-explorer`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/allow-monitor`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/notes`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/summary`, `conversations/transcript-api`, `conversations/transcript-retention`, `conversations/transcript-watcher`, `database/query`, `debug/profiling/boot-bench`, `debug/profiling/runtime`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `improve`, `plugin-meta/plugin-health`, `reports`, `review/plugin-changes`, `stats/cost`, `stats/tasks`, `tasks`, `tasks/auto-start`, `tasks/task-effort`, `tasks/task-preprompt`, `tasks/task-title`
-        - Extended by: `tasks/auto-start` (table `tasks-core_ext_auto_start`), `conversations/conversation-category` (table `tasks-core_ext_category`), `tasks/task-effort` (table `tasks-core_ext_effort`), `plugin-meta/plugin-health` (table `tasks-core_ext_health_review`), `conversations/conversation-view/notes` (table `tasks-core_ext_notes`), `conversations/conversation-preprompt` (table `tasks-core_ext_preprompt`), `conversations/conversation-progress` (table `tasks-core_ext_progress`), `conversations/conversations-view/queue` (table `tasks-core_ext_queue`), `conversations/conversation-view/turn-summary` (table `tasks-core_ext_turn_summary`)
+        - Extended by: `conversations/conversation-category` (table `conversations_ext_category`), `conversations/conversation-view/notes` (table `conversations_ext_notes`), `conversations/conversation-preprompt` (table `conversations_ext_preprompt`), `conversations/conversation-progress` (table `conversations_ext_progress`), `conversations/conversations-view/queue` (table `conversations_ext_queue`), `conversations/conversation-view/turn-summary` (table `conversations_ext_turn_summary`), `tasks/auto-start` (table `tasks_ext_auto_start`), `tasks/task-effort` (table `tasks_ext_effort`), `plugin-meta/plugin-health` (table `tasks_ext_health_review`), `tasks/task-preprompt` (table `tasks_ext_preprompt`)
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:
