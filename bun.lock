@@ -1029,6 +1029,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-additional-context",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-error": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-error",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-success": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-success",
       "version": "0.0.1",
@@ -4926,6 +4930,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-edited-text-file": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-edited-text-file@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/edited-text-file"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-additional-context": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-additional-context@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-additional-context"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-error": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-error@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-error"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-success": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-success@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-success"],
 

@@ -272,7 +272,18 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
     // live conversation. Lines without a uuid (metadata markers) are not in
     // the tree and always pass through.
     const uuid = typeof obj.uuid === "string" ? obj.uuid : null;
-    if (uuid && !keptUuids.has(uuid)) continue;
+    if (uuid && !keptUuids.has(uuid)) {
+      // Claude threads some attachments (e.g. a non-blocking hook error) as a
+      // dead-end side-leaf off the spine: the conversation continues from a
+      // sibling, so the attachment is never on the leaf→root path that
+      // activeLineUuids keeps. An attachment is an annotation of its parent
+      // node, so keep it when its parent IS live. The parent-on-spine guard
+      // still drops attachments belonging to abandoned rewind branches.
+      const parentUuid = typeof obj.parentUuid === "string" ? obj.parentUuid : null;
+      const rescuable =
+        obj.type === "attachment" && parentUuid !== null && keptUuids.has(parentUuid);
+      if (!rescuable) continue;
+    }
     const ts = typeof obj.timestamp === "string" ? obj.timestamp : null;
     if (!ts) continue;
 
