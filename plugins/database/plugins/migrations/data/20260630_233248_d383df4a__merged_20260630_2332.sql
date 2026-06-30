@@ -1,0 +1,1 @@
+ALTER TABLE "workflow_execution_steps" ADD COLUMN "expires_at" timestamp with time zone;

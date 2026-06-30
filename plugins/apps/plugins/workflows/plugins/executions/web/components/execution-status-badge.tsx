@@ -9,6 +9,8 @@ const styles: Record<ExecutionStatus, { bg: string; label: string }> = {
   suspended: { bg: "bg-warning", label: "Suspended" },
   completed: { bg: "bg-success", label: "Completed" },
   failed: { bg: "bg-destructive", label: "Failed" },
+  cancelled: { bg: "bg-muted-foreground", label: "Cancelled" },
+  expired: { bg: "bg-warning", label: "Expired" },
 };
 
 export function ExecutionStatusBadge({ status }: { status: ExecutionStatus }) {

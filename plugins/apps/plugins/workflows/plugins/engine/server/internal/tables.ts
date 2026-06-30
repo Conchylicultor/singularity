@@ -50,6 +50,7 @@ export const _workflowExecutionSteps = pgTable(
     error: text("error"),
     startedAt: timestamp("started_at", { withTimezone: true }),
     completedAt: timestamp("completed_at", { withTimezone: true }),
+    expiresAt: timestamp("expires_at", { withTimezone: true }),
   },
   (t) => [index("wf_exec_steps_exec_idx").on(t.executionId, t.executionOrder)],
 );

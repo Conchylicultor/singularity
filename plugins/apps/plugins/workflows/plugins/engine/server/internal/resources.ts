@@ -24,6 +24,7 @@ function serializeExecutionStep(row: typeof _workflowExecutionSteps.$inferSelect
     config: row.config ?? {},
     startedAt: row.startedAt?.toISOString() ?? null,
     completedAt: row.completedAt?.toISOString() ?? null,
+    expiresAt: row.expiresAt?.toISOString() ?? null,
   };
 }
 

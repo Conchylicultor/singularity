@@ -27,6 +27,13 @@ export interface StepResult {
   output?: unknown;
   /** Routing key; selects `nextStepMapping[branchKey]` over the default `next`. */
   branchKey?: string;
+  /**
+   * Set by a suspending step (e.g. `user-input`) when its bounded wait elapsed
+   * with no event — a normal *business* outcome, not an error. run-job lands the
+   * step + execution in the terminal `expired` state on the normal post-exec
+   * path (no throw → no graphile retry storm).
+   */
+  expired?: true;
 }
 
 export interface StepExecutorSpec {

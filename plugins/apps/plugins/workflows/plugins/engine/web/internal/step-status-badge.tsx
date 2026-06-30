@@ -10,6 +10,8 @@ const styles: Record<ExecutionStepStatus, { bg: string; label: string }> = {
   completed: { bg: "bg-success", label: "Completed" },
   failed: { bg: "bg-destructive", label: "Failed" },
   skipped: { bg: "bg-muted-foreground", label: "Skipped" },
+  cancelled: { bg: "bg-muted-foreground", label: "Cancelled" },
+  expired: { bg: "bg-warning", label: "Expired" },
 };
 
 export function StepStatusBadge({ status }: { status: ExecutionStepStatus }) {

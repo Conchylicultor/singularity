@@ -32,6 +32,8 @@ export const ExecutionStatusSchema = z.enum([
   "suspended",
   "completed",
   "failed",
+  "cancelled",
+  "expired",
 ]);
 export type ExecutionStatus = z.infer<typeof ExecutionStatusSchema>;
 
@@ -42,6 +44,8 @@ export const ExecutionStepStatusSchema = z.enum([
   "completed",
   "failed",
   "skipped",
+  "cancelled",
+  "expired",
 ]);
 export type ExecutionStepStatus = z.infer<typeof ExecutionStepStatusSchema>;
 
@@ -60,6 +64,7 @@ export const WorkflowExecutionStepSchema = z.object({
   error: z.string().nullable(),
   startedAt: z.string().nullable(),
   completedAt: z.string().nullable(),
+  expiresAt: z.string().nullable(),
 });
 export type WorkflowExecutionStep = z.infer<typeof WorkflowExecutionStepSchema>;
 

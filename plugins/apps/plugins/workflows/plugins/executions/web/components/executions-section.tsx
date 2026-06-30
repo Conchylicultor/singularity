@@ -34,6 +34,8 @@ export function ExecutionsSection({ definitionId }: { definitionId: string }) {
           { value: "suspended", label: "Suspended" },
           { value: "completed", label: "Completed" },
           { value: "failed", label: "Failed" },
+          { value: "cancelled", label: "Cancelled" },
+          { value: "expired", label: "Expired" },
         ],
         value: (e) => e.status,
         cell: (e) => <ExecutionStatusBadge status={e.status} />,

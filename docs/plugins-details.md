@@ -923,9 +923,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/relative-time.RelativeTime`
             - Exports: Values: `CollapsibleValue`, `StepStatusBadge`, `StepTraceShell`, `useStepTypeIndex`, `ValueBlock`, `Workflows`
           - Server:
-            - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `infra/jobs.defineJob`, `infra/jobs.isSuspendSignal`
+            - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `infra/jobs.abortDurableRun`, `infra/jobs.defineJob`, `infra/jobs.isSuspendSignal`
             - DB schema: `plugins/apps/plugins/workflows/plugins/engine/server/internal/tables-events.ts`, `plugins/apps/plugins/workflows/plugins/engine/server/internal/tables.ts`
-            - Exports: Types: `StepExecutorRunArgs`, `StepExecutorSpec`, `StepResult`, `UserInputSubmittedPayload`; Values: `_userInputSubmittedTriggers`, `_workflowDefinitions`, `_workflowExecutions`, `_workflowExecutionSteps`, `defineStepExecutor`, `getExecutor`, `userInputSubmitted`, `workflowDefinitionsResource`, `workflowExecutionsResource`
+            - Exports: Types: `StepExecutorRunArgs`, `StepExecutorSpec`, `StepResult`, `UserInputSubmittedPayload`; Values: `_userInputSubmittedTriggers`, `_workflowDefinitions`, `_workflowExecutions`, `_workflowExecutionSteps`, `defineStepExecutor`, `getExecutor`, `setStepExpiryIfUnset`, `userInputSubmitted`, `workflowDefinitionsResource`, `workflowExecutionsResource`
             - Register: `defineJob('workflows.run')`, `defineTriggerEvent('workflows.userInputSubmitted')`
             - Resources: `workflow-definitions` (push), `workflow-executions` (push)
             - Routes: `GET /api/workflows/definitions`, `POST /api/workflows/definitions`, `GET /api/workflows/definitions/:id`, `PATCH /api/workflows/definitions/:id`, `DELETE /api/workflows/definitions/:id`, `GET /api/workflows/executions`, `POST /api/workflows/executions`, `GET /api/workflows/executions/:id`, `DELETE /api/workflows/executions/:id`, `POST /api/workflows/executions/:execId/steps/:stepId/submit`
@@ -994,8 +994,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `Workflows.StepType` "Wait for Input"
                 - Uses: `apps/workflows/engine.Workflows`, `infra/endpoints.useEndpointMutation`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`
               - Server:
-                - Uses: `apps/workflows/engine.defineStepExecutor`, `apps/workflows/engine.userInputSubmitted`, `apps/workflows/engine.UserInputSubmittedPayload`
+                - Uses: `apps/workflows/engine.defineStepExecutor`, `apps/workflows/engine.setStepExpiryIfUnset`, `apps/workflows/engine.userInputSubmitted`, `apps/workflows/engine.UserInputSubmittedPayload`
                 - Register: `defineStepExecutor('user-input')`
+              - Core:
+                - Exports: Types: `ExpiresAfter`; Values: `DEFAULT_EXPIRES_AFTER`, `ExpiresAfterSchema`, `MAX_EXPIRES_MS`, `resolveTimeoutMs`
 
 - **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Web:
@@ -3391,7 +3393,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`, `database/admin.connectionString`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
         - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
-        - Exports: Types: `DeadJobStat`, `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `QueueBacklogStat`, `RegisteredJob`, `ScheduleSpec`; Values: `deadJobsResource`, `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `NonRetryableError`, `queryDeadJobStats`, `queryQueueBacklog`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
+        - Exports: Types: `DeadJobStat`, `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `QueueBacklogStat`, `RegisteredJob`, `ScheduleSpec`; Values: `abortDurableRun`, `deadJobsResource`, `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `NonRetryableError`, `queryDeadJobStats`, `queryQueueBacklog`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
         - Register: `defineJob('jobs.resume')`, `defineJob('jobs.dead-gc')`
         - Resources: `dead-jobs` (invalidate)
         - Routes: `GET /api/jobs`, `GET /api/jobs/dead`, `POST /api/jobs/:id/retry`, `DELETE /api/jobs/:id`

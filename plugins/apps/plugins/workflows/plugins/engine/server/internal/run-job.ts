@@ -63,6 +63,17 @@ export const workflowRunJob = defineJob({
     let lastOutput: unknown = null;
 
     while (currentStepId !== null) {
+      // Non-memoized live terminal re-check, run on EVERY resume (outside
+      // `ctx.step`, which would memoize it). The memoized `init` step's guard
+      // never re-runs on resume, so a run resumed after cancel/expiry must see
+      // live terminal state here and bail — closing the silent-resume-after-
+      // cancel trap. A legitimate resume sees `suspended` and proceeds.
+      const [live] = await db
+        .select({ status: _workflowExecutions.status })
+        .from(_workflowExecutions)
+        .where(eq(_workflowExecutions.id, input.executionId));
+      if (live && (live.status === "cancelled" || live.status === "expired")) return;
+
       const stepDef: DefinitionStep | undefined = stepsMap[currentStepId];
       if (!stepDef) {
         await updateExecution(input.executionId, { status: "failed", completedAt: new Date() });
@@ -78,9 +89,11 @@ export const workflowRunJob = defineJob({
         }),
       );
 
+      // `startedAt` is written write-once inside the memoized `createExecutionStep`
+      // INSERT, so this (non-memoized) mark-running write must NOT re-stamp it —
+      // doing so would reset "Started Xm ago" on every resume.
       await updateExecutionStep(execStep!.id, {
         status: "running",
-        startedAt: new Date(),
       });
       await updateExecution(input.executionId, {
         currentStepId: execStep!.id,
@@ -127,6 +140,22 @@ export const workflowRunJob = defineJob({
           completedAt: new Date(),
         });
         throw err;
+      }
+
+      // A bounded wait elapsed with no event (e.g. user-input expiry). This is
+      // a normal business outcome, handled on the normal post-exec path — the
+      // executor returns `{ expired: true }` instead of throwing, so graphile
+      // doesn't retry. Land step + execution in the terminal `expired` state.
+      if (result.expired) {
+        await updateExecutionStep(execStep!.id, {
+          status: "expired",
+          completedAt: new Date(),
+        });
+        await updateExecution(input.executionId, {
+          status: "expired",
+          completedAt: new Date(),
+        });
+        return;
       }
 
       // A step that omits `output` is transparent: its input flows through

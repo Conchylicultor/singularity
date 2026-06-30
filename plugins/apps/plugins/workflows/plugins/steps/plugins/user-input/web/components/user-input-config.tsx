@@ -3,6 +3,10 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { MdAdd, MdClose } from "react-icons/md";
+import {
+  DEFAULT_EXPIRES_AFTER,
+  type ExpiresAfter,
+} from "@plugins/apps/plugins/workflows/plugins/steps/plugins/user-input/core";
 
 /**
  * Config form for the user-input step type. The executor suspends the workflow
@@ -20,7 +24,10 @@ interface UserInputField {
 interface UserInputConfigShape {
   prompt?: string;
   fields?: UserInputField[];
+  expiresAfter?: ExpiresAfter;
 }
+
+const EXPIRES_UNITS: ExpiresAfter["unit"][] = ["minutes", "hours", "days"];
 
 export function UserInputConfig({
   config,
@@ -31,6 +38,7 @@ export function UserInputConfig({
 }) {
   const current = (config ?? {}) as UserInputConfigShape;
   const fields = current.fields ?? [];
+  const expiresAfter = current.expiresAfter ?? DEFAULT_EXPIRES_AFTER;
 
   function update(next: Partial<UserInputConfigShape>) {
     onChange({ ...current, ...next });
@@ -91,6 +99,47 @@ export function UserInputConfig({
             <MdAdd /> Add field
           </Button>
         </Stack>
+      </Stack>
+
+      <Stack gap="2xs">
+        <Text variant="caption" tone="muted">Expires after</Text>
+        <Stack direction="row" align="center" gap="xs">
+          <Input
+            type="number"
+            min={1}
+            value={String(expiresAfter.amount)}
+            onChange={(e) =>
+              update({
+                expiresAfter: {
+                  ...expiresAfter,
+                  amount: Math.max(1, Math.floor(Number(e.target.value) || 1)),
+                },
+              })
+            }
+            aria-label="Expires after amount"
+            className="w-20"
+          />
+          <select
+            value={expiresAfter.unit}
+            onChange={(e) =>
+              update({
+                expiresAfter: {
+                  ...expiresAfter,
+                  unit: e.target.value as ExpiresAfter["unit"],
+                },
+              })
+            }
+            aria-label="Expires after unit"
+            className="text-body w-fit rounded-md border bg-transparent px-sm py-xs outline-none focus:ring-1 focus:ring-ring"
+          >
+            {EXPIRES_UNITS.map((unit) => (
+              <option key={unit} value={unit}>{unit}</option>
+            ))}
+          </select>
+        </Stack>
+        <Text variant="caption" className="text-muted-foreground">
+          The run is marked &ldquo;expired&rdquo; if no one responds in time.
+        </Text>
       </Stack>
     </Stack>
   );

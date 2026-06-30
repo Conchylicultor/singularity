@@ -30,6 +30,25 @@ function resolveFields(config: UserInputConfigShape): UserInputField[] {
 }
 
 /**
+ * Future-aware relative formatter (`RelativeTime` only renders past times). Not
+ * ticked on an interval — repo rules ban setInterval polling; the string is
+ * derived once on render and refreshes on the next live-state push. Promote into
+ * the `relative-time` primitive once a second consumer appears.
+ */
+function formatTimeUntil(date: Date): string {
+  const ms = date.getTime() - Date.now();
+  if (ms <= 0) return "Expiring…";
+  const totalMinutes = Math.floor(ms / 60_000);
+  const days = Math.floor(totalMinutes / 1440);
+  const hours = Math.floor((totalMinutes % 1440) / 60);
+  const minutes = totalMinutes % 60;
+  if (days > 0) return `Expires in ${days}d ${hours}h`;
+  if (hours > 0) return `Expires in ${hours}h ${minutes}m`;
+  if (minutes > 0) return `Expires in ${minutes}m`;
+  return `Expires in ${Math.floor(ms / 1000)}s`;
+}
+
+/**
  * Execution body for the user-input step. While the workflow is suspended it
  * renders the prompt + a form; submitting POSTs to the engine's submit endpoint,
  * which emits the `userInputSubmitted` event the executor is waiting on. Once the
@@ -50,6 +69,18 @@ export function UserInputExecution({
   }
   if (step.status === "completed") {
     return <CollectedSummary output={step.output} />;
+  }
+  if (step.status === "expired") {
+    return (
+      <Text as="div" variant="caption" tone="muted">
+        Expired — no response received.
+      </Text>
+    );
+  }
+  if (step.status === "cancelled") {
+    return (
+      <Text as="div" variant="caption" tone="muted">Cancelled.</Text>
+    );
   }
   return null;
 }
@@ -86,6 +117,11 @@ function SuspendedForm({
   return (
     <Stack gap="sm">
       {config.prompt ? <Text as="div" variant="body">{config.prompt}</Text> : null}
+      {step.expiresAt ? (
+        <Text as="div" variant="caption" tone="muted">
+          {formatTimeUntil(new Date(step.expiresAt))}
+        </Text>
+      ) : null}
       <Stack gap="xs">
         {fields.map((field) => (
           <Stack key={field.name} gap="2xs">

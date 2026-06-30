@@ -1,11 +1,14 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { db } from "@plugins/database/server";
+import { abortDurableRun } from "@plugins/infra/plugins/jobs/server";
 import type { DefinitionStep } from "../../core";
 import {
   _workflowDefinitions,
   _workflowExecutions,
   _workflowExecutionSteps,
 } from "./tables";
+import { _userInputSubmittedTriggers } from "./tables-events";
 
 function generateId(prefix: string): string {
   return `${prefix}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -94,17 +97,73 @@ export async function createExecutionStep(params: {
       next: params.stepDef.next ?? null,
       nextStepMapping: params.stepDef.nextStepMapping ?? null,
       input: params.input,
+      // Write-once start time: this INSERT is memoized via `ctx.step`, so a
+      // resume-after-suspend replay reuses the recorded row and never rewrites
+      // `startedAt`. (run-job's later mark-running update only sets `status`.)
+      startedAt: new Date(),
     })
     .returning();
   return row;
 }
 
+/**
+ * Idempotently records a step's wait deadline. The `IS NULL` guard makes
+ * replays no-ops, so the stored value equals `firstSuspendTime + timeoutMs` and
+ * matches the durable timeout racer's `run_at`. Do NOT route this through
+ * `updateExecutionStep`, which writes unconditionally.
+ */
+export async function setStepExpiryIfUnset(stepId: string, expiresAt: Date) {
+  await db
+    .update(_workflowExecutionSteps)
+    .set({ expiresAt })
+    .where(
+      and(
+        eq(_workflowExecutionSteps.id, stepId),
+        isNull(_workflowExecutionSteps.expiresAt),
+      ),
+    );
+}
+
+/**
+ * Cancels an execution and tears down its durable suspension state.
+ * Status-first ordering: the terminal status is written before the durable run
+ * is aborted, so run-job's non-memoized loop-top re-check sees `cancelled` and
+ * bails — a late event then structurally cannot resurrect the run.
+ *
+ * 1. In one transaction: flip the execution and its suspended step(s) to
+ *    `cancelled` with `completedAt`.
+ * 2. `abortDurableRun` cancels the pending `_jobWaits` row + scheduled racers.
+ * 3. Delete the execution's own `userInputSubmitted` trigger rows
+ *    (defense-in-depth; the engine owns that event table).
+ */
 export async function cancelExecution(id: string) {
-  const [row] = await db
-    .update(_workflowExecutions)
-    .set({ status: "failed", completedAt: new Date(), updatedAt: new Date() })
-    .where(eq(_workflowExecutions.id, id))
-    .returning();
+  const now = new Date();
+  const [row] = await db.transaction(async (tx) => {
+    const [execution] = await tx
+      .update(_workflowExecutions)
+      .set({ status: "cancelled", completedAt: now, updatedAt: now })
+      .where(eq(_workflowExecutions.id, id))
+      .returning();
+    await tx
+      .update(_workflowExecutionSteps)
+      .set({ status: "cancelled", completedAt: now })
+      .where(
+        and(
+          eq(_workflowExecutionSteps.executionId, id),
+          eq(_workflowExecutionSteps.status, "suspended"),
+        ),
+      );
+    return [execution];
+  });
+
+  await abortDurableRun(`workflows.run:${id}`);
+
+  // `_userInputSubmittedTriggers` is exported as the generic `PgTable` shape;
+  // dynamic column access mirrors the events plugin's own trigger-row deletes.
+  // biome-ignore lint/suspicious/noExplicitAny: dynamic column access on untyped PgTable
+  const executionIdCol = (_userInputSubmittedTriggers as any).executionId as AnyPgColumn;
+  await db.delete(_userInputSubmittedTriggers).where(eq(executionIdCol, id));
+
   return row;
 }
 

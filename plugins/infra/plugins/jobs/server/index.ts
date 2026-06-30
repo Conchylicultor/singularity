@@ -37,6 +37,7 @@ export {
 } from "./internal/step-ctx";
 export type { DurableHooks } from "./internal/step-ctx";
 export { NonRetryableError } from "./internal/non-retryable";
+export { abortDurableRun } from "./internal/abort-run";
 export { jobsListResource, deadJobsResource } from "./internal/resources";
 export { queryDeadJobStats, queryQueueBacklog } from "./internal/introspection";
 export type { DeadJobStat, QueueBacklogStat } from "./internal/introspection";

@@ -40,7 +40,7 @@ export const _jobWaits = pgTable(
     workflowRunId: text("workflow_run_id").notNull(),
     waitName: text("wait_name").notNull(),
     status: text("status")
-      .$type<"pending" | "resolved" | "timed_out">()
+      .$type<"pending" | "resolved" | "timed_out" | "cancelled">()
       .notNull(),
     payloadJson: jsonb("payload_json").$type<Record<string, unknown> | null>(),
     createdAt: timestamp("created_at", { withTimezone: true })

@@ -1247,6 +1247,13 @@
       "tag": "20260630_222052_802addb8__mail_sync_error_state",
       "hash": "802addb8",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1782862368000,
+      "tag": "20260630_233248_d383df4a__merged_20260630_2332",
+      "hash": "d383df4a",
+      "breakpoints": true
     }
   ]
 }
