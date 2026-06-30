@@ -1,5 +1,5 @@
-import { readdirSync } from "fs";
-import { resolve } from "path";
+import { readdirSync, readFileSync } from "fs";
+import { join, resolve } from "path";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = {
@@ -13,6 +13,42 @@ type Check = {
 // state by the sha8 hash token, which is the PRIMARY KEY of __singularity_migrations.
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 const MIGRATIONS_SUBDIR = "plugins/database/plugins/migrations/data";
+
+// ---------------------------------------------------------------------------
+// Pure classifier (no fs/git) — exported for unit testing.
+//
+// Each sha8 group with >1 file is classified by reading the actual file
+// CONTENTS (sha8 is derived from content, so true collisions are byte-identical;
+// differing content is the theoretical ~1-in-4-billion case):
+//
+//   - all files byte-identical            -> FLAG (byte-identical): the runner
+//        applies the first by timestamp and skips the rest, and the hash is
+//        already in every deployed ledger, so deleting the redundant file(s) is
+//        a pure runtime no-op. Flagged regardless of tracked status.
+//   - else, some file is branch-local     -> FLAG (differing-branch-local):
+//        distinct content that can be regenerated with a fresh hash.
+//   - else (all tracked, differing)       -> exempt: a true sha8 collision on
+//        frozen history that can never be rehashed (the safety valve).
+// ---------------------------------------------------------------------------
+export type MigrationFile = { name: string; content: string; tracked: boolean };
+export type MigrationGroup = { hash: string; files: MigrationFile[] };
+export type CollisionKind = "byte-identical" | "differing-branch-local";
+export type FlaggedCollision = { hash: string; files: string[]; kind: CollisionKind };
+
+export function classifyCollisions(groups: MigrationGroup[]): FlaggedCollision[] {
+  const flagged: FlaggedCollision[] = [];
+  for (const { hash, files } of groups) {
+    if (files.length <= 1) continue;
+    const allIdentical = files.every((f) => f.content === files[0]!.content);
+    if (allIdentical) {
+      flagged.push({ hash, files: files.map((f) => f.name), kind: "byte-identical" });
+    } else if (files.some((f) => !f.tracked)) {
+      flagged.push({ hash, files: files.map((f) => f.name), kind: "differing-branch-local" });
+    }
+    // else: all tracked, differing content -> exempt (frozen true collision).
+  }
+  return flagged;
+}
 
 async function git(root: string, args: string[]): Promise<{ code: number; out: string }> {
   const proc = Bun.spawn(["git", ...args], {
@@ -28,13 +64,12 @@ async function getRoot(): Promise<string> {
   return (await git(process.cwd(), ["rev-parse", "--show-toplevel"])).out.trim();
 }
 
-// Migrations present on origin/main (or local main) are immutable: their hash is
-// recorded in every deployed DB's __singularity_migrations, so they can never be
-// rehashed. A collision among only such files is frozen history with no safe fix,
-// so we never flag it — flagging it would make this check impossible to satisfy.
-// This is safe because the runner tolerates such a collision: identical-DDL
-// siblings are byte-identical content (the ledger PK is the sha8), so it applies
-// the first and skips the rest (logging a loud warning), never duplicate-keying.
+// Basenames present on origin/main (or local main). A file tracked there is
+// immutable: its hash is recorded in every deployed DB's __singularity_migrations
+// and can never be rehashed. This gates only the *differing-content* exemption —
+// byte-identical duplicates are always flagged (they are safely removable), so a
+// frozen true sha8 collision (differing content, all tracked) is the lone case we
+// still tolerate, since flagging it would make this check impossible to satisfy.
 async function trackedBasenames(root: string): Promise<Set<string>> {
   for (const ref of ["origin/main", "main"]) {
     if ((await git(root, ["rev-parse", "--verify", ref])).code !== 0) continue;
@@ -45,6 +80,11 @@ async function trackedBasenames(root: string): Promise<Set<string>> {
   }
   return new Set();
 }
+
+const fmtGroups = (cols: FlaggedCollision[]): string =>
+  cols
+    .map((c) => `  ${c.hash}:\n${c.files.map((f) => `    ${f}`).join("\n")}`)
+    .join("\n");
 
 const check: Check = {
   id: "migration-hashes-unique",
@@ -59,41 +99,70 @@ const check: Check = {
     const dir = resolve(root, MIGRATIONS_SUBDIR);
     const tracked = await trackedBasenames(root);
 
-    // The runner identifies applied migrations by the filename sha8 alone. Two
-    // files sharing a hash means the runner applies the first and skips the rest
-    // (the ledger PK is the sha8): correct only when the colliding files are
-    // byte-identical DDL. A branch-local collision usually is NOT intentional —
-    // it's a backfill that would never run. Catch it here so it fails loudly
-    // instead of dropping a backfill on the floor — but only when a branch-local
-    // file is involved (the agent can regenerate it); an all-tracked collision of
-    // frozen history is tolerated by the runner and not flagged (see above).
-    const byHash = new Map<string, string[]>();
+    // Group filenames by sha8. Read content only for collision groups (>1 file):
+    // that is all the classifier needs to test byte-identicality.
+    const namesByHash = new Map<string, string[]>();
     for (const f of readdirSync(dir)) {
       const m = MIGRATION_RE.exec(f);
       if (!m) continue;
-      const list = byHash.get(m[3]!) ?? [];
+      const list = namesByHash.get(m[3]!) ?? [];
       list.push(f);
-      byHash.set(m[3]!, list);
+      namesByHash.set(m[3]!, list);
     }
 
-    const collisions = [...byHash.entries()].filter(
-      ([, files]) => files.length > 1 && files.some((f) => !tracked.has(f)),
-    );
-    if (collisions.length === 0) return { ok: true };
+    const groups: MigrationGroup[] = [...namesByHash.entries()].map(([hash, names]) => ({
+      hash,
+      files: names.map((name) => ({
+        name,
+        content: names.length > 1 ? readFileSync(join(dir, name), "utf8") : "",
+        tracked: tracked.has(name),
+      })),
+    }));
+
+    const flagged = classifyCollisions(groups);
+    if (flagged.length === 0) return { ok: true };
+
+    const identical = flagged.filter((c) => c.kind === "byte-identical");
+    const branchLocal = flagged.filter((c) => c.kind === "differing-branch-local");
+
+    const messageParts: string[] = [];
+    const hintParts: string[] = [];
+
+    if (identical.length > 0) {
+      messageParts.push(
+        "byte-identical duplicate migrations (same sha8, identical content — the runner " +
+          "applies the first by timestamp and skips the rest):\n" +
+          fmtGroups(identical),
+      );
+      hintParts.push(
+        "Byte-identical duplicates are safely removable: keep the earliest-timestamp file " +
+          "(canonical) and delete the rest. For each removed file also delete its " +
+          "meta/<tag>_snapshot.json, remove its _journal.json entry, and relink the next " +
+          "snapshot's prevId to the removed file's prevId. This is a runtime no-op — the " +
+          "runner already applied the first and the hash is recorded in every deployed " +
+          "__singularity_migrations ledger.",
+      );
+    }
+
+    if (branchLocal.length > 0) {
+      messageParts.push(
+        "branch-local migration filename hash collision (differing content that would never " +
+          "run — the runner applies the first and skips the rest):\n" +
+          fmtGroups(branchLocal),
+      );
+      hintParts.push(
+        "Each migration's sha8 must be unique. Custom/backfill migrations once all hashed to " +
+          "the empty drizzle placeholder (b3cc75fa); renameMigrations now uniquifies the body " +
+          "at generate time. Rebase onto origin/main and re-run `./singularity build " +
+          "--reset-migration --migration-name <slug>` to regenerate the branch-local migration " +
+          "with a distinct hash.",
+      );
+    }
 
     return {
       ok: false,
-      message:
-        "migration filename hash collision (the runner applies the first and skips the rest):\n" +
-        collisions
-          .map(([hash, files]) => `  ${hash}:\n${files.map((f) => `    ${f}`).join("\n")}`)
-          .join("\n"),
-      hint:
-        "Each migration's sha8 must be unique. Custom/backfill migrations once all hashed to " +
-        "the empty drizzle placeholder (b3cc75fa); renameMigrations now uniquifies the body at " +
-        "generate time. If a branch-local migration has byte-identical content to an existing " +
-        "one, rebase onto origin/main and re-run `./singularity build --reset-migration " +
-        "--migration-name <slug>` to regenerate it with a distinct hash.",
+      message: messageParts.join("\n\n"),
+      hint: hintParts.join("\n\n"),
     };
   },
 };

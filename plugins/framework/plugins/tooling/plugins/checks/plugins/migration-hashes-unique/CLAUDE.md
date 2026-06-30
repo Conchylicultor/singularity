@@ -6,13 +6,30 @@ same `sha8` token in their filename (`<ts>_<sha8>__<slug>.sql`).
 The runner (`plugins/database/plugins/migrations/server/internal/runner.ts`)
 keys applied-state by that `sha8` — it is the PRIMARY KEY of
 `__singularity_migrations`. If two files collide on the hash, the runner applies
-the first and **skips** the rest, logging a loud `stderr` warning (a same-hash
-sibling is byte-identical DDL, so re-applying it would only duplicate-key the PK;
-the skip is a no-op for the identical content). That tolerance is what lets a
-frozen all-tracked collision boot cleanly. But a *branch-local* collision is
-almost never intentional — it's a backfill whose distinct content would never
-run — so this check still fails loudly whenever a branch-local file is involved
-(an all-tracked collision of immutable history is exempt; see `trackedBasenames`).
+the first (by timestamp) and **skips** the rest, logging a loud `stderr` warning.
+
+Each collision group (>1 file sharing a sha8) is classified by reading the files'
+actual **contents** — `sha8` is derived from content, so a *true* collision is
+byte-identical; differing content is the theoretical ~1-in-4-billion case:
+
+- **All files byte-identical → always FAIL** (regardless of tracked status). A
+  byte-identical sibling is safely removable: the runner already applied the
+  first and the hash is recorded in every deployed `__singularity_migrations`
+  ledger, so deleting the redundant file is a pure runtime no-op. To fix, keep
+  the earliest-timestamp file (canonical) and for each removed file: delete the
+  `.sql`, delete its `meta/<tag>_snapshot.json`, remove its `_journal.json`
+  entry, and relink the next snapshot's `prevId` to the removed file's `prevId`.
+- **Else, some file is branch-local → FAIL** (differing content that would never
+  run — usually an unintended backfill). Rebase onto origin/main and re-run
+  `./singularity build --reset-migration --migration-name <slug>` to regenerate
+  it with a distinct hash.
+- **Else (all tracked, differing content) → exempt.** This is the lone safety
+  valve: a true sha8 collision on frozen history that can never be rehashed
+  (flagging it would make the check impossible to satisfy). Gated by
+  `trackedBasenames` (basenames on origin/main or main).
+
+The pure group→verdict classification lives in `classifyCollisions` (exported and
+unit-tested in `check/index.test.ts`); the impure git/fs reads stay in `run()`.
 
 Historically every `--custom` (data/backfill) migration hashed to the empty
 drizzle placeholder body and so claimed the identical hash `b3cc75fa`.
