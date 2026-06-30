@@ -56,6 +56,17 @@ Registration is decoupled from fsnotify so it cannot silently fail at scale. Thr
 
 Net effect: `spec.json` on disk ⟺ worktree reachable. The watch is a latency optimization, never a correctness dependency.
 
+### Self-healing stale registrations (dead `spec.Server`)
+
+The registry subdir (`~/.singularity/worktrees/<name>/`, holding `spec.json` + logs) is a *different* path from `spec.Server` (the git worktree's server dir, e.g. `<repo>/.claude/worktrees/<name>/plugins/.../server-core`). The subdir can outlive the worktree it points at — `worktree-cleanup` or a manual `git worktree remove` can delete the git worktree while leaving the registry subdir behind. Such a registration is born-dead: it can only ever fail to spawn (`cmd.Dir = spec.Server` does not exist).
+
+`registry.go` evicts these defensively (`serverPathMissing`, ENOENT-only so a transient stat error never evicts a live worktree):
+
+- `loadFile`/`loadLegacyFile` refuse to register a spec whose `spec.Server` is already gone — so boot `LoadAll`, lazy `Resolve`, and the watch never admit a dead entry.
+- `reconcileOnce` also unregisters a *previously-registered* worktree once its `spec.Server` disappears (the registry-subdir presence check alone never fires, because that subdir is still on disk).
+
+The gateway never deletes the on-disk registry subdir itself (that is `worktree-cleanup`'s job) — it only keeps `byName` honest.
+
 ## File Structure
 
 Flat single-package layout:

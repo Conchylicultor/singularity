@@ -204,9 +204,10 @@ func (r *Registry) Watch(ctx context.Context) error {
 // repair any drift the fsnotify watch missed. This is the backstop that makes
 // registration correct under watch-FD pressure (the watch+reconcile informer
 // pattern): it registers worktrees whose spec.json appeared without a delivered
-// event, and unregisters worktrees whose backing dir/file was removed out from
-// under us (e.g. by worktree-cleanup). fsnotify stays the low-latency fast path;
-// this is the periodic safety net.
+// event, and unregisters worktrees whose backing registry dir/file OR backing
+// server dir (spec.Server) was removed out from under us (e.g. by
+// worktree-cleanup or a manual `git worktree remove`). fsnotify stays the
+// low-latency fast path; this is the periodic safety net.
 func (r *Registry) Reconcile(ctx context.Context) {
 	t := time.NewTicker(r.cfg.ReconcileInterval)
 	defer t.Stop()
@@ -255,8 +256,33 @@ func (r *Registry) reconcileOnce() {
 		if !present[wt.Name] {
 			slog.Info("reconcile: worktree dir gone, unregistering", "name", wt.Name)
 			r.remove(wt.Name)
+			continue
+		}
+		// Also evict registrations whose backing server dir (spec.Server, a git
+		// worktree path distinct from the registry subdir above) was removed
+		// after registration — e.g. by worktree-cleanup or a manual `git
+		// worktree remove`. Without this the registry subdir lingers, so the
+		// dir-presence check never fires and the dead entry stays in byName
+		// forever, only ever failing to spawn. serverPathMissing is ENOENT-only,
+		// so a transient stat error never evicts a live worktree.
+		if server := wt.Spec().Server; serverPathMissing(server) {
+			slog.Info("reconcile: worktree server path gone, unregistering", "name", wt.Name, "server", server)
+			r.remove(wt.Name)
 		}
 	}
+}
+
+// serverPathMissing reports whether a worktree's backing server directory is
+// confirmed absent. Only a definitive ErrNotExist counts: a transient stat error
+// (permissions, a volume unmounted mid-check) is treated as present, so an FS
+// hiccup never evicts or rejects a live worktree — the same conservatism as the
+// registry-dir presence check, which keys on existence rather than contents.
+func serverPathMissing(server string) bool {
+	if server == "" {
+		return false // loadSpec already rejects an empty server; never evict on it
+	}
+	_, err := os.Stat(server)
+	return errors.Is(err, os.ErrNotExist)
 }
 
 // Sweep blocks until ctx is done, periodically tearing down idle backends.
@@ -307,6 +333,17 @@ func (r *Registry) loadFile(path string) {
 		slog.Warn("failed to load spec", "path", path, "err", err)
 		return
 	}
+	// Never register a spec whose backing worktree is already gone — the
+	// build creates ~/.singularity/worktrees/<name> (logs, spec.json) at a
+	// different location than spec.Server (the git worktree's server dir), so
+	// the registry subdir can outlive the worktree it points at. A born-dead
+	// registration would only ever fail to spawn. Skip at Debug: the reconcile
+	// hot path re-attempts this every tick for leftover on-disk specs, so a
+	// louder level would spam.
+	if serverPathMissing(spec.Server) {
+		slog.Debug("skipping worktree: backing server dir gone", "name", name, "server", spec.Server)
+		return
+	}
 	r.upsert(name, spec)
 }
 
@@ -325,6 +362,10 @@ func (r *Registry) loadLegacyFile(path string) {
 	spec, err := loadSpec(path)
 	if err != nil {
 		slog.Warn("failed to load legacy spec", "path", path, "err", err)
+		return
+	}
+	if serverPathMissing(spec.Server) {
+		slog.Debug("skipping legacy worktree: backing server dir gone", "name", name, "server", spec.Server)
 		return
 	}
 	r.upsert(name, spec)
