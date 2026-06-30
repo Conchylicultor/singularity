@@ -11,6 +11,12 @@ export const Workflows = {
       config: unknown;
       onChange: (config: unknown) => void;
     }>;
+    /**
+     * Renders the step trace BODY only (below the shared chrome). The host
+     * (ExecutionDetail) wraps every step in StepTraceShell, which provides the
+     * uniform chrome — icon, label, status badge, timing, and error — so a body
+     * component renders only its step-type-specific content.
+     */
     executionComponent?: ComponentType<{
       step: WorkflowExecutionStep;
       execution: WorkflowExecution;

@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Workflows } from "@plugins/apps/plugins/workflows/plugins/engine/web";
 import { MdTransform } from "react-icons/md";
 import { TemplateConfig } from "./components/template-config";
+import { TemplateExecution } from "./components/template-execution";
 
 export default {
   description:
@@ -12,6 +13,7 @@ export default {
       label: "Template",
       icon: MdTransform,
       configComponent: TemplateConfig,
+      executionComponent: TemplateExecution,
     }),
   ],
 } satisfies PluginDefinition;

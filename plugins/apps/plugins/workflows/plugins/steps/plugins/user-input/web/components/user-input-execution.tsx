@@ -3,9 +3,7 @@ import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/we
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { MdEditNote } from "react-icons/md";
 import {
   submitStep,
   type WorkflowExecution,
@@ -32,10 +30,11 @@ function resolveFields(config: UserInputConfigShape): UserInputField[] {
 }
 
 /**
- * Execution trace for the user-input step. While the workflow is suspended it
+ * Execution body for the user-input step. While the workflow is suspended it
  * renders the prompt + a form; submitting POSTs to the engine's submit endpoint,
  * which emits the `userInputSubmitted` event the executor is waiting on. Once the
  * workflow resumes, live-state pushes the completed step and we show the values.
+ * The shared trace shell provides the chrome (icon, label, status, error).
  */
 export function UserInputExecution({
   step,
@@ -46,27 +45,13 @@ export function UserInputExecution({
 }) {
   const config = (step.config ?? {}) as UserInputConfigShape;
 
-  return (
-    <Surface level="raised" as="div" className="p-sm">
-      <Stack gap="sm">
-        <Stack as="div" direction="row" align="center" justify="between" gap="sm">
-          <Stack as="span" direction="row" align="center" gap="sm">
-            <MdEditNote className="size-4 text-muted-foreground" />
-            <Text as="span" variant="body">{step.label || "Wait for Input"}</Text>
-          </Stack>
-          <Text as="span" variant="caption" tone="muted">{step.status}</Text>
-        </Stack>
-
-        {step.status === "suspended" ? (
-          <SuspendedForm config={config} step={step} execution={execution} />
-        ) : step.status === "completed" ? (
-          <CollectedSummary output={step.output} />
-        ) : step.error ? (
-          <Text as="div" variant="caption" className="text-destructive">{step.error}</Text>
-        ) : null}
-      </Stack>
-    </Surface>
-  );
+  if (step.status === "suspended") {
+    return <SuspendedForm config={config} step={step} execution={execution} />;
+  }
+  if (step.status === "completed") {
+    return <CollectedSummary output={step.output} />;
+  }
+  return null;
 }
 
 function SuspendedForm({

@@ -18,7 +18,7 @@ empty `fields` list collects a single field named `"value"`.
 - Description: Wait-for-user-input step type for workflows. Suspends execution and renders a form in the trace; resumes with the submitted data once a human fills it in. Wait-for-user-input step type for workflows. Suspends execution until a human submits the form, then resumes with the submitted data as the step output.
 - Web:
   - Contributes: `Workflows.StepType` "Wait for Input"
-  - Uses: `apps/workflows/engine.Workflows`, `infra/endpoints.useEndpointMutation`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`
+  - Uses: `apps/workflows/engine.Workflows`, `infra/endpoints.useEndpointMutation`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`
 - Server:
   - Uses: `apps/workflows/engine.defineStepExecutor`, `apps/workflows/engine.userInputSubmitted`, `apps/workflows/engine.UserInputSubmittedPayload`
   - Register: `defineStepExecutor('user-input')`

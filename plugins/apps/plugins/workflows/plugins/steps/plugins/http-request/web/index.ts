@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Workflows } from "@plugins/apps/plugins/workflows/plugins/engine/web";
 import { MdHttp } from "react-icons/md";
 import { HttpRequestConfig } from "./components/http-request-config";
+import { HttpRequestExecution } from "./components/http-request-execution";
 
 export default {
   description:
@@ -12,6 +13,7 @@ export default {
       label: "HTTP Request",
       icon: MdHttp,
       configComponent: HttpRequestConfig,
+      executionComponent: HttpRequestExecution,
     }),
   ],
 } satisfies PluginDefinition;

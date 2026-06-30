@@ -21,7 +21,7 @@ Config: `{ method?: string; url?: string; headers?: string; body?: string }`
 - Description: HTTP-request step type for workflows. Makes an SSRF-safe outbound HTTP call and emits the response (status, headers, body) as the step output for downstream steps to route on. HTTP-request step type for workflows. Makes an SSRF-safe outbound HTTP call and emits the response (status, headers, body) as the step output for downstream steps to route on.
 - Web:
   - Contributes: `Workflows.StepType` "HTTP Request"
-  - Uses: `apps/workflows/engine.Workflows`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/toggle-chip.SegmentedOption`, `primitives/css/ui-kit.Input`
+  - Uses: `apps/workflows/engine.CollapsibleValue`, `apps/workflows/engine.ValueBlock`, `apps/workflows/engine.Workflows`, `primitives/css/badge.Badge`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/toggle-chip.SegmentedOption`, `primitives/css/ui-kit.Input`
 - Server:
   - Uses: `apps/workflows/engine.defineStepExecutor`, `infra/safe-fetch.safeFetch`
   - Register: `defineStepExecutor('http-request')`

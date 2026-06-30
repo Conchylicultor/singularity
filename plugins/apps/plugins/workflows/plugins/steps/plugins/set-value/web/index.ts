@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Workflows } from "@plugins/apps/plugins/workflows/plugins/engine/web";
 import { MdDataObject } from "react-icons/md";
 import { SetValueConfig } from "./components/set-value-config";
+import { SetValueExecution } from "./components/set-value-execution";
 
 export default {
   description:
@@ -12,6 +13,7 @@ export default {
       label: "Set Value",
       icon: MdDataObject,
       configComponent: SetValueConfig,
+      executionComponent: SetValueExecution,
     }),
   ],
 } satisfies PluginDefinition;

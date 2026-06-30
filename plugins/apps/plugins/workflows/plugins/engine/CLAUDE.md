@@ -7,7 +7,8 @@
 - Description: Core engine infrastructure. Defines the Workflows.StepType slot. Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.
 - Web:
   - Slots: `Workflows.StepType` ← `apps.workflows.steps.branch`, `apps.workflows.steps.http-request`, `apps.workflows.steps.llm-prompt`, `apps.workflows.steps.set-value`, `apps.workflows.steps.template`, `apps.workflows.steps.user-input`
-  - Exports: Values: `Workflows`
+  - Uses: `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/relative-time.RelativeTime`
+  - Exports: Values: `CollapsibleValue`, `StepStatusBadge`, `StepTraceShell`, `useStepTypeIndex`, `ValueBlock`, `Workflows`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `infra/jobs.defineJob`, `infra/jobs.isSuspendSignal`
   - DB schema: `plugins/apps/plugins/workflows/plugins/engine/server/internal/tables-events.ts`, `plugins/apps/plugins/workflows/plugins/engine/server/internal/tables.ts`

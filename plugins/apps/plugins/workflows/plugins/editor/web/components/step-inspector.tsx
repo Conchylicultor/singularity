@@ -35,7 +35,7 @@ import {
   removeRoute,
   type StepPatch,
 } from "../../shared/step-ops";
-import { useStepTypeIndex } from "../internal/use-step-type-index";
+import { useStepTypeIndex } from "@plugins/apps/plugins/workflows/plugins/engine/web";
 
 const NONE = "__none__";
 const CONFIG_DEBOUNCE_MS = 350;

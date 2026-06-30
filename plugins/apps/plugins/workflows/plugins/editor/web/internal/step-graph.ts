@@ -6,7 +6,7 @@ import type {
 } from "@plugins/primitives/plugins/graph-canvas/web";
 import type { WorkflowDefinition } from "@plugins/apps/plugins/workflows/plugins/engine/core";
 import { NodeActions, DefaultEdgeActions, RouteEdgeActions } from "../components/graph-actions";
-import type { useStepTypeIndex } from "./use-step-type-index";
+import type { useStepTypeIndex } from "@plugins/apps/plugins/workflows/plugins/engine/web";
 
 type StepTypeIndex = ReturnType<typeof useStepTypeIndex>;
 

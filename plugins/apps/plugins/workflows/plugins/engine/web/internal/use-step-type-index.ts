@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Workflows } from "@plugins/apps/plugins/workflows/plugins/engine/web";
+import { Workflows } from "../slots";
 
 /**
  * Index the contributed `Workflows.StepType` data slot by `pluginId` so a step

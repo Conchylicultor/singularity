@@ -8,7 +8,7 @@ import {
   DropdownMenuItem,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
-import { useStepTypeIndex } from "../internal/use-step-type-index";
+import { useStepTypeIndex } from "@plugins/apps/plugins/workflows/plugins/engine/web";
 
 /**
  * "Add step" dropdown listing every contributed `Workflows.StepType`. Collection-

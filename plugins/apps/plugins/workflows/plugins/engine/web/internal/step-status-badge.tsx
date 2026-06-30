@@ -1,4 +1,4 @@
-import type { ExecutionStepStatus } from "@plugins/apps/plugins/workflows/plugins/engine/core";
+import type { ExecutionStepStatus } from "../../core";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

@@ -7,7 +7,7 @@
 - Description: Branch step type for workflows. Routes execution based on a field value from the previous step's output. Branch step type for workflows. Routes execution based on a field value from the previous step's output.
 - Web:
   - Contributes: `Workflows.StepType` "Branch"
-  - Uses: `apps/workflows/engine.Workflows`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Input`
+  - Uses: `apps/workflows/engine.ValueBlock`, `apps/workflows/engine.Workflows`, `primitives/css/badge.Badge`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Input`
 - Server:
   - Uses: `apps/workflows/engine.defineStepExecutor`
   - Register: `defineStepExecutor('branch')`

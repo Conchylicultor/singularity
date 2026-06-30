@@ -20,7 +20,7 @@ import {
   removeRoute,
   type StepPatch,
 } from "../../shared/step-ops";
-import { useStepTypeIndex } from "../internal/use-step-type-index";
+import { useStepTypeIndex } from "@plugins/apps/plugins/workflows/plugins/engine/web";
 import { buildStepGraph } from "../internal/step-graph";
 import { AddStepMenu } from "./add-step-menu";
 import { StepInspector } from "./step-inspector";

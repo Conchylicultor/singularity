@@ -14,7 +14,7 @@ Config: `{ value?: string; json?: boolean }`.
 - Description: Set-value step type for workflows. Emits a constant seed value (string or parsed JSON) as the step output, ignoring its input. Set-value step type for workflows. Emits a constant seed value (string or parsed JSON) as the step output, ignoring its input.
 - Web:
   - Contributes: `Workflows.StepType` "Set Value"
-  - Uses: `apps/workflows/engine.Workflows`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`
+  - Uses: `apps/workflows/engine.ValueBlock`, `apps/workflows/engine.Workflows`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`
 - Server:
   - Uses: `apps/workflows/engine.defineStepExecutor`
   - Register: `defineStepExecutor('set-value')`
