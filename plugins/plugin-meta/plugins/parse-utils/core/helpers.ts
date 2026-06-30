@@ -1,5 +1,5 @@
-import { existsSync, readdirSync, readFileSync } from "fs";
-import { join } from "path";
+import { existsSync, readdirSync, readFileSync, type Dirent } from "fs";
+import { dirname, join } from "path";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -8,9 +8,60 @@ export interface BarrelExport {
   kind: "type" | "value";
 }
 
+/**
+ * Build-scoped, read-once in-memory filesystem snapshot.
+ *
+ * A facet-extraction pass over the whole plugin tree re-reads every source file
+ * multiple times (once per file-walking facet) via synchronous `readFileSync` /
+ * `readdirSync`, monopolizing the single event loop. When a snapshot is in
+ * effect (see `runWithFsSnapshot`), `readIfExists` / `walkFiles` read from these
+ * maps instead of disk — so the (still-synchronous) facet `extract()` functions
+ * touch zero disk. The snapshot is built once, asynchronously and in parallel,
+ * before the extract loop.
+ *
+ * - `files`: absolute path → file content. Only *existing* files are present.
+ * - `dirs`:  absolute directory path → its `readdir(withFileTypes)` entries.
+ *            Presence of a directory key means "this directory was scanned", so a
+ *            path whose directory is keyed but whose file is absent resolves to
+ *            `null` with no syscall.
+ */
+export interface FsSnapshot {
+  files: Map<string, string>;
+  dirs: Map<string, Dirent[]>;
+}
+
 // ── Helpers ────────────────────────────────────────────────────────
 
+// Ambient snapshot, set synchronously around each (synchronous) facet
+// extract/relate call by `runWithFsSnapshot`. Build-time callers that invoke the
+// scanners directly (codegen/checks) never set it, so they keep the byte-for-byte
+// sync-disk behavior below.
+let activeSnapshot: FsSnapshot | null = null;
+
+/**
+ * Run `fn` with `snapshot` as the ambient FS snapshot consulted by `readIfExists`
+ * / `walkFiles`. `fn` MUST be synchronous (no `await`) — the ambient is restored
+ * synchronously on return, so even interleaved concurrent builds never observe
+ * each other's snapshot. Pass `null` to force the sync-disk path.
+ */
+export function runWithFsSnapshot<T>(snapshot: FsSnapshot | null, fn: () => T): T {
+  const prev = activeSnapshot;
+  activeSnapshot = snapshot;
+  try {
+    return fn();
+  } finally {
+    activeSnapshot = prev;
+  }
+}
+
 export function readIfExists(path: string): string | null {
+  if (activeSnapshot) {
+    const cached = activeSnapshot.files.get(path);
+    if (cached !== undefined) return cached;
+    // The directory was scanned but the file is absent → definitively null, no
+    // syscall. Otherwise the directory is outside the snapshot's scope → disk.
+    if (activeSnapshot.dirs.has(dirname(path))) return null;
+  }
   return existsSync(path) ? readFileSync(path, "utf8") : null;
 }
 
@@ -142,7 +193,35 @@ export function parseBarrelExports(src: string): BarrelExport[] {
   );
 }
 
+function isSkippedWalkDir(name: string): boolean {
+  // `plugins` = sub-plugin trees (scanned as their own plugins); `__tests__`
+  // = co-located test files, which are not part of a plugin's API/dep
+  // surface and must not pollute its facets (Uses, exports, routes, …).
+  return name === "node_modules" || name === "plugins" || name === "__tests__";
+}
+
 export function walkFiles(dir: string, out: string[]): void {
+  // Snapshot fast-path: traverse the in-memory directory map. Any subdirectory
+  // not covered by the snapshot re-dispatches through `walkFiles`, which falls
+  // back to disk for that subtree — so the result is identical to a pure-disk
+  // walk regardless of snapshot coverage.
+  if (activeSnapshot) {
+    const entries = activeSnapshot.dirs.get(dir);
+    if (entries) {
+      for (const e of entries) {
+        const p = join(dir, e.name);
+        if (e.isDirectory()) {
+          if (isSkippedWalkDir(e.name)) continue;
+          walkFiles(p, out);
+        } else if (e.isFile() && /\.(ts|tsx)$/.test(e.name)) {
+          out.push(p);
+        }
+      }
+      return;
+    }
+    // dir not in snapshot → fall through to disk below.
+  }
+
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
@@ -153,10 +232,7 @@ export function walkFiles(dir: string, out: string[]): void {
   for (const e of entries) {
     const p = join(dir, e.name);
     if (e.isDirectory()) {
-      // `plugins` = sub-plugin trees (scanned as their own plugins); `__tests__`
-      // = co-located test files, which are not part of a plugin's API/dep
-      // surface and must not pollute its facets (Uses, exports, routes, …).
-      if (e.name === "node_modules" || e.name === "plugins" || e.name === "__tests__") continue;
+      if (isSkippedWalkDir(e.name)) continue;
       walkFiles(p, out);
     } else if (e.isFile() && /\.(ts|tsx)$/.test(e.name)) {
       out.push(p);

@@ -4003,7 +4003,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/plugin-tree`
       - Core:
-        - Exports: Types: `BarrelExport`, `MarkerCall`, `MarkerCallSpan`; Values: `findMarkerCalls`, `lineAt`, `markerCallSpans`, `maskSource`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
+        - Exports: Types: `BarrelExport`, `FsSnapshot`, `MarkerCall`, `MarkerCallSpan`; Values: `findMarkerCalls`, `lineAt`, `markerCallSpans`, `maskSource`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `runWithFsSnapshot`, `stripTypes`, `walkFiles`
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
         - Contributes: `PluginViewSlots.Section` "health" → `HealthSection`
@@ -4021,7 +4021,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `PluginHealthReview`, `PluginStaleness`, `ReviewTaskSummary`; Values: `getPluginHealthReviews`, `getPluginHealthTasks`, `getPluginStaleness`, `PluginHealthReviewSchema`, `PluginStalenessSchema`, `ReviewTaskSummarySchema`
     - **`plugin-tree`**
       - Core:
-        - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.Facet`, `plugin-meta/facets.loadFacets`, `plugin-meta/facets.setFacet`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.parseStringField`, `plugin-meta/parse-utils.stripTypes`
+        - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.Facet`, `plugin-meta/facets.loadFacets`, `plugin-meta/facets.setFacet`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.parseStringField`, `plugin-meta/parse-utils.runWithFsSnapshot`, `plugin-meta/parse-utils.stripTypes`
         - Exports: Types: `PluginNode`, `PluginTree`, `Runtime`; Values: `buildPluginTree`, `resolvePluginSpecifier`
       - Cross-plugin:
         - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/closure`

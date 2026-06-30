@@ -82,10 +82,18 @@ to populate `facets`/`disabled` that its own hot consumers throw away** — `exp
 only the cheap async structural skeleton (steps 1–3, `collectCoreFields`); only the Studio
 **Contributions** tab (all-plugins facets) and the **detail pane** (one plugin's facets) genuinely
 read facets. **Real cure (origin, not cache):** make the tree **structure-only** for the hot path,
-and source facets lazily (per-plugin for detail; a separate, low-frequency, cached aggregate for
-Contributions). Then async-read / read-once-share / yield only the residual full-facet builds. Full
-arc + the (superseded cache-first v1, then the structure-only design) →
-**[`2026-06-29-perfs-buildplugintree-eventloop-block-FIX.md`](./2026-06-29-perfs-buildplugintree-eventloop-block-FIX.md)**;
+and source facets lazily (a single cached, fast aggregate shared by Contributions + the detail pane —
+**not** per-plugin, since the detail pane shows `importedBy`, a relate reverse-index needing all plugins).
+**Altitude 2 (fast aggregate algorithm) LANDED & validated on the worktree (2026-06-30):** async
+read-once in-memory FS snapshot → facet `extract` touches zero disk → **max event-loop block 50 s → ~1.5 s
+cold / ~0.3 s warm**, output byte-identical; end-to-end, a concurrent cheap endpoint stays <75 ms *during*
+an 8 s tree build (no longer a victim). **Still TODO:** Altitude 1 (structure-only default + cached
+accessor → hot path to ms; client-derived `disabled` cascade — the prior doc's "explorer needs no
+disabled" was **wrong**); not yet on `singularity` (needs a push). Two corrections vs the design doc:
+explorer DOES render `disabled` (derive client-side from the composition graph); per-plugin facets are
+infeasible for the detail pane (`importedBy`). Full arc → newest implement doc
+**[`2026-06-30-buildplugintree-structure-only-IMPLEMENT.md`](./2026-06-30-buildplugintree-structure-only-IMPLEMENT.md)**;
+design **[`2026-06-29-perfs-buildplugintree-eventloop-block-FIX.md`](./2026-06-29-perfs-buildplugintree-eventloop-block-FIX.md)**;
 predecessor [`…-HANDOFF.md`](./2026-06-29-conversation-load-40s-eventloop-block-HANDOFF.md).
 
 ### Cold-boot fan-out (Ongoing)

@@ -11,7 +11,9 @@ import {
   stripTypes,
   parseStringField,
   parseBoolField,
+  runWithFsSnapshot,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { buildFsSnapshot } from "./fs-snapshot";
 
 async function readIfExistsAsync(path: string): Promise<string | null> {
   try {
@@ -360,19 +362,39 @@ export async function buildPluginTree(
 
   // Step 4b: facet extract — ALWAYS. Static facets fully populate; runtime facets
   // are partial (empty importedModules) under skipBarrelImport — acceptable.
-  const facets = await loadFacets();
+  //
+  // The facet `extract`/`relate` functions are synchronous and re-read the whole
+  // plugin source tree several times over via sync `readFileSync`/`readdirSync`,
+  // which monopolizes the single event loop for many seconds. To make that fast
+  // AND non-blocking without changing any facet body or the tree's output: read
+  // every needed file ONCE, asynchronously and in parallel, into an in-memory
+  // snapshot, then run the (still-synchronous) extract/relate against it via the
+  // ambient-snapshot hook in parse-utils — so the loops touch zero disk. The
+  // snapshot build runs in parallel with the (async) facet-module load.
+  const [facets, fsSnapshot] = await Promise.all([loadFacets(), buildFsSnapshot(dirs)]);
   tree.facets = facets;
+  let extracted = 0;
   for (const node of byDir.values()) {
     const nodeModules = importedModules.get(node.dir) ?? [];
-    for (const facet of facets) {
-      const data = facet.extract({ dir: node.dir, importedModules: nodeModules });
-      setFacet(node, facet.def, data);
-    }
+    runWithFsSnapshot(fsSnapshot, () => {
+      for (const facet of facets) {
+        const data = facet.extract({ dir: node.dir, importedModules: nodeModules, fs: fsSnapshot });
+        setFacet(node, facet.def, data);
+      }
+    });
+    // CPU safety belt: yield to the event loop every 16 nodes so even a
+    // pathological facet can't monopolize the loop. The reads are now in-memory,
+    // so this is the residual cost, not the primary mechanism.
+    if ((++extracted & 15) === 0) await new Promise<void>((resolve) => setImmediate(resolve));
   }
 
-  // Step 4c: facet relate — ALWAYS.
+  // Step 4c: facet relate — ALWAYS. `relate` (e.g. routes/cross-refs) also walks
+  // every plugin's source, so it reads from the same snapshot. Yield between
+  // facets so the residual block is one facet's relate, not all of them summed.
   for (const facet of facets) {
-    if (facet.relate) facet.relate({ tree });
+    if (!facet.relate) continue;
+    runWithFsSnapshot(fsSnapshot, () => facet.relate!({ tree }));
+    await new Promise<void>((resolve) => setImmediate(resolve));
   }
 
   return tree;
