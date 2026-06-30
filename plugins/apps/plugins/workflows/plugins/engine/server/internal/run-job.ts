@@ -4,6 +4,7 @@ import { db } from "@plugins/database/server";
 import { defineJob, isSuspendSignal } from "@plugins/infra/plugins/jobs/server";
 import { _workflowDefinitions, _workflowExecutions } from "./tables";
 import { getExecutor } from "./executor-registry";
+import { resolveNextStepId, resolveStepOutput } from "./step-flow";
 import {
   createExecutionStep,
   updateExecution,
@@ -128,18 +129,19 @@ export const workflowRunJob = defineJob({
         throw err;
       }
 
+      // A step that omits `output` is transparent: its input flows through
+      // unchanged so routing-only steps (branch) don't sever the pipeline. The
+      // persisted output mirrors what flows downstream, keeping step N's output
+      // consistent with step N+1's input.
+      const nextOutput = resolveStepOutput(lastOutput, result);
       await updateExecutionStep(execStep!.id, {
         status: "completed",
-        output: result.output,
+        output: nextOutput,
         completedAt: new Date(),
       });
-      lastOutput = result.output ?? null;
+      lastOutput = nextOutput;
 
-      if (result.branchKey && stepDef.nextStepMapping?.[result.branchKey]) {
-        currentStepId = stepDef.nextStepMapping[result.branchKey] ?? null;
-      } else {
-        currentStepId = stepDef.next;
-      }
+      currentStepId = resolveNextStepId(stepDef, result);
     }
 
     await updateExecution(input.executionId, {

@@ -17,7 +17,15 @@ export interface StepExecutorRunArgs {
 }
 
 export interface StepResult {
+  /**
+   * The value this step emits into the next step's input. **Omit the key
+   * entirely to make the step transparent** — its input flows through unchanged
+   * (the right default for pure routing or side-effect steps like `branch`).
+   * Setting `output` explicitly — even to `null` — overwrites the pipeline
+   * value. (Absent key vs. `null` value are deliberately different.)
+   */
   output?: unknown;
+  /** Routing key; selects `nextStepMapping[branchKey]` over the default `next`. */
   branchKey?: string;
 }
 
