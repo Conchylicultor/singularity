@@ -353,6 +353,10 @@
       "name": "@singularity/plugin-apps-sonata-audio-engine",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/audio/plugins/live-play": {
+      "name": "@singularity/plugin-apps-sonata-audio-live-play",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/audio/plugins/metronome": {
       "name": "@singularity/plugin-apps-sonata-audio-metronome",
       "version": "0.0.1",
@@ -4558,6 +4562,8 @@
     "@singularity/plugin-apps-sonata-audio": ["@singularity/plugin-apps-sonata-audio@workspace:plugins/apps/plugins/sonata/plugins/audio"],
 
     "@singularity/plugin-apps-sonata-audio-engine": ["@singularity/plugin-apps-sonata-audio-engine@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/engine"],
+
+    "@singularity/plugin-apps-sonata-audio-live-play": ["@singularity/plugin-apps-sonata-audio-live-play@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/live-play"],
 
     "@singularity/plugin-apps-sonata-audio-metronome": ["@singularity/plugin-apps-sonata-audio-metronome@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/metronome"],
 

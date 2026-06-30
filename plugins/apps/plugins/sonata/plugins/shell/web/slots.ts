@@ -33,6 +33,10 @@ export interface InstrumentVoices {
   schedule(note: ScheduledNote): void;
   allOff(): void;                 // cancel everything scheduled/sounding (stop/seek)
   dispose(): void;                // release audio resources
+  /** Live, interactive note-on for hand-played keys: starts a sustaining voice
+   *  immediately (no scheduled when/duration) and returns a note-off fn that
+   *  releases it. Optional — instruments that cannot sustain on demand omit it. */
+  play?(pitch: number, velocity: number): () => void;
 }
 
 /**

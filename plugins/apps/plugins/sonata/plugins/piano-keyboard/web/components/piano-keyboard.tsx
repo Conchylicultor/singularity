@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   accidentalGlyph,
   buildActiveNoteIndex,
@@ -13,6 +13,7 @@ import {
   useCursorSelector,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useLivePlay } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/live-play/web";
 import {
   blackKeyColor,
   useHiddenTrackIds,
@@ -143,6 +144,52 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
     sameLitMap,
   );
 
+  // Hand-play: when the live player is available the keyboard becomes
+  // interactive. `held` is the set of pitches currently pressed by the user;
+  // null `live` (no engine) simply leaves the keyboard non-playable.
+  const live = useLivePlay();
+  const [held, setHeld] = useState<ReadonlySet<number>>(() => new Set());
+  useEffect(() => {
+    live?.warmup();
+    return () => live?.releaseAll();
+  }, [live]);
+
+  const interaction = useMemo(
+    () =>
+      live
+        ? {
+            onPress: (p: number) => {
+              live.press(p);
+              setHeld((s) => {
+                const n = new Set(s);
+                n.add(p);
+                return n;
+              });
+            },
+            onRelease: (p: number) => {
+              live.release(p);
+              setHeld((s) => {
+                const n = new Set(s);
+                n.delete(p);
+                return n;
+              });
+            },
+          }
+        : undefined,
+    [live],
+  );
+
+  // Merge hand-held pitches into the playback `sounding` map: a held key that
+  // isn't already sounding lights in the theme accent ("" → accent); a key that
+  // is both keeps its playback color. So a hand-pressed key depresses + glows
+  // exactly like a played note via the primitive's existing lit→press visuals.
+  const lit = useMemo(() => {
+    if (held.size === 0) return sounding;
+    const m = new Map(sounding);
+    for (const p of held) if (!m.has(p)) m.set(p, "");
+    return m;
+  }, [sounding, held]);
+
   if (!keys?.length) return null; // defensive: host only mounts us with pitch-plane.
 
   const scope = labelScope as LabelScope;
@@ -153,7 +200,8 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
     <Keyboard
       low={low}
       high={high}
-      lit={sounding}
+      lit={lit}
+      interaction={interaction}
       // A lit black key shows the same darker accidental shade as the falling
       // note that lands on it — the exact `blackKeyColor` the piano-roll uses.
       accidentalColor={blackKeyColor}

@@ -5,6 +5,10 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { keyboardStyleConfig, type KeyStyle } from "../../shared/config";
 import { type KeyLane, keyLayout } from "./key-layout";
+import {
+  usePlayableKeyboard,
+  type KeyboardInteraction,
+} from "./use-playable-keyboard";
 
 /**
  * Key colors. A piano is a physical object — white keys are always ivory,
@@ -231,6 +235,13 @@ export interface KeyboardProps {
    * takes the base color to avoid compounding. Defaults to identity.
    */
   accidentalColor?: (base: string) => string;
+  /**
+   * Opt-in playability: when present the keyboard becomes interactive — clicking,
+   * tapping, or dragging across keys fires `onPress` / `onRelease` (per pitch,
+   * multi-touch + glissando aware). Omitted, the keyboard stays a pure display
+   * (the chord/key readouts), with no pointer handlers attached.
+   */
+  interaction?: KeyboardInteraction;
   className?: string;
 }
 
@@ -250,11 +261,14 @@ export function Keyboard({
   lit,
   renderKey,
   accidentalColor = (c) => c,
+  interaction,
   className,
 }: KeyboardProps) {
   const { keyStyle } = useConfig(keyboardStyleConfig);
   const style = keyStyle as KeyStyle;
   const lanes = useMemo(() => keyLayout(low, high), [low, high]);
+  // Pointer handlers when playable; `{}` (no listeners) otherwise.
+  const playProps = usePlayableKeyboard(interaction);
 
   // Normalize both highlight forms to a pitch → color lookup. A present entry
   // with an empty string means "lit in the theme accent"; a non-empty value is
@@ -286,6 +300,11 @@ export function Keyboard({
     return (
       <div
         key={k.pitch}
+        // Hit-test target for the playable keyboard: the pointer handlers read
+        // `data-pitch` off the topmost element under the pointer (decorative
+        // layers are pointer-events-none), so black-over-white stacking and
+        // glissando resolve for free. Inert when `interaction` is absent.
+        data-pitch={k.pitch}
         // eslint-disable-next-line layout/no-adhoc-layout -- computed key geometry (left/width from key-layout projection); flex/items-end/justify-center bottom-center the key label inside the lane
         className={cn(
           "absolute flex items-end justify-center",
@@ -315,15 +334,22 @@ export function Keyboard({
 
   return (
     <Clip
-      className={cn("relative", className)}
+      {...playProps}
+      className={cn("relative", interaction && "select-none", className)}
       // Physical keyboard frame — fixed shape, preset-independent (see
       // KEY_BOTTOM_RADIUS). overflow-hidden would otherwise clip the corner
-      // keys to a theme-token radius.
-      style={{ borderRadius: "4px" }}
+      // keys to a theme-token radius. When playable, suppress native touch
+      // gestures (so a drag glissando doesn't scroll/zoom) and show the pointer.
+      style={{
+        borderRadius: "4px",
+        ...(interaction ? { touchAction: "none", cursor: "pointer" } : null),
+      }}
     >
       {/* White keys (back layer). */}
       {whites.map(renderLane)}
-      {/* Red felt strip across the keybed top — above whites, below blacks. */}
+      {/* Red felt strip across the keybed top — above whites, below blacks.
+          `decorative` makes it pointer-events-none, so playable-keyboard
+          hit-tests fall through to the key beneath it. */}
       <Pin to="top" stretch decorative aria-hidden style={feltStyle(style)} />
       {/* Black keys (front layer), ~62% height. */}
       {blacks.map(renderLane)}

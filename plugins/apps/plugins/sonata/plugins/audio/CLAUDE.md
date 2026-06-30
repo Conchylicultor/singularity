@@ -7,6 +7,7 @@
 - Description: Audio playback umbrella for Sonata: engine + instruments.
 - Sub-plugins:
   - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the top toolbar.
+  - **`live-play`** — Sonata live interactive player: a headless effect that turns hand-played key presses into sustaining note-on/note-off voices, routed through the engine's shared context + master gain and the default instrument.
   - **`metronome`** — Sonata metronome: a synthesized click track (continuous + count-in lead-in) scheduled on the engine's audio clock, with a toolbar control and an on-screen countdown. Server registration of the Sonata metronome config.
   - **`piano`** — Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback. Registers the splendid-grand-piano asset mirror so the acoustic piano's samples are served same-origin (offline-capable) rather than streamed from the remote CDN.
   - **`soundfont`** — Sonata Instruments: the full General MIDI melodic set (programs 1-127) backed by smplr's Soundfont, served same-origin via the asset-mirror (offline after first warm-up). Program 0 (acoustic grand) is owned by the dedicated sampled-piano plugin. Registers the gm-soundfont asset mirror so the General MIDI instruments' samples are served same-origin (offline-capable) rather than streamed from the remote gleitz CDN.

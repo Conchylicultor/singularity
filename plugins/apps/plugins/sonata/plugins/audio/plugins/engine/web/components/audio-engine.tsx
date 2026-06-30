@@ -149,9 +149,10 @@ export function AudioEngine() {
     ctxRef.current = ctx;
     masterRef.current = master;
 
-    // Publish the live graph so sibling per-surface audio effects (the metronome)
-    // can schedule click events on the SAME clock playback is anchored against.
-    setGraph({ ctx });
+    // Publish the live graph so sibling per-surface audio effects (the metronome
+    // reads `ctx`; the live player routes voices into `master`) can share the
+    // SAME clock + output bus playback is anchored against.
+    setGraph({ ctx, master });
 
     // Register the AudioContext clock as the transport's authoritative time
     // source, so the visual cursor reads the *same* clock the audio is

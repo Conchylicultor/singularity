@@ -23,12 +23,15 @@ export type AudioStatus = "empty" | "loading" | "ready";
  * The shared Web Audio graph handle the engine owns and publishes here. The
  * engine is the SOLE owner of the `AudioContext` (its lifecycle must not be tied
  * to mountable UI; see this plugin's `CLAUDE.md`); it merely publishes the live
- * ctx so sibling per-surface effects in other slot branches — e.g. the metronome
- * — can schedule click events on the *same* clock playback is anchored against.
- * `null` until the engine's mount effect has created the context.
+ * ctx + master gain so sibling per-surface effects in other slot branches — e.g.
+ * the metronome (reads `ctx`) and the live player (routes voices into `master`,
+ * so the master-volume slider governs hand-played notes too) — can share the
+ * same clock and output bus playback is anchored against. `null` until the
+ * engine's mount effect has created the context.
  */
 export interface AudioGraph {
   ctx: AudioContext;
+  master: GainNode;
 }
 
 export interface AudioState {

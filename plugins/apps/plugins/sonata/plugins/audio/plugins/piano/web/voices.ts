@@ -66,6 +66,13 @@ export function createVoices(
       if (disposed) return;
       piano.start({ note: pitch, velocity, time: when, duration });
     },
+    play(pitch: number, velocity: number): () => void {
+      if (disposed) return () => {};
+      const stop = piano.start({ note: pitch, velocity });
+      return () => {
+        if (!disposed) stop();
+      };
+    },
     allOff(): void {
       if (disposed) return;
       // Two layers must be silenced: piano.stop() halts voices already on the

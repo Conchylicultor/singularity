@@ -67,6 +67,13 @@ export function createSoundfontVoices(
       if (disposed) return;
       sf.start({ note: pitch, velocity, time: when, duration });
     },
+    play(pitch: number, velocity: number): () => void {
+      if (disposed) return () => {};
+      const stop = sf.start({ note: pitch, velocity });
+      return () => {
+        if (!disposed) stop();
+      };
+    },
     allOff(): void {
       if (disposed) return;
       // Two layers must be silenced: sf.stop() halts voices already on the audio
