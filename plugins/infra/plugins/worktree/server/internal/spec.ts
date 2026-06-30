@@ -1,4 +1,4 @@
-import { mkdirSync, writeFileSync } from "node:fs";
+import { mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { worktreesDir } from "./worktree-op";
@@ -76,7 +76,14 @@ export function writeWorktreeSpec({
   if (web) spec.web = web;
   if (command) spec.command = command;
   if (zeroCache) spec.zeroCache = zeroCache;
-  writeFileSync(path, JSON.stringify(spec, null, 2) + "\n");
+  // Atomically publish the spec (temp + rename in the same dir) so a concurrent
+  // reader — the gateway registry's loadFile, its periodic reconcile, or a lazy
+  // resolve — never observes a truncated/partial spec.json and skips
+  // registration. rename(2) within one filesystem is atomic, so every read sees
+  // either the old complete file or the new complete file, never a torn write.
+  const tmp = `${path}.${process.pid}.tmp`;
+  writeFileSync(tmp, JSON.stringify(spec, null, 2) + "\n");
+  renameSync(tmp, path);
   return path;
 }
 
