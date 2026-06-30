@@ -1,6 +1,6 @@
 import { rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { dropDatabase } from "@plugins/database/plugins/admin/server";
+import { databaseExists, dropDatabase } from "@plugins/database/plugins/admin/server";
 import { dropZeroReplicationArtifacts } from "@plugins/database/plugins/zero/plugins/cache-service/server";
 import {
   ensureMainWorktreeRoot,
@@ -43,12 +43,18 @@ export async function reapAttempt(
   }
 
   opts.onStep?.("database");
-  // Drop Zero's replication slot(s) + publications FIRST: DROP DATABASE WITH
-  // (FORCE) terminates backends but does NOT drop replication slots, and a
-  // leftover slot makes the drop fail. No-ops cleanly for worktrees that never
-  // ran Zero.
-  await dropZeroReplicationArtifacts(id);
-  await dropDatabase(id);
+  // The fork DB may already be gone — an earlier reap dropped it, or a legacy
+  // registry-only entry never had one. Guard the DB steps on existence:
+  // dropZeroReplicationArtifacts opens a client TO the DB and would throw
+  // `database "<id>" does not exist`, aborting the reap before the registry
+  // step below and leaving the gateway registration (and its fsnotify watch)
+  // anchored forever. When the DB exists, drop Zero's replication slot(s) +
+  // publications FIRST: DROP DATABASE WITH (FORCE) terminates backends but does
+  // NOT drop replication slots, and a leftover slot makes the drop fail.
+  if (await databaseExists(id)) {
+    await dropZeroReplicationArtifacts(id);
+    await dropDatabase(id);
+  }
 
   opts.onStep?.("config");
   await rm(join(SINGULARITY_DIR, "config", id), { recursive: true, force: true });

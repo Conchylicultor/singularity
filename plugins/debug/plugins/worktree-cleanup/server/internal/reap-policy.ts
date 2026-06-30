@@ -22,6 +22,23 @@ export const AUTO_REAP_AGE_MS = 30 * 24 * 60 * 60 * 1000; // 30 days
 // fork-DB orphan filter and the registry-file orphan filter below.
 const WORKTREE_NAME_RE = /^(att|claude)-\d+(-[a-z0-9]+)?$/;
 
+// Canonical-shaped registry entry names on disk (new `<name>/` subdir or legacy
+// flat `<name>.json`) under the gateway registry dir. A missing dir (ENOENT)
+// yields an empty set; any other error is surfaced loudly.
+async function readRegistryNames(): Promise<Set<string>> {
+  const names = new Set<string>();
+  try {
+    const entries = await readdir(worktreesDir(), { withFileTypes: true });
+    for (const e of entries) {
+      const name = e.isDirectory() ? e.name : e.name.replace(/\.json$/, "");
+      if (WORKTREE_NAME_RE.test(name)) names.add(name);
+    }
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+  }
+  return names;
+}
+
 export interface ReapTarget {
   id: string;
   worktreePath?: string;
@@ -62,6 +79,11 @@ export async function collectReapable(now: number): Promise<ReapTarget[]> {
 
   const taskMap = new Map(tasks.map((t) => [t.id, t]));
   const dbSet = new Set(databases.filter((name) => WORKTREE_NAME_RE.test(name)));
+  // A worktree's gateway spec file is an artifact to reclaim just like its fork
+  // DB, so the on-disk registry set joins dbSet as a signal that an inactive
+  // attempt whose dir is gone still has something to clean (its registry entry
+  // anchors a gateway registration + fsnotify watch even after the DB is gone).
+  const registrySet = await readRegistryNames();
   const targets = new Map<string, ReapTarget>();
   const seenAttemptIds = new Set<string>();
 
@@ -76,12 +98,15 @@ export async function collectReapable(now: number): Promise<ReapTarget[]> {
       isCanonicalWorktreePath(attempt.worktreePath, root) &&
       (await dirExists(attempt.worktreePath));
     const hasDB = dbSet.has(attempt.id);
-    if (!hasDir && !hasDB) return null; // malformed row / already cleaned
+    const hasRegistry = registrySet.has(attempt.id);
+    // Nothing left to reclaim — dir, fork DB, and registry entry all gone (a
+    // fully-cleaned or malformed row). Skipping avoids perpetual no-op reaps.
+    if (!hasDir && !hasDB && !hasRegistry) return null;
 
     const age = now - attempt.createdAt.getTime();
 
     if (!hasDir) {
-      // orphan: dir gone but fork DB present.
+      // Orphan: dir gone, but a fork DB and/or a gateway registry entry linger.
       return { id: attempt.id, worktreePath: attempt.worktreePath };
     }
 
@@ -115,24 +140,12 @@ export async function collectReapable(now: number): Promise<ReapTarget[]> {
     }
   }
 
-  // Registry-file orphans: a spec entry on disk (new <name>/ subdir or legacy
-  // flat <name>.json) whose git worktree dir is gone and which has no attempt
-  // row. These are the bulk of the stale backlog — they predate the attempt
-  // system or their rows were already deleted, so neither pass above sees them.
-  // Removing the spec file deregisters the namespace from the gateway and frees
-  // its fsnotify watch (reapAttempt's "registry" step).
-  const names: string[] = [];
-  try {
-    const entries = await readdir(worktreesDir(), { withFileTypes: true });
-    for (const e of entries) {
-      const name = e.isDirectory() ? e.name : e.name.replace(/\.json$/, "");
-      if (WORKTREE_NAME_RE.test(name)) names.push(name);
-    }
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-  }
-
-  for (const name of new Set(names)) {
+  // Registry-file orphans: a spec entry on disk whose git worktree dir is gone
+  // and which has NO attempt row (attempt-backed entries are reclaimed above via
+  // the hasRegistry signal). These predate the attempt system or had their rows
+  // deleted. Removing the spec file deregisters the namespace from the gateway
+  // and frees its fsnotify watch (reapAttempt's "registry" step).
+  for (const name of registrySet) {
     if (seenAttemptIds.has(name) || targets.has(name)) continue; // covered/active already
     if (!(await dirExists(await worktreePathFor(name)))) {
       targets.set(name, { id: name }); // no worktree dir: a true orphan
