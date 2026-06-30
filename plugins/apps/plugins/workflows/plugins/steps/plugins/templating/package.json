@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-workflows-steps-templating",
+  "description": "Templating helpers for workflow step executors: dot-path access and {{ expr }} interpolation over a step's input.",
+  "private": true,
+  "version": "0.0.1"
+}

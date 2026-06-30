@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-workflows-steps-user-input",
+  "description": "Wait-for-user-input step type for workflows. Suspends execution and renders a form in the trace; resumes with the submitted data once a human fills it in.",
+  "private": true,
+  "version": "0.0.1"
+}

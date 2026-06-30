@@ -30,6 +30,7 @@ import {
 
 export { _workflowDefinitions, _workflowExecutions, _workflowExecutionSteps } from "./internal/tables";
 export { userInputSubmitted, _userInputSubmittedTriggers } from "./internal/tables-events";
+export type { UserInputSubmittedPayload } from "./internal/tables-events";
 export { defineStepExecutor, getExecutor } from "./internal/executor-registry";
 export type { StepExecutorSpec, StepResult, StepExecutorRunArgs } from "./internal/executor-registry";
 export { workflowDefinitionsResource, workflowExecutionsResource } from "./internal/resources";

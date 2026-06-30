@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-workflows-steps-template",
+  "description": "Template step type for workflows. Renders a {{ expr }} template against the previous step's output and emits the result (string or parsed JSON).",
+  "private": true,
+  "version": "0.0.1"
+}

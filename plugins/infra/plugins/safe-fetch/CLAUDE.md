@@ -6,7 +6,7 @@
 
 - Description: SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
 - Cross-plugin:
-  - Imported by: `apps-core/surface/floating/wallpaper`, `apps-core/surface/floating/wallpaper/openverse`, `apps/browser/proxy`, `apps/sonata/sources/ultimate-guitar`, `page/bookmark`
+  - Imported by: `apps-core/surface/floating/wallpaper`, `apps-core/surface/floating/wallpaper/openverse`, `apps/browser/proxy`, `apps/sonata/sources/ultimate-guitar`, `apps/workflows/steps/http-request`, `page/bookmark`
 - Server:
   - Exports: Types: `PinnedDial`, `SafeFetchInit`; Values: `assertResolvesPublic`, `buildPinnedDial`, `isPrivateIp`, `parsePublicUrl`, `safeFetch`, `SsrfError`
 

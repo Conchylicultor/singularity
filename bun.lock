@@ -725,6 +725,30 @@
       "name": "@singularity/plugin-apps-workflows-steps-branch",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/workflows/plugins/steps/plugins/http-request": {
+      "name": "@singularity/plugin-apps-workflows-steps-http-request",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/workflows/plugins/steps/plugins/llm-prompt": {
+      "name": "@singularity/plugin-apps-workflows-steps-llm-prompt",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/workflows/plugins/steps/plugins/set-value": {
+      "name": "@singularity/plugin-apps-workflows-steps-set-value",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/workflows/plugins/steps/plugins/template": {
+      "name": "@singularity/plugin-apps-workflows-steps-template",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/workflows/plugins/steps/plugins/templating": {
+      "name": "@singularity/plugin-apps-workflows-steps-templating",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/workflows/plugins/steps/plugins/user-input": {
+      "name": "@singularity/plugin-apps-workflows-steps-user-input",
+      "version": "0.0.1",
+    },
     "plugins/auth": {
       "name": "@singularity/plugin-auth",
       "version": "0.0.1",
@@ -4736,6 +4760,18 @@
     "@singularity/plugin-apps-workflows-steps": ["@singularity/plugin-apps-workflows-steps@workspace:plugins/apps/plugins/workflows/plugins/steps"],
 
     "@singularity/plugin-apps-workflows-steps-branch": ["@singularity/plugin-apps-workflows-steps-branch@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/branch"],
+
+    "@singularity/plugin-apps-workflows-steps-http-request": ["@singularity/plugin-apps-workflows-steps-http-request@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/http-request"],
+
+    "@singularity/plugin-apps-workflows-steps-llm-prompt": ["@singularity/plugin-apps-workflows-steps-llm-prompt@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/llm-prompt"],
+
+    "@singularity/plugin-apps-workflows-steps-set-value": ["@singularity/plugin-apps-workflows-steps-set-value@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/set-value"],
+
+    "@singularity/plugin-apps-workflows-steps-template": ["@singularity/plugin-apps-workflows-steps-template@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/template"],
+
+    "@singularity/plugin-apps-workflows-steps-templating": ["@singularity/plugin-apps-workflows-steps-templating@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/templating"],
+
+    "@singularity/plugin-apps-workflows-steps-user-input": ["@singularity/plugin-apps-workflows-steps-user-input@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/user-input"],
 
     "@singularity/plugin-auth": ["@singularity/plugin-auth@workspace:plugins/auth"],
 

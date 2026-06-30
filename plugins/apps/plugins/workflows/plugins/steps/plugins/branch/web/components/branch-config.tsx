@@ -4,7 +4,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /**
  * Config form for the branch step type. The branch executor reads `field` as a
- * dot-path into the previous step's output (see executor.ts `getByDotPath`) and
+ * dot-path into the previous step's output (see executor.ts `getByPath`) and
  * falls back to `defaultBranch` when that value is absent. The resolved value is
  * matched against this step's conditional route keys.
  *
