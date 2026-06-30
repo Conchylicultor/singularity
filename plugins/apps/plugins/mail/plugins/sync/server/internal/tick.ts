@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { isGmailEnabled } from "@plugins/integrations/plugins/gmail/server";
 import {
   _mailAccounts,
@@ -35,10 +36,23 @@ export const syncTickJob = defineJob({
       .select({ id: _mailAccounts.id })
       .from(_mailAccounts);
 
-    // Auto-connect on first toggle-on. Any token failure propagates (the tick
-    // fails visibly in the queue debug pane — the correct, loud behavior).
+    // Auto-connect on first toggle-on. `ensureAccount` records any failure onto
+    // the account's sync_state row (→ surfaced live on the sync-status banner)
+    // when it can attribute it. Swallow here — consistent with the per-account
+    // "record and move on" handling below — so a terminal connection error
+    // (api_disabled/auth) doesn't dead-letter the scheduled tick every minute;
+    // the next cron tick retries. Logged to the `mail-sync` channel so it stays
+    // observable in Debug → Logs.
     if (accounts.length === 0) {
-      await ensureAccount();
+      try {
+        await ensureAccount();
+      } catch (err) {
+        Log.emit(
+          "mail-sync",
+          `first-connect bootstrap failed: ${err instanceof Error ? err.message : String(err)}`,
+          "stderr",
+        );
+      }
       return;
     }
 

@@ -41,7 +41,7 @@ export const backfillJob = defineJob({
     try {
       // Fresh token every run — tokens expire; central owns refresh. A
       // token-unavailable failure here is recorded + classified like any other.
-      const token = await requireGmailToken();
+      const { accessToken: token } = await requireGmailToken();
 
       const list = await listMessages(token, { pageToken, maxResults: 100 });
 

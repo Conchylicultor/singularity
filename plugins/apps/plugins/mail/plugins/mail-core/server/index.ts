@@ -17,6 +17,7 @@ export {
 } from "./internal/tables";
 export { mailDraftAttachments } from "./internal/schema-attachments";
 export { requireGmailToken } from "./internal/token";
+export type { GmailConnection } from "./internal/token";
 
 export default {
   description:

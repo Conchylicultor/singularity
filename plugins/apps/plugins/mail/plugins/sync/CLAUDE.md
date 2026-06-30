@@ -44,7 +44,20 @@ idle → (bootstrap) → backfilling → (last page) → delta ⇄ (404 expiry) 
 - **`mail.sync-tick`** (`tick.ts`) — the steady-state driver. Auto-connects once
   the Gmail toggle is on (`ensureAccount()` when no account exists), then
   enqueues a delta for every account in a `delta`/`idle` state. `singleton`
-  dedup, `cron: "* * * * *"`, **main-only** (see below).
+  dedup, `cron: "* * * * *"`, **main-only** (see below). A first-connect
+  bootstrap failure is recorded onto the account's `mail_sync_state` row by
+  `ensureAccount` (→ surfaced live on the sync-status banner) and **swallowed**
+  here — consistent with the per-account "record and move on" handling — so a
+  terminal connection error (api_disabled/auth) does not dead-letter the tick
+  every minute; it's logged to the `mail-sync` channel for observability.
+
+  Bootstrap (`bootstrap.ts`) creates the `mail_accounts` row from the connected
+  Google email (from the OAuth identity, via `requireGmailToken()`, *without* a
+  Gmail API call) **before** the first `getProfile`/`listLabels` call, so a
+  bootstrap-time API failure has a real row to attach its classified error to. An
+  unarmed error-placeholder row (`historyId` still null) is re-armed with a fresh
+  watermark on the next successful connect, so enabling the API + "Retry now"
+  recovers cleanly.
 - **`POST /api/mail/sync`** (`handlers.ts`) — manual "connect / sync now": arms
   the account and, when already in `delta`, kicks an immediate delta. The trigger
   used by the phase-3 UI and for worktree testing (the tick is main-only and
@@ -87,7 +100,7 @@ current recommended pattern, respecting the per-user quota.
 
 - Description: Gmail sync engine: paginated backfill, history.list incremental delta with a bounded full-resync fallback on historyId expiry, and a scheduled main-only delta tick (the documented no-polling exception). Parses MIME into envelopes/bodies/attachment-metadata and mirrors threads/messages/labels into the mail-core tables.
 - Server:
-  - Uses: `apps/mail/gmail-api.batchGetMessages`, `apps/mail/gmail-api.getProfile`, `apps/mail/gmail-api.listHistory`, `apps/mail/gmail-api.listLabels`, `apps/mail/gmail-api.listMessages`, `apps/mail/mail-core._mailAccounts`, `apps/mail/mail-core._mailAttachments`, `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailMessageLabels`, `apps/mail/mail-core._mailMessages`, `apps/mail/mail-core._mailSyncState`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.requireGmailToken`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.NonRetryableError`, `integrations/gmail.isGmailEnabled`
+  - Uses: `apps/mail/gmail-api.batchGetMessages`, `apps/mail/gmail-api.getProfile`, `apps/mail/gmail-api.listHistory`, `apps/mail/gmail-api.listLabels`, `apps/mail/gmail-api.listMessages`, `apps/mail/mail-core._mailAccounts`, `apps/mail/mail-core._mailAttachments`, `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailMessageLabels`, `apps/mail/mail-core._mailMessages`, `apps/mail/mail-core._mailSyncState`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.requireGmailToken`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.NonRetryableError`, `integrations/gmail.isGmailEnabled`, `primitives/log-channels.Log`
   - Exports: Values: `mailSyncStateServerResource`
   - Register: `defineJob('mail.backfill')`, `defineJob('mail.delta')`, `defineJob('mail.sync-tick')`
   - Routes: `POST /api/mail/sync`

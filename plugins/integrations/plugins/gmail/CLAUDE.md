@@ -11,7 +11,7 @@ it and **never** import `@plugins/auth/*` directly or name the Gmail scope strin
 
 - **`core`** (`@plugins/integrations/plugins/gmail/core`)
   - `GMAIL_SCOPES` — the canonical Gmail OAuth scope tuple (`["https://mail.google.com/"]`).
-  - `GmailTokenResult` (type) — Gmail-owned token-request result: `{ ok: true; accessToken; expiresAt; scopes }` or `{ ok: false; needsConsent; message }`. Deliberately not a re-export of auth's `TokenResponse`.
+  - `GmailTokenResult` (type) — Gmail-owned token-request result: `{ ok: true; accessToken; expiresAt; scopes; email }` or `{ ok: false; needsConsent; message }`. The `email` is the connected Google account address (from the OAuth identity, known without a Gmail API call) — it lets consumers establish state before their first API call. Deliberately not a re-export of auth's `TokenResponse`.
 - **`server`** (`@plugins/integrations/plugins/gmail/server`)
   - `getGmailToken(): Promise<GmailTokenResult>` — fetches a Gmail-scoped Google token via the shared auth/central store. Lets `AuthCentralOfflineError` propagate (fail loudly).
   - `isGmailEnabled(): boolean` — whether the Settings toggle is on.

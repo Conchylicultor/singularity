@@ -16,6 +16,7 @@ export async function getGmailToken(): Promise<GmailTokenResult> {
       accessToken: res.accessToken,
       expiresAt: res.expiresAt,
       scopes: res.scopes,
+      email: res.identity.email ?? null,
     };
   }
   if (res.needsConsent) {

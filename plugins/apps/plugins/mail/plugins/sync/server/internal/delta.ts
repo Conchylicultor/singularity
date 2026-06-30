@@ -50,7 +50,7 @@ export const deltaJob = defineJob({
     }
 
     try {
-      const token = await requireGmailToken();
+      const { accessToken: token } = await requireGmailToken();
 
       // Keep label names/colors current and the message↔label FK satisfiable.
       await upsertLabels(accountId, await listLabels(token));
