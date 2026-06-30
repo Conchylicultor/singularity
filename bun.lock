@@ -2053,6 +2053,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-resize-observer-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/trigger-render-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-trigger-render-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/provision": {
       "name": "@singularity/plugin-framework-tooling-provision",
       "version": "0.0.1",
@@ -5354,6 +5358,8 @@
     "@singularity/plugin-framework-tooling-lint-reactive-server-io": ["@singularity/plugin-framework-tooling-lint-reactive-server-io@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io"],
 
     "@singularity/plugin-framework-tooling-lint-resize-observer-safety": ["@singularity/plugin-framework-tooling-lint-resize-observer-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/resize-observer-safety"],
+
+    "@singularity/plugin-framework-tooling-lint-trigger-render-safety": ["@singularity/plugin-framework-tooling-lint-trigger-render-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/trigger-render-safety"],
 
     "@singularity/plugin-framework-tooling-provision": ["@singularity/plugin-framework-tooling-provision@workspace:plugins/framework/plugins/tooling/plugins/provision"],
 

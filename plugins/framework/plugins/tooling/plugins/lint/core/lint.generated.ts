@@ -25,6 +25,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/promise-safety", id: "framework.tooling.lint.promise-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/reactive-server-io", id: "framework.tooling.lint.reactive-server-io", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/resize-observer-safety", id: "framework.tooling.lint.resize-observer-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/resize-observer-safety/lint"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/trigger-render-safety", id: "framework.tooling.lint.trigger-render-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/trigger-render-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/web-core", id: "framework.web-core", loader: () => import("@plugins/framework/plugins/web-core/lint"), dependsOn: [] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/bar", id: "primitives.bar", loader: () => import("@plugins/primitives/plugins/bar/lint"), dependsOn: [] },

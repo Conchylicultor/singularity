@@ -3038,6 +3038,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
+            - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
           - Core:
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`
