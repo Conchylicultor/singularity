@@ -1,5 +1,5 @@
 import { useConfig } from "@plugins/config_v2/web";
-import { useAccountStatus } from "@plugins/auth/web";
+import { useAccountStatus, missingScopes } from "@plugins/auth/web";
 import { gmailConfig } from "../../shared/config";
 import { GMAIL_SCOPES } from "../../core";
 
@@ -21,9 +21,8 @@ export function useGmailAccess(): GmailAccess {
   const status = useAccountStatus("google");
   const loading = status === null;
   const connected = status?.connected ?? false;
-  const granted = new Set(status?.scopes ?? []);
   const scopesGranted =
-    status != null && GMAIL_SCOPES.every((scope) => granted.has(scope));
+    status != null && missingScopes([...GMAIL_SCOPES], status.scopes).length === 0;
   return {
     enabled,
     connected,

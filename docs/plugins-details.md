@@ -1042,7 +1042,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Slots: `Auth.Provider` ← `auth.google`, `auth.notion`, `Auth.ScopeRequirement` ← `backup.targets.google-drive`, `integrations.gmail`, `accountsPane.Actions`
     - Uses: `config_v2/settings.configNavPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.useOpenPane`, `shell/notifications.toast`
-    - Exports: Types: `AuthProviderContribution`, `AuthProviderRowProps`, `AuthScopeRequirement`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`; Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `GrantAccessButton`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
+    - Exports: Types: `AuthProviderContribution`, `AuthProviderRowProps`, `AuthScopeRequirement`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`; Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `GrantAccessButton`, `missingScopes`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
   - Central:
     - Uses: `infra/secrets.getSecret`, `infra/secrets.ready`, `infra/secrets.SecretsKeychainLockedError`, `infra/secrets.setSecret`
     - Exports: Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `GetAccessTokenArgs`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `registerAuthProvider`
@@ -3343,7 +3343,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`gmail`** — Gmail access toggle and Google scope requirement. Surfaces the Gmail access toggle in Settings.
       - Web:
         - Contributes: `ConfigV2.WebRegister`, `Auth.ScopeRequirement` "Read, send, and manage Gmail messages"
-        - Uses: `auth.Auth`, `auth.useAccountStatus`, `config_v2.ConfigV2`, `config_v2.useConfig`
+        - Uses: `auth.Auth`, `auth.missingScopes`, `auth.useAccountStatus`, `config_v2.ConfigV2`, `config_v2.useConfig`
         - Exports: Types: `GmailAccess`; Values: `useGmailAccess`
       - Server:
         - Uses: `auth.getTokenFromCentral`, `config_v2.ConfigV2`, `config_v2.getConfig`

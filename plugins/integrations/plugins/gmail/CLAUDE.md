@@ -29,7 +29,7 @@ access on their behalf.
 - Description: Gmail access toggle and Google scope requirement. Surfaces the Gmail access toggle in Settings.
 - Web:
   - Contributes: `ConfigV2.WebRegister`, `Auth.ScopeRequirement` "Read, send, and manage Gmail messages"
-  - Uses: `auth.Auth`, `auth.useAccountStatus`, `config_v2.ConfigV2`, `config_v2.useConfig`
+  - Uses: `auth.Auth`, `auth.missingScopes`, `auth.useAccountStatus`, `config_v2.ConfigV2`, `config_v2.useConfig`
   - Exports: Types: `GmailAccess`; Values: `useGmailAccess`
 - Server:
   - Uses: `auth.getTokenFromCentral`, `config_v2.ConfigV2`, `config_v2.getConfig`
