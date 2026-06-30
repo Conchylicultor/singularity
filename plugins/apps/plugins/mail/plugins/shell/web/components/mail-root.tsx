@@ -1,6 +1,12 @@
 import { type ReactElement, type ReactNode } from "react";
 import { useGmailAccess } from "@plugins/integrations/plugins/gmail/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import {
+  deriveMailSyncView,
+  mailSyncStateResource,
+} from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -57,10 +63,33 @@ export function MailRoot(): ReactElement {
   }
 
   // ready
+  return <ReadyLanding />;
+}
+
+/**
+ * The connected/ready landing. Reads the live sync state and shows when the
+ * mailbox last synced; the `Mail.Banner` strip (above the surface) owns
+ * surfacing in-progress / failed syncs, so this stays a calm "all good" line.
+ */
+function ReadyLanding(): ReactElement {
+  const sync = useResource(mailSyncStateResource);
+  if (sync.pending) {
+    return <EmptyState title="Mail is connected." body="Checking your mailbox…" />;
+  }
+
+  const lastSyncedAt = deriveMailSyncView(sync.data).lastSyncedAt;
   return (
     <EmptyState
       title="Mail is connected."
-      body="Your inbox will appear here soon."
+      body={
+        lastSyncedAt ? (
+          <>
+            Synced <RelativeTime date={new Date(lastSyncedAt)} />.
+          </>
+        ) : (
+          "Waiting for your first sync…"
+        )
+      }
     />
   );
 }
@@ -71,7 +100,7 @@ function EmptyState({
   action,
 }: {
   title: string;
-  body: string;
+  body: ReactNode;
   action?: ReactNode;
 }): ReactElement {
   return (

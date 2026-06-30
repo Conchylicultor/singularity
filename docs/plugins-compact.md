@@ -27,6 +27,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`mail-core`** — Schema + token wiring for the mail app (accounts, threads, messages, labels, attachments, drafts, sync-state, outbox).
         - **`shell`** — App shell for Mail. Registers the /mail app entry, defines the Mail.Sidebar slot, and renders the capability-driven landing pane.
         - **`sync`** — Gmail sync engine: paginated backfill, history.list incremental delta with a bounded full-resync fallback on historyId expiry, and a scheduled main-only delta tick (the documented no-polling exception). Parses MIME into envelopes/bodies/attachment-metadata and mirrors threads/messages/labels into the mail-core tables.
+        - **`sync-status`** — Mail sync-status banner: a full-width strip above the mailbox surface that surfaces in-progress syncs and classified sync failures (warning/error) with remediation copy and actions (reconnect, enable API, retry). Silent when the mailbox is healthy.
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged and seeding existing pages via a one-shot boot backfill.

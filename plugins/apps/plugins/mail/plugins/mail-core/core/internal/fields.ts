@@ -16,6 +16,7 @@ import {
   MAIL_LABEL_TYPES,
   MAIL_OUTBOX_OP_TYPES,
   MAIL_OUTBOX_STATUSES,
+  MAIL_SYNC_ERROR_CODES,
   MAIL_SYNC_STATUSES,
 } from "./enums";
 
@@ -55,6 +56,9 @@ export const mailSyncStateFields = {
   lastFullSyncAt: nullable(dateField()),
   lastDeltaSyncAt: nullable(dateField()),
   status: enumTextField(MAIL_SYNC_STATUSES),
+  errorCode: nullable(enumTextField(MAIL_SYNC_ERROR_CODES)),
+  lastError: nullable(textField()),
+  lastErrorAt: nullable(dateField()),
   createdAt: dateField(),
   updatedAt: dateField(),
 } satisfies FieldsRecord;

@@ -1,3 +1,4 @@
+import type { ComponentType } from "react";
 import type { AppShellSidebarItem } from "@plugins/primitives/plugins/app-shell/web";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { mailApp } from "../core";
@@ -10,4 +11,11 @@ export const Mail = {
   Sidebar: defineRenderSlot<AppShellSidebarItem>("mail.sidebar", {
     docLabel: (p) => p.title,
   }),
+  /**
+   * Full-width status strip rendered above the mail surface on every route.
+   * Sub-plugins contribute a bare component (the sync-status banner today); each
+   * is free to render `null` when it has nothing to show, so the strip collapses
+   * to zero height when the mailbox is healthy.
+   */
+  Banner: defineRenderSlot<{ component: ComponentType }>("mail.banner"),
 };

@@ -1,0 +1,9 @@
+// @hash a4b5f9ee8329
+{
+  // Full-width status strip above the mailbox surface. Today the sync-status
+  // banner is the only contributor; additional strips would stack in this order.
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
+  "items": [
+    "apps.mail.sync-status:sync-status"
+  ]
+}

@@ -36,3 +36,12 @@ export const MAIL_SYNC_STATUSES = [
   "error",
 ] as const;
 export type MailSyncStatus = (typeof MAIL_SYNC_STATUSES)[number];
+
+/** Classification of a sync failure, driving the remediation copy + action. */
+export const MAIL_SYNC_ERROR_CODES = [
+  "auth",
+  "api_disabled",
+  "quota",
+  "unknown",
+] as const;
+export type MailSyncErrorCode = (typeof MAIL_SYNC_ERROR_CODES)[number];

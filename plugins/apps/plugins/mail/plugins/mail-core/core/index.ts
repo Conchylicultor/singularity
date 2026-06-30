@@ -7,7 +7,16 @@ export {
   type MailOutboxStatus,
   MAIL_SYNC_STATUSES,
   type MailSyncStatus,
+  MAIL_SYNC_ERROR_CODES,
+  type MailSyncErrorCode,
 } from "./internal/enums";
+export { mailSyncStateResource } from "./internal/resources";
+export {
+  type MailSyncPhase,
+  type MailSyncView,
+  deriveMailSyncView,
+  MAIL_SYNC_REMEDIATION,
+} from "./internal/sync-view";
 export type {
   MailAddress,
   MailAccount,

@@ -12,6 +12,7 @@ import {
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
 import { backfillJob } from "./backfill";
 import { upsertLabels } from "./store";
+import { recordSyncError } from "./record-error";
 
 // Idempotent first-connect: resolve the Gmail account, mirror its labels, and
 // arm the sync state machine. Safe to call repeatedly (the manual endpoint and
@@ -23,8 +24,19 @@ export async function ensureAccount(): Promise<{
   accountId: string;
   status: string;
 }> {
-  // Throws loudly if Gmail isn't connected/enabled — let it propagate.
-  const token = await requireGmailToken();
+  // Throws loudly if Gmail isn't connected/enabled. Attribute a token failure to
+  // every existing account so a manual "sync now" surfaces it on the row(s);
+  // first-connect has no account yet, so the error simply propagates.
+  let token: string;
+  try {
+    token = await requireGmailToken();
+  } catch (err) {
+    const accounts = await db
+      .select({ id: _mailAccounts.id })
+      .from(_mailAccounts);
+    for (const a of accounts) await recordSyncError(a.id, err);
+    throw err;
+  }
   const profile = await getProfile(token);
 
   // Find-or-create the account by email.

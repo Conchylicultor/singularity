@@ -9,6 +9,7 @@ import {
 import { eq } from "drizzle-orm";
 import { ensureAccount } from "./bootstrap";
 import { deltaJob } from "./delta";
+import { recordSyncError } from "./record-error";
 
 // Steady-state driver: the documented no-polling exception. Gmail push
 // (users.watch → Pub/Sub) needs a public inbound HTTPS endpoint that a
@@ -42,13 +43,20 @@ export const syncTickJob = defineJob({
     }
 
     for (const account of accounts) {
-      const [state] = await db
-        .select({ status: _mailSyncState.status })
-        .from(_mailSyncState)
-        .where(eq(_mailSyncState.accountId, account.id))
-        .limit(1);
-      if (state && (state.status === "delta" || state.status === "idle")) {
-        await deltaJob.enqueue({ accountId: account.id });
+      // One account's failure must not abort the whole tick — record it on that
+      // account's row and move on (errored/backfilling accounts are skipped).
+      try {
+        const [state] = await db
+          .select({ status: _mailSyncState.status })
+          .from(_mailSyncState)
+          .where(eq(_mailSyncState.accountId, account.id))
+          .limit(1);
+        if (state && (state.status === "delta" || state.status === "idle")) {
+          await deltaJob.enqueue({ accountId: account.id });
+        }
+      } catch (err) {
+        await recordSyncError(account.id, err);
+        continue;
       }
     }
   },
