@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-transpose",
+  "description": "Per-song global transpose offset: persists a semitone shift and syncs it into the shell's score pipeline, plus a toolbar stepper control.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -164,8 +164,12 @@ function bestKey(hist: readonly number[]): KeyGuess {
   return best;
 }
 
-/** Conventional, fewest-accidental tonic name for a `(pc, mode)` pair. */
-function tonicName(pc: number, mode: "major" | "minor"): string {
+/**
+ * Conventional, fewest-accidental tonic name for a `(pc, mode)` pair. Exported
+ * so the fewest-accidental naming table has ONE home, reused by both `inferKeys`
+ * (here) and `transposeScore`/`transposeKey` (sibling `transpose.ts`).
+ */
+export function tonicName(pc: number, mode: "major" | "minor"): string {
   return (mode === "major" ? MAJOR_NAMES : MINOR_NAMES)[pc]!;
 }
 

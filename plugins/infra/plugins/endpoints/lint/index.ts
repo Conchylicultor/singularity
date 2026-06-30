@@ -59,6 +59,10 @@ export default {
       // first, and the keyAutoDetectResource push reaffirms it — a failed persist
       // self-corrects on the next toggle.
       "plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/web/actions.ts",
+      // Per-song global transpose offset; set optimistically on the shell store
+      // first, and the transposeResource push reaffirms it — a failed persist
+      // self-corrects on the next step.
+      "plugins/apps/plugins/sonata/plugins/transpose/web/actions.ts",
 
     ],
   },

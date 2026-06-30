@@ -24,13 +24,14 @@ import {
   subdivideBars,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { inferKeys } from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import { inferKeys, transposeScore } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { reVoiceChords, voicingConfig } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { useConfig } from "@plugins/config_v2/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Sonata } from "./slots";
 import { useCursorApi } from "./cursor-store";
 import { useKeyAutoDetect } from "./key-mode-store";
+import { useTransposeSemitones } from "./transpose-store";
 
 /** Tempo scale clamp — slowest 0× (frozen / 0%) to fastest 4× (quadruple). */
 const MIN_TEMPO_SCALE = 0;
@@ -364,6 +365,12 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // pipeline ignores the authored key and infers it from the notes — see
   // `baseScore`.
   const keyAutoDetect = useKeyAutoDetect();
+  // Per-song global transpose offset in semitones (per-surface scoped store,
+  // written by the `transpose` plugin's observer / the toolbar control). Applied
+  // early in `baseScore` (before re-voicing / inference / spelling) so every
+  // downstream consumer — audio, roll geometry, overlays, key readout —
+  // transposes for free.
+  const transposeSemitones = useTransposeSemitones();
   // Global chord-voicing config (realistic toggle / strategy / octave). Read
   // reactively here so toggling it re-derives the score below — chord notes are
   // (re)generated from authored chord annotations in `baseScore`.
@@ -466,12 +473,16 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       .map((s) => s.compile(rawById[s.id]));
     if (compiled.length === 0) return emptyScore();
     const merged = mergeScores(compiled);
+    // Shift the whole song by the per-song transpose offset BEFORE anything else
+    // (re-voicing / key inference / spelling / chord analysis all operate on the
+    // shifted pitches). No-op at 0 semitones — see `transposeScore`.
+    const transposed = transposeScore(merged, transposeSemitones);
     // Regenerate chord notes from authored chord annotations under the global
     // voicing config (realistic voice-leading / strategy / octave). Runs BEFORE
     // key inference + spelling so the chord notes exist for key detection and
     // get enharmonic spellings. No-op when there are no authored chord
     // annotations (returns the score unchanged).
-    const voiced = reVoiceChords(merged, voicing);
+    const voiced = reVoiceChords(transposed, voicing);
     // Two pure pre-analysis steps establish key context: inferKeys derives the
     // tonal centre(s) from the notes (when no key is authored), then spellScore
     // fills each note's enharmonic `spelling` from the key in force. Order
@@ -484,7 +495,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     const spelled = spellScore(keyed); // score/core
     const derived = analyzers.flatMap((a) => a.analyze(spelled));
     return mergeAnnotations(spelled, derived);
-  }, [sources, analyzers, rawById, keyAutoDetect, voicing]);
+  }, [sources, analyzers, rawById, keyAutoDetect, transposeSemitones, voicing]);
 
   // Fold the tempo scale into the tempo map ONCE here, so every consumer — the
   // transport loop below, the audio scheduler, and the displays — reads a single

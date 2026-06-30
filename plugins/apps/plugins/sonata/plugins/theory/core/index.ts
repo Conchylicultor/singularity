@@ -23,4 +23,5 @@ export { parseChordSymbol } from "./parse";
 export { parseKeySignature } from "./key";
 export { detectChord, detectChordWeighted, detectChordWindows } from "./detect";
 export type { ChordMatch, ChordWindow } from "./detect";
-export { inferKeys } from "./key-detect";
+export { inferKeys, tonicName } from "./key-detect";
+export { transposeScore, transposeKey, transposeChordText } from "./transpose";

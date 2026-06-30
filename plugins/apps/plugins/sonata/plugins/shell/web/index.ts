@@ -31,6 +31,11 @@ export {
   useSetKeyAutoDetect,
 } from "./key-mode-store";
 export {
+  TransposeStoreProvider,
+  useTransposeSemitones,
+  useSetTransposeSemitones,
+} from "./transpose-store";
+export {
   LaneInsetsProvider,
   useLaneInsets,
   type LaneInsets,

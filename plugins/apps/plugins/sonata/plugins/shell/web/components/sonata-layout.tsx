@@ -3,6 +3,7 @@ import { Sonata } from "../slots";
 import { SonataProvider } from "../context";
 import { CursorStoreProvider } from "../cursor-store";
 import { KeyModeStoreProvider } from "../key-mode-store";
+import { TransposeStoreProvider } from "../transpose-store";
 
 /**
  * Sonata's app surface. Sonata is a pure full-surface app, so it mounts the
@@ -27,12 +28,14 @@ export function SonataLayout() {
   return (
     <CursorStoreProvider>
       <KeyModeStoreProvider>
-        <SonataProvider>
-          <div className="h-full min-h-0">
-            <FullPane />
-            <Sonata.Effect.Mount />
-          </div>
-        </SonataProvider>
+        <TransposeStoreProvider>
+          <SonataProvider>
+            <div className="h-full min-h-0">
+              <FullPane />
+              <Sonata.Effect.Mount />
+            </div>
+          </SonataProvider>
+        </TransposeStoreProvider>
       </KeyModeStoreProvider>
     </CursorStoreProvider>
   );
