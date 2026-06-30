@@ -81,6 +81,40 @@ INSERT model, not select), keeping the select type exact.
 > builder must actually expose the method). Mis-targeting throws a clear error
 > naming the column.
 
+## Foreign keys & cascade deletes
+
+FKs are **opt-in per column** via `meta.columns.<key>.references`, carrying a
+**lazy column thunk** plus optional `onDelete` / `onUpdate` — the exact shape of
+drizzle's native `.references(() => other.id, { onDelete })`, so a relational
+cluster reads the same as hand-written drizzle while keeping the
+`$inferSelect ≡ z.infer<schema>` guarantee:
+
+```ts
+export const mailThreads = defineEntity("mail_threads", { … }, {
+  primaryKey: "id",
+  columns: {
+    accountId: { references: { column: () => mailAccounts.table.id, onDelete: "cascade" } },
+  },
+});
+```
+
+- The thunk is **lazy** so **forward references** (target defined later) and
+  **self references** (target is the entity being defined) both resolve after
+  every table is built — drizzle wires FKs up at config time, not call time.
+- A **self reference** needs the `AnyPgColumn` return annotation to break
+  TypeScript's circular inference, mirroring the raw-drizzle precedent:
+  `parentId: { references: { column: (): AnyPgColumn => labels.table.id, onDelete: "set null" } }`.
+  A `set null` target column must be nullable (its field schema `ZodOptional` /
+  `ZodNullable`), exactly as Postgres requires.
+- `onDelete` / `onUpdate` take drizzle's `UpdateDeleteAction`
+  (`"cascade" | "set null" | "restrict" | "no action" | "set default"`); omitted
+  ⇒ NO ACTION (Postgres's default).
+- **Composite-PK junctions** combine `primaryKey: ["a", "b"]` with a
+  `references` on each column — see the unit test's `fk_message_labels`.
+
+FKs touch only the DDL — never the select/insert row shape — so they are
+deliberately absent from the `EntityColumns` cast (like `.primaryKey()`).
+
 ## Boundary casts
 
 Exactly two casts cross the runtime/type boundary (the rest is precisely typed):
@@ -106,7 +140,7 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
 - Server:
   - Uses: `fields.Fields`, `fields.resolveFieldStorage`
   - DB schema: `plugins/infra/plugins/entities/server/internal/define-entity.ts`
-  - Exports: Types: `ColumnDefault`, `DbDefault`, `DefaultedKeys`, `Entity`, `EntityColumnMeta`, `EntityColumns`, `EntityMeta`, `EntityRow`; Values: `defaultNow`, `defaultRandom`, `defineEntity`, `sqlDefault`
+  - Exports: Types: `ColumnDefault`, `DbDefault`, `DefaultedKeys`, `Entity`, `EntityColumnMeta`, `EntityColumns`, `EntityMeta`, `EntityReference`, `EntityRow`; Values: `defaultNow`, `defaultRandom`, `defineEntity`, `sqlDefault`
 - Cross-plugin:
   - Imported by: `debug/boot-profile`, `debug/slow-ops`
 

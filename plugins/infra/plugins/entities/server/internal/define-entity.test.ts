@@ -9,6 +9,7 @@ import {
   uuid,
 } from "drizzle-orm/pg-core";
 import { getTableConfig } from "drizzle-orm/pg-core";
+import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { defineFieldType } from "@plugins/fields/core";
 import type { FieldDef } from "@plugins/fields/core";
@@ -332,4 +333,162 @@ test("DB-defaulted columns may be omitted from an insert", () => {
     operation: "GET /x",
   };
   expect(insertValues.worktree).toBe("main");
+});
+
+// ── Foreign keys: cascade / set-null / self-ref / composite junction ────────
+// A relational cluster (the mail-core shape that motivated FK support): a root
+// table, a child with a CASCADE FK + a nullable SELF FK (SET NULL), and a
+// composite-PK junction whose two columns each CASCADE to a different parent.
+// `null` schema makes the SELF-FK column nullable so SET NULL is valid; cast to
+// `z.ZodType<string>` keeps the throwaway field type happy (runtime nullability
+// is read off the raw schema instance, exactly like a real nullable field).
+function nullableField(): FieldDef<string> {
+  return field(textType, z.string().nullable() as unknown as z.ZodType<string>, "");
+}
+
+test("defineEntity emits FK constraints (cascade, set-null, self-ref, composite)", () => {
+  const accounts = defineEntity(
+    "fk_accounts",
+    { id: field(textType, z.string(), "") },
+    { primaryKey: "id" },
+  );
+
+  const labels = defineEntity(
+    "fk_labels",
+    {
+      id: field(textType, z.string(), ""),
+      accountId: field(textType, z.string(), ""),
+      parentId: nullableField(),
+    },
+    {
+      primaryKey: "id",
+      columns: {
+        accountId: {
+          references: { column: () => accounts.table.id, onDelete: "cascade" },
+        },
+        // Self reference — the `AnyPgColumn` annotation breaks circular inference.
+        parentId: {
+          references: {
+            column: (): AnyPgColumn => labels.table.id,
+            onDelete: "set null",
+          },
+        },
+      },
+    },
+  );
+
+  const messages = defineEntity(
+    "fk_messages",
+    {
+      id: field(textType, z.string(), ""),
+      accountId: field(textType, z.string(), ""),
+    },
+    {
+      primaryKey: "id",
+      columns: {
+        accountId: {
+          references: { column: () => accounts.table.id, onDelete: "cascade" },
+        },
+      },
+    },
+  );
+
+  const messageLabels = defineEntity(
+    "fk_message_labels",
+    {
+      messageId: field(textType, z.string(), ""),
+      labelId: field(textType, z.string(), ""),
+    },
+    {
+      primaryKey: ["messageId", "labelId"],
+      columns: {
+        messageId: {
+          references: { column: () => messages.table.id, onDelete: "cascade" },
+        },
+        labelId: {
+          references: { column: () => labels.table.id, onDelete: "cascade" },
+        },
+      },
+    },
+  );
+
+  // Helper: { localCol → { table, foreignCol, onDelete } } for a table's FKs.
+  const fkMap = (t: Parameters<typeof getTableConfig>[0]) =>
+    new Map(
+      getTableConfig(t).foreignKeys.map((fk) => {
+        const ref = fk.reference();
+        return [
+          ref.columns[0]!.name,
+          {
+            table: getTableConfig(ref.foreignTable).name,
+            foreignCol: ref.foreignColumns[0]!.name,
+            onDelete: fk.onDelete,
+          },
+        ] as const;
+      }),
+    );
+
+  // labels: account_id → accounts.id CASCADE; parent_id → labels.id SET NULL.
+  const labelFks = fkMap(labels.table);
+  expect(labelFks.get("account_id")).toEqual({
+    table: "fk_accounts",
+    foreignCol: "id",
+    onDelete: "cascade",
+  });
+  expect(labelFks.get("parent_id")).toEqual({
+    table: "fk_labels",
+    foreignCol: "id",
+    onDelete: "set null",
+  });
+  // The SET-NULL target column must be nullable, else the constraint is invalid.
+  expect(labels.table.parentId.notNull).toBe(false);
+
+  // messages: account_id → accounts.id CASCADE.
+  expect(fkMap(messages.table).get("account_id")).toEqual({
+    table: "fk_accounts",
+    foreignCol: "id",
+    onDelete: "cascade",
+  });
+
+  // Junction: composite PK + two CASCADE FKs to different parents.
+  const jl = messageLabels.table;
+  const { primaryKeys } = getTableConfig(jl);
+  expect(primaryKeys[0]!.columns.map((c) => c.name)).toEqual([
+    "message_id",
+    "label_id",
+  ]);
+  const jlFks = fkMap(jl);
+  expect(jlFks.get("message_id")).toEqual({
+    table: "fk_messages",
+    foreignCol: "id",
+    onDelete: "cascade",
+  });
+  expect(jlFks.get("label_id")).toEqual({
+    table: "fk_labels",
+    foreignCol: "id",
+    onDelete: "cascade",
+  });
+});
+
+test("defineEntity defaults the FK action to NO ACTION when none is given", () => {
+  const parent = defineEntity(
+    "fk_noaction_parent",
+    { id: field(textType, z.string(), "") },
+    { primaryKey: "id" },
+  );
+  const child = defineEntity(
+    "fk_noaction_child",
+    { id: field(textType, z.string(), ""), parentId: field(textType, z.string(), "") },
+    {
+      primaryKey: "id",
+      columns: { parentId: { references: { column: () => parent.table.id } } },
+    },
+  );
+
+  // drizzle normalizes a missing onDelete/onUpdate to "no action" (Postgres's
+  // own default), so an action-less FK is identical to a hand-written bare FK.
+  const fk = getTableConfig(child.table).foreignKeys[0]!;
+  expect(fk.onDelete).toBe("no action");
+  expect(fk.onUpdate).toBe("no action");
+  expect(fk.reference().foreignColumns[0]!.name).toBe("id");
 });

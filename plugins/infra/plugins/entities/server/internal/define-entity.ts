@@ -94,6 +94,15 @@ export function defineEntity<
       b = applyDefault(b, colMeta.default as ColumnDefault<unknown>, key);
     }
 
+    // Opt-in FK: lazy column thunk + onDelete/onUpdate, faithfully forwarded to
+    // drizzle's native `.references(thunk, actions)`. Omitted actions fall back
+    // to drizzle's NO ACTION default (Postgres's own default). FKs affect only
+    // the DDL, never the row type — hence absent from `EntityColumns`.
+    if (colMeta?.references) {
+      const { column, onDelete, onUpdate } = colMeta.references;
+      b = b.references(column, { onDelete, onUpdate });
+    }
+
     builders[key] = b;
   }
 

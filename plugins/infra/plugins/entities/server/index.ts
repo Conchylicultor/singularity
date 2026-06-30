@@ -7,6 +7,7 @@ export type {
   EntityMeta,
   EntityColumnMeta,
   EntityColumns,
+  EntityReference,
   EntityRow,
   DefaultedKeys,
   ColumnDefault,

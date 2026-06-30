@@ -11,8 +11,10 @@ import type {
 } from "drizzle-orm";
 import type {
   AnyIndexBuilder,
+  AnyPgColumn,
   PgColumnBuilderBase,
   PgTableWithColumns,
+  UpdateDeleteAction,
 } from "drizzle-orm/pg-core";
 import type { FieldsRecord, InferFieldValue } from "@plugins/fields/core";
 
@@ -36,6 +38,37 @@ export interface EntityColumnMeta<T> {
   name?: string;
   /** Opt-in DB-column default. */
   default?: ColumnDefault<T>;
+  /** Opt-in foreign-key constraint on this column. */
+  references?: EntityReference;
+}
+
+// ─── Foreign keys ──────────────────────────────────────────────────────────
+// A column-level FK, declared opt-in per column via `meta.columns.<key>.references`.
+// `column` is a LAZY thunk returning the target Drizzle column — exactly
+// drizzle's own `.references(() => other.id)` shape — so it composes with the
+// entity factory without any structural typing of the target entity:
+//
+//   columns: {
+//     accountId: { references: { column: () => accounts.table.id, onDelete: "cascade" } },
+//   }
+//
+// The thunk defers resolution until drizzle wires up FKs (after every table is
+// built), so FORWARD references (target defined later) and SELF references
+// (target is the entity being defined) both work. A self reference needs the
+// `AnyPgColumn` return annotation to break TypeScript's circular inference,
+// mirroring the raw-drizzle precedent:
+//
+//   parentId: { references: { column: (): AnyPgColumn => labels.table.id, onDelete: "set null" } }
+//
+// FKs touch only the DDL — never the select/insert row shape — so they are
+// deliberately absent from `EntityColumns` (like `.primaryKey()`).
+export interface EntityReference {
+  /** Lazy target column, e.g. `() => accounts.table.id`. */
+  column: () => AnyPgColumn;
+  /** ON DELETE action; omitted ⇒ NO ACTION (drizzle default). */
+  onDelete?: UpdateDeleteAction;
+  /** ON UPDATE action; omitted ⇒ NO ACTION (drizzle default). */
+  onUpdate?: UpdateDeleteAction;
 }
 
 // ─── The precise select-type cast target ───────────────────────────────────
