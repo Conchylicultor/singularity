@@ -5,7 +5,6 @@ import type {
   SealContributions,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
-import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -43,6 +42,7 @@ import { useScrollAncestorGuard } from "../internal/use-scroll-ancestor-guard";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
 import { CreatorsControl } from "./creators-control";
+import { DataViewToolbar } from "./toolbar/data-view-toolbar";
 
 /**
  * Host entry point. Every DataView is config-backed (config mode is universal):
@@ -272,61 +272,54 @@ function DataViewInner<TRow>({
     // that establishes this DataView's own sticky containing block and lets the
     // body grow to natural height — the pane (via `<PaneScroll>`) owns the scroll.
     <Stack gap="none" ref={rootRef}>
-      <Sticky
-        edge="top"
-        // horizontal toolbar row of variable-content controls; no named-slot primitive maps. `bg-background` so rows don't show through the pinned bar
-        // eslint-disable-next-line layout/no-adhoc-layout
-        className={cn("bg-background flex items-center gap-sm pb-sm pl-sm")}
-      >
-        {title ? (
-          <Text as="div" variant="label">
-            {title}
-          </Text>
-        ) : null}
-        {/* View switcher + its `+` add menu lead the toolbar (Notion-style):
-            the view list anchors the left edge, everything else clusters at the
-            right past the `ml-auto` spacer the search input carries. */}
-        <EditableViewSwitcher
-          instances={instances}
-          activeId={activeViewId}
-          onSelect={viewModel.setActiveView}
-          actions={viewModel.actions}
-          viewVariants={viewVariants}
-        />
-        {/* `ml-auto` is the toolbar's spacer: it shoves the search input and the
-            whole trailing control cluster (filter/sort/config/new) to the right
-            edge, away from the leading view switcher. */}
-        <SearchInput
-          value={activeState.query}
-          onChange={(e) => viewModel.setQuery(activeViewId, e.target.value)}
-          placeholder="Search…"
-          wrapperClassName="ml-auto w-48"
-        />
-        {/* The filter + sort builders sit adjacent as a matched pair: each is a
-            pill trigger ("Filter" / "N rules", "Sort" / "N sorts") opening its
-            Notion-style popover. Each renders only when the schema has at least
-            one eligible field. */}
-        {hasFilters ? (
-          <FilterBuilderTrigger
-            controller={filterController}
-            presets={filterPresets}
+      {/* The toolbar adapts to its own width: the wide inline row below
+          `COMPACT_BREAKPOINT`, the folded compact form (search-icon + `MdTune`
+          options popover, single-view switcher hidden) above it. Each control
+          element is built once and handed to the toolbar, which only relocates
+          it — the sort/filter builder popovers are byte-for-byte identical in
+          either layout. */}
+      <DataViewToolbar
+        title={title}
+        query={activeState.query}
+        onQueryChange={(next) => viewModel.setQuery(activeViewId, next)}
+        switcher={
+          <EditableViewSwitcher
+            instances={instances}
+            activeId={activeViewId}
+            onSelect={viewModel.setActiveView}
+            actions={viewModel.actions}
+            viewVariants={viewVariants}
           />
-        ) : null}
-        {hasSort ? (
-          <SortBuilderTrigger
-            controller={sortController}
-            presets={sortPresets}
-          />
-        ) : null}
-        {actions}
-        {customColumnsEnabled ? (
-          <DataViewSettingsButton
-            defs={customColumnDefs}
-            actions={customColumnActions}
-          />
-        ) : null}
-        <CreatorsControl creators={creators} />
-      </Sticky>
+        }
+        switcherCount={instances.length}
+        filterControl={
+          hasFilters ? (
+            <FilterBuilderTrigger
+              controller={filterController}
+              presets={filterPresets}
+            />
+          ) : null
+        }
+        sortControl={
+          hasSort ? (
+            <SortBuilderTrigger controller={sortController} presets={sortPresets} />
+          ) : null
+        }
+        actions={actions}
+        fieldsControl={
+          customColumnsEnabled ? (
+            <DataViewSettingsButton
+              defs={customColumnDefs}
+              actions={customColumnActions}
+            />
+          ) : null
+        }
+        creatorsControl={<CreatorsControl creators={creators} />}
+        activeControlCount={
+          (hasFilters ? filterController.ruleCount : 0) +
+          (hasSort ? sortController.ruleCount : 0)
+        }
+      />
       {/* One density for every view type, so a row's controls and decorations
           (avatars, status dots, chips, buttons) look identical whether the same
           data is shown as a table, tree, list, or gallery. The table view's
