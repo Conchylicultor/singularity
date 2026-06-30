@@ -1,0 +1,7 @@
+// @hash 5fbf5bb6a5c7
+{
+  // Print chord symbols above the staff when the score has them.
+  "showChordSymbols": true,
+  // MIDI pitch at or above which notes go to the treble staff (60 = middle C).
+  "splitPitch": 60
+}

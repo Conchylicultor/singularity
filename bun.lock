@@ -391,6 +391,13 @@
       "name": "@singularity/plugin-apps-sonata-library",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/notation": {
+      "name": "@singularity/plugin-apps-sonata-notation",
+      "version": "0.0.1",
+      "dependencies": {
+        "vexflow": "^4.2.2",
+      },
+    },
     "plugins/apps/plugins/sonata/plugins/piano-keyboard": {
       "name": "@singularity/plugin-apps-sonata-piano-keyboard",
       "version": "0.0.1",
@@ -4631,6 +4638,8 @@
 
     "@singularity/plugin-apps-sonata-library": ["@singularity/plugin-apps-sonata-library@workspace:plugins/apps/plugins/sonata/plugins/library"],
 
+    "@singularity/plugin-apps-sonata-notation": ["@singularity/plugin-apps-sonata-notation@workspace:plugins/apps/plugins/sonata/plugins/notation"],
+
     "@singularity/plugin-apps-sonata-piano-keyboard": ["@singularity/plugin-apps-sonata-piano-keyboard@workspace:plugins/apps/plugins/sonata/plugins/piano-keyboard"],
 
     "@singularity/plugin-apps-sonata-piano-roll": ["@singularity/plugin-apps-sonata-piano-roll@workspace:plugins/apps/plugins/sonata/plugins/piano-roll"],
@@ -7846,6 +7855,8 @@
     "validate-npm-package-name": ["validate-npm-package-name@7.0.2", "", {}, "sha512-hVDIBwsRruT73PbK7uP5ebUt+ezEtCmzZz3F59BSr2F6OVFnJ/6h8liuvdLrQ88Xmnk6/+xGGuq+pG9WwTuy3A=="],
 
     "vary": ["vary@1.1.2", "", {}, "sha512-BNGbWLfd0eUPabhkXUVm0j8uuvREyTh5ovRa/dyow/BqAbZJyC+5fU+IzQOzmAKzYqYRAISoRhdQr3eIZ/PXqg=="],
+
+    "vexflow": ["vexflow@4.2.5", "", {}, "sha512-+P+V2VWFyKcpW4Pwbs0p7nwICRQCzLWvkiPi4RpFlMXh/MRsiN1r7X6yvl1WauoJ4J6pVsnCzTAhC4m1ASlTng=="],
 
     "vfile": ["vfile@6.0.3", "", { "dependencies": { "@types/unist": "^3.0.0", "vfile-message": "^4.0.0" } }, "sha512-KzIbH/9tXat2u30jf+smMwFCsno4wHVdNmzFyL+T/L3UGqqk6JKfVqOFOZEpZSHADH1k40ab6NUIXZq422ov3Q=="],
 
