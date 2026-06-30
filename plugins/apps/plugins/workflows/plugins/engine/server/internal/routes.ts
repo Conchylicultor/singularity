@@ -24,6 +24,7 @@ import {
 import {
   serializeDefinition,
   serializeExecution,
+  serializeExecutionsWithSteps,
 } from "./resources";
 import { workflowRunJob } from "./run-job";
 import { userInputSubmitted } from "./tables-events";
@@ -88,23 +89,7 @@ export const handleListExecutions = implement(listExecutionsEndpoint, async ({ r
     )
     .orderBy(desc(_workflowExecutions.createdAt));
 
-  if (executions.length === 0) return [];
-
-  const execIds = executions.map((e) => e.id);
-  const allSteps = await db
-    .select()
-    .from(_workflowExecutionSteps)
-    .orderBy(asc(_workflowExecutionSteps.executionOrder));
-
-  const stepsByExec = new Map<string, (typeof _workflowExecutionSteps.$inferSelect)[]>();
-  for (const step of allSteps) {
-    if (!execIds.includes(step.executionId)) continue;
-    const list = stepsByExec.get(step.executionId) ?? [];
-    list.push(step);
-    stepsByExec.set(step.executionId, list);
-  }
-
-  return executions.map((exec) => serializeExecution(exec, stepsByExec.get(exec.id) ?? []));
+  return serializeExecutionsWithSteps(executions);
 });
 
 export const handleCreateExecution = implement(createExecutionEndpoint, async ({ body }) => {

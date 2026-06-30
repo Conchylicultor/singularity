@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { asc, desc } from "drizzle-orm";
+import { asc, desc, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import {
@@ -40,6 +40,37 @@ function serializeExecution(
   };
 }
 
+/**
+ * Serializes a list of executions together with their steps, fetching the steps
+ * in a single query scoped to exactly the given executions via `inArray` — which
+ * hits the `wf_exec_steps_exec_idx` index instead of scanning the whole
+ * step-trace table. Shared by the executions list endpoint and the live-state
+ * resource loader so the scoped read lives in one place.
+ */
+async function serializeExecutionsWithSteps(
+  executions: (typeof _workflowExecutions.$inferSelect)[],
+) {
+  if (executions.length === 0) return [];
+
+  const execIds = executions.map((e) => e.id);
+  const steps = await db
+    .select()
+    .from(_workflowExecutionSteps)
+    .where(inArray(_workflowExecutionSteps.executionId, execIds))
+    .orderBy(asc(_workflowExecutionSteps.executionOrder));
+
+  const stepsByExecution = new Map<string, (typeof _workflowExecutionSteps.$inferSelect)[]>();
+  for (const step of steps) {
+    const list = stepsByExecution.get(step.executionId) ?? [];
+    list.push(step);
+    stepsByExecution.set(step.executionId, list);
+  }
+
+  return executions.map((exec) =>
+    serializeExecution(exec, stepsByExecution.get(exec.id) ?? []),
+  );
+}
+
 export const workflowDefinitionsResource = defineResource({
   key: "workflow-definitions",
   mode: "push" as const,
@@ -62,22 +93,13 @@ export const workflowExecutionsResource = defineResource({
       .select()
       .from(_workflowExecutions)
       .orderBy(desc(_workflowExecutions.createdAt));
-    const allSteps = await db
-      .select()
-      .from(_workflowExecutionSteps)
-      .orderBy(asc(_workflowExecutionSteps.executionOrder));
-
-    const stepsByExecution = new Map<string, (typeof _workflowExecutionSteps.$inferSelect)[]>();
-    for (const step of allSteps) {
-      const list = stepsByExecution.get(step.executionId) ?? [];
-      list.push(step);
-      stepsByExecution.set(step.executionId, list);
-    }
-
-    return executions.map((exec) =>
-      serializeExecution(exec, stepsByExecution.get(exec.id) ?? []),
-    );
+    return serializeExecutionsWithSteps(executions);
   },
 });
 
-export { serializeDefinition, serializeExecution, serializeExecutionStep };
+export {
+  serializeDefinition,
+  serializeExecution,
+  serializeExecutionStep,
+  serializeExecutionsWithSteps,
+};
