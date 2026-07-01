@@ -166,6 +166,25 @@ export function buildEnrichedTree(root: string): Promise<PluginTree> {
   return cached;
 }
 
+const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
+
+/**
+ * The barrel-FREE plugin tree (`skipBarrelImport`) — a pure function of committed
+ * plugin source (facet extraction reads only .ts/.tsx/package.json; no generated
+ * manifest feeds it), so it is IDENTICAL for every skipBarrelImport caller in a
+ * build. Memoized per root so one `./singularity build` does ONE barrel-free tree
+ * build, not one per codegen step. Twin of `buildEnrichedTree` (which is the
+ * enriched, barrel-imported tree; the two are deliberately separate caches).
+ */
+export function buildBarrelFreeTree(root: string): Promise<PluginTree> {
+  let cached = barrelFreeTreeCache.get(root);
+  if (!cached) {
+    cached = buildPluginTree(resolve(root, "plugins"), { skipBarrelImport: true });
+    barrelFreeTreeCache.set(root, cached);
+  }
+  return cached;
+}
+
 export async function renderCompactDoc({ root }: GenerateDocsOptions): Promise<string> {
   return renderCompactDocFromTree(await buildEnrichedTree(root), root);
 }

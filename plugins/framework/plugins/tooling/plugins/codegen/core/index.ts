@@ -1,5 +1,6 @@
 export {
   buildEnrichedTree,
+  buildBarrelFreeTree,
   collectAllPlugins,
   generatePluginDocs,
   pluginClaudeMdPath,

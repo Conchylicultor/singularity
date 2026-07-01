@@ -1,7 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
-import { join, resolve } from "path";
-import { buildEnrichedTree } from "./docgen";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { join } from "path";
+import { buildEnrichedTree, buildBarrelFreeTree } from "./docgen";
 import {
   setDefaultOriginAnnotationsPreparer,
   setDefaultOriginDefaultsPreparer,
@@ -78,9 +77,7 @@ interface ReorderableSlotsData {
 async function collectReorderableSlotSet(
   root: string,
 ): Promise<ReorderableSlotEntry[]> {
-  const tree = await buildPluginTree(resolve(root, "plugins"), {
-    skipBarrelImport: true,
-  });
+  const tree = await buildBarrelFreeTree(root);
   // A slot owned by a disabled plugin never registers at runtime (the owner's
   // barrel is omitted from the registry); its config_v2 directive would orphan
   // user overrides. Drop slots whose DEFINING plugin is in the disabled closure.

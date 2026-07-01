@@ -1,7 +1,8 @@
 import { existsSync, readdirSync, readFileSync, rmSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
-import { buildPluginTree, type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { type PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { findMarkerCalls, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { buildBarrelFreeTree } from "./docgen";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { computeDisabledIds } from "./disabled-ids";
@@ -161,8 +162,7 @@ export interface RegistryGenContext {
 export async function buildRegistryGenContext(
   root: string,
 ): Promise<RegistryGenContext> {
-  const pluginsRoot = resolve(root, "plugins");
-  const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
+  const tree = await buildBarrelFreeTree(root);
   return { root, tree, disabled: computeDisabledIds(tree) };
 }
 

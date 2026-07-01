@@ -1,6 +1,6 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join, relative } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { buildBarrelFreeTree } from "./docgen";
 import {
   registerBarrelStubs,
   importBarrel,
@@ -80,8 +80,7 @@ export function collectTokenGroupVars(
 async function collectTokenGroupVarsUncached(
   root: string,
 ): Promise<Record<string, string[]>> {
-  const pluginsRoot = join(root, "plugins");
-  const tree = await buildPluginTree(pluginsRoot, { skipBarrelImport: true });
+  const tree = await buildBarrelFreeTree(root);
   registerBarrelStubs(root);
 
   const byGroup: Record<string, string[]> = {};
