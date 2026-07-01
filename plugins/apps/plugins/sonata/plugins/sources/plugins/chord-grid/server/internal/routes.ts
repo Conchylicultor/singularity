@@ -5,6 +5,7 @@ import {
   createSongRow,
   updateSongMeta,
 } from "@plugins/apps/plugins/sonata/plugins/library/server";
+import { CHORD_GRID_SOURCE_ID } from "../../shared/constants";
 import {
   createChordGridSong,
   getSongChordGrid,
@@ -24,6 +25,7 @@ export const handleCreateChordGridSong = implement(
       composer: body.composer,
       durationSec: body.durationSec,
       endBeat: body.endBeat,
+      source: CHORD_GRID_SOURCE_ID,
     });
     await songChordGrid.upsert(id, {
       chordText: body.chordText,

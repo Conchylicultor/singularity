@@ -1,7 +1,4 @@
-/**
- * The chord-grid source id — the key under which its raw lives in the Sonata
- * context (`rawById`) and the `sourceId` of its `Library.Source` contribution.
- * Shared so the registration, the editor section, and the add affordance never
- * drift on a string literal.
- */
-export const CHORD_GRID_SOURCE_ID = "chord-grid";
+// The chord-grid source id now lives in `shared/` so the server create route can
+// stamp the same `source` discriminator without a web import. Re-exported here so
+// the existing web importers keep their `./constants` path unchanged.
+export { CHORD_GRID_SOURCE_ID } from "../shared/constants";

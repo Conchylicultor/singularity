@@ -8,6 +8,13 @@ export interface CreateSongRowInput {
   composer: string | null;
   durationSec: number;
   endBeat: number;
+  /**
+   * Opaque id of the source creating this song (its `Library.Source` /
+   * `Sonata.Source` id, e.g. `"midi"`). Required — every song has exactly one
+   * immutable source. The library stores it verbatim without interpreting it, so
+   * a new source needs no change here.
+   */
+  source: string;
 }
 
 /**
@@ -29,6 +36,7 @@ export async function createSongRow(input: CreateSongRowInput): Promise<string> 
       composer: input.composer,
       durationSec: input.durationSec,
       endBeat: input.endBeat,
+      source: input.source,
     })
     .onConflictDoNothing();
   return id;

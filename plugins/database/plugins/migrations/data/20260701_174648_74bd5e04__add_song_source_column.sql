@@ -1,0 +1,1 @@
+ALTER TABLE "sonata_songs" ADD COLUMN "source" text DEFAULT '' NOT NULL;

@@ -1,0 +1,1 @@
+ALTER TABLE "sonata_songs" ALTER COLUMN "source" DROP DEFAULT;

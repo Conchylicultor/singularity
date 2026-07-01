@@ -8,6 +8,7 @@ import {
   songAttachments,
   updateSongMeta,
 } from "@plugins/apps/plugins/sonata/plugins/library/server";
+import { MIDI_SOURCE_ID } from "../../shared/constants";
 import { songMidi } from "./tables";
 import { hashMidiBytes } from "./import";
 import { STARTERS } from "./starters";
@@ -95,6 +96,7 @@ export async function seedMidiStarters(): Promise<void> {
       composer: starter.composer,
       durationSec,
       endBeat,
+      source: MIDI_SOURCE_ID,
     });
     await updateSongMeta({
       id: starter.id,

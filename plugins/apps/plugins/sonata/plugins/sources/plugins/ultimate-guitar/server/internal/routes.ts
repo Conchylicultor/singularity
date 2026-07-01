@@ -4,6 +4,7 @@ import {
   updateSongMeta,
 } from "@plugins/apps/plugins/sonata/plugins/library/server";
 import { UgFetchError } from "../../core";
+import { UG_SOURCE_ID } from "../../shared/constants";
 import {
   fetchUgTab,
   searchUgTabs,
@@ -77,6 +78,7 @@ export const handleCreateUltimateGuitarSong = implement(
       composer: tab.artistName || null,
       durationSec,
       endBeat,
+      source: UG_SOURCE_ID,
     });
     await songUltimateGuitar.upsert(id, tab);
     return { id, title: tab.songName };

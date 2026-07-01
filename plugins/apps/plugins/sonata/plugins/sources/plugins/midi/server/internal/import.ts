@@ -9,6 +9,7 @@ import {
   createSongRow,
   songAttachments,
 } from "@plugins/apps/plugins/sonata/plugins/library/server";
+import { MIDI_SOURCE_ID } from "../../shared/constants";
 import { deriveMidiSongMeta, parseMidi } from "../../shared/parse";
 import { songMidi, _songMidiExt } from "./tables";
 
@@ -88,6 +89,7 @@ async function writeMidiSong({
     composer: meta.composer,
     durationSec: meta.durationSec,
     endBeat: meta.endBeat,
+    source: MIDI_SOURCE_ID,
   });
 
   await songMidi.upsert(id, {

@@ -6,7 +6,7 @@ import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/we
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songsResource, updateSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
@@ -46,6 +46,15 @@ export function SongLibrary() {
   // write surfaces via the global mutation toast (no local onError).
   const { mutate: saveSong } = useEndpointMutation(updateSong);
   const sources = Library.Source.useContributions();
+  // The player-side source registry carries each source's human label + icon
+  // (the `Library.Source` registry above is id-only). Its ids match the opaque
+  // `source` stamped on each song, so it doubles as the "Source" column's option
+  // set — the library never hard-codes a source name.
+  const sonataSources = Sonata.Source.useContributions();
+  const sourceOptions = useMemo(
+    () => sonataSources.map((s) => ({ value: s.id, label: s.label })),
+    [sonataSources],
+  );
 
   const fields: FieldDef<Song>[] = useMemo(
     () => [
@@ -83,6 +92,19 @@ export function SongLibrary() {
         width: "minmax(0,1fr)",
       },
       {
+        id: "source",
+        label: "Source",
+        // The opaque per-song source id, rendered as a muted tag via the enum
+        // field type (labels resolved from `sourceOptions`, i.e. the source
+        // registry). Read-only: a song's source is immutable, so no `onEdit`.
+        type: "enum",
+        options: sourceOptions,
+        value: (s) => s.source,
+        sortable: true,
+        filterable: true,
+        width: "8rem",
+      },
+      {
         id: "duration",
         label: "Length",
         // `int` derives its data-view cell + filter from `number` via the
@@ -108,7 +130,7 @@ export function SongLibrary() {
         width: "7rem",
       },
     ],
-    [saveSong],
+    [saveSong, sourceOptions],
   );
 
   // One render path for both states: while loading, DataView renders its

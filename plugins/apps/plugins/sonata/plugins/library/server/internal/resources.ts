@@ -16,6 +16,7 @@ export function toSong(row: typeof _songs.$inferSelect): Song {
     durationSec: row.durationSec,
     endBeat: row.endBeat,
     createdAt: row.createdAt.toISOString(),
+    source: row.source,
   };
 }
 

@@ -1261,6 +1261,27 @@
       "tag": "20260701_160713_6ba4f370__mail_sync_resync_count",
       "hash": "6ba4f370",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1782928008000,
+      "tag": "20260701_174648_74bd5e04__add_song_source_column",
+      "hash": "74bd5e04",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1782929456000,
+      "tag": "20260701_181056_3b688a7c__backfill_song_source",
+      "hash": "3b688a7c",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1782930109000,
+      "tag": "20260701_182149_eed5b5db__song_source_not_null",
+      "hash": "eed5b5db",
+      "breakpoints": true
     }
   ]
 }

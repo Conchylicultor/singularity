@@ -1,7 +1,4 @@
-/**
- * The Ultimate Guitar source id — the key under which its raw `UgTab` lives in
- * the Sonata context (`rawById`). Shared so the source registration and the
- * editor section never drift on a string literal. (The library `Library.Source`
- * `sourceId` will reuse this once persistence lands — a later task.)
- */
-export const UG_SOURCE_ID = "ultimate-guitar";
+// The Ultimate Guitar source id now lives in `shared/` so the server create route
+// can stamp the same `source` discriminator without a web import. Re-exported here
+// so the existing web importers keep their `./constants` path unchanged.
+export { UG_SOURCE_ID } from "../shared/constants";
