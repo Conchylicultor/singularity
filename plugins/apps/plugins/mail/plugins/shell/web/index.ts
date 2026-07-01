@@ -5,6 +5,7 @@ import { Apps } from "@plugins/apps-core/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { mailApp } from "../core";
 import { MailLayout } from "./components/mail-layout";
+import { MailRailBadge } from "./components/mail-rail-badge";
 import { mailRootPane } from "./panes";
 
 export { Mail, MAIL_APP_PATH } from "./slots";
@@ -19,6 +20,7 @@ export default {
       tooltip: "Mail",
       component: MailLayout,
       path: mailApp.basePath,
+      badge: MailRailBadge,
     }),
     Pane.Register({ pane: mailRootPane }),
   ],

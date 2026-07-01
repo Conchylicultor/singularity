@@ -18,4 +18,11 @@ export const Mail = {
    * to zero height when the mailbox is healthy.
    */
   Banner: defineRenderSlot<{ component: ComponentType }>("mail.banner"),
+  /**
+   * Attention overlays for the Mail app's rail icon. Each contributor renders a
+   * dot when the mailbox needs attention (e.g. an unhealthy sync), or `null`
+   * otherwise. Keeps the rail icon's attention state aggregated from the
+   * surfaces themselves rather than the shell naming any one of them.
+   */
+  RailBadge: defineRenderSlot<{ component: ComponentType }>("mail.rail-badge"),
 };

@@ -15,7 +15,7 @@ never `@plugins/auth` directly.
 
 - Description: App shell for Mail. Registers the /mail app entry, defines the Mail.Sidebar slot, and renders the capability-driven landing pane.
 - Web:
-  - Slots: `Mail.Sidebar`, `Mail.Banner` ← `apps.mail.sync-status`
+  - Slots: `Mail.Sidebar`, `Mail.Banner` ← `apps.mail.sync-status`, `Mail.RailBadge` ← `apps.mail.sync-status`
   - Contributes: `Apps.App` "Mail" → `MailLayout`, `Pane.Register` "mail-root"
   - Uses: `apps-core.Apps`, `apps-core/app-icon.mdAppIcon`, `apps-core/tabs.navigate`, `integrations/gmail.useGmailAccess`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Mail`, `MAIL_APP_PATH`

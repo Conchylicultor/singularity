@@ -1,0 +1,7 @@
+// @hash a4b5f9ee8329
+{
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
+  "items": [
+    "apps.mail.sync-status:sync-status"
+  ]
+}
