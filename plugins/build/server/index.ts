@@ -7,6 +7,7 @@ import { ConfigV2, getConfig } from "@plugins/config_v2/server";
 import { handleBuild } from "./internal/handle-build";
 import { reconcileOrphanBuilds } from "./internal/run-build";
 import { buildRunJob } from "./internal/build-run-job";
+import { buildRunDebouncedJob } from "./internal/build-run-debounced-job";
 import { getMainAhead } from "./internal/git-status";
 import { mainAheadCountResource } from "./internal/main-ahead-resource";
 import { buildHistoryResource } from "./internal/build-history-resource";
@@ -21,7 +22,7 @@ export default {
   httpRoutes: {
     [triggerBuildEndpoint.route]: handleBuild,
   },
-  register: [buildRunJob],
+  register: [buildRunJob, buildRunDebouncedJob],
   onReady: async () => {
     // Close any build left unfinished by a crashed owner (scoped to this
     // namespace so inherited main rows aren't reaped into a phantom "Build
@@ -34,7 +35,10 @@ export default {
     if (autoBuild) {
       const { count } = await getMainAhead();
       if (count > 0) {
-        await buildRunJob.enqueue({});
+        // On boot we already know main is ahead — build immediately (no runAt).
+        // There is no push burst to coalesce here, and routing through
+        // buildRunJob would only add a pointless DEBOUNCE_MS delay.
+        await buildRunDebouncedJob.enqueue({});
       }
     }
   },

@@ -309,7 +309,10 @@ export class NotificationsClient {
     if (before.length === 0) return [];
     trace(`probeMissedUpdates subCount=${before.length}`);
     for (const channel of Object.values(this.channels)) {
-      this.replaySubs(channel);
+      // Load-bearing: the probe resets lastAckVersion then reads it after a
+      // fixed settle; a staggered late-batch sub would still read -1 and hide a
+      // genuine miss. The probe is a single-tab watchdog, not the fleet herd.
+      this.replaySubs(channel, { stagger: false });
     }
     // One-shot wait for the sub-ack round-trip — not a poll. The ack landing is
     // what `lastAckVersion` captures.
@@ -491,24 +494,82 @@ export class NotificationsClient {
     return channel;
   }
 
-  private replaySubs(channel: SocketChannel): void {
-    // Fresh connection means the server has no record of our subs. Reset local
-    // versions to the -1 "nothing applied yet" baseline so the next sub-ack
-    // always applies — even a never-notified resource's version-0 sub-ack, and
-    // even a lower version after a server restart reset its counters.
-    trace(`replaySubs socket=${channel === this.channels.central ? "central" : "worktree"} subCount=${channel.subs.size}`);
-    // Subs in their keep-alive window (refcount 0, still in `channel.subs`) are
-    // resent here too. That's intentional and harmless: their pendingTeardown
-    // timer still fires and tears them down on schedule, independent of reconnect.
-    for (const sub of channel.subs.values()) {
+  /**
+   * Resend all of a channel's subs after a fresh connection (the server has no
+   * record of our subs). Per sub, reset local versions to the -1 "nothing
+   * applied yet" baseline so the next sub-ack always applies — even a
+   * never-notified resource's version-0 sub-ack, and even a lower version after
+   * a server restart reset its counters.
+   *
+   * Subs in their keep-alive window (refcount 0, still in `channel.subs`) are
+   * resent here too. That's intentional and harmless: their pendingTeardown
+   * timer still fires and tears them down on schedule, independent of reconnect.
+   *
+   * `stagger` (default `true`): a shared backend restart reconnects the whole
+   * tab fleet at once, and each tab would otherwise dump all ~30 cold sub-ack
+   * loads in one microtask — the herd amplitude that saturates the per-backend
+   * DB loader gate. Staggering fans the resends out in small batches over a
+   * bounded window so the fleet's cold-recompute load is spread, not spiked.
+   *
+   * The **probe** (`probeMissedUpdates`) passes `stagger: false`: it resets
+   * `lastAckVersion = -1`, waits a fixed `settleMs`, then reads `lastAckVersion`
+   * to detect genuine misses. A staggered late-batch sub would still read `-1`
+   * when the timer fires → a real miss goes undetected. The probe is a
+   * single-tab watchdog, not part of the fleet herd, so it must stay synchronous.
+   */
+  private replaySubs(channel: SocketChannel, opts: { stagger?: boolean } = {}): void {
+    const stagger = opts.stagger ?? true;
+    trace(`replaySubs socket=${channel === this.channels.central ? "central" : "worktree"} subCount=${channel.subs.size} stagger=${stagger}`);
+
+    // CRITICAL: reset `version`/`lastAckVersion` to -1 AND `sendSub` TOGETHER,
+    // per-sub, at that sub's send time — never reset all up front. The server
+    // holds no sub state until `sendSub` actually goes out, so a not-yet-resent
+    // sub must keep its live baseline until its own batch fires (otherwise a
+    // frame arriving for a still-un-resent sub would be dropped against a -1
+    // baseline that no server sub-ack has answered yet).
+    const resend = (sub: ActiveSub): void => {
       sub.version = -1;
-      // The server has no record of our subs; the next sub-ack is the fresh
-      // baseline. Clear it so a stale pre-resync ack can't be read as the
-      // resync's (liveFrameSeq is a monotonic counter and is never reset).
+      // The next sub-ack is the fresh baseline. Clear it so a stale pre-resync
+      // ack can't be read as the resync's (liveFrameSeq is a monotonic counter
+      // and is never reset).
       sub.lastAckVersion = -1;
       this.sendSub(channel, sub.key, sub.params);
+    };
+
+    if (!stagger) {
+      for (const sub of channel.subs.values()) resend(sub);
+      this.emitDebug();
+      return;
     }
-    this.emitDebug();
+
+    // Snapshot the sub list so concurrent mutation (teardown / new observe)
+    // during the staggered window is well-defined.
+    const subs = [...channel.subs.values()];
+    if (subs.length === 0) {
+      this.emitDebug();
+      return;
+    }
+
+    // Batch the resends: ~6 subs per batch, one batch every ~150ms, with the
+    // total spread capped at ~2.5s regardless of sub count. If there are more
+    // subs than `maxBatches * baseBatchSize`, grow the batch size so the last
+    // batch still fires within the cap (a huge sub count never stretches to
+    // tens of seconds). The setTimeout timers are fire-and-forget (they return
+    // a timer, not a promise) — the sanctioned pattern here, same as the
+    // SUB_KEEPALIVE_MS teardown below.
+    const BASE_BATCH_SIZE = 6;
+    const BATCH_DELAY_MS = 150;
+    const MAX_SPREAD_MS = 2_500;
+    const maxBatches = Math.floor(MAX_SPREAD_MS / BATCH_DELAY_MS) + 1;
+    const batchSize = Math.max(BASE_BATCH_SIZE, Math.ceil(subs.length / maxBatches));
+
+    for (let start = 0, batch = 0; start < subs.length; start += batchSize, batch++) {
+      const slice = subs.slice(start, start + batchSize);
+      setTimeout(() => {
+        for (const sub of slice) resend(sub);
+        this.emitDebug();
+      }, batch * BATCH_DELAY_MS);
+    }
   }
 
   private sendSub(channel: SocketChannel, key: string, params: ResourceParams): void {

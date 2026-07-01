@@ -14,7 +14,7 @@
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/git-watcher.refHeadResource`, `infra/jobs.defineJob`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.pruneWorktreeBuildArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.WEB_DIST_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `primitives/log-channels.Log`, `shell/notifications.recordNotification`
   - DB schema: `plugins/build/server/internal/tables.ts`
   - Exports: Values: `_buildRuns`, `getServerBuildId`
-  - Register: `defineJob('build.run')`
+  - Register: `defineJob('build.run')`, `defineJob('build.run.debounced')`
   - Resources: `build.history` (push), `build.mainAheadCount` (push)
   - Routes: `POST /api/build`
 - Core:

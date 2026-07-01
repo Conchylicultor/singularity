@@ -167,7 +167,13 @@ export class SharedWebSocket {
   };
 
   private scheduleReconnect(): void {
-    const delay = BACKOFF_MS[Math.min(this.attempt, BACKOFF_MS.length - 1)]!;
+    const base = BACKOFF_MS[Math.min(this.attempt, BACKOFF_MS.length - 1)]!;
+    // Jitter each reconnect by a fresh 0.5–1.5× factor (mirrors the
+    // fetch-with-retry idiom, wider band). When a shared restart closes the
+    // whole tab fleet at once, a fixed backoff would wake every tab in the same
+    // millisecond and re-herd the backend; the per-call random spread
+    // de-synchronizes them. Computed inline so repeated cycles don't resonate.
+    const delay = base * (0.5 + Math.random());
     this.attempt++;
     publishNetDiag({ type: "ws-reconnect-scheduled", url: this.url, attempt: this.attempt });
     this.retryTimer = setTimeout(this.connectWs, delay);
