@@ -1,6 +1,7 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import {
   evaluateNode,
+  makeSortComparator,
   pickPrimaryField,
   resolveBodyFields,
   useResolveCell,
@@ -239,6 +240,25 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     return projected.filter((p) => keep.has(p.id));
   }, [projected, props.state.filter, fields, resolveOperatorSet]);
 
+  // Field sort (default: manual/rank order). Empty rules → `null` comparator →
+  // the projected rows keep their incoming (rank) order, i.e. the manual sort the
+  // tree ships by default and DnD reorders. When a rule resolves we reorder the
+  // rows by the SAME multi-level comparator the flat views use. `buildTree`
+  // preserves each parent's incoming child order, so a single stable *global*
+  // sort of the flat row list lands every sibling group in comparator order
+  // (stability keeps rank order as the final tie-break).
+  const rowComparator = useMemo(
+    () => makeSortComparator(props.state.sort, fields),
+    [props.state.sort, fields],
+  );
+  const sortActive = rowComparator !== null;
+  const sortedProjected = useMemo(() => {
+    if (!rowComparator) return visibleProjected;
+    return [...visibleProjected].sort((a, b) =>
+      rowComparator(a.__row, b.__row),
+    );
+  }, [visibleProjected, rowComparator]);
+
   const Row = useCallback(
     (rowProps: { node: TreeNode<Projected<unknown>>; depth: number }) => {
       if (!hierarchy) return null;
@@ -284,7 +304,12 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   }, [options, primaryAccessor]);
 
   if (!hierarchy) return null;
-  if (visibleProjected.length === 0) return <>{props.emptyState}</>;
+  if (sortedProjected.length === 0) return <>{props.emptyState}</>;
+
+  // A field sort overrides the manual (rank) order, so drag-to-reorder would set
+  // a rank with no visible effect — disable DnD while sorted (drop back to manual
+  // to reorder), mirroring Notion. `onCreate` stays enabled.
+  const onMove = sortActive ? undefined : hierarchy.onMove;
 
   // Expand fallback: when the data source has no server-persisted expand state,
   // persist it in this view's ViewState (localStorage) via the host.
@@ -306,7 +331,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   return (
     <div className="px-sm">
       <TreeList<Projected<unknown>>
-        rows={visibleProjected}
+        rows={sortedProjected}
         selectedId={props.selectedRowId}
         rootId={options.rootId}
         onSelect={(id) => {
@@ -314,7 +339,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           if (original !== undefined) props.onRowActivate?.(original);
         }}
         onToggleExpanded={onToggleExpanded}
-        onMove={hierarchy.onMove}
+        onMove={onMove}
         onCreate={hierarchy.onCreate}
         Row={Row}
         dragOverlay={dragOverlay}

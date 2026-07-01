@@ -195,9 +195,10 @@ function DataViewInner<TRow>({
   // sibling `filterPresets` key in the same per-surface config doc (call
   // unconditionally next to the filter controller).
   const filterPresets = useFilterPresets(props.storageKey);
-  // The tree view orders by hierarchy rank and ignores ViewState.sort, so it
-  // opts out via `supportsSort: false` — hide the Sort pill there (Filter still
-  // shows; the tree honors filter). Default (undefined) = honors sort.
+  // A view opts out of the Sort pill via `supportsSort: false`. Every current
+  // view honors sort (the tree sorts each sibling group by field, defaulting to
+  // manual/rank order), so this stays enabled; the flag remains for future
+  // sort-less view types. Default (undefined) = honors sort.
   const activeSupportsSort = activeInstance?.viewType.supportsSort !== false;
   const hasSort = sortController.sortableFields.length > 0 && activeSupportsSort;
 

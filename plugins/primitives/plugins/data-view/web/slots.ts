@@ -15,9 +15,9 @@ import { Filter } from "./filter-slot";
 export interface DataViewContribution extends ViewTypeMeta {
   component: ComponentType<DataViewRenderProps<unknown>>;
   /** Whether this view honors `ViewState.sort` (flat field sort). Default true;
-   *  the tree view sets false because it orders by hierarchy rank, not field
-   *  sort — so the host hides the Sort pill for it (the Filter pill still shows;
-   *  the tree DOES honor filter, subtree-preserving). */
+   *  a view sets false when it has no meaningful field-sort axis, and the host
+   *  hides the Sort pill for it. The tree honors sort by ordering each sibling
+   *  group by the field (defaulting to manual/rank order), so it stays true. */
   supportsSort?: boolean;
   /** Skeleton shape the host renders while this view is loading (the host owns
    *  the loading→empty precedence so view children never see a loading state).

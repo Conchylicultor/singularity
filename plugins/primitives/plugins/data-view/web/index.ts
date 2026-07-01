@@ -15,6 +15,7 @@ export type { FieldCellProps } from "./components/field-cell";
 export { FilterValueInput } from "./components/filter/filter-value-input";
 export { ChipSelectFilterInput } from "./components/filter/chip-select-filter-input";
 export { useFlatRows } from "./internal/use-flat-rows";
+export { makeSortComparator } from "./internal/sort-rows";
 export { useServerDataSource } from "./internal/use-server-data-source";
 export type { ServerDataSourceResult } from "./internal/use-server-data-source";
 export { evaluateNode, applyFilter } from "./internal/evaluate-filter";

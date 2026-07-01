@@ -15,7 +15,11 @@ export default {
       icon: MdAccountTree,
       order: 2,
       hierarchical: true,
-      supportsSort: false,
+      // Defaults to manual (rank) order — the DnD-reorderable order the tree
+      // ships. Picking a field sort reorders each sibling group by that field
+      // (and suspends DnD while active). Sort applies per-sibling, preserving
+      // hierarchy.
+      supportsSort: true,
       loadingVariant: "rows",
       component: TreeView,
     }),
