@@ -52,13 +52,23 @@ with **theme-token colors** read from CSS vars, so the staff re-skins light/dark
 ## Rhythm: adaptive subdivision (tuplets, grace notes, sub-16ths)
 
 The converter does **not** use one fixed 1/16 grid. `web/internal/rhythm.ts`
-decides a subdivision **per quarter-note beat** from that beat's true note
-**onsets** (not offsets — a release is articulation-noise that would mislabel
-ordinary rhythms as tuplets): a 16th grid by default, a 32nd grid when onsets
-sit on 32nd positions, or a tuplet (eighth-triplet = 3, sixteenth-sextuplet = 6)
-when a tuplet grid *strictly* explains the onsets better than any binary grid.
-`buildBarStaff` expands the per-beat plan into a **variable** cell grid; runs
-inside a tuplet beat are decomposed in notated in-space beats and tagged with a
+decides a subdivision **per window** from that window's true note **onsets** (not
+offsets — a release is articulation-noise that would mislabel ordinary rhythms
+as tuplets). A greedy largest-first scan walks the bar: at each beat-aligned
+position it first tries **multi-beat tuplet windows** (2 or 4 real beats,
+power-of-two aligned) and, failing that, falls back to a **base 1-beat window**.
+A base window is a 16th grid by default, a 32nd grid when onsets sit on 32nd
+positions, or a sub-beat tuplet (ratios 3 / 5 / 6 / 7 / 12 — eighth-triplet,
+quintuplet, sixteenth-sextuplet, septuplet, 32nd-triplet) when a tuplet grid
+*strictly* explains the onsets better than any binary grid. Multi-beat windows
+claim a tuplet **only for odd ratios** (3 / 5 / 7): an even ratio over a
+2^k-beat window (6 or 12 over 2 beats) decomposes into two per-half-window
+tuplets — the simpler reading the per-beat scan already produces — so it is
+never grouped as one multi-beat tuplet. `inSpace` (VexFlow `notes_occupied`) is
+`largestPow2AtMost(num)`: 3→2, 5→4, 6→4, 7→4, 12→8 (the standard 3:2, 5:4, 6:4,
+7:4, 12:8 conventions). `buildBarStaff` expands the plan into a **variable** cell
+grid; runs inside a tuplet window are decomposed in notated in-space beats
+(`len / inSpace` per cell, general over multi-beat windows) and tagged with a
 tuplet id (consecutive same-id tickables → one VexFlow `Tuplet`), while
 `EngTickable.beat/.beats` stay in **real** beats so playhead/seek are unaffected.
 
@@ -116,10 +126,13 @@ instrument grouping — while `convert` itself stays pure.
   independent voices with opposed stems; a held note under a moving line stays
   put (no re-articulation) by construction. Tracks map onto staves per
   `staffLayout`; `perTrack` brackets one staff/grand-staff per track.
-- **Tuplets, grace notes, sub-16ths** (was the 1/16-grid caveat). Eighth-note
-  triplets and sixteenth sextuplets engrave with a bracket + number; 32nd notes
-  engrave; grace notes engrave as acciaccaturas / grace groups. See the *Rhythm*
-  section. The `seed-rhythm-etude` bundled starter demonstrates all three.
+- **Tuplets, grace notes, sub-16ths** (was the 1/16-grid caveat). Sub-beat
+  tuplets (3 / 5 / 6 / 7 / 12) and multi-beat tuplets (a quarter-note triplet
+  over 2 beats, a half-note triplet over 4 beats) engrave with a bracket +
+  number; 32nd notes engrave; grace notes engrave as acciaccaturas / grace
+  groups. See the *Rhythm* section. The `seed-rhythm-etude` bundled starter
+  demonstrates these — bar 1 eighth-triplets, bar 2 a 32nd run, bar 3 graces,
+  bar 4 a two-beat quarter-triplet + a quintuplet.
 
 ## Remaining caveats / follow-ups
 
@@ -127,11 +140,12 @@ instrument grouping — while `convert` itself stays pure.
   (default 2, ≤4). Beyond the cap, an overflow line merges into the nearest-pitch
   voice — re-articulation can reappear only at that dense spot. Configurable later.
 - **Treble/bass clefs only.** No alto/tenor C-clefs (viola etc. a follow-up).
-- **Tuplet scope.** Only quarter-beat tuplet *windows* (eighth-triplets,
-  sixteenth-sextuplets) and ratios 3 / 6. Multi-beat tuplets (quarter-note
-  triplet over 2 beats, half-note triplet), other ratios (5 / 7 / 12) and nested
-  tuplets are follow-ups (the detector's window set / ratio list extends). A
-  tuplet may not span a barline.
+- **Tuplet scope.** Sub-beat tuplet *windows* (ratios 3 / 5 / 6 / 7 / 12) plus
+  **multi-beat** tuplet windows — a quarter-note triplet over 2 beats and a
+  half-note triplet over 4 beats — the latter restricted to **odd** ratios on
+  power-of-two-aligned windows (an even ratio decomposes into two per-half-window
+  tuplets). **Nested** tuplets are still unsupported (a follow-up), and a tuplet
+  still may not span a barline.
 - **Grace notes are heuristic.** The Score IR has no grace flag, so a grace is
   inferred (a short note chained hard against a principal). Leading graces only;
   trailing/hanging graces are dropped.

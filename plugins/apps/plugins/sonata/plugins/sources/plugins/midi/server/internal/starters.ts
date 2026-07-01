@@ -88,9 +88,11 @@ const FUR_ELISE: Step[] = [
 
 // Rhythm étude — a short single-staff study that exercises the notation lens's
 // richer rhythms: eighth-note triplets (bar 1), a thirty-second-note run (bar 2),
-// and grace notes — a lone acciaccatura and a two-note grace group (bar 3).
-// Placed on absolute beats (via `placed`) so onsets land on the true 1/3 and
-// 1/32 positions and the grace notes overlap just before their principals.
+// grace notes — a lone acciaccatura and a two-note grace group (bar 3) — and the
+// extended tuplet vocabulary (bar 4): a quarter-note triplet spanning two beats
+// plus a one-beat quintuplet. Placed on absolute beats (via `placed`) so onsets
+// land on the true 1/3, 1/5 and 1/32 positions and the graces overlap just
+// before their principals.
 const RHYTHM_ETUDE: Placed[] = [
   // Bar 1 (beats 0–4): two eighth-note triplet groups, then two quarters.
   { midi: C5, beat: 0, beats: 1 / 3 },
@@ -122,6 +124,18 @@ const RHYTHM_ETUDE: Placed[] = [
   { midi: A5, beat: 9.95, beats: 0.05 },
   { midi: E5, beat: 10, beats: 1 },
   { midi: C5, beat: 11, beats: 1 },
+  // Bar 4 (beats 12–16): a quarter-note triplet over two beats (a MULTI-beat
+  // tuplet — 3 notes in the span of a half note), then a one-beat quintuplet
+  // (5 in the space of 4 sixteenths), then a closing quarter.
+  { midi: C5, beat: 12, beats: 2 / 3 },
+  { midi: E5, beat: 12 + 2 / 3, beats: 2 / 3 },
+  { midi: G5, beat: 12 + 4 / 3, beats: 2 / 3 },
+  { midi: C5, beat: 14, beats: 1 / 5 },
+  { midi: D5, beat: 14 + 1 / 5, beats: 1 / 5 },
+  { midi: E5, beat: 14 + 2 / 5, beats: 1 / 5 },
+  { midi: F5, beat: 14 + 3 / 5, beats: 1 / 5 },
+  { midi: G5, beat: 14 + 4 / 5, beats: 1 / 5 },
+  { midi: C5, beat: 15, beats: 1 },
 ];
 
 export const STARTERS: Starter[] = [

@@ -314,10 +314,14 @@ function buildBarStaff(
     }
     const groupWin = cells[groupStart]!.win;
     const tup = groupWin.tuplet;
-    // A tuplet tickable's notated base value fills `inSpace` per window (num 3 →
-    // 8th → 0.5, num 6 → 16th → 0.25); real beats scale by inSpace/num per cell.
-    const baseNotatedBeats = tup ? 1 / tup.inSpace : 0;
-    const notatedScale = tup ? (groupWin.len * tup.inSpace) / groupWin.cells : 1;
+    // A tuplet cell's NOTATED base value = window's real span (`len`) divided by
+    // the power-of-two space the group occupies (`inSpace`): a 1-beat eighth-
+    // triplet (len 1, inSpace 2) → 0.5 (8th); a 2-beat quarter-triplet (len 2,
+    // inSpace 2) → 1.0 (quarter). Real beats then scale by inSpace/cells per
+    // cell (== len/cells real width). Both reduce to the old 1/inSpace &
+    // (len·inSpace)/cells forms when len === 1.
+    const baseNotatedBeats = tup ? groupWin.len / tup.inSpace : 0;
+    const notatedScale = tup ? tup.inSpace / groupWin.cells : 1;
     const tupletId = tup ? `w${groupWin.start}` : undefined;
 
     // 3. Within the group, the classic maximal-same-set run + decompose.
