@@ -3,6 +3,7 @@ import {
   cpSync,
   existsSync,
   mkdirSync,
+  mkdtempSync,
   readFileSync,
   readdirSync,
   realpathSync,
@@ -853,6 +854,47 @@ async function packageMacDmg(opts: {
   await run(["bun", "x", "appdmg@0.6.6", specPath, dmgOut], { cwd: srcTauri });
 
   console.log(`\n[tauri] Packaged dmg: ${dmgOut}`);
+
+  // Guarded notarize + staple. The App Store Connect API key (.p8 PEM + Key ID +
+  // Issuer ID) is injected into the build env by the release engine
+  // (Release.EnvProvider). When absent — a bare local build, or no creds
+  // configured — the dmg is simply left un-notarized (graceful degradation, no
+  // hard failure). `notarytool --key` wants a file path, so write the PEM to a
+  // 0600 temp .p8 and clean it up unconditionally afterwards.
+  const keyPem = process.env.APPLE_API_KEY_PEM;
+  const keyId = process.env.APPLE_API_KEY_ID;
+  const issuerId = process.env.APPLE_API_ISSUER_ID;
+  if (keyPem && keyId && issuerId) {
+    const tmpDir = mkdtempSync(join(tmpdir(), "equin-notary-"));
+    const keyPath = join(tmpDir, "AuthKey.p8");
+    try {
+      writeFileSync(keyPath, keyPem, { mode: 0o600 });
+      console.log("\n[tauri] Notarizing dmg (notarytool submit --wait)...");
+      await run(
+        [
+          "xcrun",
+          "notarytool",
+          "submit",
+          dmgOut,
+          "--key",
+          keyPath,
+          "--key-id",
+          keyId,
+          "--issuer",
+          issuerId,
+          "--wait",
+        ],
+        { cwd: srcTauri },
+      );
+      await run(["xcrun", "stapler", "staple", dmgOut], { cwd: srcTauri });
+      console.log(`\n[tauri] Notarized + stapled dmg: ${dmgOut}`);
+    } finally {
+      rmSync(tmpDir, { recursive: true, force: true });
+    }
+  } else {
+    console.log("[tauri] No Apple API key in env — dmg left un-notarized.");
+  }
+
   return dmgOut;
 }
 

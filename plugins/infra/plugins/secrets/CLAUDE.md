@@ -55,7 +55,7 @@ On central's first boot after upgrade, `migrateLegacyAuthTokens` decrypts `~/.si
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports: Types: `SecretMetadata`, `SecretRef`; Values: `secretsDelete`, `SecretsError`, `secretsGet`, `secretsHas`, `SecretsKeychainLockedError`, `secretsList`, `SecretsMainOfflineError`, `secretsMeta`, `secretsSet`
 - Cross-plugin:
-  - Imported by: `apps/deploy/servers`, `auth`, `fields/secret/config`
+  - Imported by: `apps/deploy/servers`, `auth`, `auth/apple-signing`, `fields/secret/config`
 - Server:
   - Exports: Types: `SecretMetadata`, `SecretRef`; Values: `deleteSecret`, `getSecret`, `getSecretMetadata`, `hasSecret`, `listKeysInNamespace`, `ready`, `SecretsError`, `SecretsKeychainLockedError`, `SecretsMainOfflineError`, `setSecret`
 - Central:

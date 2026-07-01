@@ -64,6 +64,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "apps/plugins/workflows/plugins/steps/plugins/set-value", id: "apps.workflows.steps.set-value", loader: () => import("@plugins/apps/plugins/workflows/plugins/steps/plugins/set-value/server"), dependsOn: ["apps/plugins/workflows/plugins/engine"] },
   { pluginPath: "apps/plugins/workflows/plugins/steps/plugins/template", id: "apps.workflows.steps.template", loader: () => import("@plugins/apps/plugins/workflows/plugins/steps/plugins/template/server"), dependsOn: ["apps/plugins/workflows/plugins/engine"] },
   { pluginPath: "apps/plugins/workflows/plugins/steps/plugins/user-input", id: "apps.workflows.steps.user-input", loader: () => import("@plugins/apps/plugins/workflows/plugins/steps/plugins/user-input/server"), dependsOn: ["apps/plugins/workflows/plugins/engine"] },
+  { pluginPath: "auth/plugins/apple-signing", id: "auth.apple-signing", loader: () => import("@plugins/auth/plugins/apple-signing/server"), dependsOn: ["config_v2", "infra/plugins/endpoints", "infra/plugins/secrets", "release"] },
   { pluginPath: "auth/plugins/google", id: "auth.google", loader: () => import("@plugins/auth/plugins/google/server"), dependsOn: ["config_v2"] },
   { pluginPath: "auth/plugins/notion", id: "auth.notion", loader: () => import("@plugins/auth/plugins/notion/server"), dependsOn: ["config_v2"] },
   { pluginPath: "auth", id: "auth", loader: () => import("@plugins/auth/server"), dependsOn: [] },

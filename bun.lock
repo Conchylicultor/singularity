@@ -784,6 +784,14 @@
       "name": "@singularity/plugin-auth",
       "version": "0.0.1",
     },
+    "plugins/auth/plugins/apple-signing": {
+      "name": "@singularity/plugin-auth-apple-signing",
+      "version": "0.0.1",
+    },
+    "plugins/auth/plugins/apple-signing/plugins/setup-wizard": {
+      "name": "@singularity/plugin-auth-apple-signing-setup-wizard",
+      "version": "0.0.1",
+    },
     "plugins/auth/plugins/google": {
       "name": "@singularity/plugin-auth-google",
       "version": "0.0.1",
@@ -4858,6 +4866,10 @@
     "@singularity/plugin-apps-workflows-steps-user-input": ["@singularity/plugin-apps-workflows-steps-user-input@workspace:plugins/apps/plugins/workflows/plugins/steps/plugins/user-input"],
 
     "@singularity/plugin-auth": ["@singularity/plugin-auth@workspace:plugins/auth"],
+
+    "@singularity/plugin-auth-apple-signing": ["@singularity/plugin-auth-apple-signing@workspace:plugins/auth/plugins/apple-signing"],
+
+    "@singularity/plugin-auth-apple-signing-setup-wizard": ["@singularity/plugin-auth-apple-signing-setup-wizard@workspace:plugins/auth/plugins/apple-signing/plugins/setup-wizard"],
 
     "@singularity/plugin-auth-google": ["@singularity/plugin-auth-google@workspace:plugins/auth/plugins/google"],
 

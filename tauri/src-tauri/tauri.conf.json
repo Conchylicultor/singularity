@@ -35,6 +35,10 @@
     ],
     "resources": {
       "resources/bundle": "bundle"
+    },
+    "macOS": {
+      "hardenedRuntime": true,
+      "entitlements": "entitlements.plist"
     }
   }
 }

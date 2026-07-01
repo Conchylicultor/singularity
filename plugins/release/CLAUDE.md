@@ -82,11 +82,13 @@ nothing remote is built here.
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.pruneWorktreeReleaseArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `primitives/log-channels.Log`
   - DB schema: `plugins/release/server/internal/tables.ts`
-  - Exports: Values: `_releaseRuns`, `newReleaseRunId`, `releaseOutDir`, `triggerRelease`
+  - Exports: Values: `_releaseRuns`, `collectReleaseEnv`, `newReleaseRunId`, `Release`, `releaseOutDir`, `triggerRelease`
   - Routes: `POST /api/release`, `POST /api/release/runs/:id/preview`, `POST /api/release/runs/:id/preview/stop`, `GET /api/release/runs/:id/logs`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
   - Exports: Types: `Preview`, `ReleaseLogLine`, `ReleaseLogsResponse`, `ReleaseRun`, `ReleaseTarget`; Values: `previewEndpoint`, `PreviewSchema`, `previewStateResource`, `RELEASE_LOG_CHANNEL`, `RELEASE_TARGETS`, `releaseHistoryResource`, `releaseLogsEndpoint`, `ReleaseLogsResponseSchema`, `ReleaseRunSchema`, `releaseTargetById`, `stopPreviewEndpoint`, `triggerReleaseEndpoint`
+- Cross-plugin:
+  - Imported by: `auth/apple-signing`
 - Shared:
   - Exports: Types: `ReleaseStatus`
 

@@ -11,6 +11,7 @@ import { previewStateResource } from "./internal/preview-state-resource";
 export { _releaseRuns } from "./internal/tables";
 export { triggerRelease } from "./internal/run-release";
 export { releaseOutDir, newReleaseRunId } from "./internal/out-dir";
+export { Release, collectReleaseEnv } from "./internal/env-provider";
 
 export default {
   description: "Local composition release lifecycle engine: run, observe, preview F4 artifacts.",

@@ -1,0 +1,10 @@
+// @hash f9bca7c1a64e
+{
+  // Base64 of the exported .p12 (cert + private key).
+  "p12Cert": "",
+  "p12Password": "",
+  "ascApiKey": "",
+  "signingIdentity": "",
+  "ascKeyId": "",
+  "ascIssuerId": ""
+}

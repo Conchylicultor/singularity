@@ -10,6 +10,7 @@ import {
   pruneWorktreeReleaseArtifacts,
 } from "@plugins/infra/plugins/paths/server";
 import { releaseTargetById } from "../../core/targets";
+import { collectReleaseEnv } from "./env-provider";
 import { releaseOutDir, newReleaseRunId } from "./out-dir";
 import { _releaseRuns } from "./tables";
 import { releaseLog } from "./release-log";
@@ -179,6 +180,13 @@ async function doRunRelease(composition: string, target: string): Promise<void> 
     throw err;
   }
 
+  // Generic, decoupled release-env injection: other plugins contribute extra
+  // env vars for this target via the Release.EnvProvider slot (e.g. a future
+  // Apple-signing plugin contributes APPLE_* for "tauri"). With zero
+  // contributors (or any non-contributed target) this is {} → spawn env stays
+  // undefined and behavior is byte-identical to before.
+  const extraEnv = await collectReleaseEnv(target);
+
   const proc = Bun.spawn(
     [
       "./singularity",
@@ -195,6 +203,7 @@ async function doRunRelease(composition: string, target: string): Promise<void> 
       stdout: "pipe",
       stderr: "pipe",
       detached: true,
+      env: Object.keys(extraEnv).length ? { ...process.env, ...extraEnv } : undefined,
     },
   );
 
