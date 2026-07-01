@@ -6,7 +6,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { attachmentMarkdown } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
-import { ImproveCommands } from "@plugins/improve/web";
+import { openImproveWithText } from "@plugins/improve/web";
 import type { Stroke } from "@plugins/screenshot/plugins/draw-canvas/web";
 import { LiveDrawOverlay } from "./live-draw-overlay";
 
@@ -48,9 +48,7 @@ export function DrawOnAppButton() {
       }
       const uploaded = await uploadAttachment(blob, "drawing.png", "image/png");
       teardown();
-      ImproveCommands.OpenWithText({
-        text: attachmentMarkdown(uploaded.id, "drawing.png"),
-      });
+      openImproveWithText(attachmentMarkdown(uploaded.id, "drawing.png"));
     } catch (err) {
       toast({
         type: "screenshot",

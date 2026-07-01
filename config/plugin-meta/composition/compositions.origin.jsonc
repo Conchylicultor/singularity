@@ -1,4 +1,4 @@
-// @hash 0b4dd34d8a3f
+// @hash 31773057d5be
 {
   "manifests": [
     {
@@ -348,6 +348,7 @@
       "category": "subsystem",
       "entryPoints": [
         "infra.health",
+        "shell.toast",
         "ui.theme-engine",
         "ui.tokens.color-palette",
         "ui.tokens.density",

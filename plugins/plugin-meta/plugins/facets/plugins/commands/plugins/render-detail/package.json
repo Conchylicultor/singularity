@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-plugin-meta-facets-commands-render-detail",
-  "version": "0.0.1",
-  "private": true,
-  "description": "Per-plugin commands section in the plugin detail pane."
-}

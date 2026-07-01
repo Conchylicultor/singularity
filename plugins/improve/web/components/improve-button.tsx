@@ -1,26 +1,17 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
-import { Improve } from "../commands";
+import { getImproveOpenState, setImproveOpen, subscribeImproveOpen } from "../internal/open-store";
 import { IMPROVEMENTS_META_TASK_ID } from "../../shared/constants";
 
 export function ImproveButton() {
-  const [open, setOpen] = useState(false);
-  const [initialText, setInitialText] = useState("");
-
-  Improve.OpenWithText.useHandler(({ text }) => {
-    setInitialText(text);
-    setOpen(true);
-  });
+  const { open, text } = useSyncExternalStore(subscribeImproveOpen, getImproveOpenState);
 
   return (
     <TaskDraftPopover
       open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) setInitialText("");
-      }}
+      onOpenChange={setImproveOpen}
       trigger={
         <Button variant="outline">
           <MdAutoAwesome />
@@ -30,7 +21,7 @@ export function ImproveButton() {
       tooltip="Improve"
       target={{ kind: "metaTask", metaTaskId: IMPROVEMENTS_META_TASK_ID }}
       captures={["url", "screenshot"]}
-      initialText={initialText}
+      initialText={text}
       heading="Improve this app"
     />
   );

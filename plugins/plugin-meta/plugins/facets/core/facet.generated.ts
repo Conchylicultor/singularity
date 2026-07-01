@@ -13,7 +13,6 @@ export interface CollectedEntry {
 }
 
 export const facetEntries: CollectedEntry[] = [
-  { pluginPath: "plugin-meta/plugins/facets/plugins/commands", id: "plugin-meta.facets.commands", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/commands/facet"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/facets/plugins/contributions", id: "plugin-meta.facets.contributions", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/contributions/facet"), dependsOn: ["plugin-meta/plugins/facets/plugins/slots"] },
   { pluginPath: "plugin-meta/plugins/facets/plugins/cross-refs", id: "plugin-meta.facets.cross-refs", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/cross-refs/facet"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/facets/plugins/db-schema", id: "plugin-meta.facets.db-schema", loader: () => import("@plugins/plugin-meta/plugins/facets/plugins/db-schema/facet"), dependsOn: [] },

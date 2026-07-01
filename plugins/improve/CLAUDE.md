@@ -5,10 +5,9 @@
 ## Plugin reference
 
 - Web:
-  - Commands: `Improve.OpenWithText`
   - Contributes: `ActionBar.Item` → `ImproveButton`
   - Uses: `primitives/css/ui-kit.Button`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftPopover`
-  - Exports: Types: `OpenWithTextArgs`; Values: `ImproveCommands`, `IMPROVEMENTS_META_TASK_ID`
+  - Exports: Values: `IMPROVEMENTS_META_TASK_ID`, `openImproveWithText`
 - Server:
   - Uses: `conversations.conversationCreated`, `conversations/conversations-view/grouped.addMemberToGroup`, `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/container-tasks.ContainerTask`, `tasks/tasks-core.ensureMetaTask`
   - DB schema: `plugins/improve/server/internal/tables.ts`

@@ -1,6 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export { Shell } from "./slots";
-export { Shell as ShellCommands, type ToastVariant, type ToastArgs } from "./commands";
 
 export default {
   description:

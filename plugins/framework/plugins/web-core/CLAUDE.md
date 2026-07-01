@@ -57,7 +57,7 @@ request→first-paint *timeline*) and the Boot Gantt.
 
 ### Tests
 
-The vitest DOM suites here (`web/__tests__/`) need the browser stack (jsdom + the `@plugins` alias + `.css` imports + React rendering), which `bun:test` can't provide. They are discovered and run by the **repo-wide** vitest project (root `vitest.config.ts` + `test/setup.ts`), not a per-plugin config — see the root `CLAUDE.md` Testing section. Two suites live here: `plugin-render.test.tsx` (full plugin-graph load smoke) and `commands.test.tsx` (`defineCommand` handler-stack ordering, which needs real React mount/unmount).
+The vitest DOM suites here (`web/__tests__/`) need the browser stack (jsdom + the `@plugins` alias + `.css` imports + React rendering), which `bun:test` can't provide. They are discovered and run by the **repo-wide** vitest project (root `vitest.config.ts` + `test/setup.ts`), not a per-plugin config — see the root `CLAUDE.md` Testing section. One suite lives here: `plugin-render.test.tsx` (full plugin-graph load smoke).
 
 `plugin-render.test.tsx` is a **load-only smoke**: it asserts `loadPlugins(webEntries)` returns zero errors and every contribution is structurally well-formed. It does not render contributions — a contribution needs its slot's props/context, so bare rendering is meaningless. Run from the repo root (optional):
 

@@ -1,4 +1,4 @@
-// @hash 26a8b7db03cf
+// @hash b1631ff6c1ce
 {
   "items": [
     "plugin-meta.plugin-health:health",
@@ -13,7 +13,6 @@
     "plugin-meta.facets.resources.render-detail:resources",
     "plugin-meta.facets.exports.render-detail:exports",
     "plugin-meta.facets.db-schema.render-detail:db-schema",
-    "plugin-meta.facets.commands.render-detail:commands",
     "plugin-meta.facets.cross-refs.render-detail:cross-refs",
     "plugin-meta.facets.slots.render-detail:slots",
     "plugin-meta.facets.routes.render-detail:routes",

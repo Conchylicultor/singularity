@@ -1,10 +1,9 @@
-// @hash 26a8b7db03cf
+// @hash b1631ff6c1ce
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "plugin-meta.facets.commands.render-detail:commands",
     "plugin-meta.facets.contributions.render-detail:contributions",
     "plugin-meta.facets.cross-refs.render-detail:cross-refs",
     "plugin-meta.facets.db-schema.render-detail:db-schema",

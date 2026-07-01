@@ -201,7 +201,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
         - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
     - **`web-core`**
-    - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
+    - **`web-sdk`** — Web plugin runtime: slots, contributions, loader
 
 - **`fullscreen`** — Toolbar toggle to enter / exit browser fullscreen.
 
@@ -265,7 +265,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
     - **`closure`**
     - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.
-    - **`facets`** [40 sub-plugins] — Facet-based plugin metadata extraction and docgen pipeline
+    - **`facets`** [36 sub-plugins] — Facet-based plugin metadata extraction and docgen pipeline
     - **`parse-utils`**
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
     - **`plugin-tree`**
@@ -428,7 +428,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to; the global-action-bar plugin renders it.
     - **`global-action-bar`** — Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the persisted pin: a floating top-right overlay (Core.Root) when unpinned — visible in every placement mode including solo — and a docked right-aligned strip in the tab bar (Apps.TabBarActions) when pinned. Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.
     - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
-    - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
+    - **`toast`** — Global toast notifications: a plain showToast() backed by sonner's global API, plus the Core.Root-mounted sonner Toaster host. Degrades to a silent no-op when no host is mounted.
 
 - **`stats`** [4 sub-plugins] — Root plugin hosting stacked chart contributions from child plugins.
 

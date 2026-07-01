@@ -1,4 +1,4 @@
-import { ImproveCommands } from "@plugins/improve/web";
+import { openImproveWithText } from "@plugins/improve/web";
 import { serializeUiContext } from "../../core";
 import { PickerButton } from "./picker-button";
 
@@ -6,9 +6,7 @@ import { PickerButton } from "./picker-button";
 export function ElementPickerButton() {
   return (
     <PickerButton
-      onPick={(meta) =>
-        ImproveCommands.OpenWithText({ text: serializeUiContext(meta) })
-      }
+      onPick={(meta) => openImproveWithText(serializeUiContext(meta))}
     />
   );
 }

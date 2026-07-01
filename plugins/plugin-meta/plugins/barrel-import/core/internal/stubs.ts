@@ -122,8 +122,8 @@ export function registerBarrelStubs(_repoRoot: string): void {
     Fragment: reactExports.Fragment,
   };
 
-  // Self-contained web-sdk stub — mirrors plugin-core's defineSlot/defineCommand
-  // without importing real React.
+  // Self-contained web-sdk stub — mirrors plugin-core's defineSlot without
+  // importing real React.
   function defineSlot(id: string, opts?: { docLabel?: (props: any) => string | undefined }) {
     const slot = (props: any) => ({
       _slotId: id,
@@ -135,17 +135,8 @@ export function registerBarrelStubs(_repoRoot: string): void {
     return slot;
   }
 
-  function defineCommand(id: string) {
-    const cmd = Object.assign(() => {}, {
-      id,
-      useHandler: noop,
-    });
-    return cmd;
-  }
-
   const coreExports = {
     defineSlot,
-    defineCommand,
     // Type-level seal only; at runtime the component is a plain ComponentType, so the
     // stub unseal is an identity passthrough (mirrors the real implementation).
     UNSAFE_unsealSlotComponent: (c: any) => c,

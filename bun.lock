@@ -2582,22 +2582,6 @@
       "name": "@singularity/plugin-plugin-meta-facets",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/facets/plugins/commands": {
-      "name": "@singularity/plugin-plugin-meta-facets-commands",
-      "version": "0.0.1",
-    },
-    "plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-contributions": {
-      "name": "@singularity/plugin-plugin-meta-facets-commands-render-contributions",
-      "version": "0.0.1",
-    },
-    "plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-detail": {
-      "name": "@singularity/plugin-plugin-meta-facets-commands-render-detail",
-      "version": "0.0.1",
-    },
-    "plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-diff": {
-      "name": "@singularity/plugin-plugin-meta-facets-commands-render-diff",
-      "version": "0.0.1",
-    },
     "plugins/plugin-meta/plugins/facets/plugins/contributions": {
       "name": "@singularity/plugin-plugin-meta-facets-contributions",
       "version": "0.0.1",
@@ -3414,9 +3398,12 @@
       "name": "@singularity/plugin-shell-notifications",
       "version": "0.0.1",
     },
-    "plugins/shell/plugins/toaster": {
-      "name": "@singularity/plugin-shell-toaster",
+    "plugins/shell/plugins/toast": {
+      "name": "@singularity/plugin-shell-toast",
       "version": "0.0.1",
+      "dependencies": {
+        "sonner": "^2.0.7",
+      },
     },
     "plugins/stats": {
       "name": "@singularity/plugin-stats",
@@ -5686,14 +5673,6 @@
 
     "@singularity/plugin-plugin-meta-facets": ["@singularity/plugin-plugin-meta-facets@workspace:plugins/plugin-meta/plugins/facets"],
 
-    "@singularity/plugin-plugin-meta-facets-commands": ["@singularity/plugin-plugin-meta-facets-commands@workspace:plugins/plugin-meta/plugins/facets/plugins/commands"],
-
-    "@singularity/plugin-plugin-meta-facets-commands-render-contributions": ["@singularity/plugin-plugin-meta-facets-commands-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-contributions"],
-
-    "@singularity/plugin-plugin-meta-facets-commands-render-detail": ["@singularity/plugin-plugin-meta-facets-commands-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-detail"],
-
-    "@singularity/plugin-plugin-meta-facets-commands-render-diff": ["@singularity/plugin-plugin-meta-facets-commands-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-diff"],
-
     "@singularity/plugin-plugin-meta-facets-contributions": ["@singularity/plugin-plugin-meta-facets-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions"],
 
     "@singularity/plugin-plugin-meta-facets-contributions-render-contributions": ["@singularity/plugin-plugin-meta-facets-contributions-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-contributions"],
@@ -6078,7 +6057,7 @@
 
     "@singularity/plugin-shell-notifications": ["@singularity/plugin-shell-notifications@workspace:plugins/shell/plugins/notifications"],
 
-    "@singularity/plugin-shell-toaster": ["@singularity/plugin-shell-toaster@workspace:plugins/shell/plugins/toaster"],
+    "@singularity/plugin-shell-toast": ["@singularity/plugin-shell-toast@workspace:plugins/shell/plugins/toast"],
 
     "@singularity/plugin-stats": ["@singularity/plugin-stats@workspace:plugins/stats"],
 

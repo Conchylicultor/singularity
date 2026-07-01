@@ -6,7 +6,7 @@
 
 - Description: Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.
 - Cross-plugin:
-  - Imported by: `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/user-text`, `page/editor`, `primitives/css/surface`, `primitives/css/ui-kit`, `primitives/pane`, `primitives/syntax-highlight`, `shell/toaster`
+  - Imported by: `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/user-text`, `page/editor`, `primitives/css/surface`, `primitives/css/ui-kit`, `primitives/pane`, `primitives/syntax-highlight`, `shell/toast`
 - Web:
   - Exports: Values: `ContentScope`, `selectScopeProps`
 

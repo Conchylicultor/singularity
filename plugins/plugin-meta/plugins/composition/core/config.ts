@@ -143,13 +143,17 @@ export const compositionsConfig = defineConfig({
         subsystem("design-system", "aM", ["primitives.css"]),
         subsystem("mcp", "aN", ["infra.mcp"]),
         // The reusable baseline EVERY gateway-served app composition `extends`:
-        // the liveness/readiness endpoint the gateway probes plus the runtime
-        // theme engine and the token groups that supply the base CSS variables
-        // (without these a filtered app boots unstyled and fails /api/health).
-        // Entry points (not contributors) so they're forced into the hard
-        // closure unconditionally; the theme-customizer UI stays opt-in/soft.
+        // the liveness/readiness endpoint the gateway probes, the toast HOST
+        // (forced alongside health, whose Core.Root watchers dispatch toasts —
+        // without the host mounted those toasts would silently vanish), plus the
+        // runtime theme engine and the token groups that supply the base CSS
+        // variables (without these a filtered app boots unstyled and fails
+        // /api/health). Entry points (not contributors) so they're forced into
+        // the hard closure unconditionally; the theme-customizer UI stays
+        // opt-in/soft.
         subsystem("served-baseline", "aN5", [
           "infra.health",
+          "shell.toast",
           "ui.theme-engine",
           "ui.tokens.color-palette",
           "ui.tokens.density",

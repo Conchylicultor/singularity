@@ -1,4 +1,4 @@
-import { ShellCommands } from "@plugins/shell/web";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { createNotification } from "../../shared/endpoints";
 import type { NotificationVariant } from "../../shared/schema";
@@ -20,7 +20,7 @@ export const recentClientIds = new Set<string>();
 export function toast(args: ToastArgs): void {
   const variant = args.variant ?? "info";
 
-  ShellCommands.Toast({
+  showToast({
     title: args.title,
     description: args.description,
     variant,

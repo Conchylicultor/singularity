@@ -2,7 +2,6 @@ import { Core, type PluginDefinition } from "@plugins/framework/plugins/web-sdk/
 import { CommandPaletteRoot } from "./internal/command-palette-root";
 
 export { CommandPalette, type CommandPaletteItem } from "./slots";
-export { CommandPaletteCommands } from "./commands";
 
 export default {
   description:

@@ -1,5 +1,3 @@
-import { defineCommand } from "@plugins/framework/plugins/web-sdk/core";
-
 export type ToastVariant = "default" | "success" | "error" | "warning" | "info";
 
 export interface ToastArgs {
@@ -7,7 +5,3 @@ export interface ToastArgs {
   description: string;
   variant?: ToastVariant;
 }
-
-export const Shell = {
-  Toast: defineCommand<ToastArgs, void>("shell.toast"),
-};

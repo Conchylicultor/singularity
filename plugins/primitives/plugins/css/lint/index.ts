@@ -139,7 +139,6 @@ export default {
       "plugins/page/plugins/editor/web/components/block-text-editor.tsx",
       "plugins/page/plugins/file/web/components/file-block.tsx",
       "plugins/page/plugins/read-only-view/web/components/read-only-blocks.tsx",
-      "plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-detail/web/components/commands-detail-section.tsx",
       "plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-detail/web/components/contributions-detail-section.tsx",
       "plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-detail/web/components/db-schema-detail-section.tsx",
       "plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-detail/web/components/registrations-detail-section.tsx",

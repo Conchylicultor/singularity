@@ -6,7 +6,7 @@ import { PushGantt } from "@plugins/debug/plugins/profiling/plugins/push/plugins
 import { pushDetailPane, getPushProfiling } from "@plugins/debug/plugins/profiling/plugins/push/web";
 import { buildProfileDetailPane } from "@plugins/debug/plugins/profiling/plugins/build/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { ShellCommands } from "@plugins/shell/web";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { convPushProfilingPane } from "../panes";
 
@@ -45,7 +45,7 @@ export function PushProfilingPaneBody() {
       }
       onBuildClick={(build) => {
         if (!build.buildId) {
-          ShellCommands.Toast({
+          showToast({
             description: "No build profile for this build (logged before profiling).",
             variant: "info",
           });

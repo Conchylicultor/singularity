@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { MdNotifications, MdNotificationsNone } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { ShellCommands } from "@plugins/shell/web";
+import { showToast } from "@plugins/shell/plugins/toast/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
@@ -135,7 +135,7 @@ export function BellButton() {
     if (prevIdsRef.current !== null) {
       for (const n of settled) {
         if (!prevIdsRef.current.has(n.id) && !recentClientIds.has(n.id) && !n.muted) {
-          ShellCommands.Toast({
+          showToast({
             title: n.title,
             description: n.description,
             variant: n.variant,

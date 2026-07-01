@@ -79,6 +79,17 @@ test("the agent-runtime bundle aggregates the agent/worktree/git taproots", () =
   expect([...ar.extends].sort()).toEqual(["conversations", "tasks-domain"]);
 });
 
+test("served-baseline forces the toast host alongside health", () => {
+  // The toast host must ship with every gateway-served app: health's Core.Root
+  // watchers dispatch toasts, and with no `<ToasterHost/>` mounted those toasts
+  // would silently vanish. Forcing `shell.toast` as a served-baseline entry keeps
+  // the "host ships with any served app" invariant enforced (facet-a regression
+  // guard) without relying on a runtime throw.
+  const baseline = byName("served-baseline");
+  expect(baseline.entryPoints).toContain("infra.health");
+  expect(baseline.entryPoints).toContain("shell.toast");
+});
+
 test("every seed carries `excludes` and each ref resolves to a real bundle", () => {
   const names = new Set(seeds.map((s) => s.name));
   for (const s of seeds) {

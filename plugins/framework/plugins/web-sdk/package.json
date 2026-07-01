@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-framework-web-sdk",
-  "description": "Web plugin runtime: slots, commands, contributions, loader",
+  "description": "Web plugin runtime: slots, contributions, loader",
   "private": true,
   "version": "0.0.1",
   "peerDependencies": {
