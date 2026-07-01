@@ -193,6 +193,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`button-safety`** — button-safety lint rule: no-async-raw-button
             - **`context-safety`** — context-safety lint rule: no-unstable-context-value
             - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
+            - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
             - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch

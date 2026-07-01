@@ -76,11 +76,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps/browser/shell.Browser`, `apps/browser/shell.Favicon`, `apps/browser/shell.useBrowserNav`, `infra/endpoints.useEndpointMutation`, `primitives/bar.Bar`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`
             - Exports: Types: `BookmarkRow`; Values: `BookmarkRowSchema`, `browserBookmarksResource`, `useBookmarks`
           - Server:
-            - Uses: `database.db`, `infra/endpoints.implement`
+            - Uses: `database.db`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`
             - DB schema: `plugins/apps/plugins/browser/plugins/bookmarks/server/internal/tables.ts`
             - Exports: Values: `_browserBookmarks`, `addBookmark`, `browserBookmarksServerResource`, `deleteBookmark`
             - Resources: `browser-bookmarks` (push)
             - Routes: `POST /api/browser/bookmarks`, `DELETE /api/browser/bookmarks/:id`
+          - Core:
+            - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/text/config.textField`, `primitives/live-state.resourceDescriptor`
+            - Exports: Types: `BookmarkRow`; Values: `bookmarkFields`, `BookmarkRowSchema`, `browserBookmarksResource`
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
             - Endpoint callers: `history`
@@ -417,12 +420,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.TEMPO_MATH_FLOOR`, `apps/sonata/shell.useSonata`, `infra/endpoints.useEndpointMutation`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/column.Column`, `primitives/css/fill.Fill`, `primitives/css/grid.Grid`, `primitives/css/line.Line`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/data-view.CreateOption`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineFieldExtensions`, `primitives/data-view.defineItemActions`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useEventCallback`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/persistent-draft.useDraft`, `primitives/relative-time.formatRelativeTime`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `Library`, `openSongImperative`, `useOpenSong`
           - Server:
-            - Uses: `database.db`, `infra/attachments.Attachments`, `infra/endpoints.implement`
+            - Uses: `database.db`, `infra/attachments.Attachments`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`
             - DB schema: `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`, `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`
             - Exports: Types: `CreateSongRowInput`, `UpdateSongMetaInput`; Values: `_songs`, `createSongRow`, `songAttachments`, `songsLiveResource`, `updateSongMeta`
             - Routes: `DELETE /api/sonata/songs/:id`, `PATCH /api/sonata/songs/:id`
           - Core:
-            - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
+            - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/date/config.dateField`, `fields/float/config.floatField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
             - Exports: Types: `Song`, `UpdateSongBody`; Values: `deleteSong`, `SongSchema`, `songsResource`, `updateSong`
           - Cross-plugin:
             - Imported by: `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/sources/midi/folders`, `apps/sonata/sources/ultimate-guitar`, `apps/sonata/track-mixer`, `apps/sonata/transpose`
@@ -1420,15 +1423,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/optimistic-mutation.useOptimisticResource`
         - Exports: Types: `StagedConfigDefault`, `StagedDiffProps`, `StagedKey`, `StagingDiffRenderer`; Values: `GenericConfigDiff`, `StagedConfigDefaultSchema`, `stagedConfigDefaultsResource`, `Staging`, `useApplyAllConfigDefaults`, `useApplyConfigDefault`, `useDiscardAllConfigDefaults`, `useDiscardConfigDefault`, `useHasStagedDefaults`, `useStageConfigDefault`, `useStageDefault`, `useStagedKeys`, `useStagedValue`, `useStagingDiffRenderers`
       - Server:
-        - Uses: `config_v2.getAllDescriptors`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`
+        - Uses: `config_v2.getAllDescriptors`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/jobs.defineJob`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`
         - DB schema: `plugins/config_v2/plugins/staging/server/internal/tables.ts`
         - Exports: Values: `_stagedConfigDefault`, `stagedConfigDefaultsResource`
         - Register: `defineJob('config-v2.land-defaults')`
         - Resources: `config-v2-staged-defaults` (push)
         - Routes: `POST /api/config-v2/staged-defaults`, `POST /api/config-v2/staged-defaults/:pluginId/:configName/apply`, `POST /api/config-v2/staged-defaults/apply-all`, `DELETE /api/config-v2/staged-defaults/:pluginId/:configName`, `DELETE /api/config-v2/staged-defaults`
       - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
-        - Exports: Types: `StageConfigDefaultBody`; Values: `applyAllConfigDefaults`, `applyConfigDefault`, `discardAllConfigDefaults`, `discardConfigDefault`, `stageConfigDefault`, `StageConfigDefaultBodySchema`
+        - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/date/config.dateField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
+        - Exports: Types: `StageConfigDefaultBody`, `StagedConfigDefault`; Values: `applyAllConfigDefaults`, `applyConfigDefault`, `discardAllConfigDefaults`, `discardConfigDefault`, `stageConfigDefault`, `StageConfigDefaultBodySchema`, `stagedConfigDefaultFields`, `StagedConfigDefaultSchema`, `stagedConfigDefaultsResource`
       - Cross-plugin:
         - Imported by: `plugin-meta/composition`, `reorder`, `reorder/edit-mode`, `review/config-defaults`
 
@@ -2153,14 +2156,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Pane.Register` "conv-summary"
         - Uses: `conversations/conversation-view.conversationPane`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `shell/notifications.toast`
       - Server:
-        - Uses: `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.Turn`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/mcp.Mcp`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.getTask`
+        - Uses: `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.Turn`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/mcp.Mcp`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.getTask`
         - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
         - Exports: Values: `_conversationSummaries`, `conversationSummariesResource`
         - Register: `mcpTool('submit_conversation_summary')`
-        - Resources: `conversation-summaries` (push)
         - Routes: `POST /api/conversation-summary/:conversationId/generate`
+      - Core:
+        - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/date/config.dateField`, `fields/int/config.intField`, `fields/text/config.enumTextField`, `fields/text/config.textField`, `primitives/live-state.resourceDescriptor`
+        - Exports: Types: `ConversationSummary`, `Phase`; Values: `conversationSummariesResource`, `conversationSummaryFields`, `ConversationSummarySchema`, `PHASE_VALUES`, `PhaseSchema`
       - Shared:
-        - Exports: Types: `ConversationSummary`, `Phase`; Values: `conversationSummariesResource`, `generateConversationSummary`
+        - Exports: Values: `generateConversationSummary`
     - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the on-disk JSONL path for a conversation's full raw Claude session transcript.
       - Server:
         - Uses: `conversations/transcript-watcher.findTranscriptPath`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core.getConversationClaudeSessionId`
@@ -2556,7 +2561,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.rank`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Imported by: `apps/mail/mail-core`, `config_v2`, `conversations/all-conversations`, `debug/boot-profile`, `debug/slow-ops`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/bool/filter-sql`, `fields/bool/storage`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/config`, `fields/date/filter-sql`, `fields/date/storage`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/enum/filter-sql`, `fields/float`, `fields/float/config`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/config`, `fields/int/storage`, `fields/json`, `fields/json/config`, `fields/json/storage`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/number/filter-sql`, `fields/object`, `fields/object/config`, `fields/rank`, `fields/rank/config`, `fields/rank/storage`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/text/filter-sql`, `fields/text/storage`, `fields/uuid`, `fields/uuid/config`, `fields/uuid/storage`, `fields/variant`, `fields/variant/config`, `infra/entities`, `tasks/tasks-core`
+    - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `config_v2`, `config_v2/staging`, `conversations/all-conversations`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/bool/filter-sql`, `fields/bool/storage`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/config`, `fields/date/filter-sql`, `fields/date/storage`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/enum/filter-sql`, `fields/float`, `fields/float/config`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/config`, `fields/int/storage`, `fields/json`, `fields/json/config`, `fields/json/storage`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/number/filter-sql`, `fields/object`, `fields/object/config`, `fields/rank`, `fields/rank/config`, `fields/rank/storage`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/text/filter-sql`, `fields/text/storage`, `fields/uuid`, `fields/uuid/config`, `fields/uuid/storage`, `fields/variant`, `fields/variant/config`, `infra/claude-cli`, `infra/entities`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
   - Server:
     - Exports: Types: `FieldFilterSqlContribution`, `FieldStorageContribution`, `FilterSqlBuilder`, `StorageColumnBuilder`; Values: `Fields`, `fieldsToColumns`, `resolveFieldFilterSql`, `resolveFieldStorage`
   - Core:
@@ -2654,7 +2659,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/date.dateFieldType`
             - Exports: Types: `DateFieldDef`; Values: `dateField`
           - Cross-plugin:
-            - Imported by: `apps/mail/mail-core`, `debug/boot-profile`, `debug/slow-ops`, `tasks/tasks-core`
+            - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
         - **`filter`** — Date field type: data-view filter operator set (is / before / after / between …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "date"
@@ -2768,7 +2773,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/float.floatFieldType`
             - Exports: Types: `FloatFieldDef`; Values: `floatField`
           - Cross-plugin:
-            - Imported by: `apps/sonata/voicing`, `debug/live-state-churn/monitor`, `debug/slow-ops`
+            - Imported by: `apps/sonata/library`, `apps/sonata/voicing`, `debug/live-state-churn/monitor`, `debug/slow-ops`
         - **`storage`** — Float field type: DB storage capability — maps to a Postgres double precision column.
           - Server:
             - Uses: `fields.Fields`
@@ -2803,7 +2808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/int.intFieldType`
             - Exports: Types: `IntFieldDef`; Values: `intField`
           - Cross-plugin:
-            - Imported by: `apps-core/surface/floating/wallpaper`, `apps/mail/mail-core`, `conversations`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/slow-ops`
+            - Imported by: `apps-core/surface/floating/wallpaper`, `apps/mail/mail-core`, `conversations`, `conversations/summary`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`
         - **`storage`** — Integer field type: DB storage capability — maps to a Postgres integer column.
           - Server:
             - Uses: `fields.Fields`
@@ -2826,7 +2831,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/json.jsonFieldType`
             - Exports: Types: `JsonFieldDef`; Values: `jsonField`
           - Cross-plugin:
-            - Imported by: `apps/mail/mail-core`, `debug/boot-profile`, `debug/slow-ops`
+            - Imported by: `apps/mail/mail-core`, `config_v2/staging`, `debug/boot-profile`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`
         - **`storage`** — JSON field type: DB storage capability — maps to a Postgres jsonb column.
           - Server:
             - Uses: `fields.Fields`
@@ -3030,7 +3035,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.FieldType`, `fields.pickMeta`, `fields/text.textFieldType`
             - Exports: Types: `TextFieldDef`; Values: `enumTextField`, `textField`
           - Cross-plugin:
-            - Imported by: `apps-core/surface/floating/wallpaper`, `apps/mail/mail-core`, `debug/boot-profile`, `debug/slow-ops`, `fields/variant/config`, `plugin-meta/composition`, `primitives/data-view/custom-columns`, `tasks/tasks-core`
+            - Imported by: `apps-core/surface/floating/wallpaper`, `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `fields/variant/config`, `infra/claude-cli`, `infra/events`, `plugin-meta/composition`, `plugin-meta/plugin-health`, `primitives/data-view/custom-columns`, `tasks/tasks-core`
         - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "text"
@@ -3066,7 +3071,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/uuid.uuidFieldType`
             - Exports: Types: `UuidFieldDef`; Values: `uuidField`
           - Cross-plugin:
-            - Imported by: `debug/boot-profile`, `debug/slow-ops`
+            - Imported by: `debug/boot-profile`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`
         - **`storage`** — UUID field type: DB storage capability — maps to a Postgres uuid column.
           - Server:
             - Uses: `fields.Fields`
@@ -3188,6 +3193,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`button-safety`** — button-safety lint rule: no-async-raw-button
             - **`context-safety`** — context-safety lint rule: no-unstable-context-value
             - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
+            - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
             - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
@@ -3302,13 +3308,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Endpoint callers: `emit`, `live-state`
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
       - Server:
-        - Uses: `database.db`, `infra/paths.CLAUDE`
+        - Uses: `database.db`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/paths.CLAUDE`
         - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
         - Exports: Types: `RunClaudePrintInput`; Values: `_claudeCliCalls`, `claudeCliCallsResource`, `ClaudeCliError`, `runClaudePrint`
         - Resources: `claude-cli-calls` (push)
       - Core:
-        - Uses: `conversations/model-provider.StoredModelSchema`, `primitives/live-state.resourceDescriptor`
-        - Exports: Types: `ClaudeCliCall`; Values: `ClaudeCliCallSchema`, `claudeCliCallsResource`
+        - Uses: `conversations/model-provider.ConversationModelSchema`, `conversations/model-provider.StoredModelSchema`, `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/date/config.dateField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.enumTextField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `primitives/live-state.resourceDescriptor`
+        - Exports: Types: `ClaudeCliCall`; Values: `claudeCliCallFields`, `ClaudeCliCallSchema`, `claudeCliCallsResource`
       - Cross-plugin:
         - Imported by: `apps/story/generation`, `apps/workflows/steps/llm-prompt`, `conversations/conversation-category`, `conversations/conversation-view/turn-summary`, `tasks/task-title`
     - **`contention`** — Cached, cluster-wide system-contention snapshot (OS load average + Postgres backend counts) stamped onto slow ops.
@@ -3335,7 +3341,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/infra/plugins/entities/server/internal/define-entity.ts`
         - Exports: Types: `ColumnDefault`, `DbDefault`, `DefaultedKeys`, `Entity`, `EntityColumnMeta`, `EntityColumns`, `EntityMeta`, `EntityReference`, `EntityRow`; Values: `defaultNow`, `defaultRandom`, `defineEntity`, `sqlDefault`
       - Cross-plugin:
-        - Imported by: `apps/mail/mail-core`, `debug/boot-profile`, `debug/slow-ops`, `tasks/tasks-core`
+        - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
       - Server:
         - Uses: `database.db`
@@ -3345,15 +3351,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/pages/starred`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/sources/ultimate-guitar`, `apps/sonata/transpose`, `apps/story/marker`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/notes`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `plugin-meta/plugin-health`, `tasks/auto-start`, `tasks/task-effort`, `tasks/task-preprompt`
     - **`events`** — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
       - Server:
-        - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.EnqueueTx`, `infra/jobs.getAllRegisteredJobNames`, `infra/jobs.NonRetryableError`, `infra/jobs.UNSAFE_getRegisteredJob`, `infra/jobs.UNSAFE_installDurableHooks`
+        - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.defineJob`, `infra/jobs.EnqueueTx`, `infra/jobs.getAllRegisteredJobNames`, `infra/jobs.NonRetryableError`, `infra/jobs.UNSAFE_getRegisteredJob`, `infra/jobs.UNSAFE_installDurableHooks`
         - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`, `plugins/infra/plugins/events/server/internal/tables.ts`
         - Exports: Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`; Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `eventEmissionsResource`, `eventTriggersResource`, `trigger`, `Trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
         - Register: `defineJob('events.dispatch')`, `UNSAFE_installDurableHooks()`
         - Resources: `event-emissions` (invalidate), `event-triggers` (invalidate)
         - Routes: `GET /api/events/emissions`, `GET /api/events/triggers`, `DELETE /api/events/triggers/:id`, `PATCH /api/events/triggers/:id`
       - Core:
-        - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-        - Exports: Types: `EmissionRow`, `EmissionsPayload`, `PatchTriggerBody`, `TriggerRow`, `TriggersPayload`; Values: `deleteTriggerEndpoint`, `EmissionRowSchema`, `EmissionsPayloadSchema`, `eventEmissionsResource`, `eventTriggersResource`, `listEmissions`, `listTriggers`, `patchTriggerBodySchema`, `patchTriggerEndpoint`, `TriggerRowSchema`, `TriggersPayloadSchema`
+        - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
+        - Exports: Types: `EmissionRow`, `EmissionsPayload`, `PatchTriggerBody`, `TriggerRow`, `TriggersPayload`; Values: `deleteTriggerEndpoint`, `EmissionRowSchema`, `EmissionsPayloadSchema`, `eventEmissionFields`, `eventEmissionsResource`, `eventTriggersResource`, `listEmissions`, `listTriggers`, `patchTriggerBodySchema`, `patchTriggerEndpoint`, `TriggerRowSchema`, `TriggersPayloadSchema`
       - Cross-plugin:
         - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/workflows/engine`, `build`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `improve`, `infra/events-test`, `infra/git-watcher`, `page/attachment-block`, `page/editor`, `page/inline-date`, `page/links`, `tasks`, `tasks/task-title`, `tasks/tasks-core`
     - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
@@ -4025,7 +4031,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `PluginViewSlots.Section` "health" → `HealthSection`
         - Uses: `infra/endpoints.fetchEndpoint`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/css/scroll.Scroll`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/relative-time.RelativeTime`
       - Server:
-        - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks/task-preprompt.inheritTaskPreprompt`, `tasks/tasks-core._tasks`, `tasks/tasks-core.createTask`, `tasks/tasks-core.getConversation`
+        - Uses: `database.db`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/entity-extensions.defineExtension`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks/task-preprompt.inheritTaskPreprompt`, `tasks/tasks-core._tasks`, `tasks/tasks-core.createTask`, `tasks/tasks-core.getConversation`
         - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
         - Entity extension of: `tasks/tasks-core` (table `tasks_ext_health_review`)
         - Exports: Values: `healthReviewExt`, `pluginHealthReviewsResource`
@@ -4033,8 +4039,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `plugin-health-reviews` (push)
         - Routes: `GET /api/plugin-health/reviews`, `GET /api/plugin-health/staleness/:pluginId`, `GET /api/plugin-health/tasks/:reviewId`
       - Core:
-        - Uses: `infra/endpoints.defineEndpoint`
-        - Exports: Types: `PluginHealthReview`, `PluginStaleness`, `ReviewTaskSummary`; Values: `getPluginHealthReviews`, `getPluginHealthTasks`, `getPluginStaleness`, `PluginHealthReviewSchema`, `PluginStalenessSchema`, `ReviewTaskSummarySchema`
+        - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/date/config.dateField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`
+        - Exports: Types: `PluginHealthReview`, `PluginStaleness`, `ReviewTaskSummary`; Values: `getPluginHealthReviews`, `getPluginHealthTasks`, `getPluginStaleness`, `pluginHealthReviewFields`, `PluginHealthReviewSchema`, `PluginStalenessSchema`, `ReviewTaskSummarySchema`
     - **`plugin-tree`**
       - Core:
         - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.Facet`, `plugin-meta/facets.loadFacets`, `plugin-meta/facets.setFacet`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.parseStringField`, `plugin-meta/parse-utils.runWithFsSnapshot`, `plugin-meta/parse-utils.stripTypes`
@@ -4573,7 +4579,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.endpointQueryKey`, `primitives/css/placeholder.Placeholder`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/log-channels.clientLog`, `primitives/networking.NetDiagEvent`, `primitives/networking.SharedWebSocket`, `primitives/networking.subscribeNetDiag`, `primitives/networking.subscribeWsStatus`, `primitives/networking.WsStatus`, `primitives/tab-id.getTabId`
         - Exports: Types: `ChannelStatuses`, `CombinedResources`, `DebugSnapshot`, `DebugSub`, `GateDataOf`, `GateInput`, `LeaderInfo`, `LiveStateSocketKind`, `MatchResourceHandlers`, `MissedFrame`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`, `ResourceViewProps`, `SlowResourceInfo`; Values: `centralResourceDescriptor`, `combineResources`, `getNotificationsClient`, `hydrateEndpoint`, `hydrateQuery`, `hydrateResource`, `keyedResourceDescriptor`, `liveStateSocketKind`, `matchResource`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `registerSlowResourceReporter`, `resourceDescriptor`, `resourceDescriptorByKey`, `ResourceView`, `useCombinedResources`, `useNotificationsChannelStatuses`, `useNotificationsClient`, `useNotificationsStatus`, `useResource`
       - Cross-plugin:
-        - Imported by: `active-data`, `active-data/attempt`, `active-data/task`, `active-data/task-link`, `apps/agent-manager/worktree-switcher`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/browser/start-page`, `apps/deploy/servers`, `apps/mail/mail-core`, `apps/mail/shell`, `apps/mail/sync-status`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome/recent-pages`, `apps/prototypes/files`, `apps/prototypes/gallery`, `apps/settings/config`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transpose`, `apps/story/generation`, `apps/story/marker`, `apps/story/render`, `apps/story/shell`, `apps/studio/release`, `apps/studio/release/release-artifact`, `apps/studio/release/release-info`, `apps/studio/release/release-logs`, `apps/workflows/definitions`, `apps/workflows/engine`, `apps/workflows/executions`, `auth`, `auth/google/setup-wizard`, `build`, `build/build-fix`, `build/build-info`, `config_v2`, `config_v2/settings`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view`, `conversations/conversation-view/code`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/event-counter`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/notes`, `conversations/conversation-view/op-status`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/data-view`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/effort-provider`, `conversations/model-provider`, `conversations/recover`, `conversations/summary`, `debug/claude-cli-calls`, `debug/live-state-health`, `debug/queue`, `debug/reports`, `debug/slow-ops`, `debug/slow-ops/pane`, `debug/zero-test`, `fields/secret/config`, `framework/web-core`, `infra/boot-snapshot`, `infra/claude-cli`, `infra/events`, `infra/health`, `infra/jobs`, `page/editor`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/read-only-view`, `plugin-meta/plugin-health`, `primitives/data-view/custom-columns`, `primitives/optimistic-mutation`, `release`, `reports`, `review`, `review/code-review`, `review/config-defaults`, `review/plugin-changes`, `shell/global-action-bar`, `shell/notifications`, `tasks`, `tasks/attempt-view`, `tasks/auto-start`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-draft-form`, `tasks/task-effort`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`
+        - Imported by: `active-data`, `active-data/attempt`, `active-data/task`, `active-data/task-link`, `apps/agent-manager/worktree-switcher`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/browser/start-page`, `apps/deploy/servers`, `apps/mail/mail-core`, `apps/mail/shell`, `apps/mail/sync-status`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome/recent-pages`, `apps/prototypes/files`, `apps/prototypes/gallery`, `apps/settings/config`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transpose`, `apps/story/generation`, `apps/story/marker`, `apps/story/render`, `apps/story/shell`, `apps/studio/release`, `apps/studio/release/release-artifact`, `apps/studio/release/release-info`, `apps/studio/release/release-logs`, `apps/workflows/definitions`, `apps/workflows/engine`, `apps/workflows/executions`, `auth`, `auth/google/setup-wizard`, `build`, `build/build-fix`, `build/build-info`, `config_v2`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view`, `conversations/conversation-view/code`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/event-counter`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/notes`, `conversations/conversation-view/op-status`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/data-view`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/effort-provider`, `conversations/model-provider`, `conversations/recover`, `conversations/summary`, `debug/claude-cli-calls`, `debug/live-state-health`, `debug/queue`, `debug/reports`, `debug/slow-ops`, `debug/slow-ops/pane`, `debug/zero-test`, `fields/secret/config`, `framework/web-core`, `infra/boot-snapshot`, `infra/claude-cli`, `infra/events`, `infra/health`, `infra/jobs`, `page/editor`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/read-only-view`, `plugin-meta/plugin-health`, `primitives/data-view/custom-columns`, `primitives/optimistic-mutation`, `release`, `reports`, `review`, `review/code-review`, `review/config-defaults`, `review/plugin-changes`, `shell/global-action-bar`, `shell/notifications`, `tasks`, `tasks/attempt-view`, `tasks/auto-start`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-draft-form`, `tasks/task-effort`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`
       - Core:
         - Exports: Types: `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `keyedResourceDescriptor`, `resourceDescriptor`, `resourceDescriptorByKey`, `tolerantEnum`
     - **`loading`** — Single entry point for the loading state: text / spinner / skeleton-rows / skeleton-cards / shimmer-block variants composing Placeholder and Spinner, with a built-in CSS delay-before-show (~120ms) so fast loads never flash.
