@@ -1,17 +1,34 @@
 /**
- * Bundled starter songs, defined as note arrays of public-domain melodies. The
- * boot seed (`seed.ts`) turns each into a real MIDI attachment via `@tonejs/midi`
- * — no binary blobs in the repo, no licensing concerns.
+ * Bundled starter songs, defined as note arrays of public-domain repertoire. The
+ * boot seed (`seed.ts`) turns each into a real multi-track MIDI attachment via
+ * `@tonejs/midi` — no binary blobs in the repo, no licensing concerns.
  *
  * `time` and `duration` are in **seconds**; the seed sets the track tempo to
  * `bpm` (which only affects the MIDI's beat↔seconds header, not these absolute
- * seconds). `midi` is the MIDI note number (C4 = 60).
+ * seconds). `midi` is the MIDI note number (C4 = 60). `velocity` is optional on
+ * the canonical 0–127 MIDI scale (defaults to the library's own default when
+ * omitted) — the realistic pieces set it so a soft left-hand sits under a
+ * brighter melody.
+ *
+ * A starter is **multi-track**: each `StarterTrack` becomes its own MIDI track
+ * (piano-roll color + audio route), and a two-hand piano piece (left/right
+ * tracks) engraves as a real grand staff in the notation lens.
  */
 
 export interface StarterNote {
   midi: number;
   time: number;
   duration: number;
+  /** Canonical MIDI velocity (0–127). Omit to use the default. */
+  velocity?: number;
+}
+
+export interface StarterTrack {
+  /** Track name, surfaced per-track (e.g. "Left hand"). */
+  name?: string;
+  /** General MIDI program number (0 = Acoustic Grand Piano). */
+  program?: number;
+  notes: StarterNote[];
 }
 
 export interface Starter {
@@ -19,34 +36,19 @@ export interface Starter {
   title: string;
   composer: string;
   bpm: number;
-  notes: StarterNote[];
-}
-
-// --- Small note-sequencing helper ------------------------------------------
-// Build a sequence from [pitch, beats] pairs at a given bpm, laying notes
-// back-to-back. A short gap (90% gate) keeps repeated pitches articulated.
-type Step = [midi: number, beats: number];
-
-function sequence(bpm: number, steps: Step[]): StarterNote[] {
-  const secPerBeat = 60 / bpm;
-  const notes: StarterNote[] = [];
-  let time = 0;
-  for (const [midi, beats] of steps) {
-    const span = beats * secPerBeat;
-    notes.push({ midi, time, duration: span * 0.9 });
-    time += span;
-  }
-  return notes;
+  /** Optional time signature [numerator, denominator]; defaults to 4/4. */
+  timeSig?: [numerator: number, denominator: number];
+  tracks: StarterTrack[];
 }
 
 // --- Absolute-placement helper ---------------------------------------------
-// Unlike `sequence` (which lays notes back-to-back), `placed` positions each
-// note at an explicit quarter-note `beat`, so notes may sit off the binary grid
-// (triplets, 32nds) and overlap (a grace note just before its principal). Used
+// `placed` positions each note at an explicit quarter-note `beat`, so notes may
+// sit off the binary grid (triplets, 32nds) and overlap (a grace note just
+// before its principal). Used
 // by the rhythm étude that exercises the notation lens's tuplet / grace-note /
 // sub-sixteenth engraving. A near-legato 0.98 gate keeps distinct pitches
 // articulated while leaving offsets essentially on-grid so the subdivision
-// detector reads cleanly.
+// detector reads cleanly. Returns one track's worth of notes.
 type Placed = { midi: number; beat: number; beats: number };
 
 function placed(bpm: number, notes: Placed[]): StarterNote[] {
@@ -58,33 +60,15 @@ function placed(bpm: number, notes: Placed[]): StarterNote[] {
   }));
 }
 
-// MIDI note numbers used below: C4=60 D4=62 E4=64 F4=65 G4=67 A4=69
-// A4=69 B4=71 C5=72 D5=74 D#5=75 E5=76
-const C4 = 60, D4 = 62, E4 = 64, F4 = 65, G4 = 67, A4 = 69;
-const B4 = 71, C5 = 72, Cs5 = 73, D5 = 74, Ds5 = 75, E5 = 76;
-const F5 = 77, G5 = 79, A5 = 81, B5 = 83, C6 = 84;
+// Realistic multi-track pieces live in sibling files (kept out of this barrel so
+// their per-bar pitch tables stay readable and independently auditable).
+import { buildBachPreludeTracks } from "./bach-prelude";
+import { buildFurEliseTracks } from "./fur-elise";
 
-const ODE_TO_JOY: Step[] = [
-  [E4, 1], [E4, 1], [F4, 1], [G4, 1],
-  [G4, 1], [F4, 1], [E4, 1], [D4, 1],
-  [C4, 1], [C4, 1], [D4, 1], [E4, 1],
-  [E4, 1.5], [D4, 0.5], [D4, 2],
-];
-
-const TWINKLE: Step[] = [
-  [C4, 1], [C4, 1], [G4, 1], [G4, 1],
-  [A4, 1], [A4, 1], [G4, 2],
-  [F4, 1], [F4, 1], [E4, 1], [E4, 1],
-  [D4, 1], [D4, 1], [C4, 2],
-];
-
-// Für Elise opening: the iconic E–D#–E–D#–E–B–D–C–A motif (sixteenths into a
-// quarter), then the answering C–E–A–B (eighths into a quarter).
-const FUR_ELISE: Step[] = [
-  [E5, 0.5], [Ds5, 0.5], [E5, 0.5], [Ds5, 0.5], [E5, 0.5], [B4, 0.5], [D5, 0.5], [C5, 0.5],
-  [A4, 1.5],
-  [C4, 0.5], [E4, 0.5], [A4, 0.5], [B4, 1.5],
-];
+// MIDI note numbers used by the rhythm étude below.
+// C5=72 D5=74 E5=76 F5=77 G5=79 A5=81 B5=83 C6=84; A4=69 C#5=73
+const A4 = 69, C5 = 72, Cs5 = 73, D5 = 74, E5 = 76;
+const F5 = 77, G5 = 79, A5 = 81, B5 = 83, C6 = 84, G4 = 67;
 
 // Rhythm étude — a short single-staff study that exercises the notation lens's
 // richer rhythms: eighth-note triplets (bar 1), a thirty-second-note run (bar 2),
@@ -138,33 +122,40 @@ const RHYTHM_ETUDE: Placed[] = [
   { midi: C5, beat: 15, beats: 1 },
 ];
 
+// Tempos chosen to sit in each piece's customary performance range.
+const BACH_BPM = 69;
+const ELISE_BPM = 68;
+
 export const STARTERS: Starter[] = [
   {
-    id: "seed-ode-to-joy",
-    title: "Ode to Joy",
-    composer: "Beethoven",
-    bpm: 100,
-    notes: sequence(100, ODE_TO_JOY),
+    // J.S. Bach — Prelude in C major, BWV 846 (Well-Tempered Clavier, Book I).
+    // Every bar is the same 16th-note broken-chord figuration over that bar's
+    // harmony (see bach-prelude.ts): 32 measures of the canonical progression
+    // plus a final tonic chord resolving the bar-32 dominant. Two hands →
+    // grand staff. The showcase piece.
+    id: "seed-bach-prelude-c-major",
+    title: "Prelude in C major, BWV 846",
+    composer: "J.S. Bach",
+    bpm: BACH_BPM,
+    timeSig: [4, 4],
+    tracks: buildBachPreludeTracks(BACH_BPM),
   },
   {
-    id: "seed-twinkle",
-    title: "Twinkle Twinkle",
-    composer: "Trad.",
-    bpm: 110,
-    notes: sequence(110, TWINKLE),
-  },
-  {
+    // Beethoven — Für Elise (WoO 59), the A-section theme. A minor, 3/8; the
+    // iconic E–D#–E–D#–E motif over an arpeggiated left hand (see fur-elise.ts).
     id: "seed-fur-elise",
-    title: "Für Elise (opening)",
+    title: "Für Elise",
     composer: "Beethoven",
-    bpm: 72,
-    notes: sequence(72, FUR_ELISE),
+    bpm: ELISE_BPM,
+    timeSig: [3, 8],
+    tracks: buildFurEliseTracks(ELISE_BPM),
   },
   {
+    // Functional notation fixture (not a toy melody): tuplets, 32nds, grace notes.
     id: "seed-rhythm-etude",
     title: "Rhythm Étude",
     composer: "Sonata",
     bpm: 76,
-    notes: placed(76, RHYTHM_ETUDE),
+    tracks: [{ name: "Étude", program: 0, notes: placed(76, RHYTHM_ETUDE) }],
   },
 ];

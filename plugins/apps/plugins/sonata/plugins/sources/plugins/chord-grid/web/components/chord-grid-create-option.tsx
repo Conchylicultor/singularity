@@ -24,6 +24,7 @@ const STARTER: ChordGridRaw = {
 export const chordGridCreateOption: CreateOption = {
   id: "chord-grid",
   label: "New Chord Grid",
+  description: "Author a chord progression and hear it voiced.",
   icon: <MdGridView className="size-4" />,
   onSelect: async () => {
     const score = compile(STARTER);

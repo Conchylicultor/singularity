@@ -34,6 +34,7 @@ function pickFile(accept: string): Promise<File | null> {
 export const midiCreateOption: CreateOption = {
   id: "midi",
   label: "Import MIDI",
+  description: "Upload a .mid file to play and visualize it.",
   icon: <MdFileUpload className="size-4" />,
   onSelect: async () => {
     const file = await pickFile(".mid,.midi");

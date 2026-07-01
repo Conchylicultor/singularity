@@ -13,6 +13,7 @@ import { Library } from "../slots";
 import { useOpenSong } from "../hooks";
 import { SongCard, formatDuration } from "./song-card";
 import { NowPlayingBar } from "./now-playing-bar";
+import { SonataOnboarding } from "./onboarding";
 
 const LIBRARY_VIEW = defineDataView("sonata.library");
 
@@ -164,7 +165,12 @@ export function SongLibrary() {
         // The error banner above already covers the failed-load case; keep the
         // (skeleton) chrome underneath it rather than a second error block.
         error: () => renderLibrary([], true),
-        ready: (rows) => renderLibrary(rows, false),
+        // Confirmed-empty (ready + 0 rows) → the first-run onboarding takeover
+        // (hero + source cards). Any songs → the DataView. Keeping onboarding to
+        // the ready-empty case means pending/error still show the DataView
+        // skeleton, never a flash of the empty state.
+        ready: (rows) =>
+          rows.length === 0 ? <SonataOnboarding /> : renderLibrary(rows, false),
       })}
       footer={<NowPlayingBar />}
     />

@@ -3,7 +3,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { createMidiSong, getSongMidi } from "../shared/endpoints";
 import { handleCreateMidiSong, handleGetSongMidi } from "./internal/routes";
 import { songMidiLiveResource } from "./internal/resource";
-import { seedMidiStarters } from "./internal/seed";
+import { seedMidiStarters, reconcileSeededStarters } from "./internal/seed";
 import { backfillContentHashes } from "./internal/import";
 
 export { songMidi } from "./internal/tables";
@@ -26,6 +26,9 @@ export default {
   contributions: [Resource.Declare(songMidiLiveResource)],
   onReady: async () => {
     await seedMidiStarters();
+    // Drop managed seed songs no longer in STARTERS (renamed/removed starters).
+    // After seeding so newly-added ids are never transiently absent.
+    await reconcileSeededStarters();
     await backfillContentHashes();
   },
 } satisfies ServerPluginDefinition;
