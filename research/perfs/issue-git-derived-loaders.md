@@ -41,10 +41,45 @@ cheaper / off the critical path (cost) vs. don't recompute on no-change events (
 **Next:** a Phase-2 trace of the watcher recompute rate vs. actual edited-files change rate on an
 active worktree.
 
+## Fresh re-validation (2026-07-01) — still live, now tailing to multi-minute flush stalls
+
+Surfaced while answering "a new conversation took a few minutes to appear in the agent-manager
+sidebar queue list." Root of that symptom traced here: the live-state **flush** that delivers the
+`queue-ranks` / `conversations-active` diffs to the browser was backed up **multiple minutes** behind
+the git-loader gate, so the sidebar didn't update until the flush drained. Live `slow_ops` snapshot on
+`singularity` (~13:38):
+
+| op | last_ms (happening now) | max_ms (since-boot peak) | last_seen |
+|---|---|---|---|
+| `flush / flushNotifies` | 4.1 s | **990,770 ms (~16.5 min)** | 13:38:04 |
+| `loader / commits-graph.delta` | 14.8 s | 740,347 ms (~12.3 min) | 13:38:00 |
+| `loader / edited-files` | 18.3 s | 740,210 ms | 13:29:25 |
+| `db / [heavy-read-local]` (per-worktree gate) | 48.1 s | 735,439 ms | 13:27:23 |
+| `db / [heavy-read-acquire]` (host gate) | — | 739,354 ms | 2026-06-28 |
+
+Reading per the debug skill (`last_ms` = live, `max_ms` = sticky since-boot peak): the **`last_ms`
+column is the steady-state and is already multi-second to ~48 s** — this is not a stale boot peak. The
+git-loader gate contention named in session 6 is **still active on `singularity`** and its tail now
+reaches ~12 min on the loaders / ~16 min on `flushNotifies`. This is a NEW manifestation beyond
+"slow first-subscribe": it delays *any* live-state UI update (here, a sidebar list) by minutes while a
+flush is queued. Context: recurring `queue-backlog` report (count 545) and `live-state-noop` (count
+5496) on the same DB — a heavily-loaded instance with many open conversations (⇒ many
+`edited-files`/`commits-graph` subscriptions).
+
+**Open (do NOT overclaim — Phase-2 trace pending):** is `flushNotifies` slow because the git loaders
+run *inside* its recompute cascade, or because the flush is queued *behind* them on the event loop /
+the per-worktree gate? Both fit the numbers; the trace decides the altitude. Follow-up task filed
+(see Sessions).
+
 ## Causes — checklist
 
 Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / needs proof
 
+- 🔬 **Git-loader gate tail delays live-state flush delivery (not just first-subscribe)** — 2026-07-01:
+  `flushNotifies` last 4.1 s / peak ~16.5 min, loaders last 14–18 s / peak ~12 min, `heavy-read-local`
+  last 48 s — all live on `singularity`. Manifested as a new conversation taking minutes to appear in
+  the sidebar queue. Open: flush-cascade-contains-loaders vs flush-queued-behind-loaders. Phase-2 trace
+  pending (task filed).
 - 🔬 **`edited-files` cold-miss compute is the driver** — 2026-06-29 (6): work-bound, ~1.3–1.5 s of
   real git work per memo miss (4 serial git spawns). Open: is the watcher recompute *rate* legitimate,
   or amplified by no-change fs events (recompute pays full git cost *before* the unchanged-result
@@ -91,3 +126,9 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   gate; opened the watcher no-change-recompute rate-axis question. Surfaced while answering "we're
   still detecting slow ops — is it another issue?" (yes — this one). No code changes; Phase-2 trace
   pending.
+
+- **2026-07-01 — fresh re-validation (recorded above).** Live `slow_ops` on `singularity` show the
+  gate contention is still active, tailing to ~12 min on the loaders and ~16 min on `flushNotifies`,
+  and now manifesting as **multi-minute latency for a live-state UI update** (a new conversation not
+  appearing in the sidebar queue for minutes). Surfaced while debugging that symptom. No code changes;
+  Phase-2 trace (flush-cascade-contains-loaders vs flush-queued-behind-loaders) filed as a task.

@@ -57,8 +57,13 @@ host heavy-read gate, `floor(cpus/4)` on an 18-CPU box); `commits-graph.delta` i
 (workMs 82 vs ~843 ms waiting on that gate behind `edited-files` — a victim, not slow itself). Open
 rate-axis suspicion before any cost-axis fix: the @parcel watcher recomputes on *every* fs event and
 only early-returns the unchanged result **after** paying the full git compute — the same no-op shape
-as the fixed churn, on the fs-watch axis. **Next:** Phase-2 trace of recompute rate vs real change
-rate. Full detail + sessions + checklist → **[`issue-git-derived-loaders.md`](./issue-git-derived-loaders.md)**.
+as the fixed churn, on the fs-watch axis. **2026-07-01 re-validation:** still live on `singularity`
+(loaders `last_ms` 14–18 s / peak ~12 min; `heavy-read-local` last 48 s) and now tailing into the
+live-state **flush** — `flushNotifies` peak ~16 min — so a new conversation took *minutes* to appear
+in the sidebar queue list (any live-state UI update is delayed, not just first-subscribe). Open:
+flush-cascade-*contains* the loaders vs flush-*queued-behind* them. **Next:** Phase-2 trace of
+recompute rate vs real change rate, and the flush-vs-loader relationship. Full detail + sessions +
+checklist → **[`issue-git-derived-loaders.md`](./issue-git-derived-loaders.md)**.
 
 ### Conversation load 40+ s → main-thread event-loop block → `buildPluginTree` over-extraction (Ongoing)
 
