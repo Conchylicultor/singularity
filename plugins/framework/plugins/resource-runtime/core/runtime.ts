@@ -1,6 +1,8 @@
 import type { ServerWebSocket } from "bun";
 import type { ZodType } from "zod";
+import { createHash } from "node:crypto";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
   buildSnapshot,
   diffKeyedFull,
@@ -26,8 +28,10 @@ import {
 // and broadcasts updates when the plugin calls resource.notify().
 //
 // The runtime is acyclic: besides `zod` (ZodType) and `bun` (ServerWebSocket
-// type) it imports only `@plugins/packages/plugins/inflight/core` (itself a leaf,
-// so no cycle). It declares its own local WsData/WsHandler interfaces
+// type) it imports only the `packages/inflight` and `packages/semaphore` leaves
+// (globally-allowed utility code, so no cycle — inflight for read-path
+// single-flight coalescing, semaphore for the read-admission gate). It declares
+// its own local WsData/WsHandler interfaces
 // (byte-identical to server-core/central-core's types.ts) rather than importing
 // them — importing from either facade would create a cycle. The returned
 // `notificationsWsHandler` is structurally assignable to each facade's WsHandler.
@@ -201,6 +205,21 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    */
   onFirstSubscribe?: (params: P) => void | Promise<void>;
   onLastUnsubscribe?: (params: P) => void;
+  /**
+   * Conditional-revalidation signature (HTTP-ETag / 304 semantics). Optional and
+   * opt-in: when present, a cheap "did anything change?" content signature (an
+   * ETag) the read path (WS sub-ack + HTTP GET fallback) can compare against the
+   * client's last-known value BEFORE running the full loader. On a match the
+   * server answers "still current" (a WS `up-to-date` frame / an HTTP `304`)
+   * without recomputing, and the client keeps its cached value — collapsing the
+   * post-restart resubscribe herd for unchanged resources. It MUST be a
+   * conservative over-approximation (≪ the loader in cost, and a fresh/unique
+   * value whenever any loader input it cannot cheaply hash might have changed):
+   * an occasional needless recompute is fine, serving stale is not. Runs on the
+   * read path only, under the same read-admission gate as the loader (it may
+   * spawn git/fs). Absent ⇒ today's full-loader behavior, unchanged.
+   */
+  revalidate?: (params: P) => Promise<string>;
 }
 
 /**
@@ -286,6 +305,8 @@ export interface ServerResourceOptions<T, P extends ResourceParams = ResourcePar
   debounceMs?: number;
   onFirstSubscribe?: ResourceDefinition<T, P>["onFirstSubscribe"];
   onLastUnsubscribe?: ResourceDefinition<T, P>["onLastUnsubscribe"];
+  /** Conditional-revalidation ETag signature — see `ResourceDefinition.revalidate`. */
+  revalidate?: ResourceDefinition<T, P>["revalidate"];
 }
 
 // Fold a (contract, server-opts) pair into the flat `ResourceDefinition` the
@@ -311,6 +332,7 @@ function contractToDefinition<T, P extends ResourceParams>(
     debounceMs: opts.debounceMs,
     onFirstSubscribe: opts.onFirstSubscribe,
     onLastUnsubscribe: opts.onLastUnsubscribe,
+    revalidate: opts.revalidate,
   };
 }
 
@@ -456,6 +478,12 @@ interface RegistryEntry {
   downstream: DownstreamEdge[];
   onFirstSubscribe?: (params: ResourceParams) => void | Promise<void>;
   onLastUnsubscribe?: (params: ResourceParams) => void;
+  /**
+   * Conditional-revalidation ETag signature (see `ResourceDefinition.revalidate`).
+   * Undefined ⇒ the resource has not opted in and every read path runs the full
+   * loader exactly as before.
+   */
+  revalidate?: (params: ResourceParams) => Promise<string>;
 }
 
 interface SocketState {
@@ -475,11 +503,11 @@ export interface ResourceRuntimeOptions {
    * central: omit (identity). See
    * research/2026-06-19-global-wait-attribution-instrumentation.md.
    */
-  wrapOrigin?: (
+  wrapOrigin?: <R>(
     kind: "sub" | "push",
     key: string,
-    fn: () => Promise<unknown>,
-  ) => Promise<unknown>;
+    fn: () => Promise<R>,
+  ) => Promise<R>;
   /**
    * Wrap the entire `flushNotifies` drain so the notify-flush cycle is measured
    * as one `flush` entry and the per-resource `push` loads it triggers nest under
@@ -509,6 +537,14 @@ export interface ResourceRuntimeOptions {
   /** Report a loader/map/lifecycle failure. console.error ALWAYS fires inside the runtime;
    *  this is the extra hook. server: reportServerError(errorReport(ctx, err)); central: omit. */
   reportError?: (context: string, err: unknown) => void;
+  /**
+   * Report queue-wait at the read-admission gate (see `READ_LOAD_CONCURRENCY`).
+   * Fired once per gated read-path load/revalidate at slot acquisition with the
+   * ms spent queueing (≈0 when a slot was free), mirroring the DB loader gate's
+   * `onWait`. server: `chargeWait("read-admit", ms)` — attributes the wait to the
+   * enclosing `sub` entry so a saturated gate is visible in the profiler;
+   * central / before-injection: omitted (no-op). */
+  onReadGateWait?: (waitMs: number) => void;
   /** Per-key owner metadata for the _debug endpoint. server: from Resource.Declare; central: omit. */
   debugOwners?: () => Array<{ key: string; pluginId?: string }>;
   /** Fired once per push to >=1 subscriber, with whether the push carried a content change.
@@ -694,9 +730,37 @@ export interface ResourceRuntime {
 
 const HEARTBEAT_MS = 20_000;
 
+// Read-admission concurrency cap. Bounds how many COLD read-path loads (WS
+// sub-ack + HTTP GET fallback) — and the `revalidate` git/fs spawns they may run
+// first — execute at once, so no fan-out (boot, a post-restart resubscribe herd,
+// or the genuinely-dirty residual after conditional revalidation) can ever
+// stampede more than N cold read-loads simultaneously. Orthogonal to the DB
+// loader gate (that bounds DB connections; this bounds the whole read-path unit,
+// including git/fs-only loaders that issue no query). The push/flush cascade is
+// deliberately NOT gated here — it stays level-parallel, bounded by the DB gate.
+// Tunable; surfaced via `get_runtime_profile`'s read-admit wait spans.
+const READ_LOAD_CONCURRENCY = 6;
+
+// A resource's `revalidate` may return ANY string — long, and with bytes
+// (NUL/newline) that are illegal in an HTTP `ETag` header value and unstorable in
+// Postgres text (a raw signature set as a header throws `TypeError: Header has
+// invalid value`, escaping the handler as a 500). Normalize every signature into
+// a compact, opaque, header-safe token by hashing it centrally here — so the
+// token is identical across the WS and HTTP paths and every present/future
+// resource is protected regardless of what its signature contains. The client
+// treats the token as opaque, so hashing is transparent to comparison.
+function normalizeEtag(raw: string): string {
+  return createHash("sha1").update(raw).digest("hex");
+}
+
 export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): ResourceRuntime {
   const registry = new Map<string, RegistryEntry>();
   const inflight = createInflight();
+  // Per-runtime read-admission gate (see READ_LOAD_CONCURRENCY). Its `onWait`
+  // charges queue-wait to the enclosing entry via the injected hook (server:
+  // chargeWait), so a saturated gate is observable rather than hidden.
+  const readLoadGate = createSemaphore(READ_LOAD_CONCURRENCY);
+  const chargeReadGateWait = (waitMs: number): void => opts.onReadGateWait?.(waitMs);
   let dagDirty = true;
   let topoOrder: RegistryEntry[] = [];
   // `topoOrder` grouped by longest-path depth. Each level's entries are mutually
@@ -879,6 +943,63 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     return inflight.run(`${entry.key} ${paramsKey(params)}`, () => timedLoad(entry, params));
   }
 
+  // Run a full loader on the READ path (WS sub-ack + HTTP GET fallback) under the
+  // read-admission gate, inside a `sub` origin so the loader span (and the gate's
+  // charged queue-wait) attributes to the subscribe that triggered it. This is
+  // the ONLY place the gate wraps the loader — the push/flush cascade
+  // (`drainEntry`) is intentionally left ungated (bounded by the DB gate). The
+  // gate sits OUTSIDE `getResourceValue`, so it admits before the single-flight
+  // dedup: under a herd the keys are distinct (one per conversation), so the
+  // extra-slot-for-a-deduped-caller cost the DB gate avoids does not arise here.
+  function gatedRead(entry: RegistryEntry, params: ResourceParams): Promise<unknown> {
+    const run = () => readLoadGate.run(() => getResourceValue(entry, params), chargeReadGateWait);
+    return opts.wrapOrigin ? opts.wrapOrigin("sub", entry.key, run) : run();
+  }
+
+  // Compute a resource's conditional-revalidation ETag under the SAME gate + `sub`
+  // origin as a read-path load (the signature may spawn git/fs). Returns undefined
+  // when the resource never opted in OR the signature threw — a fail-safe: the
+  // caller then falls through to the full loader / omits the ETag, so a broken
+  // signature degrades to today's behavior and never serves stale.
+  async function computeEtag(
+    entry: RegistryEntry,
+    params: ResourceParams,
+  ): Promise<string | undefined> {
+    if (!entry.revalidate) return undefined;
+    const revalidate = entry.revalidate;
+    try {
+      const run = () => readLoadGate.run(() => revalidate(params), chargeReadGateWait);
+      const raw = await (opts.wrapOrigin ? opts.wrapOrigin("sub", entry.key, run) : run());
+      return normalizeEtag(raw);
+    } catch (err) {
+      reportLoaderError(`revalidate failed for ${entry.key}`, err);
+      return undefined;
+    }
+  }
+
+  // Compute an ETag on the PUSH/flush path — UNGATED (the cascade is level-
+  // parallel, bounded by the DB gate, never the read-admission cap) and
+  // attributed to the `push` origin. Rides an `update` frame so the client's
+  // stored ETag stays fresh after a push (else its next resubscribe would send a
+  // stale ETag and needlessly recompute). Fail-safe: undefined on opt-out or a
+  // throwing signature — the frame then omits the ETag and the client keeps its
+  // last stored one.
+  async function pushEtag(
+    entry: RegistryEntry,
+    params: ResourceParams,
+  ): Promise<string | undefined> {
+    if (!entry.revalidate) return undefined;
+    const revalidate = entry.revalidate;
+    try {
+      const run = () => revalidate(params);
+      const raw = await (opts.wrapOrigin ? opts.wrapOrigin("push", entry.key, run) : run());
+      return normalizeEtag(raw);
+    } catch (err) {
+      reportLoaderError(`revalidate failed for ${entry.key}`, err);
+      return undefined;
+    }
+  }
+
   // Coalesce an incoming notify into the pending map for one pk, applying the
   // FULL-absorbing union: a null `incoming` (or an existing FULL) sticks the pk
   // at FULL; otherwise the incoming ids union into the existing scoped set.
@@ -981,6 +1102,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         | undefined,
       onLastUnsubscribe: def.onLastUnsubscribe as
         | ((params: ResourceParams) => void)
+        | undefined,
+      revalidate: def.revalidate as
+        | ((params: ResourceParams) => Promise<string>)
         | undefined,
     };
     registry.set(def.key, entry);
@@ -1420,6 +1544,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       }
 
       if (subs.length > 0) {
+        // Fresh ETag to ride any `update` frame for a revalidatable resource, so
+        // the client's stored signature advances with the pushed value (else its
+        // next resubscribe would send a stale ETag and force a needless
+        // recompute). Undefined — with NO await — for a resource that never opted
+        // in, so the frames below are byte-identical to before. Ungated (push
+        // path); computed once per drained pk.
+        const updateEtag =
+          entry.revalidate ? await pushEtag(entry, params) : undefined;
         if (entry.mode === "invalidate") {
           const msg = { kind: "invalidate" as const, key: entry.key, params, version };
           for (const s of subs) sendJson(s.ws, msg);
@@ -1448,6 +1580,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
               params,
               value: full,
               version,
+              ...(updateEtag !== undefined ? { etag: updateEtag } : {}),
             };
             for (const s of subs) sendJson(s.ws, msg);
             opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
@@ -1479,7 +1612,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             if (!hadSnapshot) {
               // First notify for this pk: ship a full update so brand-new
               // subscribers get a complete base to merge subsequent deltas onto.
-              const msg = { kind: "update" as const, key: entry.key, params, value, version };
+              const msg = {
+                kind: "update" as const,
+                key: entry.key,
+                params,
+                value,
+                version,
+                ...(updateEtag !== undefined ? { etag: updateEtag } : {}),
+              };
               for (const s of subs) sendJson(s.ws, msg);
               opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
             } else {
@@ -1500,7 +1640,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             }
           }
         } else {
-          const msg = { kind: "update" as const, key: entry.key, params, value, version };
+          const msg = {
+            kind: "update" as const,
+            key: entry.key,
+            params,
+            value,
+            version,
+            ...(updateEtag !== undefined ? { etag: updateEtag } : {}),
+          };
           for (const s of subs) sendJson(s.ws, msg);
         }
       }
@@ -1612,6 +1759,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         id?: number;
         key?: string;
         params?: ResourceParams;
+        // Client's last-known conditional-revalidation ETag for (key, params), if
+        // it holds a cached value. Present only on `op: "sub"` from a client that
+        // has one; an old client omits it → full-loader path (backward-compatible).
+        etag?: string;
       };
       if (m.kind === "pong") return;
       if (m.op === "sub") {
@@ -1639,9 +1790,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
 
   async function handleSub(
     state: SocketState,
-    m: { id?: number; key?: string; params?: ResourceParams },
+    m: { id?: number; key?: string; params?: ResourceParams; etag?: string },
   ): Promise<void> {
-    const { id, key, params = {} } = m;
+    const { id, key, params = {}, etag: clientEtag } = m;
     if (!key) return;
     const entry = registry.get(key);
     if (!entry) {
@@ -1668,33 +1819,70 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       }
     }
 
+    // Report the CURRENT version without bumping: a sub-ack (or an `up-to-date`)
+    // delivers existing state, it is not a state change. Bumping here made the
+    // version climb on every (re)subscribe, which broke the missed-update
+    // watchdog — the probe re-subscribes every sub, so the version always
+    // appeared to advance even when nothing was missed. Mirrors
+    // handleResourceHttp (also unbumped). The version advances only in
+    // flushNotifies. A never-notified pk reports 0; the client's -1 "nothing
+    // applied yet" baseline still accepts that sub-ack. Read up front because
+    // both the `up-to-date` short-circuit and the loader-path sub-ack report it.
+    const version = entry.versions.get(pk) ?? 0;
+
+    // Conditional revalidation (ETag / 304 semantics): if this resource declares
+    // a cheap signature AND the client supplied its last-known ETag, answer "is
+    // what you already have still current?" without running the full loader. A
+    // backend restart does not reload the page, so the client's cache still holds
+    // the last value — on a match we send an `up-to-date` frame (the WS analogue
+    // of HTTP 304) and the client keeps that cached value, adopting `version` so
+    // a later real update isn't stale-dropped. This is the herd cure: a
+    // resubscribe for an unchanged resource costs one cheap signature, not a full
+    // loader. Only engaged when both sides opted in; otherwise the code below is
+    // byte-identical to the pre-revalidation full-loader path.
+    if (entry.revalidate && clientEtag != null) {
+      const cur = await computeEtag(entry, params);
+      if (cur !== undefined && cur === clientEtag) {
+        sendJson(state.ws, { kind: "up-to-date", id, key, params, version });
+        return;
+      }
+      // ETag miss (or the signature threw → cur undefined): fall through to the
+      // full loader below. Its sub-ack carries a fresh signature so the client's
+      // stored ETag advances.
+    }
+
     let value: unknown;
     try {
       // Origin = the subscription: establishes an entry context so the loader
       // span (and any gate waits it charges) is attributed to this `sub` request
-      // instead of running with `parent: null`.
-      value = await (opts.wrapOrigin
-        ? opts.wrapOrigin("sub", key, () => getResourceValue(entry, params))
-        : getResourceValue(entry, params));
+      // instead of running with `parent: null`. Gated by the read-admission cap.
+      value = await gatedRead(entry, params);
     } catch (err) {
       reportLoaderError(`loader failed for ${key}`, err);
       sendJson(state.ws, { kind: "sub-error", id, key, reason: "loader-failed" });
       return;
     }
-    // Report the CURRENT version without bumping: a sub-ack delivers existing
-    // state, it is not a state change. Bumping here made the version climb on
-    // every (re)subscribe, which broke the missed-update watchdog — the probe
-    // re-subscribes every sub, so the version always appeared to advance even
-    // when nothing was missed. Mirrors handleResourceHttp (also unbumped). The
-    // version advances only in flushNotifies. A never-notified pk reports 0; the
-    // client's -1 "nothing applied yet" baseline still accepts that sub-ack.
-    const version = entry.versions.get(pk) ?? 0;
     // Keyed entries: seed the per-pk snapshot from the full sub-ack value so the
     // next notify can diff against it. The sub-ack itself stays full-value.
     if (entry.mode === "keyed") {
       (entry.snapshots ??= new Map()).set(pk, snapshotOf(entry, value));
     }
-    sendJson(state.ws, { kind: "sub-ack", id, key, params, value, version });
+    // For a revalidatable resource, attach a fresh signature (computed AFTER the
+    // value, so it reflects state ≥ the value's) so the client can store it and
+    // condition its next resubscribe. Absent for non-opted-in resources → the
+    // frame is byte-identical to before. A brief value/ETag skew (a change landed
+    // mid-sub) self-heals: any real change also fires a push carrying a fresh
+    // value + ETag.
+    const freshEtag = await computeEtag(entry, params);
+    sendJson(state.ws, {
+      kind: "sub-ack",
+      id,
+      key,
+      params,
+      value,
+      version,
+      ...(freshEtag !== undefined ? { etag: freshEtag } : {}),
+    });
   }
 
   function handleUnsub(
@@ -1737,7 +1925,19 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
 
   // --- HTTP handler ---
 
-  /** GET /api/resources/:key?foo=bar — returns {value, version}. */
+  /**
+   * GET /api/resources/:key?foo=bar — returns {value, version}.
+   *
+   * Conditional GET: for a resource that declares `revalidate`, an incoming
+   * `If-None-Match` header is compared against the cheap signature. A match
+   * returns `304 Not Modified` (empty body) so the client keeps its cached
+   * value; otherwise the value is returned with a fresh `ETag` response header
+   * the client stores for its next request. This is the standard-transport path
+   * that invalidate-mode revalidatable resources (e.g. edited-files) use, since
+   * their value already arrives via this HTTP fallback rather than a WS push.
+   * Behavior is byte-identical to before for a resource without `revalidate` or a
+   * request without `If-None-Match`.
+   */
   async function handleResourceHttp(
     req: Request,
     params: Record<string, string>,
@@ -1752,18 +1952,33 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const resourceParams: ResourceParams = {};
     for (const [k, v] of url.searchParams) resourceParams[k] = v;
 
+    // Conditional revalidation: on an ETag match, short-circuit with 304 and no
+    // body — no loader run. `computeEtag` is fail-safe (undefined on a throw), so
+    // a broken signature falls through to the full value below.
+    const ifNoneMatch = req.headers.get("If-None-Match");
+    if (entry.revalidate && ifNoneMatch != null) {
+      const cur = await computeEtag(entry, resourceParams);
+      if (cur !== undefined && cur === ifNoneMatch) {
+        return new Response(null, { status: 304 });
+      }
+    }
+
     let value: unknown;
     try {
-      value = await getResourceValue(entry, resourceParams);
+      value = await gatedRead(entry, resourceParams);
     } catch (err) {
       reportLoaderError(`loader failed for ${key}`, err);
       return new Response("Loader failed", { status: 500 });
     }
     const pk = paramsKey(resourceParams);
     const version = entry.versions.get(pk) ?? 0;
-    return new Response(JSON.stringify({ value, version }), {
-      headers: { "content-type": "application/json" },
-    });
+    const headers: Record<string, string> = { "content-type": "application/json" };
+    // Stamp a fresh ETag (computed after the value, mirroring the WS sub-ack) so
+    // the client can send it as `If-None-Match` next time. Only for opted-in
+    // resources — absent otherwise, so the response is unchanged.
+    const freshEtag = await computeEtag(entry, resourceParams);
+    if (freshEtag !== undefined) headers["ETag"] = freshEtag;
+    return new Response(JSON.stringify({ value, version }), { headers });
   }
 
   function handleResourcesDebug(): Response {

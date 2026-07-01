@@ -64,7 +64,12 @@ export function useReconnectingWebSocket(
           setStatus("closed");
           return;
         }
-        const delay = BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)]!;
+        // Equal jitter (base/2 + rand·base/2): de-syncs the whole fleet's
+        // reconnect after a shared backend restart, so N tabs don't all resubscribe
+        // in the same backoff tick and stampede the server. Math.random is fine in
+        // app code (the ban is Workflow-script-only).
+        const base = BACKOFF_MS[Math.min(attempt, BACKOFF_MS.length - 1)]!;
+        const delay = base / 2 + Math.random() * (base / 2);
         attempt++;
         setStatus("reconnecting");
         retryTimer = setTimeout(connect, delay);

@@ -13,6 +13,7 @@ import type {
 import {
   recordEntrySpan,
   recordSpan,
+  chargeWait,
   getRuntimeProfile,
   getReadSetIndex,
 } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -196,6 +197,10 @@ const runtime = createResourceRuntime({
   // Delivery latency as a `push` leaf under the active `flush` entry: enqueue→send
   // time per resource (first-notify staleness window). Attributes to the resource.
   onDelivered: (key, latencyMs) => recordSpan("push", `deliver:${key}`, latencyMs),
+  // Read-admission gate queue-wait, charged to the enclosing `sub` entry (mirrors
+  // the DB loader gate's `loader-acquire`), so a saturated read cap is visible in
+  // get_runtime_profile as a `read-admit` wait rather than hidden queue time.
+  onReadGateWait: (ms) => chargeWait("read-admit", ms),
   // Loader frequency for the _debug endpoint: find this key's loader aggregate in
   // the current profiling window and derive count / calls-per-minute / slowest.
   loaderStats: (key) => {

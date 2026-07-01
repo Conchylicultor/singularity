@@ -758,3 +758,146 @@ describe("defineResource(contract, serverOpts) — keyed-ness derived from the d
     expect(h.frames.some((f) => f.key === "n")).toBe(true);
   });
 });
+
+/**
+ * Conditional revalidation (ETag / 304). Pins the additive protocol contract:
+ *
+ *   - A resource WITHOUT `revalidate` (or a client that sends no etag) behaves
+ *     exactly as before — sub-ack carries a value and no etag.
+ *   - With `revalidate` + a matching client etag, the server answers `up-to-date`
+ *     (no loader run, no value) and the client keeps its cache.
+ *   - A miss (or first subscribe) runs the loader and attaches a fresh etag.
+ *   - The HTTP fallback honors `If-None-Match` → 304, and stamps an `ETag` header.
+ */
+describe("conditional revalidation (ETag / up-to-date / 304)", () => {
+  // Richer harness: captures the FULL parsed frame (value + etag) and lets a test
+  // subscribe with an etag, so the up-to-date/sub-ack contract is observable.
+  function revalHarness() {
+    const runtime = createResourceRuntime();
+    const frames: Array<Record<string, unknown>> = [];
+    const ws = {
+      send(raw: string) {
+        const msg = JSON.parse(raw) as Record<string, unknown>;
+        if (msg.kind === "ping") return;
+        frames.push(msg);
+      },
+    };
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const handler = runtime.notificationsWsHandler as any;
+    handler.open(ws);
+    return {
+      runtime,
+      frames,
+      async sub(key: string, params: ResourceParams = {}, etag?: string) {
+        handler.message(ws, JSON.stringify({ op: "sub", key, params, ...(etag !== undefined ? { etag } : {}) }));
+        await tick();
+      },
+    };
+  }
+
+  test("no revalidate: sub-ack carries value and no etag (byte-identical)", async () => {
+    const h = revalHarness();
+    h.runtime.defineExternalResource({ key: "plain", mode: "push", schema: z.number(), loader: async () => 7 });
+    await h.sub("plain");
+    const ack = h.frames.find((f) => f.kind === "sub-ack")!;
+    expect(ack.value).toBe(7);
+    expect("etag" in ack).toBe(false);
+  });
+
+  test("first subscribe attaches a fresh etag to the sub-ack", async () => {
+    const h = revalHarness();
+    h.runtime.defineExternalResource({
+      key: "r",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => 1,
+      revalidate: async () => "sig-A",
+    });
+    await h.sub("r"); // no client etag → loader path
+    const ack = h.frames.find((f) => f.kind === "sub-ack")!;
+    expect(ack.value).toBe(1);
+    // The signature is normalized into an opaque, header-safe token (hashed), so
+    // it's a non-empty string that is NOT the raw `revalidate` return.
+    expect(typeof ack.etag).toBe("string");
+    expect((ack.etag as string).length).toBeGreaterThan(0);
+    expect(ack.etag).not.toBe("sig-A");
+  });
+
+  test("matching client etag ⇒ up-to-date, loader is NOT run", async () => {
+    const h = revalHarness();
+    let loads = 0;
+    h.runtime.defineExternalResource({
+      key: "r",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => { loads++; return 1; },
+      revalidate: async () => "sig-A",
+    });
+    // First subscribe (no etag) runs the loader and hands back the opaque token.
+    await h.sub("r");
+    const token = h.frames.find((f) => f.kind === "sub-ack")!.etag as string;
+    expect(loads).toBe(1);
+    h.frames.length = 0;
+    // Resubscribe WITH that real token → up-to-date, loader NOT run again.
+    await h.sub("r", {}, token);
+    const ack = h.frames.find((f) => f.kind === "sub-ack");
+    const utd = h.frames.find((f) => f.kind === "up-to-date");
+    expect(ack).toBeUndefined();
+    expect(utd).toBeTruthy();
+    expect("value" in utd!).toBe(false);
+    expect(loads).toBe(1); // the cure: no second loader for an unchanged resource
+  });
+
+  test("stale client etag ⇒ full sub-ack with the fresh etag", async () => {
+    const h = revalHarness();
+    let loads = 0;
+    h.runtime.defineExternalResource({
+      key: "r",
+      mode: "push",
+      schema: z.number(),
+      loader: async () => { loads++; return 2; },
+      revalidate: async () => "sig-B",
+    });
+    await h.sub("r", {}, "stale-token"); // client holds an OLD (non-matching) token
+    const ack = h.frames.find((f) => f.kind === "sub-ack")!;
+    expect(ack.value).toBe(2);
+    expect(typeof ack.etag).toBe("string"); // fresh normalized token attached
+    expect(ack.etag).not.toBe("stale-token");
+    expect(loads).toBe(1);
+  });
+
+  test("HTTP: If-None-Match match ⇒ 304, else value + ETag header", async () => {
+    const h = revalHarness();
+    h.runtime.defineExternalResource({
+      key: "r",
+      mode: "invalidate",
+      schema: z.number(),
+      loader: async () => 5,
+      revalidate: async () => "sig-A",
+    });
+    // First GET (no If-None-Match) → 200 + the opaque ETag token.
+    const first = await h.runtime.handleResourceHttp(
+      new Request("http://x/api/resources/r"),
+      { key: "r" },
+    );
+    expect(first.status).toBe(200);
+    const token = first.headers.get("ETag");
+    expect(token).toBeTruthy();
+
+    // Conditional GET with the real token → 304, empty body.
+    const notModified = await h.runtime.handleResourceHttp(
+      new Request("http://x/api/resources/r", { headers: { "If-None-Match": token! } }),
+      { key: "r" },
+    );
+    expect(notModified.status).toBe(304);
+
+    // A stale token → 200 with the value and the same fresh ETag.
+    const fresh = await h.runtime.handleResourceHttp(
+      new Request("http://x/api/resources/r", { headers: { "If-None-Match": "stale" } }),
+      { key: "r" },
+    );
+    expect(fresh.status).toBe(200);
+    expect(fresh.headers.get("ETag")).toBe(token);
+    expect((await fresh.json()).value).toBe(5);
+  });
+});

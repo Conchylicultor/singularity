@@ -8,7 +8,8 @@ import {
   type CommitDelta,
   type CommitsGraph,
 } from "../../shared/protocol";
-import { computeDelta, computeGraph, evictWorktree } from "./compute-graph";
+import { computeDelta, computeGraph, evictWorktree, probeHeadMain } from "./compute-graph";
+import { deltaEtag, graphEtag } from "./etag";
 
 type Params = { attemptId: string };
 
@@ -78,6 +79,17 @@ export const commitDeltaResource = defineResource({
     if (!wt) return EMPTY_DELTA;
     return computeDelta(wt);
   },
+  // Cheap ETag: the delta value derives entirely from (headSha, mainSha) — the
+  // same signature the loader's `deltaMemo` keys on — so an unchanged pair proves
+  // the ahead/behind/mergeBase are unchanged. No worktree ⇒ EMPTY_DELTA, so a
+  // stable "none" sentinel keeps an empty attempt up-to-date. Cost: 1–2 ungated
+  // `rev-parse` vs. the loader's `merge-base` + `rev-list --count`.
+  revalidate: async ({ attemptId }: Params): Promise<string> => {
+    const wt = await worktreeFor(attemptId);
+    if (!wt) return "none";
+    const { headSha, mainSha } = await probeHeadMain(wt);
+    return deltaEtag(headSha, mainSha);
+  },
 });
 
 export const commitsGraphResource = defineResource({
@@ -101,5 +113,22 @@ export const commitsGraphResource = defineResource({
     const pushes = await listPushesForAttempt(attemptId);
     const pushedShas = pushes.map((p) => p.sha);
     return computeGraph(wt, pushedShas);
+  },
+  // Cheap ETag: the graph value derives from (headSha, mainSha, mergeBase,
+  // pushedShas). mergeBase is a pure function of the two tips (immutable history),
+  // so folding in both tips covers it without spawning `merge-base`; pushedShas
+  // (a DB read, NOT derivable from the tips) is folded in because the landed set
+  // moves whenever a push lands — head/main alone would serve a stale graph. No
+  // worktree ⇒ EMPTY_GRAPH, so a stable "none" sentinel keeps an empty attempt
+  // up-to-date. Cost: 1–2 ungated `rev-parse` + the same push DB read the loader
+  // does, vs. the loader's additional `merge-base` and up-to-250-commit `git log`s.
+  revalidate: async ({ attemptId }: Params): Promise<string> => {
+    const wt = await worktreeFor(attemptId);
+    if (!wt) return "none";
+    const [{ headSha, mainSha }, pushes] = await Promise.all([
+      probeHeadMain(wt),
+      listPushesForAttempt(attemptId),
+    ]);
+    return graphEtag(headSha, mainSha, pushes.map((p) => p.sha));
   },
 });

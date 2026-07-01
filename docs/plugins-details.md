@@ -3108,13 +3108,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `PluginId`, `RuntimeFolder`; Values: `asFsPath`, `asPath`, `asPluginId`, `pluginIdSegments`, `RUNTIME_FOLDERS`
     - **`resource-runtime`**
       - Core:
-        - Uses: `packages/inflight.createInflight`
+        - Uses: `packages/inflight.createInflight`, `packages/semaphore.createSemaphore`
         - Exports: Types: `DefineResourceInput`, `DependsOnEntry`, `ExternalResource`, `KeyedDiff`, `KeyedResourceContract`, `KeyedSnapshot`, `RecomputeIntent`, `Resource`, `ResourceContract`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`, `ScopePolicy`, `ServerResourceOptions`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`
       - Cross-plugin:
         - Imported by: `framework/central-core`, `framework/server-core`
     - **`server-core`**
       - Core:
-        - Uses: `framework/resource-runtime.createResourceRuntime`, `framework/tooling/collected-dir.defineCollectedDir`, `infra/runtime-profiler.getReadSetIndex`, `infra/runtime-profiler.getRuntimeProfile`, `infra/runtime-profiler.recordEntrySpan`, `infra/runtime-profiler.recordSpan`
+        - Uses: `framework/resource-runtime.createResourceRuntime`, `framework/tooling/collected-dir.defineCollectedDir`, `infra/runtime-profiler.chargeWait`, `infra/runtime-profiler.getReadSetIndex`, `infra/runtime-profiler.getRuntimeProfile`, `infra/runtime-profiler.recordEntrySpan`, `infra/runtime-profiler.recordSpan`
         - Exports: Types: `DependsOnEntry`, `ExternalResource`, `HttpHandler`, `LiveStateSnapshotHooks`, `LoadedServerPlugin`, `MemoryCheckpoint`, `PhaseId`, `RecomputeIntent`, `Registration`, `ResourceContract`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ResourcePushObserver`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `ServerResourceOptions`, `Span`, `WsData`, `WsHandler`; Values: `applyDbChange`, `collectContributions`, `defineExternalResource`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `loadResourceByKey`, `markServerReady`, `measureSubscribeCycle`, `notificationsWsHandler`, `notifyStatsFor`, `onResourcePush`, `physFootprintBytes`, `profilerStart`, `recomputeResource`, `recordMemoryCheckpoint`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `setFeedExemptTables`, `setLiveStateSnapshotHooks`, `setRelationResolver`, `triggerResourcePush`, `withNotifyBatch`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
@@ -3534,7 +3534,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DelayStrategy`; Values: `exponential`, `fixed`, `RetryDeadlineError`, `retryUntil`, `withJitter`
     - **`semaphore`**
       - Cross-plugin:
-        - Imported by: `infra/endpoints`
+        - Imported by: `framework/resource-runtime`, `infra/endpoints`
       - Core:
         - Exports: Types: `Semaphore`; Values: `createSemaphore`
 

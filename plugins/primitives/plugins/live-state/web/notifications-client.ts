@@ -97,10 +97,17 @@ export interface ResourceKey {
 }
 
 type ServerMsg =
-  | { kind: "sub-ack"; id?: number; key: string; params: ResourceParams; value: unknown; version: number }
-  | { kind: "update"; key: string; params: ResourceParams; value: unknown; version: number }
+  // `etag` (conditional revalidation): the fresh content signature accompanying a
+  // full value. Present only for a resource that declares `revalidate`; the client
+  // stores it and sends it back on its next (re)subscribe / conditional GET.
+  | { kind: "sub-ack"; id?: number; key: string; params: ResourceParams; value: unknown; version: number; etag?: string }
+  | { kind: "update"; key: string; params: ResourceParams; value: unknown; version: number; etag?: string }
   | { kind: "delta"; key: string; params: ResourceParams; upserts: [string, unknown][]; deletes: string[]; order?: string[]; version: number }
   | { kind: "invalidate"; key: string; params: ResourceParams; version: number }
+  // "your cached value is still current" — the WS analogue of HTTP 304. Carries no
+  // value: the client keeps its cached value and only adopts `version` (so a later
+  // real update isn't stale-dropped), treating the (re)subscribe as acked.
+  | { kind: "up-to-date"; id?: number; key: string; params: ResourceParams; version: number }
   | { kind: "sub-error"; id?: number; key: string; reason: string }
   | { kind: "ping" };
 
@@ -150,6 +157,17 @@ interface ActiveSub {
   socket: SocketKind;
   /** ms epoch of the last applyUpdate/applyDelta write for this sub (0 = never). */
   lastAppliedAt: number;
+  /**
+   * Last-known conditional-revalidation ETag (content signature) for this
+   * (key, params), stored from any `sub-ack`/`update` frame that carried one.
+   * Sent back on the next `sub` so the server can answer `up-to-date` (keep the
+   * cached value) instead of re-running the loader. Preserved across reconnect
+   * (`replaySubs`) — that is what makes the post-restart resubscribe cheap.
+   * Undefined for a resource that has not opted into revalidation, or before the
+   * first value arrives. Cleared when the cached base is lost (a delta with no
+   * base / drift) so recovery forces a full reload, never a stale `up-to-date`.
+   */
+  etag?: string;
 }
 
 /** One entry per active sub returned by `debugSnapshot()` (Layer 2 inspector). */
@@ -461,6 +479,42 @@ export class NotificationsClient {
     channel.pendingTeardown.set(id, timer);
   }
 
+  // --- Conditional-revalidation ETag accessors (HTTP fallback path) -----------
+
+  /**
+   * Last-known ETag for (key, params) on its channel, so `useResource`'s HTTP
+   * fallback can send `If-None-Match` and get a `304` for an unchanged resource
+   * instead of recomputing the loader. Undefined when the resource hasn't opted
+   * in or no value has arrived yet.
+   */
+  etagFor(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): string | undefined {
+    const channel = this.channels[socketKindFor(origin)];
+    return channel.subs.get(`${key}\0${paramsKey(params)}`)?.etag;
+  }
+
+  /**
+   * Store the ETag from an HTTP GET's `ETag` response header onto the live sub
+   * entry, so the next conditional GET / resubscribe can send it. No-op when the
+   * header is absent (resource didn't opt in) or no sub exists yet (a fetch that
+   * raced ahead of observe() — the etag is then captured on the next GET / the WS
+   * sub-ack).
+   */
+  noteHttpEtag(
+    key: string,
+    params: ResourceParams = {},
+    origin: ResourceOrigin | undefined,
+    etag: string | null,
+  ): void {
+    if (etag == null) return;
+    const sub = this.channels[socketKindFor(origin)].subs.get(`${key}\0${paramsKey(params)}`);
+    if (sub) sub.etag = etag;
+  }
+
+  /** Current cached value for (key, params) — read by the HTTP 304 keep-cache path. */
+  getCachedResource(key: string, params: ResourceParams = {}): unknown {
+    return this.queryClient.getQueryData(queryKeyFor(key, params));
+  }
+
   private openChannel(kind: SocketKind): SocketChannel {
     const channel: SocketChannel = {
       ws: new SharedWebSocket(WS_URLS[kind]),
@@ -533,6 +587,12 @@ export class NotificationsClient {
       // ack can't be read as the resync's (liveFrameSeq is a monotonic counter
       // and is never reset).
       sub.lastAckVersion = -1;
+      // Deliberately KEEP `sub.etag`: it's the whole point of conditional
+      // revalidation. The resend below carries it so an unchanged resource gets a
+      // cheap `up-to-date` (keep cache) instead of a full loader — collapsing the
+      // post-restart resubscribe herd. The cached TanStack value survives the
+      // reconnect (the socket dropped, not the page), so the etag still describes
+      // a value we actually hold.
       this.sendSub(channel, sub.key, sub.params);
     };
 
@@ -574,9 +634,14 @@ export class NotificationsClient {
 
   private sendSub(channel: SocketChannel, key: string, params: ResourceParams): void {
     const socket = channel === this.channels.central ? "central" : "worktree";
-    trace(`sendSub key=${key} params=${paramsKey(params)} socket=${socket}`);
+    // Attach the sub's last-known ETag (if any) so the server can answer
+    // `up-to-date` instead of re-running the loader. Read off the live sub entry
+    // so every caller (fresh observe with no etag, reconnect replay with a
+    // preserved one, delta-recovery resub that cleared it) sends the right thing.
+    const etag = channel.subs.get(`${key}\0${paramsKey(params)}`)?.etag;
+    trace(`sendSub key=${key} params=${paramsKey(params)} socket=${socket}${etag !== undefined ? " etag=1" : ""}`);
     channel.ws.send(
-      JSON.stringify({ op: "sub", id: this.nextMsgId++, key, params }),
+      JSON.stringify({ op: "sub", id: this.nextMsgId++, key, params, ...(etag !== undefined ? { etag } : {}) }),
     );
   }
 
@@ -614,15 +679,32 @@ export class NotificationsClient {
     }
     if (msg.kind === "sub-ack") {
       trace(`sub-ack key=${msg.key} params=${pk} version=${msg.version}`);
+    } else if (msg.kind === "up-to-date") {
+      trace(`up-to-date key=${msg.key} params=${pk} version=${msg.version}`);
     }
     entry.version = msg.version;
     // Split the two causes of a version advance so the wedge probe can tell them
-    // apart: a sub-ack carries server truth at (re)subscribe; every other kind is
-    // a live, server-initiated frame.
-    if (msg.kind === "sub-ack") {
+    // apart: a sub-ack (and its `up-to-date` sibling) carries server truth at
+    // (re)subscribe; every other kind is a live, server-initiated frame.
+    if (msg.kind === "sub-ack" || msg.kind === "up-to-date") {
       entry.lastAckVersion = msg.version;
     } else {
       entry.liveFrameSeq++;
+    }
+    // Store the fresh ETag from any full-value frame that carries one, so the next
+    // (re)subscribe / conditional GET can be answered `up-to-date`/304.
+    if ((msg.kind === "sub-ack" || msg.kind === "update") && msg.etag !== undefined) {
+      entry.etag = msg.etag;
+    }
+
+    if (msg.kind === "up-to-date") {
+      // Conditional-revalidation hit: the server confirmed our cached value is
+      // still current. Do NOT touch the TanStack cache — the cached value stays.
+      // We already adopted `version`/`lastAckVersion` above (so a later real
+      // update isn't stale-dropped and the missed-update watchdog sees a clean
+      // ack) and kept the stored etag. Just fire the debug hook.
+      this.emitDebug();
+      return;
     }
 
     if (msg.kind === "sub-ack" || msg.kind === "update") {
@@ -687,6 +769,9 @@ export class NotificationsClient {
     // base. If the cache has no value yet, force a fresh full snapshot.
     if (this.queryClient.getQueryData(queryKey) === undefined) {
       trace(`applyDelta key=${key} params=${paramsKey(params)} reason=delta-no-base-resub`);
+      // The cached base is gone — the stored etag describes a value we no longer
+      // hold, so clear it to force a FULL sub-ack (never a stale `up-to-date`).
+      entry.etag = undefined;
       this.sendSub(channel, key, params);
       return;
     }
@@ -725,6 +810,9 @@ export class NotificationsClient {
       trace(
         `applyDelta key=${key} params=${paramsKey(params)} reason=delta-drift-resub ids=${result.missingIds.join(",")}`,
       );
+      // Base drifted behind server truth — clear the etag so the recovery sub
+      // reloads a full base rather than being told `up-to-date` (keep the drift).
+      entry.etag = undefined;
       this.sendSub(channel, key, params);
       return;
     }

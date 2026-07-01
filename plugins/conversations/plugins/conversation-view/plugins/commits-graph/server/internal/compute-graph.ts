@@ -79,7 +79,7 @@ async function computeDeltaCore(worktreePath: string): Promise<CommitDelta> {
 
 const deltaMemo = createGitStateMemo<CommitDelta>({ name: "commits-graph.delta" });
 
-async function probeHeadMain(
+export async function probeHeadMain(
   worktreePath: string,
 ): Promise<{ headSha: string; mainSha: string }> {
   // Both reads are the thin ungated `runGit` (a rev-parse is microseconds);

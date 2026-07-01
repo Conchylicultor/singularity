@@ -67,7 +67,7 @@ the client side and the keyed/scoped delta semantics.
 ## Plugin reference
 
 - Core:
-  - Uses: `packages/inflight.createInflight`
+  - Uses: `packages/inflight.createInflight`, `packages/semaphore.createSemaphore`
   - Exports: Types: `DefineResourceInput`, `DependsOnEntry`, `ExternalResource`, `KeyedDiff`, `KeyedResourceContract`, `KeyedSnapshot`, `RecomputeIntent`, `Resource`, `ResourceContract`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`, `ScopePolicy`, `ServerResourceOptions`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`
 - Cross-plugin:
   - Imported by: `framework/central-core`, `framework/server-core`

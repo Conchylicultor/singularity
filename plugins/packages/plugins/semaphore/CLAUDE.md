@@ -26,7 +26,7 @@ query never wait.) See
 ## Plugin reference
 
 - Cross-plugin:
-  - Imported by: `infra/endpoints`
+  - Imported by: `framework/resource-runtime`, `infra/endpoints`
 - Core:
   - Exports: Types: `Semaphore`; Values: `createSemaphore`
 
