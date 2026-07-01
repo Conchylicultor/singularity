@@ -26,12 +26,15 @@ import {
   Beam,
   Dot,
   Formatter,
+  GraceNote,
+  GraceNoteGroup,
   Renderer,
   Stave,
   StaveConnector,
   StaveNote,
   StaveTie,
   Stem,
+  Tuplet,
   Voice,
 } from "vexflow";
 import type {
@@ -139,7 +142,82 @@ function makeNote(
   const dir = stemOf(stem);
   if (!t.isRest && dir !== undefined) note.setStemDirection(dir);
   for (let d = 0; d < t.dots; d++) Dot.buildAndAttach([note], { all: true });
+  // Leading grace notes ride on their principal as a modifier group, added here
+  // (before formatting) so their width is reserved in the layout.
+  if (t.graceNotes?.length) attachGraces(note, t.graceNotes, clef);
   return note;
+}
+
+/**
+ * Attach a tickable's leading grace notes to its principal `StaveNote` as a
+ * `GraceNoteGroup` modifier. Graces live OUTSIDE the main `Voice`, so their
+ * accidental glyphs are added by hand (the main-note path relies on
+ * `Accidental.applyAccidentals`, which only walks voice tickables). A multi-note
+ * group is beamed + slurred; a lone grace is a bare (usually slashed) acciaccatura.
+ */
+function attachGraces(
+  principal: StaveNote,
+  graces: NonNullable<EngTickable["graceNotes"]>,
+  clef: "treble" | "bass",
+): void {
+  const gnotes = graces.map((g) => {
+    const gnote = new GraceNote({
+      keys: g.keys,
+      duration: g.duration,
+      slash: g.slash,
+      clef,
+    });
+    // Grace key strings carry letter+octave only; render the accidental glyph
+    // for each non-zero alteration, parallel to the grace's own keys.
+    g.alters.forEach((alter, k) => {
+      if (alter) {
+        gnote.addModifier(
+          new Accidental(alter > 0 ? "#".repeat(alter) : "b".repeat(-alter)),
+          k,
+        );
+      }
+    });
+    return gnote;
+  });
+  const showSlur = gnotes.length > 1;
+  const group = new GraceNoteGroup(gnotes, showSlur);
+  if (showSlur) group.beamNotes();
+  principal.addModifier(group, 0);
+}
+
+/**
+ * Build the `Tuplet` objects for one voice's flat note list. Consecutive
+ * tickables sharing the SAME `tuplet.id` form exactly one tuplet (`num` →
+ * `num_notes`, `inSpace` → `notes_occupied`); grouping is by strict adjacent
+ * equality, so two abutting windows with distinct ids never merge. The returned
+ * tuplets wrap the exact `StaveNote` instances added to the voice, so they must
+ * be drawn (not reconstructed) after the voice is formatted + drawn.
+ */
+function buildTuplets(
+  tickables: readonly EngTickable[],
+  notes: readonly StaveNote[],
+): Tuplet[] {
+  const tuplets: Tuplet[] = [];
+  let i = 0;
+  while (i < tickables.length) {
+    const tup = tickables[i]!.tuplet;
+    if (!tup) {
+      i++;
+      continue;
+    }
+    let j = i + 1;
+    while (j < tickables.length && tickables[j]!.tuplet?.id === tup.id) j++;
+    tuplets.push(
+      new Tuplet(notes.slice(i, j), {
+        num_notes: tup.num,
+        notes_occupied: tup.inSpace,
+        bracketed: true,
+        ratioed: false,
+      }),
+    );
+    i = j;
+  }
+  return tuplets;
 }
 
 /** A built voice: its engraving spec + the VexFlow note objects + Voice. */
@@ -148,6 +226,8 @@ interface BuiltVoice {
   clef: "treble" | "bass";
   notes: StaveNote[];
   voice: Voice;
+  /** Tuplets over `notes` (built once, drawn after the voice) — see buildTuplets. */
+  tuplets: Tuplet[];
 }
 
 /** A built staff: its spec + built voices. */
@@ -176,7 +256,10 @@ function buildVoice(
   }).setMode(Voice.Mode.SOFT);
   voice.addTickables(notes);
   Accidental.applyAccidentals([voice], measure.keyName);
-  return { eng: ev, clef, notes, voice };
+  // Tuplets wrap the same StaveNote instances now added to the voice; stored so
+  // the draw pass can render each bracket after the voice + beams are drawn.
+  const tuplets = buildTuplets(ev.tickables, notes);
+  return { eng: ev, clef, notes, voice, tuplets };
 }
 
 /** All the VexFlow voices of a built measure, in staff/voice order. */
@@ -377,6 +460,8 @@ export function engrave(
           );
           bv.voice.draw(ctx, st);
           beams.forEach((beam) => beam.setContext(ctx).draw());
+          // Tuplet brackets/numbers, over the now-formatted notes.
+          bv.tuplets.forEach((tuplet) => tuplet.setContext(ctx).draw());
 
           const key = `${si}:${vi}`;
           let seq = seqs.get(key);

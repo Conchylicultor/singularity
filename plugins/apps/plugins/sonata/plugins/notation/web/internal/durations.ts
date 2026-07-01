@@ -28,17 +28,24 @@ export interface DurationPiece {
   beats: number;
 }
 
-/** The sixteenth-note grid the converter quantizes to; the smallest piece. */
+/**
+ * The sixteenth-note grid used only as the **binary fallback** for windows the
+ * adaptive detector (`rhythm.ts`) classifies binary at its coarsest densities.
+ * The detector — not this constant — drives the real per-window resolution now,
+ * and the table below reaches down to the 32nd; `Q` is no longer the smallest
+ * drawable piece.
+ */
 export const Q = 0.25;
 
-/** Floating-point comparison slack — well below the {@link Q} grid. */
+/** Floating-point comparison slack — well below the smallest table value. */
 const EPS = 1e-6;
 
 /**
  * Representable single-value lengths, largest first. Each maps a length in
  * quarter-note beats to its VexFlow base token + dot count. Dotted forms are
  * included so a 1.5-beat span decomposes to a *single* dotted-quarter piece
- * rather than two tied pieces — the notation a reader expects.
+ * rather than two tied pieces — the notation a reader expects. The table reaches
+ * down to the 32nd (dotted + plain) so sub-sixteenth spans stay drawable.
  */
 const TABLE: readonly DurationPiece[] = [
   { duration: "w", dots: 0, beats: 4 },
@@ -50,6 +57,8 @@ const TABLE: readonly DurationPiece[] = [
   { duration: "8", dots: 0, beats: 0.5 },
   { duration: "16", dots: 1, beats: 0.375 },
   { duration: "16", dots: 0, beats: 0.25 },
+  { duration: "32", dots: 1, beats: 0.1875 },
+  { duration: "32", dots: 0, beats: 0.125 },
 ];
 
 /**
@@ -72,7 +81,7 @@ export function decomposeDuration(beats: number): DurationPiece[] {
   const GUARD_MAX = 10_000;
   while (remaining > EPS && guard++ < GUARD_MAX) {
     const piece = TABLE.find((p) => p.beats <= remaining + EPS);
-    if (!piece) break; // remainder smaller than a sixteenth — not drawable.
+    if (!piece) break; // remainder smaller than a 32nd — not drawable.
     pieces.push(piece);
     remaining -= piece.beats;
   }

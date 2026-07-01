@@ -14,14 +14,16 @@
  *     score (so a voice's membership is stable bar-to-bar). See
  *     {@link ./voices.partitionVoices}.
  *  2. **Build (per bar, per voice).** Feed each voice's notes — clipped to the
- *     bar and quantized to the {@link Q} grid — through {@link buildBarStaff},
- *     the unchanged run/quantize/decompose machinery. Because a voice never
- *     staggered-overlaps, runs collapse to the real note-units and ties are only
- *     the legitimate duration/barline ties — a held note is no longer re-struck
- *     when a neighbouring voice moves.
+ *     bar — through {@link buildBarStaff}, which detects a per-beat adaptive
+ *     subdivision ({@link ./rhythm.planWindows}) so triplets and sub-sixteenths
+ *     survive, then runs the run/quantize/decompose machinery over that variable
+ *     grid. Because a voice never staggered-overlaps, runs collapse to the real
+ *     note-units and ties are only the legitimate duration/barline ties — a held
+ *     note is no longer re-struck when a neighbouring voice moves. Grace notes are
+ *     lifted out first ({@link ./grace.extractGraces}) and re-attached here.
  *
  * Remaining simplifications (documented in CLAUDE.md): treble/bass clefs only, a
- * 1/16 quantization grid, no tuplets/grace notes, a per-staff display-voice cap.
+ * per-staff display-voice cap, quarter-beat tuplet windows only (3/6 ratios).
  */
 import {
   bars,
@@ -34,7 +36,9 @@ import {
   type PitchSpelling,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { decomposeDuration, Q } from "./durations";
+import { decomposeDuration } from "./durations";
+import { extractGraces, type GraceInfo } from "./grace";
+import { planWindows, type RhythmWindow } from "./rhythm";
 import { partitionVoices, type NoteLike } from "./voices";
 
 /** One drawable tickable — a chord (≥1 key) or a rest (`isRest`). */
@@ -55,6 +59,24 @@ export interface EngTickable {
   tieToNext: boolean;
   /** Per-key chromatic alteration, parallel to `keys` (for explicit accidentals). */
   alters: number[];
+  /**
+   * When set, this tickable belongs to a tuplet group; consecutive tickables in
+   * this voice's flat list sharing the same `id` form one VexFlow `Tuplet`
+   * (`num_notes: num`, `notes_occupied: inSpace`). `beat`/`beats` stay in REAL
+   * beats; only `duration`/`dots` carry the notated (in-space) value.
+   */
+  tuplet?: { id: string; num: number; inSpace: number };
+  /**
+   * VexFlow-ready leading grace notes attached to this (principal) tickable. Each
+   * entry is one grace note (a single key); the engraver builds a `GraceNote` per
+   * entry and adds the group as a modifier — excluded from the voice tick total.
+   */
+  graceNotes?: {
+    keys: string[];
+    alters: number[];
+    duration: string;
+    slash: boolean;
+  }[];
 }
 
 /** Stem direction of a voice on a staff. */
@@ -140,11 +162,6 @@ const EPS = 1e-6;
  */
 const GRAND_STAFF_MIN_SPAN = 16;
 
-/** Quantize a beat value to the {@link Q} (sixteenth-note) grid. */
-function quantize(x: number): number {
-  return Math.round(x / Q) * Q;
-}
-
 /**
  * Rest placement keys per clef + stem. A 2-voice staff nudges the upper voice's
  * rests above and the lower voice's below center so they don't collide.
@@ -182,106 +199,244 @@ function keyOf(spelling: PitchSpelling): string {
   return `${spelling.step.toLowerCase()}${accidentalChars(spelling.alter)}/${spelling.octave}`;
 }
 
-/** A note clipped to a bar, with quantized bounds and its true (unclipped) end. */
+/**
+ * A note clipped to a bar, with its *true* (unquantized) bar-local bounds. The
+ * adaptive detector reads the true onset so triplet timing survives;
+ * quantization to a drawable grid happens later, per window.
+ */
 interface Seg {
   id: string;
   pitch: number;
   spelling: PitchSpelling;
-  /** Quantized start clipped to the bar. */
-  qs: number;
-  /** Quantized end clipped to the bar. */
-  qe: number;
-  /** Quantized end BEFORE clipping — > barEnd means the note crosses the barline. */
+  /** True start of the note (unclipped) — locates the onset for grace binding. */
+  trueStart: number;
+  /** True start clipped to the bar — the detector's onset event. */
+  rs: number;
+  /** True end clipped to the bar — quantized to the chosen grid for duration. */
+  re: number;
+  /** True end BEFORE clipping — > barEnd means the note crosses the barline. */
   fullEnd: number;
 }
 
-/** Build the tickable sequence for one voice within one bar. */
+/** One variable-width cell of the bar's adaptive grid, tagged by its window. */
+interface Cell {
+  start: number;
+  end: number;
+  win: RhythmWindow;
+  winIndex: number;
+}
+
+/**
+ * Build the tickable sequence for one voice within one bar, over the **variable
+ * adaptive grid** (`rhythm.ts`) rather than a uniform 1/16 cell loop.
+ *
+ * Flow: detect a per-beat subdivision plan from the segs' true onsets (offsets
+ * are articulation-noise — see `rhythm.ts`) → expand it into variable-width
+ * cells → group cells into run-groups (each tuplet
+ * window its own group; consecutive binary windows coalesce) → within a group,
+ * run the classic maximal-same-set-run + `decomposeDuration` machinery. A binary
+ * group decomposes real beats directly; a tuplet group decomposes *notated*
+ * (in-space) beats and tags every piece with the window's tuplet id, while the
+ * emitted `beat`/`beats` stay in REAL beats so playhead/seek/highlight are
+ * unaffected. Leading graces are attached to the tickable that begins their
+ * principal.
+ */
 function buildBarStaff(
   segs: Seg[],
   barStart: number,
   barEnd: number,
+  graceByPrincipalId: Map<string, GraceInfo[]>,
+  speller: { spell: (pitch: number) => PitchSpelling },
 ): EngTickable[] {
-  const numCells = Math.max(0, Math.round((barEnd - barStart) / Q));
-  if (numCells === 0) return [];
+  if (barEnd - barStart <= EPS) return [];
+
+  // 1. Adaptive plan from TRUE onsets only. Offsets (note releases) are
+  //    articulation-noise — a staccato/gated release lands off-grid and would
+  //    mislabel ordinary rhythms as tuplets — so they never vote on the
+  //    subdivision. The note's duration is quantized to the chosen grid below.
+  const onsets = segs.map((s) => s.rs);
+  const windows = planWindows(onsets, barStart, barEnd);
+
+  // 2. Expand windows into ordered variable-width cells, tagged by their window.
+  const cells: Cell[] = [];
+  for (let wi = 0; wi < windows.length; wi++) {
+    const w = windows[wi]!;
+    const cw = w.len / w.cells;
+    for (let j = 0; j < w.cells; j++) {
+      cells.push({ start: w.start + j * cw, end: w.start + (j + 1) * cw, win: w, winIndex: wi });
+    }
+  }
+  if (cells.length === 0) return [];
+
+  // Snap a real time onto the nearest cell boundary (window-aware quantization).
+  const boundaries = [...cells.map((c) => c.start), cells[cells.length - 1]!.end];
+  const snap = (t: number): number => {
+    let best = boundaries[0]!;
+    let bestDist = Math.abs(t - best);
+    for (const b of boundaries) {
+      const d = Math.abs(t - b);
+      if (d < bestDist) {
+        bestDist = d;
+        best = b;
+      }
+    }
+    return best;
+  };
+  const snapped = new Map<string, { qs: number; qe: number }>(
+    segs.map((s) => [s.id, { qs: snap(s.rs), qe: snap(s.re) }]),
+  );
 
   // Per-cell sounding-note id set, as a stable string key for run grouping.
-  const cellIds: string[][] = [];
-  for (let k = 0; k < numCells; k++) {
-    const cb = barStart + k * Q;
-    const ids = segs
-      .filter((s) => s.qs <= cb + EPS && s.qe >= cb + Q - EPS)
-      .map((s) => s.id);
-    cellIds.push(ids);
-  }
+  const cellIds: string[][] = cells.map((c) =>
+    segs
+      .filter((s) => {
+        const q = snapped.get(s.id)!;
+        return q.qs <= c.start + EPS && q.qe >= c.end - EPS;
+      })
+      .map((s) => s.id),
+  );
   const keyFor = (ids: string[]) => ids.slice().sort().join(",");
 
   const out: EngTickable[] = [];
   let cell = 0;
-  while (cell < numCells) {
-    const runKey = keyFor(cellIds[cell]!);
-    let runLen = 1;
-    while (cell + runLen < numCells && keyFor(cellIds[cell + runLen]!) === runKey) {
-      runLen++;
+  while (cell < cells.length) {
+    // A run-group is a maximal cell span within which windows coalesce: a tuplet
+    // window is always its own group; consecutive binary windows merge (so a half
+    // note over two binary beats stays one note, never two tied quarters).
+    const groupStart = cell;
+    let groupEnd = cell + 1;
+    while (groupEnd < cells.length) {
+      const prev = cells[groupEnd - 1]!;
+      const cur = cells[groupEnd]!;
+      const windowChanged = cur.winIndex !== prev.winIndex;
+      if (windowChanged && (prev.win.tuplet || cur.win.tuplet)) break;
+      groupEnd++;
     }
-    const ids = cellIds[cell]!;
-    const runStartBeat = barStart + cell * Q;
-    const runEndCell = cell + runLen;
-    const runBeats = runLen * Q;
-    const pieces = decomposeDuration(runBeats);
+    const groupWin = cells[groupStart]!.win;
+    const tup = groupWin.tuplet;
+    // A tuplet tickable's notated base value fills `inSpace` per window (num 3 →
+    // 8th → 0.5, num 6 → 16th → 0.25); real beats scale by inSpace/num per cell.
+    const baseNotatedBeats = tup ? 1 / tup.inSpace : 0;
+    const notatedScale = tup ? (groupWin.len * tup.inSpace) / groupWin.cells : 1;
+    const tupletId = tup ? `w${groupWin.start}` : undefined;
 
-    if (ids.length === 0) {
-      // A rest run — one rest tickable per decomposed piece (rests never tie).
-      // The placement key is filled per-voice by `withRestKeys`.
-      pieces.forEach((p, i) => {
-        out.push({
-          beat: runStartBeat + offsetBeats(pieces, i),
-          keys: [], // filled by the caller (it knows the clef + stem).
-          duration: p.duration,
-          dots: p.dots,
-          beats: p.beats,
-          isRest: true,
-          tieToNext: false,
-          alters: [0],
+    // 3. Within the group, the classic maximal-same-set run + decompose.
+    while (cell < groupEnd) {
+      const runKey = keyFor(cellIds[cell]!);
+      let runLen = 1;
+      while (cell + runLen < groupEnd && keyFor(cellIds[cell + runLen]!) === runKey) {
+        runLen++;
+      }
+      const ids = cellIds[cell]!;
+      const runStartBeat = cells[cell]!.start;
+      const runEndCell = cell + runLen;
+      const runReachesBarEnd = Math.abs(cells[runEndCell - 1]!.end - barEnd) < EPS;
+
+      // Decompose the run in its group's units: real beats for a binary group,
+      // notated in-space beats for a tuplet group.
+      const pieces = tup
+        ? decomposeDuration(runLen * baseNotatedBeats)
+        : decomposeDuration(cells[runEndCell - 1]!.end - runStartBeat);
+
+      const tupletTag = tup
+        ? { id: tupletId!, num: tup.num, inSpace: tup.inSpace }
+        : undefined;
+
+      // Walk pieces on a REAL-beat cursor (notated beats × scale = real beats).
+      let realCursor = runStartBeat;
+      if (ids.length === 0) {
+        // A rest run — one rest tickable per piece (rests never tie). A rest
+        // inside a tuplet still carries the tuplet id so the group is complete.
+        pieces.forEach((p) => {
+          const realBeats = p.beats * notatedScale;
+          out.push({
+            beat: realCursor,
+            keys: [], // filled by the caller (it knows the clef + stem).
+            duration: p.duration,
+            dots: p.dots,
+            beats: realBeats,
+            isRest: true,
+            tieToNext: false,
+            alters: [0],
+            ...(tupletTag ? { tuplet: tupletTag } : {}),
+          });
+          realCursor += realBeats;
         });
-      });
-    } else {
-      // A chord run — its notes (sorted low→high) share every piece; pieces tie.
-      const chord = segs
-        .filter((s) => ids.includes(s.id))
-        .sort((a, b) => a.pitch - b.pitch);
-      const keys = chord.map((s) => keyOf(s.spelling));
-      const alters = chord.map((s) => s.spelling.alter);
-      const continuesPastBar =
-        runEndCell === numCells && chord.some((s) => s.fullEnd > barEnd + EPS);
-      pieces.forEach((p, i) => {
-        const isLastPiece = i === pieces.length - 1;
-        out.push({
-          beat: runStartBeat + offsetBeats(pieces, i),
-          keys: [...keys],
-          duration: p.duration,
-          dots: p.dots,
-          beats: p.beats,
-          isRest: false,
-          // Tie to the next piece (same chord) or, on the final piece, to the
-          // continuation in the next bar.
-          tieToNext: isLastPiece ? continuesPastBar : true,
-          alters: [...alters],
+      } else {
+        // A chord run — its notes (sorted low→high) share every piece; pieces tie.
+        const chord = segs
+          .filter((s) => ids.includes(s.id))
+          .sort((a, b) => a.pitch - b.pitch);
+        const keys = chord.map((s) => keyOf(s.spelling));
+        const alters = chord.map((s) => s.spelling.alter);
+        const continuesPastBar =
+          runReachesBarEnd && chord.some((s) => s.fullEnd > barEnd + EPS);
+        // Graces attach to the tickable that BEGINS a principal — one whose true
+        // onset lands in this bar and whose run starts at that (snapped) onset.
+        const graces = collectRunGraces(chord, runStartBeat, snapped, graceByPrincipalId, speller);
+        pieces.forEach((p, i) => {
+          const isLastPiece = i === pieces.length - 1;
+          const realBeats = p.beats * notatedScale;
+          out.push({
+            beat: realCursor,
+            keys: [...keys],
+            duration: p.duration,
+            dots: p.dots,
+            beats: realBeats,
+            isRest: false,
+            // Tie to the next piece (same chord) or, on the final piece, to the
+            // continuation in the next bar.
+            tieToNext: isLastPiece ? continuesPastBar : true,
+            alters: [...alters],
+            ...(tupletTag ? { tuplet: tupletTag } : {}),
+            // Graces only on the FIRST piece (the note's true articulation).
+            ...(i === 0 && graces.length > 0 ? { graceNotes: graces } : {}),
+          });
+          realCursor += realBeats;
         });
-      });
+      }
+      cell = runEndCell;
     }
-    cell = runEndCell;
   }
   return out;
 }
 
-/** Cumulative beat offset of piece `i` within a decomposed run. */
-function offsetBeats(pieces: { beats: number }[], i: number): number {
-  let sum = 0;
-  for (let j = 0; j < i; j++) sum += pieces[j]!.beats;
-  return sum;
+/**
+ * Collect VexFlow-ready graces for the chord notes a run *begins*. A principal
+ * qualifies iff it carries graces, its true onset falls in this bar, and this
+ * run starts at that onset (so a continuation run in a later bar never re-hosts
+ * the graces). Each grace is spelled with the bar's key speller.
+ */
+function collectRunGraces(
+  chord: Seg[],
+  runStartBeat: number,
+  snapped: Map<string, { qs: number; qe: number }>,
+  graceByPrincipalId: Map<string, GraceInfo[]>,
+  speller: { spell: (pitch: number) => PitchSpelling },
+): NonNullable<EngTickable["graceNotes"]> {
+  const out: NonNullable<EngTickable["graceNotes"]> = [];
+  for (const s of chord) {
+    const graces = graceByPrincipalId.get(s.id);
+    if (!graces) continue;
+    // Skip a principal that started in a previous bar (its onset was clipped) —
+    // its graces belong to its true-onset bar, not this continuation.
+    if (Math.abs(s.rs - s.trueStart) > EPS) continue;
+    // The principal must begin here: this run starts at its (snapped) onset.
+    if (Math.abs(snapped.get(s.id)!.qs - runStartBeat) > EPS) continue;
+    for (const g of graces) {
+      const spelling = g.spelling ?? speller.spell(g.pitch);
+      out.push({
+        keys: [keyOf(spelling)],
+        alters: [spelling.alter],
+        duration: g.slash ? "8" : "16",
+        slash: g.slash,
+      });
+    }
+  }
+  return out;
 }
 
-/** Clip + quantize a voice's notes into bar-local segments. */
+/** Clip a voice's notes into bar-local segments with TRUE (unquantized) bounds. */
 function buildSegs(
   notes: Note[],
   barStart: number,
@@ -290,16 +445,17 @@ function buildSegs(
 ): Seg[] {
   const out: Seg[] = [];
   for (const n of notes) {
-    const qs = Math.max(barStart, quantize(n.start));
-    const fullEnd = quantize(n.start + n.duration);
-    const qe = Math.min(barEnd, fullEnd);
-    if (qe - qs < Q - EPS) continue; // no representable overlap with this bar.
+    const fullEnd = n.start + n.duration;
+    const rs = Math.max(barStart, n.start);
+    const re = Math.min(barEnd, fullEnd);
+    if (re - rs <= EPS) continue; // no overlap with this bar.
     out.push({
       id: n.id,
       pitch: n.pitch,
       spelling: n.spelling ?? speller.spell(n.pitch),
-      qs,
-      qe,
+      trueStart: n.start,
+      rs,
+      re,
       fullEnd,
     });
   }
@@ -557,11 +713,18 @@ function buildPlan(score: Score, opts: ConvertOptions): PlanPart[] {
  */
 export function convert(score: Score, opts: ConvertOptions): EngraveModel {
   const { showChordSymbols } = opts;
-  const plan = buildPlan(score, opts);
+
+  // Pre-pass: lift grace notes out of the stream so they neither distort voicing
+  // nor get quantized away. All downstream planning sees only `mainNotes`; the
+  // graces are re-attached to their principal's tickable during the per-bar build.
+  const { mainNotes, graceByPrincipalId } = extractGraces(score.notes);
+  const mainScore: Score = { ...score, notes: mainNotes };
+
+  const plan = buildPlan(mainScore, opts);
   const planStaves = plan.flatMap((p) => p.staves);
 
-  const barList = bars(score);
-  const end = scoreEndBeat(score);
+  const barList = bars(mainScore);
+  const end = scoreEndBeat(mainScore);
   const sigs =
     score.timeSigMap.length > 0
       ? [...score.timeSigMap].sort((a, b) => a.beat - b.beat)
@@ -595,7 +758,7 @@ export function convert(score: Score, opts: ConvertOptions): EngraveModel {
     const staves: EngStaff[] = planStaves.map((ps) => ({
       clef: ps.clef,
       partId: ps.partId,
-      voices: buildStaffVoices(ps, barStart, barEnd, speller),
+      voices: buildStaffVoices(ps, barStart, barEnd, speller, graceByPrincipalId),
     }));
 
     let chordSymbol: string | undefined;
@@ -645,6 +808,7 @@ function buildStaffVoices(
   barStart: number,
   barEnd: number,
   speller: { spell: (pitch: number) => PitchSpelling },
+  graceByPrincipalId: Map<string, GraceInfo[]>,
 ): EngVoice[] {
   // Build each global voice's tickables for this bar; keep only those that
   // actually sound here, so a bar without a second voice isn't cluttered with a
@@ -652,11 +816,11 @@ function buildStaffVoices(
   const present = ps.voices
     .map((notes) => buildSegs(notes, barStart, barEnd, speller))
     .filter((segs) => segs.length > 0)
-    .map((segs) => buildBarStaff(segs, barStart, barEnd));
+    .map((segs) => buildBarStaff(segs, barStart, barEnd, graceByPrincipalId, speller));
 
   if (present.length === 0) {
     // Empty staff/voice in this bar → a single whole-measure rest voice.
-    const rest = buildBarStaff([], barStart, barEnd);
+    const rest = buildBarStaff([], barStart, barEnd, graceByPrincipalId, speller);
     return [{ tickables: withRestKeys(rest, ps.clef, "auto"), stem: "auto" }];
   }
 

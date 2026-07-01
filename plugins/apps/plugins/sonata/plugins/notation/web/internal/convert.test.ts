@@ -359,6 +359,74 @@ describe("convert", () => {
     expect(lower.tickables[0]!.keys[0]).toBe("c/4");
   });
 
+  // --- New: tuplets, grace notes, sub-sixteenths (adaptive subdivision). ---
+
+  test("an eighth-triplet beat yields 3 tickables in one tuplet {num:3,inSpace:2}", () => {
+    const t = 1 / 3;
+    const s = score([
+      note(60, 0, t),
+      note(62, t, t),
+      note(64, 2 * t, t),
+      note(65, 1, 1),
+      note(67, 2, 1),
+      note(69, 3, 1),
+    ]);
+    const treble = clefTickables(convert(s, OPTS).measures[0]!, "treble");
+    const trip = treble.slice(0, 3);
+    // Three notated eighths, all tagged with the SAME tuplet id.
+    expect(trip.map((x) => x.duration)).toEqual(["8", "8", "8"]);
+    expect(trip.every((x) => x.tuplet?.num === 3 && x.tuplet.inSpace === 2)).toBe(true);
+    expect(new Set(trip.map((x) => x.tuplet!.id)).size).toBe(1);
+    // beat/beats stay REAL (a triplet 8th is 1/3 of a beat), not the notated 0.5.
+    expect(trip[0]!.beat).toBeCloseTo(0, 6);
+    expect(trip[1]!.beat).toBeCloseTo(t, 6);
+    expect(trip[2]!.beat).toBeCloseTo(2 * t, 6);
+    expect(trip.every((x) => Math.abs(x.beats - t) < 1e-6)).toBe(true);
+    // The plain quarters after the triplet carry no tuplet tag.
+    expect(treble.slice(3).every((x) => x.tuplet === undefined)).toBe(true);
+    expect(treble.slice(3).map((x) => x.duration)).toEqual(["q", "q", "q"]);
+  });
+
+  test("a grace note yields graceNotes on its principal (slashed acciaccatura)", () => {
+    // Grace F#4 colliding onto a principal C4 quarter at beat 0.
+    const s = score([
+      note(66, 0, 0.05),
+      note(60, 0, 1),
+      note(62, 1, 1),
+      note(64, 2, 1),
+      note(65, 3, 1),
+    ]);
+    const treble = clefTickables(convert(s, OPTS).measures[0]!, "treble");
+    const principal = treble.find((t) => t.keys[0] === "c/4")!;
+    expect(principal.graceNotes).toBeDefined();
+    expect(principal.graceNotes!.length).toBe(1);
+    const g = principal.graceNotes![0]!;
+    expect(g.slash).toBe(true);
+    expect(g.duration).toBe("8");
+    expect(g.keys.length).toBe(1);
+    expect(g.keys[0]!.startsWith("f")).toBe(true);
+    // The grace is NOT a main tickable — the bar still has four principal notes.
+    expect(treble.filter((t) => !t.isRest).length).toBe(4);
+  });
+
+  test("a thirty-second run yields a \"32\" tickable (binary, no tuplet)", () => {
+    // Four 32nds packed into the first half-beat, then silence to beat 1.
+    const s = score([
+      note(60, 0, 0.125),
+      note(62, 0.125, 0.125),
+      note(64, 0.25, 0.125),
+      note(65, 0.375, 0.125),
+      note(67, 1, 1),
+      note(69, 2, 1),
+      note(71, 3, 1),
+    ]);
+    const treble = clefTickables(convert(s, OPTS).measures[0]!, "treble");
+    expect(treble[0]!.duration).toBe("32");
+    expect(treble[0]!.tuplet).toBeUndefined();
+    // Real beats preserved: a 32nd is 0.125 of a beat.
+    expect(treble[0]!.beats).toBeCloseTo(0.125, 6);
+  });
+
   test("separateVoices=false reproduces the single-voice-per-staff look", () => {
     const s = score([
       note(60, 0, 4),

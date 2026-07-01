@@ -49,6 +49,27 @@ accidental placement, stems, ledger lines, rest glyphs, collision avoidance) is 
 research problem; VexFlow does it to a professional standard and lets us draw
 with **theme-token colors** read from CSS vars, so the staff re-skins light/dark.
 
+## Rhythm: adaptive subdivision (tuplets, grace notes, sub-16ths)
+
+The converter does **not** use one fixed 1/16 grid. `web/internal/rhythm.ts`
+decides a subdivision **per quarter-note beat** from that beat's true note
+**onsets** (not offsets — a release is articulation-noise that would mislabel
+ordinary rhythms as tuplets): a 16th grid by default, a 32nd grid when onsets
+sit on 32nd positions, or a tuplet (eighth-triplet = 3, sixteenth-sextuplet = 6)
+when a tuplet grid *strictly* explains the onsets better than any binary grid.
+`buildBarStaff` expands the per-beat plan into a **variable** cell grid; runs
+inside a tuplet beat are decomposed in notated in-space beats and tagged with a
+tuplet id (consecutive same-id tickables → one VexFlow `Tuplet`), while
+`EngTickable.beat/.beats` stay in **real** beats so playhead/seek are unaffected.
+
+`web/internal/grace.ts` is a pre-pass (ahead of voicing) that lifts **grace
+notes** out of the stream and attaches each to its principal. A grace is a short
+note squeezed *immediately* against a real note — detection walks backward from
+each principal collecting a chain of short notes each within half a 32nd of the
+next, so a metrically-spaced 32nd (a full 0.125 beat away) never reads as an
+ornament. The engraver renders them as a VexFlow `GraceNoteGroup` modifier
+(slashed acciaccatura for a lone grace; beamed + slurred for a group).
+
 ## Shape (the hard part is pure + tested)
 
 The genuinely hard half — turning polyphonic, beat-based `Score` data into clean
@@ -56,7 +77,11 @@ measures — is a **pure, unit-tested** pipeline, kept renderer-free:
 
 - `web/internal/durations.ts` — `decomposeDuration(beats)` splits a beat-length
   into VexFlow notation pieces (`1.5` → one dotted quarter; `1.25` → a quarter
-  tied to a sixteenth), the vocabulary the engraver and rests both draw.
+  tied to a sixteenth; down to 32nds), the vocabulary the engraver and rests draw.
+- `web/internal/rhythm.ts` — `planWindows(onsets, barStart, barEnd)` → the
+  per-beat subdivision plan (16th / 32nd / triplet / sextuplet). Pure + tested.
+- `web/internal/grace.ts` — `extractGraces(notes)` → principal-only `mainNotes`
+  plus graces keyed by principal id. Pure + tested.
 - `web/internal/voices.ts` — `partitionVoices(notes, opts)` splits a staff's
   notes into ordered independent voices (explicit-voice honored first, else
   inferred). Pure + unit-tested.
@@ -91,6 +116,10 @@ instrument grouping — while `convert` itself stays pure.
   independent voices with opposed stems; a held note under a moving line stays
   put (no re-articulation) by construction. Tracks map onto staves per
   `staffLayout`; `perTrack` brackets one staff/grand-staff per track.
+- **Tuplets, grace notes, sub-16ths** (was the 1/16-grid caveat). Eighth-note
+  triplets and sixteenth sextuplets engrave with a bracket + number; 32nd notes
+  engrave; grace notes engrave as acciaccaturas / grace groups. See the *Rhythm*
+  section. The `seed-rhythm-etude` bundled starter demonstrates all three.
 
 ## Remaining caveats / follow-ups
 
@@ -98,8 +127,14 @@ instrument grouping — while `convert` itself stays pure.
   (default 2, ≤4). Beyond the cap, an overflow line merges into the nearest-pitch
   voice — re-articulation can reappear only at that dense spot. Configurable later.
 - **Treble/bass clefs only.** No alto/tenor C-clefs (viola etc. a follow-up).
-- **1/16 quantization.** Tuplets (triplets), grace notes and sub-sixteenth
-  ornaments are approximated or dropped. Tuplet support is a follow-up.
+- **Tuplet scope.** Only quarter-beat tuplet *windows* (eighth-triplets,
+  sixteenth-sextuplets) and ratios 3 / 6. Multi-beat tuplets (quarter-note
+  triplet over 2 beats, half-note triplet), other ratios (5 / 7 / 12) and nested
+  tuplets are follow-ups (the detector's window set / ratio list extends). A
+  tuplet may not span a barline.
+- **Grace notes are heuristic.** The Score IR has no grace flag, so a grace is
+  inferred (a short note chained hard against a principal). Leading graces only;
+  trailing/hanging graces are dropped.
 - **Cross-system ties are dropped.** A tie whose two notes land in different
   systems isn't drawn (the within-system tie chain is). Rare; a follow-up.
 - **Eager rendering.** All systems engrave at once (so does `songsheet`). If
