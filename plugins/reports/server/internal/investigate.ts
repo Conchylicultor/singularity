@@ -1,9 +1,8 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/core";
-import { createTask, getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { _reports } from "./tables";
-import { REPORTS_META_TASK_ID } from "./meta-reports";
+import { reportInvestigationSink } from "./investigation-sink";
 import { ReportKind } from "./report-kinds";
 
 // Appended to every report-filed task. The agent that picks one up is about to
@@ -19,9 +18,10 @@ const DEBUG_SKILL_HINT =
 const taskCreationLocks = new Map<string, Promise<void>>();
 
 // On-demand investigation: the ONLY place that now turns a report into a task.
-// Idempotent — a report already linked to a live (non-dropped) task returns that
-// task; otherwise a fresh task is filed under the Reports meta folder and linked
-// back onto the row.
+// The task-creating handler is registered softly by the tasks domain into
+// `reportInvestigationSink` — a composition without tasks has no handler, so
+// emit() returns undefined and this throws loudly. Idempotency (a report already
+// linked to a live task) is enforced by the registered handler.
 export async function investigateReport(
   reportId: string,
 ): Promise<{ taskId: string }> {
@@ -36,10 +36,11 @@ export async function investigateReport(
   taskCreationLocks.set(reportId, inflight);
 
   try {
-    // The task-creation DB work (select + getTask + createTask + update) is part
-    // of the observability subsystem's own I/O — suppress its spans so they never
-    // re-feed the slow-op recorder. The suppression ALS propagates through every
-    // awaited query, including the cross-plugin getTask/createTask DB calls.
+    // The task-creation DB work (select + the handler's getTask/createTask) is
+    // part of the observability subsystem's own I/O — suppress its spans so they
+    // never re-feed the slow-op recorder. The suppression ALS propagates through
+    // every awaited query, including across the awaited sink emit into the
+    // handler's cross-plugin getTask/createTask DB calls.
     return await runWithoutProfiling(async () => {
       const [row] = await db
         .select()
@@ -49,13 +50,6 @@ export async function investigateReport(
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (!row) {
         throw new Error(`investigateReport: no report found for id "${reportId}"`);
-      }
-
-      // Dedup: a report already linked to a live task reuses it. A dropped task
-      // means the prior investigation was abandoned — file a fresh one.
-      const linked = row.taskId ? await getTask(row.taskId) : null;
-      if (linked && linked.status !== "dropped") {
-        return { taskId: linked.id };
       }
 
       const spec = ReportKind.getContributions().find((k) => k.kind === row.kind);
@@ -68,17 +62,24 @@ export async function investigateReport(
       }
 
       const { title, description } = spec.renderTask(row);
-      const task = await createTask({
-        folderId: REPORTS_META_TASK_ID,
+      const result = await reportInvestigationSink.emit({
+        existingTaskId: row.taskId,
         title,
         description: `${description}\n\n${DEBUG_SKILL_HINT}`,
         author: "reports-plugin",
       });
-      await db
-        .update(_reports)
-        .set({ taskId: task.id, updatedAt: new Date() })
-        .where(eq(_reports.id, row.id));
-      return { taskId: task.id };
+      if (!result) {
+        throw new Error(
+          "investigateReport: no investigation-task handler registered (tasks capability absent in this composition)",
+        );
+      }
+      if (result.taskId !== row.taskId) {
+        await db
+          .update(_reports)
+          .set({ taskId: result.taskId, updatedAt: new Date() })
+          .where(eq(_reports.id, row.id));
+      }
+      return { taskId: result.taskId };
     });
   } finally {
     taskCreationLocks.delete(reportId);

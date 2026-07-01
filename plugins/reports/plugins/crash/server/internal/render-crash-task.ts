@@ -1,4 +1,4 @@
-import { getServerBuildId } from "@plugins/build/server";
+import { getServerBuildId } from "@plugins/build/plugins/server-build-id/server";
 import type { ReportRow } from "@plugins/reports/server";
 import { CrashPayloadSchema } from "../../core";
 import type { CrashPayload } from "../../core";

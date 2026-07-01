@@ -1,4 +1,4 @@
-import { defineReportSink } from "@plugins/primitives/plugins/report-sink/web";
+import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
 
 export interface BoundaryErrorReport {
   error: Error;

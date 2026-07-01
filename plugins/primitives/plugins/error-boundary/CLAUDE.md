@@ -40,7 +40,7 @@ barrel.
 - Description: Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a boundaryReportSink for opt-in crash reporting.
 - Web:
   - Slots: `ErrorBoundary.Action` ← `reports.launch-fix`
-  - Uses: `primitives/css/text.Text`, `primitives/report-sink.defineReportSink`, `primitives/slot-render.registerSlotItemMiddleware`
+  - Uses: `primitives/css/text.Text`, `primitives/slot-render.registerSlotItemMiddleware`
   - Exports: Types: `BoundaryErrorReport`; Values: `boundaryReportSink`, `ErrorBoundary`, `PluginErrorBoundary`
 - Cross-plugin:
   - Imported by: `apps/workflows/editor`, `apps/workflows/executions`, `framework/web-core`, `layouts/full-pane`, `layouts/miller`, `reports/crash`, `reports/launch-fix`

@@ -1,7 +1,7 @@
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/core";
-import { getServerBuildId } from "@plugins/build/server";
+import { getServerBuildId } from "@plugins/build/plugins/server-build-id/server";
 import { reportDetailRoute } from "@plugins/reports/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";

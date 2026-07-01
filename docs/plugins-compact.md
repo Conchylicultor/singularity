@@ -107,7 +107,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`backup`** [12 sub-plugins] — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from registered backup sources, dispatches to registered storage targets.
 
-- **`build`** [5 sub-plugins] — Trigger `./singularity build` from the toolbar.
+- **`build`** [6 sub-plugins] — Trigger `./singularity build` from the toolbar.
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Plugins:
@@ -372,7 +372,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
     - **`rank-reorder`** — Flat rank-based drag-reorder primitive: a RankReorderProvider (lifted DnD shell + computeFlatReorder drop resolution, group-by aware) and useRankReorderItem (per-row draggable + before/after droppables). Shared by the tree's sibling zones and the data-view manual-order; depends only on rank + dnd-kit.
     - **`relative-time`** — Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
-    - **`report-sink`** — Shared soft-reporter slot factory: defineReportSink() creates a module-level register/emit sink so a low-level plugin can own a neutral report body while a domain plugin (e.g. reports) registers the mapping. emit() never throws — it is called on error paths. The single-sourced idiom behind the boundary/endpoint/wedge reporters.
+    - **`report-sink`** — Web presence for the report-sink primitive; the runtime-agnostic defineReportSink() factory lives in ./core so both web and server can import it. emit() never throws — it is called on error paths. The single-sourced idiom behind the boundary/endpoint/wedge reporters.
     - **`responsive-overflow`** — Progressively hides children that don't fit the container width. Exposes ResponsiveOverflow component and useResponsiveOverflow hook.
     - **`row-actions`** — Hover-revealed row-action cluster: a row of small ghost icon buttons (RowActionButton) revealed when their row is hovered/focused. The primitive owns the reveal (opacity↔pointer-events coupled, so a hidden action is never a live click-target), the right-edge Pin positioning, and the standard icon-xs sizing. Reveal is driven by the primitive's own `group/row-actions` group, applied to the row via the exported `rowActionsAnchor` class — so it never piggybacks on a consumer's group name.
     - **`scoped-store`** — Per-Provider-instance external store primitive: defineScopedStore. Module-level factory, per-mount isolated state, with imperative reads, reactive whole-state, and selector subscriptions with re-render bailout.
@@ -440,6 +440,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
     - **`container-tasks`** — Registry of system container/meta task ids that must not own attempts: a cached hook so the web can gate Launch affordances on container rows. Registry of system container/meta task ids that must not own attempts: server-contribution registry + guard, plus a cached endpoint so the web can gate Launch affordances on container rows.
+    - **`reports-investigation`** — Files reports' on-demand investigation tasks: owns the Reports meta-folder and registers the task-creating handler into reports' investigation sink.
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
     - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.
     - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.

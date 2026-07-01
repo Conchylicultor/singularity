@@ -1,4 +1,4 @@
-import { defineReportSink } from "@plugins/primitives/plugins/report-sink/web";
+import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
 
 export interface EndpointErrorInfo {
   // The endpoint route, e.g. "POST /api/tasks/chain". Already bundles method + path.

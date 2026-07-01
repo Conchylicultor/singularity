@@ -3,7 +3,7 @@ import { defineExternalResource } from "@plugins/framework/plugins/server-core/c
 import { WEB_DIST_DIR } from "@plugins/infra/plugins/paths/server";
 import { FrontendHashSchema } from "../../shared";
 import { buildLog } from "./build-log";
-import { getServerBuildId } from "./server-build-id";
+import { getServerBuildId } from "@plugins/build/plugins/server-build-id/server";
 
 export const frontendHashResource = defineExternalResource({
   key: "build.frontendHash",

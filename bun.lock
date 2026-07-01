@@ -868,6 +868,10 @@
       "name": "@singularity/plugin-build-build-profiling",
       "version": "0.0.1",
     },
+    "plugins/build/plugins/server-build-id": {
+      "name": "@singularity/plugin-build-server-build-id",
+      "version": "0.0.1",
+    },
     "plugins/code-explorer": {
       "name": "@singularity/plugin-code-explorer",
       "version": "0.0.1",
@@ -3459,6 +3463,10 @@
       "name": "@singularity/plugin-tasks-container-tasks",
       "version": "0.0.1",
     },
+    "plugins/tasks/plugins/reports-investigation": {
+      "name": "@singularity/plugin-tasks-reports-investigation",
+      "version": "0.0.1",
+    },
     "plugins/tasks/plugins/task-attachments": {
       "name": "@singularity/plugin-tasks-task-attachments",
       "version": "0.0.1",
@@ -4877,6 +4885,8 @@
 
     "@singularity/plugin-build-build-profiling": ["@singularity/plugin-build-build-profiling@workspace:plugins/build/plugins/build-profiling"],
 
+    "@singularity/plugin-build-server-build-id": ["@singularity/plugin-build-server-build-id@workspace:plugins/build/plugins/server-build-id"],
+
     "@singularity/plugin-code-explorer": ["@singularity/plugin-code-explorer@workspace:plugins/code-explorer"],
 
     "@singularity/plugin-code-explorer-code-api": ["@singularity/plugin-code-explorer-code-api@workspace:plugins/code-explorer/plugins/code-api"],
@@ -6090,6 +6100,8 @@
     "@singularity/plugin-tasks-auto-start": ["@singularity/plugin-tasks-auto-start@workspace:plugins/tasks/plugins/auto-start"],
 
     "@singularity/plugin-tasks-container-tasks": ["@singularity/plugin-tasks-container-tasks@workspace:plugins/tasks/plugins/container-tasks"],
+
+    "@singularity/plugin-tasks-reports-investigation": ["@singularity/plugin-tasks-reports-investigation@workspace:plugins/tasks/plugins/reports-investigation"],
 
     "@singularity/plugin-tasks-task-attachments": ["@singularity/plugin-tasks-task-attachments@workspace:plugins/tasks/plugins/task-attachments"],
 

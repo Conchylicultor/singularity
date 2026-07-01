@@ -1,4 +1,4 @@
-import { defineReportSink } from "@plugins/primitives/plugins/report-sink/web";
+import { defineReportSink } from "@plugins/primitives/plugins/report-sink/core";
 
 // Neutral wedge-report body owned by health. `discriminator` is the stable
 // per-failure-mode key (folded into the crash fingerprint by the registrant);

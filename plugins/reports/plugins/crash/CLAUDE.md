@@ -9,7 +9,7 @@
   - Contributes: `Core.Root` → `CrashCollector`, `Reports.KindView` → `CrashSummary`
   - Uses: `infra/health.wedgeReportSink`, `primitives/error-boundary.boundaryReportSink`, `reports.report`, `reports.Reports`
 - Server:
-  - Uses: `build.getServerBuildId`, `reports.ReportKind`
+  - Uses: `build/server-build-id.getServerBuildId`, `reports.ReportKind`
 - Core:
   - Exports: Types: `CrashPayload`; Values: `crashFingerprint`, `CrashPayloadSchema`
 
