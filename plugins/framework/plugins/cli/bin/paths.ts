@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { readFileSync } from "node:fs";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
-export { HOME_DIR, SINGULARITY_DIR, WORKTREES_DIR, worktreeDataDir, worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
+export { HOME_DIR, SINGULARITY_DIR, WORKTREES_DIR, worktreeDataDir, worktreeArtifacts, pruneWorktreeBuildArtifacts } from "@plugins/infra/plugins/paths/server";
 
 export const PG_DIR               = join(SINGULARITY_DIR, "pg");
 export const PG_DATA_DIR          = join(PG_DIR, "data");

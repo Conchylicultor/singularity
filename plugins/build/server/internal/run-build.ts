@@ -1,7 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { REPO_ROOT, currentWorktreeName, worktreeDataDir, worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT, currentWorktreeName, worktreeDataDir, worktreeArtifacts, pruneWorktreeBuildArtifacts } from "@plugins/infra/plugins/paths/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { buildDetailRoute } from "@plugins/build/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
@@ -236,6 +236,9 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
         writeFileSync(tmp, JSON.stringify(logs) + "\n");
         renameSync(tmp, logPath);
       }
+      // A build the backend had to recover (mid-build restart) may never have
+      // reached the CLI's own prune, so cap this namespace's artifacts here too.
+      pruneWorktreeBuildArtifacts(worktreeName);
     }
   }
 

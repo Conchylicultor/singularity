@@ -1,5 +1,5 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { worktreeDataDir, worktreeArtifacts } from "./paths";
+import { worktreeDataDir, worktreeArtifacts, pruneWorktreeBuildArtifacts } from "./paths";
 
 export interface BuildSpan {
   id: string;
@@ -63,4 +63,7 @@ export function writeBuildProfile(name: string): void {
   const tmp = `${path}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(profile, null, 2) + "\n");
   renameSync(tmp, path);
+  // Trim old per-build artifact sets now that this build's set is on disk (the leak
+  // fix). See pruneWorktreeBuildArtifacts: the just-written files are always retained.
+  pruneWorktreeBuildArtifacts(name);
 }

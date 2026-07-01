@@ -1,5 +1,5 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { worktreeDataDir, worktreeArtifacts } from "./paths";
+import { worktreeDataDir, worktreeArtifacts, pruneWorktreeBuildArtifacts } from "./paths";
 
 export interface BuildStepLog {
   id: string;
@@ -55,5 +55,9 @@ export function writeBuildLogs(name: string): string {
   writeAtomic(jsonPath, JSON.stringify(logs, null, 2) + "\n");
   const textPath = worktreeArtifacts.buildLogText(name, buildId);
   writeAtomic(textPath, renderStepsText(steps));
+  // Writing a new set trims the old ones — the leak fix. Safe for the just-written
+  // files (newest mtime ⇒ always retained) and idempotent with writeBuildProfile's
+  // own prune call at the same finalize point.
+  pruneWorktreeBuildArtifacts(name);
   return textPath;
 }
