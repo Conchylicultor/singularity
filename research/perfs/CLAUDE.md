@@ -58,12 +58,18 @@ host heavy-read gate, `floor(cpus/4)` on an 18-CPU box); `commits-graph.delta` i
 rate-axis suspicion before any cost-axis fix: the @parcel watcher recomputes on *every* fs event and
 only early-returns the unchanged result **after** paying the full git compute — the same no-op shape
 as the fixed churn, on the fs-watch axis. **2026-07-01 re-validation:** still live on `singularity`
-(loaders `last_ms` 14–18 s / peak ~12 min; `heavy-read-local` last 48 s) and now tailing into the
-live-state **flush** — `flushNotifies` peak ~16 min — so a new conversation took *minutes* to appear
-in the sidebar queue list (any live-state UI update is delayed, not just first-subscribe). Open:
-flush-cascade-*contains* the loaders vs flush-*queued-behind* them. **Next:** Phase-2 trace of
-recompute rate vs real change rate, and the flush-vs-loader relationship. Full detail + sessions +
-checklist → **[`issue-git-derived-loaders.md`](./issue-git-derived-loaders.md)**.
+(loaders `last_ms` 14–18 s / peak ~12 min; `heavy-read-local` last 48 s). **2026-07-01 (2) Phase-2
+flush trace — the flush stall is NOT this issue (refuted, gate 2 + counterfactual):** the git loaders
+are `sub`-origin only and `external`/non-`bootCritical`, so they never enter `flushNotifies`; a
+coherent window shows the flush stays **≤1.3 s (6 ms during the herd)** while 31.9 s `edited-files`
+subs run concurrently ⇒ that 31.9 s is async I/O wait that yields the loop, not an event-loop/flush
+block. The minutes-scale `flushNotifies` peak is the **bootCritical DB set** FULL-recomputing under
+the **DB-pool** `loader-acquire` tail (40–75 s) at boot/catch-up (`live-state-snapshot.onReady` →
+`recomputeResource` + `runCatchUp`) — the **cold-boot fan-out root below**; the "new conversation slow
+in sidebar" symptom is the WS-reconnect herd, reattributed there. This issue is now scoped to the
+`sub`/first-subscribe + fs-watch axis. **Next:** Phase-2 trace of watcher recompute rate vs real
+change rate (unchanged). Full detail + sessions + checklist →
+**[`issue-git-derived-loaders.md`](./issue-git-derived-loaders.md)**.
 
 ### Conversation load 40+ s → main-thread event-loop block → `buildPluginTree` over-extraction (Ongoing)
 

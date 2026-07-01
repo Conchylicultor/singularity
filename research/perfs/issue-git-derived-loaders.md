@@ -66,20 +66,67 @@ flush is queued. Context: recurring `queue-backlog` report (count 545) and `live
 5496) on the same DB — a heavily-loaded instance with many open conversations (⇒ many
 `edited-files`/`commits-graph` subscriptions).
 
-**Open (do NOT overclaim — Phase-2 trace pending):** is `flushNotifies` slow because the git loaders
-run *inside* its recompute cascade, or because the flush is queued *behind* them on the event loop /
-the per-worktree gate? Both fit the numbers; the trace decides the altitude. Follow-up task filed
-(see Sessions).
+**RESOLVED (2026-07-01 session 2 Phase-2 trace) — the flush stall is NOT a git-loader problem.**
+The open question posed a false dichotomy; the answer is **neither**. Three converging lines
+(live coherent-window profile + code + boot-path data) show the git loaders never touch the
+flush, and the flush's own multi-minute peak is a boot/catch-up DB-pool artifact — the
+[cold-boot fan-out](./issue-cold-boot-fanout.md) root, not this issue. Evidence:
+
+1. **The expensive git work is `sub`-origin, never `push` (flush) origin.** In a coherent window
+   (`sinceMs` 18.6 s) `edited-files` runs as `sub` at **avg 10.9 s / max 31.9 s** (three ~31.9 s
+   subs at the same `atMs` — a fan-out herd); its `push` (flush-cascade) count is **zero**.
+   `commits-graph.delta` push is 45 ms. **Gate 2 (legitimacy):** the flush does not carry the git
+   cost.
+2. **The flush stays sub-second *while* the 31.9 s git subs run concurrently.** Same window: `flush`
+   max **1266 ms** (`atMs` 4887), and at `atMs` 32 000–35 000 — *during* the 31.9 s `edited-files`
+   herd — flushes are **6.4 ms / 570 ms**; steady-state `flush.lastMs` **0.037 ms**. A concurrent
+   6 ms flush is impossible if the 31.9 s git work were blocking the event loop or queued ahead of
+   the flush ⇒ that 31.9 s is almost entirely **async I/O wait** (git subprocess + `heavy-read-local`
+   gate), which *yields* the loop. **The flush is not starved by, nor queued behind, the git loaders.**
+3. **The git resources are structurally excluded from the flush's boot recompute.** `edited-files` is
+   `defineExternalResource` and neither it nor `commits-graph.delta` is `bootCritical`; since
+   `shouldPersist = bootCritical && !externalSource`, `drainEntry`'s `persisted` FULL-recompute path
+   never runs for them. What *does* run FULL inside the flush at boot is the **bootCritical DB-backed
+   set** (`queue-ranks`, `tasks`, `attempts`, `conversations-active`, `conversation-progress`, …):
+   `live-state-snapshot`'s `onReady` does `recomputeResource(key)` for each + `runCatchUp()`, both
+   routing through `scheduleNotify → flushNotifies → drainEntry(persisted)` (captureWatermark + FULL
+   loader + persistSnapshot). Those loaders are gated by the **DB connection pool** (`loader-acquire`),
+   whose herd tail is **40–75 s** (`[acquire]` max 75.9 s, per cold-boot-fanout). Serialized by the
+   flush's level barriers + single-active-flush mutex, that is what inflates `flushNotifies` to the
+   minutes-scale sticky `max_ms` — a **DB-pool** cost, zero git.
+
+**Measurement caveat (honest gap):** the `flush.workMs == avgMs` reported by the profiler is NOT
+"CPU work" — the `flush` span records the whole `runFlushCycle` wall-clock, and every gate-wait
+inside charges the *nested* `push`/`loader` entry (innermost), never the `flush`. So a big
+`flush.max` with empty `waits` is untracked wall-clock (mostly awaiting DB-pool-gated bootCritical
+loaders), which the prior 2026-07-01 note mis-read as the flush being "behind the git loaders."
+
+**Reattribution:** the "new conversation took minutes to appear in the sidebar queue" symptom is the
+cold-boot / **WS-reconnect fan-out herd** on the DB-pool gate (the `queue-ranks` sub/deliver queued
+behind the ~30-resource boot herd on `loader-acquire`) — it belongs to
+[`issue-cold-boot-fanout.md`](./issue-cold-boot-fanout.md), not here. This issue (git-derived
+loaders) remains real but is scoped to the **`sub`/first-subscribe + fs-watch** path.
+
+**One direct confirmation still worth capturing (does not change the conclusion):** catch a *live*
+multi-minute `flush` span and show its nested `push`/`deliver:*` children are DB-backed bootCritical
+loaders whose `loader-acquire` waits sum to the minutes, with **zero** `edited-files`/`commits-graph`
+push children. The clean window above already shows the shape (max flush 1.3 s = its slowest
+`deliver:*` branch under mild pool contention); a boot-herd capture would show the same shape scaled
+by the 40–75 s pool tail.
 
 ## Causes — checklist
 
 Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / needs proof
 
-- 🔬 **Git-loader gate tail delays live-state flush delivery (not just first-subscribe)** — 2026-07-01:
-  `flushNotifies` last 4.1 s / peak ~16.5 min, loaders last 14–18 s / peak ~12 min, `heavy-read-local`
-  last 48 s — all live on `singularity`. Manifested as a new conversation taking minutes to appear in
-  the sidebar queue. Open: flush-cascade-contains-loaders vs flush-queued-behind-loaders. Phase-2 trace
-  pending (task filed).
+- ❌ **Git-loader gate tail delays live-state flush delivery** — 2026-07-01 (2), killed by **gate 2
+  (legitimacy) + a direct counterfactual**: in a coherent window the flush stays **≤1.3 s (6 ms during
+  the herd)** while `edited-files` `sub` loaders run **31.9 s concurrently**, and the git resources are
+  `external`/non-`bootCritical` so they never enter the flush's `persisted` FULL-recompute. The flush's
+  minutes-scale `max` is the **bootCritical DB set** FULL-recomputing under the **DB-pool** `loader-acquire`
+  tail (40–75 s), routed through the flush by `live-state-snapshot.onReady` (`recomputeResource` +
+  `runCatchUp`). That is the [cold-boot fan-out](./issue-cold-boot-fanout.md) root, not git. The prior
+  reading conflated the flush's untracked wall-clock (it awaits DB-pool-gated bootCritical loaders) with
+  "behind the git loaders." Symptom (new conversation slow in sidebar) reattributed to the reconnect herd.
 - 🔬 **`edited-files` cold-miss compute is the driver** — 2026-06-29 (6): work-bound, ~1.3–1.5 s of
   real git work per memo miss (4 serial git spawns). Open: is the watcher recompute *rate* legitimate,
   or amplified by no-change fs events (recompute pays full git cost *before* the unchanged-result
@@ -132,3 +179,17 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   and now manifesting as **multi-minute latency for a live-state UI update** (a new conversation not
   appearing in the sidebar queue for minutes). Surfaced while debugging that symptom. No code changes;
   Phase-2 trace (flush-cascade-contains-loaders vs flush-queued-behind-loaders) filed as a task.
+
+- **2026-07-01 (2) — Phase-2 flush trace (recorded above; the open question is RESOLVED).**
+  Read the flush code path (`resource-runtime/core/runtime.ts` `flushNotifies` → `runFlushCycle` →
+  `drainEntry`), the profiler recorder semantics (`flush.workMs` = full wall-clock, gate-waits charge
+  the nested `push`/`loader`, not the `flush`), and a coherent live `get_runtime_profile` window.
+  **Result: the "flush queued behind git loaders" framing is refuted (gate 2 + counterfactual).** The
+  git loaders are `sub`-origin only and never enter the flush (they are `external`/non-`bootCritical`);
+  the flush stays ≤1.3 s while 31.9 s git subs run concurrently ⇒ not starved by them. The flush's
+  minutes-scale peak is the bootCritical DB set FULL-recomputing under the **DB-pool** `loader-acquire`
+  tail at boot/catch-up (`live-state-snapshot.onReady` → `recomputeResource` + `runCatchUp`), i.e. the
+  **cold-boot fan-out** root. Symptom reattributed to the WS-reconnect herd. No code changes; a direct
+  boot-herd flush capture remains the one nice-to-have confirmation. This issue is now scoped to the
+  `sub`/first-subscribe + fs-watch axis; the flush/delivery-latency angle moves to
+  [`issue-cold-boot-fanout.md`](./issue-cold-boot-fanout.md).

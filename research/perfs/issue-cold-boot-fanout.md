@@ -45,6 +45,18 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
 - 🔬 **Reconnect vs boot vs change-feed as the herd trigger** — the recurring (not one-off) sub
   averages imply WS reconnects re-subscribing all resources. Instrument what enqueues each fan-out
   burst before the fix.
+- ✅ **The multi-minute `flushNotifies` peak belongs to THIS herd, not the git loaders** — 2026-07-01 (2),
+  moved here from [`issue-git-derived-loaders.md`](./issue-git-derived-loaders.md). At boot/catch-up
+  `live-state-snapshot.onReady` drives the **bootCritical DB set** (`queue-ranks`, `tasks`, `attempts`,
+  `conversations-active`, …) through `flushNotifies` FULL (`recomputeResource(key)` + `runCatchUp()` →
+  `drainEntry(persisted)`: captureWatermark + FULL loader + persistSnapshot). Serialized by the flush's
+  level barriers + single-active-flush mutex and gated by the **DB-pool** `loader-acquire` tail (40–75 s),
+  that is what inflates `flushNotifies` to minutes — a DB-pool cost. The git loaders (`edited-files`,
+  `commits-graph`) are `external`/non-`bootCritical`, run `sub`-origin only, and do NOT block the flush
+  (a coherent window shows the flush at ≤1.3 s / 6 ms while 31.9 s `edited-files` subs run concurrently).
+  So a live-state UI update (e.g. a new conversation in the sidebar queue) delayed for minutes is this
+  fan-out herd on the DB-pool gate, not a git-gate problem. **Same structural fix as the herd** (bound /
+  stagger the fan-out; snapshot-serve non-boot-critical keys on reconnect; admission control).
 
 ## Sessions
 
