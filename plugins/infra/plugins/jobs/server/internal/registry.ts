@@ -4,6 +4,7 @@ import type { PoolClient } from "pg";
 import type { z } from "zod";
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import { DEFAULT_MAX_ATTEMPTS, JOB_TASK } from "./constants";
+import type { WaitForOptions } from "./step-ctx";
 import { getWorkerUtils } from "./worker";
 
 export { DEFAULT_MAX_ATTEMPTS } from "./constants";
@@ -46,9 +47,12 @@ export interface JobCtx {
   /**
    * Subscribe to `event` (optionally filtered by `where`), suspend the
    * handler, and return the event payload once it fires. Returns `null` on
-   * timeout. DO NOT wrap in try/catch — suspend is signaled by a sentinel
-   * error that the worker catches; swallowing it hangs the workflow. If
-   * you must catch (e.g. wrapping in your own retry), gate the catch on
+   * timeout. Every wait is bounded by construction: `opts.timeoutMs` defaults
+   * to {@link DEFAULT_WAIT_TIMEOUT_MS} and is clamped to {@link
+   * MAX_WAIT_TIMEOUT_MS} — pass `opts.unbounded: true` for the rare
+   * genuinely-forever wait. DO NOT wrap in try/catch — suspend is signaled by a
+   * sentinel error that the worker catches; swallowing it hangs the workflow.
+   * If you must catch (e.g. wrapping in your own retry), gate the catch on
    * `isSuspendSignal(err)` and re-throw.
    */
   waitFor<T extends Record<string, unknown>>(
@@ -57,12 +61,7 @@ export interface JobCtx {
       readonly def: { name: string };
       readonly filter: Record<string, unknown>;
     },
-    opts?: {
-      where?: Partial<T>;
-      match?: (payload: T) => boolean;
-      timeoutMs?: number;
-      name?: string;
-    },
+    opts?: WaitForOptions<T>,
   ): Promise<T | null>;
   /**
    * Suspend until `ms` have elapsed. Same try/catch caveat as `waitFor` —
