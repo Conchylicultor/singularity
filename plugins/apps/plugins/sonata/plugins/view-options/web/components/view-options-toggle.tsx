@@ -1,6 +1,7 @@
 /**
- * ViewOptionsToggle — the host-owned display-options popover button in the
- * lane's HUD cluster, sitting beside the FX chip.
+ * ViewOptionsToggle — the shared display-options popover button, contributed to
+ * the `Sonata.Hud` cluster so it appears in EVERY display lens (piano roll,
+ * notation, songsheet) rather than being mounted by one display.
  *
  * Lists every `Sonata.ViewOption` contribution: each hands a config_v2
  * descriptor (optionally a `fields` subset), and the host renders those fields
@@ -35,11 +36,13 @@ export function ViewOptionsToggle() {
   if (options.length === 0) return null;
 
   return (
-    // The HUD sits INSIDE the lane's drag-to-scrub surface, whose pointerdown
-    // handler takes pointer capture (useInertialDrag) — capture retargets the
-    // gesture to the lane and suppresses the button's `click`, so the popover
-    // would never open (and a press would grab the scrubber). Stop pointer
-    // events here so a press on the button is a button press, not a drag.
+    // The HUD may sit INSIDE a display's drag-to-scrub surface (e.g. the piano
+    // roll), whose pointerdown handler takes pointer capture (useInertialDrag) —
+    // capture retargets the gesture to the lane and suppresses the button's
+    // `click`, so the popover would never open (and a press would grab the
+    // scrubber). The shared HUD cluster is also pointer-events-none. Re-enable
+    // pointer events and stop pointerdown here so a press on the button is a
+    // button press, not a drag.
     <div
       className="pointer-events-auto"
       onPointerDown={(e) => e.stopPropagation()}

@@ -1,10 +1,11 @@
-// @hash 95f93508d1f1
+// @hash fa6f2d432a99
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
     "apps.sonata.audio.metronome:count-in",
-    "apps.sonata.rich.key-chip:key-chip"
+    "apps.sonata.rich.key-chip:key-chip",
+    "apps.sonata.view-options:view-options"
   ]
 }

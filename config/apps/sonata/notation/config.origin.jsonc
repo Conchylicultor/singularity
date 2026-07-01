@@ -1,5 +1,10 @@
-// @hash 5fbf5bb6a5c7
+// @hash 3c9945b094e4
 {
+  // How tracks map onto staves: auto, a merged grand staff, or one staff per track.
+  // Allowed values: "auto", "grand", "perTrack"
+  "staffLayout": "auto",
+  // Split each staff into independent voices (stems up/down); held notes stay put.
+  "separateVoices": true,
   // Print chord symbols above the staff when the score has them.
   "showChordSymbols": true,
   // MIDI pitch at or above which notes go to the treble staff (60 = middle C).

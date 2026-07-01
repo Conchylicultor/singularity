@@ -26,7 +26,7 @@ export default {
     Sonata.ViewOption({
       id: "notation",
       config: notationConfig,
-      fields: ["showChordSymbols"],
+      fields: ["staffLayout", "showChordSymbols"],
     }),
   ],
 } satisfies PluginDefinition;

@@ -16,6 +16,10 @@ import {
   useCursorApi,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  useHiddenTrackIds,
+  useTrackMixerEntries,
+} from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
@@ -24,7 +28,7 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { convert } from "../internal/convert";
+import { convert, type StaffLayout } from "../internal/convert";
 import {
   engrave,
   type BeatAnchor,
@@ -74,10 +78,38 @@ function locate(
 }
 
 function NotationInner({ score }: NotationProps) {
-  const { showChordSymbols, splitPitch } = useConfig(notationConfig);
+  const { showChordSymbols, splitPitch, staffLayout, separateVoices } =
+    useConfig(notationConfig);
   const { seekTo, isPlaying } = useSonata();
   const cursor = useCursorApi();
   const isDark = useDarkMode();
+
+  // Drop hidden tracks (track-mixer) before engraving, and pass the visible
+  // tracks' names through so per-track staves can be labeled.
+  const hiddenTrackIds = useHiddenTrackIds();
+  const trackEntries = useTrackMixerEntries();
+  const visibleScore = useMemo<Score>(() => {
+    if (hiddenTrackIds.size === 0) return score;
+    return {
+      ...score,
+      notes: score.notes.filter((n) => !hiddenTrackIds.has(n.track)),
+    };
+  }, [score, hiddenTrackIds]);
+  // Track metadata for `convert`: instrument key (gmProgram/instrumentHint) from
+  // the score's own tracks — the authoritative instrument info `auto` groups by —
+  // joined with the track-mixer's display name (honors a user rename). Filtered
+  // to the visible tracks so a hidden track never forms a part.
+  const trackMeta = useMemo(() => {
+    const nameById = new Map(trackEntries.map((e) => [e.trackId, e.name]));
+    return score.tracks
+      .filter((t) => !hiddenTrackIds.has(t.id))
+      .map((t) => ({
+        id: t.id,
+        name: nameById.get(t.id) ?? t.name,
+        gmProgram: t.gmProgram,
+        instrumentHint: t.instrumentHint,
+      }));
+  }, [score.tracks, trackEntries, hiddenTrackIds]);
 
   const [sizeRef, size] = useElementSize<HTMLDivElement>();
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -93,11 +125,25 @@ function NotationInner({ score }: NotationProps) {
   const isPlayingRef = useLatestRef(isPlaying);
 
   const model = useMemo(
-    () => convert(score, { splitPitch, showChordSymbols }),
-    [score, splitPitch, showChordSymbols],
+    () =>
+      convert(visibleScore, {
+        splitPitch,
+        showChordSymbols,
+        staffLayout: staffLayout as StaffLayout,
+        separateVoices,
+        tracks: trackMeta,
+      }),
+    [
+      visibleScore,
+      splitPitch,
+      showChordSymbols,
+      staffLayout,
+      separateVoices,
+      trackMeta,
+    ],
   );
-  const endBeat = useMemo(() => scoreEndBeat(score), [score]);
-  const hasNotes = score.notes.length > 0;
+  const endBeat = useMemo(() => scoreEndBeat(visibleScore), [visibleScore]);
+  const hasNotes = visibleScore.notes.length > 0;
 
   // Imperative per-frame cursor application — playhead position + note highlight,
   // ZERO React renders. Reads the latest engrave result + cursor from refs.

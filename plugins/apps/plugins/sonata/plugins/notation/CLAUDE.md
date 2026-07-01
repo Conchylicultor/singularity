@@ -2,10 +2,43 @@
 
 A third `Sonata.Display` lens (beside `piano-roll` and `songsheet`): standard
 **sheet-music notation**. It engraves the fully-composed `Score` (transpose,
-key inference and spelling already applied by the shell) as a **grand staff** —
-treble + bass joined by a brace — with clefs, key/time signatures, barlines,
-accidentals, rests and ties, and follows playback with a moving playhead, an
-active-note highlight, per-system auto-scroll, and click-to-seek.
+key inference and spelling already applied by the shell) as a **part → staff →
+voice** system — clefs, key/time signatures, barlines, accidentals, rests and
+ties — and follows playback with a moving playhead, an active-note highlight,
+per-system auto-scroll, and click-to-seek.
+
+## Model: part → staff → voice
+
+The pure converter (`convert.ts`) builds the score in three nested layers, then
+the engraver lays them out:
+
+- **Parts** — one per instrument group. The `staffLayout` config chooses the
+  mapping: `grand` merges every track onto a single treble/bass grand staff;
+  `perTrack` gives each track its own part (one staff, or a grand staff when the
+  track's range straddles the split pitch by ≥16 semitones); `auto` groups tracks
+  by **instrument** — a per-track key of `gmProgram` (else `instrumentHint`, else
+  the track id so unknown instruments never merge). Each `auto` group pools its
+  tracks' notes into one part: a solo-piano piece imported as two left/right-hand
+  tracks shares one GM program → **one** grand staff (the pitch split + per-clef
+  voice separation reconstructs the standard piano engraving), while a true
+  ensemble of distinct instruments stays one part per instrument. If `auto`
+  yields exactly one group it renders identically to `grand`; multiple groups use
+  the per-part staff/grand-staff + bracket logic. Parts are ordered top→bottom by
+  descending mean pitch. >1 part → the system is wrapped in a `bracket`; a
+  grand-staff part is joined by a `brace`.
+- **Staves** — a part owns 1 staff (clef by median pitch) or 2 (treble/bass split
+  by `splitPitch`). Every measure carries the same staff shape so the engraver
+  stacks/connects uniformly; an empty staff in a bar becomes a whole-measure rest.
+- **Voices** — each staff's notes are partitioned into independent melodic lines
+  by `voices.ts` (`partitionVoices`). Explicit `Note.voice` numbers are honored
+  verbatim; otherwise voices are inferred (interval-graph greedy coloring with a
+  pitch-coherence tiebreak), capped at `maxVoicesPerStaff` (default 2, classical
+  max 4). A 2-voice staff opposes stems (upper up, lower down). Because a voice
+  never staggered-overlaps, the existing run/quantize/decompose machinery —
+  **run per voice** — produces clean tied chords with **no re-articulation by
+  construction**: a held note in one voice isn't in another voice's note-set, so
+  a neighbour's onset can't re-strike it. `separateVoices=false` collapses each
+  staff to a single voice (the v1 look).
 
 ## Renderer: VexFlow (scoped here)
 
@@ -24,15 +57,19 @@ measures — is a **pure, unit-tested** pipeline, kept renderer-free:
 - `web/internal/durations.ts` — `decomposeDuration(beats)` splits a beat-length
   into VexFlow notation pieces (`1.5` → one dotted quarter; `1.25` → a quarter
   tied to a sixteenth), the vocabulary the engraver and rests both draw.
+- `web/internal/voices.ts` — `partitionVoices(notes, opts)` splits a staff's
+  notes into ordered independent voices (explicit-voice honored first, else
+  inferred). Pure + unit-tested.
 - `web/internal/convert.ts` — `convert(score, opts)` → an `EngraveModel`:
-  ordered measures, each with a treble + bass tickable sequence (chords, rests,
-  ties), key/time-signature metadata, and optional chord symbols. Bars come from
-  `bars()`; notes are quantized to a 1/16 grid, split treble/bass by `splitPitch`,
-  and walked in Q-steps (a *run* = a span where the sounding set is constant) so
-  chords, rests and ties fall out by construction.
+  ordered measures of `staves` (each a clef + voices of chords/rests/ties), the
+  `parts` layout, key/time-signature metadata, and optional chord symbols. Bars
+  come from `bars()`; per voice, notes are quantized to a 1/16 grid and walked in
+  Q-steps (a *run* = a span where the sounding set is constant) so chords, rests
+  and ties fall out by construction.
 - `web/components/engrave.ts` — `EngraveModel + width + colors` → VexFlow draws
-  into an SVG host; returns the geometry the component follows playback with
-  (beat→x anchors, per-system boxes, tagged note elements).
+  N staves × M voices into an SVG host (per-staff Y, brace/bracket connectors,
+  opposed stems, optional per-track labels); returns the geometry the component
+  follows playback with (beat→x anchors, per-system boxes, tagged note elements).
 - `web/components/notation.tsx` — the Display component: measures width via
   `useElementSize`, re-engraves on score/width/theme change, drives the playhead
   and highlight **imperatively** (`useCursorApi().subscribe`, zero re-render per
@@ -40,16 +77,27 @@ measures — is a **pure, unit-tested** pipeline, kept renderer-free:
 
 `capabilities: []` — a reading view that owns its own overlay; it publishes no
 shell `Projection`, so the falling-notes overlays / pitch-axis correctly don't
-mount here. Config (`config_v2`, registered on web + server): `showChordSymbols`
-(bool) and `splitPitch` (int, the treble/bass MIDI split).
+mount here. Config (`config_v2`, registered on web + server): `staffLayout`
+(enum auto/grand/perTrack), `separateVoices` (bool), `showChordSymbols` (bool),
+`splitPitch` (int, the treble/bass MIDI split). The component drops hidden tracks
+(via the `track-mixer` `useHiddenTrackIds` hook) and passes per-track metadata to
+`convert` — names (track-mixer override else the score track name) for labels,
+plus `gmProgram`/`instrumentHint` from the score's own `tracks` for the `auto`
+instrument grouping — while `convert` itself stays pure.
 
-## v1 caveats / follow-ups
+## Resolved (was v1 caveats)
 
-- **Single voice per staff, fixed pitch split.** v1 ignores `track`/`voice` and
-  splits treble/bass by a fixed MIDI pitch. True multi-voice (SATB, independent
-  stems) and per-track staves are follow-ups. A chord change re-articulates a
-  held note on the same staff (no cross-onset tie) — acceptable for a reading
-  view, removed by real voice separation.
+- **True multi-voice + per-track staves.** Each staff is partitioned into
+  independent voices with opposed stems; a held note under a moving line stays
+  put (no re-articulation) by construction. Tracks map onto staves per
+  `staffLayout`; `perTrack` brackets one staff/grand-staff per track.
+
+## Remaining caveats / follow-ups
+
+- **Display-voice cap.** A staff shows at most `maxVoicesPerStaff` voices
+  (default 2, ≤4). Beyond the cap, an overflow line merges into the nearest-pitch
+  voice — re-articulation can reappear only at that dense spot. Configurable later.
+- **Treble/bass clefs only.** No alto/tenor C-clefs (viola etc. a follow-up).
 - **1/16 quantization.** Tuplets (triplets), grace notes and sub-sixteenth
   ornaments are approximated or dropped. Tuplet support is a follow-up.
 - **Cross-system ties are dropped.** A tie whose two notes land in different
@@ -64,7 +112,7 @@ mount here. Config (`config_v2`, registered on web + server): `showChordSymbols`
 - Description: Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
 - Web:
   - Contributes: `Sonata.Display` "Notation" → `Notation`, `ConfigV2.WebRegister`, `Sonata.ViewOption` "notation"
-  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/element-size.useElementSize`, `primitives/latest-ref.useLatestRef`, `primitives/syntax-highlight.useDarkMode`
+  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackMixerEntries`, `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/element-size.useElementSize`, `primitives/latest-ref.useLatestRef`, `primitives/syntax-highlight.useDarkMode`
 - Server:
   - Uses: `config_v2.ConfigV2`
 

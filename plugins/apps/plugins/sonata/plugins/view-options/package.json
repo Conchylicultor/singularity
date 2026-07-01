@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-view-options",
+  "description": "Sonata Hud: shared display-options chip surfacing every Sonata.ViewOption in every display lens.",
+  "private": true,
+  "version": "0.0.1"
+}
