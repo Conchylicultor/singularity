@@ -11,7 +11,7 @@ import { db } from "@plugins/database/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { isMain } from "@plugins/infra/plugins/paths/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
-import { JOB_TASK } from "./constants";
+import { JOB_TASK, JOB_CONCURRENCY } from "./constants";
 import {
   getScheduledJobs,
   UNSAFE_getRegisteredJob,
@@ -21,8 +21,6 @@ import { isSuspendSignal, makeDurableCtx } from "./step-ctx";
 import { isNonRetryableError } from "./non-retryable";
 import { markJobPermanentlyFailed } from "./introspection";
 import { _jobSteps, _jobWaits } from "./tables";
-
-const CONCURRENCY = 4;
 
 let runner: Runner | null = null;
 
@@ -93,7 +91,7 @@ export async function startWorker(): Promise<Runner> {
   runner = await run(
     {
       connectionString: connectionString(),
-      concurrency: CONCURRENCY,
+      concurrency: JOB_CONCURRENCY,
       taskList: {
         // biome-ignore lint/suspicious/noExplicitAny: graphile's JobHelpers typing requires the full interface; we only need job.id and job.attempts.
         [JOB_TASK]: async (payload: unknown, helpers: any) => {

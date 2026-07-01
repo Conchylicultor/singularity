@@ -7,6 +7,12 @@
 // research/2026-04-24-global-jobs-events-split.md §"Layer 1".
 export const JOB_TASK = "jobs.run";
 
+// Size of the shared worker slot pool: at most this many jobs run concurrently
+// per worktree backend. The single source for the pool size — the worker passes
+// it to graphile's `run({ concurrency })`, and queue-health reports
+// `lockedCount / concurrency` saturation against it.
+export const JOB_CONCURRENCY = 4;
+
 // Small default so permanently-broken handlers don't thrash Graphile forever.
 // Callers override per-job via `defineJob({ maxAttempts })` or per-enqueue via
 // `enqueue(input, { maxAttempts })`.

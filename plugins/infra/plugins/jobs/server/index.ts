@@ -39,8 +39,19 @@ export type { DurableHooks } from "./internal/step-ctx";
 export { NonRetryableError } from "./internal/non-retryable";
 export { abortDurableRun } from "./internal/abort-run";
 export { jobsListResource, deadJobsResource } from "./internal/resources";
-export { queryDeadJobStats, queryQueueBacklog } from "./internal/introspection";
-export type { DeadJobStat, QueueBacklogStat } from "./internal/introspection";
+export {
+  queryDeadJobStats,
+  queryQueueBacklog,
+  queryBacklogByJobName,
+  queryRunningJobs,
+} from "./internal/introspection";
+export type {
+  DeadJobStat,
+  QueueBacklogStat,
+  BacklogJobStat,
+  RunningJobStat,
+} from "./internal/introspection";
+export { JOB_CONCURRENCY } from "./internal/constants";
 
 export default {
   description:

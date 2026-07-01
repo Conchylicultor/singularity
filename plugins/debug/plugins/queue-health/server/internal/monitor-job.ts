@@ -3,6 +3,8 @@ import {
   defineJob,
   queryDeadJobStats,
   queryQueueBacklog,
+  queryBacklogByJobName,
+  queryRunningJobs,
 } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { recordReport } from "@plugins/reports/server";
@@ -31,6 +33,7 @@ export const queueHealthMonitorJob = defineJob({
 
     await checkDeadJobs();
     await checkBacklog(cfg.backlogDepthThreshold, cfg.oldestOverdueMinutes);
+    await checkSlotHogs(cfg.runningJobMinutes);
   },
 });
 
@@ -70,10 +73,15 @@ async function checkBacklog(
     readyCount > backlogDepthThreshold || oldestOverdueMs > oldestThresholdMs;
   if (!tripped) return;
 
+  // Attribute the rollup: which jobs are filling the ready queue. Only fetched
+  // when the threshold has already tripped, so the healthy path stays two
+  // aggregate queries.
+  const topReady = await queryBacklogByJobName();
+
   await recordReport({
     kind: "queue-backlog",
     source: "server-queue-monitor",
-    data: { readyCount, oldestOverdueMs, lockedCount, stalled },
+    data: { readyCount, oldestOverdueMs, lockedCount, stalled, topReady },
     message: stalled
       ? `STALLED — ${readyCount} ready, 0 running, oldest overdue ${Math.round(
           oldestOverdueMs / 1000,
@@ -82,6 +90,51 @@ async function checkBacklog(
           oldestOverdueMs / 1000,
         )}s`,
   });
+}
+
+// Slot-hogging: a job holding a shared worker slot longer than the threshold —
+// the failure mode the backlog `stalled` signal (0 locked) cannot see. Collapse
+// the currently-locked rows to the longest-held per jobName, then file one
+// report per jobName over the threshold.
+async function checkSlotHogs(runningJobMinutes: number): Promise<void> {
+  const thresholdMs = runningJobMinutes * 60_000;
+  const running = await queryRunningJobs();
+
+  // queryRunningJobs is ordered by lockedForMs DESC, so the first row seen for a
+  // jobName is its longest-held slot. Also count concurrent rows for that job.
+  const longestPerJob = new Map<
+    string,
+    { lockedForMs: number; sampleJobId: string; runningCount: number }
+  >();
+  for (const r of running) {
+    const existing = longestPerJob.get(r.jobName);
+    if (existing) {
+      existing.runningCount += 1;
+    } else {
+      longestPerJob.set(r.jobName, {
+        lockedForMs: r.lockedForMs,
+        sampleJobId: r.jobId,
+        runningCount: 1,
+      });
+    }
+  }
+
+  for (const [jobName, agg] of longestPerJob) {
+    if (agg.lockedForMs <= thresholdMs) continue;
+    await recordReport({
+      kind: "queue-slot-hog",
+      source: "server-queue-monitor",
+      data: {
+        jobName,
+        lockedForMs: agg.lockedForMs,
+        runningCount: agg.runningCount,
+        sampleJobId: agg.sampleJobId,
+      },
+      message: `${jobName} holding a slot for ${Math.round(
+        agg.lockedForMs / 1000,
+      )}s`,
+    });
+  }
 }
 
 function firstLine(s: string): string {

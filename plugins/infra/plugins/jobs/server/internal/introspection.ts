@@ -26,6 +26,11 @@ export const deadJobPredicate = sql`${jobTaskScope}
   AND j.attempts >= j.max_attempts
   AND j.locked_at IS NULL`;
 
+// "Ready" = eligible to run right now but not yet picked up: overdue, unlocked,
+// and still within its retry budget. The single home for the ready predicate,
+// shared by the aggregate backlog snapshot and the per-jobName attribution.
+export const readyPredicate = sql`j.run_at <= now() AND j.locked_at IS NULL AND j.attempts < j.max_attempts`;
+
 // One terminally-dead row per distinct jobName: how many, the worst-case attempt
 // counters, the latest error, and a sample graphile job id for hand-inspection.
 export interface DeadJobStat {
@@ -103,13 +108,12 @@ interface QueueBacklogRow {
 // retry-eligible; lockedCount = currently running; oldestOverdueMs = age of the
 // oldest ready job.
 export async function queryQueueBacklog(): Promise<QueueBacklogStat> {
-  const ready = sql`j.run_at <= now() AND j.locked_at IS NULL AND j.attempts < j.max_attempts`;
   const result = await db.execute(sql`
-    SELECT count(*) FILTER (WHERE ${ready})::int AS ready_count,
+    SELECT count(*) FILTER (WHERE ${readyPredicate})::int AS ready_count,
            count(*) FILTER (WHERE j.locked_at IS NOT NULL)::int AS locked_count,
            coalesce(
              extract(epoch FROM (
-               now() - min(j.run_at) FILTER (WHERE ${ready})
+               now() - min(j.run_at) FILTER (WHERE ${readyPredicate})
              )) * 1000,
              0
            )::bigint AS oldest_overdue_ms
@@ -122,4 +126,80 @@ export async function queryQueueBacklog(): Promise<QueueBacklogStat> {
     lockedCount: row?.locked_count ?? 0,
     oldestOverdueMs: Number(row?.oldest_overdue_ms ?? 0),
   };
+}
+
+// One ready row per distinct jobName: how many are waiting and how overdue the
+// oldest is. GROUP BY jobName over the ready predicate, ordered by depth, top-N.
+// Attributes the aggregate backlog rollup to the jobs filling the ready queue.
+export interface BacklogJobStat {
+  jobName: string;
+  readyCount: number;
+  oldestOverdueMs: number;
+}
+
+interface BacklogJobStatRow {
+  job_name: string;
+  ready_count: number;
+  // bigint comes back from pg as a string; coerced to number below.
+  oldest_overdue_ms: string;
+}
+
+// Read-only: ready-queue depth per jobName, top-N by readyCount.
+export async function queryBacklogByJobName(limit = 5): Promise<BacklogJobStat[]> {
+  const result = await db.execute(sql`
+    SELECT ${jobNameExpr}                                          AS job_name,
+           count(*)::int                                           AS ready_count,
+           coalesce(
+             extract(epoch FROM (now() - min(j.run_at))) * 1000,
+             0
+           )::bigint                                               AS oldest_overdue_ms
+      FROM ${queueJobsFrom}
+     WHERE ${jobTaskScope} AND ${readyPredicate}
+     GROUP BY 1
+     ORDER BY ready_count DESC
+     LIMIT ${limit}
+  `);
+  return (result.rows as unknown as BacklogJobStatRow[]).map((r) => ({
+    jobName: r.job_name,
+    readyCount: r.ready_count,
+    oldestOverdueMs: Number(r.oldest_overdue_ms),
+  }));
+}
+
+// One currently-locked (running) row, holding a slot from the shared pool: which
+// job, its graphile id, how long it has held the slot, and the worker that owns
+// it. Ordered by locked duration so the longest slot-holders lead. Attributes
+// slot saturation — a job locked for many minutes is why new work waits.
+export interface RunningJobStat {
+  jobName: string;
+  jobId: string;
+  lockedForMs: number;
+  lockedBy: string | null;
+}
+
+interface RunningJobStatRow {
+  job_name: string;
+  job_id: string;
+  // bigint comes back from pg as a string; coerced to number below.
+  locked_for_ms: string;
+  locked_by: string | null;
+}
+
+// Read-only: currently-locked (running) jobs, longest-held slot first.
+export async function queryRunningJobs(): Promise<RunningJobStat[]> {
+  const result = await db.execute(sql`
+    SELECT ${jobNameExpr}                                              AS job_name,
+           j.id::text                                                  AS job_id,
+           (extract(epoch FROM (now() - j.locked_at)) * 1000)::bigint  AS locked_for_ms,
+           j.locked_by                                                 AS locked_by
+      FROM ${queueJobsFrom}
+     WHERE ${jobTaskScope} AND j.locked_at IS NOT NULL
+     ORDER BY locked_for_ms DESC
+  `);
+  return (result.rows as unknown as RunningJobStatRow[]).map((r) => ({
+    jobName: r.job_name,
+    jobId: r.job_id,
+    lockedForMs: Number(r.locked_for_ms),
+    lockedBy: r.locked_by,
+  }));
 }

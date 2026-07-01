@@ -30,7 +30,7 @@ replay; a plain `Error` remains the right choice for anything retry could fix.
 - Server:
   - Uses: `database.db`, `database/admin.connectionString`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
   - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
-  - Exports: Types: `DeadJobStat`, `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `QueueBacklogStat`, `RegisteredJob`, `ScheduleSpec`; Values: `abortDurableRun`, `deadJobsResource`, `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `NonRetryableError`, `queryDeadJobStats`, `queryQueueBacklog`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
+  - Exports: Types: `BacklogJobStat`, `DeadJobStat`, `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `QueueBacklogStat`, `RegisteredJob`, `RunningJobStat`, `ScheduleSpec`; Values: `abortDurableRun`, `deadJobsResource`, `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `JOB_CONCURRENCY`, `jobsListResource`, `NonRetryableError`, `queryBacklogByJobName`, `queryDeadJobStats`, `queryQueueBacklog`, `queryRunningJobs`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
   - Register: `defineJob('jobs.resume')`, `defineJob('jobs.dead-gc')`
   - Resources: `dead-jobs` (invalidate)
   - Routes: `GET /api/jobs`, `GET /api/jobs/dead`, `POST /api/jobs/:id/retry`, `DELETE /api/jobs/:id`

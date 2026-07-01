@@ -29,5 +29,12 @@ export const queueHealthConfig = defineConfig({
       description:
         "File a queue-backlog report when the oldest ready job has been overdue longer than this many minutes (a stall signal).",
     }),
+    runningJobMinutes: intField({
+      default: 5,
+      min: 0,
+      label: "Slot-hog threshold (minutes)",
+      description:
+        "File a queue-slot-hog report when a job has held a worker slot (locked/running) longer than this many minutes.",
+    }),
   },
 });

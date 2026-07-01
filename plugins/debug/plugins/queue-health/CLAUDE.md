@@ -1,15 +1,21 @@
 # queue-health
 
 The graphile-worker job queue degrades **silently** — nothing in the UI signals
-when it breaks. This plugin makes two failure modes **loud** by filing them into
-the existing reports engine (the same surface that captures crashes), modeled
-byte-for-byte on `debug/slow-ops` (durable signal → `ReportKind` → deduped task).
-It reads the queue **read-only** through the jobs plugin's public introspection API (`queryDeadJobStats` / `queryQueueBacklog`), which owns the graphile-internals coupling — the `jobs.run` task literal, the `payload->>'jobName'` encoding, and the terminally-dead predicate — so this monitor can never drift from how the queue is actually encoded.
+when it breaks. This plugin makes its saturation/failure modes **loud** by filing
+them into the existing reports engine (the same surface that captures crashes),
+modeled byte-for-byte on `debug/slow-ops` (durable signal → `ReportKind` →
+deduped task), and surfaces an attributed snapshot on demand via a summary
+endpoint + the `get_queue_health` MCP tool. It reads the queue **read-only**
+through the jobs plugin's public introspection API (`queryDeadJobStats` /
+`queryQueueBacklog` / `queryBacklogByJobName` / `queryRunningJobs`), which owns
+the graphile-internals coupling — the `jobs.run` task literal, the
+`payload->>'jobName'` encoding, the ready/terminally-dead predicates — so this
+monitor can never drift from how the queue is actually encoded.
 
 ## What it monitors
 
-One cheap scheduled monitor job (`debug.queue-health-monitor`) runs two aggregate
-queries per tick and files reports only when a threshold trips:
+One cheap scheduled monitor job (`debug.queue-health-monitor`) runs a few
+aggregate queries per tick and files reports only when a threshold trips:
 
 - **`queue-dead-job`** (variant `error`) — terminally-failed jobs
   (`attempts >= max_attempts AND locked_at IS NULL`, the same predicate
@@ -22,12 +28,39 @@ queries per tick and files reports only when a threshold trips:
   overdue past `oldestOverdueMinutes`. `stalled = lockedCount === 0 && overdue`
   (the worker is making no progress). **One rolling report per worktree**
   (fingerprint `queue-backlog:rollup`; the reports unique index is
-  `(fingerprint, worktree)`, so worktrees never collide).
+  `(fingerprint, worktree)`, so worktrees never collide). When a threshold trips
+  the payload is **enriched** with `topReady` — a top-N per-jobName breakdown
+  (`queryBacklogByJobName`) attributing which jobs are filling the ready queue.
+  The extra query runs only on the already-tripped path, so the healthy path
+  stays aggregate-only. `topReady` is **optional** so reports stored before this
+  field existed still parse.
+- **`queue-slot-hog`** (variant `warning`) — slot-hogging. The worker drains a
+  single shared pool of `JOB_CONCURRENCY` slots; a job locked/running for many
+  minutes starves the queue **even while `lockedCount > 0`** — the exact wedge
+  the backlog `stalled` signal (which only trips at 0 locked) cannot see.
+  `checkSlotHogs` calls `queryRunningJobs()`, collapses to the longest-held slot
+  per jobName, and files one report per jobName whose `lockedForMs` exceeds
+  `runningJobMinutes`. **One report per distinct jobName** (fingerprint
+  `queue-slot-hog:<jobName>`).
+
+## Summary endpoint + MCP tool
+
+- **`GET /api/debug/queue-health/summary`** (`queueHealthSummaryEndpoint`) — a
+  single attributed snapshot: `{ concurrency, backlog:{readyCount, lockedCount,
+  oldestOverdueMs}, byJobName, running, dead }`, assembled from the jobs plugin's
+  read-only introspection API.
+- **`get_queue_health`** MCP tool — proxies to the summary endpoint through the
+  gateway (the `get_runtime_profile` gateway-proxy pattern), so it always reads
+  the target worktree's live backend. `worktree` arg (defaults to the
+  conversation's own worktree; pass `"singularity"` for main). `byJobName`
+  attributes the ready backlog, `running` (with `lockedForMs`) attributes who
+  holds the shared slots, and `dead` the terminal failures.
 
 ## Thresholds (config_v2, mirroring slowOpConfig)
 
-`enabled = true`, `backlogDepthThreshold = 200`, `oldestOverdueMinutes = 10`.
-Read live each tick via `getConfig`, editable in Settings → Config.
+`enabled = true`, `backlogDepthThreshold = 200`, `oldestOverdueMinutes = 10`,
+`runningJobMinutes = 5` (the slot-hog threshold). Read live each tick via
+`getConfig`, editable in Settings → Config.
 
 ## Why per-worktree, singleton, cheap
 
@@ -37,24 +70,28 @@ Read live each tick via `getConfig`, editable in Settings → Config.
 - **`dedup: "singleton"`** — the monitor itself can never pile up.
 - **`maxAttempts: 3`** — a transiently-broken monitor doesn't become a dead-job
   storm of its own.
-- **Two aggregate queries, no row fetches** — negligible cost; reports fire only
-  on a tripped threshold (silent when healthy), and the engine's velocity limiter
-  + dedup absorb bursts. Both kinds set `notifCooldownMs ≈ 10 min` so a persistent
-  problem re-alerts the bell periodically without spamming.
+- **Aggregate queries, bounded row fetches** — the healthy path is the dead-job
+  aggregate + the backlog aggregate + a bounded currently-locked scan; the
+  per-jobName backlog breakdown fetches only on the already-tripped path.
+  Negligible cost; reports fire only on a tripped threshold (silent when
+  healthy), and the engine's velocity limiter + dedup absorb bursts. All three
+  kinds set `notifCooldownMs ≈ 10 min` so a persistent problem re-alerts the bell
+  periodically without spamming.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Queue-health report renderers: one-line Debug → Reports summaries for the queue-dead-job and queue-backlog kinds, plus the threshold config registration. Queue-health monitor: a cheap per-worktree scheduled job that samples the graphile queue and files deduped reports for terminally-dead jobs (per jobName) and backlog/stall, through the existing reports engine.
+- Description: Queue-health report renderers: one-line Debug → Reports summaries for the queue-dead-job, queue-backlog, and queue-slot-hog kinds, plus the threshold config registration. Queue-health monitor: a cheap per-worktree scheduled job that samples the graphile queue and files deduped reports for terminally-dead jobs (per jobName), backlog/stall (with per-jobName attribution), and slot-hogging jobs, through the existing reports engine. Also exposes a queue-health summary endpoint + the get_queue_health MCP tool.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `DeadJobSummary`, `Reports.KindView` → `BacklogSummary`
+  - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `DeadJobSummary`, `Reports.KindView` → `BacklogSummary`, `Reports.KindView` → `SlotHogSummary`
   - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/jobs.defineJob`, `infra/jobs.queryDeadJobStats`, `infra/jobs.queryQueueBacklog`, `reports.recordReport`, `reports.ReportKind`
-  - Register: `defineJob('debug.queue-health-monitor')`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.JOB_CONCURRENCY`, `infra/jobs.queryBacklogByJobName`, `infra/jobs.queryDeadJobStats`, `infra/jobs.queryQueueBacklog`, `infra/jobs.queryRunningJobs`, `infra/mcp.Mcp`, `reports.recordReport`, `reports.ReportKind`, `tasks/tasks-core.getConversation`
+  - Register: `defineJob('debug.queue-health-monitor')`, `mcpTool('get_queue_health')`
+  - Routes: `GET /api/debug/queue-health/summary`
 - Core:
-  - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/int/config.intField`
-  - Exports: Types: `QueueBacklogPayload`, `QueueDeadJobPayload`; Values: `QueueBacklogPayloadSchema`, `QueueDeadJobPayloadSchema`, `queueHealthConfig`
+  - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/int/config.intField`, `infra/endpoints.defineEndpoint`
+  - Exports: Types: `QueueBacklogPayload`, `QueueDeadJobPayload`, `QueueHealthSummary`, `QueueSlotHogPayload`; Values: `QueueBacklogPayloadSchema`, `QueueDeadJobPayloadSchema`, `queueHealthConfig`, `queueHealthSummaryEndpoint`, `QueueHealthSummarySchema`, `QueueSlotHogPayloadSchema`
 
 <!-- AUTOGENERATED:END -->

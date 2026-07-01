@@ -54,6 +54,17 @@ function renderDescription(row: ReportRow, d: QueueBacklogPayload): string {
   lines.push(`**Ready (overdue, unlocked):** ${d.readyCount}`);
   lines.push(`**Oldest overdue:** ${formatDurationMs(d.oldestOverdueMs)}`);
   lines.push(`**Locked (running):** ${d.lockedCount}`);
+  if (d.topReady && d.topReady.length > 0) {
+    lines.push("");
+    lines.push("**Top jobs in the ready queue:**");
+    for (const j of d.topReady) {
+      lines.push(
+        `- \`${j.jobName}\` — ${j.readyCount} ready, oldest ${formatDurationMs(
+          j.oldestOverdueMs,
+        )}`,
+      );
+    }
+  }
   lines.push("");
   lines.push(
     "Inspect the live queue in **Debug → Queue** and the full report history " +
