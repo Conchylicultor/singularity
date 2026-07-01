@@ -154,6 +154,14 @@ export interface EntityMeta<F extends FieldsRecord> {
   // a `["a","b"]` literal a `readonly` tuple — still satisfies the constraint.
   primaryKey?: (keyof F & string) | readonly (keyof F & string)[];
   columns?: { [K in keyof F]?: EntityColumnMeta<InferFieldValue<F[K]>> };
+  // Wire-projection concern (distinct from the per-column DDL concerns above):
+  // keys that stay in the table DDL but are OMITTED from the derived wire schema
+  // (and from `wireColumns`, so the loader never even fetches them). Kept as a
+  // top-level array — not a per-column flag — so the browser can import the
+  // identical omit-list from the plugin's browser-safe `core/` and build its own
+  // wire schema without re-declaring it (entities is server-only). Absent /
+  // empty ⇒ every column is on the wire (unchanged behaviour).
+  serverOnly?: readonly (keyof F & string)[];
   // Passthrough to pgTable's 3rd-arg callback; `t` is keyed by JS property
   // name. Merged with the composite-PK entry inside `defineEntity`.
   indexes?: (
@@ -161,26 +169,53 @@ export interface EntityMeta<F extends FieldsRecord> {
   ) => AnyIndexBuilder[];
 }
 
-export interface Entity<F extends FieldsRecord, D extends keyof F = never> {
+// The keys marked `serverOnly` in `meta` — the columns present in the table DDL
+// but ABSENT from the wire schema / `wireColumns`. Mirrors `DefaultedKeys` but
+// simpler: it reads the array element type directly. Absent ⇒ `never` (every
+// column is on the wire).
+export type ServerOnlyKeys<F extends FieldsRecord, M extends EntityMeta<F>> =
+  M["serverOnly"] extends readonly (infer K)[] ? K & keyof F : never;
+
+export interface Entity<
+  F extends FieldsRecord,
+  D extends keyof F = never,
+  S extends keyof F = never,
+> {
   readonly name: string;
   // Inferred from the `pgTable(...)` call so `db.select().from(entity.table)`
   // carries the real columnType/dataType `db.select()`/`.where()` need. The `D`
   // (DB-defaulted) keys ride through to `BuildColumns` so `$inferInsert` marks
-  // them optional, while `$inferSelect` stays exact.
+  // them optional, while `$inferSelect` stays exact. UNCHANGED by `S` — the
+  // server-only columns stay in the FULL table DDL.
   readonly table: PgTableWithColumns<{
     name: string;
     schema: undefined;
     dialect: "pg";
     columns: BuildColumns<string, EntityColumns<F, D>, "pg">;
   }>;
-  // = fieldsToZodObject(fields); keyed by JS prop like `$inferSelect`.
-  readonly schema: z.ZodObject<{ [K in keyof F]: F[K]["schema"] }>;
+  // The WIRE schema = `wireSchema(fields, meta.serverOnly)`; keyed by JS prop
+  // like `$inferSelect`, minus the server-only keys `S`. With `S = never`
+  // (no server-only columns) this is `{ [K in keyof F]: F[K]["schema"] }` —
+  // identical to before.
+  readonly schema: z.ZodObject<{ [K in Exclude<keyof F, S>]: F[K]["schema"] }>;
+  // The drizzle column-proxy subset the loader hands to `db.select(...)`: the
+  // table's columns minus the server-only keys. `db.select(entity.wireColumns)
+  // .from(entity.table)` never fetches the server-only columns, so they cannot
+  // leak — and the inferred rows equal `z.infer<entity.schema>` by construction
+  // (both are the full column/schema set with the same `S` keys removed). With
+  // `S = never` this is the full `BuildColumns` map.
+  readonly wireColumns: Pick<
+    BuildColumns<string, EntityColumns<F, D>, "pg">,
+    Exclude<keyof F, S>
+  >;
 }
 
 // Sugar so consumers needn't import zod:
 //   type SlowOpRow = EntityRow<typeof slowOps>;
+// Inferred from the entity's OWN (already server-only-omitted) schema, so it is
+// the wire row shape regardless of `S`.
 export type EntityRow<E> =
-  E extends Entity<infer F, infer _D> ? z.infer<Entity<F>["schema"]> : never;
+  E extends { schema: z.ZodType<infer T> } ? T : never;
 
 // ─── Default-marker constructors ───────────────────────────────────────────
 export function defaultNow(): DbDefault<never> {

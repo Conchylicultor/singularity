@@ -1,8 +1,8 @@
-import { z } from "zod";
-import { pgTable, primaryKey } from "drizzle-orm/pg-core";
 import { resolveFieldStorage } from "@plugins/fields/plugins/server-capabilities/server";
-import { fieldsToZodObject } from "@plugins/fields/core";
+import { wireSchema } from "@plugins/infra/plugins/entities/core";
 import type { FieldsRecord } from "@plugins/fields/core";
+import { pgTable, primaryKey } from "drizzle-orm/pg-core";
+import { z } from "zod";
 import { snakeCase } from "./snake-case";
 import type {
   ColumnDefault,
@@ -11,6 +11,7 @@ import type {
   Entity,
   EntityColumns,
   EntityMeta,
+  ServerOnlyKeys,
 } from "./types";
 
 // A bare (non-marker) default value. Markers carry a `kind` discriminant; a
@@ -73,7 +74,11 @@ function applyDefault(b: any, def: ColumnDefault<unknown>, key: string): any {
 export function defineEntity<
   F extends FieldsRecord,
   const M extends EntityMeta<F> = EntityMeta<F>,
->(name: string, fields: F, meta: M = {} as M): Entity<F, DefaultedKeys<F, M>> {
+>(
+  name: string,
+  fields: F,
+  meta: M = {} as M,
+): Entity<F, DefaultedKeys<F, M>, ServerOnlyKeys<F, M>> {
   const builders: Record<string, unknown> = {};
 
   for (const [key, field] of Object.entries(fields)) {
@@ -139,7 +144,48 @@ export function defineEntity<
     extraConfig,
   );
 
-  const schema = fieldsToZodObject(fields);
+  // ─── Server-only columns ──────────────────────────────────────────────────
+  // Keys present in the table DDL above but OMITTED from the wire schema and the
+  // loader's select-map. The column-builder loop is untouched, so the DDL is
+  // byte-identical — `serverOnly` is purely a wire-projection concern.
+  const serverOnly = new Set<string>(meta.serverOnly ?? []);
+  for (const key of serverOnly) {
+    if (!(key in fields)) {
+      throw new Error(
+        `defineEntity("${name}"): serverOnly key "${key}" is not a field.`,
+      );
+    }
+    if (
+      meta.primaryKey === key ||
+      (Array.isArray(meta.primaryKey) && meta.primaryKey.includes(key))
+    ) {
+      throw new Error(
+        `defineEntity("${name}"): primary-key column "${key}" cannot be serverOnly.`,
+      );
+    }
+  }
 
-  return Object.freeze({ name, table, schema }) as Entity<F, DefaultedKeys<F, M>>;
+  // Wire schema omits the server-only keys — built via the SAME `wireSchema`
+  // helper the browser calls, so `entity.schema` and a browser-side
+  // `wireSchema(fields, SERVER_ONLY)` are equal by construction.
+  const schema = wireSchema(fields, meta.serverOnly ?? []);
+
+  // The loader's select-map: table columns minus the server-only keys, so the
+  // server-only data is never even fetched (cannot leak).
+  const wireKeys = Object.keys(fields).filter((k) => !serverOnly.has(k));
+  const wireColumns = Object.fromEntries(
+    wireKeys.map((k) => [k, (table as Record<string, unknown>)[k]]),
+  );
+
+  // `as unknown as` (like the `EntityColumns` cast above): inside this generic
+  // body `wireSchema`/`wireColumns` are typed against the widened
+  // `keyof F & string` server-only set, not the caller's literal `serverOnly`.
+  // The declared return type `ServerOnlyKeys<F, M>` is the contract consumers
+  // see — at a concrete call site it resolves to the exact server-only keys, so
+  // `entity.schema` / `entity.wireColumns` carry the precise omitted types.
+  return Object.freeze({ name, table, schema, wireColumns }) as unknown as Entity<
+    F,
+    DefaultedKeys<F, M>,
+    ServerOnlyKeys<F, M>
+  >;
 }

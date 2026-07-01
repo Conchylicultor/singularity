@@ -1,24 +1,36 @@
-import { pgTable, text, timestamp, uniqueIndex, uuid } from "drizzle-orm/pg-core";
-import type { GenStatus } from "../../core";
+import { uniqueIndex } from "drizzle-orm/pg-core";
+import {
+  defineEntity,
+  defaultNow,
+  defaultRandom,
+} from "@plugins/infra/plugins/entities/server";
+import {
+  storyGeneratedUnitFields,
+  STORY_GENERATED_UNIT_SERVER_ONLY,
+} from "../../core/schemas";
 
 // One row per (page, kind, unit). `kind` is the rendererId (e.g. "blog");
 // `unitId` is a renderer-derived stable id ("article" for blog v1, a node id
-// once segmented). Whole-artifact = all rows for (pageId, kind).
-export const _storyGeneratedUnits = pgTable(
+// once segmented). Whole-artifact = all rows for (pageId, kind). The table + the
+// wire schema both derive from the single `storyGeneratedUnitFields` record
+// (core); `prompt` + the timestamps stay in the DDL but are kept off the wire.
+export const storyGeneratedUnits = defineEntity(
   "story_generated_units",
+  storyGeneratedUnitFields,
   {
-    id: uuid("id").primaryKey().defaultRandom(),
-    pageId: text("page_id").notNull(),
-    kind: text("kind").notNull(),
-    unitId: text("unit_id").notNull(),
-    inputHash: text("input_hash").notNull(),
-    status: text("status").$type<GenStatus>().notNull(),
-    output: text("output"),
-    prompt: text("prompt"),
-    instruction: text("instruction"),
-    error: text("error"),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    primaryKey: "id",
+    serverOnly: STORY_GENERATED_UNIT_SERVER_ONLY,
+    columns: {
+      id: { default: defaultRandom() },
+      createdAt: { default: defaultNow() },
+      updatedAt: { default: defaultNow() },
+    },
+    indexes: (t) => [
+      uniqueIndex("story_generated_units_pk_idx").on(t.pageId, t.kind, t.unitId),
+    ],
   },
-  (t) => [uniqueIndex("story_generated_units_pk_idx").on(t.pageId, t.kind, t.unitId)],
 );
+
+// drizzle-kit schema-glob discovery. Name kept so the barrel re-export and the
+// mutations/routes referencing the table don't churn.
+export const _storyGeneratedUnits = storyGeneratedUnits.table;

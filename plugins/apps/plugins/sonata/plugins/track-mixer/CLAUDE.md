@@ -58,10 +58,13 @@ plus a per-song reset.
   - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/css/card.Card`, `primitives/css/color-picker.SwatchGrid`, `primitives/css/row.Row`, `primitives/css/row.SectionHeaderRow`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`
   - Exports: Types: `TrackMixerEntry`; Values: `blackKeyColor`, `useHiddenTrackIds`, `useMutedTrackIds`, `useTrackColorMap`, `useTrackInstrumentMap`, `useTrackMixerEntries`
 - Server:
-  - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`
+  - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`
   - DB schema: `plugins/apps/plugins/sonata/plugins/track-mixer/server/internal/tables.ts`
   - Exports: Values: `_trackView`, `trackViewLiveResource`
   - Routes: `POST /api/sonata/songs/:songId/track-view`, `DELETE /api/sonata/songs/:songId/track-view`
+- Core:
+  - Uses: `fields.FieldsRecord`, `fields.nullable`, `fields/bool/config.boolField`, `fields/date/config.dateField`, `fields/text/config.textField`, `infra/entities.wireSchema`
+  - Exports: Types: `TrackViewRow`; Values: `TrackViewRowSchema`
 - Cross-plugin:
   - Imported by: `apps/sonata/audio/engine`, `apps/sonata/notation`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`
 

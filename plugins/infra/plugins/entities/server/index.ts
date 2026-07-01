@@ -18,6 +18,7 @@ export type {
   EntityReference,
   EntityRow,
   DefaultedKeys,
+  ServerOnlyKeys,
   ColumnDefault,
   DbDefault,
 } from "./internal/types";

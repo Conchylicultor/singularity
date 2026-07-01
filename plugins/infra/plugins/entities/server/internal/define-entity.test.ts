@@ -273,6 +273,126 @@ type _SelectInfer = (typeof slowOpsForType.table)["$inferSelect"];
 // Exported so noUnusedLocals keeps the assertion (a type-test alias).
 export type _RowMatchesWire = Expect<Equal<_SchemaInfer, _SelectInfer>>;
 
+// ── Server-only columns: in the table DDL, off the wire ─────────────────────
+// An entity with a `serverOnly` key keeps the column in the FULL table DDL but
+// omits it from BOTH the derived wire `schema` and `wireColumns` (the loader's
+// select-map). The column-builder loop is untouched, so `$inferSelect` still
+// carries every column — the omit lives only on the wire side.
+function buildServerOnlyEnt() {
+  return defineEntity(
+    "ent_server_only",
+    {
+      id: field(uuidType, z.string(), ""),
+      pageId: field(textType, z.string(), ""),
+      output: field(textType, z.string(), ""),
+      // server-only columns:
+      prompt: field(textType, z.string(), ""),
+      createdAt: field(dateType, z.date(), new Date(0)),
+    },
+    {
+      primaryKey: "id",
+      serverOnly: ["prompt", "createdAt"],
+      columns: {
+        id: { default: defaultRandom() },
+        createdAt: { default: defaultNow() },
+      },
+    },
+  );
+}
+
+test("server-only columns stay in the DDL but leave the wire schema + wireColumns", () => {
+  const ent = buildServerOnlyEnt();
+
+  // (a) DDL is FULL — every column (incl. server-only) is a real table column.
+  const { columns } = getTableConfig(ent.table);
+  const ddlNames = new Set(columns.map((c) => c.name));
+  expect(ddlNames.has("prompt")).toBe(true);
+  expect(ddlNames.has("created_at")).toBe(true);
+  expect(ddlNames.has("output")).toBe(true);
+
+  // (b) wireColumns excludes the server-only keys, keeps the normal ones.
+  const wireKeys = Object.keys(ent.wireColumns);
+  expect(wireKeys).toContain("id");
+  expect(wireKeys).toContain("pageId");
+  expect(wireKeys).toContain("output");
+  expect(wireKeys).not.toContain("prompt");
+  expect(wireKeys).not.toContain("createdAt");
+  // Each wire column is the real drizzle column proxy off the table.
+  expect(ent.wireColumns.output).toBe(ent.table.output);
+
+  // (c) the wire schema parses a row WITHOUT the server-only keys (strict object
+  // would reject `prompt`/`createdAt` if they were still in the shape).
+  const row = { id: "x", pageId: "p", output: "o" };
+  expect(() => ent.schema.parse(row)).not.toThrow();
+  const parsed = ent.schema.parse(row) as Record<string, unknown>;
+  expect("prompt" in parsed).toBe(false);
+  expect("createdAt" in parsed).toBe(false);
+});
+
+test("defineEntity throws when a serverOnly key is not a field", () => {
+  expect(() =>
+    defineEntity(
+      "ent_bad_server_only",
+      { id: field(uuidType, z.string(), "") },
+      // `nope` is not a field key.
+      { primaryKey: "id", serverOnly: ["nope" as "id"] },
+    ),
+  ).toThrow(/serverOnly key "nope" is not a field/);
+});
+
+test("defineEntity throws when a serverOnly key is the primary key", () => {
+  // Single-column PK.
+  expect(() =>
+    defineEntity(
+      "ent_pk_server_only",
+      { id: field(uuidType, z.string(), ""), note: field(textType, z.string(), "") },
+      { primaryKey: "id", serverOnly: ["id"] },
+    ),
+  ).toThrow(/primary-key column "id" cannot be serverOnly/);
+
+  // Composite PK.
+  expect(() =>
+    defineEntity(
+      "ent_composite_pk_server_only",
+      {
+        a: field(textType, z.string(), ""),
+        b: field(textType, z.string(), ""),
+      },
+      { primaryKey: ["a", "b"], serverOnly: ["b"] },
+    ),
+  ).toThrow(/primary-key column "b" cannot be serverOnly/);
+});
+
+// ── Compile-time guard: wire schema ≡ $inferSelect MINUS the server-only keys ─
+// The full-column invariant becomes: `z.infer<schema>` equals `$inferSelect`
+// with exactly the server-only keys removed. This is the server-only analogue
+// of `_RowMatchesWire`.
+const serverOnlyForType = buildServerOnlyEnt();
+type _WireInfer = z.infer<typeof serverOnlyForType.schema>;
+type _FullSelect = (typeof serverOnlyForType.table)["$inferSelect"];
+export type _WireOmitsServerOnly = Expect<
+  Equal<_WireInfer, Omit<_FullSelect, "prompt" | "createdAt">>
+>;
+// The server-only keys are genuinely absent from the wire schema shape…
+export type _PromptOffWire = Expect<
+  Equal<"prompt" extends keyof _WireInfer ? true : false, false>
+>;
+export type _CreatedAtOffWire = Expect<
+  Equal<"createdAt" extends keyof _WireInfer ? true : false, false>
+>;
+// …while `$inferSelect` still carries them (they're real table columns).
+export type _PromptOnSelect = Expect<
+  Equal<"prompt" extends keyof _FullSelect ? true : false, true>
+>;
+// And `wireColumns` is typed WITHOUT the server-only keys.
+type _WireCols = typeof serverOnlyForType.wireColumns;
+export type _WireColsOmitsServerOnly = Expect<
+  Equal<"prompt" extends keyof _WireCols ? true : false, false>
+>;
+export type _WireColsKeepsNormal = Expect<
+  Equal<"output" extends keyof _WireCols ? true : false, true>
+>;
+
 // ── Compile-time guard: DB-defaulted columns are OPTIONAL on insert ─────────
 // A column with a DB default (`meta.columns[k].default`, incl. defaultNow /
 // defaultRandom / the `[]` rings) must NOT be required by `$inferInsert` — a
