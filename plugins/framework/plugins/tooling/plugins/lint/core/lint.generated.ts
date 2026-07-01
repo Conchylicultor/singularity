@@ -41,6 +41,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/css/plugins/spacing", id: "primitives.css.spacing", loader: () => import("@plugins/primitives/plugins/css/plugins/spacing/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/surface", id: "primitives.css.surface", loader: () => import("@plugins/primitives/plugins/css/plugins/surface/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/text", id: "primitives.css.text", loader: () => import("@plugins/primitives/plugins/css/plugins/text/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/css/plugins/ui-kit", id: "primitives.css.ui-kit", loader: () => import("@plugins/primitives/plugins/css/plugins/ui-kit/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/viewport-overlay", id: "primitives.css.viewport-overlay", loader: () => import("@plugins/primitives/plugins/css/plugins/viewport-overlay/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/z-layers", id: "primitives.css.z-layers", loader: () => import("@plugins/primitives/plugins/css/plugins/z-layers/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/data-table", id: "primitives.data-table", loader: () => import("@plugins/primitives/plugins/data-table/lint"), dependsOn: [] },

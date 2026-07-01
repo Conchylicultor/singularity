@@ -96,6 +96,36 @@ function DropdownMenuLabel({
   )
 }
 
+/**
+ * A labelled menu section: the `Group` + `GroupLabel` pair rendered together as
+ * one unit. Base-ui's `Menu.GroupLabel` (our `DropdownMenuLabel`) requires an
+ * ancestor `Menu.Group` context — a groupless label throws a hard runtime error
+ * (#31 `useMenuGroupRootContext`) that white-screens the menu. This composed
+ * primitive makes that coupling structurally impossible: the label always sits
+ * inside its group, alongside the section's items (so `aria-labelledby` is
+ * correct). Prefer this over a hand-rolled `DropdownMenuGroup` + `DropdownMenuLabel`
+ * for any labelled section; the `no-groupless-dropdown-menu-label` lint rule
+ * enforces it.
+ */
+function DropdownMenuSection({
+  label,
+  inset,
+  children,
+  ...props
+}: MenuPrimitive.Group.Props & {
+  /** The section heading, rendered as the group's `GroupLabel`. */
+  label: React.ReactNode
+  /** Indent the label to align with inset items. */
+  inset?: boolean
+}) {
+  return (
+    <DropdownMenuGroup {...props}>
+      <DropdownMenuLabel inset={inset}>{label}</DropdownMenuLabel>
+      {children}
+    </DropdownMenuGroup>
+  )
+}
+
 function DropdownMenuItem({
   className,
   inset,
@@ -284,6 +314,7 @@ export {
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuLabel,
+  DropdownMenuSection,
   DropdownMenuItem,
   DropdownMenuCheckboxItem,
   DropdownMenuRadioGroup,

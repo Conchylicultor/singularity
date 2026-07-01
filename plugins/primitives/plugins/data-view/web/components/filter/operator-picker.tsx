@@ -4,9 +4,8 @@ import {
   Button,
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
-  DropdownMenuLabel,
+  DropdownMenuSection,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
@@ -67,26 +66,29 @@ export function OperatorPicker(props: {
         <MdExpandMore />
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start">
-        {groups.map((group, index) => (
-          <Fragment key={group.label || "__default"}>
-            {index > 0 && <DropdownMenuSeparator />}
-            <DropdownMenuGroup>
-              {group.label && (
-                <DropdownMenuLabel>
-                  <SectionLabel>{group.label}</SectionLabel>
-                </DropdownMenuLabel>
-              )}
-              {group.operators.map((op) => (
-                <DropdownMenuItem
-                  key={op.id}
-                  onClick={() => props.onChange(op.id)}
+        {groups.map((group, index) => {
+          const items = group.operators.map((op) => (
+            <DropdownMenuItem key={op.id} onClick={() => props.onChange(op.id)}>
+              {op.label}
+            </DropdownMenuItem>
+          ));
+          return (
+            <Fragment key={group.label || "__default"}>
+              {index > 0 && <DropdownMenuSeparator />}
+              {group.label ? (
+                <DropdownMenuSection
+                  label={<SectionLabel>{group.label}</SectionLabel>}
                 >
-                  {op.label}
-                </DropdownMenuItem>
-              ))}
-            </DropdownMenuGroup>
-          </Fragment>
-        ))}
+                  {items}
+                </DropdownMenuSection>
+              ) : (
+                // The default, unlabeled section renders its items flat — no
+                // group/label wrapper.
+                items
+              )}
+            </Fragment>
+          );
+        })}
       </DropdownMenuContent>
     </DropdownMenu>
   );
