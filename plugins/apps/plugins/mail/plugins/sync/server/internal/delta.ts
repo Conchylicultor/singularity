@@ -3,22 +3,18 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineJob, NonRetryableError } from "@plugins/infra/plugins/jobs/server";
 import {
-  batchGetMessages,
   getProfile,
-  listHistory,
   listLabels,
 } from "@plugins/apps/plugins/mail/plugins/gmail-api/server";
-import {
-  GmailHistoryExpiredError,
-  type GmailHistoryRecord,
-} from "@plugins/apps/plugins/mail/plugins/gmail-api/core";
+import { GmailHistoryExpiredError } from "@plugins/apps/plugins/mail/plugins/gmail-api/core";
 import {
   _mailSyncState,
   requireGmailToken,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
 import { MAX_CONSECUTIVE_RESYNCS } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { backfillJob } from "./backfill";
-import { deleteMessage, upsertLabels, upsertMessage } from "./store";
+import { upsertLabels } from "./store";
+import { applyHistorySince } from "./history-sync";
 import { classifyMailSyncError } from "./classify-error";
 import { recordSyncError } from "./record-error";
 
@@ -57,20 +53,11 @@ export const deltaJob = defineJob({
       // Keep label names/colors current and the message↔label FK satisfiable.
       await upsertLabels(accountId, await listLabels(token));
 
-      // Paginate history from the watermark, collecting every record.
-      const records: GmailHistoryRecord[] = [];
-      let newHistoryId = state.historyId;
-      let pageToken: string | undefined;
+      // Consume history from the watermark, applying every record and advancing
+      // the watermark (shared with the self-renewing backfill).
+      let newHistoryId: string;
       try {
-        do {
-          const page = await listHistory(token, {
-            startHistoryId: state.historyId,
-            pageToken,
-          });
-          records.push(...(page.history ?? []));
-          newHistoryId = page.historyId;
-          pageToken = page.nextPageToken;
-        } while (pageToken);
+        newHistoryId = await applyHistorySince(token, accountId, state.historyId);
       } catch (err) {
         if (!(err instanceof GmailHistoryExpiredError)) throw err;
         // Watermark too old — Gmail dropped the history. Count this expiry-driven
@@ -117,26 +104,6 @@ export const deltaJob = defineJob({
         await backfillJob.enqueue({ accountId });
         return;
       }
-
-      // Collect the message ids to (re)fetch and the ones to delete. Re-fetch
-      // covers messagesAdded AND label changes (labelsAdded/labelsRemoved) — the
-      // upsert reconciles labels/flags/thread, so we never hand-apply a delta.
-      const toFetch = new Set<string>();
-      const toDelete = new Set<string>();
-      for (const rec of records) {
-        for (const a of rec.messagesAdded ?? []) toFetch.add(a.message.id);
-        for (const c of rec.labelsAdded ?? []) toFetch.add(c.message.id);
-        for (const c of rec.labelsRemoved ?? []) toFetch.add(c.message.id);
-        for (const d of rec.messagesDeleted ?? []) toDelete.add(d.message.id);
-      }
-      // A message deleted in this same window must not be re-fetched.
-      for (const id of toDelete) toFetch.delete(id);
-
-      if (toFetch.size > 0) {
-        const msgs = await batchGetMessages(token, [...toFetch]);
-        for (const m of msgs) await upsertMessage(accountId, m);
-      }
-      for (const id of toDelete) await deleteMessage(id);
 
       // Advance the watermark even when there were zero records (it may have
       // moved server-side). Clear any prior error on a successful delta.

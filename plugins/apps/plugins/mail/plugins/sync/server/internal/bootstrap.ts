@@ -42,9 +42,10 @@ async function findOrCreateAccount(email: string): Promise<string> {
 // so a bootstrap-time failure (e.g. `403 accessNotConfigured` / API disabled, or
 // insufficient scopes) has a real `mail_sync_state` row to attach its classified
 // error to — and thus reaches the sync-status banner instead of vanishing into
-// dead jobs. Capturing `profile.historyId` BEFORE the (possibly long) backfill
-// means any change during backfill is caught by the first delta from that
-// watermark.
+// dead jobs. `profile.historyId` is captured here as the INITIAL watermark; the
+// backfill then renews it on every page (interleaved `history.list` catch-up),
+// so it can never outlive Gmail's history window and every change during
+// backfill is applied as it happens — see `backfill.ts` / `history-sync.ts`.
 export async function ensureAccount(): Promise<{
   accountId: string;
   status: string;

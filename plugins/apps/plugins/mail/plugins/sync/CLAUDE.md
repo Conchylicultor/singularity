@@ -17,9 +17,17 @@ idle → (bootstrap) → backfilling → (last page) → delta ⇄ (404 expiry) 
 ```
 
 - **`historyId`** is the watermark — the Gmail mailbox revision the local mirror
-  is current to. `getProfile().historyId` is captured at bootstrap *before* the
-  (possibly long) backfill, so any change during backfill is caught by the first
-  delta from that watermark.
+  is current to. `getProfile().historyId` is captured at bootstrap as the
+  *initial* watermark; the backfill then **renews it on every page** by consuming
+  `history.list` from the current watermark forward (`applyHistorySince` in
+  `history-sync.ts`). This keeps the watermark within one page-interval of fresh,
+  so a long backfill can never outlive Gmail's history-retention window — the
+  root cause of the stale-historyId resync loop. It also captures in-flight
+  additions/label-changes/deletions that `messages.list` (newest-first, paging
+  downward) would otherwise skip, so nothing is lost. (Capturing a *fresh*
+  `profile.historyId` at completion instead would be **unsafe**: `messages.list`
+  is not a point-in-time snapshot, so it misses messages that arrive during
+  backfill, and a post-backfill watermark would start the first delta past them.)
 - **`lastFullSyncAt` / `lastDeltaSyncAt`** are observability timestamps.
 - The backfill **cursor** (Gmail `pageToken`) lives in the **job input**, not the
   DB — durable in the graphile row, so crash recovery resumes the exact page with
@@ -28,12 +36,16 @@ idle → (bootstrap) → backfilling → (last page) → delta ⇄ (404 expiry) 
 ## The three jobs + the manual endpoint
 
 - **`mail.backfill`** (`backfill.ts`) — one `messages.list` page per run:
-  batched `messages.get` → `upsertMessage`; re-enqueues itself for the next page;
-  on the final page flips `status` to `delta`. Dedup keyed by `accountId` (one
-  chain per account). A permanent permission/contract failure (`GmailApiError`
-  400/401/403) throws `NonRetryableError` so it dead-letters after one attempt
-  instead of burning the retry budget; transient errors retry the page (upserts
-  are idempotent).
+  batched `messages.get` → `upsertMessage`; then **renews the watermark** for the
+  page (`applyHistorySince` from the current `historyId`, persisting the advanced
+  value); re-enqueues itself for the next page; on the final page flips `status`
+  to `delta`. Dedup keyed by `accountId` (one chain per account). A permanent
+  permission/contract failure (`GmailApiError` 400/401/403) throws
+  `NonRetryableError` so it dead-letters after one attempt instead of burning the
+  retry budget; transient errors retry the page (upserts are idempotent). A
+  stale-watermark 404 during renewal is extremely narrow (the job stalled longer
+  than Gmail's history window *between two pages*); it re-arms from a fresh
+  `profile.historyId` and continues (logged to `mail-sync`).
 - **`mail.delta`** (`delta.ts`) — paginates `history.list` from the watermark,
   collects records, advances `historyId`. On a stale-watermark 404
   (`GmailHistoryExpiredError`) it re-enters `backfilling` from a fresh profile
