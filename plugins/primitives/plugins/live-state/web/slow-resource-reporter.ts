@@ -2,6 +2,21 @@ export interface SlowResourceInfo {
   key: string;
   params: unknown;
   durationMs: number;
+  /**
+   * Root-cause attribution, NOT a suppression signal. True when the
+   * notifications transport was not yet ready at the moment this resource
+   * mounted — so its mount→first-data settle is dominated by transport bring-up
+   * (cold-start), not the resource's own compute cost. The signal still fires
+   * with its full duration; this only says WHY it was slow.
+   */
+  transportColdStart: boolean;
+  /**
+   * Milliseconds of the settle window spent waiting for the transport to FIRST
+   * become ready (0 if the transport was already ready when the resource
+   * mounted). This is the portion of `durationMs` chargeable to transport
+   * bring-up rather than the resource.
+   */
+  transportWaitMs: number;
 }
 
 type Reporter = (info: SlowResourceInfo) => void;

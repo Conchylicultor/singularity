@@ -13,6 +13,15 @@ export const SlowOpClientBodySchema = z.object({
   durationMs: z.number(),
   thresholdMs: z.number(),
   caller: CallerRefSchema.optional(),
+  // Additive, backward-compatible cold-start attribution for the `element`
+  // signal (absent for page-load and older clients). `transportColdStart` marks
+  // that the notifications transport was not ready when the resource mounted;
+  // `transportWaitMs` is the portion of the settle window spent on transport
+  // bring-up. Charged to a `notifications-transport` wait layer + surfaced in
+  // the report so a slow settle reads as transport time-to-first-data, not
+  // resource compute.
+  transportColdStart: z.boolean().optional(),
+  transportWaitMs: z.number().optional(),
 });
 export type SlowOpClientBody = z.infer<typeof SlowOpClientBodySchema>;
 

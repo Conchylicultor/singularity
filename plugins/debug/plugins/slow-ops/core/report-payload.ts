@@ -11,5 +11,12 @@ export const SlowOpReportPayloadSchema = z.object({
   operation: z.string(),
   durationMs: z.number(),
   thresholdMs: z.number(),
+  // Optional, backward-compatible cold-start attribution (element signal only).
+  // Stored in the report's jsonb `data`, so no migration. When present and true,
+  // renderTask/renderDescription append that the measured duration was
+  // transport bring-up (time-to-first-data), not this resource's own compute —
+  // pointing the investigation at transport/boot readiness, not the resource.
+  transportColdStart: z.boolean().optional(),
+  transportWaitMs: z.number().optional(),
 });
 export type SlowOpReportPayload = z.infer<typeof SlowOpReportPayloadSchema>;

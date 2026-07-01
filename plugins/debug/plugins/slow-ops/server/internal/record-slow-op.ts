@@ -48,6 +48,12 @@ export interface RecordSlowOpInput {
   // Merged per layer into the row's durable `waits` so the wait-vs-work split
   // survives restart. Only entry spans (loader/http/sub/push) carry it.
   waits?: WaitBreakdown;
+  // Additive cold-start attribution (client `element` signal only). When the
+  // notifications transport was not ready at resource mount, this duration is
+  // transport time-to-first-data, not resource compute. Threaded into the report
+  // `data` (jsonb — no migration) so the report title/description says WHY.
+  transportColdStart?: boolean;
+  transportWaitMs?: number;
 }
 
 // Merge a caller into the existing breakdown list: bump an existing entry
@@ -107,8 +113,17 @@ function mergeSample(
 // the live resource, and fires the per-operation report (fire-and-forget so a
 // slow report path never blocks recording). Failures propagate loudly.
 export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
-  const { operationKind, operation, durationMs, thresholdMs, source, caller, waits } =
-    input;
+  const {
+    operationKind,
+    operation,
+    durationMs,
+    thresholdMs,
+    source,
+    caller,
+    waits,
+    transportColdStart,
+    transportWaitMs,
+  } = input;
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
 
   // One transaction so the onConflictDoUpdate row lock serializes concurrent
@@ -202,7 +217,15 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
   void recordReport({
     kind: "slow-op",
     source,
-    data: { operationKind, operation, durationMs, thresholdMs },
+    data: {
+      operationKind,
+      operation,
+      durationMs,
+      thresholdMs,
+      // Optional cold-start attribution — surfaced in the report title/desc.
+      ...(transportColdStart !== undefined ? { transportColdStart } : {}),
+      ...(transportWaitMs !== undefined ? { transportWaitMs } : {}),
+    },
     message: `${operationKind} ${operation} took ${durationRounded}ms (threshold ${thresholdMs}ms)`,
   });
 }

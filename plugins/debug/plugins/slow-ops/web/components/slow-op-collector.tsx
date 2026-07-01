@@ -71,6 +71,12 @@ export function SlowOpCollector() {
             // "who mounted this resource" attribution (resource key + params are
             // already in `operation`).
             caller: { kind: "route", label: location.pathname },
+            // Additive root-cause attribution: was the notifications transport
+            // still coming up when this resource mounted, and how much of the
+            // settle window was transport bring-up? Threads through so the report
+            // says WHY it was slow (transport cold-start vs resource compute).
+            transportColdStart: info.transportColdStart,
+            transportWaitMs: info.transportWaitMs,
           },
           keepalive: true,
           report: false,

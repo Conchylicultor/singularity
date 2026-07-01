@@ -33,8 +33,9 @@ export const slowOpKind = ReportKind({
   },
   renderTask: (row: ReportRow) => {
     const d = SlowOpReportPayloadSchema.parse(row.data);
+    const coldStartSuffix = d.transportColdStart ? " — transport cold-start" : "";
     return {
-      title: `[slow-op] ${d.operationKind} ${d.operation} — ${Math.round(d.durationMs)}ms`,
+      title: `[slow-op] ${d.operationKind} ${d.operation} — ${Math.round(d.durationMs)}ms${coldStartSuffix}`,
       description: renderDescription(row, d),
     };
   },
@@ -50,6 +51,18 @@ function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
   lines.push(`**Operation:** \`${d.operationKind}\` \`${d.operation}\``);
   lines.push(`**Latest duration:** ${Math.round(d.durationMs)}ms`);
   lines.push(`**Threshold:** ${d.thresholdMs}ms`);
+  if (d.transportColdStart) {
+    const waited =
+      d.transportWaitMs !== undefined ? ` (waited ~${Math.round(d.transportWaitMs)}ms for the socket)` : "";
+    lines.push("");
+    lines.push(
+      `**Root cause:** the notifications transport was not ready when this ` +
+        `resource mounted${waited}. This duration is time-to-first-data over the ` +
+        `transport, not the resource's own compute cost — investigate ` +
+        `transport/boot readiness, not this resource. (Cold-start slowness is ` +
+        `still a real regression to fix at the source.)`,
+    );
+  }
   lines.push("");
   lines.push(
     "See this op's full ranked breakdown — total time, max, and caller " +

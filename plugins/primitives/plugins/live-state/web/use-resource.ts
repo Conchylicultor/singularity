@@ -281,7 +281,26 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   useEffect(() => {
     if (!pending && !reportedRef.current) {
       reportedRef.current = true;
-      reportSlowResource({ key, params: p, durationMs: startRef.current === null ? 0 : performance.now() - startRef.current });
+      // Cold-start attribution (additive, never suppressing): was the transport
+      // NOT yet ready when this resource mounted, and how much of the settle
+      // window did it spend waiting for the transport to first become ready?
+      const start = startRef.current;
+      const firstReadyAt = notifications.getFirstReadyAt();
+      const transportColdStart =
+        start !== null && (firstReadyAt === null || firstReadyAt >= start);
+      const transportWaitMs =
+        start === null
+          ? 0
+          : firstReadyAt === null
+            ? performance.now() - start
+            : Math.max(0, Math.min(firstReadyAt, performance.now()) - start);
+      reportSlowResource({
+        key,
+        params: p,
+        durationMs: start === null ? 0 : performance.now() - start,
+        transportColdStart,
+        transportWaitMs,
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; mirrors the observe effect above
   }, [pending, key, JSON.stringify(p)]);

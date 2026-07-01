@@ -8,6 +8,14 @@ import { recordSlowOp } from "./record-slow-op";
 export const handleClientSlowOp = implement(
   submitClientSlowOp,
   async ({ body }) => {
+    // Charge the transport bring-up wait (element cold-start) to a dedicated
+    // wait layer, reusing the durable wait-vs-work primitive (no new column, no
+    // migration). This makes the pane's per-op wait breakdown attribute the
+    // settle time to transport, not the resource.
+    const waits =
+      body.transportWaitMs && body.transportWaitMs > 0
+        ? { "notifications-transport": body.transportWaitMs }
+        : undefined;
     await recordSlowOp({
       operationKind: body.operationKind,
       operation: body.operation,
@@ -15,6 +23,9 @@ export const handleClientSlowOp = implement(
       thresholdMs: body.thresholdMs,
       source: "client-slow-op",
       caller: body.caller ?? null,
+      waits,
+      transportColdStart: body.transportColdStart,
+      transportWaitMs: body.transportWaitMs,
     });
     return { ok: true };
   },

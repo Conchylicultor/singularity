@@ -238,6 +238,15 @@ export class NotificationsClient {
   /** Fired on any sub/version/socket/leader change for the Layer-2 inspector. */
   private debugListeners = new Set<() => void>();
   private unsubscribeFromBus: () => void;
+  /**
+   * `performance.now()` timestamp the live-state transport FIRST reached the
+   * aggregate `"open"` status (null until then). This is the cold-start marker:
+   * a resource that mounts before this is set waited on transport bring-up for
+   * (at least part of) its settle window, so its mount→first-data duration is
+   * time-to-first-data over the transport, not the resource's own compute cost.
+   * Set once, never reset — a later reconnect does not re-arm cold-start.
+   */
+  private firstReadyAt: number | null = null;
 
   constructor(private queryClient: QueryClient) {
     this.channels = {
@@ -248,6 +257,11 @@ export class NotificationsClient {
       if (liveStateSocketKind(url) === null) return;
       this.channelStatuses.set(url, status);
       const next = this.getStatus();
+      // Stamp the first instant the aggregate transport reached "open" (cold-
+      // start marker; see `firstReadyAt`). Written once, never re-armed.
+      if (next === "open" && this.firstReadyAt === null) {
+        this.firstReadyAt = performance.now();
+      }
       for (const fn of this.statusListeners) fn(next);
       const channels = this.getChannelStatuses();
       for (const fn of this.channelStatusListeners) fn(channels);
@@ -272,6 +286,15 @@ export class NotificationsClient {
     if (vals.some((s) => s === "closed")) return "closed";
     if (vals.some((s) => s === "connecting")) return "connecting";
     return "open";
+  }
+
+  /**
+   * `performance.now()` of the first moment the transport reached `"open"`, or
+   * null if it has never been ready yet. Used by `useResource` to attribute a
+   * cold-start resource settle to transport bring-up rather than the resource.
+   */
+  getFirstReadyAt(): number | null {
+    return this.firstReadyAt;
   }
 
   subscribeStatus(fn: (s: WsStatus) => void): () => void {
