@@ -41,6 +41,7 @@ export default {
     // so a second zoom control would be redundant.
     Sonata.ViewOption({
       id: "piano-roll",
+      displays: ["piano-roll"],
       config: pianoRollConfig,
       fields: ["showNoteNames"],
     }),

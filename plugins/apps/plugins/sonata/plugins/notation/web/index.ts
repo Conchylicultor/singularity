@@ -25,6 +25,7 @@ export default {
     // Surface the notation prefs in the player's view-options chip.
     Sonata.ViewOption({
       id: "notation",
+      displays: ["notation"],
       config: notationConfig,
       fields: ["staffLayout", "showChordSymbols"],
     }),

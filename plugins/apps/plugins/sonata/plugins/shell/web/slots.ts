@@ -206,15 +206,25 @@ export const Sonata = {
     docLabel: (p) => p.id,
   }),
 
-  // VIEW OPTIONS — global display prefs surfaced as quick controls inside a
+  // VIEW OPTIONS — per-lens display prefs surfaced as quick controls inside a
   // player HUD chip (note names, key labels, key style, …). Each contributor
   // hands a config_v2 descriptor (optionally a `fields` subset); the host chip
   // renders those fields generically via FieldRenderer. Collection-consumer
   // clean — the host reads the slot and never names a contributor. Lives here
   // (not piano-roll) so leaf contributors like the keyboard primitive's config
   // can be surfaced without the display ⇄ primitive import cycle.
+  //
+  // `displays` scopes an option to its owning lens(es): the View popover shows
+  // ONLY the active `Sonata.Display`'s options plus globals, so a lens never
+  // surfaces controls that do nothing for it (e.g. key-style inside Notation).
+  // It is a list of display ids (matching a `Sonata.Display` `id`) or the
+  // literal `"global"` for options that apply to every lens. REQUIRED — forcing
+  // each option to declare its scope makes "leaks into every lens" impossible by
+  // construction rather than a filter a new contributor can forget.
   ViewOption: defineSlot<{
     id: string;
+    /** Owning lens(es): display ids, or `"global"` to show in every lens. */
+    displays: string[] | "global";
     config: ConfigDescriptor;
     /** Optional subset/order of field keys; default = all descriptor fields. */
     fields?: string[];

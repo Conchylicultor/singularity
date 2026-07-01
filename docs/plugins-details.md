@@ -673,7 +673,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`view-options`** — Sonata Hud: shared display-options chip. Renders every Sonata.ViewOption contribution generically via FieldRenderer, so the View popover appears in every display lens (piano roll, notation, songsheet).
           - Web:
             - Contributes: `Sonata.Hud` "view-options" → `ViewOptionsToggle`
-            - Uses: `apps/sonata/shell.Sonata`, `config_v2.useConfig`, `config_v2.useSetConfig`, `config_v2/fields.FieldRenderer`, `primitives/css/spacing.Stack`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/popover.InlinePopover`
+            - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `config_v2.useConfig`, `config_v2.useSetConfig`, `config_v2/fields.FieldRenderer`, `primitives/css/spacing.Stack`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/popover.InlinePopover`
         - **`voicing`** — Web registration of the Sonata voicing config (realistic voice-leading, strategy, octave). Server registration of the Sonata voicing config (realistic voice-leading, strategy, octave).
           - Web:
             - Contributes: `ConfigV2.WebRegister`

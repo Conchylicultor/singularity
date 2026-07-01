@@ -18,7 +18,19 @@ export default {
     // Surface the keyboard's display prefs in the player's view-options chip.
     // `key-style` belongs to the keyboard primitive (a leaf that can't import the
     // shell), so this plugin — which already depends on both — surfaces it.
-    Sonata.ViewOption({ id: "key-labels", config: pianoKeyboardConfig }),
-    Sonata.ViewOption({ id: "key-style", config: keyboardStyleConfig }),
+    // Scoped to `piano-roll`: the keyboard is a PitchAxis that mounts on the
+    // pitch-plane display (today only the piano roll), so these controls only
+    // belong to that lens. Add further display ids here if the keyboard ever
+    // mounts on another pitch-plane display.
+    Sonata.ViewOption({
+      id: "key-labels",
+      displays: ["piano-roll"],
+      config: pianoKeyboardConfig,
+    }),
+    Sonata.ViewOption({
+      id: "key-style",
+      displays: ["piano-roll"],
+      config: keyboardStyleConfig,
+    }),
   ],
 } satisfies PluginDefinition;

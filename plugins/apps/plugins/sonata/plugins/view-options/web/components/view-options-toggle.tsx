@@ -26,14 +26,23 @@ import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 
 type ViewOptionItem = ReturnType<typeof Sonata.ViewOption.useContributions>[number];
 
 export function ViewOptionsToggle() {
   const options = Sonata.ViewOption.useContributions();
+  const { activeDisplayId } = useSonata();
   const [open, setOpen] = useState(false);
-  if (options.length === 0) return null;
+
+  // Scope options to the active lens: show only the current display's options
+  // plus globals, so e.g. Notation never surfaces piano-roll-only key controls.
+  const visible = options.filter(
+    (o) =>
+      o.displays === "global" ||
+      (activeDisplayId != null && o.displays.includes(activeDisplayId)),
+  );
+  if (visible.length === 0) return null;
 
   return (
     // The HUD may sit INSIDE a display's drag-to-scrub surface (e.g. the piano
@@ -70,7 +79,7 @@ export function ViewOptionsToggle() {
         }
       >
         <Stack gap="2xs">
-          {options.map((o) => (
+          {visible.map((o) => (
             <ViewOptionGroup key={o.id} option={o} />
           ))}
         </Stack>
