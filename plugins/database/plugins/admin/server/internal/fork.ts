@@ -31,11 +31,36 @@ export async function forkDatabase(
   await dropDatabase(temp);
   await getAdminPool().query(`CREATE DATABASE "${temp}"`);
   const subprocessEnv = { ...process.env, ...libpqSubprocessEnv() };
-  const dump = Bun.spawn(["pg_dump", "-Fc", source], {
-    env: subprocessEnv,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
+  // Fork schema-only for large, worktree-irrelevant app-data tables. The main
+  // DB's mail_messages corpus (Gmail sync, ~800MB) dwarfs everything a worktree
+  // agent needs (~170MB), and streaming it through pg_dump|pg_restore made the
+  // fork slow enough to be reliably interrupted mid-COPY (see the failures that
+  // motivated this). Mail sync is main-only, so a forked worktree never needs —
+  // nor would ever re-populate — these rows. We keep the table *schemas* (no
+  // --exclude-table) so the DDL still exists; only the DATA is skipped.
+  //
+  // QUICK FIX: this hardcodes mail's table names into the generic fork path, a
+  // knowledge leak the database plugin shouldn't own. The clean design (a slot
+  // where a plugin declares "don't fork my data") is tracked as a follow-up.
+  const EXCLUDE_TABLE_DATA = [
+    "public.mail_messages",
+    "public.mail_threads",
+    "public.mail_message_labels",
+    "public.mail_attachments",
+  ];
+  const dump = Bun.spawn(
+    [
+      "pg_dump",
+      "-Fc",
+      ...EXCLUDE_TABLE_DATA.map((t) => `--exclude-table-data=${t}`),
+      source,
+    ],
+    {
+      env: subprocessEnv,
+      stdout: "pipe",
+      stderr: "pipe",
+    },
+  );
   const restore = Bun.spawn(["pg_restore", "-d", temp], {
     env: subprocessEnv,
     stdin: dump.stdout,
