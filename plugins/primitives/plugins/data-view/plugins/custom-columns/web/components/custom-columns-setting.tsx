@@ -1,0 +1,39 @@
+import type { ReactNode } from "react";
+import type { ConfigDescriptor } from "@plugins/config_v2/core";
+import type { FieldsRecord } from "@plugins/fields/core";
+import {
+  getDataViewDescriptor,
+  useDataViewSettings,
+} from "@plugins/primitives/plugins/data-view/web";
+import { useCustomColumnDefs } from "../internal/use-custom-column-defs";
+import { CustomColumnsFields } from "./data-view-settings-button";
+
+/**
+ * The custom-columns "Fields" UI as a real `DataViewSlots.Setting` contribution
+ * (`scope: "global"`) — the dependency-inversion end state. It reads the surface's
+ * `storageKey` from the settings context, resolves the SAME reference-stable
+ * config descriptor the host registered (via `getDataViewDescriptor`), drives the
+ * definitions controller, and renders the content-only `CustomColumnsFields`
+ * section. The host now names no individual setting — custom-columns contributes
+ * itself like every other setting, error-boundary-isolated in the menu.
+ *
+ * Renders nothing for a storageKey with no registered descriptor (mirrors the old
+ * host `descriptor != null` gate). The `useCustomColumnDefs` hook lives in an
+ * inner component mounted only past that gate, so it is never called conditionally
+ * (`storageKey` is stable per surface → the gate is hook-order-stable).
+ */
+export function CustomColumnsFieldsSetting(): ReactNode {
+  const { storageKey } = useDataViewSettings();
+  const descriptor = getDataViewDescriptor(storageKey);
+  if (!descriptor) return null;
+  return <Fields descriptor={descriptor} />;
+}
+
+function Fields({
+  descriptor,
+}: {
+  descriptor: ConfigDescriptor<FieldsRecord>;
+}): ReactNode {
+  const { defs, ...actions } = useCustomColumnDefs(descriptor);
+  return <CustomColumnsFields defs={defs} actions={actions} />;
+}

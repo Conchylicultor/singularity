@@ -21,20 +21,18 @@ import {
  *  - **Current view** — per-instance settings (`scope: "view"`); group-by is the
  *    first such contribution.
  *  - **DataView** — surface-wide settings (`scope: "global"`); custom-columns'
- *    "Fields" UI renders here (host-rendered, since `custom-columns` cannot
- *    import this slot without forming a cycle).
+ *    "Fields" UI is one such contribution (it imports this slot directly — the
+ *    dependency is inverted, so the host names no individual setting).
  *
- * Each scope renders its `DataViewSlots.Setting` contributions in `order`. The
- * contributions own their own sub-labels ("Group by", "Fields"), so the scopes
- * are separated structurally by a `DropdownMenuSeparator` rather than redundant
- * scope headers.
+ * Each scope renders its `DataViewSlots.Setting` contributions in `order`
+ * uniformly through `renderIsolated` (error-boundary-isolated). The contributions
+ * own their own sub-labels ("Group by", "Fields"), so the scopes are separated
+ * structurally by a `DropdownMenuSeparator` rather than redundant scope headers.
  */
 export function DataViewSettingsMenu(props: {
   context: DataViewSettingsContextValue;
-  /** Host-rendered custom-columns "Fields" UI (global scope), or null. */
-  customColumns: ReactNode;
 }): ReactNode {
-  const { context, customColumns } = props;
+  const { context } = props;
   const [open, setOpen] = useState(false);
 
   const settings = DataViewSlots.Setting.useContributions();
@@ -54,7 +52,7 @@ export function DataViewSettingsMenu(props: {
     viewSettings.length > 0 &&
     context.activeSupportsGroupBy &&
     context.fields.some((f) => isGroupableField(f));
-  const globalScopeVisible = globalSettings.length > 0 || customColumns != null;
+  const globalScopeVisible = globalSettings.length > 0;
 
   // Nothing to configure → no gear at all (host always mounts this component).
   if (!viewScopeVisible && !globalScopeVisible) return null;
@@ -90,7 +88,6 @@ export function DataViewSettingsMenu(props: {
                   {renderIsolated(DataViewSlots.Setting.id, c as unknown as Contribution, {})}
                 </div>
               ))}
-              {customColumns}
             </Stack>
           ) : null}
         </Stack>

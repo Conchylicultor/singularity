@@ -4,11 +4,15 @@ import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 
 /**
  * Sibling config field the data-view host merges into view-core's
- * `viewsDescriptor` next to `sortPresets` — the per-surface custom-column SCHEMA
- * (definitions). Mirrors `sortPresetsExtraFields`: an opaque consumer-owned extra
- * field stored in the SAME per-id config doc, so it is git-promotable +
- * per-app-scopable with zero new registration machinery. view-core never names
- * it.
+ * `viewsDescriptor` next to `presetsExtraFields` — the per-surface custom-column
+ * SCHEMA (definitions). Lives in `shared/` (next to `sort-presets-field.ts`) so
+ * the web descriptor map and the server registrations import the SAME field def
+ * (one definition, two runtimes). It is **opaque storage owned by the
+ * custom-columns sub-plugin**: data-view declares the config key here (a config_v2
+ * write requires the field be declared on the descriptor — see the
+ * dependency-inversion refactor), but never reads its shape; custom-columns owns
+ * the `CustomColumnDef` type + `readCustomColumnDefs` normalizer. view-core never
+ * names it either.
  *
  * Imports the PURE config-core field builders (`zod` + `fields/core` only), so
  * the descriptor stays server-import-safe when built on the server runtime.

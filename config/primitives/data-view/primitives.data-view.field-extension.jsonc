@@ -1,0 +1,10 @@
+// @hash ed453adff680
+{
+  // Global DataView field-extension fold order. Contributions here inject extra
+  // FieldDef[] into every DataView's schema (before the sort/filter controllers).
+  // custom-columns is the only contributor today; the order is the schema append
+  // order of contributed fields.
+  "items": [
+    "primitives.data-view.custom-columns:custom-columns"
+  ]
+}

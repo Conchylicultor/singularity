@@ -1,4 +1,3 @@
-export { customColumnsExtraFields } from "./internal/extra-fields";
 export {
   CustomColumnDefSchema,
   CustomColumnValueRowSchema,

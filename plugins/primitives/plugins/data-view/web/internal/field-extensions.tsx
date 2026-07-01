@@ -65,22 +65,34 @@ export function defineFieldExtensions<TRow>(id: string): FieldExtensions<TRow> {
 export function CollectFieldExtensions<TRow>(props: {
   descriptor?: FieldExtensionsDescriptor<TRow>;
   base: FieldDef<TRow>[];
+  /** Extra props spread into every contribution's render props alongside
+   *  `render`. The per-consumer fold passes nothing; the global fold passes
+   *  `{ storageKey, rowKey }` (see `GlobalFieldExtensionProps`). */
+  extraProps?: Record<string, unknown>;
   children: (fields: FieldDef<TRow>[]) => ReactNode;
 }): ReactNode {
-  const { descriptor, base, children } = props;
+  const { descriptor, base, extraProps, children } = props;
   // The common case: most consumers declare no field extensions. Skip the fold
   // entirely (no `useContributions` subscription) and hand back the base fields.
   if (!descriptor) return <>{children(base)}</>;
-  return <FieldExtensionFold descriptor={descriptor} base={base} emit={children} />;
+  return (
+    <FieldExtensionFold
+      descriptor={descriptor}
+      base={base}
+      extraProps={extraProps}
+      emit={children}
+    />
+  );
 }
 
 /** Reads `useContributions()` once, then kicks off the recursive fold. */
 function FieldExtensionFold<TRow>(props: {
   descriptor: FieldExtensionsDescriptor<TRow>;
   base: FieldDef<TRow>[];
+  extraProps?: Record<string, unknown>;
   emit: (fields: FieldDef<TRow>[]) => ReactNode;
 }): ReactNode {
-  const { descriptor, base, emit } = props;
+  const { descriptor, base, extraProps, emit } = props;
   const contributions = descriptor.useContributions();
   return (
     <FieldExtensionStep
@@ -88,6 +100,7 @@ function FieldExtensionFold<TRow>(props: {
       contributions={contributions}
       index={0}
       acc={base}
+      extraProps={extraProps}
       emit={emit}
     />
   );
@@ -100,20 +113,26 @@ function FieldExtensionStep<TRow>(props: {
   contributions: ReturnType<FieldExtensionsDescriptor<TRow>["useContributions"]>;
   index: number;
   acc: FieldDef<TRow>[];
+  extraProps?: Record<string, unknown>;
   emit: (fields: FieldDef<TRow>[]) => ReactNode;
 }): ReactNode {
-  const { slotId, contributions, index, acc, emit } = props;
+  const { slotId, contributions, index, acc, extraProps, emit } = props;
   // Every contributor has mounted and folded its fields into `acc` → emit.
   if (index >= contributions.length) return <>{emit(acc)}</>;
 
   const contribution = contributions[index]!;
-  const renderProps: FieldExtensionProps<TRow> = {
+  // Spread `extraProps` (the global fold's `{ storageKey, rowKey }`) alongside
+  // `render`. The per-consumer fold passes none, so contributions there still see
+  // exactly `FieldExtensionProps<TRow>` (`{ render }`).
+  const renderProps: FieldExtensionProps<TRow> & Record<string, unknown> = {
+    ...extraProps,
     render: (fields) => (
       <FieldExtensionStep
         slotId={slotId}
         contributions={contributions}
         index={index + 1}
         acc={[...acc, ...fields]}
+        extraProps={extraProps}
         emit={emit}
       />
     ),

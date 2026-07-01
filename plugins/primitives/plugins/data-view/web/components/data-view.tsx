@@ -13,6 +13,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type {
   DataViewProps,
   DataViewRenderProps,
+  FieldDef,
   FilterGroup,
   SortRule,
 } from "../../core";
@@ -20,10 +21,6 @@ import {
   EditableViewSwitcher,
   useViewVariants,
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
-import {
-  useCustomColumnDefs,
-  CustomColumnsFields,
-} from "@plugins/primitives/plugins/data-view/plugins/custom-columns/web";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
   useDataViewModel,
@@ -37,8 +34,6 @@ import { useVisibleFieldsController } from "../internal/use-visible-fields-contr
 import { useSortPresets } from "../internal/use-sort-presets";
 import { useFilterPresets } from "../internal/use-filter-presets";
 import { CollectFieldExtensions } from "../internal/field-extensions";
-import { useCustomColumnFields } from "../internal/use-custom-column-fields";
-import { dataViewDescriptors } from "../internal/descriptors";
 import { useScrollAncestorGuard } from "../internal/use-scroll-ancestor-guard";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
@@ -57,13 +52,39 @@ import type { DataViewSettingsContextValue } from "./settings/settings-context";
  * view-switcher.
  */
 export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
-  // Fold any cross-plugin field contributions into `fields` BEFORE the model +
+  // Fold cross-plugin field contributions into `fields` BEFORE the model +
   // controllers, so the merged schema reaches `useSortController`,
   // `useFilterController`, and `renderProps.fields` uniformly (automatic once it
-  // is the `fields` prop). No `fieldExtensions` → the fold is a pass-through.
+  // is the `fields` prop). Two nested folds:
+  //
+  //  1. the **global** `DataViewSlots.FieldExtension` slot — always folded (every
+  //     DataView), threading `{ storageKey, rowKey }` so a contributor (e.g.
+  //     custom-columns) can key its per-row fields over this surface; then
+  //  2. the **per-consumer** `props.fieldExtensions` factory (Sonata's play-count
+  //     / last-played fields) — a pass-through when absent.
+  //
+  // The host names no individual contributor: custom-columns folds in through the
+  // generic global slot, inverting the old host→child bridge.
+  //
+  // The global fold runs in `unknown` row space (a global slot spans disjoint
+  // consumer row types), so it is instantiated at `<unknown>`; `FieldDef<unknown>`
+  // and `FieldDef<TRow>` are mutually related, so the two boundary casts are safe.
   return (
-    <CollectFieldExtensions descriptor={props.fieldExtensions} base={props.fields}>
-      {(fields) => <DataViewWithModel {...props} fields={fields} />}
+    <CollectFieldExtensions<unknown>
+      descriptor={DataViewSlots.FieldExtension}
+      base={props.fields as FieldDef<unknown>[]}
+      extraProps={{ storageKey: props.storageKey, rowKey: props.rowKey }}
+    >
+      {(globalFields) => (
+        <CollectFieldExtensions<unknown>
+          descriptor={props.fieldExtensions}
+          base={globalFields}
+        >
+          {(fields) => (
+            <DataViewWithModel {...props} fields={fields as FieldDef<TRow>[]} />
+          )}
+        </CollectFieldExtensions>
+      )}
     </CollectFieldExtensions>
   );
 }
@@ -116,28 +137,12 @@ function DataViewInner<TRow>({
 
   const viewVariants = useViewVariants(contributions);
 
-  // User-defined custom columns (ON by default; `customColumns={false}` opts a
-  // surface out). The host resolves the per-surface config descriptor (it owns
-  // `dataViewDescriptors`) and threads it DOWN into the child controller — the
-  // custom-columns child never imports data-view (cycle). The defs feed the
-  // bridge that turns them into ordinary `FieldDef`s appended to `props.fields`,
-  // so they flow through every view + sort/filter/search. Hooks run
-  // unconditionally; when opted out the bridge gets an empty defs list.
-  const descriptor = dataViewDescriptors.get(props.storageKey);
-  const customColumnsEnabled = props.customColumns !== false && descriptor != null;
-  const { defs: customColumnDefs, ...customColumnActions } =
-    useCustomColumnDefs(descriptor);
-  const customFields = useCustomColumnFields<TRow>({
-    storageKey: props.storageKey,
-    rowKey,
-    defs: customColumnsEnabled ? customColumnDefs : [],
-  });
-  // Appended custom columns flow into every view + sort/filter/search. Computed
-  // inline (the React Compiler auto-memoizes) — a manual `useMemo` here can't be
-  // preserved by the compiler and cascades into nearby memos.
-  const fields = customColumnsEnabled
-    ? [...props.fields, ...customFields]
-    : props.fields;
+  // The schema is already fully merged: `props.fields` here arrives AFTER the
+  // top-level `DataView` folded both the global `DataViewSlots.FieldExtension`
+  // slot (custom columns, keyed by `{ storageKey, rowKey }`) and the per-consumer
+  // `fieldExtensions` factory into it. So the merged fields reach the model,
+  // controllers, and render-props uniformly with no custom-columns knowledge here.
+  const fields = props.fields;
 
   // Derive the `hasChildren` predicate once from `hierarchy.getParentId` over
   // `rows` (absent hierarchy → always `false`). Flat views (table/gallery) use
@@ -320,9 +325,9 @@ function DataViewInner<TRow>({
   };
 
   // Context for the unified settings menu — settings contributions (group-by,
-  // …) read what they need from here, no prop-threading. The custom-columns
-  // "Fields" UI stays host-rendered (it cannot import the Setting slot without a
-  // cycle), passed in as the menu's `customColumns` node.
+  // custom-columns' "Fields" UI, …) read what they need from here, no
+  // prop-threading. Custom-columns is now a real global-scope Setting contributor
+  // (it imports the slot directly), so the host names it nowhere.
   const settingsContext: DataViewSettingsContextValue = {
     storageKey: props.storageKey,
     fields: fields as DataViewRenderProps<unknown>["fields"],
@@ -378,22 +383,11 @@ function DataViewInner<TRow>({
           ) : null
         }
         actions={actions}
-        /* Unified settings gear: hosts the per-view Group by control and the
-           DataView-global custom-columns "Fields" UI. Self-hides when there is
-           nothing to configure. Supersedes the old custom-columns-only gear. */
-        fieldsControl={
-          <DataViewSettingsMenu
-            context={settingsContext}
-            customColumns={
-              customColumnsEnabled ? (
-                <CustomColumnsFields
-                  defs={customColumnDefs}
-                  actions={customColumnActions}
-                />
-              ) : null
-            }
-          />
-        }
+        /* Unified settings gear: renders every `DataViewSlots.Setting`
+           contribution (per-view Group by, DataView-global custom-columns
+           "Fields", …) uniformly. Self-hides when there is nothing to configure.
+           Supersedes the old custom-columns-only gear. */
+        fieldsControl={<DataViewSettingsMenu context={settingsContext} />}
         creatorsControl={<CreatorsControl creators={creators} />}
         activeControlCount={
           (hasFilters ? filterController.ruleCount : 0) +

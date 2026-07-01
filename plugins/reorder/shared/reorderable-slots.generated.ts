@@ -57,6 +57,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "pages.tree.row-actions", pluginId: "apps.pages.page-tree" },
   { slotId: "pages.welcome.section", pluginId: "apps.pages.welcome" },
   { slotId: "plugin-view.section", pluginId: "plugin-meta.plugin-view" },
+  { slotId: "primitives.data-view.field-extension", pluginId: "primitives.data-view" },
   { slotId: "profiling.section", pluginId: "debug.profiling" },
   { slotId: "prompt-editor.floating-action", pluginId: "primitives.prompt-editor" },
   { slotId: "release-detail.section", pluginId: "apps.studio.release" },

@@ -1,8 +1,10 @@
 import { buildViewDescriptors } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { customColumnsExtraFields } from "@plugins/primitives/plugins/data-view/plugins/custom-columns/core";
+import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { dataViews } from "../../shared/data-views.generated";
 import { presetsExtraFields } from "../../shared/sort-presets-field";
+import { customColumnsExtraFields } from "../../shared/custom-columns-field";
+import type { DataViewId } from "../../core";
 
 /**
  * The sibling config fields merged into every per-id `viewsDescriptor`. ONE
@@ -37,3 +39,17 @@ export const dataViewDescriptorEntries = entries.map((e) => ({
   ...e,
   pluginId: pluginIdById.get(e.id)!,
 }));
+
+/**
+ * Resolve the reference-stable `ConfigDescriptor` for a DataView id — the SAME
+ * object the barrels registered with `ConfigV2.WebRegister` (`useConfig`/
+ * `useSetConfig` match by `===`). Exposed from the web barrel so cross-plugin
+ * contributors (e.g. custom-columns' field-extension + Fields setting) resolve
+ * the identical descriptor without importing data-view internals. Generic — names
+ * no contributor.
+ */
+export function getDataViewDescriptor(
+  id: DataViewId,
+): ConfigDescriptor | undefined {
+  return dataViewDescriptors.get(id);
+}

@@ -1,5 +1,5 @@
 import { useState, type ReactNode } from "react";
-import { MdAdd, MdDelete, MdTune } from "react-icons/md";
+import { MdAdd, MdDelete } from "react-icons/md";
 import {
   Button,
   Input,
@@ -7,7 +7,6 @@ import {
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import type { CustomColumnDef } from "../../core";
 import type { CustomColumnDefsController } from "../internal/use-custom-column-defs";
 
@@ -113,31 +112,5 @@ export function CustomColumnsFields(props: {
         </Button>
       </div>
     </Stack>
-  );
-}
-
-/**
- * DataView Settings button — a gear `IconButton` opening a popover hosting the
- * `CustomColumnsFields` section. Retained for standalone use; the data-view host
- * now renders `CustomColumnsFields` inside its own unified settings menu instead.
- */
-export function DataViewSettingsButton(props: {
-  defs: CustomColumnDef[];
-  actions: Omit<CustomColumnDefsController, "defs">;
-}): ReactNode {
-  const [open, setOpen] = useState(false);
-
-  return (
-    <InlinePopover
-      open={open}
-      onOpenChange={setOpen}
-      align="end"
-      width="md"
-      trigger={
-        <IconButton icon={MdTune} label="Data view settings" variant="ghost" />
-      }
-    >
-      <CustomColumnsFields defs={props.defs} actions={props.actions} />
-    </InlinePopover>
   );
 }

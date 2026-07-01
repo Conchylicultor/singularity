@@ -603,13 +603,4 @@ export interface DataViewProps<TRow> {
    * pass-through. Absent → the in-memory path over `rows` (unchanged default).
    */
   dataSource?: ServerDataSourceSpec<TRow>;
-  /**
-   * User-defined custom columns (text, v1) are ON by default for every DataView.
-   * Set `false` on surfaces where ad-hoc metadata doesn't belong (debug/metric/
-   * config tables, or index-derived rowKeys). The mechanism is generic — values
-   * are keyed by `storageKey` + `rowKey`, so `rowKey` must be index-independent
-   * (the bridge calls `rowKey(row, 0)`). Server-delegated (`dataSource`) views
-   * still render + edit custom columns but don't sort/filter on them server-side.
-   */
-  customColumns?: boolean;
 }

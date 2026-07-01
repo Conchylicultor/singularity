@@ -1,8 +1,9 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import type { ComponentType } from "react";
+import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import type { ComponentType, ReactNode } from "react";
 import type { ViewTypeMeta } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import type { LoadingVariant } from "@plugins/primitives/plugins/loading/web";
-import type { DataViewRenderProps } from "../core";
+import type { DataViewId, DataViewRenderProps, FieldDef } from "../core";
 import { Cell } from "./cell-slot";
 import { CellEditor } from "./cell-editor-slot";
 import { Filter } from "./filter-slot";
@@ -54,10 +55,47 @@ export interface DataViewSettingContribution {
   component: ComponentType;
 }
 
+/**
+ * Props a **global** field-extension contribution receives. Unlike the
+ * per-consumer `FieldExtensionProps<TRow>` (minted by `defineFieldExtensions`,
+ * passed as a prop, `{ render }`-only), this is a single always-on slot every
+ * DataView folds — so the host threads the surface coordinates the contributor
+ * needs to key its per-row data: the `storageKey` (which surface) and `rowKey`
+ * (how to identify a row). The row type is erased to `unknown` (a global slot
+ * spans disjoint consumer row types), so `rowKey` is `(row: unknown, index) =>
+ * string` and the yielded fields are `FieldDef<unknown>[]`.
+ */
+export interface GlobalFieldExtensionProps {
+  storageKey: DataViewId;
+  rowKey: (row: unknown, index: number) => string;
+  /** Hand the host this contributor's extra fields (called in render — the
+   *  component is mounted, so it may load hook-backed data first). */
+  render: (fields: FieldDef<unknown>[]) => ReactNode;
+}
+
+export interface GlobalFieldExtensionContribution {
+  /** Stable id (React key + reorder/doc identity). */
+  id: string;
+  component: ComponentType<GlobalFieldExtensionProps>;
+  order?: number;
+}
+
 export const DataViewSlots = {
   View: defineSlot<DataViewContribution>("primitives.data-view.view", {
     docLabel: (p) => p.title,
   }),
+  /**
+   * Global, always-on field-extension slot: every DataView folds its
+   * contributions into the schema (before the sort/filter controllers), threading
+   * `{ storageKey, rowKey }` so a contributor can key its per-row `FieldDef.value`
+   * over the surface. The cross-plugin twin of the per-consumer
+   * `defineFieldExtensions` factory — used by custom-columns to add every
+   * surface's user-defined columns without the host importing it.
+   */
+  FieldExtension: defineRenderSlot<GlobalFieldExtensionContribution>(
+    "primitives.data-view.field-extension",
+    { docLabel: (p) => p.id },
+  ),
   /** Contributable DataView settings menu entries (group-by, future per-view /
    *  surface-wide settings). Plain data slot, read by the host's settings menu. */
   Setting: defineSlot<DataViewSettingContribution>("primitives.data-view.setting", {

@@ -10,7 +10,12 @@ export { DataViewSlots } from "./slots";
 export type {
   DataViewContribution,
   DataViewSettingContribution,
+  GlobalFieldExtensionProps,
+  GlobalFieldExtensionContribution,
 } from "./slots";
+export { getDataViewDescriptor } from "./internal/descriptors";
+export { useDataViewSettings } from "./components/settings/settings-context";
+export type { DataViewSettingsContextValue } from "./components/settings/settings-context";
 export { useResolveCell } from "./cell-slot";
 export { useResolveCellEditor } from "./cell-editor-slot";
 export { useResolveOperatorSet } from "./filter-slot";

@@ -1,15 +1,15 @@
 import { createContext, useContext, type ReactNode } from "react";
-import type { FieldDef, ViewState } from "../../../core";
+import type { DataViewId, FieldDef, ViewState } from "../../../core";
 import type { ViewModel } from "../../internal/use-data-view-model";
 
 /**
  * Everything a DataView settings contribution needs, exposed via context so a
- * setting component reads what it wants without prop-threading. (The custom-columns
- * "Fields" UI stays host-rendered, so the config descriptor it needs is NOT
- * threaded here — see settings-menu.tsx.)
+ * setting component reads what it wants without prop-threading. Global-scope
+ * contributions (e.g. custom-columns' "Fields" UI) read `storageKey` and resolve
+ * the surface's config descriptor themselves via `getDataViewDescriptor`.
  */
 export interface DataViewSettingsContextValue {
-  storageKey: string;
+  storageKey: DataViewId;
   /** The merged field schema (incl. custom columns + field extensions). */
   fields: FieldDef<unknown>[];
   activeViewId: string;
