@@ -12,6 +12,7 @@ function row(overrides: Partial<MailSyncState>): MailSyncState {
     errorCode: null,
     lastError: null,
     lastErrorAt: null,
+    resyncCount: 0,
     createdAt: new Date("2026-01-01T00:00:00Z"),
     updatedAt: new Date("2026-01-01T00:00:00Z"),
     ...overrides,
@@ -33,6 +34,20 @@ describe("deriveMailSyncView", () => {
       message: "Sign in again",
       terminal: true,
     });
+  });
+
+  test("resync-loop escalation → error phase with resync_loop code", () => {
+    const v = deriveMailSyncView([
+      row({
+        status: "error",
+        errorCode: "resync_loop",
+        lastError: "Mailbox re-synced 3 times without catching up",
+        resyncCount: 3,
+      }),
+    ]);
+    expect(v.phase).toBe("error");
+    expect(v.error?.code).toBe("resync_loop");
+    expect(v.error?.terminal).toBe(true);
   });
 
   test("error with null code/message falls back to unknown + copy", () => {

@@ -9,6 +9,7 @@ export {
   type MailSyncStatus,
   MAIL_SYNC_ERROR_CODES,
   type MailSyncErrorCode,
+  MAX_CONSECUTIVE_RESYNCS,
 } from "./internal/enums";
 export { mailSyncStateResource } from "./internal/resources";
 export {

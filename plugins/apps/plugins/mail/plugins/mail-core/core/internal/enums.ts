@@ -43,5 +43,14 @@ export const MAIL_SYNC_ERROR_CODES = [
   "api_disabled",
   "quota",
   "unknown",
+  "resync_loop",
 ] as const;
 export type MailSyncErrorCode = (typeof MAIL_SYNC_ERROR_CODES)[number];
+
+/**
+ * Max consecutive stale-historyId (404) resyncs before the delta job stops
+ * re-backfilling and escalates to a terminal `resync_loop` error. Guards against
+ * an endless backfilling→delta→404 loop when the mailbox can't be backfilled
+ * before Gmail's history window expires. Reset to 0 on any successful delta pass.
+ */
+export const MAX_CONSECUTIVE_RESYNCS = 3;

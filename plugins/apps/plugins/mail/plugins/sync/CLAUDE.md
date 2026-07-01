@@ -40,7 +40,12 @@ idle → (bootstrap) → backfilling → (last page) → delta ⇄ (404 expiry) 
   `historyId` and enqueues a backfill (bounded full resync). **Label changes are
   applied by re-fetching the affected messages and re-upserting** (the upsert
   reconciles labels + flags + thread) rather than hand-patching deltas — simpler
-  and idempotent. Dedup keyed by `accountId`.
+  and idempotent. Dedup keyed by `accountId`. Consecutive 404-expiry resyncs are
+  counted on `mail_sync_state.resyncCount`; after `MAX_CONSECUTIVE_RESYNCS` (3)
+  consecutive expiries with no successful delta in between (a mailbox too large to
+  back up before Gmail's history window expires), the engine escalates to a
+  terminal `resync_loop` error instead of looping forever. The counter resets to
+  0 on any successful delta pass and on a manual retry (`kickSync`).
 - **`mail.sync-tick`** (`tick.ts`) — the steady-state driver. Auto-connects once
   the Gmail toggle is on (`ensureAccount()` when no account exists), then
   enqueues a delta for every account in a `delta`/`idle` state. `singleton`

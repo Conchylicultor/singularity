@@ -16,6 +16,7 @@ import {
   _mailSyncState,
   requireGmailToken,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
+import { MAX_CONSECUTIVE_RESYNCS } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import { backfillJob } from "./backfill";
 import { deleteMessage, upsertLabels, upsertMessage } from "./store";
 import { classifyMailSyncError } from "./classify-error";
@@ -41,6 +42,7 @@ export const deltaJob = defineJob({
       .select({
         status: _mailSyncState.status,
         historyId: _mailSyncState.historyId,
+        resyncCount: _mailSyncState.resyncCount,
       })
       .from(_mailSyncState)
       .where(eq(_mailSyncState.accountId, accountId))
@@ -71,9 +73,34 @@ export const deltaJob = defineJob({
         } while (pageToken);
       } catch (err) {
         if (!(err instanceof GmailHistoryExpiredError)) throw err;
-        // Watermark too old — Gmail dropped the history. Bounded full resync
-        // from a fresh profile historyId. Clear any prior error (this is a
-        // recovery, not a failure).
+        // Watermark too old — Gmail dropped the history. Count this expiry-driven
+        // resync; a genuine loop (backfilling→delta→404 with delta never
+        // succeeding) climbs this counter monotonically until it trips.
+        const nextResync = (state.resyncCount ?? 0) + 1;
+        if (nextResync >= MAX_CONSECUTIVE_RESYNCS) {
+          // Too many consecutive expiries with no successful delta in between —
+          // the mailbox can't be backfilled before Gmail's window elapses.
+          // Escalate to a terminal error (the tick only enqueues delta for
+          // delta/idle accounts, so this breaks the loop) instead of resyncing.
+          const now = new Date();
+          await db
+            .update(_mailSyncState)
+            .set({
+              status: "error",
+              errorCode: "resync_loop",
+              lastError:
+                `Mailbox re-synced ${nextResync} times without catching up — ` +
+                `Gmail's history window keeps expiring before backfill completes.`,
+              lastErrorAt: now,
+              resyncCount: nextResync,
+              updatedAt: now,
+            })
+            .where(eq(_mailSyncState.accountId, accountId));
+          return;
+        }
+        // Below threshold — bounded full resync from a fresh profile historyId.
+        // Clear any prior error (this is a recovery, not a failure) but carry the
+        // incremented resync count so consecutive expiries accumulate.
         const profile = await getProfile(token);
         await db
           .update(_mailSyncState)
@@ -83,6 +110,7 @@ export const deltaJob = defineJob({
             errorCode: null,
             lastError: null,
             lastErrorAt: null,
+            resyncCount: nextResync,
             updatedAt: new Date(),
           })
           .where(eq(_mailSyncState.accountId, accountId));
@@ -121,6 +149,8 @@ export const deltaJob = defineJob({
           errorCode: null,
           lastError: null,
           lastErrorAt: null,
+          // A successful delta proves the watermark is fresh — reset the loop.
+          resyncCount: 0,
           updatedAt: new Date(),
         })
         .where(eq(_mailSyncState.accountId, accountId));

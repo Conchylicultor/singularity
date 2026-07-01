@@ -54,6 +54,9 @@ export async function kickSync(accountId: string): Promise<void> {
     errorCode: null,
     lastError: null,
     lastErrorAt: null,
+    // A manual retry resets the resync-loop counter — otherwise the next 404
+    // would immediately re-trip the threshold.
+    resyncCount: 0,
     updatedAt: new Date(),
   };
   if (row.historyId != null) {

@@ -59,6 +59,7 @@ export const mailSyncStateFields = {
   errorCode: nullable(enumTextField(MAIL_SYNC_ERROR_CODES)),
   lastError: nullable(textField()),
   lastErrorAt: nullable(dateField()),
+  resyncCount: intField(),
   createdAt: dateField(),
   updatedAt: dateField(),
 } satisfies FieldsRecord;

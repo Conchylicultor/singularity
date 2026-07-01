@@ -46,6 +46,7 @@ const mailSyncState = defineEntity("mail_sync_state", mailSyncStateFields, {
       references: { column: () => mailAccounts.table.id, onDelete: "cascade" },
     },
     status: { default: "idle" },
+    resyncCount: { default: 0 },
     createdAt: { default: defaultNow() },
     updatedAt: { default: defaultNow() },
   },

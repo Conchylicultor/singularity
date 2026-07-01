@@ -138,4 +138,9 @@ export const MAIL_SYNC_REMEDIATION: Record<
     body: "Something went wrong while syncing your mailbox.",
     action: "none",
   },
+  resync_loop: {
+    title: "Mailbox sync stuck",
+    body: "Your mailbox is being re-synced repeatedly without catching up — it may be too large to back up before Gmail's sync window expires. Retrying may help; otherwise try again later.",
+    action: "none",
+  },
 };
