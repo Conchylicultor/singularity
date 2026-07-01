@@ -20,7 +20,6 @@ import {
   useHiddenTrackIds,
   useTrackMixerEntries,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
-import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -47,13 +46,29 @@ export interface NotationProps {
 
 const EPS = 1e-6;
 
-/** Active-note highlight + playhead accent, driven by CSS so it re-skins by theme.
- *  CSS beats SVG presentation attributes, so this recolors the engraved fills. */
+/**
+ * Sheet music is always engraved as black ink on white paper — deliberately
+ * independent of the app theme (light/dark) AND the active color preset. Real
+ * notation is monochrome print; a tinted, inverted, or light-on-dark staff reads
+ * as a rendering bug, not a skin. The only accent is the active-note highlight +
+ * playhead, a single fixed hue chosen for strong contrast on white paper.
+ */
+const PAPER = {
+  /** Page background. */
+  background: "#ffffff",
+  /** Notes, staff lines, clefs, text, part labels. */
+  ink: "#1a1a1a",
+  /** Active-note highlight + playhead accent (reads well on white). */
+  accent: "#2563eb",
+} as const;
+
+/** Active-note highlight + playhead accent. CSS beats SVG presentation
+ *  attributes, so this recolors the engraved fills of the sounding note. */
 const HIGHLIGHT_CSS = `
 .notation-surface .vf-note.is-active,
 .notation-surface .vf-note.is-active * {
-  fill: var(--primary);
-  stroke: var(--primary);
+  fill: ${PAPER.accent};
+  stroke: ${PAPER.accent};
 }`;
 
 /** Largest anchor with `beat <= cursor`, plus the next anchor — for interpolation. */
@@ -82,7 +97,6 @@ function NotationInner({ score }: NotationProps) {
     useConfig(notationConfig);
   const { seekTo, isPlaying } = useSonata();
   const cursor = useCursorApi();
-  const isDark = useDarkMode();
 
   // Drop hidden tracks (track-mixer) before engraving, and pass the visible
   // tracks' names through so per-track staves can be labeled.
@@ -196,8 +210,10 @@ function NotationInner({ score }: NotationProps) {
     activeElsRef.current = next;
   }, []);
 
-  // Engrave (DOM side-effect) on score / width / theme change. LayoutEffect so
-  // the staff is painted before the browser shows the frame (no flash).
+  // Engrave (DOM side-effect) on score / width change. LayoutEffect so the staff
+  // is painted before the browser shows the frame (no flash). Colors are the fixed
+  // PAPER palette — the sheet never re-skins with the app theme, so theme changes
+  // don't invalidate the engraving.
   useLayoutEffect(() => {
     const host = hostRef.current;
     if (!host) return;
@@ -206,15 +222,13 @@ function NotationInner({ score }: NotationProps) {
       resultRef.current = null;
       return;
     }
-    const cs = getComputedStyle(host);
-    const colors = {
-      foreground: cs.getPropertyValue("--foreground").trim() || "currentColor",
-      primary: cs.getPropertyValue("--primary").trim() || "currentColor",
-    };
-    resultRef.current = engrave(host, model, size.width, endBeat, colors);
+    resultRef.current = engrave(host, model, size.width, endBeat, {
+      foreground: PAPER.ink,
+      primary: PAPER.accent,
+    });
     activeElsRef.current = [];
     applyCursor(cursor.getBeat());
-  }, [model, size.width, isDark, endBeat, hasNotes, cursor, applyCursor]);
+  }, [model, size.width, endBeat, hasNotes, cursor, applyCursor]);
 
   // Drive the imperative path on every cursor change — no React render.
   useEffect(
@@ -242,8 +256,13 @@ function NotationInner({ score }: NotationProps) {
   }
 
   return (
+    // Fixed white "paper" surface — sheet music is always black-on-white,
+    // independent of the app theme (see PAPER).
     // eslint-disable-next-line layout/no-adhoc-layout -- positioning context for the corner-pinned HUD over the scroll body
-    <div className="notation-surface relative h-full w-full bg-background">
+    <div
+      className="notation-surface relative h-full w-full"
+      style={{ backgroundColor: PAPER.background }}
+    >
       <style>{HIGHLIGHT_CSS}</style>
       <Scroll axis="y" className="h-full" ref={scrollRef}>
         <Inset pad="md">
@@ -254,8 +273,8 @@ function NotationInner({ score }: NotationProps) {
             <div
               ref={playheadRef}
               // eslint-disable-next-line layout/no-adhoc-layout -- playhead line positioned imperatively (transform/height written per frame by applyCursor)
-              className="pointer-events-none absolute left-0 top-0 z-raised w-0.5 bg-primary/70"
-              style={{ display: "none" }}
+              className="pointer-events-none absolute left-0 top-0 z-raised w-0.5"
+              style={{ display: "none", backgroundColor: PAPER.accent, opacity: 0.7 }}
             />
           </div>
         </Inset>

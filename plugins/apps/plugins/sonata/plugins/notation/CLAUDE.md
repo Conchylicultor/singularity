@@ -46,8 +46,15 @@ The engraving is drawn with **VexFlow** (`vexflow`), declared as this plugin's
 own dependency — mirroring how `piano-roll` scopes `pixi.js` to itself rather
 than hoisting a renderer to the shell. Hand-rolled SVG engraving (beaming,
 accidental placement, stems, ledger lines, rest glyphs, collision avoidance) is a
-research problem; VexFlow does it to a professional standard and lets us draw
-with **theme-token colors** read from CSS vars, so the staff re-skins light/dark.
+research problem; VexFlow does it to a professional standard.
+
+**Fixed paper palette.** The staff is always engraved as black ink on a white
+page (the `PAPER` constant in `notation.tsx`), deliberately independent of the
+app theme (light/dark) *and* the active color preset — real sheet music is
+monochrome print, so a tinted or light-on-dark staff reads as a bug, not a skin.
+The only accent is the active-note highlight + playhead (a single fixed hue with
+strong contrast on white). Because colors are constant, a theme change no longer
+invalidates the engraving.
 
 ## Rhythm: adaptive subdivision (tuplets, grace notes, sub-16ths)
 
@@ -106,7 +113,7 @@ measures — is a **pure, unit-tested** pipeline, kept renderer-free:
   opposed stems, optional per-track labels); returns the geometry the component
   follows playback with (beat→x anchors, per-system boxes, tagged note elements).
 - `web/components/notation.tsx` — the Display component: measures width via
-  `useElementSize`, re-engraves on score/width/theme change, drives the playhead
+  `useElementSize`, re-engraves on score/width change, drives the playhead
   and highlight **imperatively** (`useCursorApi().subscribe`, zero re-render per
   frame), and auto-scrolls the active system via `useCursorSelector`.
 
@@ -161,7 +168,7 @@ instrument grouping — while `convert` itself stays pure.
 - Description: Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
 - Web:
   - Contributes: `Sonata.Display` "Notation" → `Notation`, `ConfigV2.WebRegister`, `Sonata.ViewOption` "notation"
-  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackMixerEntries`, `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/element-size.useElementSize`, `primitives/latest-ref.useLatestRef`, `primitives/syntax-highlight.useDarkMode`
+  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackMixerEntries`, `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/element-size.useElementSize`, `primitives/latest-ref.useLatestRef`
 - Server:
   - Uses: `config_v2.ConfigV2`
 

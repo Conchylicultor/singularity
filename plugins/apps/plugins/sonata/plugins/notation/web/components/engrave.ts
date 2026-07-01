@@ -11,10 +11,10 @@
  * a measure's voices are joined into one `Formatter` so onsets align across the
  * system.
  *
- * Theme-driven: colors are read from CSS custom properties by the component and
- * passed in, then applied to the VexFlow context, so the score re-skins with the
- * active light/dark theme. Sheet music stays monochrome — per-track color is
- * intentionally NOT used here.
+ * Colors are supplied by the component (the fixed black-ink-on-white PAPER
+ * palette) and applied to the VexFlow context. Sheet music is deliberately
+ * monochrome and theme-independent — it never re-skins with light/dark or the
+ * active preset, and per-track color is intentionally NOT used here.
  *
  * Line-break: measures are packed into a system greedily until the next would
  * overflow the container width, then a new system row starts. Widths come from
@@ -79,11 +79,11 @@ export interface EngraveResult {
   height: number;
 }
 
-/** Theme colors, read from CSS custom properties at engrave time. */
+/** Ink colors for the engraving (the fixed black-on-white PAPER palette). */
 export interface EngraveColors {
-  /** Notes, clefs, staff lines, text (`--foreground`). */
+  /** Notes, clefs, staff lines, text (paper ink). */
   foreground: string;
-  /** Highlight + playhead accent (`--primary`). */
+  /** Highlight + playhead accent. */
   primary: string;
 }
 
