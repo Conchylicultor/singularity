@@ -1,4 +1,4 @@
-// @hash 31773057d5be
+// @hash 94c76bcae71a
 {
   "manifests": [
     {
@@ -104,7 +104,10 @@
       "extends": [
         "served-baseline"
       ],
-      "excludes": []
+      "excludes": [
+        "agent-runtime",
+        "auth"
+      ]
     },
     {
       "id": "story",

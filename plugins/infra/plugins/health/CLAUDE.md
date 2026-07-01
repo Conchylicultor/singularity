@@ -7,13 +7,8 @@
 - Description: Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
 - Web:
   - Contributes: `Core.Root` → `ReconnectWatcher`, `Core.Root` → `WedgeWatchdog`, `ActionBar.Item` → `HealthDot`
-<<<<<<< .merge_file_9ahSLj
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/css/center.Center`, `primitives/css/status-dot.StatusDot`, `primitives/live-state.getNotificationsClient`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/networking.subscribeWsStatus`, `primitives/tooltip.WithTooltip`, `reports.report`, `shell/action-bar.ActionBar`, `shell/toast.showToast`
-  - Exports: Values: `getHealth`, `waitForRestart`
-=======
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/css/center.Center`, `primitives/css/status-dot.StatusDot`, `primitives/live-state.getNotificationsClient`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/networking.subscribeWsStatus`, `primitives/report-sink.defineReportSink`, `primitives/tooltip.WithTooltip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/css/center.Center`, `primitives/css/status-dot.StatusDot`, `primitives/live-state.getNotificationsClient`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/networking.subscribeWsStatus`, `primitives/report-sink.defineReportSink`, `primitives/tooltip.WithTooltip`, `shell/action-bar.ActionBar`, `shell/toast.showToast`
   - Exports: Types: `WedgeReport`; Values: `getHealth`, `waitForRestart`, `wedgeReportSink`
->>>>>>> .merge_file_j6XGtf
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`
   - Routes: `GET /api/health`, `GET /api/health/ready`

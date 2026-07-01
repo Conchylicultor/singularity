@@ -3308,13 +3308,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports: Types: `ContentionSnapshot`, `ContentionTopDatabase`; Values: `ContentionSnapshotSchema`, `ContentionTopDatabaseSchema`
     - **`endpoints`** — Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
+      - Web:
+        - Uses: `primitives/report-sink.defineReportSink`
+        - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `endpointErrorSink`, `endpointQueryKey`, `fetchEndpoint`, `getEndpointErrorMessage`, `useEndpoint`, `useEndpointMutation`
       - Core:
         - Uses: `infra/runtime-profiler.recordEntrySpan`, `packages/inflight.createInflight`, `packages/semaphore.createSemaphore`
         - Exports: Types: `Codec`, `EndpointDef`, `ExtractParams`; Values: `blob`, `dateString`, `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`, `isCodec`, `multipart`
       - Cross-plugin:
         - Imported by: `active-data`, `active-data/plugin-link`, `active-data/task`, `apps-core/surface/floating/wallpaper`, `apps-core/surface/floating/wallpaper/openverse`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/deploy/servers`, `apps/mail/sync`, `apps/mail/sync-status`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/prototypes/files`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/sources/ultimate-guitar`, `apps/sonata/track-mixer`, `apps/sonata/transpose`, `apps/story/generation`, `apps/story/marker`, `apps/story/shell`, `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/studio/explorer`, `apps/studio/release`, `apps/studio/release/release-artifact`, `apps/studio/release/release-logs`, `apps/workflows/definitions`, `apps/workflows/editor`, `apps/workflows/engine`, `apps/workflows/executions`, `apps/workflows/steps/user-input`, `auth`, `auth/google/setup-wizard`, `backup`, `build`, `build/build-commits`, `build/build-fix`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/code-api`, `code-explorer/file-resolve`, `config_v2`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-category`, `conversations/conversation-view`, `conversations/conversation-view/allow-monitor`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/notes`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/push-profiling`, `conversations/conversation-view/resume`, `conversations/conversations-view`, `conversations/conversations-view/data-view`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/hibernation`, `conversations/recover`, `conversations/summary`, `conversations/transcript-api`, `debug/boot-profile`, `debug/broadcasts`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/live-state-churn/emit`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling/boot`, `debug/profiling/boot-bench`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/runtime`, `debug/profiling/stats`, `debug/queue`, `debug/read-set`, `debug/slow-ops`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `history/dialog`, `history/engine`, `infra/attachments`, `infra/boot-snapshot`, `infra/events`, `infra/events-test`, `infra/health`, `infra/jobs`, `infra/ndjson-stream`, `infra/secrets`, `page/bookmark`, `page/editor`, `page/inline-page-link`, `page/turn-into-page`, `plugin-meta/composition`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/file-tree`, `primitives/data-view/custom-columns`, `primitives/diff-view`, `primitives/folder-picker`, `primitives/launch`, `primitives/live-state`, `primitives/log-channels`, `release`, `reports`, `reports/endpoint-errors`, `reports/mutation-errors`, `review/code-review`, `review/config-defaults`, `review/plugin-changes`, `screenshot`, `search/engine`, `search/quick-find`, `shell/notifications`, `stats/commits`, `stats/cost`, `stats/pushes`, `stats/tasks`, `tasks`, `tasks/container-tasks`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-draft-form`, `tasks/task-effort`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-preprompt`, `ui/theme-engine/theme-customizer`, `ui/tweakcn`, `ui/tweakcn/community-browser`
-      - Web:
-        - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `endpointQueryKey`, `fetchEndpoint`, `getEndpointErrorMessage`, `registerEndpointErrorReporter`, `reportEndpointError`, `useEndpoint`, `useEndpointMutation`
       - Server:
         - Exports: Values: `HttpError`, `implement`
     - **`entities`** — Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.
@@ -3378,15 +3379,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
       - Web:
         - Contributes: `Core.Root` → `ReconnectWatcher`, `Core.Root` → `WedgeWatchdog`, `ActionBar.Item` → `HealthDot`
-        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/css/center.Center`, `primitives/css/status-dot.StatusDot`, `primitives/live-state.getNotificationsClient`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/networking.subscribeWsStatus`, `primitives/tooltip.WithTooltip`, `reports.report`, `shell/action-bar.ActionBar`, `shell/toast.showToast`
-        - Exports: Values: `getHealth`, `waitForRestart`
+        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/css/center.Center`, `primitives/css/status-dot.StatusDot`, `primitives/live-state.getNotificationsClient`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/networking.subscribeWsStatus`, `primitives/report-sink.defineReportSink`, `primitives/tooltip.WithTooltip`, `shell/action-bar.ActionBar`, `shell/toast.showToast`
+        - Exports: Types: `WedgeReport`; Values: `getHealth`, `waitForRestart`, `wedgeReportSink`
       - Server:
         - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`
         - Routes: `GET /api/health`, `GET /api/health/ready`
+      - Cross-plugin:
+        - Imported by: `reports/crash`
+        - Endpoint callers: `launcher`
       - Shared:
         - Exports: Types: `HealthResponse`; Values: `getHealth`, `HealthResponseSchema`
-      - Cross-plugin:
-        - Endpoint callers: `launcher`
     - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
       - Server:
         - Uses: `packages/host-semaphore.createHostSemaphore`
@@ -3422,7 +3424,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `mcpRequest`
     - **`ndjson-stream`** — Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint, guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder: wrap a frame-emitting producer into a chunked stream that survives Bun's idle timeout and lets clients render rows progressively.
       - Web:
-        - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.reportEndpointError`
+        - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.endpointErrorSink`
         - Exports: Values: `readNdjson`
       - Cross-plugin:
         - Imported by: `debug/slow-ops/cluster`, `debug/worktree-cleanup`
@@ -4448,11 +4450,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `ElementSize`, `ResizeTarget`; Values: `useElementSize`, `useResizeObserver`
       - Cross-plugin:
         - Imported by: `apps-core/surface/floating`, `apps/prototypes/gallery`, `apps/sonata/notation`, `apps/sonata/piano-roll`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/data-view/gallery`, `primitives/expandable`, `primitives/graph-canvas`, `primitives/pane`, `primitives/responsive-overflow`, `primitives/terminal`, `reorder`, `screenshot`
-    - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a registerBoundaryReporter() hook for opt-in crash reporting.
+    - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a boundaryReportSink for opt-in crash reporting.
       - Web:
         - Slots: `ErrorBoundary.Action` ← `reports.launch-fix`
-        - Uses: `primitives/css/text.Text`, `primitives/slot-render.registerSlotItemMiddleware`
-        - Exports: Types: `BoundaryErrorReport`; Values: `ErrorBoundary`, `PluginErrorBoundary`, `registerBoundaryReporter`
+        - Uses: `primitives/css/text.Text`, `primitives/report-sink.defineReportSink`, `primitives/slot-render.registerSlotItemMiddleware`
+        - Exports: Types: `BoundaryErrorReport`; Values: `boundaryReportSink`, `ErrorBoundary`, `PluginErrorBoundary`
       - Cross-plugin:
         - Imported by: `apps/workflows/editor`, `apps/workflows/executions`, `framework/web-core`, `layouts/full-pane`, `layouts/miller`, `reports/crash`, `reports/launch-fix`
     - **`expandable`** — Clamps tall content to a max height and reveals a Show more/less toggle only when the rendered content actually overflows (measured via ResizeObserver, not char/line heuristics).
@@ -4672,6 +4674,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/agent-manager/welcome`, `apps/browser/start-page`, `apps/mail/shell`, `apps/pages/welcome/recent-pages`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/story/shell`, `apps/studio/release`, `apps/studio/release/release-info`, `apps/workflows/definitions`, `apps/workflows/engine`, `apps/workflows/executions`, `build`, `build/build-info`, `conversations/all-conversations`, `conversations/conversation-ui/item`, `conversations/conversation-view/jsonl-viewer`, `debug/boot-profile`, `debug/claude-cli-calls`, `debug/health-monitor`, `debug/live-state-health`, `debug/reports`, `debug/slow-ops/cluster`, `debug/slow-ops/pane`, `fields/date/table`, `history/dialog`, `plugin-meta/plugin-health`, `primitives/sync-status`, `shell/notifications`, `tasks/task-header`, `tasks/task-list`
       - Web:
         - Exports: Values: `formatRelativeTime`, `RelativeTime`
+    - **`report-sink`** — Shared soft-reporter slot factory: defineReportSink() creates a module-level register/emit sink so a low-level plugin can own a neutral report body while a domain plugin (e.g. reports) registers the mapping. emit() never throws — it is called on error paths. The single-sourced idiom behind the boundary/endpoint/wedge reporters.
+      - Cross-plugin:
+        - Imported by: `infra/endpoints`, `infra/health`, `primitives/error-boundary`
+      - Web:
+        - Exports: Types: `ReportSink`; Values: `defineReportSink`
     - **`responsive-overflow`** — Progressively hides children that don't fit the container width. Exposes ResponsiveOverflow component and useResponsiveOverflow hook.
       - Web:
         - Uses: `primitives/css/measure-strip.MeasureStrip`, `primitives/css/ui-kit.cn`, `primitives/element-size.useResizeObserver`
@@ -4876,12 +4883,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
     - Exports: Types: `Report`; Values: `reportDetailRoute`, `ReportSchema`, `reportsResource`, `reportsRootRoute`
   - Cross-plugin:
-    - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `infra/health`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/render-loop`
+    - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/render-loop`
   - Plugins:
     - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
       - Web:
         - Contributes: `Core.Root` → `CrashCollector`, `Reports.KindView` → `CrashSummary`
-        - Uses: `primitives/error-boundary.registerBoundaryReporter`, `reports.report`, `reports.Reports`
+        - Uses: `infra/health.wedgeReportSink`, `primitives/error-boundary.boundaryReportSink`, `reports.report`, `reports.Reports`
       - Server:
         - Uses: `build.getServerBuildId`, `reports.ReportKind`
       - Core:
@@ -4889,7 +4896,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
       - Web:
         - Contributes: `Core.Root` → `EndpointErrorReporter`
-        - Uses: `infra/endpoints.EndpointErrorInfo`, `infra/endpoints.registerEndpointErrorReporter`, `reports.report`
+        - Uses: `infra/endpoints.EndpointErrorInfo`, `infra/endpoints.endpointErrorSink`, `reports.report`
     - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
       - Web:
         - Contributes: `ErrorBoundary.Action` → `LaunchFixButton`
