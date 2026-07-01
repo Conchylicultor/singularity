@@ -1,6 +1,7 @@
 import {
   useCallback,
   useRef,
+  type ComponentType,
   type PointerEvent as ReactPointerEvent,
 } from "react";
 import { MdAdd } from "react-icons/md";
@@ -29,6 +30,10 @@ export interface WindowMember {
   tabId: string;
   title: string;
   icon: AppIcon | undefined;
+  /** Per-app attention overlay (e.g. Mail sync-error), pinned to the tab icon —
+   *  mirrors the docked tab bar / app-rail. Renders `null` when there's nothing
+   *  to surface. */
+  badge?: ComponentType<{ className?: string }>;
 }
 
 /** The commit operations a finished chip drag invokes (resolved by the host). */
@@ -221,6 +226,7 @@ export function WindowTabStrip({
             key={member.tabId}
             data-floating-tab-id={member.tabId}
             icon={Icon}
+            badge={member.badge}
             label={member.title}
             active={active}
             title={member.title}

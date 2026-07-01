@@ -173,6 +173,7 @@ function FloatingChrome({ tabId, appId, focused, exiting }: PlacementChromeProps
           tabId: memberId,
           title: titles[memberId] ?? app?.tooltip ?? "Window",
           icon: app?.icon,
+          badge: app?.badge,
         };
       }),
     [win.members, tabAppId, apps, titles],

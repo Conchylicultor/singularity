@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { Apps } from "@plugins/apps-core/web";
-import { AppIconView } from "@plugins/apps-core/plugins/app-icon/web";
+import { appIconComponent } from "@plugins/apps-core/plugins/app-icon/web";
 import { useTabs, type Tab } from "@plugins/apps-core/plugins/tabs/web";
+import { TabIcon } from "@plugins/ui/plugins/tab-bar/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
@@ -133,7 +134,17 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
               <ToggleChip
                 active={active}
                 variant="ghost"
-                icon={app?.icon ? <AppIconView icon={app.icon} /> : undefined}
+                // Reuse the tab's icon+badge composition so the dock chip's
+                // per-app attention dot (e.g. the active member's Mail
+                // sync-error) is pixel-identical to the tab-strip / docked bar.
+                icon={
+                  app?.icon ? (
+                    <TabIcon
+                      icon={appIconComponent(app.icon)}
+                      badge={app.badge}
+                    />
+                  ) : undefined
+                }
                 onClick={onClick}
                 title={label}
                 className={cn("max-w-40", minimized && "opacity-60")}
