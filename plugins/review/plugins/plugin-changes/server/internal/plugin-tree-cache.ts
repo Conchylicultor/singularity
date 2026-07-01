@@ -36,7 +36,7 @@ export function getMainPluginTree(mainPluginsDir: string): Promise<PluginTree> {
       "",
     () =>
       withHeavyReadSlot(() =>
-        buildPluginTree(mainPluginsDir, { skipBarrelImport: true }),
+        buildPluginTree(mainPluginsDir, { skipBarrelImport: true, facets: true }),
       ),
   );
 }
@@ -61,7 +61,7 @@ export function getWorktreePluginTree(
     () => Promise.resolve(String(currentGeneration(worktreePath))),
     () =>
       withHeavyReadSlot(() =>
-        buildPluginTree(worktreePluginsDir, { skipBarrelImport: true }),
+        buildPluginTree(worktreePluginsDir, { skipBarrelImport: true, facets: true }),
       ),
   );
 }

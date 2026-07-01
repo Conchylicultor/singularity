@@ -852,7 +852,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`disabled`** — Disabled badge in the explorer plugin tree row.
               - Web:
                 - Contributes: `Explorer.TreeRowBadge` "disabled" → `DisabledBadge`
-                - Uses: `apps/studio/explorer.Explorer`
+                - Uses: `apps/studio/explorer.Explorer`, `plugin-meta/composition.useDisabledClosure`, `plugin-meta/composition.useEnsureCompositionData`
             - **`expand-collapse`** — Expand/collapse all descendants button in the explorer plugin tree row.
               - Web:
                 - Contributes: `Explorer.TreeRowBadge` "expand-collapse" → `ExpandCollapseButton`
@@ -3377,12 +3377,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DeleteTargetingBody`, `DirectEnqueueBody`, `EmitBody`, `SubscribeBody`; Values: `crashRecoveryEventsTest`, `deleteEventsTestTargeting`, `deleteEventsTestTrigger`, `DeleteTargetingBodySchema`, `DirectEnqueueBodySchema`, `directEnqueueEventsTest`, `EmitBodySchema`, `emitEventsTest`, `getEventsTestLog`, `listEventsTestTriggers`, `resetEventsTest`, `SubscribeBodySchema`, `subscribeEventsTest`, `waitEventsTestIdle`
     - **`file-watcher`** — Shared @parcel/watcher primitive with debounce, ceiling, and reconcile timer management.
       - Cross-plugin:
-        - Imported by: `apps/prototypes/files`, `apps/sonata/sources/midi/folders`, `config_v2`, `conversations/conversation-view/code`, `conversations/conversation-view/op-status`, `conversations/transcript-watcher`, `infra/git-watcher`
+        - Imported by: `apps/prototypes/files`, `apps/sonata/sources/midi/folders`, `config_v2`, `conversations/conversation-view/code`, `conversations/conversation-view/op-status`, `conversations/transcript-watcher`, `infra/git-watcher`, `plugin-meta/plugin-tree`
       - Server:
         - Exports: Types: `FileWatcher`, `FileWatcherOptions`; Values: `createFileWatcher`, `getParcelWatcher`
     - **`git-read-cache`** — Git-state-keyed result memo: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree.
       - Cross-plugin:
-        - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `review/plugin-changes`
+        - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `plugin-meta/plugin-tree`, `review/plugin-changes`
       - Server:
         - Exports: Types: `GitStateMemo`; Values: `createGitStateMemo`
     - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. Emits the git.refAdvanced trigger event (main only) and notifies the refHeadResource live-state resource on every advance.
@@ -3411,7 +3411,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `packages/host-semaphore.createHostSemaphore`
         - Exports: Values: `heavyReadQueueDepth`, `heavyReadSlotCount`, `withHeavyReadSlot`
       - Cross-plugin:
-        - Imported by: `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `debug/health-monitor`, `debug/profiling/boot-bench`, `plugin-meta/plugin-view`, `review/plugin-changes`
+        - Imported by: `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `debug/health-monitor`, `debug/profiling/boot-bench`, `plugin-meta/plugin-tree`, `review/plugin-changes`
     - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
       - Server:
         - Uses: `database.db`, `database/admin.connectionString`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
@@ -3449,7 +3449,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `ndjsonResponse`
     - **`paths`**
       - Cross-plugin:
-        - Imported by: `apps-core/surface/floating/wallpaper`, `apps/prototypes/files`, `backup`, `backup/sources/attachments`, `backup/sources/claude-settings`, `backup/sources/config`, `backup/sources/project-memory`, `backup/sources/secrets`, `backup/sources/singularity-platform`, `backup/targets/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `build/server-build-id`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/staging`, `conversations`, `conversations/conversation-progress`, `conversations/hibernation`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `database`, `database/admin`, `database/zero/cache-service`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/git-watcher`, `infra/launcher`, `infra/worktree`, `packages/host-semaphore`, `plugin-meta/composition`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `primitives/commit-list`, `primitives/log-channels`, `primitives/terminal`, `release`, `reports`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`
+        - Imported by: `apps-core/surface/floating/wallpaper`, `apps/prototypes/files`, `backup`, `backup/sources/attachments`, `backup/sources/claude-settings`, `backup/sources/config`, `backup/sources/project-memory`, `backup/sources/secrets`, `backup/sources/singularity-platform`, `backup/targets/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `build/server-build-id`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/staging`, `conversations`, `conversations/conversation-progress`, `conversations/hibernation`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `database`, `database/admin`, `database/zero/cache-service`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/git-watcher`, `infra/launcher`, `infra/worktree`, `packages/host-semaphore`, `plugin-meta/plugin-health`, `plugin-meta/plugin-tree`, `primitives/commit-list`, `primitives/log-channels`, `primitives/terminal`, `release`, `reports`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`
       - Server:
         - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `BUILD_ARTIFACTS_RETENTION`, `CLAUDE`, `CLAUDE_DIR`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `currentWorktreeName`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `pruneWorktreeBuildArtifacts`, `pruneWorktreeReleaseArtifacts`, `RELEASE_ARTIFACTS_RETENTION`, `REPO_ROOT`, `REPORTS_DIR`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`, `WEB_CORE_RELATIVE`, `WEB_DIST_DIR`, `worktreeArtifacts`, `worktreeDataDir`, `WORKTREES_DIR`
       - Core:
@@ -3846,15 +3846,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `ConfigV2.WebRegister`
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2.useSetConfig`, `config_v2/staging.useStageConfigDefault`, `infra/endpoints.useEndpoint`
-        - Exports: Types: `CompositionDataResult`, `DiffState`, `ImpactResult`, `ManifestActions`, `PromoteManifestsToGit`; Values: `clearActive`, `pinAsRoot`, `setActiveComposition`, `setCompareComposition`, `updateActiveDraft`, `useActiveComposition`, `useActiveMembership`, `useCompareComposition`, `useCompositionData`, `useDiffMap`, `useEnsureCompositionData`, `useGraph`, `useImpact`, `useInclusion`, `useIsCompareMode`, `useManifestActions`, `useManifestItems`, `usePromoteManifestsToGit`
+        - Exports: Types: `CompositionDataResult`, `DiffState`, `ImpactResult`, `ManifestActions`, `PromoteManifestsToGit`; Values: `clearActive`, `pinAsRoot`, `setActiveComposition`, `setCompareComposition`, `updateActiveDraft`, `useActiveComposition`, `useActiveMembership`, `useCompareComposition`, `useCompositionData`, `useDiffMap`, `useDisabledClosure`, `useEnsureCompositionData`, `useGraph`, `useImpact`, `useInclusion`, `useIsCompareMode`, `useManifestActions`, `useManifestItems`, `usePromoteManifestsToGit`
       - Server:
-        - Uses: `config_v2.ConfigV2`, `infra/endpoints.implement`, `infra/paths.PLUGINS_DIR`
+        - Uses: `config_v2.ConfigV2`, `infra/endpoints.implement`, `plugin-meta/plugin-tree.getFacetsTreeCached`
         - Routes: `GET /api/composition/data`
       - Core:
         - Uses: `config_v2.defineConfig`, `fields/enum/config.enumField`, `fields/list/config.listField`, `fields/string-list/config.stringListField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`, `plugin-meta/closure.flattenManifest`
         - Exports: Types: `CompositionData`, `CompositionManifestItem`; Values: `compositionDataSchema`, `compositionsConfig`, `getCompositionData`, `manifestItemToManifest`
       - Cross-plugin:
-        - Imported by: `apps/studio/compositions`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/studio/release`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/inclusion`
+        - Imported by: `apps/studio/compositions`, `apps/studio/explorer/disabled`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/studio/release`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/inclusion`
     - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`
@@ -4041,12 +4041,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/date/config.dateField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`
         - Exports: Types: `PluginHealthReview`, `PluginStaleness`, `ReviewTaskSummary`; Values: `getPluginHealthReviews`, `getPluginHealthTasks`, `getPluginStaleness`, `pluginHealthReviewFields`, `PluginHealthReviewSchema`, `PluginStalenessSchema`, `ReviewTaskSummarySchema`
-    - **`plugin-tree`**
+    - **`plugin-tree`** — Cached, watcher-invalidated plugin-tree accessors: structure-only for the hot path and a shared full-faceted build for the two facet consumers.
+      - Server:
+        - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/git-read-cache.createGitStateMemo`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.PLUGINS_DIR`
+        - Exports: Values: `getFacetsTreeCached`, `getStructureTreeCached`
       - Core:
         - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.Facet`, `plugin-meta/facets.loadFacets`, `plugin-meta/facets.setFacet`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.parseStringField`, `plugin-meta/parse-utils.runWithFsSnapshot`, `plugin-meta/parse-utils.stripTypes`
         - Exports: Types: `PluginNode`, `PluginTree`, `Runtime`; Values: `buildPluginTree`, `resolvePluginSpecifier`
       - Cross-plugin:
-        - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/closure`
+        - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/closure`, `plugin-meta/composition`, `plugin-meta/plugin-view`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Web:
         - Slots: `PluginViewSlots.Section` ← `plugin-meta.facets.contributions.render-detail`, `plugin-meta.facets.cross-refs.render-detail`, `plugin-meta.facets.db-schema.render-detail`, `plugin-meta.facets.exports.render-detail`, `plugin-meta.facets.registrations.render-detail`, `plugin-meta.facets.resources.render-detail`, `plugin-meta.facets.routes.render-detail`, `plugin-meta.facets.slots.render-detail`, `plugin-meta.facets.structure.render-detail`, `plugin-meta.plugin-health`, `plugin-meta.plugin-view.dependencies`, `plugin-meta.plugin-view.file-tree`, `plugin-meta.plugin-view.inclusion`, `plugin-meta.plugin-view.runtimes`, `plugin-meta.plugin-view.source-path`, `plugin-meta.plugin-view.sub-plugins`, `pluginViewPane.Actions`
@@ -4054,11 +4057,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.useEndpoint`, `primitives/breadcrumb.Breadcrumb`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/cluster.Cluster`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/detail-sections.defineDetailSections`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`
         - Exports: Types: `ExportRuntime`, `PluginNode`, `PluginTreePayload`; Values: `ConsumerList`, `PluginDetail`, `PluginLink`, `pluginViewPane`, `PluginViewSlots`, `RUNTIME_COLORS`, `Section`, `SubHeading`
       - Server:
-        - Uses: `infra/endpoints.implement`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.PLUGINS_DIR`
-        - Routes: `GET /api/plugin-view/tree`
+        - Uses: `infra/endpoints.implement`, `plugin-meta/plugin-tree.getFacetsTreeCached`, `plugin-meta/plugin-tree.getStructureTreeCached`
+        - Routes: `GET /api/plugin-view/tree`, `GET /api/plugin-view/facets-tree`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
-        - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `getPluginTree`
+        - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `getPluginFacetsTree`, `getPluginTree`
       - Cross-plugin:
         - Imported by: `active-data/plugin-link`, `apps/studio/contributions`, `apps/studio/explorer`, `plugin-meta/facets/contributions/render-detail`, `plugin-meta/facets/cross-refs/render-detail`, `plugin-meta/facets/db-schema/render-detail`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/facets/registrations/render-detail`, `plugin-meta/facets/resources/render-detail`, `plugin-meta/facets/routes/render-detail`, `plugin-meta/facets/slots/render-detail`, `plugin-meta/facets/structure/render-contributions`, `plugin-meta/facets/structure/render-detail`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/inclusion`, `plugin-meta/plugin-view/runtimes`, `plugin-meta/plugin-view/source-path`, `plugin-meta/plugin-view/sub-plugins`
       - Plugins:

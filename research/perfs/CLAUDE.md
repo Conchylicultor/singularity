@@ -98,11 +98,19 @@ and source facets lazily (a single cached, fast aggregate shared by Contribution
 **Altitude 2 (fast aggregate algorithm) LANDED & validated on the worktree (2026-06-30):** async
 read-once in-memory FS snapshot → facet `extract` touches zero disk → **max event-loop block 50 s → ~1.5 s
 cold / ~0.3 s warm**, output byte-identical; end-to-end, a concurrent cheap endpoint stays <75 ms *during*
-an 8 s tree build (no longer a victim). **Still TODO:** Altitude 1 (structure-only default + cached
-accessor → hot path to ms; client-derived `disabled` cascade — the prior doc's "explorer needs no
-disabled" was **wrong**); not yet on `singularity` (needs a push). Two corrections vs the design doc:
-explorer DOES render `disabled` (derive client-side from the composition graph); per-plugin facets are
-infeasible for the detail pane (`importedBy`). Full arc → newest implement doc
+an 8 s tree build (no longer a victim). **Altitude 1 (structure-only hot path + cached accessors +
+client-served `disabled` cascade) LANDED & validated on the worktree (2026-07-01, `att-1782924979-2mnf`):**
+`GET /api/plugin-view/tree` in-process workMs **382 (max 1.1 s cold / 3.3 ms warm)** — structure-only, no
+`extract`/`relate`; **`stall-profiles.jsonl` empty since boot** (the `←buildPluginTree` stall is gone);
+facets moved to a new cached `GET /api/plugin-view/facets-tree` (rare Studio/detail path, cached +
+single-flight) whose build stays non-blocking (`/api/health/ready` max **0.32 ms** *during* a 13.9 s cold
+faceted build); `/api/composition/data` now **84 ms** (`git-memo-hit` on the shared faceted build — no
+duplicate walk). Both corrections confirmed against live data: the explorer `disabled` cascade is served as
+`disabledIds` on `/api/composition/data` (**12** = `review.plugin-changes` seed + subtree + `render-diff`
+importers) and derived client-side; the detail pane reads `importedBy` off the full faceted aggregate (339
+nodes populated). All 60 `./singularity check`s pass. **Not yet on `singularity`/main (needs a push).**
+Residual: the rare faceted endpoint's cold build is still multi-second and can 502 under load (cached after;
+non-blocking). Full arc → newest implement doc
 **[`2026-06-30-buildplugintree-structure-only-IMPLEMENT.md`](./2026-06-30-buildplugintree-structure-only-IMPLEMENT.md)**;
 design **[`2026-06-29-perfs-buildplugintree-eventloop-block-FIX.md`](./2026-06-29-perfs-buildplugintree-eventloop-block-FIX.md)**;
 predecessor [`…-HANDOFF.md`](./2026-06-29-conversation-load-40s-eventloop-block-HANDOFF.md).

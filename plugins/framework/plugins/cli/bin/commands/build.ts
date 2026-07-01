@@ -738,7 +738,7 @@ export function registerBuild(program: Command) {
         if (!item) throw new Error(`Unknown composition "${opts.composition}". Known: ${items.map((m) => m.id).join(", ")}`);
         const allManifests = items.map(manifestItemToManifest);
         const flat = flattenManifest(manifestItemToManifest(item), allManifests);
-        const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true });
+        const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true, facets: true });
         const bundle = resolveComposition(tree, flat).bundle;
         await generateCompositionRegistry({ root, bundle });
         console.log(`Composition "${opts.composition}": ${bundle.size} plugins in closure.`);

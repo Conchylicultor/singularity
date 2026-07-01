@@ -77,7 +77,7 @@ const check: Check = {
     "Every declared composition is valid: unique name, all entry/contributor ids resolve, each selected contributor is a genuine load-bearing soft option (no redundant selections), and every `excludes` bundle stays disjoint from the composition's hard closure (self-containment guard).",
   async run() {
     const root = await getRoot();
-    const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true });
+    const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true, facets: true });
     const graph = classifyEdges(tree);
     const allIds = new Set<PluginId>([...tree.byDir.values()].map((n) => n.id));
 

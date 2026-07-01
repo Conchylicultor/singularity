@@ -5,6 +5,7 @@ import { compositionsConfig } from "@plugins/plugin-meta/plugins/composition/cor
 export {
   useCompositionData,
   useEnsureCompositionData,
+  useDisabledClosure,
   useInclusion,
   useImpact,
 } from "./internal/hooks";

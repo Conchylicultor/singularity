@@ -58,7 +58,7 @@ const check: Check = {
 
     // 2. Enumerate every Apps.App contribution across all plugins via the
     //    already-parsed contributions facet (props are raw source text).
-    const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true });
+    const tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true, facets: true });
     const offenders: Offender[] = [];
 
     for (const node of tree.byDir.values()) {

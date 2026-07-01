@@ -9,10 +9,12 @@ export interface PluginNode {
   id: PluginId;
   description?: string;
   loadBearing: boolean;
-  /** This plugin's own package.json `singularity.disabled` flag. */
+  /**
+   * This plugin's own package.json `singularity.disabled` flag. The
+   * dependent-closure cascade (seed OR cascade) is derived off this payload —
+   * client-side from the composition edge graph — not shipped here.
+   */
   disabledSeed: boolean;
-  /** This plugin is in the disabled closure (seed OR cascade). */
-  disabled: boolean;
   collapsed: boolean;
   runtimes: { web: boolean; server: boolean; central: boolean };
   children: PluginNode[];

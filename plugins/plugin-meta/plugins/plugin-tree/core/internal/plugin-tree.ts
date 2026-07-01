@@ -278,7 +278,7 @@ function computeIds(nodes: PluginNode[], parentId: string): void {
 
 export async function buildPluginTree(
   pluginsRoot: string,
-  opts?: { skipBarrelImport?: boolean },
+  opts?: { skipBarrelImport?: boolean; facets?: boolean },
 ): Promise<PluginTree> {
   // Step 1: find all plugin directories (async fs walk — does not block event loop)
   // Sort to restore deterministic ordering (parallel walks complete in arbitrary order).
@@ -326,11 +326,12 @@ export async function buildPluginTree(
 
   const tree: PluginTree = { pluginsRoot, byDir, byPath, roots, facets: [] };
 
-  // Step 4a: barrel import (web → server → central) — gated, only the 2 runtime
-  // facets (contributions runtime part, registrations) need imported modules.
-  // The other 7 facets parse files from disk and populate without barrels.
+  // Step 4a: barrel import (web → server → central) — gated on `facets` (and, as
+  // before, skippable within a facet build via `skipBarrelImport`). Only the 2
+  // runtime facets (contributions runtime part, registrations) need imported
+  // modules. The other 7 facets parse files from disk and populate without barrels.
   const importedModules = new Map<string, { mod: Record<string, unknown>; runtime: "web" | "server" | "central" }[]>();
-  if (!opts?.skipBarrelImport) {
+  if (opts?.facets && !opts?.skipBarrelImport) {
     registerBarrelStubs(join(pluginsRoot, ".."));
 
     // Seed web-sdk core barrel (defines Core.Root etc. — needed for slot display names)
@@ -360,41 +361,48 @@ export async function buildPluginTree(
     }
   }
 
-  // Step 4b: facet extract — ALWAYS. Static facets fully populate; runtime facets
-  // are partial (empty importedModules) under skipBarrelImport — acceptable.
-  //
-  // The facet `extract`/`relate` functions are synchronous and re-read the whole
-  // plugin source tree several times over via sync `readFileSync`/`readdirSync`,
-  // which monopolizes the single event loop for many seconds. To make that fast
-  // AND non-blocking without changing any facet body or the tree's output: read
-  // every needed file ONCE, asynchronously and in parallel, into an in-memory
-  // snapshot, then run the (still-synchronous) extract/relate against it via the
-  // ambient-snapshot hook in parse-utils — so the loops touch zero disk. The
-  // snapshot build runs in parallel with the (async) facet-module load.
-  const [facets, fsSnapshot] = await Promise.all([loadFacets(), buildFsSnapshot(dirs)]);
-  tree.facets = facets;
-  let extracted = 0;
-  for (const node of byDir.values()) {
-    const nodeModules = importedModules.get(node.dir) ?? [];
-    runWithFsSnapshot(fsSnapshot, () => {
-      for (const facet of facets) {
-        const data = facet.extract({ dir: node.dir, importedModules: nodeModules, fs: fsSnapshot });
-        setFacet(node, facet.def, data);
-      }
-    });
-    // CPU safety belt: yield to the event loop every 16 nodes so even a
-    // pathological facet can't monopolize the loop. The reads are now in-memory,
-    // so this is the residual cost, not the primary mechanism.
-    if ((++extracted & 15) === 0) await new Promise<void>((resolve) => setImmediate(resolve));
-  }
+  // Steps 4b + 4c: facet extract + relate — gated on `facets`. When `facets` is
+  // falsy this whole block is skipped: no `loadFacets`/`buildFsSnapshot`, no
+  // extract, no relate — so `tree.facets` stays `[]` and every `node.facets`
+  // stays `{}` (its init value). Structure-only is steps 1–3, the cheap async
+  // skeleton the hot callers need.
+  if (opts?.facets) {
+    // Step 4b: facet extract. Static facets fully populate; runtime facets are
+    // partial (empty importedModules) under skipBarrelImport — acceptable.
+    //
+    // The facet `extract`/`relate` functions are synchronous and re-read the whole
+    // plugin source tree several times over via sync `readFileSync`/`readdirSync`,
+    // which monopolizes the single event loop for many seconds. To make that fast
+    // AND non-blocking without changing any facet body or the tree's output: read
+    // every needed file ONCE, asynchronously and in parallel, into an in-memory
+    // snapshot, then run the (still-synchronous) extract/relate against it via the
+    // ambient-snapshot hook in parse-utils — so the loops touch zero disk. The
+    // snapshot build runs in parallel with the (async) facet-module load.
+    const [facets, fsSnapshot] = await Promise.all([loadFacets(), buildFsSnapshot(dirs)]);
+    tree.facets = facets;
+    let extracted = 0;
+    for (const node of byDir.values()) {
+      const nodeModules = importedModules.get(node.dir) ?? [];
+      runWithFsSnapshot(fsSnapshot, () => {
+        for (const facet of facets) {
+          const data = facet.extract({ dir: node.dir, importedModules: nodeModules, fs: fsSnapshot });
+          setFacet(node, facet.def, data);
+        }
+      });
+      // CPU safety belt: yield to the event loop every 16 nodes so even a
+      // pathological facet can't monopolize the loop. The reads are now in-memory,
+      // so this is the residual cost, not the primary mechanism.
+      if ((++extracted & 15) === 0) await new Promise<void>((resolve) => setImmediate(resolve));
+    }
 
-  // Step 4c: facet relate — ALWAYS. `relate` (e.g. routes/cross-refs) also walks
-  // every plugin's source, so it reads from the same snapshot. Yield between
-  // facets so the residual block is one facet's relate, not all of them summed.
-  for (const facet of facets) {
-    if (!facet.relate) continue;
-    runWithFsSnapshot(fsSnapshot, () => facet.relate!({ tree }));
-    await new Promise<void>((resolve) => setImmediate(resolve));
+    // Step 4c: facet relate. `relate` (e.g. routes/cross-refs) also walks every
+    // plugin's source, so it reads from the same snapshot. Yield between facets so
+    // the residual block is one facet's relate, not all of them summed.
+    for (const facet of facets) {
+      if (!facet.relate) continue;
+      runWithFsSnapshot(fsSnapshot, () => facet.relate!({ tree }));
+      await new Promise<void>((resolve) => setImmediate(resolve));
+    }
   }
 
   return tree;

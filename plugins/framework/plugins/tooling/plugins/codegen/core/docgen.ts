@@ -160,7 +160,7 @@ const enrichedTreeCache = new Map<string, Promise<PluginTree>>();
 export function buildEnrichedTree(root: string): Promise<PluginTree> {
   let cached = enrichedTreeCache.get(root);
   if (!cached) {
-    cached = buildPluginTree(resolve(root, "plugins"));
+    cached = buildPluginTree(resolve(root, "plugins"), { facets: true });
     enrichedTreeCache.set(root, cached);
   }
   return cached;
@@ -179,7 +179,7 @@ const barrelFreeTreeCache = new Map<string, Promise<PluginTree>>();
 export function buildBarrelFreeTree(root: string): Promise<PluginTree> {
   let cached = barrelFreeTreeCache.get(root);
   if (!cached) {
-    cached = buildPluginTree(resolve(root, "plugins"), { skipBarrelImport: true });
+    cached = buildPluginTree(resolve(root, "plugins"), { skipBarrelImport: true, facets: true });
     barrelFreeTreeCache.set(root, cached);
   }
   return cached;

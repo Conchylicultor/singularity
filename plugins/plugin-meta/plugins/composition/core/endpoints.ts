@@ -30,11 +30,13 @@ const serializedEdgeGraphSchema: z.ZodType<SerializedEdgeGraph> = z.object({
 export interface CompositionData {
   graph: SerializedEdgeGraph;
   allIds: PluginId[];
+  disabledIds: PluginId[];
 }
 
 export const compositionDataSchema: z.ZodType<CompositionData> = z.object({
   graph: serializedEdgeGraphSchema,
   allIds: idList,
+  disabledIds: z.array(z.custom<PluginId>((v) => typeof v === "string")),
 });
 
 /**

@@ -40,7 +40,7 @@ let graph: EdgeGraph;
 
 beforeAll(async () => {
   const root = (await Bun.$`git rev-parse --show-toplevel`.text()).trim();
-  tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true });
+  tree = await buildPluginTree(join(root, "plugins"), { skipBarrelImport: true, facets: true });
   graph = classifyEdges(tree);
 });
 

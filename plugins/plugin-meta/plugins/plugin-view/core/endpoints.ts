@@ -15,7 +15,6 @@ const pluginNodeSchema: z.ZodType<PluginNode> = z.lazy(() =>
     description: z.string().optional(),
     loadBearing: z.boolean(),
     disabledSeed: z.boolean(),
-    disabled: z.boolean(),
     collapsed: z.boolean(),
     runtimes: z.object({
       web: z.boolean(),
@@ -38,5 +37,10 @@ export const pluginTreePayloadSchema: z.ZodType<PluginTreePayload> = z.object({
 
 export const getPluginTree = defineEndpoint({
   route: "GET /api/plugin-view/tree",
+  response: pluginTreePayloadSchema,
+});
+
+export const getPluginFacetsTree = defineEndpoint({
+  route: "GET /api/plugin-view/facets-tree",
   response: pluginTreePayloadSchema,
 });

@@ -253,6 +253,120 @@ accessor — keep minimal; out of scope unless trivial.)
   coalesce/debounce auto-builds (cut ~20×/day main restarts). File under **`issue-cold-boot-fanout.md`**
   (they amplify every post-boot block, not just this one).
 
+---
+
+## Altitude 1 — concrete implementation plan (2026-07-01, worktree `att-1782924979-2mnf`)
+
+Grounded in a full re-read of the live code + an exhaustive caller audit. **Both corrections re-confirmed
+at the code level** (disabled-badge reads `node.disabled`/`disabledSeed`; cross-refs detail reads
+`importedBy`). Two *new* findings from this session's audit change the plan:
+
+### New finding 1 — a THIRD faceted consumer the design missed
+The design lists only Contributions + `plugin-view/web/panes.tsx` as faceted. But
+`active-data/plugins/plugin-link/web/panes.tsx` (`pluginConvSidePane`, opened when a `<plugin>` chip is
+clicked) renders `<PluginDetail node={node}/>` → `<PluginView.Host>` → **every** `PluginViewSlots.Section`
+(cross-refs, contributions, …) which read `node.facets[id]`. If it stays on the structure-only endpoint the
+pane's facet sections silently render nothing. → **It must migrate to the faceted endpoint too.** (The inline
+plugin-link *chip* — `plugin-link-chip.tsx` — reads only `id` + `description`, so it stays on the hot
+structure-only endpoint; that is the frequent path we are protecting.)
+
+### New finding 2 — the `disabled` cascade is served from the composition endpoint, not recomputed client-side
+The design says "derive the cascade client-side with `disabledClosure(seeds, graph)`." Refinement (same
+altitude — off the hot path — but cleaner): the cascade is **process-invariant, composition-independent**
+repo-derived data, and the `GET /api/composition/data` endpoint the explorer *already* fetches (every row
+calls `useEnsureCompositionData()` for the membership tint) **already runs `classifyEdges` and already ships
+a derived id list (`allIds`)**. So compute `disabledClosure(seeds, classifyEdges(tree))` there once and ship
+`disabledIds` alongside `allIds` — one extra line, zero client CPU, no per-row `disabledClosure` recompute,
+consistent with the endpoint's existing shape. The badge reads a `Set` from it. This keeps the expensive
+work off the hot `/api/plugin-view/tree` path (the audit's real concern) exactly as the doc intends; it just
+computes the closure on the already-cached composition endpoint instead of in N tree-row components.
+*(Seed-disabled still paints immediately from the kept `node.disabledSeed`; the cascade paints when the
+composition fetch resolves — same progressive behavior the doc wanted.)*
+
+### `facets` flag semantics (orthogonal to `skipBarrelImport`)
+`buildPluginTree(root, { skipBarrelImport?, facets?: boolean })`, `facets` default **false**:
+- **4a** barrel import runs when `facets && !skipBarrelImport` (unchanged condition, now also gated on facets)
+- **4b** extract + **4c** relate (incl. `loadFacets` + `buildFsSnapshot`) run when `facets`
+- structure-only (`facets:false`) = steps 1–3 only; `tree.facets=[]`, every `node.facets={}`.
+
+### Definitive caller audit → who passes `{ facets: true }`
+**NEEDS `facets:true`** (preserve each one's existing `skipBarrelImport`): `checks/composition-closure`,
+`checks/apps-paths-from-app-ref`, `codegen/docgen.ts` `buildEnrichedTree` **and** `buildBarrelFreeTree`
+(the two shared per-root memo wrappers — gate at the wrapper, *not* per caller; note `buildEnrichedTree`
+currently passes **no opts** and so must switch to `{ facets: true }` or docgen breaks),
+`cli/bin/commands/build.ts:741`, `closure/core/closure.test.ts`, `composition/server/data-handler.ts`,
+`review/plugin-changes` `plugin-tree-cache.ts` (×2) + `handle-plugin-changes.ts` (×2).
+**Structure-only is correct (no change, and now cheaper)** — all verified to never read `node.facets`:
+`config_v2/check`, `checks/{fix-shared-to-relative, no-reexport-default, plugins-have-claudemd,
+plugin-refs-resolve, plugin-boundaries, pre-barrel-manifests-complete}`, `boundaries/core/check.ts`,
+`cli/release.ts`, `facets/check`.
+
+### File changes
+| # | File | Change |
+|---|---|---|
+| 1 | `plugin-tree/core/internal/plugin-tree.ts` | add `facets?` to opts; gate 4a on `facets && !skipBarrelImport`; gate 4b+4c (incl. `loadFacets`/`buildFsSnapshot`) on `facets` |
+| 2 | `plugin-tree/server/internal/structure-tree-cache.ts` | **new** — one module generation counter + one lazy `createFileWatcher(PLUGINS_DIR, {reconcileMs:null, ignore node_modules/.git})` bumping it; two `createGitStateMemo` instances (`plugin-tree.structure`, `plugin-tree.facets`) keyed on `PLUGINS_DIR`, signature = generation; `computeFn` owns `withHeavyReadSlot`. Exports `getStructureTreeCached()` (structure-only) + `getFacetsTreeCached()` (`{skipBarrelImport:true, facets:true}`) |
+| 3 | `plugin-tree/server/index.ts` | **new** barrel — re-export both accessors + `default {description}` |
+| 4 | `plugin-view/core/types.ts` | `PluginNode`: drop `disabled` (cascade); keep `disabledSeed` |
+| 5 | `plugin-view/core/endpoints.ts` | drop `disabled` from `pluginNodeSchema`; add `getPluginFacetsTree` (`GET /api/plugin-view/facets-tree`, same payload schema) |
+| 6 | `plugin-view/core/index.ts` | export `getPluginFacetsTree` |
+| 7 | `plugin-view/server/internal/tree-handler.ts` | structure-only via `getStructureTreeCached()`; drop `classifyEdges`/`disabledClosure`; `toApiNode` drops `disabled` |
+| 8 | `plugin-view/server/internal/facets-handler.ts` | **new** — `getFacetsTreeCached()` → faceted payload (facets populated, `disabledSeed` kept, no cascade) |
+| 9 | `plugin-view/server/index.ts` | register both routes |
+| 10 | `composition/core` (endpoints/types) | `CompositionData` + schema gain `disabledIds: PluginId[]` |
+| 11 | `composition/server/internal/data-handler.ts` | source tree via `getFacetsTreeCached()` (drops its bespoke module cache, single shared faceted build); compute + ship `disabledIds = disabledClosure(seeds, classifyEdges(tree))` |
+| 12 | `composition/web` | add + export `useDisabledClosure(): Set<PluginId> \| null` (from `getCompositionData().disabledIds`) |
+| 13 | `explorer/plugins/disabled/web/components/disabled-badge.tsx` | `useEnsureCompositionData()` + `useDisabledClosure()`; show when `node.disabledSeed \|\| set?.has(node.id)`; label from `disabledSeed` |
+| 14 | `apps/studio/plugins/contributions/web/components/contributions-view.tsx` | `getPluginTree` → `getPluginFacetsTree` |
+| 15 | `plugin-view/web/panes.tsx` | → `getPluginFacetsTree` |
+| 16 | `active-data/plugins/plugin-link/web/panes.tsx` | → `getPluginFacetsTree` (**the missed 3rd consumer**) |
+| 17 | `config_v2/plugins/settings/web/components/config-nav.tsx` | orphan-fallback `PluginNode`: drop `disabled: false` (type fence) |
+| 18 | 10 build-time callers above | add `{ facets: true }` (preserving `skipBarrelImport`) |
+| 19 | `plugin-tree`/`plugin-view` `CLAUDE.md` | note new server barrel + endpoint (autogen refresh on build) |
+
+### Verification (on `singularity`, after `./singularity build`)
+1. Boot green (new barrel + endpoint register; no boundary/cycle/type failure).
+2. `GET /api/plugin-view/tree` → `get_runtime_profile` drops ~15 s → **ms**, no `extract`/`relate`.
+3. `logs/stall-profiles.jsonl` across a cold build: **no new `… ← buildPluginTree` stack**.
+4. Victims (`allow-files`/`viewed`) no longer post ~10 s timestamps behind a tree build.
+5. Correctness: explorer "Disabled"/"Disabled (cascade)" still correct; Contributions tables populated;
+   plugin detail pane (both `plugin-view` pane **and** the plugin-chip side pane) shows facets incl.
+   "imported by"; plugin chips + Settings config-nav unchanged.
+6. Faceted path fast+non-blocking: cold `GET /api/plugin-view/facets-tree` a few seconds non-blocking
+   (no multi-second `eventLoopMaxMs` in `health.jsonl`); warm = ms.
+
+### Risks / fences
+- Removing `PluginNode.disabled` is a **tsc fence** — every reader/constructor surfaces (known: `disabled-badge.tsx` reader, `config-nav.tsx` + `tree-handler.ts` constructors). Grep `disabled:` during impl to confirm none missed.
+- Boundaries: `plugin-tree/server` (new) → `infra/*/server` + own `core` only; `composition/server` → `plugin-tree/server`; `disabled` badge → `composition/web` (mirrors `membership`). All legal barrels, DAG preserved.
+- Watcher: module-singleton via `??=`; `reconcileMs:null` + `onChange` fires only on real events ⇒ never invalidates idly.
+
+### Altitude 1 — IMPLEMENTED & VALIDATED on the worktree (2026-07-01, `att-1782924979-2mnf`)
+Landed via 3 Opus workstreams; `./singularity build` green — **all 60 checks pass** (incl. `type-check`,
+`plugin-boundaries`, `composition-closure`, `apps-paths-from-app-ref`, `plugins-doc-in-sync`,
+`plugins-registry-in-sync`, `facets:render-complete`). Live-validated on the deployed worktree endpoint
+(`get_runtime_profile`, in-process handler spans — wall times were inflated by boot-recovery + gateway
+queueing under host **load 30–42 / 18 CPUs**, a separate cold-boot-fanout condition):
+
+| endpoint | before | after (cold / warm) | notes |
+|---|---|---|---|
+| `GET /api/plugin-view/tree` (**hot**) | ~15 s, uncached, full-facet | workMs **382**, max **1.1 s** cold / **3.3 ms** warm | structure-only; **no `extract`/`relate`**; `git-memo-hit` warm |
+| `GET /api/plugin-view/facets-tree` (rare) | — | ~13.9 s cold / **0.48 ms** warm | full facets, single-flight, cached; cold 502s under load — rare path only |
+| `GET /api/composition/data` | rebuilt tree itself | **84 ms** (`git-memo-hit:plugin-tree.facets`) | reused the shared faceted build — no duplicate walk |
+| `GET /api/health/ready` | victim (10–46 s) | max **0.32 ms** *during the 13.9 s faceted build* | non-blocking confirmed (Altitude-2 fs-snapshot holds) |
+
+- **Falsifiable prediction met:** `logs/stall-profiles.jsonl` has **zero captures since boot** — the
+  `… ← buildPluginTree` event-loop stall is gone.
+- **Correctness (data-level):** structure payload carries `disabledSeed`, **no `disabled` cascade key**,
+  `facets:{}`; faceted payload populates facets on all 849 nodes with **`cross-refs.importedBy` on 339 nodes**
+  (e.g. `active-data` ← attempt/conv/plugin-link — correction #2 holds); composition ships `disabledIds`=**12**
+  = `review.plugin-changes` (the sole `singularity.disabled` seed) + its subtree + its `render-diff` importers
+  (correction #1 — cascade correct).
+- **Still on the worktree only — NOT `singularity`/main (needs a push the user must approve).** The plan's
+  "re-validate on `singularity`" step requires the merge; validated here on `att-1782924979-2mnf` instead.
+- **Residual (rare path):** the faceted endpoint's cold build is still multi-second and can 502 the gateway
+  proxy under load — acceptable (rare Studio/detail path, cached + coalesced, non-blocking); the hot path is
+  now ms. The cold-boot readiness livelock under load-40 is the separate `issue-cold-boot-fanout.md`.
+
 ## Docs to keep current (same turn as the fix)
 - `research/perfs/CLAUDE.md` — update the buildPluginTree paragraph: cure landed + re-validated; the two
   corrected design errors; the named next stall (`listActiveWorktreeOps`). Keep status `(Ongoing)` until

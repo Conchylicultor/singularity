@@ -1,2 +1,2 @@
 export type { PluginNode, PluginTreePayload } from "./types";
-export { getPluginTree } from "./endpoints";
+export { getPluginTree, getPluginFacetsTree } from "./endpoints";

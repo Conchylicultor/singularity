@@ -86,6 +86,17 @@ export function useCompositionData(): CompositionDataResult {
 }
 
 /**
+ * The disabled-plugin cascade set (package.json-seeded disabled plugins plus every
+ * plugin pulled into their dependent-closure), derived server-side from the same
+ * edge graph. `null` until the composition data loads. Shares the `useEndpoint`
+ * cache entry with the other composition-data consumers.
+ */
+export function useDisabledClosure(): Set<PluginId> | null {
+  const { data } = useEndpoint(getCompositionData, {});
+  return useMemo(() => (data ? new Set(data.disabledIds) : null), [data]);
+}
+
+/**
  * Ensure the closure graph is fetched + published to the store, without returning
  * the (potentially large) payload. For ambient consumers like the per-row
  * membership band that only need the store populated so `useActiveMembership()` can

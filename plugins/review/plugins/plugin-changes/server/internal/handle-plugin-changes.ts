@@ -63,8 +63,8 @@ async function handlePush(pushId: string): Promise<PluginChangesResponse> {
       // not worth a memo (unbounded growth). This path is already deduped +
       // concurrency-capped, so just build both trees inside the one slot.
       const [headTree, baseTree] = await Promise.all([
-        buildPluginTree(join(headDir, "plugins"), { skipBarrelImport: true }),
-        buildPluginTree(join(baseDir, "plugins"), { skipBarrelImport: true }),
+        buildPluginTree(join(headDir, "plugins"), { skipBarrelImport: true, facets: true }),
+        buildPluginTree(join(baseDir, "plugins"), { skipBarrelImport: true, facets: true }),
       ]);
       const plugins = computePluginChanges(headTree, baseTree, editedFiles);
       return { plugins };

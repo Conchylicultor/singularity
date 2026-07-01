@@ -8,7 +8,7 @@ import {
   PluginDetail,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { getPluginFacetsTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 
 export const pluginConvSidePane = Pane.define({
   id: "plugin-conv-side",
@@ -29,7 +29,7 @@ function indexNodes(nodes: PluginNode[], map = new Map<string, PluginNode>()) {
 
 function PluginConvSideBody() {
   const { pluginId } = pluginConvSidePane.useParams();
-  const { data, isLoading, error } = useEndpoint(getPluginTree, {});
+  const { data, isLoading, error } = useEndpoint(getPluginFacetsTree, {});
 
   const node = useMemo(
     () => (data ? (indexNodes(data.plugins).get(pluginId) ?? null) : null),

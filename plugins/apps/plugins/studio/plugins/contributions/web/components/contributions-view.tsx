@@ -5,7 +5,7 @@ import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { DataTable } from "@plugins/primitives/plugins/data-table/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { getPluginFacetsTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
@@ -31,7 +31,7 @@ function facetEntries(plugins: PluginNode[], facetId: string): FacetTableEntry[]
 }
 
 export function ContributionsView() {
-  const { data: treeData, isLoading, error } = useEndpoint(getPluginTree, {});
+  const { data: treeData, isLoading, error } = useEndpoint(getPluginFacetsTree, {});
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const openPane = useOpenPane();
