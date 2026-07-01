@@ -51,16 +51,8 @@ import type {
 export interface BeatAnchor {
   beat: number;
   systemIndex: number;
-  /** Absolute x in the SVG (px from the left edge). */
+  /** SYSTEM-LOCAL x within the per-system SVG (px from that svg's left edge). */
   x: number;
-}
-
-/** A system's vertical bounds (drives auto-scroll and the playhead height). */
-export interface SystemBox {
-  index: number;
-  top: number;
-  bottom: number;
-  height: number;
 }
 
 /** A drawn melodic note element, tagged for highlight + seek. */
@@ -71,12 +63,69 @@ export interface NoteEl {
   end: number;
 }
 
-export interface EngraveResult {
+/**
+ * A single system's layout plan — pure geometry + measurement, no VexFlow
+ * draw. {@link planEngraving} produces one per system row; {@link drawSystem}
+ * turns one into its own `<svg>`. All coordinates are SYSTEM-LOCAL (rebased so
+ * the system's box starts at y=0); the sizer places the row at `top`.
+ */
+export interface SystemPlan {
+  index: number;
+  /** Pure model slices — draw rebuilds fresh VexFlow voices from these. */
+  measures: EngMeasure[];
+  /** Parallel to `measures`: each measure's Pass-1 measured minimum width. */
+  minWidths: number[];
+  /** index === 0 → draw the time signature + part labels. */
+  scoreStart: boolean;
+  /** Last system → append the terminal (score-end) anchor here. */
+  isLast: boolean;
+  /** First-measure extra width (clef + key sig + optional time sig). */
+  extra0: number;
+  /** Proportional width scale applied to each measure's minimum. */
+  scale: number;
+  /** First measure's start beat — for the beat→system binary search. */
+  startBeat: number;
+  /** This system's top in sizer coordinates (0-based, index * systemPitch). */
+  top: number;
+  /** SVG box height: SYSTEM_TOP_PAD + contentHeight + SYSTEM_BOTTOM_PAD. */
+  boxHeight: number;
+  /** voiceKey "si:vi" receiving an incoming (from the previous system) tie. */
+  tieIn: Set<string>;
+  /** voiceKey "si:vi" sending a hanging tie into the next system. */
+  tieOut: Set<string>;
+}
+
+/**
+ * The whole-score layout plan: every system's geometry + the shared metrics the
+ * virtualizer, the sizer, and the imperative playhead need. Pure — safe to
+ * build inside a `useMemo` (no Renderer, no DOM, no colors).
+ */
+export interface EngravePlan {
+  systems: SystemPlan[];
+  /** Full engraving width (each per-system svg spans this). */
+  width: number;
+  /** Left gutter before the first measure (label gutter included). */
+  leftPad: number;
+  /** Per-staff vertical offsets within a system (relative to its first staff). */
+  offsets: number[];
+  /** Height of one system's staff stack (last offset + STAFF_HEIGHT). */
+  contentHeight: number;
+  /** Top-to-top distance between systems (== virtualizer estimateSize). */
+  systemPitch: number;
+  /** Whether per-part labels are drawn (multi-part + named). */
+  hasLabels: boolean;
+  /** Part layout (bracket/brace + labels). */
+  parts: readonly EngPart[];
+  /** Score end beat — the terminal anchor's beat. */
+  endBeat: number;
+  /** Total sizer height (systems.length * systemPitch). */
+  totalHeight: number;
+}
+
+/** What one drawn system registers for the imperative playhead + highlight. */
+export interface SystemDrawResult {
   anchors: BeatAnchor[];
-  systems: SystemBox[];
   notes: NoteEl[];
-  /** Total rendered height in px (the host/SVG is sized to this). */
-  height: number;
 }
 
 /** Ink colors for the engraving (the fixed black-on-white PAPER palette). */
@@ -88,7 +137,6 @@ export interface EngraveColors {
 }
 
 // --- Layout constants (px). ---
-const TOP_PAD = 28;
 const LEFT_PAD = 12;
 const RIGHT_PAD = 12;
 /** Top-to-top distance between the two staves of one grand-staff part. */
@@ -290,15 +338,19 @@ function connect(
   new StaveConnector(a, b).setType(type).setContext(ctx).draw();
 }
 
-export function engrave(
-  host: HTMLDivElement,
+/**
+ * PURE layout pass — no Renderer, no DOM, no colors, so it is safe to call
+ * inside a `useMemo`. Runs Pass 1 (measure each measure's minimum width) and
+ * Pass 2 (greedy line-break into systems), then computes per-system geometry
+ * and the cross-system tie sets. VexFlow voices built here are used only to
+ * MEASURE (single-use — formatting mutates them) and discarded; {@link
+ * drawSystem} rebuilds fresh voices per system when it draws.
+ */
+export function planEngraving(
   model: EngraveModel,
   width: number,
   endBeat: number,
-  colors: EngraveColors,
-): EngraveResult {
-  host.innerHTML = "";
-
+): EngravePlan {
   // The staff shape is identical in every measure; take it from the first.
   const staffDefs = model.measures[0]?.staves ?? [];
   const staffCount = staffDefs.length;
@@ -310,8 +362,8 @@ export function engrave(
   const hasLabels = model.parts.length > 1 && model.parts.some((p) => p.name);
   const leftPad = LEFT_PAD + (hasLabels ? LABEL_GUTTER : 0);
 
-  // --- Pass 1: build every measure and measure its minimum width. ---
-  const built: BuiltMeasure[] = model.measures.map((measure) => {
+  // --- Pass 1: measure each measure's minimum width (voices discarded). ---
+  const minWidthByMeasure: number[] = model.measures.map((measure) => {
     const staves = measure.staves.map((staff) => ({
       staff,
       voices: staff.voices.map((ev) => buildVoice(ev, staff.clef, measure)),
@@ -324,176 +376,275 @@ export function engrave(
             .joinVoices(vfVoices)
             .preCalculateMinTotalWidth(vfVoices)
         : 60;
-    bm.minWidth = min + MEASURE_PAD;
-    return bm;
+    return min + MEASURE_PAD;
   });
 
-  // --- Pass 2: greedy line-break into systems. ---
+  // --- Pass 2: greedy line-break into systems (pure EngMeasure slices). ---
   const available = Math.max(120, width - leftPad - RIGHT_PAD);
-  const systems: BuiltMeasure[][] = [];
-  let current: BuiltMeasure[] = [];
-  let running = 0;
-  const firstExtra = (bm: BuiltMeasure, isScoreStart: boolean): number =>
+  const firstExtra = (measure: EngMeasure, isScoreStart: boolean): number =>
     CLEF_WIDTH +
-    (KEYSIG_ACCIDENTALS[bm.measure.keyName] ?? 0) * KEYSIG_PER_ACC +
+    (KEYSIG_ACCIDENTALS[measure.keyName] ?? 0) * KEYSIG_PER_ACC +
     (isScoreStart ? TIMESIG_WIDTH : 0);
 
-  built.forEach((bm, i) => {
-    const startingSystem = current.length === 0;
-    const extra = startingSystem ? firstExtra(bm, i === 0) : 0;
-    const cost = bm.minWidth + extra;
+  const sliceMeasures: EngMeasure[][] = [];
+  const sliceMinWidths: number[][] = [];
+  let curMeasures: EngMeasure[] = [];
+  let curMinWidths: number[] = [];
+  let running = 0;
+  model.measures.forEach((measure, i) => {
+    const minWidth = minWidthByMeasure[i]!;
+    const startingSystem = curMeasures.length === 0;
+    const extra = startingSystem ? firstExtra(measure, i === 0) : 0;
+    const cost = minWidth + extra;
     if (!startingSystem && running + cost > available) {
-      systems.push(current);
-      current = [];
-      running = firstExtra(bm, false) + bm.minWidth;
-      current.push(bm);
+      sliceMeasures.push(curMeasures);
+      sliceMinWidths.push(curMinWidths);
+      curMeasures = [measure];
+      curMinWidths = [minWidth];
+      running = firstExtra(measure, false) + minWidth;
     } else {
       running += cost;
-      current.push(bm);
+      curMeasures.push(measure);
+      curMinWidths.push(minWidth);
     }
   });
-  if (current.length > 0) systems.push(current);
+  if (curMeasures.length > 0) {
+    sliceMeasures.push(curMeasures);
+    sliceMinWidths.push(curMinWidths);
+  }
 
-  // --- Pass 3: draw. ---
-  const firstStaffTopOf = (sysIndex: number): number =>
-    TOP_PAD + SYSTEM_TOP_PAD + sysIndex * systemPitch;
-  const height =
-    systems.length === 0
-      ? TOP_PAD * 2
-      : firstStaffTopOf(systems.length - 1) +
-        contentHeight +
-        SYSTEM_BOTTOM_PAD +
-        TOP_PAD;
+  // Per-system geometry + width distribution.
+  const systems: SystemPlan[] = sliceMeasures.map((measures, index) => {
+    const minWidths = sliceMinWidths[index]!;
+    const scoreStart = index === 0;
+    const extra0 = firstExtra(measures[0]!, scoreStart);
+    const totalMin = minWidths.reduce((s, w) => s + w, 0);
+    return {
+      index,
+      measures,
+      minWidths,
+      scoreStart,
+      isLast: index === sliceMeasures.length - 1,
+      extra0,
+      scale: (available - extra0) / totalMin,
+      startBeat: measures[0]!.startBeat,
+      top: index * systemPitch,
+      boxHeight: SYSTEM_TOP_PAD + contentHeight + SYSTEM_BOTTOM_PAD,
+      tieIn: new Set<string>(),
+      tieOut: new Set<string>(),
+    };
+  });
+
+  // --- Cross-system ties (pure): mirror `drawTies`' predicate across each
+  // boundary, keyed by the same "si:vi" voiceKey `tagVoice`/`drawSystem` use.
+  // For each system, flatten every voiceKey's tickables in measure order and
+  // record its first/last tickable.
+  const firstTicks: Map<string, EngTickable>[] = [];
+  const lastTicks: Map<string, EngTickable>[] = [];
+  for (const sys of systems) {
+    const seqs = new Map<string, EngTickable[]>();
+    for (const measure of sys.measures) {
+      measure.staves.forEach((staff, si) => {
+        staff.voices.forEach((voice, vi) => {
+          const vk = `${si}:${vi}`;
+          let seq = seqs.get(vk);
+          if (!seq) {
+            seq = [];
+            seqs.set(vk, seq);
+          }
+          for (const t of voice.tickables) seq.push(t);
+        });
+      });
+    }
+    const first = new Map<string, EngTickable>();
+    const last = new Map<string, EngTickable>();
+    for (const [vk, seq] of seqs) {
+      if (seq.length === 0) continue;
+      first.set(vk, seq[0]!);
+      last.set(vk, seq.at(-1)!);
+    }
+    firstTicks.push(first);
+    lastTicks.push(last);
+  }
+  for (let s = 0; s < systems.length - 1; s++) {
+    const lastOf = lastTicks[s]!;
+    const firstOf = firstTicks[s + 1]!;
+    for (const [vk, a] of lastOf) {
+      const b = firstOf.get(vk);
+      if (a && b && a.tieToNext && !a.isRest && !b.isRest) {
+        systems[s]!.tieOut.add(vk);
+        systems[s + 1]!.tieIn.add(vk);
+      }
+    }
+  }
+
+  return {
+    systems,
+    width,
+    leftPad,
+    offsets,
+    contentHeight,
+    systemPitch,
+    hasLabels,
+    parts: model.parts,
+    endBeat,
+    totalHeight: systems.length * systemPitch,
+  };
+}
+
+/**
+ * Draw ONE system's plan into its own SVG `host`, y-rebased so the system box
+ * starts at y=0 (the virtualizer places the row via a transform). Rebuilds
+ * fresh VexFlow voices for this system (voices are single-use), draws staves /
+ * connectors / chord symbols / voices / beams / tuplets, then in-system ties
+ * and the cross-system hanging-tie stubs. Returns the beat→x anchors and tagged
+ * note elements the imperative playhead + highlight consume.
+ */
+export function drawSystem(
+  host: HTMLDivElement,
+  plan: EngravePlan,
+  systemIndex: number,
+  colors: EngraveColors,
+): SystemDrawResult {
+  const sys = plan.systems[systemIndex]!;
+  host.innerHTML = "";
 
   const renderer = new Renderer(host, Renderer.Backends.SVG);
-  renderer.resize(width, height);
+  renderer.resize(plan.width, sys.boxHeight);
   const ctx = renderer.getContext();
   ctx.setFillStyle(colors.foreground);
   ctx.setStrokeStyle(colors.foreground);
 
+  // First staff sits a fixed pad below the box top; the rest follow `offsets`.
+  const firstStaffTop = SYSTEM_TOP_PAD;
+  const staffTop = (i: number): number => firstStaffTop + (plan.offsets[i] ?? 0);
+
   const anchors: BeatAnchor[] = [];
-  const systemBoxes: SystemBox[] = [];
-  const noteEls: NoteEl[] = [];
+  const notes: NoteEl[] = [];
 
-  systems.forEach((sys, sysIndex) => {
-    const firstStaffTop = firstStaffTopOf(sysIndex);
-    const staffTop = (i: number): number => firstStaffTop + (offsets[i] ?? 0);
-    const scoreStart = sysIndex === 0;
+  // Rebuild fresh voices per measure (Pass-1 voices were discarded).
+  const built: BuiltMeasure[] = sys.measures.map((measure, mi) => ({
+    measure,
+    staves: measure.staves.map((staff) => ({
+      staff,
+      voices: staff.voices.map((ev) => buildVoice(ev, staff.clef, measure)),
+    })),
+    minWidth: sys.minWidths[mi]!,
+  }));
 
-    const boxTop = firstStaffTop - SYSTEM_TOP_PAD;
-    const boxBottom = firstStaffTop + contentHeight + SYSTEM_BOTTOM_PAD;
-    systemBoxes.push({
-      index: sysIndex,
-      top: boxTop,
-      bottom: boxBottom,
-      height: boxBottom - boxTop,
-    });
+  // Per (staffIndex:voiceIndex) flat note sequence, for tie drawing.
+  const seqs = new Map<string, { t: EngTickable; n: StaveNote }[]>();
 
-    // Distribute the row width proportionally to each measure's minimum.
-    const first = sys[0]!;
-    const extra0 = firstExtra(first, scoreStart);
-    const totalMin = sys.reduce((s, bm) => s + bm.minWidth, 0);
-    const scale = (available - extra0) / totalMin;
+  let x = plan.leftPad;
+  built.forEach((bm, mi) => {
+    const isFirst = mi === 0;
+    const w = sys.minWidths[mi]! * sys.scale + (isFirst ? sys.extra0 : 0);
 
-    // Per (staffIndex:voiceIndex) flat note sequence, for in-system tie drawing.
-    const seqs = new Map<string, { t: EngTickable; n: StaveNote }[]>();
+    // Create one VexFlow Stave per staff at its vertical position.
+    const vfStaves = bm.staves.map((_, si) => new Stave(x, staffTop(si), w));
 
-    let x = leftPad;
-    sys.forEach((bm, mi) => {
-      const isFirst = mi === 0;
-      const w = bm.minWidth * scale + (isFirst ? extra0 : 0);
-
-      // Create one VexFlow Stave per staff at its vertical position.
-      const vfStaves = bm.staves.map(
-        (_, si) => new Stave(x, staffTop(si), w),
-      );
-
-      vfStaves.forEach((st, si) => {
-        const def = bm.staves[si]!.staff;
-        if (isFirst) {
-          st.addClef(def.clef).addKeySignature(bm.measure.keyName);
-          if (scoreStart) {
-            st.addTimeSignature(
-              `${bm.measure.timeSig.numerator}/${bm.measure.timeSig.denominator}`,
-            );
-          }
-        } else if (bm.measure.keyChanged) {
-          st.addKeySignature(bm.measure.keyName);
-        }
-        st.setContext(ctx).draw();
-      });
-
-      drawConnectors(vfStaves, bm.measure.staves, model.parts, isFirst, ctx);
-
-      // Chord symbol above the first non-rest note of the top staff's top voice.
-      if (bm.measure.chordSymbol && bm.staves.length > 0) {
-        const topVoice = bm.staves[0]!.voices[0];
-        if (topVoice && topVoice.notes.length > 0) {
-          const idx = topVoice.eng.tickables.findIndex((t) => !t.isRest);
-          const anchor =
-            idx >= 0 ? topVoice.notes[idx]! : topVoice.notes[0]!;
-          const ann = new Annotation(bm.measure.chordSymbol);
-          ann.setVerticalJustification(Annotation.VerticalJustify.TOP);
-          anchor.addModifier(ann, 0);
-        }
-      }
-
-      // Join + format ALL voices of the measure so onsets align across staves.
-      const vfVoices = allVoices(bm);
-      const inner = vfStaves[0]
-        ? vfStaves[0].getNoteEndX() - vfStaves[0].getNoteStartX()
-        : Math.max(16, w - 24);
-      if (vfVoices.length > 0) {
-        new Formatter()
-          .joinVoices(vfVoices)
-          .format(vfVoices, Math.max(16, inner));
-      }
-
-      // Draw each voice on its staff, with per-voice beams + note tagging.
-      bm.staves.forEach((bs, si) => {
-        const st = vfStaves[si]!;
-        bs.voices.forEach((bv, vi) => {
-          const dir = stemOf(bv.eng.stem);
-          const beams = Beam.generateBeams(
-            bv.notes,
-            dir !== undefined ? { stem_direction: dir } : undefined,
+    vfStaves.forEach((st, si) => {
+      const def = bm.staves[si]!.staff;
+      if (isFirst) {
+        st.addClef(def.clef).addKeySignature(bm.measure.keyName);
+        if (sys.scoreStart) {
+          st.addTimeSignature(
+            `${bm.measure.timeSig.numerator}/${bm.measure.timeSig.denominator}`,
           );
-          bv.voice.draw(ctx, st);
-          beams.forEach((beam) => beam.setContext(ctx).draw());
-          // Tuplet brackets/numbers, over the now-formatted notes.
-          bv.tuplets.forEach((tuplet) => tuplet.setContext(ctx).draw());
-
-          const key = `${si}:${vi}`;
-          let seq = seqs.get(key);
-          if (!seq) {
-            seq = [];
-            seqs.set(key, seq);
-          }
-          tagVoice(bv.eng.tickables, bv.notes, seq, sysIndex, anchors, noteEls);
-        });
-      });
-
-      x += w;
+        }
+      } else if (bm.measure.keyChanged) {
+        st.addKeySignature(bm.measure.keyName);
+      }
+      st.setContext(ctx).draw();
     });
 
-    // Draw in-system ties per voice sequence (cross-system ties are dropped).
-    for (const seq of seqs.values()) drawTies(seq, ctx);
+    drawConnectors(vfStaves, bm.measure.staves, plan.parts, isFirst, ctx);
 
-    // Part labels (per-track only), on the first system, monochrome.
-    if (hasLabels && sysIndex === 0) {
-      drawPartLabels(model.parts, offsets, firstStaffTop, ctx);
+    // Chord symbol above the first non-rest note of the top staff's top voice.
+    if (bm.measure.chordSymbol && bm.staves.length > 0) {
+      const topVoice = bm.staves[0]!.voices[0];
+      if (topVoice && topVoice.notes.length > 0) {
+        const idx = topVoice.eng.tickables.findIndex((t) => !t.isRest);
+        const anchor = idx >= 0 ? topVoice.notes[idx]! : topVoice.notes[0]!;
+        const ann = new Annotation(bm.measure.chordSymbol);
+        ann.setVerticalJustification(Annotation.VerticalJustify.TOP);
+        anchor.addModifier(ann, 0);
+      }
     }
+
+    // Join + format ALL voices of the measure so onsets align across staves.
+    const vfVoices = allVoices(bm);
+    const inner = vfStaves[0]
+      ? vfStaves[0].getNoteEndX() - vfStaves[0].getNoteStartX()
+      : Math.max(16, w - 24);
+    if (vfVoices.length > 0) {
+      new Formatter().joinVoices(vfVoices).format(vfVoices, Math.max(16, inner));
+    }
+
+    // Draw each voice on its staff, with per-voice beams + note tagging.
+    bm.staves.forEach((bs, si) => {
+      const st = vfStaves[si]!;
+      bs.voices.forEach((bv, vi) => {
+        const dir = stemOf(bv.eng.stem);
+        const beams = Beam.generateBeams(
+          bv.notes,
+          dir !== undefined ? { stem_direction: dir } : undefined,
+        );
+        bv.voice.draw(ctx, st);
+        beams.forEach((beam) => beam.setContext(ctx).draw());
+        // Tuplet brackets/numbers, over the now-formatted notes.
+        bv.tuplets.forEach((tuplet) => tuplet.setContext(ctx).draw());
+
+        const key = `${si}:${vi}`;
+        let seq = seqs.get(key);
+        if (!seq) {
+          seq = [];
+          seqs.set(key, seq);
+        }
+        tagVoice(bv.eng.tickables, bv.notes, seq, systemIndex, anchors, notes);
+      });
+    });
+
+    x += w;
   });
 
-  // Terminal anchor at the score end, so the playhead can travel to the finish.
-  const lastSys = systemBoxes.at(-1);
-  if (lastSys && anchors.length > 0) {
+  // Draw in-system ties per voice sequence.
+  for (const seq of seqs.values()) drawTies(seq, ctx);
+
+  // Cross-system hanging ties: a stub in from the left edge for an incoming
+  // tie, a stub off the right edge for an outgoing tie. VexFlow renders a
+  // partial tie when one endpoint is null (the note's stave supplies the edge
+  // x); `first_indices`/`last_indices` default to [0].
+  for (const vk of sys.tieIn) {
+    const seq = seqs.get(vk);
+    if (seq?.length) {
+      new StaveTie({ first_note: null, last_note: seq[0]!.n })
+        .setContext(ctx)
+        .draw();
+    }
+  }
+  for (const vk of sys.tieOut) {
+    const seq = seqs.get(vk);
+    if (seq?.length) {
+      new StaveTie({ first_note: seq.at(-1)!.n, last_note: null })
+        .setContext(ctx)
+        .draw();
+    }
+  }
+
+  // Part labels (per-track only), on the score-start system, monochrome.
+  if (plan.hasLabels && systemIndex === 0) {
+    drawPartLabels(plan.parts, plan.offsets, SYSTEM_TOP_PAD, ctx);
+  }
+
+  // Terminal anchor at the score end, so the playhead travels to the finish.
+  if (sys.isLast && anchors.length > 0) {
     const lastX = Math.max(...anchors.map((a) => a.x));
-    anchors.push({ beat: endBeat, systemIndex: lastSys.index, x: lastX + 20 });
+    anchors.push({ beat: plan.endBeat, systemIndex, x: lastX + 20 });
   }
   anchors.sort((a, b) => a.beat - b.beat);
 
-  return { anchors, systems: systemBoxes, notes: noteEls, height };
+  return { anchors, notes };
 }
 
 /**

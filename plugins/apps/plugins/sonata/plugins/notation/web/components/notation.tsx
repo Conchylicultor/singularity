@@ -1,11 +1,5 @@
 import type React from "react";
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  useRef,
-} from "react";
+import { useCallback, useEffect, useMemo, useRef } from "react";
 import {
   scoreEndBeat,
   type Score,
@@ -22,6 +16,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useVirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -29,10 +24,14 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { convert, type StaffLayout } from "../internal/convert";
 import {
-  engrave,
+  planEngraving,
   type BeatAnchor,
-  type EngraveResult,
+  type EngraveColors,
+  type EngravePlan,
+  type SystemDrawResult,
+  type SystemPlan,
 } from "./engrave";
+import { NotationSystem } from "./notation-system";
 import { notationConfig } from "../../shared/config";
 
 /** Props the shell's `Sonata.Display.Dispatch` passes to the chosen display. The
@@ -71,6 +70,13 @@ const HIGHLIGHT_CSS = `
   stroke: ${PAPER.accent};
 }`;
 
+/** Fixed engraving ink (module-scope so its identity is stable — a NotationSystem
+ *  layout-effect dep). Sheet music never re-skins, so this is a constant. */
+const INK: EngraveColors = { foreground: PAPER.ink, primary: PAPER.accent };
+
+/** Stable empty fallback for the virtualizer's items before a plan exists. */
+const EMPTY_SYSTEMS: SystemPlan[] = [];
+
 /** Largest anchor with `beat <= cursor`, plus the next anchor — for interpolation. */
 function locate(
   anchors: BeatAnchor[],
@@ -90,6 +96,24 @@ function locate(
     }
   }
   return { lo: anchors[idx]!, hi: anchors[idx + 1] ?? null };
+}
+
+/** Greatest system index whose `startBeat <= beat`, clamped to a valid index. */
+function systemForBeat(systems: SystemPlan[], beat: number): number {
+  if (systems.length === 0) return 0;
+  let lo = 0;
+  let hi = systems.length - 1;
+  let idx = 0;
+  while (lo <= hi) {
+    const mid = (lo + hi) >> 1;
+    if (systems[mid]!.startBeat <= beat + EPS) {
+      idx = mid;
+      lo = mid + 1;
+    } else {
+      hi = mid - 1;
+    }
+  }
+  return Math.min(Math.max(idx, 0), systems.length - 1);
 }
 
 function NotationInner({ score }: NotationProps) {
@@ -126,11 +150,12 @@ function NotationInner({ score }: NotationProps) {
   }, [score.tracks, trackEntries, hiddenTrackIds]);
 
   const [sizeRef, size] = useElementSize<HTMLDivElement>();
-  const hostRef = useRef<HTMLDivElement | null>(null);
   const playheadRef = useRef<HTMLDivElement | null>(null);
-  const scrollRef = useRef<HTMLElement | null>(null);
 
-  const resultRef = useRef<EngraveResult | null>(null);
+  // One entry per mounted (drawn) system, keyed by system index — the anchors +
+  // tagged notes each NotationSystem registers. The imperative playhead reads
+  // the active system's entry; off-window systems have no entry (and no DOM).
+  const registryRef = useRef<Map<number, SystemDrawResult>>(new Map());
   const activeElsRef = useRef<SVGElement[]>([]);
   // Last system the playhead auto-scrolled to — so we scroll only on a system
   // boundary, not every frame. Play-state read via a ref so applyCursor stays
@@ -159,82 +184,108 @@ function NotationInner({ score }: NotationProps) {
   const endBeat = useMemo(() => scoreEndBeat(visibleScore), [visibleScore]);
   const hasNotes = visibleScore.notes.length > 0;
 
-  // Imperative per-frame cursor application — playhead position + note highlight,
-  // ZERO React renders. Reads the latest engrave result + cursor from refs.
-  const applyCursor = useCallback((beat: number) => {
-    const result = resultRef.current;
-    const playhead = playheadRef.current;
-    if (!result || !playhead) return;
+  // PURE layout plan (no DOM/Renderer) — safe in a memo. Each mounted system
+  // draws itself from this; recomputes on model / width / endBeat change.
+  const plan = useMemo<EngravePlan | null>(
+    () =>
+      !hasNotes || size.width <= 0
+        ? null
+        : planEngraving(model, size.width, endBeat),
+    [model, size.width, endBeat, hasNotes],
+  );
+  const planRef = useLatestRef(plan);
 
-    const found = locate(result.anchors, beat);
-    if (!found) {
-      playhead.style.display = "none";
+  // Headless windowing: only systems near the viewport mount (create SVG DOM).
+  const { measureRef, virtualizer, virtualItems, scrollMargin, totalSize } =
+    useVirtualRows<SystemPlan>({
+      items: plan?.systems ?? EMPTY_SYSTEMS,
+      estimateSize: plan?.systemPitch ?? 1,
+      getKey: (s) => String(s.index),
+      overscan: 4,
+    });
+  const virtualizerRef = useLatestRef(virtualizer);
+
+  // Set by the re-plan effect; NotationSystem calls it after (re)drawing so the
+  // playhead re-locates immediately once a freshly mounted system registers.
+  const reapplyRef = useRef<((i: number) => void) | null>(null);
+
+  // Imperative per-frame cursor application — playhead position + note highlight,
+  // ZERO React renders. Reads the latest plan + drawn-system registry from refs.
+  const applyCursor = useCallback((beat: number) => {
+    const plan = planRef.current;
+    const playhead = playheadRef.current;
+    if (!plan || !playhead || plan.systems.length === 0) {
+      if (playhead) playhead.style.display = "none";
       return;
     }
-    const { lo, hi } = found;
-    let x = lo.x;
-    if (hi && hi.systemIndex === lo.systemIndex && hi.beat > lo.beat) {
-      x = lo.x + ((hi.x - lo.x) * (beat - lo.beat)) / (hi.beat - lo.beat);
+
+    const sysIndex = systemForBeat(plan.systems, beat);
+    const sys = plan.systems[sysIndex]!;
+    const reg = registryRef.current.get(sysIndex);
+
+    // x within the active system — interpolate between the two bracketing
+    // anchors. The active system is kept mounted (auto-scroll centers it); if
+    // its registry entry is momentarily missing (mid-scroll), fall back to the
+    // left pad — the playhead re-locates once the system registers next frame.
+    let x = plan.leftPad;
+    if (reg) {
+      const found = locate(reg.anchors, beat);
+      if (found) {
+        const { lo, hi } = found;
+        x = lo.x;
+        if (hi && hi.systemIndex === lo.systemIndex && hi.beat > lo.beat) {
+          x = lo.x + ((hi.x - lo.x) * (beat - lo.beat)) / (hi.beat - lo.beat);
+        }
+      }
     }
-    const box = result.systems[lo.systemIndex];
-    if (!box) {
-      playhead.style.display = "none";
-      return;
-    }
+
     playhead.style.display = "block";
-    playhead.style.height = `${box.height}px`;
-    playhead.style.transform = `translate(${x}px, ${box.top}px)`;
+    playhead.style.height = `${sys.boxHeight}px`;
+    playhead.style.transform = `translate(${x}px, ${sys.top}px)`;
 
     // Auto-scroll the active system to center — only on a system boundary, and
     // only while playing so a paused reader can scroll and browse freely.
-    if (lo.systemIndex !== lastScrolledSystemRef.current) {
-      lastScrolledSystemRef.current = lo.systemIndex;
-      const scroll = scrollRef.current;
-      if (isPlayingRef.current && scroll) {
-        scroll.scrollTo({
-          top: box.top - scroll.clientHeight / 2 + box.height / 2,
+    if (sysIndex !== lastScrolledSystemRef.current) {
+      lastScrolledSystemRef.current = sysIndex;
+      if (isPlayingRef.current) {
+        virtualizerRef.current?.scrollToIndex(sysIndex, {
+          align: "center",
           behavior: "smooth",
         });
       }
     }
 
     // Highlight: clear the previous active set, light up notes sounding now.
+    // Only mounted systems have notes; the sounding note is in the (mounted)
+    // active system, so iterating every registry entry suffices.
     for (const el of activeElsRef.current) el.classList.remove("is-active");
     const next: SVGElement[] = [];
-    for (const n of result.notes) {
-      if (n.beat <= beat + EPS && n.end > beat + EPS) {
-        n.el.classList.add("is-active");
-        next.push(n.el);
+    for (const entry of registryRef.current.values()) {
+      for (const n of entry.notes) {
+        if (n.beat <= beat + EPS && n.end > beat + EPS) {
+          n.el.classList.add("is-active");
+          next.push(n.el);
+        }
       }
     }
     activeElsRef.current = next;
   }, []);
-
-  // Engrave (DOM side-effect) on score / width change. LayoutEffect so the staff
-  // is painted before the browser shows the frame (no flash). Colors are the fixed
-  // PAPER palette — the sheet never re-skins with the app theme, so theme changes
-  // don't invalidate the engraving.
-  useLayoutEffect(() => {
-    const host = hostRef.current;
-    if (!host) return;
-    if (!hasNotes || size.width <= 0) {
-      host.innerHTML = "";
-      resultRef.current = null;
-      return;
-    }
-    resultRef.current = engrave(host, model, size.width, endBeat, {
-      foreground: PAPER.ink,
-      primary: PAPER.accent,
-    });
-    activeElsRef.current = [];
-    applyCursor(cursor.getBeat());
-  }, [model, size.width, endBeat, hasNotes, cursor, applyCursor]);
 
   // Drive the imperative path on every cursor change — no React render.
   useEffect(
     () => cursor.subscribe(() => applyCursor(cursor.getBeat())),
     [cursor, applyCursor],
   );
+
+  // Re-plan reset: on a new plan (score / width / config change), forget the
+  // last scrolled system + active highlights, arm the redraw callback so newly
+  // mounted systems re-locate the playhead, and re-apply the cursor once.
+  useEffect(() => {
+    lastScrolledSystemRef.current = -1;
+    activeElsRef.current = [];
+    reapplyRef.current = applyCursor;
+    applyCursor(cursor.getBeat());
+  }, [plan, applyCursor, cursor]);
 
   // Click a notehead to seek the transport to its beat.
   const onClick = useCallback(
@@ -264,18 +315,44 @@ function NotationInner({ score }: NotationProps) {
       style={{ backgroundColor: PAPER.background }}
     >
       <style>{HIGHLIGHT_CSS}</style>
-      <Scroll axis="y" className="h-full" ref={scrollRef}>
+      <Scroll axis="y" className="h-full">
         <Inset pad="md">
-          {/* Positioning context for the playhead, sized to the engraved SVG. */}
-          {/* eslint-disable-next-line layout/no-adhoc-layout -- relative anchor for the absolutely-positioned playhead overlaying the SVG host */}
-          <div ref={sizeRef} className="relative" onClick={onClick}>
-            <div ref={hostRef} />
+          {/* Width source for the plan (measured) + start of the virtual region. */}
+          {/* eslint-disable-next-line layout/no-adhoc-layout -- relative host measured for engraving width; the windowing sizer lives inside it */}
+          <div ref={sizeRef} className="relative">
+            {/* eslint-disable-next-line layout/no-adhoc-layout -- the windowing sizer: a relative host whose height is the full virtual extent, anchoring each system row at a measured translateY; no layout primitive models a windowed list, and the playhead is its absolutely-positioned sibling */}
             <div
-              ref={playheadRef}
-              // eslint-disable-next-line layout/no-adhoc-layout -- playhead line positioned imperatively (transform/height written per frame by applyCursor)
-              className="pointer-events-none absolute left-0 top-0 z-raised w-0.5"
-              style={{ display: "none", backgroundColor: PAPER.accent, opacity: 0.7 }}
-            />
+              ref={measureRef}
+              className="relative w-full"
+              style={{ height: totalSize }}
+              onClick={onClick}
+            >
+              {virtualItems.map((vi) => (
+                <div
+                  key={vi.key}
+                  data-index={vi.index}
+                  // eslint-disable-next-line layout/no-adhoc-layout -- each windowed system row is absolutely positioned at its computed translateY (dynamic offset no Pin/Overlay primitive expresses)
+                  className="absolute left-0 right-0 top-0"
+                  style={{
+                    transform: `translateY(${vi.start - scrollMargin}px)`,
+                  }}
+                >
+                  <NotationSystem
+                    plan={plan!}
+                    systemIndex={vi.index}
+                    colors={INK}
+                    registryRef={registryRef}
+                    onDrawn={reapplyRef}
+                  />
+                </div>
+              ))}
+              <div
+                ref={playheadRef}
+                // eslint-disable-next-line layout/no-adhoc-layout -- playhead line positioned imperatively (transform/height written per frame by applyCursor); a sizer sibling, so scrollMargin cancels exactly as it does for the rows
+                className="pointer-events-none absolute left-0 top-0 z-raised w-0.5"
+                style={{ display: "none", backgroundColor: PAPER.accent, opacity: 0.7 }}
+              />
+            </div>
           </div>
         </Inset>
       </Scroll>

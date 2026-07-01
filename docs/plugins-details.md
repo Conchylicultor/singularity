@@ -433,7 +433,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`notation`** — Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
           - Web:
             - Contributes: `Sonata.Display` "Notation" → `Notation`, `ConfigV2.WebRegister`, `Sonata.ViewOption` "notation"
-            - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackMixerEntries`, `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/element-size.useElementSize`, `primitives/latest-ref.useLatestRef`
+            - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackMixerEntries`, `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/element-size.useElementSize`, `primitives/latest-ref.useLatestRef`, `primitives/virtual-rows.useVirtualRows`
           - Server:
             - Uses: `config_v2.ConfigV2`
         - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys. Server registration of the piano-keyboard config (key-label scope).
@@ -4891,7 +4891,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/css/ui-kit.cn`
         - Exports: Types: `UseVirtualRowsOptions`, `UseVirtualRowsResult`, `VirtualRowsProps`; Values: `useVirtualRows`, `VirtualRows`
       - Cross-plugin:
-        - Imported by: `primitives/data-table`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/tree`
+        - Imported by: `apps/sonata/notation`, `primitives/data-table`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/tree`
 
 - **`release`** — Local composition release lifecycle engine: run, observe, preview F4 artifacts.
   - Server:
