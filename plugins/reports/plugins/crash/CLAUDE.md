@@ -7,7 +7,7 @@
 - Description: Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
 - Web:
   - Contributes: `Core.Root` → `CrashCollector`, `Reports.KindView` → `CrashSummary`
-  - Uses: `primitives/error-boundary.registerBoundaryReporter`, `reports.report`, `reports.Reports`
+  - Uses: `infra/health.wedgeReportSink`, `primitives/error-boundary.boundaryReportSink`, `reports.report`, `reports.Reports`
 - Server:
   - Uses: `build.getServerBuildId`, `reports.ReportKind`
 - Core:

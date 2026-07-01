@@ -2,8 +2,8 @@ import { useEffect } from "react";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
 import { getNotificationsClient, liveStateSocketKind } from "@plugins/primitives/plugins/live-state/web";
 import { showToast } from "@plugins/shell/plugins/toast/web";
-import { report } from "@plugins/reports/web";
 import { getHealth } from "../internal/client";
+import { wedgeReportSink } from "../internal/wedge-report-sink";
 
 // How long a socket may stay non-open before we declare the live-state pipeline
 // wedged. A transient reconnect self-heals well within this window via sub-ack;
@@ -57,22 +57,15 @@ function wedge(
     });
   }
 
-  // report() never throws (it swallows beacon failures internally), but we still
-  // void it to satisfy promise-safety lint. The discriminator gives each failure
-  // mode a distinct fingerprint; the stable message/label still dedups repeats of
-  // a given mode into one growing-count task.
-  void report({
-    kind: "crash",
-    source: "live-state-wedge",
+  // Emit onto the neutral wedge sink; `reports.crash` (when present) maps it to a
+  // deduped crash task. The discriminator gives each failure mode a distinct
+  // fingerprint; the stable message still dedups repeats of a given mode into one
+  // growing-count task. emit() never throws (the sink swallows on the error path).
+  wedgeReportSink.emit({
+    discriminator,
     message: opts.benign
       ? `live-state went stale across a server restart: ${kind} — ${detail}`
       : `live-state wedged: ${kind} — ${detail}`,
-    url: location.href,
-    userAgent: navigator.userAgent,
-    data: {
-      errorType: `LiveStateWedge:${discriminator}`,
-      label: "live-state.watchdog",
-    },
   });
 }
 

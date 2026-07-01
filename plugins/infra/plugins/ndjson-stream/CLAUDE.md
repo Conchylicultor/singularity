@@ -18,7 +18,7 @@ Bun's 10s idle timeout.
 
 - Description: Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint, guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder: wrap a frame-emitting producer into a chunked stream that survives Bun's idle timeout and lets clients render rows progressively.
 - Web:
-  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.reportEndpointError`
+  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.endpointErrorSink`
   - Exports: Values: `readNdjson`
 - Cross-plugin:
   - Imported by: `debug/slow-ops/cluster`, `debug/worktree-cleanup`

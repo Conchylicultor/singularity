@@ -2,7 +2,7 @@ import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "
 import { UNSAFE_unsealSlotComponent } from "@plugins/framework/plugins/web-sdk/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ErrorBoundary } from "../slots";
-import { callReporter, type BoundaryErrorReport } from "../reporter";
+import { boundaryReportSink, type BoundaryErrorReport } from "../reporter";
 
 interface Props {
   slot?: string;
@@ -60,10 +60,10 @@ function CrashFallback({
 
   useEffect(() => {
     let cancelled = false;
-    // Defer one tick so plugin-side effects (e.g. registerBoundaryReporter)
+    // Defer one tick so plugin-side effects (e.g. boundaryReportSink.register)
     // have run if this boundary fired during the very first commit.
     const timer = setTimeout(() => {
-      const result = callReporter(report);
+      const result = boundaryReportSink.emit(report);
       if (result && typeof (result as Promise<unknown>).then === "function") {
         // eslint-disable-next-line promise-safety/no-bare-catch
         (result as Promise<unknown>)

@@ -1,4 +1,4 @@
-import { EndpointError, reportEndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { EndpointError, endpointErrorSink } from "@plugins/infra/plugins/endpoints/web";
 
 // Async generator yielding one parsed JSON frame per line. Guards res.ok so a
 // plain-text gateway error (e.g. "backend unavailable") is surfaced + reported
@@ -11,7 +11,7 @@ export async function* readNdjson(
   const res = await fetch(url, init);
   if (!res.ok) {
     const body = await res.text().catch(() => null);
-    reportEndpointError({ route, status: res.status, body });
+    endpointErrorSink.emit({ route, status: res.status, body });
     throw new EndpointError(res.status, body ?? `HTTP ${res.status}`);
   }
   const reader = res.body!.getReader();

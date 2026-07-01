@@ -1,5 +1,6 @@
 import { useEffect } from "react";
-import { registerBoundaryReporter } from "@plugins/primitives/plugins/error-boundary/web";
+import { boundaryReportSink } from "@plugins/primitives/plugins/error-boundary/web";
+import { wedgeReportSink } from "@plugins/infra/plugins/health/web";
 import { report } from "@plugins/reports/web";
 
 // A Core.Root side-effect component (the old reports ReportCollector, now owned
@@ -36,7 +37,7 @@ export function CrashCollector() {
     window.addEventListener("error", onError);
     window.addEventListener("unhandledrejection", onRejection);
 
-    registerBoundaryReporter((r) => {
+    boundaryReportSink.register((r) => {
       const promise = report({
         kind: "crash",
         source: "react-boundary",
@@ -57,10 +58,28 @@ export function CrashCollector() {
       }));
     });
 
+    // The live-state wedge watchdog (infra.health) emits a neutral WedgeReport;
+    // crash owns the mapping to a `kind: "crash"` report (both are crash-kind
+    // client sources). The discriminator carries the per-failure-mode fingerprint.
+    wedgeReportSink.register((w) => {
+      void report({
+        kind: "crash",
+        source: "live-state-wedge",
+        message: w.message,
+        url: window.location.href,
+        userAgent: navigator.userAgent,
+        data: {
+          errorType: `LiveStateWedge:${w.discriminator}`,
+          label: "live-state.watchdog",
+        },
+      });
+    });
+
     return () => {
       window.removeEventListener("error", onError);
       window.removeEventListener("unhandledrejection", onRejection);
-      registerBoundaryReporter(null);
+      boundaryReportSink.register(null);
+      wedgeReportSink.register(null);
     };
   }, []);
 

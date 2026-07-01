@@ -7,11 +7,12 @@ an error, render a small fallback, and offer a Retry button.
 
 ## Reporter
 
-Domain plugins (e.g. `crashes`) opt in by calling `registerBoundaryReporter(fn)`
-once at mount time. When a boundary catches, it invokes the reporter
-with the `BoundaryErrorReport` and stores whatever the reporter returns
-as opaque `context` — passed through to action contributions. The
-boundary itself never inspects that context.
+Domain plugins (e.g. `reports.crash`) opt in by calling
+`boundaryReportSink.register(fn)` once at mount time (the sink is the shared
+`defineReportSink` primitive). When a boundary catches, it `emit`s the
+`BoundaryErrorReport` and stores whatever the registered handler returns as
+opaque `context` — passed through to action contributions. The boundary itself
+never inspects that context.
 
 ## Actions
 
@@ -36,11 +37,11 @@ barrel.
 
 ## Plugin reference
 
-- Description: Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a registerBoundaryReporter() hook for opt-in crash reporting.
+- Description: Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a boundaryReportSink for opt-in crash reporting.
 - Web:
   - Slots: `ErrorBoundary.Action` ← `reports.launch-fix`
-  - Uses: `primitives/css/text.Text`, `primitives/slot-render.registerSlotItemMiddleware`
-  - Exports: Types: `BoundaryErrorReport`; Values: `ErrorBoundary`, `PluginErrorBoundary`, `registerBoundaryReporter`
+  - Uses: `primitives/css/text.Text`, `primitives/report-sink.defineReportSink`, `primitives/slot-render.registerSlotItemMiddleware`
+  - Exports: Types: `BoundaryErrorReport`; Values: `boundaryReportSink`, `ErrorBoundary`, `PluginErrorBoundary`
 - Cross-plugin:
   - Imported by: `apps/workflows/editor`, `apps/workflows/executions`, `framework/web-core`, `layouts/full-pane`, `layouts/miller`, `reports/crash`, `reports/launch-fix`
 

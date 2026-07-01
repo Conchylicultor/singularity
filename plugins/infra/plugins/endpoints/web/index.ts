@@ -4,7 +4,7 @@ export { fetchEndpoint, EndpointError, getEndpointErrorMessage } from "./interna
 export { useEndpoint } from "./internal/use-endpoint";
 export { endpointQueryKey } from "./internal/query-key";
 export { useEndpointMutation } from "./internal/use-endpoint-mutation";
-export { registerEndpointErrorReporter, reportEndpointError } from "./internal/error-reporter";
+export { endpointErrorSink } from "./internal/error-reporter";
 export type { EndpointErrorInfo } from "./internal/error-reporter";
 
 export default {

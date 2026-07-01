@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import {
-  registerEndpointErrorReporter,
+  endpointErrorSink,
   type EndpointErrorInfo,
 } from "@plugins/infra/plugins/endpoints/web";
 import { report } from "@plugins/reports/web";
@@ -59,7 +59,7 @@ function buildReport(info: EndpointErrorInfo) {
 
 export function EndpointErrorReporter() {
   useEffect(() => {
-    registerEndpointErrorReporter((info) => {
+    endpointErrorSink.register((info) => {
       // Bug-shaped only: all 5xx, plus validation 400s. Skip expected
       // control-flow responses (401/403/404/409, non-validation 400s).
       const bugShaped =
@@ -67,7 +67,7 @@ export function EndpointErrorReporter() {
       if (!bugShaped) return;
       void report(buildReport(info));
     });
-    return () => registerEndpointErrorReporter(null);
+    return () => endpointErrorSink.register(null);
   }, []);
 
   return null;

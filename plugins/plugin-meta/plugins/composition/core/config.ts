@@ -87,12 +87,16 @@ export const compositionsConfig = defineConfig({
         app("pages", "a3", "apps.pages"),
         app("settings", "a4", "apps.settings"),
         app("studio", "a5", "apps.studio"),
-        // NOTE: no app `excludes` the `agent-runtime` bundle YET. Today EVERY
-        // served app's closure pulls it in via served-baseline → infra.health →
-        // reports → tasks/build → git-watcher (one hard edge). Opt apps in once
-        // that coupling is cut (filed follow-up). The guard mechanism is live and
-        // ready; see plugins/.../checks/.../composition-closure.
-        app("sonata", "a6", "apps.sonata"),
+        // The linchpin edge is now CUT: infra.health no longer hard-imports
+        // reports (its wedge watchdog emits onto a neutral report-sink that
+        // reports.crash registers into), so served-baseline no longer drags
+        // reports/tasks/build/git-watcher into every served app's hard closure.
+        // Sonata is the worked proof — it `excludes` both the `agent-runtime`
+        // bundle and `auth`, and the composition-closure check enforces the
+        // disjointness. Rolling the same excludes out to the other served apps is
+        // a follow-up. The guard mechanism is live; see
+        // plugins/.../checks/.../composition-closure.
+        app("sonata", "a6", "apps.sonata", [], ["agent-runtime", "auth"]),
         app("story", "a7", "apps.story"),
         app("debug", "a8", "apps.debug"),
         app("deploy", "a9", "apps.deploy"),

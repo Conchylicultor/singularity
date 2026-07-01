@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-report-sink",
+  "description": "Shared soft-reporter slot factory: defineReportSink() single-sources the register/emit inversion behind the boundary/endpoint/wedge reporters.",
+  "private": true,
+  "version": "0.0.1"
+}

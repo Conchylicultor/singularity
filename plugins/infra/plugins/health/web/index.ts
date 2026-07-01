@@ -6,6 +6,8 @@ import { ReconnectWatcher } from "./components/reconnect-watcher";
 import { WedgeWatchdog } from "./components/wedge-watchdog";
 
 export { getHealth, waitForRestart } from "./internal/client";
+export { wedgeReportSink } from "./internal/wedge-report-sink";
+export type { WedgeReport } from "./internal/wedge-report-sink";
 
 export default {
   description: "Surfaces server restarts as a toast; exposes /api/health helpers.",

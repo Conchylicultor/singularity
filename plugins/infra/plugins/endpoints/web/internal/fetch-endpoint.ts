@@ -1,6 +1,6 @@
 import type { EndpointDef } from "../../core/define-endpoint";
 import { extractMethod, interpolatePath } from "../../core/route-params";
-import { reportEndpointError } from "./error-reporter";
+import { endpointErrorSink } from "./error-reporter";
 
 export class EndpointError extends Error {
   constructor(
@@ -31,7 +31,7 @@ type FetchOpts<TBody, TQuery> = {
   signal?: AbortSignal;
   /** RequestInit passthrough; lets a beacon survive page unload. */
   keepalive?: boolean;
-  /** Default true. `false` skips reportEndpointError (e.g. the crash beacon). */
+  /** Default true. `false` skips endpointErrorSink.emit (e.g. the crash beacon). */
   report?: boolean;
   // `[T] extends [void]` (tuple-wrapped) keeps the conditional non-distributive
   // so a union body type (e.g. a discriminated `BlockOp`) stays one `body: TBody`
@@ -107,7 +107,7 @@ export async function fetchEndpoint<
       errorBody = await res.text().catch(() => null);
     }
     if (opts?.report !== false) {
-      reportEndpointError({ route: endpoint.route, status: res.status, body: errorBody });
+      endpointErrorSink.emit({ route: endpoint.route, status: res.status, body: errorBody });
     }
     throw new EndpointError(res.status, errorBody);
   }
