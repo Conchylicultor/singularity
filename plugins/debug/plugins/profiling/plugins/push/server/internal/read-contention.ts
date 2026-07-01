@@ -204,16 +204,16 @@ export function readContentionRecords(): PushContentionRecord[] {
  * stay safe against concurrent CLI writes — callers must ensure a single writer
  * (gate on the main backend). Returns the number of records finalized.
  */
-export function finalizeOrphanedPushes(
-  isActive: (slug: string) => boolean,
-): number {
+export async function finalizeOrphanedPushes(
+  isActive: (slug: string) => Promise<boolean>,
+): Promise<number> {
   const byId = groupByPushId(readRawRecords());
   let finalized = 0;
   for (const [pushId, g] of byId) {
     if (g.terminal) continue;
     const base = g.requested;
     if (!base) continue;
-    if (isActive(base.opSlug ?? "")) continue;
+    if (await isActive(base.opSlug ?? "")) continue;
 
     const startedMs = new Date(base.startedAt ?? base.lockRequestedAt ?? 0).getTime();
     const requestedMs = new Date(base.lockRequestedAt ?? base.startedAt ?? 0).getTime();

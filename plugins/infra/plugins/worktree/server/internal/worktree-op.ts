@@ -3,7 +3,6 @@ import {
   type Dirent,
   mkdirSync,
   openSync,
-  readdirSync,
   readFileSync,
   renameSync,
   rmSync,
@@ -140,32 +139,15 @@ function markerInfoFromParsed(slug: string, parsed: MarkerJson): WorktreeOpInfo 
   };
 }
 
-// Parse one marker file synchronously, reaping it if dead or unparseable, so a
-// SIGKILLed build/push (which can't run its own cleanup) self-heals on the next
-// read. Returns the live marker's data, or null if the marker was reclaimed.
-// The SYNC variant is for the non-flush-cycle callers (isWorktreeOpActive: the
-// tmux poller / push profiler); the flush-cycle loader uses readLiveMarkerAsync.
-function readLiveMarker(slug: string, path: string): WorktreeOpInfo | null {
-  let parsed: MarkerJson;
-  try {
-    parsed = JSON.parse(readFileSync(path, "utf8")) as MarkerJson;
-  } catch (err) {
-    if (!isReapableReadError(err)) throw err;
-    // Unreadable/garbage marker — reclaim it.
-    rmSync(path, { force: true });
-    return null;
-  }
-  const info = markerInfoFromParsed(slug, parsed);
-  if (!info) rmSync(path, { force: true }); // dead pid — reclaim.
-  return info;
-}
-
-// Async twin of readLiveMarker, used by the op-status loader so the marker scan
-// yields the event loop (readFile runs on the libuv threadpool) instead of
-// blocking the shared flush cycle. Reaping still uses rmSync: it only fires for
-// already-dead markers, and the write/clear TOCTOU already exists in the sync
-// version — the async read doesn't worsen it. isPidAlive stays sync (a signal
-// syscall, not IO).
+// Parse one marker file, reaping it if dead or unparseable, so a SIGKILLed
+// build/push (which can't run its own cleanup) self-heals on the next read.
+// Returns the live marker's data, or null if the marker was reclaimed. ASYNC so
+// the marker scan yields the event loop (readFile runs on the libuv threadpool)
+// instead of blocking a runtime — shared by every marker reader
+// (isWorktreeOpActive, the flush-cycle loader). Reaping still uses rmSync: it
+// only fires for already-dead markers, and the write/clear TOCTOU is inherent to
+// the marker scheme — the async read doesn't worsen it. isPidAlive stays sync (a
+// signal syscall, not IO).
 async function readLiveMarkerAsync(slug: string, path: string): Promise<WorktreeOpInfo | null> {
   let parsed: MarkerJson;
   try {
@@ -182,20 +164,21 @@ async function readLiveMarkerAsync(slug: string, path: string): Promise<Worktree
 }
 
 // True iff any op marker for this worktree names a live pid. Reaps dead or
-// unparseable markers as it scans.
-export function isWorktreeOpActive(slug: string): boolean {
+// unparseable markers as it scans. ASYNC: this is called per-pane by the tmux
+// status poller, so the scan must yield the event loop (readdir/readFile on the
+// libuv threadpool) rather than block that runtime under filesystem IO
+// contention. Per-file reads run in parallel, like listActiveWorktreeOps.
+export async function isWorktreeOpActive(slug: string): Promise<boolean> {
+  const dir = opsDir(slug);
   let files: string[];
   try {
-    files = readdirSync(opsDir(slug));
+    files = await readdir(dir);
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return false;
     throw err;
   }
-  let active = false;
-  for (const f of files) {
-    if (readLiveMarker(slug, join(opsDir(slug), f))) active = true;
-  }
-  return active;
+  const infos = await Promise.all(files.map((f) => readLiveMarkerAsync(slug, join(dir, f))));
+  return infos.some((i) => i !== null);
 }
 
 // Every live op marker across all worktrees, parsed into WorktreeOpInfo. Reaps

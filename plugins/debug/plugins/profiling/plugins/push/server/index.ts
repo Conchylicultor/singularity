@@ -18,9 +18,9 @@ export default {
   // global files, so only the main backend reconciles them — gating avoids
   // concurrent writes from every worktree backend. Work still running is skipped
   // via the op marker.
-  onReady: () => {
+  onReady: async () => {
     if (!isMain()) return;
-    finalizeOrphanedBuilds(isWorktreeOpActive);
-    finalizeOrphanedPushes(isWorktreeOpActive);
+    await finalizeOrphanedBuilds(isWorktreeOpActive);
+    await finalizeOrphanedPushes(isWorktreeOpActive);
   },
 } satisfies ServerPluginDefinition;

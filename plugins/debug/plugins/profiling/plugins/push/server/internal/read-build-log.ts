@@ -137,13 +137,13 @@ export function readBuildLogRecords(): BuildLogRecord[] {
  * CLI writes — callers must ensure a single writer (gate on the main backend).
  * Returns the number of records finalized.
  */
-export function finalizeOrphanedBuilds(
-  isActive: (worktree: string) => boolean,
-): number {
+export async function finalizeOrphanedBuilds(
+  isActive: (worktree: string) => Promise<boolean>,
+): Promise<number> {
   const orphans = findOrphanedStarts(readRawRecords());
   let finalized = 0;
   for (const o of orphans) {
-    if (isActive(o.worktree)) continue;
+    if (await isActive(o.worktree)) continue;
     const record: RawBuildLogRecord = {
       phase: "completed",
       worktree: o.worktree,

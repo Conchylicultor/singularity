@@ -567,7 +567,7 @@ async function paneIsWorking(conversationId: string): Promise<boolean> {
   }
   const opActive =
     state.status === "shell" && pane.worktreePath
-      ? isWorktreeOpActive(basename(pane.worktreePath))
+      ? await isWorktreeOpActive(basename(pane.worktreePath))
       : false;
   return resolvePaneStatus(pane.rawTitle, state, opActive).working;
 }
@@ -594,16 +594,25 @@ export const tmuxRuntime: ConversationRuntime = {
         }
       }),
     );
+    // Only the ambiguous "shell" state needs the build/push-in-flight signal,
+    // so we skip the filesystem scan for every other pane. isWorktreeOpActive is
+    // async (off-event-loop), so resolve every pane's op state in parallel up
+    // front, then consume it synchronously when assembling the map.
+    const opActives = await Promise.all(
+      ids.map((id, i) => {
+        const { worktreePath } = panes.get(id)!;
+        const state = states[i]!;
+        return state.status === "shell" && worktreePath
+          ? isWorktreeOpActive(basename(worktreePath))
+          : Promise.resolve(false);
+      }),
+    );
+
     const out = new Map<string, RuntimeInfo>();
     ids.forEach((id, i) => {
       const { rawTitle, dead, worktreePath } = panes.get(id)!;
       const state = states[i]!;
-      // Only the ambiguous "shell" state needs the build/push-in-flight signal,
-      // so we skip the filesystem read for every other pane.
-      const opActive =
-        state.status === "shell" && worktreePath
-          ? isWorktreeOpActive(basename(worktreePath))
-          : false;
+      const opActive = opActives[i]!;
       const resolved = resolvePaneStatus(rawTitle, state, opActive);
       out.set(id, {
         title: resolved.title,
