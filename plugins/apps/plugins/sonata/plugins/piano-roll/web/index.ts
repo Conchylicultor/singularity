@@ -28,6 +28,8 @@ export default {
       label: "Piano Roll",
       icon: MdGraphicEq,
       capabilities: ["time-axis", "pitch-plane"],
+      // The default lens when the user hasn't picked one.
+      default: true,
       component: PianoRoll,
     }),
     // Toolbar jog wheel for the roll's vertical zoom (spread), in the toolbar's

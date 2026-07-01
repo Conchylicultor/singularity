@@ -87,7 +87,16 @@ export const Sonata = {
       activeDisplayId: string;
     },
     string,
-    { id: string; label: string; icon?: IconType; capabilities: Capability[] }
+    {
+      id: string;
+      label: string;
+      icon?: IconType;
+      capabilities: Capability[];
+      /** The lens selected when the user hasn't chosen one (exactly one; falls
+       *  back to the first contribution). Collection-consumer clean — consumers
+       *  pick the default-flagged display, never naming a contributor. */
+      default?: boolean;
+    }
   >("sonata.display", {
     key: (props) => props.activeDisplayId,
     fallback: NoDisplay,

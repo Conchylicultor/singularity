@@ -148,7 +148,10 @@ function SonataPlayerSurface(): ReactElement {
   // metadata (id/label/icon/capabilities) is fully readable; only `component`
   // is sealed. Never names a specific display.
   const displays = Sonata.Display.useContributions();
-  const effectiveDisplayId = activeDisplayId ?? displays[0]?.id ?? null;
+  const effectiveDisplayId =
+    activeDisplayId ??
+    (displays.find((d) => d.default) ?? displays[0])?.id ??
+    null;
 
   return (
     // The toolbar (Start: ← Library, title, display picker; End: transport,
