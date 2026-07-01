@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Fields } from "@plugins/fields/server";
+import { Fields } from "@plugins/fields/plugins/server-capabilities/server";
 import { intFieldType } from "@plugins/fields/plugins/int/core";
 import { build } from "./internal/storage";
 

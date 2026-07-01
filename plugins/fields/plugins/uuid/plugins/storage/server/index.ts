@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Fields } from "@plugins/fields/server";
+import { Fields } from "@plugins/fields/plugins/server-capabilities/server";
 import { uuidFieldType } from "@plugins/fields/plugins/uuid/core";
 import { build } from "./internal/storage";
 

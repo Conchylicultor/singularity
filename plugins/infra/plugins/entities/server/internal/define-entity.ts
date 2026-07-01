@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { pgTable, primaryKey } from "drizzle-orm/pg-core";
-import { resolveFieldStorage } from "@plugins/fields/server";
+import { resolveFieldStorage } from "@plugins/fields/plugins/server-capabilities/server";
 import { fieldsToZodObject } from "@plugins/fields/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { snakeCase } from "./snake-case";

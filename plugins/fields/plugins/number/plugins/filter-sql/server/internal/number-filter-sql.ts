@@ -1,5 +1,5 @@
 import { and, sql, type AnyColumn, type SQL } from "drizzle-orm";
-import type { FilterSqlBuilder } from "@plugins/fields/server";
+import type { FilterSqlBuilder } from "@plugins/fields/plugins/server-capabilities/server";
 
 /**
  * SQL twin of `number/filter`'s comparison predicates

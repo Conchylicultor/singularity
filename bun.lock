@@ -1803,6 +1803,14 @@
       "name": "@singularity/plugin-fields-secret-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/server-capabilities": {
+      "name": "@singularity/plugin-fields-server-capabilities",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/server-capabilities-loader": {
+      "name": "@singularity/plugin-fields-server-capabilities-loader",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/string-list": {
       "name": "@singularity/plugin-fields-string-list",
       "version": "0.0.1",
@@ -1873,10 +1881,6 @@
     },
     "plugins/fields/plugins/variant/plugins/config": {
       "name": "@singularity/plugin-fields-variant-config",
-      "version": "0.0.1",
-    },
-    "plugins/fields/server": {
-      "name": "@singularity/plugin-fields-server",
       "version": "0.0.1",
     },
     "plugins/framework": {
@@ -1982,6 +1986,10 @@
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/data-views-in-sync": {
       "name": "@singularity/plugin-framework-tooling-checks-data-views-in-sync",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/fields-eager-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-fields-eager-in-sync",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/inherited-theme-defaults-scoped": {
@@ -5349,7 +5357,9 @@
 
     "@singularity/plugin-fields-secret-config": ["@singularity/plugin-fields-secret-config@workspace:plugins/fields/plugins/secret/plugins/config"],
 
-    "@singularity/plugin-fields-server": ["@singularity/plugin-fields-server@workspace:plugins/fields/server"],
+    "@singularity/plugin-fields-server-capabilities": ["@singularity/plugin-fields-server-capabilities@workspace:plugins/fields/plugins/server-capabilities"],
+
+    "@singularity/plugin-fields-server-capabilities-loader": ["@singularity/plugin-fields-server-capabilities-loader@workspace:plugins/fields/plugins/server-capabilities-loader"],
 
     "@singularity/plugin-fields-string-list": ["@singularity/plugin-fields-string-list@workspace:plugins/fields/plugins/string-list"],
 
@@ -5428,6 +5438,8 @@
     "@singularity/plugin-framework-tooling-checks-data-migration-dml-only": ["@singularity/plugin-framework-tooling-checks-data-migration-dml-only@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/data-migration-dml-only"],
 
     "@singularity/plugin-framework-tooling-checks-data-views-in-sync": ["@singularity/plugin-framework-tooling-checks-data-views-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/data-views-in-sync"],
+
+    "@singularity/plugin-framework-tooling-checks-fields-eager-in-sync": ["@singularity/plugin-framework-tooling-checks-fields-eager-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/fields-eager-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-inherited-theme-defaults-scoped": ["@singularity/plugin-framework-tooling-checks-inherited-theme-defaults-scoped@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/inherited-theme-defaults-scoped"],
 

@@ -16,5 +16,5 @@ export { fieldsToColumns } from "./internal/fields-to-columns";
 
 export default {
   description:
-    "Storage-dimension registry: owns the fields.storage server slot where each field type contributes its Drizzle column builder, keyed by type token.",
+    "Server-owned field-capability library: the Fields.Storage / Fields.FilterSql tokens, their eager self-registering indexes, and the resolveFieldStorage / resolveFieldFilterSql resolvers. A graph sink — never imports a capability barrel.",
 } satisfies ServerPluginDefinition;

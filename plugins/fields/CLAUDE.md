@@ -41,14 +41,19 @@ capability. Leaf plugins under `plugins/` register one type each.
 
 The general rule above is that capability slots are **owned by the consuming
 surface, never by `fields`** (data-view owns cell/filter; config_v2 owns the
-config renderer). **`storage` is the single carve-out.** It is intrinsic to a
-type's identity — there is exactly one DB column mapping per type, system-wide —
-so the `fields` plugin owns it directly, on a **new `fields/server` runtime**
-(symmetric to `fields/core` and `fields/web`). It lives on the server runtime
-specifically to keep `drizzle-orm/pg-core` out of the browser bundle.
+config renderer). **`storage` (and its server-side `filter-sql` sibling) is the
+single carve-out.** It is intrinsic to a type's identity — there is exactly one
+DB column mapping per type, system-wide — so `fields` owns it directly, on a
+**server-only library sub-plugin** `plugins/server-capabilities/` (kept off the
+browser bundle to keep `drizzle-orm/pg-core` out of it). See that plugin's
+`CLAUDE.md` for why it is a dedicated leaf (a graph sink) rather than a
+`fields/server` runtime — the short version: the capability barrels import its
+tokens, so anything that imports the barrels back would cycle.
 
-- `fields/server` owns the `fields.storage` server-contribution registry (the
-  `Fields.Storage` token) and the generic `resolveFieldStorage(typeId)` resolver.
+- `fields/plugins/server-capabilities/server` owns the `fields.storage` +
+  `fields.filter-sql` server-contribution registries (the `Fields.Storage` /
+  `Fields.FilterSql` tokens) and the generic `resolveFieldStorage(typeId)` /
+  `resolveFieldFilterSql(typeId, opId)` resolvers.
 - Each persisted type contributes its Drizzle column builder from a
   `plugins/<type>/plugins/storage/` server sub-plugin
   (`Fields.Storage({ type, build })`), so adding/removing a type updates the
@@ -58,6 +63,10 @@ specifically to keep `drizzle-orm/pg-core` out of the browser bundle.
   (A future derived type wanting the same column re-declares a one-line builder
   rather than inheriting, keeping storage self-contained on the server with no
   need to mirror the web identity/`extends` map.)
+- The sibling `plugins/server-capabilities-loader/` plugin holds the generated
+  side-effect manifest that eagerly evaluates every capability barrel so each
+  self-registers before any `defineEntity` runs; eval-time consumers import it
+  for side-effect. This keeps `server-capabilities` a pure sink.
 
 ## Adding a field type
 
@@ -73,14 +82,12 @@ specifically to keep `drizzle-orm/pg-core` out of the browser bundle.
 
 ## Plugin reference
 
-- Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce). Storage-dimension registry: owns the fields.storage server slot where each field type contributes its Drizzle column builder, keyed by type token.
+- Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 - Web:
   - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.rank`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
   - Exports: Values: `Fields`
 - Cross-plugin:
-  - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `config_v2`, `config_v2/staging`, `conversations/all-conversations`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/bool/filter-sql`, `fields/bool/storage`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/config`, `fields/date/filter-sql`, `fields/date/storage`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/enum/filter-sql`, `fields/float`, `fields/float/config`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/config`, `fields/int/storage`, `fields/json`, `fields/json/config`, `fields/json/storage`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/number/filter-sql`, `fields/object`, `fields/object/config`, `fields/rank`, `fields/rank/config`, `fields/rank/storage`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/text/filter-sql`, `fields/text/storage`, `fields/uuid`, `fields/uuid/config`, `fields/uuid/storage`, `fields/variant`, `fields/variant/config`, `infra/claude-cli`, `infra/entities`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
-- Server:
-  - Exports: Types: `FieldFilterSqlContribution`, `FieldStorageContribution`, `FilterSqlBuilder`, `StorageColumnBuilder`; Values: `Fields`, `fieldsToColumns`, `resolveFieldFilterSql`, `resolveFieldStorage`
+  - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `config_v2`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/config`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/float`, `fields/float/config`, `fields/image`, `fields/int`, `fields/int/config`, `fields/json`, `fields/json/config`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/object`, `fields/object/config`, `fields/rank`, `fields/rank/config`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/uuid`, `fields/uuid/config`, `fields/variant`, `fields/variant/config`, `infra/claude-cli`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
 - Core:
   - Exports: Types: `FieldDef`, `FieldIdentity`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`; Values: `defineFieldIdentity`, `defineFieldType`, `fieldSchemaWithDefault`, `fieldsToZodObject`, `getFieldResolver`, `nullable`, `pickMeta`, `registerFieldResolver`, `resolveTypeChain`
 - Sub-plugins:
@@ -102,6 +109,8 @@ specifically to keep `drizzle-orm/pg-core` out of the browser bundle.
   - **`rank`** [2 sub-plugins] — Rank field type: identity only, extends text — a fractional-indexing string stored in the rank_text (C-collation) domain, reusing text's cell and filter via the extends chain.
   - **`reorder-tree`** [1 sub-plugin] — Reorder-tree field type: identity only. The config-render capability and the reorderTreeField factory live in the plugins/config sub-plugin.
   - **`secret`** [1 sub-plugin] — Secret field type: identity only. The config-render/storage/central capabilities and the secretField factory live in the plugins/config sub-plugin. Registers NO coerce and contributes NO data-view cell/filter, so a secret can never become a readable table cell.
+  - **`server-capabilities`** — Server-owned field-capability library: the Fields.Storage / Fields.FilterSql tokens, their eager self-registering indexes, and the resolveFieldStorage / resolveFieldFilterSql resolvers. A graph sink — never imports a capability barrel.
+  - **`server-capabilities-loader`** — Eagerly evaluates every fields storage/filter-sql capability barrel via a generated side-effect manifest, so each self-registers into the server-capabilities eager index. Eval-time consumers import this for side-effect.
   - **`string-list`** [1 sub-plugin] — String-list field type: identity only. The config-render capability and the stringListField factory live in the plugins/config sub-plugin.
   - **`tags`** [3 sub-plugins] — Tags (multi-value) field type: identity only. The data-view filter (multi-select tag chips with array-aware match-any) lives in the plugins/filter sub-plugin.
   - **`text`** [6 sub-plugins] — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.

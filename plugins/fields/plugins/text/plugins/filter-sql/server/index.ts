@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Fields } from "@plugins/fields/server";
+import { Fields } from "@plugins/fields/plugins/server-capabilities/server";
 import { textFieldType } from "@plugins/fields/plugins/text/core";
 import { textFilterSql } from "./internal/text-filter-sql";
 

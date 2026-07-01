@@ -1,7 +1,7 @@
 import { and, ilike, ne, or, type SQL } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { resolveFieldFilterSql } from "@plugins/fields/server";
+import { resolveFieldFilterSql } from "@plugins/fields/plugins/server-capabilities/server";
 import {
   buildSortKeys,
   compileWhere,

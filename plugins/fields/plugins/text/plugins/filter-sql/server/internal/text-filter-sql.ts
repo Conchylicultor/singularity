@@ -1,5 +1,5 @@
 import { sql, type AnyColumn } from "drizzle-orm";
-import type { FilterSqlBuilder } from "@plugins/fields/server";
+import type { FilterSqlBuilder } from "@plugins/fields/plugins/server-capabilities/server";
 
 /**
  * SQL twin of `text/filter`'s case-insensitive substring predicates

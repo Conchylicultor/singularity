@@ -11,6 +11,10 @@ import {
   customUtilitiesManifestPath,
   renderCustomUtilities,
 } from "./custom-utilities-gen";
+import {
+  fieldsEagerManifestPath,
+  renderFieldsEagerManifest,
+} from "./fields-eager-gen";
 
 /**
  * The single source of truth for the PRE-BARREL manifest set.
@@ -59,6 +63,15 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
     id: "customUtilities",
     path: customUtilitiesManifestPath,
     render: renderCustomUtilities,
+  },
+  {
+    // Side-effect imports of the fields storage/filter-sql server barrels. The
+    // fields/server-capabilities-loader barrel imports it at module-load; its
+    // renderer is a barrel-free `skipBarrelImport` tree scan, so regenerating it
+    // pre-barrel is sound.
+    id: "fieldsEager",
+    path: fieldsEagerManifestPath,
+    render: renderFieldsEagerManifest,
   },
 ];
 

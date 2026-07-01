@@ -1,5 +1,13 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
+// Force every fields storage/filter-sql capability barrel to evaluate (each
+// self-registers its column/filter builder into the `server-capabilities` eager
+// index) BEFORE any consumer's `tables.ts` body calls `defineEntity` — which
+// resolves builders synchronously at module-eval, ahead of `collectContributions`.
+// This side-effect import is also the composition-closure edge that pulls the
+// capability barrels into every release bundle shipping an entity-defining plugin.
+import "@plugins/fields/plugins/server-capabilities-loader/server";
+
 export { defineEntity } from "./internal/define-entity";
 export { defaultNow, defaultRandom, sqlDefault } from "./internal/types";
 export type {

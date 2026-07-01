@@ -11,7 +11,10 @@ This is Stage C of the fields-unified-entities roadmap
 (`research/2026-06-18-global-define-entity-stage-c.md`), built on the Stage A
 `fields.storage` capability and the Stage B `FieldDef` atom + `fieldsToZodObject`.
 Server-only runtime — keeps `drizzle-orm/pg-core` off the browser bundle, like
-`fields/server`.
+`fields/plugins/server-capabilities/server` (from which it imports
+`resolveFieldStorage`). Its server barrel also side-effect-imports
+`fields/plugins/server-capabilities-loader/server` so every storage capability
+barrel is evaluated before any `defineEntity` body runs.
 
 ## API
 
@@ -138,7 +141,7 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
 
 - Description: Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.
 - Server:
-  - Uses: `fields.Fields`, `fields.resolveFieldStorage`
+  - Uses: `fields/server-capabilities-loader`, `fields/server-capabilities.Fields`, `fields/server-capabilities.resolveFieldStorage`
   - DB schema: `plugins/infra/plugins/entities/server/internal/define-entity.ts`
   - Exports: Types: `ColumnDefault`, `DbDefault`, `DefaultedKeys`, `Entity`, `EntityColumnMeta`, `EntityColumns`, `EntityMeta`, `EntityReference`, `EntityRow`; Values: `defaultNow`, `defaultRandom`, `defineEntity`, `sqlDefault`
 - Cross-plugin:

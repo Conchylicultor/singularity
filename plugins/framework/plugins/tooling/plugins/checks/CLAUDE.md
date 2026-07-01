@@ -30,6 +30,7 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
   - **`css-vars-supplied`**
   - **`data-migration-dml-only`**
   - **`data-views-in-sync`**
+  - **`fields-eager-in-sync`**
   - **`inherited-theme-defaults-scoped`**
   - **`keyed-resource-scope`**
   - **`migration-hashes-unique`**

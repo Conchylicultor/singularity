@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-server-capabilities",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Server-owned field-capability library: the Fields.Storage / Fields.FilterSql tokens, their eager self-registering indexes, and the resolveFieldStorage / resolveFieldFilterSql resolvers. A graph sink — never imports a capability barrel.",
+  "singularity": {
+    "collapsed": true
+  }
+}

@@ -1474,7 +1474,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `conversations/conversation-ui/item.ConvStatusDot`, `conversations/conversation-view.conversationPane`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/inline.Inline`, `primitives/css/text.Text`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`, `shell.Shell`
         - Exports: Values: `allConversationsPane`, `conversationFieldDefs`
       - Server:
-        - Uses: `database.db`, `fields.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/data-view/server-query.buildSortKeys`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.keyValuesOf`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/data-view/server-query.orderByClauses`, `primitives/data-view/server-query.seekPredicate`, `tasks/tasks-core.conversationsView`
+        - Uses: `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/data-view/server-query.buildSortKeys`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.keyValuesOf`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/data-view/server-query.orderByClauses`, `primitives/data-view/server-query.seekPredicate`, `tasks/tasks-core.conversationsView`
         - Exports: Values: `conversationsRevisionResource`, `handleQuery`
       - Core:
         - Uses: `conversations/model-provider.modelDisplayLabel`, `conversations/model-provider.SELECTABLE_MODELS`, `infra/endpoints.defineEndpoint`, `primitives/data-view.FilterGroupSchema`, `primitives/live-state.resourceDescriptor`, `tasks/tasks-core.ConversationKindSchema`, `tasks/tasks-core.ConversationSchema`, `tasks/tasks-core.ConversationStatusSchema`
@@ -2556,14 +2556,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports: Types: `Schema`; Values: `permissions`, `schema`, `zql`
 
-- **`fields`** — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce). Storage-dimension registry: owns the fields.storage server slot where each field type contributes its Drizzle column builder, keyed by type token.
+- **`fields`** — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
   - Web:
     - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.rank`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `config_v2`, `config_v2/staging`, `conversations/all-conversations`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/bool/filter-sql`, `fields/bool/storage`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/config`, `fields/date/filter-sql`, `fields/date/storage`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/enum/filter-sql`, `fields/float`, `fields/float/config`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/config`, `fields/int/storage`, `fields/json`, `fields/json/config`, `fields/json/storage`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/number/filter-sql`, `fields/object`, `fields/object/config`, `fields/rank`, `fields/rank/config`, `fields/rank/storage`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/text/filter-sql`, `fields/text/storage`, `fields/uuid`, `fields/uuid/config`, `fields/uuid/storage`, `fields/variant`, `fields/variant/config`, `infra/claude-cli`, `infra/entities`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
-  - Server:
-    - Exports: Types: `FieldFilterSqlContribution`, `FieldStorageContribution`, `FilterSqlBuilder`, `StorageColumnBuilder`; Values: `Fields`, `fieldsToColumns`, `resolveFieldFilterSql`, `resolveFieldStorage`
+    - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `config_v2`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/config`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/float`, `fields/float/config`, `fields/image`, `fields/int`, `fields/int/config`, `fields/json`, `fields/json/config`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/object`, `fields/object/config`, `fields/rank`, `fields/rank/config`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/uuid`, `fields/uuid/config`, `fields/variant`, `fields/variant/config`, `infra/claude-cli`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
   - Core:
     - Exports: Types: `FieldDef`, `FieldIdentity`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`; Values: `defineFieldIdentity`, `defineFieldType`, `fieldSchemaWithDefault`, `fieldsToZodObject`, `getFieldResolver`, `nullable`, `pickMeta`, `registerFieldResolver`, `resolveTypeChain`
   - Plugins:
@@ -2609,16 +2607,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/toggle-chip.SegmentedControl`, `primitives/data-view.DataViewSlots`
         - **`filter-sql`** — Boolean field type: server filter-sql capability — operator→SQL fragments mirroring the data-view bool filter predicates.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/bool/plugins/filter-sql/server/internal/bool-filter-sql.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
         - **`inline`** — Boolean field type: data-view inline cell editor (immediate-commit toggle).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "bool" → `BoolEditor`
             - Uses: `primitives/css/center.Center`, `primitives/data-view.DataViewSlots`
         - **`storage`** — Boolean field type: DB storage capability — maps to a Postgres boolean column.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/bool/plugins/storage/server/internal/storage.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
         - **`table`** — Boolean field type: data-view table cell (read-only check/dash cell).
           - Web:
             - Contributes: `DataViewSlots.Cell` "bool" → `BoolCell`
@@ -2668,16 +2670,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `DateAnchor`, `DateRange`, `DateUnit`, `RelativeRange`; Values: `addUnits`, `DEFAULT_RELATIVE_RANGE`, `formatAnchor`, `resolveAnchorDay`, `TODAY`, `withinRange`
         - **`filter-sql`** — Date field type: server filter-sql capability — day-granular operator→SQL fragments mirroring the data-view date filter predicates.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/date/plugins/filter-sql/server/internal/date-filter-sql.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
         - **`inline`** — Date field type: data-view inline cell editor (native date input editor).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "date" → `DateEditor`
             - Uses: `primitives/data-view.DataViewSlots`
         - **`storage`** — Date field type: DB storage capability — maps to a Postgres timestamptz column.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/date/plugins/storage/server/internal/storage.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
         - **`table`** — Date field type: data-view table cell (read-only relative-time cell).
           - Web:
             - Contributes: `DataViewSlots.Cell` "date" → `DateCell`
@@ -2745,8 +2751,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/data-view.ChipSelectFilterInput`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FilterValueInputProps`
         - **`filter-sql`** — Enum field type: server filter-sql capability — operator→SQL fragments mirroring the data-view enum filter predicates.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/enum/plugins/filter-sql/server/internal/enum-filter-sql.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
         - **`inline`** — Enum (select) field type: data-view inline cell editor (single-select chip popover).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "enum" → `EnumEditor`
@@ -2776,8 +2784,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by: `apps/sonata/library`, `apps/sonata/voicing`, `debug/live-state-churn/monitor`, `debug/slow-ops`
         - **`storage`** — Float field type: DB storage capability — maps to a Postgres double precision column.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/float/plugins/storage/server/internal/storage.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
     - **`image`** — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).
       - Web:
         - Contributes: `Fields.Identity` "image"
@@ -2811,8 +2821,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by: `apps-core/surface/floating/wallpaper`, `apps/mail/mail-core`, `conversations`, `conversations/summary`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`
         - **`storage`** — Integer field type: DB storage capability — maps to a Postgres integer column.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/int/plugins/storage/server/internal/storage.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
     - **`json`** — JSON field type: identity only. The config-render capability and the jsonField factory live in the plugins/config sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "json"
@@ -2834,8 +2846,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by: `apps/mail/mail-core`, `config_v2/staging`, `debug/boot-profile`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`
         - **`storage`** — JSON field type: DB storage capability — maps to a Postgres jsonb column.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/json/plugins/storage/server/internal/storage.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
     - **`list`** — List field type: identity only. The config-render capability and the listField factory live in the plugins/config sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "list"
@@ -2888,8 +2902,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FilterValueInput`, `primitives/data-view.FilterValueInputProps`
         - **`filter-sql`** — Number field type: server filter-sql capability — operator→SQL fragments mirroring the data-view number filter predicates.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/number/plugins/filter-sql/server/internal/number-filter-sql.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
         - **`inline`** — Number field type: data-view inline cell editor (compact numeric input editor).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "number" → `NumberEditor`
@@ -2935,8 +2951,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by: `tasks/tasks-core`
         - **`storage`** — Rank field type: DB storage capability — maps to the rank_text (C-collation) Postgres domain column.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/rank/plugins/storage/server/internal/storage.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
     - **`reorder-tree`** — Reorder-tree field type: identity only. The config-render capability and the reorderTreeField factory live in the plugins/config sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "reorder-tree"
@@ -2978,6 +2996,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `ConfigV2SecretMeta`, `SecretFieldDef`; Values: `configV2SecretMetaResource`, `configV2SecretMetaSchema`, `secretField`
           - Cross-plugin:
             - Imported by: `auth/google`, `auth/notion`
+    - **`server-capabilities`** — Server-owned field-capability library: the Fields.Storage / Fields.FilterSql tokens, their eager self-registering indexes, and the resolveFieldStorage / resolveFieldFilterSql resolvers. A graph sink — never imports a capability barrel.
+      - Cross-plugin:
+        - Imported by: `conversations/all-conversations`, `fields/bool/filter-sql`, `fields/bool/storage`, `fields/date/filter-sql`, `fields/date/storage`, `fields/enum/filter-sql`, `fields/float/storage`, `fields/int/storage`, `fields/json/storage`, `fields/number/filter-sql`, `fields/rank/storage`, `fields/text/filter-sql`, `fields/text/storage`, `fields/uuid/storage`, `infra/entities`
+      - Server:
+        - Exports: Types: `FieldFilterSqlContribution`, `FieldStorageContribution`, `FilterSqlBuilder`, `StorageColumnBuilder`; Values: `Fields`, `fieldsToColumns`, `resolveFieldFilterSql`, `resolveFieldStorage`
+    - **`server-capabilities-loader`** — Eagerly evaluates every fields storage/filter-sql capability barrel via a generated side-effect manifest, so each self-registers into the server-capabilities eager index. Eval-time consumers import this for side-effect.
+      - Server:
+        - Uses: `fields/bool/filter-sql`, `fields/bool/storage`, `fields/date/filter-sql`, `fields/date/storage`, `fields/enum/filter-sql`, `fields/float/storage`, `fields/int/storage`, `fields/json/storage`, `fields/number/filter-sql`, `fields/rank/storage`, `fields/text/filter-sql`, `fields/text/storage`, `fields/uuid/storage`
+      - Cross-plugin:
+        - Imported by: `conversations/all-conversations`, `infra/entities`
     - **`string-list`** — String-list field type: identity only. The config-render capability and the stringListField factory live in the plugins/config sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "string-list"
@@ -3042,16 +3070,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/data-view.DataViewSlots`, `primitives/data-view.FilterValueInput`, `primitives/data-view.FilterValueInputProps`
         - **`filter-sql`** — Text field type: server filter-sql capability — operator→SQL fragments mirroring the data-view text filter predicates.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/text/plugins/filter-sql/server/internal/text-filter-sql.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
         - **`inline`** — Text field type: data-view inline cell editor (compact text input editor).
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "text" → `TextEditor`
             - Uses: `primitives/css/ui-kit.Input`, `primitives/data-view.DataViewSlots`
         - **`storage`** — Text field type: DB storage capability — maps to a Postgres text column.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/text/plugins/storage/server/internal/storage.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
         - **`table`** — Text field type: data-view table cell (read-only text cell).
           - Web:
             - Contributes: `DataViewSlots.Cell` "text" → `TextCell`
@@ -3074,8 +3106,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by: `debug/boot-profile`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`
         - **`storage`** — UUID field type: DB storage capability — maps to a Postgres uuid column.
           - Server:
-            - Uses: `fields.Fields`
+            - Uses: `fields/server-capabilities.Fields`
             - DB schema: `plugins/fields/plugins/uuid/plugins/storage/server/internal/storage.test.ts`
+          - Cross-plugin:
+            - Imported by: `fields/server-capabilities-loader`
     - **`variant`** — Variant field type: identity only. The config-render capability and the variantField factory live in the plugins/config sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "variant"
@@ -3143,6 +3177,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`css-vars-supplied`**
             - **`data-migration-dml-only`**
             - **`data-views-in-sync`**
+            - **`fields-eager-in-sync`**
             - **`inherited-theme-defaults-scoped`**
             - **`keyed-resource-scope`**
             - **`migration-hashes-unique`**
@@ -3175,7 +3210,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses: `config_v2.APP_SCOPE_DIR`, `config_v2.computeHash`, `config_v2.effective`, `config_v2.propagate`, `config_v2.readonlyProxy`, `config_v2.stringifyConfigValue`, `framework/plugin-id.asPath`, `framework/plugin-id.asPluginId`, `plugin-meta/barrel-import.AUTO_STUB_CSS`, `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`, `plugin-meta/barrel-import.AutoStubEntry`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/barrel-import.setPreBarrelImportGuard`, `plugin-meta/closure.classifyEdges`, `plugin-meta/closure.disabledClosure`, `plugin-meta/facets.DocFact`, `plugin-meta/facets.Facet`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/parse-utils.findMarkerCalls`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/parse-utils.matchBracket`, `plugin-meta/parse-utils.readIfExists`, `plugin-meta/parse-utils.walkFiles`, `plugin-meta/plugin-tree.buildPluginTree`, `plugin-meta/plugin-tree.PluginNode`, `plugin-meta/plugin-tree.PluginTree`
-            - Exports: Types: `CodegenStep`, `DiscoveredCollectedDir`, `GenerateDocsOptions`, `OriginAnnotationsPreparer`, `OriginAnnotationsProvider`, `OriginDefaultsPreparer`, `OriginDefaultsProvider`, `PreBarrelManifest`, `RegenCodegenOptions`, `RegistryGenContext`, `ReorderableSlotEntry`; Values: `barrelStubsPath`, `buildBarrelFreeTree`, `buildEnrichedTree`, `buildRegistryGenContext`, `clearCompositionRegistries`, `collectAllPlugins`, `collectDataViews`, `collectedDirCompositionRegistryPath`, `collectedDirRegistryPath`, `collectTokenGroupVars`, `computeDisabledIds`, `customUtilitiesManifestPath`, `dataViewsManifestPath`, `discoverCollectedDirs`, `extractRuntimeImportSpecifiers`, `generateBarrelStubs`, `generateCompositionRegistry`, `generateConfigOrigins`, `generateCustomUtilities`, `generateDataViews`, `generatePluginDocs`, `generatePluginRegistry`, `generateReorderableSlots`, `generateTokenGroupVars`, `loadConfigDescriptorsByOriginPath`, `parseCustomUtilities`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `preBarrelManifests`, `propagateConfigToUser`, `regenerateManifestCodegen`, `regenerateRegistryCodegen`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderCustomUtilities`, `renderDataViewsManifest`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderReorderableSlotsManifest`, `renderTokenGroupVarsManifest`, `reorderableSlotsManifestPath`, `resolveImportSpecifier`, `resolveOriginAnnotations`, `resolveOriginDefaults`, `setDefaultOriginAnnotations`, `setDefaultOriginAnnotationsPreparer`, `setDefaultOriginDefaults`, `setDefaultOriginDefaultsPreparer`, `standardPluginDirs`, `tokenGroupVarsManifestPath`, `writePreBarrelManifest`
+            - Exports: Types: `CodegenStep`, `DiscoveredCollectedDir`, `GenerateDocsOptions`, `OriginAnnotationsPreparer`, `OriginAnnotationsProvider`, `OriginDefaultsPreparer`, `OriginDefaultsProvider`, `PreBarrelManifest`, `RegenCodegenOptions`, `RegistryGenContext`, `ReorderableSlotEntry`; Values: `barrelStubsPath`, `buildBarrelFreeTree`, `buildEnrichedTree`, `buildRegistryGenContext`, `clearCompositionRegistries`, `collectAllPlugins`, `collectDataViews`, `collectedDirCompositionRegistryPath`, `collectedDirRegistryPath`, `collectFieldEagerBarrels`, `collectTokenGroupVars`, `computeDisabledIds`, `customUtilitiesManifestPath`, `dataViewsManifestPath`, `discoverCollectedDirs`, `extractRuntimeImportSpecifiers`, `fieldsEagerManifestPath`, `generateBarrelStubs`, `generateCompositionRegistry`, `generateConfigOrigins`, `generateCustomUtilities`, `generateDataViews`, `generateFieldsEager`, `generatePluginDocs`, `generatePluginRegistry`, `generateReorderableSlots`, `generateTokenGroupVars`, `loadConfigDescriptorsByOriginPath`, `parseCustomUtilities`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `preBarrelManifests`, `propagateConfigToUser`, `regenerateManifestCodegen`, `regenerateRegistryCodegen`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderCustomUtilities`, `renderDataViewsManifest`, `renderDetailsDoc`, `renderFieldsEagerManifest`, `renderPluginClaudeMd`, `renderReorderableSlotsManifest`, `renderTokenGroupVarsManifest`, `reorderableSlotsManifestPath`, `resolveImportSpecifier`, `resolveOriginAnnotations`, `resolveOriginDefaults`, `setDefaultOriginAnnotations`, `setDefaultOriginAnnotationsPreparer`, `setDefaultOriginDefaults`, `setDefaultOriginDefaultsPreparer`, `standardPluginDirs`, `tokenGroupVarsManifestPath`, `writePreBarrelManifest`
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
             - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/tooling/provision`, `framework/web-sdk`, `improve/element-picker`, `infra/asset-mirror`, `plugin-meta/facets`, `primitives/css/layout-harness`
@@ -3337,7 +3372,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `HttpError`, `implement`
     - **`entities`** — Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.
       - Server:
-        - Uses: `fields.Fields`, `fields.resolveFieldStorage`
+        - Uses: `fields/server-capabilities-loader`, `fields/server-capabilities.Fields`, `fields/server-capabilities.resolveFieldStorage`
         - DB schema: `plugins/infra/plugins/entities/server/internal/define-entity.ts`
         - Exports: Types: `ColumnDefault`, `DbDefault`, `DefaultedKeys`, `Entity`, `EntityColumnMeta`, `EntityColumns`, `EntityMeta`, `EntityReference`, `EntityRow`; Values: `defaultNow`, `defaultRandom`, `defineEntity`, `sqlDefault`
       - Cross-plugin:

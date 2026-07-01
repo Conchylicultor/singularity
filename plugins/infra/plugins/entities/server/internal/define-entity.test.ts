@@ -13,7 +13,7 @@ import type { AnyPgColumn } from "drizzle-orm/pg-core";
 import { collectContributions } from "@plugins/framework/plugins/server-core/core";
 import { defineFieldType } from "@plugins/fields/core";
 import type { FieldDef } from "@plugins/fields/core";
-import { Fields } from "@plugins/fields/server";
+import { Fields } from "@plugins/fields/plugins/server-capabilities/server";
 import { defineEntity } from "./define-entity";
 import { defaultNow, defaultRandom } from "./types";
 

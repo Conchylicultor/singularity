@@ -1,5 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { Fields } from "@plugins/fields/server";
+import { Fields } from "@plugins/fields/plugins/server-capabilities/server";
 import { enumFieldType } from "@plugins/fields/plugins/enum/core";
 import { enumFilterSql } from "./internal/enum-filter-sql";
 

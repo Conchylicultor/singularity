@@ -1,5 +1,5 @@
 import { inArray, notInArray, sql, type AnyColumn } from "drizzle-orm";
-import type { FilterSqlBuilder } from "@plugins/fields/server";
+import type { FilterSqlBuilder } from "@plugins/fields/plugins/server-capabilities/server";
 
 /**
  * SQL twin of `enum/filter`'s single-/multi-select predicates

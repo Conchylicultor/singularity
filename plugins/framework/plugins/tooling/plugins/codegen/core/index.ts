@@ -66,6 +66,13 @@ export {
   dataViewsManifestPath,
 } from "./data-views-gen";
 
+export {
+  collectFieldEagerBarrels,
+  generateFieldsEager,
+  renderFieldsEagerManifest,
+  fieldsEagerManifestPath,
+} from "./fields-eager-gen";
+
 // The closed disabled-plugin id set (seeds + dependent-closure cascade), shared
 // by the codegen generators and the in-sync checks so both derive identical
 // filtered/annotated output from the committed `package.json` flags.
