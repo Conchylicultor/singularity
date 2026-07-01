@@ -109,10 +109,14 @@ const WORKTREE_ARTIFACT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
   { pattern: /["'`]build(?:-[^"'`\s]*)?\.log/, grepArg: ".log" },
 ];
 
-const WORKTREE_ARTIFACT_ALLOWED_PATHS = [
-  "plugins/infra/plugins/paths/check/index.ts",
-  "plugins/infra/plugins/paths/core/internal/paths.ts",
-];
+// The paths plugin OWNS the artifact layout: paths.ts defines it, the prune
+// logic (server/internal/prune-build-artifacts.ts) mirrors the filename families
+// to reap old artifacts, and both have co-located tests that reference concrete
+// filenames. Anything inside the plugin is source-of-truth territory, exempt by
+// the same principle that exempts paths.ts. This guard exists to stop *other*
+// plugins from re-coupling to the layout behind paths.ts's back — not to police
+// the owner's own internals.
+const WORKTREE_ARTIFACT_ALLOWED_PREFIXES = ["plugins/infra/plugins/paths/"];
 
 const noInlinedWorktreeArtifactsCheck: Check = {
   id: "paths:no-inlined-worktree-artifacts",
@@ -137,7 +141,7 @@ const noInlinedWorktreeArtifactsCheck: Check = {
         if (seen.has(line)) continue;
         seen.add(line);
 
-        if (WORKTREE_ARTIFACT_ALLOWED_PATHS.includes(m.path)) continue;
+        if (WORKTREE_ARTIFACT_ALLOWED_PREFIXES.some((p) => m.path.startsWith(p))) continue;
         if (m.path.startsWith("research/")) continue;
 
         offenders.push(line);
