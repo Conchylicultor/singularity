@@ -132,6 +132,27 @@ describe("transposeScore", () => {
     expect(data.spelledSymbol).toBe("A/C♯"); // key-aware (D major)
   });
 
+  it("preserves an altered chord's suffix + intervals when transposing", () => {
+    const score: Score = {
+      ...emptyScore(),
+      meta: { key: { tonic: "C", mode: "major" } },
+      notes: [note(60)],
+      annotations: [
+        chordAnn({
+          symbol: "G7(♯5)",
+          root: 7,
+          quality: "dom7",
+          intervals: [4, 8, 10],
+        }),
+      ],
+    };
+    const out = transposeScore(score, 2);
+    const data = out.annotations[0]!.data as ChordData;
+    expect(data.root).toBe(9); // G → A
+    expect(data.symbol).toBe("A7(♯5)"); // suffix preserved, not reduced to "A7"
+    expect(data.intervals).toEqual([4, 8, 10]); // root-relative, unchanged
+  });
+
   it("transposes authored lyric chord text", () => {
     const lyric: LyricData = {
       text: "hello",

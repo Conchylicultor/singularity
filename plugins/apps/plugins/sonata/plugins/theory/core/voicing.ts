@@ -13,13 +13,18 @@ const pc12 = (pc: number): number => ((pc % 12) + 12) % 12;
  * Root-position MIDI pitches for a chord, ascending. The root sits at the given
  * scientific `octave` (MIDI 60 = C4 ⇒ octave 4), with each chord tone stacked
  * above it. E.g. `{root:0,quality:"maj"}` at octave 4 → [60, 64, 67].
+ *
+ * `data.intervals`, when present (altered/extended chords the parser realised
+ * beyond their base quality), is the authoritative interval set; otherwise the
+ * intervals derive from `quality`.
  */
 export function chordPitches(
-  data: { root: number; quality: string },
+  data: { root: number; quality: string; intervals?: readonly number[] },
   octave = 4,
 ): number[] {
   const base = 12 * (octave + 1) + pc12(data.root);
-  return [base, ...qualityToIntervals(data.quality).map((i) => base + i)];
+  const intervals = data.intervals ?? qualityToIntervals(data.quality);
+  return [base, ...intervals.map((i) => base + i)];
 }
 
 /**

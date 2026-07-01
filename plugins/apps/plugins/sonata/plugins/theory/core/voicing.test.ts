@@ -57,3 +57,17 @@ describe("nearestVoicing", () => {
     expect(pcs(v)).toEqual(pcs(tones));
   });
 });
+
+describe("chordPitches", () => {
+  it("derives intervals from `quality` when none are given", () => {
+    // C major triad at octave 4 → 60, 64, 67.
+    expect(chordPitches({ root: 0, quality: "maj" }, 4)).toEqual([60, 64, 67]);
+  });
+
+  it("prefers an explicit realised interval set (altered chords)", () => {
+    // G7(♯5): root 7 → base 67, intervals [4,8,10] → sounds the D♯ (75), not D.
+    expect(
+      chordPitches({ root: 7, quality: "dom7", intervals: [4, 8, 10] }, 4),
+    ).toEqual([67, 71, 75, 77]);
+  });
+});

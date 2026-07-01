@@ -101,6 +101,13 @@ export type ChordData = {
   quality: string;
   bass?: number;
   spelledSymbol?: string;
+  /**
+   * Realised semitones above the root (root excluded, ascending). Set by the
+   * chord-symbol parser only when the chord is altered beyond its base `quality`
+   * (parenthetical alterations / add / omit / sus-on-a-7th). Absent for plain
+   * qualities, whose intervals derive from `quality` via `qualityToIntervals`.
+   */
+  intervals?: readonly number[];
 };
 export type VoicingData = { label?: string }; // targets notes via target.noteIds
 export type SectionData = { name: string };

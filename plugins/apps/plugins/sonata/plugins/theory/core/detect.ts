@@ -95,6 +95,10 @@ const BASE_TEMPLATES = CHORD_TEMPLATES.filter(
   (t) =>
     t.quality !== "maj6" &&
     t.quality !== "min6" &&
+    // Suspended chords are authoring-only: a bare {0,2,7}/{0,5,7} dyad is too
+    // ambiguous to name confidently, so detection never emits sus.
+    t.quality !== "sus2" &&
+    t.quality !== "sus4" &&
     t.intervals.every((i) => i < 12),
 );
 

@@ -69,6 +69,13 @@ export const CHORD_TEMPLATES: readonly ChordTemplate[] = [
   { quality: "dom9", symbol: "9", intervals: [4, 7, 10, 14] },
   { quality: "min9", symbol: "m9", intervals: [3, 7, 10, 14] },
   { quality: "dom13", symbol: "13", intervals: [4, 7, 10, 14, 21] },
+  // Suspended & 6/9 — the 3rd is replaced (sus) or a 6th+9th added (six9). Like
+  // the 6ths above, these are authoring-oriented and excluded from detection
+  // (see `BASE_TEMPLATES` in detect.ts): a bare sus dyad is enharmonically
+  // ambiguous, and six9's 9th uses the literal size 14.
+  { quality: "sus2", symbol: "sus2", intervals: [2, 7] },
+  { quality: "sus4", symbol: "sus4", intervals: [5, 7] },
+  { quality: "six9", symbol: "6/9", intervals: [4, 7, 9, 14] },
 ];
 
 const BY_QUALITY = new Map(CHORD_TEMPLATES.map((t) => [t.quality, t]));

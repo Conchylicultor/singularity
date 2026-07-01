@@ -3,9 +3,11 @@
  *
  * The grammar is deliberately small — three things:
  *
- *   - a **chord** (`Cmaj7`, `F#m`, `Bb13`) occupies one bar;
- *   - a **group** `( … )` puts several items in a single bar, splitting it
- *     equally between them;
+ *   - a **chord** (`Cmaj7`, `F#m`, `Bb13`, `G7(♯5)`) occupies one bar. A chord
+ *     may carry parenthetical alterations *attached* to it (no space) — these
+ *     are absorbed into the token, so they are never mistaken for a group;
+ *   - a **group** `( … )` — a `(` at a cell boundary — puts several items in a
+ *     single bar, splitting it equally between them;
  *   - a **hold** `.` extends the previous chord instead of striking a new one.
  *
  * Cells are separated by whitespace / newlines (newlines are purely cosmetic),
@@ -74,23 +76,34 @@ function tokenize(text: string): { cells: Cell[]; skipped: string[] } {
     }
 
     if (c === "(") {
+      // A `(` at a cell boundary opens a bar group. Read to its matching close
+      // at depth 0 — depth-aware so a chord's own alteration parens inside the
+      // group (e.g. `(G7(♯5) A)`) don't end the group early.
       const start = i;
       i++;
       let body = "";
       let closed = false;
+      let depth = 1;
       while (i < n) {
-        if (text[i] === ")") {
-          closed = true;
-          i++;
-          break;
+        const d = text[i]!;
+        if (d === "(") depth++;
+        else if (d === ")") {
+          depth--;
+          if (depth === 0) {
+            closed = true;
+            i++;
+            break;
+          }
         }
-        body += text[i];
+        body += d;
         i++;
       }
       if (!closed) {
         skipped.push(text.slice(start)); // unterminated group
         break;
       }
+      // Group items are whitespace-separated; a chord's own `(…)` has no inner
+      // space, so `G7(♯5)` stays one item.
       const items = body.split(/\s+/).filter((t) => t.length > 0);
       cells.push({ kind: "group", items });
       continue;
@@ -102,11 +115,33 @@ function tokenize(text: string): { cells: Cell[]; skipped: string[] } {
       continue;
     }
 
-    // Bare chord run: read until the next boundary.
+    // Bare chord run, absorbing any parentheses ATTACHED to the run (no
+    // preceding space) — a parenthetical alteration like `G7(♯5)` or
+    // `Gsus4(♭9)`. A grouping `( … )` only ever opens at a cell boundary (handled
+    // above), so a `(` reached mid-run belongs to the chord, not a group.
     let tok = "";
-    while (i < n && !isBoundary(text[i]!)) {
-      tok += text[i];
-      i++;
+    let done = false;
+    while (i < n && !done) {
+      const ch = text[i]!;
+      if (ch === "(") {
+        // Absorb a balanced (…) alteration group, parens included.
+        let depth = 0;
+        while (i < n) {
+          const d = text[i]!;
+          tok += d;
+          i++;
+          if (d === "(") depth++;
+          else if (d === ")") {
+            depth--;
+            if (depth === 0) break;
+          }
+        }
+      } else if (isBoundary(ch)) {
+        done = true;
+      } else {
+        tok += ch;
+        i++;
+      }
     }
     cells.push({ kind: "chord", token: tok });
   }

@@ -75,3 +75,132 @@ describe("parseChordSymbol — slash bass", () => {
     expect(parseChordSymbol("xyz/E")).toBeNull();
   });
 });
+
+describe("parseChordSymbol — suspended", () => {
+  it("parses sus2 / sus4 as registered qualities (no intervals)", () => {
+    expect(parseChordSymbol("Gsus4")).toEqual({
+      root: 7,
+      quality: "sus4",
+      symbol: "Gsus4",
+    });
+    expect(parseChordSymbol("Csus2")).toEqual({
+      root: 0,
+      quality: "sus2",
+      symbol: "Csus2",
+    });
+  });
+
+  it("normalizes a bare `sus` to sus4", () => {
+    expect(parseChordSymbol("Gsus")).toEqual({
+      root: 7,
+      quality: "sus4",
+      symbol: "Gsus4",
+    });
+  });
+
+  it("applies sus as a modifier on a 7th head", () => {
+    expect(parseChordSymbol("C7sus4")).toEqual({
+      root: 0,
+      quality: "dom7",
+      symbol: "C7sus4",
+      intervals: [5, 7, 10],
+    });
+  });
+});
+
+describe("parseChordSymbol — 6/9", () => {
+  it("parses 6/9 without mistaking the /9 for a slash bass", () => {
+    expect(parseChordSymbol("Eb6/9")).toEqual({
+      root: 3,
+      quality: "six9",
+      symbol: "Eb6/9",
+    });
+  });
+
+  it("still treats /<note> as a slash bass", () => {
+    expect(parseChordSymbol("C6/E")).toEqual({
+      root: 0,
+      quality: "maj6",
+      bass: 4,
+      symbol: "C6/E",
+    });
+  });
+});
+
+describe("parseChordSymbol — altered", () => {
+  it("realises parenthetical alterations into the interval set", () => {
+    expect(parseChordSymbol("G7(♯5)")).toEqual({
+      root: 7,
+      quality: "dom7",
+      symbol: "G7(♯5)",
+      intervals: [4, 8, 10],
+    });
+    expect(parseChordSymbol("Gsus4(♭9)")).toEqual({
+      root: 7,
+      quality: "sus4",
+      symbol: "Gsus4(♭9)",
+      intervals: [5, 7, 13],
+    });
+  });
+
+  it("accepts ASCII accidentals and canonicalizes to a parenthesized suffix", () => {
+    expect(parseChordSymbol("C7b9")).toEqual({
+      root: 0,
+      quality: "dom7",
+      symbol: "C7(♭9)",
+      intervals: [4, 7, 10, 13],
+    });
+    expect(parseChordSymbol("C7#9")).toEqual({
+      root: 0,
+      quality: "dom7",
+      symbol: "C7(♯9)",
+      intervals: [4, 7, 10, 15],
+    });
+    expect(parseChordSymbol("C7b5")).toEqual({
+      root: 0,
+      quality: "dom7",
+      symbol: "C7(♭5)",
+      intervals: [4, 6, 10],
+    });
+  });
+
+  it("groups multiple alterations degree-sorted in one paren", () => {
+    expect(parseChordSymbol("C7(b9#5)")).toEqual({
+      root: 0,
+      quality: "dom7",
+      symbol: "C7(♯5♭9)",
+      intervals: [4, 8, 10, 13],
+    });
+  });
+
+  it("parses add tones and a raised 11th", () => {
+    expect(parseChordSymbol("Cadd9")).toEqual({
+      root: 0,
+      quality: "maj",
+      symbol: "Cadd9",
+      intervals: [4, 7, 14],
+    });
+    expect(parseChordSymbol("Cmaj7#11")).toEqual({
+      root: 0,
+      quality: "maj7",
+      symbol: "Cmaj7(♯11)",
+      intervals: [4, 7, 11, 18],
+    });
+  });
+
+  it("carries alterations through a slash bass", () => {
+    expect(parseChordSymbol("G7(♯5)/B")).toEqual({
+      root: 7,
+      quality: "dom7",
+      symbol: "G7(♯5)/B",
+      bass: 11,
+      intervals: [4, 8, 10],
+    });
+  });
+
+  it("returns null for genuine typos", () => {
+    expect(parseChordSymbol("Csus5")).toBeNull();
+    expect(parseChordSymbol("Cbanana")).toBeNull();
+    expect(parseChordSymbol("C7(x5)")).toBeNull();
+  });
+});

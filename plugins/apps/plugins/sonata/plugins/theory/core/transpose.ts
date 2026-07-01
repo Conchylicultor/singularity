@@ -26,7 +26,7 @@ import {
   type LyricData,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { formatChordSymbol, formatSpelledChordSymbol } from "./chords";
+import { PC_NAMES } from "./chords";
 import { tonicName, tonicPc } from "./key-detect";
 
 /** Reduce any integer to a pitch-class in [0, 12). */
@@ -53,41 +53,44 @@ export function transposeKey(
  * a sharp key "A#"). The speller's octave is irrelevant for a note *name* — we
  * use only its step + alteration glyph.
  */
-function shiftNoteToken(
-  token: string,
-  semitones: number,
-  speller: KeySpeller,
-): string {
-  const pc = pc12(tonicPc(token) + semitones);
-  const { step, alter } = speller.spell(pc);
-  return step + accidentalGlyph(alter);
-}
+/** Spell a pitch-class to a note name (step + accidental glyph). */
+type SpellName = (pc: number) => string;
 
 /** Matches a leading bare note token: a letter A–G plus any accidentals. */
 const LEADING_NOTE = /^([A-Ga-g][#b♯♭]*)/;
 
+function shiftNoteToken(
+  token: string,
+  semitones: number,
+  spell: SpellName,
+): string {
+  return spell(pc12(tonicPc(token) + semitones));
+}
+
 /**
- * Transpose an authored chord-text symbol (e.g. a songsheet/Ultimate-Guitar
- * chord) by `semitones`, preserving its suffix verbatim. The leading root token
- * and an optional trailing `/<bass>` are shifted through `speller` (key-correct
- * enharmonics); everything in between (`maj7`, `add9`, `sus4`, …) is kept as
- * written — more faithful than parse→canonicalize for arbitrary chord text, and
- * it transposes extensions it doesn't need to recognise.
+ * Re-root a chord-text symbol by `semitones`, preserving its suffix verbatim.
+ * The leading root token and an optional trailing `/<bass>` are shifted through
+ * `spell` (which names a pitch-class); everything in between (`maj7`, `add9`,
+ * `sus4`, `(♯5)`, …) is kept as written — more faithful than parse→canonicalize
+ * for arbitrary chord text, and it transposes extensions it need not recognise.
+ * This is the shared core behind both the public `transposeChordText` (key-aware
+ * spelling for lyric chords) and the chord-annotation re-rooting below (sharps
+ * for `symbol`, key-aware for `spelledSymbol`).
  *
  * Returns the input unchanged when there is no leading note token (e.g. "N.C.",
  * "%") so non-chord markers survive.
  */
-export function transposeChordText(
+function reRootSymbol(
   symbol: string,
   semitones: number,
-  speller: KeySpeller,
+  spell: SpellName,
 ): string {
   const rootMatch = LEADING_NOTE.exec(symbol);
   if (!rootMatch) return symbol;
 
   const rootToken = rootMatch[1]!;
   const rest = symbol.slice(rootToken.length);
-  const newRoot = shiftNoteToken(rootToken, semitones, speller);
+  const newRoot = shiftNoteToken(rootToken, semitones, spell);
 
   // Split off an optional trailing slash bass; the chord quality suffix sits
   // between the root and the slash and is preserved verbatim.
@@ -101,8 +104,24 @@ export function transposeChordText(
 
   const bassToken = bassMatch[1]!;
   const bassRest = after.slice(bassToken.length);
-  const newBass = shiftNoteToken(bassToken, semitones, speller);
+  const newBass = shiftNoteToken(bassToken, semitones, spell);
   return newRoot + suffix + "/" + newBass + bassRest;
+}
+
+/**
+ * Transpose an authored chord-text symbol (e.g. a songsheet/Ultimate-Guitar
+ * chord) by `semitones`, key-correctly spelling the root and any `/<bass>`
+ * through `speller` while preserving the quality suffix verbatim.
+ */
+export function transposeChordText(
+  symbol: string,
+  semitones: number,
+  speller: KeySpeller,
+): string {
+  return reRootSymbol(symbol, semitones, (pc) => {
+    const { step, alter } = speller.spell(pc);
+    return step + accidentalGlyph(alter);
+  });
 }
 
 /**
@@ -118,9 +137,11 @@ export function transposeChordText(
  *    stays silent); the ±12 toolbar range keeps essentially all notes in range.
  *  - `meta.key` and authored `type:"key"` annotations are renamed via
  *    `transposeKey`.
- *  - `type:"chord"` annotations shift `root`/`bass` (mod 12) and regenerate both
+ *  - `type:"chord"` annotations shift `root`/`bass` (mod 12) and re-root their
  *    `symbol` (normalized sharps) and `spelledSymbol` (key-aware, spelled through
- *    the *transposed* key in force at the annotation — so flat keys read "B♭m").
+ *    the *transposed* key in force at the annotation — so flat keys read "B♭m"),
+ *    preserving the quality suffix verbatim so alterations like "(♯5)" survive.
+ *    `intervals` is root-relative and rides through unchanged.
  *  - `type:"lyric"` annotations transpose each printed `chords[].symbol` via
  *    `transposeChordText` — the only lens whose chord display is authored text.
  *  - Other annotation types (`section`, `voicing`) are untouched.
@@ -160,18 +181,22 @@ export function transposeScore(score: Score, semitones: number): Score {
   const annotations: Annotation[] = keyTransposed.map((a) => {
     if (a.type === "chord") {
       const data = a.data as ChordData;
-      const next: ChordData = {
-        ...data,
-        root: pc12(data.root + semitones),
-        bass: data.bass === undefined ? undefined : pc12(data.bass + semitones),
-      };
       const speller = makeKeySpeller(effectiveKeyAt(keyedScore, a.start));
+      // Re-root by shifting only the root/bass and preserving the suffix (which
+      // may carry alterations like "(♯5)" that `quality` alone can't reproduce).
       return {
         ...a,
         data: {
-          ...next,
-          symbol: formatChordSymbol(next),
-          spelledSymbol: formatSpelledChordSymbol(next, speller),
+          ...data,
+          root: pc12(data.root + semitones),
+          bass:
+            data.bass === undefined ? undefined : pc12(data.bass + semitones),
+          symbol: reRootSymbol(data.symbol, semitones, (pc) => PC_NAMES[pc]!),
+          spelledSymbol: transposeChordText(
+            data.spelledSymbol ?? data.symbol,
+            semitones,
+            speller,
+          ),
         } satisfies ChordData,
       };
     }

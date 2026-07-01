@@ -8,8 +8,10 @@ blocks, nothing else:
 
 | Form | Meaning |
 | --- | --- |
-| `Cmaj7` | A **chord** — fills one bar. Parsed by `theory`'s `parseChordSymbol` (`F#m`, `Bb13`, `Ebm7b5`, …). |
+| `Cmaj7` | A **chord** — fills one bar. Parsed by `theory`'s `parseChordSymbol` (`F#m`, `Bb13`, `Ebm7b5`, `Eb6/9`, `G7(♯5)`, `Gsus4(♭9)`, …). |
 | `(E E6)` | A **group** — several items share one bar, split equally (`E` for 2 beats, `E6` for 2). |
+
+**Parens do double duty**, disambiguated by whitespace: a `(` at a **cell boundary** opens a bar *group*; a `(` **attached** to a chord (no preceding space) is a parenthetical *alteration* and is absorbed into the chord token. So `G7(♯5)` is one altered chord, while `(G7 C)` is a two-chord bar — and `(G7(♯5) C)` correctly nests both.
 | `.` | A **hold** — sustains the previous chord instead of striking a new one (no re-strike). |
 
 Rules:
