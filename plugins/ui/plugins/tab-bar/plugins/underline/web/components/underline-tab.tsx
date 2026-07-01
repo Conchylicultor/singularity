@@ -3,7 +3,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { hoverRevealGroup } from "@plugins/primitives/plugins/hover-reveal/web";
-import { TabCloseButton } from "@plugins/ui/plugins/tab-bar/web";
+import { TabCloseButton, TabIcon } from "@plugins/ui/plugins/tab-bar/web";
 import type { TabProps } from "@plugins/ui/plugins/tab-bar/core";
 
 /**
@@ -16,6 +16,7 @@ import type { TabProps } from "@plugins/ui/plugins/tab-bar/core";
  */
 export function UnderlineTab({
   icon: Icon,
+  badge,
   label,
   active,
   collapsed,
@@ -51,7 +52,7 @@ export function UnderlineTab({
       )}
       {...rest}
     >
-      {Icon && <Icon className="icon-auto" />}
+      <TabIcon icon={Icon} badge={badge} />
       {!collapsed && <Text variant="label">{label}</Text>}
       {!collapsed && onClose && (
         <TabCloseButton label={label} onClose={onClose} active={active} />

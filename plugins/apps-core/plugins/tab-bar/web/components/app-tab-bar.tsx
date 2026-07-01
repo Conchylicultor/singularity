@@ -167,6 +167,11 @@ export function AppTabBar() {
                   <TabChip
                     appId={tab.appId}
                     icon={appIconComponent(app.icon)}
+                    // Ambient per-app attention indicator (e.g. Mail sync-error,
+                    // Settings config-conflict) — the same badge the app-rail
+                    // icon paints, now on the more-proximate tab chip. Rides the
+                    // icon so it survives collapsed/icon-only mode.
+                    badge={app.badge}
                     label={label}
                     active={active}
                     fillHeight={fillHeight}
@@ -224,6 +229,8 @@ export function AppTabBar() {
 interface TabChipProps {
   appId: string;
   icon: ComponentType<{ className?: string }>;
+  /** Optional per-app attention overlay, pinned to the tab icon (see TabIcon). */
+  badge?: ComponentType<{ className?: string }>;
   label: string;
   active: boolean;
   collapsed: boolean;

@@ -4265,7 +4265,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`, `primitives/css/z-layers.InTreeLayer`, `primitives/css/z-layers.zLayerClass`
             - Exports: Types: `PinAnchor`, `PinProps`; Values: `Pin`, `pinClasses`
           - Cross-plugin:
-            - Imported by: `active-data`, `apps-core/app-rail`, `apps-core/surface/floating/wallpaper`, `apps-core/surface/solo`, `apps/browser/webview`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/sonata/notation`, `apps/sonata/piano-roll`, `apps/sonata/primitives/keyboard`, `apps/sonata/progress/loop`, `apps/sonata/rich/chord-overlay`, `apps/sonata/songsheet`, `apps/studio/release/release-logs`, `build`, `build/build-logs`, `config_v2/settings`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/user-image`, `conversations/conversation-view/jsonl-viewer/user-text`, `conversations/conversation-view/notes`, `conversations/conversations-view/queue`, `improve/element-picker`, `page/audio`, `page/bookmark`, `page/code-block`, `page/editor`, `page/file`, `page/image`, `page/video`, `primitives/data-view/gallery`, `primitives/folder-picker`, `primitives/graph-canvas`, `primitives/icon-picker`, `primitives/multi-select`, `primitives/row-actions`, `primitives/search`, `primitives/sync-status`, `primitives/text-editor/paste-images`, `primitives/tree`, `reorder/edit-mode`, `reorder/editor`, `screenshot/draw-on-app`, `shell/global-action-bar`, `shell/notifications`, `tasks/task-description`, `tasks/task-draft-form`
+            - Imported by: `active-data`, `apps-core/app-rail`, `apps-core/surface/floating/wallpaper`, `apps-core/surface/solo`, `apps/browser/webview`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/sonata/notation`, `apps/sonata/piano-roll`, `apps/sonata/primitives/keyboard`, `apps/sonata/progress/loop`, `apps/sonata/rich/chord-overlay`, `apps/sonata/songsheet`, `apps/studio/release/release-logs`, `build`, `build/build-logs`, `config_v2/settings`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/user-image`, `conversations/conversation-view/jsonl-viewer/user-text`, `conversations/conversation-view/notes`, `conversations/conversations-view/queue`, `improve/element-picker`, `page/audio`, `page/bookmark`, `page/code-block`, `page/editor`, `page/file`, `page/image`, `page/video`, `primitives/data-view/gallery`, `primitives/folder-picker`, `primitives/graph-canvas`, `primitives/icon-picker`, `primitives/multi-select`, `primitives/row-actions`, `primitives/search`, `primitives/sync-status`, `primitives/text-editor/paste-images`, `primitives/tree`, `reorder/edit-mode`, `reorder/editor`, `screenshot/draw-on-app`, `shell/global-action-bar`, `shell/notifications`, `tasks/task-description`, `tasks/task-draft-form`, `ui/tab-bar`
         - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -5329,8 +5329,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `TabBarSlots.Variant` ← `ui.tab-bar.chip`, `ui.tab-bar.connected`, `ui.tab-bar.underline`
         - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "Tab bar variant"
-        - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/css/center.Center`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/slot-render.renderIsolated`
-        - Exports: Types: `TabProps`, `TabVariantContribution`; Values: `Tab`, `TabBarSlots`, `TabCloseButton`, `useActiveTabVariant`
+        - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/slot-render.renderIsolated`
+        - Exports: Types: `TabProps`, `TabVariantContribution`; Values: `Tab`, `TabBarSlots`, `TabCloseButton`, `TabIcon`, `useActiveTabVariant`
       - Server:
         - Uses: `config_v2.ConfigV2`
       - Core:
@@ -5342,11 +5342,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`chip`** — Accent-filled pill tab (the canonical chip look).
           - Web:
             - Contributes: `TabBarSlots.Variant` "Chip" → `ChipTab`
-            - Uses: `primitives/css/line.Line`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `ui/tab-bar.TabBarSlots`, `ui/tab-bar.TabCloseButton`
+            - Uses: `primitives/css/line.Line`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `ui/tab-bar.TabBarSlots`, `ui/tab-bar.TabCloseButton`, `ui/tab-bar.TabIcon`
         - **`connected`** — Folder tab; the active tab merges into the content surface.
           - Web:
             - Contributes: `TabBarSlots.Variant` "Connected" → `ConnectedTab`
-            - Uses: `primitives/css/line.Line`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `ui/tab-bar.TabBarSlots`, `ui/tab-bar.TabCloseButton`
+            - Uses: `primitives/css/line.Line`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `ui/tab-bar.TabBarSlots`, `ui/tab-bar.TabCloseButton`, `ui/tab-bar.TabIcon`
         - **`customizer`** — Registers the tab-bar variant picker (chip / underline / connected) into the theme customizer.
           - Web:
             - Contributes: `ThemeEngine.VariantGroup` "Tab bar" → `VariantPicker`
@@ -5354,7 +5354,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`underline`** — Flat tab; the active tab is underlined flush with the bar.
           - Web:
             - Contributes: `TabBarSlots.Variant` "Underline" → `UnderlineTab`
-            - Uses: `primitives/css/line.Line`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `ui/tab-bar.TabBarSlots`, `ui/tab-bar.TabCloseButton`
+            - Uses: `primitives/css/line.Line`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `ui/tab-bar.TabBarSlots`, `ui/tab-bar.TabCloseButton`, `ui/tab-bar.TabIcon`
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
       - Web:
         - Slots: `ThemeEngine.VariantGroup` ← `apps-core.app-rail-framing`, `apps-core.surface.floating`, `conversations.conversations-view.sidebar-region`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tab-bar.customizer`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.rich-text-palette`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ThemeEngine.GlobalPreset` ← `ui.tokens`, `ThemeEngine.ColorTransform` ← `ui.tokens.color-adjust`, `ThemeEngine.PresetSource` ← `ui.tweakcn`

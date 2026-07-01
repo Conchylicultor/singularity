@@ -7,6 +7,7 @@ import { TabBar } from "./slots";
 export { Tab } from "./components/tab";
 export { useActiveTabVariant } from "./internal/use-active-variant";
 export { TabCloseButton } from "./components/tab-close-button";
+export { TabIcon } from "./components/tab-icon";
 export { TabBar as TabBarSlots } from "./slots";
 export type { TabVariantContribution } from "./slots";
 export type { TabProps } from "../core";
