@@ -2,7 +2,7 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import { join } from "node:path";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { REPO_ROOT, SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT, currentWorktreeName, worktreeDataDir, worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { releaseTargetById } from "../../core/targets";
 import { releaseOutDir, newReleaseRunId } from "./out-dir";
 import { _releaseRuns } from "./tables";
@@ -61,12 +61,7 @@ async function isAnyReleaseAlive(composition: string): Promise<boolean> {
  */
 function resolveOrphanExitCode(releaseId: string): number {
   const name = currentWorktreeName();
-  const path = join(
-    SINGULARITY_DIR,
-    "worktrees",
-    name,
-    `release-logs-${releaseId}.json`,
-  );
+  const path = worktreeArtifacts.releaseLogs(name, releaseId);
   try {
     const parsed = JSON.parse(readFileSync(path, "utf-8")) as {
       exitCode?: number;
@@ -247,9 +242,9 @@ async function doRunRelease(composition: string, target: string): Promise<void> 
   if (!succeeded && allLines.length > 0) {
     const worktreeName = process.env.SINGULARITY_WORKTREE;
     if (worktreeName) {
-      const worktreeDir = join(SINGULARITY_DIR, "worktrees", worktreeName);
+      const worktreeDir = worktreeDataDir(worktreeName);
       mkdirSync(worktreeDir, { recursive: true });
-      const logPath = join(worktreeDir, `release-logs-${releaseId}.json`);
+      const logPath = worktreeArtifacts.releaseLogs(worktreeName, releaseId);
       if (!existsSync(logPath)) {
         const tmp = `${logPath}.tmp.${process.pid}`;
         writeFileSync(tmp, JSON.stringify({ exitCode, lines: allLines }) + "\n");

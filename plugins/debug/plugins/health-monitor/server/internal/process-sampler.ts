@@ -8,7 +8,7 @@ import {
 import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
 import { physFootprintBytes } from "@plugins/framework/plugins/server-core/core";
 import { heavyReadQueueDepth } from "@plugins/infra/plugins/host-read-pool/server";
-import { SINGULARITY_DIR, currentWorktreeName, isMain } from "@plugins/infra/plugins/paths/server";
+import { worktreeDataDir, currentWorktreeName, isMain } from "@plugins/infra/plugins/paths/server";
 import type { HealthSample } from "../../shared/schema";
 import {
   startStallProfiler,
@@ -47,7 +47,7 @@ let lastHeapUsedBytes = 0;
 let lastTickAt = 0;
 
 function healthFilePath(): string {
-  return join(SINGULARITY_DIR, "worktrees", currentWorktreeName(), "logs", "health.jsonl");
+  return join(worktreeDataDir(currentWorktreeName()), "logs", "health.jsonl");
 }
 
 // Keep the JSONL bounded without a job: trim to the newest half once it grows

@@ -9,7 +9,7 @@
   - Contributes: `BuildDetailSlots.Section` "profiling" → `BuildProfilingSection`
   - Uses: `build.BuildDetailSlots`, `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.PhaseConfig`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `infra/endpoints.useEndpoint`, `primitives/css/clip.Clip`
 - Server:
-  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.worktreeArtifacts`
   - Routes: `GET /api/build/runs/:id/profile`
 - Shared:
   - Exports: Values: `getBuildRunProfile`

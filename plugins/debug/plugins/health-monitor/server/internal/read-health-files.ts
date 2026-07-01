@@ -1,6 +1,6 @@
 import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
-import { SINGULARITY_DIR, MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
+import { WORKTREES_DIR, MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
 import { readChannelEntries } from "@plugins/primitives/plugins/log-channels/server";
 import { readSlowOpMarkers } from "@plugins/debug/plugins/slow-ops/server";
 import {
@@ -46,7 +46,7 @@ export function readHealthSeries(windowMs: number): {
   hostSamples: HostSample[];
 } {
   const cutoff = Date.now() - windowMs;
-  const worktreesDir = join(SINGULARITY_DIR, "worktrees");
+  const worktreesDir = WORKTREES_DIR;
 
   let names: string[];
   try {

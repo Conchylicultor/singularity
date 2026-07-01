@@ -1,6 +1,5 @@
 import { mkdirSync, renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
-import { worktreeDataDir } from "./paths";
+import { worktreeDataDir, worktreeArtifacts } from "./paths";
 
 export interface BuildSpan {
   id: string;
@@ -60,10 +59,7 @@ export function writeBuildProfile(name: string): void {
   const dir = worktreeDataDir(name);
   mkdirSync(dir, { recursive: true });
   const buildId = process.env.SINGULARITY_BUILD_ID;
-  const filename = buildId
-    ? `build-profile-${buildId}.json`
-    : `build-profile.json`;
-  const path = join(dir, filename);
+  const path = worktreeArtifacts.buildProfile(name, buildId);
   const tmp = `${path}.tmp.${process.pid}`;
   writeFileSync(tmp, JSON.stringify(profile, null, 2) + "\n");
   renameSync(tmp, path);

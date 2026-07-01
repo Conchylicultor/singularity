@@ -11,7 +11,7 @@ import {
 } from "node:fs";
 import { join } from "node:path";
 import { dlopen } from "bun:ffi";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { SINGULARITY_DIR, WORKTREES_DIR, worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 
 // A per-worktree, crash-safe marker for a long-running operation (build, push,
 // check) that will eventually finish and resume the agent. The conversation
@@ -53,11 +53,11 @@ export interface WorktreeOpInfo {
 // The root holding every worktree's per-worktree singularity state (the `ops/`
 // markers live under `<root>/<slug>/ops/`). Exposed so consumers can watch it.
 export function worktreesDir(): string {
-  return join(SINGULARITY_DIR, "worktrees");
+  return WORKTREES_DIR;
 }
 
 function opsDir(slug: string): string {
-  return join(SINGULARITY_DIR, "worktrees", slug, "ops");
+  return join(worktreeDataDir(slug), "ops");
 }
 
 function opFile(slug: string, op: WorktreeOp): string {

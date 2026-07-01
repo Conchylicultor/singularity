@@ -1,7 +1,7 @@
 import { rm } from "node:fs/promises";
 import { join } from "node:path";
 import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import { dropZeroSlotsAndPublications } from "../../shared/internal/slot-sql";
 
 // Per-worktree replica path the gateway hands zero-cache via ZERO_REPLICA_FILE:
@@ -9,7 +9,7 @@ import { dropZeroSlotsAndPublications } from "../../shared/internal/slot-sql";
 // and reap own no gateway state) so we can delete the stale replica alongside
 // the slot. Kept in lockstep with the gateway's ZERO_REPLICA_FILE computation.
 export function worktreeReplicaFile(worktreeName: string): string {
-  return join(SINGULARITY_DIR, "worktrees", worktreeName, "zero", "replica.db");
+  return join(worktreeDataDir(worktreeName), "zero", "replica.db");
 }
 
 /**

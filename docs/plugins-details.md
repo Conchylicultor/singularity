@@ -1277,7 +1277,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `config_v2.ConfigV2`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/commit-list.CommitRowItem`, `primitives/css/badge.Badge`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/spinner.Spinner`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/detail-sections.defineDetailSections`, `primitives/icon-button.IconButton`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/log-channels.clientLog`, `primitives/networking.useReconnectingWebSocket`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tooltip.WithTooltip`, `shell/action-bar.ActionBar`, `shell/notifications.toast`
     - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`, `useStaleFrontend`
   - Server:
-    - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/git-watcher.refHeadResource`, `infra/jobs.defineJob`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.WEB_DIST_DIR`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `primitives/log-channels.Log`, `shell/notifications.recordNotification`
+    - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/git-watcher.refHeadResource`, `infra/jobs.defineJob`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.REPO_ROOT`, `infra/paths.WEB_DIST_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `primitives/log-channels.Log`, `shell/notifications.recordNotification`
     - DB schema: `plugins/build/server/internal/tables.ts`
     - Exports: Values: `_buildRuns`, `getServerBuildId`
     - Register: `defineJob('build.run')`
@@ -1316,7 +1316,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `BuildDetailSlots.Section` "logs" → `BuildLogSection`
         - Uses: `build.BuildDetailSlots`, `infra/endpoints.useEndpoint`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/clip.Clip`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/networking.useReconnectingWebSocket`, `shell/notifications.toast`
       - Server:
-        - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+        - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.worktreeArtifacts`
         - Routes: `GET /api/build/runs/:id/logs`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
@@ -1328,7 +1328,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `BuildDetailSlots.Section` "profiling" → `BuildProfilingSection`
         - Uses: `build.BuildDetailSlots`, `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.PhaseConfig`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `infra/endpoints.useEndpoint`, `primitives/css/clip.Clip`
       - Server:
-        - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+        - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.worktreeArtifacts`
         - Routes: `GET /api/build/runs/:id/profile`
       - Shared:
         - Exports: Values: `getBuildRunProfile`
@@ -2255,7 +2255,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`cache-service`** — zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.
           - Server:
-            - Uses: `database/admin.getAdminPool`, `database/admin.openShortLivedClient`, `infra/jobs.defineJob`, `infra/paths.SINGULARITY_DIR`
+            - Uses: `database/admin.getAdminPool`, `database/admin.openShortLivedClient`, `infra/jobs.defineJob`, `infra/paths.worktreeDataDir`
             - Exports: Values: `dropZeroReplicationArtifacts`, `worktreeReplicaFile`, `ZERO_DIR`, `ZERO_REPLICA_FILE`, `ZERO_UPSTREAM_DB`
             - Register: `defineJob('database.zero-slot-sweep')`
           - Cross-plugin:
@@ -2309,7 +2309,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/grid.Grid`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `stats/commits.axisProps`, `stats/commits.ChartState`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.yAxisFormatter`
         - Exports: Values: `healthMonitorPane`
       - Server:
-        - Uses: `debug/slow-ops.readSlowOpMarkers`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadQueueDepth`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.SINGULARITY_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
+        - Uses: `debug/slow-ops.readSlowOpMarkers`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadQueueDepth`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.worktreeDataDir`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
         - Routes: `GET /api/debug/health-monitor`
       - Shared:
         - Exports: Types: `GetHealthDataResponse`, `HealthSample`, `HealthSeries`, `HostSample`; Values: `getHealthData`, `GetHealthDataResponseSchema`, `HealthSampleSchema`, `HealthSeriesSchema`, `HostSampleSchema`
@@ -2320,7 +2320,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
         - Exports: Values: `heapSnapshotPane`
       - Server:
-        - Uses: `infra/endpoints.implement`, `infra/paths.currentWorktreeName`, `infra/paths.SINGULARITY_DIR`
+        - Uses: `infra/endpoints.implement`, `infra/paths.currentWorktreeName`, `infra/paths.worktreeDataDir`
         - Routes: `GET /api/debug/heap-stats`, `POST /api/debug/heap-snapshot`
     - **`live-state-churn`** — Umbrella for live-state churn debugging: the no-op push monitor/detector and the synthetic-push emitter.
       - Plugins:
@@ -2408,7 +2408,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.useProfilingContext`, `infra/endpoints.useEndpoint`, `primitives/css/clip.Clip`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
             - Exports: Values: `buildProfileDetailPane`
           - Server:
-            - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+            - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.worktreeArtifacts`
             - Routes: `GET /api/debug/profiling/build`, `GET /api/debug/profiling/build/:worktree/:buildId`
           - Cross-plugin:
             - Imported by: `conversations/conversation-view/push-profiling`, `debug/profiling/push`
@@ -3433,9 +3433,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `apps-core/surface/floating/wallpaper`, `apps/prototypes/files`, `backup`, `backup/sources/attachments`, `backup/sources/claude-settings`, `backup/sources/config`, `backup/sources/project-memory`, `backup/sources/secrets`, `backup/sources/singularity-platform`, `backup/targets/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/staging`, `conversations`, `conversations/conversation-progress`, `conversations/hibernation`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `database`, `database/admin`, `database/zero/cache-service`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/git-watcher`, `infra/launcher`, `infra/worktree`, `packages/host-semaphore`, `plugin-meta/composition`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `primitives/commit-list`, `primitives/log-channels`, `primitives/terminal`, `release`, `reports`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`
       - Server:
-        - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE`, `CLAUDE_DIR`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `currentWorktreeName`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `REPO_ROOT`, `REPORTS_DIR`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`, `WEB_CORE_RELATIVE`, `WEB_DIST_DIR`
+        - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE`, `CLAUDE_DIR`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `currentWorktreeName`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `REPO_ROOT`, `REPORTS_DIR`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`, `WEB_CORE_RELATIVE`, `WEB_DIST_DIR`, `worktreeArtifacts`, `worktreeDataDir`, `WORKTREES_DIR`
       - Core:
-        - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE_DIR`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `currentWorktreeName`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PLUGINS_DIR`, `REPO_ROOT`, `REPORTS_DIR`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`
+        - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE_DIR`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `currentWorktreeName`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PLUGINS_DIR`, `REPO_ROOT`, `REPORTS_DIR`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `worktreeArtifacts`, `worktreeDataDir`, `WORKTREES_DIR`
     - **`runtime-profiler`**
       - Cross-plugin:
         - Imported by: `framework/server-core`, `infra/endpoints`
@@ -3459,7 +3459,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `POST /api/secrets/get`, `POST /api/secrets/set`, `POST /api/secrets/delete`, `POST /api/secrets/has`, `POST /api/secrets/meta`, `POST /api/secrets/list`
     - **`worktree`**
       - Server:
-        - Uses: `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`
+        - Uses: `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeDataDir`, `infra/paths.WORKTREES_DIR`
         - Exports: Types: `DerivePushDeps`, `PushHolder`, `WorktreeOp`, `WorktreeOpInfo`, `WorktreeOpPhase`, `WorktreeSpec`, `ZeroCacheSpec`; Values: `clearPushHolder`, `clearWorktreeOp`, `derivePushPhases`, `ensureMainWorktreeRoot`, `isCanonicalWorktreePath`, `isWorktreeOpActive`, `listActiveWorktreeOps`, `markWorktreeOpStart`, `PUSH_LOCK_PATH`, `pushLockHeld`, `readPushHolder`, `removeWorktree`, `removeWorktreeSpec`, `resolveActiveWorktreeOps`, `setupWorktree`, `setWorktreeOpPhase`, `worktreePathFor`, `worktreesDir`, `writePushHolder`, `writeWorktreeSpec`
       - Cross-plugin:
         - Imported by: `code-explorer`, `config_v2/staging`, `conversations`, `conversations/conversation-view/op-status`, `conversations/runtime-tmux`, `debug/broadcasts`, `debug/memory`, `debug/profiling/push`, `debug/worktree-cleanup`, `infra/git-watcher`, `infra/launcher`, `plugin-meta/plugin-health`, `stats/commits`, `stats/cost`, `tasks`, `tasks/tasks-core`
@@ -4593,7 +4593,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.fetchEndpoint`, `primitives/networking.subscribeWsStatus`
         - Exports: Values: `clientLog`
       - Server:
-        - Uses: `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+        - Uses: `infra/endpoints.implement`, `infra/paths.worktreeDataDir`
         - Exports: Types: `LogChannel`, `LogStream`; Values: `listChannels`, `Log`, `readChannelEntries`
         - Routes: `GET /api/logs/channels`, `POST /api/logs/emit`, `/ws/logs (WS)`
       - Core:
@@ -4829,7 +4829,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`release`** — Local composition release lifecycle engine: run, observe, preview F4 artifacts.
   - Server:
-    - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `primitives/log-channels.Log`
+    - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `primitives/log-channels.Log`
     - DB schema: `plugins/release/server/internal/tables.ts`
     - Exports: Values: `_releaseRuns`, `newReleaseRunId`, `releaseOutDir`, `triggerRelease`
     - Routes: `POST /api/release`, `POST /api/release/runs/:id/preview`, `POST /api/release/runs/:id/preview/stop`, `GET /api/release/runs/:id/logs`

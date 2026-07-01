@@ -2,7 +2,7 @@ import { join } from "node:path";
 import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { startSamplingProfiler, samplingProfilerStackTraces } from "bun:jsc";
 import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
-import { SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import { worktreeDataDir, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 
 // On-stall stack-trace flight recorder. Folded into the health sampler's tick.
 //
@@ -83,9 +83,7 @@ let channel: LogChannel | null = null;
 
 function stallFilePath(): string {
   return join(
-    SINGULARITY_DIR,
-    "worktrees",
-    currentWorktreeName(),
+    worktreeDataDir(currentWorktreeName()),
     "logs",
     "stall-profiles.jsonl",
   );

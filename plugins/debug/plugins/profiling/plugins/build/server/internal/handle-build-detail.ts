@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { getBuildRunProfileByWorktree } from "../../shared/endpoints";
 
 interface BuildProfile {
@@ -24,12 +23,7 @@ function readProfile(worktree: string, buildId: string): BuildProfile | null {
   const name = sanitize(worktree);
   const id = sanitize(buildId);
   if (!name || !id) return null;
-  const path = join(
-    SINGULARITY_DIR,
-    "worktrees",
-    name,
-    `build-profile-${id}.json`,
-  );
+  const path = worktreeArtifacts.buildProfile(name, id);
   try {
     return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;
   } catch (err) {

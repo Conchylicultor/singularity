@@ -11,7 +11,7 @@
   - Uses: `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.useProfilingContext`, `infra/endpoints.useEndpoint`, `primitives/css/clip.Clip`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
   - Exports: Values: `buildProfileDetailPane`
 - Server:
-  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.worktreeArtifacts`
   - Routes: `GET /api/debug/profiling/build`, `GET /api/debug/profiling/build/:worktree/:buildId`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/push-profiling`, `debug/profiling/push`

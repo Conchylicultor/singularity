@@ -38,6 +38,50 @@ export const LEGACY_AUTH_BLOB    = join(LEGACY_AUTH_DIR, "tokens.json.enc");
 export const LEGACY_AUTH_KEY     = join(LEGACY_AUTH_DIR, ".key");
 export const ATTACHMENTS_DIR     = join(SINGULARITY_DIR, "attachments");
 export const REPORTS_DIR         = join(SINGULARITY_DIR, "reports");
+
+// Root dir holding every worktree's per-worktree singularity state. Each
+// worktree owns `<WORKTREES_DIR>/<name>/` (build/release artifacts, logs,
+// ops markers, the zero replica, …). THE single source of truth for the
+// `worktrees/<name>` layout — server plugins and the CLI both derive from it
+// so the base path can never diverge.
+export const WORKTREES_DIR       = join(SINGULARITY_DIR, "worktrees");
+
+/** The per-worktree data dir: `<WORKTREES_DIR>/<name>/`. */
+export function worktreeDataDir(name: string): string {
+  return join(WORKTREES_DIR, name);
+}
+
+/**
+ * Canonical on-disk paths for per-worktree build/release artifacts.
+ *
+ * THE single source of truth for these filenames: every reader (the profiling /
+ * build / release server plugins) and writer (the build/release CLI plus the
+ * server-side orphan-recovery fallback) derives its path from here, so a layout
+ * change is one edit and readers can never drift from writers.
+ *
+ * The `id`-less variants are the "most recent / manual CLI" artifacts; passing a
+ * build/release run id yields the per-run artifact for that run.
+ */
+export const worktreeArtifacts = {
+  /** Build profiler spans. `build-profile.json` or `build-profile-<id>.json`. */
+  buildProfile: (name: string, buildId?: string): string =>
+    join(
+      worktreeDataDir(name),
+      buildId ? `build-profile-${buildId}.json` : "build-profile.json",
+    ),
+  /** Structured build transcript. `build-logs.json` or `build-logs-<id>.json`. */
+  buildLogs: (name: string, buildId?: string): string =>
+    join(
+      worktreeDataDir(name),
+      buildId ? `build-logs-${buildId}.json` : "build-logs.json",
+    ),
+  /** Human-readable build transcript. `build.log` or `build-<id>.log`. */
+  buildLogText: (name: string, buildId?: string): string =>
+    join(worktreeDataDir(name), buildId ? `build-${buildId}.log` : "build.log"),
+  /** Per-release fallback log. Always keyed to a release run id. */
+  releaseLogs: (name: string, releaseId: string): string =>
+    join(worktreeDataDir(name), `release-logs-${releaseId}.json`),
+} as const;
 export const CLAUDE_DIR          = join(HOME_DIR, ".claude");
 export const CLAUDE_PROJECTS_DIR = join(HOME_DIR, ".claude", "projects");
 export const CLAUDE_SESSIONS_DIR = join(HOME_DIR, ".claude", "sessions");

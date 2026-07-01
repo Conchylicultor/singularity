@@ -1,7 +1,6 @@
 import { readFileSync } from "node:fs";
-import { join } from "node:path";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { releaseLogsEndpoint, type ReleaseLogLine } from "../../core/endpoints";
 
 interface ReleaseLogsFile {
@@ -15,12 +14,7 @@ interface ReleaseLogsFile {
 function readReleaseRunLogs(releaseId: string): ReleaseLogsFile | null {
   const name = process.env.SINGULARITY_WORKTREE;
   if (!name) return null;
-  const path = join(
-    SINGULARITY_DIR,
-    "worktrees",
-    name,
-    `release-logs-${releaseId}.json`,
-  );
+  const path = worktreeArtifacts.releaseLogs(name, releaseId);
   try {
     return JSON.parse(readFileSync(path, "utf-8")) as ReleaseLogsFile;
   } catch (err) {

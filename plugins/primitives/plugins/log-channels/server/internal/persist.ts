@@ -1,6 +1,6 @@
 import { appendFileSync, mkdirSync, readdirSync, readFileSync } from "node:fs";
 import { join } from "node:path";
-import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { worktreeDataDir } from "@plugins/infra/plugins/paths/server";
 import type { LogStream } from "./registry";
 
 // Persist client/server log lines to a per-worktree JSONL file the agent can
@@ -15,7 +15,7 @@ export function sanitizeChannel(channel: string): string {
 }
 
 export function logsDirFor(worktree: string): string {
-  return join(SINGULARITY_DIR, "worktrees", worktree, "logs");
+  return join(worktreeDataDir(worktree), "logs");
 }
 
 function logsDir(): string {

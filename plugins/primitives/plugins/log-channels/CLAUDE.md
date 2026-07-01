@@ -31,7 +31,7 @@ buffer only backs the live UI pane.
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/networking.subscribeWsStatus`
   - Exports: Values: `clientLog`
 - Server:
-  - Uses: `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+  - Uses: `infra/endpoints.implement`, `infra/paths.worktreeDataDir`
   - Exports: Types: `LogChannel`, `LogStream`; Values: `listChannels`, `Log`, `readChannelEntries`
   - Routes: `GET /api/logs/channels`, `POST /api/logs/emit`, `/ws/logs (WS)`
 - Core:

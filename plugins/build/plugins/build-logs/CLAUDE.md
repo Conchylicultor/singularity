@@ -9,7 +9,7 @@
   - Contributes: `BuildDetailSlots.Section` "logs" → `BuildLogSection`
   - Uses: `build.BuildDetailSlots`, `infra/endpoints.useEndpoint`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/clip.Clip`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/networking.useReconnectingWebSocket`, `shell/notifications.toast`
 - Server:
-  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.worktreeArtifacts`
   - Routes: `GET /api/build/runs/:id/logs`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

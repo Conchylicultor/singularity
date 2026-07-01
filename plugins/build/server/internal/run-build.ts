@@ -1,8 +1,7 @@
 import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { REPO_ROOT, SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT, currentWorktreeName, worktreeDataDir, worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { buildDetailRoute } from "@plugins/build/core";
 import { agentManagerApp } from "@plugins/apps/plugins/agent-manager/plugins/shell/core";
@@ -67,12 +66,7 @@ async function isAnyBuildAlive(): Promise<boolean> {
  */
 function resolveOrphanExitCode(buildId: string): number {
   const name = currentWorktreeName();
-  const path = join(
-    SINGULARITY_DIR,
-    "worktrees",
-    name,
-    `build-logs-${buildId}.json`,
-  );
+  const path = worktreeArtifacts.buildLogs(name, buildId);
   try {
     const parsed = JSON.parse(readFileSync(path, "utf-8")) as {
       steps?: Array<{ success: boolean }>;
@@ -225,9 +219,9 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
   if (exitCode !== 0 && allLines.length > 0) {
     const worktreeName = process.env.SINGULARITY_WORKTREE;
     if (worktreeName) {
-      const worktreeDir = join(SINGULARITY_DIR, "worktrees", worktreeName);
+      const worktreeDir = worktreeDataDir(worktreeName);
       mkdirSync(worktreeDir, { recursive: true });
-      const logPath = join(worktreeDir, `build-logs-${buildId}.json`);
+      const logPath = worktreeArtifacts.buildLogs(worktreeName, buildId);
       if (!existsSync(logPath)) {
         const tmp = `${logPath}.tmp.${process.pid}`;
         const logs = {

@@ -6,7 +6,7 @@
 
 - Description: zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.
 - Server:
-  - Uses: `database/admin.getAdminPool`, `database/admin.openShortLivedClient`, `infra/jobs.defineJob`, `infra/paths.SINGULARITY_DIR`
+  - Uses: `database/admin.getAdminPool`, `database/admin.openShortLivedClient`, `infra/jobs.defineJob`, `infra/paths.worktreeDataDir`
   - Exports: Values: `dropZeroReplicationArtifacts`, `worktreeReplicaFile`, `ZERO_DIR`, `ZERO_REPLICA_FILE`, `ZERO_UPSTREAM_DB`
   - Register: `defineJob('database.zero-slot-sweep')`
 - Cross-plugin:

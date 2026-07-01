@@ -2,13 +2,8 @@ import { join } from "node:path";
 import { readFileSync } from "node:fs";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
-export { HOME_DIR, SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+export { HOME_DIR, SINGULARITY_DIR, WORKTREES_DIR, worktreeDataDir, worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
 
-export const WORKTREES_DIR        = join(SINGULARITY_DIR, "worktrees");
-
-export function worktreeDataDir(name: string): string {
-  return join(WORKTREES_DIR, name);
-}
 export const PG_DIR               = join(SINGULARITY_DIR, "pg");
 export const PG_DATA_DIR          = join(PG_DIR, "data");
 export const PG_LOG_FILE          = join(PG_DIR, "postgres.log");
