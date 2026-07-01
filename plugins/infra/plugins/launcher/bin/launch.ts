@@ -44,6 +44,14 @@ process.env.SINGULARITY_MIGRATIONS_DIR ??= join(
   "migrations",
   "data",
 );
+// @parcel/watcher's native .node can't be embedded by `bun --compile`; point the
+// file-watcher loader at the vendored addon. The gateway inherits this env and
+// forwards it to the spawned backend, which is the process that starts watchers.
+process.env.SINGULARITY_PARCEL_WATCHER_NODE ??= join(
+  bundleRoot,
+  "parcel-watcher",
+  "watcher.node",
+);
 // Reroot the embedded-PG and PgBouncer Unix sockets onto a short `/tmp` path
 // (both read this single override). The data root above may be a long versioned
 // `<out>/data` (`releases/<wt>/<comp>-<target>/<run-id>/data`), which would blow

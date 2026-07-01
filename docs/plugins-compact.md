@@ -197,6 +197,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
+            - **`watcher-safety`** — watcher-safety lint rule: no-direct-parcel-watcher
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
         - **`react-compiler`** — Enables the React Compiler (Babel) across the frontend via a vite/ build contribution; presence of this folder is the on/off switch.
     - **`web-core`**

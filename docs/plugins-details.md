@@ -1552,7 +1552,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`
             - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
           - Server:
-            - Uses: `infra/git-read-cache.createGitStateMemo`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`
+            - Uses: `infra/file-watcher.getParcelWatcher`, `infra/git-read-cache.createGitStateMemo`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`
             - Exports: Values: `currentGeneration`, `editedFilesResource`, `getEditedFiles`
           - Core:
             - Uses: `primitives/live-state.resourceDescriptor`
@@ -3182,6 +3182,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer
             - **`trigger-render-safety`** — trigger-render-safety lint rule: no-provider-trigger-render
+            - **`watcher-safety`** — watcher-safety lint rule: no-direct-parcel-watcher
         - **`provision`** — Install-time provisioning registry + runner: discovers each plugin's provision/index.ts and runs it during postinstall.
           - Core:
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`
@@ -3359,9 +3360,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DeleteTargetingBody`, `DirectEnqueueBody`, `EmitBody`, `SubscribeBody`; Values: `crashRecoveryEventsTest`, `deleteEventsTestTargeting`, `deleteEventsTestTrigger`, `DeleteTargetingBodySchema`, `DirectEnqueueBodySchema`, `directEnqueueEventsTest`, `EmitBodySchema`, `emitEventsTest`, `getEventsTestLog`, `listEventsTestTriggers`, `resetEventsTest`, `SubscribeBodySchema`, `subscribeEventsTest`, `waitEventsTestIdle`
     - **`file-watcher`** — Shared @parcel/watcher primitive with debounce, ceiling, and reconcile timer management.
       - Cross-plugin:
-        - Imported by: `apps/prototypes/files`, `apps/sonata/sources/midi/folders`, `config_v2`, `conversations/conversation-view/op-status`, `conversations/transcript-watcher`, `infra/git-watcher`
+        - Imported by: `apps/prototypes/files`, `apps/sonata/sources/midi/folders`, `config_v2`, `conversations/conversation-view/code`, `conversations/conversation-view/op-status`, `conversations/transcript-watcher`, `infra/git-watcher`
       - Server:
-        - Exports: Types: `FileWatcher`, `FileWatcherOptions`; Values: `createFileWatcher`
+        - Exports: Types: `FileWatcher`, `FileWatcherOptions`; Values: `createFileWatcher`, `getParcelWatcher`
     - **`git-read-cache`** — Git-state-keyed result memo: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree.
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `review/plugin-changes`

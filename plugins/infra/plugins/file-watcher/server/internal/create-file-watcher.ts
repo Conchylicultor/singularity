@@ -1,5 +1,9 @@
 import type * as parcel from "@parcel/watcher";
 import { extname } from "node:path";
+// Pure-JS wrapper: this import loads NO native code — `wrapper.js` only defines
+// functions that close over a `binding` passed in at call time. Safe to import
+// at module top-level (the native `.node` addon is still loaded lazily below).
+import { createWrapper } from "@parcel/watcher/wrapper";
 
 // `@parcel/watcher` is loaded LAZILY (dynamic import inside createFileWatcher),
 // never at module top-level. It pulls in a native `.node` addon that a static
@@ -12,10 +16,30 @@ import { extname } from "node:path";
 // the point a watcher is actually started keeps the import side-effect-free, so
 // a release that never starts a watcher never touches the addon, and one that
 // does fails loudly at the call site (not during an unrelated barrel's init).
+//
+// In a self-contained release `bun --compile` cannot embed the native addon, so
+// the launcher vendors it on disk and points `SINGULARITY_PARCEL_WATCHER_NODE`
+// at the absolute path of the `watcher.node` binding. When that env var is set,
+// `getParcelWatcher()` dlopens the vendored binding directly and wraps it with
+// parcel's own `createWrapper`, yielding the identical public API. This single
+// loader is the only sanctioned entry point for `@parcel/watcher`; all consumers
+// must route through it so the release vendoring path is honored.
 let parcelWatcherPromise: Promise<typeof import("@parcel/watcher")> | null =
   null;
-function loadParcelWatcher(): Promise<typeof import("@parcel/watcher")> {
-  parcelWatcherPromise ??= import("@parcel/watcher");
+export function getParcelWatcher(): Promise<typeof import("@parcel/watcher")> {
+  parcelWatcherPromise ??= (async () => {
+    const nodePath = process.env.SINGULARITY_PARCEL_WATCHER_NODE;
+    if (nodePath) {
+      // Release: the native addon isn't bundled into the compiled binary.
+      // dlopen the vendored binding from disk and wrap it with parcel's own
+      // wrapper, yielding the identical public API.
+      const { createRequire } = await import("node:module");
+      const requireFn = createRequire(import.meta.url);
+      const binding = requireFn(nodePath); // absolute path → no base-dir resolution needed
+      return createWrapper(binding);
+    }
+    return import("@parcel/watcher"); // dev / non-compiled: unchanged
+  })();
   return parcelWatcherPromise;
 }
 
@@ -96,7 +120,7 @@ export async function createFileWatcher(
 
   const parcelOptions = ignore ? { ignore } : undefined;
 
-  const parcelWatcher = await loadParcelWatcher();
+  const parcelWatcher = await getParcelWatcher();
 
   for (const dir of dirs) {
     try {

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-lint-watcher-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "watcher-safety lint rule: no-direct-parcel-watcher"
+}

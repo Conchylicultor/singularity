@@ -1,4 +1,5 @@
-import parcel from "@parcel/watcher";
+import type * as parcel from "@parcel/watcher";
+import { getParcelWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import type { EditedFile } from "../../core/protocol";
 import { computeEditedFiles, getEditedFiles } from "./get-edited-files";
 import { evictEditedFiles, primeEditedFiles } from "./edited-files-cache";
@@ -89,7 +90,8 @@ async function openRoom(room: Room): Promise<void> {
   }
 
   try {
-    room.subscription = await parcel.subscribe(
+    const parcelWatcher = await getParcelWatcher();
+    room.subscription = await parcelWatcher.subscribe(
       room.worktreePath,
       (err: Error | null) => {
         if (err) {

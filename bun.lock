@@ -2148,6 +2148,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-trigger-render-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/watcher-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-watcher-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/provision": {
       "name": "@singularity/plugin-framework-tooling-provision",
       "version": "0.0.1",
@@ -5495,6 +5499,8 @@
     "@singularity/plugin-framework-tooling-lint-resize-observer-safety": ["@singularity/plugin-framework-tooling-lint-resize-observer-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/resize-observer-safety"],
 
     "@singularity/plugin-framework-tooling-lint-trigger-render-safety": ["@singularity/plugin-framework-tooling-lint-trigger-render-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/trigger-render-safety"],
+
+    "@singularity/plugin-framework-tooling-lint-watcher-safety": ["@singularity/plugin-framework-tooling-lint-watcher-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/watcher-safety"],
 
     "@singularity/plugin-framework-tooling-provision": ["@singularity/plugin-framework-tooling-provision@workspace:plugins/framework/plugins/tooling/plugins/provision"],
 

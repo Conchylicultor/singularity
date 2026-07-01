@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { createFileWatcher } from "./internal/create-file-watcher";
+export { createFileWatcher, getParcelWatcher } from "./internal/create-file-watcher";
 export type { FileWatcher, FileWatcherOptions } from "./internal/create-file-watcher";
 
 export default {

@@ -38,6 +38,7 @@ import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/serve
 //     pg/native/...                vendored embedded-postgres native tree
 //     pgbouncer/pgbouncer-start    compiled PgBouncer start binary
 //     pgbouncer/native/bin/pgbouncer  vendored PgBouncer native binary
+//     parcel-watcher/watcher.node   vendored @parcel/watcher native addon
 //     web/                         filtered Vite dist (served statically)
 //     RELEASE.json                 { composition, target, platform, builtAt, port, runId }
 //     dist/<comp>-<target>-<platform>   web target: self-extracting binary (the shippable)
@@ -351,6 +352,30 @@ function pgbouncerNativeBin(root: string): string {
   return bin;
 }
 
+/** Resolve the @parcel/watcher prebuilt native .node for the host platform. */
+function parcelWatcherNativeNode(root: string): string {
+  const tag = platformTag();
+  // parcel suffixes linux packages with -glibc/-musl; releases target glibc.
+  const pkg =
+    process.platform === "linux"
+      ? `@parcel/watcher-${tag}-glibc`
+      : `@parcel/watcher-${tag}`;
+  // The platform package is an optionalDependency of @parcel/watcher and lives in
+  // bun's store (not symlinked at top-level node_modules), so resolve it FROM
+  // @parcel/watcher's own dir. Its package.json main is "watcher.node".
+  const parcelDir = dirname(Bun.resolveSync("@parcel/watcher", root));
+  const file = join(
+    dirname(Bun.resolveSync(`${pkg}/package.json`, parcelDir)),
+    "watcher.node",
+  );
+  if (!existsSync(file)) {
+    throw new Error(
+      `release: parcel-watcher native not found at ${file}; run \`bun install\` first`,
+    );
+  }
+  return file;
+}
+
 export function registerRelease(program: Command) {
   program
     .command("release")
@@ -525,6 +550,15 @@ export function registerRelease(program: Command) {
         cpSync(
           pgbouncerNativeBin(root),
           join(out, "pgbouncer", "native", "bin", "pgbouncer"),
+        );
+
+        // @parcel/watcher native addon: bun --compile can't embed .node addons, so the
+        // file-watcher loader dlopens this vendored copy at runtime (SINGULARITY_PARCEL_WATCHER_NODE).
+        console.log("  • parcel-watcher native addon");
+        mkdirSync(join(out, "parcel-watcher"), { recursive: true });
+        cpSync(
+          parcelWatcherNativeNode(root),
+          join(out, "parcel-watcher", "watcher.node"),
         );
 
         // Migration SQL files: the runner reads them from disk at boot (they are
