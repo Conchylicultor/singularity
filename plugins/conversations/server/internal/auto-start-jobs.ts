@@ -82,10 +82,18 @@ export const maybeLaunchTaskJob = defineJob({
   },
 });
 
-// Static trigger target: fires on every taskStatusChanged, filters to
-// done/dropped, then fans out maybeLaunchTaskJob for each armed dependent.
+// Static trigger target: fires on every taskStatusChanged and re-checks the
+// auto-start eligibility of whatever tasks may have just become launchable.
 // Replaces the old per-dep oneShot triggers that armTaskAutoStart used to
 // create — the dependency graph now stays solely in task_dependencies.
+//
+// Two ways a task becomes launchable, both funnelled through this one event:
+//   1. An upstream dependency settles (done/dropped) — fan out to its armed
+//      dependents, which may now be unblocked.
+//   2. A task itself transitions *out of* `blocked` (e.g. one of its dependency
+//      edges was removed) — re-check that task directly.
+// maybeLaunchTaskJob is the exactly-once gate (armed? unblocked? unclaimed?
+// no existing attempt?), so enqueuing an ineligible task is a safe no-op.
 export const maybeLaunchDependentsJob = defineJob({
   name: "tasks.maybe-launch-dependents",
   input: z.object({}),
@@ -100,10 +108,19 @@ export const maybeLaunchDependentsJob = defineJob({
     .passthrough(),
   run: async ({ event }) => {
     if (!event) return;
-    if (event.status !== "done" && event.status !== "dropped") return;
-    const dependents = await listArmedDependentsOf(event.taskId);
-    await Promise.all(
-      dependents.map((taskId) => maybeLaunchTaskJob.enqueue({ taskId, cause: "dep-resolved" })),
-    );
+    // Case 1: an upstream dependency settled → re-check its armed dependents.
+    if (event.status === "done" || event.status === "dropped") {
+      const dependents = await listArmedDependentsOf(event.taskId);
+      await Promise.all(
+        dependents.map((taskId) => maybeLaunchTaskJob.enqueue({ taskId, cause: "dep-resolved" })),
+      );
+      return;
+    }
+    // Case 2: the task itself just became unblocked (its last blocking edge was
+    // removed) → re-check it directly. Nothing to fan out — the newly-launchable
+    // node is the one whose status changed.
+    if (event.previousStatus === "blocked" && event.status !== "blocked") {
+      await maybeLaunchTaskJob.enqueue({ taskId: event.taskId, cause: "dep-unblocked" });
+    }
   },
 });
