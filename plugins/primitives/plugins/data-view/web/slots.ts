@@ -25,11 +25,43 @@ export interface DataViewContribution extends ViewTypeMeta {
   loadingVariant?: LoadingVariant;
   /** Skeleton item count for the loading variant (forwarded to <Loading count>). */
   loadingCount?: number;
+  /** Whether this view supports group-by sections. Default true; the tree view
+   *  sets false (it orders by hierarchy, not a flat field) — so the host hides
+   *  the group-by control for it. Mirrors `supportsSort`. */
+  supportsGroupBy?: boolean;
+  /** Whether this view supports flat manual-order (rank-based drag reorder).
+   *  Default **false** (unlike `supportsSort`/`supportsGroupBy`): the flat views
+   *  list/table opt IN (`true`); gallery/tree do not. When false the host never
+   *  passes `manualOrder` into the view and keeps the Sort control. */
+  supportsManualOrder?: boolean;
+}
+
+/**
+ * A contribution to the DataView settings menu (the gear popover). A plain data
+ * contribution (NOT a render slot — settings aren't force-reorderable), mirroring
+ * the `View` slot's shape. `scope` places it in the "Current view" section
+ * (per-instance settings like group-by) or the "DataView" section (surface-wide
+ * settings like custom-columns). The `component` reads everything it needs from
+ * `DataViewSettingsContext` — no props are threaded.
+ */
+export interface DataViewSettingContribution {
+  /** Stable id (React key + reorder/doc identity). */
+  id: string;
+  /** Which menu section this setting renders in. */
+  scope: "global" | "view";
+  /** Ordering within its scope's section (ascending; default 0). */
+  order?: number;
+  component: ComponentType;
 }
 
 export const DataViewSlots = {
   View: defineSlot<DataViewContribution>("primitives.data-view.view", {
     docLabel: (p) => p.title,
+  }),
+  /** Contributable DataView settings menu entries (group-by, future per-view /
+   *  surface-wide settings). Plain data slot, read by the host's settings menu. */
+  Setting: defineSlot<DataViewSettingContribution>("primitives.data-view.setting", {
+    docLabel: (p) => p.id,
   }),
   /** Per-type table cell. Contribute `{ match, component }`. */
   Cell,

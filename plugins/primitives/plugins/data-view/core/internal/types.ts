@@ -148,6 +148,13 @@ export interface FieldDef<TRow> {
   onEditValues?: (row: TRow, next: string[]) => void | Promise<void>;
   /** Default: true when `value` is present. */
   sortable?: boolean;
+  /**
+   * Whether rows may be partitioned into sections by this field (the group-by
+   * picker lists groupable fields only). Default: **true for `enum`/`bool`**,
+   * false otherwise — mirroring how `sortable` defaults off `value`. A field
+   * with no `value` projection is never groupable regardless of this flag.
+   */
+  groupable?: boolean;
   /** Include in default search accessor; default true for text/enum. */
   filterable?: boolean;
   /**
@@ -208,8 +215,92 @@ export interface ViewState {
    * always operate on the full field schema.
    */
   visibleFields?: string[] | null;
+  /**
+   * The field id rows are partitioned by (Notion's "Group by"), or absent =
+   * ungrouped. Persisted in the per-instance config row exactly like
+   * `sort`/`filter` (host-injected, merge-written). Legacy rows without the key
+   * are ungrouped.
+   */
+  groupBy?: string;
   /** Local expand state for hierarchical views lacking server-persisted expansion. */
   expanded?: Record<string, boolean>;
+}
+
+/**
+ * One partitioned section of a flat view's rows. The unifying envelope every
+ * flat view renders against (`useDataViewSections`): when `state.groupBy` is
+ * unset the pipeline returns exactly ONE section `{ key: null, … }` mapping rows
+ * 1:1, so the un-grouped render is byte-for-byte identical to the old
+ * `useFlatRows`-and-map. When grouped, one section per group key in display
+ * order, each collapsible with a header label + member count.
+ */
+export interface DataViewSection<TRow> {
+  /** Group key (the stringified `field.value(row)`); `null` = the implicit
+   *  single section rendered headerless when no group-by is active. */
+  key: string | null;
+  /** Header label; absent for the implicit (`key === null`) section. */
+  label?: ReactNode;
+  /** Member-row count (pre-aggregation). */
+  count: number;
+  entries: DataViewRowEntry<TRow>[];
+}
+
+/**
+ * One row entry within a `DataViewSection`. For group-by (Sub-task 1) it is a
+ * 1:1 wrapper around a row; the optional `aggregateCount`/`members` fields are
+ * the seam for aggregating sections (Sub-task 3), where one entry stands for a
+ * collapsed group of rows sharing a key.
+ */
+export interface DataViewRowEntry<TRow> {
+  /** Representative row (== the row when not aggregated). */
+  row: TRow;
+  /** `rowKey(row)` — the React key + selection/hasChildren identity. */
+  key: string;
+  /** >1 when this entry stands for a collapsed group (aggregating only). */
+  aggregateCount?: number;
+  /** Collapsed members (aggregating only). */
+  members?: readonly TRow[];
+}
+
+/**
+ * Aggregating-sections config — the **seam** for Sub-task 3 (collapse rows
+ * sharing a key into one representative + count badge). Declared now so
+ * `useDataViewSections` can carry it through its `opts` unchanged; the aggregate
+ * step itself is NOT implemented in Sub-task 1.
+ */
+export interface DataViewAggregateConfig<TRow> {
+  /** Group rows sharing a non-null key into one representative; `null` =
+   *  standalone (never collapsed). */
+  getKey: (row: TRow) => string | null;
+  /** Pick the representative row for a collapsed group (default: first in
+   *  current order). */
+  pickRepresentative?: (members: readonly TRow[]) => TRow;
+}
+
+/**
+ * Flat manual-order config — the flat twin of `HierarchyConfig`. Supplied on
+ * `DataViewProps` (not the per-view `options` channel) because it carries write
+ * capability and gates the manual-order mode. Present AND the active view opts in
+ * (`supportsManualOrder`) → that view orders rows by `getRank` (skipping the
+ * field sort, like the tree ignores sort), shows drag affordances, and the host
+ * hides the Sort control. Reorder is **within a section**: a cross-section drag
+ * reports the destination group via `onMove`'s `dest.groupKey`, which the
+ * consumer maps to its own field mutation (the primitive carries no field/status
+ * knowledge). Ungrouped → the single implicit `null` section.
+ */
+export interface ManualOrderConfig<TRow> {
+  /** The sort `Rank` of a row — rows render in this order in manual mode. */
+  getRank: (row: TRow) => Rank;
+  /**
+   * Persist a reorder. `id` is `rowKey(row)`; `dest.rank` is the new rank;
+   * `dest.groupKey` is the destination section key (the drop target's group) —
+   * equal to the dragged row's group for an in-section move, the new group for a
+   * cross-section move, and `null`/absent when ungrouped.
+   */
+  onMove: (
+    id: string,
+    dest: { rank: Rank; groupKey?: string | null },
+  ) => void | Promise<void>;
 }
 
 export interface DataViewRenderProps<TRow> {
@@ -234,6 +325,22 @@ export interface DataViewRenderProps<TRow> {
   searchAccessor?: (row: TRow) => string;
   /** Present only when the data source is hierarchical (gates the tree view). */
   hierarchy?: HierarchyConfig<TRow>;
+  /**
+   * Present → the active view supports manual order AND the consumer supplied a
+   * `manualOrder`. The view orders rows by `getRank`, shows drag affordances,
+   * and reorders within a section via `rank-reorder`. The host already zeroes
+   * this for views that opt out (`supportsManualOrder` falsy), so a view simply
+   * checks presence.
+   */
+  manualOrder?: ManualOrderConfig<TRow>;
+  /**
+   * Present → rows sharing a non-null `getKey` collapse into one representative
+   * entry + count badge (within each section). A pure pipeline transform —
+   * orthogonal to the `supports*` flags — so the host threads it to every flat
+   * view unconditionally; views read `entry.aggregateCount`/`entry.members` and
+   * render the badge in their natural trailing spot.
+   */
+  aggregate?: DataViewAggregateConfig<TRow>;
   /** Present → the view enables checkbox multi-select (currently the tree). */
   selection?: SelectionConfig;
   /** This view's local expand map — for hierarchical views whose data source has
@@ -241,6 +348,11 @@ export interface DataViewRenderProps<TRow> {
   expanded?: Record<string, boolean>;
   /** Persist local expand state for a row (writes THIS view's ViewState). */
   setExpanded?: (id: string, next: boolean) => void;
+  /** Device-local set of collapsed group-by section keys (absence = expanded).
+   *  Flat views render group headers and hide a section's members when collapsed. */
+  collapsedSections?: ReadonlySet<string>;
+  /** Toggle a group-by section's device-local collapsed state. */
+  setSectionCollapsed?: (key: string, collapsed: boolean) => void;
   /** Empty-state node, rendered only on confirmed-empty (`rows.length === 0`).
    *  Views NEVER see a loading state — the host renders the skeleton itself and
    *  skips `renderIsolated` while loading, so empty here always means empty. */
@@ -432,6 +544,24 @@ export interface DataViewProps<TRow> {
   viewOptions?: Record<string, unknown>;
   /** Hierarchy accessors + mutations. Present → hierarchical views (tree) appear. */
   hierarchy?: HierarchyConfig<TRow>;
+  /**
+   * Flat manual-order accessors + mutation. Present → views that opt in
+   * (`supportsManualOrder`: list/table) order by `getRank` and enable rank-based
+   * drag reordering; the host hides the Sort control on the active view while
+   * manual order is active. Composes with group-by: a cross-section drag reports
+   * the destination section via `onMove`'s `dest.groupKey`.
+   */
+  manualOrder?: ManualOrderConfig<TRow>;
+  /**
+   * Aggregating sections — collapse rows sharing a non-null `getKey` into one
+   * representative row + count badge (within each group-by section). Present →
+   * flat views (list/table/gallery) render the representative with a `×N` badge;
+   * absent → every row renders 1:1 (the default). "Acting on the representative
+   * acts on the group" is the consumer's mutation concern — the primitive only
+   * owns the visual collapse + representative selection + count badge. Composes
+   * with `manualOrder` (collapse the rank-ordered entries) and group-by.
+   */
+  aggregate?: DataViewAggregateConfig<TRow>;
   /** Present → selectable views (tree) enable checkbox multi-select. */
   selection?: SelectionConfig;
   /** Per-item action slot descriptor minted by `defineItemActions`; views render

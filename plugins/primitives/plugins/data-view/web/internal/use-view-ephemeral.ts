@@ -17,12 +17,15 @@ const STATE_SUFFIX = ":view-state";
 interface LocalViewState {
   query: string;
   expanded: Record<string, boolean>;
+  /** Collapsed group-by section keys (absence = expanded). */
+  collapsedSections: string[];
 }
 type LocalMap = Record<string, LocalViewState>;
 
 const EMPTY_LOCAL: LocalViewState = {
   query: "",
   expanded: {},
+  collapsedSections: [],
 };
 
 // ---------------------------------------------------------------------------
@@ -63,16 +66,21 @@ function readLocalMap(key: string): LocalMap {
         typeof r.expanded === "object" && r.expanded !== null
           ? (r.expanded as Record<string, boolean>)
           : {},
+      collapsedSections: Array.isArray(r.collapsedSections)
+        ? (r.collapsedSections as string[]).filter((k) => typeof k === "string")
+        : [],
     };
   }
   return out;
 }
 
 export interface EphemeralViewState {
-  /** Raw per-instance local blob — query/expanded (device-local). */
+  /** Raw per-instance local blob — query/expanded/collapsedSections (device-local). */
   localFor: (viewId: string) => LocalViewState;
   setQuery: (viewId: string, query: string) => void;
   setExpanded: (viewId: string, id: string, next: boolean) => void;
+  /** Collapse/expand a group-by section (device-local; absence = expanded). */
+  setSectionCollapsed: (viewId: string, key: string, collapsed: boolean) => void;
 }
 
 /**
@@ -120,8 +128,20 @@ export function useViewEphemeral(storageKey: string): EphemeralViewState {
     [writeLocal],
   );
 
+  const setSectionCollapsed = useCallback(
+    (viewId: string, key: string, collapsed: boolean) => {
+      writeLocal(viewId, (prev) => {
+        const set = new Set(prev.collapsedSections);
+        if (collapsed) set.add(key);
+        else set.delete(key);
+        return { ...prev, collapsedSections: [...set] };
+      });
+    },
+    [writeLocal],
+  );
+
   return useMemo(
-    () => ({ localFor, setQuery, setExpanded }),
-    [localFor, setQuery, setExpanded],
+    () => ({ localFor, setQuery, setExpanded, setSectionCollapsed }),
+    [localFor, setQuery, setExpanded, setSectionCollapsed],
   );
 }

@@ -19,9 +19,33 @@ export interface ColumnDef<TRow> {
   cell?: (row: TRow) => ReactNode;
 }
 
+/**
+ * One group of rows for the interleaved group-header render mode. When
+ * `DataTableProps.groups` is set, the table renders each group's caller-built
+ * `header` as a full-span row inside the single subgrid (so columns stay aligned
+ * across groups), then the group's rows when not `collapsed`. The header node is
+ * fully owned by the caller (chevron, label, count, toggle) — the table stays
+ * agnostic. Grouped mode is non-virtualized (targets bounded, sectioned lists).
+ */
+export interface DataTableGroup<TRow> {
+  /** Stable key (React key for the header row). */
+  key: string;
+  /** Full-span header content (the caller owns the toggle + chevron + count). */
+  header: ReactNode;
+  /** Hide this group's rows (the header still renders, to allow re-expanding). */
+  collapsed: boolean;
+  rows: readonly TRow[];
+}
+
 export interface DataTableProps<TRow> {
   data: readonly TRow[];
   columns: ColumnDef<TRow>[];
+  /**
+   * Optional grouped render: interleave caller-built full-span section headers
+   * with their rows inside the single subgrid. When set, `data` is ignored for
+   * body rows (the rows come from each group) and virtualization is disabled.
+   */
+  groups?: DataTableGroup<TRow>[];
   filter?: string;
   rowKey: (row: TRow, index: number) => string;
   emptyLabel?: string;
@@ -41,6 +65,31 @@ export interface DataTableProps<TRow> {
   selectedRowId?: string;
   /** Trailing per-row actions, hover-revealed in their own column. */
   rowActions?: (row: TRow, index: number) => ReactNode;
+  /**
+   * Per-row decoration HOOK, called once per rendered row INSIDE the row
+   * component (so the consumer may call hooks — e.g. `useRankReorderItem` for
+   * drag reorder). Returns a ref + props spread + classes + in-row overlay for
+   * the row element. When provided, virtualization is disabled (drag +
+   * windowing is out of scope). Inert when absent. The name must start with
+   * `use` (it is invoked as a hook). Stable per mount.
+   */
+  useRowDecoration?: (
+    row: TRow,
+    index: number,
+  ) => DataTableRowDecoration | undefined;
   /** Control density for the table's controls/badges; defaults to compact (`xs`). */
   controlSize?: ControlSize;
+}
+
+/**
+ * Per-row decoration returned by `DataTableProps.useRowDecoration`. Applied to
+ * the row element: a callback `ref` (drag source), arbitrary `props` spread
+ * (drag attributes + listeners), extra `className`, and an in-row `overlay`
+ * (absolutely-positioned drop indicators — the row becomes `relative`).
+ */
+export interface DataTableRowDecoration {
+  ref?: (el: HTMLElement | null) => void;
+  props?: Record<string, unknown>;
+  className?: string;
+  overlay?: ReactNode;
 }

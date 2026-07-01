@@ -22,7 +22,7 @@ import {
 } from "@plugins/primitives/plugins/data-view/plugins/view-core/web";
 import {
   useCustomColumnDefs,
-  DataViewSettingsButton,
+  CustomColumnsFields,
 } from "@plugins/primitives/plugins/data-view/plugins/custom-columns/web";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
@@ -45,6 +45,8 @@ import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
 import { PropertiesTrigger } from "./properties-trigger";
 import { CreatorsControl } from "./creators-control";
 import { DataViewToolbar } from "./toolbar/data-view-toolbar";
+import { DataViewSettingsMenu } from "./settings/settings-menu";
+import type { DataViewSettingsContextValue } from "./settings/settings-context";
 
 /**
  * Host entry point. Every DataView is config-backed (config mode is universal):
@@ -99,6 +101,8 @@ function DataViewInner<TRow>({
     loading,
     loadingState,
     hierarchy,
+    manualOrder,
+    aggregate,
     selection,
     itemActions,
     creators,
@@ -200,7 +204,21 @@ function DataViewInner<TRow>({
   // manual/rank order), so this stays enabled; the flag remains for future
   // sort-less view types. Default (undefined) = honors sort.
   const activeSupportsSort = activeInstance?.viewType.supportsSort !== false;
-  const hasSort = sortController.sortableFields.length > 0 && activeSupportsSort;
+  // Manual order is active when the consumer supplied `manualOrder` AND the
+  // active view opts in (list/table; default false). When active the view orders
+  // by rank and the Sort control is hidden (like the tree ignores sort).
+  const activeSupportsManualOrder =
+    !!activeInstance?.viewType.supportsManualOrder;
+  const manualOrderActive = manualOrder != null && activeSupportsManualOrder;
+  const hasSort =
+    sortController.sortableFields.length > 0 &&
+    activeSupportsSort &&
+    !manualOrderActive;
+  // Group-by support mirrors sort: the tree opts out (`supportsGroupBy: false`)
+  // because it orders by hierarchy, not a flat field. The settings menu hides
+  // the group-by control accordingly.
+  const activeSupportsGroupBy =
+    activeInstance?.viewType.supportsGroupBy !== false;
 
   // Visible-fields controller — the per-view Properties pill governs which fields
   // render in the body and in what order (display-only; sort/filter/search still
@@ -280,13 +298,38 @@ function DataViewInner<TRow>({
     searchAccessor:
       searchAccessor as DataViewRenderProps<unknown>["searchAccessor"],
     hierarchy: hierarchy as DataViewRenderProps<unknown>["hierarchy"],
+    // Only hand `manualOrder` to a view that opts in (list/table); gallery/tree
+    // see `undefined` so they never enter manual mode.
+    manualOrder: activeSupportsManualOrder
+      ? (manualOrder as DataViewRenderProps<unknown>["manualOrder"])
+      : undefined,
+    // Aggregate is a pure pipeline transform (orthogonal to the supports* flags):
+    // hand it to every flat view; only those rendering via `useDataViewSections`
+    // (list/table/gallery) act on it — the tree ignores it.
+    aggregate: aggregate as DataViewRenderProps<unknown>["aggregate"],
     selection,
     expanded: activeState.expanded,
     setExpanded: (id, next) => viewModel.setExpanded(activeViewId, id, next),
+    collapsedSections: viewModel.collapsedSectionsFor(activeViewId),
+    setSectionCollapsed: (key, collapsed) =>
+      viewModel.setSectionCollapsed(activeViewId, key, collapsed),
     emptyState,
     itemActions: itemActions as DataViewRenderProps<unknown>["itemActions"],
     hasChildren,
     creators,
+  };
+
+  // Context for the unified settings menu — settings contributions (group-by,
+  // …) read what they need from here, no prop-threading. The custom-columns
+  // "Fields" UI stays host-rendered (it cannot import the Setting slot without a
+  // cycle), passed in as the menu's `customColumns` node.
+  const settingsContext: DataViewSettingsContextValue = {
+    storageKey: props.storageKey,
+    fields: fields as DataViewRenderProps<unknown>["fields"],
+    activeViewId,
+    activeState,
+    viewModel,
+    activeSupportsGroupBy,
   };
 
   return (
@@ -335,13 +378,21 @@ function DataViewInner<TRow>({
           ) : null
         }
         actions={actions}
+        /* Unified settings gear: hosts the per-view Group by control and the
+           DataView-global custom-columns "Fields" UI. Self-hides when there is
+           nothing to configure. Supersedes the old custom-columns-only gear. */
         fieldsControl={
-          customColumnsEnabled ? (
-            <DataViewSettingsButton
-              defs={customColumnDefs}
-              actions={customColumnActions}
-            />
-          ) : null
+          <DataViewSettingsMenu
+            context={settingsContext}
+            customColumns={
+              customColumnsEnabled ? (
+                <CustomColumnsFields
+                  defs={customColumnDefs}
+                  actions={customColumnActions}
+                />
+              ) : null
+            }
+          />
         }
         creatorsControl={<CreatorsControl creators={creators} />}
         activeControlCount={

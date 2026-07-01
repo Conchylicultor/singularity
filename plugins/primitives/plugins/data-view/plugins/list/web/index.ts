@@ -16,6 +16,9 @@ export default {
       order: 3,
       loadingVariant: "rows",
       component: ListView,
+      // Opts into flat manual-order (rank-based drag reorder); active only when
+      // the consumer supplies `manualOrder`.
+      supportsManualOrder: true,
     }),
   ],
 } satisfies PluginDefinition;

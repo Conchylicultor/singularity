@@ -2,17 +2,8 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { MdAdd } from "react-icons/md";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
-import {
-  DndContext,
-  DragOverlay,
-  MeasuringStrategy,
-  PointerSensor,
-  pointerWithin,
-  useSensor,
-  useSensors,
-  type DragEndEvent,
-  type DragStartEvent,
-} from "@dnd-kit/core";
+import { type DragEndEvent } from "@dnd-kit/core";
+import { RankReorderDndContext } from "@plugins/primitives/plugins/rank-reorder/web";
 import {
   buildTree,
   computeDrop,
@@ -26,7 +17,6 @@ import {
   MultiSelectProvider,
   SelectionBar,
 } from "@plugins/primitives/plugins/multi-select/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
@@ -234,25 +224,21 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     );
   }, [nodesWithChildren, allExpanded, wrappedOnToggleExpanded]);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+  // The DnD shell (DndContext, sensors, active-id lifecycle, DragOverlay chip,
+  // and the windowed measuring strategy) is lifted into `RankReorderDndContext`.
+  // The tree supplies only its drop *resolution* (onDragEnd, below — which keeps
+  // the `child`-zone reparent + isDescendant cycle guard) and the chip content.
+  const dragChip = useCallback(
+    (id: string) => {
+      const row = rows.find((r) => r.id === id);
+      if (!row) return null;
+      return dragOverlay ? dragOverlay(row) : "Item";
+    },
+    [rows, dragOverlay],
   );
-  const [activeId, setActiveId] = useState<string | null>(null);
-  const activeOverlay = useMemo(() => {
-    if (!activeId) return null;
-    const row = rows.find((r) => r.id === activeId);
-    if (!row) return null;
-    return dragOverlay ? dragOverlay(row) : "Item";
-  }, [activeId, rows, dragOverlay]);
-
-  const onDragStart = useCallback((event: DragStartEvent) => {
-    const id = event.active.data.current?.id as string | undefined;
-    setActiveId(id ?? null);
-  }, []);
 
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
-      setActiveId(null);
       if (!onMove) return;
       const { active, over } = event;
       if (!over) return;
@@ -306,7 +292,6 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     () => ({
       rows,
       selectedId,
-      activeId,
       pendingFocusId,
       clearPendingFocus,
       onSelect,
@@ -321,7 +306,6 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     [
       rows,
       selectedId,
-      activeId,
       pendingFocusId,
       clearPendingFocus,
       onSelect,
@@ -336,93 +320,80 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   );
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={pointerWithin}
-      // In windowed mode, rows mount/unmount as the user scrolls (incl. dnd-kit
-      // autoscroll dragging an off-screen target into view). `Always` re-measures
-      // droppables each frame so freshly-mounted rows become valid drop targets
-      // mid-drag, instead of being invisible to collision detection.
-      measuring={
-        windowed
-          ? { droppable: { strategy: MeasuringStrategy.Always } }
-          : undefined
-      }
-      onDragStart={onDragStart}
+    <RankReorderDndContext
       onDragEnd={onDragEnd}
-      onDragCancel={() => setActiveId(null)}
+      dragOverlay={dragChip}
+      // In windowed mode rows mount/unmount as the user scrolls; the shell's
+      // MeasuringStrategy.Always re-measures droppables each frame so freshly
+      // mounted rows become valid drop targets mid-drag.
+      measuringAlways={windowed}
     >
-      <TreeListProvider value={ctxValue}>
-        <MaybeMultiSelect multiSelect={multiSelect} orderedIds={orderedIds}>
-          <Stack gap="2xs">
-            {hasToolbar && (
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
-              <Sticky mask className="mb-1">
-                <Stack direction="row" gap="xs" align="center" justify="between">
-                  <Stack direction="row" gap="xs" align="center">
-                    {showSearchInput && (
-                      <SearchInput
-                        value={searchQuery}
-                        onChange={(e) => setSearchQuery(e.target.value)}
-                        onKeyDown={(e) => {
-                          if (e.key === "Escape") {
-                            setSearchQuery("");
-                            (e.target as HTMLInputElement).blur();
-                          }
-                        }}
-                        placeholder="Filter…"
-                        className="w-32"
-                      />
-                    )}
-                    {toolbar.start}
+      {(activeId) => (
+        <TreeListProvider value={ctxValue}>
+          <MaybeMultiSelect multiSelect={multiSelect} orderedIds={orderedIds}>
+            <Stack gap="2xs">
+              {hasToolbar && (
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
+                <Sticky mask className="mb-1">
+                  <Stack direction="row" gap="xs" align="center" justify="between">
+                    <Stack direction="row" gap="xs" align="center">
+                      {showSearchInput && (
+                        <SearchInput
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          onKeyDown={(e) => {
+                            if (e.key === "Escape") {
+                              setSearchQuery("");
+                              (e.target as HTMLInputElement).blur();
+                            }
+                          }}
+                          placeholder="Filter…"
+                          className="w-32"
+                        />
+                      )}
+                      {toolbar.start}
+                    </Stack>
+                    <Stack direction="row" gap="xs" align="center">
+                      {showExpandAll && (
+                        <ExpandAllButton allExpanded={allExpanded} onToggle={expandAll} />
+                      )}
+                    </Stack>
                   </Stack>
-                  <Stack direction="row" gap="xs" align="center">
-                    {showExpandAll && (
-                      <ExpandAllButton allExpanded={allExpanded} onToggle={expandAll} />
-                    )}
-                  </Stack>
-                </Stack>
-              </Sticky>
-            )}
-            {multiSelect && <SelectionBar actions={multiSelect.actions} />}
-            {windowed ? (
-              <VirtualRows
-                items={flatVisible}
-                estimateSize={ROW_ESTIMATE_PX}
-                getKey={(item) => item.node.id}
-                scrollToIndex={selectedIndex}
-                // Pin the drag source so it stays mounted when scrolled out of
-                // the window — otherwise its draggable unregisters mid-gesture
-                // and dnd-kit cancels the drop.
-                keepMounted={activeId ? [activeId] : undefined}
-              >
-                {(item) => <Row node={item.node} depth={item.depth} />}
-              </VirtualRows>
-            ) : (
-              visibleTree.map((node) => <Row key={node.id} node={node} depth={0} />)
-            )}
-            {showRootAdd && (
-              <Button
-                variant="ghost"
-                onClick={() => void createAtRoot(null)}
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the tree rows above (no named margin utility)
-                className="text-muted-foreground mt-1 w-fit"
-              >
-                <MdAdd className="size-4" />
-                {addLabel}
-              </Button>
-            )}
-          </Stack>
-        </MaybeMultiSelect>
-      </TreeListProvider>
-      <DragOverlay dropAnimation={null}>
-        {activeOverlay !== null ? (
-          <Text as="div" variant="body" className="bg-background/90 border-accent rounded-md border px-sm py-xs shadow">
-            {activeOverlay}
-          </Text>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+                </Sticky>
+              )}
+              {multiSelect && <SelectionBar actions={multiSelect.actions} />}
+              {windowed ? (
+                <VirtualRows
+                  items={flatVisible}
+                  estimateSize={ROW_ESTIMATE_PX}
+                  getKey={(item) => item.node.id}
+                  scrollToIndex={selectedIndex}
+                  // Pin the drag source so it stays mounted when scrolled out of
+                  // the window — otherwise its draggable unregisters mid-gesture
+                  // and dnd-kit cancels the drop.
+                  keepMounted={activeId ? [activeId] : undefined}
+                >
+                  {(item) => <Row node={item.node} depth={item.depth} />}
+                </VirtualRows>
+              ) : (
+                visibleTree.map((node) => <Row key={node.id} node={node} depth={0} />)
+              )}
+              {showRootAdd && (
+                <Button
+                  variant="ghost"
+                  onClick={() => void createAtRoot(null)}
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the tree rows above (no named margin utility)
+                  className="text-muted-foreground mt-1 w-fit"
+                >
+                  <MdAdd className="size-4" />
+                  {addLabel}
+                </Button>
+              )}
+            </Stack>
+          </MaybeMultiSelect>
+        </TreeListProvider>
+      )}
+    </RankReorderDndContext>
   );
 }
 

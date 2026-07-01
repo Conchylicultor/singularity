@@ -7,7 +7,10 @@ export {
   useSetCustomColumnValue,
 } from "./internal/use-custom-column-values";
 export type { CustomColumnValueIndex } from "./internal/use-custom-column-values";
-export { DataViewSettingsButton } from "./components/data-view-settings-button";
+export {
+  DataViewSettingsButton,
+  CustomColumnsFields,
+} from "./components/data-view-settings-button";
 
 export default {
   description:

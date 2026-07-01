@@ -24,7 +24,7 @@ config descriptor down into `useCustomColumnDefs(descriptor)`.
 - Description: User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
 - Web:
   - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `infra/endpoints.useEndpointMutation`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`
-  - Exports: Types: `CustomColumnDefsController`, `CustomColumnValueIndex`; Values: `DataViewSettingsButton`, `useCustomColumnDefs`, `useCustomColumnValues`, `useSetCustomColumnValue`
+  - Exports: Types: `CustomColumnDefsController`, `CustomColumnValueIndex`; Values: `CustomColumnsFields`, `DataViewSettingsButton`, `useCustomColumnDefs`, `useCustomColumnValues`, `useSetCustomColumnValue`
 - Server:
   - Uses: `database.db`, `infra/endpoints.implement`
   - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/server/internal/tables.ts`

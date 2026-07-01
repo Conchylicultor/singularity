@@ -20,6 +20,8 @@ export default {
       // (and suspends DnD while active). Sort applies per-sibling, preserving
       // hierarchy.
       supportsSort: true,
+      // The tree partitions by hierarchy, not by a flat group-by field.
+      supportsGroupBy: false,
       loadingVariant: "rows",
       component: TreeView,
     }),

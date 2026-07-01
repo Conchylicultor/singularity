@@ -143,6 +143,76 @@ except the two accessors, so a read-only nav tree supplies just those two. The
 hierarchy concern — declare `FieldDef.onEdit` on the primary field and the tree
 renders an inline editor (the same `onEdit` contract the table/gallery/list use).
 
+## Manual order (`manualOrder`)
+
+Pass `manualOrder?: ManualOrderConfig<TRow>` to `<DataView>` to enable flat
+rank-based drag reordering — the flat twin of the tree-only `HierarchyConfig`:
+
+```ts
+interface ManualOrderConfig<TRow> {
+  getRank: (row: TRow) => Rank;
+  onMove: (id: string, dest: { rank: Rank; groupKey?: string | null }) => void | Promise<void>;
+}
+```
+
+It activates only on views that opt in via `supportsManualOrder` (the **list**
+and **table** views; gallery/tree do not). When active for the displayed view:
+
+- the section pipeline **skips the field sort** and orders each section's entries
+  by `getRank` (search/filter still run) — like the tree ignores `ViewState.sort`;
+- the host **hides the Sort control** for that view;
+- rows render with rank-reorder drag affordances via the **`rank-reorder`**
+  primitive (`RankReorderProvider` + `useRankReorderItem`), the same DnD machinery
+  the tree's sibling zones use — one reorder model, not two;
+- reordering is **within a section**; a cross-section drag reports the destination
+  section via `onMove`'s `dest.groupKey` (the consumer maps the new group to its
+  own field mutation — the primitive carries no field/status knowledge);
+- the view renders **non-virtualized** within each section (drag + windowing
+  across huge lists is out of scope — manual order targets bounded lists).
+
+The table integration uses `DataTable`'s additive `useRowDecoration` per-row hook
+seam (drag source ref + props + in-row drop indicators); virtualization is
+disabled whenever that seam is supplied.
+
+## Aggregating sections (`aggregate`)
+
+Pass `aggregate?: DataViewAggregateConfig<TRow>` to `<DataView>` to collapse rows
+sharing a key into a single **representative row + count badge**:
+
+```ts
+interface DataViewAggregateConfig<TRow> {
+  getKey: (row: TRow) => string | null;            // null = standalone, never collapsed
+  pickRepresentative?: (members: readonly TRow[]) => TRow;  // default: first in current order
+}
+```
+
+It is a **pure pipeline transform**, orthogonal to the `supports*` flags — the
+host threads it to every flat view (`list`/`table`/`gallery`), each of which runs
+it through `useDataViewSections`. The aggregate step runs **after** group-by and
+**after** the manual-order rank sort, **within each section**:
+
+- entries sharing a non-null `getKey` collapse into ONE `DataViewRowEntry` with
+  `row = pickRepresentative(members)` (default: the first member in current
+  order), `aggregateCount = members.length`, and `members` = every collapsed row;
+- the representative entry keeps the **position and `key` of the first member**
+  (the entry stands for the group, not a single row);
+- `getKey` returning **`null`** passes the row through 1:1 (no `aggregateCount`);
+- `section.count` stays the **pre-collapse** member count.
+
+Each view renders the representative normally and, when `entry.aggregateCount > 1`,
+a `×N` `Badge` (`css/badge`) in its natural trailing spot — list **trailing**,
+table **in the primary cell** (keyed by row identity, since the cell renderer
+gets no index), gallery **top-left card corner** (a `Pin`, clear of the
+hover-revealed top-right actions).
+
+**"Acting on the representative acts on the group" is the consumer's concern.**
+The representative is a real `TRow`, so `onRowActivate`, `itemActions`, and
+`manualOrder.onMove` already fire on it; mapping that to a group mutation (e.g.
+reseating every member) is the consumer's job. The primitive owns only the visual
+collapse + representative selection + count badge. Composes with `manualOrder`:
+dragging a representative moves the whole group via the consumer's reseat — no new
+flag, aggregate is just a pipeline transform.
+
 ## Create affordances (`creators`)
 
 Pass `creators?: CreateOption[]` to `<DataView>` to declare typed "make a new
@@ -432,16 +502,16 @@ and `research/2026-06-18-tree-view-virtualization.md`).
 
 - Description: Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
 - Web:
-  - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
-  - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`
-  - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/fill.Fill`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/selection-indicator.CheckboxIndicator`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/surface.Surface`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/cursor-pagination.ScrollSentinel`, `primitives/data-view/custom-columns.DataViewSettingsButton`, `primitives/data-view/custom-columns.useCustomColumnDefs`, `primitives/data-view/custom-columns.useCustomColumnValues`, `primitives/data-view/custom-columns.useSetCustomColumnValue`, `primitives/data-view/view-core.buildViewConfigContributions`, `primitives/data-view/view-core.buildViewDescriptors`, `primitives/data-view/view-core.EditableViewSwitcher`, `primitives/data-view/view-core.useViewModel`, `primitives/data-view/view-core.useViewVariants`, `primitives/element-size.useElementSize`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
-  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `FieldCellProps`, `FieldDef`, `FieldExtensionContribution`, `FieldExtensionProps`, `FieldExtensions`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `ServerDataSourceResult`, `ServerDataSourceSpec`, `ServerPage`, `SortController`, `SortPreset`, `SortRule`, `TableCellProps`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DataView`, `DataViewSlots`, `defineDataView`, `defineFieldExtensions`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `isFilterGroup`, `makeSortComparator`, `pickPrimaryField`, `resolveBodyFields`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`, `useServerDataSource`, `useSortController`
+  - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Setting` ← `primitives.data-view`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
+  - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
+  - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/fill.Fill`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/selection-indicator.CheckboxIndicator`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/surface.Surface`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/cursor-pagination.ScrollSentinel`, `primitives/data-view/custom-columns.CustomColumnsFields`, `primitives/data-view/custom-columns.useCustomColumnDefs`, `primitives/data-view/custom-columns.useCustomColumnValues`, `primitives/data-view/custom-columns.useSetCustomColumnValue`, `primitives/data-view/view-core.buildViewConfigContributions`, `primitives/data-view/view-core.buildViewDescriptors`, `primitives/data-view/view-core.EditableViewSwitcher`, `primitives/data-view/view-core.useViewModel`, `primitives/data-view/view-core.useViewVariants`, `primitives/element-size.useElementSize`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewAggregateConfig`, `DataViewContribution`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `DataViewRowEntry`, `DataViewSection`, `DataViewSettingContribution`, `FieldCellProps`, `FieldDef`, `FieldExtensionContribution`, `FieldExtensionProps`, `FieldExtensions`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `GroupByController`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `ManualOrderConfig`, `SelectionConfig`, `ServerDataSourceResult`, `ServerDataSourceSpec`, `ServerPage`, `SortController`, `SortPreset`, `SortRule`, `TableCellProps`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DataView`, `DataViewSlots`, `defineDataView`, `defineFieldExtensions`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `isFilterGroup`, `isGroupableField`, `makeSortComparator`, `partitionIntoSections`, `pickPrimaryField`, `resolveBodyFields`, `useDataViewSections`, `useFilterController`, `useFlatRows`, `useGroupByController`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`, `useServerDataSource`, `useSortController`
 - Server:
   - Uses: `primitives/data-view/view-core.buildViewConfigRegistrations`
 - Cross-plugin:
   - Imported by: `apps/deploy/servers`, `apps/home/app-cards`, `apps/pages/page-tree`, `apps/prototypes/gallery`, `apps/sonata/library`, `apps/story/shell`, `apps/studio/explorer`, `apps/workflows/definitions`, `apps/workflows/executions`, `code-explorer`, `config_v2/settings`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversations-view/data-view`, `debug/profiling/runtime`, `debug/reports`, `debug/slow-ops/cluster`, `debug/slow-ops/pane`, `fields/bool/filter`, `fields/bool/inline`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/inline`, `fields/date/table`, `fields/enum/filter`, `fields/enum/inline`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/inline`, `fields/number/table`, `fields/tags/filter`, `fields/tags/inline`, `fields/tags/table`, `fields/text/filter`, `fields/text/inline`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/data-view/table`, `primitives/data-view/tree`, `tasks/task-list`, `ui/tweakcn/community-browser`
 - Core:
-  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldExtensionProps`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `ServerDataSourceSpec`, `ServerPage`, `SortPreset`, `SortRule`, `TableCellProps`, `ViewState`; Values: `defineDataView`, `FilterGroupSchema`, `FilterNodeSchema`, `FilterRuleSchema`
+  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewAggregateConfig`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `DataViewRowEntry`, `DataViewSection`, `FieldDef`, `FieldExtensionProps`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `ManualOrderConfig`, `SelectionConfig`, `ServerDataSourceSpec`, `ServerPage`, `SortPreset`, `SortRule`, `TableCellProps`, `ViewState`; Values: `defineDataView`, `FilterGroupSchema`, `FilterNodeSchema`, `FilterRuleSchema`
 - Sub-plugins:
   - **`custom-columns`** — User-defined custom columns for any DataView: the config-backed definition controller, the per-row values live hook + upsert mutation, and the toolbar settings (Fields) button. Persists per-row custom-column values keyed by (dataViewId, rowKey, columnId): a generic DB table, a push live resource, and an upsert/delete-on-empty endpoint.
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.

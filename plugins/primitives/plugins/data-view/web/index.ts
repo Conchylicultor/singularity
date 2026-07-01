@@ -1,11 +1,16 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { dataViewConfigContributions } from "./internal/config-registrations";
+import { DataViewSlots } from "./slots";
+import { GroupByControl } from "./components/settings/group-by-control";
 
 export { DataView } from "./components/data-view";
 export { defineDataView } from "../core";
 export type { DataViewId } from "../core";
 export { DataViewSlots } from "./slots";
-export type { DataViewContribution } from "./slots";
+export type {
+  DataViewContribution,
+  DataViewSettingContribution,
+} from "./slots";
 export { useResolveCell } from "./cell-slot";
 export { useResolveCellEditor } from "./cell-editor-slot";
 export { useResolveOperatorSet } from "./filter-slot";
@@ -16,6 +21,13 @@ export { FilterValueInput } from "./components/filter/filter-value-input";
 export { ChipSelectFilterInput } from "./components/filter/chip-select-filter-input";
 export { useFlatRows } from "./internal/use-flat-rows";
 export { makeSortComparator } from "./internal/sort-rows";
+export {
+  useDataViewSections,
+  partitionIntoSections,
+  isGroupableField,
+} from "./internal/use-data-view-sections";
+export { useGroupByController } from "./internal/use-group-by-controller";
+export type { GroupByController } from "./internal/use-group-by-controller";
 export { useServerDataSource } from "./internal/use-server-data-source";
 export type { ServerDataSourceResult } from "./internal/use-server-data-source";
 export { evaluateNode, applyFilter } from "./internal/evaluate-filter";
@@ -43,10 +55,14 @@ export type {
   HierarchyConfig,
   SelectionConfig,
   CreateOption,
+  ManualOrderConfig,
   SortRule,
   SortPreset,
   FilterPreset,
   ViewState,
+  DataViewSection,
+  DataViewRowEntry,
+  DataViewAggregateConfig,
   DataViewRenderProps,
   DataViewProps,
   TableCellProps,
@@ -73,5 +89,15 @@ export default {
   // `defineDataView(...)` markers into data-views.generated.ts), all registered
   // under the `primitives.data-view` plugin. Mirrors reorder's central
   // per-slot registration — no per-consumer barrel boilerplate.
-  contributions: [...dataViewConfigContributions],
+  contributions: [
+    ...dataViewConfigContributions,
+    // Group-by is the first DataView settings contribution (view scope). It
+    // reads groupable fields + active groupBy from DataViewSettingsContext.
+    DataViewSlots.Setting({
+      id: "data-view.group-by",
+      scope: "view",
+      order: 0,
+      component: GroupByControl,
+    }),
+  ],
 } satisfies PluginDefinition;

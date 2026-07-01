@@ -1,4 +1,4 @@
-import { Rank } from "@plugins/primitives/plugins/rank/core";
+import { Rank, computeFlatReorder } from "@plugins/primitives/plugins/rank/core";
 
 export type DropZone = "before" | "after" | "child";
 
@@ -116,29 +116,11 @@ export function computeDrop<T extends Node>(
     }
   }
 
-  const siblings = rows
-    .filter((r) => r.parentId === target.parentId && r.id !== draggedId)
-    .sort((a, b) => Rank.compare(a.rank, b.rank));
-  const idx = siblings.findIndex((s) => s.id === target.id);
-  if (idx === -1) return null;
-
-  try {
-    if (zone === "before") {
-      const prev = siblings[idx - 1];
-      return {
-        parentId: target.parentId,
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-        rank: Rank.between(prev?.rank ?? null, target.rank),
-      };
-    }
-    const next = siblings[idx + 1];
-    return {
-      parentId: target.parentId,
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-      rank: Rank.between(target.rank, next?.rank ?? null),
-    };
-  // eslint-disable-next-line promise-safety/no-bare-catch -- Rank.between throws a plain Error on rank exhaustion/corruption; returning null aborts the DnD drop, which is the correct signal for an impossible drop position
-  } catch {
-    return null;
-  }
+  // before/after sibling reorder: delegate the rank arithmetic to the shared
+  // flat-reorder primitive (tree keeps only the `child`-zone/`parentId` logic
+  // above). `computeFlatReorder` excludes the dragged id from its own
+  // neighborhood and returns null on an unknown target or rank exhaustion.
+  const siblings = rows.filter((r) => r.parentId === target.parentId);
+  const rank = computeFlatReorder(siblings, draggedId, zone, target.id);
+  return rank === null ? null : { parentId: target.parentId, rank };
 }

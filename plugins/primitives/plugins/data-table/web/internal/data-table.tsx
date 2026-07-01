@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { Fragment, type ReactNode } from "react";
 import {
   cn,
   ControlSizeProvider,
@@ -16,8 +16,17 @@ import {
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import type { ColumnDef, DataTableProps } from "./types";
+import type {
+  ColumnDef,
+  DataTableGroup,
+  DataTableProps,
+  DataTableRowDecoration,
+} from "./types";
 import { useDataTable } from "./use-data-table";
+
+/** No-op decoration hook so `DataTableRow` always calls a hook unconditionally
+ *  (rules-of-hooks), whether or not the consumer supplied `useRowDecoration`. */
+const noRowDecoration = (): DataTableRowDecoration | undefined => undefined;
 
 /** Above this row count the table windows its rows via the shared virtualizer
  *  (keeps the subgrid + sticky header; only the visible slice is in the DOM).
@@ -31,6 +40,7 @@ const ROW_ESTIMATE = 36;
 export function DataTable<TRow>({
   data,
   columns,
+  groups,
   filter,
   rowKey,
   emptyLabel = "No results found",
@@ -39,6 +49,7 @@ export function DataTable<TRow>({
   onRowClick,
   rowActions,
   selectedRowId,
+  useRowDecoration,
   controlSize = "xs",
 }: DataTableProps<TRow>) {
   const { rows, sortState, toggleSort } = useDataTable(
@@ -49,7 +60,13 @@ export function DataTable<TRow>({
     onToggleSort,
   );
 
-  if (rows.length === 0) {
+  // In grouped mode the body rows come from each group (pre-sorted by the host
+  // pipeline), not `data`; count them for the empty check.
+  const bodyRowCount = groups
+    ? groups.reduce((n, g) => n + g.rows.length, 0)
+    : rows.length;
+
+  if (bodyRowCount === 0) {
     return (
       <ControlSizeProvider size={controlSize}>
         <Center axis="both" className="h-32">
@@ -72,63 +89,27 @@ export function DataTable<TRow>({
 
   // Shared row renderer so the plain branch and the windowed branch render
   // identical rows. The optional `measure` handle is supplied only by the
-  // virtualized branch (tanstack's measureElement reads the data-index).
+  // virtualized branch (tanstack's measureElement reads the data-index). Routed
+  // through `DataTableRow` (a component) so per-row decoration may call hooks.
+  const decorate = useRowDecoration ?? noRowDecoration;
   const renderRow = (
     row: TRow,
     i: number,
     measure?: { ref: (el: Element | null) => void; index: number },
-  ) => {
-    const key = rowKey(row, i);
-    return (
-      <div
-        key={key}
-        ref={measure?.ref}
-        data-index={measure?.index}
-        // eslint-disable-next-line layout/no-adhoc-layout -- CSS subgrid row inheriting the outer grid's column tracks (no Frame/Grid equivalent for subgrid)
-        className={cn(
-          "group/dt-row col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-caption hover:bg-accent/30",
-          hoverRevealGroup,
-          key === selectedRowId && "bg-accent",
-          onRowClick && "cursor-pointer",
-        )}
-        onClick={onRowClick ? () => onRowClick(row) : undefined}
-        role={onRowClick ? "button" : undefined}
-        tabIndex={onRowClick ? 0 : undefined}
-        onKeyDown={
-          onRowClick
-            ? (e) => {
-                if (e.key === "Enter" || e.key === " ") {
-                  e.preventDefault();
-                  onRowClick(row);
-                }
-              }
-            : undefined
-        }
-      >
-        {columns.map((col) => (
-          <Text as="div" key={col.id} className={alignClass(col.align)}>
-            {col.cell
-              ? col.cell(row)
-              : col.value
-                ? String(col.value(row) ?? "")
-                : null}
-          </Text>
-        ))}
-        {rowActions && (
-          <Stack
-            direction="row"
-            align="center"
-            justify="end"
-            gap="xs"
-            className={hoverRevealTarget}
-            onClick={(e) => e.stopPropagation()}
-          >
-            {rowActions(row, i)}
-          </Stack>
-        )}
-      </div>
-    );
-  };
+  ) => (
+    <DataTableRow
+      key={rowKey(row, i)}
+      row={row}
+      index={i}
+      columns={columns}
+      rowKey={rowKey}
+      selectedRowId={selectedRowId}
+      onRowClick={onRowClick}
+      rowActions={rowActions}
+      useRowDecoration={decorate}
+      measure={measure}
+    />
+  );
 
   return (
     <ControlSizeProvider size={controlSize}>
@@ -158,18 +139,113 @@ export function DataTable<TRow>({
         })}
         {rowActions && <span aria-hidden />}
       </div>
-      {rows.length > VIRTUALIZE_THRESHOLD ? (
-        <VirtualTableBody
-          rows={rows}
-          rowKey={rowKey}
-          selectedRowId={selectedRowId}
-          renderRow={renderRow}
-        />
-      ) : (
-        rows.map((row, i) => renderRow(row, i))
-      )}
+      {groups
+        ? renderGroupedBody(groups, renderRow)
+        : !useRowDecoration && rows.length > VIRTUALIZE_THRESHOLD ? (
+            <VirtualTableBody
+              rows={rows}
+              rowKey={rowKey}
+              selectedRowId={selectedRowId}
+              renderRow={renderRow}
+            />
+          ) : (
+            rows.map((row, i) => renderRow(row, i))
+          )}
       </div>
     </ControlSizeProvider>
+  );
+}
+
+/**
+ * One table row. A component (not an inline closure) so `useRowDecoration` may be
+ * called as a hook per row (e.g. `useRankReorderItem` for drag reorder). The
+ * decoration adds a drag-source ref, spreads drag props, extra classes, and an
+ * in-row overlay (drop indicators). Markup is byte-for-byte the legacy row when
+ * no decoration is returned.
+ */
+function DataTableRow<TRow>({
+  row,
+  index,
+  columns,
+  rowKey,
+  selectedRowId,
+  onRowClick,
+  rowActions,
+  useRowDecoration,
+  measure,
+}: {
+  row: TRow;
+  index: number;
+  columns: ColumnDef<TRow>[];
+  rowKey: (row: TRow, index: number) => string;
+  selectedRowId: string | undefined;
+  onRowClick: ((row: TRow) => void) | undefined;
+  rowActions: ((row: TRow, index: number) => ReactNode) | undefined;
+  useRowDecoration: (row: TRow, index: number) => DataTableRowDecoration | undefined;
+  measure?: { ref: (el: Element | null) => void; index: number };
+}): ReactNode {
+  const decoration = useRowDecoration(row, index);
+  const key = rowKey(row, index);
+  // Destructure-and-rename so render never does inline `decoration.ref` member
+  // access on the hook output (react-hooks/refs flags member access on a ref
+  // value in render; destructuring is fine — mirrors the tree's RowChrome).
+  const decorationRef = decoration?.ref;
+  const decorationProps = decoration?.props;
+  const decorationClassName = decoration?.className;
+  const decorationOverlay = decoration?.overlay;
+  return (
+    <div
+      // decoration (drag source) and measure (windowing) are mutually exclusive
+      // — decoration disables virtualization — so a single ref suffices.
+      ref={decorationRef ?? measure?.ref}
+      data-index={measure?.index}
+      // eslint-disable-next-line layout/no-adhoc-layout -- CSS subgrid row inheriting the outer grid's column tracks (no Frame/Grid equivalent for subgrid); `relative` hosts the decoration overlay
+      className={cn(
+        "group/dt-row col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-caption hover:bg-accent/30",
+        hoverRevealGroup,
+        key === selectedRowId && "bg-accent",
+        onRowClick && "cursor-pointer",
+        decoration && "relative",
+        decorationClassName,
+      )}
+      onClick={onRowClick ? () => onRowClick(row) : undefined}
+      role={onRowClick ? "button" : undefined}
+      tabIndex={onRowClick ? 0 : undefined}
+      onKeyDown={
+        onRowClick
+          ? (e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                onRowClick(row);
+              }
+            }
+          : undefined
+      }
+      {...decorationProps}
+    >
+      {columns.map((col) => (
+        <Text as="div" key={col.id} className={alignClass(col.align)}>
+          {col.cell
+            ? col.cell(row)
+            : col.value
+              ? String(col.value(row) ?? "")
+              : null}
+        </Text>
+      ))}
+      {rowActions && (
+        <Stack
+          direction="row"
+          align="center"
+          justify="end"
+          gap="xs"
+          className={hoverRevealTarget}
+          onClick={(e) => e.stopPropagation()}
+        >
+          {rowActions(row, index)}
+        </Stack>
+      )}
+      {decorationOverlay}
+    </div>
   );
 }
 
@@ -246,6 +322,26 @@ function VirtualTableBody<TRow>({
       )}
     </>
   );
+}
+
+/**
+ * Grouped (non-virtualized) body: a caller-built full-span header per group,
+ * then the group's rows when not collapsed — all inside the single subgrid so
+ * columns stay aligned across groups. The row index counter is global so
+ * `rowKey(row, i)` stays stable/unique across groups.
+ */
+function renderGroupedBody<TRow>(
+  groups: DataTableGroup<TRow>[],
+  renderRow: (row: TRow, i: number) => ReactNode,
+): ReactNode {
+  let i = 0;
+  return groups.map((group) => (
+    <Fragment key={group.key}>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- full-span group-header row spanning the subgrid table's column tracks */}
+      <div className="col-span-full">{group.header}</div>
+      {group.collapsed ? null : group.rows.map((row) => renderRow(row, i++))}
+    </Fragment>
+  ));
 }
 
 function alignClass(align: ColumnDef<unknown>["align"]): string | undefined {

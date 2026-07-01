@@ -59,16 +59,15 @@ function FieldRow(props: {
 }
 
 /**
- * DataView Settings button — a gear `IconButton` (separate from the
- * per-view-instance switcher settings) opening a popover with a **Fields**
- * section to add / rename / delete user-defined custom columns. Text-only in v1.
+ * Content-only **Fields** section: the add / rename / delete custom-columns UI
+ * WITHOUT a popover wrapper, so it can be rendered inside the data-view host's
+ * unified settings menu (the global scope). Text-only in v1.
  */
-export function DataViewSettingsButton(props: {
+export function CustomColumnsFields(props: {
   defs: CustomColumnDef[];
   actions: Omit<CustomColumnDefsController, "defs">;
 }): ReactNode {
   const { defs, actions } = props;
-  const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState("");
 
   const addColumn = () => {
@@ -79,53 +78,66 @@ export function DataViewSettingsButton(props: {
   };
 
   return (
+    <Stack gap="sm">
+      <SectionLabel>Fields</SectionLabel>
+      {defs.map((def) => (
+        <FieldRow
+          key={def.id}
+          def={def}
+          onRename={actions.renameColumn}
+          onDelete={actions.deleteColumn}
+        />
+      ))}
+      {/* add-column row: name input + Add button (Enter submits, empty disables) */}
+      {/* eslint-disable-next-line layout/no-adhoc-layout */}
+      <div className="flex items-center gap-sm">
+        <Input
+          value={draft}
+          placeholder="Add column…"
+          aria-label="New column name"
+          onChange={(e) => setDraft(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === "Enter") {
+              e.preventDefault();
+              addColumn();
+            }
+          }}
+        />
+        <Button
+          variant="secondary"
+          disabled={draft.trim() === ""}
+          onClick={addColumn}
+        >
+          <MdAdd />
+          Add
+        </Button>
+      </div>
+    </Stack>
+  );
+}
+
+/**
+ * DataView Settings button — a gear `IconButton` opening a popover hosting the
+ * `CustomColumnsFields` section. Retained for standalone use; the data-view host
+ * now renders `CustomColumnsFields` inside its own unified settings menu instead.
+ */
+export function DataViewSettingsButton(props: {
+  defs: CustomColumnDef[];
+  actions: Omit<CustomColumnDefsController, "defs">;
+}): ReactNode {
+  const [open, setOpen] = useState(false);
+
+  return (
     <InlinePopover
       open={open}
-      onOpenChange={(next) => {
-        setOpen(next);
-        if (!next) setDraft("");
-      }}
+      onOpenChange={setOpen}
       align="end"
       width="md"
       trigger={
         <IconButton icon={MdTune} label="Data view settings" variant="ghost" />
       }
     >
-      <Stack gap="sm">
-        <SectionLabel>Fields</SectionLabel>
-        {defs.map((def) => (
-          <FieldRow
-            key={def.id}
-            def={def}
-            onRename={actions.renameColumn}
-            onDelete={actions.deleteColumn}
-          />
-        ))}
-        {/* add-column row: name input + Add button (Enter submits, empty disables) */}
-        {/* eslint-disable-next-line layout/no-adhoc-layout */}
-        <div className="flex items-center gap-sm">
-          <Input
-            value={draft}
-            placeholder="Add column…"
-            aria-label="New column name"
-            onChange={(e) => setDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                addColumn();
-              }
-            }}
-          />
-          <Button
-            variant="secondary"
-            disabled={draft.trim() === ""}
-            onClick={addColumn}
-          >
-            <MdAdd />
-            Add
-          </Button>
-        </div>
-      </Stack>
+      <CustomColumnsFields defs={props.defs} actions={props.actions} />
     </InlinePopover>
   );
 }

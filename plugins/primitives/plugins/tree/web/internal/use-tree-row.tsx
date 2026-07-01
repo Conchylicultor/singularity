@@ -3,16 +3,15 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useMemo,
   useRef,
   type ReactNode,
 } from "react";
 import {
-  useDraggable,
   useDroppable,
   type DraggableAttributes,
   type DraggableSyntheticListeners,
 } from "@dnd-kit/core";
+import { useRankReorderItem } from "@plugins/primitives/plugins/rank-reorder/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { TreeNode } from "../../core";
 import { pendingFocus } from "./pending-focus";
@@ -21,7 +20,6 @@ import type { TreeItem } from "./types";
 export type TreeListContextValue<T extends TreeItem> = {
   rows: readonly T[];
   selectedId: string | undefined;
-  activeId: string | null;
   pendingFocusId: string | null;
   clearPendingFocus: () => void;
   onSelect: (id: string) => void;
@@ -106,25 +104,20 @@ export function useTreeRow<T extends TreeItem>(
   const isOpen = node.expanded;
   const hasChildren = node.children.length > 0;
   const isSelected = ctx.selectedId === node.id;
-  const isDragging = ctx.activeId === node.id;
   const shouldAutoFocus = ctx.pendingFocusId === node.id;
 
+  // The drag source + before/after sibling zones come from the shared
+  // rank-reorder primitive (same `{ id, rank }` / `{ zone, targetId }` data
+  // contract the tree's onDragEnd reads). The `child` (reparent) zone stays
+  // tree-local — only the tree has a hierarchy to nest into.
   const {
-    attributes,
-    listeners,
-    setNodeRef: setDragRef,
-  } = useDraggable({
-    id: `drag:${node.id}`,
-    data: { id: node.id, parentId: node.parentId, rank: node.rank },
-  });
-  const { isOver: isOverBefore, setNodeRef: setBeforeRef } = useDroppable({
-    id: `before:${node.id}`,
-    data: { zone: "before" as const, targetId: node.id },
-  });
-  const { isOver: isOverAfter, setNodeRef: setAfterRef } = useDroppable({
-    id: `after:${node.id}`,
-    data: { zone: "after" as const, targetId: node.id },
-  });
+    dragSource,
+    isDragging,
+    beforeRef: setBeforeRef,
+    afterRef: setAfterRef,
+    isOverBefore,
+    isOverAfter,
+  } = useRankReorderItem(node.id, node.rank);
   const { isOver: isOverChild, setNodeRef: setChildRef } = useDroppable({
     id: `child:${node.id}`,
     data: { zone: "child" as const, targetId: node.id },
@@ -184,11 +177,6 @@ export function useTreeRow<T extends TreeItem>(
     pendingFocus.set(id);
     ctx.onSelect(id);
   }, [ctx, node.id, node.parentId, node.rank]);
-
-  const dragSource = useMemo(
-    () => ({ ref: setDragRef, attributes, listeners }),
-    [setDragRef, attributes, listeners],
-  );
 
   return {
     isSelected,

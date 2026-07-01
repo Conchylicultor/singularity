@@ -42,8 +42,14 @@ export interface ViewModel {
   /** Replace the per-view visible-fields policy for THIS view (null = show-all). */
   setVisibleFields: (id: string, ids: string[] | null) => void;
   setFilter: (id: string, filter: FilterGroup | null) => void;
+  /** Set (or clear with `null`) THIS view's group-by field. */
+  setGroupBy: (id: string, fieldId: string | null) => void;
   setQuery: (id: string, q: string) => void;
   setExpanded: (id: string, k: string, v: boolean) => void;
+  /** Device-local collapsed group-by section keys for THIS view. */
+  collapsedSectionsFor: (id: string) => ReadonlySet<string>;
+  /** Collapse/expand a group-by section for THIS view (device-local). */
+  setSectionCollapsed: (id: string, key: string, collapsed: boolean) => void;
   /** Instance actions for the editable switcher (always present). */
   actions: ViewActions;
 }
@@ -74,6 +80,10 @@ function readVisibleFields(view: VariantValue | undefined): string[] | null {
   return Array.isArray(view?.visibleFields)
     ? (view.visibleFields as string[])
     : null;
+}
+function readGroupBy(view: VariantValue | undefined): string | undefined {
+  const raw = view?.groupBy;
+  return typeof raw === "string" && raw.length > 0 ? raw : undefined;
 }
 
 /**
@@ -155,6 +165,21 @@ export function useDataViewModel(
     [core],
   );
 
+  const setGroupBy = useCallback(
+    (id: string, fieldId: string | null) => {
+      core.updateView(id, { groupBy: fieldId ?? undefined } as unknown as VariantValue, {
+        merge: true,
+      });
+    },
+    [core],
+  );
+
+  const collapsedSectionsFor = useCallback(
+    (id: string): ReadonlySet<string> =>
+      new Set(ephemeral.localFor(id).collapsedSections),
+    [ephemeral],
+  );
+
   const stateFor = useCallback(
     (id: string): ViewState => {
       const local = ephemeral.localFor(id);
@@ -162,11 +187,12 @@ export function useDataViewModel(
         sort: sortFor(id),
         filter: filterFor(id),
         visibleFields: readVisibleFields(core.viewFor(id)),
+        groupBy: readGroupBy(core.viewFor(id)),
         query: local.query,
         expanded: local.expanded,
       };
     },
-    [ephemeral, sortFor, filterFor, core],
+    [core, ephemeral, sortFor, filterFor],
   );
 
   const actions = useMemo<ViewActions>(
@@ -192,8 +218,11 @@ export function useDataViewModel(
       setSortRules,
       setVisibleFields,
       setFilter,
+      setGroupBy,
       setQuery: ephemeral.setQuery,
       setExpanded: ephemeral.setExpanded,
+      collapsedSectionsFor,
+      setSectionCollapsed: ephemeral.setSectionCollapsed,
       actions,
     }),
     [
@@ -203,6 +232,8 @@ export function useDataViewModel(
       setSortRules,
       setVisibleFields,
       setFilter,
+      setGroupBy,
+      collapsedSectionsFor,
       ephemeral,
       actions,
     ],

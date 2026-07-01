@@ -6,16 +6,24 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
+import {
+  Collapsible,
+  CollapsibleContent,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import {
   FieldCell,
   pickPrimaryField,
   resolveBodyFields,
-  useFlatRows,
+  useDataViewSections,
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
   type CreateOption,
+  type DataViewAggregateConfig,
   type DataViewRenderProps,
   type FieldDef,
   type ItemActionsDescriptor,
@@ -26,16 +34,13 @@ import { useGridColumns } from "./use-grid-columns";
 
 /** Above this card count the gallery windows its grid (lane-aware: each windowed
  *  row holds one measured row of `columns` cards). Smaller galleries keep the
- *  plain auto-fill `.map` — no probe / observer / absolute-positioning overhead,
- *  byte-for-byte the legacy markup. Cards carry far more DOM than a list row, so
- *  the threshold sits below the list view's 100. */
+ *  plain auto-fill `.map`. */
 const VIRTUALIZE_THRESHOLD = 60;
 
-/** One grid cell: a data row or the trailing dashed "+" create card. Modelling
- *  the create card as a cell keeps it in grid flow AND inside the windowed
- *  stream (rather than a special trailing element outside virtualization). */
+/** One grid cell: a data row (carrying its precomputed key) or the trailing
+ *  dashed "+" create card. */
 type GalleryCell =
-  | { kind: "row"; row: unknown; index: number }
+  | { kind: "row"; row: unknown; key: string; aggregateCount?: number }
   | { kind: "create" };
 
 /** Split a flat list into rows of `size` (the lane count). */
@@ -109,24 +114,28 @@ function renderMedia<TRow>(
 }
 
 /**
- * Gallery view: a responsive card grid. Renders the consumer's custom card via
- * `options.renderCard` (the custom card owns its own click handling), or a
- * field-driven default `<DataCard>` wired to `onRowActivate`.
+ * Gallery view: a responsive card grid. Renders against `useDataViewSections`:
+ * ungrouped → the legacy single grid (byte-for-byte); grouped → one collapsible
+ * grid per section. Windowing still applies WITHIN a section's cells.
  *
- * The host passes RAW rows; this view applies its own search/filter/sort via the
- * shared `useFlatRows` hook. `rows`/`fields` arrive type-erased as `unknown`;
- * this is the documented re-cast boundary for the view child.
+ * `rows`/`fields` arrive type-erased as `unknown`; this is the documented re-cast
+ * boundary for the view child.
  */
 export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const resolveCell = useResolveCell();
   const resolveEditor = useResolveCellEditor();
   const resolveOperatorSet = useResolveOperatorSet();
-  const rows = useFlatRows(
+  // Aggregate arrives type-erased; present only when the consumer supplied it.
+  const aggregate = props.aggregate as
+    | DataViewAggregateConfig<unknown>
+    | undefined;
+  const sections = useDataViewSections(
     props.rows,
     props.fields,
     props.state,
     resolveOperatorSet,
     props.searchAccessor,
+    { rowKey: props.rowKey, aggregate },
   );
   // Body fields follow the view's Properties (visible-fields) policy; sort/filter/
   // search above keep using the full `props.fields`. `null` → identity, so the
@@ -144,14 +153,10 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   // Documented cast boundary: creators arrives type-erased via render props.
   const creators = props.creators as CreateOption[] | undefined;
 
-  if (rows.length === 0) {
+  const totalCount = sections.reduce((sum, s) => sum + s.count, 0);
+  if (totalCount === 0) {
     return (
-      <Stack
-        align="center"
-        justify="center"
-        gap="md"
-        className="py-xl"
-      >
+      <Stack align="center" justify="center" gap="md" className="py-xl">
         <Text as="div" variant="body" className="text-muted-foreground">
           {props.emptyState}
         </Text>
@@ -172,13 +177,9 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const coverField = pickCoverField(vis, options.coverField);
   const titleField = pickPrimaryField(vis);
 
-  // Single source of cell markup — shared verbatim by the plain and windowed
-  // branches so the two render identically (the list view's `renderRow` twin).
+  // Single source of cell markup — shared by the plain and windowed branches.
   const renderCell = (cell: GalleryCell): ReactNode => {
     if (cell.kind === "create") {
-      // Trailing "+" card: single-creator only. Multiple creators → omitted (a
-      // single dashed card can't express an N-way choice; they get the toolbar
-      // menu instead).
       return (
         <Button
           variant="ghost"
@@ -193,18 +194,10 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       );
     }
 
-    const { row, index } = cell;
-    const key = props.rowKey(row, index);
+    const { row, key } = cell;
 
     if (options.renderCard) {
-      // Custom card owns click + actions; never wrapped or re-wired here.
-      // `display:contents` dissolves this key-holder wrapper so the card
-      // itself is the grid item (stretched by justify-items, like the
-      // default DataCard path) — a plain block wrapper would let a
-      // width-less custom card shrink-wrap to its content.
-      return (
-        <div className="contents">{options.renderCard(row)}</div>
-      );
+      return <div className="contents">{options.renderCard(row)}</div>;
     }
 
     const media = renderMedia(options, coverField, row);
@@ -212,7 +205,10 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       (f) => f.id !== titleField?.id && f.id !== coverField?.id,
     );
 
-    return (
+    // Aggregate representative → a persistent `×N` corner badge. Pinned top-left
+    // so it never collides with the hover-revealed actions Pin (top-right).
+    const aggregateCount = cell.aggregateCount;
+    const card = (
       <DataCard
         selected={key === props.selectedRowId}
         onActivate={() => props.onRowActivate?.(row)}
@@ -262,79 +258,112 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         ) : null}
       </DataCard>
     );
+    if (!aggregateCount || aggregateCount <= 1) return card;
+    return (
+      <div className="relative">
+        {card}
+        <Pin to="top-left" offset="sm">
+          <Badge variant="muted">{`×${aggregateCount}`}</Badge>
+        </Pin>
+      </div>
+    );
   };
 
-  // Flat cell stream: every data row, plus the trailing create card when
-  // exactly one creator is present.
-  const cells: GalleryCell[] = rows.map((row, index) => ({
-    kind: "row",
-    row,
-    index,
-  }));
-  if (options.showCreateCard && creators?.length === 1) {
-    cells.push({ kind: "create" });
-  }
   const cellKey = (cell: GalleryCell): string =>
-    cell.kind === "create" ? "::create" : props.rowKey(cell.row, cell.index);
-
-  // Below the threshold keep the plain responsive auto-fill grid — exact legacy
-  // markup, no probe / observer / windowing overhead.
-  if (cells.length <= VIRTUALIZE_THRESHOLD) {
-    return (
-      <Grid
-        minCellWidth={`${minCardWidth}px`}
-        gap="lg"
-        className="p-xl"
-      >
-        {cells.map((cell) => (
-          <div key={cellKey(cell)} className="contents">
-            {renderCell(cell)}
-          </div>
-        ))}
-      </Grid>
-    );
-  }
-
-  // Windowed (lane-aware): a zero-height probe grid (same gap as the real grid)
-  // is measured to derive how many columns fit at the current width; we chunk
-  // the cells into rows of that many lanes and window the row stream through the
-  // shared <VirtualRows>. Each windowed row is a fixed `columns`-wide grid, so
-  // its layout is pixel-identical to the auto-fill grid at the same width.
-  // `pb-lg` re-creates the inter-row vertical gap the windowing sizer drops
-  // (rows are absolutely stacked at measured offsets with no gap of their own).
-  const rowsOfCells = columns > 0 ? chunkRows(cells, columns) : [];
+    cell.kind === "create" ? "::create" : cell.key;
   const estimateRowHeight = options.cover || coverField ? 240 : 132;
 
+  // Render one section's cells: plain auto-fill grid below the threshold (exact
+  // legacy markup), else the lane-aware windowed grid.
+  const renderGrid = (cells: GalleryCell[]): ReactNode => {
+    if (cells.length <= VIRTUALIZE_THRESHOLD) {
+      return (
+        <Grid minCellWidth={`${minCardWidth}px`} gap="lg" className="p-xl">
+          {cells.map((cell) => (
+            <div key={cellKey(cell)} className="contents">
+              {renderCell(cell)}
+            </div>
+          ))}
+        </Grid>
+      );
+    }
+    const rowsOfCells = columns > 0 ? chunkRows(cells, columns) : [];
+    return (
+      <div className="p-xl">
+        <Grid
+          ref={probeRef}
+          aria-hidden
+          minCellWidth={`${minCardWidth}px`}
+          gap="lg"
+          className="h-0"
+        />
+        {columns > 0 ? (
+          <VirtualRows<GalleryCell[]>
+            items={rowsOfCells}
+            estimateSize={estimateRowHeight}
+            getKey={(chunk) => chunk.map(cellKey).join("|")}
+          >
+            {(chunk) => (
+              <Grid cols={columns} gap="lg" className="pb-lg">
+                {chunk.map((cell) => (
+                  <div key={cellKey(cell)} className="contents">
+                    {renderCell(cell)}
+                  </div>
+                ))}
+              </Grid>
+            )}
+          </VirtualRows>
+        ) : null}
+      </div>
+    );
+  };
+
+  // Ungrouped: the single implicit section renders as the legacy single grid,
+  // with the trailing "+" create card appended.
+  if (sections.length === 1 && sections[0]!.key === null) {
+    const cells: GalleryCell[] = sections[0]!.entries.map((e) => ({
+      kind: "row",
+      row: e.row,
+      key: e.key,
+      aggregateCount: e.aggregateCount,
+    }));
+    if (options.showCreateCard && creators?.length === 1) {
+      cells.push({ kind: "create" });
+    }
+    return renderGrid(cells);
+  }
+
+  // Grouped: one collapsible grid per section.
   return (
-    <div className="p-xl">
-      <Grid
-        ref={probeRef}
-        aria-hidden
-        minCellWidth={`${minCardWidth}px`}
-        gap="lg"
-        className="h-0"
-      />
-      {columns > 0 ? (
-        <VirtualRows<GalleryCell[]>
-          items={rowsOfCells}
-          estimateSize={estimateRowHeight}
-          getKey={(chunk) => chunk.map(cellKey).join("|")}
-        >
-          {(chunk) => (
-            <Grid
-              cols={columns}
-              gap="lg"
-              className="pb-lg"
+    <Stack gap="none">
+      {sections.map((section) => {
+        const key = section.key!;
+        const collapsed = props.collapsedSections?.has(key) ?? false;
+        const cells: GalleryCell[] = section.entries.map((e) => ({
+          kind: "row",
+          row: e.row,
+          key: e.key,
+        }));
+        return (
+          <Collapsible
+            key={key}
+            open={!collapsed}
+            onOpenChange={(open) => props.setSectionCollapsed?.(key, !open)}
+          >
+            <SectionHeaderRow
+              className="px-xl"
+              actions={
+                <Text variant="caption" tone="muted">
+                  {section.count}
+                </Text>
+              }
             >
-              {chunk.map((cell) => (
-                <div key={cellKey(cell)} className="contents">
-                  {renderCell(cell)}
-                </div>
-              ))}
-            </Grid>
-          )}
-        </VirtualRows>
-      ) : null}
-    </div>
+              {section.label}
+            </SectionHeaderRow>
+            <CollapsibleContent>{renderGrid(cells)}</CollapsibleContent>
+          </Collapsible>
+        );
+      })}
+    </Stack>
   );
 }

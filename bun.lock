@@ -3168,6 +3168,10 @@
       "name": "@singularity/plugin-primitives-rank",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/rank-reorder": {
+      "name": "@singularity/plugin-primitives-rank-reorder",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/relative-time": {
       "name": "@singularity/plugin-primitives-relative-time",
       "version": "0.0.1",
@@ -5956,6 +5960,8 @@
     "@singularity/plugin-primitives-prompt-editor-voice-input": ["@singularity/plugin-primitives-prompt-editor-voice-input@workspace:plugins/primitives/plugins/prompt-editor/plugins/voice-input"],
 
     "@singularity/plugin-primitives-rank": ["@singularity/plugin-primitives-rank@workspace:plugins/primitives/plugins/rank"],
+
+    "@singularity/plugin-primitives-rank-reorder": ["@singularity/plugin-primitives-rank-reorder@workspace:plugins/primitives/plugins/rank-reorder"],
 
     "@singularity/plugin-primitives-relative-time": ["@singularity/plugin-primitives-relative-time@workspace:plugins/primitives/plugins/relative-time"],
 
