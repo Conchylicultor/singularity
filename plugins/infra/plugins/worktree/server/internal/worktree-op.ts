@@ -9,6 +9,7 @@ import {
   rmSync,
   writeFileSync,
 } from "node:fs";
+import { type FileHandle, mkdir, open, readdir, readFile } from "node:fs/promises";
 import { join } from "node:path";
 import { dlopen } from "bun:ffi";
 import { SINGULARITY_DIR, WORKTREES_DIR, worktreeDataDir } from "@plugins/infra/plugins/paths/server";
@@ -113,24 +114,20 @@ export function clearWorktreeOp(slug: string, op: WorktreeOp): void {
   rmSync(opFile(slug, op), { force: true });
 }
 
-// Parse one marker file, reaping it if dead or unparseable, so a SIGKILLed
-// build/push (which can't run its own cleanup) self-heals on the next read.
-// Returns the live marker's data, or null if the marker was reclaimed.
-function readLiveMarker(slug: string, path: string): WorktreeOpInfo | null {
-  let parsed: { op?: unknown; pid?: unknown; startedAt?: unknown; phase?: unknown };
-  try {
-    parsed = JSON.parse(readFileSync(path, "utf8")) as typeof parsed;
-  } catch (err) {
-    // Expected: fs errors (ENOENT, EACCES, etc.) or garbled JSON (SyntaxError).
-    if ((err as NodeJS.ErrnoException).code == null && !(err instanceof SyntaxError)) throw err;
-    // Unreadable/garbage marker — reclaim it.
-    rmSync(path, { force: true });
-    return null;
-  }
-  if (typeof parsed.pid !== "number" || !isPidAlive(parsed.pid)) {
-    rmSync(path, { force: true });
-    return null;
-  }
+// A caught read error we should treat as "reap the marker" rather than propagate:
+// an fs error (ENOENT, EACCES, …) or garbled JSON (SyntaxError). A genuinely
+// unexpected error (code == null and not a SyntaxError) is re-thrown by callers.
+function isReapableReadError(err: unknown): boolean {
+  return (err as NodeJS.ErrnoException).code != null || err instanceof SyntaxError;
+}
+
+type MarkerJson = { op?: unknown; pid?: unknown; startedAt?: unknown; phase?: unknown };
+
+// Pure: turn a parsed marker into its WorktreeOpInfo, or null if it names a dead
+// pid (a caller reaps the file on null). No IO — shared by the sync and async
+// marker readers.
+function markerInfoFromParsed(slug: string, parsed: MarkerJson): WorktreeOpInfo | null {
+  if (typeof parsed.pid !== "number" || !isPidAlive(parsed.pid)) return null;
   return {
     slug,
     op: KNOWN_OPS.includes(parsed.op as WorktreeOp) ? (parsed.op as WorktreeOp) : "build",
@@ -141,6 +138,47 @@ function readLiveMarker(slug: string, path: string): WorktreeOpInfo | null {
     // marker itself never carries it.
     runningAt: null,
   };
+}
+
+// Parse one marker file synchronously, reaping it if dead or unparseable, so a
+// SIGKILLed build/push (which can't run its own cleanup) self-heals on the next
+// read. Returns the live marker's data, or null if the marker was reclaimed.
+// The SYNC variant is for the non-flush-cycle callers (isWorktreeOpActive: the
+// tmux poller / push profiler); the flush-cycle loader uses readLiveMarkerAsync.
+function readLiveMarker(slug: string, path: string): WorktreeOpInfo | null {
+  let parsed: MarkerJson;
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf8")) as MarkerJson;
+  } catch (err) {
+    if (!isReapableReadError(err)) throw err;
+    // Unreadable/garbage marker — reclaim it.
+    rmSync(path, { force: true });
+    return null;
+  }
+  const info = markerInfoFromParsed(slug, parsed);
+  if (!info) rmSync(path, { force: true }); // dead pid — reclaim.
+  return info;
+}
+
+// Async twin of readLiveMarker, used by the op-status loader so the marker scan
+// yields the event loop (readFile runs on the libuv threadpool) instead of
+// blocking the shared flush cycle. Reaping still uses rmSync: it only fires for
+// already-dead markers, and the write/clear TOCTOU already exists in the sync
+// version — the async read doesn't worsen it. isPidAlive stays sync (a signal
+// syscall, not IO).
+async function readLiveMarkerAsync(slug: string, path: string): Promise<WorktreeOpInfo | null> {
+  let parsed: MarkerJson;
+  try {
+    parsed = JSON.parse(await readFile(path, "utf8")) as MarkerJson;
+  } catch (err) {
+    if (!isReapableReadError(err)) throw err;
+    // Unreadable/garbage marker — reclaim it.
+    rmSync(path, { force: true });
+    return null;
+  }
+  const info = markerInfoFromParsed(slug, parsed);
+  if (!info) rmSync(path, { force: true }); // dead pid — reclaim.
+  return info;
 }
 
 // True iff any op marker for this worktree names a live pid. Reaps dead or
@@ -161,35 +199,39 @@ export function isWorktreeOpActive(slug: string): boolean {
 }
 
 // Every live op marker across all worktrees, parsed into WorktreeOpInfo. Reaps
-// dead/garbage markers as it scans, like isWorktreeOpActive.
-export function listActiveWorktreeOps(): WorktreeOpInfo[] {
+// dead/garbage markers as it scans, like isWorktreeOpActive. ASYNC: this runs
+// inside the op-status loader (the shared flush cycle), so every IO must yield
+// the event loop rather than block it. Per-slug scans run in parallel for lower
+// wall-clock latency; the only caller is resolveActiveWorktreeOps.
+export async function listActiveWorktreeOps(): Promise<WorktreeOpInfo[]> {
   let entries: Dirent[];
   try {
-    entries = readdirSync(worktreesDir(), { withFileTypes: true });
+    entries = await readdir(worktreesDir(), { withFileTypes: true });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }
-  const out: WorktreeOpInfo[] = [];
-  for (const entry of entries) {
-    // worktreesDir() holds both worktree directories AND per-worktree gateway
-    // registration files (`<slug>.json`); only directories carry an ops/ subdir,
-    // so descending into a `.json` file would throw ENOTDIR. Skip non-dirs.
-    if (!entry.isDirectory()) continue;
-    const slug = entry.name;
-    let files: string[];
-    try {
-      files = readdirSync(opsDir(slug));
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      continue; // Not a worktree-with-ops dir; skip.
-    }
-    for (const f of files) {
-      const info = readLiveMarker(slug, join(opsDir(slug), f));
-      if (info) out.push(info);
-    }
-  }
-  return out;
+  const perSlug = await Promise.all(
+    entries.map(async (entry): Promise<WorktreeOpInfo[]> => {
+      // worktreesDir() holds both worktree directories AND per-worktree gateway
+      // registration files (`<slug>.json`); only directories carry an ops/
+      // subdir, so descending into a `.json` file would throw ENOTDIR. Skip
+      // non-dirs.
+      if (!entry.isDirectory()) return [];
+      const slug = entry.name;
+      const dir = opsDir(slug);
+      let files: string[];
+      try {
+        files = await readdir(dir);
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+        return []; // Not a worktree-with-ops dir; skip.
+      }
+      const infos = await Promise.all(files.map((f) => readLiveMarkerAsync(slug, join(dir, f))));
+      return infos.filter((i): i is WorktreeOpInfo => i !== null);
+    }),
+  );
+  return perSlug.flat();
 }
 
 // ---------------------------------------------------------------------------
@@ -261,6 +303,28 @@ export function pushLockHeld(lockPath: string = PUSH_LOCK_PATH): boolean {
   }
 }
 
+// Async twin of pushLockHeld for the flush-cycle loader: the file open/close is
+// IO and runs on the libuv threadpool, but the flock() probe itself is a fast,
+// non-blocking syscall (LOCK_NB) — not IO wait — so it stays a synchronous FFI
+// call. Identical semantics to the sync version: ENOENT on open ⇒ false; a
+// non-zero flock return ⇒ held; always release/close.
+async function pushLockHeldAsync(lockPath: string = PUSH_LOCK_PATH): Promise<boolean> {
+  await mkdir(SINGULARITY_DIR, { recursive: true });
+  let handle: FileHandle;
+  try {
+    handle = await open(lockPath, "a");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    return false;
+  }
+  try {
+    // Non-zero return ⇒ EWOULDBLOCK ⇒ someone else holds it.
+    return flock(handle.fd, LOCK_EX | LOCK_NB) !== 0;
+  } finally {
+    await handle.close(); // releases the flock if we happened to acquire it
+  }
+}
+
 // Atomically publish the holder identity (temp + rename) so a reader never sees
 // a torn write. Called by the flock holder the instant the lock is granted. The
 // path defaults to the real holder file; tests pass a temp path.
@@ -271,14 +335,9 @@ export function writePushHolder(holder: PushHolder, path: string = PUSH_HOLDER_P
   renameSync(tmp, path);
 }
 
-export function readPushHolder(path: string = PUSH_HOLDER_PATH): PushHolder | null {
-  let parsed: Partial<PushHolder>;
-  try {
-    parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<PushHolder>;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code == null && !(err instanceof SyntaxError)) throw err;
-    return null; // absent or unparseable
-  }
+// Pure: validate a parsed holder blob into a PushHolder, or null if malformed.
+// No IO — shared by the sync and async holder readers.
+function holderFromParsed(parsed: Partial<PushHolder>): PushHolder | null {
   if (
     typeof parsed.slug !== "string" ||
     typeof parsed.pid !== "number" ||
@@ -292,6 +351,26 @@ export function readPushHolder(path: string = PUSH_HOLDER_PATH): PushHolder | nu
     pushId: parsed.pushId,
     acquiredAt: typeof parsed.acquiredAt === "string" ? parsed.acquiredAt : new Date(0).toISOString(),
   };
+}
+
+export function readPushHolder(path: string = PUSH_HOLDER_PATH): PushHolder | null {
+  try {
+    return holderFromParsed(JSON.parse(readFileSync(path, "utf8")) as Partial<PushHolder>);
+  } catch (err) {
+    if (!isReapableReadError(err)) throw err;
+    return null; // absent or unparseable
+  }
+}
+
+// Async twin of readPushHolder for the flush-cycle loader (readFile on the libuv
+// threadpool). Identical semantics: absent/unparseable/malformed ⇒ null.
+async function readPushHolderAsync(path: string = PUSH_HOLDER_PATH): Promise<PushHolder | null> {
+  try {
+    return holderFromParsed(JSON.parse(await readFile(path, "utf8")) as Partial<PushHolder>);
+  } catch (err) {
+    if (!isReapableReadError(err)) throw err;
+    return null; // absent or unparseable
+  }
 }
 
 // Remove the holder file ONLY if it still names this push — a late-dying waiter
@@ -337,9 +416,17 @@ export function derivePushPhases(
 
 // Composition used by the op-status resource loader: scan live markers, read the
 // holder file, and derive push phases against the real pid/flock predicates.
-export function resolveActiveWorktreeOps(): WorktreeOpInfo[] {
-  return derivePushPhases(listActiveWorktreeOps(), readPushHolder(), {
+// ASYNC and fully off the event loop — this is the flush-cycle path, so it must
+// never do synchronous IO. The three reads run in parallel; the flock probe is
+// pre-resolved to a boolean so derivePushPhases (pure, sync) can consume it.
+export async function resolveActiveWorktreeOps(): Promise<WorktreeOpInfo[]> {
+  const [markers, holder, lockHeld] = await Promise.all([
+    listActiveWorktreeOps(),
+    readPushHolderAsync(),
+    pushLockHeldAsync(),
+  ]);
+  return derivePushPhases(markers, holder, {
     isAlive: isPidAlive,
-    lockHeld: pushLockHeld,
+    lockHeld: () => lockHeld,
   });
 }

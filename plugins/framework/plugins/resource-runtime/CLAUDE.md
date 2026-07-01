@@ -26,6 +26,15 @@ per-pk loop sequential so versions/snapshots stay monotonic. A `flushRunning`
 mutex + `flushAgain` rerun flag guarantee two flushes never overlap: a notify that
 lands mid-flush sets `flushAgain` and is re-drained by the live flush.
 
+**A resource loader must never do synchronous IO.** The loader runs inside this
+shared flush cycle, and JS is single-threaded — a synchronous syscall
+(`readFileSync`, `readdirSync`, `openSync`, …) freezes the whole event loop for
+its entire duration, head-of-line-blocking every other resource's loader, every
+`ws.send`, and every HTTP handler until it returns (under host IO contention this
+was seconds, not milliseconds). Always use `node:fs/promises` (or another
+threadpool/async primitive) so a slow read yields the loop instead of blocking it;
+the flush cycle already `await`s loaders returning `Promise<T>`.
+
 The three injected hooks (`ResourceRuntimeOptions`):
 
 - `wrapLoad(key, fn)` — wrap each loader call. server: `recordEntrySpan("loader",

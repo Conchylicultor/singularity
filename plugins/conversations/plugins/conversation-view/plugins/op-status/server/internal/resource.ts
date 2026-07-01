@@ -22,9 +22,9 @@ export const worktreeOpsResource = defineExternalResource<WorktreeOpsPayload>({
   // flock), not echoed from each marker's self-asserted phase — see
   // resolveActiveWorktreeOps. This is what makes "two pushing at once" and
   // "all waiting, none running" impossible to display.
-  loader: () => {
+  loader: async () => {
     const out: WorktreeOpsPayload = {};
-    for (const info of resolveActiveWorktreeOps()) {
+    for (const info of await resolveActiveWorktreeOps()) {
       // At most one op per worktree slug; highest-precedence op wins if several
       // somehow run at once (push > check > build).
       const existing = out[info.slug];
