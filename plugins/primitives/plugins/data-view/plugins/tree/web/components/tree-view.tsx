@@ -1,10 +1,12 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import {
   evaluateNode,
+  FieldCell,
   makeSortComparator,
   pickPrimaryField,
   resolveBodyFields,
   useResolveCell,
+  useResolveCellEditor,
   useResolveOperatorSet,
   type DataViewRenderProps,
   type FieldDef,
@@ -43,8 +45,10 @@ type Projected<TRow> = {
  * resolution the table uses, swapping in an `EditableTreeLabel` (select-then-edit
  * over the shared `useResolveCellEditor` capability) when the primary field
  * declares `onEdit`/`onEditValues`. The remaining visible (non-primary) fields
- * render as read-only trailing chips — the tree's body now follows the view's
- * Properties (visible-fields) policy like every other view, not label-only.
+ * render as trailing chips through the shared `FieldCell` (click-to-edit when the
+ * field declares a write-back, read-only otherwise) — the tree's body now follows
+ * the view's Properties (visible-fields) policy like every other view, not
+ * label-only.
  */
 function DefaultRow<TRow>(props: {
   node: TreeNode<Projected<TRow>>;
@@ -57,6 +61,7 @@ function DefaultRow<TRow>(props: {
   const { node, depth, primaryField, secondaryFields, options, itemActions } =
     props;
   const resolveCell = useResolveCell();
+  const resolveEditor = useResolveCellEditor();
   const row = node.__row;
 
   const primaryValue = primaryField?.value?.(row);
@@ -126,18 +131,23 @@ function DefaultRow<TRow>(props: {
     >
       {label}
       {secondaryFields.length > 0 ? (
-        // Read-only secondary-field chips (the tree's body fields, in Properties
-        // order), sitting between the label and any persistent `options.trailing`.
+        // Secondary-field chips (the tree's body fields, in Properties order),
+        // sitting between the label and any persistent `options.trailing`, each
+        // rendered through the shared `FieldCell` — so a field declaring
+        // `onEdit`/`onEditValues` (e.g. a custom column) is click-to-edit here,
+        // exactly like the table/list, while write-back-less fields stay read-only.
         // Rigid (never shrink) so the truncating label absorbs the slack.
         // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 rigid trailing cluster beside the flexible label, the tree row owns its flex row
         <Inline gap="xs" className="shrink-0">
           {secondaryFields.map((f) => (
             <span key={f.id}>
-              {resolveCell(
-                f as FieldDef<unknown>,
-                f.value?.(row) ?? null,
-                row,
-              ) ?? String(f.value?.(row) ?? "")}
+              <FieldCell
+                field={f as FieldDef<unknown>}
+                row={row}
+                resolveCell={resolveCell}
+                resolveEditor={resolveEditor}
+                display="inline"
+              />
             </span>
           ))}
         </Inline>
