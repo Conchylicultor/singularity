@@ -429,6 +429,19 @@ export interface FilterOperator {
   id: string;
   /** Dropdown label, e.g. "Contains", "Is empty". */
   label: string;
+  /**
+   * Optional section label used to group operators in the picker dropdown.
+   * Operators sharing a `group` render under one uppercase-muted header, in
+   * first-seen group order; operators with no `group` fall into a single
+   * unlabeled default section (the pre-grouping flat-list behavior).
+   */
+  group?: string;
+  /**
+   * When true the operator is NOT offered in the picker dropdown, but stays
+   * resolvable by id — so an already-saved filter using it still evaluates and
+   * still shows its label in the trigger. Deprecation-without-breakage.
+   */
+  hidden?: boolean;
   /** false → no value editor (is-empty / is-not-empty). */
   hasValue: boolean;
   /** Present iff `hasValue`. The operand editor for a single rule. */
