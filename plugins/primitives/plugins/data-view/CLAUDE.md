@@ -370,13 +370,15 @@ removes the whole class of nested/severed-scroll bugs — a DataView dropped int
 flex-severed wrapper can no longer balloon to full content height and starve the
 scroll.
 
-- **The toolbar is a `<Sticky edge="top">` header.** It pins against the pane's
-  scroll viewport, staying visible whether the DataView is the pane's sole
+- **The toolbar is a `<Sticky edge="top" mask>` header.** It pins against the
+  pane's scroll viewport, staying visible whether the DataView is the pane's sole
   content or one of several stacked sections. The `<Stack gap="none">` root is
   each DataView's own sticky **containing block**, so stacked DataViews hand off
   automatically — when a section scrolls out its toolbar un-pins with it, no
-  `active` toggling or computed `top` offsets. The toolbar carries
-  `bg-background` so rows never show through the pinned bar.
+  `active` toggling or computed `top` offsets. The `mask` prop paints
+  `bg-chrome-mask` so rows never show through the pinned bar — and because that
+  follows the surface the DataView is embedded in (page canvas, sidebar,
+  `<Surface>`), the bar never becomes a mismatched band in a tinted surface.
 - **The pane provides the scroll.** A pane body is one `<PaneScroll>` viewport;
   every header within it (the DataView toolbar, a section's stats header) is a
   `<Sticky>`. `PaneChrome` routes its body through `<PaneScroll>` for free, so a

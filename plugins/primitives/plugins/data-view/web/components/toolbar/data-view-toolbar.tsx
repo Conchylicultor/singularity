@@ -75,10 +75,10 @@ export function DataViewToolbar({
   ) : null;
 
   return (
-    <Sticky edge="top" className="bg-background">
+    <Sticky edge="top" mask>
       <div
         ref={measureRef}
-        // toolbar row of variable-content controls; no named-slot primitive maps. `bg-background` (on the Sticky) so rows don't show through the pinned bar
+        // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)
         // eslint-disable-next-line layout/no-adhoc-layout
         className={cn("flex items-center gap-sm pb-sm pl-sm")}
       >

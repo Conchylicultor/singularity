@@ -357,7 +357,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
           <Stack gap="2xs">
             {hasToolbar && (
               // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
-              <Sticky className="bg-background mb-1">
+              <Sticky mask className="mb-1">
                 <Stack direction="row" gap="xs" align="center" justify="between">
                   <Stack direction="row" gap="xs" align="center">
                     {showSearchInput && (

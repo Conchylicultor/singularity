@@ -186,10 +186,11 @@ export function AppShellLayout({
       {/* The content canvas inherits the framing surface (`--background`) rather
           than painting its own tint. Sticky chrome inside the canvas (the
           DataView toolbar, pane/section headers) masks scrolled content with
-          `bg-background`; a divergent canvas tint here (previously a translucent
-          `bg-muted/30`) made every pinned header a visibly different shade than
-          the surface it floats over. Keeping the canvas on `--background` is the
-          single masking contract every sticky header already assumes. */}
+          `bg-chrome-mask`, which follows `--chrome-mask` (the page canvas by
+          default). So a tinted canvas is no longer a footgun — it would just
+          need to co-publish `--chrome-mask` alongside its background, exactly as
+          the sidebar and `<Surface>` roles do — but we keep it on `--background`
+          as the plain default. */}
       <Clip as="main" fill>
         <SurfaceChromeContext.Provider value={surfaceChrome}>
           {children}
@@ -210,7 +211,15 @@ export function AppShellLayout({
   }
 
   const sidebarContent = (
-    <sidebarSlot.Render>{(item) => <item.component />}</sidebarSlot.Render>
+    // Publish the sidebar surface color (`--sidebar`) as the sticky-chrome mask
+    // for the whole sidebar subtree, so a sticky header inside it (e.g. a
+    // DataView toolbar) masks with the sidebar tone instead of the page canvas.
+    // One place covers every framing (flush/floating/inset), which all render
+    // the shadcn `bg-sidebar` surface. `display:contents` keeps this wrapper out
+    // of the sidebar's flex layout — it only carries the inherited var.
+    <div style={{ display: "contents", "--chrome-mask": "var(--sidebar)" } as React.CSSProperties}>
+      <sidebarSlot.Render>{(item) => <item.component />}</sidebarSlot.Render>
+    </div>
   );
 
   // useContributions() seals the `component` field, so the framing can't be

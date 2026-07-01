@@ -12,9 +12,9 @@ export interface BarProps extends HTMLAttributes<HTMLElement> {
   /**
    * Which chrome tier this bar belongs to.
    * - `"chrome"` (default): the app/pane **toolbar** tier — a `<header>` at
-   *   `h-chrome-bar`, `pl-chrome` on `bg-background`. Reserves the floating-bar
-   *   safe area by default (`endSafeArea`). Used by the app-shell toolbar and
-   *   pane-toolbar host.
+   *   `h-chrome-bar`, `pl-chrome`, masked with `bg-chrome-mask` (the surface it
+   *   sits on, page canvas by default). Reserves the floating-bar safe area by
+   *   default (`endSafeArea`). Used by the app-shell toolbar and pane-toolbar host.
    * - `"pane"`: the **pane-header** tier — a `<div>` at the shorter `h-chrome-pane`
    *   with symmetric `px-chrome` and `min-w-0` (truncation-safe). Used by PaneChrome.
    */
@@ -42,9 +42,9 @@ export interface BarProps extends HTMLAttributes<HTMLElement> {
   controlSize?: ControlSize;
 }
 
-/** Per-tier chrome: height token, horizontal inset, and (chrome only) the bg. */
+/** Per-tier chrome: height token, horizontal inset, and (chrome only) the mask. */
 const TIER_CLASS: Record<BarTier, string> = {
-  chrome: "h-chrome-bar pl-chrome bg-background",
+  chrome: "h-chrome-bar pl-chrome bg-chrome-mask",
   pane: "h-chrome-pane px-chrome min-w-0",
 };
 

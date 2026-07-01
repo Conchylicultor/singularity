@@ -60,6 +60,16 @@ export interface StickyProps extends React.HTMLAttributes<HTMLElement> {
   /** Stacking level among siblings, from the z-layer scale. Defaults to `raised`
    *  (a sticky header sits above the content it scrolls over). */
   layer?: InTreeLayer;
+  /**
+   * Paint the sticky-chrome mask (`bg-chrome-mask`) so scrolled content can't
+   * show through the pinned bar. Prefer this over a hand-written `bg-background`:
+   * the mask resolves to `--chrome-mask`, which follows the surface the bar is
+   * pinned inside (page canvas by default, `--sidebar` in the sidebar, a
+   * `<Surface>`'s own color when nested in one) — so an opaque header never
+   * becomes a mismatched band in a tinted surface. `className` still composes
+   * last, so a caller can override the color for a bespoke case. Defaults off.
+   */
+  mask?: boolean;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
   /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
@@ -71,9 +81,10 @@ export interface StickyProps extends React.HTMLAttributes<HTMLElement> {
  * a scroll edge with a z-layer-aware stacking level, the `sticky top-0 z-raised`
  * combination ~24 call sites wrote by hand.
  *
- * Background and borders stay in `className` — `bg-*` / `border-*` /
- * `backdrop-blur` are not banned, so an opaque sticky header is `<Sticky
- * className="border-b bg-background">`.
+ * An opaque sticky header masks the content scrolling under it — use `mask` for
+ * that (`bg-chrome-mask`, which follows the surface), NOT a hand-written
+ * `bg-background` that assumes the surface is the page canvas. Borders and other
+ * chrome stay in `className` (`border-*` / `backdrop-blur` are not banned).
  *
  * Caller `className` composes last; caller `style` overrides the edge offset.
  */
@@ -82,6 +93,7 @@ export function Sticky({
   edge = "top",
   offset = "none",
   layer = "raised",
+  mask = false,
   as: As = "div",
   ref,
   className,
@@ -93,7 +105,7 @@ export function Sticky({
   return (
     <As
       ref={ref}
-      className={cn(active && sticky.className, className)}
+      className={cn(active && sticky.className, mask && "bg-chrome-mask", className)}
       style={{ ...(active ? sticky.style : null), ...style }}
       {...rest}
     >

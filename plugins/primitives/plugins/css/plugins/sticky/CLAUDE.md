@@ -20,8 +20,22 @@ var (the `Grid`-style escape for what a class can't express). `offset="none"`
 
 ## Scope
 
-Owns position + edge + stacking only. Background, borders, and blur stay in
-`className` (`bg-*` / `border-*` / `backdrop-blur` are not banned).
+Owns position + edge + stacking, plus the opaque **mask** (`mask` prop →
+`bg-chrome-mask`). Borders and blur stay in `className` (`border-*` /
+`backdrop-blur` are not banned).
+
+## Masking — follow the surface, never hardcode `bg-background`
+
+An opaque sticky header has to hide the content scrolling under it. Do that with
+`<Sticky mask>`, not a hand-written `bg-background`. `mask` paints
+`bg-chrome-mask`, which resolves to the `--chrome-mask` var — and every surface
+co-publishes its own background there (the page canvas by default via `:root`,
+`--sidebar` in the app-shell sidebar, a `<Surface>`'s own color when nested in
+one). So the bar masks with *whatever surface it is pinned inside* and can never
+become a mismatched band in a tinted surface (the sidebar/inset-framing bug).
+`className` still composes last, so a bespoke case can override the color. A new
+tinted surface only has to set `--chrome-mask` alongside its background to get
+matching pinned bars for free.
 
 ## Conditional stickiness — toggle, don't swap
 
