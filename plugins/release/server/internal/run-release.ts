@@ -2,7 +2,13 @@ import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "
 import { join } from "node:path";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { REPO_ROOT, currentWorktreeName, worktreeDataDir, worktreeArtifacts } from "@plugins/infra/plugins/paths/server";
+import {
+  REPO_ROOT,
+  currentWorktreeName,
+  worktreeDataDir,
+  worktreeArtifacts,
+  pruneWorktreeReleaseArtifacts,
+} from "@plugins/infra/plugins/paths/server";
 import { releaseTargetById } from "../../core/targets";
 import { releaseOutDir, newReleaseRunId } from "./out-dir";
 import { _releaseRuns } from "./tables";
@@ -250,6 +256,10 @@ async function doRunRelease(composition: string, target: string): Promise<void> 
         writeFileSync(tmp, JSON.stringify({ exitCode, lines: allLines }) + "\n");
         renameSync(tmp, logPath);
       }
+      // Cap the per-release logs to a bounded window (mirror build's
+      // prune-on-write): writing a new fallback log trims the old ones, so a
+      // long-lived namespace can't accumulate them unbounded.
+      pruneWorktreeReleaseArtifacts(worktreeName);
     }
   }
 

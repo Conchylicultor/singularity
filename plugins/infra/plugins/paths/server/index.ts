@@ -29,8 +29,10 @@ export { GIT, PGREP, CLAUDE, TMUX } from "./internal/bins";
 
 export {
   pruneWorktreeBuildArtifacts,
+  pruneWorktreeReleaseArtifacts,
   BUILD_ARTIFACTS_RETENTION,
-} from "./internal/prune-build-artifacts";
+  RELEASE_ARTIFACTS_RETENTION,
+} from "./internal/prune-artifacts";
 
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
