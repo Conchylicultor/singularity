@@ -133,13 +133,12 @@ function upperVoice(opts: VoicingOptions): number | undefined {
 
 export const VOICINGS: Voicing[] = [
   {
-    id: "block-triad",
-    label: "Block triad",
+    id: "block-full",
+    label: "Block (full chord)",
     voice: (events, opts) => {
       const { track, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
-      // Triad only: root + 3rd + 5th; drops any 7th / extensions.
       const placed = placeVoicings(events, opts, (ev) =>
-        chordPitches(ev.data, opts.octave).slice(0, 3),
+        chordPitches(ev.data, opts.octave),
       );
       const voice = upperVoice(opts);
       return events.flatMap((ev, i) => [
@@ -157,12 +156,13 @@ export const VOICINGS: Voicing[] = [
     },
   },
   {
-    id: "block-full",
-    label: "Block (full chord)",
+    id: "block-triad",
+    label: "Block triad",
     voice: (events, opts) => {
       const { track, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
+      // Triad only: root + 3rd + 5th; drops any 7th / extensions.
       const placed = placeVoicings(events, opts, (ev) =>
-        chordPitches(ev.data, opts.octave),
+        chordPitches(ev.data, opts.octave).slice(0, 3),
       );
       const voice = upperVoice(opts);
       return events.flatMap((ev, i) => [
