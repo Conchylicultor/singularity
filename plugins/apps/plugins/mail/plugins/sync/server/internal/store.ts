@@ -91,13 +91,53 @@ export async function ensureLabelsExist(
   await db.insert(_mailLabels).values(rows).onConflictDoNothing();
 }
 
-/** Parse + upsert one Gmail message, reconciling labels/attachments + thread. */
-export async function upsertMessage(
+/**
+ * Whether a message row has its full body cached (fetched via `format=full`).
+ * `bodyFetchedAt` is the authoritative marker; a present body with a null marker
+ * is a legacy row from the pre-on-demand full backfill and counts as hydrated,
+ * so opening it never re-fetches. A genuinely body-less message (e.g. an
+ * attachment-only mail) is disambiguated by the marker alone.
+ */
+export function isMessageHydrated(row: {
+  bodyFetchedAt: Date | null;
+  bodyHtml: string | null;
+  bodyText: string | null;
+}): boolean {
+  return (
+    row.bodyFetchedAt != null || row.bodyHtml != null || row.bodyText != null
+  );
+}
+
+/**
+ * Parse + upsert one Gmail message, reconciling labels + thread.
+ *
+ * `full` controls whether the MIME body + attachments are written:
+ * - `false` (metadata sync): only the envelope/flags/labels are (re)written; the
+ *   body columns, `bodyFetchedAt`, and attachments are LEFT UNTOUCHED. This is
+ *   what the bounded backfill and steady-state delta use — so a label change on
+ *   an already-hydrated message never wipes its cached body, and a metadata sync
+ *   of a fresh message inserts an envelope-only stub (body null).
+ * - `true` (on-demand hydration): additionally writes `bodyText`/`bodyHtml`,
+ *   stamps `bodyFetchedAt`, and reconciles the attachment metadata.
+ */
+async function writeMessage(
   accountId: string,
   msg: GmailMessage,
+  full: boolean,
 ): Promise<void> {
   const parsed = parseGmailMessage(msg);
   const flags = flagsFromLabels(parsed.labelIds);
+
+  // Body columns are written only on a full (hydration) fetch. On a metadata
+  // sync they are omitted from BOTH the insert (→ DB defaults: null / null) and
+  // the update (→ any previously-cached body is preserved).
+  const body = full
+    ? {
+        bodyText: parsed.bodyText,
+        bodyHtml: parsed.bodyHtml,
+        bodyFetchedAt: new Date(),
+      }
+    : {};
 
   // 1. Ensure the FK-parent thread stub exists before inserting the message.
   await db
@@ -105,57 +145,35 @@ export async function upsertMessage(
     .values({ id: msg.threadId, accountId })
     .onConflictDoNothing();
 
-  // 2. Upsert the message envelope + bodies + derived flags.
+  // 2. Upsert the message envelope + derived flags (+ body when hydrating).
+  const envelope = {
+    threadId: msg.threadId,
+    from: parsed.from,
+    to: parsed.to,
+    cc: parsed.cc,
+    bcc: parsed.bcc,
+    replyTo: parsed.replyTo,
+    subject: parsed.subject,
+    snippet: parsed.snippet,
+    headers: parsed.headers,
+    internalDate: parsed.internalDate,
+    unread: flags.unread,
+    starred: flags.starred,
+    isDraft: flags.isDraft,
+    isSent: flags.isSent,
+    sizeEstimate: msg.sizeEstimate ?? null,
+    historyId: msg.historyId ?? null,
+  };
   await db
     .insert(_mailMessages)
-    .values({
-      id: msg.id,
-      threadId: msg.threadId,
-      accountId,
-      from: parsed.from,
-      to: parsed.to,
-      cc: parsed.cc,
-      bcc: parsed.bcc,
-      replyTo: parsed.replyTo,
-      subject: parsed.subject,
-      snippet: parsed.snippet,
-      headers: parsed.headers,
-      bodyText: parsed.bodyText,
-      bodyHtml: parsed.bodyHtml,
-      internalDate: parsed.internalDate,
-      unread: flags.unread,
-      starred: flags.starred,
-      isDraft: flags.isDraft,
-      isSent: flags.isSent,
-      sizeEstimate: msg.sizeEstimate ?? null,
-      historyId: msg.historyId ?? null,
-    })
+    .values({ id: msg.id, accountId, ...envelope, ...body })
     .onConflictDoUpdate({
       target: _mailMessages.id,
-      set: {
-        threadId: msg.threadId,
-        from: parsed.from,
-        to: parsed.to,
-        cc: parsed.cc,
-        bcc: parsed.bcc,
-        replyTo: parsed.replyTo,
-        subject: parsed.subject,
-        snippet: parsed.snippet,
-        headers: parsed.headers,
-        bodyText: parsed.bodyText,
-        bodyHtml: parsed.bodyHtml,
-        internalDate: parsed.internalDate,
-        unread: flags.unread,
-        starred: flags.starred,
-        isDraft: flags.isDraft,
-        isSent: flags.isSent,
-        sizeEstimate: msg.sizeEstimate ?? null,
-        historyId: msg.historyId ?? null,
-        updatedAt: new Date(),
-      },
+      set: { ...envelope, ...body, updatedAt: new Date() },
     });
 
-  // 3. Reconcile the message↔label join to exactly parsed.labelIds.
+  // 3. Reconcile the message↔label join to exactly parsed.labelIds (labels are
+  //    present in metadata too, so this runs on both metadata and full syncs).
   await ensureLabelsExist(accountId, parsed.labelIds);
   if (parsed.labelIds.length > 0) {
     await db
@@ -176,30 +194,58 @@ export async function upsertMessage(
       .where(eq(_mailMessageLabels.messageId, msg.id));
   }
 
-  // 4. Reconcile attachments: drop + re-insert the parsed set (a message's
-  //    attachment set is effectively immutable for a given id; simplest correct
-  //    reconcile). Blob bytes are not downloaded in this phase
-  //    (storedAttachmentId stays null — lazy fetch is a later phase).
-  await db.delete(_mailAttachments).where(eq(_mailAttachments.messageId, msg.id));
-  if (parsed.attachments.length > 0) {
-    await db.insert(_mailAttachments).values(
-      parsed.attachments.map((a) => ({
-        id: randomUUID(),
-        messageId: msg.id,
-        accountId,
-        gmailAttachmentId: a.gmailAttachmentId,
-        filename: a.filename,
-        mimeType: a.mimeType,
-        sizeBytes: a.sizeBytes,
-        inline: a.inline,
-        contentId: a.contentId,
-        storedAttachmentId: null,
-      })),
-    );
+  // 4. Reconcile attachments ONLY on a full fetch. A `format=metadata` message
+  //    carries no MIME parts, so its parsed attachment set is empty — running
+  //    the reconcile there would wrongly wipe a hydrated message's attachments.
+  //    Blob bytes are still not downloaded (storedAttachmentId stays null — lazy
+  //    blob fetch is a later phase).
+  if (full) {
+    await db
+      .delete(_mailAttachments)
+      .where(eq(_mailAttachments.messageId, msg.id));
+    if (parsed.attachments.length > 0) {
+      await db.insert(_mailAttachments).values(
+        parsed.attachments.map((a) => ({
+          id: randomUUID(),
+          messageId: msg.id,
+          accountId,
+          gmailAttachmentId: a.gmailAttachmentId,
+          filename: a.filename,
+          mimeType: a.mimeType,
+          sizeBytes: a.sizeBytes,
+          inline: a.inline,
+          contentId: a.contentId,
+          storedAttachmentId: null,
+        })),
+      );
+    }
   }
 
   // 5. Recompute the thread rollups from its (now-current) message set.
   await recomputeThread(accountId, msg.threadId);
+}
+
+/**
+ * Metadata sync of one message: (re)write the envelope/flags/labels only, leaving
+ * any cached body + attachments intact. Used by the bounded backfill and the
+ * steady-state delta — the body is fetched lazily on first open.
+ */
+export function upsertMessageEnvelope(
+  accountId: string,
+  msg: GmailMessage,
+): Promise<void> {
+  return writeMessage(accountId, msg, false);
+}
+
+/**
+ * Full (on-demand hydration) sync of one message: write the envelope AND the MIME
+ * body + attachments, stamping `bodyFetchedAt`. Called when a message is opened.
+ */
+export function upsertMessageFull(
+  accountId: string,
+  msg: GmailMessage,
+): Promise<void> {
+  return writeMessage(accountId, msg, true);
 }
 
 /** Recompute a thread's denormalized rollups from its messages, or delete it. */

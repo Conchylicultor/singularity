@@ -27,7 +27,10 @@ A local mirror of a Gmail mailbox, one FK cluster rooted at `mail_accounts`:
 - `mail_messages` — individual messages; address columns are stored as
   `from_addr`/`to_addrs`/`cc_addrs`/`bcc_addrs`/`reply_to` (DB names avoid the
   SQL reserved words `from`/`to`) with readable TS keys `from`/`to`/`cc`/`bcc`/
-  `replyTo`.
+  `replyTo`. `body_text`/`body_html` are null on an **envelope-only stub** (the
+  on-demand sync mirrors envelopes via Gmail `format=metadata`); they + the
+  `body_fetched_at` hydration marker are filled the first time the message is
+  opened (see `sync`'s `POST /api/mail/hydrate`).
 - `mail_message_labels` — message↔label join (composite PK).
 - `mail_attachments` — attachment metadata; `stored_attachment_id` links to a
   downloaded blob.

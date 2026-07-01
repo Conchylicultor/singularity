@@ -2,8 +2,25 @@
 
 The Gmail **sync engine** — the only genuinely new code in the Gmail-client
 vision (everything else composes existing primitives). It fills the otherwise
-empty `mail-core` tables by mirroring a Gmail mailbox into Postgres: backfill,
-incremental delta, and a bounded full-resync fallback.
+empty `mail-core` tables by mirroring a Gmail mailbox into Postgres: a bounded
+backfill, incremental delta, and a bounded full-resync fallback.
+
+## On-demand model (Superhuman-style local cache)
+
+The mailbox is **not** mirrored in full, and message **bodies are never fetched
+eagerly**. Two independent bounds make connect feel instant even on a huge
+mailbox (this account had 58k messages, which the old eager full-body crawl
+could never back up inside Gmail's history window — it wedged in a resync loop):
+
+1. **Bounded window.** The backfill only mirrors message ENVELOPES within a
+   recent window (`newer_than:${BACKFILL_WINDOW_DAYS}d`, hard-capped at
+   `MAX_BACKFILL_MESSAGES` — both in `core/config.ts`). Older mail simply isn't
+   in the local mirror until on-demand search pulls it in (a later phase).
+2. **Metadata-only ingestion.** Envelopes are fetched with Gmail
+   `format=metadata` (headers + snippet + labels, no body) — cheap and fast.
+   The full MIME **body + attachments are hydrated lazily on first open** and
+   cached forever after (`POST /api/mail/hydrate` → `hydrate.ts`). A message row
+   is an envelope-only stub (`body_fetched_at` null, body null) until then.
 
 Depends on `gmail-api` (the stateless token-in/JSON-out REST client) and
 `mail-core` (the persisted tables + `requireGmailToken()`). MIME parsing is a
@@ -13,7 +30,7 @@ pure, sync-internal concern (`server/internal/mime.ts`, with a co-located
 ## Sync state machine (`mail_sync_state.status`)
 
 ```
-idle → (bootstrap) → backfilling → (last page) → delta ⇄ (404 expiry) → backfilling
+idle → (bootstrap) → backfilling → (window done / cap hit) → delta ⇄ (404 expiry) → backfilling
 ```
 
 - **`historyId`** is the watermark — the Gmail mailbox revision the local mirror
@@ -35,12 +52,15 @@ idle → (bootstrap) → backfilling → (last page) → delta ⇄ (404 expiry) 
 
 ## The three jobs + the manual endpoint
 
-- **`mail.backfill`** (`backfill.ts`) — one `messages.list` page per run:
-  batched `messages.get` → `upsertMessage`; then **renews the watermark** for the
-  page (`applyHistorySince` from the current `historyId`, persisting the advanced
-  value); re-enqueues itself for the next page; on the final page flips `status`
-  to `delta`. Dedup keyed by `accountId` (one chain per account). A permanent
-  permission/contract failure (`GmailApiError` 400/401/403) throws
+- **`mail.backfill`** (`backfill.ts`) — one **windowed** `messages.list` page per
+  run (`newer_than:${BACKFILL_WINDOW_DAYS}d`): `fetchEnvelopes` (metadata-only,
+  404-tolerant) → `upsertMessageEnvelope` (envelope-only, no body); then **renews
+  the watermark** for the page (`applyHistorySince` from the current `historyId`,
+  persisting the advanced value); re-enqueues itself for the next page **while the
+  window has more pages AND the `MAX_BACKFILL_MESSAGES` cap is not hit** (the
+  running count rides in the job input). Flips `status` to `delta` as soon as
+  either bound trips. Dedup keyed by `accountId` (one chain per account). A
+  permanent permission/contract failure (`GmailApiError` 400/401/403) throws
   `NonRetryableError` so it dead-letters after one attempt instead of burning the
   retry budget; transient errors retry the page (upserts are idempotent). A
   stale-watermark 404 during renewal is extremely narrow (the job stalled longer
@@ -49,10 +69,16 @@ idle → (bootstrap) → backfilling → (last page) → delta ⇄ (404 expiry) 
 - **`mail.delta`** (`delta.ts`) — paginates `history.list` from the watermark,
   collects records, advances `historyId`. On a stale-watermark 404
   (`GmailHistoryExpiredError`) it re-enters `backfilling` from a fresh profile
-  `historyId` and enqueues a backfill (bounded full resync). **Label changes are
-  applied by re-fetching the affected messages and re-upserting** (the upsert
-  reconciles labels + flags + thread) rather than hand-patching deltas — simpler
-  and idempotent. Dedup keyed by `accountId`. Consecutive 404-expiry resyncs are
+  `historyId` and enqueues a backfill (bounded full resync). **Label changes and
+  new messages are applied by re-fetching the affected ENVELOPES via
+  `fetchEnvelopes` (metadata-only, 404-tolerant) and re-upserting with
+  `upsertMessageEnvelope`** (the envelope upsert reconciles labels + flags +
+  thread and PRESERVES any already-cached body) rather than hand-patching deltas
+  — simpler and idempotent. A message that 404s on re-fetch (deleted after its
+  history record) is reconciled as a deletion, so one vanished message never
+  aborts the pass (the old all-or-nothing `batchGetMessages` dead-lettered the
+  whole sync on a single deleted message — the root cause of the wedged
+  `unknown`-error account). Dedup keyed by `accountId`. Consecutive 404-expiry resyncs are
   counted on `mail_sync_state.resyncCount`; after `MAX_CONSECUTIVE_RESYNCS` (3)
   consecutive expiries with no successful delta in between (a mailbox too large to
   back up before Gmail's history window expires), the engine escalates to a
@@ -80,6 +106,15 @@ idle → (bootstrap) → backfilling → (last page) → delta ⇄ (404 expiry) 
   used by the phase-3 UI and for worktree testing (the tick is main-only and
   won't fire in a worktree). When Gmail isn't connected, `requireGmailToken()`
   throws and the failure surfaces loudly.
+- **`POST /api/mail/hydrate`** (`handlers.ts` → `hydrate.ts`) — on-demand body
+  fetch, the "fetch only when opened" half of the model. Body `{ messageId }`. If
+  the message is already hydrated (or is a legacy full-backfilled row —
+  `isMessageHydrated`), it is returned straight from Postgres with **no Gmail
+  round-trip** (a pure cache hit). On a cache miss it fetches `format=full`,
+  `upsertMessageFull` (body + attachments + `body_fetched_at`), and returns the
+  now-cached `{ message, attachments }`. The message must already exist as an
+  envelope stub in the mirror (a `messageId` outside the synced window → 404).
+  This is what a reading pane calls when a user opens an email.
 
 ## No-polling exception
 
@@ -96,34 +131,47 @@ runtime, so the engine is fully testable inside a worktree.
 
 ## Quota ("batched")
 
-Google's JSON multipart batch endpoint is deprecated. `batchGetMessages`
-(`gmail-api`) is therefore a **concurrency-bounded parallel fan-out** (8 in
-flight) with exponential backoff on 429/5xx in the shared request helper — the
-current recommended pattern, respecting the per-user quota.
+Google's JSON multipart batch endpoint is deprecated. The engine's envelope
+fetch (`fetchEnvelopes`) and the `gmail-api` `batchGetMessages` are therefore
+**concurrency-bounded parallel fan-outs** (8 in flight) with exponential backoff
+on 429/5xx in the shared request helper — the current recommended pattern,
+respecting the per-user quota. Metadata-only + windowed ingestion also slashes
+the total request/byte volume versus the old full-mailbox, full-body crawl.
 
 ## Limitations (documented, deferred)
 
+- **Window ≠ whole mailbox.** Only envelopes newer than `BACKFILL_WINDOW_DAYS`
+  (capped at `MAX_BACKFILL_MESSAGES`) are mirrored. Older mail is not searchable
+  locally until on-demand server-side search (`messages.list?q=`) pulls matching
+  envelopes into the mirror — a later-phase follow-up.
+- **`hasAttachments` / attachment metadata lag hydration.** `format=metadata`
+  carries no MIME parts, so a thread's attachment indicator and a message's
+  attachment list are unknown until the message is hydrated (opened). A cheap
+  header-heuristic or a background hydration pass could pre-populate the paperclip
+  — a later-phase follow-up.
 - **Bounded resync ≠ deletion reconciliation.** The 404-expiry full resync
   re-fetches and upserts everything but does **not** detect messages deleted on
   the server during the gap (Gmail gives no deleted-set without history). A
-  periodic full reconcile is a later-phase follow-up.
+  periodic full reconcile is a later-phase follow-up. (Per-message 404s seen
+  *during* a history/backfill pass ARE reconciled as deletions — see
+  `fetchEnvelopes`.)
 - **Attachment blobs are not downloaded** in this phase — only metadata +
-  `gmailAttachmentId` are stored (`storedAttachmentId` stays null). Lazy blob
-  fetch lands with the reading pane in a later phase.
+  `gmailAttachmentId` are stored (`storedAttachmentId` stays null), populated at
+  hydration time. Lazy blob fetch lands with the reading pane in a later phase.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Gmail sync engine: paginated backfill, history.list incremental delta with a bounded full-resync fallback on historyId expiry, and a scheduled main-only delta tick (the documented no-polling exception). Parses MIME into envelopes/bodies/attachment-metadata and mirrors threads/messages/labels into the mail-core tables.
+- Description: Gmail sync engine (on-demand model): a bounded, metadata-only backfill mirrors a recent window of message envelopes; history.list incremental delta keeps them fresh (with a bounded full-resync fallback on historyId expiry) via a scheduled main-only delta tick (the documented no-polling exception). Message bodies + attachments are hydrated lazily on first open and cached (POST /api/mail/hydrate). Mirrors threads/messages/labels into the mail-core tables.
 - Server:
-  - Uses: `apps/mail/gmail-api.batchGetMessages`, `apps/mail/gmail-api.getProfile`, `apps/mail/gmail-api.listHistory`, `apps/mail/gmail-api.listLabels`, `apps/mail/gmail-api.listMessages`, `apps/mail/mail-core._mailAccounts`, `apps/mail/mail-core._mailAttachments`, `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailMessageLabels`, `apps/mail/mail-core._mailMessages`, `apps/mail/mail-core._mailSyncState`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.requireGmailToken`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.NonRetryableError`, `integrations/gmail.isGmailEnabled`, `primitives/log-channels.Log`
+  - Uses: `apps/mail/gmail-api.getMessage`, `apps/mail/gmail-api.getProfile`, `apps/mail/gmail-api.listHistory`, `apps/mail/gmail-api.listLabels`, `apps/mail/gmail-api.listMessages`, `apps/mail/mail-core._mailAccounts`, `apps/mail/mail-core._mailAttachments`, `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailMessageLabels`, `apps/mail/mail-core._mailMessages`, `apps/mail/mail-core._mailSyncState`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.requireGmailToken`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.NonRetryableError`, `integrations/gmail.isGmailEnabled`, `primitives/log-channels.Log`
   - Exports: Values: `mailSyncStateServerResource`
   - Register: `defineJob('mail.backfill')`, `defineJob('mail.delta')`, `defineJob('mail.sync-tick')`
-  - Routes: `POST /api/mail/sync`
+  - Routes: `POST /api/mail/sync`, `POST /api/mail/hydrate`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`
-  - Exports: Values: `mailSyncEndpoint`
+  - Uses: `apps/mail/mail-core.MailAttachmentSchema`, `apps/mail/mail-core.MailMessageSchema`, `infra/endpoints.defineEndpoint`
+  - Exports: Values: `BACKFILL_WINDOW_DAYS`, `mailHydrateMessageEndpoint`, `mailSyncEndpoint`, `MAX_BACKFILL_MESSAGES`
 - Sub-plugins:
   - **`auto-resume`** — Auto-resumes Mail sync when the Gmail scope is (re)granted: an app-wide headless listener that POSTs the sync kick endpoint on the connect edge.
 

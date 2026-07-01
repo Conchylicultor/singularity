@@ -241,15 +241,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `mailApp`
           - Cross-plugin:
             - Imported by: `apps/mail/sync-status`
-        - **`sync`** — Gmail sync engine: paginated backfill, history.list incremental delta with a bounded full-resync fallback on historyId expiry, and a scheduled main-only delta tick (the documented no-polling exception). Parses MIME into envelopes/bodies/attachment-metadata and mirrors threads/messages/labels into the mail-core tables.
+        - **`sync`** — Gmail sync engine (on-demand model): a bounded, metadata-only backfill mirrors a recent window of message envelopes; history.list incremental delta keeps them fresh (with a bounded full-resync fallback on historyId expiry) via a scheduled main-only delta tick (the documented no-polling exception). Message bodies + attachments are hydrated lazily on first open and cached (POST /api/mail/hydrate). Mirrors threads/messages/labels into the mail-core tables.
           - Server:
-            - Uses: `apps/mail/gmail-api.batchGetMessages`, `apps/mail/gmail-api.getProfile`, `apps/mail/gmail-api.listHistory`, `apps/mail/gmail-api.listLabels`, `apps/mail/gmail-api.listMessages`, `apps/mail/mail-core._mailAccounts`, `apps/mail/mail-core._mailAttachments`, `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailMessageLabels`, `apps/mail/mail-core._mailMessages`, `apps/mail/mail-core._mailSyncState`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.requireGmailToken`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.NonRetryableError`, `integrations/gmail.isGmailEnabled`, `primitives/log-channels.Log`
+            - Uses: `apps/mail/gmail-api.getMessage`, `apps/mail/gmail-api.getProfile`, `apps/mail/gmail-api.listHistory`, `apps/mail/gmail-api.listLabels`, `apps/mail/gmail-api.listMessages`, `apps/mail/mail-core._mailAccounts`, `apps/mail/mail-core._mailAttachments`, `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailMessageLabels`, `apps/mail/mail-core._mailMessages`, `apps/mail/mail-core._mailSyncState`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.requireGmailToken`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.NonRetryableError`, `integrations/gmail.isGmailEnabled`, `primitives/log-channels.Log`
             - Exports: Values: `mailSyncStateServerResource`
             - Register: `defineJob('mail.backfill')`, `defineJob('mail.delta')`, `defineJob('mail.sync-tick')`
-            - Routes: `POST /api/mail/sync`
+            - Routes: `POST /api/mail/sync`, `POST /api/mail/hydrate`
           - Core:
-            - Uses: `infra/endpoints.defineEndpoint`
-            - Exports: Values: `mailSyncEndpoint`
+            - Uses: `apps/mail/mail-core.MailAttachmentSchema`, `apps/mail/mail-core.MailMessageSchema`, `infra/endpoints.defineEndpoint`
+            - Exports: Values: `BACKFILL_WINDOW_DAYS`, `mailHydrateMessageEndpoint`, `mailSyncEndpoint`, `MAX_BACKFILL_MESSAGES`
           - Plugins:
             - **`auto-resume`** — Auto-resumes Mail sync when the Gmail scope is (re)granted: an app-wide headless listener that POSTs the sync kick endpoint on the connect edge.
               - Web:

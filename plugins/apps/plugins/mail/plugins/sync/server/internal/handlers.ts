@@ -1,7 +1,11 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { mailSyncEndpoint } from "../../core";
+import {
+  mailSyncEndpoint,
+  mailHydrateMessageEndpoint,
+} from "../../core";
 import { ensureAccount } from "./bootstrap";
 import { kickSync } from "./record-error";
+import { hydrateMessage } from "./hydrate";
 
 // Manual sync trigger: arm the account, then `kickSync` to clear any recorded
 // error and kick an immediate delta/backfill so "sync now" feels instant AND
@@ -18,3 +22,10 @@ export const handleMailSync = implement(mailSyncEndpoint, async () => {
   }
   return result;
 });
+
+// On-demand body hydration: fetch + cache one message's full body on open (or
+// serve it straight from the mirror on a repeat open). See `hydrate.ts`.
+export const handleMailHydrate = implement(
+  mailHydrateMessageEndpoint,
+  ({ body }) => hydrateMessage(body.messageId),
+);

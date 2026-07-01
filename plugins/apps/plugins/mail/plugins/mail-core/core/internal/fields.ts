@@ -133,6 +133,12 @@ export const mailMessageFields = {
   }),
   bodyText: nullable(textField()),
   bodyHtml: nullable(textField()),
+  // On-demand hydration marker. Null = envelope-only stub (synced via Gmail
+  // `format=metadata` during the bounded backfill/delta — no body fetched yet);
+  // set = the full MIME body + attachments were fetched on first open and cached.
+  // Legacy rows from the pre-on-demand full backfill carry a body but a null
+  // marker; `isMessageHydrated` treats a present body as hydrated too.
+  bodyFetchedAt: nullable(dateField()),
   internalDate: nullable(dateField()),
   unread: boolField(),
   starred: boolField(),

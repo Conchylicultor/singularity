@@ -3,7 +3,6 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineJob, NonRetryableError } from "@plugins/infra/plugins/jobs/server";
 import {
-  batchGetMessages,
   getProfile,
   listMessages,
 } from "@plugins/apps/plugins/mail/plugins/gmail-api/server";
@@ -13,16 +12,28 @@ import {
   requireGmailToken,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
-import { upsertMessage } from "./store";
+import {
+  BACKFILL_WINDOW_DAYS,
+  MAX_BACKFILL_MESSAGES,
+} from "../../core";
+import { upsertMessageEnvelope } from "./store";
+import { fetchEnvelopes } from "./fetch-envelopes";
 import { applyHistorySince } from "./history-sync";
 import { classifyMailSyncError } from "./classify-error";
 import { recordSyncError } from "./record-error";
 
-// Whole-mailbox backfill, one `messages.list` page per run. The Gmail pageToken
-// is carried in the job INPUT (durable in the graphile row) rather than the DB,
-// so a crash resumes the exact page on retry and no schema column is needed.
-// Each page is idempotent via the storage layer's upserts. The job re-enqueues
-// itself for the next page and flips sync_state to "delta" on the final page.
+// Bounded, metadata-only backfill — the on-demand ("instant") sync model. Rather
+// than mirroring the ENTIRE mailbox with full bodies, each run lists one
+// `messages.list` page WITHIN a recent window (`newer_than:${BACKFILL_WINDOW_DAYS}d`)
+// and fetches only ENVELOPES (`format=metadata`: headers + snippet + labels, no
+// body). Bodies are hydrated lazily on first open (see `hydrate.ts`). The Gmail
+// pageToken + a running envelope count are carried in the job INPUT (durable in
+// the graphile row), so a crash resumes the exact page and the cap survives.
+//
+// The backfill ends — flipping sync_state to "delta" — as soon as EITHER bound
+// trips: the window is exhausted (no `nextPageToken`) OR `MAX_BACKFILL_MESSAGES`
+// envelopes have been synced. This is what makes connect feel instant on a large
+// mailbox: seconds of metadata, not an hours-long full-body crawl.
 //
 // Self-renewing watermark: on every page we ALSO consume `history.list` from the
 // current watermark forward (`applyHistorySince`) and persist the advanced
@@ -34,12 +45,17 @@ import { recordSyncError } from "./record-error";
 
 export const backfillJob = defineJob({
   name: "mail.backfill",
-  input: z.object({ accountId: z.string(), pageToken: z.string().optional() }),
+  input: z.object({
+    accountId: z.string(),
+    pageToken: z.string().optional(),
+    // Envelopes synced so far across this backfill chain (for the hard cap).
+    syncedCount: z.number().optional(),
+  }),
   event: z.never(),
   dedup: { key: ({ accountId }) => accountId },
   maxAttempts: 5,
   run: async ({ input }) => {
-    const { accountId, pageToken } = input;
+    const { accountId, pageToken, syncedCount = 0 } = input;
 
     // Guard: only run while this account is actually backfilling (a concurrent
     // cancel / completion flips the status and this run no-ops).
@@ -58,13 +74,24 @@ export const backfillJob = defineJob({
       // token-unavailable failure here is recorded + classified like any other.
       const { accessToken: token } = await requireGmailToken();
 
-      const list = await listMessages(token, { pageToken, maxResults: 100 });
+      // Metadata-only, windowed list: only envelopes within the recent window are
+      // fetched (bodies are hydrated on-demand). The `q` filter carries across
+      // pages via the pageToken.
+      const list = await listMessages(token, {
+        pageToken,
+        q: `newer_than:${BACKFILL_WINDOW_DAYS}d`,
+        maxResults: 100,
+      });
 
       const ids = (list.messages ?? []).map((m) => m.id);
-      const msgs = await batchGetMessages(token, ids);
-      for (const m of msgs) {
-        await upsertMessage(accountId, m);
+      // Tolerant of a freshly-listed id that 404s (deleted in the race between
+      // list and get) — one vanished message must not dead-letter the backfill.
+      const { fetched } = await fetchEnvelopes(token, ids);
+      for (const m of fetched) {
+        await upsertMessageEnvelope(accountId, m);
       }
+      const newSyncedCount = syncedCount + ids.length;
+      const capReached = newSyncedCount >= MAX_BACKFILL_MESSAGES;
 
       // Renew the watermark for this page (armed by bootstrap/resync, so never
       // null while backfilling — the `?? null` guard is defensive).
@@ -74,18 +101,33 @@ export const backfillJob = defineJob({
         state.historyId ?? null,
       );
 
-      if (list.nextPageToken) {
+      // Continue only while the window has more pages AND the cap is not hit.
+      if (list.nextPageToken && !capReached) {
         await db
           .update(_mailSyncState)
           .set({ historyId: renewedHistoryId, updatedAt: new Date() })
           .where(eq(_mailSyncState.accountId, accountId));
-        await backfillJob.enqueue({ accountId, pageToken: list.nextPageToken });
+        await backfillJob.enqueue({
+          accountId,
+          pageToken: list.nextPageToken,
+          syncedCount: newSyncedCount,
+        });
         return;
       }
 
-      // Final page: the watermark was renewed each page, so it is already fresh —
-      // the first delta starts from it with no stale-history gap. Flip into
-      // steady-state delta and clear any prior error.
+      if (capReached && list.nextPageToken) {
+        Log.emit(
+          "mail-sync",
+          `backfill hit the ${MAX_BACKFILL_MESSAGES}-envelope cap for ` +
+            `${accountId}; older mail loads on-demand.`,
+          "stdout",
+        );
+      }
+
+      // Final page (window exhausted or cap reached): the watermark was renewed
+      // each page, so it is already fresh — the first delta starts from it with
+      // no stale-history gap. Flip into steady-state delta and clear any prior
+      // error.
       await db
         .update(_mailSyncState)
         .set({

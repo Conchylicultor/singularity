@@ -1,9 +1,7 @@
-import {
-  batchGetMessages,
-  listHistory,
-} from "@plugins/apps/plugins/mail/plugins/gmail-api/server";
+import { listHistory } from "@plugins/apps/plugins/mail/plugins/gmail-api/server";
 import type { GmailHistoryRecord } from "@plugins/apps/plugins/mail/plugins/gmail-api/core";
-import { deleteMessage, upsertMessage } from "./store";
+import { deleteMessage, upsertMessageEnvelope } from "./store";
+import { fetchEnvelopes } from "./fetch-envelopes";
 
 // Shared history-consumption pass used by BOTH the steady-state delta and the
 // self-renewing backfill: paginate `history.list` from a watermark, apply every
@@ -40,8 +38,11 @@ export async function applyHistorySince(
   } while (pageToken);
 
   // Collect the message ids to (re)fetch and the ones to delete. Re-fetch covers
-  // messagesAdded AND label changes (labelsAdded/labelsRemoved) — the upsert
-  // reconciles labels/flags/thread, so we never hand-apply a delta.
+  // messagesAdded AND label changes (labelsAdded/labelsRemoved) — the metadata
+  // upsert reconciles labels/flags/thread, so we never hand-apply a delta. It is
+  // deliberately metadata-only: a newly-arrived message lands as an envelope stub
+  // (body fetched on first open), and a label change on an already-hydrated
+  // message preserves its cached body.
   const toFetch = new Set<string>();
   const toDelete = new Set<string>();
   for (const rec of records) {
@@ -54,8 +55,11 @@ export async function applyHistorySince(
   for (const id of toDelete) toFetch.delete(id);
 
   if (toFetch.size > 0) {
-    const msgs = await batchGetMessages(token, [...toFetch]);
-    for (const m of msgs) await upsertMessage(accountId, m);
+    const { fetched, missing } = await fetchEnvelopes(token, [...toFetch]);
+    for (const m of fetched) await upsertMessageEnvelope(accountId, m);
+    // A 404 on re-fetch means the message was deleted after its history record
+    // was written — reconcile it as a deletion alongside the explicit ones.
+    for (const id of missing) toDelete.add(id);
   }
   for (const id of toDelete) await deleteMessage(id);
 

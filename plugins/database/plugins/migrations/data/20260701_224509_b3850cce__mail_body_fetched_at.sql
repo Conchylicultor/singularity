@@ -1,0 +1,1 @@
+ALTER TABLE "mail_messages" ADD COLUMN "body_fetched_at" timestamp with time zone;

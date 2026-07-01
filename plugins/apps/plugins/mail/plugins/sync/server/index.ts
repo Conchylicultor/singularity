@@ -2,8 +2,8 @@ import {
   Resource,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
-import { mailSyncEndpoint } from "../core";
-import { handleMailSync } from "./internal/handlers";
+import { mailSyncEndpoint, mailHydrateMessageEndpoint } from "../core";
+import { handleMailSync, handleMailHydrate } from "./internal/handlers";
 import { backfillJob } from "./internal/backfill";
 import { deltaJob } from "./internal/delta";
 import { syncTickJob } from "./internal/tick";
@@ -13,8 +13,11 @@ export { mailSyncStateServerResource } from "./internal/resource";
 
 export default {
   description:
-    "Gmail sync engine: paginated backfill, history.list incremental delta with a bounded full-resync fallback on historyId expiry, and a scheduled main-only delta tick (the documented no-polling exception). Parses MIME into envelopes/bodies/attachment-metadata and mirrors threads/messages/labels into the mail-core tables.",
+    "Gmail sync engine (on-demand model): a bounded, metadata-only backfill mirrors a recent window of message envelopes; history.list incremental delta keeps them fresh (with a bounded full-resync fallback on historyId expiry) via a scheduled main-only delta tick (the documented no-polling exception). Message bodies + attachments are hydrated lazily on first open and cached (POST /api/mail/hydrate). Mirrors threads/messages/labels into the mail-core tables.",
   contributions: [Resource.Declare(mailSyncStateServerResource)],
-  httpRoutes: { [mailSyncEndpoint.route]: handleMailSync },
+  httpRoutes: {
+    [mailSyncEndpoint.route]: handleMailSync,
+    [mailHydrateMessageEndpoint.route]: handleMailHydrate,
+  },
   register: [backfillJob, deltaJob, syncTickJob],
 } satisfies ServerPluginDefinition;

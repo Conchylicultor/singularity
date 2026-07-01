@@ -32,11 +32,15 @@ export async function getMessage(
  * fan-out (8 in flight) rather than a single multipart request. A per-message
  * failure rejects the whole `Promise.all` on purpose — the caller's job retries
  * the page and upserts are idempotent.
+ *
+ * `format` is threaded to each `getMessage` (default `"full"`). The sync engine
+ * fetches envelopes with `"metadata"`; on-demand hydration fetches `"full"`.
  */
 export async function batchGetMessages(
   token: string,
   ids: string[],
+  format = "full",
 ): Promise<GmailMessage[]> {
   const sem = createSemaphore(8);
-  return Promise.all(ids.map((id) => sem.run(() => getMessage(token, id))));
+  return Promise.all(ids.map((id) => sem.run(() => getMessage(token, id, format))));
 }
