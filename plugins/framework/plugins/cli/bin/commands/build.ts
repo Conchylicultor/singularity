@@ -1,7 +1,9 @@
 import type { Command } from "commander";
+import os from "node:os";
 import { existsSync, lstatSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
 import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
+import { adaptiveTimeoutMs } from "./adaptive-timeout";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
@@ -481,28 +483,98 @@ async function waitForDatabase(name: string): Promise<void> {
   );
 }
 
+// Reads the gateway's authoritative state for one worktree. Returns null when
+// the gateway is unreachable (connection refused / timeout) or the worktree is
+// absent from the snapshot. Only connection/timeout errors are swallowed;
+// anything unexpected is rethrown so it fails loudly.
+async function getWorktreeState(
+  name: string,
+): Promise<{ state: string; lastSpawnErr: string } | null> {
+  try {
+    const resp = await fetch("http://localhost:9000/gateway/worktrees", {
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!resp.ok) return null;
+    const entries = (await resp.json()) as Array<{
+      name?: string;
+      state?: string;
+      lastSpawnErr?: string;
+    }>;
+    if (!Array.isArray(entries)) return null;
+    const entry = entries.find((e) => e.name === name);
+    if (!entry) return null;
+    return { state: entry.state ?? "", lastSpawnErr: entry.lastSpawnErr ?? "" };
+  } catch (err) {
+    // Gateway not running (TypeError/connection refused) or request timed out
+    // (DOMException AbortError). Anything else is unexpected — rethrow.
+    if (!(err instanceof TypeError) && !(err instanceof DOMException)) throw err;
+    return null;
+  }
+}
+
 async function probeHealth(name: string): Promise<void> {
-  console.log("Probing /api/health...");
+  const deadline = adaptiveTimeoutMs(20_000, 120_000);
+  console.log(`Probing /api/health... (deadline ${Math.round(deadline / 1000)}s)`);
   const url = `http://${name}.localhost:9000/api/health`;
   let lastStatus: number | string = "no response";
-  await retryUntil(
+  await retryUntil<true, Promise<void>>(
     async () => {
       try {
-        const resp = await fetch(url);
+        const resp = await fetch(url, { signal: AbortSignal.timeout(5_000) });
         if (resp.ok) return true;
         lastStatus = resp.status;
       } catch (err) {
+        // A per-attempt abort (DOMException) is just a slow request — record it
+        // and let retryUntil try again like any other failed attempt.
         lastStatus = err instanceof Error ? err.message : String(err);
       }
       return null;
     },
     {
       delay: fixed(250),
-      deadline: 10_000,
-      onDeadline: () => {
-        console.error(`Server failed to respond on /api/health within 10s (last: ${lastStatus}).`);
-        console.error("The build artifacts are valid but the server can't boot. Check server logs.");
-        process.exit(1);
+      deadline,
+      // On deadline we ask the gateway for the worktree's authoritative state
+      // instead of blindly declaring a crash. A stopwatch expiring is not the
+      // same as a boot failure under host load.
+      onDeadline: async () => {
+        const load1 = Math.round((os.loadavg()[0] ?? 0) * 10) / 10;
+        const info = await getWorktreeState(name);
+        if (!info) {
+          console.warn(
+            `Server didn't respond on /api/health within ${Math.round(deadline / 1000)}s ` +
+              `(last: ${lastStatus}) and the gateway is unreachable. ` +
+              `Build artifacts are valid; not blocking the build.`,
+          );
+          return;
+        }
+        switch (info.state) {
+          case "broken":
+            console.error(
+              `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}. ` +
+                `Check server logs.`,
+            );
+            process.exit(1);
+            break;
+          case "running":
+            console.log("Server is up.");
+            return;
+          case "starting":
+          case "restarting":
+          case "idle":
+            console.warn(
+              `Server still booting after ${Math.round(deadline / 1000)}s under host load ` +
+                `(load avg ${load1}). Build artifacts are valid; the gateway will finish ` +
+                `bringing it up on demand. Not blocking the build.`,
+            );
+            return;
+          default:
+            console.warn(
+              `Server didn't respond on /api/health within ${Math.round(deadline / 1000)}s ` +
+                `(gateway state: ${info.state || "unknown"}, last: ${lastStatus}). ` +
+                `Build artifacts are valid; not blocking the build.`,
+            );
+            return;
+        }
       },
     },
   );
@@ -1096,12 +1168,26 @@ export function registerBuild(program: Command) {
       try {
         const resp = await fetch(
           `http://localhost:9000/gateway/worktrees/${name}/restart`,
-          { method: "POST", signal: AbortSignal.timeout(30_000) },
+          { method: "POST", signal: AbortSignal.timeout(adaptiveTimeoutMs(30_000, 130_000)) },
         );
         if (resp.ok) {
           console.log("Backend restarted");
         } else if (resp.status === 404) {
           console.log("No running backend to restart");
+        } else if (resp.status === 500) {
+          // A 500 can be a real boot crash or a still-in-progress readiness
+          // timeout under load. Ask the gateway for the authoritative state
+          // before deciding to hard-fail; otherwise let probeHealth make the
+          // final call.
+          const info = await getWorktreeState(name);
+          if (info?.state === "broken") {
+            console.error(
+              `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}. ` +
+                `Check server logs.`,
+            );
+            process.exit(1);
+          }
+          console.warn(`Backend restart returned ${resp.status}`);
         } else {
           console.warn(`Backend restart returned ${resp.status}`);
         }

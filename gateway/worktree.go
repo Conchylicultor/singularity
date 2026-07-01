@@ -84,6 +84,9 @@ type WorktreeStatus struct {
 	ActiveConns  int       `json:"activeConns"`
 	Server       string    `json:"server"`
 	Web          string    `json:"web"`
+	// LastSpawnErr is the last spawn/readiness failure, empty when none. Lets a
+	// consumer (the build CLI) distinguish a real boot crash from a slow boot.
+	LastSpawnErr string `json:"lastSpawnErr"`
 }
 
 var (
@@ -328,7 +331,9 @@ func (w *Worktree) Ensure(ctx context.Context) (*backend, error) {
 		w.mu.Lock()
 		w.active = bk
 		w.mu.Unlock()
-		spawnErr = waitReady(socketPath, w.cfg.ReadyTimeout, bk.exitCh)
+		timeout := adaptiveTimeout(w.cfg.ReadyTimeout, w.cfg.ReadyTimeoutMax)
+		logAdaptiveTimeout(w.Name, w.cfg.ReadyTimeout, timeout)
+		spawnErr = waitReady(socketPath, timeout, bk.exitCh)
 	}
 
 	if spawnErr != nil {
@@ -418,7 +423,9 @@ func (w *Worktree) Restart(ctx context.Context) error {
 
 	// --- Step 3: Wait for readiness ---
 	if spawnErr == nil {
-		spawnErr = waitReady(newSocketPath, w.cfg.ReadyTimeout, newBk.exitCh)
+		timeout := adaptiveTimeout(w.cfg.ReadyTimeout, w.cfg.ReadyTimeoutMax)
+		logAdaptiveTimeout(w.Name, w.cfg.ReadyTimeout, timeout)
+		spawnErr = waitReady(newSocketPath, timeout, newBk.exitCh)
 	}
 
 	// --- Step 4 (failure): keep old backend, revert state ---
@@ -763,6 +770,10 @@ func (w *Worktree) Snapshot() WorktreeStatus {
 	state := w.state
 	last := w.lastActivity
 	bk := w.active
+	var lastSpawnErr string
+	if w.lastSpawnErr != nil {
+		lastSpawnErr = w.lastSpawnErr.Error()
+	}
 	w.mu.Unlock()
 	spec := w.Spec()
 	var socketPath string
@@ -779,6 +790,7 @@ func (w *Worktree) Snapshot() WorktreeStatus {
 		ActiveConns:  conns,
 		Server:       spec.Server,
 		Web:          spec.Web,
+		LastSpawnErr: lastSpawnErr,
 	}
 }
 
@@ -900,6 +912,20 @@ func (w *Worktree) onBackendExit(bk *backend, err error) {
 	}
 	w.active = nil
 	w.state = StateIdle
+}
+
+// logAdaptiveTimeout records the readiness timeout chosen for a spawn so slow
+// boots under host load are observable. The load is included when available;
+// when it is not (unsupported OS / read error), chosen == base and no load is
+// attached.
+func logAdaptiveTimeout(worktree string, base, chosen time.Duration) {
+	if load, ok := hostLoad1(); ok {
+		slog.Info("adaptive readiness timeout", "worktree", worktree,
+			"base", base, "chosen", chosen, "load1", load)
+		return
+	}
+	slog.Info("adaptive readiness timeout", "worktree", worktree,
+		"base", base, "chosen", chosen)
 }
 
 // waitReady polls the backend's `GET /api/health/ready` over its Unix socket
