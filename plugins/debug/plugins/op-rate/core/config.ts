@@ -62,5 +62,12 @@ export const opRateConfig = defineConfig({
       description:
         "File an op-rate report when a database query label runs more than this many times within one monitor window (leaf-level, naturally high).",
     }),
+    jobPerWindow: intField({
+      default: 500,
+      min: 0,
+      label: "Job runs per window",
+      description:
+        "File an op-rate report when a job label runs more than this many times within one monitor window.",
+    }),
   },
 });

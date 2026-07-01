@@ -30,7 +30,10 @@
 // (which resource dominated a flush cycle) for free. See
 // research/2026-06-19-global-wait-attribution-instrumentation.md and
 // research/2026-06-19-global-observability-frequency-delivery-and-dead-job-gc.md.
-export type SpanKind = "http" | "db" | "loader" | "sub" | "push" | "flush";
+// `job` is a top-level background-work entry recorded around each
+// graphile-worker `job.run()`, analogous to `http` but triggered by the queue
+// rather than an incoming request; its label is the job name.
+export type SpanKind = "http" | "db" | "loader" | "sub" | "push" | "flush" | "job";
 
 /** A reference to an enclosing entry point (the immediate parent of a span). */
 export interface SpanRef {
@@ -106,7 +109,7 @@ export function waitSplit(agg: Aggregate): {
 const MAX_LABEL_LEN = 500;
 const SLOWEST_CAP = 50;
 
-const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push", "flush"];
+const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push", "flush", "job"];
 
 // --- Injected ambient-context runtime ---
 
@@ -236,6 +239,7 @@ const aggregates: Record<SpanKind, Map<string, AggregateInternal>> = {
   sub: new Map(),
   push: new Map(),
   flush: new Map(),
+  job: new Map(),
 };
 
 // Per-kind "slowest recent" buffer. We keep a slowest-N set rather than a plain
@@ -249,6 +253,7 @@ const slowest: Record<SpanKind, SlowSpan[]> = {
   sub: [],
   push: [],
   flush: [],
+  job: [],
 };
 
 let sinceMs = performance.now();

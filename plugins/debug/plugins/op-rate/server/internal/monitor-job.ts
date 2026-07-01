@@ -21,7 +21,7 @@ const WINDOW_MS = 5 * 60_000;
 // recorder does not export its KINDS array). Kept in lock-step with
 // runtime-profiler's SpanKind union, which IS exported and types the threshold
 // helper below.
-const KINDS = ["http", "db", "loader", "sub", "push", "flush"] as const;
+const KINDS = ["http", "db", "loader", "sub", "push", "flush", "job"] as const;
 
 // Cap on reports filed per tick, so a pathological burst across many ops can
 // never storm task creation. Over-threshold ops past the cap are logged (no
@@ -121,5 +121,7 @@ function kindThreshold(kind: SpanKind, cfg: Thresholds): number {
       return cfg.flushPerWindow;
     case "db":
       return cfg.dbPerWindow;
+    case "job":
+      return cfg.jobPerWindow;
   }
 }

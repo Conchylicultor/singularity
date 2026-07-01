@@ -5,7 +5,7 @@ import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { type SpanKind, waitSplit } from "@plugins/infra/plugins/runtime-profiler/core";
 import { runtimeProfileSchema } from "../../shared/endpoints";
 
-const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push", "flush"];
+const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push", "flush", "job"];
 
 export const runtimeProfileTool = Mcp.tool({
   name: "get_runtime_profile",
@@ -18,7 +18,7 @@ Wait-vs-work: every entry (loader/http/sub/push) carries a \`waits\` map (gate/l
 Default: profiles the current conversation's worktree server. Pass \`worktree\` to target a different worktree (e.g. "att-1778089188-7uvf" or "singularity" for main).`,
   inputSchema: {
     kind: z
-      .enum(["http", "db", "loader", "sub", "push", "flush", "all"])
+      .enum(["http", "db", "loader", "sub", "push", "flush", "job", "all"])
       .optional()
       .describe('Span kind to filter. Defaults to "all".'),
     limit: z

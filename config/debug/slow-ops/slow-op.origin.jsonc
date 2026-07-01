@@ -1,4 +1,4 @@
-// @hash edaa23061a17
+// @hash 2d6911826a94
 {
   // Report a slow-op when first content paint takes longer than this (measured client-side in a post-paint frame).
   "pageLoadMs": 2000,
@@ -9,5 +9,7 @@
   // Report a slow-op when a server HTTP request span exceeds this duration.
   "httpMs": 2000,
   // Report a slow-op when a database query span exceeds this duration.
-  "dbMs": 500
+  "dbMs": 500,
+  // Report a slow-op when a background job run exceeds this duration. A job can override this via defineJob({ slowThresholdMs }).
+  "jobMs": 3000
 }

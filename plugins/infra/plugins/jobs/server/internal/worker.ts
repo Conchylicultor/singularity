@@ -11,6 +11,7 @@ import { db } from "@plugins/database/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { isMain } from "@plugins/infra/plugins/paths/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
+import { recordEntrySpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import { JOB_TASK, JOB_CONCURRENCY } from "./constants";
 import {
   getScheduledJobs,
@@ -208,7 +209,9 @@ async function dispatch(
   });
 
   try {
-    await job.run({ input: payload.input, event: payload.event, ctx });
+    await recordEntrySpan("job", payload.jobName, () =>
+      job.run({ input: payload.input, event: payload.event, ctx }),
+    );
   } catch (err) {
     if (isSuspendSignal(err)) {
       // Graphile sees a successful run — the current job completes and the

@@ -40,8 +40,10 @@ pure (no `node:async_hooks`, web bundle unaffected):
 ### Entry points vs leaves
 
 - `recordEntrySpan(kind, label, fn)` — used at the HTTP (`endpoints/core/implement.ts`),
-  loader (`server-core/core/resources.ts` `wrapLoad`), and origin (`server-core` `wrapOrigin`,
-  for the `sub`/`push` entries) chokepoints. Runs `fn` under a fresh ambient
+  loader (`server-core/core/resources.ts` `wrapLoad`), origin (`server-core` `wrapOrigin`,
+  for the `sub`/`push` entries), and job (the jobs dispatcher,
+  `infra/plugins/jobs/server/internal/worker.ts`, which wraps each `job.run()` in a `job`
+  entry span labelled by the job name) chokepoints. Runs `fn` under a fresh ambient
   `EntryContext { kind, label, waits }` so children attribute to it (and gates charge their
   wait to it), while recording the entry span itself against the *outer* parent (an entry is
   never its own parent). Records in `finally`.

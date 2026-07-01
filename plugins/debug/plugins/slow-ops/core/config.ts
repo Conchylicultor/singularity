@@ -43,5 +43,12 @@ export const slowOpConfig = defineConfig({
       description:
         "Report a slow-op when a database query span exceeds this duration.",
     }),
+    jobMs: intField({
+      default: 3000,
+      min: 0,
+      label: "Job threshold (ms)",
+      description:
+        "Report a slow-op when a background job run exceeds this duration. A job can override this via defineJob({ slowThresholdMs }).",
+    }),
   },
 });

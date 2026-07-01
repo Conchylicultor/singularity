@@ -16,7 +16,7 @@ import {
 
 const RUNTIME_VIEW = defineDataView("debug.profiling.runtime");
 
-type RuntimeKind = "http" | "db" | "loader" | "sub" | "push" | "flush";
+type RuntimeKind = "http" | "db" | "loader" | "sub" | "push" | "flush" | "job";
 
 interface ParentRow {
   kind: RuntimeKind;
@@ -135,6 +135,7 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
       { value: "sub", label: "Sub" },
       { value: "push", label: "Push" },
       { value: "flush", label: "Flush" },
+      { value: "job", label: "Job" },
     ],
     width: "5rem",
   },
@@ -218,6 +219,7 @@ export function RuntimeSection(): ReactElement | null {
       ...tag("sub", toAggRows(data.aggregates.sub)),
       ...tag("push", toAggRows(data.aggregates.push)),
       ...tag("flush", toAggRows(data.aggregates.flush)),
+      ...tag("job", toAggRows(data.aggregates.job)),
     ];
   }, [data]);
 

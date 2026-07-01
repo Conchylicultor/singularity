@@ -88,6 +88,10 @@ export interface RegisteredJob {
     ctx: JobCtx;
   }) => Promise<void> | void;
   maxAttempts: number;
+  /** Per-job slow-op threshold (ms), if declared. When a run exceeds this the
+   * slow-ops pipeline files a report; falls back to the `slow-op` config
+   * `jobMs` default when unset. */
+  slowThresholdMs?: number;
   /** Recurring schedule, if the job declared one. Read by the worker at
    * startup to build graphile-worker cron items. */
   schedule?: ScheduleSpec;
@@ -206,6 +210,12 @@ export interface DefineJobSpec<
     ctx: JobCtx;
   }) => Promise<void> | void;
   maxAttempts?: number;
+  /**
+   * Duration (ms) above which a run of this job files a slow-op report.
+   * Defaults to the `slow-op` config `jobMs` (3000). Raise it for jobs
+   * expected to run long (backfills, syncs) so they don't file noise.
+   */
+  slowThresholdMs?: number;
 }
 
 export interface JobFactory<
@@ -343,6 +353,7 @@ export function defineJob<
               : "keyed",
         run: spec.run as RegisteredJob["run"],
         maxAttempts: spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+        slowThresholdMs: spec.slowThresholdMs,
         schedule: spec.schedule,
         enqueue,
       });
@@ -364,6 +375,12 @@ export function UNSAFE_getRegisteredJob(
 
 export function getAllRegisteredJobNames(): Set<string> {
   return new Set(jobRegistry.keys());
+}
+
+/** The per-job slow-op threshold (ms) declared via `defineJob({ slowThresholdMs })`,
+ * or `undefined` when the job declared none (callers fall back to the config default). */
+export function getJobSlowThresholdMs(name: string): number | undefined {
+  return jobRegistry.get(name)?.slowThresholdMs;
 }
 
 // Every registered job that declared a recurring `schedule`. The worker reads
