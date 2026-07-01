@@ -45,7 +45,7 @@ const PATTERNS = [
   "~/" + ".singularity",
 ];
 
-const check: Check = {
+const noHardcodedPathsCheck: Check = {
   id: "paths:no-hardcoded-paths",
   description:
     "Filesystem paths must come from @plugins/infra/plugins/paths/{core,server}; no homedir() calls or hardcoded path strings in TS",
@@ -85,4 +85,73 @@ const check: Check = {
   },
 };
 
-export default check;
+// Guards the per-worktree ARTIFACT layout owned by paths.ts: the
+// `worktrees/<name>` data dir (worktreeDataDir) and the build/release artifact
+// filenames (worktreeArtifacts). Re-inlining any of these re-couples a reader
+// to a writer behind paths.ts's back, exactly the drift the single source of
+// truth exists to prevent.
+//
+// This is DISTINCT from the git-checkout `.claude/worktrees` path (see
+// plugins/infra/plugins/worktree): that is a different concept and is
+// intentionally NOT matched here — pattern 1 is scoped to SINGULARITY_DIR-derived
+// paths, so `join(repoRoot, ".claude", "worktrees")` never trips this check and
+// needs no allowlist entry.
+const WORKTREE_ARTIFACT_PATTERNS: { pattern: RegExp; grepArg: string }[] = [
+  // Base dir re-inline: join(SINGULARITY_DIR, "worktrees" or `${SINGULARITY_DIR}/worktrees`.
+  { pattern: /SINGULARITY_DIR\s*(?:,\s*["'`]|\}?\/)worktrees/, grepArg: "worktrees" },
+  // build-profile artifact filename.
+  { pattern: /["'`]build-profile[^"'`\s]*\.json/, grepArg: "build-profile" },
+  // build-logs artifact filename.
+  { pattern: /["'`]build-logs[^"'`\s]*\.json/, grepArg: "build-logs" },
+  // release-logs artifact filename.
+  { pattern: /["'`]release-logs[^"'`\s]*\.json/, grepArg: "release-logs" },
+  // build.log human-readable artifact filename.
+  { pattern: /["'`]build(?:-[^"'`\s]*)?\.log/, grepArg: ".log" },
+];
+
+const WORKTREE_ARTIFACT_ALLOWED_PATHS = [
+  "plugins/infra/plugins/paths/check/index.ts",
+  "plugins/infra/plugins/paths/core/internal/paths.ts",
+];
+
+const noInlinedWorktreeArtifactsCheck: Check = {
+  id: "paths:no-inlined-worktree-artifacts",
+  description:
+    "The per-worktree artifact layout (the worktrees/<name> data dir and the build/release artifact filenames) must come from worktreeDataDir()/worktreeArtifacts in @plugins/infra/plugins/paths; never re-inline the base dir or a raw artifact filename.",
+  async run() {
+    const root = await getRoot();
+    const seen = new Set<string>();
+    const offenders: string[] = [];
+
+    for (const p of WORKTREE_ARTIFACT_PATTERNS) {
+      const matches = await grepCode({
+        root,
+        pattern: p.pattern,
+        grepArg: p.grepArg,
+        fixed: true,
+        maskStrings: false,
+      });
+
+      for (const m of matches) {
+        const line = `${m.path}:${m.line}:${m.text}`;
+        if (seen.has(line)) continue;
+        seen.add(line);
+
+        if (WORKTREE_ARTIFACT_ALLOWED_PATHS.includes(m.path)) continue;
+        if (m.path.startsWith("research/")) continue;
+
+        offenders.push(line);
+      }
+    }
+
+    if (offenders.length === 0) return { ok: true };
+
+    return {
+      ok: false,
+      message: `inlined worktree-artifact path found in ${offenders.length} place(s):\n    ${offenders.join("\n    ")}`,
+      hint: "Import `worktreeDataDir` / `worktreeArtifacts` from `@plugins/infra/plugins/paths/core` (or `/server`) instead of reconstructing the ~/.singularity/worktrees/<name> dir or hardcoding artifact filenames (build-profile*.json, build-logs*.json, build*.log, release-logs-*.json). Note: the git-checkout `.claude/worktrees` path (plugins/infra/plugins/worktree) is a different concept and intentionally out of scope.",
+    };
+  },
+};
+
+export default [noHardcodedPathsCheck, noInlinedWorktreeArtifactsCheck];
