@@ -128,7 +128,7 @@ export interface GenerateDocsOptions {
 }
 
 export async function collectAllPlugins(root: string): Promise<PluginNode[]> {
-  const tree = await buildPluginTree(resolve(root, "plugins"), { skipBarrelImport: true });
+  const tree = await buildBarrelFreeTree(root);
   return Array.from(tree.byDir.values());
 }
 

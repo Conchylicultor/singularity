@@ -1,12 +1,12 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
-import { join, resolve } from "path";
-import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { join } from "path";
 import {
   findMarkerCalls,
   maskSource,
   readIfExists,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { buildBarrelFreeTree } from "./docgen";
 import { computeDisabledIds } from "./disabled-ids";
 
 /**
@@ -70,9 +70,7 @@ export interface DataViewEntry {
  * be regenerated BEFORE the first barrel import freezes the ESM cache.
  */
 export async function collectDataViews(root: string): Promise<DataViewEntry[]> {
-  const tree = await buildPluginTree(resolve(root, "plugins"), {
-    skipBarrelImport: true,
-  });
+  const tree = await buildBarrelFreeTree(root);
   // A disabled plugin's data-view descriptor never registers at runtime (its
   // barrel is omitted from the registry), so emitting its `config/<pluginId>/`
   // origin would orphan user overrides under `pruneOrphanedConfigFiles`. Skip
