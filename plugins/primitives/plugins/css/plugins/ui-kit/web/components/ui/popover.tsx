@@ -10,6 +10,7 @@ import {
   type PopoverPadding,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/popover-width"
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
+import { SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/single-line"
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
   return <PopoverPrimitive.Root {...props} />
@@ -66,7 +67,13 @@ function PopoverContent({
           )}
           {...props}
         >
-          <ContentScope fill={false}>{children}</ContentScope>
+          {/* A floating panel is a fresh flow root: reset the ambient
+              single-line contract so content opened from a line container
+              (Bar/Row) wraps/pretty-prints instead of collapsing onto one
+              line. Line containers inside re-assert `true` locally. */}
+          <SingleLineProvider value={false}>
+            <ContentScope fill={false}>{children}</ContentScope>
+          </SingleLineProvider>
         </PopoverPrimitive.Popup>
       </PopoverPrimitive.Positioner>
     </PopoverPrimitive.Portal>
