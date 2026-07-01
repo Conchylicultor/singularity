@@ -281,6 +281,10 @@
       "name": "@singularity/plugin-apps-mail-sync-status",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/mail/plugins/sync/plugins/auto-resume": {
+      "name": "@singularity/plugin-apps-mail-sync-auto-resume",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages": {
       "name": "@singularity/plugin-apps-pages",
       "version": "0.0.1",
@@ -4602,6 +4606,8 @@
     "@singularity/plugin-apps-mail-shell": ["@singularity/plugin-apps-mail-shell@workspace:plugins/apps/plugins/mail/plugins/shell"],
 
     "@singularity/plugin-apps-mail-sync": ["@singularity/plugin-apps-mail-sync@workspace:plugins/apps/plugins/mail/plugins/sync"],
+
+    "@singularity/plugin-apps-mail-sync-auto-resume": ["@singularity/plugin-apps-mail-sync-auto-resume@workspace:plugins/apps/plugins/mail/plugins/sync/plugins/auto-resume"],
 
     "@singularity/plugin-apps-mail-sync-status": ["@singularity/plugin-apps-mail-sync-status@workspace:plugins/apps/plugins/mail/plugins/sync-status"],
 

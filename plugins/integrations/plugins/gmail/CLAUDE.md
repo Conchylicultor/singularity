@@ -35,7 +35,7 @@ access on their behalf.
   - Uses: `auth.getTokenFromCentral`, `config_v2.ConfigV2`, `config_v2.getConfig`
   - Exports: Values: `getGmailToken`, `isGmailEnabled`
 - Cross-plugin:
-  - Imported by: `apps/mail/mail-core`, `apps/mail/shell`, `apps/mail/sync`
+  - Imported by: `apps/mail/mail-core`, `apps/mail/shell`, `apps/mail/sync`, `apps/mail/sync/auto-resume`
 - Core:
   - Exports: Types: `GmailTokenResult`; Values: `GMAIL_SCOPES`
 
