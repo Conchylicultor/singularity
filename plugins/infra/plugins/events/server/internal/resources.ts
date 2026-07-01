@@ -17,21 +17,14 @@ const BASE_COLS = new Set(["id", "jobName", "jobWith", "enabled", "oneShot", "cr
 type Row = Record<string, any>;
 
 export async function loadEmissions(limit = 200): Promise<EmissionsPayload> {
+  // `_event_emissions.$inferSelect ≡ EmissionRow` by construction (both derive
+  // from `eventEmissionFields`), so rows are returned verbatim — no projection.
   const rows = await db
     .select()
     .from(_event_emissions)
     .orderBy(desc(_event_emissions.emittedAt))
     .limit(limit);
-  return {
-    rows: rows.map((r) => ({
-      id: r.id,
-      eventName: r.eventName,
-      payload: r.payload,
-      matchedCount: r.matchedCount,
-      matchedTriggerIds: r.matchedTriggerIds,
-      emittedAt: r.emittedAt instanceof Date ? r.emittedAt.toISOString() : String(r.emittedAt),
-    })),
-  };
+  return { rows };
 }
 
 export async function loadTriggers(): Promise<TriggersPayload> {

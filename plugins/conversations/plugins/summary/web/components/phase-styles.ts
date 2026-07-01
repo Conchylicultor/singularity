@@ -1,4 +1,4 @@
-import type { Phase } from "../../shared/resources";
+import type { Phase } from "../../core";
 
 export const PHASE_LABEL: Record<Phase, string> = {
   clarification_needed: "Clarification",

@@ -15,7 +15,7 @@ interface ReviewWithMeta {
   id: string;
   axis: string;
   commitHash: string;
-  createdAt: string;
+  createdAt: Date;
   staleness?: PluginStaleness;
   tasks: ReviewTaskSummary[];
 }
@@ -127,7 +127,7 @@ function HealthSectionInner({
                     {r.axis}
                   </td>
                   <td className="py-xs pr-md text-muted-foreground">
-                    <RelativeTime date={new Date(r.createdAt)} />
+                    <RelativeTime date={r.createdAt} />
                   </td>
                   <td className="py-xs pr-md text-muted-foreground">
                     {r.staleness?.commitsSince ?? "—"}

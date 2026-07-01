@@ -1,13 +1,22 @@
-import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import {
+  defineEntity,
+  defaultNow,
+} from "@plugins/infra/plugins/entities/server";
+import { bookmarkFields } from "../../core";
 
 // `browser_bookmarks`: one row per bookmarked URL, ordered by createdAt asc in
 // the bookmarks bar. A plain table (not an entity extension) — bookmarks have
 // no parent entity to hang off.
-export const _browserBookmarks = pgTable("browser_bookmarks", {
-  id: text("id").primaryKey(),
-  url: text("url").notNull(),
-  title: text("title").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true })
-    .defaultNow()
-    .notNull(),
+//
+// The table + the `BookmarkRow` wire schema both derive from the single
+// `bookmarkFields` record (core), so a column/schema drift is unrepresentable
+// and the loader returns `db.select()` rows verbatim.
+const browserBookmarks = defineEntity("browser_bookmarks", bookmarkFields, {
+  primaryKey: "id",
+  columns: {
+    createdAt: { default: defaultNow() },
+  },
 });
+
+// drizzle-kit schema-glob discovery. Name kept so consumers don't churn.
+export const _browserBookmarks = browserBookmarks.table;

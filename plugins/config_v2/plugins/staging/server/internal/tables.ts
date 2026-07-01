@@ -1,4 +1,8 @@
-import { pgTable, text, jsonb, timestamp, primaryKey } from "drizzle-orm/pg-core";
+import {
+  defineEntity,
+  defaultNow,
+} from "@plugins/infra/plugins/entities/server";
+import { stagedConfigDefaultFields } from "../../core";
 
 // Worktree-local holding area for config documents staged as "default for
 // everyone". Last-write-wins per (plugin_id, config_name) — the composite key
@@ -6,14 +10,20 @@ import { pgTable, text, jsonb, timestamp, primaryKey } from "drizzle-orm/pg-core
 // endpoint, read by the live resource + review section, and consumed (deleted)
 // by apply/discard. The full `value` document is validated against the
 // descriptor schema at apply time, not at write time — see handlers.ts.
-export const _stagedConfigDefault = pgTable(
+//
+// The table + the `StagedConfigDefault` wire schema both derive from the single
+// `stagedConfigDefaultFields` record (core), so a column/schema drift is
+// unrepresentable.
+const stagedConfigDefault = defineEntity(
   "staged_config_default",
+  stagedConfigDefaultFields,
   {
-    pluginId: text("plugin_id").notNull(), // dot-form; server derives the config path
-    configName: text("config_name").notNull(), // descriptor config name
-    value: jsonb("value").notNull(), // full config document (field-map object)
-    authorId: text("author_id"), // conversation id or null
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+    primaryKey: ["pluginId", "configName"],
+    columns: {
+      updatedAt: { default: defaultNow() },
+    },
   },
-  (t) => [primaryKey({ columns: [t.pluginId, t.configName] })],
 );
+
+// drizzle-kit schema-glob discovery. Name kept so consumers don't churn.
+export const _stagedConfigDefault = stagedConfigDefault.table;

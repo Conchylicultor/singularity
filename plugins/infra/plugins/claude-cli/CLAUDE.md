@@ -31,13 +31,13 @@ Throws `ClaudeCliError` on non-zero exit or timeout. Callers that need graceful 
 
 - Description: One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
 - Server:
-  - Uses: `database.db`, `infra/paths.CLAUDE`
+  - Uses: `database.db`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/paths.CLAUDE`
   - DB schema: `plugins/infra/plugins/claude-cli/server/internal/tables.ts`
   - Exports: Types: `RunClaudePrintInput`; Values: `_claudeCliCalls`, `claudeCliCallsResource`, `ClaudeCliError`, `runClaudePrint`
   - Resources: `claude-cli-calls` (push)
 - Core:
-  - Uses: `conversations/model-provider.StoredModelSchema`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `ClaudeCliCall`; Values: `ClaudeCliCallSchema`, `claudeCliCallsResource`
+  - Uses: `conversations/model-provider.ConversationModelSchema`, `conversations/model-provider.StoredModelSchema`, `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/date/config.dateField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.enumTextField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `primitives/live-state.resourceDescriptor`
+  - Exports: Types: `ClaudeCliCall`; Values: `claudeCliCallFields`, `ClaudeCliCallSchema`, `claudeCliCallsResource`
 - Cross-plugin:
   - Imported by: `apps/story/generation`, `apps/workflows/steps/llm-prompt`, `conversations/conversation-category`, `conversations/conversation-view/turn-summary`, `tasks/task-title`
 

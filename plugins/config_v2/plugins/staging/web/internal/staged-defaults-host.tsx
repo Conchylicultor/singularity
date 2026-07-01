@@ -5,7 +5,7 @@ import { stageConfigDefault } from "../../core/endpoints";
 import {
   stagedConfigDefaultsResource,
   type StagedConfigDefault,
-} from "../../shared/resources";
+} from "../../core/resources";
 import { setStageDispatch, setStagedDefaultsData } from "./staged-defaults-store";
 
 // Variables for one optimistic stage op — the full config document for a

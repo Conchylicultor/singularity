@@ -1,4 +1,8 @@
 import { z } from "zod";
+import { fieldsToZodObject, nullable, type FieldsRecord } from "@plugins/fields/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 
 /**
  * A persisted Sonata song — **source-agnostic** generic metadata only. The raw
@@ -7,8 +11,10 @@ import { z } from "zod";
  * core row never names a source. `durationSec`/`endBeat` are score-level (the
  * composed timeline's length), not tied to any one source.
  *
- * `createdAt` is an ISO string (it crosses the wire as JSON; the server maps the
- * DB `Date` to `.toISOString()` in the resource loader).
+ * The physical table (server) and this wire schema both derive from this single
+ * `songFields` record, so a column/schema drift is unrepresentable. `createdAt`
+ * crosses the wire as a Date (`z.coerce.date()` parses the serialised ISO string
+ * back into a Date on the client); the DB defaults it to `now()`.
  *
  * `source` is the opaque id of the input source that created the song (MIDI,
  * chord-grid, …), stamped once at creation and never changed. The library treats
@@ -16,14 +22,16 @@ import { z } from "zod";
  * always equals the creating source's `Library.Source` / `Sonata.Source` id, and
  * display labels are resolved through the generic `Sonata.Source` registry.
  */
-export const SongSchema = z.object({
-  id: z.string(),
-  title: z.string(),
-  composer: z.string().nullable(),
-  durationSec: z.number(),
-  endBeat: z.number(),
-  createdAt: z.string(),
-  source: z.string(),
-});
+export const songFields = {
+  id:          textField(),
+  title:       textField(),
+  composer:    nullable(textField()),
+  durationSec: floatField(),
+  endBeat:     floatField(),
+  createdAt:   dateField(),
+  source:      textField(),
+} satisfies FieldsRecord;
+
+export const SongSchema = fieldsToZodObject(songFields);
 
 export type Song = z.infer<typeof SongSchema>;

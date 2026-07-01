@@ -2,25 +2,9 @@ import { and, asc, eq, or } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import type { StagedConfigDefault } from "../../shared/resources";
+import type { StagedConfigDefault } from "../../core/resources";
 import { _stagedConfigDefault } from "./tables";
 import { landDefaults, type LandedKey } from "./land";
-
-function toStaged(r: {
-  pluginId: string;
-  configName: string;
-  value: unknown;
-  authorId: string | null;
-  updatedAt: Date;
-}): StagedConfigDefault {
-  return {
-    pluginId: r.pluginId,
-    configName: r.configName,
-    value: r.value,
-    authorId: r.authorId,
-    updatedAt: r.updatedAt,
-  };
-}
 
 // Build an OR-of-ANDs predicate matching a set of composite keys, or undefined
 // when no keys are given (→ "all rows").
@@ -42,8 +26,10 @@ async function loadRows(keys?: LandedKey[]): Promise<StagedConfigDefault[]> {
     .select()
     .from(_stagedConfigDefault)
     .orderBy(asc(_stagedConfigDefault.pluginId), asc(_stagedConfigDefault.configName));
-  const rows = predicate ? await base.where(predicate) : await base;
-  return rows.map(toStaged);
+  // `_stagedConfigDefault.$inferSelect` matches `StagedConfigDefault` by
+  // construction (both derive from `stagedConfigDefaultFields`), so the rows
+  // are returned verbatim — no projection.
+  return predicate ? base.where(predicate) : base;
 }
 
 /**

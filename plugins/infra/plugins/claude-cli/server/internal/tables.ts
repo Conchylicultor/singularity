@@ -1,18 +1,23 @@
-import { index, integer, jsonb, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { index } from "drizzle-orm/pg-core";
+import {
+  defineEntity,
+  defaultNow,
+  defaultRandom,
+} from "@plugins/infra/plugins/entities/server";
+import { claudeCliCallFields } from "../../core";
 
-export const _claudeCliCalls = pgTable(
-  "claude_cli_calls",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    model: text("model").notNull(),
-    sourceName: text("source_name").notNull(),
-    sourceContext: jsonb("source_context").$type<Record<string, unknown> | null>(),
-    prompt: text("prompt").notNull(),
-    system: text("system"),
-    output: text("output"),
-    error: text("error"),
-    durationMs: integer("duration_ms").notNull(),
+// Durable recent-call log for one-shot `claude --print` invocations. The table
+// and the `ClaudeCliCall` wire schema both derive from the single
+// `claudeCliCallFields` record (core), so a column/schema drift is
+// unrepresentable. Trimmed to the most recent N rows after every insert.
+const claudeCliCalls = defineEntity("claude_cli_calls", claudeCliCallFields, {
+  primaryKey: "id",
+  columns: {
+    id: { default: defaultRandom() },
+    createdAt: { default: defaultNow() },
   },
-  (t) => [index("claude_cli_calls_created_at_idx").on(t.createdAt)],
-);
+  indexes: (t) => [index("claude_cli_calls_created_at_idx").on(t.createdAt)],
+});
+
+// drizzle-kit schema-glob discovery. Name kept so consumers don't churn.
+export const _claudeCliCalls = claudeCliCalls.table;

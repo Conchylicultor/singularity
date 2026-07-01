@@ -10,11 +10,14 @@
   - Uses: `apps/browser/shell.Browser`, `apps/browser/shell.Favicon`, `apps/browser/shell.useBrowserNav`, `infra/endpoints.useEndpointMutation`, `primitives/bar.Bar`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`
   - Exports: Types: `BookmarkRow`; Values: `BookmarkRowSchema`, `browserBookmarksResource`, `useBookmarks`
 - Server:
-  - Uses: `database.db`, `infra/endpoints.implement`
+  - Uses: `database.db`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`
   - DB schema: `plugins/apps/plugins/browser/plugins/bookmarks/server/internal/tables.ts`
   - Exports: Values: `_browserBookmarks`, `addBookmark`, `browserBookmarksServerResource`, `deleteBookmark`
   - Resources: `browser-bookmarks` (push)
   - Routes: `POST /api/browser/bookmarks`, `DELETE /api/browser/bookmarks/:id`
+- Core:
+  - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/text/config.textField`, `primitives/live-state.resourceDescriptor`
+  - Exports: Types: `BookmarkRow`; Values: `bookmarkFields`, `BookmarkRowSchema`, `browserBookmarksResource`
 - Cross-plugin:
   - Imported by: `apps/browser/start-page`
   - Endpoint callers: `history`

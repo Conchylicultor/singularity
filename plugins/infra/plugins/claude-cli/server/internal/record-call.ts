@@ -1,10 +1,11 @@
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { _claudeCliCalls } from "./tables";
 import { RECENT_CALLS_LIMIT } from "./resources";
 
 export interface RecordCallInput {
-  model: string;
+  model: ConversationModel;
   sourceName: string;
   sourceContext: Record<string, unknown> | null;
   prompt: string;

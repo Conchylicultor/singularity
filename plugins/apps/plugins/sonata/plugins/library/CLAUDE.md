@@ -55,12 +55,12 @@ component where the caller-aware context store is correct.
   - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.TEMPO_MATH_FLOOR`, `apps/sonata/shell.useSonata`, `infra/endpoints.useEndpointMutation`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/column.Column`, `primitives/css/fill.Fill`, `primitives/css/grid.Grid`, `primitives/css/line.Line`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/data-view.CreateOption`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineFieldExtensions`, `primitives/data-view.defineItemActions`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useEventCallback`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/persistent-draft.useDraft`, `primitives/relative-time.formatRelativeTime`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Library`, `openSongImperative`, `useOpenSong`
 - Server:
-  - Uses: `database.db`, `infra/attachments.Attachments`, `infra/endpoints.implement`
+  - Uses: `database.db`, `infra/attachments.Attachments`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`
   - DB schema: `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`, `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`
   - Exports: Types: `CreateSongRowInput`, `UpdateSongMetaInput`; Values: `_songs`, `createSongRow`, `songAttachments`, `songsLiveResource`, `updateSongMeta`
   - Routes: `DELETE /api/sonata/songs/:id`, `PATCH /api/sonata/songs/:id`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
+  - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/date/config.dateField`, `fields/float/config.floatField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
   - Exports: Types: `Song`, `UpdateSongBody`; Values: `deleteSong`, `SongSchema`, `songsResource`, `updateSong`
 - Cross-plugin:
   - Imported by: `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/sources/midi/folders`, `apps/sonata/sources/ultimate-guitar`, `apps/sonata/track-mixer`, `apps/sonata/transpose`

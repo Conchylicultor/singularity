@@ -4,8 +4,8 @@ import { StagedDefaultsOverlayHost } from "./internal/staged-defaults-host";
 export {
   stagedConfigDefaultsResource,
   StagedConfigDefaultSchema,
-} from "../shared/resources";
-export type { StagedConfigDefault } from "../shared/resources";
+} from "../core/resources";
+export type { StagedConfigDefault } from "../core/resources";
 export {
   useStageConfigDefault,
   useApplyConfigDefault,

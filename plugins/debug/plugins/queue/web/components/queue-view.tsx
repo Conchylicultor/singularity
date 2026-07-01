@@ -61,7 +61,7 @@ function toastErr(e: unknown, prefix: string) {
   toast({ type: "debug", title: prefix, description: msg, variant: "error" });
 }
 
-function relativeTime(iso: string): string {
+function relativeTime(iso: string | Date): string {
   const ms = Date.now() - new Date(iso).getTime();
   const abs = Math.abs(ms);
   const sign = ms < 0 ? "in " : "";

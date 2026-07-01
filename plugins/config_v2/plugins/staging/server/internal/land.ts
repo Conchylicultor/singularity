@@ -4,7 +4,7 @@ import {
   ensureMainWorktreeRoot,
   removeWorktree,
 } from "@plugins/infra/plugins/worktree/server";
-import type { StagedConfigDefault } from "../../shared/resources";
+import type { StagedConfigDefault } from "../../core/resources";
 import { findPromotableDescriptor } from "./registry-lookup";
 import { writeGitLayerOverride } from "./git-layer-writer";
 

@@ -1,4 +1,10 @@
 export {
+  stagedConfigDefaultsResource,
+  StagedConfigDefaultSchema,
+  stagedConfigDefaultFields,
+} from "./resources";
+export type { StagedConfigDefault } from "./resources";
+export {
   stageConfigDefault,
   applyConfigDefault,
   applyAllConfigDefaults,

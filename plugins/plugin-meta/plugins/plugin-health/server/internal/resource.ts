@@ -12,21 +12,12 @@ export const pluginHealthReviewsResource = defineResource({
   key: "plugin-health-reviews",
   mode: "push",
   schema: z.array(PluginHealthReviewSchema),
-  loader: async (): Promise<PluginHealthReview[]> => {
-    const rows = await db
+  loader: async (): Promise<PluginHealthReview[]> =>
+    db
       .select()
       .from(_pluginHealthReviews)
       .orderBy(
         asc(_pluginHealthReviews.pluginId),
         asc(_pluginHealthReviews.axis),
-      );
-    return rows.map((r) => ({
-      id: r.id,
-      pluginId: r.pluginId,
-      axis: r.axis,
-      commitHash: r.commitHash,
-      conversationId: r.conversationId,
-      createdAt: r.createdAt.toISOString(),
-    }));
-  },
+      ),
 });

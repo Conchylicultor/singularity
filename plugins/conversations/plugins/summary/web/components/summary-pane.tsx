@@ -12,7 +12,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   conversationSummariesResource,
   type ConversationSummary,
-} from "../../shared/resources";
+} from "../../core";
 import { generateConversationSummary } from "../../shared/endpoints";
 import { PHASE_CLASSES, PHASE_LABEL } from "./phase-styles";
 import { convSummaryPane } from "../panes";
@@ -128,7 +128,7 @@ function SummaryPaneInner({
 }
 
 function SummaryCard({ summary }: { summary: ConversationSummary }) {
-  const generated = new Date(summary.generatedAt);
+  const generated = summary.generatedAt;
   return (
     <Stack gap="md" className="rounded-md border p-md">
       <div className="flex items-center justify-between gap-sm">

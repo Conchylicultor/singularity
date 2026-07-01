@@ -6,7 +6,7 @@ import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { cliFlagFor } from "@plugins/conversations/plugins/model-provider/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { _conversationSummaries } from "./tables";
-import { PhaseSchema } from "../../shared/resources";
+import { PhaseSchema } from "../../core";
 
 export const SUMMARY_MODEL_ID: ConversationModel = "sonnet-4-6";
 export const SUMMARY_MODEL = cliFlagFor(SUMMARY_MODEL_ID);

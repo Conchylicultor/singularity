@@ -1,4 +1,6 @@
-import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { index } from "drizzle-orm/pg-core";
+import { defineEntity, defaultNow } from "@plugins/infra/plugins/entities/server";
+import { conversationSummaryFields } from "../../core";
 
 // Append-only summary rows — one row per "Summarize" press, never updated.
 // Soft FK to conversations (text id, no cascade): the model decides when
@@ -6,26 +8,26 @@ import { index, integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
 // historical rows even after a conversation is deleted (sweep later if
 // needed). Composite index supports "latest summary for conversation X"
 // and "all rows ordered newest-first for monitoring".
-export const _conversationSummaries = pgTable(
+//
+// The table + the `ConversationSummary` wire schema both derive from the single
+// `conversationSummaryFields` record (core), so a column/schema drift is
+// unrepresentable.
+const conversationSummaries = defineEntity(
   "conversation_summaries",
+  conversationSummaryFields,
   {
-    id: text("id").primaryKey(),
-    conversationId: text("conversation_id").notNull(),
-    generatedAt: timestamp("generated_at", { withTimezone: true })
-      .defaultNow()
-      .notNull(),
-    model: text("model").notNull(),
-    turnCountAtGeneration: integer("turn_count_at_generation").notNull(),
-    phase: text("phase").notNull(),
-    phaseDetail: text("phase_detail"),
-    flags: text("flags"),
-    nextAction: text("next_action").notNull(),
-    notes: text("notes"),
+    primaryKey: "id",
+    columns: {
+      generatedAt: { default: defaultNow() },
+    },
+    indexes: (t) => [
+      index("conversation_summaries_by_conv_idx").on(
+        t.conversationId,
+        t.generatedAt,
+      ),
+    ],
   },
-  (t) => [
-    index("conversation_summaries_by_conv_idx").on(
-      t.conversationId,
-      t.generatedAt,
-    ),
-  ],
 );
+
+// drizzle-kit schema-glob discovery. Name kept so consumers don't churn.
+export const _conversationSummaries = conversationSummaries.table;

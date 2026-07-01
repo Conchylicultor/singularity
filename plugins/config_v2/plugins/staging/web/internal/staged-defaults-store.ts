@@ -1,5 +1,5 @@
 import { useSyncExternalStore } from "react";
-import type { StagedConfigDefault } from "../../shared/resources";
+import type { StagedConfigDefault } from "../../core/resources";
 
 /** A staged row's composite identity. */
 export interface StagedKey {

@@ -46,15 +46,15 @@ queue-health); only the wasted retry churn is removed.
 - Description: Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
 - Load-bearing: yes
 - Server:
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.EnqueueTx`, `infra/jobs.getAllRegisteredJobNames`, `infra/jobs.NonRetryableError`, `infra/jobs.UNSAFE_getRegisteredJob`, `infra/jobs.UNSAFE_installDurableHooks`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.defineJob`, `infra/jobs.EnqueueTx`, `infra/jobs.getAllRegisteredJobNames`, `infra/jobs.NonRetryableError`, `infra/jobs.UNSAFE_getRegisteredJob`, `infra/jobs.UNSAFE_installDurableHooks`
   - DB schema: `plugins/infra/plugins/events/server/internal/event.ts`, `plugins/infra/plugins/events/server/internal/tables.ts`
   - Exports: Types: `DefineTriggerEventSpec`, `EmitTx`, `EventHandle`, `EventSource`, `FilterSlot`, `TriggerSpec`, `UnsafeTriggerByNameSpec`; Values: `_event_emissions`, `defineTriggerEvent`, `deleteTrigger`, `deleteTriggersFor`, `EMISSIONS_CAP`, `eventEmissionsResource`, `eventTriggersResource`, `trigger`, `Trigger`, `triggerTableRegistry`, `UNSAFE_triggerByName`
   - Register: `defineJob('events.dispatch')`, `UNSAFE_installDurableHooks()`
   - Resources: `event-emissions` (invalidate), `event-triggers` (invalidate)
   - Routes: `GET /api/events/emissions`, `GET /api/events/triggers`, `DELETE /api/events/triggers/:id`, `PATCH /api/events/triggers/:id`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `EmissionRow`, `EmissionsPayload`, `PatchTriggerBody`, `TriggerRow`, `TriggersPayload`; Values: `deleteTriggerEndpoint`, `EmissionRowSchema`, `EmissionsPayloadSchema`, `eventEmissionsResource`, `eventTriggersResource`, `listEmissions`, `listTriggers`, `patchTriggerBodySchema`, `patchTriggerEndpoint`, `TriggerRowSchema`, `TriggersPayloadSchema`
+  - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
+  - Exports: Types: `EmissionRow`, `EmissionsPayload`, `PatchTriggerBody`, `TriggerRow`, `TriggersPayload`; Values: `deleteTriggerEndpoint`, `EmissionRowSchema`, `EmissionsPayloadSchema`, `eventEmissionFields`, `eventEmissionsResource`, `eventTriggersResource`, `listEmissions`, `listTriggers`, `patchTriggerBodySchema`, `patchTriggerEndpoint`, `TriggerRowSchema`, `TriggersPayloadSchema`
 - Cross-plugin:
   - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/workflows/engine`, `build`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `improve`, `infra/events-test`, `infra/git-watcher`, `page/attachment-block`, `page/editor`, `page/inline-date`, `page/links`, `tasks`, `tasks/task-title`, `tasks/tasks-core`
 

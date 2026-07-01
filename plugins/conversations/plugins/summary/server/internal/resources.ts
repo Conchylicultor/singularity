@@ -1,47 +1,34 @@
-import { z } from "zod";
 import { asc, desc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { conversationSummariesResource as conversationSummariesDescriptor } from "../../core";
+import type { ConversationSummary } from "../../core";
 import { _conversationSummaries } from "./tables";
-import {
-  ConversationSummarySchema,
-} from "../../shared/resources";
-import type { Phase } from "../../shared/resources";
-import type { ConversationSummary } from "../../shared/resources";
 
-function rowToSummary(
-  row: typeof _conversationSummaries.$inferSelect,
-): ConversationSummary {
-  return {
-    id: row.id,
-    conversationId: row.conversationId,
-    generatedAt: row.generatedAt.toISOString(),
-    model: row.model,
-    turnCountAtGeneration: row.turnCountAtGeneration,
-    phase: row.phase as Phase,
-    phaseDetail: row.phaseDetail,
-    flags: row.flags,
-    nextAction: row.nextAction,
-    notes: row.notes,
-  };
-}
-
-export const conversationSummariesResource = defineResource({
-  key: "conversation-summaries",
-  mode: "push",
-  schema: z.record(z.array(ConversationSummarySchema)),
-  loader: async (): Promise<Record<string, ConversationSummary[]>> => {
-    const rows = await db
-      .select()
-      .from(_conversationSummaries)
-      .orderBy(asc(_conversationSummaries.conversationId), desc(_conversationSummaries.generatedAt));
-    const out: Record<string, ConversationSummary[]> = {};
-    for (const row of rows) {
-      const summary = rowToSummary(row);
-      const arr = out[summary.conversationId] ?? [];
-      arr.push(summary);
-      out[summary.conversationId] = arr;
-    }
-    return out;
+// The table row type and the `ConversationSummary` wire schema both derive from
+// the single `conversationSummaryFields` record (core), so
+// `_conversationSummaries.$inferSelect ≡ ConversationSummary` by construction —
+// the loader returns `db.select()` rows verbatim (grouped by conversationId)
+// with no projection and no `rowToSummary` helper.
+export const conversationSummariesResource = defineResource(
+  conversationSummariesDescriptor,
+  {
+    mode: "push",
+    loader: async (): Promise<Record<string, ConversationSummary[]>> => {
+      const rows = await db
+        .select()
+        .from(_conversationSummaries)
+        .orderBy(
+          asc(_conversationSummaries.conversationId),
+          desc(_conversationSummaries.generatedAt),
+        );
+      const out: Record<string, ConversationSummary[]> = {};
+      for (const row of rows) {
+        const arr = out[row.conversationId] ?? [];
+        arr.push(row);
+        out[row.conversationId] = arr;
+      }
+      return out;
+    },
   },
-});
+);

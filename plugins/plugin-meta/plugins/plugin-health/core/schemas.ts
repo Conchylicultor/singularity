@@ -1,13 +1,26 @@
 import { z } from "zod";
+import {
+  fieldsToZodObject,
+  nullable,
+  type FieldsRecord,
+} from "@plugins/fields/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
 
-export const PluginHealthReviewSchema = z.object({
-  id: z.string(),
-  pluginId: z.string(),
-  axis: z.string(),
-  commitHash: z.string(),
-  conversationId: z.string().nullable(),
-  createdAt: z.string(),
-});
+// One recorded plugin-health review, keyed by (pluginId, axis). The table (its
+// `_pluginHealthReviews` pgTable) and this wire schema both derive from this
+// single field record, so `$inferSelect ≡ PluginHealthReview` by construction —
+// the loader returns `db.select()` rows verbatim, no projection.
+export const pluginHealthReviewFields = {
+  id:             textField(),
+  pluginId:       textField(),
+  axis:           textField(),
+  commitHash:     textField(),
+  conversationId: nullable(textField()),
+  createdAt:      dateField(),
+} satisfies FieldsRecord;
+
+export const PluginHealthReviewSchema = fieldsToZodObject(pluginHealthReviewFields);
 export type PluginHealthReview = z.infer<typeof PluginHealthReviewSchema>;
 
 export const PluginStalenessSchema = z.object({

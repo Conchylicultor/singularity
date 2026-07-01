@@ -4,7 +4,7 @@ import {
   defineSlot,
   PluginRuntimeContext,
 } from "@plugins/framework/plugins/web-sdk/core";
-import type { StagedConfigDefault } from "../../shared/resources";
+import type { StagedConfigDefault } from "../../core/resources";
 
 /** Identity passed to a diff renderer's `match` predicate. */
 export interface StagedKey {

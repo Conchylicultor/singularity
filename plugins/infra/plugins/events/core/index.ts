@@ -1,6 +1,7 @@
 export {
   eventEmissionsResource,
   eventTriggersResource,
+  eventEmissionFields,
   EmissionRowSchema,
   EmissionsPayloadSchema,
   TriggerRowSchema,

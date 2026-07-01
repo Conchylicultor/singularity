@@ -122,10 +122,10 @@ export function SongLibrary() {
         id: "added",
         label: "Added",
         type: "date",
-        // `createdAt` is an ISO string; wrap in a Date so the `date` type sorts
-        // correctly, and render it as a relative "Nd ago" label.
-        value: (s) => new Date(s.createdAt),
-        cell: (s) => formatRelativeTime(new Date(s.createdAt)),
+        // `createdAt` is a Date on the wire; the `date` type sorts on it
+        // directly, rendered as a relative "Nd ago" label.
+        value: (s) => s.createdAt,
+        cell: (s) => formatRelativeTime(s.createdAt),
         sortable: true,
         width: "7rem",
       },

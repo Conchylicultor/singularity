@@ -5,7 +5,7 @@ import { addBookmark, deleteBookmark } from "../../shared/endpoints";
 import {
   browserBookmarksResource,
   type BookmarkRow,
-} from "../../shared/resources";
+} from "../../core/resources";
 
 /**
  * Shared read + mutate logic for the bookmark surfaces (star toggle + bar).

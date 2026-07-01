@@ -11,15 +11,15 @@
   - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/optimistic-mutation.useOptimisticResource`
   - Exports: Types: `StagedConfigDefault`, `StagedDiffProps`, `StagedKey`, `StagingDiffRenderer`; Values: `GenericConfigDiff`, `StagedConfigDefaultSchema`, `stagedConfigDefaultsResource`, `Staging`, `useApplyAllConfigDefaults`, `useApplyConfigDefault`, `useDiscardAllConfigDefaults`, `useDiscardConfigDefault`, `useHasStagedDefaults`, `useStageConfigDefault`, `useStageDefault`, `useStagedKeys`, `useStagedValue`, `useStagingDiffRenderers`
 - Server:
-  - Uses: `config_v2.getAllDescriptors`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`
+  - Uses: `config_v2.getAllDescriptors`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/jobs.defineJob`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`
   - DB schema: `plugins/config_v2/plugins/staging/server/internal/tables.ts`
   - Exports: Values: `_stagedConfigDefault`, `stagedConfigDefaultsResource`
   - Register: `defineJob('config-v2.land-defaults')`
   - Resources: `config-v2-staged-defaults` (push)
   - Routes: `POST /api/config-v2/staged-defaults`, `POST /api/config-v2/staged-defaults/:pluginId/:configName/apply`, `POST /api/config-v2/staged-defaults/apply-all`, `DELETE /api/config-v2/staged-defaults/:pluginId/:configName`, `DELETE /api/config-v2/staged-defaults`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`
-  - Exports: Types: `StageConfigDefaultBody`; Values: `applyAllConfigDefaults`, `applyConfigDefault`, `discardAllConfigDefaults`, `discardConfigDefault`, `stageConfigDefault`, `StageConfigDefaultBodySchema`
+  - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/date/config.dateField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
+  - Exports: Types: `StageConfigDefaultBody`, `StagedConfigDefault`; Values: `applyAllConfigDefaults`, `applyConfigDefault`, `discardAllConfigDefaults`, `discardConfigDefault`, `stageConfigDefault`, `StageConfigDefaultBodySchema`, `stagedConfigDefaultFields`, `StagedConfigDefaultSchema`, `stagedConfigDefaultsResource`
 - Cross-plugin:
   - Imported by: `plugin-meta/composition`, `reorder`, `reorder/edit-mode`, `review/config-defaults`
 

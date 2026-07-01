@@ -6,7 +6,7 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import {
   conversationSummariesResource,
   type ConversationSummary,
-} from "../../shared/resources";
+} from "../../core";
 import { PHASE_CLASSES, PHASE_LABEL } from "./phase-styles";
 import { convSummaryPane } from "../panes";
 

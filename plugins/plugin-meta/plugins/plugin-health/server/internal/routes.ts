@@ -14,17 +14,9 @@ import {
   apiChangedSince,
 } from "./staleness";
 
-export const handleGetReviews = implement(getPluginHealthReviews, async () => {
-  const rows = await db.select().from(_pluginHealthReviews);
-  return rows.map((r) => ({
-    id: r.id,
-    pluginId: r.pluginId,
-    axis: r.axis,
-    commitHash: r.commitHash,
-    conversationId: r.conversationId,
-    createdAt: r.createdAt.toISOString(),
-  }));
-});
+export const handleGetReviews = implement(getPluginHealthReviews, async () =>
+  db.select().from(_pluginHealthReviews),
+);
 
 export const handleGetStaleness = implement(getPluginStaleness, async ({ params }) => {
   const { pluginId } = params;
