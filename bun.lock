@@ -1513,6 +1513,10 @@
       "name": "@singularity/plugin-debug-claude-cli-calls",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/flight-recorder": {
+      "name": "@singularity/plugin-debug-flight-recorder",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/health-monitor": {
       "name": "@singularity/plugin-debug-health-monitor",
       "version": "0.0.1",
@@ -5287,6 +5291,8 @@
     "@singularity/plugin-debug-broadcasts": ["@singularity/plugin-debug-broadcasts@workspace:plugins/debug/plugins/broadcasts"],
 
     "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
+
+    "@singularity/plugin-debug-flight-recorder": ["@singularity/plugin-debug-flight-recorder@workspace:plugins/debug/plugins/flight-recorder"],
 
     "@singularity/plugin-debug-health-monitor": ["@singularity/plugin-debug-health-monitor@workspace:plugins/debug/plugins/health-monitor"],
 

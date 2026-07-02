@@ -410,6 +410,203 @@ function parentKey(parent: SpanRef): string {
   return `${parent.kind}:${parent.label}`;
 }
 
+// --- Flight-recorder substrate ---
+//
+// Three side-structures let a slow-event consumer materialize ONE coherent
+// instant (who was in flight, who just finished, how saturated each gate was)
+// via `captureFlightWindow`. All hot-path writes are O(1) and allocation-free;
+// allocation happens only at capture time — i.e. only on a (rate-limited)
+// slow-event trip. See research/2026-07-02-global-slow-event-flight-recorder.md.
+
+// Side-table of currently-open ENTRY contexts. EntryContexts are otherwise
+// reachable only via the ambient async chain of one request, so this is what
+// lets a snapshot enumerate every concurrently in-flight op. Maintained by
+// `recordEntrySpan` (add before run, delete in the finally — exactly paired on
+// every path, including throws). Leaf `db` spans have no context and are not
+// registered; they are covered by the completed ring below.
+const openEntries = new Set<EntryContext>();
+
+// Preallocated circular buffer of recently-completed spans: the blocker often
+// finishes before its victim's span ends, so open entries alone can't name it.
+// Slots are mutable and overwritten in place — a ring write is a comparison +
+// ~10 field writes, zero allocation (label strings are shared references).
+const FLIGHT_RING_CAPACITY = 4096;
+const FLIGHT_RING_MIN_MS = 5; // sub-5ms spans can't matter to a >=500ms window
+
+interface FlightRingSlot {
+  used: boolean;
+  kind: SpanKind;
+  label: string;
+  t0: number;
+  t1: number;
+  parentKind: SpanKind | null;
+  parentLabel: string | null;
+  waitMs: number;
+  childMs: number;
+  selfMs: number;
+}
+
+const flightRing: FlightRingSlot[] = Array.from({ length: FLIGHT_RING_CAPACITY }, () => ({
+  used: false,
+  kind: "db" as SpanKind,
+  label: "",
+  t0: 0,
+  t1: 0,
+  parentKind: null,
+  parentLabel: null,
+  waitMs: 0,
+  childMs: 0,
+  selfMs: 0,
+}));
+let flightRingHead = 0;
+
+// Called at the END of record(), so it naturally sits behind the
+// SINGULARITY_PROFILING kill-switch and suppression early-returns.
+function pushCompleted(
+  kind: SpanKind,
+  label: string,
+  t1: number,
+  durationMs: number,
+  parent: SpanRef | null,
+  waitMs: number,
+  childMs: number,
+  selfMs: number,
+): void {
+  if (durationMs < FLIGHT_RING_MIN_MS) return;
+  const slot = flightRing[flightRingHead]!;
+  slot.used = true;
+  slot.kind = kind;
+  slot.label = label;
+  slot.t0 = t1 - durationMs;
+  slot.t1 = t1;
+  slot.parentKind = parent ? parent.kind : null;
+  slot.parentLabel = parent ? parent.label : null;
+  slot.waitMs = waitMs;
+  slot.childMs = childMs;
+  slot.selfMs = selfMs;
+  flightRingHead = (flightRingHead + 1) % FLIGHT_RING_CAPACITY;
+}
+
+/** Point-in-time occupancy of one concurrency gate. */
+export interface GateGauge {
+  active: number;
+  queued: number;
+  max: number;
+}
+
+const gateGauges = new Map<string, () => GateGauge>();
+
+/**
+ * Register a live occupancy reader for a concurrency gate. `layer` uses the
+ * SAME vocabulary as `chargeWait` layer names, so a snapshot's gate occupancy
+ * joins directly to span `waits`. Gate OWNERS self-register (the recorder
+ * never names a gate); a duplicate layer is a wiring bug — fail loudly.
+ */
+export function registerGateGauge(layer: string, read: () => GateGauge): void {
+  if (gateGauges.has(layer)) {
+    throw new Error(`registerGateGauge: duplicate layer ${layer}`);
+  }
+  gateGauges.set(layer, read);
+}
+
+/** Invoke every registered gate gauge, keyed by its `chargeWait` layer name. */
+export function readGateGauges(): Record<string, GateGauge> {
+  const out: Record<string, GateGauge> = {};
+  for (const [layer, read] of gateGauges) out[layer] = read();
+  return out;
+}
+
+/** One span in a captured flight window — open (still running) or completed. */
+export interface FlightSpan {
+  kind: SpanKind;
+  label: string;
+  t0: number;
+  /** null => still open at capture. */
+  t1: number | null;
+  /** (t1 ?? captureAt) − t0. */
+  ageMs: number;
+  /** Innermost→outermost, capped depth. Completed spans: immediate parent only. */
+  parents: SpanRef[];
+  waitMs: number;
+  childMs: number;
+  selfMs: number;
+  /** Per-layer wait unions; OPEN spans only (live layerUnions). */
+  waits?: WaitBreakdown;
+}
+
+export interface FlightWindow {
+  atMs: number;
+  open: FlightSpan[];
+  completed: FlightSpan[];
+}
+
+/**
+ * Synchronously materialize the flight-recorder state: every in-flight entry
+ * (from the open-entry registry) plus the recently-completed spans overlapping
+ * `[windowStartMs, now]` (from the ring, newest first). Reading a live
+ * context's `unionMs` mid-flight is sound — a track's union is monotonic
+ * accumulated coverage, so a partial read is simply the coverage so far. This
+ * is the only place in the substrate that allocates (trip-time only).
+ */
+export function captureFlightWindow(opts: {
+  windowStartMs: number;
+  maxOpen?: number;
+  maxCompleted?: number;
+  maxParentDepth?: number;
+}): FlightWindow {
+  const atMs = now();
+  const maxOpen = opts.maxOpen ?? 200;
+  const maxCompleted = opts.maxCompleted ?? 400;
+  const maxParentDepth = opts.maxParentDepth ?? 8;
+
+  const open: FlightSpan[] = [];
+  for (const ctx of openEntries) {
+    if (open.length >= maxOpen) break;
+    const parents: SpanRef[] = [];
+    for (let a = ctx.parent, depth = 0; a && depth < maxParentDepth; a = a.parent, depth++) {
+      parents.push({ kind: a.kind, label: a.label });
+    }
+    const ageMs = atMs - ctx.startMs;
+    let waits: WaitBreakdown | undefined;
+    if (ctx.layerUnions.size > 0) {
+      waits = {};
+      for (const [layer, track] of ctx.layerUnions) waits[layer] = track.unionMs;
+    }
+    open.push({
+      kind: ctx.kind,
+      label: ctx.label,
+      t0: ctx.startMs,
+      t1: null,
+      ageMs,
+      parents,
+      waitMs: ctx.waitUnion.unionMs,
+      childMs: ctx.childUnion.unionMs,
+      selfMs: Math.max(0, ageMs - ctx.busyUnion.unionMs),
+      waits,
+    });
+  }
+
+  const completed: FlightSpan[] = [];
+  for (let i = 0; i < FLIGHT_RING_CAPACITY && completed.length < maxCompleted; i++) {
+    const slot = flightRing[(flightRingHead - 1 - i + FLIGHT_RING_CAPACITY) % FLIGHT_RING_CAPACITY]!;
+    if (!slot.used) continue;
+    if (slot.t1 < opts.windowStartMs) continue;
+    completed.push({
+      kind: slot.kind,
+      label: slot.label,
+      t0: slot.t0,
+      t1: slot.t1,
+      ageMs: slot.t1 - slot.t0,
+      parents: slot.parentKind ? [{ kind: slot.parentKind, label: slot.parentLabel! }] : [],
+      waitMs: slot.waitMs,
+      childMs: slot.childMs,
+      selfMs: slot.selfMs,
+    });
+  }
+
+  return { atMs, open, completed };
+}
+
 // Core write path: update aggregates + slowest ring, attributing to `parent`.
 // `waitMs`/`childMs`/`selfMs` are the entry's decomposition (see module
 // header); leaf spans take the defaults (no waits, no children, all self).
@@ -538,6 +735,8 @@ function record(
       if (durationMs >= sub.thresholdMs) sub.handler(span);
     }
   }
+
+  pushCompleted(kind, cappedLabel, atMs, durationMs, parent, waitMs, childMs, selfMs);
 }
 
 /**
@@ -673,6 +872,7 @@ export async function recordEntrySpan<T>(
     busyUnion: { unionMs: 0, prevEnd: t0 },
     childUnion: { unionMs: 0, prevEnd: t0 },
   };
+  openEntries.add(ctx);
   try {
     return await contextRuntime.run(ctx, fn);
   } finally {
@@ -690,6 +890,10 @@ export async function recordEntrySpan<T>(
     }
     // (2) Close before recording so nothing can race a mutation in between.
     ctx.closed = true;
+    // Deregister before record() so the tripping span is never in its own
+    // captured `open` list (it is the snapshot's trip). Paired with the add
+    // above on every path — the finally guarantees no leak.
+    openEntries.delete(ctx);
     // (3) Materialize the decomposition and record.
     const wall = t1 - t0;
     const waitMs = ctx.waitUnion.unionMs;
@@ -805,5 +1009,12 @@ export function resetRuntimeProfile(): void {
     slowest[kind].length = 0;
   }
   readSetIndex.clear();
+  // The flight ring is profile data — clear it. Gate gauges are structural
+  // registrations (like slow-span subscribers), not profile data, so they
+  // survive. `openEntries` is owned by the in-flight calls themselves: each
+  // live context deregisters in its own finally, so clearing here would only
+  // break the add/delete pairing.
+  for (const slot of flightRing) slot.used = false;
+  flightRingHead = 0;
   sinceMs = now();
 }

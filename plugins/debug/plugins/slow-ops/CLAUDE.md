@@ -67,14 +67,14 @@ the bar).
 - Server:
   - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.getJobSlowThresholdMs`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelEntries`, `reports.recordReport`, `reports.ReportKind`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
-  - Exports: Types: `RecordSlowOpInput`; Values: `_slowOps`, `readSlowOpMarkers`, `recordSlowOp`, `slowOpsResource`
+  - Exports: Types: `RecordSlowOpInput`, `Thresholds`; Values: `_slowOps`, `readSlowOpMarkers`, `recordSlowOp`, `resolveSlowThreshold`, `slowOpsResource`
   - Resources: `slow-ops` (push)
   - Routes: `POST /api/slow-ops/client`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/float/config.floatField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `infra/contention.ContentionSnapshotSchema`, `primitives/live-state.resourceDescriptor`
   - Exports: Types: `CallerBreakdown`, `CallerRef`, `SlowOp`, `SlowOpMarker`, `SlowOpReportPayload`, `SlowOpSample`; Values: `CallerBreakdownSchema`, `CallerRefSchema`, `loadSeverity`, `slowOpConfig`, `slowOpFields`, `SlowOpMarkerSchema`, `SlowOpReportPayloadSchema`, `SlowOpSampleSchema`, `SlowOpSchema`, `slowOpsResource`
 - Cross-plugin:
-  - Imported by: `debug/health-monitor`
+  - Imported by: `debug/flight-recorder`, `debug/health-monitor`
 - Sub-plugins:
   - **`cluster`** — Cross-worktree cluster tab for the Slow Ops pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint: merges every worktree DB fork's slow_ops into one cluster response.
   - **`pane`** — Debug pane showing a global, ranked overview of slow operations with per-operation caller attribution.

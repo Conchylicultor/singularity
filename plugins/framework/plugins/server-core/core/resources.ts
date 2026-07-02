@@ -16,6 +16,7 @@ import {
   chargeWait,
   getRuntimeProfile,
   getReadSetIndex,
+  registerGateGauge,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineServerContribution } from "./contributions";
 import { reportServerError, type ServerErrorReport } from "./error-reporter";
@@ -265,6 +266,12 @@ const runtime = createResourceRuntime({
       pluginId: c._pluginId,
     })),
 });
+
+// Occupancy gauge for the read-admission gate, under the same layer name as its
+// `onReadGateWait` charge above — the flight recorder's gate snapshot joins
+// occupancy to `read-admit` span waits. Registered here (not in the runtime)
+// because resource-runtime stays profiler-free; central never registers.
+registerGateGauge("read-admit", () => runtime.readGateStats());
 
 export const {
   defineResource,

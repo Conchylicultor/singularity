@@ -2,7 +2,7 @@ import { drizzle } from "drizzle-orm/node-postgres";
 import { Pool } from "pg";
 import { retryUntil, exponential, withJitter } from "@plugins/packages/plugins/retry/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { recordSpan, chargeWait, currentCallerKind, recordReadTables } from "@plugins/infra/plugins/runtime-profiler/core";
+import { recordSpan, chargeWait, currentCallerKind, recordReadTables, registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { readDatabaseConfig, buildConnectionString } from "@plugins/database/core";
 
@@ -55,6 +55,18 @@ const pool = new Pool({
 // (Task 2) and research/2026-06-15-global-live-state-cascade-contention.md.
 const RESERVED_INTERACTIVE = 6;
 const loaderDbGate = createSemaphore(POOL_MAX - RESERVED_INTERACTIVE);
+
+// Occupancy gauges for the flight recorder's gate snapshot: layer names join to
+// the corresponding `chargeWait` layers in span `waits`. `loader-acquire` is the
+// loader gate itself; `db-pool` is the gauge for the `db-acquire` wait layer —
+// occupancy of the raw pg pool (held connections + queued checkouts), not the
+// loader gate. pg.Pool's totalCount/idleCount/waitingCount are free property reads.
+registerGateGauge("loader-acquire", () => loaderDbGate.stats());
+registerGateGauge("db-pool", () => ({
+  active: pool.totalCount - pool.idleCount,
+  queued: pool.waitingCount,
+  max: POOL_MAX,
+}));
 
 // Time every query that flows through pool.query (all drizzle ORM queries).
 // The promise form is reimplemented to split the two phases that node-postgres

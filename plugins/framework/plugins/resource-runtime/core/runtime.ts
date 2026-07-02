@@ -803,6 +803,13 @@ export interface ResourceRuntime {
    * (`feed`). Used by the read-set debug pane to surface read-set-gap candidates.
    */
   notifyStatsFor: (key: string) => { hand: number; feed: number };
+  /**
+   * Occupancy of the read-admission gate (see `READ_LOAD_CONCURRENCY`):
+   * currently-held slots, queued waiters, and the cap. The runtime stays
+   * profiler-free, so the facade (server-core) registers this as the
+   * `read-admit` gate gauge; central omits the registration.
+   */
+  readGateStats: () => { active: number; queued: number; max: number };
 }
 
 const HEARTBEAT_MS = 20_000;
@@ -2395,5 +2402,6 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     applyDbChange,
     recomputeResource,
     notifyStatsFor,
+    readGateStats: () => readLoadGate.stats(),
   };
 }

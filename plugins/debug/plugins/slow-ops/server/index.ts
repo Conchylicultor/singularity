@@ -15,6 +15,8 @@ export { slowOpsResource } from "./internal/resources";
 export { recordSlowOp } from "./internal/record-slow-op";
 export type { RecordSlowOpInput } from "./internal/record-slow-op";
 export { readSlowOpMarkers } from "./internal/read-markers";
+export { resolveSlowThreshold } from "./internal/resolve-threshold";
+export type { Thresholds } from "./internal/resolve-threshold";
 
 export default {
   description:

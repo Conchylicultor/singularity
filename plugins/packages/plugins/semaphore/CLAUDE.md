@@ -6,7 +6,9 @@ counter plus a waiter queue — releases the slot in a `finally` so a rejecting
 body never leaks one. `onWait(waitMs)` fires once at acquisition with the time
 spent queueing (≈0 when a slot was free), so callers can make the gate
 observable — e.g. record a profiler span — without coupling this primitive to a
-profiler.
+profiler. `stats()` returns a zero-cost occupancy snapshot
+(`{ active, queued, max }`) so a gate owner can expose a gauge — e.g. sample
+occupancy into a flight recorder — again without profiler coupling.
 
 Used at the per-worktree DB connection gate
 (`plugins/database/server/internal/client.ts`) to cap concurrent loader-kind

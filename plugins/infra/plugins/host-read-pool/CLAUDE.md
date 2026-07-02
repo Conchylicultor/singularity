@@ -45,6 +45,14 @@ queue-wait is charged as a `heavy-read-local` span sitting beside the host-wide
 separately attributable. See
 research/2026-06-19-global-incremental-git-loaders.md (Stage 1).
 
+**Occupancy gauges.** Both tiers register a `registerGateGauge` under their
+`chargeWait` layer names (`heavy-read-local`, `heavy-read-acquire`) so the
+flight recorder's gate snapshot joins occupancy to span waits. Limitation:
+host-*wide* occupancy across other worktree processes is not cheaply readable
+from the flock slot files, so the `heavy-read-acquire` gauge reports **this
+process's** held slots plus this process's parked depth, against the host-wide
+`max`.
+
 Gate at the **operation level** — one slot per logical job. The gate never lives
 inside `runGit` (the canonical thin spawn stays ungated so cheap interactive git
 is never serialized behind a 14s archive). See

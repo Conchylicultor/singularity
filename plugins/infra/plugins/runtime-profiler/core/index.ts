@@ -14,6 +14,9 @@ export {
   resetRuntimeProfile,
   onSlowSpan,
   waitSplit,
+  captureFlightWindow,
+  registerGateGauge,
+  readGateGauges,
   __contribute,
 } from "./recorder";
 export type {
@@ -26,4 +29,7 @@ export type {
   WaitBreakdown,
   EntryContext,
   Track,
+  FlightSpan,
+  FlightWindow,
+  GateGauge,
 } from "./recorder";

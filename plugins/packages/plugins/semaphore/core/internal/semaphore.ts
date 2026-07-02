@@ -11,6 +11,15 @@ export interface Semaphore {
    * from `fn`'s own timing so queue-wait is never conflated with work time.
    */
   run<T>(fn: () => Promise<T>, onWait?: (waitMs: number) => void): Promise<T>;
+
+  /**
+   * Observability-only snapshot of current occupancy: how many `run` bodies
+   * hold a slot, how many are queued, and the configured cap. Lets a gate
+   * owner expose a gauge — e.g. sample occupancy into a flight recorder —
+   * without coupling this primitive to a profiler. Reads existing counters;
+   * zero hot-path cost.
+   */
+  stats(): { active: number; queued: number; max: number };
 }
 
 /**
@@ -53,5 +62,6 @@ export function createSemaphore(max: number): Semaphore {
         release();
       }
     },
+    stats: () => ({ active, queued: waiters.length, max }),
   };
 }

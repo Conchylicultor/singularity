@@ -5,15 +5,19 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
   __contribute,
+  captureFlightWindow,
   chargeWait,
   getRuntimeProfile,
   installClock,
   installSpanContextRuntime,
+  readGateGauges,
   recordEntrySpan,
   recordSpan,
+  registerGateGauge,
   resetRuntimeProfile,
   type Aggregate,
   type EntryContext,
+  type FlightWindow,
   type SpanKind,
   type Track,
 } from "./recorder";
@@ -252,6 +256,141 @@ describe("chargeWait fallbacks and markers", () => {
     expect(a.waits).toEqual({ "git-memo-hit": 0 });
     expect(a.waitTotalMs).toBe(0);
     expect(a.selfTotalMs).toBe(20);
+  });
+});
+
+describe("flight recorder — open-entry registry", () => {
+  test("capture mid-flight lists nested open entries with parents/ageMs; empty after completion", async () => {
+    let mid!: FlightWindow;
+    await recordEntrySpan("flush", "f", async () => {
+      await recordEntrySpan("loader", "l", async () => {
+        fakeNow = 30;
+        mid = captureFlightWindow({ windowStartMs: 0 });
+      });
+    });
+
+    expect(mid.atMs).toBe(30);
+    expect(mid.open).toHaveLength(2);
+    const loader = mid.open.find((s) => s.kind === "loader")!;
+    expect(loader.label).toBe("l");
+    expect(loader.t0).toBe(0);
+    expect(loader.t1).toBeNull();
+    expect(loader.ageMs).toBe(30);
+    expect(loader.parents).toEqual([{ kind: "flush", label: "f" }]);
+    expect(loader.waits).toBeUndefined(); // only materialized when non-empty
+    const flush = mid.open.find((s) => s.kind === "flush")!;
+    expect(flush.parents).toEqual([]);
+    // Both entries closed → deregistered.
+    expect(captureFlightWindow({ windowStartMs: 0 }).open).toHaveLength(0);
+  });
+
+  test("a throwing entry is still removed from the open registry", async () => {
+    let thrown: unknown;
+    try {
+      await recordEntrySpan("loader", "boom", async () => {
+        fakeNow = 10;
+        throw new Error("boom");
+      });
+    } catch (err) {
+      thrown = err;
+    }
+    expect((thrown as Error).message).toBe("boom");
+    expect(captureFlightWindow({ windowStartMs: 0 }).open).toHaveLength(0);
+  });
+
+  test("an open span's live wait unions appear in the capture", async () => {
+    await recordEntrySpan("loader", "l", async () => {
+      fakeNow = 40;
+      chargeWait("db-acquire", 40); // interval [0, 40]
+      fakeNow = 50;
+      const w = captureFlightWindow({ windowStartMs: 0 });
+      const span = w.open[0]!;
+      expect(span.waits).toEqual({ "db-acquire": 40 });
+      expect(span.waitMs).toBe(40);
+      // selfMs mid-flight: age 50 − busy 40 (coverage so far).
+      expect(span.selfMs).toBe(10);
+    });
+  });
+});
+
+describe("flight recorder — completed ring", () => {
+  test("a finished span ≥5ms appears with correct t0/t1 and immediate parent; a sub-5ms span does not", async () => {
+    await recordEntrySpan("push", "p", async () => {
+      await recordEntrySpan("loader", "slow", async () => {
+        fakeNow = 20;
+      });
+      await recordEntrySpan("loader", "fast", async () => {
+        fakeNow = 22; // 2ms — below the 5ms floor
+      });
+    });
+
+    const completed = captureFlightWindow({ windowStartMs: 0 }).completed;
+    // Newest→oldest: the enclosing push recorded last.
+    expect(completed.map((s) => s.label)).toEqual(["p", "slow"]);
+    const slow = completed[1]!;
+    expect(slow.t0).toBe(0);
+    expect(slow.t1).toBe(20);
+    expect(slow.ageMs).toBe(20);
+    expect(slow.parents).toEqual([{ kind: "push", label: "p" }]);
+  });
+
+  test("windowStartMs excludes spans completed before the window", async () => {
+    await recordEntrySpan("loader", "old", async () => {
+      fakeNow = 10;
+    });
+    fakeNow = 100;
+    await recordEntrySpan("loader", "recent", async () => {
+      fakeNow = 110;
+    });
+    const completed = captureFlightWindow({ windowStartMs: 50 }).completed;
+    expect(completed.map((s) => s.label)).toEqual(["recent"]);
+  });
+});
+
+describe("flight recorder — caps", () => {
+  test("maxOpen and maxCompleted are respected; completed comes back newest first", async () => {
+    for (const label of ["a", "b", "c"]) {
+      const start = fakeNow;
+      await recordEntrySpan("loader", label, async () => {
+        fakeNow = start + 10;
+      });
+    }
+    const w = captureFlightWindow({ windowStartMs: 0, maxCompleted: 2 });
+    expect(w.completed.map((s) => s.label)).toEqual(["c", "b"]);
+
+    // Three concurrently-open entries (registered synchronously before the
+    // first await), capped at 2.
+    const gate = deferred();
+    const runs = ["x", "y", "z"].map((label) =>
+      recordEntrySpan("loader", label, async () => {
+        await gate.promise;
+      }),
+    );
+    expect(captureFlightWindow({ windowStartMs: 0, maxOpen: 2 }).open).toHaveLength(2);
+    gate.resolve();
+    await Promise.all(runs);
+  });
+});
+
+describe("flight recorder — gate gauges", () => {
+  test("a registered gauge is read; duplicate layer registration throws", () => {
+    registerGateGauge("test-gate", () => ({ active: 2, queued: 5, max: 4 }));
+    expect(readGateGauges()["test-gate"]).toEqual({ active: 2, queued: 5, max: 4 });
+    expect(() => registerGateGauge("test-gate", () => ({ active: 0, queued: 0, max: 0 }))).toThrow(
+      "duplicate layer",
+    );
+  });
+
+  test("resetRuntimeProfile clears the flight ring but keeps registered gauges", async () => {
+    registerGateGauge("reset-gate", () => ({ active: 1, queued: 0, max: 1 }));
+    await recordEntrySpan("loader", "l", async () => {
+      fakeNow = 10;
+    });
+    expect(captureFlightWindow({ windowStartMs: 0 }).completed).toHaveLength(1);
+
+    resetRuntimeProfile();
+    expect(captureFlightWindow({ windowStartMs: 0 }).completed).toHaveLength(0);
+    expect(readGateGauges()["reset-gate"]).toEqual({ active: 1, queued: 0, max: 1 });
   });
 });
 

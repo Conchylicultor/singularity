@@ -1,6 +1,6 @@
 import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
+import { chargeWait, registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
 import { cpus } from "node:os";
 
 function heavyReadSize(): number {
@@ -33,6 +33,22 @@ function localSize(): number {
 const perWorktreeGate = createSemaphore(localSize());
 const pool = createHostSemaphore({ name: "heavy-read", size: heavyReadSize() });
 
+// Host-tier slots currently held BY THIS PROCESS. The flock gate is host-wide,
+// but host-WIDE occupancy across other worktree processes is not cheaply
+// readable from the flock slot files — so the `heavy-read-acquire` gauge below
+// reports this process's held slots + this process's parked depth, against the
+// host-wide `max`.
+let heldByThisProcess = 0;
+
+// Occupancy gauges for the flight recorder's gate snapshot: layer names join to
+// the same-named `chargeWait` layers in span `waits` (see withHeavyReadSlot).
+registerGateGauge("heavy-read-local", () => perWorktreeGate.stats());
+registerGateGauge("heavy-read-acquire", () => ({
+  active: heldByThisProcess,
+  queued: pool.depth(),
+  max: heavyReadSize(),
+}));
+
 export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
   // Two-tier gate: the local per-worktree semaphore wraps OUTSIDE the host-wide
   // flock gate. It bounds how many heavy ops *this* backend can have parked in
@@ -48,7 +64,20 @@ export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
   // 3500 / git diff 532) instead of one opaque number. Context-less callers fall
   // back to a standalone span inside chargeWait.
   return perWorktreeGate.run(
-    () => pool.run(fn, (waitMs) => chargeWait("heavy-read-acquire", waitMs)),
+    () =>
+      pool.run(
+        async () => {
+          // The callback runs only once the host slot is held — the counter
+          // brackets exactly the held window for the occupancy gauge above.
+          heldByThisProcess++;
+          try {
+            return await fn();
+          } finally {
+            heldByThisProcess--;
+          }
+        },
+        (waitMs) => chargeWait("heavy-read-acquire", waitMs),
+      ),
     (waitMs) => chargeWait("heavy-read-local", waitMs),
   );
 }
