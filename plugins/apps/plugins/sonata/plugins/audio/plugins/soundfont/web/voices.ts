@@ -1,4 +1,3 @@
-import { Soundfont } from "smplr";
 import { assetMirrorUrl } from "@plugins/infra/plugins/asset-mirror/core";
 import type {
   InstrumentVoices,
@@ -39,18 +38,24 @@ import { SOUNDFONT_MIRROR_ID } from "../shared/mirror";
  * offline-and-never-warmed instrument resolves `load` but is silent; the loud
  * failure signal is the mirror's server-side 502 + log, not a client exception.
  */
+/** smplr's `Soundfont` instance type, taken from the dynamically imported
+ *  module so the module is only reached in type position (erased). */
+type Sf = ReturnType<(typeof import("smplr"))["Soundfont"]>;
+
 export function createSoundfontVoices(
   ctx: AudioContext,
   destination: AudioNode,
   gleitzName: string,
 ): InstrumentVoices {
-  const sf = Soundfont(ctx, {
-    destination,
-    // Full same-origin URL to this patch's gleitz file. `<base>` already pins the
-    // kit directory, so the only trailing segment is the flat `<gleitz>-mp3.js`
-    // name the mirror route accepts.
-    instrumentUrl: `${assetMirrorUrl(SOUNDFONT_MIRROR_ID)}/${gleitzName}-mp3.js`,
-  });
+  // `smplr` is imported DYNAMICALLY here (inside the factory body) rather than
+  // as a top-level static import, so the sample-engine library is code-split OFF
+  // the eager plugin-boot wave: this plugin registers 127 Instrument
+  // contributions, but the factory (and thus the chunk) only runs when one of
+  // those timbres is first put in use. The synchronous `InstrumentVoices`
+  // contract is preserved — the instance is created behind the `loaded` promise
+  // every consumer already awaits, and the voice methods are safe no-ops until
+  // it settles.
+  let sf: Sf | null = null;
 
   // After teardown the smplr instance throws on any stop/start. The panel drives
   // this voice from two independent effects whose cleanups run in mount order —
@@ -59,23 +64,39 @@ export function createSoundfontVoices(
   // switch. Make the contract robust to that ordering: once disposed, all voice
   // methods are safe no-ops (there are no voices left to stop or notes worth
   // scheduling). Identical semantics to the piano wrapper's `disposed` guard.
+  // The same guard also covers the pre-load window (`sf` still null): a method
+  // called before the smplr chunk resolves has no instance to act on yet.
   let disposed = false;
 
+  const loaded = import("smplr").then(({ Soundfont }) => {
+    // Disposed before the chunk landed (fast unmount / instrument-switch): skip
+    // instantiation entirely — there is nothing to sound or tear down.
+    if (disposed) return;
+    sf = Soundfont(ctx, {
+      destination,
+      // Full same-origin URL to this patch's gleitz file. `<base>` already pins
+      // the kit directory, so the only trailing segment is the flat
+      // `<gleitz>-mp3.js` name the mirror route accepts.
+      instrumentUrl: `${assetMirrorUrl(SOUNDFONT_MIRROR_ID)}/${gleitzName}-mp3.js`,
+    });
+    return sf.ready;
+  });
+
   return {
-    loaded: sf.ready,
+    loaded,
     schedule({ pitch, velocity, when, duration }: ScheduledNote): void {
-      if (disposed) return;
+      if (disposed || !sf) return;
       sf.start({ note: pitch, velocity, time: when, duration });
     },
     play(pitch: number, velocity: number): () => void {
-      if (disposed) return () => {};
+      if (disposed || !sf) return () => {};
       const stop = sf.start({ note: pitch, velocity });
       return () => {
         if (!disposed) stop();
       };
     },
     allOff(): void {
-      if (disposed) return;
+      if (disposed || !sf) return;
       // Two layers must be silenced: sf.stop() halts voices already on the audio
       // graph, and sf.scheduler.stop() flushes notes still queued in smplr's
       // internal lookahead (the engine pre-schedules ~1.5s ahead, so without this
@@ -88,7 +109,7 @@ export function createSoundfontVoices(
     dispose(): void {
       if (disposed) return;
       disposed = true;
-      sf.dispose();
+      sf?.dispose();
     },
   };
 }

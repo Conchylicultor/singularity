@@ -1,4 +1,3 @@
-import { SplendidGrandPiano } from "smplr";
 import { assetMirrorUrl } from "@plugins/infra/plugins/asset-mirror/core";
 import type {
   InstrumentVoices,
@@ -39,17 +38,23 @@ import { PIANO_MIRROR_ID } from "../shared/mirror";
  *    `piano.scheduler.stop()` to flush that queue (see allOff).
  *  - `piano.dispose()` stops all voices and disposes the output channel.
  */
+/** smplr's `SplendidGrandPiano` instance type, taken from the dynamically
+ *  imported module so the module is only reached in type position (erased). */
+type Piano = ReturnType<(typeof import("smplr"))["SplendidGrandPiano"]>;
+
 export function createVoices(
   ctx: AudioContext,
   destination: AudioNode,
 ): InstrumentVoices {
-  const piano = SplendidGrandPiano(ctx, {
-    destination,
-    // Same-origin mirror instead of smplr's default CDN. smplr appends
-    // `/<sample>.<format>` and URL-encodes it, so the mirror receives a
-    // well-formed path; `formats` is left at smplr's default ["ogg","m4a"].
-    baseUrl: assetMirrorUrl(PIANO_MIRROR_ID),
-  });
+  // `smplr` is imported DYNAMICALLY here (inside the factory body) rather than
+  // as a top-level static import, so the ~heavy sample-engine library is
+  // code-split OFF the eager plugin-boot wave: the barrel statically imports
+  // this factory, but the factory only runs when the piano instrument is first
+  // put in use (selected / default), which is when the chunk downloads. The
+  // synchronous `InstrumentVoices` contract is preserved — the instance is
+  // created behind the `loaded` promise every consumer already awaits before
+  // scheduling, and the voice methods are safe no-ops until it settles.
+  let piano: Piano | null = null;
 
   // After dispose() the smplr instance throws on any stop/start ("Cannot stop
   // voices on a disposed Smplr instance"). The panel drives this voice from two
@@ -57,24 +62,40 @@ export function createVoices(
   // effect) before allOff (scheduling effect) — so allOff is *expected* to land
   // on an already-disposed instance on unmount and instrument-switch. Make the
   // contract robust to that ordering: once disposed, all voice methods are safe
-  // no-ops (there are no voices left to stop or notes worth scheduling).
+  // no-ops (there are no voices left to stop or notes worth scheduling). The
+  // same guard also covers the pre-load window (`piano` still null): a method
+  // called before the smplr chunk resolves has no instance to act on yet.
   let disposed = false;
 
+  const loaded = import("smplr").then(({ SplendidGrandPiano }) => {
+    // Disposed before the chunk landed (fast unmount / instrument-switch): skip
+    // instantiation entirely — there is nothing to sound or tear down.
+    if (disposed) return;
+    piano = SplendidGrandPiano(ctx, {
+      destination,
+      // Same-origin mirror instead of smplr's default CDN. smplr appends
+      // `/<sample>.<format>` and URL-encodes it, so the mirror receives a
+      // well-formed path; `formats` is left at smplr's default ["ogg","m4a"].
+      baseUrl: assetMirrorUrl(PIANO_MIRROR_ID),
+    });
+    return piano.ready;
+  });
+
   return {
-    loaded: piano.ready,
+    loaded,
     schedule({ pitch, velocity, when, duration }: ScheduledNote): void {
-      if (disposed) return;
+      if (disposed || !piano) return;
       piano.start({ note: pitch, velocity, time: when, duration });
     },
     play(pitch: number, velocity: number): () => void {
-      if (disposed) return () => {};
+      if (disposed || !piano) return () => {};
       const stop = piano.start({ note: pitch, velocity });
       return () => {
         if (!disposed) stop();
       };
     },
     allOff(): void {
-      if (disposed) return;
+      if (disposed || !piano) return;
       // Two layers must be silenced: piano.stop() halts voices already on the
       // audio graph, and piano.scheduler.stop() flushes notes still queued in
       // smplr's internal lookahead (the engine pre-schedules ~1.5s ahead, so
@@ -87,7 +108,7 @@ export function createVoices(
     dispose(): void {
       if (disposed) return;
       disposed = true;
-      piano.dispose();
+      piano?.dispose();
     },
   };
 }

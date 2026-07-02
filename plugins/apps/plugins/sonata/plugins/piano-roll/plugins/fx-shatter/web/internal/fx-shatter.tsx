@@ -15,10 +15,7 @@
  */
 import { useEffect } from "react";
 import { Graphics, type Renderer, type Texture, type Ticker } from "pixi.js";
-import {
-  createEmitter,
-  type FxContext,
-} from "@plugins/apps/plugins/sonata/plugins/piano-roll/web";
+import type { FxContext } from "@plugins/apps/plugins/sonata/plugins/piano-roll/web";
 
 /** Tiny rounded shard — rounded so additive overlaps stay soft. */
 function makeDebrisTexture(renderer: Renderer): Texture {
@@ -42,7 +39,7 @@ function jitterBrightness(rgb: number, amount: number): number {
 export function NoteShatterFx({ fx }: { fx: FxContext }) {
   useEffect(() => {
     const debrisTex = makeDebrisTexture(fx.renderer);
-    const debris = createEmitter(fx.layers.aboveNotes, {
+    const debris = fx.createEmitter(fx.layers.aboveNotes, {
       texture: debrisTex,
       capacity: Math.min(600, fx.quality.particleBudget),
       gravity: 900,

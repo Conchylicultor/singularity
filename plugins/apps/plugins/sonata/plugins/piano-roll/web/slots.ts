@@ -14,6 +14,7 @@
  */
 import type { ComponentType } from "react";
 import type { Container, Renderer, Ticker } from "pixi.js";
+import type { EmitterOptions, ParticleEmitter } from "./internal/fx/particles";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { BoolFieldDef } from "@plugins/fields/plugins/bool/plugins/config/core";
@@ -93,6 +94,14 @@ export interface FxContext {
   ticker: Ticker;
   /** The live renderer (texture generation, DPR). */
   renderer: Renderer;
+  /**
+   * Build a pooled particle emitter parented into one of the `layers`. The host
+   * owns the pixi coupling (this is piano-roll's own `createEmitter` factory),
+   * so an effect never imports the factory itself — that keeps the pixi-bearing
+   * particle pool out of the eager plugin-boot wave (the fx barrels are eager,
+   * the pool is not). Size the pool with `quality.particleBudget`.
+   */
+  createEmitter(parent: Container, opts: EmitterOptions): ParticleEmitter;
   /**
    * Quality knobs. `particleBudget` is a per-pool capacity ceiling derived
    * from the lane area — size pools with it and let spawns drop when full so

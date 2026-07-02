@@ -27,10 +27,7 @@ import {
   type Texture,
   type Ticker,
 } from "pixi.js";
-import {
-  createEmitter,
-  type FxContext,
-} from "@plugins/apps/plugins/sonata/plugins/piano-roll/web";
+import type { FxContext } from "@plugins/apps/plugins/sonata/plugins/piano-roll/web";
 
 /** Comet flight time. */
 const COMET_DUR_SEC = 0.4;
@@ -84,7 +81,7 @@ export function PitchCometsFx({ fx }: { fx: FxContext }) {
 
     const heads = new Container();
     fx.layers.aboveNotes.addChild(heads);
-    const trail = createEmitter(fx.layers.aboveNotes, {
+    const trail = fx.createEmitter(fx.layers.aboveNotes, {
       texture: trailTex,
       capacity: Math.min(240, fx.quality.particleBudget),
       drag: 1.5,

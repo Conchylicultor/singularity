@@ -38,7 +38,6 @@ import {
   type Ticker,
 } from "pixi.js";
 import {
-  createEmitter,
   easeOutCubic,
   type FxContext,
   type FxNoteEvent,
@@ -93,12 +92,12 @@ export function NoteGlowSparksFx({ fx }: { fx: FxContext }) {
     const sparkTex = makeSparkTexture(fx.renderer);
     const budget = fx.quality.particleBudget;
 
-    const glow = createEmitter(fx.layers.aboveNotes, {
+    const glow = fx.createEmitter(fx.layers.aboveNotes, {
       texture: glowTex,
       capacity: Math.min(48, budget),
       ease: easeOutCubic,
     });
-    const sparks = createEmitter(fx.layers.aboveNotes, {
+    const sparks = fx.createEmitter(fx.layers.aboveNotes, {
       texture: sparkTex,
       capacity: Math.min(320, budget),
       // Gentle deceleration so sparks drift to a stop rather than flying off.

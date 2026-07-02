@@ -1,34 +1,10 @@
-import "katex/dist/katex.min.css"; // Vite bundles the CSS + woff2 fonts (pattern: terminal imports xterm.css)
-import katex from "katex";
-import { useMemo } from "react";
+import { lazyComponent } from "@plugins/primitives/plugins/lazy-component/web";
+import type { KatexMathProps } from "./katex-math-impl";
 
-/**
- * The single home for KaTeX rendering across the page math plugins (block
- * equations + inline math). Owns the KaTeX config so error styling and output
- * mode stay consistent everywhere math is drawn.
- *
- * `throwOnError: false` makes KaTeX render parse errors inline in `errorColor`
- * rather than throwing — fail-soft display is correct here (the user is mid-typing
- * a formula), and is a *render* concern, not a swallowed exception.
- */
-export function KatexMath({
-  expression,
-  display,
-  className,
-}: {
-  expression: string;
-  display: boolean;
-  className?: string;
-}) {
-  const html = useMemo(
-    () =>
-      katex.renderToString(expression, {
-        displayMode: display,
-        throwOnError: false,
-        output: "html",
-        errorColor: "var(--destructive)", // matches theme tokens
-      }),
-    [expression, display],
-  );
-  return <span className={className} dangerouslySetInnerHTML={{ __html: html }} />;
-}
+// Lazy-loaded: keeps the ~259KB katex package out of the eager plugin-boot
+// wave. `fallback: null` because math renders inline — pop in once the chunk
+// resolves rather than showing a loading placeholder.
+export const KatexMath = lazyComponent<KatexMathProps>(
+  () => import("./katex-math-impl").then((m) => ({ default: m.KatexMath })),
+  { fallback: null },
+);

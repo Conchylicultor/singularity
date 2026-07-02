@@ -3124,6 +3124,10 @@
       "name": "@singularity/plugin-primitives-launch",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/lazy-component": {
+      "name": "@singularity/plugin-primitives-lazy-component",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/live-state": {
       "name": "@singularity/plugin-primitives-live-state",
       "version": "0.0.1",
@@ -5972,6 +5976,8 @@
     "@singularity/plugin-primitives-latest-ref": ["@singularity/plugin-primitives-latest-ref@workspace:plugins/primitives/plugins/latest-ref"],
 
     "@singularity/plugin-primitives-launch": ["@singularity/plugin-primitives-launch@workspace:plugins/primitives/plugins/launch"],
+
+    "@singularity/plugin-primitives-lazy-component": ["@singularity/plugin-primitives-lazy-component@workspace:plugins/primitives/plugins/lazy-component"],
 
     "@singularity/plugin-primitives-live-state": ["@singularity/plugin-primitives-live-state@workspace:plugins/primitives/plugins/live-state"],
 

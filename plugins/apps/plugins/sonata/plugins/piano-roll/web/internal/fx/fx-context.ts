@@ -23,6 +23,7 @@ import type { Application } from "pixi.js";
 import type { Projection } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type { FxContext } from "../../slots";
 import type { PianoRollScene } from "../pixi/scene";
+import { createEmitter } from "./particles";
 
 /** Global ceiling — even a huge lane never buys more than this per pool. */
 const PARTICLE_BUDGET_MAX = 2000;
@@ -50,6 +51,7 @@ export function createFxContext(input: {
     getPlaybackBeats,
     ticker: app.ticker,
     renderer: app.renderer,
+    createEmitter,
     quality: {
       get particleBudget(): number {
         const { width, height } = getLaneSize();

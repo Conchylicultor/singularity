@@ -17,7 +17,6 @@
 import { useEffect } from "react";
 import { Graphics, type Renderer, type Texture, type Ticker } from "pixi.js";
 import {
-  createEmitter,
   easeOutCubic,
   type FxContext,
 } from "@plugins/apps/plugins/sonata/plugins/piano-roll/web";
@@ -39,7 +38,7 @@ function makeRingTexture(renderer: Renderer): Texture {
 export function SoundWaveRipplesFx({ fx }: { fx: FxContext }) {
   useEffect(() => {
     const ringTex = makeRingTexture(fx.renderer);
-    const rings = createEmitter(fx.layers.belowNotes, {
+    const rings = fx.createEmitter(fx.layers.belowNotes, {
       texture: ringTex,
       capacity: Math.min(24, fx.quality.particleBudget),
       ease: easeOutCubic,

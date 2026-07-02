@@ -1,8 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdGraphicEq } from "react-icons/md";
 import { ConfigV2 } from "@plugins/config_v2/web";
+import { lazyComponent } from "@plugins/primitives/plugins/lazy-component/web";
 import { Sonata, SonataToolbar } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { PianoRoll } from "./components/piano-roll";
 import { SpreadWheel } from "./components/spread-wheel";
 import { pianoRollConfig } from "../shared/config";
 
@@ -10,9 +10,11 @@ import { pianoRollConfig } from "../shared/config";
 // (the only legal cross-plugin path) and contribute headless effects.
 export { PianoRollFx } from "./slots";
 export type { FxToggleConfig, FxNoteEvent, FxContext } from "./slots";
-// The shared, budget-respecting particle pool effects build on (one emitter
-// per texture; spawns drop when the pool is full — see particles.ts).
-export { createEmitter } from "./internal/fx/particles";
+// The particle-pool types effects build on. `createEmitter` itself is NOT
+// re-exported here: it is pixi-bearing, and a static value re-export would drag
+// pixi.js into the eager plugin-boot wave. Effects call `fx.createEmitter(...)`
+// off the FxContext instead — the host (piano-roll, lazy-loaded) owns the pixi
+// coupling, so the pool ships in the lazy piano-roll chunk, not at boot.
 export type { ParticleEmitter, EmitterOptions, SpawnSpec } from "./internal/fx/particles";
 export { easeOutCubic } from "./internal/fx/particle-step";
 
@@ -30,7 +32,12 @@ export default {
       capabilities: ["time-axis", "pitch-plane"],
       // The default lens when the user hasn't picked one.
       default: true,
-      component: PianoRoll,
+      // Lazy: the piano-roll draws via pixi.js, a heavy dep. Code-splitting it
+      // here keeps pixi off the eager plugin-boot wave — it loads only when a
+      // user actually opens the (non-default) Sonata piano-roll display.
+      component: lazyComponent(() =>
+        import("./components/piano-roll").then((m) => ({ default: m.PianoRoll })),
+      ),
     }),
     // Toolbar jog wheel for the roll's vertical zoom (spread), in the toolbar's
     // End zone beside the transport controls. Lives in this plugin (not

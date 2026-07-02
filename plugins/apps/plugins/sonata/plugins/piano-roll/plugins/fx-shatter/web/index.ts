@@ -1,9 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdGrain } from "react-icons/md";
 import { ConfigV2 } from "@plugins/config_v2/web";
+import { lazyComponent } from "@plugins/primitives/plugins/lazy-component/web";
 import { PianoRollFx } from "@plugins/apps/plugins/sonata/plugins/piano-roll/web";
 import { fxShatterConfig } from "../shared/config";
-import { NoteShatterFx } from "./internal/fx-shatter";
 
 export default {
   description:
@@ -15,7 +15,12 @@ export default {
       icon: MdGrain,
       tier: "fancy",
       config: fxShatterConfig,
-      component: NoteShatterFx,
+      // Lazy + headless (renders null): keeps this effect's pixi.js off the
+      // eager boot wave. Loads inside the already-lazy piano-roll subtree.
+      component: lazyComponent(
+        () => import("./internal/fx-shatter").then((m) => ({ default: m.NoteShatterFx })),
+        { fallback: null },
+      ),
     }),
     ConfigV2.WebRegister({ descriptor: fxShatterConfig }),
   ],

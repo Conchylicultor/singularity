@@ -432,8 +432,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Extended by: `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`), `apps/sonata/rich/key-mode` (table `sonata_songs_ext_key_auto_detect`), `apps/sonata/sources/midi` (table `sonata_songs_ext_midi`), `apps/sonata/playback-history` (table `sonata_songs_ext_playback`), `apps/sonata/transpose` (table `sonata_songs_ext_transpose`), `apps/sonata/sources/ultimate-guitar` (table `sonata_songs_ext_ultimate_guitar`)
         - **`notation`** — Sonata Display: standard staff notation. Engraves the score as a grand staff (treble + bass) with clefs, key/time signatures, barlines, accidentals and rests, following playback with a moving playhead, active-note highlight and auto-scroll. A reading view (no time-axis / pitch-plane capabilities); click a note to seek. Server registration of the notation config (chord-symbol toggle + treble/bass split pitch).
           - Web:
-            - Contributes: `Sonata.Display` "Notation" → `Notation`, `ConfigV2.WebRegister`, `Sonata.ViewOption` "notation"
-            - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackMixerEntries`, `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/element-size.useElementSize`, `primitives/latest-ref.useLatestRef`, `primitives/virtual-rows.useVirtualRows`
+            - Contributes: `Sonata.Display` "Notation" → `LazyBoundary`, `ConfigV2.WebRegister`, `Sonata.ViewOption` "notation"
+            - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackMixerEntries`, `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/element-size.useElementSize`, `primitives/latest-ref.useLatestRef`, `primitives/lazy-component.lazyComponent`, `primitives/virtual-rows.useVirtualRows`
           - Server:
             - Uses: `config_v2.ConfigV2`
         - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys. Server registration of the piano-keyboard config (key-label scope).
@@ -445,9 +445,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays. Server registration of the piano-roll config (Synthesia-style note-name labels).
           - Web:
             - Slots: `PianoRollFx.PianoRollFx` ← `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`
-            - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`, `SonataToolbar.End` "spread" → `SpreadWheel`, `ConfigV2.WebRegister`, `Sonata.ViewOption` "piano-roll"
-            - Uses: `apps/sonata/primitives/inertial-drag.useInertialDrag`, `apps/sonata/primitives/keyboard.isBlackPitch`, `apps/sonata/primitives/keyboard.keyLayout`, `apps/sonata/shell.LaneInsetsProvider`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.blackKeyColor`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/element-size.useElementSize`, `primitives/latest-ref.useLatestRef`, `primitives/log-channels.clientLog`, `primitives/popover.InlinePopover`, `primitives/slot-render.renderIsolated`, `primitives/tooltip.WithTooltip`
-            - Exports: Types: `EmitterOptions`, `FxContext`, `FxNoteEvent`, `FxToggleConfig`, `ParticleEmitter`, `SpawnSpec`; Values: `createEmitter`, `easeOutCubic`, `PianoRollFx`
+            - Contributes: `Sonata.Display` "Piano Roll" → `LazyBoundary`, `SonataToolbar.End` "spread" → `SpreadWheel`, `ConfigV2.WebRegister`, `Sonata.ViewOption` "piano-roll"
+            - Uses: `apps/sonata/primitives/inertial-drag.useInertialDrag`, `apps/sonata/primitives/keyboard.isBlackPitch`, `apps/sonata/primitives/keyboard.keyLayout`, `apps/sonata/shell.LaneInsetsProvider`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.blackKeyColor`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/element-size.useElementSize`, `primitives/latest-ref.useLatestRef`, `primitives/lazy-component.lazyComponent`, `primitives/log-channels.clientLog`, `primitives/popover.InlinePopover`, `primitives/slot-render.renderIsolated`, `primitives/tooltip.WithTooltip`
+            - Exports: Types: `EmitterOptions`, `FxContext`, `FxNoteEvent`, `FxToggleConfig`, `ParticleEmitter`, `SpawnSpec`; Values: `easeOutCubic`, `PianoRollFx`
           - Server:
             - Uses: `config_v2.ConfigV2`
           - Cross-plugin:
@@ -455,26 +455,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`fx-comets`** — Fancy piano-roll FX (opt-in): a comet arcs along the keyboard line between consecutive notes of the same track, with a fading particle trail. Server registration of the fx-comets enabled toggle.
               - Web:
-                - Contributes: `PianoRollFx` "Pitch comets" → `PitchCometsFx`, `ConfigV2.WebRegister`
-                - Uses: `apps/sonata/piano-roll.createEmitter`, `apps/sonata/piano-roll.FxContext`, `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`
+                - Contributes: `PianoRollFx` "Pitch comets" → `LazyBoundary`, `ConfigV2.WebRegister`
+                - Uses: `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`, `primitives/lazy-component.lazyComponent`
               - Server:
                 - Uses: `config_v2.ConfigV2`
             - **`fx-core`** — Ambient piano-roll FX (on by default): key-strike glow, rising sparks, and an active-note brighten over the sounding bar. Server registration of the fx-core enabled toggle.
               - Web:
-                - Contributes: `PianoRollFx` "Note glow & sparks" → `NoteGlowSparksFx`, `ConfigV2.WebRegister`
-                - Uses: `apps/sonata/piano-roll.createEmitter`, `apps/sonata/piano-roll.easeOutCubic`, `apps/sonata/piano-roll.FxContext`, `apps/sonata/piano-roll.FxNoteEvent`, `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`
+                - Contributes: `PianoRollFx` "Note glow & sparks" → `LazyBoundary`, `ConfigV2.WebRegister`
+                - Uses: `apps/sonata/piano-roll.easeOutCubic`, `apps/sonata/piano-roll.FxContext`, `apps/sonata/piano-roll.FxNoteEvent`, `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`, `primitives/lazy-component.lazyComponent`
               - Server:
                 - Uses: `config_v2.ConfigV2`
             - **`fx-ripples`** — Fancy piano-roll FX (opt-in): expanding sound-wave ripple rings from each note strike, chords merging into one stronger ripple. Server registration of the fx-ripples enabled toggle.
               - Web:
-                - Contributes: `PianoRollFx` "Sound-wave ripples" → `SoundWaveRipplesFx`, `ConfigV2.WebRegister`
-                - Uses: `apps/sonata/piano-roll.createEmitter`, `apps/sonata/piano-roll.easeOutCubic`, `apps/sonata/piano-roll.FxContext`, `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`
+                - Contributes: `PianoRollFx` "Sound-wave ripples" → `LazyBoundary`, `ConfigV2.WebRegister`
+                - Uses: `apps/sonata/piano-roll.easeOutCubic`, `apps/sonata/piano-roll.FxContext`, `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`, `primitives/lazy-component.lazyComponent`
               - Server:
                 - Uses: `config_v2.ConfigV2`
             - **`fx-shatter`** — Fancy piano-roll FX (opt-in): notes shatter into tinted debris that arcs up and falls under gravity at the strike line. Server registration of the fx-shatter enabled toggle.
               - Web:
-                - Contributes: `PianoRollFx` "Note shatter" → `NoteShatterFx`, `ConfigV2.WebRegister`
-                - Uses: `apps/sonata/piano-roll.createEmitter`, `apps/sonata/piano-roll.FxContext`, `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`
+                - Contributes: `PianoRollFx` "Note shatter" → `LazyBoundary`, `ConfigV2.WebRegister`
+                - Uses: `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`, `primitives/lazy-component.lazyComponent`
               - Server:
                 - Uses: `config_v2.ConfigV2`
         - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), shows stats on each library card (Library.CardMeta), and contributes Plays / Last-played fields (Library.Fields) so they appear in the DataView's sort, filter, and table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
@@ -3815,10 +3815,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Values: `INLINE_MATH_TOKEN_PATTERN`, `inlineMathToken`
         - **`render`** — Shared KaTeX renderer leaf for the page math plugins: <KatexMath/> plus the single home for KaTeX config and CSS.
+          - Web:
+            - Uses: `primitives/lazy-component.lazyComponent`
+            - Exports: Values: `KatexMath`
           - Cross-plugin:
             - Imported by: `page/math/equation`, `page/math/inline`, `page/read-only-view`
-          - Web:
-            - Exports: Values: `KatexMath`
     - **`numbered-list`** — Numbered-list block type for the page editor.
       - Web:
         - Contributes: `Editor.Block` "numbered-list" → `BlockTextRenderer`
@@ -4588,7 +4589,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `fields/directory-path/config`
     - **`graph-canvas`** — Generic dagre+xyflow graph canvas primitive: a pan/zoom/fit viewer with HTML/Tailwind nodes and solid/dashed directed edges, behind a domain-agnostic node/edge API. Read-only by default, with opt-in editor affordances (hover connect handles + onConnect, node/edge action overlays, group-background layers, smoothstep edges).
       - Web:
-        - Uses: `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/css/ui-kit.SURFACE_LEVELS`, `primitives/element-size.useResizeObserver`
+        - Uses: `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/css/ui-kit.SURFACE_LEVELS`, `primitives/element-size.useResizeObserver`, `primitives/lazy-component.lazyComponent`
         - Exports: Types: `GraphCanvasEdge`, `GraphCanvasEdgeTone`, `GraphCanvasGroup`, `GraphCanvasNode`, `GraphCanvasProps`; Values: `GraphCanvas`
       - Cross-plugin:
         - Imported by: `apps/studio/graph`, `apps/workflows/editor`, `tasks/task-graph`
@@ -4638,6 +4639,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `LaunchAgentPopoverProps`, `LaunchControlProps`, `LaunchRequest`; Values: `LaunchAgentPopover`, `LaunchControl`, `useLaunchConversation`
       - Cross-plugin:
         - Imported by: `active-data/task`, `apps/agent-manager/welcome`, `apps/prototypes/gallery`, `build/build-fix`, `conversations/conversation-view/branch`, `conversations/conversation-view/fork-conversation`, `conversations/conversation-view/fork-session`, `conversations/conversation-view/jsonl-viewer/investigate-event`, `conversations/conversations-view`, `debug/reports`, `reports/launch-fix`, `screenshot`, `tasks/attempt-view`, `tasks/task-description`, `tasks/task-list`
+    - **`lazy-component`** — Pairs React.lazy with its own Suspense boundary so a heavy component is code-split off the eager plugin-boot wave, loading on first mount instead.
+      - Web:
+        - Uses: `primitives/loading.Loading`
+        - Exports: Types: `LazyComponentOptions`; Values: `lazyComponent`
+      - Cross-plugin:
+        - Imported by: `apps/sonata/notation`, `apps/sonata/piano-roll`, `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`, `page/math/render`, `primitives/graph-canvas`, `primitives/markdown`, `primitives/text-editor`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
       - Web:
         - Uses: `infra/endpoints.endpointQueryKey`, `primitives/css/placeholder.Placeholder`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/log-channels.clientLog`, `primitives/networking.NetDiagEvent`, `primitives/networking.SharedWebSocket`, `primitives/networking.subscribeNetDiag`, `primitives/networking.subscribeWsStatus`, `primitives/networking.WsStatus`, `primitives/tab-id.getTabId`
@@ -4651,7 +4658,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/css/grid.Grid`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/spinner.Spinner`, `primitives/css/ui-kit.cn`
         - Exports: Types: `LoadingProps`, `LoadingVariant`; Values: `Loading`
       - Cross-plugin:
-        - Imported by: `active-data/plugin-link`, `active-data/task`, `apps-core/surface/floating/wallpaper`, `apps/deploy/servers`, `apps/mail/shell`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/welcome/recent-pages`, `apps/prototypes/gallery`, `apps/sonata/sources/ultimate-guitar`, `apps/story/render`, `apps/story/renderers/blog`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/studio/explorer`, `apps/studio/graph`, `apps/studio/release`, `apps/studio/release/release-artifact`, `apps/studio/release/release-info`, `apps/workflows/definitions`, `apps/workflows/executions`, `apps/workflows/steps/user-input`, `auth/apple-signing/setup-wizard`, `auth/google/setup-wizard`, `backup`, `build`, `build/build-commits`, `build/build-info`, `code-explorer`, `config_v2/settings`, `conversations/agents`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`, `conversations/recover`, `conversations/summary`, `debug/boot-profile`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/live-state-health`, `debug/memory`, `debug/queue`, `debug/read-set`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `debug/zero-test`, `history/dialog`, `page/bookmark`, `page/editor`, `page/inline-page-link`, `page/page-link`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/dependencies`, `primitives/css/layout-harness`, `primitives/data-view`, `primitives/diff-view`, `primitives/folder-picker`, `primitives/icon-picker`, `primitives/live-state`, `primitives/pane`, `review/code-review`, `review/config-defaults`, `review/plugin-changes`, `review/plugin-changes/file-changes`, `screenshot`, `search/quick-find`, `stats/commits`, `tasks/attempt-view`, `tasks/task-dependencies`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-list`
+        - Imported by: `active-data/plugin-link`, `active-data/task`, `apps-core/surface/floating/wallpaper`, `apps/deploy/servers`, `apps/mail/shell`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/welcome/recent-pages`, `apps/prototypes/gallery`, `apps/sonata/sources/ultimate-guitar`, `apps/story/render`, `apps/story/renderers/blog`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/studio/explorer`, `apps/studio/graph`, `apps/studio/release`, `apps/studio/release/release-artifact`, `apps/studio/release/release-info`, `apps/workflows/definitions`, `apps/workflows/executions`, `apps/workflows/steps/user-input`, `auth/apple-signing/setup-wizard`, `auth/google/setup-wizard`, `backup`, `build`, `build/build-commits`, `build/build-info`, `code-explorer`, `config_v2/settings`, `conversations/agents`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`, `conversations/recover`, `conversations/summary`, `debug/boot-profile`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/live-state-health`, `debug/memory`, `debug/queue`, `debug/read-set`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `debug/zero-test`, `history/dialog`, `page/bookmark`, `page/editor`, `page/inline-page-link`, `page/page-link`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/dependencies`, `primitives/css/layout-harness`, `primitives/data-view`, `primitives/diff-view`, `primitives/folder-picker`, `primitives/icon-picker`, `primitives/lazy-component`, `primitives/live-state`, `primitives/pane`, `review/code-review`, `review/config-defaults`, `review/plugin-changes`, `review/plugin-changes/file-changes`, `screenshot`, `search/quick-find`, `stats/commits`, `tasks/attempt-view`, `tasks/task-dependencies`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-list`
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.
       - Web:
         - Uses: `infra/endpoints.fetchEndpoint`, `primitives/networking.subscribeWsStatus`
@@ -4668,7 +4675,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot.MarkdownEnhancerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
-        - Uses: `primitives/css/text.Text`, `primitives/latest-ref.useLatestRef`, `primitives/syntax-highlight.HighlightedCode`
+        - Uses: `primitives/css/text.Text`, `primitives/latest-ref.useLatestRef`, `primitives/lazy-component.lazyComponent`, `primitives/syntax-highlight.HighlightedCode`
         - Exports: Types: `MarkdownEnhancement`; Values: `langFromClassName`, `Markdown`, `MarkdownEnhancementContext`, `MarkdownEnhancerSlot`, `nodeToText`, `useMarkdownEnhancement`
       - Cross-plugin:
         - Imported by: `active-data`, `apps/story/renderers/blog`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/teammate-message`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/markdown-extensions`, `debug/memory`
@@ -4852,7 +4859,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Web:
         - Slots: `TextEditorSlots.Plugin` ← `primitives.text-editor.paste-images`, `TextEditorSlots.NodeExtensions` ← `active-data`
-        - Uses: `primitives/css/ui-kit.cn`, `primitives/latest-ref.useLatestRef`, `primitives/slot-render.defineRenderSlot`
+        - Uses: `primitives/css/ui-kit.cn`, `primitives/latest-ref.useLatestRef`, `primitives/lazy-component.lazyComponent`, `primitives/slot-render.defineRenderSlot`
         - Exports: Types: `NodeExtension`, `TextEditorPluginProps`; Values: `registerNodeExtension`, `TextEditor`, `TextEditorSlots`
       - Cross-plugin:
         - Imported by: `active-data`, `active-data/task`, `conversations/agents`, `conversations/conversation-view/branch`, `primitives/launch`, `primitives/prompt-editor`, `primitives/text-editor/paste-images`, `screenshot`, `tasks/task-description`, `tasks/task-draft-form`

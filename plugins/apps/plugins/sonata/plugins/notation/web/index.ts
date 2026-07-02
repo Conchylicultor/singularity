@@ -2,7 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdMusicNote } from "react-icons/md";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { Notation } from "./components/notation";
+import { lazyComponent } from "@plugins/primitives/plugins/lazy-component/web";
 import { notationConfig } from "../shared/config";
 
 export default {
@@ -19,7 +19,13 @@ export default {
       label: "Notation",
       icon: MdMusicNote,
       capabilities: [],
-      component: Notation,
+      // Lazy-loaded so VexFlow (the heavy engraving library reached through
+      // `./components/notation` → `./components/engrave`) is code-split off the
+      // eager plugin-boot wave and only downloaded when the notation display is
+      // first mounted. Its own Suspense boundary shows a spinner meanwhile.
+      component: lazyComponent(() =>
+        import("./components/notation").then((m) => ({ default: m.Notation })),
+      ),
     }),
     ConfigV2.WebRegister({ descriptor: notationConfig }),
     // Surface the notation prefs in the player's view-options chip.
