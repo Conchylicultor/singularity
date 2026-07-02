@@ -55,12 +55,32 @@ async function copyTsBuildInfoToWorktree(repoRoot: string, wtPath: string): Prom
 }
 
 export async function setupWorktree(id: string, wtPath: string): Promise<void> {
+  // Idempotent: an already-present worktree dir means the checkout already
+  // landed, so a durable-job retry (or a caller reusing an existing worktree) is
+  // a no-op. `worktreePathFor` derives the path purely from the id, so the dir's
+  // existence is an authoritative "already set up" signal.
+  if (existsSync(wtPath)) return;
+
   const repoRoot = await ensureMainWorktreeRoot();
   const branch = `claude-web/${id}`;
-  await Bun.spawn(
+  const proc = Bun.spawn(
     [GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"],
     { stdout: "pipe", stderr: "pipe" },
-  ).exited;
+  );
+  const [stderr, exit] = await Promise.all([
+    new Response(proc.stderr).text(),
+    proc.exited,
+  ]);
+  // Fail loudly on a genuine checkout failure so the durable spawn job retries
+  // instead of handing `runtime.create` a nonexistent worktree dir (the latent
+  // swallowed-failure bug this replaces: the old code awaited `.exited` and
+  // ignored `exitCode`). A nonzero exit where the dir now exists is a benign
+  // "already exists" race (a concurrent creator won) — treat it as success.
+  if (exit !== 0 && !existsSync(wtPath)) {
+    throw new Error(
+      `git worktree add for ${id} failed (exit ${exit}): ${stderr.trim() || "<no stderr>"}`,
+    );
+  }
   try {
     await copyTsBuildInfoToWorktree(repoRoot, wtPath);
   // eslint-disable-next-line promise-safety/no-bare-catch

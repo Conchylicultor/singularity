@@ -30,6 +30,14 @@ export interface EndpointDef<
    * drop a caller's distinct side effect.
    */
   readonly dedupe?: boolean;
+  /**
+   * Per-route slow-op threshold (ms). When this route's `http` span exceeds it,
+   * the slow-ops pipeline files a report — the HTTP twin of
+   * `defineJob({ slowThresholdMs })`. Use it to hold a latency-sensitive endpoint
+   * to a tighter bar than the global `slow-op` `httpMs` default (a regression
+   * backstop). Omit = the global default applies.
+   */
+  readonly slowThresholdMs?: number;
   /** Phantom field to carry the params type. Never set at runtime. */
   readonly __params?: TParams;
 }
@@ -61,6 +69,7 @@ export function defineEndpoint<
   query?: ZodType<TQuery>;
   concurrency?: number;
   dedupe?: boolean;
+  slowThresholdMs?: number;
 }): EndpointDef<Route, ExtractParams<Route>, SpecType<B>, SpecType<R>, TQuery> {
   const bodyCodec = opts.body
     ? isCodec(opts.body)
@@ -81,5 +90,6 @@ export function defineEndpoint<
     querySchema: opts.query,
     concurrency: opts.concurrency,
     dedupe: opts.dedupe,
+    slowThresholdMs: opts.slowThresholdMs,
   };
 }

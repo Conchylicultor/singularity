@@ -71,6 +71,32 @@ in sidebar" symptom is the WS-reconnect herd, reattributed there. This issue is 
 change rate (unchanged). Full detail + sessions + checklist →
 **[`issue-git-derived-loaders.md`](./issue-git-derived-loaders.md)**.
 
+### Launching a task/conversation is slow (Ongoing)
+
+Clicking **Launch** blocks the UI until `POST /api/conversations` resolves — the endpoint is
+**synchronous end-to-end** (no job between click and response; `launch-control.tsx:74` awaits it,
+`handleCreate` → `createConversation` awaits its whole body). Observed **12.97 s** in one live
+sample on `singularity`; uncontended floor **~3.8 s**. The one expensive blocking step on the
+critical path is **`git worktree add`** — a full working-tree checkout of **8385 tracked files**
+(`setupWorktree`, `worktree.ts:57-77`, awaited at `lifecycle.ts:139`), measured at ~3.8 s in
+isolation. The DB fork, config fork, and Claude-CLI boot are all correctly **off** the path
+(async job / detached tmux). The amplifier that lifts 3.8 s → 13 s is **machine IO/CPU contention**,
+NOT a git lock — **index-lock serialization refuted** (2026-07-02 Phase-2 controlled trace): the
+checkout is `git reset --hard` against the new worktree's *own* index (`GIT_DIR=<newpath>/.git`),
+holds no repo-global lock, and K concurrent adds run in **parallel** (K=6 wall 5.7 s, not the 19.2 s
+a lock would force; zero lock errors). Instead a foreground add slows **3.2 s → 7.7 s median / 10.7 s
+max (+141 %)** under a 6-way remove/add churn (mirroring the 58 s `worktree-cleanup.reap-stale`'s
+`pMap(limit=6)` full-tree removes), which stacked with the same-window 2× `database.fork` `pg_restore`
++ Haiku classify closes the gap to ~13 s.
+**Not an event-loop block** — the cost is awaited-subprocess wall-clock that yields the loop;
+`workMs` is a profiler-labeling artifact here (do not re-diagnose as CPU starvation like
+`buildPluginTree`). **Likely cure (not built):** `git worktree add` is largely irreducible, so
+making it cheaper is containment — the structural fix is to take worktree setup + spawn **off the
+interactive response** into a durable job (mirroring the DB-fork pattern already in the same
+function), returning a `starting` row immediately. Open questions (row-reorder safety, the
+still-forking-DB race, index-lock invariant) tracked in the doc. Full evidence + Causes checklist
++ next steps → **[`issue-launch-conversation-slow.md`](./issue-launch-conversation-slow.md)**.
+
 ### Conversation load 40+ s → main-thread event-loop block → `buildPluginTree` over-extraction (Ongoing)
 
 "Loading a conversation takes 40+ s" was traced **past** DB-pool exhaustion, the git gate, and the

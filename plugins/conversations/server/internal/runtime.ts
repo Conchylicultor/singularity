@@ -38,6 +38,13 @@ export interface ConversationRuntime {
     },
   ): Promise<void>;
   delete(conversationId: string): Promise<void>;
+  /**
+   * True if a live session/process for this conversation currently exists.
+   * Makes {@link create} idempotent under durable-job retry: a retry after a
+   * crash between spawning the session and committing the job must not throw on
+   * the duplicate session — `create` probes this first and no-ops when true.
+   */
+  isRunning(conversationId: string): Promise<boolean>;
   list(): Promise<Map<string, RuntimeInfo>>;
   send(conversationId: string, text: string): Promise<void>;
   interrupt(conversationId: string): Promise<void>;

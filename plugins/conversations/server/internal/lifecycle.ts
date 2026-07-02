@@ -16,7 +16,8 @@ import { DEFAULT_MODEL, normalizeModel, type ConversationModel } from "@plugins/
 import type { Conversation, ConversationKind } from "@plugins/tasks/plugins/tasks-core/core";
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
 import { forkConfig } from "@plugins/config_v2/server";
-import { setupWorktree, worktreePathFor } from "@plugins/infra/plugins/worktree/server";
+import { worktreePathFor } from "@plugins/infra/plugins/worktree/server";
+import { spawnConversationJob } from "./spawn-job";
 import { conversationCreated } from "./tables-created-event";
 import { SYSTEM_META_TASK_ID } from "./meta-system";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
@@ -135,8 +136,12 @@ export async function createConversation(
     newAttemptId = newId(ATTEMPT_PREFIX);
     const thisAttemptId = newAttemptId;
     attemptId = thisAttemptId;
+    // Derived purely from the id, so the path is known before the worktree dir
+    // exists. `setupWorktree` (the multi-second `git worktree add` checkout) is
+    // deferred to the durable `conversations.spawn` job below — off the
+    // interactive response — and `createAttempt` inserts a row that carries the
+    // not-yet-existent path (it is never existence-checked at write time).
     worktreePath = await worktreePathFor(thisAttemptId);
-    await setupWorktree(thisAttemptId, worktreePath);
     void forkConfig(thisAttemptId);
     await createAttempt({ id: thisAttemptId, taskId, worktreePath });
     // Durable fork via a graphile job: the enqueue is a committed row, so an
@@ -204,34 +209,19 @@ export async function createConversation(
   // mutation (unlike preprompt, ultracode rides --settings, not the transcript).
   const effort = opts.effort ?? (await resolveTaskEffort(effectiveTaskId));
 
-  try {
-    await runtime.create(conversationId, worktreePath, {
-      prompt: resolvedPrompt,
-      model,
-      effort,
-      resumeSessionId,
-      forkSession: !!opts.forkFromConversationId,
-    });
-  } catch (err) {
-    // Without this, the row stays at "starting" forever — the poller skips
-    // starting rows, and the UI just shows "Starting…" with a terminal pane
-    // that prints "can't find session" because tmux never created one.
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    await updateConversation(conversationId, {
-      status: "gone",
-      endedAt: new Date(),
-    }).catch((e) => {
-      console.error(
-        `[conversations] failed to mark ${conversationId} gone after runtime.create error`,
-        e,
-      );
-    });
-    throw err;
-  }
+  const create = {
+    prompt: resolvedPrompt,
+    model,
+    effort,
+    resumeSessionId,
+    forkSession: !!opts.forkFromConversationId,
+  };
 
-  const row = await getConversation(conversationId);
-  const conv = row as Conversation;
+  const conv = (await getConversation(conversationId)) as Conversation;
 
+  // Emit right after insert — the subscribers (title-gen, queue-rank, preprompt
+  // snapshot) need only the row, never the live session — so it fires whether the
+  // spawn happens inline (reuse branch) or in the background job (new branch).
   await conversationCreated.emit({
     conversationId: conv.id,
     taskId: conv.taskId,
@@ -242,6 +232,45 @@ export async function createConversation(
     kind: conv.kind,
     prepromptId,
   });
+
+  if (newAttemptId) {
+    // New-worktree branch: background the multi-second `git worktree add` +
+    // `runtime.create` in a durable graphile job so the interactive Launch
+    // response returns immediately with a `starting` row. Enqueued in parallel
+    // with the DB fork (they have no ordering dependency). On failure the job
+    // records a deduped notification and retries; the poller owns the eventual
+    // `starting → gone` transition.
+    await spawnConversationJob.enqueue({
+      conversationId,
+      attemptId: attemptId!,
+      worktreePath,
+      runtimeId,
+      needsWorktreeSetup: true,
+      create,
+    });
+  } else {
+    // Reuse-attempt branch (fork / +Sonnet / fork-session): the worktree already
+    // exists and the only spawn step (`runtime.create`) is sub-second, so keep it
+    // synchronous — no job-pickup latency for the interactive fork buttons.
+    try {
+      await runtime.create(conversationId, worktreePath, create);
+    } catch (err) {
+      // Without this, the row stays at "starting" forever — the poller skips
+      // starting rows, and the UI just shows "Starting…" with a terminal pane
+      // that prints "can't find session" because tmux never created one.
+      // eslint-disable-next-line promise-safety/no-bare-catch
+      await updateConversation(conversationId, {
+        status: "gone",
+        endedAt: new Date(),
+      }).catch((e) => {
+        console.error(
+          `[conversations] failed to mark ${conversationId} gone after runtime.create error`,
+          e,
+        );
+      });
+      throw err;
+    }
+  }
 
   return conv;
 }

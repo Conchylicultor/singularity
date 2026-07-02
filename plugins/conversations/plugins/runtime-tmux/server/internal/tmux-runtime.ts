@@ -651,6 +651,15 @@ export const tmuxRuntime: ConversationRuntime = {
     return out;
   },
 
+  async isRunning(conversationId: string): Promise<boolean> {
+    // `tmux has-session -t <id>` exits 0 iff a session by that name exists.
+    const exit = await Bun.spawn(
+      [TMUX, "has-session", "-t", conversationId],
+      { stdout: "pipe", stderr: "pipe" },
+    ).exited;
+    return exit === 0;
+  },
+
   async create(
     conversationId: string,
     worktreePath: string,
@@ -662,6 +671,12 @@ export const tmuxRuntime: ConversationRuntime = {
       forkSession?: boolean;
     },
   ): Promise<void> {
+    // Idempotent under durable-job retry: if a live session already exists (a
+    // retry after a crash between `new-session` and the job commit), do nothing.
+    // `tmux new-session -s <id>` refuses a duplicate name, so a non-idempotent
+    // retry would loop forever on the duplicate error.
+    if (await this.isRunning(conversationId)) return;
+
     // SINGULARITY_CONVERSATION_ID is read by the .githooks/prepare-commit-msg
     // hook so any `git commit` made inside the pane gets stamped with a
     // Singularity-Conversation trailer. SINGULARITY_PARENT_HOST is the

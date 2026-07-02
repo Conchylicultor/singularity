@@ -2,6 +2,7 @@ import { recordEntrySpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import type { EndpointDef } from "./define-endpoint";
+import { registerRouteSlowThreshold } from "./slow-threshold";
 import { HttpError } from "./http-error";
 
 export { HttpError };
@@ -52,6 +53,11 @@ export function implement<
     throw new Error(
       `implement(${_endpoint.route}): dedupe is only valid on GET endpoints`,
     );
+  }
+  // Publish the per-route slow-op threshold so the slow-ops pipeline can hold this
+  // route to a tighter bar than the global `httpMs` default (see slow-threshold).
+  if (_endpoint.slowThresholdMs != null) {
+    registerRouteSlowThreshold(_endpoint.route, _endpoint.slowThresholdMs);
   }
   return async (req: Request, params: Record<string, string>) => {
     try {

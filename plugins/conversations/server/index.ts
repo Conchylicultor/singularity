@@ -27,6 +27,7 @@ import {
   maybeLaunchDependentsJob,
 } from "./internal/auto-start-jobs";
 import { notifyConversationCreatedJob } from "./internal/notify-created-job";
+import { spawnConversationJob } from "./internal/spawn-job";
 import { conversationCreated } from "./internal/tables-created-event";
 import { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 import { userTurnSent } from "./internal/tables-user-turn-sent-event";
@@ -85,7 +86,7 @@ export default {
     Trigger({ on: conversationCreated, do: notifyConversationCreatedJob, with: {}, oneShot: false }),
     ContainerTask({ id: SYSTEM_META_TASK_ID }),
   ],
-  register: [maybeLaunchTaskJob, maybeLaunchDependentsJob, notifyConversationCreatedJob, conversationCreated, conversationTurnCompleted, userTurnSent],
+  register: [maybeLaunchTaskJob, maybeLaunchDependentsJob, notifyConversationCreatedJob, spawnConversationJob, conversationCreated, conversationTurnCompleted, userTurnSent],
   onReady: async () => {
     await ensureSystemMeta();
     startPoller();

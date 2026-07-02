@@ -1,6 +1,7 @@
 import { onSlowSpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { SlowSpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import { getJobSlowThresholdMs } from "@plugins/infra/plugins/jobs/server";
+import { getRouteSlowThresholdMs } from "@plugins/infra/plugins/endpoints/core";
 import type { ConfigValues } from "@plugins/config_v2/core";
 import { recordSlowOp } from "./record-slow-op";
 import type { slowOpConfig } from "../../core";
@@ -21,7 +22,11 @@ let disposer: { dispose(): void } | null = null;
 function thresholdFor(span: SlowSpan, t: Thresholds): number {
   switch (span.kind) {
     case "http":
-      return t.httpMs;
+      // A route may hold a tighter bar than the global `httpMs` via
+      // `defineEndpoint({ slowThresholdMs })` (regression backstop). The span
+      // label is the route. Honored as long as it sits at/above the perf floor
+      // below (min config threshold; `dbMs` default 500 ms, well under 1 s uses).
+      return getRouteSlowThresholdMs(span.label) ?? t.httpMs;
     case "db":
       return t.dbMs;
     case "job":

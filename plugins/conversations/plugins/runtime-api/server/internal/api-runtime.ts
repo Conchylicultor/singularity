@@ -8,6 +8,9 @@ export const apiRuntime: ConversationRuntime = {
   async list(): Promise<Map<string, RuntimeInfo>> {
     return new Map();
   },
+  async isRunning(): Promise<boolean> {
+    return false;
+  },
   async create(
     _conversationId: string,
     _worktreePath: string,

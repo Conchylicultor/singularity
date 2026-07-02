@@ -65,6 +65,11 @@ export const createConversation = defineEndpoint({
   route: "POST /api/conversations",
   body: CreateConversationBodySchema,
   response: ConversationSchema,
+  // Regression backstop: the interactive Launch path must never again block on
+  // worktree-scale subprocess work (the `setupWorktree` checkout is now off in a
+  // durable job). If this endpoint's in-process time creeps back over 1 s, the
+  // slow-ops pipeline files a report — catching any re-introduced blocking work.
+  slowThresholdMs: 1000,
 });
 
 export const deleteConversation = defineEndpoint({
