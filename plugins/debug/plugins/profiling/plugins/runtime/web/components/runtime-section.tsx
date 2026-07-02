@@ -28,12 +28,20 @@ interface AggRow {
   label: string;
   count: number;
   avgMs: number;
-  /** Pure operation cost: avg minus average wait. Lock-vs-work, readable directly. */
-  workMs: number;
+  /** Per-call gate-wait union (waitTotalMs / count): time queued on named gates. */
+  waitMs: number;
+  /** Per-call direct-child execution union (childTotalMs / count). */
+  childMs: number;
+  /** Per-call own orchestration (selfTotalMs / count): wall − union(waits ∪ children). */
+  selfMs: number;
   maxMs: number;
+  /** Age of the since-boot maxMs peak — an old peak reads as old. */
+  maxAgeMs: number;
+  /** Max duration within the rolling ~5-min window; 0 when idle past it. */
+  recentMaxMs: number;
   lastMs: number;
   byParent: ParentRow[];
-  /** Per-layer wait (gate/lock → summed ms) across this label's records. */
+  /** Per-layer wait (gate/lock → summed per-record union ms) across this label's records. */
   waits: Record<string, number>;
 }
 
@@ -41,6 +49,19 @@ type RuntimeRow = AggRow & { kind: RuntimeKind };
 
 // How many distinct callers to render inline before collapsing into "+N more".
 const MAX_PARENTS_SHOWN = 3;
+
+// Compact human age for a duration in ms (maxAgeMs is an age, not a Date, so
+// formatRelativeTime doesn't apply directly — this mirrors its output style).
+function formatMsAge(ageMs: number): string {
+  const seconds = Math.floor(ageMs / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  return `${days}d ago`;
+}
 
 function CallerBreakdown({ parents }: { parents: ParentRow[] }): ReactElement {
   const shown = parents.slice(0, MAX_PARENTS_SHOWN);
@@ -95,31 +116,36 @@ function toAggRows(
     count: number;
     totalMs: number;
     maxMs: number;
+    maxAgeMs: number;
+    recentMaxMs: number;
     lastMs: number;
+    waitTotalMs: number;
+    childTotalMs: number;
+    selfTotalMs: number;
     byParent: { parent: { kind: RuntimeKind; label: string }; count: number }[];
     waits?: Record<string, number>;
   }[],
 ): AggRow[] {
   return aggregates
-    .map((agg) => {
-      const waits = agg.waits ?? {};
-      const totalWait = Object.values(waits).reduce((a, b) => a + b, 0);
-      return {
-        label: agg.label,
-        count: agg.count,
-        avgMs: Math.round(agg.totalMs / agg.count),
-        workMs: Math.round((agg.totalMs - totalWait) / agg.count),
-        maxMs: agg.maxMs,
-        lastMs: agg.lastMs,
-        byParent: agg.byParent.map((pb) => ({
-          kind: pb.parent.kind,
-          label: pb.parent.label,
-          count: pb.count,
-        })),
-        waits,
-      };
-    })
-    .sort((a, b) => b.maxMs - a.maxMs);
+    .map((agg) => ({
+      label: agg.label,
+      count: agg.count,
+      avgMs: Math.round(agg.totalMs / agg.count),
+      waitMs: Math.round(agg.waitTotalMs / agg.count),
+      childMs: Math.round(agg.childTotalMs / agg.count),
+      selfMs: Math.round(agg.selfTotalMs / agg.count),
+      maxMs: Math.round(agg.maxMs),
+      maxAgeMs: agg.maxAgeMs,
+      recentMaxMs: Math.round(agg.recentMaxMs),
+      lastMs: Math.round(agg.lastMs),
+      byParent: agg.byParent.map((pb) => ({
+        kind: pb.parent.kind,
+        label: pb.parent.label,
+        count: pb.count,
+      })),
+      waits: agg.waits ?? {},
+    }))
+    .sort((a, b) => b.recentMaxMs - a.recentMaxMs);
 }
 
 const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
@@ -176,12 +202,28 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     width: "5rem",
   },
   {
-    id: "workMs",
-    label: "Work (ms)",
+    id: "selfMs",
+    label: "Self (ms)",
     type: "number",
-    value: (r) => r.workMs,
+    value: (r) => r.selfMs,
     align: "end",
     width: "5rem",
+  },
+  {
+    id: "childMs",
+    label: "Child (ms)",
+    type: "number",
+    value: (r) => r.childMs,
+    align: "end",
+    width: "5rem",
+  },
+  {
+    id: "recentMaxMs",
+    label: "Recent max (ms)",
+    type: "number",
+    value: (r) => r.recentMaxMs,
+    align: "end",
+    width: "6.5rem",
   },
   {
     id: "maxMs",
@@ -189,7 +231,13 @@ const RUNTIME_FIELDS: FieldDef<RuntimeRow>[] = [
     type: "number",
     value: (r) => r.maxMs,
     align: "end",
-    width: "5rem",
+    width: "9rem",
+    // Since-boot peak with its age alongside, so a stale spike reads as stale.
+    cell: (row) => (
+      <Text as="span" variant="caption" className="truncate font-mono">
+        {row.maxMs.toLocaleString()} · {formatMsAge(row.maxAgeMs)}
+      </Text>
+    ),
   },
   {
     id: "lastMs",
@@ -225,7 +273,7 @@ export function RuntimeSection(): ReactElement | null {
 
   if (!data) return null;
 
-  const title = `Runtime — peaks since boot · ${formatDuration(data.windowMs)} window`;
+  const title = `Runtime — recent max · ${formatDuration(data.windowMs)} window`;
 
   return (
     <DataView<RuntimeRow>

@@ -1,4 +1,4 @@
-import { recordEntrySpan } from "@plugins/infra/plugins/runtime-profiler/core";
+import { recordEntrySpan, chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import type { EndpointDef } from "./define-endpoint";
@@ -87,25 +87,29 @@ export function implement<
       }
 
       // Records an `http` span and establishes the ambient parent context so
-      // nested DB/loader spans attribute to this route. Records in `finally`,
-      // so a throwing handler's duration is captured too.
-      const runHandler = async (): Promise<JsonCompat<TResponse>> =>
-        recordEntrySpan("http", _endpoint.route, () =>
+      // nested DB/loader spans attribute to this route. The entry span
+      // ENCLOSES the gates — dedupe (outermost, so duplicates never even take
+      // a concurrency slot) → concurrency gate → handler — so the http span's
+      // wall matches client-observed latency and queue-wait is attributed to
+      // it by name (`endpoint-dedupe` / `endpoint-concurrency` waits) instead
+      // of hiding outside the span. Deduped callers share one `result` object
+      // (read-only JSON-safe data) and each encodes its own Response below.
+      // Records in `finally`, so a throwing handler's duration is captured too.
+      const result = await recordEntrySpan("http", _endpoint.route, async () => {
+        const runHandler = async (): Promise<JsonCompat<TResponse>> =>
           handler({
             params: params as TParams,
             body,
             query,
             req,
-          }),
-        );
-
-      // dedupe (outermost, so duplicates never even take a concurrency slot) →
-      // concurrency gate → handler. Deduped callers share one `result` object
-      // (read-only JSON-safe data) and each encodes its own Response below.
-      const gated = gate ? () => gate.run(runHandler) : runHandler;
-      const result = dedupe
-        ? await dedupe.run(dedupeKey(req), gated)
-        : await gated();
+          });
+        const gated = gate
+          ? () => gate.run(runHandler, (ms) => chargeWait("endpoint-concurrency", ms))
+          : runHandler;
+        return dedupe
+          ? dedupe.run(dedupeKey(req), gated, (ms) => chargeWait("endpoint-dedupe", ms))
+          : gated();
+      });
 
       // void/undefined/null → 204
       if (result === undefined || result === null) {

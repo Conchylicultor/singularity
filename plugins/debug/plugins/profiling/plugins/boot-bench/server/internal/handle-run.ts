@@ -33,11 +33,12 @@ const SETTLE_MS = 150;
 
 type ProfileEntry = IterResult["runtimeProfile"]["loaders"][number];
 
-// Map every runtime-profiler aggregate (loader or db) to its wait-vs-work split,
-// rounding at the edge for readability (matching the runtime MCP tool). `waits`
-// holds the per-call amortized wait by layer; `workMs = avgMs − Σwaits`. Sorted by
-// avg duration desc. The boot burst touches only a handful of labels, so the full
-// (small) list is captured rather than a top-N slice.
+// Map every runtime-profiler aggregate (loader or db) to its per-call wall-clock
+// decomposition, rounding at the edge for readability (matching the runtime MCP
+// tool). `waits` holds the per-call amortized wait union by layer; `selfMs` is
+// own work (wall − union(waits ∪ direct children)), `childMs` the direct-child
+// union. Sorted by avg duration desc. The boot burst touches only a handful of
+// labels, so the full (small) list is captured rather than a top-N slice.
 function toProfileEntries(aggs: Aggregate[]): ProfileEntry[] {
   return aggs
     .map((agg): ProfileEntry => {
@@ -48,7 +49,8 @@ function toProfileEntries(aggs: Aggregate[]): ProfileEntry[] {
         label: agg.label,
         count: agg.count,
         avgMs: Math.round(ws.avgMs),
-        workMs: Math.round(ws.workMs),
+        selfMs: Math.round(ws.selfMs),
+        childMs: Math.round(ws.childMs),
         maxMs: agg.maxMs,
         waits: Object.keys(waits).length > 0 ? waits : undefined,
       };

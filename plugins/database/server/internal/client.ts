@@ -135,7 +135,13 @@ pool.query = ((...a: Parameters<typeof origQuery>): any => {
   const runOnce = async () => {
     const acq0 = performance.now();
     const client = await origConnect(); // unwrapped: avoids double-recording
-    recordSpan("db", "[acquire]", performance.now() - acq0);
+    const acqMs = performance.now() - acq0;
+    // The leaf "[acquire]" span keeps rate visibility; the chargeWait ALSO
+    // lands the same duration in the enclosing entry's waits ("db-acquire"
+    // layer), so the caller's wall-clock decomposition sums instead of the
+    // connect-wait hiding inside a label-shared leaf bucket.
+    recordSpan("db", "[acquire]", acqMs);
+    chargeWait("db-acquire", acqMs);
     try {
       const exec0 = performance.now();
       // biome-ignore lint/suspicious/noExplicitAny: proxy pg's overloaded query.

@@ -66,12 +66,18 @@ export function createGitStateMemo<T>(opts: { name: string }): GitStateMemo<T> {
       // *different* signature mid-flight shares this in-flight (≤1-event stale)
       // result; the next notify re-probes. Mirrors the runtime single-flight's
       // staleness-sharing contract.
-      return inflight.run(worktreePath, async () => {
-        chargeWait(`git-memo-miss:${opts.name}`, 0);
-        const value = await computeFn(); // computeFn owns withHeavyReadSlot
-        cache.set(worktreePath, { signature: sig, value });
-        return value;
-      });
+      return inflight.run(
+        worktreePath,
+        async () => {
+          chargeWait(`git-memo-miss:${opts.name}`, 0);
+          const value = await computeFn(); // computeFn owns withHeavyReadSlot
+          cache.set(worktreePath, { signature: sig, value });
+          return value;
+        },
+        // Joiners charge the time spent awaiting the shared compute to their
+        // OWN enclosing entry — the starter's compute is real work, not wait.
+        (ms) => chargeWait(`git-coalesce:${opts.name}`, ms),
+      );
     },
     set(worktreePath, signature, value) {
       // Write-through prime from an authoritative external writer: cache the

@@ -5,11 +5,13 @@ MCP tool and `POST /api/debug/boot-bench/run` re-run the boot burst (boot-snapsh
 the boot-critical first-subscribes) in a worktree's RUNNING backend and report the
 four headline metrics PLUS the signals the contention root cause needs:
 
-- **Wait-vs-work split.** Every loader AND db aggregate the burst touches is mapped
-  through `runtime-profiler/core.waitSplit` into `{ avgMs, workMs, maxMs, waits }`, so
-  a slot-starved loader (high `avgMs`, high `heavy-read-acquire` wait, low `workMs`) is
-  distinguishable from a genuinely slow one. The full small per-label list is captured
-  (not a top-N) so union-by-label aggregation across iterations has no ragged samples.
+- **Wall-clock decomposition.** Every loader AND db aggregate the burst touches is
+  mapped through `runtime-profiler/core.waitSplit` into
+  `{ avgMs, selfMs, childMs, maxMs, waits }` (per-call wait unions by layer; `selfMs`
+  = own work, `childMs` = direct-child entry union), so a slot-starved loader (high
+  `avgMs`, high `heavy-read-acquire` wait, low `selfMs`) is distinguishable from a
+  genuinely slow one. The full small per-label list is captured (not a top-N) so
+  union-by-label aggregation across iterations has no ragged samples.
 - **Host-gate load.** `loadConcurrency > 0` saturates the host-wide `heavy-read` gate
   via `load-generator.ts`: occupants run on a `host-semaphore` keyed by the SAME
   `"heavy-read"` name the live `host-read-pool` pool uses, so they hold the IDENTICAL

@@ -44,7 +44,8 @@ export function stat(xs: number[]): Stat {
 // iterations where that label charged that layer.
 export interface ProfileAggregate {
   avgMs: Stat;
-  workMs: Stat;
+  selfMs: Stat;
+  childMs: Stat;
   maxMs: Stat;
   waits: Record<string, Stat>;
 }
@@ -77,8 +78,9 @@ export interface ModeAggregate {
 type ModeBloat = NonNullable<BootBenchRunResponse["snapshotBloat"]>["cold"];
 
 // Union-by-label aggregation of a per-iteration profile-entry list (loaders or db):
-// for each label seen in any iteration, aggregate avg/work/max over the iterations
-// where it appeared, and a Stat per wait layer over the iterations where it waited.
+// for each label seen in any iteration, aggregate avg/self/child/max over the
+// iterations where it appeared, and a Stat per wait layer over the iterations
+// where it waited.
 function aggregateProfile(
   iters: IterResult[],
   pick: (it: IterResult) => IterResult["runtimeProfile"]["loaders"],
@@ -89,14 +91,16 @@ function aggregateProfile(
   const out: Record<string, ProfileAggregate> = {};
   for (const label of labels) {
     const avgMs: number[] = [];
-    const workMs: number[] = [];
+    const selfMs: number[] = [];
+    const childMs: number[] = [];
     const maxMs: number[] = [];
     const waitsByLayer: Record<string, number[]> = {};
     for (const it of iters) {
       const e = pick(it).find((x) => x.label === label);
       if (!e) continue;
       avgMs.push(e.avgMs);
-      workMs.push(e.workMs);
+      selfMs.push(e.selfMs);
+      childMs.push(e.childMs);
       maxMs.push(e.maxMs);
       if (e.waits) {
         for (const layer in e.waits) {
@@ -106,7 +110,13 @@ function aggregateProfile(
     }
     const waits: Record<string, Stat> = {};
     for (const layer in waitsByLayer) waits[layer] = stat(waitsByLayer[layer]!);
-    out[label] = { avgMs: stat(avgMs), workMs: stat(workMs), maxMs: stat(maxMs), waits };
+    out[label] = {
+      avgMs: stat(avgMs),
+      selfMs: stat(selfMs),
+      childMs: stat(childMs),
+      maxMs: stat(maxMs),
+      waits,
+    };
   }
   return out;
 }

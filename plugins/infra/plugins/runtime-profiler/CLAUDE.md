@@ -14,19 +14,59 @@ the lightweight ambient tier — one level only, **not** full span trees. A load
 a WS subscription or a push cascade nests inside a `sub` / `push` origin entry (see below), so
 its `parent` names the request class that triggered it instead of being `null`.
 
-## Wait-vs-work (per-entry wait accumulation)
+## Wall-clock decomposition (wait / child / self)
 
-The ambient context (`EntryContext`) carries a mutable per-layer **wait accumulator**. A
-concurrency gate calls `chargeWait(layer, ms)` from its `onWait` callback to charge its
-queue-wait to the innermost enclosing entry; `recordEntrySpan` materializes the map into the
-entry's `waits` on finish. So an entry span reports `work = duration − Σwaits` directly,
-attributed to the resource that waited — head-of-line blocking and lock-vs-work are readable
-without cross-referencing a label-shared `[*-acquire]` bucket. Two layers charge today:
-`loader-acquire` (the DB connection gate, `database/server/internal/client.ts`) and
-`heavy-read-acquire` (the host-wide heavy-read pool, `infra/host-read-pool`). A `chargeWait`
-with no active entry (context-less jobs/pollers) falls back to a standalone `db [layer]` span
-so the wait is never lost. See
-`research/2026-06-19-global-wait-attribution-instrumentation.md`.
+Every entry span decomposes its wall-clock into **`waitMs`** (time covered by named
+gate/pool waits at any depth of its subtree), **`childMs`** (time covered by direct-child
+entry executions), and **`selfMs`** (the remainder: its own orchestration/CPU — on a
+composite span a *conservative upper bound* of own work, since untracked awaits land here).
+A concurrency gate calls `chargeWait(layer, ms)` from its `onWait` callback; the interval
+`[now − ms, now]` propagates to **every open ancestor entry** (innermost included) up the
+live `EntryContext.parent` chain — so a composite span like a `flush` draining many loaders
+names the gates its subtree waited on instead of showing huge wall-clock with empty `waits`.
+
+The load-bearing math is the **streaming interval-union** (`Track`, per ancestor): a flush
+drains loaders concurrently, so *summing* child waits into an ancestor could exceed its
+wall-clock (20 loaders × 60 s gate wait inside a 90 s flush ≠ "1200 s wait"). Each ancestor
+instead unions the intervals over its own timeline, guaranteeing `waitMs ≤ wall` and
+`selfMs ≥ 0` at every level. Because every charge arrives at its interval's END (gates call
+`onWait` at slot acquisition; children charge at finish), the charge stream is end-ordered
+by construction and the O(1) streaming union is *exact* — a non-end-ordered arrival would
+only undercount, never overcount. Per-layer `waits` values are unions too (each ≤ wall). A
+finished child charges its execution interval into the *nearest open ancestor only* (each
+parent's own interval propagates upward when it finishes — charging every ancestor would
+double-count grandchildren); gate waits go to *all* open ancestors because unions are
+idempotent under re-covering, which is what makes each level's `waits` self-contained.
+Closed ancestors are never mutated (a detached child finishing late cannot corrupt a
+recorded span).
+
+Reading it: a leaf loader that is mostly `waitMs` was head-of-line-blocked (the resource is
+fast); mostly `selfMs` = genuinely slow. A `flush` with `childMs ≈ wall`, `waits` naming
+`loader-acquire`/`db-acquire`, and small `selfMs` spent its life awaiting gate-blocked
+children. `waitSplit(agg)` returns the per-call averages `{ avgMs, waitMs, childMs, selfMs,
+waits }` from the aggregate's summed totals.
+
+Charging layers: `loader-acquire` (per-backend DB loader gate,
+`database/server/internal/client.ts`), `db-acquire` (pg pool connect wait, same file),
+`heavy-read-acquire` / `heavy-read-local` (host-wide heavy-read pool,
+`infra/host-read-pool`), `read-admit` (resource read admission) and `read-coalesce` (joined
+an in-flight resource read) (`server-core/core/resources.ts`), `endpoint-concurrency` /
+`endpoint-dedupe` (per-route gates, `infra/endpoints/core/implement.ts` — the `http` entry
+span encloses them, so deduped GETs record one span per request with joiners showing
+`endpoint-dedupe ≈ wall`, `selfMs ≈ 0`), `git-coalesce:<name>` (joined an in-flight git
+recompute) and the 0 ms markers `git-memo-hit:<name>` / `git-memo-miss:<name>`
+(`infra/git-read-cache`). A `chargeWait` with no active entry (context-less jobs/pollers)
+falls back to a standalone `db [layer]` span so the wait is never lost. See
+`research/2026-07-02-global-profiler-wait-propagation.md`.
+
+## Windowed max (`recentMaxMs` / `maxAgeMs`)
+
+Each aggregate keeps a rolling ~5-min bucketed max: `recentMaxMs` answers "is it slow NOW"
+(0 when idle past the window), while `maxMs` is the sticky since-boot peak and `maxAgeMs`
+its age — so a stale spike reads as stale. `getRuntimeProfile()` sorts aggregates by
+`recentMaxMs` desc. All timestamps flow through one injectable clock seam (`installClock`,
+default `performance.now()`) so union/bucket arithmetic is deterministic under test
+(`core/recorder.test.ts`).
 
 The ambient context is supplied by an **injected** `SpanContextRuntime`, so the core stays
 pure (no `node:async_hooks`, web bundle unaffected):
@@ -44,21 +84,25 @@ pure (no `node:async_hooks`, web bundle unaffected):
   for the `sub`/`push` entries), and job (the jobs dispatcher,
   `infra/plugins/jobs/server/internal/worker.ts`, which wraps each `job.run()` in a `job`
   entry span labelled by the job name) chokepoints. Runs `fn` under a fresh ambient
-  `EntryContext { kind, label, waits }` so children attribute to it (and gates charge their
-  wait to it), while recording the entry span itself against the *outer* parent (an entry is
-  never its own parent). Records in `finally`.
+  `EntryContext` (chained to the live parent context, with per-track union accumulators) so
+  children attribute to it and gates charge their wait into it and every open ancestor,
+  while recording the entry span itself against the *outer* parent (an entry is never its
+  own parent). Records in `finally`, materializing `waits`/`waitMs`/`childMs`/`selfMs`.
 - `recordSpan(kind, label, durationMs)` — leaf path (DB pool wrapper); attributes to the
-  current ambient context automatically.
-- `chargeWait(layer, ms)` — called by a concurrency gate's `onWait` to charge queue-wait to
-  the innermost entry's `waits` map (falls back to a standalone `db [layer]` span when no
-  entry is active).
+  current ambient context automatically. A leaf has no decomposition: `waitMs`/`childMs`
+  default to 0, `selfMs` to the full duration.
+- `chargeWait(layer, ms)` — called by a concurrency gate's `onWait` to union the wait
+  interval into every open enclosing entry's tracks (falls back to a standalone
+  `db [layer]` span when no entry is active).
 - `currentCallerKind()` — the `kind` of the innermost enclosing entry point (or `undefined`
   when none is active). A thin read of the same ambient context; the DB pool wrapper uses it
   to gate loader-originated queries (reserving connections for interactive work) without a
   separate cost-class taxonomy. Read it synchronously, before any await.
 
-`getRuntimeProfile()` returns each aggregate with a `byParent` breakdown (sorted by count
-desc) and each `slowest` span with its `parent`.
+`getRuntimeProfile()` returns each aggregate (sorted by `recentMaxMs` desc) with its
+`byParent` breakdown (sorted by count desc) and summed `waitTotalMs`/`childTotalMs`/
+`selfTotalMs`, and each `slowest` span with its `parent` and per-span
+`waitMs`/`childMs`/`selfMs`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -68,6 +112,6 @@ desc) and each `slowest` span with its `parent`.
 - Cross-plugin:
   - Imported by: `framework/server-core`, `infra/endpoints`
 - Core:
-  - Exports: Types: `Aggregate`, `EntryContext`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `WaitBreakdown`; Values: `chargeWait`, `currentCallerKind`, `getReadSetIndex`, `getRuntimeProfile`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `resetRuntimeProfile`, `runWithoutProfiling`, `seedReadSetIndex`, `waitSplit`
+  - Exports: Types: `Aggregate`, `EntryContext`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `Track`, `WaitBreakdown`; Values: `__contribute`, `chargeWait`, `currentCallerKind`, `getReadSetIndex`, `getRuntimeProfile`, `installClock`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `resetRuntimeProfile`, `runWithoutProfiling`, `seedReadSetIndex`, `waitSplit`
 
 <!-- AUTOGENERATED:END -->

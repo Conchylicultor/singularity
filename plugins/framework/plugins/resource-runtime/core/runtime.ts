@@ -545,6 +545,16 @@ export interface ResourceRuntimeOptions {
    * enclosing `sub` entry so a saturated gate is visible in the profiler;
    * central / before-injection: omitted (no-op). */
   onReadGateWait?: (waitMs: number) => void;
+  /**
+   * Report queue-wait at the read-path single-flight coalescer (see
+   * `getResourceValue`). Fired once per JOINING full load — a caller that found
+   * an existing in-flight loader promise for the same (key, params) — with the
+   * ms spent awaiting the shared flight (the starter never reports), mirroring
+   * the read-admission gate's `onReadGateWait`. server:
+   * `chargeWait("read-coalesce", ms)` — attributes the wait to the enclosing
+   * entry so time spent coalesced behind another caller's slow loader is
+   * visible in the profiler; central / before-injection: omitted (no-op). */
+  onCoalesceWait?: (waitMs: number) => void;
   /** Per-key owner metadata for the _debug endpoint. server: from Resource.Declare; central: omit. */
   debugOwners?: () => Array<{ key: string; pluginId?: string }>;
   /** Fired once per push to >=1 subscriber, with whether the push carried a content change.
@@ -940,7 +950,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     ctx?: { affectedIds: readonly string[] },
   ): Promise<unknown> {
     if (ctx) return timedLoad(entry, params, ctx);
-    return inflight.run(`${entry.key} ${paramsKey(params)}`, () => timedLoad(entry, params));
+    return inflight.run(
+      `${entry.key} ${paramsKey(params)}`,
+      () => timedLoad(entry, params),
+      opts.onCoalesceWait,
+    );
   }
 
   // Run a full loader on the READ path (WS sub-ack + HTTP GET fallback) under the

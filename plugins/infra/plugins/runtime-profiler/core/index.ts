@@ -8,11 +8,13 @@ export {
   currentCallerKind,
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,
+  installClock,
   runWithoutProfiling,
   getRuntimeProfile,
   resetRuntimeProfile,
   onSlowSpan,
   waitSplit,
+  __contribute,
 } from "./recorder";
 export type {
   SpanKind,
@@ -23,4 +25,5 @@ export type {
   ParentBreakdown,
   WaitBreakdown,
   EntryContext,
+  Track,
 } from "./recorder";

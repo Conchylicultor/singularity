@@ -101,6 +101,12 @@ inside charges the *nested* `push`/`loader` entry (innermost), never the `flush`
 `flush.max` with empty `waits` is untracked wall-clock (mostly awaiting DB-pool-gated bootCritical
 loaders), which the prior 2026-07-01 note mis-read as the flush being "behind the git loaders."
 
+**Fixed (2026-07-02):** the profiler now propagates gate waits to every open ancestor entry via
+streaming interval-union, so a `flush` reports the gates its subtree waited on directly, and every
+span's wall-clock decomposes into `waitMs`/`childMs`/`selfMs` (`workMs` removed). The mis-read
+above is structurally impossible now — see
+[`research/2026-07-02-global-profiler-wait-propagation.md`](../2026-07-02-global-profiler-wait-propagation.md).
+
 **Reattribution:** the "new conversation took minutes to appear in the sidebar queue" symptom is the
 cold-boot / **WS-reconnect fan-out herd** on the DB-pool gate (the `queue-ranks` sub/deliver queued
 behind the ~30-resource boot herd on `loader-acquire`) — it belongs to

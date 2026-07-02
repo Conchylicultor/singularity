@@ -102,12 +102,15 @@ describe("aggregateMode", () => {
               label: "edited-files",
               count: 1,
               avgMs: 100,
-              workMs: 20,
+              selfMs: 20,
+              childMs: 0,
               maxMs: 120,
               waits: { "heavy-read-acquire": 80 },
             },
           ],
-          db: [{ label: "SELECT pushes", count: 2, avgMs: 3, workMs: 3, maxMs: 5 }],
+          db: [
+            { label: "SELECT pushes", count: 2, avgMs: 3, selfMs: 3, childMs: 0, maxMs: 5 },
+          ],
         },
       }),
       // Second iteration lacks the db label and adds a second loader label, so the
@@ -119,11 +122,19 @@ describe("aggregateMode", () => {
               label: "edited-files",
               count: 1,
               avgMs: 200,
-              workMs: 40,
+              selfMs: 40,
+              childMs: 0,
               maxMs: 220,
               waits: { "heavy-read-acquire": 160, "heavy-read-local": 10 },
             },
-            { label: "commits-graph.graph", count: 1, avgMs: 50, workMs: 50, maxMs: 50 },
+            {
+              label: "commits-graph.graph",
+              count: 1,
+              avgMs: 50,
+              selfMs: 40,
+              childMs: 10,
+              maxMs: 50,
+            },
           ],
           db: [],
         },
@@ -132,7 +143,9 @@ describe("aggregateMode", () => {
 
     const edited = agg.loaders["edited-files"]!;
     expect(edited.avgMs.median).toBe(150);
-    expect(edited.workMs.min).toBe(20);
+    expect(edited.selfMs.min).toBe(20);
+    expect(edited.childMs.median).toBe(0);
+    expect(agg.loaders["commits-graph.graph"]!.childMs.median).toBe(10);
     // heavy-read-acquire appeared in both iterations; heavy-read-local in only one.
     expect(edited.waits["heavy-read-acquire"]!.median).toBe(120);
     expect(edited.waits["heavy-read-local"]!.min).toBe(10);

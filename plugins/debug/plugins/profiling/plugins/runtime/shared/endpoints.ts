@@ -19,8 +19,9 @@ const parentBreakdownSchema = z.object({
   maxMs: z.number(),
 });
 
-// Per-layer wait charged to an entry (gate/lock name → ms): the wait-vs-work
-// split. Absent when the entry never waited.
+// Per-layer wait charged to an entry (gate/lock name → ms). Each value is an
+// interval union over the entry's own timeline (≤ its wall-clock), propagated
+// to every open ancestor entry. Absent when the entry never waited.
 const waitBreakdownSchema = z.record(z.string(), z.number());
 
 const aggregateSchema = z.object({
@@ -29,6 +30,17 @@ const aggregateSchema = z.object({
   totalMs: z.number(),
   maxMs: z.number(),
   lastMs: z.number(),
+  // Σ per-record wait/child/self unions — per-call averages are /count. Per
+  // record they decompose the wall-clock: waitMs (union of gate waits at any
+  // subtree depth) + childMs (union of direct-child executions, overlapping
+  // waits) and selfMs = wall − union(waits ∪ children).
+  waitTotalMs: z.number(),
+  childTotalMs: z.number(),
+  selfTotalMs: z.number(),
+  // Max duration within the rolling ~5-min window (0 if idle past it), vs the
+  // since-boot maxMs whose age is maxAgeMs — so a stale peak reads as stale.
+  recentMaxMs: z.number(),
+  maxAgeMs: z.number(),
   byParent: z.array(parentBreakdownSchema),
   waits: waitBreakdownSchema.optional(),
 });
@@ -40,6 +52,10 @@ const slowSpanSchema = z.object({
   atMs: z.number(),
   parent: spanRefSchema.nullable(),
   waits: waitBreakdownSchema.optional(),
+  // Per-span wall-clock decomposition (unions; leaves are 0/0/durationMs).
+  waitMs: z.number(),
+  childMs: z.number(),
+  selfMs: z.number(),
 });
 
 const byKind = <T extends z.ZodTypeAny>(item: T) =>

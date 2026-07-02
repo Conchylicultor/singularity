@@ -31,8 +31,10 @@ rather than inheriting it.
 
 1. Reproduce and quantify with the `benchmark_boot` MCP tool **and** the live
    `get_runtime_profile` (aggregate `waits`, not just `avgMs`).
-2. Separate **work** from **wait** — a high `avgMs` with a high wait / low `workMs`
-   is queueing, not a slow op. Find the *dominant* wait layer before theorizing.
+2. Separate **work** from **wait** — a high `avgMs` with a high `waitMs` / low `selfMs`
+   is queueing, not a slow op. Every entry (composite `flush`/`push` included) now
+   decomposes into `waitMs`/`childMs`/`selfMs`; find the *dominant* wait layer before
+   theorizing, and read `recentMaxMs` (not the since-boot `maxMs`) for "slow now".
 3. **Decompose every cost into `rate × cost-per-occurrence` and trace to the origin, not
    the hotspot.** The biggest number is usually a downstream *amplifier*; amplitude is not
    causality. A `no-op`/`redundant`/`unchanged` signal means look *upstream*. Stop only at an

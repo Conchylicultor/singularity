@@ -19,7 +19,7 @@ Measures, per iteration, all in the target process (so the event-loop histogram 
 - edited-files first-subscribe latency (onFirstSubscribe + loader) for the conversation fixture.
 - commits-graph (.delta / .graph) first-subscribe latency for the attempt fixture.
 - event-loop lag (max) during the burst.
-- runtimeProfile.loaders AND runtimeProfile.db: every loader/db aggregate touched, each split into wait vs work. \`workMs\` = \`avgMs\` − Σ\`waits\` (per-call amortized wait by gate layer, e.g. \`heavy-read-acquire\` / \`heavy-read-local\`). A high \`avgMs\` with a high wait / low \`workMs\` is head-of-line blocking, NOT a slow op — this is the signal the contention root cause needs. Cross-reference: \`firstSubscribe[key].loaderMs\` is the end-to-end load latency; \`loaders[key].workMs\` + its \`waits\` is the SAME number split into work vs wait.
+- runtimeProfile.loaders AND runtimeProfile.db: every loader/db aggregate touched, each decomposed per call into \`waits\` (per-call amortized wait union by gate layer, e.g. \`heavy-read-acquire\` / \`heavy-read-local\` — each ≤ wall), \`childMs\` (direct-child entry union), and \`selfMs\` (own work: wall − union(waits ∪ children)). A high \`avgMs\` with a high wait / low \`selfMs\` is head-of-line blocking, NOT a slow op — this is the signal the contention root cause needs. Cross-reference: \`firstSubscribe[key].loaderMs\` is the end-to-end load latency; \`loaders[key].selfMs\` + its \`waits\` is the SAME number split into work vs wait.
 
 Scope = live-server cold: it deliberately EXCLUDES server-boot work (catch-up, derived-table rebuild, pool warm), which is noisier. Run on an idle backend for clean cold numbers (a concurrent flushNotifies can re-persist rows mid-run).
 

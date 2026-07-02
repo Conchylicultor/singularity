@@ -18,6 +18,36 @@
 // so the web bundle is unaffected); the server installs an AsyncLocalStorage-backed
 // runtime at boot via `installSpanContextRuntime`. On the web the default no-op
 // runtime makes every entry point a transparent passthrough.
+//
+// ## Wall-clock decomposition (wait / child / self)
+//
+// Every entry span decomposes its wall-clock into `waitMs` (time spent queued
+// on named gates/pools, at any depth of its subtree), `childMs` (time covered
+// by direct-child entry spans), and `selfMs` (the remainder: its own
+// orchestration/CPU). Gate waits propagate to EVERY open ancestor — not just
+// the innermost entry — so a composite span (e.g. a `flush` draining many
+// loaders) names the gates its subtree waited on instead of showing a huge
+// wall-clock with empty `waits`.
+//
+// The load-bearing constraint is concurrency: a flush drains many loaders in
+// parallel, so SUMMING child waits into an ancestor can exceed the ancestor's
+// wall-clock (20 loaders × 60s gate wait inside a 90s flush would read as
+// "1200s of wait"). Each ancestor therefore accumulates waits as an
+// interval-UNION over its own timeline (`Track`), guaranteeing
+// `waitMs ≤ wall` and `selfMs ≥ 0` at every level. Because every charge
+// arrives at its interval's END time (gates call `onWait` at slot acquisition;
+// children charge at finish), the charge stream is end-ordered by
+// construction, so a streaming union — O(1) state per track, no interval list
+// — is exact for these streams; an interval that reaches back before the
+// track's covered frontier contributes only the part past it (conservative:
+// never overcounts, so `selfMs` can never go negative).
+//
+// A finished child charges its execution interval into the NEAREST open
+// ancestor only: each parent's own interval propagates upward when *it*
+// finishes, so charging every ancestor would double-count grandchildren.
+// Gate waits, by contrast, go to ALL open ancestors — a union is idempotent
+// under re-covering the same time range, so the same wait interval landing in
+// every level is exactly what makes each level's `waits` self-contained.
 
 // `http` / `db` / `loader` are spans of real work. `sub` / `push` are *origin*
 // entries: the WS-subscription ack and the cascade/push flush that trigger a
@@ -43,11 +73,23 @@ export interface SpanRef {
 
 /**
  * Per-layer wait breakdown charged to an entry while it ran: gate/lock name →
- * accumulated ms. Lets an entry span report pure operation cost (work = total −
- * Σwaits) and makes lock-vs-work readable directly, attributed to the resource
- * that waited. Populated via `chargeWait` from each concurrency gate.
+ * ms of the entry's own timeline covered by waits on that layer (an interval
+ * UNION per record, so each value is ≤ the record's wall-clock — never a sum
+ * across concurrent waiters). Populated via `chargeWait` from each concurrency
+ * gate; propagated to every open ancestor entry.
  */
 export type WaitBreakdown = Record<string, number>;
+
+/**
+ * A streaming interval-union accumulator over one entry's timeline.
+ * `prevEnd` is the covered frontier: because charges arrive end-ordered (see
+ * module header), everything at/before `prevEnd` that will ever be covered
+ * already is, so a single scalar suffices — no interval list.
+ */
+export interface Track {
+  unionMs: number;
+  prevEnd: number;
+}
 
 /** Per-parent breakdown of an aggregate: who issued this label, how often. */
 export interface ParentBreakdown {
@@ -66,6 +108,12 @@ export interface SlowSpan {
   parent: SpanRef | null;
   /** Wait charged to this entry by layer, if it waited (entry spans only). */
   waits?: WaitBreakdown;
+  /** Union of all gate waits over this span's timeline (0 for leaf spans). */
+  waitMs: number;
+  /** Union of direct-child entry executions over this span's timeline (0 for leaves). */
+  childMs: number;
+  /** durationMs − union(waits ∪ child executions): own orchestration/CPU. Leaves: durationMs. */
+  selfMs: number;
 }
 
 export type SlowSpanHandler = (span: SlowSpan) => void;
@@ -76,22 +124,35 @@ export interface Aggregate {
   totalMs: number;
   maxMs: number;
   lastMs: number;
+  /** Σ per-record waitMs (each a union ≤ that record's wall). Per-call avg = /count. */
+  waitTotalMs: number;
+  /** Σ per-record childMs. */
+  childTotalMs: number;
+  /** Σ per-record selfMs. */
+  selfTotalMs: number;
+  /** Max duration within the recent rolling window (~5 min). 0 if idle past the window. */
+  recentMaxMs: number;
+  /** How long ago the all-time `maxMs` was set — so a stale peak reads as stale. */
+  maxAgeMs: number;
   /** Attribution by immediate parent, sorted by count desc. */
   byParent: ParentBreakdown[];
-  /** Summed wait by layer across all records of this label, if any waited. */
+  /** Summed per-record wait unions by layer across all records of this label, if any waited. */
   waits?: WaitBreakdown;
 }
 
 /**
- * Split an aggregate's average per-call duration into work vs wait. `Aggregate.waits`
- * is SUMMED across every record of the label (see `record()`), so dividing by `count`
- * amortizes each layer's wait per call. Returns RAW floats (no rounding) — callers
- * format. With no waits, `waitMs = 0` and `workMs = avgMs`.
+ * Split an aggregate's average per-call duration into wait / child / self.
+ * The `*TotalMs` fields are SUMMED across every record of the label (see
+ * `record()`), so dividing by `count` amortizes each component per call.
+ * Returns RAW floats (no rounding) — callers format. Per-record each component
+ * is an interval union ≤ wall, so `waitMs ≤ avgMs` and `selfMs ≥ 0` hold on
+ * the averages too.
  */
 export function waitSplit(agg: Aggregate): {
   avgMs: number;
-  workMs: number;
   waitMs: number;
+  childMs: number;
+  selfMs: number;
   waits: Record<string, number>;
 } {
   const avgMs = agg.totalMs / agg.count;
@@ -101,35 +162,104 @@ export function waitSplit(agg: Aggregate): {
       waits[layer] = agg.waits[layer]! / agg.count;
     }
   }
-  let waitMs = 0;
-  for (const layer in waits) waitMs += waits[layer]!;
-  return { avgMs, workMs: avgMs - waitMs, waitMs, waits };
+  return {
+    avgMs,
+    waitMs: agg.waitTotalMs / agg.count,
+    childMs: agg.childTotalMs / agg.count,
+    selfMs: agg.selfTotalMs / agg.count,
+    waits,
+  };
 }
 
 const MAX_LABEL_LEN = 500;
 const SLOWEST_CAP = 50;
 
+// Rolling-max window: per-aggregate max durations are bucketed into
+// BUCKET_MS-wide bins; `recentMaxMs` is the max over the last WINDOW_BUCKETS
+// live bins (~5 min). Bounded at O(WINDOW_BUCKETS) per aggregate.
+const BUCKET_MS = 30_000;
+const WINDOW_BUCKETS = 10;
+
 const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push", "flush", "job"];
+
+// --- Injected clock ---
+
+// Single clock seam used by every timestamp in this module (record, chargeWait,
+// recordEntrySpan, getRuntimeProfile). Injectable so union/bucket arithmetic is
+// deterministic under test; default behavior identical to performance.now().
+let now: () => number = () => performance.now();
+
+export function installClock(fn: () => number): void {
+  now = fn;
+}
+
+// --- Streaming interval union ---
+
+// Contribute the interval [start, end] to a track. `floor` clips the interval
+// to the owning context's lifetime (a wait that started before the entry did
+// must not count against the entry's wall-clock). The frontier check makes it
+// a union, not a sum: only time past `prevEnd` is new coverage. An interval
+// fully at/before the frontier contributes 0 — with end-ordered arrival this
+// means "already covered"; in the theoretical non-end-ordered case it
+// undercounts, never overcounts (so selfMs stays ≥ 0).
+function contribute(track: Track, start: number, end: number, floor: number): void {
+  if (start < floor) start = floor;
+  const lo = start > track.prevEnd ? start : track.prevEnd;
+  if (end > lo) {
+    track.unionMs += end - lo;
+    track.prevEnd = end;
+  }
+}
+
+// Test-only export: the streaming union is the load-bearing math of the whole
+// decomposition, so it is unit-tested directly. Not part of the public API.
+export { contribute as __contribute };
 
 // --- Injected ambient-context runtime ---
 
 /**
  * The mutable ambient entry context: the innermost enclosing entry's identity
- * plus a per-layer wait accumulator. A gate charges its queue-wait here (via
- * `chargeWait`) while the entry runs; `recordEntrySpan` materializes the map
- * into the entry's `waits` on finish. Stored by identity in the server's
- * AsyncLocalStorage, so a gate awaited deep inside the entry mutates the SAME
- * map — this is why per-entry wait accumulation works without threading state.
+ * plus its live parent chain and interval-union accumulators. A gate charges
+ * its queue-wait here (via `chargeWait`) while the entry runs — into this
+ * context AND every open ancestor up the chain; `recordEntrySpan` materializes
+ * the unions into `waits`/`waitMs`/`childMs`/`selfMs` on finish. Stored by
+ * identity in the server's AsyncLocalStorage, so a gate awaited deep inside
+ * the entry mutates the SAME tracks — this is why per-entry wait accumulation
+ * works without threading state.
  */
 export interface EntryContext {
   kind: SpanKind;
   label: string;
-  waits: Map<string, number>;
+  /**
+   * The live enclosing entry chain (unlike the `SpanRef` snapshot `record()`
+   * attributes to, these are the mutable contexts wait/child intervals
+   * propagate into). `undefined` at the top level.
+   */
+  parent: EntryContext | undefined;
+  /** Entry start on the profiler clock; the clip floor for all its tracks. */
+  startMs: number;
+  /**
+   * Set in `recordEntrySpan`'s finally, after the entry recorded itself. A
+   * closed context must never be mutated again: a detached child (or a late
+   * gate callback) finishing after its parent closed would otherwise write
+   * into unions the parent already materialized — silently lost at best,
+   * corrupting a reused timeline at worst. Walkers skip closed ancestors.
+   */
+  closed: boolean;
+  /** Per-gate-layer wait unions → materialized into the record's `waits`. */
+  layerUnions: Map<string, Track>;
+  /** Union of ALL gate-wait intervals (across layers) → `waitMs`. */
+  waitUnion: Track;
+  /** Union of gate-waits ∪ child executions → `selfMs = wall − busy`. */
+  busyUnion: Track;
+  /** Union of direct-child entry execution intervals → `childMs`. */
+  childUnion: Track;
   /**
    * The set of DB tables this entry read, lazily created on first
-   * `recordReadTables` (unlike `waits`, which is always allocated). Materialized
-   * into `readSetIndex` by `recordEntrySpan` for loader entries only, so the many
-   * non-loader entries that never read tables don't allocate a Set.
+   * `recordReadTables` (unlike the tracks, which are always allocated).
+   * Materialized into `readSetIndex` by `recordEntrySpan` for loader entries
+   * only, so the many non-loader entries that never read tables don't allocate
+   * a Set.
    */
   tables?: Set<string>;
 }
@@ -225,9 +355,21 @@ interface AggregateInternal {
   count: number;
   totalMs: number;
   maxMs: number;
+  /** Profiler-clock timestamp of the record that set (or last beat) maxMs. */
+  maxAtMs: number;
   lastMs: number;
+  waitTotalMs: number;
+  childTotalMs: number;
+  selfTotalMs: number;
+  /**
+   * Per-bucket max durations for the rolling recent-max window. `at` is the
+   * bucket index (atMs / BUCKET_MS); records within the same bucket fold into
+   * one entry, and expired entries are dropped on append — bounded at
+   * O(WINDOW_BUCKETS).
+   */
+  recentBuckets: { at: number; max: number }[];
   byParent: Map<string, ParentBreakdown>;
-  /** Summed wait by layer, lazily created the first time a record waits. */
+  /** Summed per-record wait unions by layer, lazily created on first wait. */
   waits?: WaitBreakdown;
 }
 
@@ -256,7 +398,7 @@ const slowest: Record<SpanKind, SlowSpan[]> = {
   job: [],
 };
 
-let sinceMs = performance.now();
+let sinceMs = now();
 
 // Automatic loader→table read-set index: each loader entry's captured `tables`
 // set is unioned in here under its `label` (which, for loader entries, IS the
@@ -269,12 +411,17 @@ function parentKey(parent: SpanRef): string {
 }
 
 // Core write path: update aggregates + slowest ring, attributing to `parent`.
+// `waitMs`/`childMs`/`selfMs` are the entry's decomposition (see module
+// header); leaf spans take the defaults (no waits, no children, all self).
 function record(
   kind: SpanKind,
   label: string,
   durationMs: number,
   parent: SpanRef | null,
   waits?: WaitBreakdown,
+  waitMs = 0,
+  childMs = 0,
+  selfMs = durationMs,
 ): void {
   if (process.env.SINGULARITY_PROFILING === "0") return;
   // Drop spans produced inside a runWithoutProfiling scope before any aggregate,
@@ -283,6 +430,7 @@ function record(
   if (suppressionRuntime.suppressed()) return;
 
   const cappedLabel = label.length > MAX_LABEL_LEN ? label.slice(0, MAX_LABEL_LEN) : label;
+  const atMs = now();
 
   const byLabel = aggregates[kind];
   let agg = byLabel.get(cappedLabel);
@@ -290,17 +438,45 @@ function record(
     agg.count += 1;
     agg.totalMs += durationMs;
     agg.lastMs = durationMs;
-    if (durationMs > agg.maxMs) agg.maxMs = durationMs;
+    agg.waitTotalMs += waitMs;
+    agg.childTotalMs += childMs;
+    agg.selfTotalMs += selfMs;
+    if (durationMs > agg.maxMs) {
+      agg.maxMs = durationMs;
+      agg.maxAtMs = atMs;
+    }
   } else {
     agg = {
       label: cappedLabel,
       count: 1,
       totalMs: durationMs,
       maxMs: durationMs,
+      maxAtMs: atMs,
       lastMs: durationMs,
+      waitTotalMs: waitMs,
+      childTotalMs: childMs,
+      selfTotalMs: selfMs,
+      recentBuckets: [],
       byParent: new Map(),
     };
     byLabel.set(cappedLabel, agg);
+  }
+
+  // Rolling recent-max: fold into the current bucket, or open a new one and
+  // evict everything that has left the window. Eviction only happens on bucket
+  // rollover, so an idle aggregate keeps stale buckets — getRuntimeProfile()
+  // filters by liveness against the CURRENT time, so they never leak into
+  // recentMaxMs.
+  const bucketIdx = Math.floor(atMs / BUCKET_MS);
+  const buckets = agg.recentBuckets;
+  const lastBucket = buckets[buckets.length - 1];
+  if (lastBucket && lastBucket.at === bucketIdx) {
+    if (durationMs > lastBucket.max) lastBucket.max = durationMs;
+  } else {
+    buckets.push({ at: bucketIdx, max: durationMs });
+    while (buckets.length > 0 && buckets[0]!.at <= bucketIdx - WINDOW_BUCKETS) {
+      buckets.shift();
+    }
   }
 
   if (parent) {
@@ -320,8 +496,10 @@ function record(
     }
   }
 
-  // Sum the entry's per-layer wait into the aggregate so a label's wait-vs-work
-  // split is durable across all its records, not just the latest.
+  // Sum the entry's per-layer wait into the aggregate so a label's wait split
+  // is durable across all its records, not just the latest. Each incoming
+  // value is a per-record union (≤ that record's wall), so the summed value
+  // divided by count stays a meaningful per-call average.
   if (waits) {
     agg.waits ??= {};
     for (const layer in waits) {
@@ -329,9 +507,8 @@ function record(
     }
   }
 
-  const atMs = performance.now();
   const ring = slowest[kind];
-  ring.push({ kind, label: cappedLabel, durationMs, atMs, parent, waits });
+  ring.push({ kind, label: cappedLabel, durationMs, atMs, parent, waits, waitMs, childMs, selfMs });
   if (ring.length > SLOWEST_CAP) {
     // Drop the single fastest entry to keep the slowest N.
     let minIdx = 0;
@@ -346,7 +523,17 @@ function record(
   // non-throwing fire-and-forget scheduler, so we don't guard it — failing
   // loudly is correct per repo policy.
   if (slowSpanSubs.length > 0) {
-    const span: SlowSpan = { kind, label: cappedLabel, durationMs, atMs, parent, waits };
+    const span: SlowSpan = {
+      kind,
+      label: cappedLabel,
+      durationMs,
+      atMs,
+      parent,
+      waits,
+      waitMs,
+      childMs,
+      selfMs,
+    };
     for (const sub of slowSpanSubs) {
       if (durationMs >= sub.thresholdMs) sub.handler(span);
     }
@@ -355,7 +542,8 @@ function record(
 
 /**
  * Record a leaf span (e.g. a DB query), attributed to the innermost enclosing
- * entry point if one is active. Used by the DB pool wrapper.
+ * entry point if one is active. Used by the DB pool wrapper. A leaf has no
+ * decomposition: waitMs/childMs default to 0, selfMs to the full duration.
  */
 export function recordSpan(kind: SpanKind, label: string, durationMs: number): void {
   const cur = contextRuntime.current();
@@ -363,21 +551,46 @@ export function recordSpan(kind: SpanKind, label: string, durationMs: number): v
 }
 
 /**
- * Charge `ms` of wait time, under layer name `layer`, to the innermost enclosing
- * entry (loader/http/sub/push). A concurrency gate calls this from its `onWait`
- * callback when it makes the current entry queue, so the wait lands ON the
- * waiting resource's own span (work = total − Σwaits, lock-vs-work readable
- * directly) instead of in a label-shared bucket. If no entry is active
- * (context-less: jobs, pollers, migrations), fall back to a standalone `db` span
- * so the wait is never silently lost. Read+charge synchronously at slot
- * acquisition, while the ambient context is still active.
+ * Charge `ms` of wait time, under layer name `layer`, to EVERY open enclosing
+ * entry (innermost included). A concurrency gate calls this from its `onWait`
+ * callback at slot acquisition, so the interval `[now − ms, now]` is exact and
+ * arrives end-ordered (the invariant the streaming union relies on). Each open
+ * ancestor unions the interval into its own per-layer track, `waitUnion`, and
+ * `busyUnion` — so a composite entry (flush) sees the gates its subtree waited
+ * on, while concurrent waiters can never push an ancestor's wait past its
+ * wall-clock. Closed ancestors are skipped (already recorded — see
+ * `EntryContext.closed`); the interval is clipped to each ancestor's own start.
+ *
+ * A zero-ms charge still creates the layer key (with 0): git-memo hit/miss
+ * markers use this to surface *that* a layer was consulted, not just how long
+ * it blocked.
+ *
+ * If no entry is active (context-less: jobs, pollers, migrations), fall back
+ * to a standalone `db [layer]` span so the wait is never silently lost.
+ * Suppression is honored here (unlike the old innermost-only version) because
+ * a wait incurred inside `runWithoutProfiling` would otherwise pollute the
+ * unions of ancestors whose own records are NOT suppressed.
  */
 export function chargeWait(layer: string, ms: number): void {
+  if (process.env.SINGULARITY_PROFILING === "0") return;
+  if (suppressionRuntime.suppressed()) return;
   const cur = contextRuntime.current();
-  if (cur) {
-    cur.waits.set(layer, (cur.waits.get(layer) ?? 0) + ms);
-  } else {
+  if (!cur) {
     record("db", `[${layer}]`, ms, null);
+    return;
+  }
+  const end = now();
+  const start = end - ms;
+  for (let a: EntryContext | undefined = cur; a; a = a.parent) {
+    if (a.closed) continue;
+    let track = a.layerUnions.get(layer);
+    if (!track) {
+      track = { unionMs: 0, prevEnd: a.startMs };
+      a.layerUnions.set(layer, track);
+    }
+    contribute(track, start, end, a.startMs);
+    contribute(a.waitUnion, start, end, a.startMs);
+    contribute(a.busyUnion, start, end, a.startMs);
   }
 }
 
@@ -423,9 +636,20 @@ export function currentCallerKind(): SpanKind | undefined {
 
 /**
  * Run `fn` as an entry point of the given kind/label: children executed inside
- * `fn` see `{ kind, label }` as their ambient parent, while the entry span
- * itself is recorded against the *outer* parent (so an entry is never its own
- * parent). Used at the HTTP and loader chokepoints.
+ * `fn` see this entry as their ambient parent, while the entry span itself is
+ * recorded against the *outer* parent (so an entry is never its own parent).
+ * Used at the HTTP and loader chokepoints.
+ *
+ * On finish (`finally`), the entry:
+ * 1. charges its own execution interval `[t0, t1]` into the NEAREST open
+ *    ancestor's `childUnion` + `busyUnion` — nearest only, because each
+ *    ancestor's own interval propagates upward when IT finishes; charging
+ *    every ancestor would double-count grandchild time;
+ * 2. closes its context so late detached work can never mutate it;
+ * 3. records with the materialized decomposition: `waitMs` (union of all gate
+ *    waits), `childMs` (union of direct-child executions), and
+ *    `selfMs = max(0, wall − busyUnion)` — busy is the union of waits AND
+ *    child executions, so overlapping wait/child time is not subtracted twice.
  */
 export async function recordEntrySpan<T>(
   kind: SpanKind,
@@ -434,16 +658,49 @@ export async function recordEntrySpan<T>(
 ): Promise<T> {
   const cur = contextRuntime.current();
   const parent: SpanRef | null = cur ? { kind: cur.kind, label: cur.label } : null;
-  // Fresh accumulator per entry: nested entries (loader inside sub/http) each
-  // own their wait map, so a gate charges only the innermost one — no double
-  // counting up the chain.
-  const ctx: EntryContext = { kind, label, waits: new Map() };
-  const t0 = performance.now();
+  const t0 = now();
+  // Fresh accumulators per entry, chained to the live parent context: a gate
+  // charge deep inside `fn` walks this chain and unions into every open level.
+  // All tracks start their frontier at t0 so pre-entry time can never count.
+  const ctx: EntryContext = {
+    kind,
+    label,
+    parent: cur,
+    startMs: t0,
+    closed: false,
+    layerUnions: new Map(),
+    waitUnion: { unionMs: 0, prevEnd: t0 },
+    busyUnion: { unionMs: 0, prevEnd: t0 },
+    childUnion: { unionMs: 0, prevEnd: t0 },
+  };
   try {
     return await contextRuntime.run(ctx, fn);
   } finally {
-    const waits = ctx.waits.size > 0 ? Object.fromEntries(ctx.waits) : undefined;
-    record(kind, label, performance.now() - t0, parent, waits);
+    const t1 = now();
+    // (1) Propagate this entry's execution interval to the nearest OPEN
+    // ancestor only (see doc comment). Skipping closed ancestors keeps a
+    // detached child (finishing after its parent already recorded) from
+    // mutating a finished timeline; if everything up the chain is closed, the
+    // interval is dropped — conservative, the ancestors' records are final.
+    for (let a: EntryContext | undefined = ctx.parent; a; a = a.parent) {
+      if (a.closed) continue;
+      contribute(a.childUnion, t0, t1, a.startMs);
+      contribute(a.busyUnion, t0, t1, a.startMs);
+      break;
+    }
+    // (2) Close before recording so nothing can race a mutation in between.
+    ctx.closed = true;
+    // (3) Materialize the decomposition and record.
+    const wall = t1 - t0;
+    const waitMs = ctx.waitUnion.unionMs;
+    const childMs = ctx.childUnion.unionMs;
+    const selfMs = Math.max(0, wall - ctx.busyUnion.unionMs);
+    let waits: WaitBreakdown | undefined;
+    if (ctx.layerUnions.size > 0) {
+      waits = {};
+      for (const [layer, track] of ctx.layerUnions) waits[layer] = track.unionMs;
+    }
+    record(kind, label, wall, parent, waits, waitMs, childMs, selfMs);
     // Flush the loader's captured table read-set into the index, keyed by label
     // (the resource key). Gating on `loader` kind means a stray table captured
     // under a non-loader entry is never indexed. Done after `record` so it can
@@ -464,20 +721,38 @@ export function getRuntimeProfile(): {
   slowest: Record<SpanKind, SlowSpan[]>;
   sinceMs: number;
 } {
+  const nowMs = now();
+  // A bucket is live while its index is within the window of the CURRENT
+  // bucket index — matching the eviction rule in record(), which only runs on
+  // rollover, so idle aggregates decay here rather than there.
+  const liveFloor = Math.floor(nowMs / BUCKET_MS) - WINDOW_BUCKETS;
   const aggOut = {} as Record<SpanKind, Aggregate[]>;
   const slowOut = {} as Record<SpanKind, SlowSpan[]>;
   for (const kind of KINDS) {
     aggOut[kind] = Array.from(aggregates[kind].values())
-      .map((agg) => ({
-        label: agg.label,
-        count: agg.count,
-        totalMs: agg.totalMs,
-        maxMs: agg.maxMs,
-        lastMs: agg.lastMs,
-        byParent: Array.from(agg.byParent.values()).sort((a, b) => b.count - a.count),
-        waits: agg.waits ? { ...agg.waits } : undefined,
-      }))
-      .sort((a, b) => b.maxMs - a.maxMs);
+      .map((agg) => {
+        let recentMaxMs = 0;
+        for (const bucket of agg.recentBuckets) {
+          if (bucket.at > liveFloor && bucket.max > recentMaxMs) recentMaxMs = bucket.max;
+        }
+        return {
+          label: agg.label,
+          count: agg.count,
+          totalMs: agg.totalMs,
+          maxMs: agg.maxMs,
+          lastMs: agg.lastMs,
+          waitTotalMs: agg.waitTotalMs,
+          childTotalMs: agg.childTotalMs,
+          selfTotalMs: agg.selfTotalMs,
+          recentMaxMs,
+          maxAgeMs: nowMs - agg.maxAtMs,
+          byParent: Array.from(agg.byParent.values()).sort((a, b) => b.count - a.count),
+          waits: agg.waits ? { ...agg.waits } : undefined,
+        };
+      })
+      // Live relevance first: a label spiking NOW outranks one whose since-boot
+      // peak is stale (the aged peak stays readable via maxMs + maxAgeMs).
+      .sort((a, b) => b.recentMaxMs - a.recentMaxMs);
     // Most-recent-slowest first: sort the slowest-N buffer by duration desc.
     slowOut[kind] = [...slowest[kind]].sort((a, b) => b.durationMs - a.durationMs);
   }
@@ -520,11 +795,15 @@ export function seedReadSetIndex(seed: Record<string, readonly string[]>): void 
   }
 }
 
+// Clears every per-aggregate accumulator (the new maxAtMs/recentBuckets/totals
+// live on the aggregate objects, so dropping the maps drops them too). Live
+// EntryContexts are intentionally untouched: an in-flight entry records into
+// the fresh store when it finishes.
 export function resetRuntimeProfile(): void {
   for (const kind of KINDS) {
     aggregates[kind].clear();
     slowest[kind].length = 0;
   }
   readSetIndex.clear();
-  sinceMs = performance.now();
+  sinceMs = now();
 }

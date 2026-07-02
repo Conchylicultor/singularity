@@ -18,15 +18,18 @@ const firstSubscribeSchema = z
   })
   .nullable();
 
-// One runtime-profiler aggregate (loader or db), with its wait-vs-work split. `waits`
-// is the per-call amortized wait by gate/lock layer (e.g. `heavy-read-acquire`);
-// `workMs = avgMs − Σwaits` — a high `avgMs` with a high wait / low `workMs` is
-// head-of-line blocking, not a slow op. Values are rounded at the edge.
+// One runtime-profiler aggregate (loader or db), with its per-call wall-clock
+// decomposition. `waits` is the per-call amortized wait by gate/lock layer (e.g.
+// `heavy-read-acquire`; each an interval union ≤ wall); `selfMs` is the entry's
+// own work (wall − union(waits ∪ direct children)) and `childMs` the direct-child
+// union — a high `avgMs` with a high wait / low `selfMs` is head-of-line
+// blocking, not a slow op. Values are rounded at the edge.
 const profileEntrySchema = z.object({
   label: z.string(),
   count: z.number(),
   avgMs: z.number(),
-  workMs: z.number(),
+  selfMs: z.number(),
+  childMs: z.number(),
   maxMs: z.number(),
   waits: z.record(z.string(), z.number()).optional(),
 });
