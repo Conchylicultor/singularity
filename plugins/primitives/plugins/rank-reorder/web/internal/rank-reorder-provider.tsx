@@ -20,12 +20,19 @@ export interface RankReorderProviderProps {
   /**
    * Persist a reorder. `dest.group` is the destination section (the drop
    * target's group); equal to the dragged item's group for an in-section move,
-   * different for a cross-section move. No-op drops (same position) are filtered
-   * out before this fires.
+   * different for a cross-section move. `dest.targetId` / `dest.zone` are the
+   * drop neighbor's id + side, surfaced so neighbor-based (endpoint) consumers
+   * can persist by neighbor instead of by `rank`. No-op drops (same position)
+   * are filtered out before this fires.
    */
   onMove: (
     id: string,
-    dest: { rank: Rank; group: string | null },
+    dest: {
+      rank: Rank;
+      group: string | null;
+      targetId: string;
+      zone: "before" | "after";
+    },
   ) => void | Promise<void>;
   /** Floating drag-chip content for the active id. */
   dragOverlay?: (id: string) => ReactNode;
@@ -74,7 +81,7 @@ export function RankReorderProvider({
       ) {
         return;
       }
-      void onMove(draggedId, { rank, group });
+      void onMove(draggedId, { rank, group, targetId, zone });
     },
     [items, onMove],
   );

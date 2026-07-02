@@ -102,7 +102,10 @@
   - **`conversations-view`** — Sidebar list of all conversations.
     - Plugins:
       - **`classic`** — Registers today's tabbed Queue/Grouped/History conversation list as the `classic` sidebar variant (the default, and the only variant in Phase 0).
-      - **`data-view`** — Registers the sidebar History list as a server-delegated DataView (the `dataview` conversation-list variant), reusing the all-conversations query infra.
+      - **`data-view`** — Umbrella for the `dataview` conversation-list sidebar variant: owns the tab host and registers the variant. Per-tab sub-plugins (History, Queue) contribute their tab into SidebarDataView.View.
+        - Plugins:
+          - **`history`** — Contributes the History list (a server-delegated DataView reusing the all-conversations query infra) as the History tab of the `dataview` sidebar variant.
+          - **`queue`** — Contributes the priority Queue (rebuilt on the official DataView primitive — status group-by sections, task-group aggregation, and neighbor-based manual-order drag over the queue's live data/mutation layer) as the Queue tab of the `dataview` sidebar variant.
       - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
       - **`history`** — All conversations in historical order of creation.
       - **`queue`** — Stable-rank global priority queue of conversations awaiting user input. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.

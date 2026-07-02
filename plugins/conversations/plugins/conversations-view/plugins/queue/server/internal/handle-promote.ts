@@ -1,7 +1,7 @@
 import { getConversation, hasBlockingDep } from "@plugins/tasks/plugins/tasks-core/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { promoteQueue } from "../../shared/endpoints";
+import { promoteQueue } from "../../core/endpoints";
 import { lockDeck, rankForTop, reseatGroupMembers, upsertRank } from "./queue-ranks";
 import { setPinnedId, validatePin } from "./pinned";
 

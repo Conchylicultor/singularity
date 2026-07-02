@@ -58,7 +58,7 @@ import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
   - Uses: `database.db`
   - Exports: Types: `RankExecutor`; Values: `nextRankIn`, `nextRankUnder`, `rankText`
 - Cross-plugin:
-  - Imported by: `apps/pages/starred`, `apps/story/story-core`, `apps/studio/explorer`, `conversations/agents`, `conversations/conversations-view/grouped`, `page/editor`, `primitives/data-view/view-core`, `primitives/tree`, `tasks`, `tasks/tasks-core`
+  - Imported by: `apps/pages/starred`, `apps/story/story-core`, `apps/studio/explorer`, `conversations/agents`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `page/editor`, `primitives/data-view/view-core`, `primitives/tree`, `tasks`, `tasks/tasks-core`
 - Web:
   - Exports: Values: `Rank`, `RankSchema`
 - Core:

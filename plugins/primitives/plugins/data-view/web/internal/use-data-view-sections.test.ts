@@ -1,8 +1,10 @@
 import { describe, expect, test } from "bun:test";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { DataViewSection, FieldDef } from "../../core";
 import {
   aggregateSections,
   isGroupableField,
+  orderSectionsByRank,
   partitionIntoSections,
 } from "./use-data-view-sections";
 
@@ -196,6 +198,58 @@ describe("aggregateSections", () => {
     expect(agg!.entries).toHaveLength(1);
     expect(agg!.entries[0]!.row.id).toBe("b");
     expect(agg!.entries[0]!.members?.map((m) => m.id)).toEqual(["b", "a", "c"]);
+  });
+});
+
+describe("orderSectionsByRank", () => {
+  interface Ranked {
+    id: string;
+    rank: Rank | null;
+  }
+  const sectionOf = (
+    key: string | null,
+    entries: Ranked[],
+  ): DataViewSection<Ranked> => ({
+    key,
+    count: entries.length,
+    entries: entries.map((row) => ({ row, key: row.id })),
+  });
+
+  test("a ranked section sorts by rank, ignoring incoming order", () => {
+    const [r0, r1, r2] = Rank.nBetween(null, null, 3);
+    // Incoming order scrambled; expect rank-ascending output.
+    const section = sectionOf(null, [
+      { id: "c", rank: r2! },
+      { id: "a", rank: r0! },
+      { id: "b", rank: r1! },
+    ]);
+    const [out] = orderSectionsByRank([section], (r) => r.rank);
+    expect(out!.entries.map((e) => e.row.id)).toEqual(["a", "b", "c"]);
+  });
+
+  test("an all-null section keeps incoming order (stable no-op)", () => {
+    const section = sectionOf(null, [
+      { id: "x", rank: null },
+      { id: "y", rank: null },
+      { id: "z", rank: null },
+    ]);
+    const [out] = orderSectionsByRank([section], (r) => r.rank);
+    expect(out!.entries.map((e) => e.row.id)).toEqual(["x", "y", "z"]);
+  });
+
+  test("orders each homogeneous section independently (ranked sorts, null keeps order)", () => {
+    const [r0, r1] = Rank.nBetween(null, null, 2);
+    const ranked = sectionOf("ranked", [
+      { id: "b", rank: r1! },
+      { id: "a", rank: r0! },
+    ]);
+    const nulls = sectionOf("nulls", [
+      { id: "n1", rank: null },
+      { id: "n2", rank: null },
+    ]);
+    const out = orderSectionsByRank([ranked, nulls], (r) => r.rank);
+    expect(out[0]!.entries.map((e) => e.row.id)).toEqual(["a", "b"]);
+    expect(out[1]!.entries.map((e) => e.row.id)).toEqual(["n1", "n2"]);
   });
 });
 

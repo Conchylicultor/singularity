@@ -23,7 +23,7 @@ import {
   demoteQueue,
   stepDownQueue,
   rerankQueue,
-} from "../shared/endpoints";
+} from "../core/endpoints";
 
 export { conversationsQueue } from "./internal/tables";
 export { queueRanksResource } from "./internal/resource";

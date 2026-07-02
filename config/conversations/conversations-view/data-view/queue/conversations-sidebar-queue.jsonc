@@ -1,0 +1,9 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "name": "Queue",
+      "view": { "type": "list", "groupBy": "section" }
+    }
+  ]
+}

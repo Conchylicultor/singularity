@@ -1,7 +1,7 @@
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { demoteQueue } from "../../shared/endpoints";
+import { demoteQueue } from "../../core/endpoints";
 import { lockDeck, rankForBottom, reseatGroupMembers, upsertRank } from "./queue-ranks";
 import { validatePin } from "./pinned";
 import { cascadeBlockedDependents } from "./cascade-blocked";

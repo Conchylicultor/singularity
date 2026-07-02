@@ -35,10 +35,15 @@ export interface RankReorderItemControls {
  * are the shared contract the `RankReorderDndContext` `onDragEnd` reads — the
  * same shape the tree's sibling zones use, so the tree consumes this hook for
  * its before/after zones while keeping its own `child` droppable.
+ *
+ * `rank` may be `null` for a non-orderable row: a caller that must call this
+ * hook unconditionally (hooks-rule compliance, e.g. a per-row decoration hook)
+ * passes the null rank through but never attaches the returned refs, so the
+ * row's draggable/droppables register no DOM node and it participates in no drag.
  */
 export function useRankReorderItem(
   id: string,
-  rank: Rank,
+  rank: Rank | null,
 ): RankReorderItemControls {
   const {
     attributes,

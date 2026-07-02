@@ -5,6 +5,8 @@ import { QueueView } from "./components/queue-view";
 
 export { applyReorder } from "./components/apply-reorder";
 export type { ReorderVars } from "./components/apply-reorder";
+export { classifyQueue } from "./classify-queue";
+export type { ClassifiedQueue, RankedConversation, TaskGroup } from "./classify-queue";
 
 export default {
   description:

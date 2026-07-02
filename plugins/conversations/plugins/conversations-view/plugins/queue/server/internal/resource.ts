@@ -1,6 +1,6 @@
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { QueueDataSchema, type QueueData, type QueueRankRow } from "../../shared/resources";
+import { QueueDataSchema, type QueueData, type QueueRankRow } from "../../core/resources";
 import { conversationsQueue } from "./tables";
 import { getPinnedId } from "./pinned";
 

@@ -289,17 +289,31 @@ export interface DataViewAggregateConfig<TRow> {
  * knowledge). Ungrouped → the single implicit `null` section.
  */
 export interface ManualOrderConfig<TRow> {
-  /** The sort `Rank` of a row — rows render in this order in manual mode. */
-  getRank: (row: TRow) => Rank;
+  /**
+   * The sort `Rank` of a row — rows render in this order in manual mode.
+   * Returning **`null`** marks the row as NOT orderable: it is neither a drag
+   * source nor a drop target, and keeps its incoming (source/section) order.
+   * A section is homogeneous — either all-ranked or all-null (the consumer
+   * guarantees it) — so a null-ranked section simply keeps incoming order.
+   */
+  getRank: (row: TRow) => Rank | null;
   /**
    * Persist a reorder. `id` is `rowKey(row)`; `dest.rank` is the new rank;
    * `dest.groupKey` is the destination section key (the drop target's group) —
    * equal to the dragged row's group for an in-section move, the new group for a
-   * cross-section move, and `null`/absent when ungrouped.
+   * cross-section move, and `null`/absent when ungrouped. `dest.targetId` /
+   * `dest.zone` are the drop neighbor's row id + side (`"before"`/`"after"`):
+   * rank-based consumers ignore them and persist `dest.rank`; endpoint-based
+   * (neighbor-based) consumers use them and ignore `dest.rank`.
    */
   onMove: (
     id: string,
-    dest: { rank: Rank; groupKey?: string | null },
+    dest: {
+      rank: Rank;
+      groupKey?: string | null;
+      targetId?: string;
+      zone?: "before" | "after";
+    },
   ) => void | Promise<void>;
 }
 

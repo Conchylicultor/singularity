@@ -1,6 +1,6 @@
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { reorderQueue } from "../../shared/endpoints";
+import { reorderQueue } from "../../core/endpoints";
 import { lockDeck, rankAdjacentTo, reseatGroupMembers, upsertRank } from "./queue-ranks";
 import { validatePin } from "./pinned";
 import { cascadeBlockedDependents } from "./cascade-blocked";

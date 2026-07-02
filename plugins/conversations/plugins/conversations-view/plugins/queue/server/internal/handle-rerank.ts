@@ -1,7 +1,7 @@
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { rerankQueue } from "../../shared/endpoints";
+import { rerankQueue } from "../../core/endpoints";
 import { lockDeck, rankForTop, rankJoiningGroup, upsertRank } from "./queue-ranks";
 import { validatePin } from "./pinned";
 

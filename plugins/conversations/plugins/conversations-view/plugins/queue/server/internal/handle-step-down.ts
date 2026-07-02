@@ -1,7 +1,7 @@
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { stepDownQueue } from "../../shared/endpoints";
+import { stepDownQueue } from "../../core/endpoints";
 import { lockDeck, rankAfterN, reseatGroupMembers, upsertRank, findTaskIdForConversation } from "./queue-ranks";
 import { getPinnedId, setPinnedId, topWaitingByRank, validatePin } from "./pinned";
 import { cascadeBlockedDependents } from "./cascade-blocked";

@@ -28,20 +28,15 @@ import { useResource, useCombinedResources } from "@plugins/primitives/plugins/l
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { reorderQueue, promoteQueue, demoteQueue, stepDownQueue, rerankQueue } from "../../shared/endpoints";
-import { queueRanksResource } from "../../shared/resources";
+import { reorderQueue, promoteQueue, demoteQueue, stepDownQueue, rerankQueue } from "../../core/endpoints";
+import { queueRanksResource } from "../../core/resources";
 import { applyReorder, type ReorderVars } from "./apply-reorder";
 import { tasksResource } from "@plugins/tasks/plugins/tasks-core/core";
-import { Rank } from "@plugins/primitives/plugins/rank/core";
-
-type RankedConversation = Conversation & { rank: Rank };
-
-type TaskGroup = {
-  taskId: string;
-  selected: RankedConversation;
-  members: RankedConversation[];
-  count: number;
-};
+import {
+  classifyQueue,
+  type ClassifiedQueue,
+  type RankedConversation,
+} from "../classify-queue";
 
 type DropData = { zone: "before" | "after"; targetId: string };
 
@@ -139,78 +134,22 @@ export function QueueView({
     disconnected,
     recentGone,
     pinnedConversationId,
-  } = useMemo(() => {
-    if (all.pending) {
-      return {
-        waitingGroups: [] as TaskGroup[],
-        workingGroups: [] as TaskGroup[],
-        allWaitingCount: 0,
-        blockedIds: new Set<string>(),
-        unranked: [] as Conversation[],
-        disconnected: [] as Conversation[],
-        recentGone: [] as Conversation[],
-        pinnedConversationId: null as string | null,
-      };
-    }
-    const { active, gone, queue, tasks } = all.data;
-    const ranks = new Map(queue.ranks.map((r) => [r.conversationId, r.rank]));
-    const taskStatusMap = new Map(tasks.map((t) => [t.id, t.status]));
-    const ranked: RankedConversation[] = [];
-    const blocked = new Set<string>();
-    const noRank: Conversation[] = [];
-
-    for (const c of active) {
-      if (c.status !== "waiting" && c.status !== "working" && c.status !== "starting") continue;
-      if (taskStatusMap.get(c.taskId) === "blocked") {
-        blocked.add(c.id);
-      }
-      const rank = ranks.get(c.id);
-      if (rank) {
-        ranked.push({ ...c, rank });
-      } else if (c.status === "waiting") {
-        noRank.push(c);
-      }
-    }
-    ranked.sort((a, b) => Rank.compare(a.rank, b.rank));
-
-    // Group by taskId
-    const taskMap = new Map<string, RankedConversation[]>();
-    for (const conv of ranked) {
-      const list = taskMap.get(conv.taskId);
-      if (list) list.push(conv);
-      else taskMap.set(conv.taskId, [conv]);
-    }
-
-    const waiting: TaskGroup[] = [];
-    const working: TaskGroup[] = [];
-    let waitingCount = 0;
-    for (const [taskId, members] of taskMap) {
-      if (members.length === 0) continue;
-      const workingMember = members.find((m) => m.status === "working" || m.status === "starting");
-      const mostRecent = members.reduce((a, b) => (b.createdAt > a.createdAt ? b : a));
-      const selected = workingMember ?? mostRecent;
-      const group: TaskGroup = { taskId, selected, members, count: members.length };
-      if (workingMember) {
-        working.push(group);
-      } else {
-        waiting.push(group);
-        waitingCount += members.filter((m) => m.status === "waiting").length;
-      }
-    }
-    waiting.sort((a, b) => Rank.compare(a.selected.rank, b.selected.rank));
-    working.sort((a, b) => Rank.compare(a.selected.rank, b.selected.rank));
-
-    return {
-      waitingGroups: waiting,
-      workingGroups: working,
-      allWaitingCount: waitingCount,
-      blockedIds: blocked,
-      unranked: noRank,
-      disconnected: active.filter((c) => c.status === "gone"),
-      recentGone: gone,
-      pinnedConversationId: queue.pinnedConversationId,
-    };
-  }, [all]);
+  } = useMemo<ClassifiedQueue>(
+    () =>
+      all.pending
+        ? {
+            waitingGroups: [],
+            workingGroups: [],
+            allWaitingCount: 0,
+            blockedIds: new Set<string>(),
+            unranked: [],
+            disconnected: [],
+            recentGone: [],
+            pinnedConversationId: null,
+          }
+        : classifyQueue(all.data),
+    [all],
+  );
 
   const [workingExpanded, setWorkingExpanded] = useState<boolean>(() => {
     try {

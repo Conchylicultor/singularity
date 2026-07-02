@@ -1,6 +1,6 @@
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { OpNoLongerApplies } from "@plugins/primitives/plugins/optimistic-mutation/web";
-import type { QueueData } from "../../shared/resources";
+import type { QueueData } from "../../core/resources";
 
 export interface ReorderVars {
   conversationId: string;

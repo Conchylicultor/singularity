@@ -81,8 +81,13 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     i: number,
   ): DataTableRowDecoration | undefined {
     const id = props.rowKey(row, i);
+    const rank = manualOrder!.getRank(row);
     const { dragSource, isDragging, beforeRef, afterRef, isOverBefore, isOverAfter } =
-      useRankReorderItem(id, manualOrder!.getRank(row));
+      useRankReorderItem(id, rank);
+    // A null rank marks the row non-orderable: the hook still runs (hooks rule),
+    // but we return no decoration so its refs attach to nothing — the row is
+    // neither a drag source nor a drop target.
+    if (rank == null) return undefined;
     // Destructure-and-rename so we never do inline `dragSource.ref` member access
     // (react-hooks/refs flags member access on the hook output; destructuring is
     // fine — mirrors the tree's RowChrome precedent).
@@ -238,7 +243,12 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
       <RankReorderProvider
         items={manualOrderItems(sections, manualOrder)}
         onMove={(id, dest) =>
-          manualOrder.onMove(id, { rank: dest.rank, groupKey: dest.group })
+          manualOrder.onMove(id, {
+            rank: dest.rank,
+            groupKey: dest.group,
+            targetId: dest.targetId,
+            zone: dest.zone,
+          })
         }
         dragOverlay={(id) => manualOrderOverlay(sections, columns, id)}
       >
@@ -249,17 +259,20 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
   return table;
 }
 
-/** Flatten the sections into the rank-reorder item list (id + rank + group). */
+/** Flatten the sections into the rank-reorder item list (id + rank + group).
+ *  Null-rank entries are non-orderable, so they are neither reorder-scope
+ *  members nor drop targets — filter them out before mapping. */
 function manualOrderItems(
   sections: DataViewSection<unknown>[],
   manualOrder: ManualOrderConfig<unknown>,
 ) {
   return sections.flatMap((section) =>
-    section.entries.map((entry) => ({
-      id: entry.key,
-      rank: manualOrder.getRank(entry.row),
-      group: section.key,
-    })),
+    section.entries.flatMap((entry) => {
+      const rank = manualOrder.getRank(entry.row);
+      return rank != null
+        ? [{ id: entry.key, rank, group: section.key }]
+        : [];
+    }),
   );
 }
 

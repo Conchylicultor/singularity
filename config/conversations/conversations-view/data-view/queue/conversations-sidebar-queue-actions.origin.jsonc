@@ -1,0 +1,13 @@
+// @hash 7cf6eac46ffb
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "conversations.conversations-view.data-view.queue:promote",
+    "conversations.conversations-view.data-view.queue:step-down",
+    "conversations.conversations-view.data-view.queue:demote",
+    "conversations.conversations-view.data-view.queue:add-to-queue",
+    "conversations.conversations-view.data-view.queue:close"
+  ]
+}

@@ -1,9 +1,9 @@
-// @hash 0d0bd6f5aba2
+// @hash d66df1640334
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "conversations.conversations-view.data-view:close"
+    "conversations.conversations-view.data-view.history:close"
   ]
 }

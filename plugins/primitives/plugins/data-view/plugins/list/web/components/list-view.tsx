@@ -235,15 +235,19 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     if (manualOrder) {
       return (
         <Stack gap="none" className="p-sm">
-          {entries.map((entry) => (
-            <ManualOrderRow
-              key={entry.key}
-              id={entry.key}
-              rank={manualOrder.getRank(entry.row)}
-            >
-              {renderRow(entry.row, entry.key, entry.aggregateCount)}
-            </ManualOrderRow>
-          ))}
+          {entries.map((entry) => {
+            // A null rank marks the row non-orderable: render it plain, so the
+            // `useRankReorderItem` hook (inside ManualOrderRow) is never mounted
+            // for it. This is an element-type choice, not a conditional hook.
+            const rank = manualOrder.getRank(entry.row);
+            return rank != null ? (
+              <ManualOrderRow key={entry.key} id={entry.key} rank={rank}>
+                {renderRow(entry.row, entry.key, entry.aggregateCount)}
+              </ManualOrderRow>
+            ) : (
+              renderRow(entry.row, entry.key, entry.aggregateCount)
+            );
+          })}
         </Stack>
       );
     }
@@ -312,7 +316,12 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
       <RankReorderProvider
         items={manualOrderItems(sections, manualOrder)}
         onMove={(id, dest) =>
-          manualOrder.onMove(id, { rank: dest.rank, groupKey: dest.group })
+          manualOrder.onMove(id, {
+            rank: dest.rank,
+            groupKey: dest.group,
+            targetId: dest.targetId,
+            zone: dest.zone,
+          })
         }
         dragOverlay={(id) => {
           const entry = sections
@@ -338,16 +347,19 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   return body;
 }
 
-/** Flatten the sections into the rank-reorder item list (id + rank + group). */
+/** Flatten the sections into the rank-reorder item list (id + rank + group).
+ *  Null-rank entries are non-orderable, so they are neither reorder-scope
+ *  members nor drop targets — filter them out before mapping. */
 function manualOrderItems(
   sections: DataViewSection<unknown>[],
   manualOrder: ManualOrderConfig<unknown>,
 ) {
   return sections.flatMap((section) =>
-    section.entries.map((entry) => ({
-      id: entry.key,
-      rank: manualOrder.getRank(entry.row),
-      group: section.key,
-    })),
+    section.entries.flatMap((entry) => {
+      const rank = manualOrder.getRank(entry.row);
+      return rank != null
+        ? [{ id: entry.key, rank, group: section.key }]
+        : [];
+    }),
   );
 }
