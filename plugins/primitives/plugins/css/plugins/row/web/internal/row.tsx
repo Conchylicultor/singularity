@@ -1,5 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import {
   useHoverReveal,
   hoverRevealClass,
@@ -122,19 +123,38 @@ export function Row({
   );
   const style = indent !== undefined ? { paddingLeft: indent } : undefined;
 
+  // Hover-revealed actions are PINNED to the right edge, so a hidden cluster
+  // reserves ZERO flow width — otherwise a multi-button cluster (e.g. a queue
+  // row's 4 icon buttons) permanently steals ~100px from the row body via
+  // `shrink-0`, collapsing the flex-1 title cell and truncating the title even
+  // when nothing is shown. Mirrors the row-actions primitive's Pin approach; on
+  // reveal the cluster overlays the row's right edge (raised above the hit-area,
+  // so its buttons stay clickable). `actionsAlwaysVisible` actions instead stay
+  // in flow: they are part of the row layout and legitimately reserve their space.
   const actionsSpan = actions ? (
-    <span
-      onClick={(e) => e.stopPropagation()}
-      className={cn(
-        "ml-auto flex shrink-0 items-center gap-2xs",
-        // Raise above the stretched hit-area so the actions stay clickable
-        // (positioned siblings paint in DOM order — actions come after it).
-        interactive && "relative",
-        hoverRevealClass(revealed, { alwaysVisible: actionsAlwaysVisible }),
-      )}
-    >
-      {actions}
-    </span>
+    actionsAlwaysVisible ? (
+      <span
+        onClick={(e) => e.stopPropagation()}
+        className={cn(
+          "ml-auto flex shrink-0 items-center gap-2xs",
+          // Raise above the stretched hit-area so the actions stay clickable
+          // (positioned siblings paint in DOM order — actions come after it).
+          interactive && "relative",
+          hoverRevealClass(revealed, { alwaysVisible: true }),
+        )}
+      >
+        {actions}
+      </span>
+    ) : (
+      <Pin
+        to="right"
+        offset="xs"
+        onClick={(e) => e.stopPropagation()}
+        className={cn("flex items-center gap-2xs", hoverRevealClass(revealed))}
+      >
+        {actions}
+      </Pin>
+    )
   ) : null;
 
   // SPLIT PATH — an interactive row that also carries actions. The interactive
@@ -173,7 +193,8 @@ export function Row({
 
   // SINGLE-ELEMENT PATH — no actions (any element), or a non-interactive
   // container row with actions (a <div> may legally nest the action buttons).
-  // Byte-for-byte the original markup.
+  // When the actions are hover-revealed they render as a right-edge Pin, so the
+  // row must establish the positioning context (`relative`) for it to anchor to.
   return (
     <Line
       as={Tag}
@@ -182,7 +203,7 @@ export function Row({
       disabled={isButton ? disabled : undefined}
       aria-current={isButton && selected ? true : undefined}
       {...revealHandlers}
-      className={chromeClass}
+      className={cn(chromeClass, needsReveal && "relative")}
       style={style}
       {...restProps}
     >
