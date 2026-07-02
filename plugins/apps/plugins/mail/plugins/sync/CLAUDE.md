@@ -196,8 +196,6 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
 - Core:
   - Uses: `apps/mail/mail-core.MailAttachmentSchema`, `apps/mail/mail-core.MailMessageSchema`, `infra/endpoints.defineEndpoint`
   - Exports: Values: `ATTACHMENT_SCAN_DELTA_WINDOW_DAYS`, `BACKFILL_WINDOW_DAYS`, `mailHydrateMessageEndpoint`, `mailSearchEndpoint`, `mailSyncEndpoint`, `MAX_ATTACHMENT_SCAN_PAGES`, `MAX_BACKFILL_MESSAGES`
-- Cross-plugin:
-  - Endpoint callers: `search`
 - Sub-plugins:
   - **`auto-resume`** — Auto-resumes Mail sync when the Gmail scope is (re)granted: an app-wide headless listener that POSTs the sync kick endpoint on the connect edge.
 

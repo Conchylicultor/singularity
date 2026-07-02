@@ -5,7 +5,7 @@ import { mailViewTitle } from "./internal/view-title";
 
 // The thread-list column (Miller column 1 of the Mail app). `segment: "v/:view"`
 // makes `/mail/v/<view>` resolve here as a fresh root; selecting a row pushes
-// `threadPane` (`t/:threadId`) as the next column. `width` is the default column
+// `threadPane` (`thread/:threadId`) as the next column. `width` is the default column
 // width the Miller layout reads.
 export const mailboxViewPane = Pane.define({
   id: "mail-view",

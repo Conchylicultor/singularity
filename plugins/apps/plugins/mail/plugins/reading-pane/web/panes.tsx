@@ -13,7 +13,7 @@ import { MessageList } from "./components/message-list";
 // `Pane.Register` in the default plugin definition (`index.ts`).
 export const threadPane = Pane.define({
   id: "mail-thread",
-  segment: "t/:threadId",
+  segment: "thread/:threadId",
   component: ThreadPaneView,
   width: 640,
   // No existence gate: a missing/deleted thread resolves to an empty message

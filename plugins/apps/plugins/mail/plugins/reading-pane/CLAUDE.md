@@ -15,7 +15,7 @@ hydrated on demand (below).
 
 ## Web
 
-`threadPane` (`Pane.define`, `segment: "t/:threadId"`, width 640) is **exported
+`threadPane` (`Pane.define`, `segment: "thread/:threadId"`, width 640) is **exported
 from `web/index.ts`** so the thread-list plugin can open + track it, and
 registered via `Pane.Register` in the plugin definition. Open it with
 `openPane(threadPane, { threadId }, { mode: "push" })`.

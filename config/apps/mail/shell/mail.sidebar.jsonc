@@ -1,4 +1,4 @@
-// @hash 0f83806eb4f5
+// @hash 879bc70494c2
 {
   // Entries: the mailbox nav (system views + labels, apps.mail.mailbox) and the
   // Search entry (apps.mail.search). Reorder/hide here — empty `items` keeps the
