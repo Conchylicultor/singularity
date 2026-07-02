@@ -1,5 +1,5 @@
 import { stat } from "node:fs/promises";
-import { libpqSubprocessEnv } from "./pool";
+import { libpqSubprocessEnv, openShortLivedClient } from "./pool";
 
 export type TableStat = {
   name: string;
@@ -28,76 +28,34 @@ export async function backupDatabase(
   }
 }
 
-async function getTableNames(file: string): Promise<string[]> {
+// Table + estimated-row stats read straight from the source DB catalog. This is
+// a cheap metadata query against pg_stat_user_tables — it never decompresses the
+// dump. `n_live_tup` is Postgres's own live-row estimate (kept current by
+// autovacuum/ANALYZE), which is exactly what the cosmetic manifest label needs;
+// the previous approach ran `pg_restore --data-only` to re-decompress the whole
+// dump and count every row line-by-line in JS, roughly doubling the dump cost.
+async function readTableStats(name: string): Promise<TableStat[]> {
+  const pool = openShortLivedClient(name);
   try {
-    const proc = Bun.spawn(["pg_restore", "--list", file], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    await proc.exited;
-    const output = await new Response(proc.stdout).text();
-    return output
-      .split("\n")
-      .flatMap((line) => {
-        if (line.startsWith(";") || !line.trim()) return [];
-        const parts = line.trim().split(/\s+/);
-        if (parts[3] === "TABLE" && parts[4] !== "DATA") return [parts[5] ?? ""];
-        return [];
-      })
-      .filter(Boolean);
-  // eslint-disable-next-line promise-safety/no-bare-catch -- best-effort pg_restore introspection; any failure (spawn error, parse error) safely degrades to empty table list
-  } catch {
-    return [];
+    const result = await pool.query<{ relname: string; n_live_tup: string }>(
+      `SELECT relname, n_live_tup FROM pg_stat_user_tables ORDER BY relname`,
+    );
+    return result.rows.map((r) => ({
+      name: r.relname,
+      rowCount: Number(r.n_live_tup),
+    }));
+  } finally {
+    await pool.end();
   }
-}
-
-async function getRowCounts(file: string): Promise<Record<string, number>> {
-  const counts: Record<string, number> = {};
-  try {
-    const proc = Bun.spawn(["pg_restore", "--data-only", "-f", "-", file], {
-      stdout: "pipe",
-      stderr: "pipe",
-    });
-    await proc.exited;
-    const output = await new Response(proc.stdout).text();
-
-    let currentTable: string | null = null;
-    let count = 0;
-
-    for (const line of output.split("\n")) {
-      if (line.startsWith("COPY ")) {
-        const parenIdx = line.indexOf(" (");
-        const tableSpec = line.slice(5, parenIdx);
-        const dotIdx = tableSpec.lastIndexOf(".");
-        const raw = dotIdx >= 0 ? tableSpec.slice(dotIdx + 1) : tableSpec;
-        currentTable = raw.replace(/^"|"$/g, "");
-        count = 0;
-      } else if (line === "\\.") {
-        if (currentTable !== null) counts[currentTable] = count;
-        currentTable = null;
-      } else if (currentTable !== null && line !== "") {
-        count++;
-      }
-    }
-  // eslint-disable-next-line promise-safety/no-bare-catch
-  } catch {
-    // noop
-  }
-  return counts;
 }
 
 export async function inspectBackup(
   file: string,
   name: string,
 ): Promise<BackupInfo> {
-  const [fileStat, tableNames, rowCounts] = await Promise.all([
+  const [fileStat, tables] = await Promise.all([
     stat(file),
-    getTableNames(file),
-    getRowCounts(file),
+    readTableStats(name),
   ]);
-  const tables: TableStat[] = tableNames.map((tableName) => ({
-    name: tableName,
-    rowCount: rowCounts[tableName] ?? 0,
-  }));
   return { name, sizeBytes: fileStat.size, tables };
 }

@@ -26,13 +26,17 @@ export async function assembleArchive(
 
   await mkdir(stagingDir, { recursive: true });
 
+  // Assemble every source concurrently — each writes into its own staging
+  // subdir, so they are independent. Promise.all preserves contribution order
+  // in the reports array.
   const sources = BackupSource.getContributions();
-  const reports: BackupSourceReport[] = [];
-  for (const source of sources) {
-    const dir = join(stagingDir, source.id);
-    await mkdir(dir, { recursive: true });
-    reports.push(await source.assemble(dir));
-  }
+  const reports: BackupSourceReport[] = await Promise.all(
+    sources.map(async (source) => {
+      const dir = join(stagingDir, source.id);
+      await mkdir(dir, { recursive: true });
+      return source.assemble(dir);
+    }),
+  );
 
   const manifest: BackupManifest = {
     version: 2,

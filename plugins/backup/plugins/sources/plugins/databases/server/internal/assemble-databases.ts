@@ -22,20 +22,27 @@ export async function assembleDatabases(
     (name) => !name.startsWith("claude-") && !name.startsWith("att-"),
   );
 
-  const items = [];
-  let sizeBytes = 0;
-  for (const db of targetDbs) {
-    const out = join(dir, `${db}.dump`);
-    await backupDatabase(db, out);
-    const info = await inspectBackup(out, db);
-    const rows = info.tables.reduce((acc, t) => acc + t.rowCount, 0);
-    items.push({
-      label: db,
-      detail: `${info.tables.length} tables / ${rows} rows`,
-      count: info.tables.length,
-    });
-    sizeBytes += info.sizeBytes;
-  }
+  // Dump every target DB concurrently — each pg_dump is an independent
+  // subprocess writing its own file, so there is no cross-DB ordering.
+  const dumped = await Promise.all(
+    targetDbs.map(async (db) => {
+      const out = join(dir, `${db}.dump`);
+      await backupDatabase(db, out);
+      const info = await inspectBackup(out, db);
+      const rows = info.tables.reduce((acc, t) => acc + t.rowCount, 0);
+      return {
+        item: {
+          label: db,
+          detail: `${info.tables.length} tables / ${rows} rows`,
+          count: info.tables.length,
+        },
+        sizeBytes: info.sizeBytes,
+      };
+    }),
+  );
+
+  const items = dumped.map((d) => d.item);
+  const sizeBytes = dumped.reduce((acc, d) => acc + d.sizeBytes, 0);
 
   return { id: "databases", name: "Databases", skipped: false, items, sizeBytes };
 }
