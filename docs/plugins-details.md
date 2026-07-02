@@ -1387,7 +1387,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/build/server/internal/tables.ts`
     - Exports: Values: `_buildRuns`
     - Register: `defineJob('build.run')`, `defineJob('build.run.debounced')`
-    - Resources: `build.history` (push), `build.mainAheadCount` (push)
     - Routes: `POST /api/build`
   - Core:
     - Uses: `infra/endpoints.defineEndpoint`, `primitives/commit-list.CommitRowSchema`, `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
@@ -1590,7 +1589,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_category`)
         - Exports: Values: `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`, `conversationCategoryConfig`
         - Register: `defineJob('conversation-category.classify')`
-        - Resources: `conversation-categories` (push)
         - Routes: `POST /api/conversation-category/:conversationId/classify`, `POST /api/conversation-category/:conversationId`, `DELETE /api/conversation-category/:conversationId`
       - Cross-plugin:
         - Imported by: `stats/commits`
@@ -1607,7 +1605,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)
         - Exports: Values: `conversationPreprompt`, `conversationPrepromptsResource`, `recordConversationPreprompt`, `recordPrepromptJob`
         - Register: `defineJob('conversation-preprompt.record')`
-        - Resources: `conversation-preprompts` (push)
       - Shared:
         - Exports: Types: `ConversationPreprompt`, `ConversationPrepromptsPayload`, `PrepromptIcon`; Values: `ConversationPrepromptSchema`, `ConversationPrepromptsPayloadSchema`, `conversationPrepromptsResource`
     - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
@@ -1620,7 +1617,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Entity extension of: `tasks/tasks-core` (table `conversations_ext_progress`)
         - Exports: Values: `classifyProgressJob`, `conversationProgress`, `conversationProgressResource`, `markProgressPushedJob`
         - Register: `defineJob('conversation-progress.classify')`, `defineJob('conversation-progress.mark-pushed')`
-        - Resources: `conversation-progress` (push)
     - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
       - Plugins:
         - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
@@ -2030,7 +2026,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
             - Entity extension of: `tasks/tasks-core` (table `conversations_ext_notes`)
             - Exports: Values: `conversationNotes`, `conversationNotesResource`
-            - Resources: `conversation-notes` (push)
             - Routes: `PUT /api/conversation-notes/:conversationId`, `DELETE /api/conversation-notes/:conversationId`
           - Shared:
             - Exports: Types: `ConversationNote`, `ConversationNotesPayload`; Values: `ConversationNoteSchema`, `ConversationNotesPayloadSchema`, `conversationNotesResource`, `deleteNote`, `upsertNote`
@@ -2111,7 +2106,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Entity extension of: `tasks/tasks-core` (table `conversations_ext_turn_summary`)
             - Exports: Values: `generateTurnSummaryJob`, `turnSummaries`, `turnSummariesResource`
             - Register: `defineJob('turn-summary.generate')`
-            - Resources: `turn-summaries` (push)
           - Shared:
             - Exports: Types: `TurnSummariesPayload`, `TurnSummary`; Values: `TurnSummariesPayloadSchema`, `turnSummariesResource`, `turnSummaryConfig`, `TurnSummarySchema`
         - **`vscode`** — Opens the conversation's worktree in VSCode.
@@ -2156,7 +2150,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/rank.nextRankIn`, `primitives/rank.nextRankUnder`, `tasks/tasks-core._conversations`
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
             - Exports: Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
-            - Resources: `conversation-groups` (push)
             - Routes: `POST /api/conversation-groups`, `PATCH /api/conversation-groups/:id`, `DELETE /api/conversation-groups/:id`, `POST /api/conversation-groups/:id/members`, `DELETE /api/conversation-groups/members/:conversationId`
           - Cross-plugin:
             - Imported by: `improve`
@@ -2177,7 +2170,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Entity extension of: `tasks/tasks-core` (table `conversations_ext_queue`)
             - Exports: Values: `conversationsQueue`, `endRank`, `findTaskIdForConversation`, `lockDeck`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `rankJoiningGroup`, `reseatGroupMembers`, `seedRankJob`, `upsertRank`
             - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.pin-revalidate')`, `defineJob('queue.advance-pin')`, `defineJob('queue.task-status-pin')`
-            - Resources: `queue-ranks` (push)
             - Routes: `POST /api/conversations-queue/reorder`, `POST /api/conversations-queue/promote`, `POST /api/conversations-queue/demote`, `POST /api/conversations-queue/step-down`, `POST /api/conversations-queue/rerank`
           - Core:
             - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`, `primitives/rank.RankSchema`
@@ -3291,6 +3283,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`css-vars-supplied`**
             - **`data-migration-dml-only`**
             - **`data-views-in-sync`**
+            - **`eager-tier-in-sync`**
             - **`fields-eager-in-sync`**
             - **`inherited-theme-defaults-scoped`**
             - **`keyed-resource-scope`**
@@ -3323,8 +3316,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`type-check`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: `config_v2.APP_SCOPE_DIR`, `config_v2.computeHash`, `config_v2.effective`, `config_v2.propagate`, `config_v2.readonlyProxy`, `config_v2.stringifyConfigValue`, `framework/plugin-id.asPath`, `framework/plugin-id.asPluginId`, `plugin-meta/barrel-import.AUTO_STUB_CSS`, `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`, `plugin-meta/barrel-import.AutoStubEntry`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/barrel-import.setPreBarrelImportGuard`, `plugin-meta/closure.classifyEdges`, `plugin-meta/closure.disabledClosure`, `plugin-meta/facets.DocFact`, `plugin-meta/facets.Facet`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/parse-utils.findMarkerCalls`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/parse-utils.matchBracket`, `plugin-meta/parse-utils.readIfExists`, `plugin-meta/parse-utils.walkFiles`, `plugin-meta/plugin-tree.buildPluginTree`, `plugin-meta/plugin-tree.PluginNode`, `plugin-meta/plugin-tree.PluginTree`
-            - Exports: Types: `CodegenStep`, `DiscoveredCollectedDir`, `GenerateDocsOptions`, `OriginAnnotationsPreparer`, `OriginAnnotationsProvider`, `OriginDefaultsPreparer`, `OriginDefaultsProvider`, `PreBarrelManifest`, `RegenCodegenOptions`, `RegistryGenContext`, `ReorderableSlotEntry`; Values: `barrelStubsPath`, `buildBarrelFreeTree`, `buildEnrichedTree`, `buildRegistryGenContext`, `clearCompositionRegistries`, `collectAllPlugins`, `collectDataViews`, `collectedDirCompositionRegistryPath`, `collectedDirRegistryPath`, `collectFieldEagerBarrels`, `collectTokenGroupVars`, `computeDisabledIds`, `customUtilitiesManifestPath`, `dataViewsManifestPath`, `discoverCollectedDirs`, `extractRuntimeImportSpecifiers`, `fieldsEagerManifestPath`, `generateBarrelStubs`, `generateCompositionRegistry`, `generateConfigOrigins`, `generateCustomUtilities`, `generateDataViews`, `generateFieldsEager`, `generatePluginDocs`, `generatePluginRegistry`, `generateReorderableSlots`, `generateTokenGroupVars`, `loadConfigDescriptorsByOriginPath`, `parseCustomUtilities`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `preBarrelManifests`, `propagateConfigToUser`, `regenerateManifestCodegen`, `regenerateRegistryCodegen`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderCustomUtilities`, `renderDataViewsManifest`, `renderDetailsDoc`, `renderFieldsEagerManifest`, `renderPluginClaudeMd`, `renderReorderableSlotsManifest`, `renderTokenGroupVarsManifest`, `reorderableSlotsManifestPath`, `resolveImportSpecifier`, `resolveOriginAnnotations`, `resolveOriginDefaults`, `setDefaultOriginAnnotations`, `setDefaultOriginAnnotationsPreparer`, `setDefaultOriginDefaults`, `setDefaultOriginDefaultsPreparer`, `standardPluginDirs`, `tokenGroupVarsManifestPath`, `writePreBarrelManifest`
+            - Uses: `config_v2.APP_SCOPE_DIR`, `config_v2.computeHash`, `config_v2.effective`, `config_v2.propagate`, `config_v2.readonlyProxy`, `config_v2.stringifyConfigValue`, `framework/plugin-id.asPath`, `framework/plugin-id.asPluginId`, `plugin-meta/barrel-import.AUTO_STUB_CSS`, `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`, `plugin-meta/barrel-import.AutoStubEntry`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/barrel-import.setPreBarrelImportGuard`, `plugin-meta/closure.classifyEdges`, `plugin-meta/closure.disabledClosure`, `plugin-meta/facets.DocFact`, `plugin-meta/facets.Facet`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/parse-utils.findMarkerCalls`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/parse-utils.matchBracket`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.readIfExists`, `plugin-meta/parse-utils.walkFiles`, `plugin-meta/plugin-tree.buildPluginTree`, `plugin-meta/plugin-tree.PluginNode`, `plugin-meta/plugin-tree.PluginTree`
+            - Exports: Types: `BootCriticalOwner`, `CodegenStep`, `CollectedRawEntry`, `DiscoveredCollectedDir`, `EagerTierResult`, `GenerateDocsOptions`, `OriginAnnotationsPreparer`, `OriginAnnotationsProvider`, `OriginDefaultsPreparer`, `OriginDefaultsProvider`, `PreBarrelManifest`, `RegenCodegenOptions`, `RegistryGenContext`, `ReorderableSlotEntry`, `WatchedSlotHit`; Values: `barrelStubsPath`, `buildBarrelFreeTree`, `buildEnrichedTree`, `buildRegistryGenContext`, `clearCompositionRegistries`, `collectAllPlugins`, `collectDataViews`, `collectedDirCompositionRegistryPath`, `collectedDirRegistryPath`, `collectEntriesWithDeps`, `collectFieldEagerBarrels`, `collectTokenGroupVars`, `computeDisabledIds`, `computeEagerTier`, `customUtilitiesManifestPath`, `dataViewsManifestPath`, `discoverCollectedDirs`, `eagerTierManifestPath`, `extractRuntimeImportSpecifiers`, `fieldsEagerManifestPath`, `generateBarrelStubs`, `generateCompositionRegistry`, `generateConfigOrigins`, `generateCustomUtilities`, `generateDataViews`, `generateEagerTier`, `generateFieldsEager`, `generatePluginDocs`, `generatePluginRegistry`, `generateReorderableSlots`, `generateTokenGroupVars`, `isAppContent`, `loadConfigDescriptorsByOriginPath`, `parseCustomUtilities`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `preBarrelManifests`, `propagateConfigToUser`, `regenerateManifestCodegen`, `regenerateRegistryCodegen`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderCustomUtilities`, `renderDataViewsManifest`, `renderDetailsDoc`, `renderEagerTierManifest`, `renderFieldsEagerManifest`, `renderPluginClaudeMd`, `renderReorderableSlotsManifest`, `renderTokenGroupVarsManifest`, `reorderableSlotsManifestPath`, `resolveImportSpecifier`, `resolveOriginAnnotations`, `resolveOriginDefaults`, `setDefaultOriginAnnotations`, `setDefaultOriginAnnotationsPreparer`, `setDefaultOriginDefaults`, `setDefaultOriginDefaultsPreparer`, `standardPluginDirs`, `tokenGroupVarsManifestPath`, `writePreBarrelManifest`
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
             - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/tooling/provision`, `framework/web-sdk`, `improve/element-picker`, `infra/asset-mirror`, `plugin-meta/facets`, `primitives/css/layout-harness`
@@ -3366,7 +3359,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `Core.Root` ← `apps-core.layout`, `apps.mail.sync.auto-resume`, `config_v2.staging`, `conversations.model-provider`, `debug.live-state-churn.emit`, `debug.render-profiler`, `debug.slow-ops`, `infra.health`, `primitives.command-palette`, `primitives.imperative-dialog`, `primitives.overscroll-hint`, `primitives.shortcuts`, `reorder.edit-mode`, `reports.crash`, `reports.endpoint-errors`, `reports.mutation-errors`, `reports.render-loop`, `shell.global-action-bar`, `shell.toast`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`, `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.tweakcn`
       - Core:
         - Uses: `framework/plugin-id.asPluginId`, `framework/tooling/collected-dir.defineCollectedDir`
-        - Exports: Types: `Contribution`, `DeferredLoadState`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineSlot`, `EAGER_EXCEPTIONS`, `getDeferredLoadState`, `isDeferredPluginPath`, `loadPlugins`, `markDeferredLoadComplete`, `markDeferredPluginsLoaded`, `partitionWebEntries`, `PluginProvider`, `PluginRuntimeContext`, `subscribeDeferredLoadState`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `useDeferredLoadState`, `webCollectedDir`
+        - Exports: Types: `Contribution`, `DeferredLoadState`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineSlot`, `getDeferredLoadState`, `isDeferredPluginPath`, `loadPlugins`, `markDeferredLoadComplete`, `markDeferredPluginsLoaded`, `partitionWebEntries`, `PluginProvider`, `PluginRuntimeContext`, `subscribeDeferredLoadState`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `useDeferredLoadState`, `webCollectedDir`
 
 - **`fullscreen`** — Toolbar toggle to enter / exit browser fullscreen.
   - Web:
@@ -5233,7 +5226,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
         - Exports: Types: `RecordNotificationInput`; Values: `_notifications`, `notificationsResource`, `recordNotification`, `setMutedByMetadata`
         - Register: `defineJob('notifications.ttl-cleanup')`
-        - Resources: `notifications` (push)
         - Routes: `POST /api/notifications`, `POST /api/notifications/dismiss-all`, `POST /api/notifications/mark-all-read`, `POST /api/notifications/:id/dismiss`
       - Cross-plugin:
         - Imported by: `apps/prototypes/gallery`, `apps/studio/release/release-logs`, `auth`, `build`, `build/build-fix`, `build/build-logs`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/investigate-event`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/summary`, `database/fork`, `debug/boot-profile`, `debug/queue`, `debug/reports`, `history/dialog`, `infra/events-test`, `page/inline-date`, `reports`, `reports/launch-fix`, `reports/mutation-errors`, `screenshot`, `screenshot/draw-on-app`, `shell/global-action-bar`, `tasks/task-draft-form`, `tasks/task-effort`, `tasks/task-preprompt`
@@ -5452,7 +5444,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `defineJob('task-title.on-conversation-created')`, `defineJob('task-title.on-user-turn-sent')`
       - Cross-plugin:
         - Imported by: `tasks`
-    - **`tasks-core`** — Schema + repository layer for the tasks/attempts/conversations FK cluster.
+    - **`tasks-core`** — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, independent of any (lazy) consumer UI. Schema + repository layer for the tasks/attempts/conversations FK cluster.
       - Server:
         - Uses: `database.db`, `database/derived-tables.DerivedTable`, `database/derived-views.View`, `infra/attachments.Attachments`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/events.defineTriggerEvent`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.isCanonicalWorktreePath`, `primitives/rank.nextRankUnder`, `primitives/rank.RankExecutor`
         - DB schema: `plugins/tasks/plugins/tasks-core/server/internal/mutations/cross-table.ts`, `plugins/tasks/plugins/tasks-core/server/internal/rollup-table.ts`, `plugins/tasks/plugins/tasks-core/server/internal/schema-attachments.ts`, `plugins/tasks/plugins/tasks-core/server/internal/schema.ts`, `plugins/tasks/plugins/tasks-core/server/internal/tables-events.ts`, `plugins/tasks/plugins/tasks-core/server/internal/tables.ts`, `plugins/tasks/plugins/tasks-core/server/internal/views.ts`

@@ -190,7 +190,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
-        - **`checks`** [42 sub-plugins] — Check runner and built-in checks for ./singularity check
+        - **`checks`** [43 sub-plugins] — Check runner and built-in checks for ./singularity check
         - **`codegen`** — Plugin doc generation and registry codegen
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
@@ -467,7 +467,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`task-preprompt`** — Per-task preprompt picker in the task detail pane; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
     - **`task-title`** — Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.
-    - **`tasks-core`** [load-bearing] — Schema + repository layer for the tasks/attempts/conversations FK cluster.
+    - **`tasks-core`** [load-bearing] — tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, independent of any (lazy) consumer UI. Schema + repository layer for the tasks/attempts/conversations FK cluster.
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:
