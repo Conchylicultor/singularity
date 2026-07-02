@@ -10,7 +10,7 @@ export { conversationNotesResource } from "./internal/resource";
 export default {
   description:
     "Per-conversation free-form notes, auto-saved to the server.",
-  contributions: [Resource.Declare(conversationNotesResource, { bootCritical: true })],
+  contributions: [Resource.Declare(conversationNotesResource)],
   httpRoutes: {
     [upsertNote.route]: handleUpsertNote,
     [deleteNote.route]: handleDeleteNote,

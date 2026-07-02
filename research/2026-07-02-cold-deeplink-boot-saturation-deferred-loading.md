@@ -165,6 +165,9 @@ main-thread lever needs follow-up #1/#2 to defer sonata/studio + the top-level d
    ancestor wins, shell auto-eager), and have codegen *automatically* keep any plugin with
    a `Core.Root`/`Core.Boot` contribution eager — so a new global listener can never be
    silently deferred. Removes the hand-maintained `EAGER_EXCEPTIONS`.
+   **Done — see research/2026-07-02-global-eager-tier-derived-from-markers.md** (the eager
+   tier is now derived from watched boot slots + bootCritical descriptors + the `dependsOn`
+   closure into `web-tiers.generated.ts`; both allowlists are deleted).
 2. **Route-closure eager set.** Defer shared domains (conversations/page/tasks) too when
    the boot route doesn't need them, driven by an explicit per-app dependency manifest —
    so a `/sonata` deep-link stops eagerly loading the agent-manager domain.

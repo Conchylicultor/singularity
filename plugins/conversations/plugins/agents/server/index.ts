@@ -44,7 +44,7 @@ export default {
     [launchAgent.route]: handleLaunch,
     [listAgentLaunches.route]: handleListLaunches,
   },
-  contributions: [Resource.Declare(agentsResource, { bootCritical: true }), Resource.Declare(agentLaunchesResource, { bootCritical: true }), View({ view: agents }), DerivedTable(taskLatestConversationSpec), ContainerTask({ id: AGENTS_META_TASK_ID })],
+  contributions: [Resource.Declare(agentsResource), Resource.Declare(agentLaunchesResource), View({ view: agents }), DerivedTable(taskLatestConversationSpec), ContainerTask({ id: AGENTS_META_TASK_ID })],
   onReady: async () => {
     await ensureAgentsMetaTask();
     await backfillAgentSvgNodes();

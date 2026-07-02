@@ -34,6 +34,14 @@ export interface ResourceDescriptor<T, P extends Record<string, string> = Record
    * research/2026-06-05-global-live-state-delta-sync.md.
    */
   keyed?: { keyOf: (row: unknown) => string };
+  /**
+   * Marks a resource hydrated by boot-snapshot before first paint. Declared here
+   * — on the shared descriptor — so build-time codegen can statically see which
+   * plugin owns a boot-critical descriptor (the eager-tier generator scans for
+   * it), and the server derives its `Resource.Declare` payload from it. Single
+   * source of truth: the server no longer restates it in `Declare` opts.
+   */
+  bootCritical?: true;
   /** Phantom — exists only at the type level so `useResource` can infer `P`. */
   readonly __params?: P;
 }
@@ -67,8 +75,9 @@ export function resourceDescriptor<T, P extends Record<string, string> = Record<
   key: string,
   schema: ZodType<T>,
   initialData: T,
+  opts?: { bootCritical?: true },
 ): ResourceDescriptor<T, P> & { keyed?: never } {
-  const d = { key, schema, initialData };
+  const d = { key, schema, initialData, ...opts };
   registerDescriptor(d as ResourceDescriptor<unknown>);
   return d;
 }
@@ -86,8 +95,9 @@ export function keyedResourceDescriptor<T extends unknown[], P extends Record<st
   schema: ZodType<T>,
   initialData: T,
   keyOf: (row: unknown) => string,
+  opts?: { bootCritical?: true },
 ): ResourceDescriptor<T, P> & { keyed: { keyOf: (row: unknown) => string } } {
-  const d = { key, schema, initialData, keyed: { keyOf } };
+  const d = { key, schema, initialData, keyed: { keyOf }, ...opts };
   registerDescriptor(d as ResourceDescriptor<unknown>);
   return d;
 }
@@ -101,8 +111,9 @@ export function centralResourceDescriptor<T, P extends Record<string, string> = 
   key: string,
   schema: ZodType<T>,
   initialData: T,
+  opts?: { bootCritical?: true },
 ): ResourceDescriptor<T, P> & { keyed?: never } {
-  const d = { key, origin: "central" as const, schema, initialData };
+  const d = { key, origin: "central" as const, schema, initialData, ...opts };
   registerDescriptor(d as ResourceDescriptor<unknown>);
   return d;
 }

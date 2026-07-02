@@ -15,7 +15,6 @@
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_queue`)
   - Exports: Values: `conversationsQueue`, `endRank`, `findTaskIdForConversation`, `lockDeck`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `rankJoiningGroup`, `reseatGroupMembers`, `seedRankJob`, `upsertRank`
   - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.pin-revalidate')`, `defineJob('queue.advance-pin')`, `defineJob('queue.task-status-pin')`
-  - Resources: `queue-ranks` (push)
   - Routes: `POST /api/conversations-queue/reorder`, `POST /api/conversations-queue/promote`, `POST /api/conversations-queue/demote`, `POST /api/conversations-queue/step-down`, `POST /api/conversations-queue/rerank`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`, `primitives/rank.RankSchema`

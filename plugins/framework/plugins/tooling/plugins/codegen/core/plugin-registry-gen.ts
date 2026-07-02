@@ -122,7 +122,7 @@ export function standardPluginDirs(root: string): Set<string> {
 
 // ── Entry collection ───────────────────────────────────────────────
 
-interface CollectedRawEntry {
+export interface CollectedRawEntry {
   pluginPath: string;
   importPath: string;
   id: string;
@@ -262,6 +262,39 @@ function buildDepsForDir(
   return result;
 }
 
+// ── Filtered entries + pruned deps ─────────────────────────────────
+//
+// The disabled-closure filter is UNCONDITIONAL (driven by the committed
+// `singularity.disabled` seeds), never the optional `bundle` — so the
+// `plugins-registry-in-sync` check, which re-renders without `bundle`, sees the
+// identical filtered output. Each surviving entry's `dependsOn` is pruned to the
+// surviving `pluginPath`s: the disabled filter can drop a dependency
+// unconditionally (not only under `bundle`), and a dangling dep on a non-emitted
+// plugin would break the loader's topo-sort. Shared by `renderCollectedDirRegistry`
+// (so its output is byte-identical) AND the eager-tier generator, which needs the
+// exact same filtered web entry set + pruned `dependsOn` graph.
+export function collectEntriesWithDeps(
+  ctx: RegistryGenContext,
+  dir: string,
+  // See `renderCollectedDirRegistry`: restrict to a composition's bundle when set.
+  bundle?: Set<string>,
+): { entries: CollectedRawEntry[]; deps: Map<string, string[]> } {
+  const { disabled } = ctx;
+  const allEntries = collectEntries(ctx.tree, dir);
+  const rawDeps = buildDepsForDir(ctx.root, allEntries, dir);
+  const entries = (bundle ? allEntries.filter((e) => bundle.has(e.id)) : allEntries)
+    .filter((e) => !disabled.has(asPluginId(e.id)));
+  const survivingPaths = new Set(entries.map((e) => e.pluginPath));
+  const deps = new Map<string, string[]>();
+  for (const e of entries) {
+    const entryDeps = (rawDeps.get(e.pluginPath) ?? []).filter((d) =>
+      survivingPaths.has(d),
+    );
+    if (entryDeps.length > 0) deps.set(e.pluginPath, entryDeps);
+  }
+  return { entries, deps };
+}
+
 // ── Renderer ───────────────────────────────────────────────────────
 
 export function renderCollectedDirRegistry(opts: {
@@ -276,19 +309,8 @@ export function renderCollectedDirRegistry(opts: {
   bundle?: Set<string>;
 }): string {
   const { ctx, def, bundle } = opts;
-  const { disabled } = ctx;
-  const allEntries = collectEntries(ctx.tree, def.dir);
-  const deps = buildDepsForDir(ctx.root, allEntries, def.dir);
+  const { entries, deps } = collectEntriesWithDeps(ctx, def.dir, bundle);
   const exportName = `${def.dir}Entries`;
-
-  // The disabled-closure filter is UNCONDITIONAL (driven by the committed
-  // `singularity.disabled` seeds), never the optional `bundle` — so the
-  // `plugins-registry-in-sync` check, which re-renders without `bundle`, sees
-  // the identical filtered output. `survivingPaths` is derived from the
-  // post-filter `entries`, so `dependsOn` is pruned to survivors.
-  const entries = (bundle ? allEntries.filter((e) => bundle.has(e.id)) : allEntries)
-    .filter((e) => !disabled.has(asPluginId(e.id)));
-  const survivingPaths = new Set(entries.map((e) => e.pluginPath));
 
   const lines: string[] = [];
   lines.push(HEADER);
@@ -302,10 +324,7 @@ export function renderCollectedDirRegistry(opts: {
   lines.push("");
   lines.push(`export const ${exportName}: CollectedEntry[] = [`);
   for (const e of entries) {
-    // Always prune `dependsOn` to surviving paths: the disabled filter can drop
-    // a dependency unconditionally (not only under `bundle`), and a dangling
-    // dep on a non-emitted plugin would break the loader's topo-sort.
-    const entryDeps = (deps.get(e.pluginPath) ?? []).filter((d) => survivingPaths.has(d));
+    const entryDeps = deps.get(e.pluginPath) ?? [];
     const depsLiteral = entryDeps.length > 0
       ? `[${entryDeps.map((d) => JSON.stringify(d)).join(", ")}]`
       : "[]";
@@ -328,8 +347,12 @@ export function collectedDirRegistryPath(
 
 export async function generatePluginRegistry(opts: {
   root: string;
+  // Optional prebuilt context so the pipeline can share ONE tree walk between the
+  // registry and eager-tier generators (both are pure functions of the same
+  // barrel-free tree). Built here when absent so standalone callers still work.
+  ctx?: RegistryGenContext;
 }): Promise<void> {
-  const ctx = await buildRegistryGenContext(opts.root);
+  const ctx = opts.ctx ?? (await buildRegistryGenContext(opts.root));
   const defs = discoverCollectedDirs(opts.root);
   for (const def of defs) {
     const file = collectedDirRegistryPath(def);

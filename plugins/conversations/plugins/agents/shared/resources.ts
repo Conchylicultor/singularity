@@ -30,6 +30,7 @@ export const agentsResource = resourceDescriptor<Agent[]>(
   "agents",
   z.array(AgentSchema),
   [],
+  { bootCritical: true },
 );
 // Keyed delta-sync: mirrors the server resource's `mode: "keyed"` + `keyOf`.
 // Must stay in lockstep — a plain `resourceDescriptor` here crashes the client
@@ -39,4 +40,5 @@ export const agentLaunchesResource = keyedResourceDescriptor<AgentLaunchWithStat
   z.array(AgentLaunchWithStatusSchema),
   [],
   (row) => (row as AgentLaunchWithStatus).id,
+  { bootCritical: true },
 );

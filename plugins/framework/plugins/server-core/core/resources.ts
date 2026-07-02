@@ -59,17 +59,20 @@ export type DependsOnEntry<P extends ResourceParams = ResourceParams> = RtDep<P>
 export type RecomputeIntent = RtRecomputeIntent;
 
 // Resource.Declare stays here — its ~37 contributors import it from server-core.
-// `bootCritical` is an optional opt-in: a param-less global resource flagged
-// boot-critical is warmed server-side and hydrated client-side before first
-// paint. Consumers read it via the generic collection
-// (`Resource.Declare.getContributions().filter(c => c.bootCritical)`), never by
-// naming a specific resource. See research/2026-06-14-global-cold-load-instant-boot.md.
+// `bootCritical` is a param-less global resource's opt-in to being warmed
+// server-side and hydrated client-side before first paint. It is declared ONCE,
+// on the shared client `ResourceDescriptor`
+// (`@plugins/primitives/plugins/live-state/core`), and threaded through
+// `defineResource`/`defineExternalResource` onto the resource object — so
+// `Declare` DERIVES it from the resource here rather than restating it. Consumers
+// read the set generically (`Resource.Declare.getContributions().filter(c => c.bootCritical)`),
+// never by naming a specific resource. See research/2026-06-14-global-cold-load-instant-boot.md.
 //
-// Declare takes the resource (its `key`/`mode` satisfy the payload shape) plus
-// an optional opts object so a call site reads
-// `Resource.Declare(myResource, { bootCritical: true })`. Both args are merged
-// into one contribution payload; the underlying token still owns the registry
-// and the generic `getContributions()` read side.
+// Declare takes ONE arg — the resource — and builds its contribution payload
+// explicitly from the resource's own `key`/`mode`/`bootCritical`. There is no
+// opts param, so a stale `Declare(r, { bootCritical: true })` is a compile error
+// that forces the flag onto the descriptor factory call. The underlying token
+// still owns the registry and the generic `getContributions()` read side.
 type ResourceDeclarePayload = {
   key: string;
   mode: ResourceMode;
@@ -80,13 +83,13 @@ const declareToken = defineServerContribution<ResourceDeclarePayload>(
   "resource.declare",
 );
 
-const declareResource = ((
-  resource: ResourceDeclarePayload,
-  opts?: { bootCritical?: boolean },
-) => declareToken({ ...resource, ...opts })) as typeof declareToken & {
-  (resource: ResourceDeclarePayload, opts?: { bootCritical?: boolean }): ReturnType<
-    typeof declareToken
-  >;
+const declareResource = ((resource: ResourceDeclarePayload) =>
+  declareToken({
+    key: resource.key,
+    mode: resource.mode,
+    bootCritical: resource.bootCritical,
+  })) as typeof declareToken & {
+  (resource: ResourceDeclarePayload): ReturnType<typeof declareToken>;
 };
 declareResource.getContributions = declareToken.getContributions;
 

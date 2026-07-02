@@ -2,7 +2,11 @@ import { setPreBarrelImportGuard } from "@plugins/plugin-meta/plugins/barrel-imp
 import { generateBarrelStubs } from "./barrel-stubs-gen";
 import { generateConfigOrigins } from "./config-origin-gen";
 import { generatePluginDocs } from "./docgen";
-import { generatePluginRegistry } from "./plugin-registry-gen";
+import {
+  buildRegistryGenContext,
+  generatePluginRegistry,
+} from "./plugin-registry-gen";
+import { generateEagerTier } from "./eager-tier-gen";
 import { generateTokenGroupVars } from "./token-group-vars-gen";
 import {
   preBarrelManifests,
@@ -60,14 +64,24 @@ export interface RegenCodegenOptions {
  * Runs FIRST in build — before central is spawned (its `plugins.generated.ts`
  * must be in sync) and before migrations. Barrel stubs must precede the registry
  * because registry generation imports barrels under the stub set.
+ *
+ * The plugin registry and the eager-tier manifest are both pure functions of the
+ * SAME barrel-free tree + disabled closure, so one context is built here and
+ * threaded through both — one tree walk, not two. The eager-tier step runs after
+ * the registry (it consumes the same filtered web-entry set + `dependsOn` graph)
+ * and may throw the reachability error, which correctly fails the build.
  */
 export async function regenerateRegistryCodegen({
   root,
   onStep = runInline,
 }: RegenCodegenOptions): Promise<void> {
   await onStep("barrelStubs", "barrel stubs", () => generateBarrelStubs({ root }));
+  const ctx = await buildRegistryGenContext(root);
   await onStep("pluginRegistry", "plugin registry", () =>
-    generatePluginRegistry({ root }),
+    generatePluginRegistry({ root, ctx }),
+  );
+  await onStep("eagerTier", "eager-tier manifest", () =>
+    generateEagerTier({ root, ctx }),
   );
 }
 

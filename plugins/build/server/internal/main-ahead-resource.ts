@@ -1,12 +1,10 @@
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
-import { MainAheadCountSchema } from "../../shared";
+import { mainAheadCountResource as mainAheadCountDescriptor } from "../../shared";
 import { getMainAhead } from "./git-status";
 
-export const mainAheadCountResource = defineResource({
-  key: "build.mainAheadCount",
+export const mainAheadCountResource = defineResource(mainAheadCountDescriptor, {
   mode: "push",
-  schema: MainAheadCountSchema,
   dependsOn: [
     {
       resource: refHeadResource,

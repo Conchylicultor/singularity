@@ -18,4 +18,5 @@ export const queueRanksResource = resourceDescriptor<QueueData>(
   "queue-ranks",
   QueueDataSchema,
   { ranks: [], pinnedConversationId: null },
+  { bootCritical: true },
 );

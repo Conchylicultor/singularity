@@ -1,18 +1,13 @@
 import { asc } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import {
-  ConversationCategoriesPayloadSchema,
-  type ConversationCategoriesPayload,
-} from "../../shared";
+import { conversationCategoriesResource as conversationCategoriesDescriptor } from "../../shared";
 import { conversationCategory } from "./tables";
 
 const t = conversationCategory.table;
 
-export const conversationCategoriesResource = defineResource<ConversationCategoriesPayload>({
-  key: "conversation-categories",
+export const conversationCategoriesResource = defineResource(conversationCategoriesDescriptor, {
   mode: "push",
-  schema: ConversationCategoriesPayloadSchema,
   loader: async () => {
     return db
       .select({

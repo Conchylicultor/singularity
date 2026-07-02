@@ -8,7 +8,7 @@ export type { PluginDefinition, LoadedPlugin, Contribution, DocMeta } from "./ty
 export { loadPlugins } from "./loader";
 export type { PluginEntry, PluginLoadError } from "./loader";
 export { topoSortPlugins } from "./topo";
-export { partitionWebEntries, isDeferredPluginPath, EAGER_EXCEPTIONS } from "./load-tiers";
+export { partitionWebEntries, isDeferredPluginPath } from "./load-tiers";
 export {
   useDeferredLoadState,
   getDeferredLoadState,

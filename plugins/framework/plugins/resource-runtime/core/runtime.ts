@@ -238,6 +238,13 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    * caller-context argument later is a non-breaking additive change.
    */
   authorize?: (params: P) => boolean | Promise<boolean>;
+  /**
+   * Boot-critical marker, threaded from the shared client descriptor through the
+   * two-arg `defineResource`/`defineExternalResource` form onto the returned
+   * `Resource`. Pure metadata: it does not affect loader/registry behavior — it
+   * only lets `Resource.Declare` derive the flag instead of restating it.
+   */
+  bootCritical?: true;
 }
 
 /**
@@ -267,7 +274,10 @@ export type ScopePolicy =
  * research/2026-06-20-global-enforce-keyed-resource-scope-coverage.md.
  */
 export type DefineResourceInput<T, P extends ResourceParams = ResourceParams> =
-  Omit<ResourceDefinition<T, P>, "mode" | "keyOf" | "identityTable" | "recompute"> & {
+  Omit<
+    ResourceDefinition<T, P>,
+    "mode" | "keyOf" | "identityTable" | "recompute" | "bootCritical"
+  > & {
     mode?: "push" | "invalidate";
     identityTable?: string;
   };
@@ -291,6 +301,13 @@ export interface ResourceContract<T, P extends ResourceParams = ResourceParams> 
   key: string;
   schema: ZodType<T>;
   keyed?: { keyOf: (row: unknown) => string };
+  /**
+   * Boot-critical marker, declared once on the shared client descriptor. Threaded
+   * through onto the returned `Resource` so `Resource.Declare` derives its payload
+   * from it instead of restating it in server-side opts. See the descriptor in
+   * `@plugins/primitives/plugins/live-state/core`.
+   */
+  bootCritical?: true;
   /** Phantom — carries `P` for inference, mirroring the client descriptor. */
   readonly __params?: P;
 }
@@ -345,6 +362,7 @@ function contractToDefinition<T, P extends ResourceParams>(
     schema: contract.schema,
     mode: contract.keyed ? "keyed" : (opts.mode ?? "invalidate"),
     keyOf: contract.keyed?.keyOf,
+    bootCritical: contract.bootCritical,
     loader: opts.loader,
     dependsOn: opts.dependsOn,
     identityTable: opts.identityTable,
@@ -361,6 +379,12 @@ export interface Resource<T, P extends ResourceParams = ResourceParams> {
   key: string;
   mode: ResourceMode;
   schema: ZodType<T>;
+  /**
+   * Boot-critical marker, derived from the shared client descriptor (via the
+   * two-arg `defineResource`/`defineExternalResource` form). `Resource.Declare`
+   * reads it to build its contribution payload — the single source of truth.
+   */
+  bootCritical?: true;
   load(params: P): Promise<T>;
 }
 
@@ -686,10 +710,24 @@ export interface ResourceRuntime {
    * change-feed can never reach them). Sets `entry.externalSource = true` for the
    * backstop check + `_debug` payload. See
    * research/2026-06-20-global-remove-hand-notify-dependson.md §2.
+   *
+   * Two shapes, mirroring `defineResource`:
+   *
+   * - Flat `(def)` — the loose `ResourceDefinition` (external resources are not
+   *   held to the `ScopePolicy` invariant — they have no DB feed to scope against).
+   * - Two-arg `(contract, serverOpts)` — derives `key`/`schema`/keyed-ness AND
+   *   `bootCritical` from the shared client descriptor so server and client can't
+   *   drift, exactly like `defineResource`'s two-arg form.
    */
-  defineExternalResource: <T, P extends ResourceParams = ResourceParams>(
-    def: ResourceDefinition<T, P>,
-  ) => ExternalResource<T, P>;
+  defineExternalResource: {
+    <T, P extends ResourceParams = ResourceParams>(
+      def: ResourceDefinition<T, P>,
+    ): ExternalResource<T, P>;
+    <T, P extends ResourceParams = ResourceParams>(
+      contract: ResourceContract<T, P>,
+      opts: ServerResourceOptions<T, P>,
+    ): ExternalResource<T, P>;
+  };
   notificationsWsHandler: WsHandler;
   handleResourceHttp: (
     req: Request,
@@ -1168,6 +1206,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       key: def.key,
       mode,
       schema: def.schema,
+      bootCritical: def.bootCritical,
       async load(params: P): Promise<T> {
         // Parse here too: this handle method is the one load path that bypasses
         // `timedLoad`, so it must validate to keep the guarantee total.
@@ -1214,9 +1253,25 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   }
 
   // Escape-hatch resource (truth outside Postgres): exposes a callable `notify`.
+  // Two shapes mirroring `defineResource`: the flat loose `ResourceDefinition`,
+  // and the `(contract, serverOpts)` form that reads key/schema/keyed-ness AND
+  // `bootCritical` off a shared client descriptor. External resources are NOT
+  // held to the keyed `ScopePolicy` invariant (no DB feed to scope against), so
+  // the two-arg overload takes plain `ServerResourceOptions`.
   function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
     def: ResourceDefinition<T, P>,
+  ): ExternalResource<T, P>;
+  function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
+    contract: ResourceContract<T, P>,
+    opts: ServerResourceOptions<T, P>,
+  ): ExternalResource<T, P>;
+  function defineExternalResource<T, P extends ResourceParams = ResourceParams>(
+    a: ResourceDefinition<T, P> | ResourceContract<T, P>,
+    opts?: ServerResourceOptions<T, P>,
   ): ExternalResource<T, P> {
+    const def = opts
+      ? contractToDefinition(a as ResourceContract<T, P>, opts)
+      : (a as ResourceDefinition<T, P>);
     return createResource(def, true);
   }
 

@@ -21,4 +21,5 @@ export const conversationNotesResource =
     "conversation-notes",
     ConversationNotesPayloadSchema,
     {},
+    { bootCritical: true },
   );

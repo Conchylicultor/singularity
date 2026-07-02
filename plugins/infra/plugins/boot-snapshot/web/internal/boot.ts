@@ -8,8 +8,8 @@ import { bootSnapshot } from "../../core";
 // Boot-readiness task: fetch every boot-critical resource in ONE request and seed the
 // live-state cache before first paint (no `pending` flash, no WS round-trip).
 //
-// The snapshot ships ONLY boot-critical resources (the server's single source —
-// `Resource.Declare(r, { bootCritical: true })`) and omits any whose loader failed this
+// The snapshot ships ONLY boot-critical resources (the single source is the shared
+// descriptor's `bootCritical: true`, which `Resource.Declare` derives) and omits any whose loader failed this
 // boot, so ITS KEYS are the authoritative set to hydrate. We resolve each key to its
 // client descriptor via the live-state descriptor registry (populated when each
 // descriptor module is evaluated, which happens before boot tasks run). A snapshot key

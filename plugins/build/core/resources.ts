@@ -13,6 +13,7 @@ export const mainAheadCountResource = resourceDescriptor<MainAheadCount>(
   "build.mainAheadCount",
   MainAheadCountSchema,
   { count: 0, commits: [] },
+  { bootCritical: true },
 );
 
 export const FrontendHashSchema = z.object({ hash: z.string(), buildId: z.string() });
@@ -21,6 +22,7 @@ export const frontendHashResource = resourceDescriptor<FrontendHash>(
   "build.frontendHash",
   FrontendHashSchema,
   { hash: "", buildId: "" },
+  { bootCritical: true },
 );
 
 export const BuildRunSchema = z.object({
@@ -38,4 +40,5 @@ export const buildHistoryResource = resourceDescriptor<BuildRun[]>(
   "build.history",
   z.array(BuildRunSchema),
   [],
+  { bootCritical: true },
 );

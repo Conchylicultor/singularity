@@ -34,7 +34,7 @@ export default {
   description:
     "Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.",
   contributions: [
-    Resource.Declare(queueRanksResource, { bootCritical: true }),
+    Resource.Declare(queueRanksResource),
     Trigger({ on: conversationCreated, do: seedRankJob, with: {}, oneShot: false }),
     // Authoritative pin revalidation on any conversation status change. Replaces
     // both the old conversationTurnCompleted→validatePinJob trigger and the

@@ -1,17 +1,15 @@
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import {
-  ConversationPrepromptsPayloadSchema,
+  conversationPrepromptsResource as conversationPrepromptsDescriptor,
   type ConversationPrepromptsPayload,
 } from "../../shared/schemas";
 import { conversationPreprompt } from "./tables";
 
 const t = conversationPreprompt.table;
 
-export const conversationPrepromptsResource = defineResource<ConversationPrepromptsPayload>({
-  key: "conversation-preprompts",
+export const conversationPrepromptsResource = defineResource(conversationPrepromptsDescriptor, {
   mode: "push",
-  schema: ConversationPrepromptsPayloadSchema,
   loader: async () => {
     const rows = await db
       .select({

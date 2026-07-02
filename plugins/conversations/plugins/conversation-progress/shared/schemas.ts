@@ -36,4 +36,5 @@ export const conversationProgressResource =
     "conversation-progress",
     ConversationProgressPayloadSchema,
     [],
+    { bootCritical: true },
   );

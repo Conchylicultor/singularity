@@ -25,6 +25,7 @@ export const releaseHistoryResource = resourceDescriptor<ReleaseRun[]>(
   "release.history",
   z.array(ReleaseRunSchema),
   [],
+  { bootCritical: true },
 );
 
 // In-memory preview state, keyed by runId. Truth lives in the server's preview
@@ -43,4 +44,5 @@ export const previewStateResource = resourceDescriptor<Record<string, Preview>>(
   "release.previews",
   z.record(z.string(), PreviewSchema),
   {},
+  { bootCritical: true },
 );

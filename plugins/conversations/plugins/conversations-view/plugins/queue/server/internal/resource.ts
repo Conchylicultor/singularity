@@ -1,6 +1,10 @@
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { QueueDataSchema, type QueueData, type QueueRankRow } from "../../core/resources";
+import {
+  queueRanksResource as queueRanksDescriptor,
+  type QueueData,
+  type QueueRankRow,
+} from "../../core/resources";
 import { conversationsQueue } from "./tables";
 import { getPinnedId } from "./pinned";
 
@@ -13,10 +17,8 @@ import { getPinnedId } from "./pinned";
 // the persisted pin. There is deliberately NO dependsOn the conversations
 // resource: a status tick does not change a rank row, and pin revalidation now
 // arrives via the explicit event.
-export const queueRanksResource = defineResource({
-  key: "queue-ranks",
+export const queueRanksResource = defineResource(queueRanksDescriptor, {
   mode: "push",
-  schema: QueueDataSchema,
   loader: async (): Promise<QueueData> => {
     const rows = await db
       .select({

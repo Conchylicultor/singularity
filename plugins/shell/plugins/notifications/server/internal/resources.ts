@@ -1,14 +1,11 @@
 import { desc, eq } from "drizzle-orm";
-import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { _notifications } from "./tables";
-import { NotificationSchema } from "../../shared/schema";
+import { notificationsResource as notificationsDescriptor } from "../../shared/resources";
 
-export const notificationsResource = defineResource({
-  key: "notifications",
+export const notificationsResource = defineResource(notificationsDescriptor, {
   mode: "push",
-  schema: z.array(NotificationSchema),
   loader: async () =>
     db
       // Explicit columns: dedupKey is a server-internal dedup mechanism and

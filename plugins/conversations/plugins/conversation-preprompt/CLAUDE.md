@@ -36,7 +36,6 @@ never the reverse) and the feature fully opt-in and removable.
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)
   - Exports: Values: `conversationPreprompt`, `conversationPrepromptsResource`, `recordConversationPreprompt`, `recordPrepromptJob`
   - Register: `defineJob('conversation-preprompt.record')`
-  - Resources: `conversation-preprompts` (push)
 - Shared:
   - Exports: Types: `ConversationPreprompt`, `ConversationPrepromptsPayload`, `PrepromptIcon`; Values: `ConversationPrepromptSchema`, `ConversationPrepromptsPayloadSchema`, `conversationPrepromptsResource`
 

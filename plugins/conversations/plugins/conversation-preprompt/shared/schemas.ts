@@ -47,4 +47,5 @@ export const conversationPrepromptsResource = resourceDescriptor<ConversationPre
   "conversation-preprompts",
   ConversationPrepromptsPayloadSchema,
   {},
+  { bootCritical: true },
 );

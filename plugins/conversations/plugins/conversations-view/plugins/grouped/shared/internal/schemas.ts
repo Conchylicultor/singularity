@@ -29,4 +29,5 @@ export const conversationGroupsResource = resourceDescriptor<ConversationGroupsP
   "conversation-groups",
   ConversationGroupsPayloadSchema,
   { groups: [], members: [] },
+  { bootCritical: true },
 );

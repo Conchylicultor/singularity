@@ -16,15 +16,28 @@ export {
   collectedDirRegistryPath,
   collectedDirCompositionRegistryPath,
   clearCompositionRegistries,
+  collectEntriesWithDeps,
   discoverCollectedDirs,
   generateCompositionRegistry,
   generatePluginRegistry,
   renderCollectedDirRegistry,
   buildRegistryGenContext,
   standardPluginDirs,
+  type CollectedRawEntry,
   type DiscoveredCollectedDir,
   type RegistryGenContext,
 } from "./plugin-registry-gen";
+
+export {
+  computeEagerTier,
+  eagerTierManifestPath,
+  generateEagerTier,
+  isAppContent,
+  renderEagerTierManifest,
+  type BootCriticalOwner,
+  type EagerTierResult,
+  type WatchedSlotHit,
+} from "./eager-tier-gen";
 
 // defineCollectedDir / CollectedDirDef / isCollectedDirDef now live in the
 // dependency-free leaf @plugins/framework/plugins/tooling/plugins/collected-dir/core

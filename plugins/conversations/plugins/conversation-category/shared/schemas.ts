@@ -20,4 +20,5 @@ export const conversationCategoriesResource = resourceDescriptor<ConversationCat
   "conversation-categories",
   ConversationCategoriesPayloadSchema,
   [],
+  { bootCritical: true },
 );

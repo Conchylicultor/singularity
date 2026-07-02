@@ -18,4 +18,5 @@ export const turnSummariesResource = resourceDescriptor<TurnSummariesPayload>(
   "turn-summaries",
   TurnSummariesPayloadSchema,
   {},
+  { bootCritical: true },
 );

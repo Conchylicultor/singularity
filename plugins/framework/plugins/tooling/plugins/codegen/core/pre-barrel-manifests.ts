@@ -15,6 +15,10 @@ import {
   fieldsEagerManifestPath,
   renderFieldsEagerManifest,
 } from "./fields-eager-gen";
+import {
+  eagerTierManifestPath,
+  renderEagerTierManifest,
+} from "./eager-tier-gen";
 
 /**
  * The single source of truth for the PRE-BARREL manifest set.
@@ -72,6 +76,19 @@ export const preBarrelManifests: readonly PreBarrelManifest[] = [
     id: "fieldsEager",
     path: fieldsEagerManifestPath,
     render: renderFieldsEagerManifest,
+  },
+  {
+    // The deferred web plugin tier. The web-sdk core barrel reaches it at
+    // module-load (`load-tiers.ts` imports `web-tiers.generated.ts`); its
+    // renderer is a barrel-free `skipBarrelImport` tree scan, so regenerating
+    // it pre-barrel is sound. Also generated earlier in
+    // `regenerateRegistryCodegen` (sharing the registry context — one tree
+    // walk, early reachability failure); this entry makes the pre-barrel
+    // freshness guard + completeness check cover it, and the phase-2 write is
+    // a no-op when phase 1 already ran.
+    id: "eagerTier",
+    path: eagerTierManifestPath,
+    render: renderEagerTierManifest,
   },
 ];
 

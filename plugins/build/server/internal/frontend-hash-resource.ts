@@ -1,14 +1,12 @@
 import { createHash } from "node:crypto";
 import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import { WEB_DIST_DIR } from "@plugins/infra/plugins/paths/server";
-import { FrontendHashSchema } from "../../shared";
+import { frontendHashResource as frontendHashDescriptor } from "../../shared";
 import { buildLog } from "./build-log";
 import { getServerBuildId } from "@plugins/build/plugins/server-build-id/server";
 
-export const frontendHashResource = defineExternalResource({
-  key: "build.frontendHash",
+export const frontendHashResource = defineExternalResource(frontendHashDescriptor, {
   mode: "push",
-  schema: FrontendHashSchema,
   loader: async () => ({ hash: await getFrontendHash(), buildId: getServerBuildId() ?? "" }),
 });
 

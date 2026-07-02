@@ -1,15 +1,13 @@
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import {
-  TurnSummariesPayloadSchema,
+  turnSummariesResource as turnSummariesDescriptor,
   type TurnSummariesPayload,
 } from "../../shared";
 import { turnSummaries } from "./tables";
 
-export const turnSummariesResource = defineResource<TurnSummariesPayload>({
-  key: "turn-summaries",
+export const turnSummariesResource = defineResource(turnSummariesDescriptor, {
   mode: "push",
-  schema: TurnSummariesPayloadSchema,
   loader: async () => {
     const rows = await db
       .select({

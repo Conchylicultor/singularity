@@ -6,4 +6,5 @@ export const notificationsResource = resourceDescriptor<Notification[]>(
   "notifications",
   z.array(NotificationSchema),
   [],
+  { bootCritical: true },
 );

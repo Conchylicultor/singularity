@@ -36,6 +36,7 @@ export const tasksResource = keyedResourceDescriptor<TaskListItem[]>(
   z.array(TaskListItemSchema),
   [],
   (r) => (r as TaskListItem).id,
+  { bootCritical: true },
 );
 export const taskDetailResource = resourceDescriptor<Task | null, { id: string }>(
   "task-detail",
@@ -47,8 +48,11 @@ export const attemptsResource = keyedResourceDescriptor<AttemptWithConversations
   z.array(AttemptWithConversationsSchema),
   [],
   (r) => (r as AttemptWithConversations).id,
+  { bootCritical: true },
 );
-export const pushesResource = resourceDescriptor<Push[]>("pushes", z.array(PushSchema), []);
+export const pushesResource = resourceDescriptor<Push[]>("pushes", z.array(PushSchema), [], {
+  bootCritical: true,
+});
 
 // Conversation list, decomposed into keyed delta-sync sub-resources + one scalar
 // stats resource (replaces the old aggregate `conversationsResource`). Keyed
@@ -59,21 +63,25 @@ export const conversationsActiveResource = keyedResourceDescriptor<Conversation[
   z.array(ConversationSchema),
   [],
   (r) => (r as Conversation).id,
+  { bootCritical: true },
 );
 export const conversationsSystemResource = keyedResourceDescriptor<Conversation[]>(
   "conversations-system",
   z.array(ConversationSchema),
   [],
   (r) => (r as Conversation).id,
+  { bootCritical: true },
 );
 export const conversationsGoneResource = keyedResourceDescriptor<Conversation[]>(
   "conversations-gone",
   z.array(ConversationSchema),
   [],
   (r) => (r as Conversation).id,
+  { bootCritical: true },
 );
 export const conversationsGoneStatsResource = resourceDescriptor<{ totalGoneCount: number }>(
   "conversations-gone-stats",
   z.object({ totalGoneCount: z.number() }),
   { totalGoneCount: 0 },
+  { bootCritical: true },
 );

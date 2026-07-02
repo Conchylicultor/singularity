@@ -16,8 +16,8 @@ export { Release, collectReleaseEnv } from "./internal/env-provider";
 export default {
   description: "Local composition release lifecycle engine: run, observe, preview F4 artifacts.",
   contributions: [
-    Resource.Declare(releaseHistoryResource, { bootCritical: true }),
-    Resource.Declare(previewStateResource, { bootCritical: true }),
+    Resource.Declare(releaseHistoryResource),
+    Resource.Declare(previewStateResource),
   ],
   httpRoutes: {
     [triggerReleaseEndpoint.route]: handleRelease,

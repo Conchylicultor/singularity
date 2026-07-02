@@ -34,7 +34,7 @@ the `fields.storage` contributions, unregistered in the browser). So
 
 ## Plugin reference
 
-- Description: Schema + repository layer for the tasks/attempts/conversations FK cluster.
+- Description: tasks-core web presence: eagerly registers the boot-critical tasks / attempts / pushes / conversations-* resource descriptors so boot-snapshot can hydrate them before first paint, independent of any (lazy) consumer UI. Schema + repository layer for the tasks/attempts/conversations FK cluster.
 - Load-bearing: yes
 - Server:
   - Uses: `database.db`, `database/derived-tables.DerivedTable`, `database/derived-views.View`, `infra/attachments.Attachments`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/events.defineTriggerEvent`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.isCanonicalWorktreePath`, `primitives/rank.nextRankUnder`, `primitives/rank.RankExecutor`

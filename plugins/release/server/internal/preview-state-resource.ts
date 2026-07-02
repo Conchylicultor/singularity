@@ -29,9 +29,7 @@ function snapshot(): Record<string, Preview> {
   return out;
 }
 
-export const previewStateResource = defineExternalResource({
-  key: previewStateDescriptor.key,
+export const previewStateResource = defineExternalResource(previewStateDescriptor, {
   mode: "push",
-  schema: previewStateDescriptor.schema,
   loader: () => snapshot(),
 });

@@ -3,14 +3,12 @@ import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { _conversationGroupMembers, _conversationGroups } from "./tables";
 import {
-  ConversationGroupsPayloadSchema,
+  conversationGroupsResource as conversationGroupsDescriptor,
   type ConversationGroupsPayload,
 } from "../../shared";
 
-export const conversationGroupsResource = defineResource<ConversationGroupsPayload>({
-  key: "conversation-groups",
+export const conversationGroupsResource = defineResource(conversationGroupsDescriptor, {
   mode: "push",
-  schema: ConversationGroupsPayloadSchema,
   loader: async () => {
     const [groups, members] = await Promise.all([
       db

@@ -8,7 +8,7 @@ export { worktreeOpsResource } from "./internal/resource";
 export default {
   description:
     "Watches the per-worktree build/push op markers and pushes them to a live-state resource. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.",
-  contributions: [Resource.Declare(worktreeOpsResource, { bootCritical: true })],
+  contributions: [Resource.Declare(worktreeOpsResource)],
   onReady: async () => {
     await startOpWatcher();
   },

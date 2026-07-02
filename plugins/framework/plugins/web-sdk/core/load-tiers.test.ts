@@ -1,72 +1,53 @@
 import { describe, expect, test } from "bun:test";
-import {
-  DEFERRABLE_APPS,
-  EAGER_EXCEPTIONS,
-  isDeferredPluginPath,
-  partitionWebEntries,
-} from "./load-tiers";
+import { isDeferredPluginPath, partitionWebEntries } from "./load-tiers";
 
-describe("isDeferredPluginPath", () => {
-  test("top-level plugin is eager", () => {
+// These guardrails assert against the REAL committed `web-tiers.generated.ts`
+// (via `isDeferredPluginPath`), so they lock in the derivation's headline
+// outcomes end-to-end: the structural rule, the watched-slot pins, and the
+// dependsOn closure. Regenerating the manifest (via `./singularity build`) is
+// what keeps them true; the `eager-tier-in-sync` check guards drift.
+describe("isDeferredPluginPath (against the generated tier set)", () => {
+  test("top-level / non-app-content plugins are eager", () => {
     expect(isDeferredPluginPath("conversations")).toBe(false);
-  });
-
-  test("non-apps nested plugin is eager", () => {
     expect(isDeferredPluginPath("primitives/plugins/pane")).toBe(false);
   });
 
-  test("deferrable-app content is deferred", () => {
-    expect(isDeferredPluginPath("apps/plugins/workflows/plugins/board")).toBe(true);
-    expect(isDeferredPluginPath("apps/plugins/story/plugins/lens")).toBe(true);
-  });
-
-  test("a deferrable app's shell subtree is eager", () => {
-    expect(isDeferredPluginPath("apps/plugins/workflows/plugins/shell")).toBe(false);
-    expect(isDeferredPluginPath("apps/plugins/workflows/plugins/shell/plugins/x")).toBe(false);
-  });
-
-  test("non-allowlisted app content stays eager (studio excluded)", () => {
-    expect(DEFERRABLE_APPS.has("studio")).toBe(false);
-    expect(isDeferredPluginPath("apps/plugins/studio/plugins/release")).toBe(false);
-  });
-
-  test("sonata is deferrable; its content defers except the pinned voicing leaf", () => {
-    expect(DEFERRABLE_APPS.has("sonata")).toBe(true);
-    // Ordinary sonata content defers.
-    expect(isDeferredPluginPath("apps/plugins/sonata/plugins/notation")).toBe(true);
-    expect(isDeferredPluginPath("apps/plugins/sonata/plugins/piano-roll")).toBe(true);
-    // The shell subtree stays eager (rail icon + SonataProvider).
+  test("an app's shell subtree is eager (structural)", () => {
     expect(isDeferredPluginPath("apps/plugins/sonata/plugins/shell")).toBe(false);
-    // `voicing` is pinned eager — the eager SonataProvider reads voicingConfig at mount.
-    expect(EAGER_EXCEPTIONS.has("apps/plugins/sonata/plugins/voicing")).toBe(true);
+  });
+
+  test("ordinary app content defers", () => {
+    expect(isDeferredPluginPath("apps/plugins/sonata/plugins/notation")).toBe(true);
+  });
+
+  test("sonata/voicing is pinned eager via the dependsOn closure from the shell", () => {
     expect(isDeferredPluginPath("apps/plugins/sonata/plugins/voicing")).toBe(false);
   });
 
-  test("default app (agent-manager) content stays eager", () => {
-    expect(DEFERRABLE_APPS.has("agent-manager")).toBe(false);
-    expect(isDeferredPluginPath("apps/plugins/agent-manager/plugins/welcome")).toBe(false);
+  test("studio content defers now that every app is deferrable", () => {
+    expect(isDeferredPluginPath("apps/plugins/studio/plugins/explorer")).toBe(true);
   });
 
-  test("EAGER_EXCEPTIONS override deferrable-app content back to eager", () => {
-    expect(EAGER_EXCEPTIONS.has("apps/plugins/mail/plugins/sync/plugins/auto-resume")).toBe(true);
-    expect(isDeferredPluginPath("apps/plugins/mail/plugins/sync/plugins/auto-resume")).toBe(false);
+  test("worktree-switcher is pinned eager via its ActionBar.Item contribution", () => {
+    expect(isDeferredPluginPath("apps/plugins/agent-manager/plugins/worktree-switcher")).toBe(
+      false,
+    );
   });
 
-  test("non-exception deferrable-app content still defers (mail child = sync)", () => {
-    expect(isDeferredPluginPath("apps/plugins/mail/plugins/sync")).toBe(true);
+  test("mail auto-resume is pinned eager via its Core.Root contribution", () => {
+    expect(isDeferredPluginPath("apps/plugins/mail/plugins/sync/plugins/auto-resume")).toBe(
+      false,
+    );
   });
 });
 
 describe("partitionWebEntries", () => {
   const entries = [
     { pluginPath: "conversations" },
-    { pluginPath: "apps/plugins/studio/plugins/release" }, // not allowlisted → eager
-    { pluginPath: "apps/plugins/sonata/plugins/voicing" }, // pinned exception → eager
-    { pluginPath: "apps/plugins/sonata/plugins/notation" }, // allowlisted content → deferred
-    { pluginPath: "apps/plugins/workflows/plugins/board" }, // allowlisted content → deferred
-    { pluginPath: "apps/plugins/workflows/plugins/shell" }, // shell → eager
-    { pluginPath: "apps/plugins/mail/plugins/sync/plugins/auto-resume" }, // exception → eager
-    { pluginPath: "apps/plugins/mail/plugins/sync" }, // deferred
+    { pluginPath: "apps/plugins/sonata/plugins/shell" }, // shell → eager
+    { pluginPath: "apps/plugins/sonata/plugins/notation" }, // content → deferred
+    { pluginPath: "apps/plugins/sonata/plugins/voicing" }, // closure pin → eager
+    { pluginPath: "apps/plugins/studio/plugins/explorer" }, // content → deferred
     { pluginPath: "primitives/plugins/pane" },
   ];
 
@@ -79,16 +60,13 @@ describe("partitionWebEntries", () => {
     const { eager, deferred } = partitionWebEntries(entries);
     expect(eager.map((e) => e.pluginPath)).toEqual([
       "conversations",
-      "apps/plugins/studio/plugins/release",
+      "apps/plugins/sonata/plugins/shell",
       "apps/plugins/sonata/plugins/voicing",
-      "apps/plugins/workflows/plugins/shell",
-      "apps/plugins/mail/plugins/sync/plugins/auto-resume",
       "primitives/plugins/pane",
     ]);
     expect(deferred.map((e) => e.pluginPath)).toEqual([
       "apps/plugins/sonata/plugins/notation",
-      "apps/plugins/workflows/plugins/board",
-      "apps/plugins/mail/plugins/sync",
+      "apps/plugins/studio/plugins/explorer",
     ]);
   });
 });

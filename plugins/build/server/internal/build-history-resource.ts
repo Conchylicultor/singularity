@@ -2,14 +2,11 @@ import { desc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { BuildRunSchema } from "../../shared";
+import { buildHistoryResource as buildHistoryDescriptor } from "../../shared";
 import { _buildRuns } from "./tables";
-import { z } from "zod";
 
-export const buildHistoryResource = defineResource({
-  key: "build.history",
+export const buildHistoryResource = defineResource(buildHistoryDescriptor, {
   mode: "push",
-  schema: z.array(BuildRunSchema),
   loader: async () =>
     // Explicit column list: `pid` is an internal liveness marker, not part of the
     // public BuildRun resource. Selecting it would break the schema's row type.

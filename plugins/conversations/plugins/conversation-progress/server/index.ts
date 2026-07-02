@@ -16,7 +16,7 @@ export default {
   description:
     "Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.",
   contributions: [
-    Resource.Declare(conversationProgressResource, { bootCritical: true }),
+    Resource.Declare(conversationProgressResource),
     Trigger({ on: conversationTurnCompleted, do: classifyProgressJob, with: {}, oneShot: false }),
     Trigger({ on: pushLanded, do: markProgressPushedJob, with: {}, oneShot: false }),
   ],

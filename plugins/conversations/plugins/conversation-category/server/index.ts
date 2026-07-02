@@ -27,7 +27,7 @@ export default {
     "Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.",
   contributions: [
     ConfigV2.Register({ descriptor: conversationCategoryConfig }),
-    Resource.Declare(conversationCategoriesResource, { bootCritical: true }),
+    Resource.Declare(conversationCategoriesResource),
     Trigger({ on: conversationTurnCompleted, do: classifyConversationJob, with: {}, oneShot: false }),
   ],
   httpRoutes: {

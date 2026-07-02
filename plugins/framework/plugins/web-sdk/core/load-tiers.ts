@@ -10,91 +10,32 @@
 // renders inside its own app surface) shrinks the eager set to what the chrome
 // actually needs, so the socket + first paint land seconds sooner.
 //
-// The rule is a pure function of `pluginPath` — no runtime knowledge, so it is
-// trivially unit-testable (see load-tiers.test.ts) and the concatenated
-// `webEntries` stays the single source of truth (the partition is derived, so
-// `--composition` builds and the plugin-load smoke test are unaffected).
+// The tiers are DERIVED, not hand-listed. `web-tiers.generated.ts` (produced by
+// `codegen/core/eager-tier-gen.ts`) is the committed source of truth: a plugin
+// is EAGER iff it is non-app-content / a shell subtree (structural), calls a
+// watched boot slot (Core.Root / Core.Boot / Apps.App / ActionBar.Item), owns a
+// bootCritical resource descriptor, or is pulled in by the transitive dependsOn
+// closure of any of those. Every app is deferrable by default; the historical
+// hand-maintained allowlists (DEFERRABLE_APPS / EAGER_EXCEPTIONS) are gone.
+//
+// Fail-safe direction: the generated artifact is the DEFERRED set, so an unknown
+// path is treated as EAGER — a modeling gap only makes a plugin needlessly eager
+// (slower boot), never wrongly deferred. The `eager-tier-in-sync` check fails on
+// drift, and a bootCritical descriptor whose owner has no web entry fails
+// generation outright (the reachability guard). The rule stays a pure function of
+// `pluginPath` — trivially unit-testable (see load-tiers.test.ts) and leaving the
+// concatenated `webEntries` as the single source of truth (the partition is
+// derived, so `--composition` builds and the plugin-load smoke test are unaffected).
 
-// Deferral is OPT-IN per app: only an app whose dir is listed here has its
-// *content* deferred; every other app (and all shared substrate) stays eager,
-// so the default is byte-for-byte today's behavior. This conservative allowlist
-// is the safe floor while the general safety net is built (see follow-up #1):
-// an app is safe to defer ONLY if nothing in the EAGER tier depends, at boot, on
-// a registration its content provides. Where an app has a single such coupling,
-// the offending *content* plugin is pinned eager via EAGER_EXCEPTIONS (below) and
-// the app is still deferred (sonata does exactly this — see EAGER_EXCEPTIONS).
-// One app remains fully EXCLUDED because the coupling is diffuse, not a single
-// pinnable plugin:
-//   • studio — the boot-critical `release.history` / `release.previews` resource
-//     WEB descriptors register only as a side effect of studio's release content
-//     importing `@plugins/release/core`; deferring it leaves boot-snapshot unable
-//     to hydrate them.
-// The default app (agent-manager) is also kept eager so cold boot into the
-// primary surface is unchanged. Follow-up #1 replaces this hand-maintained list
-// with codegen that auto-keeps any plugin carrying a boot-critical descriptor,
-// a config web-registration, or a Core.Root/Core.Boot contribution eager — which
-// makes safe default-deferral possible and dissolves both the allowlist below
-// and EAGER_EXCEPTIONS.
-export const DEFERRABLE_APPS = new Set<string>([
-  "browser",
-  "debug",
-  "deploy",
-  "file-explorer",
-  "home",
-  "mail",
-  "pages",
-  "prototypes",
-  "settings",
-  "sonata",
-  "story",
-  "workflows",
-]);
-
-// App-content plugins that a boot-eager surface hard-depends on and that MUST
-// therefore load at boot despite living under a deferrable app. Two coupling
-// classes require this today:
-//   • a `Core.Root` / `Core.Boot` global always-mounted contribution — the mail
-//     app-wide headless sync listener (a `Core.Root` watcher that must run
-//     regardless of which app is focused).
-//   • a `ConfigV2.WebRegister` an EAGER app shell reads at mount — sonata's
-//     `voicing` plugin's web runtime exists solely to register `voicingConfig`,
-//     which the eager `SonataProvider` reads via `useConfig` at mount; without it
-//     the shell throws "descriptor has no web registration". Pinning just this
-//     leaf keeps the other ~48 sonata plugins deferred.
-// Each entry is dissolved by follow-up #1 (codegen auto-eager). Values are plugin
-// dir paths (no `/web` suffix), matched verbatim against `pluginPath`.
-export const EAGER_EXCEPTIONS = new Set<string>([
-  "apps/plugins/mail/plugins/sync/plugins/auto-resume",
-  "apps/plugins/sonata/plugins/voicing",
-]);
-
-// `apps/plugins/<app>/plugins/<child>` — captures the app dir and `<child>`, the
-// first path segment of app *content* under it. Anything shallower (an app
-// umbrella barrel, or a non-`apps/` plugin) does not match and stays eager.
-const APP_CONTENT = /^apps\/plugins\/([^/]+)\/plugins\/([^/]+)/;
+import { DEFERRED_PLUGIN_PATHS } from "./web-tiers.generated";
 
 /**
- * True IFF `pluginPath` is deferrable app content: it lives under a
- * {@link DEFERRABLE_APPS} app as `apps/plugins/<app>/plugins/<child>/…` with
- * `<child> !== "shell"` and not in {@link EAGER_EXCEPTIONS}. Everything else —
- * framework, primitives, apps-core, shell, ui/theme, config, fields, shared
- * domains, non-deferrable apps, AND each deferrable app's own `shell` subtree
- * (which registers the rail icon + the app's root layout) — is eager.
+ * True IFF `pluginPath` is deferred app content — a membership lookup against the
+ * generated {@link DEFERRED_PLUGIN_PATHS} set. Everything not in the set (an
+ * unknown or newly-added path included) is eager, the fail-safe direction.
  */
 export function isDeferredPluginPath(pluginPath: string): boolean {
-  const m = APP_CONTENT.exec(pluginPath);
-  // Not app content (framework / primitives / shared domains / app umbrella) → eager.
-  if (!m) return false;
-  const app = m[1]!;
-  const child = m[2]!;
-  // Only explicitly-allowlisted apps defer; every other app stays eager.
-  if (!DEFERRABLE_APPS.has(app)) return false;
-  // The app's `shell` subtree registers `Apps.App` (rail icon + root layout) and
-  // must be present at boot so the rail and the app skeleton paint immediately.
-  if (child === "shell") return false;
-  // Enumerated global-contribution exceptions stay eager.
-  if (EAGER_EXCEPTIONS.has(pluginPath)) return false;
-  return true;
+  return DEFERRED_PLUGIN_PATHS.has(pluginPath);
 }
 
 /**

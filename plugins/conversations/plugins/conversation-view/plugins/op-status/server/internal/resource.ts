@@ -4,7 +4,7 @@ import {
   type WorktreeOp,
 } from "@plugins/infra/plugins/worktree/server";
 import {
-  WorktreeOpsPayloadSchema,
+  worktreeOpsResource as worktreeOpsDescriptor,
   type WorktreeOpsPayload,
 } from "../../shared";
 
@@ -14,10 +14,8 @@ import {
 // build.
 const OP_RANK: Record<WorktreeOp, number> = { push: 2, check: 1, build: 0 };
 
-export const worktreeOpsResource = defineExternalResource<WorktreeOpsPayload>({
-  key: "worktree-ops",
+export const worktreeOpsResource = defineExternalResource(worktreeOpsDescriptor, {
   mode: "push",
-  schema: WorktreeOpsPayloadSchema,
   // Phases are DERIVED from the real push-lock ownership (holder file + kernel
   // flock), not echoed from each marker's self-asserted phase — see
   // resolveActiveWorktreeOps. This is what makes "two pushing at once" and

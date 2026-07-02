@@ -22,4 +22,5 @@ export const worktreeOpsResource = resourceDescriptor<WorktreeOpsPayload>(
   "worktree-ops",
   WorktreeOpsPayloadSchema,
   {},
+  { bootCritical: true },
 );
