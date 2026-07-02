@@ -13,7 +13,7 @@ import { dirname, join, resolve } from "path";
 const HERE = dirname(new URL(import.meta.url).pathname);
 const WEB_INTERNAL = resolve(HERE, "../web/internal");
 const METADATA_PATH = join(WEB_INTERNAL, "icon-metadata.json");
-const OUTPUT_PATH = resolve(HERE, "../server/internal/icon-svg-map.generated.ts");
+const OUTPUT_PATH = resolve(HERE, "../core/internal/icon-svg-map.generated.ts");
 
 interface SvgNode {
   tag: string;
@@ -57,6 +57,7 @@ async function main() {
   const pkg = JSON.parse(readFileSync(pkgPath, "utf-8"));
   const reactIconsVersion: string = pkg.version;
 
+  // eslint-disable-next-line icon-safety/no-namespace-react-icons -- build-time SVG extraction; this script is never bundled into the web app
   const mdModule = (await import("react-icons/md")) as Record<string, unknown>;
 
   const map: Record<string, SvgNode[]> = {};

@@ -8,9 +8,9 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { MdClose, MdSearch } from "react-icons/md";
+import { SvgIcon } from "./svg-icon";
 import {
   loadFullIconSet,
-  extractSvgNodes,
   type SvgNode,
   type FullIconSet,
   type FullIconEntry,
@@ -48,7 +48,7 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
   }, []);
 
   const pickIcon = (entry: FullIconEntry) => {
-    onSelect({ key: entry.key, svgNodes: extractSvgNodes(entry.Icon) });
+    onSelect({ key: entry.key, svgNodes: entry.svgNodes });
   };
 
   const isSearching = query.trim().length > 0;
@@ -139,7 +139,6 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
 }
 
 function IconBtn({ entry, selected, onPick }: { entry: FullIconEntry; selected: boolean; onPick: (e: FullIconEntry) => void }) {
-  const Icon = entry.Icon;
   return (
     <button
       type="button"
@@ -153,7 +152,7 @@ function IconBtn({ entry, selected, onPick }: { entry: FullIconEntry; selected: 
       )}
     >
       <Center>
-        <Icon className="size-4" />
+        <SvgIcon nodes={entry.svgNodes} className="size-4" />
       </Center>
     </button>
   );

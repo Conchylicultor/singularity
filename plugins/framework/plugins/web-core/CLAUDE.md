@@ -52,6 +52,16 @@ an eager-used slice and lazy-used slices, and forcing the whole package into one
 gzip to ~2.4 MB. Only group libraries that are fully eager regardless (react/react-dom/
 scheduler), where isolating them is a pure cross-deploy caching win with zero eager cost.
 
+**Never namespace-import a big icon package.** A dynamic or `import * as` namespace
+import of `react-icons/md` (`mdModule[key]`) forces Rollup to retain *every* icon
+(the package is un-tree-shakeable through a namespace) and, because hundreds of
+barrels also import named icons eagerly, hoists the whole ~2 MB set into the eager
+entry chunk (once measured at **417 KB gzip = 62 % of the entry chunk**). Import
+named icons (`import { MdFoo }`) so tree-shaking keeps only the used union, or render
+stored `SvgNode` data (see `primitives/icon-picker`). Enforced by the
+`icon-safety/no-namespace-react-icons` lint rule; the sole exemption is the
+build-time `gen-icon-svg-map.ts` (never bundled).
+
 This is the static-bytes counterpart to the **Debug → Boot Profile** pane (the
 request→first-paint *timeline*) and the Boot Gantt.
 

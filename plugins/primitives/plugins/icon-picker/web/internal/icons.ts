@@ -37,11 +37,13 @@ export const CATEGORY_LABELS: Record<string, string> = {
 };
 
 // ---------------------------------------------------------------------------
-// Full icon set — dynamically loaded on demand (react-icons/md + metadata JSON).
-// Only used by the IconPicker for browsing/searching, never for rendering.
+// Full icon set — dynamically loaded on demand (generated SvgNode map + metadata
+// JSON). Only used by the IconPicker for browsing/searching. Rendered from the
+// stored SvgNode data (via <SvgIcon/>), so the ~2 000-icon react-icons/md bundle
+// is never pulled into the picker chunk.
 // ---------------------------------------------------------------------------
 
-export interface FullIconEntry { key: string; Icon: IconType; label: string }
+export interface FullIconEntry { key: string; svgNodes: SvgNode[]; label: string }
 export interface FullIconCategory { label: string; entries: FullIconEntry[] }
 export interface FullIconSet {
   categories: FullIconCategory[];
@@ -50,35 +52,31 @@ export interface FullIconSet {
 
 let _fullSetCache: FullIconSet | null = null;
 
-function mdNameToReactKey(mdName: string): string {
-  return "Md" + mdName.split("_").map((s) => s.charAt(0).toUpperCase() + s.slice(1)).join("");
-}
-
 export async function loadFullIconSet(): Promise<FullIconSet> {
   if (_fullSetCache) return _fullSetCache;
 
-  const [mdModule, { default: meta }] = await Promise.all([
-    import("react-icons/md"),
+  const [{ ICON_SVG_MAP }, { default: meta }] = await Promise.all([
+    import("../../core/internal/icon-svg-map.generated"),
     import("./icon-metadata.json"),
   ]);
 
-  const mdCache = mdModule as Record<string, unknown>;
+  const svgMap = ICON_SVG_MAP as Record<string, SvgNode[]>;
   const metaTyped = meta as Record<string, { category: string; tags: string[] }>;
 
   type RichEntry = FullIconEntry & { category: string; tags: string[] };
   const entries: RichEntry[] = [];
 
   for (const [mdName, { category, tags }] of Object.entries(metaTyped)) {
-    const Icon = mdCache[mdNameToReactKey(mdName)] as IconType | undefined;
-    if (!Icon) continue;
-    entries.push({ key: mdName, Icon, label: mdName.replace(/_/g, " "), category, tags });
+    const svgNodes = svgMap[mdName];
+    if (!svgNodes) continue;
+    entries.push({ key: mdName, svgNodes, label: mdName.replace(/_/g, " "), category, tags });
   }
 
   const catMap = new Map<string, FullIconEntry[]>();
-  for (const { key, Icon, label, category } of entries) {
+  for (const { key, svgNodes, label, category } of entries) {
     const catLabel = CATEGORY_LABELS[category] ?? category;
     if (!catMap.has(catLabel)) catMap.set(catLabel, []);
-    catMap.get(catLabel)!.push({ key, Icon, label });
+    catMap.get(catLabel)!.push({ key, svgNodes, label });
   }
 
   const categories: FullIconCategory[] = Array.from(catMap.entries()).map(([label, es]) => ({ label, entries: es }));
@@ -91,7 +89,7 @@ export async function loadFullIconSet(): Promise<FullIconSet> {
         const haystack = [key, label, ...tags].join(" ").toLowerCase();
         return words.every((w) => haystack.includes(w));
       })
-      .map(({ key, Icon, label }) => ({ key, Icon, label }));
+      .map(({ key, svgNodes, label }) => ({ key, svgNodes, label }));
   };
 
   _fullSetCache = { categories, search };

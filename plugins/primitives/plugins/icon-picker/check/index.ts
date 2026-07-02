@@ -6,9 +6,9 @@ type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 const HERE = dirname(new URL(import.meta.url).pathname);
-const SERVER_INTERNAL = resolve(HERE, "../server/internal");
+const CORE_INTERNAL = resolve(HERE, "../core/internal");
 const WEB_INTERNAL = resolve(HERE, "../web/internal");
-const GENERATED_PATH = join(SERVER_INTERNAL, "icon-svg-map.generated.ts");
+const GENERATED_PATH = join(CORE_INTERNAL, "icon-svg-map.generated.ts");
 const METADATA_PATH = join(WEB_INTERNAL, "icon-metadata.json");
 
 function computeInputsHash(metadataContent: string, reactIconsVersion: string): string {

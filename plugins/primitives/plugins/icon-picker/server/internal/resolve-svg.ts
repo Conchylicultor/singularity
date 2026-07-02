@@ -1,5 +1,5 @@
 import type { SvgNode } from "../../core";
-import type { ICON_SVG_MAP as IconSvgMap } from "./icon-svg-map.generated";
+import type { ICON_SVG_MAP as IconSvgMap } from "../../core/internal/icon-svg-map.generated";
 
 type IconSvgMapModule = { ICON_SVG_MAP: typeof IconSvgMap };
 
@@ -17,7 +17,7 @@ let cachedMap: typeof IconSvgMap | undefined;
 
 function getIconSvgMap(): typeof IconSvgMap {
   if (cachedMap === undefined) {
-    const mod = require("./icon-svg-map.generated") as IconSvgMapModule;
+    const mod = require("../../core/internal/icon-svg-map.generated") as IconSvgMapModule;
     cachedMap = mod.ICON_SVG_MAP;
   }
   return cachedMap;
