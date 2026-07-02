@@ -1,21 +1,27 @@
 import type { ReactNode } from "react";
-import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { FilterValueInputProps } from "@plugins/primitives/plugins/data-view/web";
 
-const OPTIONS = [
-  { id: "unchecked", label: "Unchecked" },
-  { id: "checked", label: "Checked" },
-] as const;
-
-/** Checked / Unchecked selector. Operand is a boolean (default false). */
+/**
+ * A single explicit checkbox operand: ticked → the filter matches `true`,
+ * unticked → `false` (the default). Replaces the former "Unchecked / Checked"
+ * text toggle with a direct checkbox, so the rule reads "<field> Is ☑" the way a
+ * boolean naturally renders. Uses the sanctioned native `<input type="checkbox">`
+ * (accent-primary, keyboard-accessible, native a11y), left-aligned right after
+ * the operator and vertically centered to the `control-sm` height so it lines up
+ * with the adjacent field / operator pickers.
+ */
 export function BoolValueInput(props: FilterValueInputProps): ReactNode {
-  const current = props.value === true ? "checked" : "unchecked";
+  const checked = props.value === true;
   return (
-    <SegmentedControl
-      options={OPTIONS}
-      value={current}
-      onChange={(id) => props.onChange(id === "checked")}
-      variant="ghost"
-    />
+    <Stack direction="row" gap="none" align="center" className="h-(--control-height-sm)">
+      <input
+        type="checkbox"
+        checked={checked}
+        onChange={(e) => props.onChange(e.target.checked)}
+        aria-label={checked ? "Checked" : "Unchecked"}
+        className="size-4 cursor-pointer accent-primary"
+      />
+    </Stack>
   );
 }
