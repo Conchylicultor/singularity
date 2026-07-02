@@ -35,6 +35,11 @@ import {
   PGBOUNCER_PORT,
   pgbouncerPidFileUnder,
 } from "@plugins/database/plugins/pgbouncer/server";
+// The Zero opt-in switch is owned by the zero plugin (its single source of
+// truth), consulted here only to decide whether to compose the worktree spec's
+// `zeroCache` block. The same predicate gates the cache-service install-time
+// provision, so the fence stays consistent across runtime and build time.
+import { zeroCacheEnabled } from "@plugins/database/plugins/zero/core";
 
 // Progress sink. The launcher runs in a CLI process whose human-facing output
 // belongs on the terminal, but this plugin must not assume stdout (a packaged
@@ -121,20 +126,6 @@ export function pgbouncerService(repoRoot: string) {
 
 export function pgbouncerConnection() {
   return { host: PGBOUNCER_SOCKET_DIR, port: PGBOUNCER_PORT };
-}
-
-// zero-cache is gated on an EXPLICIT opt-in env switch, default OFF — NOT on
-// package presence (`@rocicorp/zero` is always committed for the client bundle,
-// so a presence gate would auto-start zero-cache for everyone on merge). With
-// the env unset, no spec carries a `zeroCache` block and database.json is
-// byte-identical to today — zero churn, nothing changes for anyone else.
-//
-// Stage 2: zero-cache is a PER-WORKTREE sidecar owned by the gateway's worktree
-// state machine (spawned from the worktree spec's `zeroCache` block), NOT a
-// global `database.json` service. This gate is consulted at spec-composition
-// time (zeroCacheSpec below), not when writing database.json.
-export function zeroCacheEnabled(): boolean {
-  return process.env.SINGULARITY_ZERO_CACHE === "1";
 }
 
 /**

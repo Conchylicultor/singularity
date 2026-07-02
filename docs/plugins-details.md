@@ -2381,7 +2381,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `mcpTool('query_db')`
     - **`zero`** — Umbrella for the Rocicorp Zero sync-engine infrastructure: shared constants (core), the zero-cache supervised service (cache-service), and the generic client provider + adapter (client). Domain-agnostic — no concrete schema.
       - Core:
-        - Exports: Values: `ZERO_CACHE_PORT`
+        - Exports: Values: `ZERO_CACHE_PORT`, `zeroCacheEnabled`
       - Plugins:
         - **`cache-service`** — zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.
           - Server:
@@ -3580,7 +3580,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`launcher`**
       - Server:
         - Uses: `database/admin.ensureDatabase`, `database/admin.getAdminPool`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `database/embedded.pgPostmasterPidFile`, `database/pgbouncer.PGBOUNCER_PORT`, `database/pgbouncer.PGBOUNCER_SOCKET_DIR`, `database/pgbouncer.pgbouncerPidFileUnder`, `infra/asset-mirror.seedAssetMirrorCache`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.writeWorktreeSpec`, `infra/worktree.ZeroCacheSpec`
-        - Exports: Values: `awaitPgReady`, `bootSelfContainedApp`, `buildOrLocateGateway`, `ensureDatabaseConfig`, `gatewayPidFile`, `hasPgBouncerPackage`, `isGatewayListening`, `isRunning`, `pgbouncerConnection`, `pgbouncerService`, `readPid`, `seedReleaseAssetMirror`, `spawnGatewayDaemon`, `teardownSelfContainedApp`, `writeReleaseDatabaseConfig`, `zeroCacheEnabled`, `zeroCacheSpec`
+        - Exports: Values: `awaitPgReady`, `bootSelfContainedApp`, `buildOrLocateGateway`, `ensureDatabaseConfig`, `gatewayPidFile`, `hasPgBouncerPackage`, `isGatewayListening`, `isRunning`, `pgbouncerConnection`, `pgbouncerService`, `readPid`, `seedReleaseAssetMirror`, `spawnGatewayDaemon`, `teardownSelfContainedApp`, `writeReleaseDatabaseConfig`, `zeroCacheSpec`
       - Cross-plugin:
         - Imported by: `release`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.

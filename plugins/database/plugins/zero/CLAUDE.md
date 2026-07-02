@@ -23,10 +23,13 @@
 > `@rocicorp/zero` dependency does **not** (it is always committed for the client
 > bundle, so a presence-gate would silently auto-start the sidecar for everyone):
 >
-> - `zeroCacheEnabled()` reads `process.env.SINGULARITY_ZERO_CACHE === "1"`
->   (`plugins/infra/plugins/launcher/server/internal/boot.ts`). Consulted once,
->   by `zeroCacheSpec()`. With the flag unset, the worktree `spec.json` carries
->   **no** `zeroCache` block and is byte-identical to a pre-Zero spec.
+> - `zeroCacheEnabled()` reads `process.env.SINGULARITY_ZERO_CACHE === "1"` and
+>   is owned by **this plugin** (`core/internal/flag.ts`, exported from
+>   `@plugins/database/plugins/zero/core` — the single source of truth for the
+>   fence). Consulted in two places: `zeroCacheSpec()` (launcher boot) at
+>   runtime, and the cache-service `provision/` step at install time. With the
+>   flag unset, the worktree `spec.json` carries **no** `zeroCache` block and is
+>   byte-identical to a pre-Zero spec.
 > - The gateway spawns the Node `zero-cache` sidecar **lazily on the first
 >   `/zero/*` request, and only if `spec.json` has a `zeroCache` block**
 >   (`gateway/worktree.go` `EnsureZeroCache` → `ErrZeroCacheDisabled`). With the
@@ -52,12 +55,16 @@
 >    exists. Negligible, correct.
 > 3. **First-install provisioning** — the `cache-service` postinstall provision
 >    (`ensureZeroSqlite3` + `ensureZeroNode`) builds a native addon and downloads
->    a Node 24 tarball, **not** gated on the flag (only on filesystem
->    idempotency). This is the one genuine build-time coupling: a one-time
->    ~35 MB + native-build cost on a fresh machine even when Zero is disabled.
->    **Follow-up filed** to gate provisioning on `SINGULARITY_ZERO_CACHE` so the
->    fence is complete at install time too. (Residuals 1–2 are deliberately left
->    unconditional — gating them would leak orphaned slots across a flag toggle.)
+>    a Node 24 tarball. **Now gated on `zeroCacheEnabled()`** (via
+>    `provision/index.ts`), so with the flag off the provision early-returns and
+>    costs nothing — the fence is complete at install time too. The design
+>    subtlety this introduces: opting in requires the flag set at **install**
+>    time (`SINGULARITY_ZERO_CACHE=1 ./singularity build`); flipping it on for an
+>    already-installed tree needs a re-provision (re-run the build with the flag,
+>    which re-runs `bun install`'s postinstall). Acceptable for a frozen opt-in
+>    feature. (Residuals 1–2 are deliberately left unconditional — gating them
+>    would leak orphaned slots/artifacts across a flag toggle; only the *install*
+>    cost is safe to gate, because a later re-provision restores it.)
 >
 > ### Deliberately deferred (do NOT remove)
 >
@@ -79,7 +86,7 @@
 
 - Description: Umbrella for the Rocicorp Zero sync-engine infrastructure: shared constants (core), the zero-cache supervised service (cache-service), and the generic client provider + adapter (client). Domain-agnostic — no concrete schema.
 - Core:
-  - Exports: Values: `ZERO_CACHE_PORT`
+  - Exports: Values: `ZERO_CACHE_PORT`, `zeroCacheEnabled`
 - Sub-plugins:
   - **`cache-service`** — zero-cache sidecar service: the supervised Node process that replicates the main Postgres DB into Zero's SQLite replica. Schema-agnostic.
   - **`client`** — Generic, schema-parameterized Zero client: the ZeroRoot provider wrapper, the useZeroResource (ResourceResult-shaped) adapter, and a raw useZeroQuery re-export. No concrete schema.

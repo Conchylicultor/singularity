@@ -16,7 +16,6 @@ export {
   seedReleaseAssetMirror,
   teardownSelfContainedApp,
   gatewayPidFile,
-  zeroCacheEnabled,
   zeroCacheSpec,
 } from "./internal/boot";
 
