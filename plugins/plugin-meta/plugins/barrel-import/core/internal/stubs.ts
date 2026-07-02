@@ -144,6 +144,17 @@ export function registerBarrelStubs(_repoRoot: string): void {
     PluginProvider: noop,
     PluginRuntimeContext: reactExports.createContext(null),
     loadPlugins: () => [],
+    // Boot load-tier partition + deferred-load signal (see web-sdk load-tiers.ts /
+    // deferred-load-store.ts). Stubbed so plugin barrels that consume them (e.g.
+    // layouts/route-fallback → useDeferredLoadState) import cleanly under docgen.
+    partitionWebEntries: (e: any[]) => ({ eager: e, deferred: [] }),
+    isDeferredPluginPath: () => false,
+    EAGER_EXCEPTIONS: new Set<string>(),
+    useDeferredLoadState: () => ({ loadedPluginIds: new Set<string>(), deferredComplete: false }),
+    getDeferredLoadState: () => ({ loadedPluginIds: new Set<string>(), deferredComplete: false }),
+    subscribeDeferredLoadState: () => noop,
+    markDeferredPluginsLoaded: noop,
+    markDeferredLoadComplete: noop,
     __esModule: true,
   };
 

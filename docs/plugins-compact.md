@@ -253,6 +253,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`full-pane`** — Full-pane layout renderer. Paints only the active pane (route.at(-1)) full-surface — the screen-stack navigation model, mounted by full-surface apps.
     - **`host`** — Mixing host that dispatches each active pane to Full-pane or Miller per the app's own full-surface pane list. Resolves the route once and provides the shared match context.
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
+    - **`route-fallback`** — Loading placeholder for an unmatched pane route while the deferred plugin tier is still loading; renders null once loading settles so a genuinely-invalid URL falls through to not-found.
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
@@ -368,6 +369,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`perfs`** — Umbrella for client-side performance primitives.
       - Plugins:
         - **`boot-trace`** — Module-level boot-span store imported eagerly by the framework boot path. Captures one-clock boot spans (startBootSpan/markBootInstant/recordBootSpan) and folds in Navigation/Paint Timing plus the first React commit; getBootTrace() assembles the trace.
+        - **`scheduler`** — Main-thread scheduling primitives (yieldToMain: scheduler.yield → postTask → setTimeout(0)) for cooperative boot/work batching.
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
     - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.
     - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).

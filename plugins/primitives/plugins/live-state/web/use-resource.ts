@@ -58,6 +58,20 @@ function getOrCreateNotifications(qc: QueryClient): NotificationsClient {
   return singleton;
 }
 
+// Transport hoist: construct the singleton NotificationsClient at the VERY start
+// of boot — before any plugin chunk is evaluated — so its leader-election
+// `navigator.locks.request` is queued at t≈0. The lock grant callback (which
+// calls `new WebSocket()` inside SharedWebSocket) then fires during the first
+// main-thread yield (a `loadPlugins` await gap) and the socket opens *during*
+// boot instead of ~8s later, after the full app mount. NotificationsProvider
+// later calls the same `getOrCreateNotifications`, so it reuses THIS singleton —
+// the one-socket-per-origin invariant is preserved (no eager second socket, no
+// per-tab WS regression). Constructed against the same default QueryClient the
+// provider mounts, so seeded/hydrated cache entries line up.
+export function ensureNotificationsClient(): NotificationsClient {
+  return getOrCreateNotifications(getDefaultQueryClient());
+}
+
 // Context-free accessor for the singleton — usable from Core.Root watchers that
 // may mount outside NotificationsProvider (the wedge watchdog). Returns null
 // until the provider has created the client (i.e. before first render).

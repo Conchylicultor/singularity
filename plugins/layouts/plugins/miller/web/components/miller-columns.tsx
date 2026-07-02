@@ -1,4 +1,5 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "react";
+import { DeferredRouteFallback } from "@plugins/layouts/plugins/route-fallback/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   type PaneMatch,
@@ -47,7 +48,11 @@ export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
     [store],
   );
 
-  if (!match) return null;
+  // No matched route. During the post-paint deferred-load gap the pane the URL
+  // points at may not be registered yet, so show a loading placeholder while
+  // deferred loading is in progress; once it settles this falls back to null
+  // (genuinely-invalid URL). See route-fallback for the full rationale.
+  if (!match) return <DeferredRouteFallback />;
 
   const itemIds = match.panes.map((e) => String(e.instanceId));
   // Reordering only makes sense with 2+ columns. With a single pane there is

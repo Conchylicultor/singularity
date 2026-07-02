@@ -2373,6 +2373,10 @@
       "name": "@singularity/plugin-layouts-miller",
       "version": "0.0.1",
     },
+    "plugins/layouts/plugins/route-fallback": {
+      "name": "@singularity/plugin-layouts-route-fallback",
+      "version": "0.0.1",
+    },
     "plugins/packages": {
       "name": "@singularity/plugin-packages",
       "version": "0.0.1",
@@ -3182,6 +3186,10 @@
     },
     "plugins/primitives/plugins/perfs/plugins/boot-trace": {
       "name": "@singularity/plugin-primitives-perfs-boot-trace",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/perfs/plugins/scheduler": {
+      "name": "@singularity/plugin-primitives-perfs-scheduler",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/persistent-draft": {
@@ -5639,6 +5647,8 @@
 
     "@singularity/plugin-layouts-miller": ["@singularity/plugin-layouts-miller@workspace:plugins/layouts/plugins/miller"],
 
+    "@singularity/plugin-layouts-route-fallback": ["@singularity/plugin-layouts-route-fallback@workspace:plugins/layouts/plugins/route-fallback"],
+
     "@singularity/plugin-packages": ["@singularity/plugin-packages@workspace:plugins/packages"],
 
     "@singularity/plugin-packages-host-semaphore": ["@singularity/plugin-packages-host-semaphore@workspace:plugins/packages/plugins/host-semaphore"],
@@ -6014,6 +6024,8 @@
     "@singularity/plugin-primitives-perfs": ["@singularity/plugin-primitives-perfs@workspace:plugins/primitives/plugins/perfs"],
 
     "@singularity/plugin-primitives-perfs-boot-trace": ["@singularity/plugin-primitives-perfs-boot-trace@workspace:plugins/primitives/plugins/perfs/plugins/boot-trace"],
+
+    "@singularity/plugin-primitives-perfs-scheduler": ["@singularity/plugin-primitives-perfs-scheduler@workspace:plugins/primitives/plugins/perfs/plugins/scheduler"],
 
     "@singularity/plugin-primitives-persistent-draft": ["@singularity/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
 

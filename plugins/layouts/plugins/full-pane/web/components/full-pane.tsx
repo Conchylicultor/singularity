@@ -1,4 +1,5 @@
 import { useContext } from "react";
+import { DeferredRouteFallback } from "@plugins/layouts/plugins/route-fallback/web";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { PortalForwardProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -39,7 +40,11 @@ export function FullPane({ match: provided }: { match?: PaneMatch }) {
   const match = provided ?? selfMatch;
   // Active pane = last entry.
   const active = match?.panes?.at(-1);
-  if (!active) return null;
+  // No active pane. On a cold deep-link the target pane's plugin may still be
+  // loading in the deferred tier, so show a loading placeholder while that is in
+  // progress; once deferred loading settles this falls back to null (a real
+  // no-match). See route-fallback for the full rationale.
+  if (!active) return <DeferredRouteFallback />;
   const body = (
     <PaneInstanceContext.Provider value={active.instanceId}>
       <PaneLayoutContext.Provider value={FULL_PANE_LAYOUT_CTX}>
