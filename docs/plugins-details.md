@@ -4418,7 +4418,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`, `primitives/css/z-layers.InTreeLayer`, `primitives/css/z-layers.zLayerClass`
             - Exports: Types: `StickyEdge`, `StickyProps`; Values: `Sticky`, `stickyClasses`
           - Cross-plugin:
-            - Imported by: `apps/mail/search`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversations-view/queue`, `debug/profiling/push/push-gantt`, `debug/queue`, `primitives/data-view`, `primitives/data-view/list`, `primitives/multi-select`, `primitives/tree`, `review/code-review`, `review/config-defaults`
+            - Imported by: `apps/mail/search`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversations-view/queue`, `debug/profiling/push/push-gantt`, `debug/queue`, `primitives/data-table`, `primitives/data-view`, `primitives/data-view/list`, `primitives/multi-select`, `primitives/tree`, `review/code-review`, `review/config-defaults`
         - **`surface`** — Semantic surface elevation primitive: <Surface level> bundles background + border + radius + shadow into a closed set of roles (sunken/base/raised/overlay), plus the no-adhoc-surface lint rule.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SURFACE_LEVELS`, `primitives/css/ui-kit.SurfaceLevel`, `primitives/select-scope.selectScopeProps`
@@ -4469,7 +4469,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `CursorPage`; Values: `cursorPageSchema`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Web:
-        - Uses: `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/virtual-rows.useVirtualRows`
+        - Uses: `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/element-size.useElementSize`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/virtual-rows.useVirtualRows`
         - Exports: Types: `ColumnDef`, `DataTableGroup`, `DataTableProps`, `DataTableRowDecoration`, `SortState`; Values: `DataTable`
       - Cross-plugin:
         - Imported by: `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/sample-rows`, `debug/boot-profile`, `debug/heap-snapshot`, `debug/profiling/boot`, `primitives/data-view/table`
@@ -4524,7 +4524,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/pin.Pin`, `primitives/css/row.SectionHeaderRow`, `primitives/css/text.Text`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-table.DataTableGroup`, `primitives/data-table.DataTableRowDecoration`, `primitives/data-table.SortState`, `primitives/data-view.DataViewAggregateConfig`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSection`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.FieldValue`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.ManualOrderConfig`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.resolveBodyFields`, `primitives/data-view.SortRule`, `primitives/data-view.useDataViewSections`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/rank-reorder.RankReorderProvider`, `primitives/rank-reorder.useRankReorderItem`
+            - Uses: `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/pin.Pin`, `primitives/css/row.SectionHeaderRow`, `primitives/css/text.Text`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-table.DataTableGroup`, `primitives/data-table.DataTableRowDecoration`, `primitives/data-table.SortState`, `primitives/data-view.DATA_VIEW_HEADER_OFFSET_VAR`, `primitives/data-view.DataViewAggregateConfig`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSection`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.FieldValue`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.ManualOrderConfig`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.resolveBodyFields`, `primitives/data-view.SortRule`, `primitives/data-view.useDataViewSections`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/rank-reorder.RankReorderProvider`, `primitives/rank-reorder.useRankReorderItem`
             - Exports: Types: `TableViewOptions`
           - Core:
             - Exports: Types: `TableViewOptions`
@@ -4569,7 +4569,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/latest-ref.useEventCallback`
         - Exports: Types: `ElementSize`, `ResizeTarget`; Values: `useElementSize`, `useResizeObserver`
       - Cross-plugin:
-        - Imported by: `apps-core/surface/floating`, `apps/prototypes/gallery`, `apps/sonata/notation`, `apps/sonata/piano-roll`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/data-view/gallery`, `primitives/expandable`, `primitives/graph-canvas`, `primitives/pane`, `primitives/responsive-overflow`, `primitives/terminal`, `reorder`, `screenshot`
+        - Imported by: `apps-core/surface/floating`, `apps/prototypes/gallery`, `apps/sonata/notation`, `apps/sonata/piano-roll`, `primitives/collapsible-wrap`, `primitives/data-table`, `primitives/data-view`, `primitives/data-view/gallery`, `primitives/expandable`, `primitives/graph-canvas`, `primitives/pane`, `primitives/responsive-overflow`, `primitives/terminal`, `reorder`, `screenshot`
     - **`error-boundary`** — Generic React error boundary primitive. Wraps plugin contributions so render errors are contained to one slot, with an ErrorBoundary.Action slot for domain-specific buttons (e.g. crash 'Fix') and a boundaryReportSink for opt-in crash reporting.
       - Web:
         - Slots: `ErrorBoundary.Action` ← `reports.launch-fix`

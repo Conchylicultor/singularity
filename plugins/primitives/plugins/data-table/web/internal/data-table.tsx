@@ -8,6 +8,8 @@ import {
   hoverRevealTarget,
 } from "@plugins/primitives/plugins/hover-reveal/web";
 import { useVirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import {
   MdArrowDownward,
   MdArrowUpward,
@@ -51,6 +53,7 @@ export function DataTable<TRow>({
   selectedRowId,
   useRowDecoration,
   controlSize = "xs",
+  stickyHeaderOffset = "0px",
 }: DataTableProps<TRow>) {
   const { rows, sortState, toggleSort } = useDataTable(
     data,
@@ -59,6 +62,11 @@ export function DataTable<TRow>({
     controlledSort,
     onToggleSort,
   );
+
+  // Measure the sticky column-header row so group headers can stack directly
+  // below it: their sticky `top` is `stickyHeaderOffset + this height`. Synchronous
+  // initial measure (element-size) → correct on first paint, before any scroll.
+  const [headerRef, { height: headerHeight }] = useElementSize();
 
   // In grouped mode the body rows come from each group (pre-sorted by the host
   // pipeline), not `data`; count them for the empty check.
@@ -111,12 +119,28 @@ export function DataTable<TRow>({
     />
   );
 
+  // Group headers pin flush beneath the sticky column header (which itself pins
+  // at `stickyHeaderOffset`, below any consumer chrome such as a DataView toolbar).
+  const groupHeaderTop = `calc(${stickyHeaderOffset} + ${Math.round(headerHeight)}px)`;
+
   return (
     <ControlSizeProvider size={controlSize}>
       {/* eslint-disable-next-line layout/no-adhoc-layout -- subgrid table host: a dynamic gridTemplateColumns grid whose rows are full-span subgrids (no Frame/Grid equivalent) */}
       <div className="grid gap-x-sm" style={{ gridTemplateColumns: template }}>
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks */}
-      <div className="sticky top-0 z-raised col-span-full grid grid-cols-subgrid border-b bg-background p-control text-3xs font-medium uppercase tracking-wider text-muted-foreground">
+      {/* The column-header row pins to the scroll viewport at `stickyHeaderOffset`
+          (0 by default; a DataView passes its toolbar height so the header stacks
+          BELOW the toolbar instead of hiding behind it). `mask` follows the
+          embedding surface so rows never show through the pinned bar. */}
+      <Sticky
+        as="div"
+        ref={headerRef}
+        edge="top"
+        mask
+        layer="raised"
+        // eslint-disable-next-line layout/no-adhoc-layout -- sticky header is itself a full-span subgrid row inheriting the host's column tracks
+        className="col-span-full grid grid-cols-subgrid border-b p-control text-3xs font-medium uppercase tracking-wider text-muted-foreground"
+        style={{ top: stickyHeaderOffset }}
+      >
         {columns.map((col) => {
           const sortable = !!col.value;
           const active = sortState?.columnId === col.id;
@@ -138,9 +162,9 @@ export function DataTable<TRow>({
           );
         })}
         {rowActions && <span aria-hidden />}
-      </div>
+      </Sticky>
       {groups
-        ? renderGroupedBody(groups, renderRow)
+        ? renderGroupedBody(groups, renderRow, groupHeaderTop)
         : !useRowDecoration && rows.length > VIRTUALIZE_THRESHOLD ? (
             <VirtualTableBody
               rows={rows}
@@ -333,12 +357,28 @@ function VirtualTableBody<TRow>({
 function renderGroupedBody<TRow>(
   groups: DataTableGroup<TRow>[],
   renderRow: (row: TRow, i: number) => ReactNode,
+  groupHeaderTop: string,
 ): ReactNode {
   let i = 0;
   return groups.map((group) => (
     <Fragment key={group.key}>
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- full-span group-header row spanning the subgrid table's column tracks */}
-      <div className="col-span-full">{group.header}</div>
+      {/* The group header pins flush below the sticky column header as you scroll
+          within its group. All group headers share the one grid as their sticky
+          containing block, so the next header covers the previous at the same top
+          (a swap hand-off) — the subgrid table can't wrap each group in its own
+          containing block without breaking column alignment. `mask` keeps rows
+          from showing through the pinned header. */}
+      <Sticky
+        as="div"
+        edge="top"
+        mask
+        layer="raised"
+        // eslint-disable-next-line layout/no-adhoc-layout -- full-span sticky group-header row spanning the subgrid table's column tracks
+        className="col-span-full"
+        style={{ top: groupHeaderTop }}
+      >
+        {group.header}
+      </Sticky>
       {group.collapsed ? null : group.rows.map((row) => renderRow(row, i++))}
     </Fragment>
   ));

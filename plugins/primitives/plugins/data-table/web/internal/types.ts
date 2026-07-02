@@ -66,6 +66,16 @@ export interface DataTableProps<TRow> {
   /** Trailing per-row actions, hover-revealed in their own column. */
   rowActions?: (row: TRow, index: number) => ReactNode;
   /**
+   * CSS length the table's own sticky rows pin at, measured from the top of the
+   * scroll viewport. Defaults to `"0px"` (flush to the top). Set this when a
+   * sticky element sits ABOVE the table in the SAME scroll container (e.g. a
+   * DataView's sticky toolbar) so the sticky column-header row stacks directly
+   * below it instead of hiding behind it; group headers then stack below the
+   * column header (offset by its measured height). Accepts any CSS length,
+   * including a `var(...)` / `calc(...)` expression.
+   */
+  stickyHeaderOffset?: string;
+  /**
    * Per-row decoration HOOK, called once per rendered row INSIDE the row
    * component (so the consumer may call hooks — e.g. `useRankReorderItem` for
    * drag reorder). Returns a ref + props spread + classes + in-row overlay for

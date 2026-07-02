@@ -19,6 +19,7 @@ import {
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
+  DATA_VIEW_HEADER_OFFSET_VAR,
   type DataViewAggregateConfig,
   type DataViewRenderProps,
   type DataViewSection,
@@ -196,6 +197,11 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     filter: undefined,
     emptyLabel: "No results found",
     rowActions,
+    // Pin the table's own sticky rows (column header + group headers) below the
+    // DataView's sticky toolbar, reading the host-published toolbar height. Fixes
+    // both the column header (was hiding behind the toolbar) and the group headers
+    // (were not sticky) — consistent with the list view's sticky group headers.
+    stickyHeaderOffset: `var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px)`,
     // Manual order: per-row drag affordances (disables virtualization in
     // DataTable). Sort is already hidden by the host while manual order is on.
     useRowDecoration: manualOrder ? useRowDecoration : undefined,
