@@ -1,7 +1,11 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { useHoverReveal, hoverRevealClass } from "./internal/use-hover-reveal";
-export { hoverRevealGroup, hoverRevealTarget } from "./internal/group-reveal";
+export {
+  hoverRevealGroup,
+  hoverRevealTarget,
+  hoverRevealTargetHoverOnly,
+} from "./internal/group-reveal";
 
 export default {
   description:
