@@ -5,7 +5,14 @@ release, observe live progress/logs, see the artifact, and launch/preview it
 locally. A sibling of the `build` plugin and modeled on it shape-for-shape
 (durable pid-claim, detached `Bun.spawn`, line streaming into a `Log.channel`,
 orphan reconcile on boot, a partial unique inflight index). The Studio app is the
-first UI consumer; the engine itself ships no web barrel.
+first UI consumer; the engine ships no UI of its own. Its web barrel
+(`web/index.ts`) is **registration-only** — a side-effect import
+(`web/internal/register.ts`) that eagerly pulls `@plugins/release/core` into the
+web import graph so the boot-critical `release.history` / `release.previews`
+ResourceDescriptors self-register before first paint. This must live with the
+resource OWNER: the descriptors are read only by the Studio release pane, which is
+lazy-loaded, so nothing else guarantees eager registration and boot-snapshot would
+otherwise file a crash report every boot.
 
 ## How it works
 
@@ -78,7 +85,7 @@ nothing remote is built here.
 
 ## Plugin reference
 
-- Description: Local composition release lifecycle engine: run, observe, preview F4 artifacts.
+- Description: Release engine web presence: eagerly registers the boot-critical release.history / release.previews resource descriptors so boot-snapshot can hydrate them before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.pruneWorktreeReleaseArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `primitives/log-channels.Log`
   - DB schema: `plugins/release/server/internal/tables.ts`
