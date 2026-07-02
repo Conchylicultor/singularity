@@ -30,14 +30,12 @@ import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/we
 import { useServerDataSource } from "../internal/use-server-data-source";
 import { useFilterController } from "../internal/use-filter-controller";
 import { useSortController } from "../internal/use-sort-controller";
-import { useVisibleFieldsController } from "../internal/use-visible-fields-controller";
 import { useSortPresets } from "../internal/use-sort-presets";
 import { useFilterPresets } from "../internal/use-filter-presets";
 import { CollectFieldExtensions } from "../internal/field-extensions";
 import { useScrollAncestorGuard } from "../internal/use-scroll-ancestor-guard";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
-import { PropertiesTrigger } from "./properties-trigger";
 import { CreatorsControl } from "./creators-control";
 import { DataViewToolbar } from "./toolbar/data-view-toolbar";
 import { DataViewSettingsMenu } from "./settings/settings-menu";
@@ -225,20 +223,11 @@ function DataViewInner<TRow>({
   const activeSupportsGroupBy =
     activeInstance?.viewType.supportsGroupBy !== false;
 
-  // Visible-fields controller — the per-view Properties pill governs which fields
-  // render in the body and in what order (display-only; sort/filter/search still
-  // use the full `fields`). Gated below on `fields.length > 1` (a single-field
-  // surface has nothing to configure).
-  const setActiveVisibleFields = useCallback(
-    (ids: string[] | null) => viewModel.setVisibleFields(activeViewId, ids),
-    [viewModel, activeViewId],
-  );
-  const visibleFieldsController = useVisibleFieldsController(
-    fields,
-    activeState.visibleFields ?? null,
-    setActiveVisibleFields,
-  );
-  const hasProperties = fields.length > 1;
+  // The per-view Properties control (which fields render in the body + their
+  // order) now lives in the settings gear as a `view`-scope `DataViewSlots.Setting`
+  // contribution (see `PropertiesControl`), reading/writing the same
+  // `activeState.visibleFields` / `viewModel.setVisibleFields` via
+  // `DataViewSettingsContext` — no host wiring needed here.
 
   // Config is the single source of truth: zero authored view-instances → render
   // an honest placeholder rather than an empty shell. The build-time
@@ -373,13 +362,6 @@ function DataViewInner<TRow>({
         sortControl={
           hasSort ? (
             <SortBuilderTrigger controller={sortController} presets={sortPresets} />
-          ) : null
-        }
-        /* Properties pill — per-view-instance visible-fields (which fields show
-           in the body + their order); null when there is nothing to configure. */
-        propertiesControl={
-          hasProperties ? (
-            <PropertiesTrigger controller={visibleFieldsController} />
           ) : null
         }
         actions={actions}

@@ -4,6 +4,7 @@ import type { ComponentType, ReactNode } from "react";
 import type { ViewTypeMeta } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import type { LoadingVariant } from "@plugins/primitives/plugins/loading/web";
 import type { DataViewId, DataViewRenderProps, FieldDef } from "../core";
+import type { DataViewSettingsContextValue } from "./components/settings/settings-context";
 import { Cell } from "./cell-slot";
 import { CellEditor } from "./cell-editor-slot";
 import { Filter } from "./filter-slot";
@@ -41,9 +42,9 @@ export interface DataViewContribution extends ViewTypeMeta {
  * A contribution to the DataView settings menu (the gear popover). A plain data
  * contribution (NOT a render slot — settings aren't force-reorderable), mirroring
  * the `View` slot's shape. `scope` places it in the "Current view" section
- * (per-instance settings like group-by) or the "DataView" section (surface-wide
- * settings like custom-columns). The `component` reads everything it needs from
- * `DataViewSettingsContext` — no props are threaded.
+ * (per-instance settings like group-by / properties) or the "DataView" section
+ * (surface-wide settings like custom-columns). The `component` reads everything it
+ * needs from `DataViewSettingsContext` — no props are threaded.
  */
 export interface DataViewSettingContribution {
   /** Stable id (React key + reorder/doc identity). */
@@ -52,6 +53,15 @@ export interface DataViewSettingContribution {
   scope: "global" | "view";
   /** Ordering within its scope's section (ascending; default 0). */
   order?: number;
+  /**
+   * Whether this setting has anything to render for the current context — the
+   * generic applicability signal the menu uses to decide gear/section visibility
+   * without ever naming a specific contribution (group-by hides when no field is
+   * groupable, properties hides on a single-field surface). Must mirror the
+   * component's own self-hide so an "applicable" setting always renders. Absent =
+   * always applicable.
+   */
+  isApplicable?: (ctx: DataViewSettingsContextValue) => boolean;
   component: ComponentType;
 }
 

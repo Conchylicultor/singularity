@@ -1,7 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { dataViewConfigContributions } from "./internal/config-registrations";
+import { isGroupableField } from "./internal/use-data-view-sections";
 import { DataViewSlots } from "./slots";
 import { GroupByControl } from "./components/settings/group-by-control";
+import { PropertiesControl } from "./components/settings/properties-control";
 
 export { DataView } from "./components/data-view";
 export { defineDataView } from "../core";
@@ -96,12 +98,25 @@ export default {
   // per-slot registration — no per-consumer barrel boilerplate.
   contributions: [
     ...dataViewConfigContributions,
-    // Group-by is the first DataView settings contribution (view scope). It
-    // reads groupable fields + active groupBy from DataViewSettingsContext.
+    // Per-view (view scope) DataView settings, rendered in the gear menu's
+    // "Current view" section. Each reads what it needs from
+    // DataViewSettingsContext and declares its own `isApplicable` so the menu
+    // gates visibility generically (never naming a specific setting).
+    // Properties: which fields render in the body + their order (Notion-style).
+    DataViewSlots.Setting({
+      id: "data-view.properties",
+      scope: "view",
+      order: 0,
+      isApplicable: (ctx) => ctx.fields.length > 1,
+      component: PropertiesControl,
+    }),
+    // Group-by: sections the rows by a groupable field.
     DataViewSlots.Setting({
       id: "data-view.group-by",
       scope: "view",
-      order: 0,
+      order: 1,
+      isApplicable: (ctx) =>
+        ctx.activeSupportsGroupBy && ctx.fields.some((f) => isGroupableField(f)),
       component: GroupByControl,
     }),
   ],
