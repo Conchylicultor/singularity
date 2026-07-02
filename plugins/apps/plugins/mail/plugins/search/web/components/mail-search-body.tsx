@@ -3,15 +3,18 @@ import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
-  useEndpoint,
-  getEndpointErrorMessage,
-} from "@plugins/infra/plugins/endpoints/web";
-import { mailSearchEndpoint } from "@plugins/apps/plugins/mail/plugins/sync/core";
+  Button,
+  ControlSizeProvider,
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";
 import { mailSearchPane } from "../panes";
 import { MailSearchRow } from "./mail-search-row";
+import { useMailSearch } from "../internal/use-mail-search";
 
 /**
  * The search surface: a sticky query input over a live result list. The backend
@@ -22,12 +25,12 @@ import { MailSearchRow } from "./mail-search-row";
  *
  * Debounce: there is no shared `useDebounced` primitive, so the query is
  * debounced locally (~250ms) with a `setTimeout` in an effect before it drives
- * the endpoint. (Follow-up: promote a `useDebounced` hook to primitives.)
+ * the search. (Follow-up: promote a `useDebounced` hook to primitives.)
  *
- * Pagination: the endpoint returns `nextPageToken`, but "Load more" is deferred
- * — `useEndpoint` keys each page by its query, so accumulating pages cleanly
- * needs `useInfiniteQuery`/cursor-pagination wiring. One page (25 relevance-
- * ordered hits) is correct and useful today. (Follow-up.)
+ * Pagination: `useMailSearch` accumulates Gmail's opaque `nextPageToken` pages
+ * via `useInfiniteQuery` and auto-fetches the next page as a `ScrollSentinel`
+ * scrolls into view (the reader pane's single scroll). A failed next-page fetch
+ * shows an inline Retry instead of hot-looping the sentinel.
  */
 export function MailSearchBody(): ReactElement {
   const [query, setQuery] = useState("");
@@ -39,11 +42,17 @@ export function MailSearchBody(): ReactElement {
   }, [query]);
 
   const trimmed = debounced.trim();
-  const result = useEndpoint(
-    mailSearchEndpoint,
-    {},
-    { query: { q: trimmed }, enabled: trimmed.length > 0 },
-  );
+  const {
+    results,
+    isLoading,
+    isError,
+    error,
+    hasNextPage,
+    isFetchingNextPage,
+    isFetchNextPageError,
+    sentinelRef,
+    fetchNextPage,
+  } = useMailSearch(trimmed);
 
   let body: ReactNode;
   if (trimmed.length === 0) {
@@ -52,19 +61,38 @@ export function MailSearchBody(): ReactElement {
         Search all mail — including messages older than the 30-day sync window.
       </Placeholder>
     );
-  } else if (result.isLoading) {
+  } else if (isLoading) {
     body = <Loading variant="rows" />;
-  } else if (result.isError) {
+  } else if (isError) {
     // The backend returns 409 when Gmail isn't connected — surface its message.
-    body = <Placeholder tone="error">{getEndpointErrorMessage(result.error)}</Placeholder>;
-  } else if (!result.data || result.data.results.length === 0) {
+    body = <Placeholder tone="error">{getEndpointErrorMessage(error)}</Placeholder>;
+  } else if (results.length === 0 && !hasNextPage) {
     body = <Placeholder>No matches.</Placeholder>;
   } else {
     body = (
       <Stack gap="none" className="p-sm">
-        {result.data.results.map((m) => (
+        {results.map((m) => (
           <MailSearchRow key={m.id} message={m} />
         ))}
+        {isFetchingNextPage && <Loading variant="spinner" label="Loading…" />}
+        {isFetchNextPageError && (
+          <Center axis="horizontal">
+            <Inset pad="sm">
+              <Stack gap="xs" align="center">
+                <Placeholder tone="error">Couldn't load more.</Placeholder>
+                <ControlSizeProvider size="sm">
+                  <Button variant="ghost" onClick={() => fetchNextPage()}>
+                    Retry
+                  </Button>
+                </ControlSizeProvider>
+              </Stack>
+            </Inset>
+          </Center>
+        )}
+        <ScrollSentinel
+          sentinelRef={sentinelRef}
+          show={hasNextPage && !isFetchNextPageError}
+        />
       </Stack>
     );
   }
