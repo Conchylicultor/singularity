@@ -1,4 +1,4 @@
-// @hash 94c76bcae71a
+// @hash 6cefdf4b69c9
 {
   "manifests": [
     {
@@ -350,6 +350,7 @@
       "name": "served-baseline",
       "category": "subsystem",
       "entryPoints": [
+        "apps-core.layout",
         "infra.health",
         "shell.toast",
         "ui.theme-engine",

@@ -234,7 +234,13 @@ interface SocketChannel {
 }
 
 export class NotificationsClient {
-  private channels: Record<SocketKind, SocketChannel>;
+  // Lazily-populated: the worktree channel is opened eagerly in the constructor,
+  // but the central channel is created only when a central-origin resource is
+  // first observed (see `channelFor`). An app with no central resources (a
+  // self-contained release with `auth` excluded) therefore never opens
+  // /ws/central-notifications — a release ships no central runtime, so that
+  // socket would otherwise 404 and reconnect forever, pinning the overall status.
+  private channels: Partial<Record<SocketKind, SocketChannel>> = {};
   private nextMsgId = 1;
   /**
    * key → Zod schema. Registered on every observe() call from useResource.
@@ -274,10 +280,9 @@ export class NotificationsClient {
   private firstReadyByKind: Record<SocketKind, number | null> = { worktree: null, central: null };
 
   constructor(private queryClient: QueryClient) {
-    this.channels = {
-      worktree: this.openChannel("worktree"),
-      central: this.openChannel("central"),
-    };
+    // Open the worktree channel eagerly (always used). Central stays lazy —
+    // opened on the first central-origin observe() via channelFor.
+    this.channelFor("worktree");
     this.unsubscribeFromBus = subscribeWsStatus(({ url, status }) => {
       const kind = liveStateSocketKind(url);
       if (kind === null) return;
@@ -388,7 +393,7 @@ export class NotificationsClient {
     }
     if (before.length === 0) return [];
     trace(`probeMissedUpdates subCount=${before.length}`);
-    for (const channel of Object.values(this.channels)) {
+    for (const channel of Object.values(this.channels) as SocketChannel[]) {
       // Load-bearing: the probe resets lastAckVersion then reads it after a
       // fixed settle; a staggered late-batch sub would still read -1 and hide a
       // genuine miss. The probe is a single-tab watchdog, not the fleet herd.
@@ -401,7 +406,7 @@ export class NotificationsClient {
     const missed: MissedFrame[] = [];
     for (const b of before) {
       // Re-look up by id: a refcount-0 sub may have torn down mid-probe.
-      const sub = this.channels[b.socket].subs.get(b.id);
+      const sub = this.channels[b.socket]?.subs.get(b.id);
       if (!sub) continue;
       if (
         b.prevVersion >= 0 &&
@@ -427,7 +432,7 @@ export class NotificationsClient {
    */
   debugSnapshot(): DebugSnapshot {
     const subs: DebugSub[] = [];
-    for (const channel of Object.values(this.channels)) {
+    for (const channel of Object.values(this.channels) as SocketChannel[]) {
       for (const [id, sub] of channel.subs) {
         subs.push({
           key: sub.key,
@@ -456,7 +461,11 @@ export class NotificationsClient {
   }
 
   private leaderInfo(kind: SocketKind): LeaderInfo {
-    const ws = this.channels[kind].ws;
+    // Read without creating: a never-opened channel (e.g. central on an app with
+    // no central resources) has no leader — report it as such, never open it.
+    const channel = this.channels[kind];
+    if (!channel) return { isLeader: false, hasLeader: false };
+    const ws = channel.ws;
     return { isLeader: ws.isLeader, hasLeader: ws.hasLeader };
   }
 
@@ -479,7 +488,9 @@ export class NotificationsClient {
     if (schema) this.schemas.set(key, schema);
     if (keyOf) this.keyedKeyOf.set(key, keyOf);
     const kind = socketKindFor(origin);
-    const channel = this.channels[kind];
+    // The ONLY path that may lazily create a channel: the first central-origin
+    // observe() opens the central socket; every read-only path below only reads.
+    const channel = this.channelFor(kind);
     const pk = paramsKey(params);
     const id = `${key}\0${pk}`;
     const existing = channel.subs.get(id);
@@ -506,7 +517,10 @@ export class NotificationsClient {
   /** Observer count decreased. Unsub on 1→0. */
   unobserve(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): void {
     const kind = socketKindFor(origin);
+    // Read-only: an unobserve can only be reached for an origin a prior observe()
+    // already created the channel for. Guard defensively (never create it here).
     const channel = this.channels[kind];
+    if (!channel) return;
     const pk = paramsKey(params);
     const id = `${key}\0${pk}`;
     const existing = channel.subs.get(id);
@@ -550,8 +564,9 @@ export class NotificationsClient {
    * in or no value has arrived yet.
    */
   etagFor(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): string | undefined {
+    // Read-only: reachable only after an observe() created this origin's channel.
     const channel = this.channels[socketKindFor(origin)];
-    return channel.subs.get(`${key}\0${paramsKey(params)}`)?.etag;
+    return channel?.subs.get(`${key}\0${paramsKey(params)}`)?.etag;
   }
 
   /**
@@ -568,7 +583,8 @@ export class NotificationsClient {
     etag: string | null,
   ): void {
     if (etag == null) return;
-    const sub = this.channels[socketKindFor(origin)].subs.get(`${key}\0${paramsKey(params)}`);
+    // Read-only: reachable only after an observe() created this origin's channel.
+    const sub = this.channels[socketKindFor(origin)]?.subs.get(`${key}\0${paramsKey(params)}`);
     if (sub) sub.etag = etag;
   }
 
@@ -603,7 +619,7 @@ export class NotificationsClient {
     schema: ZodType<T>,
     source: "prime" | "fallback",
   ): Promise<T> {
-    const entry = this.channels[socketKindFor(origin)].subs.get(`${key}\0${paramsKey(params)}`);
+    const entry = this.channels[socketKindFor(origin)]?.subs.get(`${key}\0${paramsKey(params)}`);
     const qs = new URLSearchParams(params).toString();
     const base = origin === "central" ? "/api/central-resources" : "/api/resources";
     const url = `${base}/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
@@ -649,7 +665,7 @@ export class NotificationsClient {
    *  (the WS will deliver); a schema/parse failure is a real bug surfaced loudly
    *  (mirroring the WS `onmessage` discipline). Never rejects (safe to `void`). */
   async primeFromHttp(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): Promise<void> {
-    const entry = this.channels[socketKindFor(origin)].subs.get(`${key}\0${paramsKey(params)}`);
+    const entry = this.channels[socketKindFor(origin)]?.subs.get(`${key}\0${paramsKey(params)}`);
     if (!entry) return; // observe() must have created the sub
     const schema = this.schemas.get(key);
     if (!schema) return;
@@ -667,6 +683,22 @@ export class NotificationsClient {
       trace(`http error key=${key} params=${paramsKey(params)} source=prime error=${String(err)}`);
       queueMicrotask(() => { throw err; });
     }
+  }
+
+  /**
+   * Lazily create + open + cache the channel for `kind`, returning the cached
+   * one on every subsequent call. The worktree channel is created eagerly in the
+   * constructor; the central channel is created only on the first central-origin
+   * `observe()` — the single deliberate creation point (every read-only accessor
+   * reads `this.channels[kind]` directly and tolerates its absence). An app with
+   * no central resources never opens /ws/central-notifications this way.
+   */
+  private channelFor(kind: SocketKind): SocketChannel {
+    const existing = this.channels[kind];
+    if (existing) return existing;
+    const channel = this.openChannel(kind);
+    this.channels[kind] = channel;
+    return channel;
   }
 
   private openChannel(kind: SocketKind): SocketChannel {

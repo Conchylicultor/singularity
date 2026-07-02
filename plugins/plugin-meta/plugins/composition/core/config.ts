@@ -147,15 +147,20 @@ export const compositionsConfig = defineConfig({
         subsystem("design-system", "aM", ["primitives.css"]),
         subsystem("mcp", "aN", ["infra.mcp"]),
         // The reusable baseline EVERY gateway-served app composition `extends`:
-        // the liveness/readiness endpoint the gateway probes, the toast HOST
-        // (forced alongside health, whose Core.Root watchers dispatch toasts —
-        // without the host mounted those toasts would silently vanish), plus the
-        // runtime theme engine and the token groups that supply the base CSS
-        // variables (without these a filtered app boots unstyled and fails
-        // /api/health). Entry points (not contributors) so they're forced into
-        // the hard closure unconditionally; the theme-customizer UI stays
-        // opt-in/soft.
+        // the mandatory Core.Root app SURFACE renderer (apps-core.layout —
+        // AppsLayout: the tab bar / rail / tab surface; without it a filtered app
+        // boots to a black screen, since it's a graph dead-end nothing hard-imports
+        // and so its Core.Root contribution silently vanishes — same "force it in"
+        // rationale as the toast host below), the liveness/readiness endpoint the
+        // gateway probes, the toast HOST (forced alongside health, whose Core.Root
+        // watchers dispatch toasts — without the host mounted those toasts would
+        // silently vanish), plus the runtime theme engine and the token groups that
+        // supply the base CSS variables (without these a filtered app boots
+        // unstyled and fails /api/health). Entry points (not contributors) so
+        // they're forced into the hard closure unconditionally; the
+        // theme-customizer UI stays opt-in/soft.
         subsystem("served-baseline", "aN5", [
+          "apps-core.layout",
           "infra.health",
           "shell.toast",
           "ui.theme-engine",
