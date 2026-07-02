@@ -7,6 +7,7 @@ export {
   setupWorktree,
   removeWorktree,
 } from "./internal/worktree";
+export { withWorktreeMutateSlot } from "./internal/mutate-gate";
 export {
   type WorktreeOp,
   type WorktreeOpPhase,

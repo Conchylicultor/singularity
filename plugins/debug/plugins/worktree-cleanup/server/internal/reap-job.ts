@@ -35,9 +35,15 @@ export const worktreeReapJob = defineJob({
     const targets = await collectReapable(Date.now());
     let reaped = 0;
 
+    // Per-caller cap kept ≤ the host `worktree-mutate` gate size. The host gate
+    // (infra/worktree.withWorktreeMutateSlot) is now the HARD bound on concurrent
+    // full-tree `git worktree remove`s across every process; this local cap keeps
+    // the reap from flooding the shared flock queue with more waiters than the gate
+    // can grant, always leaving headroom for an interactive spawn's checkout
+    // (two-tier fairness, mirroring host-read-pool's per-worktree tier).
     await pMap(
       targets,
-      6,
+      3,
       async (t: ReapTarget) => {
         try {
           await reapAttempt(t.id, { worktreePath: t.worktreePath });

@@ -3,6 +3,7 @@ import { GIT } from "@plugins/infra/plugins/paths/server";
 import {
   ensureMainWorktreeRoot,
   removeWorktree,
+  withWorktreeMutateSlot,
 } from "@plugins/infra/plugins/worktree/server";
 import type { StagedConfigDefault } from "../../core/resources";
 import { findPromotableDescriptor } from "./registry-lookup";
@@ -56,7 +57,13 @@ export async function landDefaults(
   const branch = slug;
   const wtPath = join(repoRoot, ".claude/worktrees", slug);
 
-  await git(repoRoot, "worktree", "add", "-b", branch, wtPath, "main");
+  // Gate the heavy checkout host-wide alongside every other worktree add/remove, so
+  // the invariant holds for this second inline `git worktree add` too (the `git`
+  // helper still throws loudly on a nonzero exit — the throw propagates out of the
+  // slot, which releases in a finally).
+  await withWorktreeMutateSlot(() =>
+    git(repoRoot, "worktree", "add", "-b", branch, wtPath, "main"),
+  );
 
   const landed: LandedKey[] = [];
 

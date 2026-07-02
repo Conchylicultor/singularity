@@ -1463,7 +1463,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/optimistic-mutation.useOptimisticResource`
         - Exports: Types: `StagedConfigDefault`, `StagedDiffProps`, `StagedKey`, `StagingDiffRenderer`; Values: `GenericConfigDiff`, `StagedConfigDefaultSchema`, `stagedConfigDefaultsResource`, `Staging`, `useApplyAllConfigDefaults`, `useApplyConfigDefault`, `useDiscardAllConfigDefaults`, `useDiscardConfigDefault`, `useHasStagedDefaults`, `useStageConfigDefault`, `useStageDefault`, `useStagedKeys`, `useStagedValue`, `useStagingDiffRenderers`
       - Server:
-        - Uses: `config_v2.getAllDescriptors`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/jobs.defineJob`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`
+        - Uses: `config_v2.getAllDescriptors`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/jobs.defineJob`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`, `infra/worktree.withWorktreeMutateSlot`
         - DB schema: `plugins/config_v2/plugins/staging/server/internal/tables.ts`
         - Exports: Values: `_stagedConfigDefault`, `stagedConfigDefaultsResource`
         - Register: `defineJob('config-v2.land-defaults')`
@@ -3571,8 +3571,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `POST /api/secrets/get`, `POST /api/secrets/set`, `POST /api/secrets/delete`, `POST /api/secrets/has`, `POST /api/secrets/meta`, `POST /api/secrets/list`
     - **`worktree`**
       - Server:
-        - Uses: `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeDataDir`, `infra/paths.WORKTREES_DIR`
-        - Exports: Types: `DerivePushDeps`, `PushHolder`, `WorktreeOp`, `WorktreeOpInfo`, `WorktreeOpPhase`, `WorktreeSpec`, `ZeroCacheSpec`; Values: `clearPushHolder`, `clearWorktreeOp`, `derivePushPhases`, `ensureMainWorktreeRoot`, `isCanonicalWorktreePath`, `isWorktreeOpActive`, `listActiveWorktreeOps`, `markWorktreeOpStart`, `PUSH_LOCK_PATH`, `pushLockHeld`, `readPushHolder`, `removeWorktree`, `removeWorktreeSpec`, `resolveActiveWorktreeOps`, `setupWorktree`, `setWorktreeOpPhase`, `worktreePathFor`, `worktreesDir`, `writePushHolder`, `writeWorktreeSpec`
+        - Uses: `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeDataDir`, `infra/paths.WORKTREES_DIR`, `packages/host-semaphore.createHostSemaphore`
+        - Exports: Types: `DerivePushDeps`, `PushHolder`, `WorktreeOp`, `WorktreeOpInfo`, `WorktreeOpPhase`, `WorktreeSpec`, `ZeroCacheSpec`; Values: `clearPushHolder`, `clearWorktreeOp`, `derivePushPhases`, `ensureMainWorktreeRoot`, `isCanonicalWorktreePath`, `isWorktreeOpActive`, `listActiveWorktreeOps`, `markWorktreeOpStart`, `PUSH_LOCK_PATH`, `pushLockHeld`, `readPushHolder`, `removeWorktree`, `removeWorktreeSpec`, `resolveActiveWorktreeOps`, `setupWorktree`, `setWorktreeOpPhase`, `withWorktreeMutateSlot`, `worktreePathFor`, `worktreesDir`, `writePushHolder`, `writeWorktreeSpec`
       - Cross-plugin:
         - Imported by: `code-explorer`, `config_v2/staging`, `conversations`, `conversations/conversation-view/op-status`, `conversations/runtime-tmux`, `debug/broadcasts`, `debug/memory`, `debug/profiling/push`, `debug/worktree-cleanup`, `infra/git-watcher`, `infra/launcher`, `plugin-meta/plugin-health`, `stats/commits`, `stats/cost`, `tasks`, `tasks/tasks-core`
 
@@ -3623,7 +3623,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/paths.SINGULARITY_DIR`
         - Exports: Types: `HostSemaphore`; Values: `createHostSemaphore`
       - Cross-plugin:
-        - Imported by: `debug/profiling/boot-bench`, `infra/host-read-pool`
+        - Imported by: `debug/profiling/boot-bench`, `infra/host-read-pool`, `infra/worktree`
     - **`inflight`**
       - Cross-plugin:
         - Imported by: `framework/resource-runtime`, `infra/endpoints`

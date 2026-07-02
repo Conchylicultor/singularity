@@ -2,6 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
+import { withWorktreeMutateSlot } from "./mutate-gate";
 
 let cachedRepoRoot: string | null = null;
 
@@ -63,24 +64,29 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
 
   const repoRoot = await ensureMainWorktreeRoot();
   const branch = `claude-web/${id}`;
-  const proc = Bun.spawn(
-    [GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"],
-    { stdout: "pipe", stderr: "pipe" },
-  );
-  const [stderr, exit] = await Promise.all([
-    new Response(proc.stderr).text(),
-    proc.exited,
-  ]);
-  // Fail loudly on a genuine checkout failure so the durable spawn job retries
-  // instead of handing `runtime.create` a nonexistent worktree dir (the latent
-  // swallowed-failure bug this replaces: the old code awaited `.exited` and
-  // ignored `exitCode`). A nonzero exit where the dir now exists is a benign
-  // "already exists" race (a concurrent creator won) — treat it as success.
-  if (exit !== 0 && !existsSync(wtPath)) {
-    throw new Error(
-      `git worktree add for ${id} failed (exit ${exit}): ${stderr.trim() || "<no stderr>"}`,
+  // Gate ONLY the heavy checkout subprocess host-wide (the 77 MB / 8385-file disk
+  // offender). The idempotent existsSync early-return, tsbuildinfo copy, and `mise
+  // trust` stay outside the gate — they are cheap and must not hold a slot.
+  await withWorktreeMutateSlot(async () => {
+    const proc = Bun.spawn(
+      [GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"],
+      { stdout: "pipe", stderr: "pipe" },
     );
-  }
+    const [stderr, exit] = await Promise.all([
+      new Response(proc.stderr).text(),
+      proc.exited,
+    ]);
+    // Fail loudly on a genuine checkout failure so the durable spawn job retries
+    // instead of handing `runtime.create` a nonexistent worktree dir (the latent
+    // swallowed-failure bug this replaces: the old code awaited `.exited` and
+    // ignored `exitCode`). A nonzero exit where the dir now exists is a benign
+    // "already exists" race (a concurrent creator won) — treat it as success.
+    if (exit !== 0 && !existsSync(wtPath)) {
+      throw new Error(
+        `git worktree add for ${id} failed (exit ${exit}): ${stderr.trim() || "<no stderr>"}`,
+      );
+    }
+  });
   try {
     await copyTsBuildInfoToWorktree(repoRoot, wtPath);
   // eslint-disable-next-line promise-safety/no-bare-catch
@@ -98,13 +104,17 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
 
 export async function removeWorktree(wtPath: string): Promise<void> {
   const repoRoot = await ensureMainWorktreeRoot();
-  const proc = Bun.spawn(
-    [GIT, "-C", repoRoot, "worktree", "remove", wtPath, "--force"],
-    { stdout: "pipe", stderr: "pipe" },
-  );
-  await proc.exited;
-  if (proc.exitCode !== 0) {
-    const err = await new Response(proc.stderr).text();
-    throw new Error(`git worktree remove failed: ${err}`);
-  }
+  // Gate the heavy full-tree `rm` host-wide (~1.2 s / 77 MB), the same disk offender
+  // as `add` — one shared budget bounds add+remove contention across all callers.
+  await withWorktreeMutateSlot(async () => {
+    const proc = Bun.spawn(
+      [GIT, "-C", repoRoot, "worktree", "remove", wtPath, "--force"],
+      { stdout: "pipe", stderr: "pipe" },
+    );
+    await proc.exited;
+    if (proc.exitCode !== 0) {
+      const err = await new Response(proc.stderr).text();
+      throw new Error(`git worktree remove failed: ${err}`);
+    }
+  });
 }
