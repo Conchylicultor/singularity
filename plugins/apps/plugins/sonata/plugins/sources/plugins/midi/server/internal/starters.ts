@@ -23,12 +23,28 @@ export interface StarterNote {
   velocity?: number;
 }
 
+/**
+ * A sustain-pedal press, in **seconds** (like `StarterNote.time`). Written to
+ * the generated MIDI as CC64 down (`down`) / up (`up`) events, so it round-trips
+ * through the exact same importer path as a real `.mid` — no special-casing.
+ */
+export interface StarterPedalSpan {
+  down: number;
+  up: number;
+}
+
 export interface StarterTrack {
   /** Track name, surfaced per-track (e.g. "Left hand"). */
   name?: string;
   /** General MIDI program number (0 = Acoustic Grand Piano). */
   program?: number;
   notes: StarterNote[];
+  /**
+   * Optional sustain-pedal (CC64) spans for this track, in seconds. Omit for an
+   * unpedalled track. A two-hand piano piece pedals both hands with the same
+   * spans (one physical pedal, per-track CC64 lanes).
+   */
+  pedal?: readonly StarterPedalSpan[];
 }
 
 export interface Starter {

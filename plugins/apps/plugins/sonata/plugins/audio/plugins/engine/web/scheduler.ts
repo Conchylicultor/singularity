@@ -1,5 +1,6 @@
 import {
   buildTempoIndex,
+  resolvePedalSustain,
   type Note,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -170,8 +171,18 @@ export function startScheduling(
   let anchorPathSec = pathSec(anchorC); // 0 at build; recomputed on retime
   const whenFor = (c: number): number => anchorWhen + pathSec(c) - anchorPathSec;
 
-  const durationSec = (n: Note): number =>
-    tempo.beatToSeconds(n.start + n.duration) - tempo.beatToSeconds(n.start);
+  // Sustain-pedal resolution is in BEATS, hence tempo-invariant — compute the
+  // per-note extended sounding off-beat ONCE. It survives `retime` untouched
+  // (which only rebuilds the tempo index; note beats and the pedal lane are
+  // preserved), so a note released under a held pedal keeps ringing to the
+  // pedal lift regardless of tempo changes. Notes absent from the map sound for
+  // their natural `start + duration`.
+  const sustainOff = resolvePedalSustain(score.notes, score.pedalEvents);
+
+  const durationSec = (n: Note): number => {
+    const off = sustainOff.get(n) ?? n.start + n.duration;
+    return tempo.beatToSeconds(off) - tempo.beatToSeconds(n.start);
+  };
 
   const buildEvent = (n: Note, c: number): SchedEvent => ({
     track: n.track,

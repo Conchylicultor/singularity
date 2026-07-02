@@ -25,7 +25,7 @@
  * another, so the notation lens engraves a real grand staff.
  */
 
-import type { StarterNote, StarterTrack } from "./starters";
+import type { StarterPedalSpan, StarterNote, StarterTrack } from "./starters";
 
 // 32 measures as [p0, p1, p2, p3, p4] MIDI note numbers (low→high). C4 = 60.
 export const BACH_PRELUDE_BARS: readonly (readonly [
@@ -126,8 +126,22 @@ export function buildBachPreludeTracks(bpm: number): StarterTrack[] {
     rh.push({ midi, time: finalStart, duration: barLen, velocity: RH_VELOCITY });
   }
 
+  // Legato "syncopated" pedaling — one pedal per bar (the harmony is constant
+  // within a bar). Lift a hair before each barline and re-press on the downbeat
+  // so consecutive harmonies never blur, but the broken chord rings through its
+  // own bar instead of sounding detached sixteenths. Both hands share the pedal
+  // (one physical pedal → identical per-track CC64 lanes). The final tonic bar
+  // is held for its whole duration.
+  const PEDAL_LIFT_GAP = sixteenth * 0.5; // brief clearing gap at the barline
+  const pedal: StarterPedalSpan[] = [];
+  for (let bar = 0; bar < BACH_PRELUDE_BARS.length; bar++) {
+    const start = bar * barLen;
+    pedal.push({ down: start, up: start + barLen - PEDAL_LIFT_GAP });
+  }
+  pedal.push({ down: finalStart, up: finalStart + barLen });
+
   return [
-    { name: "Left hand", program: 0, notes: lh },
-    { name: "Right hand", program: 0, notes: rh },
+    { name: "Left hand", program: 0, notes: lh, pedal },
+    { name: "Right hand", program: 0, notes: rh, pedal },
   ];
 }

@@ -67,6 +67,13 @@ export async function seedMidiStarters(): Promise<void> {
           ...(note.velocity != null ? { velocity: note.velocity / 127 } : {}),
         });
       }
+      // Sustain pedal (CC64): write a down (127) / up (0) pair per span, so the
+      // demo's pedaling round-trips through the SAME importer path as a real
+      // MIDI file's pedal (parseMidi reads track.controlChanges[64]).
+      for (const span of trackDef.pedal ?? []) {
+        track.addCC({ number: 64, value: 1, time: span.down });
+        track.addCC({ number: 64, value: 0, time: span.up });
+      }
     }
 
     const bytes = midi.toArray();

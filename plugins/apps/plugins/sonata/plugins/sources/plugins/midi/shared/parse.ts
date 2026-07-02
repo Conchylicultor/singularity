@@ -19,11 +19,15 @@ import {
   type Annotation,
   type KeySignature,
   type Note,
+  type PedalEvent,
   type Score,
   type TempoEvent,
   type TimeSigEvent,
   type TrackMeta,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+
+/** MIDI CC number for the sustain (damper) pedal. */
+const SUSTAIN_CC = 64;
 
 /** Accepts an `ArrayBuffer` (web) or a `Uint8Array` (server `Bun.file().bytes()`). */
 function toArrayBuffer(raw: unknown): ArrayBuffer {
@@ -77,6 +81,7 @@ export function parseMidi(raw: unknown): Score {
   // Only include MIDI tracks that contain at least one note.
   const tracks: TrackMeta[] = [];
   const notes: Note[] = [];
+  const pedalEvents: PedalEvent[] = [];
 
   for (let trackIdx = 0; trackIdx < midi.tracks.length; trackIdx++) {
     const track = midi.tracks[trackIdx]!;
@@ -109,7 +114,24 @@ export function parseMidi(raw: unknown): Score {
         track: trackId,
       });
     }
+
+    // --- Sustain pedal (CC64) ------------------------------------------
+    // @tonejs/midi buckets control changes by CC number and normalises each
+    // value to [0, 1]. The damper pedal is on/off with the ≥ 64 threshold
+    // (0.5 normalised). Collapse runs of the same resolved state so a lane of
+    // continuous half-pedal wiggle doesn't emit dozens of redundant events —
+    // the audio model is full-pedal (see resolvePedalSustain). Without this the
+    // pedal data present in the source file is silently dropped.
+    const cc = track.controlChanges[SUSTAIN_CC] ?? [];
+    let prevDown: boolean | null = null;
+    for (const change of cc) {
+      const down = change.value >= 0.5;
+      if (down === prevDown) continue;
+      pedalEvents.push({ track: trackId, beat: change.ticks / ppq, down });
+      prevDown = down;
+    }
   }
+  pedalEvents.sort((a, b) => a.beat - b.beat);
 
   // --- Key signature(s) ------------------------------------------------
   // @tonejs/midi exposes header.keySignatures as { ticks, key, scale }[] where
@@ -161,6 +183,7 @@ export function parseMidi(raw: unknown): Score {
     timeSigMap,
     notes,
     annotations: keyAnnotations,
+    pedalEvents,
   };
 }
 

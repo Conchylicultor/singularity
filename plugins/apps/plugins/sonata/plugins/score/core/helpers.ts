@@ -133,6 +133,7 @@ export function emptyScore(): Score {
     timeSigMap: [],
     notes: [],
     annotations: [],
+    pedalEvents: [],
   };
 }
 
@@ -327,6 +328,8 @@ export function mergeScores(scores: Score[]): Score {
     for (const t of s.tracks) out.tracks.push({ ...t, id: ns(t.id) });
     for (const n of s.notes)
       out.notes.push({ ...n, id: ns(n.id), track: ns(n.track) });
+    for (const p of s.pedalEvents)
+      out.pedalEvents.push({ ...p, track: ns(p.track) });
     for (const a of s.annotations) {
       const target = a.target
         ? {

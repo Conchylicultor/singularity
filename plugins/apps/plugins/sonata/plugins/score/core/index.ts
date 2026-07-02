@@ -16,6 +16,7 @@ export type {
   SectionAnnotation,
   TempoEvent,
   TimeSigEvent,
+  PedalEvent,
   TrackMeta,
   KeySignature,
   PitchSpelling,
@@ -47,6 +48,9 @@ export {
 
 export type { TempoIndex } from "./tempo-index";
 export { buildTempoIndex } from "./tempo-index";
+
+export { resolvePedalSustain, pedalSpans, isPedalDownAt } from "./pedal";
+export type { PedalSpan } from "./pedal";
 
 export type { LoopWindowSec } from "./loop-fold";
 export { foldLoopTime } from "./loop-fold";

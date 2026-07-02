@@ -191,6 +191,8 @@ export function synthesizeScore(parsed: ParsedTab, title?: string): Score {
     timeSigMap: [{ beat: 0, numerator: 4, denominator: 4 }],
     notes: [],
     annotations,
+    // UG tabs carry no pedaling; the re-voicing step generates plain notes.
+    pedalEvents: [],
   };
 }
 

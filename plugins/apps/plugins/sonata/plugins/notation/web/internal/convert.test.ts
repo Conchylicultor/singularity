@@ -38,6 +38,7 @@ function score(notes: Note[], extra?: Partial<Score>): Score {
     timeSigMap: [],
     notes,
     annotations: [],
+    pedalEvents: [],
     ...extra,
   };
 }

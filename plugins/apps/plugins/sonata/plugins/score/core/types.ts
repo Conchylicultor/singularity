@@ -66,6 +66,21 @@ export type TimeSigEvent = {
   denominator: number;
 };
 
+/**
+ * A sustain (damper) pedal state change on a track, at `beat`.
+ *
+ * This is a **continuous-controller lane** on the Score — the sustain pedal's
+ * MIDI CC64. It is deliberately a first-class layer, NOT baked into note
+ * durations: the audio layer reads it to extend a note's *sounding* time
+ * ({@link resolvePedalSustain}) while the note's authored `duration` (its
+ * *notated* length) stays untouched, and the display layer reads the SAME lane
+ * to draw pedal marks. One source of truth for "when is the pedal down".
+ *
+ * `down` is the resolved boolean (MIDI convention: CC64 value ≥ 64 = down).
+ * Events are kept sorted ascending by `beat`, per-track (CC64 is per channel).
+ */
+export type PedalEvent = { track: string; beat: number; down: boolean };
+
 /** A single literal pitch event. */
 export interface Note {
   /** Stable identity — annotations target notes by id and survive re-analysis. */
@@ -171,6 +186,13 @@ export interface Score {
   timeSigMap: TimeSigEvent[];
   notes: Note[];
   annotations: Annotation[];
+  /**
+   * Sustain-pedal (CC64) state changes, sorted ascending by `beat`, per track.
+   * Empty when the source authored no pedaling. The audio layer extends note
+   * sustain from this lane; displays draw pedal marks from it. See
+   * {@link PedalEvent}.
+   */
+  pedalEvents: PedalEvent[];
 }
 
 // ---------------------------------------------------------------------------

@@ -83,5 +83,7 @@ export function compile(raw: unknown): Score {
     timeSigMap: [],
     notes: [],
     annotations,
+    // Chords author no pedaling; the re-voicing step generates plain notes.
+    pedalEvents: [],
   };
 }

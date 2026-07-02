@@ -406,6 +406,18 @@
         "vexflow": "^4.2.2",
       },
     },
+    "plugins/apps/plugins/sonata/plugins/pedal": {
+      "name": "@singularity/plugin-apps-sonata-pedal",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/pedal/plugins/indicator": {
+      "name": "@singularity/plugin-apps-sonata-pedal-indicator",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/pedal/plugins/lane": {
+      "name": "@singularity/plugin-apps-sonata-pedal-lane",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/piano-keyboard": {
       "name": "@singularity/plugin-apps-sonata-piano-keyboard",
       "version": "0.0.1",
@@ -4706,6 +4718,12 @@
     "@singularity/plugin-apps-sonata-library": ["@singularity/plugin-apps-sonata-library@workspace:plugins/apps/plugins/sonata/plugins/library"],
 
     "@singularity/plugin-apps-sonata-notation": ["@singularity/plugin-apps-sonata-notation@workspace:plugins/apps/plugins/sonata/plugins/notation"],
+
+    "@singularity/plugin-apps-sonata-pedal": ["@singularity/plugin-apps-sonata-pedal@workspace:plugins/apps/plugins/sonata/plugins/pedal"],
+
+    "@singularity/plugin-apps-sonata-pedal-indicator": ["@singularity/plugin-apps-sonata-pedal-indicator@workspace:plugins/apps/plugins/sonata/plugins/pedal/plugins/indicator"],
+
+    "@singularity/plugin-apps-sonata-pedal-lane": ["@singularity/plugin-apps-sonata-pedal-lane@workspace:plugins/apps/plugins/sonata/plugins/pedal/plugins/lane"],
 
     "@singularity/plugin-apps-sonata-piano-keyboard": ["@singularity/plugin-apps-sonata-piano-keyboard@workspace:plugins/apps/plugins/sonata/plugins/piano-keyboard"],
 

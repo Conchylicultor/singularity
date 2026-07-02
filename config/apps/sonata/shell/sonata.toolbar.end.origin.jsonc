@@ -1,4 +1,4 @@
-// @hash 138a36163922
+// @hash eba25809102b
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -6,6 +6,7 @@
   "items": [
     "apps.sonata.audio.engine:volume",
     "apps.sonata.audio.metronome:metronome",
+    "apps.sonata.pedal.indicator:pedal-indicator",
     "apps.sonata.piano-roll:spread",
     "apps.sonata.progress.loop:loop-toggle",
     "apps.sonata.transport-bar:playback",
