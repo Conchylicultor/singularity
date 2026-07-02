@@ -212,13 +212,21 @@ the checkout.
 
 ## Follow-ups
 
-- **[cost-axis origin — the real root] Prove or refute checkout irreducibility.** Measure what
-  fraction of the 8385-file tree a typical agent actually modifies (e.g. from `git diff` sizes
-  across recent attempts). If it's a small subtree, prototype a `sparse-checkout` / partial
-  worktree so both `git worktree add` and `remove` touch far less than 77 MB — this attacks the
-  cost *per occurrence*, which the gate cannot, and would largely dissolve the contention rather
-  than merely bound it. File as its own issue doc; this gate is the backstop that makes the box
-  safe *while* that investigation runs.
+- **[cost-axis origin — the real root] Prove or refute checkout irreducibility. → DONE 2026-07-02,
+  assumption REFUTED — see [`2026-07-02-worktree-checkout-clonefile-DESIGN.md`](./2026-07-02-worktree-checkout-clonefile-DESIGN.md).**
+  Measured: agents modify **< 1 %** of the 8475-file tree (median ~5–8 files, max 72). But
+  *sparse-checkout is dead* — the mandatory `./singularity build` type-checks/reads the **whole
+  tree** (fraction *read* ≈ 100 %; `setupWorktree` even seeds `.tsbuildinfo` for exactly this
+  reason), so a partial tree is a *broken* worktree, not a cheaper one. The cost is still reducible,
+  just via a lever this doc didn't consider: the tree must be **present** but on APFS need not be
+  physically **copied**. A single directory-granular `clonefile(2)` materializes all 8475 files as
+  copy-on-write in **~0.24 s vs ~3.8 s checkout (16×; 80× under load)**, and stays flat under
+  contention (metadata-only, no disk-write monopolization) ⇒ it *dissolves* the launch-vs-reap
+  collision this gate only *bounds*. Clean integration proven feasible (`git worktree add
+  --no-checkout` + clonefile from a warm `main` template + `read-tree HEAD` → clean worktree), with
+  a correct checkout fallback for stale-template / non-APFS. `cp -c` per-file clonefile does **not**
+  win (per-file metadata bound). **This gate stays** as the containment backstop (fallback add +
+  remove side + non-APFS hosts); clonefile is the origin cure for the add cost — keep both.
 - **[rate-axis smell] Hourly full re-classification.** `collectReapable` re-runs 24-way
   `getGitHygiene` git spawns over *every* inactive attempt *every* hour (`reap-policy.ts:94`) —
   redundant recompute for worktrees unchanged since the last tick. Not the dominant 77 MB cost,

@@ -98,6 +98,13 @@ interactive response** into a durable job (mirroring the DB-fork pattern already
 function), returning a `starting` row immediately. Open questions (row-reorder safety, the
 still-forking-DB race, index-lock invariant) tracked in the doc. Full evidence + Causes checklist
 + next steps → **[`issue-launch-conversation-slow.md`](./issue-launch-conversation-slow.md)**.
+**Throughput follow-up (add/remove contention under load)** bounded by the host `worktree-mutate`
+semaphore (containment) → **[`2026-07-02-worktree-mutation-host-gate-DESIGN.md`](./2026-07-02-worktree-mutation-host-gate-DESIGN.md)**.
+**Cost-axis origin RESOLVED 2026-07-02 — the "checkout is irreducible" assumption is REFUTED:** agents
+edit < 1 % of the tree but the mandatory whole-tree `./singularity build` kills *sparse* checkout;
+the real lever is APFS directory `clonefile(2)` — materialize the (still-full) tree copy-on-write in
+**~0.24 s vs ~3.8 s (16×, 80× under load)**, dissolving the add-vs-reap contention the gate only
+bounds. Design + measurements (3 probes) + clean git integration → **[`2026-07-02-worktree-checkout-clonefile-DESIGN.md`](./2026-07-02-worktree-checkout-clonefile-DESIGN.md)**.
 
 ### Conversation load 40+ s → main-thread event-loop block → `buildPluginTree` over-extraction (Ongoing)
 
