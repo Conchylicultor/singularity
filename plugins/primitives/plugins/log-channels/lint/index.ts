@@ -49,6 +49,12 @@ export default {
       // (which serves the Logs pane + read_logs JSONL) does not run there, so
       // console — captured to ~/.singularity/logs/central.log — is the sink.
       "**/central/**/*.{ts,tsx}",
+      // provision/ — install-time provisioning contributions, discovered by the
+      // provision runner and executed during the `bun install` postinstall. Same
+      // standalone/server-less context as scripts/: no backend is running, so the
+      // structured logger (which persists over HTTP to a live server) is
+      // unreachable. console — captured by the install output — is the sink.
+      "**/provision/**/*.{ts,tsx}",
     ],
   },
 };

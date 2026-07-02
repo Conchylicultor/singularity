@@ -25,11 +25,15 @@ import { ensureZeroNode } from "../scripts/ensure-zero-node";
 export default async function provision(): Promise<void> {
   // Fence off at install time: with Zero disabled (the default) this is a no-op,
   // so a fresh machine pays neither the native addon build nor the Node 24
-  // download. Silent by design — the runner already prints one line per
-  // provision entry, and provision/ (unlike scripts/) has no console exemption
-  // from the no-console-log lint rule, so a "skipped" log line isn't worth the
-  // structural cost. See the follow-up on extending that exemption to provision/.
-  if (!zeroCacheEnabled()) return;
+  // download. console is the sink here — provision/ runs in the server-less
+  // postinstall context and is exempted from no-console-log alongside scripts/.
+  if (!zeroCacheEnabled()) {
+    console.log(
+      "[provision] zero/cache-service skipped — SINGULARITY_ZERO_CACHE not set. " +
+        "Opt in at install time (SINGULARITY_ZERO_CACHE=1 ./singularity build) to build the sidecar.",
+    );
+    return;
+  }
   await ensureZeroSqlite3();
   await ensureZeroNode();
 }
