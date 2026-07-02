@@ -657,10 +657,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/css/card.Card`, `primitives/css/color-picker.SwatchGrid`, `primitives/css/row.Row`, `primitives/css/row.SectionHeaderRow`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`
             - Exports: Types: `TrackMixerEntry`; Values: `blackKeyColor`, `useHiddenTrackIds`, `useMutedTrackIds`, `useTrackColorMap`, `useTrackInstrumentMap`, `useTrackMixerEntries`
           - Server:
-            - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`
+            - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`
             - DB schema: `plugins/apps/plugins/sonata/plugins/track-mixer/server/internal/tables.ts`
             - Exports: Values: `_trackView`, `trackViewLiveResource`
             - Routes: `POST /api/sonata/songs/:songId/track-view`, `DELETE /api/sonata/songs/:songId/track-view`
+          - Core:
+            - Uses: `fields.FieldsRecord`, `fields.nullable`, `fields/bool/config.boolField`, `fields/date/config.dateField`, `fields/text/config.textField`, `infra/entities.wireSchema`
+            - Exports: Types: `TrackViewRow`; Values: `TrackViewRowSchema`
           - Cross-plugin:
             - Imported by: `apps/sonata/audio/engine`, `apps/sonata/notation`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`
         - **`transport-bar`** — Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to the Sonata toolbar's End zone.
@@ -704,16 +707,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `infra/endpoints.useEndpointMutation`, `primitives/live-state.useResource`
             - Exports: Types: `GenerationTurn`, `GenStatus`; Values: `useGeneratedUnits`
           - Server:
-            - Uses: `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/endpoints.implement`, `infra/jobs.defineJob`
+            - Uses: `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.defineJob`
             - DB schema: `plugins/apps/plugins/story/plugins/generation/server/internal/tables.ts`
             - Exports: Values: `_storyGeneratedUnits`, `storyGeneratedUnitsResource`
             - Register: `defineJob('story-generation.generate')`
             - Resources: `story-generated-units` (push)
             - Routes: `POST /api/story/generate/:pageId/:kind/:unitId`
+          - Core:
+            - Uses: `fields.FieldsRecord`, `fields.nullable`, `fields/date/config.dateField`, `fields/text/config.enumTextField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `infra/entities.wireSchema`
+            - Exports: Types: `GenStatus`, `StoryGeneratedUnitRow`; Values: `GEN_STATUSES`, `STORY_GENERATED_UNIT_SERVER_ONLY`, `storyGeneratedUnitFields`, `StoryGeneratedUnitRowSchema`
           - Cross-plugin:
             - Imported by: `apps/story/renderers/blog`
-          - Core:
-            - Exports: Types: `GenStatus`
         - **`marker`** — Story capability marker (read hooks + set/clear mutations). No UI: useIsStory/useStories, markStory/unmarkStory. Story capability marker: page_blocks_ext_story side-table (entity-extensions), storiesResource, set/clear endpoints, useIsStory/useStories.
           - Web:
             - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`
@@ -2581,7 +2585,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.rank`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `config_v2`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/config`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/float`, `fields/float/config`, `fields/image`, `fields/int`, `fields/int/config`, `fields/json`, `fields/json/config`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/object`, `fields/object/config`, `fields/rank`, `fields/rank/config`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/uuid`, `fields/uuid/config`, `fields/variant`, `fields/variant/config`, `infra/claude-cli`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
+    - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/story/generation`, `config_v2`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/config`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/float`, `fields/float/config`, `fields/image`, `fields/int`, `fields/int/config`, `fields/json`, `fields/json/config`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/object`, `fields/object/config`, `fields/rank`, `fields/rank/config`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/uuid`, `fields/uuid/config`, `fields/variant`, `fields/variant/config`, `infra/claude-cli`, `infra/entities`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
   - Core:
     - Exports: Types: `FieldDef`, `FieldIdentity`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`; Values: `defineFieldIdentity`, `defineFieldType`, `fieldSchemaWithDefault`, `fieldsToZodObject`, `getFieldResolver`, `nullable`, `pickMeta`, `registerFieldResolver`, `resolveTypeChain`
   - Plugins:
@@ -2620,7 +2624,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/bool.boolFieldType`
             - Exports: Types: `BoolFieldDef`; Values: `boolField`
           - Cross-plugin:
-            - Imported by: `apps-core/surface/floating`, `apps/mail/mail-core`, `apps/sonata/voicing`, `conversations`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `tasks/tasks-core`
+            - Imported by: `apps-core/surface/floating`, `apps/mail/mail-core`, `apps/sonata/track-mixer`, `apps/sonata/voicing`, `conversations`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `tasks/tasks-core`
         - **`filter`** — Boolean field type: data-view filter operator set (is checked/unchecked).
           - Web:
             - Contributes: `DataViewSlots.Filter` "bool"
@@ -2681,7 +2685,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/date.dateFieldType`
             - Exports: Types: `DateFieldDef`; Values: `dateField`
           - Cross-plugin:
-            - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
+            - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/story/generation`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
         - **`filter`** — Date field type: data-view filter operator set (is / before / after / between …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "date"
@@ -3083,7 +3087,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.FieldType`, `fields.pickMeta`, `fields/text.textFieldType`
             - Exports: Types: `TextFieldDef`; Values: `enumTextField`, `textField`
           - Cross-plugin:
-            - Imported by: `apps-core/surface/floating/wallpaper`, `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `fields/variant/config`, `infra/claude-cli`, `infra/events`, `plugin-meta/composition`, `plugin-meta/plugin-health`, `tasks/tasks-core`
+            - Imported by: `apps-core/surface/floating/wallpaper`, `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/story/generation`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `fields/variant/config`, `infra/claude-cli`, `infra/events`, `plugin-meta/composition`, `plugin-meta/plugin-health`, `tasks/tasks-core`
         - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "text"
@@ -3123,7 +3127,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/uuid.uuidFieldType`
             - Exports: Types: `UuidFieldDef`; Values: `uuidField`
           - Cross-plugin:
-            - Imported by: `debug/boot-profile`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`
+            - Imported by: `apps/story/generation`, `debug/boot-profile`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`
         - **`storage`** — UUID field type: DB storage capability — maps to a Postgres uuid column.
           - Server:
             - Uses: `fields/server-capabilities.Fields`
@@ -3394,9 +3398,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `fields/server-capabilities-loader`, `fields/server-capabilities.Fields`, `fields/server-capabilities.resolveFieldStorage`
         - DB schema: `plugins/infra/plugins/entities/server/internal/define-entity.ts`
-        - Exports: Types: `ColumnDefault`, `DbDefault`, `DefaultedKeys`, `Entity`, `EntityColumnMeta`, `EntityColumns`, `EntityMeta`, `EntityReference`, `EntityRow`; Values: `defaultNow`, `defaultRandom`, `defineEntity`, `sqlDefault`
+        - Exports: Types: `ColumnDefault`, `DbDefault`, `DefaultedKeys`, `Entity`, `EntityColumnMeta`, `EntityColumns`, `EntityMeta`, `EntityReference`, `EntityRow`, `ServerOnlyKeys`; Values: `defaultNow`, `defaultRandom`, `defineEntity`, `sqlDefault`
+      - Core:
+        - Uses: `fields.fieldsToZodObject`
+        - Exports: Values: `wireSchema`
       - Cross-plugin:
-        - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
+        - Imported by: `apps/browser/bookmarks`, `apps/mail/mail-core`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/story/generation`, `config_v2/staging`, `conversations/summary`, `debug/boot-profile`, `debug/slow-ops`, `infra/claude-cli`, `infra/events`, `plugin-meta/plugin-health`, `tasks/tasks-core`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
       - Server:
         - Uses: `database.db`
