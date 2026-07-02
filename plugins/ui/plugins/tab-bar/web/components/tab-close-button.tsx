@@ -2,7 +2,7 @@ import type React from "react";
 import { MdClose } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
+import { hoverRevealTargetWithGroupFocus } from "@plugins/primitives/plugins/hover-reveal/web";
 
 export interface TabCloseButtonProps {
   /** Tab label, used for the accessible name (`Close <label>`). */
@@ -18,9 +18,12 @@ export interface TabCloseButtonProps {
  * mechanics. The reveal couples opacity↔pointer-events via the `hover-reveal`
  * primitive's group pair, so the hidden control is never a live click-target —
  * the variant root carries `hoverRevealGroup`, this button carries
- * `hoverRevealTarget`. The active tab overrides the hide so its close is always
- * reachable. `stopPropagation` keeps a close from also activating the tab /
- * starting a drag the consumer wired on the root.
+ * `hoverRevealTargetWithGroupFocus`. That group-focus variant (not the default
+ * `hoverRevealTarget`) is deliberate: the tab root is a dedicated `role="button"`
+ * trigger distinct from this `×`, so keyboard-focusing the tab should reveal its
+ * close. The active tab overrides the hide so its close is always reachable.
+ * `stopPropagation` keeps a close from also activating the tab / starting a drag
+ * the consumer wired on the root.
  */
 export function TabCloseButton({ label, onClose, active }: TabCloseButtonProps) {
   return (
@@ -34,7 +37,7 @@ export function TabCloseButton({ label, onClose, active }: TabCloseButtonProps) 
       }}
       className={cn(
         "size-4 rounded-sm text-muted-foreground transition-[color,background-color,opacity] hover:bg-foreground/10 hover:text-foreground",
-        active ? "opacity-70" : hoverRevealTarget,
+        active ? "opacity-70" : hoverRevealTargetWithGroupFocus,
       )}
     >
       <MdClose className="icon-auto" />

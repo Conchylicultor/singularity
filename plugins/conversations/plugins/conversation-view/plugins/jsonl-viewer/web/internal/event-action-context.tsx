@@ -2,7 +2,7 @@ import { createContext, useContext, type ReactNode } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { hoverRevealTargetHoverOnly } from "@plugins/primitives/plugins/hover-reveal/web";
+import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { JsonlViewer } from "../slots";
 
 const EventActionContext = createContext<JsonlEvent | null>(null);
@@ -31,14 +31,15 @@ export function EventActionProvider({
  * image renderers so the buttons stay legible over prose.
  *
  * The reveal (opacity ⇄ pointer-events ⇄ select-none coupling) is owned by the
- * `hover-reveal` primitive's {@link hoverRevealTargetHoverOnly}, keyed on the
- * row's `hoverRevealGroup` set by `EventRow` — so the cluster is never a live
+ * `hover-reveal` primitive's {@link hoverRevealTarget}, keyed on the row's
+ * `hoverRevealGroup` set by `EventRow` — so the cluster is never a live
  * click-target nor part of a Ctrl+A / drag selection over the transcript.
  *
- * Hover-only (not focus-within): a transcript row wraps a focusable select-scope
- * text region, so `group-focus-within` would pin the actions after a click even
- * once the pointer leaves. The actions are pure hover chrome — clicking a turn
- * and moving away must hide them.
+ * The default target (not the group-focus opt-in) is exactly right here: a
+ * transcript row wraps a focusable select-scope text region, and the default
+ * reveals only on hover or on the actions' OWN focus — so clicking a turn and
+ * moving the pointer away hides them (no pinning), while a keyboard user tabbing
+ * into the action cluster still sees it.
  */
 export function RowActions({
   className,
@@ -59,7 +60,7 @@ export function RowActions({
       // eslint-disable-next-line layout/no-adhoc-layout -- rigid action strip; stays whole when hosted in a non-Frame flex parent (floating headerless renderers)
       className={cn(
         "shrink-0",
-        hoverRevealTargetHoverOnly,
+        hoverRevealTarget,
         floating && "rounded-lg border border-border/60 bg-background/90 px-xs py-2xs shadow-md backdrop-blur-sm",
         className,
       )}

@@ -2,7 +2,7 @@ import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-vie
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { InvestigateEventButton } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/investigate-event/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { hoverRevealTargetHoverOnly } from "@plugins/primitives/plugins/hover-reveal/web";
+import { hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import type { AttachmentRendererProps } from "../../core";
 
 export function GenericAttachmentView({ event }: AttachmentRendererProps) {
@@ -16,7 +16,7 @@ export function GenericAttachmentView({ event }: AttachmentRendererProps) {
           label={`attachment:${event.subtype}`}
           json={event.attachment}
           sourceConversationId={conversationId}
-          className={hoverRevealTargetHoverOnly}
+          className={hoverRevealTarget}
         />
       }
     >

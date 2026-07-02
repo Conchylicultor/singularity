@@ -3,7 +3,7 @@ import { MdClose } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
-import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
+import { hoverRevealGroup, hoverRevealTargetWithGroupFocus } from "@plugins/primitives/plugins/hover-reveal/web";
 import { attachmentUrl } from "../internal/markdown";
 import { Lightbox } from "./lightbox";
 
@@ -61,7 +61,9 @@ export function AttachmentThumbnail({
               e.stopPropagation();
               onRemove();
             }}
-            className={cn(hoverRevealTarget, "bg-background/90 border-border text-foreground block size-4 rounded-full border")}
+            // Group-focus variant: the thumbnail wraps a dedicated Expand
+            // trigger, so keyboard-focusing the thumbnail should reveal Remove.
+            className={cn(hoverRevealTargetWithGroupFocus, "bg-background/90 border-border text-foreground block size-4 rounded-full border")}
             aria-label="Remove image"
           >
             <Center className="size-full">

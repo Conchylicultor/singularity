@@ -8,7 +8,7 @@
 - Web:
   - Slots: `TabBarSlots.Variant` ← `ui.tab-bar.chip`, `ui.tab-bar.connected`, `ui.tab-bar.underline`
   - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "Tab bar variant"
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/slot-render.renderIsolated`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`, `primitives/slot-render.renderIsolated`
   - Exports: Types: `TabProps`, `TabVariantContribution`; Values: `Tab`, `TabBarSlots`, `TabCloseButton`, `TabIcon`, `useActiveTabVariant`
 - Server:
   - Uses: `config_v2.ConfigV2`

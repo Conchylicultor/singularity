@@ -17,7 +17,7 @@
 - Description: Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
 - Web:
   - Contributes: `TextEditorSlots.Plugin` → `ImageUploadPlugin`
-  - Uses: `infra/attachments.uploadAttachment`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/text-editor.registerNodeExtension`, `primitives/text-editor.TextEditorSlots`
+  - Uses: `infra/attachments.uploadAttachment`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTargetWithGroupFocus`, `primitives/text-editor.registerNodeExtension`, `primitives/text-editor.TextEditorSlots`
   - Exports: Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `rewriteAttachmentMarkdown`
 - Cross-plugin:
   - Imported by: `apps/pages/page-tree`, `conversations/conversation-view`, `page/audio`, `page/bookmark`, `page/file`, `page/image`, `page/read-only-view`, `page/video`, `screenshot/draw-on-app`, `tasks/task-description`, `tasks/task-draft-form`

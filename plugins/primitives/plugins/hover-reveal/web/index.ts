@@ -4,7 +4,7 @@ export { useHoverReveal, hoverRevealClass } from "./internal/use-hover-reveal";
 export {
   hoverRevealGroup,
   hoverRevealTarget,
-  hoverRevealTargetHoverOnly,
+  hoverRevealTargetWithGroupFocus,
 } from "./internal/group-reveal";
 
 export default {
