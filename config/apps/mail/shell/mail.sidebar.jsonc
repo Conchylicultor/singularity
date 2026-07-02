@@ -1,4 +1,4 @@
-// @hash dfc9a7e375eb
+// @hash 0f83806eb4f5
 {
   // Mailbox/label entries land in a later phase (system views + labels).
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.

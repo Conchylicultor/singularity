@@ -1,4 +1,9 @@
-// @hash dfc9a7e375eb
+// @hash 0f83806eb4f5
 {
-  "items": []
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.mail.search:search"
+  ]
 }

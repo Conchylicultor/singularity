@@ -4,10 +4,9 @@ import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Mail } from "../slots";
 
 /**
- * Mail's main-area layout. Phase 1 has no left-rail content yet, so the shell
- * collapses to a full-surface host and the landing pane fills the width. The
- * `Mail.Sidebar` slot is already defined/exported; a later phase (system views
- * + labels) wires it back in via `sidebarSlot={Mail.Sidebar}`.
+ * Mail's main-area layout. The `Mail.Sidebar` slot hosts the left-rail entries
+ * (Search today; system views + labels in a later phase); the search plugin
+ * contributes its Search entry there.
  *
  * The `Mail.Banner` strip is a rigid header above the mailbox surface, so a
  * sync-status banner shows on every mail route while `MillerColumns` keeps
@@ -17,7 +16,7 @@ import { Mail } from "../slots";
  */
 export function MailLayout() {
   return (
-    <AppShellLayout>
+    <AppShellLayout sidebarSlot={Mail.Sidebar}>
       <Column
         className="h-full"
         scrollBody={false}

@@ -115,6 +115,15 @@ idle → (bootstrap) → backfilling → (window done / cap hit) → delta ⇄ (
   now-cached `{ message, attachments }`. The message must already exist as an
   envelope stub in the mirror (a `messageId` outside the synced window → 404).
   This is what a reading pane calls when a user opens an email.
+- **`GET /api/mail/search`** (`handlers.ts` → `remote-search.ts`) — on-demand
+  server-side search, the escape hatch for the bounded window. Query `?q=` (+
+  optional `pageToken`). It lists one `messages.list?q=` page (25), fetches the
+  matching ENVELOPES (`fetchEnvelopes`, metadata-only, 404-tolerant), FOLDS them
+  into the same mirror via `upsertMessageEnvelope`, then reads the rows back and
+  returns them in Gmail's order (`{ results, nextPageToken }`). Bodies still
+  hydrate lazily on first open. Every write is idempotent, so a retried/paged
+  search is safe. When Gmail isn't connected (no token or no account row) it
+  surfaces a clean `409`. `concurrency: 4` + `dedupe` (GET) bound the fan-out.
 
 ## No-polling exception
 
@@ -141,9 +150,12 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
 ## Limitations (documented, deferred)
 
 - **Window ≠ whole mailbox.** Only envelopes newer than `BACKFILL_WINDOW_DAYS`
-  (capped at `MAX_BACKFILL_MESSAGES`) are mirrored. Older mail is not searchable
-  locally until on-demand server-side search (`messages.list?q=`) pulls matching
-  envelopes into the mirror — a later-phase follow-up.
+  (capped at `MAX_BACKFILL_MESSAGES`) are mirrored. Older mail reaches the local
+  mirror on demand: `GET /api/mail/search` (`remote-search.ts`) takes an arbitrary
+  Gmail query, hits `messages.list?q=`, and folds the matching older-than-window
+  envelopes into the mirror (list → metadata-fetch → upsert → read-back), bodies
+  still hydrating lazily on open. A background reconcile of the wider mailbox
+  remains a later-phase follow-up.
 - **`hasAttachments` / attachment metadata lag hydration.** `format=metadata`
   carries no MIME parts, so a thread's attachment indicator and a message's
   attachment list are unknown until the message is hydrated (opened). A cheap
@@ -168,10 +180,12 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
   - Uses: `apps/mail/gmail-api.getMessage`, `apps/mail/gmail-api.getProfile`, `apps/mail/gmail-api.listHistory`, `apps/mail/gmail-api.listLabels`, `apps/mail/gmail-api.listMessages`, `apps/mail/mail-core._mailAccounts`, `apps/mail/mail-core._mailAttachments`, `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailMessageLabels`, `apps/mail/mail-core._mailMessages`, `apps/mail/mail-core._mailSyncState`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.requireGmailToken`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.NonRetryableError`, `integrations/gmail.isGmailEnabled`, `primitives/log-channels.Log`
   - Exports: Values: `mailSyncStateServerResource`
   - Register: `defineJob('mail.backfill')`, `defineJob('mail.delta')`, `defineJob('mail.sync-tick')`
-  - Routes: `POST /api/mail/sync`, `POST /api/mail/hydrate`
+  - Routes: `POST /api/mail/sync`, `POST /api/mail/hydrate`, `GET /api/mail/search`
 - Core:
   - Uses: `apps/mail/mail-core.MailAttachmentSchema`, `apps/mail/mail-core.MailMessageSchema`, `infra/endpoints.defineEndpoint`
-  - Exports: Values: `BACKFILL_WINDOW_DAYS`, `mailHydrateMessageEndpoint`, `mailSyncEndpoint`, `MAX_BACKFILL_MESSAGES`
+  - Exports: Values: `BACKFILL_WINDOW_DAYS`, `mailHydrateMessageEndpoint`, `mailSearchEndpoint`, `mailSyncEndpoint`, `MAX_BACKFILL_MESSAGES`
+- Cross-plugin:
+  - Endpoint callers: `search`
 - Sub-plugins:
   - **`auto-resume`** — Auto-resumes Mail sync when the Gmail scope is (re)granted: an app-wide headless listener that POSTs the sync kick endpoint on the connect edge.
 

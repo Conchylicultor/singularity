@@ -2,8 +2,16 @@ import {
   Resource,
   type ServerPluginDefinition,
 } from "@plugins/framework/plugins/server-core/core";
-import { mailSyncEndpoint, mailHydrateMessageEndpoint } from "../core";
-import { handleMailSync, handleMailHydrate } from "./internal/handlers";
+import {
+  mailSyncEndpoint,
+  mailHydrateMessageEndpoint,
+  mailSearchEndpoint,
+} from "../core";
+import {
+  handleMailSync,
+  handleMailHydrate,
+  handleMailSearch,
+} from "./internal/handlers";
 import { backfillJob } from "./internal/backfill";
 import { deltaJob } from "./internal/delta";
 import { syncTickJob } from "./internal/tick";
@@ -18,6 +26,7 @@ export default {
   httpRoutes: {
     [mailSyncEndpoint.route]: handleMailSync,
     [mailHydrateMessageEndpoint.route]: handleMailHydrate,
+    [mailSearchEndpoint.route]: handleMailSearch,
   },
   register: [backfillJob, deltaJob, syncTickJob],
 } satisfies ServerPluginDefinition;
