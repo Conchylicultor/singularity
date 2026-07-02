@@ -6,9 +6,17 @@ let registered = false;
  * Registers Bun runtime stubs so web/server barrel files can be imported
  * outside the browser. Must be called once before any `importBarrel()` call.
  *
- * Uses build.module() for virtual modules (React, web-sdk/core, DOM-heavy packages)
- * and build.onLoad() for CSS files. Path aliases (@/* → web/src/*) are
- * resolved via the root tsconfig.json.
+ * Uses build.module() for virtual modules (React, DOM-heavy packages) and
+ * build.onLoad() for CSS files. Path aliases (@plugins/* → plugins/*, @/* →
+ * web/src/*) are resolved via the root tsconfig.json.
+ *
+ * NOTE: `@plugins/framework/plugins/web-sdk/core` is deliberately NOT stubbed.
+ * The real barrel only pulls in `react` (stubbed above), `plugin-id/core`, and
+ * `collected-dir/core` — all side-effect-free — so it loads verbatim against the
+ * React stub, resolved through the tsconfig `@plugins/*` alias like any other
+ * barrel. Stubbing it forced a hand-maintained mirror of its export list that
+ * silently broke docgen whenever a new export was added; letting the real module
+ * be its own source of truth removes that coupling entirely.
  */
 export function registerBarrelStubs(_repoRoot: string): void {
   if (registered) return;
@@ -122,42 +130,6 @@ export function registerBarrelStubs(_repoRoot: string): void {
     Fragment: reactExports.Fragment,
   };
 
-  // Self-contained web-sdk stub — mirrors plugin-core's defineSlot without
-  // importing real React.
-  function defineSlot(id: string, opts?: { docLabel?: (props: any) => string | undefined }) {
-    const slot = (props: any) => ({
-      _slotId: id,
-      _doc: { label: opts?.docLabel?.(props) },
-      ...props,
-    });
-    slot.id = id;
-    slot.useContributions = () => [];
-    return slot;
-  }
-
-  const coreExports = {
-    defineSlot,
-    // Type-level seal only; at runtime the component is a plain ComponentType, so the
-    // stub unseal is an identity passthrough (mirrors the real implementation).
-    UNSAFE_unsealSlotComponent: (c: any) => c,
-    Core: { Root: defineSlot("core.root"), Boot: defineSlot("core.boot") },
-    PluginProvider: noop,
-    PluginRuntimeContext: reactExports.createContext(null),
-    loadPlugins: () => [],
-    // Boot load-tier partition + deferred-load signal (see web-sdk load-tiers.ts /
-    // deferred-load-store.ts). Stubbed so plugin barrels that consume them (e.g.
-    // layouts/route-fallback → useDeferredLoadState) import cleanly under docgen.
-    partitionWebEntries: (e: any[]) => ({ eager: e, deferred: [] }),
-    isDeferredPluginPath: () => false,
-    EAGER_EXCEPTIONS: new Set<string>(),
-    useDeferredLoadState: () => ({ loadedPluginIds: new Set<string>(), deferredComplete: false }),
-    getDeferredLoadState: () => ({ loadedPluginIds: new Set<string>(), deferredComplete: false }),
-    subscribeDeferredLoadState: () => noop,
-    markDeferredPluginsLoaded: noop,
-    markDeferredLoadComplete: noop,
-    __esModule: true,
-  };
-
   Bun.plugin({
     name: "barrel-import-stubs",
     setup(build) {
@@ -188,11 +160,9 @@ export function registerBarrelStubs(_repoRoot: string): void {
         loader: "object",
       }));
 
-      // ── @plugins/framework/plugins/web-sdk/core — self-contained, avoids importing real React ───────
-      build.module("@plugins/framework/plugins/web-sdk/core", () => ({
-        exports: coreExports,
-        loader: "object",
-      }));
+      // @plugins/framework/plugins/web-sdk/core is intentionally left unstubbed —
+      // the real barrel loads against the React stub above (see the note on
+      // registerBarrelStubs). Stubbing it is what created the export-list drift bug.
 
       // ── Server plugin barrels that fail outside the real server ─────
       build.module("@plugins/database/server", () => ({
