@@ -79,8 +79,8 @@ parsed against that schema **twice**, by design:
   declared schema. Keyed Layer-2 scoped loads return a partial array, which
   still satisfies the `z.array(Element)` schema.
 - **On the client, on receipt** — before the value lands in the TanStack cache,
-  at both write paths: `useResource`'s `queryFn` HTTP fallback
-  (`web/use-resource.ts`) and the WS push path in
+  at both write paths: the HTTP path (`NotificationsClient.fetchOverHttp` — see
+  "One version-guarded HTTP write path" below) and the WS push path in
   `NotificationsClient.applyUpdate` (a key→schema registry populated as
   `useResource` calls `observe`). A parse failure on the WS push path is no
   longer swallowed: the `onmessage` handler re-throws it asynchronously
@@ -93,6 +93,33 @@ way in, so consumers can rely on them. See
 `research/2026-06-08-global-mandatory-resource-schema-server-validation.md`
 (and the earlier `research/2026-04-29-global-resource-schema-validation.md` for
 the original client-side migration).
+
+## One version-guarded HTTP write path (`fetchOverHttp`)
+
+Every HTTP resource-cache write goes through the **single** method
+`NotificationsClient.fetchOverHttp(key, params, origin, schema, source)`:
+
+- `useResource`'s `queryFn` (WS-down fallback + `invalidate`-mode post-invalidate
+  refetch) calls it with `source: "fallback"` and lets errors propagate to
+  `q.error`.
+- The cold-start prime (`primeFromHttp`) delegates to it with `source: "prime"`,
+  fire-and-forget: a transient network (`TypeError`) / HTTP-status
+  (`ResourceHttpError`) failure is swallowed (the WS sub-ack is the source of
+  truth); a schema/parse failure is a real bug rethrown via `queueMicrotask`.
+
+It writes through the **same version guard** as WS frames, so a late HTTP
+response can never clobber a newer WS value — with one deliberate difference: the
+HTTP guard is **strict `<`** where the WS guard (`handleServerMessage`) is `<=`.
+An HTTP GET *reports* the server's per-`(key,params)` version counter without
+bumping it, so a legitimate response can *equal* the version already applied — in
+particular the normal `invalidate` refetch (the `invalidate` frame advanced the
+client to `N`, the refetch GET returns `N`). `<` accepts that equal version (a
+no-op write for push/keyed via structural sharing) while still dropping a
+genuinely-stale older read; `<=` here would silently discard invalidate mode's
+refetch. `fetchOverHttp` returns the *effective* cached value (the freshly
+applied one, or the retained value on a `304`/stale drop) so React Query's
+`queryFn` contract holds with no separate render path. See
+`research/2026-07-02-converge-http-resource-writes-version-guard.md`.
 
 ## Descriptor registry (`resourceDescriptorByKey`)
 

@@ -121,45 +121,6 @@ export type ResourceResult<T> =
   | { pending: true; error: Error | null; refetch: () => Promise<void> }
   | { pending: false; data: T; error: Error | null; refetch: () => Promise<void> };
 
-// Shared HTTP fetch for a resource. Used by useResource's queryFn as the WS-down
-// fallback and by invalidate-mode resources' post-invalidate refetch; the sub-ack
-// normally fills the cache so this rarely runs.
-//
-// Conditional revalidation: when the resource declares `revalidate` and we hold a
-// prior ETag, send `If-None-Match`. A `304` means "still current" — keep the
-// value already in the cache instead of re-parsing a fresh body (the loader never
-// ran server-side). Otherwise store the response's fresh `ETag` for next time.
-// A resource without `revalidate` has no stored ETag → no header → byte-identical
-// to the old unconditional GET.
-async function fetchResourceValue<T, P extends ResourceParams>(
-  resource: ResourceDescriptor<T, P>,
-  p: ResourceParams,
-  notifications: NotificationsClient,
-): Promise<T> {
-  const qs = new URLSearchParams(p).toString();
-  const base = resource.origin === "central" ? "/api/central-resources" : "/api/resources";
-  const url = `${base}/${encodeURIComponent(resource.key)}${qs ? `?${qs}` : ""}`;
-  const etag = notifications.etagFor(resource.key, p, resource.origin);
-  const res = await fetch(url, etag !== undefined ? { headers: { "If-None-Match": etag } } : undefined);
-  if (res.status === 304) {
-    const cached = notifications.getCachedResource(resource.key, p);
-    // Keep the cached value (same reference — structural sharing sees no change).
-    if (cached !== undefined) return cached as T;
-    // Defensive: 304 with no cached base (shouldn't happen — we only send an ETag
-    // when we hold a value). Re-fetch unconditionally so the cache is never left
-    // empty by a needless 304.
-    const fresh = await fetch(url);
-    if (!fresh.ok) throw new Error(`Resource ${resource.key} fetch failed: ${fresh.status}`);
-    const body = (await fresh.json()) as { value: unknown; version: number };
-    notifications.noteHttpEtag(resource.key, p, resource.origin, fresh.headers.get("ETag"));
-    return resource.schema.parse(body.value) as T;
-  }
-  if (!res.ok) throw new Error(`Resource ${resource.key} fetch failed: ${res.status}`);
-  const body = (await res.json()) as { value: unknown; version: number };
-  notifications.noteHttpEtag(resource.key, p, resource.origin, res.headers.get("ETag"));
-  return resource.schema.parse(body.value) as T;
-}
-
 // Optional read options for useResource.
 export interface UseResourceOptions<T, S> {
   /**
@@ -246,7 +207,11 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
 
   const q = useQuery({
     queryKey: queryKeyFor(key, p),
-    queryFn: () => fetchResourceValue(resource, p, notifications),
+    // THE single HTTP write path: version-guarded, shared with the cold-start
+    // prime (notifications-client.ts `fetchOverHttp`). Runs as the WS-down
+    // fallback and the invalidate-mode post-invalidate refetch; the sub-ack
+    // normally fills the cache so this rarely runs. Errors propagate to `q.error`.
+    queryFn: () => notifications.fetchOverHttp(key, p, origin, schema, "fallback"),
     // sub-ack writes setQueryData, so normally queryFn never runs.
     // It's the fallback when the WS is down.
     initialData: resource.initialData as NonUndefinedGuard<T>,

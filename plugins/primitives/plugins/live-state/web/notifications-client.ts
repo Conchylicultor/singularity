@@ -96,6 +96,23 @@ export interface ResourceKey {
   params?: ResourceParams;
 }
 
+/**
+ * A resource HTTP GET returned a non-2xx status. Typed so callers can classify
+ * it: `useResource`'s `queryFn` lets it propagate to `q.error`, while the
+ * cold-start prime swallows it (the WS sub-ack is the source of truth) — both
+ * distinct from a schema/parse failure, which is always a real bug surfaced
+ * loudly.
+ */
+export class ResourceHttpError extends Error {
+  constructor(
+    public readonly key: string,
+    public readonly status: number,
+  ) {
+    super(`Resource ${key} fetch failed: ${status}`);
+    this.name = "ResourceHttpError";
+  }
+}
+
 type ServerMsg =
   // `etag` (conditional revalidation): the fresh content signature accompanying a
   // full value. Present only for a resource that declares `revalidate`; the client
@@ -560,47 +577,94 @@ export class NotificationsClient {
     return this.queryClient.getQueryData(queryKeyFor(key, params));
   }
 
-  /** Cold-start accelerator: fetch a resource's first value over plain HTTP when
-   *  the notifications transport isn't ready yet, and write it through the same
-   *  version guard as WS frames so a late HTTP response can never clobber a newer
-   *  WS value. Best-effort — the WS sub-ack remains the source of truth. Never
-   *  rejects (safe to `void`). */
+  /**
+   * THE single HTTP resource-cache write path. Fetches a resource's `{ value,
+   * version }` over plain HTTP (conditional `If-None-Match`/304) and writes it
+   * through the SAME version guard as WS frames, so a late HTTP response can
+   * never clobber a newer WS value. Returns the EFFECTIVE cached value — the
+   * freshly-applied one, or the retained value on a `304`/stale drop — so React
+   * Query's `queryFn` contract holds (data returned, `dataUpdatedAt` bumps,
+   * `pending` flips) with no separate render path.
+   *
+   * Guard uses strict `<` (not the WS path's `<=`): an HTTP GET REPORTS the
+   * server's version counter without bumping it, so a legitimate response can
+   * EQUAL the version we already applied (the normal `invalidate`-mode refetch:
+   * the `invalidate` frame advanced us to `N`, the refetch GET returns `N`). `<`
+   * accepts that equal version (a no-op write for push/keyed via structural
+   * sharing) while still dropping a genuinely-stale older read.
+   *
+   * Throws on network (`fetch` `TypeError`), HTTP status (`ResourceHttpError`),
+   * or schema/parse failure — callers choose how to surface each.
+   */
+  async fetchOverHttp<T>(
+    key: string,
+    params: ResourceParams,
+    origin: ResourceOrigin | undefined,
+    schema: ZodType<T>,
+    source: "prime" | "fallback",
+  ): Promise<T> {
+    const entry = this.channels[socketKindFor(origin)].subs.get(`${key}\0${paramsKey(params)}`);
+    const qs = new URLSearchParams(params).toString();
+    const base = origin === "central" ? "/api/central-resources" : "/api/resources";
+    const url = `${base}/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
+    const etag = this.etagFor(key, params, origin);
+    let res = await fetch(url, etag !== undefined ? { headers: { "If-None-Match": etag } } : undefined);
+    if (res.status === 304) {
+      const cached = this.getCachedResource(key, params);
+      // "Still current" — keep the cached value (same reference; structural
+      // sharing sees no change).
+      if (cached !== undefined) return cached as T;
+      // Defensive: 304 with no cached base (shouldn't happen — we only send an
+      // ETag when we hold a value). Re-fetch unconditionally so a needless 304
+      // never leaves the cache empty, then fall through to the write path.
+      res = await fetch(url);
+    }
+    if (!res.ok) throw new ResourceHttpError(key, res.status);
+    const body = (await res.json()) as { value: unknown; version: number };
+    this.noteHttpEtag(key, params, origin, res.headers.get("ETag"));
+    // Version guard — same discipline as handleServerMessage, but strict `<`
+    // (see doc comment). Drop only a response strictly older than the value we
+    // already hold, keeping the newer cached value.
+    const cached = this.getCachedResource(key, params);
+    if (entry && cached !== undefined && body.version < entry.version) {
+      trace(`http drop key=${key} params=${paramsKey(params)} msgVersion=${body.version} haveVersion=${entry.version} reason=stale-version source=${source}`);
+      return cached as T;
+    }
+    const parsed = schema.parse(body.value); // schema violation throws — surfaced by the caller
+    this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
+    if (entry) {
+      // Advance monotonically (never lower) so a later WS frame at this version
+      // is stale-dropped cheaply and a genuinely-newer one still applies.
+      if (body.version > entry.version) entry.version = body.version;
+      this.markApplied(entry, key); // stamps lastAppliedAt + emitDebug + verbose trace
+    }
+    trace(`http key=${key} params=${paramsKey(params)} version=${body.version} source=${source}`);
+    return parsed;
+  }
+
+  /** Cold-start accelerator: prime a resource's first value over plain HTTP when
+   *  the notifications transport isn't ready yet. Delegates to the shared
+   *  version-guarded `fetchOverHttp`; best-effort — the WS sub-ack remains the
+   *  source of truth. A transient network / HTTP-status failure is swallowed
+   *  (the WS will deliver); a schema/parse failure is a real bug surfaced loudly
+   *  (mirroring the WS `onmessage` discipline). Never rejects (safe to `void`). */
   async primeFromHttp(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): Promise<void> {
-    const kind = socketKindFor(origin);
-    const entry = this.channels[kind].subs.get(`${key}\0${paramsKey(params)}`);
-    if (!entry) return;                        // observe() must have created the sub
+    const entry = this.channels[socketKindFor(origin)].subs.get(`${key}\0${paramsKey(params)}`);
+    if (!entry) return; // observe() must have created the sub
     const schema = this.schemas.get(key);
     if (!schema) return;
     try {
-      const qs = new URLSearchParams(params).toString();
-      const base = origin === "central" ? "/api/central-resources" : "/api/resources";
-      const url = `${base}/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
-      const etag = this.etagFor(key, params, origin);
-      const res = await fetch(url, etag !== undefined ? { headers: { "If-None-Match": etag } } : undefined);
-      if (res.status === 304) return;          // cached value already current
-      if (!res.ok) { trace(`http-prime drop key=${key} params=${paramsKey(params)} reason=http-${res.status}`); return; }
-      const body = (await res.json()) as { value: unknown; version: number };
-      this.noteHttpEtag(key, params, origin, res.headers.get("ETag"));
-      // Version guard — identical discipline to handleServerMessage.
-      if (body.version <= entry.version) {
-        trace(`http-prime drop key=${key} params=${paramsKey(params)} msgVersion=${body.version} haveVersion=${entry.version} reason=stale-version`);
-        return;
-      }
-      const parsed = schema.parse(body.value);   // schema violation => surfaced loudly below
-      this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
-      entry.version = body.version;
-      this.markApplied(entry, key);              // stamps lastAppliedAt + emitDebug + verbose trace
-      trace(`http-prime key=${key} params=${paramsKey(params)} version=${body.version}`);
+      await this.fetchOverHttp(key, params, origin, schema, "prime");
     } catch (err) {
-      if (err instanceof TypeError) {
-        // Transient network failure during cold boot — non-fatal; the WS sub-ack
-        // remains the source of truth and will deliver.
-        trace(`http-prime drop key=${key} params=${paramsKey(params)} reason=network error=${String(err)}`);
+      if (err instanceof TypeError || err instanceof ResourceHttpError) {
+        // Transient network / HTTP-status failure during cold boot — non-fatal;
+        // the WS sub-ack remains the source of truth and will deliver.
+        trace(`http drop key=${key} params=${paramsKey(params)} reason=${err instanceof TypeError ? "network" : "http"} source=prime error=${String(err)}`);
         return;
       }
       // Schema violation / malformed body is a real bug — surface loudly like the
       // WS onmessage path, without rejecting this promise.
-      trace(`http-prime error key=${key} params=${paramsKey(params)} error=${String(err)}`);
+      trace(`http error key=${key} params=${paramsKey(params)} source=prime error=${String(err)}`);
       queueMicrotask(() => { throw err; });
     }
   }
