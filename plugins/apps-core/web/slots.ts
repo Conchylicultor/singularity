@@ -20,6 +20,12 @@ export interface SurfaceContribution {
   component: ComponentType<Record<string, never>>;
 }
 
+/** The top tab strip. A single-contribution slot (the `tab-bar` plugin); `apps`
+ * renders nothing here when no contributor is present (chrome-less surface). */
+export interface TabBarContribution {
+  component: ComponentType<Record<string, never>>;
+}
+
 export const Apps = {
   App: defineRenderSlot<{
     /** The app's canonical serializable icon descriptor (see {@link AppIcon}). */
@@ -48,6 +54,13 @@ export const Apps = {
    * its built-in docked-only strip when no contributor is present. */
   Surface: defineSlot<SurfaceContribution>("apps.surface", {
     docLabel: () => "Surface",
+  }),
+  /** The top tab strip. A single-contribution slot (the `tab-bar` plugin);
+   * `apps` renders nothing here when no contributor is present (chrome-less
+   * surface). Distinct from `TabBarActions` (the trailing action zone inside
+   * the strip); this slot hosts the strip itself. */
+  TabBar: defineSlot<TabBarContribution>("apps.tab-bar", {
+    docLabel: () => "Tab bar",
   }),
   /** Trailing tab-bar action zone (next to `+`), where the `surface` plugin
    * drops its in-strip placement control. `apps` owns only the seam; the control

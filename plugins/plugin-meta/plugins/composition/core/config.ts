@@ -186,6 +186,21 @@ export const compositionsConfig = defineConfig({
           "ui.tweakcn",
           "ui.tweakcn.community-browser",
         ]),
+        // The app-surface CHROME, opt-in and extended by nothing: the tab strip,
+        // the app rail (its default `rail` variant), and the multi-placement
+        // surface (docked / floating / solo). `apps-core.layout` (in
+        // served-baseline) renders a chrome-less surface — tabs + tab-surface
+        // substrate only — so a composition ships the tab bar / rail / placements
+        // only by `extends`-ing this pack (or selecting individual contributors).
+        pack("app-chrome", "aQ", [
+          "apps-core.tab-bar",
+          "apps-core.app-rail-framing",
+          "apps-core.app-rail-framing.rail",
+          "apps-core.surface",
+          "apps-core.surface.docked",
+          "apps-core.surface.floating",
+          "apps-core.surface.solo",
+        ]),
       ],
     }),
   },

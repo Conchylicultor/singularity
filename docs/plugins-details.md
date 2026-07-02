@@ -1033,9 +1033,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`apps-core`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Web:
-    - Slots: `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.story.shell`, `apps.studio.shell`, `apps.workflows.shell`, `Apps.RailFraming` ← `apps-core.app-rail-framing`, `Apps.Surface` ← `apps-core.surface`, `Apps.TabBarActions` ← `shell.global-action-bar`
+    - Slots: `Apps.App` ← `apps.agent-manager.shell`, `apps.browser.shell`, `apps.debug.shell`, `apps.deploy.shell`, `apps.file-explorer.shell`, `apps.home.shell`, `apps.mail.shell`, `apps.pages.shell`, `apps.prototypes.shell`, `apps.settings.shell`, `apps.sonata.shell`, `apps.story.shell`, `apps.studio.shell`, `apps.workflows.shell`, `Apps.RailFraming` ← `apps-core.app-rail-framing`, `Apps.Surface` ← `apps-core.surface`, `Apps.TabBar` ← `apps-core.tab-bar`, `Apps.TabBarActions` ← `shell.global-action-bar`
     - Uses: `primitives/pane.stripBasePath`, `primitives/pane.useSurfaceAppId`, `primitives/slot-render.defineRenderSlot`
-    - Exports: Types: `ActiveApp`, `Placement`, `RailFramingContribution`, `ResolvedApp`, `SurfaceContribution`; Values: `Apps`, `defaultApp`, `matchAppForPath`, `resolveAppForPath`, `useActiveApp`, `useCurrentAppId`, `usePathname`
+    - Exports: Types: `ActiveApp`, `Placement`, `RailFramingContribution`, `ResolvedApp`, `SurfaceContribution`, `TabBarContribution`; Values: `Apps`, `defaultApp`, `matchAppForPath`, `resolveAppForPath`, `useActiveApp`, `useCurrentAppId`, `usePathname`
   - Cross-plugin:
     - Imported by: `apps-core/app-rail`, `apps-core/app-rail-framing`, `apps-core/layout`, `apps-core/surface`, `apps-core/surface/floating`, `apps-core/tab-bar`, `apps-core/tab-surface`, `apps-core/tabs`, `apps-core/theme-scope`, `apps/agent-manager/shell`, `apps/browser/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/mail/shell`, `apps/pages/shell`, `apps/prototypes/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `config_v2/settings`, `shell/global-action-bar`, `tasks/task-draft-form`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/variant-region`
   - Core:
@@ -1055,7 +1055,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `apps-core.Apps`, `apps-core.useActiveApp`, `apps-core/app-icon.AppIconView`, `apps-core/tabs.useTabs`, `apps-core/theme-scope.useChromeThemeScope`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/tooltip.WithTooltip`
         - Exports: Values: `AppRail`
       - Cross-plugin:
-        - Imported by: `apps-core/app-rail-framing/rail`, `apps-core/layout`
+        - Imported by: `apps-core/app-rail-framing/rail`
     - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
       - Web:
         - Slots: `AppRailFraming.Variant` ← `apps-core.app-rail-framing.hidden`, `apps-core.app-rail-framing.rail`
@@ -1081,7 +1081,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`layout`** — Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.
       - Web:
         - Contributes: `Core.Root` → `AppsLayout`
-        - Uses: `apps-core.Apps`, `apps-core.defaultApp`, `apps-core.useActiveApp`, `apps-core.usePathname`, `apps-core/app-rail.AppRail`, `apps-core/tab-bar.AppTabBar`, `apps-core/tab-surface.AppTabsBody`, `apps-core/tabs.TabsProvider`, `apps-core/tabs.useTabs`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.TooltipProvider`, `primitives/pane.setBasePath`, `primitives/pane.useRenderSync`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.renderIsolated`
+        - Uses: `apps-core.Apps`, `apps-core.defaultApp`, `apps-core.useActiveApp`, `apps-core.usePathname`, `apps-core/tab-surface.AppTabsBody`, `apps-core/tabs.TabsProvider`, `apps-core/tabs.useTabs`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.TooltipProvider`, `primitives/pane.setBasePath`, `primitives/pane.useRenderSync`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.renderIsolated`
     - **`surface`** — Generic per-tab surface dispatcher: renders every open tab at once positioned by its own placement, dispatched through the Surface.Placement registry. Owns the multi-placement body and the placement control; each placement (docked / floating / solo) is a self-contained sub-plugin.
       - Web:
         - Slots: `Surface.Placement` ← `apps-core.surface.docked`, `apps-core.surface.floating`, `apps-core.surface.solo`
@@ -1143,10 +1143,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps-core/surface.Surface`, `apps-core/tabs.getDefaultPlacement`, `apps-core/tabs.getFocusedPlacement`, `apps-core/tabs.setFocusedTabPlacement`, `primitives/css/pin.Pin`, `primitives/icon-button.IconButton`, `primitives/shortcuts.defineShortcut`
     - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
       - Web:
+        - Contributes: `Apps.TabBar` "Tab bar" → `AppTabBar`
         - Uses: `apps-core.Apps`, `apps-core/app-icon.appIconComponent`, `apps-core/tabs.getDefaultPlacement`, `apps-core/tabs.placementIsNewTabFollows`, `apps-core/tabs.tearOffPlacement`, `apps-core/tabs.useTabs`, `apps-core/theme-scope.useChromeThemeScope`, `primitives/css/line.Line`, `primitives/css/measure-strip.MeasureStrip`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.PortalThemeScopeProvider`, `primitives/icon-button.IconButton`, `primitives/responsive-overflow.useResponsiveOverflow`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/tooltip.WithTooltip`, `ui/tab-bar.Tab`, `ui/tab-bar.useActiveTabVariant`
-        - Exports: Values: `AppTabBar`
-      - Cross-plugin:
-        - Imported by: `apps-core/layout`
     - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
       - Web:
         - Uses: `apps-core.Apps`, `apps-core/tabs.appPathFor`, `apps-core/tabs.Tab`, `apps-core/tabs.useTabs`, `primitives/css/ui-kit.appThemeScope`, `primitives/css/ui-kit.PortalThemeScopeProvider`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneSurfaceProvider`, `primitives/pane.useIndexMatch`, `primitives/pane.usePaneTitle`, `primitives/pane.useRoute`, `primitives/slot-render.renderIsolated`, `primitives/sync-status.SyncStatusIndicator`, `primitives/sync-status.SyncStatusProvider`

@@ -17,8 +17,6 @@ import {
 } from "@plugins/apps-core/web";
 import { TabsProvider, useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
-import { AppRail } from "@plugins/apps-core/plugins/app-rail/web";
-import { AppTabBar } from "@plugins/apps-core/plugins/tab-bar/web";
 
 /** Replace the URL and notify the router/pathname subscribers. */
 function redirectTo(url: string) {
@@ -28,21 +26,20 @@ function redirectTo(url: string) {
 }
 
 /**
- * Inline fallback when no app-rail-framing plugin is loaded — the default
- * 2.5rem icon rail. Mirrors DefaultFlushFraming in app-shell. The rail variant
- * owns the flex wrapper and the `--app-rail-width` var (the rail's own width);
- * the rail is a flex sibling of `body`, so the sidebar bounded to `body` needs
- * no rail-width offset of its own.
+ * Import-free fallback when no `Apps.RailFraming` contributor is loaded: no
+ * rail, `body` fills the full width. Rail chrome is opt-in via `Apps.RailFraming`
+ * — a filtered composition that never selects a rail-framing variant gets this
+ * railless surface. The `--app-rail-width: 0px` keeps the rail-width var
+ * consistent for any downstream reader (mirrors `app-rail-framing/hidden`).
  */
-function DefaultRailFraming({ body }: RailFramingProps) {
+function RaillessFraming({ body }: RailFramingProps) {
   return (
     <Stack
       direction="row"
       gap="none"
       className="h-full min-h-0"
-      style={{ "--app-rail-width": "2.5rem" } as React.CSSProperties}
+      style={{ "--app-rail-width": "0px" } as React.CSSProperties}
     >
-      <AppRail />
       {body}
     </Stack>
   );
@@ -113,7 +110,7 @@ export function AppsLayout() {
       <TabsProvider>
         <DocumentTitleSync />
         <Stack gap="none" className="h-full min-h-0">
-          <AppTabBar />
+          <TabBarHost />
           {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible fill leaf below the rigid tab bar; bounds the framed surface's own scroll */}
           <div className="min-h-0 min-w-0 flex-1">
             <FramedSurface />
@@ -122,6 +119,15 @@ export function AppsLayout() {
       </TabsProvider>
     </TooltipProvider>
   );
+}
+
+/** Renders the tab strip via the `Apps.TabBar` slot; nothing when no
+ * contributor is present (chrome-less surface — the tab bar is opt-in). */
+function TabBarHost() {
+  const tabBar = Apps.TabBar.useContributions()[0];
+  return tabBar
+    ? renderIsolated(Apps.TabBar.id, tabBar as unknown as Contribution, {})
+    : null;
 }
 
 /** Renders the surface body inside the active rail-framing variant. */
@@ -147,6 +153,6 @@ function FramedSurface() {
       props,
     )
   ) : (
-    <DefaultRailFraming {...props} />
+    <RaillessFraming {...props} />
   );
 }

@@ -4,6 +4,7 @@ export {
   Apps,
   type RailFramingContribution,
   type SurfaceContribution,
+  type TabBarContribution,
 } from "./slots";
 export {
   useActiveApp,

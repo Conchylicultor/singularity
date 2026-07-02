@@ -1,4 +1,4 @@
-// @hash 6cefdf4b69c9
+// @hash d82be53fc5f3
 {
   "manifests": [
     {
@@ -392,6 +392,24 @@
         "ui.theme-toggle",
         "ui.tweakcn",
         "ui.tweakcn.community-browser"
+      ],
+      "extends": [],
+      "excludes": []
+    },
+    {
+      "id": "app-chrome",
+      "rank": "aQ",
+      "name": "app-chrome",
+      "category": "pack",
+      "entryPoints": [],
+      "selectedContributors": [
+        "apps-core.tab-bar",
+        "apps-core.app-rail-framing",
+        "apps-core.app-rail-framing.rail",
+        "apps-core.surface",
+        "apps-core.surface.docked",
+        "apps-core.surface.floating",
+        "apps-core.surface.solo"
       ],
       "extends": [],
       "excludes": []
