@@ -20,11 +20,11 @@
 // so the default is byte-for-byte today's behavior. This conservative allowlist
 // is the safe floor while the general safety net is built (see follow-up #1):
 // an app is safe to defer ONLY if nothing in the EAGER tier depends, at boot, on
-// a registration its content provides. Two coupling classes were found and are
-// deliberately EXCLUDED:
-//   • sonata — its eager shell mounts a provider whose `useConfig` needs a
-//     `ConfigV2.WebRegister` that lives in sonata *content* (21 non-shell
-//     registrations); deferring it crashes the shell.
+// a registration its content provides. Where an app has a single such coupling,
+// the offending *content* plugin is pinned eager via EAGER_EXCEPTIONS (below) and
+// the app is still deferred (sonata does exactly this — see EAGER_EXCEPTIONS).
+// One app remains fully EXCLUDED because the coupling is diffuse, not a single
+// pinnable plugin:
 //   • studio — the boot-critical `release.history` / `release.previews` resource
 //     WEB descriptors register only as a side effect of studio's release content
 //     importing `@plugins/release/core`; deferring it leaves boot-snapshot unable
@@ -45,17 +45,27 @@ export const DEFERRABLE_APPS = new Set<string>([
   "pages",
   "prototypes",
   "settings",
+  "sonata",
   "story",
   "workflows",
 ]);
 
-// App-content plugins that contribute to a GLOBAL, always-mounted slot
-// (`Core.Root` / `Core.Boot`) and therefore MUST load at boot despite living
-// under a deferrable app. Measured: the ONLY such plugin across the entire tree
-// is the mail app-wide headless sync listener (a `Core.Root` watcher that must
-// run regardless of which app is focused).
+// App-content plugins that a boot-eager surface hard-depends on and that MUST
+// therefore load at boot despite living under a deferrable app. Two coupling
+// classes require this today:
+//   • a `Core.Root` / `Core.Boot` global always-mounted contribution — the mail
+//     app-wide headless sync listener (a `Core.Root` watcher that must run
+//     regardless of which app is focused).
+//   • a `ConfigV2.WebRegister` an EAGER app shell reads at mount — sonata's
+//     `voicing` plugin's web runtime exists solely to register `voicingConfig`,
+//     which the eager `SonataProvider` reads via `useConfig` at mount; without it
+//     the shell throws "descriptor has no web registration". Pinning just this
+//     leaf keeps the other ~48 sonata plugins deferred.
+// Each entry is dissolved by follow-up #1 (codegen auto-eager). Values are plugin
+// dir paths (no `/web` suffix), matched verbatim against `pluginPath`.
 export const EAGER_EXCEPTIONS = new Set<string>([
   "apps/plugins/mail/plugins/sync/plugins/auto-resume",
+  "apps/plugins/sonata/plugins/voicing",
 ]);
 
 // `apps/plugins/<app>/plugins/<child>` — captures the app dir and `<child>`, the

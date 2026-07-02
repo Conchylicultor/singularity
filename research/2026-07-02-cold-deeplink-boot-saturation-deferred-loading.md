@@ -89,21 +89,26 @@ otherwise eager   (== today's behavior for every non-allowlisted plugin)
   as it streams in.
 - **`DEFERRABLE_APPS`** (verified by deep-linking every route, no fatal crash / no
   boot-snapshot loss): `browser, debug, deploy, file-explorer, home, mail, pages,
-  prototypes, settings, story, workflows`. **Excluded** and kept eager:
-  - `sonata` — its eager shell mounts a provider whose `useConfig` needs a
-    `ConfigV2.WebRegister` living in sonata *content* (21 non-shell registrations);
-    deferring it **crashes the shell** (caught by the error boundary, but the app is dead).
+  prototypes, settings, sonata, story, workflows`. **Excluded** and kept eager:
   - `studio` — the boot-critical `release.history`/`release.previews` resource **web
     descriptors** register only as a side effect of studio's release content importing
     `@plugins/release/core`; deferring it leaves boot-snapshot unable to hydrate them
-    (non-fatal but files a crash report every boot + loses the pre-hydration).
+    (non-fatal but files a crash report every boot + loses the pre-hydration). The coupling
+    is diffuse (a whole content plugin's import side effect), not a single pinnable leaf.
   - `agent-manager` — the default app; kept eager so cold boot into the primary surface is
     unchanged.
-- **`EAGER_EXCEPTIONS`** — deferrable-app content contributing to a *global, always-mounted*
-  slot. Measured: the only one is `apps/plugins/mail/plugins/sync/plugins/auto-resume`
-  (an app-wide `Core.Root` sync listener). (Panes, sidebar entries, command-palette items,
-  shortcuts contributed by app content are *not* global — they only matter on that app's own
-  surface, so deferring them is correct.)
+- **`EAGER_EXCEPTIONS`** — individual deferrable-app content plugins a boot-eager surface
+  hard-depends on, pinned eager while the app itself defers. Two classes today:
+  - `apps/plugins/mail/plugins/sync/plugins/auto-resume` — an app-wide `Core.Root` sync
+    listener (a *global, always-mounted* contribution).
+  - `apps/plugins/sonata/plugins/voicing` — its web runtime exists solely to
+    `ConfigV2.WebRegister({ descriptor: voicingConfig })`, which the eager `SonataProvider`
+    reads via `useConfig` at mount. Pinning just this leaf lets the other ~48 sonata plugins
+    defer. (The prior "21 non-shell registrations" note was inaccurate — there are 11 sonata
+    config web-registrations total, and only this one is read by an eager surface; the other
+    10 are read only inside their own deferred content.)
+  - (Panes, sidebar entries, command-palette items, shortcuts contributed by app content are
+    *not* global — they only matter on that app's own surface, so deferring them is correct.)
 
 Because most "app content" actually lives **top-level** (`plugins/debug/*`,
 `plugins/conversations/*`, `plugins/page/*`, `plugins/fields/*`), NOT nested under
