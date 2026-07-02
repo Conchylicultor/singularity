@@ -44,6 +44,8 @@ Always READ the plugin architecture doc to understand design, caveats, and rules
 
 Think carefully about the plugin's boundaries, APIs, etc. when designing plugins, as it is the load-bearing infra of the entire project.
 
+**Deployment model — one instance per user.** Singularity runs as exactly one instance per user: the marketplace shares *plugins*, not runtime, and multi-tenancy is a non-goal. This is a recorded architectural decision — read it before touching auth, the gateway, DB forks, secrets, or the live-state subscription path: [`research/2026-07-02-global-adr-single-instance-per-user.md`](research/2026-07-02-global-adr-single-instance-per-user.md).
+
 ### Collection-consumer separation
 
 When a plugin collects sub-plugin contributions (e.g. facets, checks, collected dirs), consumers must use only the **generic collection API** — never import or name individual contributors. The collection plugin owns the registry and generic interface; each contributor implements the internal details. Adding or removing a contributor updates all consumers automatically with zero code changes. If a consumer needs to reference a specific contributor, the abstraction is leaking — redesign the generic API instead.

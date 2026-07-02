@@ -220,6 +220,24 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    * spawn git/fs). Absent ⇒ today's full-loader behavior, unchanged.
    */
   revalidate?: (params: P) => Promise<string>;
+  /**
+   * Subscription-authorization seam (deferred; single-instance-per-user). Runs
+   * on the subscribe path — before the refcount bump, `onFirstSubscribe`, and
+   * the loader — and, if it resolves falsy, refuses the subscription with a
+   * `sub-error` (`reason: "unauthorized"`) instead of an initial value.
+   *
+   * Absent ⇒ the subscription is always allowed. That is the shipped behavior
+   * for every resource today: under the one-instance-per-user deployment model
+   * (`research/2026-07-02-global-adr-single-instance-per-user.md`) there is
+   * exactly one trusted caller, so no resource populates this. The field exists
+   * so the authorization boundary is an explicit, typed seam rather than an
+   * implicit hole — a future authenticated-gateway / multi-tenant deployment can
+   * enforce per-subscription access here without reshaping the sub path. The
+   * callback takes only `params` today (the resource key is fixed per entry, and
+   * no caller identity is threaded through the socket yet); widening it with a
+   * caller-context argument later is a non-breaking additive change.
+   */
+  authorize?: (params: P) => boolean | Promise<boolean>;
 }
 
 /**
@@ -307,6 +325,8 @@ export interface ServerResourceOptions<T, P extends ResourceParams = ResourcePar
   onLastUnsubscribe?: ResourceDefinition<T, P>["onLastUnsubscribe"];
   /** Conditional-revalidation ETag signature — see `ResourceDefinition.revalidate`. */
   revalidate?: ResourceDefinition<T, P>["revalidate"];
+  /** Deferred subscription-authorization seam — see `ResourceDefinition.authorize`. */
+  authorize?: ResourceDefinition<T, P>["authorize"];
 }
 
 // Fold a (contract, server-opts) pair into the flat `ResourceDefinition` the
@@ -333,6 +353,7 @@ function contractToDefinition<T, P extends ResourceParams>(
     onFirstSubscribe: opts.onFirstSubscribe,
     onLastUnsubscribe: opts.onLastUnsubscribe,
     revalidate: opts.revalidate,
+    authorize: opts.authorize,
   };
 }
 
@@ -484,6 +505,14 @@ interface RegistryEntry {
    * loader exactly as before.
    */
   revalidate?: (params: ResourceParams) => Promise<string>;
+  /**
+   * Deferred subscription-authorization seam (see `ResourceDefinition.authorize`).
+   * Undefined ⇒ every subscription to this resource is allowed (the shipped
+   * single-instance-per-user behavior). When present, `handleSub` awaits it
+   * before any side effect and refuses the sub with `sub-error`/`unauthorized`
+   * if it resolves falsy.
+   */
+  authorize?: (params: ResourceParams) => boolean | Promise<boolean>;
 }
 
 interface SocketState {
@@ -1119,6 +1148,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         | undefined,
       revalidate: def.revalidate as
         | ((params: ResourceParams) => Promise<string>)
+        | undefined,
+      authorize: def.authorize as
+        | ((params: ResourceParams) => boolean | Promise<boolean>)
         | undefined,
     };
     registry.set(def.key, entry);
@@ -1812,6 +1844,26 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     if (!entry) {
       sendJson(state.ws, { kind: "sub-error", id, key, reason: "unknown-key" });
       return;
+    }
+    // Subscription-authorization seam (deferred; single-instance-per-user — see
+    // research/2026-07-02-global-adr-single-instance-per-user.md). Runs before
+    // any side effect (refcount bump, onFirstSubscribe, loader read) so a refused
+    // sub leaves no trace. No resource declares `authorize` today — the sole
+    // trusted caller of the one-instance-per-user model is always allowed — so
+    // for every shipped resource this branch is skipped entirely. A throwing
+    // authorize fails CLOSED (report + reject) rather than leaking the value.
+    if (entry.authorize) {
+      let allowed: boolean;
+      try {
+        allowed = await entry.authorize(params);
+      } catch (err) {
+        reportLoaderError(`authorize failed for ${key}`, err);
+        allowed = false;
+      }
+      if (!allowed) {
+        sendJson(state.ws, { kind: "sub-error", id, key, reason: "unauthorized" });
+        return;
+      }
     }
     const pk = paramsKey(params);
     let inner = state.subs.get(key);

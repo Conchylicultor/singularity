@@ -132,8 +132,19 @@
   `EAGER_EXCEPTIONS`); codegen from boot-critical markers is the stated
   follow-up.
 - **Reads execute server-side** — every filter/sort interaction is a
-  round-trip (fast on localhost, but not 0ms). The Zero pilot vs Axis B
-  in-house store is the open architectural decision.
+  round-trip (fast on localhost, but not 0ms). ~~The Zero pilot vs Axis B
+  in-house store is the open architectural decision.~~ **Resolved
+  (2026-07-02):** the in-house stack is the committed direction; the Zero pilot
+  is **frozen and fenced** behind `SINGULARITY_ZERO_CACHE`
+  ([`plugins/database/plugins/zero/CLAUDE.md`](../../plugins/database/plugins/zero/CLAUDE.md),
+  super-plan Track 2). Re-evaluate only if Axis B becomes a committed track.
+- **Deployment model was an unrecorded assumption** — single-user/single-machine
+  couplings (trust-auth PG, per-worktree forks, localhost subdomains, per-origin
+  leader election, host-local secrets) ran deep with no written status.
+  **Resolved (2026-07-02):**
+  [ADR — one instance per user](../2026-07-02-global-adr-single-instance-per-user.md)
+  records the decision, enumerates the sanctioned couplings, and adds the
+  deferred `authorize` subscription seam (super-plan Track 5).
 - **Cron placement is convention-checked, not type-checked** — a missing
   `perWorktree` flag is a semantic decision the compiler can't see.
 - **Fork excludes mail bulk data by table name list** in the fork code — a

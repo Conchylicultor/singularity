@@ -30,6 +30,7 @@ interface SentFrame {
   key: string;
   kind: string;
   version?: number;
+  reason?: string;
 }
 
 /** A runtime under test plus a single fake socket that records every frame sent. */
@@ -40,9 +41,20 @@ function harness() {
   // Fake ServerWebSocket: only `send` is exercised by the runtime's sendJson.
   const ws = {
     send(raw: string) {
-      const msg = JSON.parse(raw) as { kind: string; key?: string; version?: number };
+      const msg = JSON.parse(raw) as {
+        kind: string;
+        key?: string;
+        version?: number;
+        reason?: string;
+      };
       if (msg.kind === "ping") return; // ignore heartbeats
-      frames.push({ seq: seq++, key: msg.key ?? "", kind: msg.kind, version: msg.version });
+      frames.push({
+        seq: seq++,
+        key: msg.key ?? "",
+        kind: msg.kind,
+        version: msg.version,
+        reason: msg.reason,
+      });
     },
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -899,5 +911,86 @@ describe("conditional revalidation (ETag / up-to-date / 304)", () => {
     expect(fresh.status).toBe(200);
     expect(fresh.headers.get("ETag")).toBe(token);
     expect((await fresh.json()).value).toBe(5);
+  });
+});
+
+describe("authorize — deferred subscription-authorization seam", () => {
+  test("absent authorize ⇒ subscription is allowed (default, sub-ack sent)", async () => {
+    const h = harness();
+    h.runtime.defineResource({
+      key: "r",
+      mode: "invalidate",
+      schema: z.number(),
+      loader: async () => 1,
+    });
+    await h.subscribe("r");
+
+    const acks = h.frames.filter((f) => f.key === "r" && f.kind === "sub-ack");
+    expect(acks).toHaveLength(1);
+    expect(h.frames.some((f) => f.kind === "sub-error")).toBe(false);
+  });
+
+  test("authorize returning false ⇒ sub-error/unauthorized, loader never runs", async () => {
+    const h = harness();
+    let loaded = false;
+    h.runtime.defineResource({
+      key: "r",
+      mode: "invalidate",
+      schema: z.number(),
+      loader: async () => {
+        loaded = true;
+        return 1;
+      },
+      authorize: () => false,
+    });
+    await h.subscribe("r");
+
+    const errs = h.frames.filter((f) => f.key === "r" && f.kind === "sub-error");
+    expect(errs).toHaveLength(1);
+    expect(errs[0]!.reason).toBe("unauthorized");
+    // No initial value leaked, and the (side-effecting) loader was never invoked.
+    expect(h.frames.some((f) => f.key === "r" && f.kind === "sub-ack")).toBe(false);
+    expect(loaded).toBe(false);
+  });
+
+  test("authorize can decide per-params (async, allow one tuple, deny another)", async () => {
+    const h = harness();
+    h.runtime.defineResource<number, { id: string }>({
+      key: "r",
+      mode: "invalidate",
+      schema: z.number(),
+      loader: async () => 1,
+      authorize: async (params) => params.id === "ok",
+    });
+    await h.subscribe("r", { id: "ok" });
+    await h.subscribe("r", { id: "nope" });
+
+    expect(h.frames.filter((f) => f.kind === "sub-ack")).toHaveLength(1);
+    const errs = h.frames.filter((f) => f.kind === "sub-error");
+    expect(errs).toHaveLength(1);
+    expect(errs[0]!.reason).toBe("unauthorized");
+  });
+
+  test("a throwing authorize fails CLOSED (rejects the sub, no value)", async () => {
+    const h = harness();
+    let loaded = false;
+    h.runtime.defineResource({
+      key: "r",
+      mode: "invalidate",
+      schema: z.number(),
+      loader: async () => {
+        loaded = true;
+        return 1;
+      },
+      authorize: () => {
+        throw new Error("boom");
+      },
+    });
+    await h.subscribe("r");
+
+    const errs = h.frames.filter((f) => f.key === "r" && f.kind === "sub-error");
+    expect(errs).toHaveLength(1);
+    expect(errs[0]!.reason).toBe("unauthorized");
+    expect(loaded).toBe(false);
   });
 });
