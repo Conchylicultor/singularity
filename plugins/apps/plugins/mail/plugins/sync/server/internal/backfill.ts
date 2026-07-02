@@ -19,6 +19,7 @@ import {
 import { upsertMessageEnvelope } from "./store";
 import { fetchEnvelopes } from "./fetch-envelopes";
 import { applyHistorySince } from "./history-sync";
+import { attachmentScanJob } from "./attachment-scan";
 import { classifyMailSyncError } from "./classify-error";
 import { recordSyncError } from "./record-error";
 
@@ -140,6 +141,14 @@ export const backfillJob = defineJob({
           updatedAt: new Date(),
         })
         .where(eq(_mailSyncState.accountId, accountId));
+
+      // Pre-populate the attachment indicator for the mirrored window without a
+      // body fetch (Gmail `has:attachment`, decoupled + idempotent so a scan
+      // failure never dead-letters the backfill).
+      await attachmentScanJob.enqueue({
+        accountId,
+        windowDays: BACKFILL_WINDOW_DAYS,
+      });
     } catch (err) {
       // Persist + classify the failure so it survives a restart and pushes to
       // the UI. A permanent permission/auth/contract failure can never succeed
@@ -175,7 +184,8 @@ async function renewWatermark(
     return (await getProfile(token)).historyId;
   }
   try {
-    return await applyHistorySince(token, accountId, currentHistoryId);
+    return (await applyHistorySince(token, accountId, currentHistoryId))
+      .historyId;
   } catch (err) {
     if (!(err instanceof GmailHistoryExpiredError)) throw err;
     const profile = await getProfile(token);

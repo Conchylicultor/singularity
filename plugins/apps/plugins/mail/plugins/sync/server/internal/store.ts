@@ -139,6 +139,15 @@ async function writeMessage(
       }
     : {};
 
+  // The message-level attachment flag is authoritative only on a full fetch
+  // (real MIME parts present). Non-inline parts match Gmail's `has:attachment`
+  // paperclip semantics (inline cid: images are not attachments). On a metadata
+  // sync it is omitted from BOTH insert (→ DB default false) and update (→ a
+  // previously scan-set/hydrated flag is preserved).
+  const attachmentFlag = full
+    ? { hasAttachments: parsed.attachments.some((a) => !a.inline) }
+    : {};
+
   // 1. Ensure the FK-parent thread stub exists before inserting the message.
   await db
     .insert(_mailThreads)
@@ -166,10 +175,10 @@ async function writeMessage(
   };
   await db
     .insert(_mailMessages)
-    .values({ id: msg.id, accountId, ...envelope, ...body })
+    .values({ id: msg.id, accountId, ...envelope, ...body, ...attachmentFlag })
     .onConflictDoUpdate({
       target: _mailMessages.id,
-      set: { ...envelope, ...body, updatedAt: new Date() },
+      set: { ...envelope, ...body, ...attachmentFlag, updatedAt: new Date() },
     });
 
   // 3. Reconcile the message↔label join to exactly parsed.labelIds (labels are
@@ -248,6 +257,35 @@ export function upsertMessageFull(
   return writeMessage(accountId, msg, true);
 }
 
+/**
+ * Positive-only mark that a set of messages have a (real, non-inline) attachment,
+ * from Gmail's authoritative `has:attachment` signal (see `attachment-scan.ts`).
+ * Only flips `false → true` (a message never loses an attachment — Gmail content
+ * is immutable; a hydration still corrects the exact value), so re-runs are cheap
+ * idempotent no-ops. Recomputes each distinct affected thread so its rollup flips.
+ */
+export async function markMessagesWithAttachments(
+  accountId: string,
+  ids: string[],
+): Promise<void> {
+  if (ids.length === 0) return;
+  const updated = await db
+    .update(_mailMessages)
+    .set({ hasAttachments: true, updatedAt: new Date() })
+    .where(
+      and(
+        eq(_mailMessages.accountId, accountId),
+        inArray(_mailMessages.id, ids),
+        eq(_mailMessages.hasAttachments, false),
+      ),
+    )
+    .returning({ threadId: _mailMessages.threadId });
+  const threadIds = [...new Set(updated.map((r) => r.threadId))];
+  for (const threadId of threadIds) {
+    await recomputeThread(accountId, threadId);
+  }
+}
+
 /** Recompute a thread's denormalized rollups from its messages, or delete it. */
 export async function recomputeThread(
   accountId: string,
@@ -295,12 +333,6 @@ export async function recomputeThread(
     .where(inArray(_mailMessageLabels.messageId, messageIds));
   const labelIds = labelRows.map((r) => r.labelId);
 
-  const attachmentRows = await db
-    .select({ id: _mailAttachments.id })
-    .from(_mailAttachments)
-    .where(inArray(_mailAttachments.messageId, messageIds))
-    .limit(1);
-
   await db
     .update(_mailThreads)
     .set({
@@ -313,7 +345,8 @@ export async function recomputeThread(
       unread: messages.some((m) => m.unread),
       starred: messages.some((m) => m.starred),
       important: labelIds.includes("IMPORTANT"),
-      hasAttachments: attachmentRows.length > 0,
+      // derived from the message-level flag (scan- or hydration-populated)
+      hasAttachments: messages.some((m) => m.hasAttachments),
       labelIds,
       updatedAt: new Date(),
     })

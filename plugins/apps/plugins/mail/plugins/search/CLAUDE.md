@@ -38,8 +38,9 @@ composes primitives.
 ## Deferred follow-ups
 
 - **Thread grouping** — results are flat per-message, not grouped by thread.
-- **Label / attachment chips on rows** — labels are a join table and
-  `hasAttachments` is unknown until a message is hydrated.
+- **Label chips on rows** — labels are a join table. (The attachment paperclip is
+  done: the message-level `hasAttachments` flag, pre-populated by the sync's
+  `has:attachment` scan, renders on the row without an open.)
 - **Attachment download** — attachments render as filename `Badge` chips only.
 - **HTML rendering** — needs a sanitizer before `bodyHtml` can be shown.
 - **`useDebounced` primitive** — the local `setTimeout` debounce could be

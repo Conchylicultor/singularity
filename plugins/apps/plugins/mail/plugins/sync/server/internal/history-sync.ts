@@ -16,7 +16,9 @@ import { fetchEnvelopes } from "./fetch-envelopes";
 
 /**
  * Consume Gmail history from `startHistoryId` forward, applying every record to
- * the local mirror, and return the new (advanced) historyId watermark.
+ * the local mirror, and return the new (advanced) historyId watermark plus the
+ * ids of the freshly-added messages (from `messagesAdded`, for a targeted
+ * attachment scan).
  *
  * Throws `GmailHistoryExpiredError` if Gmail has dropped the history for
  * `startHistoryId` (the caller must full-resync).
@@ -25,7 +27,7 @@ export async function applyHistorySince(
   token: string,
   accountId: string,
   startHistoryId: string,
-): Promise<string> {
+): Promise<{ historyId: string; addedIds: string[] }> {
   // Paginate history from the watermark, collecting every record.
   const records: GmailHistoryRecord[] = [];
   let newHistoryId = startHistoryId;
@@ -45,8 +47,12 @@ export async function applyHistorySince(
   // message preserves its cached body.
   const toFetch = new Set<string>();
   const toDelete = new Set<string>();
+  const addedIds = new Set<string>();
   for (const rec of records) {
-    for (const a of rec.messagesAdded ?? []) toFetch.add(a.message.id);
+    for (const a of rec.messagesAdded ?? []) {
+      toFetch.add(a.message.id);
+      addedIds.add(a.message.id);
+    }
     for (const c of rec.labelsAdded ?? []) toFetch.add(c.message.id);
     for (const c of rec.labelsRemoved ?? []) toFetch.add(c.message.id);
     for (const d of rec.messagesDeleted ?? []) toDelete.add(d.message.id);
@@ -63,5 +69,5 @@ export async function applyHistorySince(
   }
   for (const id of toDelete) await deleteMessage(id);
 
-  return newHistoryId;
+  return { historyId: newHistoryId, addedIds: [...addedIds] };
 }

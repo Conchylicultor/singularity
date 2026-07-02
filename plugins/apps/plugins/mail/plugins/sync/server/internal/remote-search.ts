@@ -8,7 +8,7 @@ import {
   requireGmailToken,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
 import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import { upsertMessageEnvelope } from "./store";
+import { markMessagesWithAttachments, upsertMessageEnvelope } from "./store";
 import { fetchEnvelopes } from "./fetch-envelopes";
 
 // On-demand server-side search — the escape hatch for the bounded window. The
@@ -65,6 +65,24 @@ export async function remoteSearch(
   const { fetched } = await fetchEnvelopes(accessToken, ids);
   for (const m of fetched) {
     await upsertMessageEnvelope(accountId, m);
+  }
+
+  // Mark attachment-bearing results with Gmail's authoritative `has:attachment`
+  // (matches the paperclip). One extra id-only list page for the same query,
+  // intersected with this page's ids — metadata-only, no body fetch. First page
+  // only: `has:attachment`'s first page spans a far wider recency range than the
+  // 25-result query page, so it reliably covers this page's attachment bearers;
+  // deep-page marking lands with real pagination.
+  if (!pageToken) {
+    const attachList = await listMessages(accessToken, {
+      q: `${query} has:attachment`,
+      maxResults: 100,
+    });
+    const attachIds = new Set((attachList.messages ?? []).map((m) => m.id));
+    await markMessagesWithAttachments(
+      accountId,
+      ids.filter((id) => attachIds.has(id)),
+    );
   }
 
   // Read the (now-mirrored) rows back and reorder to Gmail's `ids` order — a bare

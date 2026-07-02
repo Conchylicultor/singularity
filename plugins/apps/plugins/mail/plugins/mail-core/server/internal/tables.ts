@@ -110,6 +110,7 @@ const mailMessages = defineEntity("mail_messages", mailMessageFields, {
     starred: { default: false },
     isDraft: { default: false },
     isSent: { default: false },
+    hasAttachments: { default: false },
     createdAt: { default: defaultNow() },
     updatedAt: { default: defaultNow() },
   },

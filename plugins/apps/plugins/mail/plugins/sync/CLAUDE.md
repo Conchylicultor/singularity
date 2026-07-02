@@ -50,7 +50,7 @@ idle → (bootstrap) → backfilling → (window done / cap hit) → delta ⇄ (
   DB — durable in the graphile row, so crash recovery resumes the exact page with
   no schema column.
 
-## The three jobs + the manual endpoint
+## The four jobs + the manual endpoint
 
 - **`mail.backfill`** (`backfill.ts`) — one **windowed** `messages.list` page per
   run (`newer_than:${BACKFILL_WINDOW_DAYS}d`): `fetchEnvelopes` (metadata-only,
@@ -101,6 +101,16 @@ idle → (bootstrap) → backfilling → (window done / cap hit) → delta ⇄ (
   unarmed error-placeholder row (`historyId` still null) is re-armed with a fresh
   watermark on the next successful connect, so enabling the API + "Retry now"
   recovers cleanly.
+- **`mail.attachment-scan`** (`attachment-scan.ts`) — pre-populates the paperclip
+  indicator WITHOUT a body fetch. Paginates `messages.list?q=… has:attachment`
+  (Gmail's authoritative metadata-only "real, non-inline attachment" signal —
+  id-only, no per-message GET, bounded by `MAX_ATTACHMENT_SCAN_PAGES`) and marks
+  the mirrored messages' `has_attachments` via the positive-only
+  `markMessagesWithAttachments` (the thread rollup derives from it). Dedup keyed by
+  `accountId`. Enqueued at **backfill completion** for the full
+  `BACKFILL_WINDOW_DAYS` window, and on a **delta** that added new messages for a
+  short recent window (`ATTACHMENT_SCAN_DELTA_WINDOW_DAYS`). Decoupled + idempotent
+  so a scan failure never dead-letters the ingestion path that enqueued it.
 - **`POST /api/mail/sync`** (`handlers.ts`) — manual "connect / sync now": arms
   the account and, when already in `delta`, kicks an immediate delta. The trigger
   used by the phase-3 UI and for worktree testing (the tick is main-only and
@@ -156,11 +166,13 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
   envelopes into the mirror (list → metadata-fetch → upsert → read-back), bodies
   still hydrating lazily on open. A background reconcile of the wider mailbox
   remains a later-phase follow-up.
-- **`hasAttachments` / attachment metadata lag hydration.** `format=metadata`
-  carries no MIME parts, so a thread's attachment indicator and a message's
-  attachment list are unknown until the message is hydrated (opened). A cheap
-  header-heuristic or a background hydration pass could pre-populate the paperclip
-  — a later-phase follow-up.
+- **Attachment indicator is pre-populated (paperclip), not the full list.** The
+  message-level `has_attachments` flag (→ thread rollup) is filled WITHOUT a body
+  fetch by the `mail.attachment-scan` job (Gmail `has:attachment`, see above), so
+  the paperclip shows on unopened mail. Remaining gaps: the reader's attachment
+  chips still include inline `cid:` images (they list every `mail_attachments`
+  row), and deep search pages / older-than-window mail that no scan has covered
+  aren't flagged until hydration.
 - **Bounded resync ≠ deletion reconciliation.** The 404-expiry full resync
   re-fetches and upserts everything but does **not** detect messages deleted on
   the server during the gap (Gmail gives no deleted-set without history). A
@@ -179,11 +191,11 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
 - Server:
   - Uses: `apps/mail/gmail-api.getMessage`, `apps/mail/gmail-api.getProfile`, `apps/mail/gmail-api.listHistory`, `apps/mail/gmail-api.listLabels`, `apps/mail/gmail-api.listMessages`, `apps/mail/mail-core._mailAccounts`, `apps/mail/mail-core._mailAttachments`, `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailMessageLabels`, `apps/mail/mail-core._mailMessages`, `apps/mail/mail-core._mailSyncState`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.requireGmailToken`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/jobs.NonRetryableError`, `integrations/gmail.isGmailEnabled`, `primitives/log-channels.Log`
   - Exports: Values: `mailSyncStateServerResource`
-  - Register: `defineJob('mail.backfill')`, `defineJob('mail.delta')`, `defineJob('mail.sync-tick')`
+  - Register: `defineJob('mail.backfill')`, `defineJob('mail.delta')`, `defineJob('mail.sync-tick')`, `defineJob('mail.attachment-scan')`
   - Routes: `POST /api/mail/sync`, `POST /api/mail/hydrate`, `GET /api/mail/search`
 - Core:
   - Uses: `apps/mail/mail-core.MailAttachmentSchema`, `apps/mail/mail-core.MailMessageSchema`, `infra/endpoints.defineEndpoint`
-  - Exports: Values: `BACKFILL_WINDOW_DAYS`, `mailHydrateMessageEndpoint`, `mailSearchEndpoint`, `mailSyncEndpoint`, `MAX_BACKFILL_MESSAGES`
+  - Exports: Values: `ATTACHMENT_SCAN_DELTA_WINDOW_DAYS`, `BACKFILL_WINDOW_DAYS`, `mailHydrateMessageEndpoint`, `mailSearchEndpoint`, `mailSyncEndpoint`, `MAX_ATTACHMENT_SCAN_PAGES`, `MAX_BACKFILL_MESSAGES`
 - Cross-plugin:
   - Endpoint callers: `search`
 - Sub-plugins:

@@ -15,6 +15,7 @@ import {
 import { backfillJob } from "./internal/backfill";
 import { deltaJob } from "./internal/delta";
 import { syncTickJob } from "./internal/tick";
+import { attachmentScanJob } from "./internal/attachment-scan";
 import { mailSyncStateServerResource } from "./internal/resource";
 
 export { mailSyncStateServerResource } from "./internal/resource";
@@ -28,5 +29,5 @@ export default {
     [mailHydrateMessageEndpoint.route]: handleMailHydrate,
     [mailSearchEndpoint.route]: handleMailSearch,
   },
-  register: [backfillJob, deltaJob, syncTickJob],
+  register: [backfillJob, deltaJob, syncTickJob, attachmentScanJob],
 } satisfies ServerPluginDefinition;

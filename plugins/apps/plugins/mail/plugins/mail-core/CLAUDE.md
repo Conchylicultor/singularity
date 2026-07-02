@@ -30,7 +30,10 @@ A local mirror of a Gmail mailbox, one FK cluster rooted at `mail_accounts`:
   `replyTo`. `body_text`/`body_html` are null on an **envelope-only stub** (the
   on-demand sync mirrors envelopes via Gmail `format=metadata`); they + the
   `body_fetched_at` hydration marker are filled the first time the message is
-  opened (see `sync`'s `POST /api/mail/hydrate`).
+  opened (see `sync`'s `POST /api/mail/hydrate`). A message-level `has_attachments`
+  flag drives the paperclip: pre-populated WITHOUT a body fetch by the sync's
+  `has:attachment` scan (or corrected exactly on hydration), and the
+  `mail_threads` attachment rollup derives from it.
 - `mail_message_labels` — message↔label join (composite PK).
 - `mail_attachments` — attachment metadata; `stored_attachment_id` links to a
   downloaded blob.

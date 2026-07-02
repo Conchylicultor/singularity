@@ -144,6 +144,7 @@ export const mailMessageFields = {
   starred: boolField(),
   isDraft: boolField(),
   isSent: boolField(),
+  hasAttachments: boolField(),
   sizeEstimate: nullable(intField()),
   historyId: nullable(textField()),
   createdAt: dateField(),

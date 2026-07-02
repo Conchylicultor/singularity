@@ -12,9 +12,11 @@ import {
   requireGmailToken,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
 import { MAX_CONSECUTIVE_RESYNCS } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import { ATTACHMENT_SCAN_DELTA_WINDOW_DAYS } from "../../core";
 import { backfillJob } from "./backfill";
 import { upsertLabels } from "./store";
 import { applyHistorySince } from "./history-sync";
+import { attachmentScanJob } from "./attachment-scan";
 import { classifyMailSyncError } from "./classify-error";
 import { recordSyncError } from "./record-error";
 
@@ -55,9 +57,9 @@ export const deltaJob = defineJob({
 
       // Consume history from the watermark, applying every record and advancing
       // the watermark (shared with the self-renewing backfill).
-      let newHistoryId: string;
+      let applied: { historyId: string; addedIds: string[] };
       try {
-        newHistoryId = await applyHistorySince(token, accountId, state.historyId);
+        applied = await applyHistorySince(token, accountId, state.historyId);
       } catch (err) {
         if (!(err instanceof GmailHistoryExpiredError)) throw err;
         // Watermark too old — Gmail dropped the history. Count this expiry-driven
@@ -110,7 +112,7 @@ export const deltaJob = defineJob({
       await db
         .update(_mailSyncState)
         .set({
-          historyId: newHistoryId,
+          historyId: applied.historyId,
           status: "delta",
           lastDeltaSyncAt: new Date(),
           errorCode: null,
@@ -121,6 +123,16 @@ export const deltaJob = defineJob({
           updatedAt: new Date(),
         })
         .where(eq(_mailSyncState.accountId, accountId));
+
+      // New mail may carry attachments — pre-populate the paperclip for the
+      // freshly-arrived (recent) envelopes without a body fetch. Skipped when the
+      // delta added nothing, so an idle tick does no scan work.
+      if (applied.addedIds.length > 0) {
+        await attachmentScanJob.enqueue({
+          accountId,
+          windowDays: ATTACHMENT_SCAN_DELTA_WINDOW_DAYS,
+        });
+      }
     } catch (err) {
       // Persist + classify the failure (survives restart, pushes to the UI).
       // Terminal → dead-letter; transient → rethrow so graphile retries.

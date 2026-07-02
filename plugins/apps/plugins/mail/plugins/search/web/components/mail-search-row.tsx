@@ -1,5 +1,5 @@
 import { type ReactElement } from "react";
-import { MdStar } from "react-icons/md";
+import { MdAttachFile, MdStar } from "react-icons/md";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Line } from "@plugins/primitives/plugins/css/plugins/line/web";
@@ -16,8 +16,9 @@ import { mailMessagePane } from "../panes";
  * snippet). Clicking opens the reader pane to the right, handing the envelope in
  * as `input` so the header renders instantly while the body hydrates.
  *
- * Follow-up: no label / attachment chips — labels are a join table and
- * `hasAttachments` is unknown until the message is hydrated (opened).
+ * Attachment presence shows a paperclip (the message-level `hasAttachments` flag,
+ * pre-populated by the sync's `has:attachment` scan — no open needed). Label chips
+ * remain a follow-up (labels are a join table).
  */
 export function MailSearchRow({ message }: { message: MailMessage }): ReactElement {
   const openPane = useOpenPane();
@@ -41,6 +42,9 @@ export function MailSearchRow({ message }: { message: MailMessage }): ReactEleme
             <Fill>
               <Text variant="label">{sender}</Text>
             </Fill>
+            {message.hasAttachments && (
+              <MdAttachFile className="text-muted-foreground" aria-label="Has attachment" />
+            )}
             {message.starred && <MdStar className="text-primary" />}
             {message.internalDate && (
               <Text variant="caption" tone="muted">

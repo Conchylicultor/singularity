@@ -16,3 +16,14 @@ export const BACKFILL_WINDOW_DAYS = 30;
 
 /** Hard ceiling on message envelopes synced by the bounded backfill. */
 export const MAX_BACKFILL_MESSAGES = 1500;
+
+/**
+ * Recency window (days) scanned for the `has:attachment` attachment flag on the
+ * steady-state delta path. New mail arrives recent, so a small window keeps the
+ * per-delta scan to ~one id-only list page. The initial backfill scans the full
+ * `BACKFILL_WINDOW_DAYS` once on completion.
+ */
+export const ATTACHMENT_SCAN_DELTA_WINDOW_DAYS = 2;
+
+/** Safety cap on `has:attachment` list pages one scan will page through. */
+export const MAX_ATTACHMENT_SCAN_PAGES = 20;

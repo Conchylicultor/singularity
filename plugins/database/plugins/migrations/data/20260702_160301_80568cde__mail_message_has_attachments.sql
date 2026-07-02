@@ -1,0 +1,1 @@
+ALTER TABLE "mail_messages" ADD COLUMN "has_attachments" boolean DEFAULT false NOT NULL;
