@@ -6,7 +6,11 @@
 
 - Description: Cursor-pagination primitive: useCursorPagination hook with frozen-cursor capture, useInfiniteQuery wiring, IntersectionObserver auto-fetch, and ScrollSentinel component.
 - Cross-plugin:
+<<<<<<< .merge_file_cpy42C
   - Imported by: `apps/mail/search`, `conversations/conversations-view`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `primitives/data-view`
+=======
+  - Imported by: `apps/mail/thread-list`, `conversations/conversations-view`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `primitives/data-view`
+>>>>>>> .merge_file_uJMxVX
 - Web:
   - Exports: Types: `CursorPage`, `CursorPaginationHandle`, `ScrollSentinelProps`, `UseCursorPaginationOptions`; Values: `cursorPageSchema`, `ScrollSentinel`, `useCursorPagination`
 - Core:

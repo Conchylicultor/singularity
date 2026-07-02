@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 
 export { getProfile } from "./internal/profile";
 export { listMessages, getMessage, batchGetMessages } from "./internal/messages";
+export { getAttachment } from "./internal/attachments";
 export { listHistory } from "./internal/history";
 export { listLabels } from "./internal/labels";
 

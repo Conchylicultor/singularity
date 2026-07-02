@@ -16,6 +16,8 @@ export {
   _mailOutbox,
 } from "./internal/tables";
 export { mailDraftAttachments } from "./internal/schema-attachments";
+export { resolveMailAccountId } from "./internal/account";
+export { mailViewFilterSql } from "./internal/view-sql";
 export { requireGmailToken } from "./internal/token";
 export type { GmailConnection } from "./internal/token";
 

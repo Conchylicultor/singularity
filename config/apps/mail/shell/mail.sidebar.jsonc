@@ -1,6 +1,8 @@
 // @hash 0f83806eb4f5
 {
-  // Mailbox/label entries land in a later phase (system views + labels).
+  // Entries: the mailbox nav (system views + labels, apps.mail.mailbox) and the
+  // Search entry (apps.mail.search). Reorder/hide here — empty `items` keeps the
+  // default order.
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": []
 }

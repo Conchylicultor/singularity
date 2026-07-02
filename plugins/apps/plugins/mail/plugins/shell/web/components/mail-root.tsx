@@ -1,12 +1,9 @@
-import { type ReactElement, type ReactNode } from "react";
+import { useEffect, useRef, type ReactElement, type ReactNode } from "react";
 import { useGmailAccess } from "@plugins/integrations/plugins/gmail/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
-import {
-  deriveMailSyncView,
-  mailSyncStateResource,
-} from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { DEFAULT_MAIL_VIEW } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import { mailboxViewPane } from "@plugins/apps/plugins/mail/plugins/thread-list/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -14,13 +11,26 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
- * Mail's capability-driven landing surface. It reads the Gmail integration's
- * connection state (never touches `@plugins/auth` directly) and renders the
- * appropriate empty-state. The inbox itself lands in a later phase; until then
- * this pane explains exactly what the user must do to connect.
+ * Mail's index surface (bare `/mail`). It reads the Gmail integration's
+ * connection state (never `@plugins/auth` directly) and renders the appropriate
+ * empty-state until the mailbox is ready; once ready it redirects to the default
+ * mailbox view (`mailboxViewPane`), so the user lands straight in the inbox with
+ * the sidebar and thread list rather than a static "connected" card.
  */
 export function MailRoot(): ReactElement {
-  const { enabled, connected, scopesGranted, loading } = useGmailAccess();
+  const { enabled, connected, scopesGranted, loading, ready } = useGmailAccess();
+  const openPane = useOpenPane();
+
+  // Fire the inbox redirect exactly once per mount, on the edge where the
+  // mailbox becomes ready. `mode: "root"` replaces this index pane with the view
+  // column as the fresh route root.
+  const redirected = useRef(false);
+  useEffect(() => {
+    if (ready && !redirected.current) {
+      redirected.current = true;
+      openPane(mailboxViewPane, { view: DEFAULT_MAIL_VIEW }, { mode: "root" });
+    }
+  }, [ready, openPane]);
 
   if (loading) {
     return (
@@ -46,51 +56,20 @@ export function MailRoot(): ReactElement {
 
   if (!connected) {
     return (
-      <EmptyState
-        title="Mail"
-        body="Connect your Google account to use Mail."
-      />
+      <EmptyState title="Mail" body="Connect your Google account to use Mail." />
     );
   }
 
   if (!scopesGranted) {
-    return (
-      <EmptyState
-        title="Mail"
-        body="Grant Gmail access to continue."
-      />
-    );
+    return <EmptyState title="Mail" body="Grant Gmail access to continue." />;
   }
 
-  // ready
-  return <ReadyLanding />;
-}
-
-/**
- * The connected/ready landing. Reads the live sync state and shows when the
- * mailbox last synced; the `Mail.Banner` strip (above the surface) owns
- * surfacing in-progress / failed syncs, so this stays a calm "all good" line.
- */
-function ReadyLanding(): ReactElement {
-  const sync = useResource(mailSyncStateResource);
-  if (sync.pending) {
-    return <EmptyState title="Mail is connected." body="Checking your mailbox…" />;
-  }
-
-  const lastSyncedAt = deriveMailSyncView(sync.data).lastSyncedAt;
+  // ready — the effect above swaps the route to the inbox view; show a spinner
+  // for the frame before it lands.
   return (
-    <EmptyState
-      title="Mail is connected."
-      body={
-        lastSyncedAt ? (
-          <>
-            Synced <RelativeTime date={new Date(lastSyncedAt)} />.
-          </>
-        ) : (
-          "Waiting for your first sync…"
-        )
-      }
-    />
+    <Center axis="both" className="min-h-full">
+      <Loading variant="spinner" />
+    </Center>
   );
 }
 

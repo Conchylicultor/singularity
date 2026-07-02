@@ -45,9 +45,9 @@ backoff and a 120s deadline. Retry classification:
 
 - Description: Stateless typed Gmail REST API v1 client (profile, messages, history, labels) with concurrency-bounded batched gets and exponential backoff. Takes an access token per call; never touches auth or storage.
 - Cross-plugin:
-  - Imported by: `apps/mail/sync`
+  - Imported by: `apps/mail/attachments`, `apps/mail/sync`
 - Server:
-  - Exports: Values: `batchGetMessages`, `getMessage`, `getProfile`, `listHistory`, `listLabels`, `listMessages`
+  - Exports: Values: `batchGetMessages`, `getAttachment`, `getMessage`, `getProfile`, `listHistory`, `listLabels`, `listMessages`
 - Core:
   - Exports: Types: `GmailHeader`, `GmailHistoryLabelChange`, `GmailHistoryList`, `GmailHistoryMessageRef`, `GmailHistoryRecord`, `GmailLabel`, `GmailLabelColor`, `GmailListLabelsResponse`, `GmailMessage`, `GmailMessageList`, `GmailMessagePart`, `GmailMessagePartBody`, `GmailMessageRef`, `GmailProfile`; Values: `GmailApiError`, `GmailHistoryExpiredError`
 

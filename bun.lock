@@ -261,12 +261,35 @@
       "name": "@singularity/plugin-apps-mail",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/mail/plugins/attachments": {
+      "name": "@singularity/plugin-apps-mail-attachments",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/mail/plugins/gmail-api": {
       "name": "@singularity/plugin-apps-mail-gmail-api",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/mail/plugins/mail-core": {
       "name": "@singularity/plugin-apps-mail-mail-core",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/mail/plugins/mail-html": {
+      "name": "@singularity/plugin-apps-mail-mail-html",
+      "version": "0.0.1",
+      "dependencies": {
+        "dompurify": "^3.2.0",
+      },
+    },
+    "plugins/apps/plugins/mail/plugins/mailbox": {
+      "name": "@singularity/plugin-apps-mail-mailbox",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/mail/plugins/reading-pane": {
+      "name": "@singularity/plugin-apps-mail-reading-pane",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/mail/plugins/remote-images": {
+      "name": "@singularity/plugin-apps-mail-remote-images",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/mail/plugins/search": {
@@ -287,6 +310,10 @@
     },
     "plugins/apps/plugins/mail/plugins/sync/plugins/auto-resume": {
       "name": "@singularity/plugin-apps-mail-sync-auto-resume",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/mail/plugins/thread-list": {
+      "name": "@singularity/plugin-apps-mail-thread-list",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/pages": {
@@ -4655,9 +4682,19 @@
 
     "@singularity/plugin-apps-mail": ["@singularity/plugin-apps-mail@workspace:plugins/apps/plugins/mail"],
 
+    "@singularity/plugin-apps-mail-attachments": ["@singularity/plugin-apps-mail-attachments@workspace:plugins/apps/plugins/mail/plugins/attachments"],
+
     "@singularity/plugin-apps-mail-gmail-api": ["@singularity/plugin-apps-mail-gmail-api@workspace:plugins/apps/plugins/mail/plugins/gmail-api"],
 
     "@singularity/plugin-apps-mail-mail-core": ["@singularity/plugin-apps-mail-mail-core@workspace:plugins/apps/plugins/mail/plugins/mail-core"],
+
+    "@singularity/plugin-apps-mail-mail-html": ["@singularity/plugin-apps-mail-mail-html@workspace:plugins/apps/plugins/mail/plugins/mail-html"],
+
+    "@singularity/plugin-apps-mail-mailbox": ["@singularity/plugin-apps-mail-mailbox@workspace:plugins/apps/plugins/mail/plugins/mailbox"],
+
+    "@singularity/plugin-apps-mail-reading-pane": ["@singularity/plugin-apps-mail-reading-pane@workspace:plugins/apps/plugins/mail/plugins/reading-pane"],
+
+    "@singularity/plugin-apps-mail-remote-images": ["@singularity/plugin-apps-mail-remote-images@workspace:plugins/apps/plugins/mail/plugins/remote-images"],
 
     "@singularity/plugin-apps-mail-search": ["@singularity/plugin-apps-mail-search@workspace:plugins/apps/plugins/mail/plugins/search"],
 
@@ -4668,6 +4705,8 @@
     "@singularity/plugin-apps-mail-sync-auto-resume": ["@singularity/plugin-apps-mail-sync-auto-resume@workspace:plugins/apps/plugins/mail/plugins/sync/plugins/auto-resume"],
 
     "@singularity/plugin-apps-mail-sync-status": ["@singularity/plugin-apps-mail-sync-status@workspace:plugins/apps/plugins/mail/plugins/sync-status"],
+
+    "@singularity/plugin-apps-mail-thread-list": ["@singularity/plugin-apps-mail-thread-list@workspace:plugins/apps/plugins/mail/plugins/thread-list"],
 
     "@singularity/plugin-apps-pages": ["@singularity/plugin-apps-pages@workspace:plugins/apps/plugins/pages"],
 
@@ -6776,6 +6815,8 @@
     "dom-accessibility-api": ["dom-accessibility-api@0.5.16", "", {}, "sha512-X7BJ2yElsnOJ30pZF4uIIDfBEVgF4XEBxL9Bxhy6dnrm5hkzqmsWHGTiHqRiITNhMyFLyAiWndIJP7Z1NTteDg=="],
 
     "dom-helpers": ["dom-helpers@5.2.1", "", { "dependencies": { "@babel/runtime": "^7.8.7", "csstype": "^3.0.2" } }, "sha512-nRCa7CK3VTrM2NmGkIy4cbK7IZlgBE/PYMn55rrXefr5xXDP0LdtfPnblFDoVdcAfslJ7or6iqAUnx0CCGIWQA=="],
+
+    "dompurify": ["dompurify@3.4.11", "", { "optionalDependencies": { "@types/trusted-types": "^2.0.7" } }, "sha512-zhlUV12GsaRzMsf9q5M254YhA4+VuF0fG+QFqu6aYpoGlKtz+w8//jBcGVYBgQkR5GHjUomejY84AV+/uPbWdw=="],
 
     "dotenv": ["dotenv@17.4.1", "", {}, "sha512-k8DaKGP6r1G30Lx8V4+pCsLzKr8vLmV2paqEj1Y55GdAgJuIqpRp5FfajGF8KtwMxCz9qJc6wUIJnm053d/WCw=="],
 

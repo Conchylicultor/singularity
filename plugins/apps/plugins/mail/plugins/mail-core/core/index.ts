@@ -13,6 +13,15 @@ export {
 } from "./internal/enums";
 export { mailSyncStateResource } from "./internal/resources";
 export {
+  type MailViewFilter,
+  type MailSystemView,
+  MAIL_SYSTEM_VIEWS,
+  DEFAULT_MAIL_VIEW,
+  labelViewId,
+  mailViewLabelId,
+  parseMailView,
+} from "./internal/views";
+export {
   type MailSyncPhase,
   type MailSyncView,
   deriveMailSyncView,
