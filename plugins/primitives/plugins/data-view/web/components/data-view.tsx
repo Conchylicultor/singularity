@@ -1,5 +1,6 @@
 import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { type ReactNode, useCallback, useMemo } from "react";
+import { type CSSProperties, type ReactNode, useCallback, useMemo } from "react";
+import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
 import type {
   Contribution,
   SealContributions,
@@ -10,12 +11,13 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import type {
-  DataViewProps,
-  DataViewRenderProps,
-  FieldDef,
-  FilterGroup,
-  SortRule,
+import {
+  DATA_VIEW_HEADER_OFFSET_VAR,
+  type DataViewProps,
+  type DataViewRenderProps,
+  type FieldDef,
+  type FilterGroup,
+  type SortRule,
 } from "../../core";
 import {
   EditableViewSwitcher,
@@ -132,6 +134,13 @@ function DataViewInner<TRow>({
   // the enclosing pane forgot to provide that scroll (kept in its own hook so the
   // effect's DOM walk stays out of this component's React Compiler analysis).
   const rootRef = useScrollAncestorGuard(props.storageKey);
+
+  // Measure the sticky toolbar's height and publish it on the root as
+  // `--dv-header-offset` (see `DATA_VIEW_HEADER_OFFSET_VAR`). Grouped views stack
+  // their sticky group headers directly below the toolbar by reading this var, so
+  // two stacked sticky bands never overlap regardless of the toolbar's (dynamic)
+  // height. Mirrors the `--chrome-mask` cross-plugin CSS-var convention.
+  const [toolbarRef, { height: toolbarHeight }] = useElementSize();
 
   const viewVariants = useViewVariants(contributions);
 
@@ -330,7 +339,15 @@ function DataViewInner<TRow>({
     // `Stack gap="none"` = a plain `flex flex-col` block box (no `min-h-0 flex-1`)
     // that establishes this DataView's own sticky containing block and lets the
     // body grow to natural height — the pane (via `<PaneScroll>`) owns the scroll.
-    <Stack gap="none" ref={rootRef}>
+    <Stack
+      gap="none"
+      ref={rootRef}
+      // Publish the measured sticky-toolbar height so grouped views stack their
+      // own sticky group headers directly below it (see DATA_VIEW_HEADER_OFFSET_VAR).
+      style={
+        { [DATA_VIEW_HEADER_OFFSET_VAR]: `${Math.round(toolbarHeight)}px` } as CSSProperties
+      }
+    >
       {/* The toolbar adapts to its own width: the wide inline row below
           `COMPACT_BREAKPOINT`, the folded compact form (search-icon + `MdTune`
           options popover, single-view switcher hidden) above it. Each control
@@ -338,6 +355,7 @@ function DataViewInner<TRow>({
           it — the sort/filter builder popovers are byte-for-byte identical in
           either layout. */}
       <DataViewToolbar
+        stickyRef={toolbarRef}
         title={title}
         query={activeState.query}
         onQueryChange={(next) => viewModel.setQuery(activeViewId, next)}

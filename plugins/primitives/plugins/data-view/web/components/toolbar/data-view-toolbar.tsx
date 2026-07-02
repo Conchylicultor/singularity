@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useState, type ReactNode, type Ref } from "react";
 import { MdArrowBack, MdSearch } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
@@ -18,6 +18,12 @@ import { CompactControls } from "./compact-controls";
 const COMPACT_BREAKPOINT = 360;
 
 export interface DataViewToolbarProps {
+  /**
+   * Attached to the sticky toolbar element so the host can measure its height and
+   * publish it as `--dv-header-offset` (grouped views stack their sticky group
+   * headers below it).
+   */
+  stickyRef?: Ref<HTMLElement>;
   title?: ReactNode;
   query: string;
   onQueryChange: (next: string) => void;
@@ -46,6 +52,7 @@ export interface DataViewToolbarProps {
  * paint, so there is no wide→compact flash.
  */
 export function DataViewToolbar({
+  stickyRef,
   title,
   query,
   onQueryChange,
@@ -72,7 +79,10 @@ export function DataViewToolbar({
   ) : null;
 
   return (
-    <Sticky edge="top" mask>
+    // `nav` (not the default `raised`) so the toolbar out-stacks the grouped
+    // views' own sticky group headers (`raised`): an outgoing group header slides
+    // UNDER the toolbar instead of painting over it during the sticky hand-off.
+    <Sticky edge="top" mask layer="nav" ref={stickyRef}>
       <div
         ref={measureRef}
         // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)

@@ -4,6 +4,7 @@ import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/r
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
@@ -18,6 +19,7 @@ import {
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
+  DATA_VIEW_HEADER_OFFSET_VAR,
   type DataViewAggregateConfig,
   type DataViewRowEntry,
   type DataViewRenderProps,
@@ -289,16 +291,32 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
               open={!collapsed}
               onOpenChange={(open) => props.setSectionCollapsed?.(key, !open)}
             >
-              <SectionHeaderRow
-                className="px-sm"
-                actions={
-                  <Text variant="caption" tone="muted">
-                    {section.count}
-                  </Text>
-                }
+              {/* The group header pins to the pane's scroll viewport as you scroll
+                  within its group. It stacks BELOW the DataView toolbar by reading
+                  the host-published `--dv-header-offset` (the toolbar's measured
+                  height); `style` overrides Sticky's ramp offset, which has no
+                  arbitrary-length step. `mask` keeps rows from showing through;
+                  `raised` sits above the (relative, in manual-order) rows while the
+                  toolbar's `nav` keeps this header sliding under it at the hand-off.
+                  Each header is bounded by its own <Collapsible>, so it un-pins when
+                  its group scrolls away — classic sticky section behavior. */}
+              <Sticky
+                edge="top"
+                mask
+                layer="raised"
+                style={{ top: `var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px)` }}
               >
-                {section.label}
-              </SectionHeaderRow>
+                <SectionHeaderRow
+                  className="px-sm"
+                  actions={
+                    <Text variant="caption" tone="muted">
+                      {section.count}
+                    </Text>
+                  }
+                >
+                  {section.label}
+                </SectionHeaderRow>
+              </Sticky>
               <CollapsibleContent>
                 {renderEntries(section.entries)}
               </CollapsibleContent>

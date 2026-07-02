@@ -1,6 +1,8 @@
 export { defineDataView } from "./internal/define-data-view";
 export type { DataViewId } from "./internal/define-data-view";
 
+export { DATA_VIEW_HEADER_OFFSET_VAR } from "./internal/header-offset";
+
 export {
   FilterGroupSchema,
   FilterNodeSchema,
