@@ -1,4 +1,4 @@
-import { Button, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, Popover, PopoverContent, PopoverTrigger, SingleLineProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Fragment, useContext, useRef, useState, type ReactNode } from "react";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
@@ -45,6 +45,13 @@ interface PaneChromeProps {
    * by the fixed-height band. Opt in only for panes whose header can reveal
    * overflow; the band stays `h-10` so row 1 and the rest of the chrome are
    * unaffected. Default false (clip — today's behavior for every other pane).
+   *
+   * This opens BOTH clip boundaries PaneChrome owns between the band and the
+   * title node: the `Bar`'s overflow AND the node-title `<Text>` wrapper (which
+   * would otherwise auto-apply the single-line `truncate` recipe — i.e.
+   * `overflow:hidden` — because it sits in the Bar's single-line context, and
+   * re-clip the very spill this flag enables). The node then owns its own
+   * overflow; single-line leaves inside it still truncate via their own class.
    */
   headerSpill?: boolean;
   children: ReactNode;
@@ -99,6 +106,21 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
                   <Text as="span" variant="label" className="min-w-0 truncate">
                     {resolvedTitle}
                   </Text>
+                ) : headerSpill ? (
+                  // Node title in a spill-enabled header (e.g. a `CollapsibleWrap`).
+                  // The Bar's `overflow-visible` (headerSpill) is not enough on its
+                  // own: this `<Text>` wrapper sits in the Bar's single-line context,
+                  // so it would auto-apply the `truncate` recipe (`overflow:hidden`)
+                  // and re-clip the very spill headerSpill opened. Reset the
+                  // single-line context so the wrapper stops clipping — the node owns
+                  // its own overflow, and any single-line leaf inside it (chips,
+                  // `ConversationTitle`) still truncates via its own container/class.
+                  <SingleLineProvider value={false}>
+                    {/* eslint-disable-next-line layout/no-adhoc-layout -- node title needs inline-flex baseline alignment for breadcrumb-style multi-segment compositions */}
+                    <Text as="div" variant="label" className="flex min-w-0 items-center">
+                      {resolvedTitle}
+                    </Text>
+                  </SingleLineProvider>
                 ) : (
                   // Node titles get the SAME `label` typography baseline as string
                   // titles, so a title node inherits the canonical pane-title size
