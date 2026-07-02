@@ -23,6 +23,13 @@ export default {
       // The live-state primitive's own resource GET — this IS the primitive that
       // useEndpoint resources are built on; it cannot depend on itself.
       "plugins/primitives/plugins/live-state/web/use-resource.ts",
+      // Same live-state resource GET, in the client that owns the version-guarded
+      // cache write: `primeFromHttp` is the cold-start HTTP prime of the same
+      // `/api/resources/:key` route as use-resource's queryFn, kept here because
+      // the write needs the client's private sub/schema state (and this file
+      // cannot import use-resource — that would be a cycle). Same primitive, same
+      // untyped per-resource route, same self-dependency exemption.
+      "plugins/primitives/plugins/live-state/web/notifications-client.ts",
 
       // The (c) BURNDOWN list is now empty — every legacy holdout has been
       // migrated to a typed endpoint. Do NOT add new entries here; the rule

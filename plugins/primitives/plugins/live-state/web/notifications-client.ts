@@ -247,6 +247,14 @@ export class NotificationsClient {
    * Set once, never reset — a later reconnect does not re-arm cold-start.
    */
   private firstReadyAt: number | null = null;
+  /**
+   * Per-channel twin of `firstReadyAt`: the worktree and central sockets are
+   * independent, so a worktree resource's cold-start decision must not hinge on
+   * the central channel's readiness (or vice-versa). Stamped the first instant
+   * each channel's own url reaches "open"; read by `hasEverBeenReady(origin)`.
+   * One-way latch per kind — never reset on a later reconnect.
+   */
+  private firstReadyByKind: Record<SocketKind, number | null> = { worktree: null, central: null };
 
   constructor(private queryClient: QueryClient) {
     this.channels = {
@@ -254,8 +262,15 @@ export class NotificationsClient {
       central: this.openChannel("central"),
     };
     this.unsubscribeFromBus = subscribeWsStatus(({ url, status }) => {
-      if (liveStateSocketKind(url) === null) return;
+      const kind = liveStateSocketKind(url);
+      if (kind === null) return;
       this.channelStatuses.set(url, status);
+      // Stamp the first instant THIS channel reached "open" (per-origin cold-
+      // start latch; see `firstReadyByKind`). Written once per kind, never
+      // re-armed — read by `hasEverBeenReady(origin)`.
+      if (status === "open" && this.firstReadyByKind[kind] === null) {
+        this.firstReadyByKind[kind] = performance.now();
+      }
       const next = this.getStatus();
       // Stamp the first instant the aggregate transport reached "open" (cold-
       // start marker; see `firstReadyAt`). Written once, never re-armed.
@@ -295,6 +310,13 @@ export class NotificationsClient {
    */
   getFirstReadyAt(): number | null {
     return this.firstReadyAt;
+  }
+
+  /** Has the transport for this origin's channel EVER reached "open"? A one-way
+   *  latch (never reset) used by useResource to decide whether a cold-start HTTP
+   *  prime is warranted. */
+  hasEverBeenReady(origin?: ResourceOrigin): boolean {
+    return this.firstReadyByKind[socketKindFor(origin)] !== null;
   }
 
   subscribeStatus(fn: (s: WsStatus) => void): () => void {
@@ -536,6 +558,51 @@ export class NotificationsClient {
   /** Current cached value for (key, params) — read by the HTTP 304 keep-cache path. */
   getCachedResource(key: string, params: ResourceParams = {}): unknown {
     return this.queryClient.getQueryData(queryKeyFor(key, params));
+  }
+
+  /** Cold-start accelerator: fetch a resource's first value over plain HTTP when
+   *  the notifications transport isn't ready yet, and write it through the same
+   *  version guard as WS frames so a late HTTP response can never clobber a newer
+   *  WS value. Best-effort — the WS sub-ack remains the source of truth. Never
+   *  rejects (safe to `void`). */
+  async primeFromHttp(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): Promise<void> {
+    const kind = socketKindFor(origin);
+    const entry = this.channels[kind].subs.get(`${key}\0${paramsKey(params)}`);
+    if (!entry) return;                        // observe() must have created the sub
+    const schema = this.schemas.get(key);
+    if (!schema) return;
+    try {
+      const qs = new URLSearchParams(params).toString();
+      const base = origin === "central" ? "/api/central-resources" : "/api/resources";
+      const url = `${base}/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
+      const etag = this.etagFor(key, params, origin);
+      const res = await fetch(url, etag !== undefined ? { headers: { "If-None-Match": etag } } : undefined);
+      if (res.status === 304) return;          // cached value already current
+      if (!res.ok) { trace(`http-prime drop key=${key} params=${paramsKey(params)} reason=http-${res.status}`); return; }
+      const body = (await res.json()) as { value: unknown; version: number };
+      this.noteHttpEtag(key, params, origin, res.headers.get("ETag"));
+      // Version guard — identical discipline to handleServerMessage.
+      if (body.version <= entry.version) {
+        trace(`http-prime drop key=${key} params=${paramsKey(params)} msgVersion=${body.version} haveVersion=${entry.version} reason=stale-version`);
+        return;
+      }
+      const parsed = schema.parse(body.value);   // schema violation => surfaced loudly below
+      this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
+      entry.version = body.version;
+      this.markApplied(entry, key);              // stamps lastAppliedAt + emitDebug + verbose trace
+      trace(`http-prime key=${key} params=${paramsKey(params)} version=${body.version}`);
+    } catch (err) {
+      if (err instanceof TypeError) {
+        // Transient network failure during cold boot — non-fatal; the WS sub-ack
+        // remains the source of truth and will deliver.
+        trace(`http-prime drop key=${key} params=${paramsKey(params)} reason=network error=${String(err)}`);
+        return;
+      }
+      // Schema violation / malformed body is a real bug — surface loudly like the
+      // WS onmessage path, without rejecting this promise.
+      trace(`http-prime error key=${key} params=${paramsKey(params)} error=${String(err)}`);
+      queueMicrotask(() => { throw err; });
+    }
   }
 
   private openChannel(kind: SocketKind): SocketChannel {

@@ -270,6 +270,26 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   });
 
   const pending = q.dataUpdatedAt === 0;
+
+  // Cold-start accelerator: if this resource mounts before the live-state
+  // transport has EVER been ready (a cold deep-link — the notifications socket is
+  // starved for seconds by main-thread saturation), fetch the first value over
+  // plain HTTP in parallel with the socket coming up, so content settles ~2.5s
+  // sooner instead of waiting on the batched WS sub-ack. Fires at most once per
+  // (key,params), only while still pending (no hydrated/boot-snapshot value), and
+  // only on genuine cold start. Warm navigations (transport already opened once)
+  // skip this entirely, so the warm path is unchanged. The later WS sub-ack
+  // reconciles via the shared version guard.
+  const primedKeyRef = useRef<string | null>(null);
+  useEffect(() => {
+    if (!pending) return;
+    if (notifications.hasEverBeenReady(origin)) return;
+    if (primedKeyRef.current === keyStr) return;
+    primedKeyRef.current = keyStr;
+    void notifications.primeFromHttp(key, p, origin);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; mirrors the observe effect
+  }, [pending, keyStr, notifications, key, origin, JSON.stringify(p)]);
+
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- gate first-settle transition: a one-way latch deliberately held as state for a (key,params) pair; the unsettled→settled flip MUST cause a re-render so the notifyOnChangeProps select-narrowing takes effect next render — a ref would silently skip that re-render and break the gate; there is no external store to subscribe to and it cannot be derived in render
     if (gate && !pending && settledKey !== keyStr) setSettledKey(keyStr);
