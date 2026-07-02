@@ -135,7 +135,11 @@ export function DataViewToolbar({
               value={query}
               onChange={(e) => onQueryChange(e.target.value)}
               placeholder="Search…"
-              wrapperClassName="ml-auto w-48"
+              // The switcher now grows (flex-1) to absorb the leading slack, so it
+              // pushes search + trailing controls to the right — no `ml-auto` margin
+              // needed (and an auto margin would steal the free space from the
+              // switcher's flex-grow, collapsing its hover-reveal spacer).
+              wrapperClassName="w-48"
             />
             {filterControl}
             {sortControl}

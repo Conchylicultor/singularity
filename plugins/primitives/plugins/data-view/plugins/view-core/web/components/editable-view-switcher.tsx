@@ -63,8 +63,8 @@ export function EditableViewSwitcher<T extends ViewTypeMeta>({
       direction="row"
       align="center"
       gap="xs"
-      // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 keeps the whole switcher rigid in the toolbar's flex row (a standalone trailing control, not a Frame slot)
-      className="shrink-0"
+      // eslint-disable-next-line layout/no-adhoc-layout -- flex-1 grows the switcher to absorb the toolbar's leading slack so its hover-reveal group (which carries groupProps) spans the empty gap up to the next control, making the `+` add button surface when the pointer is anywhere in that space — not just over the chips. min-width stays auto (no min-w-0), so the view chips never truncate; they hug their content and only the trailing empty space grows.
+      className="flex-1"
       {...groupProps}
     >
       <SortableList items={ids} onMove={onMove} orientation="horizontal">
