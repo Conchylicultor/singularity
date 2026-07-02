@@ -5,11 +5,6 @@ import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
 import { Studio } from "@plugins/apps/plugins/studio/plugins/shell/web";
 import { contributionsPane } from "./panes";
 
-export { PluginChip } from "./components/plugin-chip";
-export { Contributions } from "./slots";
-export type { ContributionsFacetTable, FacetTableEntry } from "./facet-table";
-export { defineFacetTable } from "./facet-table";
-
 export default {
   description:
     "Central view of all plugin contributions aggregated by type.",

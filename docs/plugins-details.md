@@ -851,21 +851,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps/studio/explorer.explorerPane`, `apps/studio/explorer/membership.DIFF_LEGEND`, `apps/studio/shell.Studio`, `plugin-meta/composition.clearActive`, `plugin-meta/composition.setActiveComposition`, `plugin-meta/composition.setCompareComposition`, `plugin-meta/composition.updateActiveDraft`, `plugin-meta/composition.useActiveComposition`, `plugin-meta/composition.useActiveMembership`, `plugin-meta/composition.useCompareComposition`, `plugin-meta/composition.useCompositionData`, `plugin-meta/composition.useDiffMap`, `plugin-meta/composition.useGraph`, `plugin-meta/composition.useManifestActions`, `plugin-meta/composition.useManifestItems`, `plugin-meta/composition.usePromoteManifestsToGit`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/badge.BadgeVariant`, `primitives/css/cluster.Cluster`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.Input`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/tooltip.WithTooltip`
         - **`contributions`** — Central view of all plugin contributions aggregated by type.
           - Web:
-            - Slots: `Contributions.FacetTable` ← `plugin-meta.facets.contributions.render-contributions`, `plugin-meta.facets.cross-refs.render-contributions`, `plugin-meta.facets.db-schema.render-contributions`, `plugin-meta.facets.exports.render-contributions`, `plugin-meta.facets.registrations.render-contributions`, `plugin-meta.facets.resources.render-contributions`, `plugin-meta.facets.routes.render-contributions`, `plugin-meta.facets.slots.render-contributions`, `plugin-meta.facets.structure.render-contributions`
             - Contributes: `Pane.Register` "contributions", `Studio.Sidebar` "Contributions" → `component`
-            - Uses: `apps/studio/shell.Studio`, `infra/endpoints.useEndpoint`, `plugin-meta/plugin-view.pluginViewPane`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/link-chip.LinkChip`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/data-table.DataTable`, `primitives/filter-chips.FilterChip`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/search.SearchInput`
-            - Exports: Types: `ContributionsFacetTable`, `FacetTableEntry`; Values: `Contributions`, `defineFacetTable`, `PluginChip`
-          - Cross-plugin:
-            - Imported by: `plugin-meta/facets/contributions/render-contributions`, `plugin-meta/facets/cross-refs/render-contributions`, `plugin-meta/facets/db-schema/render-contributions`, `plugin-meta/facets/exports/render-contributions`, `plugin-meta/facets/registrations/render-contributions`, `plugin-meta/facets/resources/render-contributions`, `plugin-meta/facets/routes/render-contributions`, `plugin-meta/facets/slots/render-contributions`, `plugin-meta/facets/structure/render-contributions`
+            - Uses: `apps/studio/shell.Studio`, `infra/endpoints.useEndpoint`, `plugin-meta/contributions-table.Contributions`, `plugin-meta/contributions-table.ContributionsRowClick`, `plugin-meta/contributions-table.FacetTableEntry`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/data-table.DataTable`, `primitives/filter-chips.FilterChip`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/search.SearchInput`
           - Plugins:
             - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
               - Web:
                 - Slots: `TableDetail.Section` ← `apps.studio.contributions.tables.columns`, `apps.studio.contributions.tables.foreign-keys`, `apps.studio.contributions.tables.indexes`, `apps.studio.contributions.tables.row-count`, `apps.studio.contributions.tables.sample-rows`, `tableDetailPane.Actions`
-                - Contributes: `Pane.Register` "table-detail"
-                - Uses: `primitives/detail-sections.defineDetailSections`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
+                - Contributes: `Pane.Register` "table-detail", `Contributions.RowClick` "db-schema"
+                - Uses: `plugin-meta/contributions-table.Contributions`, `plugin-meta/contributions-table.defineRowClick`, `primitives/detail-sections.defineDetailSections`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
                 - Exports: Values: `TableDetail`, `tableDetailPane`
               - Cross-plugin:
-                - Imported by: `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `plugin-meta/facets/db-schema/render-contributions`
+                - Imported by: `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`
               - Plugins:
                 - **`columns`** — Table column definitions section in the table detail view.
                   - Web:
@@ -4017,6 +4013,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `CompositionData`, `CompositionManifestItem`; Values: `compositionDataSchema`, `compositionsConfig`, `getCompositionData`, `manifestItemToManifest`
       - Cross-plugin:
         - Imported by: `apps/studio/compositions`, `apps/studio/explorer/disabled`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/studio/release`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/inclusion`
+    - **`contributions-table`** — Registry for the Studio Contributions aggregated-table surface: FacetTable + RowClick slots and factories.
+      - Web:
+        - Slots: `Contributions.FacetTable` ← `plugin-meta.facets.contributions.render-contributions`, `plugin-meta.facets.cross-refs.render-contributions`, `plugin-meta.facets.db-schema.render-contributions`, `plugin-meta.facets.exports.render-contributions`, `plugin-meta.facets.registrations.render-contributions`, `plugin-meta.facets.resources.render-contributions`, `plugin-meta.facets.routes.render-contributions`, `plugin-meta.facets.slots.render-contributions`, `plugin-meta.facets.structure.render-contributions`, `Contributions.RowClick` ← `apps.studio.contributions.tables`, `plugin-meta.facets.structure.render-contributions`
+        - Uses: `plugin-meta/plugin-view.pluginViewPane`, `primitives/css/link-chip.LinkChip`, `primitives/pane.useOpenPane`
+        - Exports: Types: `ContributionsFacetTable`, `ContributionsRowClick`, `ContributionsRowClickContext`, `FacetTableEntry`; Values: `Contributions`, `defineFacetTable`, `defineRowClick`, `PluginChip`
+      - Cross-plugin:
+        - Imported by: `apps/studio/contributions`, `apps/studio/contributions/tables`, `plugin-meta/facets/contributions/render-contributions`, `plugin-meta/facets/cross-refs/render-contributions`, `plugin-meta/facets/db-schema/render-contributions`, `plugin-meta/facets/exports/render-contributions`, `plugin-meta/facets/registrations/render-contributions`, `plugin-meta/facets/resources/render-contributions`, `plugin-meta/facets/routes/render-contributions`, `plugin-meta/facets/slots/render-contributions`, `plugin-meta/facets/structure/render-contributions`
     - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`
@@ -4034,7 +4037,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`render-contributions`** — Aggregated cross-plugin contributions table in the Studio Contributions view.
               - Web:
                 - Contributes: `Contributions.FacetTable` "Contributions"
-                - Uses: `apps/studio/contributions.Contributions`, `apps/studio/contributions.defineFacetTable`, `apps/studio/contributions.FacetTableEntry`, `apps/studio/contributions.PluginChip`
+                - Uses: `plugin-meta/contributions-table.Contributions`, `plugin-meta/contributions-table.defineFacetTable`, `plugin-meta/contributions-table.FacetTableEntry`, `plugin-meta/contributions-table.PluginChip`
             - **`render-detail`** — Per-plugin contributions section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "contributions" → `ContributionsDetailSection`
@@ -4053,7 +4056,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`render-contributions`** — Aggregated cross-plugin cross-refs table in the Studio Contributions view.
               - Web:
                 - Contributes: `Contributions.FacetTable` "Cross-refs"
-                - Uses: `apps/studio/contributions.Contributions`, `apps/studio/contributions.defineFacetTable`, `apps/studio/contributions.FacetTableEntry`, `apps/studio/contributions.PluginChip`
+                - Uses: `plugin-meta/contributions-table.Contributions`, `plugin-meta/contributions-table.defineFacetTable`, `plugin-meta/contributions-table.FacetTableEntry`, `plugin-meta/contributions-table.PluginChip`
             - **`render-detail`** — Per-plugin cross-refs section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "cross-refs" → `CrossRefsDetailSection`
@@ -4065,12 +4068,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`db-schema`**
           - Core:
             - Uses: `plugin-meta/facets.defineFacet`
-            - Exports: Types: `DbSchemaFacetData`, `EntityExtension`, `EntityExtensionRef`, `TableDef`; Values: `dbSchemaFacetDef`, `dbSchemaToComparable`
+            - Exports: Types: `DbSchemaFacetData`, `DbSchemaTableRow`, `EntityExtension`, `EntityExtensionRef`, `TableDef`; Values: `dbSchemaFacetDef`, `dbSchemaToComparable`
           - Plugins:
             - **`render-contributions`** — Aggregated cross-plugin tables table in the Studio Contributions view.
               - Web:
                 - Contributes: `Contributions.FacetTable` "Tables"
-                - Uses: `apps/studio/contributions.Contributions`, `apps/studio/contributions.defineFacetTable`, `apps/studio/contributions.FacetTableEntry`, `apps/studio/contributions.PluginChip`, `apps/studio/contributions/tables.tableDetailPane`
+                - Uses: `plugin-meta/contributions-table.Contributions`, `plugin-meta/contributions-table.defineFacetTable`, `plugin-meta/contributions-table.FacetTableEntry`, `plugin-meta/contributions-table.PluginChip`
             - **`render-detail`** — Per-plugin db-schema section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "db-schema" → `DbSchemaDetailSection`
@@ -4087,7 +4090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`render-contributions`** — Aggregated cross-plugin exports table in the Studio Contributions view.
               - Web:
                 - Contributes: `Contributions.FacetTable` "Exports"
-                - Uses: `apps/studio/contributions.Contributions`, `apps/studio/contributions.defineFacetTable`, `apps/studio/contributions.FacetTableEntry`, `apps/studio/contributions.PluginChip`, `primitives/css/badge.Badge`
+                - Uses: `plugin-meta/contributions-table.Contributions`, `plugin-meta/contributions-table.defineFacetTable`, `plugin-meta/contributions-table.FacetTableEntry`, `plugin-meta/contributions-table.PluginChip`, `primitives/css/badge.Badge`
             - **`render-detail`** — Per-plugin exports section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "exports" → `ExportsDetailSection`
@@ -4104,7 +4107,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`render-contributions`** — Aggregated cross-plugin registrations table in the Studio Contributions view.
               - Web:
                 - Contributes: `Contributions.FacetTable` "Registrations"
-                - Uses: `apps/studio/contributions.Contributions`, `apps/studio/contributions.defineFacetTable`, `apps/studio/contributions.FacetTableEntry`, `apps/studio/contributions.PluginChip`
+                - Uses: `plugin-meta/contributions-table.Contributions`, `plugin-meta/contributions-table.defineFacetTable`, `plugin-meta/contributions-table.FacetTableEntry`, `plugin-meta/contributions-table.PluginChip`
             - **`render-detail`** — Per-plugin registrations section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "registrations" → `RegistrationsDetailSection`
@@ -4121,7 +4124,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`render-contributions`** — Aggregated cross-plugin resources table in the Studio Contributions view.
               - Web:
                 - Contributes: `Contributions.FacetTable` "Resources"
-                - Uses: `apps/studio/contributions.Contributions`, `apps/studio/contributions.defineFacetTable`, `apps/studio/contributions.FacetTableEntry`, `apps/studio/contributions.PluginChip`
+                - Uses: `plugin-meta/contributions-table.Contributions`, `plugin-meta/contributions-table.defineFacetTable`, `plugin-meta/contributions-table.FacetTableEntry`, `plugin-meta/contributions-table.PluginChip`
             - **`render-detail`** — Per-plugin resources section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "resources" → `ResourcesDetailSection`
@@ -4138,7 +4141,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`render-contributions`** — Aggregated cross-plugin routes table in the Studio Contributions view.
               - Web:
                 - Contributes: `Contributions.FacetTable` "Routes"
-                - Uses: `apps/studio/contributions.Contributions`, `apps/studio/contributions.defineFacetTable`, `apps/studio/contributions.FacetTableEntry`, `apps/studio/contributions.PluginChip`, `primitives/css/ui-kit.cn`
+                - Uses: `plugin-meta/contributions-table.Contributions`, `plugin-meta/contributions-table.defineFacetTable`, `plugin-meta/contributions-table.FacetTableEntry`, `plugin-meta/contributions-table.PluginChip`, `primitives/css/ui-kit.cn`
             - **`render-detail`** — Per-plugin routes section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "routes" → `RoutesDetailSection`
@@ -4157,7 +4160,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`render-contributions`** — Aggregated cross-plugin slots table in the Studio Contributions view.
               - Web:
                 - Contributes: `Contributions.FacetTable` "Slots"
-                - Uses: `apps/studio/contributions.Contributions`, `apps/studio/contributions.defineFacetTable`, `apps/studio/contributions.FacetTableEntry`, `apps/studio/contributions.PluginChip`, `primitives/css/cluster.Cluster`
+                - Uses: `plugin-meta/contributions-table.Contributions`, `plugin-meta/contributions-table.defineFacetTable`, `plugin-meta/contributions-table.FacetTableEntry`, `plugin-meta/contributions-table.PluginChip`, `primitives/css/cluster.Cluster`
             - **`render-detail`** — Per-plugin slots section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "slots" → `SlotsDetailSection`
@@ -4173,8 +4176,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`render-contributions`** — Aggregated cross-plugin structure-anomaly table in the Studio Contributions view.
               - Web:
-                - Contributes: `Contributions.FacetTable` "Structure"
-                - Uses: `apps/studio/contributions.Contributions`, `apps/studio/contributions.defineFacetTable`, `apps/studio/contributions.FacetTableEntry`, `apps/studio/contributions.PluginChip`, `plugin-meta/plugin-view.pluginViewPane`
+                - Contributes: `Contributions.FacetTable` "Structure", `Contributions.RowClick` "structure"
+                - Uses: `plugin-meta/contributions-table.Contributions`, `plugin-meta/contributions-table.defineFacetTable`, `plugin-meta/contributions-table.defineRowClick`, `plugin-meta/contributions-table.FacetTableEntry`, `plugin-meta/contributions-table.PluginChip`, `plugin-meta/plugin-view.pluginViewPane`
             - **`render-detail`** — Per-plugin structure section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "structure" → `StructureDetailSection`
@@ -4225,7 +4228,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `getPluginFacetsTree`, `getPluginTree`
       - Cross-plugin:
-        - Imported by: `active-data/plugin-link`, `apps/studio/contributions`, `apps/studio/explorer`, `plugin-meta/facets/contributions/render-detail`, `plugin-meta/facets/cross-refs/render-detail`, `plugin-meta/facets/db-schema/render-detail`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/facets/registrations/render-detail`, `plugin-meta/facets/resources/render-detail`, `plugin-meta/facets/routes/render-detail`, `plugin-meta/facets/slots/render-detail`, `plugin-meta/facets/structure/render-contributions`, `plugin-meta/facets/structure/render-detail`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/inclusion`, `plugin-meta/plugin-view/runtimes`, `plugin-meta/plugin-view/source-path`, `plugin-meta/plugin-view/sub-plugins`
+        - Imported by: `active-data/plugin-link`, `apps/studio/explorer`, `plugin-meta/contributions-table`, `plugin-meta/facets/contributions/render-detail`, `plugin-meta/facets/cross-refs/render-detail`, `plugin-meta/facets/db-schema/render-detail`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/facets/registrations/render-detail`, `plugin-meta/facets/resources/render-detail`, `plugin-meta/facets/routes/render-detail`, `plugin-meta/facets/slots/render-detail`, `plugin-meta/facets/structure/render-contributions`, `plugin-meta/facets/structure/render-detail`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/inclusion`, `plugin-meta/plugin-view/runtimes`, `plugin-meta/plugin-view/source-path`, `plugin-meta/plugin-view/sub-plugins`
       - Plugins:
         - **`dependencies`** — Deduped cargo-tree-style dependency trees in the plugin detail pane: 'Depends on' (recursive forward deps) and 'Used by' (recursive reverse dependents), each marking soft slot-contributions and collapsing DAG diamonds via first-occurrence dedup.
           - Web:
@@ -4413,7 +4416,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/badge.Badge`
             - Exports: Types: `LinkChipProps`; Values: `LinkChip`
           - Cross-plugin:
-            - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `apps/studio/contributions`, `apps/studio/release/release-artifact`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/markdown-extensions`, `page/inline-date`, `page/inline-page-link`, `page/read-only-view`, `plugin-meta/plugin-view/inclusion`, `primitives/file-links`
+            - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `apps/studio/release/release-artifact`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/markdown-extensions`, `page/inline-date`, `page/inline-page-link`, `page/read-only-view`, `plugin-meta/contributions-table`, `plugin-meta/plugin-view/inclusion`, `primitives/file-links`
         - **`measure-strip`** — Off-screen body-portaled measurement strip: a hidden flex row for measuring children's natural widths before an overflow/collapse decision.
           - Cross-plugin:
             - Imported by: `apps-core/tab-bar`, `primitives/pane`, `primitives/responsive-overflow`
@@ -4805,7 +4808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/bar.Bar`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/measure-strip.MeasureStrip`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/scroll.ScrollProps`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/element-size.useResizeObserver`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/select-scope.ContentScope`, `primitives/slot-render.renderIsolated`, `primitives/surface-id.SurfaceIdContext`, `primitives/tooltip.WithTooltip`
         - Exports: Types: `InferParams`, `MatchEntry`, `OpenPaneFn`, `PaneChromeConfig`, `PaneHeaderZones`, `PaneInput`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneRouteEntry`, `PaneScrollProps`, `PaneSlot`, `PaneStore`, `PaneToggleOpts`, `PaneToolbarItem`, `ResolveHook`, `SurfaceChrome`, `TypeMarker`; Values: `buildRouteUrl`, `clearRoute`, `createPaneStore`, `defaultStore`, `getBasePath`, `getRoute`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `PaneScroll`, `PaneStoreContext`, `PaneSurfaceAppContext`, `PaneSurfaceProvider`, `parseUrl`, `reorderRoute`, `restoreRoute`, `setBasePath`, `setLiveStore`, `stripBasePath`, `SurfaceChromeContext`, `ToolbarItem`, `type`, `useCurrentPane`, `useIndexMatch`, `useOpenPane`, `usePaneMatch`, `usePaneRoute`, `usePaneStore`, `usePaneTitle`, `usePathname`, `useRenderSync`, `useRoute`, `useSurfaceAppId`, `useSyncPaneRegistry`
       - Cross-plugin:
-        - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `apps-core`, `apps-core/layout`, `apps-core/tab-surface`, `apps-core/tabs`, `apps/agent-manager/shell`, `apps/agent-manager/welcome`, `apps/browser/shell`, `apps/debug/shell`, `apps/deploy/servers`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/mail/mailbox`, `apps/mail/reading-pane`, `apps/mail/search`, `apps/mail/shell`, `apps/mail/thread-list`, `apps/pages/content-search`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/pages/starred`, `apps/pages/welcome`, `apps/pages/welcome/quick-create`, `apps/pages/welcome/recent-pages`, `apps/prototypes/gallery`, `apps/prototypes/shell`, `apps/settings/accounts`, `apps/settings/appearance`, `apps/settings/config`, `apps/settings/shell`, `apps/sonata/library`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables`, `apps/studio/explorer`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/studio/release`, `apps/studio/shell`, `apps/workflows/definitions`, `apps/workflows/executions`, `apps/workflows/shell`, `auth`, `auth/apple-signing/setup-wizard`, `auth/google`, `auth/google/setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/file-path`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/open-app`, `conversations/conversation-view/push-profiling`, `conversations/conversation-view/terminal-pane`, `conversations/conversation-view/vscode`, `conversations/conversations-view`, `conversations/pane-restore`, `conversations/recover`, `conversations/summary`, `debug/boot-profile`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/live-state-churn/emit`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/profiling/build`, `debug/profiling/push`, `debug/queue`, `debug/read-set`, `debug/render-profiler`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `debug/zero-test`, `infra/events-test`, `layouts/full-pane`, `layouts/host`, `layouts/miller`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/sub-plugins`, `primitives/app-shell`, `primitives/css/layout-harness`, `primitives/launch`, `primitives/pane-toolbar`, `reports`, `review`, `screenshot`, `stats`, `stats/cost`, `tasks/attempt-view`, `tasks/task-dependencies`, `tasks/task-detail`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-header`, `tasks/tasks-core`, `ui/theme-engine/theme-customizer`
+        - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `apps-core`, `apps-core/layout`, `apps-core/tab-surface`, `apps-core/tabs`, `apps/agent-manager/shell`, `apps/agent-manager/welcome`, `apps/browser/shell`, `apps/debug/shell`, `apps/deploy/servers`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/mail/mailbox`, `apps/mail/reading-pane`, `apps/mail/search`, `apps/mail/shell`, `apps/mail/thread-list`, `apps/pages/content-search`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/pages/starred`, `apps/pages/welcome`, `apps/pages/welcome/quick-create`, `apps/pages/welcome/recent-pages`, `apps/prototypes/gallery`, `apps/prototypes/shell`, `apps/settings/accounts`, `apps/settings/appearance`, `apps/settings/config`, `apps/settings/shell`, `apps/sonata/library`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables`, `apps/studio/explorer`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/studio/release`, `apps/studio/shell`, `apps/workflows/definitions`, `apps/workflows/executions`, `apps/workflows/shell`, `auth`, `auth/apple-signing/setup-wizard`, `auth/google`, `auth/google/setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/file-path`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/open-app`, `conversations/conversation-view/push-profiling`, `conversations/conversation-view/terminal-pane`, `conversations/conversation-view/vscode`, `conversations/conversations-view`, `conversations/pane-restore`, `conversations/recover`, `conversations/summary`, `debug/boot-profile`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/live-state-churn/emit`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/profiling/build`, `debug/profiling/push`, `debug/queue`, `debug/read-set`, `debug/render-profiler`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `debug/zero-test`, `infra/events-test`, `layouts/full-pane`, `layouts/host`, `layouts/miller`, `plugin-meta/contributions-table`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/sub-plugins`, `primitives/app-shell`, `primitives/css/layout-harness`, `primitives/launch`, `primitives/pane-toolbar`, `reports`, `review`, `screenshot`, `stats`, `stats/cost`, `tasks/attempt-view`, `tasks/task-dependencies`, `tasks/task-detail`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-header`, `tasks/tasks-core`, `ui/theme-engine/theme-customizer`
       - Core:
         - Exports: Types: `AppRef`, `InferParams`, `RouteDef`; Values: `defineApp`, `defineRoute`, `fillSegment`, `normalizeSegmentPattern`
     - **`pane-toolbar`** — Factory for a pane's custom header: reorderable start/end render-slot zones wired into PaneChrome via chrome.header. Use instead of hand-rolling a header bar.

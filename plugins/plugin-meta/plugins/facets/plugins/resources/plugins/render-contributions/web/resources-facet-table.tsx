@@ -2,7 +2,7 @@ import {
   defineFacetTable,
   type FacetTableEntry,
   PluginChip,
-} from "@plugins/apps/plugins/studio/plugins/contributions/web";
+} from "@plugins/plugin-meta/plugins/contributions-table/web";
 import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { ResourceFacetData } from "@plugins/plugin-meta/plugins/facets/plugins/resources/core";

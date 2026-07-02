@@ -25,4 +25,12 @@ export interface DbSchemaFacetData {
   extendedBy: EntityExtensionRef[];
 }
 
+/** Identifying shape of one row in the db-schema Contributions table, shared
+ *  between the meta table projection and the app-side table-detail drill-down. */
+export interface DbSchemaTableRow {
+  pluginId: string;
+  name: string;
+  varName: string;
+}
+
 export const dbSchemaFacetDef = defineFacet<DbSchemaFacetData>("db-schema");

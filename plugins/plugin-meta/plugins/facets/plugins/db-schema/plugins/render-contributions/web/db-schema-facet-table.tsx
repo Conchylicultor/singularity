@@ -2,20 +2,15 @@ import {
   defineFacetTable,
   type FacetTableEntry,
   PluginChip,
-} from "@plugins/apps/plugins/studio/plugins/contributions/web";
+} from "@plugins/plugin-meta/plugins/contributions-table/web";
 import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
-import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
-import type { DbSchemaFacetData } from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
-import { tableDetailPane } from "@plugins/apps/plugins/studio/plugins/contributions/plugins/tables/web";
+import type {
+  DbSchemaFacetData,
+  DbSchemaTableRow,
+} from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
 import { MdTableChart } from "react-icons/md";
 
-type TableRow = {
-  plugin: PluginNode;
-  name: string;
-  varName: string;
-};
-
-const columns: ColumnDef<TableRow>[] = [
+const columns: ColumnDef<DbSchemaTableRow>[] = [
   {
     id: "name",
     header: "SQL Name",
@@ -36,35 +31,27 @@ const columns: ColumnDef<TableRow>[] = [
   {
     id: "plugin",
     header: "Plugin",
-    value: (row) => row.plugin.id,
-    cell: (row) => <PluginChip pluginId={row.plugin.id} />,
+    value: (row) => row.pluginId,
+    cell: (row) => <PluginChip pluginId={row.pluginId} />,
   },
 ];
 
-function rows(entries: FacetTableEntry[]): TableRow[] {
-  const result: TableRow[] = [];
+function rows(entries: FacetTableEntry[]): DbSchemaTableRow[] {
+  const result: DbSchemaTableRow[] = [];
   for (const entry of entries) {
     const data = entry.data as DbSchemaFacetData;
     for (const t of data.tables) {
-      result.push({ plugin: entry.node, name: t.name, varName: t.varName });
+      result.push({ pluginId: entry.node.id, name: t.name, varName: t.varName });
     }
   }
   return result;
 }
 
-export const dbSchemaFacetTable = defineFacetTable<TableRow>({
+export const dbSchemaFacetTable = defineFacetTable<DbSchemaTableRow>({
   facetId: "db-schema",
   label: "Tables",
   icon: MdTableChart,
   columns,
   rows,
-  rowKey: (r) => `${r.plugin.id}:${r.name}`,
-  // Clicking a table opens its live-SQL detail pane (columns, FKs, indexes,
-  // row count, sample rows) owned by `contributions/plugins/tables`.
-  onRowClick: (r, { openPane }) =>
-    openPane(
-      tableDetailPane,
-      { tableName: r.name, pluginId: r.plugin.id },
-      { mode: "push" },
-    ),
+  rowKey: (r) => `${r.pluginId}:${r.name}`,
 });

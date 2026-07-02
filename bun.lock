@@ -2669,6 +2669,10 @@
       "name": "@singularity/plugin-plugin-meta-composition",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/contributions-table": {
+      "name": "@singularity/plugin-plugin-meta-contributions-table",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/facets": {
       "name": "@singularity/plugin-plugin-meta-facets",
       "version": "0.0.1",
@@ -5825,6 +5829,8 @@
     "@singularity/plugin-plugin-meta-closure": ["@singularity/plugin-plugin-meta-closure@workspace:plugins/plugin-meta/plugins/closure"],
 
     "@singularity/plugin-plugin-meta-composition": ["@singularity/plugin-plugin-meta-composition@workspace:plugins/plugin-meta/plugins/composition"],
+
+    "@singularity/plugin-plugin-meta-contributions-table": ["@singularity/plugin-plugin-meta-contributions-table@workspace:plugins/plugin-meta/plugins/contributions-table"],
 
     "@singularity/plugin-plugin-meta-facets": ["@singularity/plugin-plugin-meta-facets@workspace:plugins/plugin-meta/plugins/facets"],
 

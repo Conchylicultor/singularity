@@ -23,8 +23,6 @@
 //   - apps/plugins/sonata/plugins/voicing: dependency closure (imported by an eager plugin)
 //   - apps/plugins/story/plugins/marker: dependency closure (imported by an eager plugin)
 //   - apps/plugins/story/plugins/render: dependency closure (imported by an eager plugin)
-//   - apps/plugins/studio/plugins/contributions: dependency closure (imported by an eager plugin)
-//   - apps/plugins/studio/plugins/contributions/plugins/tables: dependency closure (imported by an eager plugin)
 
 export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/agent-manager/plugins/welcome",
@@ -100,6 +98,8 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/story/plugins/renderers/plugins/blog",
   "apps/plugins/story/plugins/renderers/plugins/slides",
   "apps/plugins/studio/plugins/compositions",
+  "apps/plugins/studio/plugins/contributions",
+  "apps/plugins/studio/plugins/contributions/plugins/tables",
   "apps/plugins/studio/plugins/contributions/plugins/tables/plugins/columns",
   "apps/plugins/studio/plugins/contributions/plugins/tables/plugins/foreign-keys",
   "apps/plugins/studio/plugins/contributions/plugins/tables/plugins/indexes",

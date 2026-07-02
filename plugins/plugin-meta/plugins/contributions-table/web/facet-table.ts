@@ -35,12 +35,6 @@ export interface ContributionsFacetTable<Row = unknown> {
   rows: (entries: FacetTableEntry[]) => Row[];
   /** Stable, unique key per row (passed to data-table's `rowKey`). */
   rowKey: (row: Row) => string;
-  /**
-   * Optional row-click handler. When set, the host makes rows clickable and
-   * forwards clicks here, passing its `useOpenPane()` opener so the row can push a
-   * detail pane (e.g. db-schema's Tables → live-SQL pane) without a bespoke slot.
-   */
-  onRowClick?: (row: Row, ctx: ContributionsRowClickContext) => void;
 }
 
 /**
@@ -52,4 +46,17 @@ export interface ContributionsFacetTable<Row = unknown> {
  */
 export function defineFacetTable<Row>(table: ContributionsFacetTable<Row>): ContributionsFacetTable {
   return table as ContributionsFacetTable;
+}
+
+/** A keyed row-click drill-down contributed by the owner of the target pane
+ *  (app-side), so a facet renderer (meta) never imports an app pane. */
+export interface ContributionsRowClick<Row = unknown> {
+  /** Facet id whose table rows this handler makes clickable. */
+  facetId: string;
+  /** Invoked with the projected row and the host's useOpenPane() opener. */
+  onRowClick: (row: Row, ctx: ContributionsRowClickContext) => void;
+}
+
+export function defineRowClick<Row>(entry: ContributionsRowClick<Row>): ContributionsRowClick {
+  return entry as ContributionsRowClick;
 }

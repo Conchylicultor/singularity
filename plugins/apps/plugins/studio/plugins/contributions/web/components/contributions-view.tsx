@@ -15,8 +15,11 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type {
   PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/core";
-import { Contributions } from "../slots";
-import type { FacetTableEntry } from "../facet-table";
+import {
+  Contributions,
+  type FacetTableEntry,
+  type ContributionsRowClick,
+} from "@plugins/plugin-meta/plugins/contributions-table/web";
 
 /** Flatten the plugin tree into one entry per plugin carrying its slice of a facet. */
 function facetEntries(plugins: PluginNode[], facetId: string): FacetTableEntry[] {
@@ -42,6 +45,14 @@ export function ContributionsView() {
     () => [...tables].sort((a, b) => a.label.localeCompare(b.label)),
     [tables],
   );
+  // Row-click drill-downs are contributed app-side (keyed by facetId) so meta
+  // facet renderers never import an app pane; match them to tables by facetId.
+  const rowClicks = Contributions.RowClick.useContributions();
+  const rowClickByFacet = useMemo(() => {
+    const map = new Map<string, ContributionsRowClick["onRowClick"]>();
+    for (const rc of rowClicks) map.set(rc.facetId, rc.onRowClick);
+    return map;
+  }, [rowClicks]);
 
   const plugins = treeData?.plugins ?? null;
 
@@ -80,7 +91,7 @@ export function ContributionsView() {
 
   const activeId = selectedId ?? sortedTables[0]?.facetId ?? null;
   const activeTable = sortedTables.find((t) => t.facetId === activeId) ?? null;
-  const activeRowClick = activeTable?.onRowClick;
+  const activeRowClick = activeTable ? rowClickByFacet.get(activeTable.facetId) : undefined;
 
   return (
     <Column

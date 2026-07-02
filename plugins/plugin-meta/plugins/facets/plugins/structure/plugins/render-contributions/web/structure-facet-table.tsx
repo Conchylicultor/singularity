@@ -1,8 +1,9 @@
 import {
   defineFacetTable,
+  defineRowClick,
   type FacetTableEntry,
   PluginChip,
-} from "@plugins/apps/plugins/studio/plugins/contributions/web";
+} from "@plugins/plugin-meta/plugins/contributions-table/web";
 import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
@@ -100,12 +101,13 @@ export const structureFacetTable = defineFacetTable<StructureRow>({
   columns,
   rows,
   rowKey: (r) => r.plugin.id,
-  // Clicking a row opens that plugin's detail pane, where the migrated Structure
-  // section shows the same anomalies in context.
+});
+
+// Clicking a row opens that plugin's detail pane, where the migrated Structure
+// section shows the same anomalies in context. `pluginViewPane` is a meta pane
+// (plugin-view/web), so this row-click stays co-located with the renderer.
+export const structureRowClick = defineRowClick<StructureRow>({
+  facetId: "structure",
   onRowClick: (r, { openPane }) =>
-    openPane(
-      pluginViewPane,
-      { pluginId: r.plugin.id },
-      { mode: "push" },
-    ),
+    openPane(pluginViewPane, { pluginId: r.plugin.id }, { mode: "push" }),
 });

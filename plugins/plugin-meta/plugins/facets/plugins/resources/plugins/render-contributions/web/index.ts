@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Contributions } from "@plugins/apps/plugins/studio/plugins/contributions/web";
+import { Contributions } from "@plugins/plugin-meta/plugins/contributions-table/web";
 import { resourcesFacetTable } from "./resources-facet-table";
 
 export default {
