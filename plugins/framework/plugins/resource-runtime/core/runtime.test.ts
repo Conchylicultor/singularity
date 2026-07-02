@@ -19,93 +19,17 @@
 
 import { test, expect, describe } from "bun:test";
 import { z } from "zod";
-import { createResourceRuntime, type ResourceParams } from "./runtime";
-
-// Next-macrotask yield: flushes all pending microtasks (the queued flush) AND any
-// loader promises so the WS sends have landed in the log before we assert.
-const tick = (): Promise<void> => new Promise((r) => setTimeout(r, 0));
-
-interface SentFrame {
-  seq: number;
-  key: string;
-  kind: string;
-  version?: number;
-  reason?: string;
-}
-
-/** A runtime under test plus a single fake socket that records every frame sent. */
-function harness() {
-  const runtime = createResourceRuntime();
-  const frames: SentFrame[] = [];
-  let seq = 0;
-  // Fake ServerWebSocket: only `send` is exercised by the runtime's sendJson.
-  const ws = {
-    send(raw: string) {
-      const msg = JSON.parse(raw) as {
-        kind: string;
-        key?: string;
-        version?: number;
-        reason?: string;
-      };
-      if (msg.kind === "ping") return; // ignore heartbeats
-      frames.push({
-        seq: seq++,
-        key: msg.key ?? "",
-        kind: msg.kind,
-        version: msg.version,
-        reason: msg.reason,
-      });
-    },
-  };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handler = runtime.notificationsWsHandler as any;
-  handler.open(ws);
-
-  return {
-    runtime,
-    frames,
-    async subscribe(key: string, params: ResourceParams = {}) {
-      handler.message(ws, JSON.stringify({ op: "sub", key, params }));
-      await tick(); // let the async sub-ack (initial load) complete
-    },
-    /** Frames for `key`, excluding the initial sub-ack, in send order. */
-    pushesFor(key: string) {
-      return frames.filter((f) => f.key === key && f.kind !== "sub-ack");
-    },
-  };
-}
-
-/**
- * A loader whose completion the test controls. Initially open (so the sub-ack's
- * initial load resolves immediately); call `block()` to make the NEXT load park
- * until `release()`.
- */
-function controllable<T>(initial: T) {
-  let releaseFn: (() => void) | undefined;
-  let blocker: Promise<void> = Promise.resolve();
-  let value = initial;
-  return {
-    loader: async (): Promise<T> => {
-      await blocker;
-      return value;
-    },
-    block() {
-      blocker = new Promise<void>((res) => {
-        releaseFn = res;
-      });
-    },
-    release() {
-      releaseFn?.();
-    },
-    setValue(v: T) {
-      value = v;
-    },
-  };
-}
+import { type ResourceParams } from "./runtime";
+// The harness / controllable-loader / tick helpers live in the shared
+// test-support module (extracted so the invariant suites reuse the exact same
+// fakes). `createHarness()` subsumes the old bespoke `harness()` (default 1
+// socket), `feedHarness()` (a `readSet` option), and `revalHarness()` (subscribe
+// takes an `etag`) with byte-identical behavior.
+import { createHarness, controllable, tick } from "./test-support";
 
 describe("flushNotifies — level-parallel", () => {
   test("a slow loader does not head-of-line-block an unrelated fast node", async () => {
-    const h = harness();
+    const h = createHarness();
     const slow = controllable(0);
     const fast = controllable(0);
 
@@ -144,7 +68,7 @@ describe("flushNotifies — level-parallel", () => {
   });
 
   test("a downstream frame is sent strictly after its upstream", async () => {
-    const h = harness();
+    const h = createHarness();
     const upstreamR = h.runtime.defineExternalResource({
       key: "up",
       mode: "push",
@@ -174,7 +98,7 @@ describe("flushNotifies — level-parallel", () => {
   });
 
   test("version advances monotonically per (key,pk), one per notify", async () => {
-    const h = harness();
+    const h = createHarness();
     const r = h.runtime.defineExternalResource({
       key: "ver",
       mode: "push",
@@ -193,7 +117,7 @@ describe("flushNotifies — level-parallel", () => {
   });
 
   test("a notify arriving mid-flush is re-drained, once, after the in-flight flush", async () => {
-    const h = harness();
+    const h = createHarness();
     const slow = controllable(0);
     const slowR = h.runtime.defineExternalResource({
       key: "s",
@@ -237,36 +161,11 @@ describe("flushNotifies — level-parallel", () => {
 /**
  * A harness whose runtime is built with an injected L3 read-set hook so
  * `applyDbChange` can invert table→resource. `readSet` is a static map for the
- * test; in production it is `getReadSetIndex()[key]`.
+ * test; in production it is `getReadSetIndex()[key]`. `createHarness` folds this
+ * into its `ResourceRuntimeOptions` — no bespoke harness needed.
  */
-function feedHarness(readSetMap: Record<string, string[]>) {
-  const runtime = createResourceRuntime({
-    readSet: (key) => readSetMap[key] ?? [],
-  });
-  const frames: SentFrame[] = [];
-  let seq = 0;
-  const ws = {
-    send(raw: string) {
-      const msg = JSON.parse(raw) as { kind: string; key?: string; version?: number };
-      if (msg.kind === "ping") return;
-      frames.push({ seq: seq++, key: msg.key ?? "", kind: msg.kind, version: msg.version });
-    },
-  };
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const handler = runtime.notificationsWsHandler as any;
-  handler.open(ws);
-  return {
-    runtime,
-    frames,
-    async subscribe(key: string, params: ResourceParams = {}) {
-      handler.message(ws, JSON.stringify({ op: "sub", key, params }));
-      await tick();
-    },
-    pushesFor(key: string) {
-      return frames.filter((f) => f.key === key && f.kind !== "sub-ack");
-    },
-  };
-}
+const feedHarness = (readSetMap: Record<string, string[]>) =>
+  createHarness({ readSet: (key) => readSetMap[key] ?? [] });
 
 describe("applyDbChange — L4 DB change-feed routing", () => {
   test("routes a table change to a subscribed param-less resource (full recompute on INSERT)", async () => {
@@ -760,7 +659,7 @@ describe("defineResource(contract, serverOpts) — keyed-ness derived from the d
   });
 
   test("a non-keyed contract honors serverOpts.mode (push)", async () => {
-    const h = harness();
+    const h = createHarness();
     h.runtime.defineResource(
       { key: "n", schema: z.number() },
       { mode: "push", loader: async () => 1 },
@@ -782,30 +681,19 @@ describe("defineResource(contract, serverOpts) — keyed-ness derived from the d
  *   - The HTTP fallback honors `If-None-Match` → 304, and stamps an `ETag` header.
  */
 describe("conditional revalidation (ETag / up-to-date / 304)", () => {
-  // Richer harness: captures the FULL parsed frame (value + etag) and lets a test
-  // subscribe with an etag, so the up-to-date/sub-ack contract is observable.
-  function revalHarness() {
-    const runtime = createResourceRuntime();
-    const frames: Array<Record<string, unknown>> = [];
-    const ws = {
-      send(raw: string) {
-        const msg = JSON.parse(raw) as Record<string, unknown>;
-        if (msg.kind === "ping") return;
-        frames.push(msg);
-      },
-    };
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const handler = runtime.notificationsWsHandler as any;
-    handler.open(ws);
+  // `createHarness` already captures the FULL parsed frame (value + etag) with
+  // faithful key presence, and its `subscribe` takes an `etag` — so the old
+  // bespoke `revalHarness` collapses to a thin `sub(key, params?, etag?)` shim
+  // over it (keeps these tests' call sites unchanged).
+  const revalHarness = () => {
+    const h = createHarness();
     return {
-      runtime,
-      frames,
-      async sub(key: string, params: ResourceParams = {}, etag?: string) {
-        handler.message(ws, JSON.stringify({ op: "sub", key, params, ...(etag !== undefined ? { etag } : {}) }));
-        await tick();
-      },
+      runtime: h.runtime,
+      frames: h.frames,
+      sub: (key: string, params: ResourceParams = {}, etag?: string) =>
+        h.subscribe(key, params, etag !== undefined ? { etag } : {}),
     };
-  }
+  };
 
   test("no revalidate: sub-ack carries value and no etag (byte-identical)", async () => {
     const h = revalHarness();
@@ -916,7 +804,7 @@ describe("conditional revalidation (ETag / up-to-date / 304)", () => {
 
 describe("authorize — deferred subscription-authorization seam", () => {
   test("absent authorize ⇒ subscription is allowed (default, sub-ack sent)", async () => {
-    const h = harness();
+    const h = createHarness();
     h.runtime.defineResource({
       key: "r",
       mode: "invalidate",
@@ -931,7 +819,7 @@ describe("authorize — deferred subscription-authorization seam", () => {
   });
 
   test("authorize returning false ⇒ sub-error/unauthorized, loader never runs", async () => {
-    const h = harness();
+    const h = createHarness();
     let loaded = false;
     h.runtime.defineResource({
       key: "r",
@@ -954,7 +842,7 @@ describe("authorize — deferred subscription-authorization seam", () => {
   });
 
   test("authorize can decide per-params (async, allow one tuple, deny another)", async () => {
-    const h = harness();
+    const h = createHarness();
     h.runtime.defineResource<number, { id: string }>({
       key: "r",
       mode: "invalidate",
@@ -972,7 +860,7 @@ describe("authorize — deferred subscription-authorization seam", () => {
   });
 
   test("a throwing authorize fails CLOSED (rejects the sub, no value)", async () => {
-    const h = harness();
+    const h = createHarness();
     let loaded = false;
     h.runtime.defineResource({
       key: "r",

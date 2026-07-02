@@ -234,7 +234,7 @@ v2 mapped H1/H2/H7. v3 maps all seven.
 | H2 stale React state after reconnect | Restart server; all panes converge to truth within a tick (v2 check #3). |
 | H3 refresh-watcher-keyed-on-wrong-status | N/A — `wasReconnecting` watcher is deleted. Regression test: open a pane, kill the WS, restore; the query refetches exactly once, no status-keyed logic remains (`grep -r wasReconnecting` returns empty). |
 | H4 duplicate subscriptions across mounts | Mount/unmount the same pane 10×; DevTools shows exactly one `sub` + one `unsub` net per cycle (TanStack Query refcounts observers, `NotificationsClient` subs on 0→1 and unsubs on 1→0). |
-| H5 snapshot/edge event ordering | Covered structurally by §1 sub-ack + versioning; test by racing a `notify()` against a fresh `sub` in a unit test. |
+| H5 snapshot/edge event ordering | Covered structurally by §1 sub-ack + versioning; **now pinned by executable tests** — `plugins/framework/plugins/resource-runtime/core/runtime-h5.test.ts` races a `notify()` against a fresh `sub` (push, keyed, multi-socket) and asserts the client simulator converges to server truth. Companion server-runtime invariants (scoped-vs-FULL routing, over-replay idempotence, L2 persist-hook contract) are in the sibling `runtime-scoped-routing.test.ts` / `runtime-catchup.test.ts`. See `research/2026-07-03-global-live-state-server-invariant-harness.md`. |
 | H6 cross-tab divergence | Open 3 tabs; mutate state; all three reflect within a tick; exactly 1 WS open (v2 check #5). |
 | H7 snapshot-replays-only-working-truth | Kill an agent externally; row transitions to `gone` within a tick (v2 check #4). Level-state push has no notion of "only working truth." |
 
