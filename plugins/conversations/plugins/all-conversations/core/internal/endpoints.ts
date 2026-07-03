@@ -16,6 +16,10 @@ export const QueryConversationsBodySchema = z.object({
   query: z.string(),
   cursor: z.string().nullable(),
   limit: z.number().int().positive().max(200),
+  // The DataView surface id (its `storageKey`), injected by `useServerDataSource`.
+  // The handler passes it to `augmentServerQuery` so per-surface augmentations
+  // (custom columns) can bind their values into the query.
+  dataViewId: z.string(),
   // When true, the handler drops the hard `kind != 'system'` exclusion so system
   // conversations are included (default false → byte-for-byte unchanged scope).
   includeSystem: z.boolean().optional(),

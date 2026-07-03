@@ -1,15 +1,7 @@
 import { buildViewConfigRegistrations } from "@plugins/primitives/plugins/data-view/plugins/view-core/server";
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { dataViews } from "../../shared/data-views.generated";
-import { presetsExtraFields } from "../../shared/sort-presets-field";
-import { customColumnsExtraFields } from "../../shared/custom-columns-field";
-
-/**
- * The sibling config fields merged into every per-id `viewsDescriptor` — the
- * server twin of the web `extraFields` constant. ONE identity-stable module
- * constant; disjoint keys (`sortPresets` + `filterPresets` + `customColumns`), so merge.
- */
-const extraFields = { ...presetsExtraFields, ...customColumnsExtraFields };
+import { extraFields } from "./descriptors";
 
 /**
  * One `ConfigV2.Register` contribution per DataView id, each planted under its

@@ -1,8 +1,11 @@
 import { and, ilike, ne, or, type SQL } from "drizzle-orm";
+import type { PgColumn, PgSelect } from "drizzle-orm/pg-core";
 import { db } from "@plugins/database/server";
+import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { resolveFieldFilterSql } from "@plugins/fields/plugins/server-capabilities/server";
 import {
+  augmentServerQuery,
   buildSortKeys,
   compileWhere,
   keyValuesOf,
@@ -43,12 +46,44 @@ function searchWhere(query: string): SQL | undefined {
 const resolver: OperatorSqlResolver = (typeId, operatorId) =>
   resolveFieldFilterSql(typeId, operatorId) ?? null;
 
+// drizzle has no public "columns of a view" getter (`getTableColumns` accepts a
+// `Table` only). A `pgView` stores its aliased column bag under the stable global
+// `ViewBaseConfig` symbol — the exact set drizzle itself selects for `.from(view)`.
+// Spreading it reproduces the flat all-columns projection so we can add the
+// augmentors' join columns alongside; a bare `.select()` with joins would instead
+// nest the row shape by source table.
+const VIEW_BASE_CONFIG = Symbol.for("drizzle:ViewBaseConfig");
+function viewColumns(view: unknown): Record<string, PgColumn> {
+  const cfg = (
+    view as Record<
+      symbol,
+      { selectedFields: Record<string, PgColumn> } | undefined
+    >
+  )[VIEW_BASE_CONFIG];
+  if (!cfg) throw new Error("viewColumns: value is not a drizzle view");
+  return cfg.selectedFields;
+}
+
 export const handleQuery = implement(queryConversations, async ({ body }) => {
   const { sort, filter, query, cursor, limit } = body;
 
+  // Fold in the generic server-side augmentors (custom columns, …). Each binds
+  // its aliased columns into `columnMap` (so sort/filter/seek reach them), a
+  // `LEFT JOIN` thunk, and a projection (so `keyValuesOf` can mint the cursor).
+  // The consumer names no contributor — this is the server twin of the web
+  // global `FieldExtension` slot. `rowKeyCol` must be the column whose value ==
+  // the web `rowKey(row)` (here `conversations.id`, matching `rowKey={c => c.id}`).
+  const aug = await augmentServerQuery({
+    dataViewId: body.dataViewId,
+    rowKeyCol: conversations.id,
+    sort,
+    filter,
+  });
+  const columnMap = { ...COLUMN_MAP, ...aug.columnMap };
+
   // Always append PK `id asc` as a total-order tiebreaker so the keyset seek is
   // strict (gap-free / dup-free) even across the NULLS-LAST boundary.
-  const keys = buildSortKeys(sort, COLUMN_MAP, { col: conversations.id, fieldId: "id" });
+  const keys = buildSortKeys(sort, columnMap, { col: conversations.id, fieldId: "id" });
 
   let seek: SQL | undefined;
   if (cursor) {
@@ -64,27 +99,44 @@ export const handleQuery = implement(queryConversations, async ({ body }) => {
   const where = and(
     body.includeSystem ? undefined : ne(conversations.kind, "system"),
     searchWhere(query),
-    compileWhere(filter, COLUMN_MAP, resolver),
+    compileWhere(filter, columnMap, resolver),
     seek,
   );
 
-  const rows = await db
-    .select()
+  // Explicit flat projection (base columns + the augmentors' sort-key columns)
+  // over a `$dynamic()` query so the augmentors' joins can be applied.
+  let q: PgSelect = db
+    .select({ ...viewColumns(conversations), ...aug.projection })
     .from(conversations)
+    .$dynamic();
+  for (const j of aug.joins) q = j.apply(q);
+  const rows = await q
     .where(where)
     .orderBy(...orderByClauses(keys))
     .limit(limit + 1);
 
   const hasMore = rows.length > limit;
-  const items = rows.slice(0, limit);
-  const last = items.at(-1);
+  const rawItems = rows.slice(0, limit);
+
+  // Compute the cursor from the RAW last row — it still carries the custom
+  // projection keys `keyValuesOf` reads to mint the keyset cursor.
+  const lastRaw = rawItems.at(-1);
   const nextCursor =
-    hasMore && last
+    hasMore && lastRaw
       ? encodeCursor(
-          keyValuesOf(last as unknown as Record<string, unknown>, keys),
+          keyValuesOf(lastRaw as unknown as Record<string, unknown>, keys),
           sortSignature(sort),
         )
       : null;
+
+  // Strip the custom projection keys before returning: `ConversationSchema` is a
+  // strict entity-derived zod object and would reject unknown `cc-*` keys.
+  const ccKeys = Object.keys(aug.projection);
+  const items = rawItems.map((r) => {
+    const c = { ...r } as Record<string, unknown>;
+    for (const k of ccKeys) delete c[k];
+    return c;
+  }) as unknown as Conversation[];
 
   return { items, nextCursor, hasMore };
 });

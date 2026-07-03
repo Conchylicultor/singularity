@@ -3,6 +3,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { setCustomColumnValue } from "../core";
 import { handleSetCustomColumnValue } from "./internal/handle-set-custom-column-value";
 import { customColumnValuesLiveResource } from "./internal/resource";
+import { customColumnsQueryAugmentor } from "./internal/query-augmentor";
 
 export { _dataViewCustomValues } from "./internal/tables";
 export { customColumnValuesLiveResource } from "./internal/resource";
@@ -13,5 +14,8 @@ export default {
   httpRoutes: {
     [setCustomColumnValue.route]: handleSetCustomColumnValue,
   },
-  contributions: [Resource.Declare(customColumnValuesLiveResource)],
+  contributions: [
+    Resource.Declare(customColumnValuesLiveResource),
+    customColumnsQueryAugmentor,
+  ],
 } satisfies ServerPluginDefinition;

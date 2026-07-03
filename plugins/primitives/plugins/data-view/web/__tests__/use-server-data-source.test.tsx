@@ -4,7 +4,10 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import type { ReactNode } from "react";
 import { createElement } from "react";
 import { useServerDataSource } from "../internal/use-server-data-source";
+import { defineDataView } from "../../core";
 import type { ServerDataSourceSpec, ServerPage } from "../../core";
+
+const TEST_VIEW = defineDataView("test-view");
 
 beforeAll(() => {
   // jsdom lacks IntersectionObserver; the hook constructs one in an effect.
@@ -31,7 +34,7 @@ function pageOf(items: string[], nextCursor: string | null): ServerPage<string> 
 describe("useServerDataSource", () => {
   it("returns null when no spec is provided (in-memory path)", () => {
     const { result } = renderHook(
-      () => useServerDataSource<string>(emptyView, undefined),
+      () => useServerDataSource<string>(emptyView, undefined, TEST_VIEW),
       { wrapper },
     );
     expect(result.current).toBeNull();
@@ -41,7 +44,7 @@ describe("useServerDataSource", () => {
     const fetchPage = vi.fn(async () => pageOf(["a", "b"], "cur-1"));
     const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
     const { result } = renderHook(
-      () => useServerDataSource<string>(emptyView, spec),
+      () => useServerDataSource<string>(emptyView, spec, TEST_VIEW),
       { wrapper },
     );
     await waitFor(() => expect(result.current?.rows.length).toBe(2));
@@ -59,7 +62,7 @@ describe("useServerDataSource", () => {
       .mockResolvedValueOnce(pageOf(["b"], null));
     const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
     const { result } = renderHook(
-      () => useServerDataSource<string>(emptyView, spec),
+      () => useServerDataSource<string>(emptyView, spec, TEST_VIEW),
       { wrapper },
     );
     await waitFor(() => expect(result.current?.rows).toEqual(["a"]));
@@ -76,10 +79,11 @@ describe("useServerDataSource", () => {
     const fetchPage = vi.fn(async () => pageOf([token], null));
     const { result, rerender } = renderHook(
       ({ tick }: { tick: number }) =>
-        useServerDataSource<string>(emptyView, {
-          fetchPage,
-          changeTick: tick,
-        }),
+        useServerDataSource<string>(
+          emptyView,
+          { fetchPage, changeTick: tick },
+          TEST_VIEW,
+        ),
       { wrapper, initialProps: { tick: 0 } },
     );
     await waitFor(() => expect(result.current?.rows).toEqual(["v1"]));
@@ -97,7 +101,7 @@ describe("useServerDataSource", () => {
     const spec: ServerDataSourceSpec<string> = { fetchPage, changeTick: 0 };
     const { result, rerender } = renderHook(
       ({ q }: { q: string }) =>
-        useServerDataSource<string>({ ...emptyView, query: q }, spec),
+        useServerDataSource<string>({ ...emptyView, query: q }, spec, TEST_VIEW),
       { wrapper, initialProps: { q: "" } },
     );
     await waitFor(() => expect(result.current?.rows.length).toBe(1));

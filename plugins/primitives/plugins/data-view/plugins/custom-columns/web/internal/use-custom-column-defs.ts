@@ -4,7 +4,7 @@ import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { CustomColumnDef } from "../../core";
-import { readCustomColumnDefs } from "./read-custom-column-defs";
+import { readCustomColumnDefs } from "../../shared/read-custom-column-defs";
 
 export interface CustomColumnDefsController {
   defs: CustomColumnDef[];

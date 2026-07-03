@@ -177,7 +177,11 @@ function DataViewInner<TRow>({
   // path). When present, filter/sort/search/paginate run server-side over the
   // live `activeState`, so the accumulated pages replace `rows` and the client
   // pipeline (`useFlatRows`) is neutralized into a pass-through below.
-  const server = useServerDataSource(activeState, props.dataSource);
+  const server = useServerDataSource(
+    activeState,
+    props.dataSource,
+    props.storageKey,
+  );
 
   // Filter controller — the popover builder consumes the full surface (filter,
   // setFilter, filterableFields, resolveOperatorSet, ruleCount).

@@ -47,7 +47,7 @@ how the caller obtained it.
   - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `infra/endpoints.useEndpointMutation`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/data-view.DataViewSlots`, `primitives/data-view.getDataViewDescriptor`, `primitives/data-view.GlobalFieldExtensionProps`, `primitives/data-view.useDataViewSettings`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.useResource`
   - Exports: Types: `CustomColumnDefsController`, `CustomColumnValueIndex`; Values: `CustomColumnsFields`, `useCustomColumnDefs`, `useCustomColumnValues`, `useSetCustomColumnValue`
 - Server:
-  - Uses: `database.db`, `infra/endpoints.implement`
+  - Uses: `database.db`, `infra/endpoints.implement`, `primitives/data-view/server-query.DataViewServer`, `primitives/data-view/server-query.FieldColumnMap`, `primitives/data-view/server-query.QueryAugmentor`, `primitives/data-view/server-query.QueryAugmentorContext`, `primitives/data-view/server-query.ServerQueryAugmentation`
   - DB schema: `plugins/primitives/plugins/data-view/plugins/custom-columns/server/internal/tables.ts`
   - Exports: Values: `_dataViewCustomValues`, `customColumnValuesLiveResource`
   - Routes: `POST /api/data-view/custom-values`

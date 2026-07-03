@@ -1,9 +1,10 @@
-import type { CustomColumnDef } from "../../core";
+import type { CustomColumnDef } from "../core";
 
 /**
  * Pure reader: normalize the raw config `customColumns` value into
  * `CustomColumnDef[]`. Kept dependency-free (no React, no config_v2), mirroring
- * `readSortPresets`.
+ * `readSortPresets`. Lives in `shared/` so BOTH runtimes normalize identically —
+ * the web defs controller and the server query-augmentor.
  *
  * Terse/legacy/absent input is tolerated: a non-array yields `[]`; a row missing
  * a string `label` is skipped; a missing/empty `id` falls back to a stable

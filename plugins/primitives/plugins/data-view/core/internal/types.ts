@@ -529,7 +529,9 @@ export interface ServerPage<TRow> {
  * `fetchPage` is a factory (not pre-resolved rows): `DataViewInner` invokes it
  * with the live `activeState` (sort/filter/query) it already owns plus the
  * keyset `cursor` + `limit`, so `ViewState` stays the single source of truth and
- * the consumer never touches it.
+ * the consumer never touches it. `dataViewId` is the surface's `storageKey`,
+ * injected by the host so the server can key per-surface augmentations (e.g.
+ * custom columns) off it — the consumer's closure carries it with no extra work.
  */
 export interface ServerDataSourceSpec<TRow> {
   fetchPage: (args: {
@@ -538,6 +540,7 @@ export interface ServerDataSourceSpec<TRow> {
     query: string;
     cursor: string | null;
     limit: number;
+    dataViewId: string;
   }) => Promise<ServerPage<TRow>>;
   /** Changes when server truth changes — drives an in-place refetch of loaded pages. */
   changeTick: unknown;

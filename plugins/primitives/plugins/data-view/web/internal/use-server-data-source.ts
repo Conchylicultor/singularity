@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type {
+  DataViewId,
   FilterGroup,
   ServerDataSourceSpec,
   SortRule,
@@ -60,6 +61,7 @@ function stableStringify(value: unknown): string {
 export function useServerDataSource<TRow>(
   view: ServerQueryView,
   spec: ServerDataSourceSpec<TRow> | undefined,
+  storageKey: DataViewId,
 ): ServerDataSourceResult<TRow> | null {
   const viewKey = stableStringify({
     sort: view.sort,
@@ -81,6 +83,7 @@ export function useServerDataSource<TRow>(
         query: view.query,
         cursor: pageParam,
         limit: pageSize,
+        dataViewId: storageKey,
       });
     },
     getNextPageParam: (last) => (last.hasMore ? last.nextCursor : undefined),

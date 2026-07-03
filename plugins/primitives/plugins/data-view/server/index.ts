@@ -1,6 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { dataViewConfigRegistrations } from "./internal/config-registrations";
 
+export { readDataViewConfigDoc } from "./internal/descriptors";
+
 export default {
   description:
     "Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.",
