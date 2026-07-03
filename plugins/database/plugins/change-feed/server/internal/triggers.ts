@@ -72,6 +72,16 @@ CREATE TABLE IF NOT EXISTS ${LIVE_STATE_CHANGELOG_TABLE} (
 CREATE INDEX IF NOT EXISTS live_state_changelog_xid_idx ON ${LIVE_STATE_CHANGELOG_TABLE} (xid);
 `;
 
+// Create the L2 durable outbox table if it does not already exist. Extracted so
+// production (rebuildTriggers, passing its own `tx`) and the DB-backed test
+// harness share ONE DDL source — mirroring `ensureSnapshotTable(db)` in
+// live-state-snapshot. A drizzle transaction `tx` is assignable to
+// `NodePgDatabase` for `.execute`, so callers can pass either the pool-backed db
+// or a live transaction.
+export async function ensureChangelogTable(db: NodePgDatabase): Promise<void> {
+  await db.execute(drizzleSql.raw(CHANGELOG_TABLE_DDL));
+}
+
 // The generic STATEMENT-level trigger function. It is deterministic, data-less
 // DDL — created with CREATE OR REPLACE on every boot (never a migration), exactly
 // like derived-views.
@@ -256,7 +266,7 @@ export async function rebuildTriggers(db: NodePgDatabase): Promise<void> {
     // parallel, so the live-state-snapshot plugin's own boot ordering can't be
     // relied on for this (it owns the snapshot table; change-feed owns the
     // changelog because change-feed writes it).
-    await tx.execute(drizzleSql.raw(CHANGELOG_TABLE_DDL));
+    await ensureChangelogTable(tx);
 
     await tx.execute(drizzleSql.raw(NOTIFY_FUNCTION_DDL));
 

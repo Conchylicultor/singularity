@@ -177,6 +177,9 @@ comment cross-refs them in `runtime.test.ts`.
   `live-state-snapshot/catch-up.ts` + `persist.ts` xmin/changelog SQL and
   `change-feed/listener.ts` reconnect logic — via embedded-Postgres fixture or a
   `db`-parametrization refactor. Explicitly the out-of-seam half of "catch-up".
+  **DONE** — landed via `db`-parametrization + a throwaway-DB fixture on the
+  running cluster; see
+  [`2026-07-03-database-live-state-db-backed-invariant-harness.md`](./2026-07-03-database-live-state-db-backed-invariant-harness.md).
 - If H5c is filed rather than fixed: a second follow-up task for that hazard.
 
 ## Critical files

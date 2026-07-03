@@ -10,7 +10,11 @@ import { rebuildTriggers } from "./internal/triggers";
 import { startListener, stopListener } from "./internal/listener";
 import { buildViewDeps } from "./internal/view-deps";
 
-export { rebuildTriggers, getCoveredTables } from "./internal/triggers";
+export {
+  rebuildTriggers,
+  getCoveredTables,
+  ensureChangelogTable,
+} from "./internal/triggers";
 // Opt a high-churn observability table out of the L4 change-feed (see
 // ./internal/exclusion for the trade this makes).
 export { ExcludeFromChangeFeed } from "./internal/exclusion";

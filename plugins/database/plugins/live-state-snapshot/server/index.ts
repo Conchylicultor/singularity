@@ -22,7 +22,17 @@ import { liveStateChangelogPruneJob } from "./internal/prune";
 // table (the transactional outbox) is owned by change-feed (it writes it from the
 // trigger function). See
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md.
-export { readPersistedSnapshots, clearPersistedSnapshots } from "./internal/persist";
+//
+// `persist.ts` and `catch-up.ts` are db-PARAMETRIZED (no `@plugins/database/server`
+// import) so a test can import them without the SINGULARITY_WORKTREE-at-import
+// throw; the `db` singleton is bound HERE (a backend-only entry) and threaded into
+// the hooks + catch-up below. The two public barrel exports keep their `(keys) => …`
+// signature via `./internal/public-snapshots` (barrel-purity R3 forbids the
+// singleton-binding wrappers living inline in this barrel).
+export {
+  readPersistedSnapshots,
+  clearPersistedSnapshots,
+} from "./internal/public-snapshots";
 
 export default {
   description:
@@ -42,13 +52,18 @@ export default {
   // than racing onReady) means a persist can never fire with the holder unset.
   async onReadyBlocking() {
     await ensureSnapshotTable(db);
-    setLiveStateSnapshotHooks({ shouldPersist, captureWatermark, persistSnapshot });
+    setLiveStateSnapshotHooks({
+      shouldPersist,
+      captureWatermark: () => captureWatermark(db),
+      persistSnapshot: (key, paramsKey, value, watermark, tablesRead) =>
+        persistSnapshot(db, key, paramsKey, value, watermark, tablesRead),
+    });
     // Seed the in-memory loader→table read-set index from the durable
     // `tables_read` column BEFORE the readiness barrier flips — so the
     // table→resource inversion (`tableToResources`) is non-empty for catch-up's
     // first `applyDbChange`, with NO loader run at boot. Only non-empty read-sets
     // are seeded; an empty one means "no usable read-set" → force-FULL in onReady.
-    const persistedReadSets = await readPersistedReadSets();
+    const persistedReadSets = await readPersistedReadSets(db);
     const seed: Record<string, string[]> = {};
     for (const [key, tables] of persistedReadSets) {
       if (tables.length > 0) seed[key] = tables;
@@ -65,7 +80,7 @@ export default {
     // recompute persists both its value AND its read-set for the next boot. On a
     // steady-state deploy `needsInit` is empty → no forced recomputes. Boot-
     // critical keys are read GENERICALLY from `Resource.Declare` (never by name).
-    const usable = await readPersistedReadSets();
+    const usable = await readPersistedReadSets(db);
     for (const key of bootCriticalKeys()) {
       if (!usable.get(key)?.length) recomputeResource(key);
     }
@@ -79,6 +94,6 @@ export default {
     // after change-feed's `onReady` (which calls `startListener()`). Do NOT remove
     // that import edge without re-establishing the ordering another way. See the
     // plan's "Ordering invariant" section.
-    await runCatchUp();
+    await runCatchUp(db);
   },
 } satisfies ServerPluginDefinition;

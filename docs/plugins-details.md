@@ -2322,11 +2322,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/paths.SINGULARITY_DIR`
         - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `countActiveConnections`, `databaseExists`, `dropDatabase`, `ensureDatabase`, `forkDatabase`, `getAdminPool`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
       - Cross-plugin:
-        - Imported by: `backup/sources/databases`, `database/change-feed`, `database/fork`, `database/query`, `database/zero/cache-service`, `debug/profiling/push`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `infra/jobs`, `infra/launcher`
+        - Imported by: `backup/sources/databases`, `database/change-feed`, `database/fork`, `database/live-state-snapshot`, `database/query`, `database/zero/cache-service`, `debug/profiling/push`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `infra/jobs`, `infra/launcher`
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
       - Server:
-        - Uses: `database.db`, `database/admin.connectionString`, `database/derived-tables.feedExemptTables`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
-        - Exports: Types: `DbChange`; Values: `ExcludeFromChangeFeed`, `getCoveredTables`, `parseLiveStatePayload`, `rebuildTriggers`, `routeChange`
+        - Uses: `database.db`, `database/admin.connectionString`, `database/admin.dropDatabase`, `database/admin.ensureDatabase`, `database/admin.openShortLivedClient`, `database/derived-tables.feedExemptTables`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
+        - Exports: Types: `DbChange`; Values: `ensureChangelogTable`, `ExcludeFromChangeFeed`, `getCoveredTables`, `parseLiveStatePayload`, `rebuildTriggers`, `routeChange`
       - Cross-plugin:
         - Imported by: `database/live-state-snapshot`, `debug/slow-ops`, `reports`
     - **`derived-tables`** — Rebuilds trigger-maintained materialized rollup tables from source on every boot. A rollup is derived state (declared via the DerivedTable contribution), kept current incrementally by STATEMENT triggers — a hand-rolled IVM for aggregates too expensive to recompute live yet not expressible as a plain view.
@@ -2361,7 +2361,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations`
     - **`live-state-snapshot`** — L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, with a bounded changelog catch-up that recomputes only the resources whose tables changed during downtime.
       - Server:
-        - Uses: `database.db`, `database/change-feed.routeChange`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
+        - Uses: `database.db`, `database/admin.dropDatabase`, `database/admin.ensureDatabase`, `database/admin.openShortLivedClient`, `database/change-feed.routeChange`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
         - DB schema: `plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`
         - Exports: Values: `clearPersistedSnapshots`, `readPersistedSnapshots`
         - Register: `defineJob('database.live-state-changelog-prune')`

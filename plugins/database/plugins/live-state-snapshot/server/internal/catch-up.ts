@@ -1,6 +1,7 @@
 import { sql as drizzleSql } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { routeChange } from "@plugins/database/plugins/change-feed/server";
+import type { DbChange } from "@plugins/database/plugins/change-feed/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import {
   LIVE_STATE_CHANGELOG_TABLE,
@@ -25,9 +26,9 @@ type ChangelogRow = {
 // FULL: a delete/membership change cannot be a scoped recompute (a scoped path
 // never asserts membership), so the scoped ids are dropped before routing. See
 // research/2026-06-22-global-live-state-l2-persisted-materialization.md §3.5.
-function replayChange(row: ChangelogRow): void {
+function replayChange(row: ChangelogRow, route: (change: DbChange) => void): void {
   const ids = row.op === "D" ? null : row.ids;
-  routeChange({ table: row.t, op: row.op, ids });
+  route({ table: row.t, op: row.op, ids });
 }
 
 // Bounded cold-boot catch-up: replay only the changelog rows committed at or after
@@ -52,7 +53,10 @@ function replayChange(row: ChangelogRow): void {
 // post-LISTEN ordering documented at the call site in `server/index.ts`: this runs
 // after change-feed's listener has its LISTEN up, so a commit landing after the
 // `SELECT` below is delivered on the live path (no gap).
-export async function runCatchUp(): Promise<void> {
+export async function runCatchUp(
+  db: NodePgDatabase,
+  route: (change: DbChange) => void = routeChange,
+): Promise<void> {
   const floorRes = await db.execute<{ min_position: string | null }>(
     drizzleSql.raw(
       `SELECT min(position)::text AS min_position FROM ${LIVE_STATE_SNAPSHOT_TABLE}`,
@@ -85,7 +89,7 @@ export async function runCatchUp(): Promise<void> {
       `[live-state-snapshot] WARNING: oldest retained changelog xid ${oldestRetained} > snapshot floor ${minPosition} — history pruned past a stale snapshot; forcing FULL recompute of all changed tables`,
       "stderr",
     );
-    await fullRecomputeChangedTables();
+    await fullRecomputeChangedTables(db, route);
     return;
   }
 
@@ -106,18 +110,21 @@ export async function runCatchUp(): Promise<void> {
   log.publish(
     `[live-state-snapshot] catch-up: replaying ${rows.rows.length} changelog row(s) since floor xid ${minPosition}`,
   );
-  for (const row of rows.rows) replayChange(row);
+  for (const row of rows.rows) replayChange(row, route);
 }
 
 // FULL backstop: route a null-ids FULL change for every DISTINCT table seen in the
 // retained changelog (the universe of tables that have changed). `applyDbChange`
 // fans each out to every reading resource, so persisted resources whose tables
 // changed get a FULL recompute. The rare, loud missing-history path.
-async function fullRecomputeChangedTables(): Promise<void> {
+async function fullRecomputeChangedTables(
+  db: NodePgDatabase,
+  route: (change: DbChange) => void,
+): Promise<void> {
   const tablesRes = await db.execute<{ t: string }>(
     drizzleSql.raw(`SELECT DISTINCT t FROM ${LIVE_STATE_CHANGELOG_TABLE}`),
   );
   for (const { t } of tablesRes.rows) {
-    replayChange({ xid: "0", t, op: "U", ids: null });
+    replayChange({ xid: "0", t, op: "U", ids: null }, route);
   }
 }

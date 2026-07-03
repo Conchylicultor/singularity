@@ -1,5 +1,5 @@
 import { sql as drizzleSql } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 
@@ -32,7 +32,7 @@ export function shouldPersist(key: string): boolean {
 // runtime, so the catch-up replay predicate (xid >= position) can never
 // under-replay a write invisible to the loader's snapshot. Returned as text →
 // stored as numeric (no signed-bigint overflow near 2^63).
-export async function captureWatermark(): Promise<string> {
+export async function captureWatermark(db: NodePgDatabase): Promise<string> {
   const res = await db.execute<{ xmin: string }>(
     drizzleSql.raw(`SELECT pg_snapshot_xmin(pg_current_snapshot())::text AS xmin`),
   );
@@ -54,6 +54,7 @@ export async function captureWatermark(): Promise<string> {
 // value), so an `ARRAY[…]` constructor is built explicitly via `sql.join`. An
 // empty array yields `ARRAY[]::text[]`, a valid empty text[] literal.
 export async function persistSnapshot(
+  db: NodePgDatabase,
   key: string,
   paramsKey: string,
   value: unknown,
@@ -89,7 +90,9 @@ export async function persistSnapshot(
 // for the boot seed. Returns resource_key → string[] (the pg driver returns a
 // text[] column as a JS string[]). A key with an empty `tables_read` is "no usable
 // read-set" — the caller (boot init) force-FULL recomputes it.
-export async function readPersistedReadSets(): Promise<Map<string, string[]>> {
+export async function readPersistedReadSets(
+  db: NodePgDatabase,
+): Promise<Map<string, string[]>> {
   const out = new Map<string, string[]>();
   const res = await db.execute<{ resource_key: string; tables_read: string[] }>(
     drizzleSql`
@@ -106,6 +109,7 @@ export async function readPersistedReadSets(): Promise<Map<string, string[]>> {
 // query, for the boot-snapshot hot path. Returns a key→value map; a key with no
 // persisted row is simply absent (the caller falls back to a from-scratch load).
 export async function readPersistedSnapshots(
+  db: NodePgDatabase,
   keys: string[],
 ): Promise<Map<string, unknown>> {
   const out = new Map<string, unknown>();
@@ -135,7 +139,10 @@ export async function readPersistedSnapshots(
 // OWNS `live_state_snapshot`; consumers (boot-bench) call it generically by key
 // rather than issuing raw SQL against a table they don't own. `RETURNING` makes
 // the deleted-row count robust regardless of the driver's `rowCount` typing.
-export async function clearPersistedSnapshots(keys: string[]): Promise<number> {
+export async function clearPersistedSnapshots(
+  db: NodePgDatabase,
+  keys: string[],
+): Promise<number> {
   if (keys.length === 0) return 0;
   const res = await db.execute<{ resource_key: string }>(
     drizzleSql`
