@@ -19,6 +19,16 @@ import { pruneWindows } from "../hooks/use-floating-windows";
  * store reconcile (`pruneWindows`) lives here (not in a per-window chrome) and
  * keys on BOTH sets, so a window mid-exit-tween is retained until its retention
  * ends rather than pruned out from under its chrome.
+ *
+ * The reconcile is a single keyed effect that runs WHILE MOUNTED — on mount and
+ * whenever the retained set changes — never on unmount. This Foreground unmounts
+ * on every surface-mode switch (it renders only in `floating` mode), which is NOT
+ * the same as "no floating windows exist", so no teardown may touch the geometry
+ * store; a mode round-trip must leave every window's box intact to be restored on
+ * re-entry. The while-mounted reconcile still covers both prune cases: a genuine
+ * last-tab-close empties `retainedTabIds` (→ the now-empty window is pruned), and
+ * stale entries left by tabs closed while away from `floating` mode are pruned on
+ * re-entry when the effect re-runs against the current live set.
  */
 export function FloatingForeground({
   tabIds,
@@ -36,19 +46,6 @@ export function FloatingForeground({
     pruneWindows(new Set(tabIds), new Set(retainedTabIds));
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the id set, not the array identity (mirrors the tabs-bridge effect)
   }, [retainedKey]);
-
-  // Final cleanup when the LAST floating tab leaves: this Foreground unmounts once
-  // no floating tab remains (live or exiting), so the keyed prune effect above can
-  // never run its case-3 delete for that last window — it would linger empty in the
-  // store + sessionStorage. Reconcile against empty live+retained sets on unmount,
-  // which deletes every now-empty window (case 3) and persists. Kept SEPARATE from
-  // the keyed effect (empty deps) so it fires ONLY on unmount, never on a dep
-  // change — running it on a dep change would momentarily delete a window about to
-  // be kept. A minimized window keeps its member tabs open, so this Foreground
-  // stays mounted and the cleanup never fires for it.
-  useEffect(() => {
-    return () => pruneWindows(new Set(), new Set());
-  }, []);
 
   return (
     <>
