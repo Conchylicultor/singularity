@@ -26,50 +26,57 @@ export interface PlacementChromeProps {
    */
   exiting: boolean;
   onClose: () => void;
-  /** Switch this tab to the registry default placement (e.g. solo's exit). */
-  onExitToDefault: () => void;
+  /** Return the surface to the mode it was in before this one (solo's exit). */
+  onExit: () => void;
 }
 
 /**
- * A placement descriptor — the contribution to {@link Surface.Placement}. Each
- * placement (docked / floating / solo …) is a self-contained sub-plugin that
- * contributes exactly one of these. Almost all of it is *data*: the host
- * (`SurfaceBody`) keeps one stable container per tab and only varies the
- * descriptor's class / portal / chrome, so a placement change re-positions the
- * still-mounted tab rather than remounting it (keep-alive).
+ * A surface-mode descriptor — the contribution to {@link Surface.Placement}.
+ * Each mode (docked / floating / solo …) is a self-contained sub-plugin that
+ * contributes exactly one of these. The surface is in EXACTLY ONE mode at a
+ * time (per-surface, never per-tab), and renders every open tab under that one
+ * descriptor — so two modes can never be visible at once (e.g. a solo app and a
+ * floating window). Almost all of it is *data*: the host (`SurfaceBody`) keeps
+ * one stable container per tab and only varies the descriptor's class / portal /
+ * chrome, so a mode switch re-positions the still-mounted tabs rather than
+ * remounting them (keep-alive).
  *
  * The optional {@link PlacementDef.Chrome} is the escape hatch for dynamic,
  * hook-derived presentation (floating's geometry box): it runs its own hooks and
  * pushes inline style up to the host-owned container via
- * {@link usePlacementStyle}, so the dynamic style lives in the placement plugin
- * yet styles the shared container — without the host calling a per-placement
- * hook in a loop (which would trip `react-hooks/rules-of-hooks`).
+ * {@link usePlacementStyle}, so the dynamic style lives in the mode plugin yet
+ * styles the shared container — without the host calling a per-mode hook in a
+ * loop (which would trip `react-hooks/rules-of-hooks`).
  */
 export interface PlacementDef {
-  /** Stable id; also the value stored on `tab.placement`. */
+  /** Stable id; the value stored as the surface mode. */
   id: string;
   /** Control tooltip / label. */
   label: string;
-  /** Icon for the placement control. */
+  /** Icon for the mode control. */
   icon: ComponentType<{ className?: string }>;
   /** Control order + default resolution (lowest order acts as default fallback). */
   order: number;
-  /** Exactly one placement should set this — the registry's default placement. */
+  /** Exactly one mode should set this — the registry's default (boot) mode. */
   default?: boolean;
 
   /**
-   * Defer this placement's per-tab teardown by N ms after the tab leaves the
-   * store, so its {@link PlacementDef.Chrome} can play an exit tween before the
-   * host truly unmounts it. Omitted ⇒ instant unmount (docked / solo keep the
-   * current behavior — a closed tab vanishes immediately).
+   * Defer a closed tab's teardown by N ms while this mode is active, so this
+   * mode's {@link PlacementDef.Chrome} can play an exit tween before the host
+   * truly unmounts it. Omitted ⇒ instant unmount (docked / solo keep the current
+   * behavior — a closed tab vanishes immediately).
    */
   exitDurationMs?: number;
 
-  /** Static class applied to the stable per-tab container. */
+  /** Static class applied to the stable per-tab container in this mode. */
   containerClassName: string;
-  /** Render the container into `document.body` (escapes the backdrop, e.g. solo). */
+  /** Render each container into `document.body` (escapes the backdrop, e.g. solo). */
   portalToBody?: boolean;
-  /** Keep this placement's tab painted even when unfocused (floating windows). */
+  /**
+   * Paint EVERY tab in this mode, not just the focused one (windows mode). When
+   * false (docked / solo) only the focused tab is painted; the rest stay mounted
+   * (keep-alive) but hidden — so a non-focused tab can never overlap.
+   */
   visibleWhenUnfocused?: boolean;
 
   /**
@@ -79,13 +86,12 @@ export interface PlacementDef {
    * shared host.
    */
   Chrome?: ComponentType<PlacementChromeProps>;
-  /** Rendered once whenever >= 1 tab uses this placement (e.g. desktop wallpaper). */
+  /** Rendered once while this mode is active (e.g. desktop wallpaper). */
   Backdrop?: ComponentType;
   /**
-   * Optional overlay rendered ONCE, ABOVE all tab containers, whenever >= 1
-   * retained tab uses this placement. Symmetric with {@link PlacementDef.Backdrop}
-   * (which renders below). Receives two id sets resolving to this placement so it
-   * stays decoupled from the host's placement-resolution:
+   * Optional overlay rendered ONCE, ABOVE all tab containers, while this mode is
+   * active. Symmetric with {@link PlacementDef.Backdrop} (which renders below).
+   * Receives two id sets so it stays decoupled from the host:
    *  - `tabIds` — the LIVE tabs only (still in the store). Dock / cycle act on
    *    these, so a closing window's chip disappears immediately and it can't be
    *    cycled or docked while it plays its exit tween.
@@ -96,11 +102,9 @@ export interface PlacementDef {
   Foreground?: ComponentType<{ tabIds: string[]; retainedTabIds: string[] }>;
 
   // Capabilities consumed generically by apps-side chrome (no string compares):
-  /** Focused tab in this placement => chrome wears the app theme. */
+  /** This mode's chrome wears the app theme (docked / solo). */
   themeScope?: "app";
-  /** Dragging a chip out of the strip lands the tab in this placement. */
-  tearOffTarget?: boolean;
-  /** `+` opens the new tab in this placement when the focused tab uses it. */
+  /** `+` reads as "new window" while the surface is in this mode (windows mode). */
   newTabFollows?: boolean;
 }
 

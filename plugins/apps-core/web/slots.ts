@@ -10,11 +10,12 @@ export interface RailFramingContribution {
 }
 
 /**
- * The single surface body that renders every open tab at once, positioning each
- * by its own per-tab {@link Placement}. There is no global arrangement mode — the
- * surface "looks like" tabs / desktop / full-app emergently from the tabs'
- * placements. The body reads the whole tab lifecycle from `useTabs()`, so the
- * host forwards no props (the empty-object contract, as before).
+ * The single surface body that renders every open tab at once under the ONE
+ * surface {@link Placement} mode (docked / windows / solo). The mode is
+ * per-surface, never per-tab, so the surface "looks like" tabs / desktop /
+ * full-app as a single mutually-exclusive choice — two modes can never be
+ * visible at once. The body reads the whole tab lifecycle + mode from
+ * `useTabs()`, so the host forwards no props (the empty-object contract).
  */
 export interface SurfaceContribution {
   component: ComponentType<Record<string, never>>;

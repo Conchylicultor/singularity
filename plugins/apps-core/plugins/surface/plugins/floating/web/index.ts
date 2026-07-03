@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { getFocusedPlacement } from "@plugins/apps-core/plugins/tabs/web";
+import { getSurfaceMode } from "@plugins/apps-core/plugins/tabs/web";
 import { Surface } from "@plugins/apps-core/plugins/surface/web";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
@@ -40,7 +40,7 @@ export default {
       keys: "ctrl+alt+arrowleft",
       label: "Tile window left",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => snapFocusedWindow("left"),
     }),
     defineShortcut({
@@ -48,7 +48,7 @@ export default {
       keys: "ctrl+alt+arrowright",
       label: "Tile window right",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => snapFocusedWindow("right"),
     }),
     defineShortcut({
@@ -56,7 +56,7 @@ export default {
       keys: "ctrl+alt+arrowup",
       label: "Maximize / tile window up",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => snapFocusedWindow("up"),
     }),
     defineShortcut({
@@ -64,7 +64,7 @@ export default {
       keys: "ctrl+alt+arrowdown",
       label: "Restore / minimize window",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => snapFocusedWindow("down"),
     }),
     defineShortcut({
@@ -72,7 +72,7 @@ export default {
       keys: "mod+m",
       label: "Minimize window",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => minimizeFocusedWindow(),
     }),
     // Always-on-top toggle: uses the Ctrl+Alt window-manager modifier family (like
@@ -82,7 +82,7 @@ export default {
       keys: "ctrl+alt+p",
       label: "Toggle always on top",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => togglePinFocusedWindow(),
     }),
     defineShortcut({
@@ -90,7 +90,7 @@ export default {
       keys: "mod+w",
       label: "Close window",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => closeFocusedWindow(),
     }),
     defineShortcut({
@@ -98,7 +98,7 @@ export default {
       keys: "mod+`",
       label: "Cycle windows",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => cycleWindows(1),
     }),
     // Reverse cycle is Shift + the forward key. The shortcut registry matches on
@@ -110,7 +110,7 @@ export default {
       keys: "mod+shift+~",
       label: "Cycle windows (reverse)",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => cycleWindows(-1),
     }),
     defineShortcut({
@@ -118,7 +118,7 @@ export default {
       keys: "mod+shift+`",
       label: "Cycle windows (reverse)",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => cycleWindows(-1),
     }),
     // Virtual-desktop (workspace) navigation. Page keys keep the Ctrl+Alt
@@ -129,7 +129,7 @@ export default {
       keys: "ctrl+alt+pagedown",
       label: "Next desktop",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => switchDesktopByDelta(1),
     }),
     defineShortcut({
@@ -137,7 +137,7 @@ export default {
       keys: "ctrl+alt+pageup",
       label: "Previous desktop",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => switchDesktopByDelta(-1),
     }),
     defineShortcut({
@@ -145,7 +145,7 @@ export default {
       keys: "ctrl+alt+shift+pagedown",
       label: "Move window to next desktop",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => moveFocusedWindowByDelta(1),
     }),
     defineShortcut({
@@ -153,7 +153,7 @@ export default {
       keys: "ctrl+alt+shift+pageup",
       label: "Move window to previous desktop",
       group: "Window",
-      when: () => getFocusedPlacement() === "floating",
+      when: () => getSurfaceMode() === "floating",
       handler: () => moveFocusedWindowByDelta(-1),
     }),
   ],

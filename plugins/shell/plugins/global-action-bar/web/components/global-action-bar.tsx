@@ -14,9 +14,9 @@ import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-
 import { useConfig } from "@plugins/config_v2/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import {
-  getFocusedPlacement,
-  setFocusedTabPlacement,
-  useFocusedPlacement,
+  getSurfaceMode,
+  setSurfaceMode,
+  useSurfaceMode,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { actionBarConfig } from "../../shared/config";
@@ -95,8 +95,8 @@ function useActionBarPin() {
   });
   const togglePin = () => {
     const next = !pinned;
-    if (next && getFocusedPlacement() === "solo") {
-      setFocusedTabPlacement("docked");
+    if (next && getSurfaceMode() === "solo") {
+      setSurfaceMode("docked");
     }
     setPinned(next);
   };
@@ -145,11 +145,11 @@ export function DockedActionBarHost() {
   const { enabled } = useConfig(actionBarConfig);
   const { pinned, togglePin } = useActionBarPin();
   const status = useActionBarStatus();
-  const placement = useFocusedPlacement();
+  const mode = useSurfaceMode();
 
   useEffect(() => {
-    if (pinned && placement === "solo") setFocusedTabPlacement("docked");
-  }, [pinned, placement]);
+    if (pinned && mode === "solo") setSurfaceMode("docked");
+  }, [pinned, mode]);
 
   if (!enabled || !pinned) return null;
 

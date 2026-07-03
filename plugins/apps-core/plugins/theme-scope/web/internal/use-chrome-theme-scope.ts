@@ -1,7 +1,7 @@
 import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useActiveApp } from "@plugins/apps-core/web";
 import {
-  useFocusedPlacement,
+  useSurfaceMode,
   placementHasAppThemeScope,
 } from "@plugins/apps-core/plugins/tabs/web";
 
@@ -9,9 +9,9 @@ import {
  * The theme scope owned by the focused full-surface app — or `undefined` when no
  * single app fills the surface (desktop / floating focus → global `:root`).
  *
- * Returns `app:<id>` when the focused tab's placement is `themeScope:"app"`
- * (`docked` full-area or `solo` fullscreen) AND an app is active; otherwise
- * `undefined`. This is the single definition shared by BOTH:
+ * Returns `app:<id>` when the surface mode is `themeScope:"app"` (`docked`
+ * full-area or `solo` fullscreen) AND an app is active; otherwise `undefined`.
+ * This is the single definition shared by BOTH:
  *  - the cross-app chrome surfaces (rail, tab bar, toaster), via
  *    `useChromeThemeScope`, which adopt the focused app's theme so the shell
  *    reads as one continuous surface with the app; and
@@ -27,13 +27,12 @@ import {
  * outside it (the `Core.Root` toaster + `ThemeInjector`): `useActiveApp`
  * resolves the focused app from the URL when called outside a surface —
  * reactive across focus switches, which mirror the focused tab's route into the
- * URL — and `useFocusedPlacement` reads the module-level focused-placement
- * store.
+ * URL — and `useSurfaceMode` reads the module-level surface-mode store.
  */
 export function useRootThemeScope(): string | undefined {
   const activeApp = useActiveApp();
-  const placement = useFocusedPlacement();
-  return placementHasAppThemeScope(placement) && activeApp
+  const mode = useSurfaceMode();
+  return placementHasAppThemeScope(mode) && activeApp
     ? appThemeScope(activeApp.id)
     : undefined;
 }

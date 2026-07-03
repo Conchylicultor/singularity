@@ -7,13 +7,18 @@ import type {
 } from "@plugins/apps-core/plugins/surface/web";
 
 /**
- * The solo placement: a single tab full-app over everything. It portals its
- * container to `document.body` so the `fixed inset-0` box is relative to the
- * VIEWPORT (not the surface backdrop). `z-overlay` (NOT `z-max`): the box portals
- * to <body>, so a higher band than the floating layers (`z-popover`) would paint
- * its opaque `bg-background` over every popover/dropdown/dialog opened from inside
- * the solo'd app. `z-overlay` still covers all app chrome (`z-nav`) and the
- * surface backdrop, while letting floating layers surface above it.
+ * The solo (fullscreen) surface mode: only the focused tab, full-viewport. It
+ * portals its container to `document.body` so the `fixed inset-0` box is relative
+ * to the VIEWPORT (not the surface backdrop). `z-overlay` (NOT `z-max`): the box
+ * portals to <body>, so a higher band would paint its opaque `bg-background` over
+ * every popover/dropdown/dialog opened from inside the solo'd app. `z-overlay`
+ * still covers all app chrome (`z-nav`) and the surface backdrop.
+ *
+ * Mutual exclusion with windows mode is guaranteed one level up, structurally:
+ * the surface is in exactly ONE mode, and each mode renders every tab under its
+ * own descriptor. Solo does not set `visibleWhenUnfocused`, so only the focused
+ * tab is painted and it declares no Backdrop/Foreground — so entering solo drops
+ * the desktop wallpaper + window dock. There is simply no window to overlap it.
  */
 export const soloDef: PlacementDef = {
   id: "solo",
@@ -33,7 +38,7 @@ export const soloDef: PlacementDef = {
  * via the shortcut contributed alongside this placement). Static class only — no
  * style push needed. Gated on `focused` so only the visible solo tab shows it.
  */
-function SoloExitOverlay({ focused, onExitToDefault }: PlacementChromeProps) {
+function SoloExitOverlay({ focused, onExit }: PlacementChromeProps) {
   if (!focused) return null;
   return (
     <Pin
@@ -47,7 +52,7 @@ function SoloExitOverlay({ focused, onExitToDefault }: PlacementChromeProps) {
           icon={MdFullscreenExit}
           label="Exit fullscreen (Esc)"
           variant="secondary"
-          onClick={onExitToDefault}
+          onClick={onExit}
         />
       </div>
     </Pin>

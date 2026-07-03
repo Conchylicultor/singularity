@@ -41,7 +41,6 @@ export const floatingDef: PlacementDef = {
   icon: MdWebAsset,
   order: 1,
   visibleWhenUnfocused: true,
-  tearOffTarget: true,
   newTabFollows: true,
   // Defer teardown of a just-closed floating tab by the close tween's duration so
   // `FloatingChrome` can animate the window out before the host unmounts it.
@@ -77,7 +76,7 @@ function FloatingChrome({ tabId, appId, focused, exiting }: PlacementChromeProps
   const { window: win, isActive, setGeo, bringToFront } = useTabWindow(tabId);
   const windows = useFloatingWindows();
   const { desktops, activeDesktopId } = useDesktops();
-  const { tabs, titles, focusTab, closeTab, openTab, setPlacement } = useTabs();
+  const { tabs, titles, focusTab, closeTab, openTab, setMode } = useTabs();
   const apps = Apps.App.useContributions();
   const { setContainerStyle, setContentInsetStyle, setContainerPointerDownCapture } =
     usePlacementStyle();
@@ -145,13 +144,14 @@ function FloatingChrome({ tabId, appId, focused, exiting }: PlacementChromeProps
 
   const togglePin = useCallback(() => toggleWindowPin(win.id), [win.id]);
 
-  // Take this window's active tab full-screen: focus it (so it's the visible solo
-  // tab) and switch it to the solo placement — a single tab full-app over
-  // everything. The solo overlay's exit button / Esc returns to the default.
+  // Take this window's active tab full-screen: focus it (so it's the tab solo
+  // mode shows) and switch the whole surface into solo mode — the windows vanish
+  // (windows mode is no longer active), so nothing can overlap. The solo overlay's
+  // exit button / Esc returns to windows mode (the mode we came from).
   const onFullscreen = useCallback(() => {
     focusTab(win.activeTabId);
-    setPlacement(win.activeTabId, "solo");
-  }, [focusTab, setPlacement, win.activeTabId]);
+    setMode("solo");
+  }, [focusTab, setMode, win.activeTabId]);
 
   // Inactive members render no chrome (one titlebar per window). Their container
   // is display:none anyway, so they paint nothing.
@@ -207,7 +207,7 @@ function FloatingChrome({ tabId, appId, focused, exiting }: PlacementChromeProps
   // the merge runs synchronously before the new tab's chrome mounts, so its
   // `readWindowForTab` resolves to this window instead of auto-creating one.
   const onNewTab = useCallback(() => {
-    const newTabId = openTab("home", "floating");
+    const newTabId = openTab("home");
     mergeTabIntoWindow(newTabId, win.id);
   }, [openTab, win.id]);
 

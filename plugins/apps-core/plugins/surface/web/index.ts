@@ -15,12 +15,12 @@ export {
 
 export default {
   description:
-    "Generic per-tab surface dispatcher: renders every open tab at once positioned by its own placement, dispatched through the Surface.Placement registry. Owns the multi-placement body and the placement control; each placement (docked / floating / solo) is a self-contained sub-plugin.",
+    "Generic surface dispatcher: renders every open tab at once under the ONE surface mode (docked / windows / solo) selected from the Surface.Placement registry, so the modes are mutually exclusive. Owns the surface body and the mode control; each mode (docked / floating / solo) is a self-contained sub-plugin.",
   contributions: [
-    // The single body that lays out every tab by its per-tab placement.
+    // The single body that renders every tab under the one surface mode.
     Apps.Surface({ component: SurfaceBody }),
-    // The placement control, contributed as a shared action-bar item so it
-    // renders in both the docked tab-bar strip and the floating overlay.
+    // The mode control, contributed as a shared action-bar item so it renders in
+    // both the docked tab-bar strip and the floating overlay.
     ActionBar.Item({ id: "placement-control", component: ActionBarPlacementControl }),
   ],
 } satisfies PluginDefinition;

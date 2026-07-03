@@ -96,7 +96,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`hidden`** — Hidden app rail — no switcher; sidebar slides flush to the edge.
         - **`rail`** — App-rail framing — the default 2.5rem icon rail.
     - **`layout`** [load-bearing] — Apps layout: the Core.Root composition wiring the tab bar, rail framing, and surface together, with the default-app redirect and document-title sync.
-    - **`surface`** — Generic per-tab surface dispatcher: renders every open tab at once positioned by its own placement, dispatched through the Surface.Placement registry. Owns the multi-placement body and the placement control; each placement (docked / floating / solo) is a self-contained sub-plugin.
+    - **`surface`** — Generic surface dispatcher: renders every open tab at once under the ONE surface mode (docked / windows / solo) selected from the Surface.Placement registry, so the modes are mutually exclusive. Owns the surface body and the mode control; each mode (docked / floating / solo) is a self-contained sub-plugin.
       - Plugins:
         - **`docked`** — Docked surface placement — the default full-area tab that fills the surface below the tab strip.
         - **`floating`** — Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store, window chrome, and keyboard window-management shortcuts (tile / minimize / close / cycle).
@@ -106,7 +106,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
                 - **`from-url`** — From-URL wallpaper source: contributes the From URL tab to the desktop wallpaper picker, emitting a pasted image URL the picker imports (and the server validates) via the import-url endpoint.
                 - **`openverse`** — Openverse wallpaper source: contributes the Openverse tab to the desktop wallpaper picker, reusing the shared search panel over the server-side `openverse` provider. Openverse wallpaper search provider: maps a query to open-license image results via the Openverse API (SSRF-guarded safeFetch), registered into the generic wallpaper provider registry.
                 - **`upload`** — Upload wallpaper source: contributes the Upload tab to the desktop wallpaper picker, emitting a local image file the picker funnels through the upload endpoint.
-        - **`solo`** — Solo (fullscreen) surface placement — a single tab full-app over everything, with a hover exit button and an Esc shortcut back to the default placement.
+        - **`solo`** — Solo (fullscreen) surface mode — only the focused tab, full-viewport, with a hover exit button and an Esc shortcut back to the previous mode.
     - **`tab-bar`** — App tab bar: the top tab strip with per-tab titles, overflow collapse, drag reorder/tear-off, and the new-tab/new-window + button.
     - **`tab-surface`** — Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
     - **`tabs`** — Tab manager for the app switcher: the open-tab set, focus model, cross-app navigate(), the focused-placement module store, and the surface-written placement-capabilities registry.

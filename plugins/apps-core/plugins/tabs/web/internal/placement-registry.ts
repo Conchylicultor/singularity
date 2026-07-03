@@ -14,13 +14,11 @@ import { useSyncExternalStore } from "react";
  * very first commit, before any user interaction.
  */
 export interface PlacementCapabilities {
-  /** The id of the default placement (the one a freshly opened tab gets). */
+  /** The id of the default surface mode (the one the surface boots into). */
   defaultId: string;
-  /** The placement a tab tears off into (chip dragged out of the strip). */
-  tearOffId?: string;
-  /** Placements for which `+` opens the new tab in the focused tab's placement. */
+  /** Modes for which `+` reads as "new window" (i.e. windows mode). */
   newTabFollows: Set<string>;
-  /** Placements whose focused chrome wears the app theme. */
+  /** Modes whose chrome wears the app theme. */
   appThemeScope: Set<string>;
 }
 
@@ -69,16 +67,8 @@ export function useDefaultPlacement(): string {
 }
 
 /**
- * The placement a torn-off tab (chip dragged out of the strip) lands in, or
- * `undefined` if no placement declares itself a tear-off target.
- */
-export function tearOffPlacement(): string | undefined {
-  return capabilities?.tearOffId;
-}
-
-/**
- * Whether `+` should open a new tab in placement `id` when the focused tab uses
- * it (the "new window" affordance). False until `surface` registers.
+ * Whether `+` reads as "new window" in surface mode `id` (i.e. windows mode).
+ * False until `surface` registers.
  */
 export function placementIsNewTabFollows(id: string): boolean {
   return capabilities?.newTabFollows.has(id) ?? false;

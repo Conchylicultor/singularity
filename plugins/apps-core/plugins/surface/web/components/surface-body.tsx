@@ -38,7 +38,7 @@ import { useTabPresence } from "../internal/use-tab-presence";
  * mounted (Chrome-style keep-alive).
  */
 export function SurfaceBody() {
-  const { tabs, focusedTabId, focusTab, closeTab, setPlacement, titles } =
+  const { tabs, focusedTabId, focusTab, closeTab, mode, exitToPreviousMode, titles } =
     useTabs();
 
   const defs = Surface.Placement.useContributions();
@@ -57,13 +57,12 @@ export function SurfaceBody() {
   );
 
   // Publish the derived capabilities to the apps-owned registry so apps-side
-  // chrome (tab bar `+`, drag-out, theme scope, use-tabs default) can read them
-  // back without ever importing or naming a specific placement. Direction stays
+  // chrome (tab bar `+`, theme scope, use-tabs default) can read them back
+  // without ever importing or naming a specific mode. Direction stays
   // surface → apps (apps never imports surface).
   useEffect(() => {
     registerPlacementCapabilities({
       defaultId,
-      tearOffId: sorted.find((d) => d.tearOffTarget)?.id,
       newTabFollows: new Set(
         sorted.filter((d) => d.newTabFollows).map((d) => d.id),
       ),
@@ -73,115 +72,70 @@ export function SurfaceBody() {
     });
   }, [sorted, defaultId]);
 
-  // Heal any tab whose stored placement isn't a registered id back to the
-  // default. A tab seeded before this registry populated stores "" as its
-  // placement (apps' `getDefaultPlacement()` returns "" until `surface`
-  // registers), and a removed placement sub-plugin leaves dangling ids. The
-  // surface RENDERS such tabs under the default (resolveId below), but the raw
-  // `tab.placement` must also be made canonical: other consumers read it
-  // unresolved — the focused-placement store and, through it, the app-theme
-  // chrome scope (`useChromeThemeScope` → `placementHasAppThemeScope`). Without
-  // this, a freshly-seeded docked tab leaves chrome (rail / tab bar) on the
-  // global theme instead of the focused app's. Resolution lives here because the
-  // surface owns the placement registry; apps just stores whatever it's told.
-  // The setPlacement no-op guard (same value) makes this idempotent — it fires
-  // once per unknown placement, never loops.
-  useEffect(() => {
-    if (!defaultId) return;
-    for (const tab of tabs) {
-      if (!byId.has(tab.placement)) setPlacement(tab.tabId, defaultId);
-    }
-  }, [tabs, byId, defaultId, setPlacement]);
+  // The ONE active mode descriptor: the surface renders EVERY tab under it.
+  // Resolve the stored mode id to a registered descriptor, falling back to the
+  // default for the pre-registration "" seed or a removed mode sub-plugin. This
+  // single value is why two modes can never be visible at once — there is no
+  // per-tab placement to disagree with it.
+  const activeDef = byId.get(mode) ?? byId.get(defaultId);
 
-  // Resolve a tab's placement id, falling back to the default for unknown ids.
-  const resolveId = (placement: string) =>
-    byId.has(placement) ? placement : defaultId;
+  // Exit-presence layer (view-only): the live tabs plus any just-closed tab,
+  // retained so the active mode's Chrome can play an exit tween (only when the
+  // mode declares an `exitDurationMs`, e.g. windows) before the host truly
+  // unmounts it. Drives the render loop so a closing window animates out.
+  const presence = useTabPresence(tabs, activeDef);
 
-  // Exit-presence layer (view-only): the live tabs plus any just-closed tab whose
-  // placement declares an `exitDurationMs`, retained so its Chrome can play an
-  // exit tween before the host truly unmounts it. Placements without the duration
-  // (docked / solo) keep their tabs instant. Drives the backdrop / foreground
-  // gates and the render loop below so wallpaper + window survive the tween.
-  const presence = useTabPresence(tabs, byId, defaultId);
-
-  // Backdrops: render each placement's optional `Backdrop` once iff at least one
-  // retained tab resolves to it (replaces the old `desktopMode` wallpaper rule).
-  // Keyed on `presence` (not `tabs`) so the wallpaper survives a closing window's
-  // exit tween rather than blinking out the instant the last window leaves the store.
-  const backdrops = sorted.filter(
-    (d) => d.Backdrop && presence.some((p) => resolveId(p.tab.placement) === d.id),
-  );
-
-  // Foregrounds: the symmetric overlay above all containers — each placement's
-  // optional `Foreground` rendered once iff at least one retained tab resolves to
-  // it (e.g. floating's desktop dock). Stays generic: passes the resolved tabIds so
-  // the foreground never re-derives placement (e.g. floating's window dock).
-  const foregrounds = sorted.filter(
-    (d) => d.Foreground && presence.some((p) => resolveId(p.tab.placement) === d.id),
-  );
+  // Backdrop / Foreground belong to the ONE active mode (e.g. windows' wallpaper
+  // + dock). A mode without them (docked / solo) paints neither, so switching to
+  // solo instantly drops the desktop wallpaper and window dock — no leak.
+  const Backdrop = activeDef?.Backdrop;
+  const Foreground = activeDef?.Foreground;
 
   return (
-    // The shared backdrop for all placements. `transform-gpu` makes it the
-    // containing block for the absolutely-positioned tabs (and their fixed-position
-    // app chrome), so docked/floating tabs are clipped to the surface below the
-    // tab bar. (Solo tabs escape via `position: fixed` + portalToBody.) No
+    // The shared backdrop for all modes. `transform-gpu` makes it the containing
+    // block for the absolutely-positioned tabs (and their fixed-position app
+    // chrome), so docked/floating tabs are clipped to the surface below the tab
+    // bar. (Solo tabs escape via `position: fixed` + portalToBody.) No
     // `data-theme-scope` here — the backdrop inherits the desktop `:root` theme.
     // Each forked app's scope block is mounted centrally (theme-engine's
     // AppScopeThemes at Core.Root); each tab container is still tagged
     // `data-theme-scope="app:<id>"` to pick it up.
     <Clip className="relative h-full w-full bg-background transform-gpu">
-      {/* Per-placement backdrops (e.g. floating's desktop wallpaper), rendered
-          only while >= 1 tab uses that placement so they never bleed otherwise. */}
-      {backdrops.map((d) => {
-        const Backdrop = d.Backdrop!;
-        return <Backdrop key={d.id} />;
-      })}
+      {/* The active mode's optional backdrop (e.g. windows' desktop wallpaper). */}
+      {Backdrop && <Backdrop />}
       {presence.map((p) => (
         <TabContainer
           key={p.tab.tabId}
-          def={byId.get(p.tab.placement) ?? byId.get(defaultId)}
-          defaultId={defaultId}
+          def={activeDef}
           tab={p.tab}
           focused={p.tab.tabId === focusedTabId}
           exiting={p.exiting}
           title={titles[p.tab.tabId]}
           onFocus={() => focusTab(p.tab.tabId)}
           onClose={() => closeTab(p.tab.tabId)}
-          setPlacement={setPlacement}
+          onExit={exitToPreviousMode}
         />
       ))}
-      {/* Per-placement foregrounds (e.g. floating's window dock), rendered last so
-          they sit above the tab containers, only while >= 1 tab uses that
-          placement. Each gets the tabIds resolving to it so it stays decoupled
-          from the host's placement-resolution. */}
-      {foregrounds.map((d) => {
-        const Foreground = d.Foreground!;
-        const forThis = presence.filter(
-          (p) => resolveId(p.tab.placement) === d.id,
-        );
-        return (
-          <Foreground
-            key={d.id}
-            // LIVE ids only: the dock chip disappears immediately on close, and a
-            // closing window can't be cycled / docked while it animates out.
-            tabIds={forThis
-              .filter((p) => !p.exiting)
-              .map((p) => p.tab.tabId)}
-            // LIVE + EXITING ids: store-prune keys on this so a window is not
-            // pruned out from under its still-animating Chrome.
-            retainedTabIds={forThis.map((p) => p.tab.tabId)}
-          />
-        );
-      })}
+      {/* The active mode's optional foreground (e.g. windows' dock), rendered last
+          so it sits above the tab containers. Gets the tabIds so it stays
+          decoupled from the host — in a single mode, that's all the tabs. */}
+      {Foreground && (
+        <Foreground
+          // LIVE ids only: the dock chip disappears immediately on close, and a
+          // closing window can't be cycled / docked while it animates out.
+          tabIds={presence.filter((p) => !p.exiting).map((p) => p.tab.tabId)}
+          // LIVE + EXITING ids: store-prune keys on this so a window is not
+          // pruned out from under its still-animating Chrome.
+          retainedTabIds={presence.map((p) => p.tab.tabId)}
+        />
+      )}
     </Clip>
   );
 }
 
 interface TabContainerProps {
-  /** The resolved placement descriptor for this tab (undefined => empty registry). */
+  /** The ONE active surface-mode descriptor (undefined => empty registry). */
   def: PlacementDef | undefined;
-  /** The registry default placement id (for self-heal + exit-to-default). */
-  defaultId: string;
   tab: Tab;
   focused: boolean;
   /** True while this tab has left the store but is retained for its exit tween. */
@@ -189,7 +143,8 @@ interface TabContainerProps {
   title: string | undefined;
   onFocus: () => void;
   onClose: () => void;
-  setPlacement: (tabId: string, placement: string) => void;
+  /** Return the surface to the previous mode (passed to the mode's Chrome). */
+  onExit: () => void;
 }
 
 /**
@@ -207,14 +162,13 @@ interface TabContainerProps {
  */
 function TabContainer({
   def,
-  defaultId,
   tab,
   focused,
   exiting,
   title,
   onFocus,
   onClose,
-  setPlacement,
+  onExit,
 }: TabContainerProps) {
   // Dynamic style pushed by the active placement's `Chrome` (null for static
   // placements like docked / solo). These are the keep-alive override channel.
@@ -235,11 +189,7 @@ function TabContainer({
     [],
   );
 
-  // Unknown / empty placements are healed to the default canonically by
-  // SurfaceBody (it owns the registry), so `tab.placement` is always a
-  // registered id by the time this renders — no per-container self-heal needed.
-
-  // Empty registry (no placement plugins): fall back to a built-in docked-like
+  // Empty registry (no mode plugins): fall back to a built-in docked-like
   // full-area container so the app stays usable. The control renders nothing.
   const fallback = !def;
   const containerClassName = def
@@ -249,13 +199,15 @@ function TabContainer({
   const portalToBody = def?.portalToBody ?? false;
   const Chrome = def?.Chrome;
 
-  // Hidden tabs stay mounted (keep-alive): only the visibility gate changes.
-  // `visibleWhenUnfocused` placements (floating windows) stay painted unfocused.
+  // Every tab stays mounted (keep-alive); only the visibility gate changes. A
+  // mode that paints all tabs (`visibleWhenUnfocused`, i.e. windows) shows every
+  // tab; docked / solo show only the focused one, so a non-focused tab is
+  // display:none and can never overlap the visible one.
   const visible = visibleWhenUnfocused || focused;
 
-  // The host ALWAYS owns focus-on-pointerdown (harmless for every placement);
-  // the active placement may ADD behavior (floating's raise-to-front) via the
-  // registered `pointerDownCapture`, composed after the base focus.
+  // The host ALWAYS owns focus-on-pointerdown (harmless for every mode); the
+  // active mode may ADD behavior (windows' raise-to-front) via the registered
+  // `pointerDownCapture`, composed after the base focus.
   const onContainerPointerDownCapture = (e: PointerEvent) => {
     onFocus();
     pointerDownCapture?.(e);
@@ -303,7 +255,7 @@ function TabContainer({
             focused={focused}
             exiting={exiting}
             onClose={onClose}
-            onExitToDefault={() => setPlacement(tab.tabId, defaultId)}
+            onExit={onExit}
           />
         </PlacementStyleProvider>
       )}

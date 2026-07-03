@@ -22,11 +22,11 @@ interface Retained {
 
 /**
  * Exit-presence layer for the surface body (view layer only — the tabs store is
- * never touched). Diffs the live `tabs` each render: when a tab vanishes and its
- * resolved placement declares an {@link PlacementDef.exitDurationMs}, its last
- * render's `Tab` object is RETAINED for that many ms so the placement's Chrome
- * can play an exit tween, then it is truly dropped (forcing a re-render via a
- * version counter). Placements without `exitDurationMs` unmount instantly.
+ * never touched). Diffs the live `tabs` each render: when a tab vanishes and the
+ * ACTIVE surface mode declares an {@link PlacementDef.exitDurationMs}, its last
+ * render's `Tab` object is RETAINED for that many ms so the mode's Chrome can
+ * play an exit tween, then it is truly dropped (forcing a re-render via a version
+ * counter). Modes without `exitDurationMs` (docked / solo) unmount instantly.
  *
  * The returned list is the live tabs (in store order, `exiting:false`) with each
  * retained exiting tab spliced back at its last-known index (`exiting:true`).
@@ -37,8 +37,7 @@ interface Retained {
  */
 export function useTabPresence(
   tabs: Tab[],
-  byId: Map<string, PlacementDef>,
-  defaultId: string,
+  activeDef: PlacementDef | undefined,
 ): TabPresence[] {
   // Previous render's tabs (to recover a vanished id's full Tab object) and its
   // live id set (to diff which ids left the store this render).
@@ -79,8 +78,7 @@ export function useTabPresence(
     // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
     if (retained.has(tab.tabId)) continue; // already retained
     // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
-    const def = byId.get(tab.placement) ?? byId.get(defaultId);
-    const duration = def?.exitDurationMs;
+    const duration = activeDef?.exitDurationMs;
     if (!duration || duration <= 0) continue; // instant unmount (docked / solo)
     // eslint-disable-next-line react-hooks/refs -- intentional render-time exit-presence diff: the vanishing tab must persist in this same render to play its exit tween; refs track prev-render state and the retained map by design
     const timer = setTimeout(() => {

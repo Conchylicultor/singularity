@@ -26,9 +26,7 @@ import { appIconComponent } from "@plugins/apps-core/plugins/app-icon/web";
 import { useChromeThemeScope } from "@plugins/apps-core/plugins/theme-scope/web";
 import {
   useTabs,
-  getDefaultPlacement,
   placementIsNewTabFollows,
-  tearOffPlacement,
 } from "@plugins/apps-core/plugins/tabs/web";
 
 /** Chip gap in px (`gap-2xs` ≈ 0.125rem) — fed to the overflow measurer. */
@@ -59,7 +57,7 @@ export function AppTabBar() {
     closeTab,
     openTab,
     moveTab,
-    setPlacement,
+    mode,
     titles,
   } = useTabs();
   const apps = Apps.App.useContributions();
@@ -74,18 +72,11 @@ export function AppTabBar() {
   // seam; chip/underline keep centered, padded, bottom-bordered tabs.
   const fillHeight = !!useActiveTabVariant()?.fillHeight;
 
-  // The focused tab's placement determines what `+` spawns: a placement that
-  // "follows" the focused tab (e.g. another floating window in desktop mode)
-  // opens a "new window"; otherwise `+` opens a "new tab" in the default
-  // placement. The tab bar is covered while a tab is solo, so `+` is
-  // unreachable in that state anyway.
-  const focusedPlacement = tabs.find(
-    (t) => t.tabId === focusedTabId,
-  )?.placement;
-  const newTabPlacement =
-    focusedPlacement && placementIsNewTabFollows(focusedPlacement)
-      ? focusedPlacement
-      : getDefaultPlacement();
+  // The surface mode determines how `+` reads: in windows mode it opens a "new
+  // window", otherwise a "new tab". Either way `openTab` adds a tab under the
+  // current mode — the surface owns the mode, not the tab. (The tab bar is
+  // covered while the surface is solo, so `+` is unreachable in that state.)
+  const newTabIsWindow = placementIsNewTabFollows(mode);
 
   const { containerRef, measureRef, visibleCount } = useResponsiveOverflow({
     count: tabs.length,
@@ -143,12 +134,6 @@ export function AppTabBar() {
         <SortableList
           items={resolved.map(({ tab }) => tab.tabId)}
           onMove={(activeId, overId) => moveTab(activeId, overId)}
-          // Chrome-style tear-off: dragging a tab out of the strip floats the
-          // tab as a window (then focuses it so it lands on top).
-          onDragOut={(id) => {
-            setPlacement(id, tearOffPlacement() ?? getDefaultPlacement());
-            focusTab(id);
-          }}
           orientation="horizontal"
           disabled={tabs.length < 2}
         >
@@ -192,8 +177,8 @@ export function AppTabBar() {
       <ControlSizeProvider size="sm">
         <IconButton
           icon={MdAdd}
-          label={newTabPlacement !== getDefaultPlacement() ? "New window" : "New tab"}
-          onClick={() => openTab("home", newTabPlacement)}
+          label={newTabIsWindow ? "New window" : "New tab"}
+          onClick={() => openTab("home")}
         />
       </ControlSizeProvider>
       {/* Push the trailing action zone to the far right edge so it sits at a

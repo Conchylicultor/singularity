@@ -46,13 +46,22 @@ export interface TabsApi {
   titles: Record<string, string>;
   /** Publish (or clear, with `undefined`) the resolved content title for a tab. */
   setTabTitle(tabId: string, title: string | undefined): void;
+  /** The ONE surface rendering mode every tab is displayed under. */
+  mode: Placement;
   /**
-   * Always opens a NEW tab for `appId` (multi-instance), with the given spatial
-   * `placement` (defaults to the registry default placement). Passing the
-   * focused tab's placement makes the `+` button a "new window" affordance while
-   * in desktop mode. Returns its tabId.
+   * Switch the surface rendering mode (docked / windows / solo). Applies to the
+   * whole surface at once — never a single tab — so the modes stay mutually
+   * exclusive. Records the outgoing mode for {@link TabsApi.exitToPreviousMode}.
    */
-  openTab(appId: string, placement?: Placement): string;
+  setMode(mode: Placement): void;
+  /** Return to the mode in effect before the current one (solo's exit). */
+  exitToPreviousMode(): void;
+  /**
+   * Always opens a NEW tab for `appId` (multi-instance) under the current
+   * surface mode (in windows mode it becomes a new window; docked, a new tab).
+   * Returns its tabId.
+   */
+  openTab(appId: string): string;
   /** Swap `tabId`'s app in place (keeps the tabId) and focus it. */
   replaceTabApp(tabId: string, appId: string): void;
   /**
@@ -67,13 +76,6 @@ export interface TabsApi {
   closeTab(tabId: string): void;
   /** Reorder: move the tab `activeId` to the position of `overId`. */
   moveTab(activeId: string, overId: string): void;
-  /**
-   * Set a tab's spatial placement (docked / floating / solo). Pure per-tab
-   * state — focus, route, and store liveness are untouched; the `surface`
-   * plugin re-positions the (still-mounted) tab in response, so a placement
-   * change never reloads the tab.
-   */
-  setPlacement(tabId: string, placement: Placement): void;
 }
 
 const TabsContext = createContext<TabsApi | null>(null);
@@ -101,57 +103,69 @@ export function navigate(url: string): void {
   tabsNavigator(url);
 }
 
-// Module-level handle to the focused tab's placement + a setter, mirroring the
-// `tabsNavigator` pattern above. Lets out-of-provider callers (the floating
-// action bar's placement control, the global Esc shortcut) read/drive the
-// focused tab's placement without the `useTabs` hook. A subscribable snapshot
-// (useFocusedPlacement) keeps those consumers reactive.
-// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: the FOCUSED tab's placement, mirroring tabsNavigator/focusedSurfaceId. Driven by single global chrome (the floating-bar placement control + global Esc) outside any surface tree, so it cannot be a per-surface scoped store.
-let focusedPlacement: Placement = "";
-let setFocusedPlacementFn: ((placement: Placement) => void) | null = null;
-const focusedPlacementSubscribers = new Set<() => void>();
+// Module-level mirror of the ONE per-surface rendering mode + its setters,
+// mirroring the `tabsNavigator` pattern above. Lets out-of-provider callers (the
+// floating action bar's mode control, the global Esc shortcut, the action-bar
+// pin guard) read/drive the surface mode without the `useTabs` hook. A
+// subscribable snapshot (useSurfaceMode) keeps those consumers reactive.
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: the ONE surface rendering mode, mirroring tabsNavigator/focusedSurfaceId. Driven by single global chrome (the floating-bar mode control + global Esc) outside any surface tree, so it cannot be a per-surface scoped store.
+let surfaceMode: Placement = "";
+let setSurfaceModeFn: ((mode: Placement) => void) | null = null;
+let exitToPreviousModeFn: (() => void) | null = null;
+const surfaceModeSubscribers = new Set<() => void>();
 
-function publishFocusedPlacement(
-  placement: Placement,
-  setter: ((placement: Placement) => void) | null,
+function publishSurfaceMode(
+  mode: Placement,
+  setter: ((mode: Placement) => void) | null,
+  exit: (() => void) | null,
 ): void {
-  setFocusedPlacementFn = setter;
-  if (placement !== focusedPlacement) {
-    focusedPlacement = placement;
-    for (const fn of focusedPlacementSubscribers) fn();
+  setSurfaceModeFn = setter;
+  exitToPreviousModeFn = exit;
+  if (mode !== surfaceMode) {
+    surfaceMode = mode;
+    for (const fn of surfaceModeSubscribers) fn();
   }
 }
 
 /**
- * Imperatively set the focused tab's placement from anywhere — the persistent
- * home for the placement control on the floating action bar, and the Esc-exit
- * shortcut. No-op (rather than throw) before the provider mounts: a stray
- * shortcut keystroke pre-mount is benign, not a bug.
+ * Imperatively set the surface rendering mode from anywhere — the persistent
+ * home for the mode control on the floating action bar, the fullscreen button,
+ * and the pin guard. No-op (rather than throw) before the provider mounts: a
+ * stray keystroke/click pre-mount is benign, not a bug.
  */
-export function setFocusedTabPlacement(placement: Placement): void {
-  setFocusedPlacementFn?.(placement);
+export function setSurfaceMode(mode: Placement): void {
+  setSurfaceModeFn?.(mode);
 }
 
 /**
- * Non-hook read of the focused tab's placement — for plain-function callers
- * (e.g. a shortcut `when`/`handler` guard) that can't use the hook form.
+ * Return the surface to the mode it was in before the current one — the solo
+ * (fullscreen) exit affordance. Soloing from a window returns to windows mode;
+ * soloing from docked returns to docked. No-op before the provider mounts.
  */
-export function getFocusedPlacement(): Placement {
-  return focusedPlacement;
+export function exitToPreviousMode(): void {
+  exitToPreviousModeFn?.();
 }
 
 /**
- * Reactive read of the focused tab's placement, callable outside
- * `<TabsProvider>`. Backs the floating-bar placement control + solo exit.
+ * Non-hook read of the surface mode — for plain-function callers (e.g. a
+ * shortcut `when`/`handler` guard) that can't use the hook form.
  */
-export function useFocusedPlacement(): Placement {
+export function getSurfaceMode(): Placement {
+  return surfaceMode;
+}
+
+/**
+ * Reactive read of the surface mode, callable outside `<TabsProvider>`. Backs
+ * the floating-bar mode control, the solo exit, and the chrome theme scope.
+ */
+export function useSurfaceMode(): Placement {
   return useSyncExternalStore(
     (cb) => {
-      focusedPlacementSubscribers.add(cb);
-      return () => focusedPlacementSubscribers.delete(cb);
+      surfaceModeSubscribers.add(cb);
+      return () => surfaceModeSubscribers.delete(cb);
     },
-    () => focusedPlacement,
-    () => focusedPlacement,
+    () => surfaceMode,
+    () => surfaceMode,
   );
 }
 
@@ -182,13 +196,14 @@ function rebuildBackgroundTab(persisted: PersistedTab, apps: AppList): Tab {
     tabId: persisted.tabId,
     appId: persisted.appId,
     store,
-    placement: persisted.placement ?? getDefaultPlacement(),
   };
 }
 
 interface BootState {
   tabs: Tab[];
   focusedTabId: string;
+  /** Restored surface mode (registry default until `surface` registers). */
+  mode: Placement;
 }
 
 /**
@@ -225,7 +240,6 @@ function bootTabs(apps: AppList, seedAppId: string): BootState {
       tabId: crypto.randomUUID(),
       appId: urlAppId,
       store: makeBackgroundStore(urlAppId, apps),
-      placement: getDefaultPlacement(),
     });
     focusIdx = tabs.length - 1;
   }
@@ -240,7 +254,12 @@ function bootTabs(apps: AppList, seedAppId: string): BootState {
   else focused.store.clearRoute();
   focused.store.live = true;
 
-  return { tabs, focusedTabId: focused.tabId };
+  // Restore the persisted surface mode, or fall back to the registry default
+  // (which is "" until `surface` registers — SurfaceBody resolves that to the
+  // default at render, and the provider heals it once the registry populates).
+  const mode = persisted?.mode ?? getDefaultPlacement();
+
+  return { tabs, focusedTabId: focused.tabId, mode };
 }
 
 /**
@@ -257,11 +276,17 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // Stable refs so callbacks read the latest apps without re-creating.
   const appsRef = useLatestRef(apps);
 
-  const [{ tabs: initialTabs, focusedTabId: initialFocus }] = useState(() =>
-    bootTabs(apps, initialApp?.id ?? defaultApp(apps)?.id ?? ""),
-  );
+  const [{ tabs: initialTabs, focusedTabId: initialFocus, mode: initialMode }] =
+    useState(() =>
+      bootTabs(apps, initialApp?.id ?? defaultApp(apps)?.id ?? ""),
+    );
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
   const [focusedTabId, setFocusedTabId] = useState<string>(initialFocus);
+  // The ONE surface rendering mode (docked / windows / solo). Per-surface, never
+  // per-tab: every tab is displayed under this single value, so two modes can
+  // never be visible at once. `previousMode` backs the solo (fullscreen) exit.
+  const [mode, setModeState] = useState<Placement>(initialMode);
+  const previousModeRef = useRef<Placement>(initialMode);
   // Per-tab content titles, published by the title reporter mounted inside each
   // tab's pane surface. Derived (not persisted): each tab re-reports on mount.
   const [titles, setTitles] = useState<Record<string, string>>({});
@@ -282,7 +307,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // Latest tabs/focus in refs for the persistence subscriptions + actions.
   // HYBRID, not useLatestRef: these are ALSO written authoritatively inside the
   // action callbacks (tabsRef.current = nextTabs / focusedRef.current = tabId in
-  // focusTab/openTab/closeTab/moveTab/setPlacement/replaceTabAppWithRoute) so a
+  // focusTab/openTab/closeTab/moveTab/setMode/replaceTabAppWithRoute) so a
   // callback's mutation is visible to the next callback in the SAME tick before
   // React re-renders. A useLatestRef render-sync would clobber those in-flight
   // writes on the next render, so the render-sync stays explicit and documented.
@@ -292,9 +317,14 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   const focusedRef = useRef(focusedTabId);
   // eslint-disable-next-line react-hooks/refs -- intentional render-sync of a hybrid ref also written imperatively inside the action callbacks; see the note above.
   focusedRef.current = focusedTabId;
+  // Hybrid ref (also written imperatively in setMode) so persist() reads the
+  // latest surface mode in the same tick a mode change fires.
+  const modeRef = useRef(mode);
+  // eslint-disable-next-line react-hooks/refs -- intentional render-sync of a hybrid ref also written imperatively inside setMode; see the note above.
+  modeRef.current = mode;
 
   const persist = useCallback(() => {
-    savePersistedTabs(tabsRef.current, focusedRef.current);
+    savePersistedTabs(tabsRef.current, focusedRef.current, modeRef.current);
   }, []);
 
   // One-time: point the imperative live store at the initially-focused tab's
@@ -352,16 +382,15 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   );
 
   /**
-   * Open a new tab for `appId` at its index. Used by the `+` new-tab button,
-   * which passes the focused tab's placement so `+` spawns a floating "new
-   * window" while in desktop mode and a docked tab otherwise.
+   * Open a new tab for `appId` at its index. Used by the `+` new-tab button; the
+   * new tab is displayed under the current surface mode (a new window in windows
+   * mode, a docked tab otherwise) — the surface owns the mode, not the tab.
    */
   const openTab = useCallback(
-    (appId: string, placement?: Placement): string => {
-      const p = placement ?? getDefaultPlacement();
+    (appId: string): string => {
       const tabId = crypto.randomUUID();
       const store = makeBackgroundStore(appId, appsRef.current);
-      const tab: Tab = { tabId, appId, store, placement: p };
+      const tab: Tab = { tabId, appId, store };
       const nextTabs = [...tabsRef.current, tab];
       tabsRef.current = nextTabs;
       setTabs(nextTabs);
@@ -382,13 +411,9 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     (tabId: string, appId: string, route: PaneSlot[]) => {
       const idx = tabsRef.current.findIndex((t) => t.tabId === tabId);
       if (idx < 0) return;
-      // Preserve the tab's existing placement — swapping the app in place must
-      // not relocate the tab (e.g. picking an app from Home inside a floating
-      // tab keeps it floating, never resets it to the default / background).
-      const placement = tabsRef.current[idx]!.placement;
       tabsRef.current[idx]!.store.live = false;
       const store = makeBackgroundStore(appId, appsRef.current);
-      const tab: Tab = { tabId, appId, store, placement };
+      const tab: Tab = { tabId, appId, store };
       const nextTabs = [...tabsRef.current];
       nextTabs[idx] = tab;
       tabsRef.current = nextTabs;
@@ -475,7 +500,6 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
           tabId: seedId,
           appId: seedApp.id,
           store,
-          placement: getDefaultPlacement(),
         };
         tabsRef.current = [seed];
         setTabs([seed]);
@@ -522,38 +546,41 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     [persist],
   );
 
-  // Set a tab's placement. Pure per-tab state — no focus/liveness change, so the
-  // surface plugin re-positions the still-mounted tab (Chrome-style: no reload).
-  const setPlacement = useCallback(
-    (tabId: string, placement: Placement) => {
-      const prev = tabsRef.current;
-      const idx = prev.findIndex((t) => t.tabId === tabId);
-      if (idx < 0 || prev[idx]!.placement === placement) return;
-      const next = [...prev];
-      next[idx] = { ...prev[idx]!, placement };
-      tabsRef.current = next;
-      setTabs(next);
+  // Switch the ONE surface rendering mode. Records the outgoing mode so solo's
+  // exit can pop back to it. Pure surface state — no tab/focus/liveness change,
+  // so the surface re-renders every (still-mounted) tab under the new mode with
+  // no reload (Chrome-style keep-alive).
+  const setMode = useCallback(
+    (next: Placement) => {
+      if (modeRef.current === next) return;
+      previousModeRef.current = modeRef.current;
+      modeRef.current = next;
+      setModeState(next);
       persist();
     },
     [persist],
   );
 
+  // Return to the mode in effect before the current one (solo's exit). Falls
+  // back to the registry default if the previous mode is unknown or equals the
+  // current (defensive: never leave the surface stuck in solo).
+  const exitToPreviousMode = useCallback(() => {
+    const prev = previousModeRef.current;
+    setMode(prev && prev !== modeRef.current ? prev : getDefaultPlacement());
+  }, [setMode]);
+
   const api = useMemo<TabsApi>(
-    () => ({ tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab, setPlacement }),
-    [tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab, setPlacement],
+    () => ({ tabs, focusedTabId, titles, mode, setMode, exitToPreviousMode, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab }),
+    [tabs, focusedTabId, titles, mode, setMode, exitToPreviousMode, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab],
   );
 
-  // Publish the focused tab's placement + a bound setter at module scope so
-  // out-of-provider callers (floating-bar placement control, Esc shortcut) can
-  // read and drive it. Mirrors the `setTabsNavigator` handle above.
-  const focusedTabPlacement =
-    tabs.find((t) => t.tabId === focusedTabId)?.placement ?? getDefaultPlacement();
+  // Publish the surface mode + bound setters at module scope so out-of-provider
+  // callers (floating-bar mode control, Esc shortcut, pin guard) can read and
+  // drive it. Mirrors the `setTabsNavigator` handle above.
   useEffect(() => {
-    publishFocusedPlacement(focusedTabPlacement, (p) =>
-      setPlacement(focusedRef.current, p),
-    );
-    return () => publishFocusedPlacement(getDefaultPlacement(), null);
-  }, [focusedTabPlacement, setPlacement]);
+    publishSurfaceMode(mode, setMode, exitToPreviousMode);
+    return () => publishSurfaceMode(getDefaultPlacement(), null, null);
+  }, [mode, setMode, exitToPreviousMode]);
 
   return <TabsContext.Provider value={api}>{children}</TabsContext.Provider>;
 }

@@ -6,7 +6,7 @@
 
 - Description: Theme-scope helpers: the single definition of the focused full-surface app's theme scope, shared by the cross-app chrome (rail, tab bar, toaster) and the :root token layer.
 - Web:
-  - Uses: `apps-core.useActiveApp`, `apps-core/tabs.placementHasAppThemeScope`, `apps-core/tabs.useFocusedPlacement`, `primitives/css/ui-kit.appThemeScope`
+  - Uses: `apps-core.useActiveApp`, `apps-core/tabs.placementHasAppThemeScope`, `apps-core/tabs.useSurfaceMode`, `primitives/css/ui-kit.appThemeScope`
   - Exports: Values: `useChromeThemeScope`, `useRootThemeScope`
 - Cross-plugin:
   - Imported by: `apps-core/app-rail`, `apps-core/tab-bar`, `shell/toast`, `ui/theme-engine`

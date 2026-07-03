@@ -9,15 +9,18 @@ import type { ActiveApp } from "@plugins/apps-core/web";
  * tab keeps its route while another is focused. Exactly one store is `live` at
  * a time (the focused tab's); the tab manager flips liveness on focus switch.
  *
- * `placement` is the per-tab spatial state (docked / floating / solo) the
- * `surface` plugin reads to position the tab; the surface "mode" is emergent
- * from the per-tab placements, never a global setting.
+ * A tab carries NO spatial/placement state. The surface renders every tab under
+ * the ONE {@link Placement} the surface is currently in (see
+ * {@link PersistedTabs.mode}) — docked / windows / solo are mutually-exclusive
+ * *surface* modes, not per-tab states. A single mode value makes "solo and
+ * windows visible at once" structurally unrepresentable. Window geometry (only
+ * meaningful in windows mode) lives in the floating plugin's own store, keyed by
+ * tabId — never on the tab itself.
  */
 export interface Tab {
   tabId: string;
   appId: string;
   store: PaneStore;
-  placement: Placement;
 }
 
 /**
@@ -39,13 +42,17 @@ export interface PersistedTab {
   tabId: string;
   appId: string;
   route: PersistedSlot[];
-  /** Optional for back-compat: pre-placement payloads default to `docked`. */
-  placement?: Placement;
 }
 
 export interface PersistedTabs {
   tabs: PersistedTab[];
   focusedTabId: string;
+  /**
+   * The single surface rendering mode (docked / windows / solo). Optional for
+   * back-compat: payloads written before the per-surface mode (which stored a
+   * per-tab `placement` instead) restore at the registry default mode.
+   */
+  mode?: Placement;
 }
 
 /** sessionStorage key, namespaced per browser tab via {@link getTabId}. */
@@ -82,16 +89,20 @@ export function loadPersistedTabs(): PersistedTabs | null {
 }
 
 /** Persist the live tab set (route serialized per store) to sessionStorage. */
-export function savePersistedTabs(tabs: Tab[], focusedTabId: string): void {
+export function savePersistedTabs(
+  tabs: Tab[],
+  focusedTabId: string,
+  mode: Placement,
+): void {
   if (typeof window === "undefined") return;
   const payload: PersistedTabs = {
     tabs: tabs.map((t) => ({
       tabId: t.tabId,
       appId: t.appId,
       route: serializeRoute(t.store),
-      placement: t.placement,
     })),
     focusedTabId,
+    mode,
   };
   window.sessionStorage.setItem(storageKey(), JSON.stringify(payload));
 }

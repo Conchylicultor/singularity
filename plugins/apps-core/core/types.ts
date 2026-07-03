@@ -18,20 +18,21 @@ export interface RailFramingProps {
 }
 
 /**
- * Per-tab spatial placement — the *emergent* arrangement model. There is no
- * global "tabs vs desktop" mode: each open tab carries its own placement and the
- * surface looks like "tabs" when all docked, "desktop" once any float, "full
- * app" when the focused tab is solo. Chrome-style: tearing a tab off a strip
- * just changes its placement.
+ * The surface rendering mode — a SINGLE per-surface value (docked / windows /
+ * solo), never per-tab. The surface renders every open tab under this one mode,
+ * so the modes are mutually exclusive by construction: "tabs" (docked), "desktop"
+ * (windows), and "full app" (solo) can never be visible at the same time. This
+ * is what makes a solo app and a floating window overlapping structurally
+ * unrepresentable — there is no per-tab placement that could disagree with the
+ * mode.
  *
- * Placement is an **opaque id** owned by the `surface` registry — each placement
- * is a self-contained sub-plugin contributing a descriptor under the
+ * A mode is an **opaque id** owned by the `surface` registry — each mode is a
+ * self-contained sub-plugin contributing a descriptor under the
  * `Surface.Placement` slot, and the id is whatever that descriptor declares.
- * `apps` stores the id on the tab and routes it (open/replace/set, the focused
- * snapshot), but never enumerates the valid set and never knows the default:
- * those live in the `surface` registry, surfaced back to `apps` through the
- * apps-owned placement-capability registry. Keeping it a named alias (rather
- * than bare `string`) documents the intent at call sites. All *presentation*
- * lives in the placement sub-plugins, never here.
+ * `apps` stores the current mode + routes mode changes, but never enumerates the
+ * valid set and never knows the default: those live in the `surface` registry,
+ * surfaced back to `apps` through the apps-owned capability registry. Keeping it
+ * a named alias (rather than bare `string`) documents the intent at call sites.
+ * All *presentation* lives in the mode sub-plugins, never here.
  */
 export type Placement = string;

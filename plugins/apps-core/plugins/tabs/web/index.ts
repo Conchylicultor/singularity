@@ -4,9 +4,10 @@ export {
   TabsProvider,
   useTabs,
   navigate,
-  setFocusedTabPlacement,
-  getFocusedPlacement,
-  useFocusedPlacement,
+  setSurfaceMode,
+  getSurfaceMode,
+  useSurfaceMode,
+  exitToPreviousMode,
   type TabsApi,
 } from "./internal/use-tabs";
 export { appPathFor, appContributionFor, type Tab } from "./internal/tabs-store";
@@ -14,7 +15,6 @@ export {
   registerPlacementCapabilities,
   getDefaultPlacement,
   useDefaultPlacement,
-  tearOffPlacement,
   placementIsNewTabFollows,
   placementHasAppThemeScope,
   type PlacementCapabilities,

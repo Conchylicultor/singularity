@@ -1,8 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import {
-  getFocusedPlacement,
-  setFocusedTabPlacement,
-  getDefaultPlacement,
+  getSurfaceMode,
+  exitToPreviousMode,
 } from "@plugins/apps-core/plugins/tabs/web";
 import { Surface } from "@plugins/apps-core/plugins/surface/web";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
@@ -10,18 +9,18 @@ import { soloDef } from "./solo-placement";
 
 export default {
   description:
-    "Solo (fullscreen) surface placement — a single tab full-app over everything, with a hover exit button and an Esc shortcut back to the default placement.",
+    "Solo (fullscreen) surface mode — only the focused tab, full-viewport, with a hover exit button and an Esc shortcut back to the previous mode.",
   contributions: [
     Surface.Placement(soloDef),
-    // Esc exits a solo (fullscreen) tab back to the default placement. The
-    // `when` self-references this placement's own id (allowed — owned here).
+    // Esc exits solo (fullscreen) back to the mode it was entered from. The
+    // `when` self-references this mode's own id (allowed — owned here).
     defineShortcut({
       id: "surface.exit-solo",
       keys: "Escape",
       label: "Exit fullscreen",
       group: "Surface",
-      when: () => getFocusedPlacement() === "solo",
-      handler: () => setFocusedTabPlacement(getDefaultPlacement()),
+      when: () => getSurfaceMode() === "solo",
+      handler: () => exitToPreviousMode(),
     }),
   ],
 } satisfies PluginDefinition;
