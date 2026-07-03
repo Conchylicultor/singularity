@@ -512,7 +512,39 @@ async function getWorktreeState(
   }
 }
 
-async function probeHealth(name: string): Promise<void> {
+// Per-process identity of the backend currently served for `name`, or null when
+// nothing is serving yet (cold start) or it's unreachable. The gateway only ever
+// routes to a backend past its ready barrier, so a change in this value across a
+// restart proves the NEW (ready) backend took over — not the stale old one.
+async function readHealthStartedAt(name: string): Promise<number | null> {
+  try {
+    const resp = await fetch(`http://${name}.localhost:9000/api/health`, {
+      signal: AbortSignal.timeout(5_000),
+    });
+    if (!resp.ok) return null;
+    const body = (await resp.json()) as { startedAt?: unknown };
+    return typeof body.startedAt === "number" ? body.startedAt : null;
+  } catch (err) {
+    if (!(err instanceof TypeError) && !(err instanceof DOMException)) throw err;
+    return null;
+  }
+}
+
+// Verifies the freshly-restarted backend actually took over. `previousStartedAt`
+// is the per-process identity of the backend serving BEFORE the restart POST
+// (null on a cold start, where nothing was serving yet). On a hot restart the
+// gateway is blue/green: it swaps `w.active` to the new backend only once that
+// backend clears its ready barrier, so a served `startedAt` greater than
+// `previousStartedAt` proves the NEW (ready) backend is live. Reading only
+// `resp.ok` is not enough — a failed hot-restart leaves the OLD backend
+// answering `{ok:true}` with stale code and the build would falsely pass.
+// `restartError` carries the gateway's 500 body, if any, for the failure message.
+async function probeHealth(
+  name: string,
+  previousStartedAt: number | null,
+  restartError: string | null,
+): Promise<void> {
+  const isRestart = previousStartedAt != null;
   const deadline = adaptiveTimeoutMs(20_000, 120_000);
   console.log(`Probing /api/health... (deadline ${Math.round(deadline / 1000)}s)`);
   const url = `http://${name}.localhost:9000/api/health`;
@@ -521,7 +553,20 @@ async function probeHealth(name: string): Promise<void> {
     async () => {
       try {
         const resp = await fetch(url, { signal: AbortSignal.timeout(5_000) });
-        if (resp.ok) return true;
+        if (resp.ok) {
+          // Cold start: any healthy backend is the one we just built.
+          if (!isRestart) return true;
+          // Hot restart: the gateway swaps `w.active` to the new backend only
+          // after it passes `waitReady`, so a served `startedAt` past the old
+          // one proves the new backend is live AND ready. Without this a failed
+          // hot-restart leaves the old backend answering ok and the build
+          // falsely passes.
+          const body = (await resp.json().catch(() => null)) as { startedAt?: unknown } | null;
+          const startedAt = typeof body?.startedAt === "number" ? body.startedAt : null;
+          if (startedAt != null && startedAt > previousStartedAt) return true;
+          lastStatus = `stale backend (startedAt ${startedAt} <= ${previousStartedAt})`;
+          return null;
+        }
         lastStatus = resp.status;
       } catch (err) {
         // A per-attempt abort (DOMException) is just a slow request — record it
@@ -537,6 +582,22 @@ async function probeHealth(name: string): Promise<void> {
       // instead of blindly declaring a crash. A stopwatch expiring is not the
       // same as a boot failure under host load.
       onDeadline: async () => {
+        // A hot restart whose new backend never became the served backend is an
+        // unambiguous deploy failure: the gateway SIGKILLed it (state reverts to
+        // "running", never "broken") and is still serving the previous backend's
+        // stale code. There is no lenient interpretation for this path — fail the
+        // build. finalizeBuildLog runs via the process.on("exit") handler.
+        if (isRestart) {
+          const detail = restartError ? `\nGateway restart error: ${restartError}` : "";
+          console.error(
+            `New backend never became ready within ${Math.round(deadline / 1000)}s — the gateway is still ` +
+              `serving the previous backend (stale code). The freshly-built backend failed its onReadyBlocking ` +
+              `ready barrier (last: ${lastStatus}).${detail}\n` +
+              `Inspect the backend log at ${join(worktreeDataDir(name), "logs")} for the throw.`,
+          );
+          writeBuildLogs(name);
+          process.exit(1);
+        }
         const load1 = Math.round((os.loadavg()[0] ?? 0) * 10) / 10;
         const info = await getWorktreeState(name);
         if (!info) {
@@ -1165,6 +1226,11 @@ export function registerBuild(program: Command) {
       endSpan = buildProfilerStart("restartBackend", "build:deploy", "restart backend");
       console.log("Restarting backend...");
       let gatewayUp = true;
+      // Snapshot the currently-served backend's per-process identity BEFORE the
+      // restart. probeHealth compares against it to prove the NEW backend took
+      // over, rather than the old one still answering ok with stale code.
+      const previousStartedAt = await readHealthStartedAt(name);
+      let restartError: string | null = null;
       try {
         const resp = await fetch(
           `http://localhost:9000/gateway/worktrees/${name}/restart`,
@@ -1176,18 +1242,22 @@ export function registerBuild(program: Command) {
           console.log("No running backend to restart");
         } else if (resp.status === 500) {
           // A 500 can be a real boot crash or a still-in-progress readiness
-          // timeout under load. Ask the gateway for the authoritative state
-          // before deciding to hard-fail; otherwise let probeHealth make the
-          // final call.
+          // timeout under load. Capture the gateway's error body, then ask it
+          // for the authoritative state before deciding to hard-fail; otherwise
+          // let probeHealth make the final call by comparing startedAt.
+          restartError = (await resp.text().catch(() => "")).trim() || null;
           const info = await getWorktreeState(name);
           if (info?.state === "broken") {
             console.error(
-              `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}. ` +
-                `Check server logs.`,
+              `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}` +
+                `${restartError ? `: ${restartError}` : ""}. Check server logs.`,
             );
+            finalizeBuildLog(false);
             process.exit(1);
           }
-          console.warn(`Backend restart returned ${resp.status}`);
+          console.warn(
+            `Backend restart returned 500${restartError ? `: ${restartError}` : ""} — verifying the new backend took over…`,
+          );
         } else {
           console.warn(`Backend restart returned ${resp.status}`);
         }
@@ -1206,7 +1276,7 @@ export function registerBuild(program: Command) {
       // and fail the build if the server can't come up.
       if (gatewayUp) {
         endSpan = buildProfilerStart("probeHealth", "build:deploy", "health probe");
-        await probeHealth(name);
+        await probeHealth(name, previousStartedAt, restartError);
         endSpan();
       }
 
