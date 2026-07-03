@@ -24,4 +24,7 @@ export { parseKeySignature } from "./key";
 export { detectChord, detectChordWeighted, detectChordWindows } from "./detect";
 export type { ChordMatch, ChordWindow } from "./detect";
 export { inferKeys, tonicName, tonicPc } from "./key-detect";
+export { romanNumeral } from "./roman";
+export { formatChordLabel } from "./chord-label";
+export type { ChordDisplayMode } from "./chord-label";
 export { transposeScore, transposeKey, transposeChordText } from "./transpose";

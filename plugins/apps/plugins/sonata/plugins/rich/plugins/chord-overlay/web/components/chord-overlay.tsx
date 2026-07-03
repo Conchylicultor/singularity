@@ -1,8 +1,13 @@
-import type {
-  Annotation,
-  ChordData,
-  Projection,
+import { useMemo } from "react";
+import {
+  effectiveKeyAt,
+  type Annotation,
+  type ChordData,
+  type Projection,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { formatChordLabel } from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useChordDisplayMode } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 
 /**
@@ -16,6 +21,11 @@ import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
  * we render inside the display's translated scroll layer, so every label is
  * drawn once and the lane's `overflow-hidden` clips whatever scrolls offscreen.
  * Derived chords are badged subtly so inferred data reads as inferred.
+ *
+ * The visible text follows the shared chord-label mode (`symbol` / `roman` /
+ * `both`) via `formatChordLabel`, resolved against the key in force at each
+ * chord's onset — so the overlay and the progression strip label chords in
+ * lockstep. The `title` tooltip keeps the raw symbol + spelling + confidence.
  */
 export function ChordOverlay({
   projection,
@@ -24,7 +34,28 @@ export function ChordOverlay({
   projection: Projection;
   annotations: Annotation[];
 }) {
+  const { score } = useSonata();
+  const mode = useChordDisplayMode();
   const beatToY = projection.beatToY;
+
+  // Displayed label per annotation, keyed by the stable annotation reference so
+  // chips read it by identity. Recomputes only when the annotations, the score
+  // (key context) or the mode changes — never per playback frame.
+  const labels = useMemo(
+    () =>
+      new Map(
+        annotations.map((a) => [
+          a,
+          formatChordLabel(
+            a.data as ChordData,
+            effectiveKeyAt(score, a.start) ?? null,
+            mode,
+          ),
+        ]),
+      ),
+    [annotations, score, mode],
+  );
+
   if (!beatToY) return null; // defensive: host only mounts us with time-axis.
 
   return (
@@ -47,7 +78,7 @@ export function ChordOverlay({
                 : name;
             })()}
           >
-            {data.symbol}
+            {labels.get(a)}
           </div>
         );
       })}

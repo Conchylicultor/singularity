@@ -536,6 +536,10 @@
       "name": "@singularity/plugin-apps-sonata-rich-chord-analyzer",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label": {
+      "name": "@singularity/plugin-apps-sonata-rich-chord-label",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/rich/plugins/chord-overlay": {
       "name": "@singularity/plugin-apps-sonata-rich-chord-overlay",
       "version": "0.0.1",
@@ -4821,6 +4825,8 @@
     "@singularity/plugin-apps-sonata-rich": ["@singularity/plugin-apps-sonata-rich@workspace:plugins/apps/plugins/sonata/plugins/rich"],
 
     "@singularity/plugin-apps-sonata-rich-chord-analyzer": ["@singularity/plugin-apps-sonata-rich-chord-analyzer@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-analyzer"],
+
+    "@singularity/plugin-apps-sonata-rich-chord-label": ["@singularity/plugin-apps-sonata-rich-chord-label@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label"],
 
     "@singularity/plugin-apps-sonata-rich-chord-overlay": ["@singularity/plugin-apps-sonata-rich-chord-overlay@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-overlay"],
 

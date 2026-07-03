@@ -7,6 +7,7 @@
 - Description: Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
 - Sub-plugins:
   - **`chord-analyzer`** — Sonata Analyzer: derives chord annotations from the score's notes. Slices the score at every onset, runs interval-set chord detection over each window, and emits coalesced source:"derived" chord annotations.
+  - **`chord-label`** — Sonata chord-label preference: the single shared symbol/numeral/both display mode that drives the piano-roll overlay and the progression strip in lockstep, surfaced in the View popover. Server registration of the Sonata chord-label config (the shared symbol/numeral/both display mode).
   - **`chord-overlay`** — Sonata Overlay: labels chord annotations along the timeline. Requires the time-axis capability, so it renders on the piano roll and any future time-based display.
   - **`chord-progression`** — Sonata Section: a rhythm-aware chord-progression strip of chips, laid out bar-by-bar and sized by duration, highlighting the chord under the playhead and seeking on click.
   - **`chord-readout`** — Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the shared Score + cursor from useSonata().

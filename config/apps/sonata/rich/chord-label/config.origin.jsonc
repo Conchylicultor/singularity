@@ -1,0 +1,6 @@
+// @hash 7cd9bcfffbd2
+{
+  // How chords are labeled on the piano roll and progression.
+  // Allowed values: "symbol", "roman", "both"
+  "mode": "symbol"
+}

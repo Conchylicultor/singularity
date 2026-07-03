@@ -10,13 +10,15 @@ import {
   chordPitches,
   invertVoicing,
   formatChordSymbol,
+  romanNumeral,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import type {
-  Annotation,
-  ChordData,
+import {
+  effectiveKeyAt,
+  type Annotation,
+  type ChordData,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 
 /** Inversion row labels by index (0 = root position). */
@@ -83,6 +85,17 @@ export function ChordReadout() {
     [chords],
   );
 
+  // The chord's Roman-numeral function in the key in force at its onset — e.g.
+  // "V7", "ii", "♭VII". `null` when no key is established (a keyless / atonal
+  // score) or the quality is outside the vocabulary. Recomputes only when the
+  // chord under the playhead changes (both `current` and `score` are stable
+  // between cursor frames), so this never runs per-frame.
+  const roman = useMemo(() => {
+    if (!current) return null;
+    const key = effectiveKeyAt(score, current.start);
+    return key ? romanNumeral(current.data, key) : null;
+  }, [current, score]);
+
   // Every inversion of the current chord (index 0 = root position), each an
   // ascending MIDI voicing. Used for the keyboards below the symbol.
   const voicings = useMemo(() => {
@@ -98,9 +111,25 @@ export function ChordReadout() {
       </div>
       {current ? (
         <>
-          {/* eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- large display readout (36px) exceeds the title token (20px), no equivalent variant; top offset separates it from the section label inside the Card chrome */}
-          <div className="mt-2 text-4xl font-bold tracking-tight text-foreground">
-            {current.data.symbol}
+          {/* Row: the big chord symbol, and — when a key is in force — its
+              Roman-numeral function trailing in the accent color, so the chord's
+              name and its harmonic role read side by side. */}
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separates the readout from the section label inside the Card chrome; no flex parent to own a gap */}
+          <div className="mt-2 flex items-baseline gap-sm">
+            {/* eslint-disable-next-line text/no-adhoc-typography -- large display readout (36px) exceeds the title token (20px), no equivalent variant */}
+            <div className="text-4xl font-bold tracking-tight text-foreground">
+              {current.data.symbol}
+            </div>
+            {roman && (
+              <Text
+                as="div"
+                variant="title"
+                tone="primary"
+                className="tabular-nums font-semibold"
+              >
+                {roman}
+              </Text>
+            )}
           </div>
           {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the spelled-symbol caption from the large readout above */}
           <Text as="div" variant="caption" className="mt-1 text-muted-foreground">

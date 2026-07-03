@@ -5,11 +5,14 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
   bars,
+  effectiveKeyAt,
   scoreEndBeat,
   type Annotation,
   type ChordData,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { formatChordLabel } from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import { useChordDisplayMode } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -81,9 +84,14 @@ function buildBars(score: Score, chords: ChordAnn[]): BarLine[] {
  * bounded scroll viewport — and the active chip highlights (both tracked via
  * `useCursorSelector`, so the panel reconciles only on bar / chord boundaries,
  * not every frame). Clicking a chip seeks to that chord.
+ *
+ * Each chip's text follows the shared chord-label mode (`symbol` / `roman` /
+ * `both`) via `formatChordLabel` — the same label the piano-roll overlay shows —
+ * so the two chord surfaces stay in lockstep.
  */
 export function ChordProgression() {
   const { score, seekTo } = useSonata();
+  const mode = useChordDisplayMode();
 
   const chords = useMemo(
     () =>
@@ -92,6 +100,19 @@ export function ChordProgression() {
   );
 
   const barLines = useMemo(() => buildBars(score, chords), [score, chords]);
+
+  // The displayed label per chord under the active mode, resolved against the
+  // key in force at each chord's onset (a chord's function follows the key, which
+  // can change mid-song via `key` annotations). Keyed by the stable chord
+  // reference so chips read it by identity, and memoized on the Score + mode so
+  // it never recomputes on a cursor frame.
+  const labelByChord = useMemo(() => {
+    const m = new Map<ChordAnn, string>();
+    for (const c of chords) {
+      m.set(c, formatChordLabel(c.data, effectiveKeyAt(score, c.start) ?? null, mode));
+    }
+    return m;
+  }, [score, chords, mode]);
 
   // Stable reference of the chord under the playhead (from the memoized `chords`
   // array, so chips can match by `===`). Falls back to the first chord at the
@@ -156,6 +177,7 @@ export function ChordProgression() {
               }}
               line={line}
               active={active}
+              labelByChord={labelByChord}
               onSeek={seekTo}
             />
           ))}
@@ -168,8 +190,13 @@ export function ChordProgression() {
 /** One bar on its own line: a rigid bar-number gutter plus the chord slices. */
 const BarRow = forwardRef<
   HTMLDivElement,
-  { line: BarLine; active: ChordAnn | undefined; onSeek: (beat: number) => void }
->(function BarRow({ line, active, onSeek }, ref) {
+  {
+    line: BarLine;
+    active: ChordAnn | undefined;
+    labelByChord: Map<ChordAnn, string>;
+    onSeek: (beat: number) => void;
+  }
+>(function BarRow({ line, active, labelByChord, onSeek }, ref) {
   return (
     // `auto minmax(0,1fr)`: rigid number gutter + a flexible chip track that
     // owns the full bar width, so the per-chip `fr` weights map to real bar time.
@@ -185,7 +212,12 @@ const BarRow = forwardRef<
       <Text variant="caption" tone="muted" className="tabular-nums">
         {line.number}
       </Text>
-      <BarBody segs={line.segs} active={active} onSeek={onSeek} />
+      <BarBody
+        segs={line.segs}
+        active={active}
+        labelByChord={labelByChord}
+        onSeek={onSeek}
+      />
     </div>
   );
 });
@@ -194,10 +226,12 @@ const BarRow = forwardRef<
 function BarBody({
   segs,
   active,
+  labelByChord,
   onSeek,
 }: {
   segs: Seg[];
   active: ChordAnn | undefined;
+  labelByChord: Map<ChordAnn, string>;
   onSeek: (beat: number) => void;
 }) {
   if (segs.length === 0) {
@@ -222,6 +256,7 @@ function BarBody({
           key={j}
           seg={seg}
           isActive={seg.chord === active}
+          label={labelByChord.get(seg.chord) ?? seg.chord.data.symbol}
           onSeek={onSeek}
         />
       ))}
@@ -233,10 +268,12 @@ function BarBody({
 function ChordChip({
   seg,
   isActive,
+  label,
   onSeek,
 }: {
   seg: Seg;
   isActive: boolean;
+  label: string;
   onSeek: (beat: number) => void;
 }) {
   const { chord, isContinuation } = seg;
@@ -248,7 +285,7 @@ function ChordChip({
       title={`${chord.data.symbol} · beats ${chord.start.toFixed(2)}–${chord.end.toFixed(2)}`}
       className={cn("w-full", isContinuation && "opacity-40")}
     >
-      {chord.data.symbol}
+      {label}
     </ToggleChip>
   );
 }
