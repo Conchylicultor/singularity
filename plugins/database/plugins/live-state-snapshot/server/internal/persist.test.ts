@@ -2,7 +2,10 @@ import { describe, test, expect, beforeAll, afterAll, beforeEach } from "bun:tes
 import { sql } from "drizzle-orm";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { ensureSnapshotTable } from "./tables-ddl";
-import { createTestDb, type TestDb } from "./test-db";
+import {
+  createTestDb,
+  type TestDb,
+} from "@plugins/database/plugins/db-test-fixture/server";
 import {
   captureWatermark,
   persistSnapshot,
@@ -15,12 +18,12 @@ import {
 // the ON CONFLICT upsert, the text[] `tables_read` round-trip (incl. the empty
 // `ARRAY[]::text[]` path), jsonb value round-trip, and the `params_key='{}'`
 // filtering of the read helpers. Runs the real SQL against a throwaway database on
-// the running cluster (see test-db.ts).
+// the running cluster (see the db-test-fixture primitive).
 
 let t: TestDb;
 
 beforeAll(async () => {
-  t = await createTestDb();
+  t = await createTestDb({ prefix: "lss_test" });
   await ensureSnapshotTable(t.db);
 });
 

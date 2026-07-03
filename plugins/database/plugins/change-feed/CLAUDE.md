@@ -28,7 +28,7 @@ contribution/registry sets:
 
 - Description: L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
 - Server:
-  - Uses: `database.db`, `database/admin.connectionString`, `database/admin.dropDatabase`, `database/admin.ensureDatabase`, `database/admin.openShortLivedClient`, `database/derived-tables.feedExemptTables`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
+  - Uses: `database.db`, `database/admin.connectionString`, `database/derived-tables.feedExemptTables`, `database/derived-views.relationIdentityBase`, `primitives/log-channels.Log`
   - Exports: Types: `DbChange`; Values: `ensureChangelogTable`, `ExcludeFromChangeFeed`, `getCoveredTables`, `parseLiveStatePayload`, `rebuildTriggers`, `routeChange`
 - Cross-plugin:
   - Imported by: `database/live-state-snapshot`, `debug/slow-ops`, `reports`
@@ -50,8 +50,9 @@ trigger layer's concern, exercised at every boot's `rebuildTriggers`).
 To make it testable, `listener.ts` is an injectable factory
 (`createChangeFeedListener({ connectionString, route, coveredTables, …timers })`)
 with all state per-instance; the production singleton is re-presented as the same
-`startListener`/`stopListener` exports. `server/internal/test-db.ts` provisions an
-isolated throwaway database on the running cluster via admin's public barrel
+`startListener`/`stopListener` exports. The shared `db-test-fixture` primitive
+(`createTestDb({ prefix: "cf_test" })`) provisions an isolated throwaway database
+on the running cluster via admin's public barrel
 (`ensureDatabase`/`openShortLivedClient`/`dropDatabase`) and drops it after.
 
 **Running:** these suites need a running cluster (started by `./singularity

@@ -6,7 +6,7 @@
 
 - Description: L2 persisted live-state materialization: durable snapshot + xmin watermark for instant cold boot, with a bounded changelog catch-up that recomputes only the resources whose tables changed during downtime.
 - Server:
-  - Uses: `database.db`, `database/admin.dropDatabase`, `database/admin.ensureDatabase`, `database/admin.openShortLivedClient`, `database/change-feed.routeChange`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
+  - Uses: `database.db`, `database/change-feed.routeChange`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
   - DB schema: `plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`
   - Exports: Values: `clearPersistedSnapshots`, `readPersistedSnapshots`
   - Register: `defineJob('database.live-state-changelog-prune')`
@@ -35,8 +35,8 @@ in the backend entry `server/index.ts` (hooks + catch-up) and in
   DELETE/null-ids → FULL degrade, the missing-history **backstop** (`min(xid) >
   floor` → one FULL per distinct table), and "already current".
 
-`server/internal/test-db.ts` provisions an isolated throwaway database via admin's
-public barrel and drops it after. **Running:** needs a running cluster — a plain
+The shared `db-test-fixture` primitive (`createTestDb`) provisions an isolated
+throwaway database via admin's public barrel and drops it after. **Running:** needs a running cluster — a plain
 `bun test plugins/database/plugins/live-state-snapshot` (the fixture throws loudly
 if the cluster is unreachable). No `SINGULARITY_WORKTREE=<worktree>` prefix: the
 root `bunfig.toml` `[test]` preload (`test/bun-preload.ts`) defaults it to the

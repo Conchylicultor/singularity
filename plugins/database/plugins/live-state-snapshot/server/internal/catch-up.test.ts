@@ -7,7 +7,10 @@ import {
 import { ensureChangelogTable } from "@plugins/database/plugins/change-feed/server";
 import type { DbChange } from "@plugins/database/plugins/change-feed/server";
 import { ensureSnapshotTable } from "./tables-ddl";
-import { createTestDb, type TestDb } from "./test-db";
+import {
+  createTestDb,
+  type TestDb,
+} from "@plugins/database/plugins/db-test-fixture/server";
 import { persistSnapshot } from "./persist";
 import { runCatchUp } from "./catch-up";
 
@@ -16,12 +19,12 @@ import { runCatchUp } from "./catch-up";
 // null-ids FULL degrade, and the missing-history backstop. A recording `route`
 // spy is injected so we observe EXACTLY which changes replay (order, op, ids),
 // without standing up the full server-core cascade. Runs the real SQL against a
-// throwaway database on the running cluster (see test-db.ts).
+// throwaway database on the running cluster (see the db-test-fixture primitive).
 
 let t: TestDb;
 
 beforeAll(async () => {
-  t = await createTestDb();
+  t = await createTestDb({ prefix: "lss_test" });
   await ensureSnapshotTable(t.db);
   await ensureChangelogTable(t.db);
 });

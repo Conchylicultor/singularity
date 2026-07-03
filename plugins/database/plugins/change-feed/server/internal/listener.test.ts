@@ -2,7 +2,10 @@ import { describe, test, expect, beforeAll, afterAll } from "bun:test";
 import { sql } from "drizzle-orm";
 import { createChangeFeedListener } from "./listener";
 import type { DbChange } from "./parse-payload";
-import { createTestDb, type TestDb } from "./test-db";
+import {
+  createTestDb,
+  type TestDb,
+} from "@plugins/database/plugins/db-test-fixture/server";
 
 // Real-DB listener suite: a throwaway database on the running cluster, a real raw
 // LISTEN client, and real `pg_notify` delivery over that socket. The listener's
@@ -87,7 +90,7 @@ function findChange(
 }
 
 beforeAll(async () => {
-  testDb = await createTestDb();
+  testDb = await createTestDb({ prefix: "cf_test" });
 });
 
 afterAll(async () => {
