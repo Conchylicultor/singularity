@@ -20,6 +20,26 @@ exact key `useEndpoint` reads (endpoints' `endpointQueryKey`). It lives here
 rather than in endpoints because live-state already sits downstream of
 endpoints (via log-channels) — the import can only point this way.
 
+## Hazard tests (H1–H7) — the executable correctness argument
+
+The client transport hazards are pinned by named vitest tests under
+`web/__tests__/`: `notifications-subs.test.ts` (H4 duplicate-subs +
+keep-alive, the `no-sub` frame-drop gate, delta-no-base and delta-drift
+forced resubs, the version guard), `notifications-reconnect.test.ts` (H1
+reopen-gap convergence, H1b replaySubs stagger, H2 restart version-counter
+reset, H7 level-state convergence + `probeMissedUpdates`), and
+`notifications-cross-tab.test.ts` (H6 two-client leader handover). They build
+real `NotificationsClient` + `SharedWebSocket` stacks on the deterministic
+fake transports from `@plugins/primitives/plugins/networking/web`
+(`createTransportHub`); only `WebSocket`/`BroadcastChannel`/`navigator.locks`
+are faked. The server-half siblings (H5 etc.) live in
+`plugins/framework/plugins/resource-runtime/core/`. Design:
+`research/2026-07-03-global-live-state-client-transport-harness.md`. Run:
+`bun run test:dom plugins/primitives/plugins/networking plugins/primitives/plugins/live-state`.
+When touching `notifications-client.ts`, `shared-websocket.ts`, or
+`cross-tab-election.ts`, run these suites — they are the regression fence for
+the race-prone core (a prerequisite for the A1 cascade migration).
+
 ## Per-hop tracing (`live-state` log channel)
 
 `NotificationsClient` traces every hop of the update pipeline to the

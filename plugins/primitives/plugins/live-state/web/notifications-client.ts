@@ -261,6 +261,12 @@ export class NotificationsClient {
   /** Fired on any sub/version/socket/leader change for the Layer-2 inspector. */
   private debugListeners = new Set<() => void>();
   private unsubscribeFromBus: () => void;
+  /** Net-diag bus unsubscriber, captured so `destroy()` can release it (a test
+   *  constructs many clients; the module-level bus would otherwise leak). */
+  private unsubscribeFromNetDiag: () => void;
+  /** Socket factory (injection seam): defaults to a real `SharedWebSocket`; a
+   *  test wires one built on fake transports. */
+  private makeSocket: (url: string) => SharedWebSocket;
   /**
    * `performance.now()` timestamp the live-state transport FIRST reached the
    * aggregate `"open"` status (null until then). This is the cold-start marker:
@@ -279,7 +285,12 @@ export class NotificationsClient {
    */
   private firstReadyByKind: Record<SocketKind, number | null> = { worktree: null, central: null };
 
-  constructor(private queryClient: QueryClient) {
+  constructor(
+    private queryClient: QueryClient,
+    hooks?: { makeSocket?: (url: string) => SharedWebSocket },
+  ) {
+    // Socket factory must be set before channelFor (openChannel reads it).
+    this.makeSocket = hooks?.makeSocket ?? ((u) => new SharedWebSocket(u));
     // Open the worktree channel eagerly (always used). Central stays lazy —
     // opened on the first central-origin observe() via channelFor.
     this.channelFor("worktree");
@@ -307,10 +318,10 @@ export class NotificationsClient {
     // Net-diag forwarder: the networking layer publishes socket/election
     // transitions to an event bus (it must not depend on log-channels — that
     // would form networking ↔ log-channels). Forward every event to the trace
-    // channel here, where importing clientLog is legal. The client is a module
-    // singleton, so this single constructor-time subscription never needs
-    // teardown and is never double-mounted.
-    subscribeNetDiag((ev: NetDiagEvent) => {
+    // channel here, where importing clientLog is legal. In production the client
+    // is a module singleton, so this never needs teardown; the unsubscriber is
+    // captured only so `destroy()` (tests) can release the module-level bus.
+    this.unsubscribeFromNetDiag = subscribeNetDiag((ev: NetDiagEvent) => {
       trace(`net-diag ${JSON.stringify(ev)}`);
       this.emitDebug();
     });
@@ -473,8 +484,20 @@ export class NotificationsClient {
     for (const fn of this.debugListeners) fn();
   }
 
+  /**
+   * Release every resource this client holds. Inert in production (the client is
+   * a module singleton, never destroyed); the complete teardown exists so a test
+   * leaves no dangling module-level bus subscription, deferred-teardown timer, or
+   * open socket to leak into the next test.
+   */
   destroy(): void {
     this.unsubscribeFromBus();
+    this.unsubscribeFromNetDiag();
+    for (const channel of Object.values(this.channels) as SocketChannel[]) {
+      for (const timer of channel.pendingTeardown.values()) clearTimeout(timer);
+      channel.pendingTeardown.clear();
+      channel.ws.close();
+    }
   }
 
   /** Observer count increased for (key, params). Sub on 0→1. */
@@ -703,7 +726,7 @@ export class NotificationsClient {
 
   private openChannel(kind: SocketKind): SocketChannel {
     const channel: SocketChannel = {
-      ws: new SharedWebSocket(WS_URLS[kind]),
+      ws: this.makeSocket(WS_URLS[kind]),
       subs: new Map(),
       pendingTeardown: new Map(),
     };

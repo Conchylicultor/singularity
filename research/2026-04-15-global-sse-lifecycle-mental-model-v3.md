@@ -228,15 +228,24 @@ things:
 
 v2 mapped H1/H2/H7. v3 maps all seven.
 
+The client-side hazards (H1/H2/H4/H6/H7) are **pinned by executable tests**
+(the living source of truth; the manual checks below remain as smoke
+procedures) — the vitest harness under
+`plugins/primitives/plugins/live-state/web/__tests__/` and
+`plugins/primitives/plugins/networking/web/__tests__/`, built on the injected
+fake transports in `plugins/primitives/plugins/networking/web/test-support.ts`.
+See `research/2026-07-03-global-live-state-client-transport-harness.md`.
+Run: `bun run test:dom plugins/primitives/plugins/networking plugins/primitives/plugins/live-state`.
+
 | Hazard | Check |
 |---|---|
-| H1 events-lost-in-reopen-gap | Open conversations + open a second pane mid-stream; first pane never flickers (v2 check #2). |
-| H2 stale React state after reconnect | Restart server; all panes converge to truth within a tick (v2 check #3). |
+| H1 events-lost-in-reopen-gap | Tests `H1:`/`H1b:` in `live-state/web/__tests__/notifications-reconnect.test.ts` — frames sent to a closed socket are lost; the reconnect resubscribe (per-sub version reset at send time, staggered batches) converges to server truth. Manual: open conversations + open a second pane mid-stream; first pane never flickers (v2 check #2). |
+| H2 stale React state after reconnect | Test `H2:` in `notifications-reconnect.test.ts` — server restart resets version counters; post-restart sub-acks at *lower* versions still apply, and a not-yet-resent stagger-batch sub keeps its live baseline. Manual: restart server; all panes converge within a tick (v2 check #3). |
 | H3 refresh-watcher-keyed-on-wrong-status | N/A — `wasReconnecting` watcher is deleted. Regression test: open a pane, kill the WS, restore; the query refetches exactly once, no status-keyed logic remains (`grep -r wasReconnecting` returns empty). |
-| H4 duplicate subscriptions across mounts | Mount/unmount the same pane 10×; DevTools shows exactly one `sub` + one `unsub` net per cycle (TanStack Query refcounts observers, `NotificationsClient` subs on 0→1 and unsubs on 1→0). |
-| H5 snapshot/edge event ordering | Covered structurally by §1 sub-ack + versioning; **now pinned by executable tests** — `plugins/framework/plugins/resource-runtime/core/runtime-h5.test.ts` races a `notify()` against a fresh `sub` (push, keyed, multi-socket) and asserts the client simulator converges to server truth. Companion server-runtime invariants (scoped-vs-FULL routing, over-replay idempotence, L2 persist-hook contract) are in the sibling `runtime-scoped-routing.test.ts` / `runtime-catchup.test.ts`. See `research/2026-07-03-global-live-state-server-invariant-harness.md`. |
-| H6 cross-tab divergence | Open 3 tabs; mutate state; all three reflect within a tick; exactly 1 WS open (v2 check #5). |
-| H7 snapshot-replays-only-working-truth | Kill an agent externally; row transitions to `gone` within a tick (v2 check #4). Level-state push has no notion of "only working truth." |
+| H4 duplicate subscriptions across mounts | Tests `H4:`/`H4b:` in `live-state/web/__tests__/notifications-subs.test.ts` — observe/unobserve ×10 collapses to exactly one `sub` + one `unsub` (after the 30s keep-alive window). The same file pins the `no-sub` frame-drop gate, the delta-no-base and delta-drift forced resubs, and the version guard. |
+| H5 snapshot/edge event ordering | Covered structurally by §1 sub-ack + versioning; pinned by `plugins/framework/plugins/resource-runtime/core/runtime-h5.test.ts`, which races a `notify()` against a fresh `sub` (push, keyed, multi-socket) and asserts the client simulator converges to server truth. Companion server-runtime invariants (scoped-vs-FULL routing, over-replay idempotence, L2 persist-hook contract) are in the sibling `runtime-scoped-routing.test.ts` / `runtime-catchup.test.ts`. See `research/2026-07-03-global-live-state-server-invariant-harness.md`. |
+| H6 cross-tab divergence | Tests `H6:`/`H6b:` in `live-state/web/__tests__/notifications-cross-tab.test.ts` (full-stack two-client handover: frozen leader stolen from, follower resubs on a fresh socket, never two live sockets; one frame fans out to both tabs' caches) plus the lock/socket halves (`H6-lock`, `H6-socket`, `H6c` demoted-leader-closes-socket) in `networking/web/__tests__/{cross-tab-election,shared-websocket}.test.ts`. Manual: open 3 tabs; mutate; all three reflect within a tick; exactly 1 WS open (v2 check #5). |
+| H7 snapshot-replays-only-working-truth | Tests `H7:` in `notifications-reconnect.test.ts` — a lost intermediate level-state frame converges on the next full frame, and `probeMissedUpdates` surfaces a silently-missed gap end-to-end. Manual: kill an agent externally; row transitions to `gone` within a tick (v2 check #4). |
 
 Plus v2's DevTools checks (`/api/events` absent, `/ws/notifications`
 present) and the TanStack Query devtools sanity check.

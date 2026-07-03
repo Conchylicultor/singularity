@@ -1,15 +1,39 @@
 import { publishNetDiag } from "./net-diag-bus";
+import type {
+  BroadcastChannelLike,
+  LockManagerLike,
+  MakeBroadcastChannel,
+} from "./transport-types";
 
 export interface CrossTabElectionCallbacks<TMsg> {
   onElected(): void;
   onFollowerMessage(msg: TMsg): void;
   onLeaderMessage(msg: TMsg): void;
   onFollowerJoined(): void;
+  /**
+   * The leader lost its lock (stolen by a follower that saw it go silent). Fired
+   * from `demoteToFollower` so the owner (SharedWebSocket) can drop the socket it
+   * no longer owns — without this the stolen-from tab keeps a live socket, a
+   * two-socket violation of the one-leader invariant. Required (single
+   * construction site) so no caller can forget it.
+   */
+  onDemoted(): void;
 }
 
 interface CrossTabElectionOptions {
   heartbeatMs?: number;
   timeoutMs?: number;
+  /**
+   * BroadcastChannel factory (injection seam). `undefined` ⇒ the global
+   * `new BroadcastChannel(name)` when it exists, else the solo-leader fallback.
+   */
+  makeBroadcastChannel?: MakeBroadcastChannel;
+  /**
+   * Lock manager (injection seam), tri-state: `undefined` ⇒ the global
+   * `navigator.locks ?? null`; `null` ⇒ explicitly absent → the solo-leader
+   * fallback; an instance ⇒ use it.
+   */
+  locks?: LockManagerLike | null;
 }
 
 type ChannelFrame<T> =
@@ -27,8 +51,8 @@ export class CrossTabElection<TMsg> {
   private callbacks: CrossTabElectionCallbacks<TMsg>;
   private heartbeatMs: number;
   private timeoutMs: number;
-  private channel: BroadcastChannel | null = null;
-  private locks: LockManager | null = null;
+  private channel: BroadcastChannelLike | null = null;
+  private locks: LockManagerLike | null = null;
   private closed = false;
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null;
   private timeoutTimer: ReturnType<typeof setTimeout> | null = null;
@@ -43,20 +67,28 @@ export class CrossTabElection<TMsg> {
     this.heartbeatMs = opts?.heartbeatMs ?? DEFAULT_HEARTBEAT_MS;
     this.timeoutMs = opts?.timeoutMs ?? DEFAULT_TIMEOUT_MS;
 
-    const hasChannel = typeof BroadcastChannel !== "undefined";
+    const makeBroadcastChannel: MakeBroadcastChannel | null =
+      opts?.makeBroadcastChannel ??
+      (typeof BroadcastChannel !== "undefined"
+        ? (name) => new BroadcastChannel(name)
+        : null);
+    // Tri-state: an injected `locks` (even `null`) wins; only a truly absent
+    // option falls through to the global default.
     this.locks =
-      typeof navigator !== "undefined"
-        ? // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          (navigator as Navigator & { locks?: LockManager }).locks ?? null
-        : null;
+      opts?.locks !== undefined
+        ? opts.locks
+        : typeof navigator !== "undefined"
+          ? // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+            (navigator as Navigator & { locks?: LockManagerLike }).locks ?? null
+          : null;
 
-    if (!hasChannel || !this.locks) {
+    if (!makeBroadcastChannel || !this.locks) {
       this.isLeader = true;
       callbacks.onElected();
       return;
     }
 
-    this.channel = new BroadcastChannel(this.name);
+    this.channel = makeBroadcastChannel(this.name);
     this.channel.onmessage = this.onFrame;
     this.post({ k: "hello" });
     this.requestLock(false);
@@ -108,9 +140,8 @@ export class CrossTabElection<TMsg> {
   private requestLock(steal: boolean): void {
     if (this.closed || !this.locks) return;
     if (steal) publishNetDiag({ type: "steal-attempt", name: this.name });
-    const opts: LockOptions = { mode: "exclusive", steal };
     this.locks
-      .request(this.name, opts, () => {
+      .request(this.name, { mode: "exclusive", steal }, () => {
         if (this.closed) return;
         this.becomeLeader();
         return new Promise<void>(() => {});
@@ -142,6 +173,9 @@ export class CrossTabElection<TMsg> {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
+    // Tell the owner it no longer holds the socket, then re-queue for the lock as
+    // a follower (a re-election reconnects via `onElected` → `startLeading`).
+    this.callbacks.onDemoted();
     publishNetDiag({ type: "demoted", name: this.name });
     this.requestLock(false);
   }

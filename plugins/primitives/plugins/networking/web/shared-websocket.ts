@@ -1,6 +1,27 @@
 import { publishWsStatus, type WsStatus } from "./ws-status-bus";
 import { publishNetDiag } from "./net-diag-bus";
 import { CrossTabElection } from "./cross-tab-election";
+import type {
+  WebSocketLike,
+  MakeWebSocket,
+  MakeBroadcastChannel,
+  LockManagerLike,
+} from "./transport-types";
+
+/**
+ * Injection seam for the three OS globals this stack touches. All optional —
+ * production passes nothing and the globals are used; tests wire the fakes from
+ * `./test-support`. `heartbeatMs`/`timeoutMs` scale the election timers down for
+ * fake-timer tests. See
+ * `research/2026-07-03-global-live-state-client-transport-harness.md`.
+ */
+export interface SharedWebSocketHooks {
+  makeWebSocket?: MakeWebSocket;
+  makeBroadcastChannel?: MakeBroadcastChannel;
+  locks?: LockManagerLike | null;
+  heartbeatMs?: number;
+  timeoutMs?: number;
+}
 
 // Drop-in replacement for the string-message subset of the native WebSocket
 // API, shared across all tabs of the same origin via CrossTabElection. One tab
@@ -31,19 +52,38 @@ export class SharedWebSocket {
   onerror: ((ev: Event) => void) | null = null;
 
   private election: CrossTabElection<WsRelayMsg>;
-  private ws: WebSocket | null = null;
+  private makeWebSocket: MakeWebSocket;
+  private ws: WebSocketLike | null = null;
   private queue: string[] = [];
   private attempt = 0;
   private retryTimer: ReturnType<typeof setTimeout> | null = null;
   private closed = false;
   private lastStatus: WsStatus | null = null;
 
-  constructor(url: string | URL) {
+  constructor(url: string | URL, hooks?: SharedWebSocketHooks) {
     this.url = typeof url === "string" ? url : url.toString();
+    this.makeWebSocket = hooks?.makeWebSocket ?? ((u) => new WebSocket(u));
     const name = `singularity:shared-ws:${this.url}`;
+
+    // Forward only the election-relevant hooks that are actually present, so an
+    // omitted key keeps its "use the global default" meaning inside the election
+    // (`locks: null` is a real value — explicitly absent — and must forward).
+    const electionOpts: {
+      heartbeatMs?: number;
+      timeoutMs?: number;
+      makeBroadcastChannel?: MakeBroadcastChannel;
+      locks?: LockManagerLike | null;
+    } = {};
+    if (hooks?.heartbeatMs !== undefined) electionOpts.heartbeatMs = hooks.heartbeatMs;
+    if (hooks?.timeoutMs !== undefined) electionOpts.timeoutMs = hooks.timeoutMs;
+    if (hooks?.makeBroadcastChannel !== undefined) {
+      electionOpts.makeBroadcastChannel = hooks.makeBroadcastChannel;
+    }
+    if (hooks?.locks !== undefined) electionOpts.locks = hooks.locks;
 
     this.election = new CrossTabElection<WsRelayMsg>(name, {
       onElected: () => this.startLeading(),
+      onDemoted: () => this.onDemoted(),
       onFollowerMessage: (msg) => {
         if (msg.kind === "tx") this.writeOrQueue(msg.data);
       },
@@ -68,11 +108,24 @@ export class SharedWebSocket {
         }
       },
       onFollowerJoined: () => {
-        if (this.ws?.readyState === WebSocket.OPEN) {
+        if (this.ws?.readyState === SharedWebSocket.OPEN) {
           this.election.broadcast({ kind: "open" });
         }
       },
-    });
+    }, electionOpts);
+  }
+
+  /**
+   * This tab was demoted (its leader lock was stolen by a follower that saw it go
+   * silent). It no longer owns the real socket — the new leader does — so drop
+   * ours and reset to a follower-waiting state. Deliberately does NOT schedule a
+   * reconnect: as a follower we now receive frames relayed by the leader, and if
+   * we are ever re-elected `onElected` → `startLeading` opens a fresh socket.
+   */
+  private onDemoted(): void {
+    this.teardownWs();
+    this.readyState = SharedWebSocket.CONNECTING;
+    this.setStatus("reconnecting");
   }
 
   send(data: string): void {
@@ -120,9 +173,9 @@ export class SharedWebSocket {
       ? this.url
       : `${proto}://${host}${this.url}`;
 
-    let ws: WebSocket;
+    let ws: WebSocketLike;
     try {
-      ws = new WebSocket(absUrl);
+      ws = this.makeWebSocket(absUrl);
     } catch (err) {
       if (!(err instanceof SyntaxError)) throw err;
       this.scheduleReconnect();
@@ -180,7 +233,7 @@ export class SharedWebSocket {
   }
 
   private writeOrQueue(data: string): void {
-    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+    if (this.ws && this.ws.readyState === SharedWebSocket.OPEN) {
       // eslint-disable-next-line promise-safety/no-bare-catch
       try { this.ws.send(data); } catch { /* ignore */ }
     } else {

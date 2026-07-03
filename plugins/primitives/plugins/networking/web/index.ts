@@ -5,8 +5,31 @@ export type { ReconnectingWsOptions, ReconnectingWsHandle } from "./use-reconnec
 export { ReconnectingEventSource } from "./reconnecting-event-source";
 export type { ReconnectingEventSourceOptions } from "./reconnecting-event-source";
 export { SharedWebSocket } from "./shared-websocket";
+export type { SharedWebSocketHooks } from "./shared-websocket";
 export { CrossTabElection } from "./cross-tab-election";
 export type { CrossTabElectionCallbacks } from "./cross-tab-election";
+export type {
+  WebSocketLike,
+  BroadcastChannelLike,
+  LockManagerLike,
+  MakeWebSocket,
+  MakeBroadcastChannel,
+} from "./transport-types";
+export {
+  FakeWebSocket,
+  FakeWsServer,
+  FakeBroadcastChannel,
+  FakeBroadcastChannelBus,
+  FakeLockManager,
+  createTransportHub,
+  HUB_HEARTBEAT_MS,
+  HUB_TIMEOUT_MS,
+} from "./test-support";
+export type {
+  FakeWsServerOptions,
+  TabHandle,
+  TransportHub,
+} from "./test-support";
 export { fetchWithRetry } from "./fetch-with-retry";
 export type { FetchWithRetryOptions } from "./fetch-with-retry";
 export { publishWsStatus, subscribeWsStatus } from "./ws-status-bus";
