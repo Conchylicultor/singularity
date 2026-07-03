@@ -123,12 +123,12 @@ describe("resolveIdentity", () => {
     );
   });
 
-  test("PgView with an unresolved identity base throws", () => {
-    // `rows_v` is not a declared identity view, so relationIdentityBase leaves it
-    // unresolved and no identity.table is supplied → loud throw.
+  test("PgView without identity.table throws", () => {
+    // A view's identity base cannot be derived at module eval (the View
+    // contribution is only collected at boot), so it must be declared → loud throw.
     expect(() =>
       resolveIdentity(rowsView, { pk: rowsView.id }, undefined),
-    ).toThrow(/no declared identity base/);
+    ).toThrow(/needs identity\.table/);
   });
 
   test("PgView with explicit identity.table resolves", () => {
@@ -262,10 +262,10 @@ describe("compileQuery — SQL", () => {
 });
 
 describe("rel() → dependsOn", () => {
-  test("affectedMap self-queries the FK (selectDistinct) and maps ids", async () => {
-    const { db, calls } = fakeDb(() => [{ fk: "p1" }, { fk: "p2" }]);
+  test("single hop self-queries the FK (selectDistinct) and maps ids", async () => {
+    const { db, calls } = fakeDb(() => [{ v: "p1" }, { v: "p2" }]);
     const upstream = { key: "up" } as never;
-    const edge = rel(upstream, rows, { fk: rows.parentId, upstreamPk: rows.id });
+    const edge = rel(upstream, { via: rows, from: rows.id, to: rows.parentId });
     const { serverOpts } = compileQuery({
       from: rows,
       select: { id: rows.id },
@@ -285,9 +285,11 @@ describe("rel() → dependsOn", () => {
     const { db } = fakeDb();
     const signature = () => new Map([["u1", "sig"]]);
     const upstream = { key: "up" } as never;
-    const edge = rel(upstream, rows, { fk: rows.parentId, upstreamPk: rows.id }, {
-      signature,
-    });
+    const edge = rel(
+      upstream,
+      { via: rows, from: rows.id, to: rows.parentId },
+      { signature },
+    );
     const { serverOpts } = compileQuery({
       from: rows,
       select: { id: rows.id },
@@ -295,6 +297,76 @@ describe("rel() → dependsOn", () => {
       db,
     });
     expect(serverOpts.dependsOn![0]!.signature).toBe(signature);
+  });
+
+  // A two-hop chain (the agent-launches shape): rows.id → rows.parentId, then
+  // junction.a → junction.b. Each hop's distinct `to` values feed the next hop's
+  // `from IN (…)`, so the whole chain runs exactly one selectDistinct per hop.
+  const twoHop = (upstream: never) =>
+    rel(upstream, [
+      { via: rows, from: rows.id, to: rows.parentId },
+      { via: junction, from: junction.a, to: junction.b },
+    ]);
+
+  test("multi-hop chains one selectDistinct per hop, threading ids", async () => {
+    const { db, calls } = fakeDb((info) =>
+      info.sql.includes(`from "rows"`) ? [{ v: "a1" }, { v: "a2" }] : [{ v: "b1" }],
+    );
+    const edge = twoHop({ key: "up" } as never);
+    const { serverOpts } = compileQuery({
+      from: rows,
+      select: { id: rows.id },
+      edges: [edge],
+      db,
+    });
+    const out = await serverOpts.dependsOn![0]!.affectedMap!(new Set(["c1"]), {});
+    expect(out).toEqual(["b1"]);
+    expect(calls).toHaveLength(2); // one selectDistinct per hop
+    expect(calls[0]!.sql).toBe(
+      `select distinct "parent_id" from "rows" where "rows"."id" in ($1)`,
+    );
+    expect(calls[0]!.params).toEqual(["c1"]);
+    // The second hop threads the first hop's distinct `to` values as its IN list.
+    expect(calls[1]!.sql).toBe(
+      `select distinct "b" from "junction" where "junction"."a" in ($1, $2)`,
+    );
+    expect(calls[1]!.params).toEqual(["a1", "a2"]);
+  });
+
+  test("an empty intermediate hop short-circuits to [] with no further query", async () => {
+    const { db, calls } = fakeDb((info) =>
+      info.sql.includes(`from "rows"`) ? [] : [{ v: "b1" }],
+    );
+    const edge = twoHop({ key: "up" } as never);
+    const { serverOpts } = compileQuery({
+      from: rows,
+      select: { id: rows.id },
+      edges: [edge],
+      db,
+    });
+    const out = await serverOpts.dependsOn![0]!.affectedMap!(new Set(["c1"]), {});
+    expect(out).toEqual([]);
+    expect(calls).toHaveLength(1); // the second hop is never queried
+  });
+
+  test("ids are deduped between hops", async () => {
+    // The first hop returns duplicate `to` values; the second hop's IN list is
+    // deduped by the compiler (not left as ["a1","a1","a2"]).
+    const { db, calls } = fakeDb((info) =>
+      info.sql.includes(`from "rows"`)
+        ? [{ v: "a1" }, { v: "a1" }, { v: "a2" }]
+        : [{ v: "b1" }],
+    );
+    const edge = twoHop({ key: "up" } as never);
+    const { serverOpts } = compileQuery({
+      from: rows,
+      select: { id: rows.id },
+      edges: [edge],
+      db,
+    });
+    const out = await serverOpts.dependsOn![0]!.affectedMap!(new Set(["c1"]), {});
+    expect(out).toEqual(["b1"]);
+    expect(calls[1]!.params).toEqual(["a1", "a2"]);
   });
 });
 

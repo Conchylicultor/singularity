@@ -11,7 +11,7 @@ import type {
 import type { QueryResourceContract } from "@plugins/infra/plugins/query-resource/core";
 import { resolveIdentity } from "./identity";
 import { compileEdge } from "./rel";
-import type { QueryDb, QueryResourceSpec, QueryStep } from "./spec";
+import type { Edge, QueryDb, QueryResourceSpec, QueryStep } from "./spec";
 
 /** The compiled server half of a query-resource, ready for `defineResource`. */
 export interface CompiledQuery<Row, P extends ResourceParams> {
@@ -106,6 +106,25 @@ export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
   } as ServerResourceOptions<Row[], P> & ScopePolicy;
 
   return { serverOpts, keyField, identityTableName: scoped ? tableName : null };
+}
+
+/**
+ * Compile `rel()` edges into `dependsOn` entries for a HAND-WRITTEN
+ * `defineResource` — the derived-scoping analogue for resources that keep a
+ * bespoke loader (attempts' nested conversation join, agent-launches' rollup
+ * join) yet want their cascade edges derived rather than hand-rolled. `db`
+ * defaults to the real per-worktree drizzle `db` (unit tests inject a fake).
+ *
+ * The `as DependsOnEntry<P>[]` is the same generic laundering `compileQuery`
+ * does when it folds edges into `serverOpts.dependsOn`: `compileEdge` never
+ * sets `map` (only `affectedMap`/`signature`), which are `P`-independent, so a
+ * `DependsOnEntry` (default `P`) is a sound `DependsOnEntry<P>` for any `P`.
+ */
+export function compileEdges<P extends ResourceParams = ResourceParams>(
+  edges: Edge[],
+  db: QueryDb = realDb as unknown as QueryDb,
+): DependsOnEntry<P>[] {
+  return edges.map((edge) => compileEdge(edge, db)) as DependsOnEntry<P>[];
 }
 
 /**

@@ -2,6 +2,7 @@ import {
   resourceDescriptor,
   keyedResourceDescriptor,
 } from "@plugins/primitives/plugins/live-state/core";
+import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 import { z } from "zod";
 import {
   TaskSchema,
@@ -31,11 +32,16 @@ export const RECENT_GONE_LIMIT = 30;
 // than in the `tasks` umbrella, so the tasks-core server
 // can import them without forming a `tasks ⇄ tasks-core` plugin cycle. Consumers
 // import these directly from `@plugins/tasks/plugins/tasks-core/core`.
-export const tasksResource = keyedResourceDescriptor<TaskListItem[]>(
+// The tasks list is fully declarative: its server half is a `queryResource`
+// (derived loader + scoped refill + identityTable + derived cascade edge), so
+// the descriptor is a `queryResourceDescriptor` — a keyed `ResourceDescriptor`
+// over `TaskListItem[]` plus the `queryPk` the server asserts its derived
+// keyField against (a boot-time throw on drift). Web consumers still read only
+// key/origin/schema/keyOf, so the swap is additive.
+export const tasksResource = queryResourceDescriptor<TaskListItem>(
   "tasks",
-  z.array(TaskListItemSchema),
-  [],
-  (r) => (r as TaskListItem).id,
+  TaskListItemSchema,
+  "id",
   { bootCritical: true },
 );
 export const taskDetailResource = resourceDescriptor<Task | null, { id: string }>(

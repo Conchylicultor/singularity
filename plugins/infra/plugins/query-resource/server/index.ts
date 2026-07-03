@@ -1,11 +1,12 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { compileQuery, queryResource } from "./internal/compile";
+export { compileQuery, compileEdges, queryResource } from "./internal/compile";
 export type { CompiledQuery } from "./internal/compile";
 export { rel } from "./internal/rel";
 export type {
   Edge,
   EntitySource,
+  Hop,
   QueryDb,
   QueryResourceSpec,
   QuerySource,

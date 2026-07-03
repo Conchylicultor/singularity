@@ -47,16 +47,29 @@ export interface QueryDb {
 }
 
 /**
+ * One join step of a cascade edge: read `to` (distinct) from `via` for every row
+ * whose `from` column is in the incoming id set. The distinct `to` values become
+ * the next hop's incoming set (or, for the final hop, this resource's changed
+ * ids). A single-table FK translation (the old `upstreamTable`/`fk`/`upstreamPk`
+ * shape) is just a one-element `hops` chain; a multi-table mapping (e.g.
+ * conversation → task → launch) chains one hop per join.
+ */
+export interface Hop {
+  via: PgTable | PgView;
+  from: PgColumn; // matched against the incoming id set (upstream side)
+  to: PgColumn; // its distinct values become the next hop's id set / the result
+}
+
+/**
  * A compiled cross-resource cascade edge (produced by `rel()`). It is folded
- * into a `dependsOn` entry now (its `affectedMap` self-queries the FK column to
- * translate changed upstream ids → this resource's changed ids); it becomes
- * load-bearing when the tasks/agents cascade migrates to `rel()` in M4.
+ * into a `dependsOn` entry (its `affectedMap` chains `hops` — one
+ * `selectDistinct` per hop — to translate changed upstream ids → this resource's
+ * changed ids). Load-bearing: the tasks/attempts/agents cascade rides these
+ * derived edges (via `queryResource`'s `edges` or the public `compileEdges`).
  */
 export interface Edge {
   upstream: Resource<unknown, ResourceParams>;
-  upstreamTable: PgTable;
-  fk: PgColumn;
-  upstreamPk: PgColumn;
+  hops: Hop[];
   signature?: DependsOnEntry["signature"];
 }
 
@@ -69,10 +82,12 @@ export interface QueryResourceSpec<P extends ResourceParams = ResourceParams> {
   /** The relation to read: a base table, a 1:1 identity view, or an entity. */
   from: QuerySource;
   /**
-   * Required for a `PgView` (a view carries no primary-key metadata) and usable
-   * as an override elsewhere. `pk` is the identity column; `table` names the
-   * base table the identity scopes to (defaults to the entity/table name, or —
-   * for a view — `relationIdentityBase(viewName)`).
+   * Required in full for a `PgView` (a view carries no primary-key metadata,
+   * and its identity base cannot be derived at module eval — the
+   * `View({ view, identityTable })` contribution is only collected at boot,
+   * after `queryResource(...)` has already resolved); usable as an override
+   * elsewhere. `pk` is the identity column; `table` names the base table the
+   * identity scopes to (defaults to the entity/table name for non-views).
    */
   identity?: { table?: string; pk: PgColumn };
   /** Projection. Default: an entity's `wireColumns`, or all columns (table/view). */
@@ -101,7 +116,7 @@ export interface QueryResourceSpec<P extends ResourceParams = ResourceParams> {
    * FULL query and ignores `ctx.affectedIds`.
    */
   recompute?: { kind: "full"; reason: string };
-  /** `rel()` cascade edges — compiled into `dependsOn` now, used from M4 on. */
+  /** `rel()` cascade edges — compiled into `dependsOn` (see `Edge`). */
   edges?: Edge[];
   /** Fixed-window trailing debounce (ms) for this resource's flushes. */
   debounceMs?: number;

@@ -18,7 +18,8 @@ import {
   type ScopePolicy,
   type ServerResourceOptions,
 } from "@plugins/framework/plugins/resource-runtime/core";
-import { compileQuery } from "./compile";
+import { compileEdges, compileQuery } from "./compile";
+import { rel } from "./rel";
 import type { QueryDb, SelectMap } from "./spec";
 
 const rows = pgTable("rows", {
@@ -26,12 +27,40 @@ const rows = pgTable("rows", {
   n: integer("n").notNull(),
 });
 
+// The tasks/attempts/tasks cascade shape, in miniature: conversations own an
+// `attemptId`, attempts own a `taskId`. `rel()` edges chain a `selectDistinct`
+// per hop to translate conv ids → attempt ids → task ids (the fake db scripts
+// each hop's result — see `fakeDb`'s `distinct` arg).
+const convs = pgTable("convs", {
+  id: text("id").primaryKey(),
+  attemptId: text("attempt_id").notNull(),
+  n: integer("n").notNull(),
+});
+const attemptsT = pgTable("attempts_t", {
+  id: text("id").primaryKey(),
+  taskId: text("task_id").notNull(),
+  n: integer("n").notNull(),
+});
+const tasksT = pgTable("tasks_t", {
+  id: text("id").primaryKey(),
+  n: integer("n").notNull(),
+});
+
 // A fake db whose scripted rows depend on whether the query is scoped. The
-// scoped refill is the only path that calls `.where()` (the compiler adds
-// `pk IN (...)`), so the fake flips to "scoped" on the first `.where()`. Full
-// loads return the whole set; scoped loads return only the "changed" rows. No
-// SQL is rendered here — that is covered by compile.test.ts.
-function fakeDb(full: () => unknown[], scopedRows: () => unknown[]): QueryDb {
+// scoped refill is the only `select()` path that calls `.where()` (the compiler
+// adds `pk IN (...)`), so the fake flips to "scoped" on the first `.where()`.
+// Full loads return the whole set; scoped loads return only the "changed" rows.
+//
+// `distinct` scripts the `selectDistinct(...).from(...).where(...)` path a
+// compiled `rel()` edge's `affectedMap` drives — one call per hop, returning the
+// hop's distinct `{ v }` rows (the mapped downstream ids). It defaults to `[]`
+// (edge-free resources never call it). No SQL is rendered here — that is covered
+// by compile.test.ts.
+function fakeDb(
+  full: () => unknown[],
+  scopedRows: () => unknown[],
+  distinct: () => unknown[] = () => [],
+): QueryDb {
   const step = (scoped: boolean) => ({
     where: () => step(true),
     orderBy: () => step(scoped),
@@ -39,11 +68,18 @@ function fakeDb(full: () => unknown[], scopedRows: () => unknown[]): QueryDb {
     then: (resolve: (v: unknown[]) => unknown) =>
       Promise.resolve(scoped ? scopedRows() : full()).then(resolve),
   });
+  // A `selectDistinct` hop: `.from(via).where(from IN ids)` then await.
+  const distinctStep = () => ({
+    where: () => distinctStep(),
+    then: (resolve: (v: unknown[]) => unknown) =>
+      Promise.resolve(distinct()).then(resolve),
+  });
   const from = { from: () => step(false) };
+  const distinctFrom = { from: () => distinctStep() };
   return {
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     select: (_fields?: SelectMap) => from,
-    selectDistinct: () => from,
+    selectDistinct: () => distinctFrom,
   } as unknown as QueryDb;
 }
 
@@ -97,13 +133,17 @@ function register(
   spec: Parameters<typeof compileQuery>[0],
   loads: boolean[],
   subscribed: () => boolean,
+  idsSeen?: (readonly string[] | undefined)[],
 ) {
   const { serverOpts } = compileQuery(spec);
   const inner = serverOpts.loader;
   const wrapped = {
     ...serverOpts,
     loader: (p: ResourceParams, ctx?: { affectedIds: readonly string[] }) => {
-      if (subscribed()) loads.push(ctx !== undefined);
+      if (subscribed()) {
+        loads.push(ctx !== undefined);
+        idsSeen?.push(ctx?.affectedIds);
+      }
       return inner(p, ctx);
     },
   } as ServerResourceOptions<{ id: string; n: number }[]> & ScopePolicy;
@@ -247,5 +287,203 @@ describe("compiled query-resource — end-to-end via the change-feed", () => {
     expect(loads).toEqual([false]); // FULL recompute, never scoped
     expect(pushes).toHaveLength(1); // the disappearance SHIPS (delta with delete+order)
     expect(pushes[0]!.kind).toBe("delta");
+  });
+});
+
+// The derived-cascade end-to-end: `rel()` edges (single- and multi-hop, plus the
+// signature relevance gate) driving the real change-feed → keyed-diff path. These
+// pin the tasks/attempts/agents cascade the M4 migration rides on.
+describe("compiled query-resource — rel() cascade edges end-to-end", () => {
+  test("a rel() edge cascades a scoped upstream change into a downstream keyed delta", async () => {
+    // `up` reads convs; `down` reads attempts_t and cascades off `up` via a
+    // single-hop edge (conv id → its attemptId). A scoped convs change flows
+    // through the edge and refills only the mapped attempt row.
+    const h = harness({ up_a: ["convs"], down_a: ["attempts_t"] });
+    const loads: boolean[] = [];
+    const idsSeen: (readonly string[] | undefined)[] = [];
+    let subscribed = false;
+    const up = register(
+      h.runtime,
+      "up_a",
+      {
+        from: convs,
+        identity: { pk: convs.id },
+        db: fakeDb(() => [{ id: "c1", n: 1 }], () => [{ id: "c1", n: 2 }]),
+      },
+      [],
+      () => subscribed,
+    );
+    register(
+      h.runtime,
+      "down_a",
+      {
+        from: attemptsT,
+        identity: { pk: attemptsT.id },
+        edges: [rel(up, { via: convs, from: convs.id, to: convs.attemptId })],
+        db: fakeDb(
+          () => [{ id: "at1", n: 1 }],
+          () => [{ id: "at1", n: 2 }],
+          () => [{ v: "at1" }], // affectedMap: conv c1 → attempt at1
+        ),
+      },
+      loads,
+      () => subscribed,
+      idsSeen,
+    );
+    await h.subscribe("up_a");
+    await h.subscribe("down_a");
+    subscribed = true;
+
+    h.runtime.applyDbChange({ table: "convs", op: "U", ids: ["c1"], origin: "convs", identityBase: "convs" });
+    await tick();
+
+    const downPushes = h.pushesFor("down_a");
+    expect(downPushes).toHaveLength(1);
+    expect(downPushes[0]!.kind).toBe("delta"); // scoped keyed upsert, no order
+    expect(loads).toEqual([true]); // down loaded scoped via the cascade
+    expect(idsSeen).toEqual([["at1"]]); // the edge mapped conv → attempt
+  });
+
+  test("a 3-level A→B→C cascade (conv→attempts→tasks shape) flows through both edges scoped", async () => {
+    // A = conversations-active (keyed queryResource), B = attempts (keyed
+    // defineResource with a HAND-WRITTEN loader + a DERIVED `compileEdges` edge),
+    // C = tasks (keyed queryResource with an `edges` edge) — mirroring production.
+    // A scoped conv change must propagate A→B→C with each hop's ids correctly
+    // mapped (conv → attempt → task).
+    const h = harness({ A: ["convs"], B: ["attempts_t"], C: ["tasks_t"] });
+    let subscribed = false;
+    const A = register(
+      h.runtime,
+      "A",
+      {
+        from: convs,
+        identity: { pk: convs.id },
+        db: fakeDb(() => [{ id: "c1", n: 1 }], () => [{ id: "c1", n: 2 }]),
+      },
+      [],
+      () => subscribed,
+    );
+    // B: a bespoke loader (the attempts nested-join analogue) whose cascade edge
+    // is nonetheless DERIVED via `compileEdges` (the migration's hand-written half).
+    const bIds: (readonly string[] | undefined)[] = [];
+    const B = h.runtime.defineResource(keyed("B"), {
+      identityTable: "attempts_t",
+      dependsOn: compileEdges(
+        [rel(A, { via: convs, from: convs.id, to: convs.attemptId })],
+        fakeDb(() => [], () => [], () => [{ v: "at1" }]), // conv c1 → attempt at1
+      ),
+      loader: (_p: ResourceParams, ctx?: { affectedIds: readonly string[] }) => {
+        if (subscribed) bIds.push(ctx?.affectedIds);
+        return ctx ? [{ id: "at1", n: 2 }] : [{ id: "at1", n: 1 }];
+      },
+    } as ServerResourceOptions<{ id: string; n: number }[]> & ScopePolicy);
+    const cLoads: boolean[] = [];
+    const cIds: (readonly string[] | undefined)[] = [];
+    register(
+      h.runtime,
+      "C",
+      {
+        from: tasksT,
+        identity: { pk: tasksT.id },
+        edges: [rel(B, { via: attemptsT, from: attemptsT.id, to: attemptsT.taskId })],
+        db: fakeDb(
+          () => [{ id: "ta1", n: 1 }],
+          () => [{ id: "ta1", n: 2 }],
+          () => [{ v: "ta1" }], // affectedMap: attempt at1 → task ta1
+        ),
+      },
+      cLoads,
+      () => subscribed,
+      cIds,
+    );
+    await h.subscribe("A");
+    await h.subscribe("B");
+    await h.subscribe("C");
+    subscribed = true;
+
+    h.runtime.applyDbChange({ table: "convs", op: "U", ids: ["c1"], origin: "convs", identityBase: "convs" });
+    await tick();
+
+    expect(h.pushesFor("B")).toHaveLength(1);
+    expect(h.pushesFor("B")[0]!.kind).toBe("delta");
+    expect(h.pushesFor("C")).toHaveLength(1);
+    expect(h.pushesFor("C")[0]!.kind).toBe("delta");
+    expect(bIds).toEqual([["at1"]]); // edge A→B mapped conv → attempt
+    expect(cIds).toEqual([["ta1"]]); // edge B→C mapped attempt → task
+    expect(cLoads).toEqual([true]); // C loaded scoped, not FULL
+  });
+
+  test("the signature gate drops a transient-only upstream change (affectedMap not consulted)", async () => {
+    // The edge carries a `signature` returning a CONSTANT signature per id. The
+    // first change is new → passes the gate → affectedMap runs → a downstream
+    // frame. The second change has the SAME signature → the relevance gate
+    // short-circuits the edge BEFORE affectedMap, so no second frame and the
+    // affectedMap (distinct) is never re-consulted.
+    let distinctCalls = 0;
+    const h = harness({ up_s: ["convs"], down_s: ["attempts_t"] });
+    const loads: boolean[] = [];
+    let subscribed = false;
+    const up = register(
+      h.runtime,
+      "up_s",
+      {
+        from: convs,
+        identity: { pk: convs.id },
+        // Distinct n each call so `up` itself always ships a frame — isolating the
+        // gate's effect to the DOWNSTREAM edge.
+        db: fakeDb(() => [{ id: "c1", n: 1 }], (() => {
+          let k = 1;
+          return () => [{ id: "c1", n: ++k }];
+        })()),
+      },
+      [],
+      () => subscribed,
+    );
+    register(
+      h.runtime,
+      "down_s",
+      {
+        from: attemptsT,
+        identity: { pk: attemptsT.id },
+        edges: [
+          rel(
+            up,
+            { via: convs, from: convs.id, to: convs.attemptId },
+            {
+              // Only transient fields changed ⇒ the same signature both times.
+              signature: (ids) => new Map([...ids].map((id) => [id, "sig-const"])),
+            },
+          ),
+        ],
+        db: fakeDb(
+          () => [{ id: "at1", n: 1 }],
+          () => [{ id: "at1", n: 2 }],
+          () => {
+            distinctCalls++;
+            return [{ v: "at1" }];
+          },
+        ),
+      },
+      loads,
+      () => subscribed,
+    );
+    await h.subscribe("up_s");
+    await h.subscribe("down_s");
+    subscribed = true;
+
+    // First change: new signature → passes → one downstream delta, affectedMap once.
+    h.runtime.applyDbChange({ table: "convs", op: "U", ids: ["c1"], origin: "convs", identityBase: "convs" });
+    await tick();
+    expect(h.pushesFor("down_s")).toHaveLength(1);
+    expect(loads).toEqual([true]);
+    expect(distinctCalls).toBe(1);
+
+    // Second change: identical signature → the gate short-circuits the edge, so
+    // no new downstream frame and affectedMap is never re-consulted.
+    h.runtime.applyDbChange({ table: "convs", op: "U", ids: ["c1"], origin: "convs", identityBase: "convs" });
+    await tick();
+    expect(h.pushesFor("down_s")).toHaveLength(1); // still just the first frame
+    expect(loads).toEqual([true]); // down never re-loaded
+    expect(distinctCalls).toBe(1); // affectedMap not consulted the second time
   });
 });

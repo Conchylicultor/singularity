@@ -31,10 +31,13 @@ export const notificationsResource = queryResource(notificationsDescriptor, {
    of `getTableColumns(entity.table)`, default projection = `wireColumns`.
    `PgTable` → base = `getTableConfig(table).name`, pk = its single primary,
    default projection = select-all. `PgView` → **requires** `identity.pk` (a view
-   has no PK metadata); base table = `identity.table` ?? `relationIdentityBase(viewName)`,
-   with a **loud throw** when that leaves the view unresolved. A composite /
-   missing PK (with no `identity.pk` override) throws — such a resource stays on a
-   plain push `defineResource`.
+   has no PK metadata) **and** `identity.table` (matching the view's
+   `View({ view, identityTable })` declaration) — the base cannot be derived
+   here because `queryResource(...)` resolves at module eval, before the
+   boot-time contribution collection that populates `relationIdentityBase`;
+   a missing declaration is a **loud throw**. A composite / missing PK (with no
+   `identity.pk` override) throws — such a resource stays on a plain push
+   `defineResource`.
 2. **keyField.** The wire field the client `keyOf` reads. With a `select`
    projection it is the projection key whose column matches the pk (matched by
    DB column name, so an aliased projection — `{ conversationId: table.parentId }`
@@ -102,14 +105,50 @@ it **in place** until the next FULL recompute reships `order`. This is identical
 to `conversationsActive` today and is an accepted trade-off — the payoff is that
 a status/title flip on one row ships one row, not the whole ordered list.
 
-## `rel()` cascade edges (compiled now, load-bearing in M4)
+## `rel()` cascade edges (load-bearing)
 
-`rel(upstream, upstreamTable, { fk, upstreamPk }, { signature? })` declares a
-cross-resource cascade: when `upstream` notifies, the edge's `affectedMap`
-self-queries the FK column (`selectDistinct({ fk }).from(upstreamTable).where(pk
-IN ids)`) to translate changed upstream ids → this resource's changed ids —
-reproducing the hand-written attempts↔conversations closure. `edges` are compiled
-into `dependsOn` today; the tasks/agents cascade migrates onto them in M4.
+`rel(upstream, hops, { signature? })` declares a cross-resource cascade: when
+`upstream` notifies, the compiled edge's `affectedMap` chains `hops` to translate
+changed upstream ids → this resource's changed ids. **Load-bearing:** the
+tasks/attempts/agents cascade (the last hand-written `affectedMap` scoping in the
+codebase) now rides these derived edges.
+
+A **hop** is one join step — read `to` (distinct) from `via` for every row whose
+`from` column is in the incoming id set:
+
+```ts
+export interface Hop { via: PgTable | PgView; from: PgColumn; to: PgColumn }
+```
+
+- **Single-hop** (a plain FK translation) reproduces the old attempts↔conversations
+  closure. `rel(conversationsActive, { via: _conversations, from: _conversations.id,
+  to: _conversations.attemptId })` ⇒ `affectedMap = ids =>
+  selectDistinct({ v: attemptId }).from(_conversations).where(id IN ids)`.
+- **Multi-hop** (a hop array) chains one `selectDistinct` per hop, each hop's
+  distinct `to` values feeding the next hop's `from IN (…)`. The agent-launches
+  edge is two hops: `conv id → task id (conversations_v) → launch id
+  (_agent_launches)` — collapsing the old conv→attempt→task→launch 3-table join
+  because `conversations_v` already carries `taskId`.
+
+Per-hop semantics: ids are `String()`-coerced and **deduped between hops**; an
+**empty hop short-circuits** the whole chain to `[]` with no further query. That
+short-circuit is sound because the runtime never calls `affectedMap` with an
+empty set (it guards on the delivered affected set upstream), so an empty result
+can only mean "no downstream rows".
+
+Two ways to consume edges:
+
+- **`queryResource({ …, edges: [rel(…)] })`** — the compiler folds them into
+  `serverOpts.dependsOn` for a fully-declarative resource (`tasksResource`).
+- **`compileEdges([rel(…)], db?)`** — compile edges for a **hand-written**
+  `defineResource` that keeps a bespoke loader but wants derived scoping
+  (`attemptsResource`'s nested-conversation loader, `agentLaunchesResource`'s
+  rollup loader). `db` defaults to the real per-worktree drizzle `db`.
+
+`opts.signature` is passed through verbatim to the `DependsOnEntry` — the
+relevance gate that drops a cascade whose downstream-relevant upstream projection
+is unchanged (e.g. a conversation's transient `waitingFor`/`updatedAt`, which the
+tasks/attempts aggregates never read).
 
 ## The `db` seam
 
@@ -136,12 +175,12 @@ env shim needed. `compile.test.ts` renders SQL via `new PgDialect().sqlToQuery(.
 
 - Description: Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, identityTable, and client keyOf for keyed live-state resources.
 - Server:
-  - Uses: `database.db`, `database/derived-views.relationIdentityBase`
-  - Exports: Types: `CompiledQuery`, `Edge`, `EntitySource`, `QueryDb`, `QueryResourceSpec`, `QuerySource`, `SelectMap`; Values: `compileQuery`, `queryResource`, `rel`
+  - Uses: `database.db`
+  - Exports: Types: `CompiledQuery`, `Edge`, `EntitySource`, `Hop`, `QueryDb`, `QueryResourceSpec`, `QuerySource`, `SelectMap`; Values: `compileEdges`, `compileQuery`, `queryResource`, `rel`
 - Core:
   - Uses: `primitives/live-state.keyedResourceDescriptor`, `primitives/live-state.ResourceDescriptor`
   - Exports: Types: `QueryResourceContract`; Values: `queryResourceDescriptor`
 - Cross-plugin:
-  - Imported by: `apps/browser/bookmarks`, `apps/mail/reading-pane`, `apps/pages/starred`, `apps/story/generation`, `build`, `conversations/conversation-category`, `conversations/conversation-progress`, `plugin-meta/plugin-health`, `release`, `shell/notifications`, `tasks/auto-start`
+  - Imported by: `apps/browser/bookmarks`, `apps/mail/reading-pane`, `apps/pages/starred`, `apps/story/generation`, `build`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-progress`, `plugin-meta/plugin-health`, `release`, `shell/notifications`, `tasks/auto-start`, `tasks/tasks-core`
 
 <!-- AUTOGENERATED:END -->

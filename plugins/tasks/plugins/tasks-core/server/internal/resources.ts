@@ -1,8 +1,13 @@
 import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { pushes } from "./tables";
-import { attempts, conversations, tasks } from "./views";
+import {
+  compileEdges,
+  queryResource,
+  rel,
+} from "@plugins/infra/plugins/query-resource/server";
+import { _attempts, _conversations, pushes } from "./tables";
+import { attempts, tasks } from "./views";
 import type { Task, TaskListItem } from "./schema";
 // `key` / `schema` / keyed-ness come from the shared client descriptors — the
 // single source of truth both runtimes read. The server adds only the DB half
@@ -89,53 +94,44 @@ export const pushesResource = defineResource(pushesDescriptor, {
 
 export const attemptsResource = defineResource(attemptsDescriptor, {
   // A direct `attempts` change scopes to that attempt id; conversation and push
-  // changes arrive scoped through the affectedMap edges below (conv → attempt,
-  // push → attempt).
+  // changes arrive scoped through the derived edges below (conv → attempt, push
+  // → attempt). The nested conversations loader stays hand-written; only the
+  // cascade scoping is derived (`rel()` + `compileEdges`) — no hand-rolled
+  // affectedMap closures that can drift from what the loader reads.
   identityTable: "attempts",
-  dependsOn: [
-    {
-      // Cascades off the active sub-resource ALONE. This is sufficient because the
-      // active loader's read-set covers the whole `conversations` table, so the L4
-      // feed delivers every conversation change here scoped to its id (even
-      // gone-only rows the active filter excludes), and the downstream affectedMap
-      // edge fires on that delivered affected set — not on whether the payload
-      // changed.
-      resource: conversationsActiveResource,
-      // Relevance gate: a conversation write that touched ONLY transient fields
-      // (waitingFor/updatedAt/lastViewedAt — none of which an attempt derives)
-      // never reaches this edge's affectedMap, so it can't cascade a no-op
-      // recompute through attempts → tasks. Genuine status/title/liveness
-      // changes still flow through (they're in the signature).
-      signature: conversationCascadeSignatures,
-      // A changed conversation affects exactly its owning attempt. Map the
-      // changed conversation ids → their attempt ids via the conversations_v
-      // view (carries attemptId; index conversations_attempt_id_status_idx).
-      affectedMap: async (convIds) => {
-        const rows = await db
-          .selectDistinct({ attemptId: conversations.attemptId })
-          .from(conversations)
-          .where(inArray(conversations.id, [...convIds]));
-        return rows.map((r) => r.attemptId);
-      },
-    },
-    {
-      // Push changes flip an attempt's derived status (in_progress → pushed /
-      // completed) and finished_at. Previously `attempts_v` referenced `pushes`
-      // directly, so a push change routed to it through the view→base-table graph;
-      // now `attempts_v` reads the `attempt_push_agg` rollup (feed-exempt, no NOTIFY),
-      // so this explicit edge carries the invalidation. `pushesResource`'s loader
-      // reads the whole `pushes` table, so the L4 feed delivers every push change
-      // here scoped to its id; the affectedMap maps push ids → their attempt ids.
-      resource: pushesResource,
-      affectedMap: async (pushIds) => {
-        const rows = await db
-          .selectDistinct({ attemptId: pushes.attemptId })
-          .from(pushes)
-          .where(inArray(pushes.id, [...pushIds]));
-        return rows.map((r) => r.attemptId);
-      },
-    },
-  ],
+  dependsOn: compileEdges([
+    // Cascades off the active sub-resource ALONE. This is sufficient because the
+    // active loader's read-set covers the whole `conversations` table, so the L4
+    // feed delivers every conversation change here scoped to its id (even
+    // gone-only rows the active filter excludes), and the derived edge fires on
+    // that delivered affected set — not on whether the payload changed.
+    //
+    // A changed conversation affects exactly its owning attempt: map the changed
+    // conversation ids → their attempt ids via the `_conversations` BASE table
+    // (carries attemptId; index conversations_attempt_id_status_idx). This hop
+    // reads the base table where the old closure read conversations_v — an
+    // FK-equivalent attemptId set (conversations_v inner-joins attempts, but the
+    // NOT NULL attempt FK guarantees the same set), verified by the parity diff.
+    //
+    // `signature` (relevance gate): a conversation write that touched ONLY
+    // transient fields (waitingFor/updatedAt/lastViewedAt — none of which an
+    // attempt derives) never reaches this edge's affectedMap, so it can't cascade
+    // a no-op recompute through attempts → tasks. Genuine status/title/liveness
+    // changes still flow through (they're in the signature).
+    rel(
+      conversationsActiveResource,
+      { via: _conversations, from: _conversations.id, to: _conversations.attemptId },
+      { signature: conversationCascadeSignatures },
+    ),
+    // Push changes flip an attempt's derived status (in_progress → pushed /
+    // completed) and finished_at. Previously `attempts_v` referenced `pushes`
+    // directly, so a push change routed to it through the view→base-table graph;
+    // now `attempts_v` reads the `attempt_push_agg` rollup (feed-exempt, no NOTIFY),
+    // so this explicit edge carries the invalidation. `pushesResource`'s loader
+    // reads the whole `pushes` table, so the L4 feed delivers every push change
+    // here scoped to its id; the hop maps push ids → their attempt ids.
+    rel(pushesResource, { via: pushes, from: pushes.id, to: pushes.attemptId }),
+  ]),
   loader: async (_params, ctx): Promise<AttemptWithConversations[]> => {
     const ids = ctx?.affectedIds;
     const [attemptRows, convRows] = await Promise.all([
@@ -169,65 +165,58 @@ export const attemptsResource = defineResource(attemptsDescriptor, {
   },
 });
 
-// List loader: every `tasks_v` column EXCEPT `description`. Pushed to every tab
+// List payload: every `tasks_v` column EXCEPT `description`. Pushed to every tab
 // on each cascade fire, so it carries only what the list renders — dropping
 // `description` removes ~60% of the payload. The detail pane reads the full row
 // (incl. description) from `taskDetailResource` below.
-export const tasksResource = defineResource(tasksDescriptor, {
-  // A direct `tasks` change scopes to that task id; attempt/conversation changes
-  // arrive scoped through the affectedMap edge below (attempt → task), which is
-  // covered transitively (conv → attempt → task).
-  identityTable: "tasks",
-  dependsOn: [
-    {
-      resource: attemptsResource,
-      // A changed attempt affects exactly its owning task. Map changed attempt
-      // ids → their task ids via the attempts_v view (carries taskId; index
-      // attempts_task_id_idx).
-      affectedMap: async (attemptIds) => {
-        const rows = await db
-          .selectDistinct({ taskId: attempts.taskId })
-          .from(attempts)
-          .where(inArray(attempts.id, [...attemptIds]));
-        return rows.map((r) => r.taskId);
-      },
-    },
-  ],
-  loader: async (_params, ctx) => {
-    // Every `tasks_v` column except `description`. The `satisfies
-    // Record<keyof TaskListItem, unknown>` makes this projection fail to COMPILE
-    // if it ever drifts from `TaskListItemSchema` (= `TaskSchema.omit({
-    // description })`): adding a `_tasks` column makes it required in the schema,
-    // so omitting it here is a type error. Previously the column set was
-    // hand-listed with no such guard and the `as unknown as` cast below hid the
-    // mismatch — a missing column (e.g. `titleAuto`) surfaced only at runtime as
-    // a ZodError on every list load, freezing the whole tasks app.
-    const listColumns = {
-      id: tasks.id,
-      folderId: tasks.folderId,
-      groupId: tasks.groupId,
-      title: tasks.title,
-      titleAuto: tasks.titleAuto,
-      author: tasks.author,
-      droppedAt: tasks.droppedAt,
-      heldAt: tasks.heldAt,
-      expanded: tasks.expanded,
-      rank: tasks.rank,
-      createdAt: tasks.createdAt,
-      updatedAt: tasks.updatedAt,
-      status: tasks.status,
-      active: tasks.active,
-      finishedAt: tasks.finishedAt,
-      dependencies: tasks.dependencies,
-    } satisfies Record<keyof TaskListItem, unknown>;
-    const sel = db.select(listColumns).from(tasks);
-    const scoped = ctx?.affectedIds
-      ? sel.where(inArray(tasks.id, [...ctx.affectedIds]))
-      : sel;
-    return scoped.orderBy(asc(tasks.rank), asc(tasks.createdAt)) as unknown as Promise<
-      TaskListItem[]
-    >;
-  },
+//
+// Fully declarative via `queryResource`: the compiler derives the FULL loader,
+// the Layer-2 scoped refill (`WHERE id IN (…)`), the `identityTable: "tasks"`
+// scope policy (from the tasks_v view identity), the derived cascade edge, and
+// the client keyField — replacing the former hand-written loader + affectedMap
+// closure + `as unknown as` cast.
+export const tasksResource = queryResource(tasksDescriptor, {
+  // tasks_v PgView. The identity base table is declared explicitly (matching the
+  // View({ view: tasks, identityTable: "tasks" }) contribution in server/index.ts):
+  // it cannot be derived here — this call resolves at module eval, before the
+  // boot-time contribution collection that populates relationIdentityBase.
+  from: tasks,
+  identity: { table: "tasks", pk: tasks.id },
+  // Every `tasks_v` column except `description`. The `satisfies Record<keyof
+  // TaskListItem, unknown>` makes this projection fail to COMPILE if it ever
+  // drifts from `TaskListItemSchema` (= `TaskSchema.omit({ description })`):
+  // adding a `_tasks` column makes it required in the schema, so omitting it here
+  // is a type error. Previously the column set was hand-listed with no such guard
+  // and an `as unknown as` cast that hid the mismatch — a missing column (e.g.
+  // `titleAuto`) surfaced only at runtime as a ZodError on every list load,
+  // freezing the whole tasks app.
+  select: {
+    id: tasks.id,
+    folderId: tasks.folderId,
+    groupId: tasks.groupId,
+    title: tasks.title,
+    titleAuto: tasks.titleAuto,
+    author: tasks.author,
+    droppedAt: tasks.droppedAt,
+    heldAt: tasks.heldAt,
+    expanded: tasks.expanded,
+    rank: tasks.rank,
+    createdAt: tasks.createdAt,
+    updatedAt: tasks.updatedAt,
+    status: tasks.status,
+    active: tasks.active,
+    finishedAt: tasks.finishedAt,
+    dependencies: tasks.dependencies,
+  } satisfies Record<keyof TaskListItem, unknown>,
+  orderBy: [asc(tasks.rank), asc(tasks.createdAt)],
+  // A direct `tasks` change scopes to that task id (identityTable); attempt (and,
+  // transitively, conversation) changes arrive scoped through this derived edge.
+  // A changed attempt affects exactly its owning task: map changed attempt ids →
+  // their task ids via the `_attempts` BASE table (carries taskId; index
+  // attempts_task_id_idx). Reads the base table where the old closure read
+  // attempts_v — an FK-equivalent taskId set (attempts_v is _attempts + computed
+  // columns; taskId is a base column), verified by the parity diff.
+  edges: [rel(attemptsResource, { via: _attempts, from: _attempts.id, to: _attempts.taskId })],
 });
 
 // Per-id detail resource: the full task row (incl. `description`). Only loads

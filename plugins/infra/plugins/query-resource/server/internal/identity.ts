@@ -6,7 +6,6 @@ import {
   getViewConfig,
   type PgColumn,
 } from "drizzle-orm/pg-core";
-import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";
 import type { EntitySource, QuerySource, SelectMap } from "./spec";
 
 // The resolved identity of a query source: the base table its change scopes to,
@@ -95,9 +94,13 @@ function keyFieldFor(
  *   `getTableColumns(entity.table)`; default projection = `wireColumns`.
  * - **PgTable** → base table = `getTableConfig(table).name`; pk = its single
  *   primary; default projection = select-all.
- * - **PgView** → REQUIRES `identity.pk`; base table = `identity.table` ??
- *   `relationIdentityBase(viewName)`, throwing when unresolved (the base maps to
- *   the view's own name).
+ * - **PgView** → REQUIRES `identity.pk` AND `identity.table`. A view carries no
+ *   pk metadata, and its identity base CANNOT be derived here: the
+ *   `View({ view, identityTable })` contribution that would name it is collected
+ *   at boot, while `queryResource(...)` resolves at module eval — always before
+ *   collection (the owning barrel evaluates its `resources.ts` import first). A
+ *   `relationIdentityBase` fallback was tried and is structurally dead code at
+ *   this point in the lifecycle, so the base table is declared explicitly.
  *
  * `identity.pk` overrides the derived pk anywhere; a composite / missing pk (with
  * no override) throws.
@@ -120,17 +123,15 @@ export function resolveIdentity(
           `primary-key metadata, so its identity column must be declared explicitly.`,
       );
     }
-    let tableName = identity.table;
+    const tableName = identity.table;
     if (!tableName) {
-      const base = relationIdentityBase(viewName);
-      if (base === viewName) {
-        throw new Error(
-          `queryResource: ${label} has no declared identity base table ` +
-            `(relationIdentityBase left it unresolved). Declare the view via ` +
-            `View({ view, identityTable }) in derived-views, or pass identity.table.`,
-        );
-      }
-      tableName = base;
+      throw new Error(
+        `queryResource: ${label} needs identity.table — a view's identity base ` +
+          `cannot be derived at module eval (the View({ view, identityTable }) ` +
+          `contribution is only collected at boot, after this call). Pass the ` +
+          `base table name explicitly, matching the view's derived-views ` +
+          `identityTable declaration.`,
+      );
     }
     const columns = getViewConfig(from).selectedFields as Record<string, PgColumn>;
     return {
