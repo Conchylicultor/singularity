@@ -51,7 +51,7 @@ call.
 
 - Description: Server-owned field-capability library: the Fields.Storage / Fields.FilterSql tokens, their eager self-registering indexes, and the resolveFieldStorage / resolveFieldFilterSql resolvers. A graph sink — never imports a capability barrel.
 - Cross-plugin:
-  - Imported by: `conversations/all-conversations`, `fields/bool/filter-sql`, `fields/bool/storage`, `fields/date/filter-sql`, `fields/date/storage`, `fields/enum/filter-sql`, `fields/float/storage`, `fields/int/storage`, `fields/json/storage`, `fields/number/filter-sql`, `fields/rank/storage`, `fields/text/filter-sql`, `fields/text/storage`, `fields/uuid/storage`, `infra/entities`
+  - Imported by: `apps/mail/inbox`, `conversations/all-conversations`, `fields/bool/filter-sql`, `fields/bool/storage`, `fields/date/filter-sql`, `fields/date/storage`, `fields/enum/filter-sql`, `fields/float/storage`, `fields/int/storage`, `fields/json/storage`, `fields/number/filter-sql`, `fields/rank/storage`, `fields/text/filter-sql`, `fields/text/storage`, `fields/uuid/storage`, `infra/entities`
 - Server:
   - Exports: Types: `FieldFilterSqlContribution`, `FieldStorageContribution`, `FilterSqlBuilder`, `StorageColumnBuilder`; Values: `Fields`, `fieldsToColumns`, `resolveFieldFilterSql`, `resolveFieldStorage`
 

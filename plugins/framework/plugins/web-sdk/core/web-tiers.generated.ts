@@ -15,11 +15,7 @@
 
 // App-content plugins pinned EAGER (would otherwise defer), and why:
 //   - apps/plugins/agent-manager/plugins/worktree-switcher: watched boot slot ActionBar.Item
-//   - apps/plugins/mail/plugins/attachments: dependency closure (imported by an eager plugin)
-//   - apps/plugins/mail/plugins/mail-html: dependency closure (imported by an eager plugin)
-//   - apps/plugins/mail/plugins/reading-pane: dependency closure (imported by an eager plugin)
 //   - apps/plugins/mail/plugins/sync/plugins/auto-resume: watched boot slot Core.Root
-//   - apps/plugins/mail/plugins/thread-list: dependency closure (imported by an eager plugin)
 //   - apps/plugins/sonata/plugins/voicing: dependency closure (imported by an eager plugin)
 //   - apps/plugins/story/plugins/marker: dependency closure (imported by an eager plugin)
 //   - apps/plugins/story/plugins/render: dependency closure (imported by an eager plugin)
@@ -36,9 +32,14 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/browser/plugins/webview",
   "apps/plugins/deploy/plugins/servers",
   "apps/plugins/home/plugins/app-cards",
+  "apps/plugins/mail/plugins/attachments",
+  "apps/plugins/mail/plugins/inbox",
+  "apps/plugins/mail/plugins/mail-html",
   "apps/plugins/mail/plugins/mailbox",
+  "apps/plugins/mail/plugins/reading-pane",
   "apps/plugins/mail/plugins/search",
   "apps/plugins/mail/plugins/sync-status",
+  "apps/plugins/mail/plugins/thread-list",
   "apps/plugins/pages/plugins/content-search",
   "apps/plugins/pages/plugins/history",
   "apps/plugins/pages/plugins/page-tree",

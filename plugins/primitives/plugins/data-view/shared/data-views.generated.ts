@@ -28,6 +28,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "debug.slow-ops.local", pluginId: "debug.slow-ops.pane" },
   { id: "deploy.servers", pluginId: "apps.deploy.servers" },
   { id: "home.apps", pluginId: "apps.home.app-cards" },
+  { id: "mail-inbox", pluginId: "apps.mail.inbox" },
   { id: "pages-sidebar", pluginId: "apps.pages.page-tree" },
   { id: "prototypes.gallery", pluginId: "apps.prototypes.gallery" },
   { id: "sonata.library", pluginId: "apps.sonata.library" },

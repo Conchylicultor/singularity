@@ -9,7 +9,7 @@
   - Uses: `primitives/data-view.readDataViewConfigDoc`
   - Exports: Types: `ColumnBinding`, `DataViewJoin`, `FieldColumnMap`, `OperatorSqlBuilder`, `OperatorSqlResolver`, `QueryAugmentor`, `QueryAugmentorContext`, `ServerQueryAugmentation`, `SortKey`, `Tiebreaker`; Values: `augmentServerQuery`, `buildSortKeys`, `compileWhere`, `DataViewServer`, `keyValuesOf`, `orderByClauses`, `seekPredicate`
 - Cross-plugin:
-  - Imported by: `conversations/all-conversations`, `primitives/data-view/custom-columns`
+  - Imported by: `apps/mail/inbox`, `conversations/all-conversations`, `primitives/data-view/custom-columns`
 - Core:
   - Exports: Types: `CursorPayload`; Values: `decodeCursor`, `encodeCursor`, `sortSignature`
 

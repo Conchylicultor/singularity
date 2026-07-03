@@ -1,0 +1,9 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    {
+      "name": "Inbox",
+      "view": { "type": "list", "sort": [{ "fieldId": "lastMessageAt", "direction": "desc" }] }
+    }
+  ]
+}

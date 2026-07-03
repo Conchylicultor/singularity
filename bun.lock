@@ -269,6 +269,10 @@
       "name": "@singularity/plugin-apps-mail-gmail-api",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/mail/plugins/inbox": {
+      "name": "@singularity/plugin-apps-mail-inbox",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/mail/plugins/mail-core": {
       "name": "@singularity/plugin-apps-mail-mail-core",
       "version": "0.0.1",
@@ -4705,6 +4709,8 @@
     "@singularity/plugin-apps-mail-attachments": ["@singularity/plugin-apps-mail-attachments@workspace:plugins/apps/plugins/mail/plugins/attachments"],
 
     "@singularity/plugin-apps-mail-gmail-api": ["@singularity/plugin-apps-mail-gmail-api@workspace:plugins/apps/plugins/mail/plugins/gmail-api"],
+
+    "@singularity/plugin-apps-mail-inbox": ["@singularity/plugin-apps-mail-inbox@workspace:plugins/apps/plugins/mail/plugins/inbox"],
 
     "@singularity/plugin-apps-mail-mail-core": ["@singularity/plugin-apps-mail-mail-core@workspace:plugins/apps/plugins/mail/plugins/mail-core"],
 

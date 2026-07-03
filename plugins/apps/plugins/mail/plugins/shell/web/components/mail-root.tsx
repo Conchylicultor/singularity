@@ -1,14 +1,12 @@
 import { useEffect, useRef, type ReactElement, type ReactNode } from "react";
 import { useGmailAccess } from "@plugins/integrations/plugins/gmail/web";
 import { navigate } from "@plugins/apps-core/plugins/tabs/web";
-import { DEFAULT_MAIL_VIEW } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
-import { mailboxViewPane } from "@plugins/apps/plugins/mail/plugins/thread-list/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { MAIL_APP_PATH } from "../slots";
 
 /**
  * Mail's index surface (bare `/mail`). It reads the Gmail integration's
@@ -19,18 +17,19 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
  */
 export function MailRoot(): ReactElement {
   const { enabled, connected, scopesGranted, loading, ready } = useGmailAccess();
-  const openPane = useOpenPane();
 
   // Fire the inbox redirect exactly once per mount, on the edge where the
-  // mailbox becomes ready. `mode: "root"` replaces this index pane with the view
-  // column as the fresh route root.
+  // mailbox becomes ready. Navigate by URL (not the pane object) so this shell
+  // never imports the inbox plugin — `inbox → shell` stays one-way and acyclic.
+  // `/mail/mailbox` mounts `inboxPane` as the Miller root exactly like
+  // `openPane(inboxPane, {}, { mode: "root" })`.
   const redirected = useRef(false);
   useEffect(() => {
     if (ready && !redirected.current) {
       redirected.current = true;
-      openPane(mailboxViewPane, { view: DEFAULT_MAIL_VIEW }, { mode: "root" });
+      navigate(`${MAIL_APP_PATH}/mailbox`);
     }
-  }, [ready, openPane]);
+  }, [ready]);
 
   if (loading) {
     return (
