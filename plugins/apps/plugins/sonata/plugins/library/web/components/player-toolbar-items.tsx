@@ -40,12 +40,8 @@ export function SongTitle() {
  * metadata, never naming a contributor.
  */
 export function DisplayPicker() {
-  const { activeDisplayId, setActiveDisplay } = useSonata();
+  const { effectiveDisplayId, setActiveDisplay } = useSonata();
   const displays = Sonata.Display.useContributions();
-  const effectiveDisplayId =
-    activeDisplayId ??
-    (displays.find((d) => d.default) ?? displays[0])?.id ??
-    null;
   return (
     <Stack direction="row" align="center" gap="sm">
       <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">

@@ -32,15 +32,18 @@ type ViewOptionItem = ReturnType<typeof Sonata.ViewOption.useContributions>[numb
 
 export function ViewOptionsToggle() {
   const options = Sonata.ViewOption.useContributions();
-  const { activeDisplayId } = useSonata();
+  const { effectiveDisplayId } = useSonata();
   const [open, setOpen] = useState(false);
 
   // Scope options to the active lens: show only the current display's options
   // plus globals, so e.g. Notation never surfaces piano-roll-only key controls.
+  // Read the *effective* display (the lens actually on screen), not the raw
+  // explicit pick — the latter is null until the user clicks the picker, which
+  // would hide every lens-scoped option on first load even though a lens is up.
   const visible = options.filter(
     (o) =>
       o.displays === "global" ||
-      (activeDisplayId != null && o.displays.includes(activeDisplayId)),
+      (effectiveDisplayId != null && o.displays.includes(effectiveDisplayId)),
   );
   if (visible.length === 0) return null;
 

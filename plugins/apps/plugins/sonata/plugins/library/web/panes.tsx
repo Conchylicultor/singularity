@@ -127,7 +127,7 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
 function SonataPlayerSurface(): ReactElement {
   const { songId } = sonataPlayerPane.useParams();
   const input = sonataPlayerPane.useInput();
-  const { score, tempoScale, activeDisplayId, setCurrentSong, clearCurrentSong } =
+  const { score, tempoScale, effectiveDisplayId, setCurrentSong, clearCurrentSong } =
     useSonata();
 
   // Mark this song open on mount (once per open — each open is a fresh
@@ -143,15 +143,6 @@ function SonataPlayerSurface(): ReactElement {
     // are stable. `input.title` is intentionally read once at open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songId]);
-
-  // Enumerate displays via the dispatch slot's contributions — the `Extra`
-  // metadata (id/label/icon/capabilities) is fully readable; only `component`
-  // is sealed. Never names a specific display.
-  const displays = Sonata.Display.useContributions();
-  const effectiveDisplayId =
-    activeDisplayId ??
-    (displays.find((d) => d.default) ?? displays[0])?.id ??
-    null;
 
   return (
     // The toolbar (Start: ← Library, title, display picker; End: transport,

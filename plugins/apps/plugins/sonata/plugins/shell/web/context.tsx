@@ -182,7 +182,16 @@ export interface SonataContextValue {
   spreadMin: number;
   spreadMax: number;
   activeSourceId: string | null;
+  /** The user's explicit display pick, or null when none has been made yet. */
   activeDisplayId: string | null;
+  /**
+   * The display lens actually on screen: `activeDisplayId` when the user has
+   * picked one, else the default (or first) contributed lens. Consumers that
+   * care about the *visible* lens — the render host, the picker, the
+   * view-options filter — must read this, not `activeDisplayId`, which is null
+   * until the first explicit pick.
+   */
+  effectiveDisplayId: string | null;
   /**
    * Monotonic counter bumped on every seek (absolute or relative). Re-anchoring
    * the transport moves the playback origin without changing `score`, so anchored
@@ -359,6 +368,7 @@ const wallClock: TransportClock = { now: () => performance.now() / 1000 };
 
 export function SonataProvider({ children }: { children: ReactNode }) {
   const sources = Sonata.Source.useContributions();
+  const displays = Sonata.Display.useContributions();
   const analyzers = Sonata.Analyzer.useContributions();
   // Per-song key-source override (per-surface scoped store, written by the
   // `key-mode` plugin's observer / the key-readout toggle). When on, the score
@@ -399,6 +409,15 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // explicit pick (null = "no pick yet, fall back to the first source").
   const effectiveSourceId = activeSourceId ?? sources[0]?.id ?? null;
   const [activeDisplayId, setActiveDisplayId] = useState<string | null>(null);
+  // The effective active display — same "no explicit pick yet, fall back to the
+  // default (else first) lens" rule the render host and the display picker apply.
+  // Derived here once and published so every consumer (render host, picker, the
+  // view-options filter) reads one value; `activeDisplayId` holds only the user's
+  // explicit pick (null = "no pick yet"). Deriving it in a single place is what
+  // keeps the view-options popover from filtering on a null id and hiding its
+  // lens-scoped options on first load before any pick.
+  const effectiveDisplayId =
+    activeDisplayId ?? (displays.find((d) => d.default) ?? displays[0])?.id ?? null;
   // Raw input keyed by source id — each source keeps its own input so they
   // accumulate and merge, rather than one active source replacing another.
   const [rawById, setRawById] = useState<Record<string, unknown>>({});
@@ -1085,6 +1104,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       spreadMax: MAX_SPREAD,
       activeSourceId: effectiveSourceId,
       activeDisplayId,
+      effectiveDisplayId,
       seekEpoch,
       loop,
       countIn,
@@ -1129,6 +1149,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       spreadMin,
       effectiveSourceId,
       activeDisplayId,
+      effectiveDisplayId,
       seekEpoch,
       loop,
       countIn,
