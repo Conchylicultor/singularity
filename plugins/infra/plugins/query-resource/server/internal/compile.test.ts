@@ -1,4 +1,3 @@
-import "./test-env"; // MUST be first — makes the transitive `db` import safe.
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { desc, eq, type SQL } from "drizzle-orm";

@@ -115,11 +115,11 @@ into `dependsOn` today; the tasks/agents cascade migrates onto them in M4.
 
 `spec.db` defaults to the real per-worktree drizzle `db` (a top-level static
 import — the boundary system forbids inline `import()`), coerced once through a
-minimal structural `QueryDb` facade. Unit tests always inject a fake `db`, but
-`@plugins/database/server` still evaluates at import time and requires
-`SINGULARITY_WORKTREE` — the test files import `./test-env` FIRST, which sets a
-placeholder worktree name (the pg pool connects lazily, so no DB is touched).
-`compile.test.ts` renders SQL via `new PgDialect().sqlToQuery(...)`;
+minimal structural `QueryDb` facade. Unit tests always inject a fake `db`.
+`@plugins/database/server` is **import-safe**: the pg pool (and its
+`SINGULARITY_WORKTREE` requirement) is built lazily on the first real query, so
+merely importing `db` and injecting a fake never touches a worktree — no test
+env shim needed. `compile.test.ts` renders SQL via `new PgDialect().sqlToQuery(...)`;
 `compile-runtime.test.ts` wires a compiled resource into a real
 `createResourceRuntime` with a fake WS and drives `applyDbChange`.
 

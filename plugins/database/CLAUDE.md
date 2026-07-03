@@ -50,6 +50,20 @@ an older semaphore that wrapped whole loader *bodies* in
 `research/2026-06-19-global-live-state-unified-read-path-v2.md` (Task 2) and
 `research/2026-06-19-global-wait-attribution-instrumentation.md`.
 
+## Import-safety (lazy pool)
+
+Importing `@plugins/database/server` has **no side effects** and never reads
+`SINGULARITY_WORKTREE`. The pg pool is built by a lazy `pool()` singleton on the
+first real query/connection; `db` is a thin forwarding Proxy over a
+lazily-constructed real drizzle instance (`server/internal/client.ts`). A missing
+worktree stays **loud** — the first `db.<method>()` (or `awaitDbReady`/`warmPool`)
+throws `SINGULARITY_WORKTREE env var is required` — but the throw no longer fires
+at module eval. This is what lets any `bun:test` transitively import a server
+module near the DB and inject a fake `db` without a per-suite env shim. The Proxy
+forwards to a **real `pg.Pool`-backed** drizzle instance (not a fake), so
+`db.transaction()` — which drizzle gates on `client instanceof Pool` — keeps
+working. Do not reintroduce an eager `new Pool(requireWorktree())` at module top.
+
 ## Bootstrap
 
 `awaitPgReady` + `runMigrations` are called in the database plugin's `onReadyBlocking` hook. `onReadyBlocking` is a hard barrier the framework awaits in full before flipping the server-ready flag and before any plugin's `onReady` runs — so consumers can safely use the DB in their own `onReady`, and the gateway holds its hot-swap until migrations have landed. (Previously this lived in `onReady`, where it raced other plugins' `onReady` and the gateway swap until migrations happened to be slow.)

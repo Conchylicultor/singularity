@@ -8,7 +8,6 @@
  * Run: `bun test plugins/infra/plugins/query-resource/server/internal/compile-runtime.test.ts`
  */
 
-import "./test-env"; // MUST be first — makes the transitive `db` import safe.
 import { describe, expect, test } from "bun:test";
 import { z } from "zod";
 import { integer, pgTable, text } from "drizzle-orm/pg-core";

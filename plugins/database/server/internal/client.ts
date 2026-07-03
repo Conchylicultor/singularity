@@ -7,10 +7,12 @@ import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { readDatabaseConfig, buildConnectionString } from "@plugins/database/core";
 
 // The worktree name is the worktree DB name — the one thing the worktree pool
-// genuinely needs. The throw is deferred to first use (building the pool's
-// connection string) rather than run at module load, so admin-only importers
-// that never touch the worktree pool stay import-safe. It is still loud and
-// never silently defaulted.
+// genuinely needs. The throw is deferred to first use (the lazy `pool()` build,
+// triggered by the first real query/connection) rather than run at module load,
+// so this module is import-safe: admin-only importers that never touch the
+// worktree pool, and unit tests that inject a fake `db` and never issue a query,
+// both import it without a worktree. It is still loud and never silently
+// defaulted — a real query without `SINGULARITY_WORKTREE` throws here.
 function requireWorktree(): string {
   const worktree = process.env.SINGULARITY_WORKTREE;
   if (!worktree) {
@@ -34,12 +36,6 @@ const conn = config.pgbouncer
 
 const POOL_MAX = 16;
 
-const pool = new Pool({
-  connectionString: buildConnectionString(conn, requireWorktree()),
-  max: POOL_MAX,
-  idleTimeoutMillis: 20_000,
-});
-
 // The one concurrency gate, at the only place the scarce resource is consumed.
 // Of the pool's `max` connections, RESERVED_INTERACTIVE are always kept free for
 // interactive (HTTP/mutation) work; the rest is the ceiling for background/loader
@@ -61,37 +57,19 @@ const loaderDbGate = createSemaphore(POOL_MAX - RESERVED_INTERACTIVE);
 // loader gate itself; `db-pool` is the gauge for the `db-acquire` wait layer —
 // occupancy of the raw pg pool (held connections + queued checkouts), not the
 // loader gate. pg.Pool's totalCount/idleCount/waitingCount are free property reads.
+// Both gauges register at module load; `db-pool` reads the pool lazily and reports
+// an empty occupancy until the pool is first built (no worktree touched to sample).
 registerGateGauge("loader-acquire", () => loaderDbGate.stats());
-registerGateGauge("db-pool", () => ({
-  active: pool.totalCount - pool.idleCount,
-  queued: pool.waitingCount,
-  max: POOL_MAX,
-}));
+registerGateGauge("db-pool", () => {
+  const p = poolSingleton;
+  if (!p) return { active: 0, queued: 0, max: POOL_MAX };
+  return {
+    active: p.totalCount - p.idleCount,
+    queued: p.waitingCount,
+    max: POOL_MAX,
+  };
+});
 
-// Time every query that flows through pool.query (all drizzle ORM queries).
-// The promise form is reimplemented to split the two phases that node-postgres
-// Pool.query collapses internally — connection acquisition (pool queue-wait +
-// pgbouncer backend establishment) and query execution — into two separate
-// spans:
-//   - "[acquire]" : time to check out a live connection. At cold boot this is
-//                   where the multi-second cost lives; once warm it's sub-ms.
-//   - "<sql text>": pure execution time on an already-acquired client.
-// Before this split, the single "db" span lumped acquisition into execution, so
-// a trivial PK lookup could read as multi-second right after a restart. The
-// callback form is passed straight through to origQuery untouched (drizzle never
-// uses it). Direct pool.connect() → client.query paths still bypass timing —
-// see plugins/database/CLAUDE.md.
-//
-// Loader-originated queries (caller kind === "loader") additionally route
-// through `loaderDbGate`, so background load caps at POOL_MAX - RESERVED_INTERACTIVE
-// concurrent connections and interactive work keeps reserved capacity. The gate
-// wait is CHARGED to the enclosing loader entry (via chargeWait) under the
-// "loader-acquire" layer, so the wait lands on the waiting resource's own span
-// (work = total − Σwaits, lock-vs-work readable directly) instead of in a
-// label-shared `db [loader-acquire]` bucket. The caller kind is read
-// synchronously, before any await, so the profiler's ambient context is still
-// active. The pool's own `[acquire]` (connect) and `<sql>` (execute) leaf spans
-// stay — those are real per-query measurements, not gate waits.
 // Extract the table read-set from compiled SQL by matching quoted identifiers
 // after FROM / JOIN / INTO / UPDATE / DELETE FROM. Drizzle always double-quotes
 // table identifiers, so this is reliable for ORM queries; raw sql`` and CTE
@@ -134,75 +112,162 @@ function retryableSqlState(err: unknown): string | null {
   return RETRYABLE_SQLSTATES.has(code) ? code : null;
 }
 
-const origQuery = pool.query.bind(pool);
-const origConnect = pool.connect.bind(pool);
-// biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
-pool.query = ((...a: Parameters<typeof origQuery>): any => {
-  const last = a[a.length - 1];
-  if (typeof last === "function") return origQuery(...a); // callback form, untimed + ungated
+// Install the timing/gating wrapper onto a freshly-built pool's `query`. Called
+// exactly once, from `pool()`, so the wrapper is bound to the same pool instance
+// `db` and `awaitDbReady`/`warmPool` use. See the block comment on each concern.
+function installQueryWrapper(pool: Pool): void {
+  const origQuery = pool.query.bind(pool);
+  const origConnect = pool.connect.bind(pool);
 
-  const first = a[0] as string | { text?: string } | undefined;
-  const text = typeof first === "string" ? first : (first?.text ?? "?");
+  // Time every query that flows through pool.query (all drizzle ORM queries).
+  // The promise form is reimplemented to split the two phases that node-postgres
+  // Pool.query collapses internally — connection acquisition (pool queue-wait +
+  // pgbouncer backend establishment) and query execution — into two separate
+  // spans:
+  //   - "[acquire]" : time to check out a live connection. At cold boot this is
+  //                   where the multi-second cost lives; once warm it's sub-ms.
+  //   - "<sql text>": pure execution time on an already-acquired client.
+  // Before this split, the single "db" span lumped acquisition into execution, so
+  // a trivial PK lookup could read as multi-second right after a restart. The
+  // callback form is passed straight through to origQuery untouched (drizzle never
+  // uses it). Direct pool.connect() → client.query paths still bypass timing —
+  // see plugins/database/CLAUDE.md.
+  //
+  // Loader-originated queries (caller kind === "loader") additionally route
+  // through `loaderDbGate`, so background load caps at POOL_MAX - RESERVED_INTERACTIVE
+  // concurrent connections and interactive work keeps reserved capacity. The gate
+  // wait is CHARGED to the enclosing loader entry (via chargeWait) under the
+  // "loader-acquire" layer, so the wait lands on the waiting resource's own span
+  // (work = total − Σwaits, lock-vs-work readable directly) instead of in a
+  // label-shared `db [loader-acquire]` bucket. The caller kind is read
+  // synchronously, before any await, so the profiler's ambient context is still
+  // active. The pool's own `[acquire]` (connect) and `<sql>` (execute) leaf spans
+  // stay — those are real per-query measurements, not gate waits.
+  // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
+  pool.query = ((...a: Parameters<typeof origQuery>): any => {
+    const last = a[a.length - 1];
+    if (typeof last === "function") return origQuery(...a); // callback form, untimed + ungated
 
-  const runOnce = async () => {
-    const acq0 = performance.now();
-    const client = await origConnect(); // unwrapped: avoids double-recording
-    const acqMs = performance.now() - acq0;
-    // The leaf "[acquire]" span keeps rate visibility; the chargeWait ALSO
-    // lands the same duration in the enclosing entry's waits ("db-acquire"
-    // layer), so the caller's wall-clock decomposition sums instead of the
-    // connect-wait hiding inside a label-shared leaf bucket.
-    recordSpan("db", "[acquire]", acqMs);
-    chargeWait("db-acquire", acqMs);
-    try {
-      const exec0 = performance.now();
-      // biome-ignore lint/suspicious/noExplicitAny: proxy pg's overloaded query.
-      const res = await (client.query as any)(...a);
-      recordSpan("db", text, performance.now() - exec0);
-      return res;
-    } finally {
-      client.release();
+    const first = a[0] as string | { text?: string } | undefined;
+    const text = typeof first === "string" ? first : (first?.text ?? "?");
+
+    const runOnce = async () => {
+      const acq0 = performance.now();
+      const client = await origConnect(); // unwrapped: avoids double-recording
+      const acqMs = performance.now() - acq0;
+      // The leaf "[acquire]" span keeps rate visibility; the chargeWait ALSO
+      // lands the same duration in the enclosing entry's waits ("db-acquire"
+      // layer), so the caller's wall-clock decomposition sums instead of the
+      // connect-wait hiding inside a label-shared leaf bucket.
+      recordSpan("db", "[acquire]", acqMs);
+      chargeWait("db-acquire", acqMs);
+      try {
+        const exec0 = performance.now();
+        // biome-ignore lint/suspicious/noExplicitAny: proxy pg's overloaded query.
+        const res = await (client.query as any)(...a);
+        recordSpan("db", text, performance.now() - exec0);
+        return res;
+      } finally {
+        client.release();
+      }
+    };
+
+    // Re-run the statement (fresh connection each attempt) on a deadlock/
+    // serialization victim; non-retryable errors propagate immediately, and the
+    // attempt cap re-throws a persistent conflict so it never loops forever.
+    const runTimed = () =>
+      retryUntil(
+        async (attempt) => {
+          try {
+            return await runOnce();
+          } catch (err) {
+            const sqlstate = retryableSqlState(err);
+            // Non-retryable errors, and a retryable one that has exhausted the cap,
+            // propagate — a persistent deadlock still crashes loudly.
+            if (sqlstate === null || attempt >= MAX_QUERY_RETRIES) throw err;
+            dbLog.publish(
+              `[deadlock-retry] sqlstate=${sqlstate} attempt=${attempt + 1}/${MAX_QUERY_RETRIES} sql=${text.slice(0, 160)}`,
+              "stderr",
+            );
+            return null; // retryable victim — back off and retry
+          }
+        },
+        { delay: queryRetryDelay },
+      );
+
+    // Gate only background/loader queries; interactive (http) and context-less
+    // (jobs/migrations/pollers) queries run ungated against the reserved capacity.
+    if (currentCallerKind() === "loader") {
+      // Capture the loader's table read-set into its ambient entry context (still
+      // active here, before the gated promise). Observation-only — does not affect
+      // timing or gating.
+      recordReadTables(extractTablesFromSql(text));
+      return loaderDbGate.run(runTimed, (waitMs) =>
+        chargeWait("loader-acquire", waitMs),
+      );
     }
-  };
+    return runTimed();
+  }) as typeof pool.query;
+}
 
-  // Re-run the statement (fresh connection each attempt) on a deadlock/
-  // serialization victim; non-retryable errors propagate immediately, and the
-  // attempt cap re-throws a persistent conflict so it never loops forever.
-  const runTimed = () =>
-    retryUntil(
-      async (attempt) => {
-        try {
-          return await runOnce();
-        } catch (err) {
-          const sqlstate = retryableSqlState(err);
-          // Non-retryable errors, and a retryable one that has exhausted the cap,
-          // propagate — a persistent deadlock still crashes loudly.
-          if (sqlstate === null || attempt >= MAX_QUERY_RETRIES) throw err;
-          dbLog.publish(
-            `[deadlock-retry] sqlstate=${sqlstate} attempt=${attempt + 1}/${MAX_QUERY_RETRIES} sql=${text.slice(0, 160)}`,
-            "stderr",
-          );
-          return null; // retryable victim — back off and retry
-        }
-      },
-      { delay: queryRetryDelay },
-    );
+// Lazily-constructed singleton pool. Importing this module never builds a pool or
+// reads SINGULARITY_WORKTREE; the worktree name is required only when the first
+// real query/connection is issued (`pool()` → `requireWorktree()`). node-postgres
+// pools connect lazily, so building the pool opens no connection either — the warm
+// step in `warmPool()` does that explicitly at boot.
+let poolSingleton: Pool | null = null;
 
-  // Gate only background/loader queries; interactive (http) and context-less
-  // (jobs/migrations/pollers) queries run ungated against the reserved capacity.
-  if (currentCallerKind() === "loader") {
-    // Capture the loader's table read-set into its ambient entry context (still
-    // active here, before the gated promise). Observation-only — does not affect
-    // timing or gating.
-    recordReadTables(extractTablesFromSql(text));
-    return loaderDbGate.run(runTimed, (waitMs) =>
-      chargeWait("loader-acquire", waitMs),
-    );
-  }
-  return runTimed();
-}) as typeof pool.query;
+function pool(): Pool {
+  if (poolSingleton) return poolSingleton;
+  const p = new Pool({
+    connectionString: buildConnectionString(conn, requireWorktree()),
+    max: POOL_MAX,
+    idleTimeoutMillis: 20_000,
+  });
+  installQueryWrapper(p);
+  poolSingleton = p;
+  return p;
+}
 
-export const db = drizzle(pool);
+// Lazily-built real drizzle instance over the real per-worktree pool. Kept behind
+// `db` (a forwarding Proxy) so that: (a) importing this module builds nothing —
+// the pool is created on the first `db.<method>()` call, not at eval; and (b) the
+// underlying client is a genuine `pg.Pool`, which drizzle's session requires
+// (`this.client instanceof Pool`) to open a dedicated connection for
+// `db.transaction()`. A faked/proxied pool would silently break transactions.
+// Derive the type from the concrete `drizzle(pool())` call (not `ReturnType<typeof
+// drizzle>`, which resolves to the broad variadic overload) so `db` keeps the exact
+// `NodePgDatabase<Record<string, never>>` type the original eager `drizzle(pool)`
+// produced — consumers are typed against it.
+function buildDb() {
+  return drizzle(pool());
+}
+type DrizzleDb = ReturnType<typeof buildDb>;
+let dbSingleton: DrizzleDb | null = null;
+
+function realDb(): DrizzleDb {
+  if (!dbSingleton) dbSingleton = buildDb();
+  return dbSingleton;
+}
+
+// Bound-method cache: `realDb()` is a stable singleton once built, so each method
+// need bind only once. Non-function properties (e.g. `db.query` RQB namespace,
+// `db.$client`) forward straight through.
+const boundMethods = new Map<PropertyKey, unknown>();
+
+export const db: DrizzleDb = new Proxy({} as DrizzleDb, {
+  get(_target, prop) {
+    const real = realDb() as unknown as Record<PropertyKey, unknown>;
+    const value = real[prop];
+    if (typeof value !== "function") return value;
+    let bound = boundMethods.get(prop);
+    if (bound === undefined) {
+      bound = (value as (...args: unknown[]) => unknown).bind(real);
+      boundMethods.set(prop, bound);
+    }
+    return bound;
+  },
+});
 
 export function isTransientDbError(err: unknown): boolean {
   if (!err || typeof err !== "object") return false;
@@ -221,7 +286,7 @@ export async function awaitDbReady(): Promise<void> {
     await retryUntil(
       async () => {
         try {
-          const client = await pool.connect();
+          const client = await pool().connect();
           try {
             await client.query("SELECT 1");
             return true;
@@ -259,11 +324,12 @@ export async function awaitDbReady(): Promise<void> {
 // and any other plugin's onReady. awaitDbReady() leaves 1 connection idle, so we
 // only open the remainder; self-healing if `max` is small (e.g. 1 in tests).
 export async function warmPool(): Promise<void> {
-  const target = pool.options.max ?? 5;
-  const need = target - pool.idleCount;
+  const p = pool();
+  const target = p.options.max ?? 5;
+  const need = target - p.idleCount;
   if (need <= 0) return;
   const clients = await Promise.all(
-    Array.from({ length: need }, () => pool.connect()),
+    Array.from({ length: need }, () => p.connect()),
   );
   await Promise.all(clients.map((c) => c.query("SELECT 1")));
   for (const c of clients) c.release();
