@@ -13,6 +13,7 @@
   - DB schema: `plugins/apps/plugins/story/plugins/generation/server/internal/tables.ts`
   - Exports: Values: `_storyGeneratedUnits`, `storyGeneratedUnitsResource`
   - Register: `defineJob('story-generation.generate')`
+  - Resources: `story-generated-units` (keyed)
   - Routes: `POST /api/story/generate/:pageId/:kind/:unitId`
 - Core:
   - Uses: `fields.FieldsRecord`, `fields.nullable`, `fields/date/config.dateField`, `fields/text/config.enumTextField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `infra/entities.wireSchema`

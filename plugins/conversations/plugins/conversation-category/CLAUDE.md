@@ -47,6 +47,7 @@ unless the user clicks "Re-classify with Haiku".
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_category`)
   - Exports: Values: `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`, `conversationCategoryConfig`
   - Register: `defineJob('conversation-category.classify')`
+  - Resources: `conversation-categories` (keyed)
   - Routes: `POST /api/conversation-category/:conversationId/classify`, `POST /api/conversation-category/:conversationId`, `DELETE /api/conversation-category/:conversationId`
 - Cross-plugin:
   - Imported by: `stats/commits`

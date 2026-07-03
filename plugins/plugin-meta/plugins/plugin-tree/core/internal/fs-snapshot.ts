@@ -38,9 +38,12 @@ function isSkippedDir(name: string): boolean {
 }
 
 // Only the file kinds the scanners pass to `readIfExists` / surface from
-// `walkFiles`. Keeps the snapshot tight while covering every read.
+// `walkFiles`. Keeps the snapshot tight while covering every read. Mirrors
+// `walkFiles`' exclusion of co-located bun:test files (`*.test.ts(x)`), which are
+// never part of a plugin's API/dep surface.
 function shouldRead(name: string): boolean {
-  return name === "package.json" || /\.(ts|tsx)$/.test(name);
+  if (name === "package.json") return true;
+  return /\.(ts|tsx)$/.test(name) && !/\.test\.(ts|tsx)$/.test(name);
 }
 
 export async function buildFsSnapshot(pluginDirs: string[]): Promise<FsSnapshot> {

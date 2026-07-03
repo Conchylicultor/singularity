@@ -63,6 +63,7 @@ parses MIME or HTML itself.
 - Server:
   - Uses: `apps/mail/mail-core._mailMessages`, `infra/query-resource.queryResource`
   - Exports: Values: `threadMessagesServerResource`
+  - Resources: `mail-thread-messages` (keyed)
 - Core:
   - Uses: `apps/mail/mail-core.MailMessageSchema`, `infra/query-resource.queryResourceDescriptor`
   - Exports: Values: `threadMessagesResource`

@@ -200,6 +200,16 @@ function isSkippedWalkDir(name: string): boolean {
   return name === "node_modules" || name === "plugins" || name === "__tests__";
 }
 
+// A plugin's API/dep surface excludes co-located bun:test files (`*.test.ts(x)`,
+// which the convention co-locates next to source rather than under `__tests__`) —
+// the same rationale as the `__tests__` dir skip. Since `walkFiles` is the shared
+// source-file enumerator for every facet + codegen scan, excluding them here keeps
+// a test fixture (e.g. a `queryResourceDescriptor("qr-mismatch-test", …)` in a
+// `*.test.ts`) or a test-only import from leaking into a plugin's docs.
+function isSourceFile(name: string): boolean {
+  return /\.(ts|tsx)$/.test(name) && !/\.test\.(ts|tsx)$/.test(name);
+}
+
 export function walkFiles(dir: string, out: string[]): void {
   // Snapshot fast-path: traverse the in-memory directory map. Any subdirectory
   // not covered by the snapshot re-dispatches through `walkFiles`, which falls
@@ -213,7 +223,7 @@ export function walkFiles(dir: string, out: string[]): void {
         if (e.isDirectory()) {
           if (isSkippedWalkDir(e.name)) continue;
           walkFiles(p, out);
-        } else if (e.isFile() && /\.(ts|tsx)$/.test(e.name)) {
+        } else if (e.isFile() && isSourceFile(e.name)) {
           out.push(p);
         }
       }
@@ -234,7 +244,7 @@ export function walkFiles(dir: string, out: string[]): void {
     if (e.isDirectory()) {
       if (isSkippedWalkDir(e.name)) continue;
       walkFiles(p, out);
-    } else if (e.isFile() && /\.(ts|tsx)$/.test(e.name)) {
+    } else if (e.isFile() && isSourceFile(e.name)) {
       out.push(p);
     }
   }

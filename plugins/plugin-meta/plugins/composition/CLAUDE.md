@@ -155,7 +155,7 @@ difference (via `flattenManifest`) is exactly that pack. Run with
   - Uses: `config_v2.ConfigV2`, `infra/endpoints.implement`, `plugin-meta/plugin-tree.getFacetsTreeCached`
   - Routes: `GET /api/composition/data`
 - Core:
-  - Uses: `config_v2.defineConfig`, `fields/enum/config.enumField`, `fields/list/config.listField`, `fields/string-list/config.stringListField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`, `plugin-meta/closure.flattenManifest`
+  - Uses: `config_v2.defineConfig`, `fields/enum/config.enumField`, `fields/list/config.listField`, `fields/string-list/config.stringListField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`
   - Exports: Types: `CompositionData`, `CompositionManifestItem`; Values: `compositionDataSchema`, `compositionsConfig`, `getCompositionData`, `manifestItemToManifest`
 - Cross-plugin:
   - Imported by: `apps/studio/compositions`, `apps/studio/explorer/disabled`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/studio/release`, `plugin-meta/plugin-view/dependencies`, `plugin-meta/plugin-view/inclusion`

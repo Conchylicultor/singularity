@@ -13,6 +13,7 @@
 - Server:
   - Uses: `database.db`, `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldFilterSql`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/data-view/server-query.augmentServerQuery`, `primitives/data-view/server-query.buildSortKeys`, `primitives/data-view/server-query.compileWhere`, `primitives/data-view/server-query.keyValuesOf`, `primitives/data-view/server-query.OperatorSqlResolver`, `primitives/data-view/server-query.orderByClauses`, `primitives/data-view/server-query.seekPredicate`, `tasks/tasks-core.conversationsView`
   - Exports: Values: `conversationsRevisionResource`, `handleQuery`
+  - Resources: `conversations-revision` (push)
 - Core:
   - Uses: `conversations/model-provider.modelDisplayLabel`, `conversations/model-provider.SELECTABLE_MODELS`, `infra/endpoints.defineEndpoint`, `primitives/data-view.FilterGroupSchema`, `primitives/live-state.resourceDescriptor`, `tasks/tasks-core.ConversationKindSchema`, `tasks/tasks-core.ConversationSchema`, `tasks/tasks-core.ConversationStatusSchema`
   - Exports: Types: `ConversationFieldSpec`, `ConversationFieldType`, `QueryConversationsBody`; Values: `CONVERSATION_FIELDS`, `conversationsRevisionResource`, `queryConversations`, `QueryConversationsBodySchema`, `QueryConversationsResponseSchema`, `SortRuleSchema`

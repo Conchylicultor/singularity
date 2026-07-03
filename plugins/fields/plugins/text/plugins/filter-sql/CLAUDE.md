@@ -7,7 +7,6 @@
 - Description: Text field type: server filter-sql capability — operator→SQL fragments mirroring the data-view text filter predicates.
 - Server:
   - Uses: `fields/server-capabilities.Fields`
-  - DB schema: `plugins/fields/plugins/text/plugins/filter-sql/server/internal/text-filter-sql.test.ts`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`
 

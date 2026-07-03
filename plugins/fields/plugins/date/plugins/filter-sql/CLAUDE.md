@@ -7,7 +7,6 @@
 - Description: Date field type: server filter-sql capability — day-granular operator→SQL fragments mirroring the data-view date filter predicates.
 - Server:
   - Uses: `fields/server-capabilities.Fields`
-  - DB schema: `plugins/fields/plugins/date/plugins/filter-sql/server/internal/date-filter-sql.test.ts`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`
 

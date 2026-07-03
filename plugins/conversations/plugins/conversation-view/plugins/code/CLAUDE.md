@@ -11,6 +11,7 @@
 - Server:
   - Uses: `infra/file-watcher.getParcelWatcher`, `infra/git-read-cache.createGitStateMemo`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`
   - Exports: Values: `currentGeneration`, `editedFilesResource`, `getEditedFiles`
+  - Resources: `edited-files` (invalidate)
 - Core:
   - Uses: `primitives/live-state.resourceDescriptor`
   - Exports: Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`; Values: `EditedFileSchema`, `editedFilesResource`

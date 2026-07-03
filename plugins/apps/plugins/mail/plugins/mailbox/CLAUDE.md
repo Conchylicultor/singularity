@@ -45,6 +45,7 @@ view model stays icon-free plain data.
 - Server:
   - Uses: `apps/mail/mail-core._mailLabels`, `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.mailViewFilterSql`, `apps/mail/mail-core.resolveMailAccountId`, `database.db`
   - Exports: Values: `mailLabelsServerResource`, `mailViewCountsServerResource`
+  - Resources: `mail-labels` (push), `mail-view-counts` (push)
 - Core:
   - Uses: `apps/mail/mail-core.MailLabelSchema`, `primitives/live-state.resourceDescriptor`
   - Exports: Values: `mailLabelsResource`, `mailViewCountsResource`

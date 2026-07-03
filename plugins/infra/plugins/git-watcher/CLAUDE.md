@@ -11,6 +11,7 @@
   - DB schema: `plugins/infra/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
   - Exports: Types: `RefAdvancedPayload`, `RefHead`; Values: `_refAdvancedTriggers`, `lastKnownMainSha`, `refAdvanced`, `refHeadResource`, `RefHeadSchema`
   - Register: `defineTriggerEvent('git.refAdvanced')`
+  - Resources: `git-watcher.refHead` (push)
 - Cross-plugin:
   - Imported by: `build`, `conversations/conversation-view/commits-graph`, `review/plugin-changes`, `tasks`
 

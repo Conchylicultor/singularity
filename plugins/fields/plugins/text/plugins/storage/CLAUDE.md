@@ -12,7 +12,6 @@ runtime) mapping the `text` field token to a Postgres `text` column via
 - Description: Text field type: DB storage capability — maps to a Postgres text column.
 - Server:
   - Uses: `fields/server-capabilities.Fields`
-  - DB schema: `plugins/fields/plugins/text/plugins/storage/server/internal/storage.test.ts`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`
 

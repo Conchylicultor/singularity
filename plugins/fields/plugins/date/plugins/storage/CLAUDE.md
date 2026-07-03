@@ -13,7 +13,6 @@ Resolved by exact token through `resolveFieldStorage("date")`.
 - Description: Date field type: DB storage capability — maps to a Postgres timestamptz column.
 - Server:
   - Uses: `fields/server-capabilities.Fields`
-  - DB schema: `plugins/fields/plugins/date/plugins/storage/server/internal/storage.test.ts`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`
 

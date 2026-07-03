@@ -13,6 +13,7 @@
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`, `infra/query-resource.queryResource`
   - DB schema: `plugins/apps/plugins/browser/plugins/bookmarks/server/internal/tables.ts`
   - Exports: Values: `_browserBookmarks`, `addBookmark`, `browserBookmarksServerResource`, `deleteBookmark`
+  - Resources: `browser-bookmarks` (keyed)
   - Routes: `POST /api/browser/bookmarks`, `DELETE /api/browser/bookmarks/:id`
 - Core:
   - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/text/config.textField`, `infra/query-resource.queryResourceDescriptor`

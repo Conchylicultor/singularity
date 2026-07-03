@@ -1,5 +1,3 @@
-import { existsSync } from "fs";
-import { join } from "path";
 import {
   createFacet,
   type DocFact,
@@ -11,12 +9,7 @@ export default createFacet<ResourceFacetData>({
   def: resourcesFacetDef,
 
   extract(ctx) {
-    const serverDir = join(ctx.dir, "server");
-    const centralDir = join(ctx.dir, "central");
-    return {
-      server: existsSync(serverDir) ? parseResources(serverDir) : [],
-      central: existsSync(centralDir) ? parseResources(centralDir) : [],
-    };
+    return parseResources(ctx.dir);
   },
 
   renderDoc(data) {

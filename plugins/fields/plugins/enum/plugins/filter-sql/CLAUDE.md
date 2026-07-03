@@ -7,7 +7,6 @@
 - Description: Enum field type: server filter-sql capability — operator→SQL fragments mirroring the data-view enum filter predicates.
 - Server:
   - Uses: `fields/server-capabilities.Fields`
-  - DB schema: `plugins/fields/plugins/enum/plugins/filter-sql/server/internal/enum-filter-sql.test.ts`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`
 

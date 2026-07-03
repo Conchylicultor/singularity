@@ -90,6 +90,7 @@ nothing remote is built here.
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.pruneWorktreeReleaseArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `infra/query-resource.queryResource`, `primitives/log-channels.Log`
   - DB schema: `plugins/release/server/internal/tables.ts`
   - Exports: Values: `_releaseRuns`, `collectReleaseEnv`, `newReleaseRunId`, `Release`, `releaseOutDir`, `triggerRelease`
+  - Resources: `release.history` (keyed), `release.previews` (push)
   - Routes: `POST /api/release`, `POST /api/release/runs/:id/preview`, `POST /api/release/runs/:id/preview/stop`, `GET /api/release/runs/:id/logs`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `infra/query-resource.queryResourceDescriptor`, `primitives/live-state.resourceDescriptor`

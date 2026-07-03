@@ -14,6 +14,7 @@
   - DB schema: `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_auto_start`)
   - Exports: Values: `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
+  - Resources: `tasks-auto-start` (keyed)
 - Cross-plugin:
   - Imported by: `conversations`, `tasks`, `tasks/task-header`
 

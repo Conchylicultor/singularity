@@ -13,6 +13,7 @@
   - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
   - Exports: Values: `_conversationSummaries`, `conversationSummariesResource`
   - Register: `mcpTool('submit_conversation_summary')`
+  - Resources: `conversation-summaries` (push)
   - Routes: `POST /api/conversation-summary/:conversationId/generate`
 - Core:
   - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/date/config.dateField`, `fields/int/config.intField`, `fields/text/config.enumTextField`, `fields/text/config.textField`, `primitives/live-state.resourceDescriptor`

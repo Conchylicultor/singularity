@@ -32,7 +32,7 @@ replay; a plain `Error` remains the right choice for anything retry could fix.
   - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
   - Exports: Types: `BacklogJobStat`, `DeadJobStat`, `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `QueueBacklogStat`, `RegisteredJob`, `RunningJobStat`, `ScheduleSpec`; Values: `abortDurableRun`, `deadJobsResource`, `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `getJobSlowThresholdMs`, `isSuspendSignal`, `JOB_CONCURRENCY`, `jobsListResource`, `NonRetryableError`, `queryBacklogByJobName`, `queryDeadJobStats`, `queryQueueBacklog`, `queryRunningJobs`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
   - Register: `defineJob('jobs.resume')`, `defineJob('jobs.dead-gc')`
-  - Resources: `dead-jobs` (invalidate)
+  - Resources: `dead-jobs` (invalidate), `jobs-list` (invalidate)
   - Routes: `GET /api/jobs`, `GET /api/jobs/dead`, `POST /api/jobs/:id/retry`, `DELETE /api/jobs/:id`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`

@@ -54,6 +54,7 @@ sidebar — which owns the labels — shows the friendly name.
 - Server:
   - Uses: `apps/mail/mail-core._mailThreads`, `apps/mail/mail-core.mailViewFilterSql`, `apps/mail/mail-core.resolveMailAccountId`, `database.db`, `infra/endpoints.implement`
   - Exports: Values: `mailThreadsRevisionServerResource`
+  - Resources: `mail-threads-revision` (push)
   - Routes: `POST /api/mail/threads`
 - Core:
   - Uses: `apps/mail/mail-core.MailThreadSchema`, `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`

@@ -141,7 +141,7 @@ so a stray `defineEntity(` outside a schema-glob file is flagged.
 
 - Description: Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.
 - Server:
-  - Uses: `fields/server-capabilities-loader`, `fields/server-capabilities.Fields`, `fields/server-capabilities.resolveFieldStorage`
+  - Uses: `fields/server-capabilities-loader`, `fields/server-capabilities.resolveFieldStorage`
   - DB schema: `plugins/infra/plugins/entities/server/internal/define-entity.ts`
   - Exports: Types: `ColumnDefault`, `DbDefault`, `DefaultedKeys`, `Entity`, `EntityColumnMeta`, `EntityColumns`, `EntityMeta`, `EntityReference`, `EntityRow`, `ServerOnlyKeys`; Values: `defaultNow`, `defaultRandom`, `defineEntity`, `sqlDefault`
 - Core:

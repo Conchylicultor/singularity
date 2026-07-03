@@ -15,6 +15,7 @@
   - DB schema: `plugins/build/server/internal/tables.ts`
   - Exports: Values: `_buildRuns`
   - Register: `defineJob('build.run')`, `defineJob('build.run.debounced')`
+  - Resources: `build.frontendHash` (push), `build.history` (keyed), `build.mainAheadCount` (push)
   - Routes: `POST /api/build`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `infra/query-resource.queryResourceDescriptor`, `primitives/commit-list.CommitRowSchema`, `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`

@@ -14,6 +14,7 @@
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_health_review`)
   - Exports: Values: `healthReviewExt`, `pluginHealthReviewsResource`
   - Register: `mcpTool('propose_task')`
+  - Resources: `plugin-health-reviews` (keyed)
   - Routes: `GET /api/plugin-health/reviews`, `GET /api/plugin-health/staleness/:pluginId`, `GET /api/plugin-health/tasks/:reviewId`
 - Core:
   - Uses: `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.nullable`, `fields/date/config.dateField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`

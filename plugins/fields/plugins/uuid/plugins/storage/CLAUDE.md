@@ -12,7 +12,6 @@ runtime) mapping the `uuid` field token to a Postgres `uuid` column via
 - Description: UUID field type: DB storage capability — maps to a Postgres uuid column.
 - Server:
   - Uses: `fields/server-capabilities.Fields`
-  - DB schema: `plugins/fields/plugins/uuid/plugins/storage/server/internal/storage.test.ts`
 - Cross-plugin:
   - Imported by: `fields/server-capabilities-loader`
 

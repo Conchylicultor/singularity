@@ -137,7 +137,6 @@ env shim needed. `compile.test.ts` renders SQL via `new PgDialect().sqlToQuery(.
 - Description: Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, identityTable, and client keyOf for keyed live-state resources.
 - Server:
   - Uses: `database.db`, `database/derived-views.relationIdentityBase`
-  - DB schema: `plugins/infra/plugins/query-resource/server/internal/compile-runtime.test.ts`, `plugins/infra/plugins/query-resource/server/internal/compile.test.ts`
   - Exports: Types: `CompiledQuery`, `Edge`, `EntitySource`, `QueryDb`, `QueryResourceSpec`, `QuerySource`, `SelectMap`; Values: `compileQuery`, `queryResource`, `rel`
 - Core:
   - Uses: `primitives/live-state.keyedResourceDescriptor`, `primitives/live-state.ResourceDescriptor`

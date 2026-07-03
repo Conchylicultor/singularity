@@ -72,6 +72,7 @@ lock) was indistinguishable from the agent merely "working".
 - Server:
   - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/worktree.resolveActiveWorktreeOps`, `infra/worktree.WorktreeOp`, `infra/worktree.worktreesDir`
   - Exports: Values: `worktreeOpsResource`
+  - Resources: `worktree-ops` (push)
 - Shared:
   - Exports: Types: `WorktreeOp`, `WorktreeOpsPayload`; Values: `WorktreeOpSchema`, `WorktreeOpsPayloadSchema`, `worktreeOpsResource`
 

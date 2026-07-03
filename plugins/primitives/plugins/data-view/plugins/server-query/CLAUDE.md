@@ -7,7 +7,6 @@
 - Description: Generic FilterGroup/SortRule → SQL compiler + null-aware keyset (cursor) seek for server-delegated data-view sources, plus the DataViewServer.QueryAugmentor registry (server twin of the web FieldExtension slot) that lets sub-plugins inject extra joined sort/filter columns. Field-type agnostic: operator SQL is supplied by an injected resolver, so this owns drizzle and the seek correctness, not any field type.
 - Server:
   - Uses: `primitives/data-view.readDataViewConfigDoc`
-  - DB schema: `plugins/primitives/plugins/data-view/plugins/server-query/server/internal/compile.test.ts`
   - Exports: Types: `ColumnBinding`, `DataViewJoin`, `FieldColumnMap`, `OperatorSqlBuilder`, `OperatorSqlResolver`, `QueryAugmentor`, `QueryAugmentorContext`, `ServerQueryAugmentation`, `SortKey`, `Tiebreaker`; Values: `augmentServerQuery`, `buildSortKeys`, `compileWhere`, `DataViewServer`, `keyValuesOf`, `orderByClauses`, `seekPredicate`
 - Cross-plugin:
   - Imported by: `conversations/all-conversations`, `primitives/data-view/custom-columns`

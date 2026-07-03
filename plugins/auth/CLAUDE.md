@@ -87,6 +87,7 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Central:
   - Uses: `infra/secrets.getSecret`, `infra/secrets.ready`, `infra/secrets.SecretsKeychainLockedError`, `infra/secrets.setSecret`
   - Exports: Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `GetAccessTokenArgs`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `registerAuthProvider`
+  - Resources: `auth-state` (push)
   - Routes: `GET /api/auth/start/:provider`, `GET /api/auth/callback/:provider`, `POST /api/auth/disconnect/:provider`, `POST /api/auth/api-key/:provider`, `GET /api/auth/state`, `POST /api/auth/token`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.centralResourceDescriptor`
