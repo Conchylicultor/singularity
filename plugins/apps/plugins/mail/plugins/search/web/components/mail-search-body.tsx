@@ -3,15 +3,10 @@ import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import {
-  Button,
-  ControlSizeProvider,
-} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
-import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";
+import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
 import { mailSearchPane } from "../panes";
 import { MailSearchRow } from "./mail-search-row";
 import { useMailSearch } from "../internal/use-mail-search";
@@ -28,9 +23,9 @@ import { useMailSearch } from "../internal/use-mail-search";
  * the search. (Follow-up: promote a `useDebounced` hook to primitives.)
  *
  * Pagination: `useMailSearch` accumulates Gmail's opaque `nextPageToken` pages
- * via `useInfiniteQuery` and auto-fetches the next page as a `ScrollSentinel`
- * scrolls into view (the reader pane's single scroll). A failed next-page fetch
- * shows an inline Retry instead of hot-looping the sentinel.
+ * via `useInfiniteQuery`; the shared `<InfiniteScrollFooter>` auto-fetches the
+ * next page as its sentinel scrolls into view (the reader pane's single scroll)
+ * and shows an inline Retry instead of hot-looping on a failed next-page fetch.
  */
 export function MailSearchBody(): ReactElement {
   const [query, setQuery] = useState("");
@@ -42,17 +37,7 @@ export function MailSearchBody(): ReactElement {
   }, [query]);
 
   const trimmed = debounced.trim();
-  const {
-    results,
-    isLoading,
-    isError,
-    error,
-    hasNextPage,
-    isFetchingNextPage,
-    isFetchNextPageError,
-    sentinelRef,
-    fetchNextPage,
-  } = useMailSearch(trimmed);
+  const { results, isLoading, isError, error, scroll } = useMailSearch(trimmed);
 
   let body: ReactNode;
   if (trimmed.length === 0) {
@@ -66,7 +51,7 @@ export function MailSearchBody(): ReactElement {
   } else if (isError) {
     // The backend returns 409 when Gmail isn't connected — surface its message.
     body = <Placeholder tone="error">{getEndpointErrorMessage(error)}</Placeholder>;
-  } else if (results.length === 0 && !hasNextPage) {
+  } else if (results.length === 0 && !scroll.hasNextPage) {
     body = <Placeholder>No matches.</Placeholder>;
   } else {
     body = (
@@ -74,25 +59,7 @@ export function MailSearchBody(): ReactElement {
         {results.map((r) => (
           <MailSearchRow key={r.threadId} result={r} />
         ))}
-        {isFetchingNextPage && <Loading variant="spinner" label="Loading…" />}
-        {isFetchNextPageError && (
-          <Center axis="horizontal">
-            <Inset pad="sm">
-              <Stack gap="xs" align="center">
-                <Placeholder tone="error">Couldn't load more.</Placeholder>
-                <ControlSizeProvider size="sm">
-                  <Button variant="ghost" onClick={() => fetchNextPage()}>
-                    Retry
-                  </Button>
-                </ControlSizeProvider>
-              </Stack>
-            </Inset>
-          </Center>
-        )}
-        <ScrollSentinel
-          sentinelRef={sentinelRef}
-          show={hasNextPage && !isFetchNextPageError}
-        />
+        <InfiniteScrollFooter handle={scroll} />
       </Stack>
     );
   }

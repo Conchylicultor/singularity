@@ -2,11 +2,10 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 import { useConversations } from "@plugins/conversations/web";
-import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";
+import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { useGoneConversationsPagination } from "@plugins/conversations/plugins/conversations-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { GroupedConversationList } from "./grouped-conversation-list";
@@ -48,12 +47,12 @@ export function GroupedView({
     [active, recentGone],
   );
 
-  const {
-    items: paginatedItems,
-    hasNextPage,
-    isFetchingNextPage,
-    sentinelRef,
-  } = useGoneConversationsPagination({ recentGone, hasMoreGone, liveIds });
+  const pagination = useGoneConversationsPagination({
+    recentGone,
+    hasMoreGone,
+    liveIds,
+  });
+  const paginatedItems = pagination.items;
 
   const isEmpty = active.length === 0 && recentGone.length === 0;
 
@@ -91,10 +90,7 @@ export function GroupedView({
         onNavigate={onNavigate}
         onCloseConversation={onCloseConversation}
       />
-      {isFetchingNextPage && (
-        <Loading variant="spinner" label="Loading…" />
-      )}
-      <ScrollSentinel sentinelRef={sentinelRef} show={hasNextPage} />
+      <InfiniteScrollFooter handle={pagination} />
       {isEmpty && !conv.pending && (
         <Text as="div" variant="caption" className="px-lg py-sm text-muted-foreground">
           No conversations

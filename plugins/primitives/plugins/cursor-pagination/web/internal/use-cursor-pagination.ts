@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import type { CursorPage } from "../../core";
+import {
+  useInfiniteScroll,
+  type InfiniteScrollHandle,
+} from "./use-infinite-scroll";
 
 const DEFAULT_PAGE_SIZE = 20;
 
@@ -15,12 +19,8 @@ export interface UseCursorPaginationOptions<T> {
   getId?: (item: T) => string;
 }
 
-export interface CursorPaginationHandle<T> {
+export interface CursorPaginationHandle<T> extends InfiniteScrollHandle {
   items: T[];
-  hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  sentinelRef: React.RefObject<HTMLDivElement | null>;
-  fetchNextPage: () => void;
 }
 
 export function useCursorPagination<T>(
@@ -48,6 +48,7 @@ export function useCursorPagination<T>(
     fetchNextPage: tanstackFetchNextPage,
     hasNextPage,
     isFetchingNextPage,
+    isFetchNextPageError,
   } = useInfiniteQuery({
     // eslint-disable-next-line react-hooks/refs -- intentional frozen-cursor capture: read in render to seed a stable useInfiniteQuery; freezing across refetch is the design
     queryKey: [...queryKey, frozenCursorRef.current],
@@ -71,25 +72,13 @@ export function useCursorPagination<T>(
     return flat.filter((item) => !liveIds.has(getId(item)));
   }, [data, liveIds, getId]);
 
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        void tanstackFetchNextPage();
-      }
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [hasNextPage, isFetchingNextPage, tanstackFetchNextPage]);
-
-  return {
-    items,
+  const scroll = useInfiniteScroll({
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- hasNextPage can be undefined before first fetch
     hasNextPage: hasNextPage ?? false,
     isFetchingNextPage,
-    sentinelRef,
+    isFetchNextPageError,
     fetchNextPage: () => void tanstackFetchNextPage(),
-  };
+  });
+
+  return { items, ...scroll };
 }

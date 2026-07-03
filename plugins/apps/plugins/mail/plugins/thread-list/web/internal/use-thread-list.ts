@@ -2,6 +2,10 @@ import { useEffect, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useInfiniteScroll,
+  type InfiniteScrollHandle,
+} from "@plugins/primitives/plugins/cursor-pagination/web";
 import type { MailThread } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 import {
   queryThreadsEndpoint,
@@ -15,9 +19,7 @@ export interface ThreadListResult {
   items: MailThread[];
   isPending: boolean;
   isError: boolean;
-  hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  fetchNextPage: () => void;
+  scroll: InfiniteScrollHandle;
 }
 
 /**
@@ -62,12 +64,19 @@ export function useThreadList(view: string): ThreadListResult {
   }, [revResult, refetch]);
 
   const items = query.data?.pages.flatMap((p) => p.items) ?? [];
+  const scroll = useInfiniteScroll({
+    hasNextPage: query.hasNextPage,
+    isFetchingNextPage: query.isFetchingNextPage,
+    isFetchNextPageError: query.isFetchNextPageError,
+    fetchNextPage: () => void query.fetchNextPage(),
+    // Prefetch the next page ~400px before the sentinel scrolls into view so the
+    // long thread list feels seamless (preserving the pre-refactor behavior).
+    rootMargin: "400px",
+  });
   return {
     items,
     isPending: query.isPending,
     isError: query.isError,
-    hasNextPage: query.hasNextPage,
-    isFetchingNextPage: query.isFetchingNextPage,
-    fetchNextPage: () => void query.fetchNextPage(),
+    scroll,
   };
 }

@@ -1,6 +1,10 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useMemo } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  useInfiniteScroll,
+  type InfiniteScrollHandle,
+} from "@plugins/primitives/plugins/cursor-pagination/web";
 import {
   mailSearchEndpoint,
   type MailSearchResult,
@@ -12,11 +16,7 @@ export interface MailSearchHandle {
   isLoading: boolean;
   isError: boolean;
   error: unknown;
-  hasNextPage: boolean;
-  isFetchingNextPage: boolean;
-  isFetchNextPageError: boolean;
-  sentinelRef: React.RefObject<HTMLDivElement | null>;
-  fetchNextPage: () => void;
+  scroll: InfiniteScrollHandle;
 }
 
 /**
@@ -25,11 +25,12 @@ export interface MailSearchHandle {
  * the `useCursorPagination` primitive (`getCursor(item)`). Instead it mirrors
  * the `data-view` `useServerDataSource` shape: a `useInfiniteQuery` keyed by the
  * query, coalescing each page's thread groups by `threadId` (a thread can match
- * on two pages, so pages aren't just flattened), with an `IntersectionObserver`
- * sentinel that auto-fetches the next page as it scrolls into view.
+ * on two pages, so pages aren't just flattened), delegating the auto-fetch to the
+ * shared `useInfiniteScroll` primitive.
  *
- * The observer is gated on `!isFetchNextPageError` so a failed next-page fetch
- * does not hot-loop the sentinel (the manual Retry button is the recovery path).
+ * The `!isFetchNextPageError` gate that stops a failed next-page fetch from
+ * hot-looping the sentinel (with the Retry button as the recovery path) now lives
+ * in the `useInfiniteScroll` primitive, shared by every infinite-scroll consumer.
  *
  * @param q Already-trimmed, debounced query. Empty string disables the query.
  */
@@ -93,34 +94,19 @@ export function useMailSearch(q: string): MailSearchHandle {
     return [...byThread.values()];
   }, [data]);
 
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([entry]) => {
-      if (
-        entry?.isIntersecting &&
-        hasNextPage &&
-        !isFetchingNextPage &&
-        !isFetchNextPageError
-      ) {
-        void fetchNextPage();
-      }
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [hasNextPage, isFetchingNextPage, isFetchNextPageError, fetchNextPage]);
+  const scroll = useInfiniteScroll({
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- hasNextPage can be undefined before first fetch
+    hasNextPage: hasNextPage ?? false,
+    isFetchingNextPage,
+    isFetchNextPageError,
+    fetchNextPage: () => void fetchNextPage(),
+  });
 
   return {
     results,
     isLoading,
     isError,
     error,
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- hasNextPage can be undefined before first fetch
-    hasNextPage: hasNextPage ?? false,
-    isFetchingNextPage,
-    isFetchNextPageError,
-    sentinelRef,
-    fetchNextPage: () => void fetchNextPage(),
+    scroll,
   };
 }

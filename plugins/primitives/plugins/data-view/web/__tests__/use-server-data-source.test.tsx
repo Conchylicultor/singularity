@@ -49,13 +49,13 @@ describe("useServerDataSource", () => {
     );
     await waitFor(() => expect(result.current?.rows.length).toBe(2));
     expect(result.current?.rows).toEqual(["a", "b"]);
-    expect(result.current?.hasMore).toBe(true);
+    expect(result.current?.scroll.hasNextPage).toBe(true);
     expect(fetchPage).toHaveBeenCalledWith(
       expect.objectContaining({ cursor: null, limit: 40 }),
     );
   });
 
-  it("paginates via fetchMore using the server cursor", async () => {
+  it("paginates via scroll.retry using the server cursor", async () => {
     const fetchPage = vi
       .fn<ServerDataSourceSpec<string>["fetchPage"]>()
       .mockResolvedValueOnce(pageOf(["a"], "cur-1"))
@@ -66,12 +66,12 @@ describe("useServerDataSource", () => {
       { wrapper },
     );
     await waitFor(() => expect(result.current?.rows).toEqual(["a"]));
-    act(() => result.current?.fetchMore());
+    act(() => result.current?.scroll.retry());
     await waitFor(() => expect(result.current?.rows).toEqual(["a", "b"]));
     expect(fetchPage).toHaveBeenLastCalledWith(
       expect.objectContaining({ cursor: "cur-1" }),
     );
-    await waitFor(() => expect(result.current?.hasMore).toBe(false));
+    await waitFor(() => expect(result.current?.scroll.hasNextPage).toBe(false));
   });
 
   it("refetches loaded pages in place when changeTick changes", async () => {

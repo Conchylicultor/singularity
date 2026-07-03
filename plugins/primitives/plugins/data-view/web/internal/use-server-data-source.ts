@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
+import {
+  useInfiniteScroll,
+  type InfiniteScrollHandle,
+} from "@plugins/primitives/plugins/cursor-pagination/web";
 import type {
   DataViewId,
   FilterGroup,
@@ -18,10 +22,8 @@ interface ServerQueryView {
 
 export interface ServerDataSourceResult<TRow> {
   rows: readonly TRow[];
-  hasMore: boolean;
-  fetchMore: () => void;
-  sentinelRef: React.RefObject<HTMLDivElement | null>;
   loading: boolean;
+  scroll: InfiniteScrollHandle;
 }
 
 /**
@@ -56,7 +58,8 @@ function stableStringify(value: unknown): string {
  * - `changeTick` is kept OUT of the queryKey; instead, when it changes, the hook
  *   `refetch()`es ALL currently-loaded pages in place (each re-runs with its
  *   stored keyset `pageParam`, so the window stays gap-free under live inserts).
- * - An `IntersectionObserver` sentinel fetches the next page on view.
+ * - The returned `scroll` handle (from `useInfiniteScroll`) owns the
+ *   error-gated `IntersectionObserver` sentinel that fetches the next page on view.
  */
 export function useServerDataSource<TRow>(
   view: ServerQueryView,
@@ -97,6 +100,7 @@ export function useServerDataSource<TRow>(
     hasNextPage,
     isFetching,
     isFetchingNextPage,
+    isFetchNextPageError,
     refetch,
   } = query;
 
@@ -115,27 +119,21 @@ export function useServerDataSource<TRow>(
     [data],
   );
 
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el) return;
-    const obs = new IntersectionObserver(([entry]) => {
-      if (entry?.isIntersecting && hasNextPage && !isFetchingNextPage) {
-        void fetchNextPage();
-      }
-    });
-    obs.observe(el);
-    return () => obs.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
+  // Build the scroll handle unconditionally (before the `!spec` early-return) so
+  // the hook order stays stable whether or not a server spec is present.
+  const scroll = useInfiniteScroll({
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- hasNextPage can be undefined before first fetch
+    hasNextPage: hasNextPage ?? false,
+    isFetchingNextPage,
+    isFetchNextPageError,
+    fetchNextPage: () => void fetchNextPage(),
+  });
 
   if (!spec) return null;
 
   return {
     rows,
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- hasNextPage can be undefined before first fetch
-    hasMore: hasNextPage ?? false,
-    fetchMore: () => void fetchNextPage(),
-    sentinelRef,
     loading: isFetching && rows.length === 0,
+    scroll,
   };
 }

@@ -28,7 +28,7 @@ import {
   useDataViewModel,
   type ViewModel,
 } from "../internal/use-data-view-model";
-import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";
+import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
 import { useServerDataSource } from "../internal/use-server-data-source";
 import { useFilterController } from "../internal/use-filter-controller";
 import { useSortController } from "../internal/use-sort-controller";
@@ -422,12 +422,11 @@ function DataViewInner<TRow>({
               renderProps,
             )}
       </ControlSizeProvider>
-      {/* Server-delegated infinite scroll: an IntersectionObserver sentinel that
-          fetches the next page as it scrolls into view. Rendered only on the
-          server path with more pages pending; the in-memory path renders nothing. */}
-      {server?.hasMore ? (
-        <ScrollSentinel sentinelRef={server.sentinelRef} show />
-      ) : null}
+      {/* Server-delegated infinite scroll: the error-gated footer (loading-more
+          spinner, Retry on a failed page fetch, and the IntersectionObserver
+          sentinel) that fetches the next page as it scrolls into view. Rendered
+          only on the server path; the in-memory path renders nothing. */}
+      {server ? <InfiniteScrollFooter handle={server.scroll} /> : null}
     </Stack>
   );
 }

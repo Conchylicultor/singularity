@@ -1,7 +1,7 @@
 import { cn, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { useConversations } from "@plugins/conversations/web";
-import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";
+import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { useGoneConversationsPagination } from "@plugins/conversations/plugins/conversations-view/web";
 import { RowActions, RowActionButton, rowActionsAnchor } from "@plugins/primitives/plugins/row-actions/web";
@@ -9,7 +9,6 @@ import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { MdClose } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export function HistoryView({
@@ -33,12 +32,12 @@ export function HistoryView({
     [liveItems],
   );
 
-  const {
-    items: paginatedItems,
-    hasNextPage,
-    isFetchingNextPage,
-    sentinelRef,
-  } = useGoneConversationsPagination({ recentGone, hasMoreGone, liveIds });
+  const pagination = useGoneConversationsPagination({
+    recentGone,
+    hasMoreGone,
+    liveIds,
+  });
+  const paginatedItems = pagination.items;
 
   const isEmpty = liveItems.length === 0 && paginatedItems.length === 0;
 
@@ -76,10 +75,7 @@ export function HistoryView({
           {paginatedItems.map(renderRow)}
         </SidebarMenu>
       )}
-      {isFetchingNextPage && (
-        <Loading variant="spinner" label="Loading…" />
-      )}
-      <ScrollSentinel sentinelRef={sentinelRef} show={hasNextPage} />
+      <InfiniteScrollFooter handle={pagination} />
     </Stack>
   );
 }

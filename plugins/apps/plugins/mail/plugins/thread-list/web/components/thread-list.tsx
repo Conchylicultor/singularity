@@ -1,11 +1,11 @@
-import { useEffect, useRef, type ReactElement } from "react";
+import { type ReactElement } from "react";
 import { threadPane } from "@plugins/apps/plugins/mail/plugins/reading-pane/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
-import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";
+import { InfiniteScrollFooter } from "@plugins/primitives/plugins/cursor-pagination/web";
 import { useThreadList } from "../internal/use-thread-list";
 import { ThreadRow } from "./thread-row";
 
@@ -19,25 +19,8 @@ const ROW_ESTIMATE_PX = 60;
  * IntersectionObserver sentinel that pulls the next keyset page as it nears view.
  */
 export function MailThreadList({ view }: { view: string }): ReactElement {
-  const { items, isPending, hasNextPage, isFetchingNextPage, fetchNextPage } =
-    useThreadList(view);
+  const { items, isPending, scroll } = useThreadList(view);
   const selectedThreadId = threadPane.useRouteEntry()?.params.threadId;
-
-  const sentinelRef = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = sentinelRef.current;
-    if (!el || !hasNextPage) return;
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries.some((e) => e.isIntersecting) && !isFetchingNextPage) {
-          fetchNextPage();
-        }
-      },
-      { rootMargin: "400px" },
-    );
-    observer.observe(el);
-    return () => observer.disconnect();
-  }, [hasNextPage, isFetchingNextPage, fetchNextPage]);
 
   if (isPending) {
     return (
@@ -66,7 +49,7 @@ export function MailThreadList({ view }: { view: string }): ReactElement {
           <ThreadRow thread={thread} selected={thread.id === selectedThreadId} />
         )}
       </VirtualRows>
-      <ScrollSentinel sentinelRef={sentinelRef} show={hasNextPage} />
+      <InfiniteScrollFooter handle={scroll} />
     </Scroll>
   );
 }

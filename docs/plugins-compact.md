@@ -335,7 +335,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`viewport-overlay`** — Viewport-filling overlay primitive: self-portals to document.body + z-layer + theme-scope so fixed inset-0 fills the real viewport, never a transformed ancestor.
         - **`z-layers`** — Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).
     - **`cursor-menu`** — Cursor-anchored DropdownMenu: a body-portaled zero-size anchor pinned at an (x,y) point, so position:fixed resolves against the viewport even inside a transformed ancestor.
-    - **`cursor-pagination`** — Cursor-pagination primitive: useCursorPagination hook with frozen-cursor capture, useInfiniteQuery wiring, IntersectionObserver auto-fetch, and ScrollSentinel component.
+    - **`cursor-pagination`** — Cursor-pagination primitive: the error-gated useInfiniteScroll observer + InfiniteScrollFooter (load-more spinner / Retry / sentinel), the useCursorPagination keyset wrapper (frozen-cursor + useInfiniteQuery), and the ScrollSentinel component.
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
     - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
       - Plugins:
