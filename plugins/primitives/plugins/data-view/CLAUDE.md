@@ -481,12 +481,24 @@ scroll.
   must supply its own `<PaneScroll>` (or equivalent `overflow-y` scroller) around
   the DataView.
 
-**Dev-mode structural guard.** On mount `<DataView>` walks up from its root for a
-scroll ancestor (`overflow-y ∈ {auto, scroll, overlay}`) before reaching the
-document scroller; if none is found it `console.error`s
-`[DataView <storageKey>] no scroll ancestor — the pane must provide a <PaneScroll>`.
-This catches a pane that forgot its `<PaneScroll>` loudly (dev only,
-non-fatal — `console.error`, never throw, to stay safe for overlay/SSR edges).
+**Dev-mode structural guards.** On mount `<DataView>` runs two loud-but-non-fatal
+checks (`console.error`, never throw — safe for overlay/SSR edges), after one
+layout frame (`use-dev-guards.ts`):
+
+1. **Single-scroll.** Walks up for the nearest ancestor the content vertically
+   overflows; if that ancestor clips (`overflow-y ∉ {auto, scroll, overlay}`) the
+   pane forgot its `<PaneScroll>` and the view is unscrollable.
+2. **Chrome-mask match.** The sticky toolbar masks with `--chrome-mask`, which
+   must equal the actual painted background behind the DataView for the pinned bar
+   to look seamless. Every `<Surface>` (and the page canvas / sidebar / theme
+   scope) co-publishes `--chrome-mask` alongside its background, so this holds by
+   construction for surfaces built through the primitive. This guard compares the
+   root's computed `--chrome-mask` against the nearest actually-painted ancestor
+   background and errors on a mismatch — catching an **ad-hoc** `bg-muted`/`bg-card`
+   wrapper that paints a surface without co-publishing (the case a lint can't see,
+   since the surface is a runtime ancestor and those tokens have no
+   false-positive-free static fingerprint). Fix: route the wrapper through
+   `<Surface>`, which co-publishes `--chrome-mask`.
 
 The toolbar, filter bar, and view switcher always render — there is no
 headless-chrome axis.

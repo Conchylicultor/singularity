@@ -119,13 +119,6 @@
     /* Tell the UA which scheme to paint native surfaces in (form controls,
        scrollbars, canvas). Inherited; `.dark` flips it below. */
     color-scheme: light;
-
-    /* Sticky-chrome mask default = the page canvas. Inherited, so any surface
-       painting a different background overrides `--chrome-mask` on its own
-       subtree (Surface roles, the app-shell sidebar) and every sticky bar
-       pinned inside it (`bg-chrome-mask`) masks with that surface's color. Not
-       a token-group var — a structural helper, like the `--z-*` ladder. */
-    --chrome-mask: var(--background);
 }
 
 .dark {
@@ -405,6 +398,20 @@
   [data-theme-scope] {
     font-family: var(--font-sans);
     color: var(--foreground);
+    /* Sticky-chrome mask default = the page canvas (`--background`). A pinned
+       bar (`bg-chrome-mask`) paints this to hide content scrolling under it;
+       Surface roles + the app-shell sidebar override it per-subtree with their
+       own background. It is a DERIVED helper (`var(--background)`), not a
+       token-group var — so like `font-family`/`color` above it MUST be
+       re-declared at every theme-scope root, not only `:root`. CSS inheritance
+       passes the *computed* value: anchored on `:root` alone, `var(--background)`
+       resolves once against the desktop background, and a forked app's
+       `[data-theme-scope]` descendants inherit that computed color and silently
+       ignore their own scoped `--background` — the sticky-chrome twin of the
+       font/color bleed bug (a mismatched mask band on every DataView toolbar in
+       a scoped app theme). Re-declaring here re-reads `var(--background)` inside
+       each scope. Guarded by `inherited-theme-defaults-scoped`. */
+    --chrome-mask: var(--background);
     }
   body {
     @apply bg-background;

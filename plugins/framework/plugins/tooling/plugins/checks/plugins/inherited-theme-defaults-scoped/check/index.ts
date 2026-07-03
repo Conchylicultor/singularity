@@ -30,6 +30,11 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
  *  - its selector references a bare root (`html`/`body`/`:root`/`*`) and does
  *    NOT also list a `[data-theme-scope]` selector (which would re-anchor it),
  *  - and it sets an inherited property to a themed `var(--x)` value, OR
+ *    declares a custom property (`--foo`) whose value reads a themed `var(--x)`
+ *    (a DERIVED helper var — e.g. `--chrome-mask: var(--background)` — which
+ *    custom-property inheritance freezes at `:root` exactly like font/color, so
+ *    a `[data-theme-scope]` subtree consuming it via a `var()`-based utility
+ *    like `bg-chrome-mask` gets the desktop value, not its own scoped one), OR
  *    `@apply`s an inherited+themed utility (base font-family / themed text
  *    color).
  */
@@ -151,7 +156,7 @@ function isThemedInheritedUtility(cls: string, themedVars: Set<string>): boolean
 const check: Check = {
   id: "inherited-theme-defaults-scoped",
   description:
-    "Inherited themed CSS defaults (font-family, text color, …) are consumed at a theme-scope root (:root, [data-theme-scope]), never on a bare html/body above the scope boundary",
+    "Inherited themed CSS defaults (font-family, text color, …) and derived custom-property helpers (--chrome-mask, …) are consumed at a theme-scope root (:root, [data-theme-scope]), never on a bare html/body above the scope boundary",
   async run() {
     const root = await getRoot();
 
@@ -175,13 +180,18 @@ const check: Check = {
         const decls = m[2] ?? "";
         if (!selector || !hasBareRoot(selector) || hasScope(selector)) continue;
 
-        // (A) raw inherited property reading a themed var.
+        // (A) raw inherited property — OR a derived custom property (`--foo`) —
+        // reading a themed var. Custom properties always inherit, so a derived
+        // helper var declared at a bare root freezes its `var(--x)` to the
+        // desktop value for the whole tree, exactly like an inherited native
+        // property (the `--chrome-mask` sticky-mask bleed). Native NON-inherited
+        // paints (`background`, `border-color`) don't inherit and stay excluded.
         for (const d of decls.split(";")) {
           const idx = d.indexOf(":");
           if (idx < 0) continue;
           const prop = d.slice(0, idx).trim().toLowerCase();
           const value = d.slice(idx + 1);
-          if (!INHERITED_PROPS.has(prop)) continue;
+          if (!INHERITED_PROPS.has(prop) && !prop.startsWith("--")) continue;
           for (const vm of value.matchAll(/var\(\s*(--[\w-]+)/g)) {
             const name = vm[1];
             if (name && themedVars.has(name)) {

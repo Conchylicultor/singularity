@@ -35,7 +35,7 @@ import { useSortController } from "../internal/use-sort-controller";
 import { useSortPresets } from "../internal/use-sort-presets";
 import { useFilterPresets } from "../internal/use-filter-presets";
 import { CollectFieldExtensions } from "../internal/field-extensions";
-import { useScrollAncestorGuard } from "../internal/use-scroll-ancestor-guard";
+import { useDataViewDevGuards } from "../internal/use-dev-guards";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 import { SortBuilderTrigger } from "./sort/sort-builder-trigger";
 import { CreatorsControl } from "./creators-control";
@@ -133,7 +133,7 @@ function DataViewInner<TRow>({
   // exactly one scroll (via `<PaneScroll>`). Dev-only structural guard fires if
   // the enclosing pane forgot to provide that scroll (kept in its own hook so the
   // effect's DOM walk stays out of this component's React Compiler analysis).
-  const rootRef = useScrollAncestorGuard(props.storageKey);
+  const rootRef = useDataViewDevGuards(props.storageKey);
 
   // Measure the sticky toolbar's height and publish it on the root as
   // `--dv-header-offset` (see `DATA_VIEW_HEADER_OFFSET_VAR`). Grouped views stack
