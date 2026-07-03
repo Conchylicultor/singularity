@@ -3,6 +3,7 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { flushQuestion } from "../../shared";
@@ -42,6 +43,7 @@ export function AnswerHereButton({
         >
           Answer here
         </Button>
+        <JsonlViewer.PendingPromptAction.Render />
       </Stack>
     </Text>
   );

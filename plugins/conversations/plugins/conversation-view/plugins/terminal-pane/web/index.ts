@@ -1,7 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/action-bar/web";
+import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { TerminalButton } from "./components/terminal-button";
+import { OpenTerminalButton } from "./components/open-terminal-button";
 import { convTerminalPane } from "./panes";
 
 export default {
@@ -10,5 +12,9 @@ export default {
   contributions: [
     Pane.Register({ pane: convTerminalPane }),
     Conversation.ActionBar({ id: "terminal", component: TerminalButton }),
+    JsonlViewer.PendingPromptAction({
+      id: "open-terminal",
+      component: OpenTerminalButton,
+    }),
   ],
 } satisfies PluginDefinition;
