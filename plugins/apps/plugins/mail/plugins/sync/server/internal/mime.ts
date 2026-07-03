@@ -114,6 +114,33 @@ function isAttachmentPart(part: GmailMessagePart): boolean {
   );
 }
 
+/**
+ * Classify an attachment part as "inline" (displayed in the body, not a real
+ * attachment) vs. a genuine attachment — the SINGLE definition behind both the
+ * reader's chip list (`!inline`) and the paperclip flag (`some(!inline)`), so
+ * the two can never diverge from each other.
+ *
+ * The rule mirrors Gmail's own `has:attachment` semantics (used by the
+ * pre-hydration attachment-scan), so the MIME-derived flag agrees with the
+ * server-side scan:
+ * - An explicit `Content-Disposition: attachment` is ALWAYS a real attachment,
+ *   even when the part also carries a `Content-ID`. Outlook/Exchange routinely
+ *   stamp Content-IDs on genuine attachments; treating those as inline (the old
+ *   `contentId != null` shortcut) wrongly hid real attachments from the reader
+ *   while Gmail's scan still lit the paperclip.
+ * - Otherwise the part is inline when it is displayed in the body: an explicit
+ *   `inline` disposition, or an implicit `cid:` reference (a `Content-ID` with
+ *   no/other disposition).
+ */
+export function isInlineAttachment(
+  disposition: string,
+  contentId: string | null,
+): boolean {
+  const dispo = disposition.trim().toLowerCase();
+  if (dispo.startsWith("attachment")) return false;
+  return dispo.startsWith("inline") || contentId != null;
+}
+
 function walkPayload(part: GmailMessagePart | undefined, acc: BodyAcc): void {
   if (!part) return;
 
@@ -130,7 +157,7 @@ function walkPayload(part: GmailMessagePart | undefined, acc: BodyAcc): void {
           : (contentId ?? "attachment"),
       mimeType: part.mimeType ?? "application/octet-stream",
       sizeBytes: part.body?.size ?? 0,
-      inline: disposition.trim().toLowerCase().startsWith("inline") || contentId != null,
+      inline: isInlineAttachment(disposition, contentId),
       contentId,
     });
   } else if (part.mimeType === "text/plain" && part.body?.data) {

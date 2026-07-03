@@ -169,10 +169,13 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
 - **Attachment indicator is pre-populated (paperclip), not the full list.** The
   message-level `has_attachments` flag (→ thread rollup) is filled WITHOUT a body
   fetch by the `mail.attachment-scan` job (Gmail `has:attachment`, see above), so
-  the paperclip shows on unopened mail. Remaining gaps: the reader's attachment
-  chips still include inline `cid:` images (they list every `mail_attachments`
-  row), and deep search pages / older-than-window mail that no scan has covered
-  aren't flagged until hydration.
+  the paperclip shows on unopened mail. The reader's chip list and this flag share
+  ONE "real, non-inline attachment" definition — `isInlineAttachment` in
+  `mime.ts`, which mirrors Gmail's `has:attachment` semantics (explicit
+  `Content-Disposition: attachment` always counts, even with a `Content-ID`;
+  otherwise a part is inline when it's `inline`-disposition or `cid:`-referenced)
+  — so the two cannot diverge from each other. Remaining gap: deep search pages /
+  older-than-window mail that no scan has covered aren't flagged until hydration.
 - **Bounded resync ≠ deletion reconciliation.** The 404-expiry full resync
   re-fetches and upserts everything but does **not** detect messages deleted on
   the server during the gap (Gmail gives no deleted-set without history). A

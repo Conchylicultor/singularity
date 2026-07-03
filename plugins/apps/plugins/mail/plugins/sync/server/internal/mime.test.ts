@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { GmailMessage } from "@plugins/apps/plugins/mail/plugins/gmail-api/core";
 import {
   decodeBase64Url,
+  isInlineAttachment,
   parseAddress,
   parseAddressList,
   parseGmailMessage,
@@ -51,6 +52,28 @@ describe("decodeBase64Url", () => {
   test("round-trips a known base64url string", () => {
     const original = "Hello, world! — café";
     expect(decodeBase64Url(b64(original))).toBe(original);
+  });
+});
+
+describe("isInlineAttachment", () => {
+  test("explicit `inline` disposition → inline", () => {
+    expect(isInlineAttachment("inline", null)).toBe(true);
+    expect(isInlineAttachment("inline; filename=logo.png", "<logo>")).toBe(true);
+  });
+
+  test("Content-ID with no disposition → inline (implicit cid reference)", () => {
+    expect(isInlineAttachment("", "<logo>")).toBe(true);
+  });
+
+  test("explicit `attachment` disposition → real attachment, even with a Content-ID", () => {
+    // Outlook/Exchange stamp Content-IDs on genuine attachments; disposition wins.
+    expect(isInlineAttachment("attachment; filename=doc.pdf", "<doc>")).toBe(false);
+    expect(isInlineAttachment("attachment", null)).toBe(false);
+    expect(isInlineAttachment("  ATTACHMENT ; filename=x", "<x>")).toBe(false);
+  });
+
+  test("no disposition and no Content-ID → real attachment", () => {
+    expect(isInlineAttachment("", null)).toBe(false);
   });
 });
 
@@ -157,6 +180,45 @@ describe("parseGmailMessage", () => {
         sizeBytes: 512,
         inline: true,
         contentId: "logo123",
+      },
+    ]);
+  });
+
+  test("Outlook-style attachment with a Content-ID is a real attachment, not inline", () => {
+    const msg: GmailMessage = {
+      id: "m4",
+      threadId: "t4",
+      payload: {
+        mimeType: "multipart/mixed",
+        headers: [{ name: "From", value: "a@x" }],
+        parts: [
+          { mimeType: "text/html", body: { size: 6, data: b64("<p/>x") } },
+          {
+            mimeType: "application/pdf",
+            filename: "invoice.pdf",
+            headers: [
+              { name: "Content-ID", value: "<invoice@outlook>" },
+              {
+                name: "Content-Disposition",
+                value: "attachment; filename=invoice.pdf",
+              },
+            ],
+            body: { attachmentId: "att-inv", size: 2048 },
+          },
+        ],
+      },
+    };
+    const parsed = parseGmailMessage(msg);
+    // Disposition `attachment` wins over the Content-ID → shows a reader chip AND
+    // matches Gmail's `has:attachment` paperclip.
+    expect(parsed.attachments).toEqual([
+      {
+        gmailAttachmentId: "att-inv",
+        filename: "invoice.pdf",
+        mimeType: "application/pdf",
+        sizeBytes: 2048,
+        inline: false,
+        contentId: "invoice@outlook",
       },
     ]);
   });
