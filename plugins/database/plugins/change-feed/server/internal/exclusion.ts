@@ -25,6 +25,13 @@ import { defineServerContribution } from "@plugins/framework/plugins/server-core
 // Collected by the framework at boot BEFORE any onReadyBlocking runs (same as the
 // `View` contribution), so `rebuildTriggers` sees every exclusion regardless of
 // module import order.
+//
+// INVARIANT (enforced at boot by ./identity-coverage): no keyed live-state
+// resource may declare an `identityTable` on an excluded table. Scoped delivery
+// fires only on `origin === identityTable`, which an excluded (trigger-less) table
+// can never produce — so the policy would be dead config that silently degrades
+// the resource to hydrate-on-mount. A resource that reads an excluded table must
+// be a plain push resource (no identityTable), like reportsResource/slowOpsResource.
 export const ExcludeFromChangeFeed = defineServerContribution<{
   table: PgTable;
   reason: string;

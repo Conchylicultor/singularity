@@ -312,8 +312,17 @@ the tasks-core/agents cascade is deliberately deferred to M4.
   affectedMaps).
 - M5: opt-in scoped membership (DELETE then INSERT) — would relax both the
   mutable-`where` rule and the LIMIT-window rule.
-- Check: fail when a keyed resource's `identityTable` names a
-  change-feed-excluded table (dead scope policy — the reports/slow-ops finding).
+- ~~Check: fail when a keyed resource's `identityTable` names a
+  change-feed-excluded table (dead scope policy — the reports/slow-ops finding).~~
+  **DONE** — implemented as a boot-time invariant, not a `./singularity check`.
+  A static check can't reach it: `excludedTableNames()` only populates after server
+  boot (contribution registry), and query-resource-derived `identityTable`s are
+  runtime drizzle values, not statically parseable. Instead the change-feed's
+  `onReadyBlocking` cross-checks `scopedResourceIdentities()` (new resource-runtime
+  accessor, threaded through server-core) against `excludedTableNames()` and throws
+  loudly (blocks boot) on any collision — the sibling of `warnOnCoverageGaps`, which
+  the plugin already documents as replacing a check that "can't reach a live DB".
+  See `plugins/database/plugins/change-feed/server/internal/identity-coverage.ts`.
 - Resources docgen facet only parses the flat `defineResource({key})` form —
   two-arg descriptor-form resources (most of the repo, now including all
   query-resource migrations) are invisible to the per-plugin "Resources:" doc

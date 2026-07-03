@@ -810,6 +810,19 @@ export interface ResourceRuntime {
    * `read-admit` gate gauge; central omits the registration.
    */
   readGateStats: () => { active: number; queued: number; max: number };
+  /**
+   * Every registered resource that declared a scoped `identityTable` policy, as
+   * `{ key, identityTable }` (entries on `recompute:{full}` or with no scope
+   * policy are omitted). The change-feed cross-checks these against its
+   * `ExcludeFromChangeFeed` set at boot: a scoped resource whose identity base
+   * has no feed trigger can NEVER receive the `origin === identityTable` scoped
+   * delivery it declares, so the policy is dead config that silently degrades the
+   * resource to hydrate-on-mount with zero signal. The runtime owns the registry;
+   * the change-feed owns the exclusion set — this accessor is the seam that lets
+   * the change-feed (the DB↔live-state wirer) enforce the invariant without the
+   * runtime importing a specific DB plugin.
+   */
+  scopedResourceIdentities: () => Array<{ key: string; identityTable: string }>;
 }
 
 const HEARTBEAT_MS = 20_000;
@@ -2390,6 +2403,21 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     return { hand: s?.hand ?? 0, feed: s?.feed ?? 0 };
   }
 
+  // Enumerate every registered resource that declared a scoped `identityTable`
+  // policy. Read straight off the registry (populated at module-import, so this is
+  // authoritative by the time any boot hook runs) — covers hand-written AND
+  // query-resource-compiled resources identically, because the compiler lowers the
+  // drizzle table down to the same `identityTable` string the runtime stores here.
+  function scopedResourceIdentities(): Array<{ key: string; identityTable: string }> {
+    const out: Array<{ key: string; identityTable: string }> = [];
+    for (const entry of registry.values()) {
+      if (entry.identityTable) {
+        out.push({ key: entry.key, identityTable: entry.identityTable });
+      }
+    }
+    return out;
+  }
+
   return {
     defineResource,
     defineExternalResource,
@@ -2402,6 +2430,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     applyDbChange,
     recomputeResource,
     notifyStatsFor,
+    scopedResourceIdentities,
     readGateStats: () => readLoadGate.stats(),
   };
 }

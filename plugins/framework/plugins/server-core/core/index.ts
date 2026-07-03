@@ -22,6 +22,7 @@ export {
   notifyStatsFor,
   onResourcePush,
   recomputeResource,
+  scopedResourceIdentities,
   setRelationResolver,
   setFeedExemptTables,
   setLiveStateSnapshotHooks,

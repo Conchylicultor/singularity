@@ -296,4 +296,7 @@ export const {
   recomputeResource,
   // L4 self-verification counters (hand vs feed) for the read-set debug pane.
   notifyStatsFor,
+  // Scoped keyed resources ({ key, identityTable }) — the change-feed cross-checks
+  // these against its ExcludeFromChangeFeed set at boot to reject dead scope policy.
+  scopedResourceIdentities,
 } = runtime;
