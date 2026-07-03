@@ -72,6 +72,76 @@ that table is the Studio engine's dev/preview history only. Discoverability for
 hand-run releases is the path + `latest` symlink + `RELEASE.json`, not a registry
 query, keeping the CLI cleanly DB-free.
 
+## Testing a release renders (end-to-end)
+
+A built stack being *up* (processes alive, gateway listening) does **not** prove
+the app *renders* — the original desktop bug was "Starting… → black screen": the
+backend booted but the SPA never mounted on the bare default-namespace route the
+webview navigates to. Always verify the actual render.
+
+**The harness: [`e2e/release-boot-verify.mjs`](../../e2e/release-boot-verify.mjs).**
+It loads a URL in headless Chromium and asserts the SPA truly mounted — `#root`
+has a real tree (>10 nodes, re-checked after a settle window to catch
+mount-then-crash), **zero** console/page errors, and no gateway↔backend 502/404
+request storm on `/api` `/ws` `/zero`. Exit 0 = PASS.
+
+```bash
+bun e2e/release-boot-verify.mjs --url http://localhost:<port>/ --settle 15000
+```
+
+Always point it at the **bare default-namespace URL** (`http://localhost:<port>/`,
+no `.localhost` subdomain) — that is the exact route the Tauri webview uses and
+the one that reproduces the desktop path. `<port>` is `RELEASE.json → port`
+(default `9100`). Optional `--expect-text "<substr>"` / `--expect-selector <css>`
+add content assertions; a wrong selector fails the run even when the app rendered
+fine, so pick one that genuinely marks the surface.
+
+**Web target** — stage with `--dev`, run the launcher, verify against it:
+
+```bash
+./singularity release --composition <c> --target web --dev   # stages <out>/
+<out>/launch &                                                # self-roots data under <out>/data
+bun e2e/release-boot-verify.mjs --url http://localhost:9100/ --settle 15000
+```
+
+**Tauri target** — build the `.app`, launch it, verify the served content **and**
+the real window:
+
+```bash
+./singularity release --composition <c> --target tauri        # builds <out>/bundle/<Name>.app
+open "<out>/bundle/<Name>.app"                                 # brings up the embedded stack on RELEASE.json port
+bun e2e/release-boot-verify.mjs --url http://localhost:9100/ --settle 15000
+```
+
+The harness covers the *served bytes* (identical to what the WKWebView loads,
+same origin). To also confirm the **native window** paints — the one thing a
+headless browser can't — capture the real WKWebView window on macOS via
+CoreGraphics (no Screen-Recording-blocked full-screen grab needed):
+
+```bash
+open -a "<Name>"; sleep 2
+cat > /tmp/winid.swift <<'SW'
+import CoreGraphics; import Foundation
+let opts = CGWindowListOption(arrayLiteral: .optionOnScreenOnly, .excludeDesktopElements)
+for w in (CGWindowListCopyWindowInfo(opts, kCGNullWindowID) as? [[String:Any]] ?? []) {
+  let owner = (w[kCGWindowOwnerName as String] as? String) ?? ""
+  if (owner.contains("<Name>") || owner.lowercased().contains("equin")),
+     (w[kCGWindowLayer as String] as? Int) == 0,
+     let n = w[kCGWindowNumber as String] as? Int { print(n); exit(0) }
+}
+exit(2)
+SW
+screencapture -o -x -l"$(swift /tmp/winid.swift)" /tmp/app-window.png
+```
+
+A **fresh** release boots an empty app-data DB, so data-backed surfaces are
+legitimately empty. Note the current gap this does not cover: config_v2
+"default-for-everyone" values (e.g. Sonata's Library view tabs) are **absent** in
+a release because the repo `config/` origin tier is neither vendored nor
+reachable (`REPO_ROOT/config` does not resolve inside a compiled binary) — an
+empty config-driven surface is that gap, not the fresh-DB state. See the filed
+follow-up task.
+
 ## Deploy handoff note
 
 The engine's run model, target registry, and `triggerRelease` are
