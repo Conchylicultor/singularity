@@ -7,6 +7,7 @@ export const dateIdentity = defineFieldIdentity<Date>({
   type: dateFieldType,
   label: "Date",
   icon: MdCalendarToday,
+  customColumn: true,
   coerce: (v) =>
     v instanceof Date
       ? v.getTime()

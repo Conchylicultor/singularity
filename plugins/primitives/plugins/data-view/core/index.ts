@@ -9,9 +9,13 @@ export {
   FilterRuleSchema,
 } from "./internal/filter-schema";
 
+export { IDENTITY_CODEC } from "./internal/types";
+
 export type {
   FieldValue,
   FilterFieldValue,
+  ValueCodec,
+  ColumnConfigProps,
   FieldDef,
   HierarchyConfig,
   SelectionConfig,

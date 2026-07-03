@@ -8,7 +8,9 @@ import type { CustomColumnDef } from "../core";
  *
  * Terse/legacy/absent input is tolerated: a non-array yields `[]`; a row missing
  * a string `label` is skipped; a missing/empty `id` falls back to a stable
- * index-derived id; a missing/empty `type` defaults to `"text"`.
+ * index-derived id; a missing/empty `type` defaults to `"text"`. The opaque
+ * `config` blob is carried through as-is when present (left `undefined`
+ * otherwise) — its shape is owned by the field type, never read here.
  */
 export function readCustomColumnDefs(raw: unknown): CustomColumnDef[] {
   if (!Array.isArray(raw)) return [];
@@ -19,7 +21,9 @@ export function readCustomColumnDefs(raw: unknown): CustomColumnDef[] {
     if (typeof r.label !== "string") return;
     const id = typeof r.id === "string" && r.id !== "" ? r.id : `cc-${index}`;
     const type = typeof r.type === "string" && r.type !== "" ? r.type : "text";
-    defs.push({ id, label: r.label, type });
+    const def: CustomColumnDef = { id, label: r.label, type };
+    if ("config" in r && r.config !== undefined) def.config = r.config;
+    defs.push(def);
   });
   return defs;
 }

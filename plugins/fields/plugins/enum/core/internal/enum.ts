@@ -7,6 +7,7 @@ export const enumIdentity = defineFieldIdentity<string>({
   type: enumFieldType,
   label: "Select",
   icon: MdList,
+  customColumn: true,
   coerce: (v) => (typeof v === "string" ? v : String(v ?? "")),
   directionLabels: { asc: "A → Z", desc: "Z → A" },
 });

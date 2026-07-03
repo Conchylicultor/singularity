@@ -1,5 +1,6 @@
-import { and, eq, sql } from "drizzle-orm";
-import { alias } from "drizzle-orm/pg-core";
+import { and, eq, sql, type AnyColumn } from "drizzle-orm";
+import { alias, type PgColumn } from "drizzle-orm/pg-core";
+import { resolveFieldValueTextCast } from "@plugins/fields/plugins/server-capabilities/server";
 import {
   DataViewServer,
   type QueryAugmentor,
@@ -82,8 +83,20 @@ const customColumnsAugmentor: QueryAugmentor = (ctx: QueryAugmentorContext) => {
           ),
         ),
     });
-    columnMap[def.id] = { col: t.value, type: def.type, nullable: true };
-    if (sortIds.has(def.id)) projection[def.id] = t.value;
+    // Present the generic `TEXT` value column as the def's Postgres type for
+    // filter/sort SQL. Text/enum resolve no cast → raw `t.value` (identical to
+    // before). The `as unknown as AnyColumn/PgColumn` widening is contained here:
+    // the cast is SQL; the compiler only interpolates ${col} into sql templates —
+    // runtime-safe.
+    const cast = resolveFieldValueTextCast(def.type);
+    const colExpr = cast ? cast(t.value) : t.value;
+    columnMap[def.id] = {
+      col: colExpr as unknown as AnyColumn,
+      type: def.type,
+      nullable: true,
+    };
+    if (sortIds.has(def.id))
+      projection[def.id] = colExpr as unknown as PgColumn;
   }
 
   return { columnMap, joins, projection };

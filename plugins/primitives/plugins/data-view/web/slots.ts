@@ -8,6 +8,8 @@ import type { DataViewSettingsContextValue } from "./components/settings/setting
 import { Cell } from "./cell-slot";
 import { CellEditor } from "./cell-editor-slot";
 import { Filter } from "./filter-slot";
+import { ValueCodec } from "./value-codec-slot";
+import { ColumnConfig } from "./column-config-slot";
 
 /**
  * A registered view-*type*: the generic `ViewTypeMeta` (type/title/icon/order/
@@ -117,4 +119,8 @@ export const DataViewSlots = {
   CellEditor,
   /** Per-type filter. Contribute one `FilterOperatorSet` ({ match, operators, defaultOperator? }). */
   Filter,
+  /** Per-type native↔text value codec for custom columns. Contribute `{ match, codec }`. */
+  ValueCodec,
+  /** Per-type add-time custom-column config editor. Contribute `{ match, component }`. */
+  ColumnConfig,
 };

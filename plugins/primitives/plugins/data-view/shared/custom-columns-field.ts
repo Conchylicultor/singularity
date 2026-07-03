@@ -1,6 +1,8 @@
+import { z } from "zod";
 import type { FieldsRecord } from "@plugins/fields/core";
 import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 
 /**
  * Sibling config field the data-view host merges into view-core's
@@ -27,6 +29,12 @@ export const customColumnsExtraFields: FieldsRecord = {
       id: textField({ label: "Id" }),
       label: textField({ label: "Label" }),
       type: textField({ label: "Type", default: "text" }),
+      // Opaque per-type add-time config blob (e.g. an enum's option list).
+      // Declared explicitly for clarity (the item schema is already
+      // `.passthrough()`); `custom-columns` and the host never inspect its
+      // shape — only the field type's own code (e.g. enum) reads it. A
+      // `z.unknown()` `jsonField` is the sanctioned arbitrary-value config field.
+      config: jsonField({ label: "Config", schema: z.unknown(), default: null }),
     },
   }),
 };

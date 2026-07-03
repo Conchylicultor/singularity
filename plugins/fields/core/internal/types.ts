@@ -19,6 +19,8 @@ export interface FieldIdentity<T = unknown> {
   readonly icon?: ComponentType<{ className?: string }>;
   /** Base type whose table/filter contributions this type inherits (one hop in practice). */
   readonly extends?: FieldType;
+  /** Opt-in: this type may be chosen when adding a custom DataView column. */
+  readonly customColumn?: boolean;
   /** Projection to a sortable/comparable scalar (Date→ms, bool→0/1, …). */
   readonly coerce?: (value: T) => string | number | null;
   /**

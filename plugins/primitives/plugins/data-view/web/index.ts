@@ -6,7 +6,7 @@ import { GroupByControl } from "./components/settings/group-by-control";
 import { PropertiesControl } from "./components/settings/properties-control";
 
 export { DataView } from "./components/data-view";
-export { defineDataView, DATA_VIEW_HEADER_OFFSET_VAR } from "../core";
+export { defineDataView, DATA_VIEW_HEADER_OFFSET_VAR, IDENTITY_CODEC } from "../core";
 export type { DataViewId } from "../core";
 export { DataViewSlots } from "./slots";
 export type {
@@ -21,6 +21,9 @@ export type { DataViewSettingsContextValue } from "./components/settings/setting
 export { useResolveCell } from "./cell-slot";
 export { useResolveCellEditor } from "./cell-editor-slot";
 export { useResolveOperatorSet } from "./filter-slot";
+export { useResolveValueCodec } from "./value-codec-slot";
+export { useResolveColumnConfig } from "./column-config-slot";
+export { useFieldIdentities } from "./internal/use-field-identities";
 export { EditableCell } from "./components/editable-cell";
 export { FieldCell } from "./components/field-cell";
 export type { FieldCellProps } from "./components/field-cell";
@@ -58,6 +61,8 @@ export type {
 export type {
   FieldValue,
   FilterFieldValue,
+  ValueCodec,
+  ColumnConfigProps,
   FieldDef,
   HierarchyConfig,
   SelectionConfig,

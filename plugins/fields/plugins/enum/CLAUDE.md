@@ -37,6 +37,7 @@ token) matches descriptors built with the factory.
 - Cross-plugin:
   - Imported by: `fields/enum/config`
 - Sub-plugins:
+  - **`column-config`** — Enum field type: data-view custom-column add-time config editor (options add/rename/remove).
   - **`config`** — Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
   - **`filter`** — Enum (select) field type: data-view filter operator set (is / is-any-of / is-empty …).
   - **`filter-sql`** — Enum field type: server filter-sql capability — operator→SQL fragments mirroring the data-view enum filter predicates.

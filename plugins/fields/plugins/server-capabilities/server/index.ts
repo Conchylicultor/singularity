@@ -12,9 +12,14 @@ export type {
   FilterSqlBuilder,
   FieldFilterSqlContribution,
 } from "./internal/filter-sql";
+export { resolveFieldValueTextCast } from "./internal/value-cast";
+export type {
+  ValueTextCast,
+  FieldValueTextCastContribution,
+} from "./internal/value-cast";
 export { fieldsToColumns } from "./internal/fields-to-columns";
 
 export default {
   description:
-    "Server-owned field-capability library: the Fields.Storage / Fields.FilterSql tokens, their eager self-registering indexes, and the resolveFieldStorage / resolveFieldFilterSql resolvers. A graph sink — never imports a capability barrel.",
+    "Server-owned field-capability library: the Fields.Storage / Fields.FilterSql / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldFilterSql / resolveFieldValueTextCast), and the storage/filter-sql eager self-registering indexes. A graph sink — never imports a capability barrel.",
 } satisfies ServerPluginDefinition;

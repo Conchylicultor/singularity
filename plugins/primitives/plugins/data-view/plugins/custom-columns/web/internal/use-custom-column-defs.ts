@@ -8,9 +8,11 @@ import { readCustomColumnDefs } from "../../shared/read-custom-column-defs";
 
 export interface CustomColumnDefsController {
   defs: CustomColumnDef[];
-  /** Append a new text column under a generated stable id. */
-  addColumn: (label: string) => void;
+  /** Append a new column of the given field type under a generated stable id. */
+  addColumn: (label: string, type: string) => void;
   renameColumn: (id: string, label: string) => void;
+  /** Replace a column's opaque per-type config blob (understood only by the type). */
+  setColumnConfig: (id: string, config: unknown) => void;
   deleteColumn: (id: string) => void;
 }
 
@@ -89,8 +91,8 @@ export function useCustomColumnDefs(
   }, [persisted, mirror]);
 
   const addColumn = useCallback(
-    (label: string) => {
-      commit([...mirror, { id: columnId(), label, type: "text" }]);
+    (label: string, type: string) => {
+      commit([...mirror, { id: columnId(), label, type }]);
     },
     [commit, mirror],
   );
@@ -98,6 +100,13 @@ export function useCustomColumnDefs(
   const renameColumn = useCallback(
     (id: string, label: string) => {
       commit(mirror.map((c) => (c.id === id ? { ...c, label } : c)));
+    },
+    [commit, mirror],
+  );
+
+  const setColumnConfig = useCallback(
+    (id: string, config: unknown) => {
+      commit(mirror.map((c) => (c.id === id ? { ...c, config } : c)));
     },
     [commit, mirror],
   );
@@ -110,7 +119,7 @@ export function useCustomColumnDefs(
   );
 
   return useMemo(
-    () => ({ defs: mirror, addColumn, renameColumn, deleteColumn }),
-    [mirror, addColumn, renameColumn, deleteColumn],
+    () => ({ defs: mirror, addColumn, renameColumn, setColumnConfig, deleteColumn }),
+    [mirror, addColumn, renameColumn, setColumnConfig, deleteColumn],
   );
 }

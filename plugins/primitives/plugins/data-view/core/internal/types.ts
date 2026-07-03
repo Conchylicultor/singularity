@@ -6,6 +6,37 @@ import type { DataViewId } from "./define-data-view";
 export type FieldValue = string | number | boolean | Date | null | undefined;
 
 /**
+ * Round-trips a custom column's native cell/editor value ↔ its canonical text
+ * storage form. A field type whose value is already a string needs no codec
+ * (defaults to `IDENTITY_CODEC`); number/bool/date contribute one so their
+ * native values survive the generic `TEXT` storage column. Resolved per field
+ * type via `DataViewSlots.ValueCodec` (data-view/web), honoring the `extends`
+ * chain — the read twin of the server-side text→typed SQL cast.
+ */
+export interface ValueCodec {
+  decode: (raw: string | undefined) => FieldValue;
+  encode: (value: FieldValue) => string;
+}
+
+/** Default codec for string-valued types (text/enum): raw text is the value. */
+export const IDENTITY_CODEC: ValueCodec = {
+  decode: (raw) => raw ?? "",
+  encode: (v) => String(v ?? ""),
+};
+
+/**
+ * Props a per-type add-time column-config editor receives. Rendered in the
+ * custom-column Fields settings when the selected field type contributes a
+ * `DataViewSlots.ColumnConfig`. `config` is the opaque per-column blob
+ * (`FieldDef.config` / `CustomColumnDef.config`); the editor reads/writes it
+ * through `onChange` — the host never inspects its shape.
+ */
+export interface ColumnConfigProps {
+  config: unknown;
+  onChange: (next: unknown) => void;
+}
+
+/**
  * The value a filter predicate receives: a scalar `FieldValue` for normal
  * fields, or a `readonly string[]` for multi-value `tags`-style fields (which
  * project via `FieldDef.values`). Scalar predicates accept this union and narrow
@@ -166,6 +197,9 @@ export interface FieldDef<TRow> {
   align?: "start" | "end" | "center";
   /** type:"enum" — enables Phase 3 chip/multiselect filtering. */
   options?: { value: string; label: string }[];
+  /** Opaque per-type config for custom columns; understood only by the field
+   *  type's own code (e.g. enum options). Passed through untouched by the host. */
+  config?: unknown;
   /** type:"media" — gallery cover source. */
   cover?: boolean;
   /** The field rendered as the tree row label. Fallback heuristic: first text field, else fields[0]. */

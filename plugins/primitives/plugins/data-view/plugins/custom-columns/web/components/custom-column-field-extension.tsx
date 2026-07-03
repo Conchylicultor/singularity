@@ -1,15 +1,18 @@
 import { useMemo, type ReactNode } from "react";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
+import { resolveTypeChain } from "@plugins/fields/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   getDataViewDescriptor,
+  useResolveValueCodec,
+  useResolveOperatorSet,
+  useFieldIdentities,
   type GlobalFieldExtensionProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import type {
   DataViewId,
   FieldDef,
-  FieldValue,
 } from "@plugins/primitives/plugins/data-view/core";
 import { useCustomColumnDefs } from "../internal/use-custom-column-defs";
 import {
@@ -74,30 +77,48 @@ function Inner({
   const values = useCustomColumnValues(storageKey);
   const setValue = useSetCustomColumnValue();
   const rowKeyRef = useLatestRef(rowKey);
+  const resolveCodec = useResolveValueCodec();
+  const resolveOps = useResolveOperatorSet();
+  const identities = useFieldIdentities();
 
   const fields = useMemo(
     () =>
-      defs.map(
-        (def): FieldDef<unknown> => ({
+      defs.map((def): FieldDef<unknown> => {
+        // Native↔text codec round-trips the typed cell value through the generic
+        // `TEXT` storage column; string types (text/enum) resolve IDENTITY_CODEC.
+        const codec = resolveCodec(def.type);
+        // Capability-derived flags — NO type-name literals. A type is filterable
+        // when it resolves a non-empty filter operator set; sortable when some
+        // type in its `extends` chain declares a `coerce` (the sortable scalar
+        // projection). Hardcoding `true` would show an empty filter UI for types
+        // (e.g. avatar) with no filter operators / no coerce.
+        const filterable = (resolveOps(def.type)?.operators.length ?? 0) > 0;
+        const sortable = resolveTypeChain(def.type, identities).some(
+          (id) => identities.get(id)?.coerce != null,
+        );
+        return {
           id: def.id,
           label: def.label,
-          // NOT a literal — the field-type registry is the extension seam for
-          // future number/date/checkbox columns.
+          // NOT a literal — the field-type registry is the extension seam; the
+          // type is dispatched through the generic cell/editor/filter slots.
           type: def.type,
-          value: (row): FieldValue =>
-            values.get(rowKeyRef.current(row, 0))?.get(def.id) ?? "",
+          value: (row) =>
+            codec.decode(values.get(rowKeyRef.current(row, 0))?.get(def.id)),
           onEdit: (row, next) =>
             setValue({
               dataViewId: storageKey,
               rowKey: rowKeyRef.current(row, 0),
               columnId: def.id,
-              value: String(next ?? ""),
+              value: codec.encode(next),
             }),
-          sortable: true,
-          filterable: true,
-        }),
-      ),
-    [defs, values, setValue, storageKey, rowKeyRef],
+          // Opaque per-type config (e.g. enum options); understood only by the
+          // field type's own code, passed through untouched.
+          config: def.config,
+          sortable,
+          filterable,
+        };
+      }),
+    [defs, values, setValue, storageKey, rowKeyRef, resolveCodec, resolveOps, identities],
   );
 
   return <>{render(fields)}</>;

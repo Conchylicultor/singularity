@@ -11,12 +11,19 @@ export interface CustomColumnDef {
   id: string;
   label: string;
   type: string;
+  /**
+   * Opaque per-type add-time config blob (e.g. an enum's option list). Owned by
+   * the field type's own code — `custom-columns` passes it through untouched and
+   * never inspects its shape.
+   */
+  config?: unknown;
 }
 
 export const CustomColumnDefSchema = z.object({
   id: z.string(),
   label: z.string(),
   type: z.string(),
+  config: z.unknown().optional(),
 });
 
 /**

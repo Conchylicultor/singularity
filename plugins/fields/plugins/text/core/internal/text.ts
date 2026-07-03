@@ -7,6 +7,7 @@ export const textIdentity = defineFieldIdentity<string>({
   type: textFieldType,
   label: "Text",
   icon: MdTextFields,
+  customColumn: true,
   coerce: (v) => (typeof v === "string" ? v : String(v ?? "")),
   directionLabels: { asc: "A → Z", desc: "Z → A" },
 });

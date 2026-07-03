@@ -92,24 +92,24 @@ tokens, so anything that imports the barrels back would cycle.
   - Exports: Types: `FieldDef`, `FieldIdentity`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`; Values: `defineFieldIdentity`, `defineFieldType`, `fieldSchemaWithDefault`, `fieldsToZodObject`, `getFieldResolver`, `nullable`, `pickMeta`, `registerFieldResolver`, `resolveTypeChain`
 - Sub-plugins:
   - **`avatar`** [1 sub-plugin] — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
-  - **`bool`** [6 sub-plugins] — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
+  - **`bool`** [8 sub-plugins] — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`color`** [2 sub-plugins] — Color field type: identity only. The read-only swatch cell lives in the plugins/table sub-plugin; color has no filter (sparse).
-  - **`date`** [6 sub-plugins] — Date field type: identity only. The data-view cell (relative time) and filter (date range) capabilities live in the plugins/{table,filter} sub-plugins.
+  - **`date`** [8 sub-plugins] — Date field type: identity only. The data-view cell (relative time) and filter (date range) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`directory-path`** [1 sub-plugin] — Directory-path field type: identity only. The config-render capability (a folder picker) and the dirPathField factory live in the plugins/config sub-plugin.
   - **`dynamic-enum`** [1 sub-plugin] — Dynamic enum (select) field type: identity only. Options are resolved at config-render time via the plugins/config sub-plugin's slot.
-  - **`enum`** [5 sub-plugins] — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
+  - **`enum`** [6 sub-plugins] — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
   - **`float`** [2 sub-plugins] — Float field type: identity only, extends number — reuses number's cell and filter via the extends chain.
   - **`image`** [1 sub-plugin] — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).
   - **`int`** [2 sub-plugins] — Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain.
   - **`json`** [2 sub-plugins] — JSON field type: identity only. The config-render capability and the jsonField factory live in the plugins/config sub-plugin.
   - **`list`** [1 sub-plugin] — List field type: identity only. The config-render capability and the listField factory live in the plugins/config sub-plugin.
   - **`multiline-text`** [1 sub-plugin] — Long text field type: identity only, extends text — reuses text's cell and filter via the extends chain.
-  - **`number`** [4 sub-plugins] — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.
+  - **`number`** [6 sub-plugins] — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`object`** [1 sub-plugin] — Object field type: identity only. The config-render capability and the objectField factory live in the plugins/config sub-plugin.
   - **`rank`** [2 sub-plugins] — Rank field type: identity only, extends text — a fractional-indexing string stored in the rank_text (C-collation) domain, reusing text's cell and filter via the extends chain.
   - **`reorder-tree`** [1 sub-plugin] — Reorder-tree field type: identity only. The config-render capability and the reorderTreeField factory live in the plugins/config sub-plugin.
   - **`secret`** [1 sub-plugin] — Secret field type: identity only. The config-render/storage/central capabilities and the secretField factory live in the plugins/config sub-plugin. Registers NO coerce and contributes NO data-view cell/filter, so a secret can never become a readable table cell.
-  - **`server-capabilities`** — Server-owned field-capability library: the Fields.Storage / Fields.FilterSql tokens, their eager self-registering indexes, and the resolveFieldStorage / resolveFieldFilterSql resolvers. A graph sink — never imports a capability barrel.
+  - **`server-capabilities`** — Server-owned field-capability library: the Fields.Storage / Fields.FilterSql / Fields.ValueTextCast tokens, their resolvers (resolveFieldStorage / resolveFieldFilterSql / resolveFieldValueTextCast), and the storage/filter-sql eager self-registering indexes. A graph sink — never imports a capability barrel.
   - **`server-capabilities-loader`** — Eagerly evaluates every fields storage/filter-sql capability barrel via a generated side-effect manifest, so each self-registers into the server-capabilities eager index. Eval-time consumers import this for side-effect.
   - **`string-list`** [1 sub-plugin] — String-list field type: identity only. The config-render capability and the stringListField factory live in the plugins/config sub-plugin.
   - **`tags`** [3 sub-plugins] — Tags (multi-value) field type: identity only. The data-view filter (multi-select tag chips with array-aware match-any) lives in the plugins/filter sub-plugin.

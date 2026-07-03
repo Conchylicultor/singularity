@@ -1662,6 +1662,10 @@
       "name": "@singularity/plugin-fields-bool-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/bool/plugins/data-view-codec": {
+      "name": "@singularity/plugin-fields-bool-data-view-codec",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/bool/plugins/filter": {
       "name": "@singularity/plugin-fields-bool-filter",
       "version": "0.0.1",
@@ -1680,6 +1684,10 @@
     },
     "plugins/fields/plugins/bool/plugins/table": {
       "name": "@singularity/plugin-fields-bool-table",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/bool/plugins/text-cast": {
+      "name": "@singularity/plugin-fields-bool-text-cast",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/color": {
@@ -1702,6 +1710,10 @@
       "name": "@singularity/plugin-fields-date-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/date/plugins/data-view-codec": {
+      "name": "@singularity/plugin-fields-date-data-view-codec",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/date/plugins/filter": {
       "name": "@singularity/plugin-fields-date-filter",
       "version": "0.0.1",
@@ -1722,6 +1734,10 @@
       "name": "@singularity/plugin-fields-date-table",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/date/plugins/text-cast": {
+      "name": "@singularity/plugin-fields-date-text-cast",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/directory-path": {
       "name": "@singularity/plugin-fields-directory-path",
       "version": "0.0.1",
@@ -1740,6 +1756,10 @@
     },
     "plugins/fields/plugins/enum": {
       "name": "@singularity/plugin-fields-enum",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/enum/plugins/column-config": {
+      "name": "@singularity/plugin-fields-enum-column-config",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/enum/plugins/config": {
@@ -1826,6 +1846,10 @@
       "name": "@singularity/plugin-fields-number",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/number/plugins/data-view-codec": {
+      "name": "@singularity/plugin-fields-number-data-view-codec",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/number/plugins/filter": {
       "name": "@singularity/plugin-fields-number-filter",
       "version": "0.0.1",
@@ -1840,6 +1864,10 @@
     },
     "plugins/fields/plugins/number/plugins/table": {
       "name": "@singularity/plugin-fields-number-table",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/number/plugins/text-cast": {
+      "name": "@singularity/plugin-fields-number-text-cast",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/object": {
@@ -5384,6 +5412,8 @@
 
     "@singularity/plugin-fields-bool-config": ["@singularity/plugin-fields-bool-config@workspace:plugins/fields/plugins/bool/plugins/config"],
 
+    "@singularity/plugin-fields-bool-data-view-codec": ["@singularity/plugin-fields-bool-data-view-codec@workspace:plugins/fields/plugins/bool/plugins/data-view-codec"],
+
     "@singularity/plugin-fields-bool-filter": ["@singularity/plugin-fields-bool-filter@workspace:plugins/fields/plugins/bool/plugins/filter"],
 
     "@singularity/plugin-fields-bool-filter-sql": ["@singularity/plugin-fields-bool-filter-sql@workspace:plugins/fields/plugins/bool/plugins/filter-sql"],
@@ -5393,6 +5423,8 @@
     "@singularity/plugin-fields-bool-storage": ["@singularity/plugin-fields-bool-storage@workspace:plugins/fields/plugins/bool/plugins/storage"],
 
     "@singularity/plugin-fields-bool-table": ["@singularity/plugin-fields-bool-table@workspace:plugins/fields/plugins/bool/plugins/table"],
+
+    "@singularity/plugin-fields-bool-text-cast": ["@singularity/plugin-fields-bool-text-cast@workspace:plugins/fields/plugins/bool/plugins/text-cast"],
 
     "@singularity/plugin-fields-color": ["@singularity/plugin-fields-color@workspace:plugins/fields/plugins/color"],
 
@@ -5404,6 +5436,8 @@
 
     "@singularity/plugin-fields-date-config": ["@singularity/plugin-fields-date-config@workspace:plugins/fields/plugins/date/plugins/config"],
 
+    "@singularity/plugin-fields-date-data-view-codec": ["@singularity/plugin-fields-date-data-view-codec@workspace:plugins/fields/plugins/date/plugins/data-view-codec"],
+
     "@singularity/plugin-fields-date-filter": ["@singularity/plugin-fields-date-filter@workspace:plugins/fields/plugins/date/plugins/filter"],
 
     "@singularity/plugin-fields-date-filter-sql": ["@singularity/plugin-fields-date-filter-sql@workspace:plugins/fields/plugins/date/plugins/filter-sql"],
@@ -5414,6 +5448,8 @@
 
     "@singularity/plugin-fields-date-table": ["@singularity/plugin-fields-date-table@workspace:plugins/fields/plugins/date/plugins/table"],
 
+    "@singularity/plugin-fields-date-text-cast": ["@singularity/plugin-fields-date-text-cast@workspace:plugins/fields/plugins/date/plugins/text-cast"],
+
     "@singularity/plugin-fields-directory-path": ["@singularity/plugin-fields-directory-path@workspace:plugins/fields/plugins/directory-path"],
 
     "@singularity/plugin-fields-directory-path-config": ["@singularity/plugin-fields-directory-path-config@workspace:plugins/fields/plugins/directory-path/plugins/config"],
@@ -5423,6 +5459,8 @@
     "@singularity/plugin-fields-dynamic-enum-config": ["@singularity/plugin-fields-dynamic-enum-config@workspace:plugins/fields/plugins/dynamic-enum/plugins/config"],
 
     "@singularity/plugin-fields-enum": ["@singularity/plugin-fields-enum@workspace:plugins/fields/plugins/enum"],
+
+    "@singularity/plugin-fields-enum-column-config": ["@singularity/plugin-fields-enum-column-config@workspace:plugins/fields/plugins/enum/plugins/column-config"],
 
     "@singularity/plugin-fields-enum-config": ["@singularity/plugin-fields-enum-config@workspace:plugins/fields/plugins/enum/plugins/config"],
 
@@ -5466,6 +5504,8 @@
 
     "@singularity/plugin-fields-number": ["@singularity/plugin-fields-number@workspace:plugins/fields/plugins/number"],
 
+    "@singularity/plugin-fields-number-data-view-codec": ["@singularity/plugin-fields-number-data-view-codec@workspace:plugins/fields/plugins/number/plugins/data-view-codec"],
+
     "@singularity/plugin-fields-number-filter": ["@singularity/plugin-fields-number-filter@workspace:plugins/fields/plugins/number/plugins/filter"],
 
     "@singularity/plugin-fields-number-filter-sql": ["@singularity/plugin-fields-number-filter-sql@workspace:plugins/fields/plugins/number/plugins/filter-sql"],
@@ -5473,6 +5513,8 @@
     "@singularity/plugin-fields-number-inline": ["@singularity/plugin-fields-number-inline@workspace:plugins/fields/plugins/number/plugins/inline"],
 
     "@singularity/plugin-fields-number-table": ["@singularity/plugin-fields-number-table@workspace:plugins/fields/plugins/number/plugins/table"],
+
+    "@singularity/plugin-fields-number-text-cast": ["@singularity/plugin-fields-number-text-cast@workspace:plugins/fields/plugins/number/plugins/text-cast"],
 
     "@singularity/plugin-fields-object": ["@singularity/plugin-fields-object@workspace:plugins/fields/plugins/object"],
 

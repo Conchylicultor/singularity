@@ -5,6 +5,7 @@ import {
 import type { AnyColumn, SQL } from "drizzle-orm";
 import type { FieldType } from "@plugins/fields/core";
 import { Fields as StorageFields } from "./storage";
+import { ValueTextCast } from "./value-cast";
 
 /** Builds a SQL predicate fragment for one (field-type, operator) pair, or
  *  `undefined` when the operand is INCOMPLETE (no-op rule → dropped),
@@ -47,10 +48,15 @@ const FilterSqlToken = Object.assign(
 ) as unknown as ServerContributionToken<FieldFilterSqlContribution>;
 
 /** The server-owned field capability namespace. `Storage` is composed in from
- *  `./storage` so this library re-exports ONE `Fields` object carrying every
- *  server-owned field capability (`Fields.Storage` + `Fields.FilterSql`) — the
- *  barrel itself stays pure (a plain re-export, no merge logic). */
-export const Fields = { ...StorageFields, FilterSql: FilterSqlToken };
+ *  `./storage` and `ValueTextCast` from `./value-cast`, so this library
+ *  re-exports ONE `Fields` object carrying every server-owned field capability
+ *  (`Fields.Storage` + `Fields.FilterSql` + `Fields.ValueTextCast`) — the barrel
+ *  itself stays pure (a plain re-export, no merge logic). */
+export const Fields = {
+  ...StorageFields,
+  FilterSql: FilterSqlToken,
+  ValueTextCast,
+};
 
 /** Resolve a (field type, operator) pair to its SQL fragment builder by exact
  *  token (no `extends` fallback — derived types re-declare). Live-first so a
