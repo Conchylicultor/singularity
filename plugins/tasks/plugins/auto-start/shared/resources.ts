@@ -1,4 +1,4 @@
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 import { z } from "zod";
 import { StoredModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 
@@ -11,8 +11,11 @@ export const TaskAutoStartRowSchema = z.object({
 });
 export type TaskAutoStartRow = z.infer<typeof TaskAutoStartRowSchema>;
 
-export const taskAutoStartResource = resourceDescriptor<TaskAutoStartRow[]>(
+// Keyed query-resource contract: rows key on `parentId` (the side-table's PK).
+// The server half is compiled from the drizzle declaration in
+// `server/internal/resource.ts`; the wire shape stays `TaskAutoStartRow[]`.
+export const taskAutoStartResource = queryResourceDescriptor<TaskAutoStartRow>(
   "tasks-auto-start",
-  z.array(TaskAutoStartRowSchema),
-  [],
+  TaskAutoStartRowSchema,
+  "parentId",
 );

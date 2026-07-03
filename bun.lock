@@ -2382,6 +2382,10 @@
     "plugins/infra/plugins/paths": {
       "name": "@singularity/plugin-infra-paths",
     },
+    "plugins/infra/plugins/query-resource": {
+      "name": "@singularity/plugin-infra-query-resource",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/runtime-profiler": {
       "name": "@singularity/plugin-infra-runtime-profiler",
       "version": "0.0.1",
@@ -5705,6 +5709,8 @@
     "@singularity/plugin-infra-ndjson-stream": ["@singularity/plugin-infra-ndjson-stream@workspace:plugins/infra/plugins/ndjson-stream"],
 
     "@singularity/plugin-infra-paths": ["@singularity/plugin-infra-paths@workspace:plugins/infra/plugins/paths"],
+
+    "@singularity/plugin-infra-query-resource": ["@singularity/plugin-infra-query-resource@workspace:plugins/infra/plugins/query-resource"],
 
     "@singularity/plugin-infra-runtime-profiler": ["@singularity/plugin-infra-runtime-profiler@workspace:plugins/infra/plugins/runtime-profiler"],
 

@@ -1,16 +1,20 @@
 import { asc } from "drizzle-orm";
-import { z } from "zod";
-import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { BookmarkRowSchema, type BookmarkRow } from "../../core/resources";
+import { queryResource } from "@plugins/infra/plugins/query-resource/server";
+import { browserBookmarksResource as browserBookmarksDescriptor } from "../../core/resources";
 import { _browserBookmarks } from "./tables";
 
-export const browserBookmarksServerResource = defineResource({
-  key: "browser-bookmarks",
-  mode: "push",
-  schema: z.array(BookmarkRowSchema),
-  // `_browserBookmarks.$inferSelect ≡ BookmarkRow` by construction (both derive
-  // from `bookmarkFields`), so rows are returned verbatim — no projection.
-  loader: async (): Promise<BookmarkRow[]> =>
-    db.select().from(_browserBookmarks).orderBy(asc(_browserBookmarks.createdAt)),
-});
+// Compiled keyed query-resource: the loader, Layer-2 scoped loader, and
+// identityTable ("browser_bookmarks") all derive from this one declaration.
+// Select-all is byte-identical to the wire schema by construction — the table
+// and `BookmarkRow` both derive from `bookmarkFields`, which has no server-only
+// columns. K/scoped is sound: there is no `where`, so membership only changes
+// via INSERT/DELETE (→ FULL), and `createdAt asc` is insert-immutable so an
+// in-place UPDATE (a title change) never reorders — its scoped delta swaps the
+// row in place.
+export const browserBookmarksServerResource = queryResource(
+  browserBookmarksDescriptor,
+  {
+    from: _browserBookmarks,
+    orderBy: asc(_browserBookmarks.createdAt),
+  },
+);

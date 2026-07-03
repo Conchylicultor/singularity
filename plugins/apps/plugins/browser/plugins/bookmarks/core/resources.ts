@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 import {
   fieldsToZodObject,
   type FieldsRecord,
@@ -21,8 +21,12 @@ export const bookmarkFields = {
 export const BookmarkRowSchema = fieldsToZodObject(bookmarkFields);
 export type BookmarkRow = z.infer<typeof BookmarkRowSchema>;
 
-export const browserBookmarksResource = resourceDescriptor<BookmarkRow[]>(
+// Keyed query-resource contract: rows key on `id`. The server half is compiled
+// from the drizzle declaration in `server/internal/resource.ts` (K/scoped — the
+// `createdAt asc` order key is insert-immutable and there is no `where`). The
+// wire shape stays `BookmarkRow[]`.
+export const browserBookmarksResource = queryResourceDescriptor<BookmarkRow>(
   "browser-bookmarks",
-  z.array(BookmarkRowSchema),
-  [],
+  BookmarkRowSchema,
+  "id",
 );

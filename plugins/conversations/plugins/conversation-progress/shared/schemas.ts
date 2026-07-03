@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 
 export const PHASE_ORDER = [
   "research",
@@ -31,10 +31,14 @@ export type ConversationProgressPayload = z.infer<
   typeof ConversationProgressPayloadSchema
 >;
 
+// Keyed query-resource contract: rows key on `conversationId` — the ALIAS the
+// server projection exposes the side-table's `parent_id` PK under. The server
+// half is compiled from the drizzle declaration in `server/internal/resource.ts`;
+// the wire shape stays `ConversationProgress[]`.
 export const conversationProgressResource =
-  resourceDescriptor<ConversationProgressPayload>(
+  queryResourceDescriptor<ConversationProgress>(
     "conversation-progress",
-    ConversationProgressPayloadSchema,
-    [],
+    ConversationProgressSchema,
+    "conversationId",
     { bootCritical: true },
   );

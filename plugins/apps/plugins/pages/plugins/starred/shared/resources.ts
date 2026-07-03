@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 
 // One row per starred page. Presence in the table = starred; `rank` orders the
@@ -10,8 +10,13 @@ export const StarredPageRowSchema = z.object({
 });
 export type StarredPageRow = z.infer<typeof StarredPageRowSchema>;
 
-export const starredPagesResource = resourceDescriptor<StarredPageRow[]>(
+// Keyed query-resource contract: rows key on `parentId` (the side-table PK). The
+// server half is compiled from the drizzle declaration in
+// `server/internal/resource.ts` (K/full — `rank` is a mutable order-by column
+// the Favorites sidebar renders in wire order, see the compiler's CLAUDE.md).
+// The wire shape stays `StarredPageRow[]`.
+export const starredPagesResource = queryResourceDescriptor<StarredPageRow>(
   "pages-starred",
-  z.array(StarredPageRowSchema),
-  [],
+  StarredPageRowSchema,
+  "parentId",
 );

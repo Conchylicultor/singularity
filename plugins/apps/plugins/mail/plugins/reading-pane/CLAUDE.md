@@ -61,10 +61,10 @@ parses MIME or HTML itself.
   - Uses: `apps/mail/attachments.AttachmentChip`, `apps/mail/attachments.useMailAttachment`, `apps/mail/mail-html.MailHtml`, `infra/endpoints.fetchEndpoint`, `primitives/avatar.Avatar`, `primitives/collapsible.useCollapsible`, `primitives/css/center.Center`, `primitives/css/cluster.Cluster`, `primitives/css/fill.Fill`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/icon-button.IconButton`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`
   - Exports: Values: `threadPane`
 - Server:
-  - Uses: `apps/mail/mail-core._mailMessages`, `database.db`
+  - Uses: `apps/mail/mail-core._mailMessages`, `infra/query-resource.queryResource`
   - Exports: Values: `threadMessagesServerResource`
 - Core:
-  - Uses: `apps/mail/mail-core.MailMessageSchema`, `primitives/live-state.resourceDescriptor`
+  - Uses: `apps/mail/mail-core.MailMessageSchema`, `infra/query-resource.queryResourceDescriptor`
   - Exports: Values: `threadMessagesResource`
 - Cross-plugin:
   - Imported by: `apps/mail/thread-list`

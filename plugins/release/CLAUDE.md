@@ -87,12 +87,12 @@ nothing remote is built here.
 
 - Description: Release engine web presence: eagerly registers the boot-critical release.history / release.previews resource descriptors so boot-snapshot can hydrate them before first paint, independent of the (lazy) Studio release UI. Local composition release lifecycle engine: run, observe, preview F4 artifacts.
 - Server:
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.pruneWorktreeReleaseArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `primitives/log-channels.Log`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/launcher.gatewayPidFile`, `infra/launcher.isRunning`, `infra/launcher.teardownSelfContainedApp`, `infra/paths.currentWorktreeName`, `infra/paths.pruneWorktreeReleaseArtifacts`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeArtifacts`, `infra/paths.worktreeDataDir`, `infra/query-resource.queryResource`, `primitives/log-channels.Log`
   - DB schema: `plugins/release/server/internal/tables.ts`
   - Exports: Values: `_releaseRuns`, `collectReleaseEnv`, `newReleaseRunId`, `Release`, `releaseOutDir`, `triggerRelease`
   - Routes: `POST /api/release`, `POST /api/release/runs/:id/preview`, `POST /api/release/runs/:id/preview/stop`, `GET /api/release/runs/:id/logs`
 - Core:
-  - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
+  - Uses: `infra/endpoints.defineEndpoint`, `infra/query-resource.queryResourceDescriptor`, `primitives/live-state.resourceDescriptor`
   - Exports: Types: `Preview`, `ReleaseLogLine`, `ReleaseLogsResponse`, `ReleaseRun`, `ReleaseTarget`; Values: `previewEndpoint`, `PreviewSchema`, `previewStateResource`, `RELEASE_LOG_CHANNEL`, `RELEASE_TARGETS`, `releaseHistoryResource`, `releaseLogsEndpoint`, `ReleaseLogsResponseSchema`, `ReleaseRunSchema`, `releaseTargetById`, `stopPreviewEndpoint`, `triggerReleaseEndpoint`
 - Cross-plugin:
   - Imported by: `auth/apple-signing`

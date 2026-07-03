@@ -1,20 +1,17 @@
-import { z } from "zod";
-import { db } from "@plugins/database/server";
-import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { TaskAutoStartRowSchema, type TaskAutoStartRow } from "../../shared/resources";
+import { queryResource } from "@plugins/infra/plugins/query-resource/server";
+import { taskAutoStartResource as taskAutoStartDescriptor } from "../../shared/resources";
 import { _tasksAutoStartExt } from "./tables";
 
-export const tasksAutoStartResource = defineResource({
-  key: "tasks-auto-start",
-  mode: "push",
-  schema: z.array(TaskAutoStartRowSchema),
-  loader: async (): Promise<TaskAutoStartRow[]> => {
-    const rows = await db.select().from(_tasksAutoStartExt);
-    return rows.map((r) => ({
-      parentId: r.parentId,
-      autoStartAt: r.autoStartAt,
-      // No normalize here: the field tolerates legacy/unknown on parse via StoredModelSchema.
-      autoStartModel: r.autoStartModel,
-    }));
+// Compiled keyed query-resource: the loader, Layer-2 scoped loader, and
+// identityTable ("tasks_ext_auto_start") all derive from this one declaration.
+// The projection drops createdAt/updatedAt (they are not on the wire schema).
+// A CAS arm/re-arm is an UPDATE on `parent_id` → one scoped keyed delta; arm
+// (INSERT) / disarm (DELETE) are membership changes → FULL recompute.
+export const tasksAutoStartResource = queryResource(taskAutoStartDescriptor, {
+  from: _tasksAutoStartExt,
+  select: {
+    parentId: _tasksAutoStartExt.parentId,
+    autoStartAt: _tasksAutoStartExt.autoStartAt,
+    autoStartModel: _tasksAutoStartExt.autoStartModel,
   },
 });

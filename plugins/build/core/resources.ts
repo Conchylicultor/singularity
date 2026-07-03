@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 import { CommitRowSchema } from "@plugins/primitives/plugins/commit-list/core";
 
 export const MainAheadCountSchema = z.object({
@@ -36,9 +37,14 @@ export const BuildRunSchema = z.object({
 
 export type BuildRun = z.infer<typeof BuildRunSchema>;
 
-export const buildHistoryResource = resourceDescriptor<BuildRun[]>(
+// Keyed query-resource contract: rows key on `id`. The server half
+// (`server/internal/build-history-resource.ts`) is K/full — a windowed
+// `orderBy startedAt desc LIMIT 50` read, where a row entering/leaving the top-50
+// is a membership change a scoped refill cannot express. It still gains Layer-1
+// keyed row diffing. The wire shape stays `BuildRun[]`.
+export const buildHistoryResource = queryResourceDescriptor<BuildRun>(
   "build.history",
-  z.array(BuildRunSchema),
-  [],
+  BuildRunSchema,
+  "id",
   { bootCritical: true },
 );

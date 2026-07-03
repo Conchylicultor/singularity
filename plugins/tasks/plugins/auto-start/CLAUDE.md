@@ -10,11 +10,10 @@
   - Uses: `primitives/css/badge.Badge`, `primitives/live-state.useResource`, `tasks.setAutoStart`, `tasks/task-list.Tasks`
   - Exports: Types: `TaskAutoStartRow`; Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`, `useTaskAutoStart`
 - Server:
-  - Uses: `database.db`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._tasks`
+  - Uses: `database.db`, `infra/entity-extensions.defineExtension`, `infra/query-resource.queryResource`, `tasks/tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/auto-start/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `tasks_ext_auto_start`)
   - Exports: Values: `claimAutoStart`, `getTaskAutoStart`, `setTaskAutoStart`, `tasksAutoStartResource`
-  - Resources: `tasks-auto-start` (push)
 - Cross-plugin:
   - Imported by: `conversations`, `tasks`, `tasks/task-header`
 

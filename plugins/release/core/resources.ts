@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { queryResourceDescriptor } from "@plugins/infra/plugins/query-resource/core";
 
 // One release run as seen by the client. Mirrors the `release_runs` table EXCEPT
 // `pid` — that is an internal liveness marker (see tables.ts), never part of the
@@ -21,10 +22,15 @@ export const ReleaseRunSchema = z.object({
 
 export type ReleaseRun = z.infer<typeof ReleaseRunSchema>;
 
-export const releaseHistoryResource = resourceDescriptor<ReleaseRun[]>(
+// Keyed query-resource contract: rows key on `id`. The server half
+// (`server/internal/release-history-resource.ts`) is K/full — a windowed
+// `orderBy startedAt desc LIMIT 50` read, where a row entering/leaving the top-50
+// is a membership change a scoped refill cannot express. It still gains Layer-1
+// keyed row diffing. The wire shape stays `ReleaseRun[]`.
+export const releaseHistoryResource = queryResourceDescriptor<ReleaseRun>(
   "release.history",
-  z.array(ReleaseRunSchema),
-  [],
+  ReleaseRunSchema,
+  "id",
   { bootCritical: true },
 );
 

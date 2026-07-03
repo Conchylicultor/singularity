@@ -9,11 +9,10 @@
   - Uses: `infra/endpoints.useEndpointMutation`, `primitives/live-state.useResource`
   - Exports: Types: `GenerationTurn`, `GenStatus`; Values: `useGeneratedUnits`
 - Server:
-  - Uses: `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.defineJob`
+  - Uses: `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `infra/jobs.defineJob`, `infra/query-resource.queryResource`
   - DB schema: `plugins/apps/plugins/story/plugins/generation/server/internal/tables.ts`
   - Exports: Values: `_storyGeneratedUnits`, `storyGeneratedUnitsResource`
   - Register: `defineJob('story-generation.generate')`
-  - Resources: `story-generated-units` (push)
   - Routes: `POST /api/story/generate/:pageId/:kind/:unitId`
 - Core:
   - Uses: `fields.FieldsRecord`, `fields.nullable`, `fields/date/config.dateField`, `fields/text/config.enumTextField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `infra/entities.wireSchema`

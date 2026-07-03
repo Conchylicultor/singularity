@@ -200,12 +200,16 @@ const WATCHED_SLOTS: { marker: string; head: string }[] = [
   { marker: "ActionBar.Item", head: "ActionBar" },
 ];
 
-// The three live-state descriptor factories carrying `bootCritical: true` in a
-// trailing options object.
+// The descriptor factories carrying `bootCritical: true` in a trailing options
+// object: the three live-state factories plus the query-resource compiler's
+// wrapper (which forwards its opts to `keyedResourceDescriptor` at runtime, but
+// is a distinct identifier this textual scan must know about — `\bresourceDescriptor`
+// does not match inside `queryResourceDescriptor`).
 const DESCRIPTOR_FACTORIES = [
   "resourceDescriptor",
   "keyedResourceDescriptor",
   "centralResourceDescriptor",
+  "queryResourceDescriptor",
 ];
 
 /** Every identifier imported from any `@plugins/` specifier in masked source. */

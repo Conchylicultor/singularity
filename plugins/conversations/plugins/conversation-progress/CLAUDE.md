@@ -9,7 +9,7 @@
   - Contributes: `Conversation.Header` → `ProgressBarToolbar`, `Item.Chips` → `ProgressBarRow`
   - Uses: `conversations.useConversationById`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `primitives/css/inline.Inline`, `primitives/live-state.useResource`, `ui/segmented-progress-bar.SegmentedProgressBar`
 - Server:
-  - Uses: `conversations.conversationTurnCompleted`, `database.db`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `infra/paths.GIT`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.pushLanded`
+  - Uses: `conversations.conversationTurnCompleted`, `database.db`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `infra/paths.GIT`, `infra/query-resource.queryResource`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.pushLanded`
   - DB schema: `plugins/conversations/plugins/conversation-progress/server/internal/tables.ts`
   - Entity extension of: `tasks/tasks-core` (table `conversations_ext_progress`)
   - Exports: Values: `classifyProgressJob`, `conversationProgress`, `conversationProgressResource`, `markProgressPushedJob`
