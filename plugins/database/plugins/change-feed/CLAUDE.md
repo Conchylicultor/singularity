@@ -55,7 +55,8 @@ isolated throwaway database on the running cluster via admin's public barrel
 (`ensureDatabase`/`openShortLivedClient`/`dropDatabase`) and drops it after.
 
 **Running:** these suites need a running cluster (started by `./singularity
-build`) and the backend env — run with `SINGULARITY_WORKTREE=<worktree> bun test
-plugins/database/plugins/change-feed`. The fixture throws loudly (never silently
-skips) if the cluster is unreachable. See
+build`) — run with a plain `bun test plugins/database/plugins/change-feed`. No
+`SINGULARITY_WORKTREE=<worktree>` prefix: the root `bunfig.toml` `[test]` preload
+(`test/bun-preload.ts`) defaults it to the current checkout when unset. The
+fixture throws loudly (never silently skips) if the cluster is unreachable. See
 `research/2026-07-03-database-live-state-db-backed-invariant-harness.md`.

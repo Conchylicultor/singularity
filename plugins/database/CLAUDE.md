@@ -64,6 +64,13 @@ forwards to a **real `pg.Pool`-backed** drizzle instance (not a fake), so
 `db.transaction()` — which drizzle gates on `client instanceof Pool` — keeps
 working. Do not reintroduce an eager `new Pool(requireWorktree())` at module top.
 
+The lazy pool keeps *import* safe; a **`bun test` preload** (`test/bun-preload.ts`,
+registered in the root `bunfig.toml` `[test]` section) then defaults
+`SINGULARITY_WORKTREE` to the current checkout when unset, so a suite that issues a
+real query — or that touches any other worktree-scoped throw (the per-worktree log
+dir, config_v2) — runs with `bun test <path>` and no `SINGULARITY_WORKTREE=<worktree>`
+prefix. The throws stay loud in production; only test runs get the default.
+
 ## Bootstrap
 
 `awaitPgReady` + `runMigrations` are called in the database plugin's `onReadyBlocking` hook. `onReadyBlocking` is a hard barrier the framework awaits in full before flipping the server-ready flag and before any plugin's `onReady` runs — so consumers can safely use the DB in their own `onReady`, and the gateway holds its hot-swap until migrations have landed. (Previously this lived in `onReady`, where it raced other plugins' `onReady` and the gateway swap until migrations happened to be slow.)

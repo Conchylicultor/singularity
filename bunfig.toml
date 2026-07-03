@@ -1,0 +1,8 @@
+# Applies to `bun test` only. `bun run test:dom` (vitest) does not read bunfig, so
+# the jsdom suite is unaffected.
+#
+# The preload defaults `SINGULARITY_WORKTREE` to the current checkout when unset, so
+# server-side / DB-backed `bun:test` suites run with a plain `bun test <path>` — no
+# `SINGULARITY_WORKTREE=<worktree>` prefix. See test/bun-preload.ts for the why.
+[test]
+preload = ["./test/bun-preload.ts"]

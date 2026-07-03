@@ -36,8 +36,9 @@ in the backend entry `server/index.ts` (hooks + catch-up) and in
   floor` → one FULL per distinct table), and "already current".
 
 `server/internal/test-db.ts` provisions an isolated throwaway database via admin's
-public barrel and drops it after. **Running:** needs a running cluster + the
-backend env — `SINGULARITY_WORKTREE=<worktree> bun test
-plugins/database/plugins/live-state-snapshot` (the fixture throws loudly if the
-cluster is unreachable). See
+public barrel and drops it after. **Running:** needs a running cluster — a plain
+`bun test plugins/database/plugins/live-state-snapshot` (the fixture throws loudly
+if the cluster is unreachable). No `SINGULARITY_WORKTREE=<worktree>` prefix: the
+root `bunfig.toml` `[test]` preload (`test/bun-preload.ts`) defaults it to the
+current checkout when unset. See
 `research/2026-07-03-database-live-state-db-backed-invariant-harness.md`.

@@ -239,6 +239,7 @@ The runner is chosen by **where the file lives**, so the two never cross-load:
   ```
 - **Prerequisite:** `node_modules` must be populated. Any `./singularity` invocation (and `build` as step 1) runs `bun install` — so run tests after a build, or `bun install` first.
 - Do **not** run a blanket `bun test` from the repo root: it would also try to load the vitest files under `__tests__/` and fail. Scope `bun test` to a folder of pure tests, or use `bun run test:dom` for the jsdom suites.
+- **No `SINGULARITY_WORKTREE=…` prefix needed.** Server-side / DB-backed `bun:test` suites resolve their worktree identity automatically: the root `bunfig.toml` `[test]` preload (`test/bun-preload.ts`) defaults `SINGULARITY_WORKTREE` to the current checkout when unset, so `bun test <path>` just works. An explicitly-set value still wins (e.g. `SINGULARITY_WORKTREE=singularity bun test …` to target main's DB).
 
 ### Coding Style
 
