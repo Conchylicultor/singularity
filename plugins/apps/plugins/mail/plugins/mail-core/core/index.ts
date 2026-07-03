@@ -44,6 +44,8 @@ export {
   MailAccountSchema,
   MailSyncStateSchema,
   MailLabelSchema,
+  MailLabelRefSchema,
+  type MailLabelRef,
   MailThreadSchema,
   MailMessageSchema,
   MailMessageLabelSchema,

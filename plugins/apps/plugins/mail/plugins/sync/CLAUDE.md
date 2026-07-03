@@ -194,8 +194,8 @@ the total request/byte volume versus the old full-mailbox, full-body crawl.
   - Register: `defineJob('mail.backfill')`, `defineJob('mail.delta')`, `defineJob('mail.sync-tick')`, `defineJob('mail.attachment-scan')`
   - Routes: `POST /api/mail/sync`, `POST /api/mail/hydrate`, `GET /api/mail/search`
 - Core:
-  - Uses: `apps/mail/mail-core.MailAttachmentSchema`, `apps/mail/mail-core.MailMessageSchema`, `infra/endpoints.defineEndpoint`
-  - Exports: Values: `ATTACHMENT_SCAN_DELTA_WINDOW_DAYS`, `BACKFILL_WINDOW_DAYS`, `mailHydrateMessageEndpoint`, `mailSearchEndpoint`, `mailSyncEndpoint`, `MAX_ATTACHMENT_SCAN_PAGES`, `MAX_BACKFILL_MESSAGES`
+  - Uses: `apps/mail/mail-core.MailAttachmentSchema`, `apps/mail/mail-core.MailLabelRefSchema`, `apps/mail/mail-core.MailMessageSchema`, `infra/endpoints.defineEndpoint`
+  - Exports: Types: `MailSearchResult`; Values: `ATTACHMENT_SCAN_DELTA_WINDOW_DAYS`, `BACKFILL_WINDOW_DAYS`, `mailHydrateMessageEndpoint`, `mailSearchEndpoint`, `MailSearchResultSchema`, `mailSyncEndpoint`, `MAX_ATTACHMENT_SCAN_PAGES`, `MAX_BACKFILL_MESSAGES`
 - Sub-plugins:
   - **`auto-resume`** — Auto-resumes Mail sync when the Gmail scope is (re)granted: an app-wide headless listener that POSTs the sync kick endpoint on the connect edge.
 

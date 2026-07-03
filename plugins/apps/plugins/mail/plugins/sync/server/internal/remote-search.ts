@@ -1,13 +1,19 @@
-import { eq, inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { HttpError } from "@plugins/infra/plugins/endpoints/core";
 import { listMessages } from "@plugins/apps/plugins/mail/plugins/gmail-api/server";
 import {
   _mailAccounts,
   _mailMessages,
+  _mailLabels,
+  _mailMessageLabels,
   requireGmailToken,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/server";
-import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import type {
+  MailMessage,
+  MailLabelRef,
+} from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import type { MailSearchResult } from "../../core";
 import { markMessagesWithAttachments, upsertMessageEnvelope } from "./store";
 import { fetchEnvelopes } from "./fetch-envelopes";
 
@@ -22,12 +28,14 @@ import { fetchEnvelopes } from "./fetch-envelopes";
 // One page (25) per call; the caller pages via `nextPageToken`, and the `q`
 // filter rides across pages. Results are returned in Gmail's relevance/recency
 // order — the id order `messages.list` hands back, which a bare `inArray` read
-// would NOT preserve, so we reorder through a `Map` after the read-back.
+// would NOT preserve, so we reorder through a `Map` after the read-back. Finally
+// the ordered messages are folded into per-thread `MailSearchResult`s (Gmail-
+// style thread collapse) with their user-label chips.
 
 export async function remoteSearch(
   q: string,
   pageToken?: string,
-): Promise<{ results: MailMessage[]; nextPageToken?: string }> {
+): Promise<{ results: MailSearchResult[]; nextPageToken?: string }> {
   const query = q.trim();
   if (!query) return { results: [] };
 
@@ -93,9 +101,78 @@ export async function remoteSearch(
     .from(_mailMessages)
     .where(inArray(_mailMessages.id, ids));
   const byId = new Map<string, MailMessage>(rows.map((r) => [r.id, r]));
-  const results = ids
+  const orderedMessages = ids
     .map((id) => byId.get(id))
     .filter((r): r is MailMessage => r != null);
 
-  return { results, nextPageToken: list.nextPageToken };
+  // Fetch the USER labels for the matched messages (system labels excluded — they
+  // are surfaced as flags, not chips) and index them by message id.
+  const messageIds = orderedMessages.map((m) => m.id);
+  const labelRows =
+    messageIds.length === 0
+      ? []
+      : await db
+          .select({
+            messageId: _mailMessageLabels.messageId,
+            id: _mailLabels.id,
+            name: _mailLabels.name,
+            color: _mailLabels.color,
+            textColor: _mailLabels.textColor,
+          })
+          .from(_mailMessageLabels)
+          .innerJoin(_mailLabels, eq(_mailMessageLabels.labelId, _mailLabels.id))
+          .where(
+            and(
+              inArray(_mailMessageLabels.messageId, messageIds),
+              eq(_mailLabels.type, "user"),
+            ),
+          );
+  const labelsByMessage = new Map<string, MailLabelRef[]>();
+  for (const row of labelRows) {
+    const label: MailLabelRef = {
+      id: row.id,
+      name: row.name,
+      color: row.color,
+      textColor: row.textColor,
+    };
+    const existing = labelsByMessage.get(row.messageId);
+    if (existing) existing.push(label);
+    else labelsByMessage.set(row.messageId, [label]);
+  }
+
+  // Fold matched messages into per-thread results, preserving first-seen (Gmail-
+  // ranked) thread order. Each group's representative is the newest matched member
+  // by `internalDate`; flags OR across members; labels are the de-duped union.
+  const dateOf = (m: MailMessage): number => m.internalDate?.getTime() ?? 0;
+  const byThread = new Map<string, MailSearchResult>();
+  for (const message of orderedMessages) {
+    const existing = byThread.get(message.threadId);
+    const labels = labelsByMessage.get(message.id) ?? [];
+    if (!existing) {
+      byThread.set(message.threadId, {
+        threadId: message.threadId,
+        message,
+        messageCount: 1,
+        unread: message.unread,
+        starred: message.starred,
+        hasAttachments: message.hasAttachments,
+        labels: [...labels],
+      });
+      continue;
+    }
+    existing.messageCount += 1;
+    existing.unread = existing.unread || message.unread;
+    existing.starred = existing.starred || message.starred;
+    existing.hasAttachments = existing.hasAttachments || message.hasAttachments;
+    if (dateOf(message) > dateOf(existing.message)) existing.message = message;
+    const seen = new Set(existing.labels.map((l) => l.id));
+    for (const label of labels) {
+      if (!seen.has(label.id)) {
+        seen.add(label.id);
+        existing.labels.push(label);
+      }
+    }
+  }
+
+  return { results: [...byThread.values()], nextPageToken: list.nextPageToken };
 }

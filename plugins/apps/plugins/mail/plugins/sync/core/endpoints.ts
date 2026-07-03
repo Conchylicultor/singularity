@@ -3,6 +3,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import {
   MailMessageSchema,
   MailAttachmentSchema,
+  MailLabelRefSchema,
 } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
 
 // Manual "connect / sync now" trigger. POST with no body — `ensureAccount()`
@@ -34,11 +35,29 @@ export const mailHydrateMessageEndpoint = defineEndpoint({
 // envelopes into Postgres via the same idempotent upsert, and returns the mirrored
 // rows in Gmail's order. Bodies still hydrate lazily on open. `pageToken` pages the
 // Gmail result set; a burst of identical searches collapses onto one handler run.
+// A thread-collapsed search hit. `messages.list?q=` returns individual messages;
+// multiple hits in one thread are folded into ONE result here (Gmail-style),
+// keyed by `threadId`. `message` is the representative (newest matched) envelope
+// that paints the row + opens on click; the rollup fields (`unread`, `starred`,
+// `hasAttachments`) are OR-ed across the matched messages, `messageCount` is how
+// many of them landed in this thread, and `labels` is the de-duped union of the
+// matched messages' user labels (system labels are filtered out server-side).
+export const MailSearchResultSchema = z.object({
+  threadId: z.string(),
+  message: MailMessageSchema,
+  messageCount: z.number().int(),
+  unread: z.boolean(),
+  starred: z.boolean(),
+  hasAttachments: z.boolean(),
+  labels: z.array(MailLabelRefSchema),
+});
+export type MailSearchResult = z.infer<typeof MailSearchResultSchema>;
+
 export const mailSearchEndpoint = defineEndpoint({
   route: "GET /api/mail/search",
   query: z.object({ q: z.string(), pageToken: z.string().optional() }),
   response: z.object({
-    results: z.array(MailMessageSchema),
+    results: z.array(MailSearchResultSchema),
     nextPageToken: z.string().optional(),
   }),
   concurrency: 4,

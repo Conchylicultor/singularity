@@ -225,3 +225,15 @@ export const MailMessageLabelSchema = fieldsToZodObject(mailMessageLabelFields);
 export const MailAttachmentSchema = fieldsToZodObject(mailAttachmentFields);
 export const MailDraftSchema = fieldsToZodObject(mailDraftFields);
 export const MailOutboxItemSchema = fieldsToZodObject(mailOutboxFields);
+
+// A lean label projection for chips: id + display name + Gmail colors (the
+// subset a label chip renders), so search/list rows never ship the full label
+// row. `color`/`textColor` are Gmail's own hex values, applied inline on the
+// chip; both null → a neutral chip.
+export const MailLabelRefSchema = MailLabelSchema.pick({
+  id: true,
+  name: true,
+  color: true,
+  textColor: true,
+});
+export type MailLabelRef = z.infer<typeof MailLabelRefSchema>;

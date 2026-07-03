@@ -11,10 +11,14 @@ composes primitives.
 - **`mailSearchPane`** (`segment: "search"`, `/mail/search`) — a sticky
   `SearchInput` over a live result list. The query is debounced locally (~250ms)
   and drives `GET /api/mail/search` via `useMailSearch` (a `useInfiniteQuery`
-  wrapper — see Pagination below). Results are Gmail relevance-ordered envelopes
-  (server folds them into the local mirror), so this reaches mail OLDER than the
-  sync window. Empty / loading / no-match / error states are explicit; a `409`
-  (Gmail not connected) surfaces its message.
+  wrapper — see Pagination below). Results are Gmail relevance-ordered,
+  **thread-collapsed** rows (multiple hits in one thread fold into one row, with
+  a message-count pill when >1; server folds them into the local mirror), so this
+  reaches mail OLDER than the sync window. Each row carries an attachment
+  paperclip (the pre-populated `hasAttachments` flag) and its thread's
+  **user-label chips** (Gmail's own hex colors, via `MailLabelChip`). Empty /
+  loading / no-match / error states are explicit; a `409` (Gmail not connected)
+  surfaces its message.
 - **Pagination** (`internal/use-mail-search.ts`) — Gmail returns an opaque
   `nextPageToken` (not a keyset cursor derived from an item), so this can't use
   the `useCursorPagination` primitive. Instead `useMailSearch` mirrors
@@ -37,10 +41,6 @@ composes primitives.
 
 ## Deferred follow-ups
 
-- **Thread grouping** — results are flat per-message, not grouped by thread.
-- **Label chips on rows** — labels are a join table. (The attachment paperclip is
-  done: the message-level `hasAttachments` flag, pre-populated by the sync's
-  `has:attachment` scan, renders on the row without an open.)
 - **Attachment download** — attachments render as filename `Badge` chips only.
 - **HTML rendering** — needs a sanitizer before `bodyHtml` can be shown.
 - **`useDebounced` primitive** — the local `setTimeout` debounce could be

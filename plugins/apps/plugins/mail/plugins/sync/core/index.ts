@@ -2,6 +2,8 @@ export {
   mailSyncEndpoint,
   mailHydrateMessageEndpoint,
   mailSearchEndpoint,
+  MailSearchResultSchema,
+  type MailSearchResult,
 } from "./endpoints";
 export {
   BACKFILL_WINDOW_DAYS,

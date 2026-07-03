@@ -1,12 +1,14 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useInfiniteQuery } from "@tanstack/react-query";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { mailSearchEndpoint } from "@plugins/apps/plugins/mail/plugins/sync/core";
-import type { MailMessage } from "@plugins/apps/plugins/mail/plugins/mail-core/core";
+import {
+  mailSearchEndpoint,
+  type MailSearchResult,
+} from "@plugins/apps/plugins/mail/plugins/sync/core";
 
 /** A clean, flat handle over the paginated `GET /api/mail/search` result set. */
 export interface MailSearchHandle {
-  results: MailMessage[];
+  results: MailSearchResult[];
   isLoading: boolean;
   isError: boolean;
   error: unknown;
@@ -22,8 +24,9 @@ export interface MailSearchHandle {
  * (undefined on the last page), so this is NOT a keyset cursor — it can't use
  * the `useCursorPagination` primitive (`getCursor(item)`). Instead it mirrors
  * the `data-view` `useServerDataSource` shape: a `useInfiniteQuery` keyed by the
- * query, flattening `data.pages`, with an `IntersectionObserver` sentinel that
- * auto-fetches the next page as it scrolls into view.
+ * query, coalescing each page's thread groups by `threadId` (a thread can match
+ * on two pages, so pages aren't just flattened), with an `IntersectionObserver`
+ * sentinel that auto-fetches the next page as it scrolls into view.
  *
  * The observer is gated on `!isFetchNextPageError` so a failed next-page fetch
  * does not hot-loop the sentinel (the manual Retry button is the recovery path).
@@ -56,10 +59,39 @@ export function useMailSearch(q: string): MailSearchHandle {
     staleTime: Infinity,
   });
 
-  const results = useMemo(
-    () => data?.pages.flatMap((p) => p.results) ?? [],
-    [data],
-  );
+  const results = useMemo<MailSearchResult[]>(() => {
+    // Each page is thread-collapsed server-side, but Gmail lists each MESSAGE
+    // once, so a thread with matches on two pages yields a group on EACH page.
+    // Coalesce them by threadId (same fold as the server: representative =
+    // newest matched message, counts summed, flags OR-ed, labels de-duped) so
+    // pagination never splits one thread across two rows.
+    const ms = (r: MailSearchResult): number =>
+      r.message.internalDate ? new Date(r.message.internalDate).getTime() : 0;
+    const byThread = new Map<string, MailSearchResult>();
+    for (const page of data?.pages ?? []) {
+      for (const group of page.results) {
+        const existing = byThread.get(group.threadId);
+        if (!existing) {
+          byThread.set(group.threadId, { ...group, labels: [...group.labels] });
+          continue;
+        }
+        existing.messageCount += group.messageCount;
+        existing.unread = existing.unread || group.unread;
+        existing.starred = existing.starred || group.starred;
+        existing.hasAttachments =
+          existing.hasAttachments || group.hasAttachments;
+        if (ms(group) > ms(existing)) existing.message = group.message;
+        const seen = new Set(existing.labels.map((l) => l.id));
+        for (const label of group.labels) {
+          if (!seen.has(label.id)) {
+            seen.add(label.id);
+            existing.labels.push(label);
+          }
+        }
+      }
+    }
+    return [...byThread.values()];
+  }, [data]);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   useEffect(() => {

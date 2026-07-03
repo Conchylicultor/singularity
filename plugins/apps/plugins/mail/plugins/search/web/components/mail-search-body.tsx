@@ -71,8 +71,8 @@ export function MailSearchBody(): ReactElement {
   } else {
     body = (
       <Stack gap="none" className="p-sm">
-        {results.map((m) => (
-          <MailSearchRow key={m.id} message={m} />
+        {results.map((r) => (
+          <MailSearchRow key={r.threadId} result={r} />
         ))}
         {isFetchingNextPage && <Loading variant="spinner" label="Loading…" />}
         {isFetchNextPageError && (
