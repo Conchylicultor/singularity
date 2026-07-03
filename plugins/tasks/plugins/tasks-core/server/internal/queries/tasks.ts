@@ -6,13 +6,17 @@ import { _taskDependencies, _tasks } from "../tables";
 import { attempts, taskBlocking, tasks } from "../views";
 import type { Task } from "../schema";
 import { TaskGraph } from "../../../core";
+import type { DbExecutor } from "../status-batch";
 
 export interface TaskFilters {
   excludeId?: string;
 }
 
-export async function listTasks(filters?: TaskFilters): Promise<Task[]> {
-  const rows = (await db
+export async function listTasks(
+  filters?: TaskFilters,
+  exec: DbExecutor = db,
+): Promise<Task[]> {
+  const rows = (await exec
     .select()
     .from(tasks)
     .orderBy(asc(tasks.rank), asc(tasks.createdAt))) as unknown as Task[];
@@ -94,16 +98,22 @@ export async function listBlockingDepIds(taskId: string): Promise<string[]> {
   return rows.map((r) => r.depTaskId);
 }
 
-export async function listDependentIds(taskId: string): Promise<string[]> {
-  const rows = await db
+export async function listDependentIds(
+  taskId: string,
+  exec: DbExecutor = db,
+): Promise<string[]> {
+  const rows = await exec
     .select({ taskId: _taskDependencies.taskId })
     .from(_taskDependencies)
     .where(eq(_taskDependencies.dependsOnTaskId, taskId));
   return rows.map((r) => r.taskId);
 }
 
-export async function getTaskDependencyIds(taskId: string): Promise<string[]> {
-  const rows = await db
+export async function getTaskDependencyIds(
+  taskId: string,
+  exec: DbExecutor = db,
+): Promise<string[]> {
+  const rows = await exec
     .select({ dependsOnTaskId: _taskDependencies.dependsOnTaskId })
     .from(_taskDependencies)
     .where(eq(_taskDependencies.taskId, taskId));
@@ -142,6 +152,10 @@ export async function listArmedDependentsOf(
 // dependency cycles before inserting `target → start`. Structural and
 // status-agnostic: routes through the shared TaskGraph so the last in-process
 // server walk derives from the same model as every other traversal.
-export async function taskDependsOn(start: string, target: string): Promise<boolean> {
-  return TaskGraph.from(await listTasks()).dependsOn(start, target);
+export async function taskDependsOn(
+  start: string,
+  target: string,
+  exec: DbExecutor = db,
+): Promise<boolean> {
+  return TaskGraph.from(await listTasks(undefined, exec)).dependsOn(start, target);
 }

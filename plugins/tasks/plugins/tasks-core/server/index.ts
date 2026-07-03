@@ -179,6 +179,12 @@ export type { ConversationStatusChangedPayload } from "./internal/tables-events"
 // for plugins that perform writes outside the core mutation surface.
 export { readTaskStatus, emitStatusChangeIfChanged } from "./internal/status-emit";
 
+// Coalesce a multi-edge dependency mutation to one DB transaction and at most
+// one net tasks.statusChanged per affected task. Consumers thread the provided
+// `tx` (a DbExecutor) to the dependency mutations they call.
+export { withTaskStatusBatch } from "./internal/status-batch";
+export type { DbExecutor } from "./internal/status-batch";
+
 export { adoptOrphanConversation, maybeDropTaskOnExit } from "./internal/mutations/cross-table";
 export type { AdoptOrphanInput } from "./internal/mutations/cross-table";
 

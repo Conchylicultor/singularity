@@ -6,6 +6,7 @@ import type { TaskStatus } from "../schema";
 import { TaskGraph } from "../../../core";
 import { findNextRankInFolder, isDescendant, listTasks, taskDependsOn } from "../queries/tasks";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
+import type { DbExecutor } from "../status-batch";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 
 export const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
@@ -35,12 +36,12 @@ export interface UpdateTaskPatch {
   rank?: Rank;
 }
 
-export async function createTask(input: CreateTaskInput) {
+export async function createTask(input: CreateTaskInput, exec: DbExecutor = db) {
   const id =
     input.id ?? `task-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const folderId = input.folderId ?? null;
-  const rank = input.rank ?? (await findNextRankInFolder(folderId));
-  await db.insert(_tasks).values({
+  const rank = input.rank ?? (await findNextRankInFolder(folderId, exec));
+  await exec.insert(_tasks).values({
     id,
     folderId,
     groupId: input.groupId ?? null,
@@ -51,17 +52,17 @@ export async function createTask(input: CreateTaskInput) {
     description: input.description ?? null,
   });
   if (folderId) {
-    await db
+    await exec
       .update(_tasks)
       .set({ expanded: true, updatedAt: new Date() })
       .where(eq(_tasks.id, folderId));
   }
-  const [full] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
+  const [full] = await exec.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   // New tasks emit their first-ever status (typically "new"). Subscribers
   // bound via `where({ taskId })` only register after creation, so this
   // first emit is a no-op for them; emitting unconditionally keeps the
   // mutation/event surface uniform with updateTask.
-  await emitStatusChangeIfChanged(id, null);
+  await emitStatusChangeIfChanged(id, null, exec);
   return full!;
 }
 
@@ -142,40 +143,43 @@ export async function updateTaskTitle(
 export async function addTaskDependency(
   taskId: string,
   dependsOnTaskId: string,
+  exec: DbExecutor = db,
 ): Promise<void> {
   if (dependsOnTaskId === taskId)
     throw new Error("A task cannot depend on itself");
-  const [task] = await db
+  const [task] = await exec
     .select({ id: _tasks.id })
     .from(_tasks)
     .where(eq(_tasks.id, taskId))
     .limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!task) throw new Error("Task not found");
-  const [dep] = await db
+  const [dep] = await exec
     .select({ id: _tasks.id })
     .from(_tasks)
     .where(eq(_tasks.id, dependsOnTaskId))
     .limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!dep) throw new Error("Dependency task not found");
-  if (await taskDependsOn(dependsOnTaskId, taskId)) {
+  // Read the cycle check on `exec` so it sees edges added earlier in the batch.
+  if (await taskDependsOn(dependsOnTaskId, taskId, exec)) {
     throw new Error("Cycle detected in dependencies");
   }
-  const prev = await readTaskStatus(taskId);
-  await db
+  const prev = await readTaskStatus(taskId, exec);
+  await exec
     .insert(_taskDependencies)
     .values({ taskId, dependsOnTaskId })
     .onConflictDoNothing();
-  await emitStatusChangeIfChanged(taskId, prev);
+  await emitStatusChangeIfChanged(taskId, prev, exec);
 }
 
 export async function removeTaskDependency(
   taskId: string,
   dependsOnTaskId: string,
+  exec: DbExecutor = db,
 ): Promise<boolean> {
-  const prev = await readTaskStatus(taskId);
-  const [row] = await db
+  const prev = await readTaskStatus(taskId, exec);
+  const [row] = await exec
     .delete(_taskDependencies)
     .where(
       and(
@@ -186,7 +190,7 @@ export async function removeTaskDependency(
     .returning({ taskId: _taskDependencies.taskId });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
-  await emitStatusChangeIfChanged(taskId, prev);
+  await emitStatusChangeIfChanged(taskId, prev, exec);
   return true;
 }
 
