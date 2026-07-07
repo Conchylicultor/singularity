@@ -254,10 +254,25 @@ console.log(`Server listening on ${socketPath}`);
 // only after all its `dependsOn` parents' hooks have resolved. `topoSortPlugins`
 // guarantees every plugin appears after its deps in `ordered`, so
 // `resolved.get(d.id)` is always defined when we reach a dependent. The per-plugin
-// try/catch lives INSIDE the `.then` callback: a non-loadBearing failure is caught
-// → its promise resolves → dependents still proceed; only a `loadBearing` rejection
-// re-throws → its promise rejects → the final `Promise.all` aborts boot. Shared by
-// the `onReadyBlocking` and `onReady` phases.
+// try/catch lives INSIDE the `.then` callback so one plugin's outcome propagates
+// (or doesn't) to the final `Promise.all` per the phase's fatality contract below.
+//
+// Fatality differs by phase, because the two phases sit on opposite sides of the
+// readiness flip:
+//
+// - `onReadyBlocking` is the HARD BARRIER *before* the backend serves. Its entire
+//   contract is "this MUST finish before requests can be served correctly" — so a
+//   throw means it did NOT finish, and boot MUST abort, for EVERY plugin regardless
+//   of the plugin-wide `loadBearing` flag. `loadBearing` classifies docs detail /
+//   criticality, not barrier participation; gating the barrier on it silently
+//   promoted a degraded backend (a change-feed with no triggers, an empty config
+//   registry) behind a green `/api/health/ready`. A plugin whose blocking work is
+//   genuinely optional-for-correctness must make that explicit by handling its own
+//   failure INSIDE the hook (see `live-state-snapshot`), never by relying on the
+//   framework to swallow it.
+// - `onReady` runs AFTER the server is already serving. Killing a live, serving
+//   backend because a background poller/watcher threw is reserved for genuinely
+//   critical plugins, so that phase stays gated on `loadBearing`.
 async function runGraphPhase(
   ordered: LoadedServerPlugin[],
   hook: "onReadyBlocking" | "onReady",
@@ -273,7 +288,7 @@ async function runGraphPhase(
         await fn.call(p);
       } catch (err) {
         console.error(`[plugin.${p.id}] ${hook} failed`, err);
-        if (p.loadBearing) throw err;
+        if (hook === "onReadyBlocking" || p.loadBearing) throw err;
       } finally {
         end();
       }
@@ -294,8 +309,9 @@ async function runGraphPhase(
 // after this point, and the gateway gates its hot-swap on that probe (so the old
 // backend keeps serving until the new one is genuinely ready). Background
 // `onReady` work runs after, now guaranteed to observe a migrated DB and a ready
-// registry. A load-bearing plugin's rejection aborts boot (same contract as
-// `onAllReady`).
+// registry. ANY plugin's rejection here aborts boot — this is a hard barrier, so
+// its fatality is NOT gated on `loadBearing` (a plugin with optional blocking work
+// handles its own failure inside the hook). See `runGraphPhase`.
 {
   const end = profilerStart("onReadyBlocking", "onReadyBlocking", "Blocking Ready");
   try {

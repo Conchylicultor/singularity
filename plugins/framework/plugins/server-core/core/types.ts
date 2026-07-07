@@ -92,8 +92,18 @@ export interface ServerPluginDefinition {
    * gates its hot-swap on. Use ONLY for work that must complete before the
    * backend can correctly serve requests — DB migrations + pool warmup, registry
    * init. Everything else (pollers, watchers, reconcilers) belongs in `onReady`.
-   * A `loadBearing` plugin's rejection aborts boot. Because this is a barrier,
-   * every `onReady` is guaranteed to observe a migrated DB and a ready registry.
+   *
+   * A throw here ALWAYS aborts boot — for every plugin, NOT just `loadBearing`
+   * ones. This is a hard barrier: the whole reason work lives here rather than in
+   * `onReady` is that it must complete before the backend can serve correctly, so
+   * a failure to complete is fatal by definition. (`loadBearing` classifies docs
+   * detail / criticality, not barrier participation.) If a plugin's blocking work
+   * is genuinely optional-for-correctness — a failure should DEGRADE, not crash —
+   * it must handle its own error INSIDE the hook (catch + log + continue), making
+   * the degradation explicit and co-located with the code that understands the
+   * failure mode. Do NOT rely on the framework to swallow the throw. Because this
+   * is a barrier, every `onReady` is guaranteed to observe a migrated DB and a
+   * ready registry.
    */
   onReadyBlocking?: () => void | Promise<void>;
   /**

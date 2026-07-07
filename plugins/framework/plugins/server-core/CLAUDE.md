@@ -52,6 +52,8 @@ export default plugin;
 
 The type is intentionally flat — no base classes. A plugin is a data object with optional route maps and lifecycle hooks. Two readiness hooks: **`onReadyBlocking`** runs as a hard barrier after the socket binds but before the server reports ready (and before any `onReady`) — use only for work that must finish before the backend can correctly serve requests (DB migrations + warmup, registry init); the gateway gates its hot-swap on the barrier completing. **`onReady`** runs after the barrier, so it observes a migrated DB and ready registry — use it for background work like pollers or watchers.
 
+**Barrier fatality is not gated on `loadBearing`.** A throw in *any* plugin's `onReadyBlocking` aborts boot — the barrier's whole contract is "this completes before we serve", so a failure to complete is fatal by definition (`loadBearing` only classifies docs detail / criticality, and gating the barrier on it silently promoted degraded backends behind a green `/api/health/ready`). If a plugin's blocking work is genuinely optional-for-correctness (a failure should *degrade*, not crash), it must catch its own error **inside** the hook and continue — see `plugins/database/plugins/live-state-snapshot/server/internal/boot-init.ts` for the pattern. The `loadBearing` gate still applies to the post-serving `onReady` / `onAllReady` phases, where killing a live backend is reserved for critical plugins.
+
 ### `defineResource` — live state
 
 Live state (anything a client wants kept in sync with server truth) is declared via `defineResource`, never by hand-rolled WS or SSE:

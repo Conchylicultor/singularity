@@ -1,18 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import {
-  setLiveStateSnapshotHooks,
-  recomputeResource,
-} from "@plugins/framework/plugins/server-core/core";
-import { seedReadSetIndex } from "@plugins/infra/plugins/runtime-profiler/core";
+import { recomputeResource } from "@plugins/framework/plugins/server-core/core";
 import { db } from "@plugins/database/server";
-import { ensureSnapshotTable } from "./internal/tables-ddl";
-import {
-  shouldPersist,
-  captureWatermark,
-  persistSnapshot,
-  readPersistedReadSets,
-  bootCriticalKeys,
-} from "./internal/persist";
+import { initSnapshotSubsystem } from "./internal/boot-init";
+import { readPersistedReadSets, bootCriticalKeys } from "./internal/persist";
 import { runCatchUp } from "./internal/catch-up";
 import { liveStateChangelogPruneJob } from "./internal/prune";
 
@@ -48,27 +38,13 @@ export default {
   // snapshot. The changelog table is created by change-feed's own onReadyBlocking
   // (rebuildTriggers), inside its trigger-rebuild txn; we never touch it here.
   //
-  // The hooks read the boot-injected holder lazily, so installing them now (rather
-  // than racing onReady) means a persist can never fire with the holder unset.
+  // Snapshot init is GRACEFUL-DEGRADATION work, not a barrier prerequisite: a
+  // failure degrades cold-boot (full recompute in onReady) rather than crashing.
+  // Because `onReadyBlocking` throws are fatal by contract, that degradation is
+  // handled EXPLICITLY inside `initSnapshotSubsystem` (catch + log + continue) — it
+  // never throws, so a snapshot-table failure can't abort boot. See boot-init.ts.
   async onReadyBlocking() {
-    await ensureSnapshotTable(db);
-    setLiveStateSnapshotHooks({
-      shouldPersist,
-      captureWatermark: () => captureWatermark(db),
-      persistSnapshot: (key, paramsKey, value, watermark, tablesRead) =>
-        persistSnapshot(db, key, paramsKey, value, watermark, tablesRead),
-    });
-    // Seed the in-memory loader→table read-set index from the durable
-    // `tables_read` column BEFORE the readiness barrier flips — so the
-    // table→resource inversion (`tableToResources`) is non-empty for catch-up's
-    // first `applyDbChange`, with NO loader run at boot. Only non-empty read-sets
-    // are seeded; an empty one means "no usable read-set" → force-FULL in onReady.
-    const persistedReadSets = await readPersistedReadSets(db);
-    const seed: Record<string, string[]> = {};
-    for (const [key, tables] of persistedReadSets) {
-      if (tables.length > 0) seed[key] = tables;
-    }
-    seedReadSetIndex(seed);
+    await initSnapshotSubsystem(db);
   },
   // Boot init + bounded catch-up, after the barrier (alongside change-feed's
   // listener, which also starts in onReady).
