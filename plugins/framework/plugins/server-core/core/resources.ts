@@ -17,7 +17,7 @@ import {
   getRuntimeProfile,
   getReadSetIndex,
   registerGateGauge,
-} from "@plugins/infra/plugins/runtime-profiler/core";
+} from "./profiler-hooks";
 import { defineServerContribution } from "./contributions";
 import { reportServerError, type ServerErrorReport } from "./error-reporter";
 

@@ -146,7 +146,7 @@ are shared references) per qualifying completed span. Allocation happens only in
 
 - Load-bearing: yes
 - Cross-plugin:
-  - Imported by: `framework/server-core`, `infra/endpoints`
+  - Imported by: `infra/endpoints`
 - Core:
   - Exports: Types: `Aggregate`, `EntryContext`, `FlightSpan`, `FlightWindow`, `GateGauge`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `Track`, `WaitBreakdown`; Values: `__contribute`, `captureFlightWindow`, `chargeWait`, `currentCallerKind`, `getReadSetIndex`, `getRuntimeProfile`, `installClock`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `readGateGauges`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `registerGateGauge`, `resetRuntimeProfile`, `runWithoutProfiling`, `seedReadSetIndex`, `waitSplit`
 

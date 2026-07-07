@@ -3,6 +3,7 @@ import { dirname, join, relative, resolve, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { standardPluginDirs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { runtimeNames } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
+import { findImports, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { stripComments, splitTopLevelStatements } from "./parse";
 import { collectForeignReexports } from "./reexport-provenance";
 
@@ -652,9 +653,11 @@ interface Imp {
  *   - "namespace" for `import * as X from` / `export * from`.
  *   - "side-effect" for bare `import "..."`.
  *
- * We strip comments (but keep string-literal contents intact so module
- * specifiers survive), then run line-anchored regexes. Misses only pathological
- * cases the linter in practice never encounters in this repo.
+ * All four extractors route through `findImports` (the shared static-import
+ * scanner), which masks comments/regex/strings and reads each specifier back by
+ * offset — so an import statement written inside a string or template literal
+ * (a test fixture, a docs snippet) is never mistaken for a real import, while
+ * genuine imports (including in test files) are still caught.
  */
 /**
  * Extract module specifiers that target a sibling plugin via its bun-workspace
@@ -664,15 +667,9 @@ interface Imp {
  * them and forces the alias form.
  */
 function extractWorkspaceImports(rawSrc: string): string[] {
-  const src = stripComments(rawSrc);
-  const results: string[] = [];
-  const withFromRe =
-    /^[ \t]*(?:import|export)\s+[\s\S]*?\s+from\s+["'](@singularity\/plugin-[^"']+)["']/gm;
-  const bareRe = /^[ \t]*import\s+["'](@singularity\/plugin-[^"']+)["']/gm;
-  let m: RegExpExecArray | null;
-  while ((m = withFromRe.exec(src))) results.push(m[1]!);
-  while ((m = bareRe.exec(src))) results.push(m[1]!);
-  return results;
+  return findImports(rawSrc)
+    .map((i) => i.specifier)
+    .filter((s) => s.startsWith("@singularity/plugin-"));
 }
 
 /**
@@ -681,15 +678,9 @@ function extractWorkspaceImports(rawSrc: string): string[] {
  * the source plugin's tree. Skips dynamic `import()` and `require()`.
  */
 function extractRelativeImports(rawSrc: string): string[] {
-  const src = stripComments(rawSrc);
-  const results: string[] = [];
-  const withFromRe =
-    /^[ \t]*(?:import|export)\s+[\s\S]*?\s+from\s+["'](\.\.?\/[^"']*)["']/gm;
-  const bareRe = /^[ \t]*import\s+["'](\.\.?\/[^"']*)["']/gm;
-  let m: RegExpExecArray | null;
-  while ((m = withFromRe.exec(src))) results.push(m[1]!);
-  while ((m = bareRe.exec(src))) results.push(m[1]!);
-  return results;
+  return findImports(rawSrc)
+    .map((i) => i.specifier)
+    .filter((s) => s.startsWith("./") || s.startsWith("../"));
 }
 
 /**
@@ -698,41 +689,40 @@ function extractRelativeImports(rawSrc: string): string[] {
  * and are invisible to `extractPluginImports`, which only scans static
  * `import … from` statements. R9 flags them: use a top-level
  * `import type { Bar } from "…/shared"` instead.
+ *
+ * `findImports` deliberately ignores dynamic `import(...)` (it is a call, not a
+ * static import), so we scan for it here — but over MASKED source, reading the
+ * specifier back by offset, so an `import("@plugins/…")` written inside a
+ * string/template literal is never mistaken for a real one.
  */
 function extractInlineImports(rawSrc: string): string[] {
-  const src = stripComments(rawSrc);
+  const masked = maskSource(rawSrc);
   const results: string[] = [];
-  const re = /\bimport\s*\(\s*["'](@plugins\/[^"']+)["']\s*\)/g;
+  const re = /\bimport\s*\(\s*(["'`])/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(src))) results.push(m[1]!);
+  while ((m = re.exec(masked))) {
+    const openQuoteIdx = m.index + m[0].length - 1;
+    const quote = masked[openQuoteIdx]!;
+    const closeIdx = masked.indexOf(quote, openQuoteIdx + 1);
+    if (closeIdx < 0) continue;
+    const spec = rawSrc.slice(openQuoteIdx + 1, closeIdx);
+    if (spec.startsWith("@plugins/")) results.push(spec);
+  }
   return results;
 }
 
 function extractPluginImports(rawSrc: string): Imp[] {
-  const src = stripComments(rawSrc);
   const results: Imp[] = [];
-
-  // `import ... from "..."` / `export ... from "..."`
-  const withFromRe =
-    /^[ \t]*(import|export)\s+([\s\S]*?)\s+from\s+["']([^"']+)["']/gm;
-  let m: RegExpExecArray | null;
-  while ((m = withFromRe.exec(src))) {
-    const keyword = m[1]!;
-    const body = m[2]!.trim();
-    const modulePath = m[3]!;
-    if (!modulePath.startsWith("@plugins/")) continue;
-    if (!looksLikeImportOrReexport(keyword, body)) continue;
-    results.push({ path: modulePath, kind: classifyKind(keyword, body) });
+  for (const imp of findImports(rawSrc)) {
+    if (!imp.specifier.startsWith("@plugins/")) continue;
+    if (imp.sideEffect) {
+      results.push({ path: imp.specifier, kind: "side-effect" });
+      continue;
+    }
+    const body = imp.clause.trim();
+    if (!looksLikeImportOrReexport(imp.keyword, body)) continue;
+    results.push({ path: imp.specifier, kind: classifyKind(imp.keyword, body) });
   }
-
-  // Bare side-effect import: `import "..."`
-  const bareRe = /^[ \t]*import\s+["']([^"']+)["']/gm;
-  while ((m = bareRe.exec(src))) {
-    const modulePath = m[1]!;
-    if (!modulePath.startsWith("@plugins/")) continue;
-    results.push({ path: modulePath, kind: "side-effect" });
-  }
-
   return results;
 }
 

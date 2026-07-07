@@ -1,22 +1,14 @@
 import { existsSync, statSync } from "fs";
 import { dirname, resolve } from "path";
+import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 /**
  * Static module-import-graph helpers for the `pre-barrel-manifests-complete`
- * check. Both operate on raw text (no TS AST, like every other build-time
- * scanner in the repo) — the caller masks comments/regex with
- * `maskSource(src, { strings: false })` first so import-path string literals
- * survive, then feeds the masked source here.
+ * check. Import scanning routes through `findImports` (the shared static-import
+ * scanner), which masks comments/regex/strings and reads each specifier back by
+ * offset — so an import written inside a string/template literal is never
+ * mistaken for a real one.
  */
-
-// `import … from "<spec>"` and `export … from "<spec>"`, capturing the bindings
-// span (so we can drop `import type` / `export type`) and the specifier.
-// Side-effect imports (`import "<spec>"`) have no `from` and are matched
-// separately below.
-const FROM_RE =
-  /\b(?:import|export)\b([^"'`;]*?)\bfrom\s*["'`]([^"'`]+)["'`]/g;
-// Bare side-effect import: `import "<spec>"` (no bindings, no `from`).
-const SIDE_EFFECT_RE = /\bimport\s*["'`]([^"'`]+)["'`]/g;
 
 // Asset specifiers that never resolve to a .generated.ts module.
 const ASSET_RE = /\.(css|svg|png|jpe?g|gif|webp|avif|ico|woff2?|ttf|otf)$/i;
@@ -55,29 +47,17 @@ function isAsset(spec: string): boolean {
  * Slightly over-inclusive by design: a `import { type X } from "./y"` (runtime
  * keyword, type-only binding) is treated as runtime. That's safe — pre-barrel
  * regeneration is always sound — and we only drop the unambiguous
- * whole-statement type forms.
+ * whole-statement type forms (which `findImports` flags via `typeOnly`).
+ *
+ * `src` is RAW source; `findImports` masks internally.
  */
-export function extractRuntimeImportSpecifiers(maskedSrc: string): string[] {
+export function extractRuntimeImportSpecifiers(src: string): string[] {
   const out: string[] = [];
-
-  FROM_RE.lastIndex = 0;
-  let m: RegExpExecArray | null;
-  while ((m = FROM_RE.exec(maskedSrc))) {
-    const bindings = m[1]!;
-    const spec = m[2]!;
-    // Whole-statement type form: `import type …` / `export type …`.
-    if (/^\s*type\b/.test(bindings)) continue;
-    if (!isInternal(spec) || isAsset(spec)) continue;
-    out.push(spec);
+  for (const imp of findImports(src)) {
+    if (imp.typeOnly) continue;
+    if (!isInternal(imp.specifier) || isAsset(imp.specifier)) continue;
+    out.push(imp.specifier);
   }
-
-  SIDE_EFFECT_RE.lastIndex = 0;
-  while ((m = SIDE_EFFECT_RE.exec(maskedSrc))) {
-    const spec = m[1]!;
-    if (!isInternal(spec) || isAsset(spec)) continue;
-    out.push(spec);
-  }
-
   return out;
 }
 

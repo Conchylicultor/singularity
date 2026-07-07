@@ -10,7 +10,6 @@ import {
   resolveImportSpecifier,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -80,9 +79,9 @@ function collectReachableGenerated(root: string, barrels: string[]): Set<string>
     if (abs.endsWith(".generated.ts")) generated.add(abs);
 
     const src = readFileSync(abs, "utf8");
-    // `{ strings: false }`: keep import-path string literals so we can read them.
-    const masked = maskSource(src, { strings: false });
-    for (const spec of extractRuntimeImportSpecifiers(masked)) {
+    // `extractRuntimeImportSpecifiers` masks internally (via `findImports`) and
+    // reads specifiers by offset, so it takes RAW source.
+    for (const spec of extractRuntimeImportSpecifiers(src)) {
       const resolved = resolveImportSpecifier(root, abs, spec);
       if (resolved) visit(resolved);
     }

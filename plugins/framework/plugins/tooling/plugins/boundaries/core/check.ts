@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { join, relative, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
 import type { BoundaryConfig } from "./types";
 import { buildZoneMap } from "./resolve";
@@ -67,21 +67,18 @@ function safeRead(path: string): string | null {
   }
 }
 
+// Alias specifiers the zone map can resolve; every other specifier (relative,
+// bare npm) resolves to null downstream, so filtering here is just an early cut.
+const ZONE_SPECIFIER_RE = /^@(?:plugins|core|server|central)(?:\/|$)/;
+
 function extractCrossZoneImports(rawSrc: string): string[] {
-  // Mask comments + regex literals; keep string interiors so import-path strings
-  // (`from "@plugins/…"`) are still matched, while a commented-out import is not.
-  const src = maskSource(rawSrc, { strings: false });
-  const results: string[] = [];
-
-  const withFromRe =
-    /^[ \t]*(?:import|export)\s+[\s\S]*?\s+from\s+["'](@(?:plugins|core|server|central)(?:\/[^"']*)?)["']/gm;
-  let m: RegExpExecArray | null;
-  while ((m = withFromRe.exec(src))) results.push(m[1]!);
-
-  const bareRe = /^[ \t]*import\s+["'](@(?:plugins|core|server|central)(?:\/[^"']*)?)["']/gm;
-  while ((m = bareRe.exec(src))) results.push(m[1]!);
-
-  return results;
+  // `findImports` masks comments/regex AND string interiors, then reads each
+  // specifier back by offset — so a `from "@plugins/…"` written inside a string
+  // or template literal (test fixture, docs snippet) is never mistaken for a
+  // real import, while genuine imports (including in test files) are still caught.
+  return findImports(rawSrc)
+    .map((i) => i.specifier)
+    .filter((s) => ZONE_SPECIFIER_RE.test(s));
 }
 
 const MAX_REPORTED = 15;
