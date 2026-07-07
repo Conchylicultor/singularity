@@ -1,5 +1,5 @@
 import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
-import { chargeWait } from "@plugins/infra/plugins/runtime-profiler/core";
+import { chargeWait, registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
 import { cpus } from "node:os";
 
 // A DEDICATED host-wide gate for heavy `git worktree add`/`remove` — deliberately
@@ -32,10 +32,29 @@ function mutateSize(): number {
 
 const gate = createHostSemaphore({ name: "worktree-mutate", size: mutateSize() });
 
+// Held-by-this-process count; host-wide occupancy across other processes is not
+// cheaply readable (same documented limitation as host-read-pool's gauge).
+let held = 0;
+registerGateGauge("worktree-mutate-acquire", () => ({
+  active: held,
+  queued: gate.depth(),
+  max: mutateSize(),
+}));
+
 // Wrap the heavy `git worktree add`/`remove` subprocess. The acquire-wait is charged
 // to the enclosing profiler entry (job/http) so a saturated gate stays attributable
 // in get_runtime_profile / slow-ops, mirroring host-read-pool. Context-less callers
 // (graphile jobs) fall back to a standalone span inside chargeWait.
 export function withWorktreeMutateSlot<T>(fn: () => Promise<T>): Promise<T> {
-  return gate.run(fn, (waitMs) => chargeWait("worktree-mutate-acquire", waitMs));
+  return gate.run(
+    async () => {
+      held++;
+      try {
+        return await fn();
+      } finally {
+        held--;
+      }
+    },
+    (waitMs) => chargeWait("worktree-mutate-acquire", waitMs),
+  );
 }

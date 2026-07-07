@@ -1,5 +1,7 @@
+import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
 import { getAdminPool, openShortLivedClient, libpqSubprocessEnv } from "./pool";
 import { databaseExists, dropDatabase } from "./databases";
+import { withDbForkSlot } from "./fork-gate";
 
 function assertSafeName(name: string): void {
   if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
@@ -30,7 +32,16 @@ export async function forkDatabase(
   // WITH FORCE — terminates any lingering connection).
   await dropDatabase(temp);
   await getAdminPool().query(`CREATE DATABASE "${temp}"`);
-  const subprocessEnv = { ...process.env, ...libpqSubprocessEnv() };
+  const subprocessEnv = {
+    ...process.env,
+    ...libpqSubprocessEnv(),
+    // The dump/restore CLIENTS are darwinbg-demoted below, but the server-side
+    // restore runs in a Postgres backend we cannot demote. Disabling parallel
+    // maintenance workers keeps each restore's index builds to one backend, so
+    // a fork costs at most one un-demotable core (bounded further by the
+    // db-fork gate).
+    PGOPTIONS: "-c max_parallel_maintenance_workers=0",
+  };
   // Fork schema-only for large, worktree-irrelevant app-data tables. The main
   // DB's mail_messages corpus (Gmail sync, ~800MB) dwarfs everything a worktree
   // agent needs (~170MB), and streaming it through pg_dump|pg_restore made the
@@ -48,34 +59,41 @@ export async function forkDatabase(
     "public.mail_message_labels",
     "public.mail_attachments",
   ];
-  const dump = Bun.spawn(
-    [
-      "pg_dump",
-      "-Fc",
-      ...EXCLUDE_TABLE_DATA.map((t) => `--exclude-table-data=${t}`),
-      source,
-    ],
-    {
+  // Gate ONLY the heavy dump|restore pipeline host-wide (the ~18.5 s step whose
+  // server-side restore work spawn-priority cannot demote); the cheap admin-pool
+  // ops (exists/drop/CREATE/graphile-drop/RENAME) stay outside the slot. The
+  // clients are additionally darwinbg-demoted (backgroundArgv) so their own
+  // CPU/IO (compression, COPY streaming) yields to the interactive backends.
+  await withDbForkSlot(async () => {
+    const dump = Bun.spawn(
+      backgroundArgv([
+        "pg_dump",
+        "-Fc",
+        ...EXCLUDE_TABLE_DATA.map((t) => `--exclude-table-data=${t}`),
+        source,
+      ]),
+      {
+        env: subprocessEnv,
+        stdout: "pipe",
+        stderr: "pipe",
+      },
+    );
+    const restore = Bun.spawn(backgroundArgv(["pg_restore", "-d", temp]), {
       env: subprocessEnv,
+      stdin: dump.stdout,
       stdout: "pipe",
       stderr: "pipe",
-    },
-  );
-  const restore = Bun.spawn(["pg_restore", "-d", temp], {
-    env: subprocessEnv,
-    stdin: dump.stdout,
-    stdout: "pipe",
-    stderr: "pipe",
+    });
+    const [dumpExit, restoreExit] = await Promise.all([
+      dump.exited,
+      restore.exited,
+    ]);
+    if (dumpExit !== 0 || restoreExit !== 0) {
+      const err = await new Response(restore.stderr).text();
+      await dropDatabase(temp);
+      throw new Error(`forkDatabase(${source} → ${target}) failed: ${err}`);
+    }
   });
-  const [dumpExit, restoreExit] = await Promise.all([
-    dump.exited,
-    restore.exited,
-  ]);
-  if (dumpExit !== 0 || restoreExit !== 0) {
-    const err = await new Response(restore.stderr).text();
-    await dropDatabase(temp);
-    throw new Error(`forkDatabase(${source} → ${target}) failed: ${err}`);
-  }
 
   // The dump copies the Graphile Worker schema along with everything else.
   // Inheriting the parent's jobs, known_crontabs.last_execution, and

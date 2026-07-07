@@ -272,6 +272,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`inflight`**
     - **`retry`**
     - **`semaphore`**
+    - **`spawn-priority`** — OS-priority demotion for background subprocess spawns: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends.
 
 - **`page`** [41 sub-plugins] — Block-based page editor.
 

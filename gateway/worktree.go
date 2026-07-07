@@ -15,6 +15,7 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -104,6 +105,7 @@ type backend struct {
 	exitCh     chan struct{} // closed when cmd.Wait returns
 	socketPath string
 	proxy      *httputil.ReverseProxy // nil until waitReady succeeds
+	demoted    bool                   // spawned darwinbg (taskpolicy -b); lifted on readiness
 
 	// connMu guards both connection counters. httpConns tracks in-flight HTTP
 	// requests — bounded, short-lived, and waited on at drain so they finish
@@ -357,6 +359,9 @@ func (w *Worktree) Ensure(ctx context.Context) (*backend, error) {
 		return nil, wrapped
 	}
 
+	// Boot burst over — lift the darwinbg demotion for steady-state serving.
+	promoteBackend(bk, w.Name)
+
 	w.mu.Lock()
 	w.state = StateRunning
 	bk.proxy = newReverseProxy(socketPath)
@@ -446,6 +451,8 @@ func (w *Worktree) Restart(ctx context.Context) error {
 	}
 
 	// --- Step 4 (success): atomic swap ---
+	// Boot burst over — lift the darwinbg demotion for steady-state serving.
+	promoteBackend(newBk, w.Name)
 	newBk.proxy = newReverseProxy(newSocketPath)
 	w.mu.Lock()
 	w.active = newBk
@@ -824,6 +831,29 @@ func (w *Worktree) ShouldSweep(idleTimeout time.Duration) bool {
 
 // ─── internal helpers ────────────────────────────────────────
 
+// taskpolicyPath is the macOS priority tool used to spawn agent-worktree
+// backends darwinbg (boot burst on efficiency cores) and lift the demotion
+// once ready.
+const taskpolicyPath = "/usr/sbin/taskpolicy"
+
+// promoteBackend lifts a darwinbg-demoted backend back to default priority
+// (taskpolicy -B -p <pid>) once it is ready — the boot burst is over, and
+// steady-state serving (the user browsing the worktree's app) should run on
+// all cores. Best-effort: a failed promote just leaves the backend on the
+// efficiency cores, which is safe.
+func promoteBackend(bk *backend, name string) {
+	if bk == nil || !bk.demoted || bk.cmd == nil || bk.cmd.Process == nil {
+		return
+	}
+	out, err := exec.Command(taskpolicyPath, "-B", "-p", fmt.Sprint(bk.cmd.Process.Pid)).CombinedOutput()
+	if err != nil {
+		slog.Warn("taskpolicy -B failed; backend stays demoted",
+			"worktree", name, "pid", bk.cmd.Process.Pid, "err", err, "out", strings.TrimSpace(string(out)))
+		return
+	}
+	slog.Info("backend promoted to default priority", "worktree", name, "pid", bk.cmd.Process.Pid)
+}
+
 // startBackend builds and starts a backend process on the given socketPath.
 // Returns a *backend with cmd and exitCh populated; proxy is nil until the
 // caller confirms readiness and calls newReverseProxy.
@@ -836,6 +866,21 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error)
 	argv := spec.Command
 	if len(argv) == 0 {
 		argv = []string{"bun", "bin/index.ts"}
+	}
+	// Boot-time priority isolation: agent-worktree backends spawn darwinbg
+	// (taskpolicy -b execs the target in place, so cmd.Process.Pid stays the
+	// backend pid) so their boot burst (catch-up, derived-table rebuild, pool
+	// warm) runs on the efficiency cores and cannot starve the interactive
+	// main backend. Once ready, promoteBackend lifts the demotion (-B -p) so
+	// steady-state serving is back on all cores. main ("singularity") and
+	// "central" are the interactive/always-on backends — never demoted.
+	// See research/2026-07-07-global-background-work-priority-isolation.md.
+	demoted := false
+	if runtime.GOOS == "darwin" && w.Name != "singularity" && w.Name != "central" {
+		if _, err := os.Stat(taskpolicyPath); err == nil {
+			argv = append([]string{taskpolicyPath, "-b", "--"}, argv...)
+			demoted = true
+		}
 	}
 	cmd := exec.Command(argv[0], argv[1:]...)
 	cmd.Dir = spec.Server
@@ -872,6 +917,7 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error)
 		cmd:        cmd,
 		exitCh:     make(chan struct{}),
 		socketPath: socketPath,
+		demoted:    demoted,
 	}
 	log := slog.With("worktree", w.Name, "pid", cmd.Process.Pid, "socket", socketPath)
 	go pumpLog(stdout, "stdout", w.logBuf, w.logFile)

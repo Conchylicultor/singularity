@@ -11,6 +11,7 @@ import {
 } from "@plugins/conversations/plugins/effort-provider/core";
 import { CLAUDE, TMUX } from "@plugins/infra/plugins/paths/server";
 import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
+import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/server";
 import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
 import { resolveSessionState, type SessionState } from "./claude-session";
@@ -726,7 +727,12 @@ export const tmuxRuntime: ConversationRuntime = {
         cmdParts.push(`-- "$1"`);
       }
     }
-    const claudeCmd = cmdParts.join(" ");
+    // Demote the whole agent subtree (claude + everything it spawns: builds,
+    // tests, git) below the interactive backends. The prefix must live in the
+    // session command STRING: the pane process is forked by the shared tmux
+    // SERVER, so demoting our short-lived `tmux new-session` client below
+    // would be a no-op. backgroundPrefix() is a fixed literal — shell-safe.
+    const claudeCmd = backgroundPrefix() + cmdParts.join(" ");
     const proc = Bun.spawn(
       [
         TMUX,

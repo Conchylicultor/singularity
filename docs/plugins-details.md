@@ -2294,7 +2294,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `conversations.Runtime`
     - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
       - Server:
-        - Uses: `conversations.Runtime`, `conversations/model-provider.resolveCliFlag`, `infra/paths.CLAUDE`, `infra/paths.CLAUDE_SESSIONS_DIR`, `infra/paths.PGREP`, `infra/paths.TMUX`, `infra/worktree.isWorktreeOpActive`, `reports.recordReport`
+        - Uses: `conversations.Runtime`, `conversations/model-provider.resolveCliFlag`, `infra/paths.CLAUDE`, `infra/paths.CLAUDE_SESSIONS_DIR`, `infra/paths.PGREP`, `infra/paths.TMUX`, `infra/worktree.isWorktreeOpActive`, `packages/spawn-priority.backgroundPrefix`, `reports.recordReport`
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Web:
         - Contributes: `Pane.Register` "conv-summary"
@@ -2342,7 +2342,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
-        - Uses: `infra/paths.SINGULARITY_DIR`
+        - Uses: `infra/paths.SINGULARITY_DIR`, `packages/host-semaphore.createHostSemaphore`, `packages/spawn-priority.backgroundArgv`
         - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `countActiveConnections`, `databaseExists`, `dropDatabase`, `ensureDatabase`, `forkDatabase`, `getAdminPool`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
       - Cross-plugin:
         - Imported by: `backup/sources/databases`, `database/change-feed`, `database/db-test-fixture`, `database/fork`, `database/query`, `database/zero/cache-service`, `debug/profiling/push`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `infra/jobs`, `infra/launcher`
@@ -3698,7 +3698,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `POST /api/secrets/get`, `POST /api/secrets/set`, `POST /api/secrets/delete`, `POST /api/secrets/has`, `POST /api/secrets/meta`, `POST /api/secrets/list`
     - **`worktree`**
       - Server:
-        - Uses: `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeDataDir`, `infra/paths.WORKTREES_DIR`, `packages/host-semaphore.createHostSemaphore`
+        - Uses: `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeDataDir`, `infra/paths.WORKTREES_DIR`, `packages/host-semaphore.createHostSemaphore`, `packages/spawn-priority.backgroundArgv`
         - Exports: Types: `DerivePushDeps`, `PushHolder`, `WorktreeOp`, `WorktreeOpInfo`, `WorktreeOpPhase`, `WorktreeSpec`, `ZeroCacheSpec`; Values: `clearPushHolder`, `clearWorktreeOp`, `derivePushPhases`, `ensureMainWorktreeRoot`, `isCanonicalWorktreePath`, `isWorktreeOpActive`, `listActiveWorktreeOps`, `markWorktreeOpStart`, `PUSH_LOCK_PATH`, `pushLockHeld`, `readPushHolder`, `removeWorktree`, `removeWorktreeSpec`, `resolveActiveWorktreeOps`, `setupWorktree`, `setWorktreeOpPhase`, `withWorktreeMutateSlot`, `worktreePathFor`, `worktreesDir`, `writePushHolder`, `writeWorktreeSpec`
       - Cross-plugin:
         - Imported by: `code-explorer`, `config_v2/staging`, `conversations`, `conversations/conversation-view/op-status`, `conversations/runtime-tmux`, `debug/broadcasts`, `debug/memory`, `debug/profiling/push`, `debug/worktree-cleanup`, `infra/git-watcher`, `infra/launcher`, `plugin-meta/plugin-health`, `stats/commits`, `stats/cost`, `tasks`, `tasks/tasks-core`
@@ -3750,7 +3750,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/paths.SINGULARITY_DIR`
         - Exports: Types: `HostSemaphore`; Values: `createHostSemaphore`
       - Cross-plugin:
-        - Imported by: `debug/profiling/boot-bench`, `infra/host-read-pool`, `infra/worktree`
+        - Imported by: `database/admin`, `debug/profiling/boot-bench`, `infra/host-read-pool`, `infra/worktree`
     - **`inflight`**
       - Cross-plugin:
         - Imported by: `framework/resource-runtime`, `infra/endpoints`
@@ -3764,6 +3764,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `framework/resource-runtime`, `infra/endpoints`
       - Core:
         - Exports: Types: `Semaphore`; Values: `createSemaphore`
+    - **`spawn-priority`** — OS-priority demotion for background subprocess spawns: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends.
+      - Cross-plugin:
+        - Imported by: `conversations/runtime-tmux`, `database/admin`, `infra/worktree`
+      - Server:
+        - Exports: Values: `backgroundArgv`, `backgroundPrefix`
 
 - **`page`** — Block-based page editor.
   - Plugins:

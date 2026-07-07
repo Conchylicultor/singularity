@@ -2492,6 +2492,10 @@
       "name": "@singularity/plugin-packages-semaphore",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/spawn-priority": {
+      "name": "@singularity/plugin-packages-spawn-priority",
+      "version": "0.0.1",
+    },
     "plugins/page": {
       "name": "@singularity/plugin-page",
       "version": "0.0.1",
@@ -5803,6 +5807,8 @@
     "@singularity/plugin-packages-retry": ["@singularity/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
 
     "@singularity/plugin-packages-semaphore": ["@singularity/plugin-packages-semaphore@workspace:plugins/packages/plugins/semaphore"],
+
+    "@singularity/plugin-packages-spawn-priority": ["@singularity/plugin-packages-spawn-priority@workspace:plugins/packages/plugins/spawn-priority"],
 
     "@singularity/plugin-page": ["@singularity/plugin-page@workspace:plugins/page"],
 

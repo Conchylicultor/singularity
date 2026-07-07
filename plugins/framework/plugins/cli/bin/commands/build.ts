@@ -26,6 +26,7 @@ import {
 } from "../paths";
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
 import { withHostSlot, type HostSlotKind } from "../host-semaphore";
+import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
 import { appendBuildLog } from "../build-log-writer-global";
 import { markWorktreeOpStart, clearWorktreeOp, writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
@@ -965,6 +966,17 @@ export function registerBuild(program: Command) {
       // machine. Main-branch builds are exempt (never queued); agent builds share
       // the bounded build pool. See host-semaphore.ts.
       const slotKind: HostSlotKind = branch === "main" ? "exempt" : "build";
+      // Agent-branch builds additionally run their heavy children (tsc, vite)
+      // darwinbg-demoted so even a single build can't starve the interactive
+      // main backend (one build legitimately fans across every core). Usually
+      // redundant — a build started from an agent's tmux session already
+      // inherits darwinbg (runtime-tmux demotes the whole session) — but this
+      // keeps the invariant when a build of an agent branch is started from an
+      // undemoted shell. Main-branch builds stay undemoted: the user is
+      // waiting on them. Residual: on the non-`--skip-checks` path the checks
+      // runner's internal tsc/eslint workers are only demoted via session
+      // inheritance, not here.
+      const demote = slotKind === "build" ? backgroundArgv : (argv: string[]) => argv;
       let endSlotWaitSpan: (() => void) | undefined;
 
       // buildId (computed up-front, before the "started" build-log record) is
@@ -1047,7 +1059,7 @@ export function registerBuild(program: Command) {
                   // `.tsbuildinfo` per target without options-hash churn.
                   const buildInfo = tsBuildInfoPath(root, target.name);
                   const output = await execBuffered(
-                    [process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo],
+                    demote([process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo]),
                     target.dir,
                   );
                   end();
@@ -1067,7 +1079,7 @@ export function registerBuild(program: Command) {
             (async (): Promise<StepResult> => {
               const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
               const start = performance.now();
-              const output = await execBuffered(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) });
+              const output = await execBuffered(demote(["bun", "run", "build"]), webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) });
               end();
               return {
                 id: "viteBuild",

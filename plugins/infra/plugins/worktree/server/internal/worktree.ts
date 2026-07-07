@@ -2,6 +2,7 @@ import { existsSync, readdirSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { dirname, join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
+import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
 import { withWorktreeMutateSlot } from "./mutate-gate";
 
 let cachedRepoRoot: string | null = null;
@@ -68,8 +69,10 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
   // offender). The idempotent existsSync early-return, tsbuildinfo copy, and `mise
   // trust` stay outside the gate — they are cheap and must not hold a slot.
   await withWorktreeMutateSlot(async () => {
+    // Demoted (darwinbg): the checkout runs in the deferred spawn job — always
+    // background work relative to the interactive backends.
     const proc = Bun.spawn(
-      [GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"],
+      backgroundArgv([GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"]),
       { stdout: "pipe", stderr: "pipe" },
     );
     const [stderr, exit] = await Promise.all([
@@ -107,8 +110,9 @@ export async function removeWorktree(wtPath: string): Promise<void> {
   // Gate the heavy full-tree `rm` host-wide (~1.2 s / 77 MB), the same disk offender
   // as `add` — one shared budget bounds add+remove contention across all callers.
   await withWorktreeMutateSlot(async () => {
+    // Demoted (darwinbg): removal is cleanup/reap work, never interactive.
     const proc = Bun.spawn(
-      [GIT, "-C", repoRoot, "worktree", "remove", wtPath, "--force"],
+      backgroundArgv([GIT, "-C", repoRoot, "worktree", "remove", wtPath, "--force"]),
       { stdout: "pipe", stderr: "pipe" },
     );
     await proc.exited;
