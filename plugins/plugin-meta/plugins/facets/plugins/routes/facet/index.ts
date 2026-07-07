@@ -13,6 +13,7 @@ import {
   stripTypes,
   matchBracket,
   maskSource,
+  markerCallSpans,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type RouteDef, type RoutesData, routesFacetDef } from "../core";
@@ -39,16 +40,20 @@ export default createFacet<RoutesData>({
       const raw = readIfExists(file);
       if (!raw) continue;
       const src = stripTypes(raw);
-      const exportRe = /export\s+const\s+(\w+)\s*=\s*defineEndpoint\s*\(/g;
-      let m: RegExpExecArray | null;
-      while ((m = exportRe.exec(src))) {
-        const name = m[1]!;
-        const parenStart = m.index + m[0].length - 1;
-        const parenEnd = matchBracket(src, parenStart, "(", ")");
-        if (parenEnd < 0) continue;
-        const body = src.slice(parenStart + 1, parenEnd);
+      // FULL-mask so a `defineEndpoint(` written inside a comment, string, or
+      // template literal can't register a phantom route. Genuine calls are
+      // located over the mask; the export name and the call body are read back
+      // from the ORIGINAL by offset (the mask preserves offsets 1:1) — the
+      // sanctioned marker contract, not a raw-source `const X = defineEndpoint(`
+      // regex.
+      const masked = maskSource(src);
+      for (const span of markerCallSpans(masked, "defineEndpoint")) {
+        // `export const <name> = ` immediately before the call identifier.
+        const decl = /export\s+const\s+(\w+)\s*=\s*$/.exec(masked.slice(0, span.identifier));
+        if (!decl) continue;
+        const body = src.slice(span.open + 1, span.close);
         const routeMatch = /route\s*:\s*"([^"]+)"/.exec(body);
-        if (routeMatch) endpointRoutes.set(name, routeMatch[1]!);
+        if (routeMatch) endpointRoutes.set(decl[1]!, routeMatch[1]!);
       }
     }
 

@@ -1,9 +1,20 @@
 # marker-scan-safety
 
-Contributes the repo-wide `no-adhoc-marker-scan` ESLint rule: a
-`maskSource(src, { strings: false })` call — masking comments/regex but
-**keeping string interiors** — is banned everywhere except a small, reviewed
-allowlist of genuine token-in-string scanners.
+Contributes two repo-wide ESLint rules that close the two shapes of the
+marker-scan string/comment-embedding false-positive class:
+
+- **`no-adhoc-marker-scan`** — a `maskSource(src, { strings: false })` call
+  (masking comments/regex but **keeping string interiors**) is banned everywhere
+  except a small, reviewed allowlist of genuine token-in-string scanners. This
+  is the *partially-masked* footgun.
+- **`no-adhoc-binding-scan`** — a **global** regex literal that hand-rolls a
+  `const <name> = <call>(` marker-binding scan is banned outright. This is the
+  *fully-unmasked* twin: the exact shape of `const X = pgTable("…")` /
+  `const X = defineEndpoint(` / `const X = Pane.define({…})` scanners that run a
+  regex straight over RAW source, so a call written inside a comment, string, or
+  template literal registers a phantom table/route/pane. Route these through
+  `markerCallSpans(maskSource(src), "<marker>")` (or `findMarkerCalls`) and read
+  the binding name + string value back from the ORIGINAL by offset.
 
 ## Why
 
@@ -26,12 +37,28 @@ and read values from the original at the returned offsets). A string-embedded
 call then vanishes from the masked text; a real call's blanked id is recovered
 from the original.
 
-## The rule
+## The rules
 
-Fires on any `maskSource(..., { strings: false })` call (a `strings` property
-whose value is the literal `false`), reporting on that property.
+`no-adhoc-marker-scan` fires on any `maskSource(..., { strings: false })` call (a
+`strings` property whose value is the literal `false`), reporting on that
+property.
+
+`no-adhoc-binding-scan` fires on any **global** (`/g`) regex literal whose source
+hand-rolls a `const <name> = <call>(` binding scan — the tell is a literal
+`const … =` binding reaching a named call's LITERAL `\(` (a dotted identifier is
+allowed, e.g. `Pane\.define\s*\(`). A bare capture-group `(`, an object-literal
+binding (`const X = { … }`), and the `.table` alias form (`const X = Y\.table`,
+no `\(`) are deliberately NOT flagged — the first two aren't calls, and the alias
+form is a construct detector that is safe once run over masked source. The
+`isBindingScanSource(pattern)` predicate is exported for unit tests. Dynamic
+`new RegExp(...)` construction is out of scope (rare; parse-utils' own primitives
+build their regexes there and must not self-flag).
 
 ## Sanctioned exceptions (on the `ignores` allowlist)
+
+`no-adhoc-binding-scan` needs no allowlist — every marker-binding scanner routes
+through `markerCallSpans` / `findMarkerCalls`. The `no-adhoc-marker-scan`
+allowlist covers the two shapes where `{ strings: false }` is correct:
 
 `{ strings: false }` is correct in exactly two shapes, both allowlisted here:
 

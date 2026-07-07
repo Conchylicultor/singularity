@@ -18,6 +18,7 @@ import {
   findMarkerCalls,
   findImports,
   maskSource,
+  markerCallSpans,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type DbSchemaFacetData, dbSchemaFacetDef } from "../core";
 
@@ -113,21 +114,41 @@ function parseEntityExtensionCalls(dbFiles: string[]): RawExtRef[] {
 // name consumers actually import) to the entity's table name, and drop the
 // intermediate entity binding so a table is never reported twice.
 export function parseTableNames(src: string, out: Map<string, string>): void {
-  // Form (1): direct pgTable bindings.
-  const pgRe = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*pgTable\s*\(\s*["']([^"']+)["']/g;
-  let m: RegExpExecArray | null;
-  while ((m = pgRe.exec(src))) out.set(m[1]!, m[2]!);
+  // FULL-mask so a `pgTable("x")` / `defineEntity("x")` / `.table` written in a
+  // comment, string, or template literal (a fixture, docs snippet, codegen
+  // template) can't register a phantom table. Genuine calls are located over the
+  // mask via `markerCallSpans`; the binding var name and the string name are
+  // read back from the ORIGINAL by offset (the mask preserves offsets 1:1) — the
+  // sanctioned marker-value contract, not a hand-rolled `const X = pgTable("…")`
+  // regex over raw source.
+  const masked = maskSource(src);
+  const declBefore = (upTo: number): string | undefined =>
+    /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*$/.exec(masked.slice(0, upTo))?.[1];
+  const firstStringArg = (open: number, close: number): string | undefined =>
+    /^\s*["']([^"']+)["']/.exec(src.slice(open + 1, close))?.[1];
+
+  // Form (1): direct `const <var> = pgTable("name", …)` bindings.
+  for (const span of markerCallSpans(masked, "pgTable")) {
+    const varName = declBefore(span.identifier);
+    const name = firstStringArg(span.open, span.close);
+    if (varName && name) out.set(varName, name);
+  }
 
   // Form (2a): `const <entity> = defineEntity("name", …)` bindings.
   const entityVarToName = new Map<string, string>();
-  const entityRe = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*defineEntity\s*\(\s*["']([^"']+)["']/g;
-  while ((m = entityRe.exec(src))) entityVarToName.set(m[1]!, m[2]!);
+  for (const span of markerCallSpans(masked, "defineEntity")) {
+    const varName = declBefore(span.identifier);
+    const name = firstStringArg(span.open, span.close);
+    if (varName && name) entityVarToName.set(varName, name);
+  }
 
   // Form (2b): `const <alias> = <entity>.table` re-exports — the alias is the
-  // importable handle; the entity var is intermediate.
+  // importable handle; the entity var is intermediate. Matched over the mask
+  // (identifiers aren't blanked, so a `.table` in a string can't register).
   const aliasSources = new Set<string>();
   const aliasRe = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*([A-Za-z_$][\w$]*)\.table\b/g;
-  while ((m = aliasRe.exec(src))) {
+  let m: RegExpExecArray | null;
+  while ((m = aliasRe.exec(masked))) {
     const name = entityVarToName.get(m[2]!);
     if (name === undefined) continue;
     out.set(m[1]!, name);

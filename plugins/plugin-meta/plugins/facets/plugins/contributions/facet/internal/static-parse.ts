@@ -5,6 +5,8 @@ import {
   readIfExists,
   parseStringField,
   findImports,
+  maskSource,
+  markerCallSpans,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 // ── Types ──────────────────────────────────────────────────────────
@@ -200,21 +202,33 @@ export function parsePaneDefinitions(webDir: string): Map<string, PaneDefinition
   if (!existsSync(webDir)) return out;
   const files: string[] = [];
   walkFiles(webDir, files);
-  const re = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*Pane\.define\s*\(\s*\{/g;
   for (const f of files) {
     const src = readIfExists(f);
     if (!src) continue;
-    re.lastIndex = 0;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(src))) {
-      const varName = m[1]!;
-      const openIdx = m.index + m[0].length - 1;
-      const closeIdx = matchBracket(src, openIdx, "{", "}");
-      if (closeIdx < 0) continue;
-      const body = src.slice(openIdx + 1, closeIdx);
+    // FULL-mask so a `Pane.define(` written inside a comment, string, or
+    // template literal (a test fixture, docs snippet, codegen template) can't
+    // register a phantom pane. Genuine calls are located over the mask; the var
+    // name and the object body are read back from the ORIGINAL by offset (the
+    // mask preserves every offset 1:1). Routes through `markerCallSpans` rather
+    // than a hand-rolled `const X = Pane.define(` regex over raw source.
+    const masked = maskSource(src);
+    for (const span of markerCallSpans(masked, "Pane.define")) {
+      // `const <VarName> = ` immediately before the call identifier.
+      const decl = /(?:export\s+)?const\s+([A-Za-z_$][\w$]*)\s*=\s*$/.exec(
+        masked.slice(0, span.identifier),
+      );
+      if (!decl) continue;
+      // The single object-literal argument: `Pane.define({ … })`. The first
+      // non-space char after `(` must be `{` (faithful to the old `\(\s*\{`).
+      let braceStart = span.open + 1;
+      while (braceStart < span.close && /\s/.test(masked[braceStart]!)) braceStart++;
+      if (masked[braceStart] !== "{") continue;
+      const braceEnd = matchBracket(masked, braceStart, "{", "}");
+      if (braceEnd < 0) continue;
+      const body = src.slice(braceStart + 1, braceEnd);
       const id = parseStringField(body, "id");
       const path = parseStringField(body, "path") ?? parseStringField(body, "segment");
-      if (id) out.set(varName, { id, path });
+      if (id) out.set(decl[1]!, { id, path });
     }
   }
   return out;

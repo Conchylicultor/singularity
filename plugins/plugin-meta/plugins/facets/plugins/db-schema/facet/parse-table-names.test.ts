@@ -62,4 +62,25 @@ describe("parseTableNames", () => {
     `;
     expect(parse(src)).toEqual({ _raw: "raw", _foo: "foo" });
   });
+
+  // Comment/string/template-embedded declarations must NOT register a phantom
+  // table — the false-positive class the full-mask + read-by-offset scan closes.
+  test("commented-out pgTable / defineEntity is ignored", () => {
+    const src = `
+      // export const _ghost = pgTable("ghost", {});
+      /* const ghostEntity = defineEntity("ghost2", fields);
+         export const _ghost2 = ghostEntity.table; */
+      export const _real = pgTable("real", {});
+    `;
+    expect(parse(src)).toEqual({ _real: "real" });
+  });
+
+  test("stringified / templated declaration is ignored", () => {
+    const src = [
+      'const snippet = "export const _fake = pgTable(\\"fake\\", {})";',
+      "const tmpl = `const fakeEntity = defineEntity(\"fake2\", f); export const _f = fakeEntity.table;`;",
+      'export const _real = pgTable("real", {});',
+    ].join("\n");
+    expect(parse(src)).toEqual({ _real: "real" });
+  });
 });

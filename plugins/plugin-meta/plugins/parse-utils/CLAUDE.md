@@ -10,7 +10,12 @@ A scanner that matches a marker against *raw* source treats an occurrence inside
 a comment, string literal, or regex literal as real code. That is a silent
 correctness bug (it once made codegen emit a phantom `<dir>.generated.ts` from a
 `defineCollectedDir("…")` written in a comment, which broke `tsc`). **Never**
-`readFileSync`-and-regex or bare `git grep` for a marker. Route through one of:
+`readFileSync`-and-regex or bare `git grep` for a marker. A hand-rolled global
+`const <name> = <call>(` binding scan over raw source is the fully-unmasked twin
+of the `{ strings: false }` trap and is banned by the `no-adhoc-binding-scan`
+lint rule (in `framework/tooling/lint/plugins/marker-scan-safety`) — route it
+through `markerCallSpans(maskSource(src), …)` and read the binding name + string
+value back from the original by offset. Route through one of:
 
 - **`findImports(src)`** — the single static-import scanner: every
   `import … from "…"`, `export … from "…"`, and bare `import "…"` not in a

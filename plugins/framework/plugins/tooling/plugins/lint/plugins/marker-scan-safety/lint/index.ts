@@ -1,9 +1,14 @@
 import noAdhocMarkerScan from "./no-adhoc-marker-scan";
+import noAdhocBindingScan from "./no-adhoc-binding-scan";
 
 export default {
   name: "marker-scan-safety",
   rules: {
     "no-adhoc-marker-scan": noAdhocMarkerScan,
+    // Sibling concern: a global `const <name> = <call>(` binding scanner run over
+    // RAW (un-masked) source — the fully-unmasked twin of the `{ strings: false }`
+    // footgun `no-adhoc-marker-scan` covers. Both route through `markerCallSpans`.
+    "no-adhoc-binding-scan": noAdhocBindingScan,
   },
   ignores: {
     // `{ strings: false }` is sanctioned ONLY for a genuine token-in-string scan
