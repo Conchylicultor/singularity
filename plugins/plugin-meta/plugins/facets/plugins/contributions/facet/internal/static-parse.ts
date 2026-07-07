@@ -89,27 +89,46 @@ export function extractContributionsBlock(masked: string): ContributionsBlock | 
 }
 
 /**
- * Find each `Head.member(...{ … })` contribution call inside the block. The call
- * is *located* over `maskedBlock` (fully masked, so a call written inside a
- * string literal in a fixture/docs snippet has vanished), while the `callee` and
+ * Find each top-level `Head.member(...)` contribution call inside the block,
+ * regardless of argument shape — an inline object literal (`Cell({ … })`), a
+ * pre-built const (`DataViewSlots.Filter(textOperatorSet)`), a helper call, or a
+ * spread. The call is *located* over `maskedBlock` (fully masked, so a call
+ * written inside a string literal in a fixture/docs snippet has vanished, and
+ * matchBracket never trips on a bracket inside a string), while `callee` and
  * `argsBody` are *sliced from `origBlock`* at the matched offsets — so a real
  * call's blanked string args (`{ pane: "editorPane" }`) are recovered intact.
  * `maskedBlock` and `origBlock` are the same slice of the masked / original
  * buffers, so their offsets align 1:1.
+ *
+ * `argsBody` is the inline object-literal body when the first argument is `{ … }`
+ * (fed to `parsePropsBlock`), else "" — the slot identity comes from the callee,
+ * not the argument. Requiring an inline literal here is exactly what dropped every
+ * `DataViewSlots.Filter(<const>)` contribution from the closure graph. Nested
+ * dotted calls inside an argument are skipped by resuming the scan past each
+ * call's balanced `)`.
  */
 export function findCalls(
   maskedBlock: string,
   origBlock: string,
 ): { callee: string; argsBody: string }[] {
   const out: { callee: string; argsBody: string }[] = [];
-  const re = /([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+)\s*\(\s*\{/g;
+  const re = /([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+)\s*\(/g; // no `{` requirement
   let m: RegExpExecArray | null;
   while ((m = re.exec(maskedBlock))) {
     const callee = origBlock.slice(m.index, m.index + m[1]!.length);
-    const openIdx = m.index + m[0].length - 1;
-    const closeIdx = matchBracket(maskedBlock, openIdx, "{", "}");
-    if (closeIdx < 0) continue;
-    out.push({ callee, argsBody: origBlock.slice(openIdx + 1, closeIdx) });
+    const openIdx = m.index + m[0].length - 1; // index of "("
+    const closeParen = matchBracket(maskedBlock, openIdx, "(", ")");
+    if (closeParen < 0) continue;
+    // Inline object-literal argument → keep its body for parsePropsBlock.
+    let argsBody = "";
+    let j = openIdx + 1;
+    while (j < maskedBlock.length && /\s/.test(maskedBlock[j]!)) j++;
+    if (maskedBlock[j] === "{") {
+      const closeBrace = matchBracket(maskedBlock, j, "{", "}");
+      if (closeBrace >= 0) argsBody = origBlock.slice(j + 1, closeBrace);
+    }
+    out.push({ callee, argsBody });
+    re.lastIndex = closeParen + 1; // resume AFTER this call → skip nested dotted calls in args
   }
   return out;
 }

@@ -213,15 +213,14 @@ export const compositionsConfig = defineConfig({
         // config_v2; this pack makes the RENDERERS available — the two are
         // orthogonal.)
         //
-        // NOTE: the `DataViewSlots.{Filter,ValueCodec,ColumnConfig}` contributors
-        // (fields.*.filter / *.data-view-codec / fields.enum.column-config) are
-        // deliberately NOT here: the closure classifier does not surface their
-        // contribution as a soft-option edge (unlike Cell/CellEditor/View), so
-        // `composition-closure` rejects selecting them ("not a genuine soft option").
-        // The Filter pill / typed value codecs therefore degrade gracefully in a
-        // release (fail-soft to identity behaviour) — tracked as a follow-up to make
-        // those slots composition-selectable. The view tabs + cell rendering (the
-        // reported bug) do not depend on them.
+        // Plus the Filter-pill (`DataViewSlots.Filter`), typed value-codec
+        // (`DataViewSlots.ValueCodec`), and enum column-config
+        // (`DataViewSlots.ColumnConfig`) contributors. These are now selectable
+        // after the static-parser fix (the closure parser used to drop any
+        // contribution whose argument was a pre-built const rather than an inline
+        // object literal, so `composition-closure` rejected them as "not a genuine
+        // soft option"). Carrying them here keeps a released DataView's filtering
+        // and typed codecs working instead of fail-soft degrading to identity.
         pack("data-views", "aR", [
           "primitives.data-view.gallery",
           "primitives.data-view.table",
@@ -241,6 +240,16 @@ export const compositionsConfig = defineConfig({
           "fields.number.inline",
           "fields.tags.inline",
           "fields.text.inline",
+          "fields.bool.filter",
+          "fields.date.filter",
+          "fields.enum.filter",
+          "fields.number.filter",
+          "fields.tags.filter",
+          "fields.text.filter",
+          "fields.bool.data-view-codec",
+          "fields.date.data-view-codec",
+          "fields.number.data-view-codec",
+          "fields.enum.column-config",
         ]),
       ],
     }),

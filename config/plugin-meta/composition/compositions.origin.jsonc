@@ -1,4 +1,4 @@
-// @hash b0af3dd71261
+// @hash a867ead2167e
 {
   "manifests": [
     {
@@ -439,7 +439,17 @@
         "fields.enum.inline",
         "fields.number.inline",
         "fields.tags.inline",
-        "fields.text.inline"
+        "fields.text.inline",
+        "fields.bool.filter",
+        "fields.date.filter",
+        "fields.enum.filter",
+        "fields.number.filter",
+        "fields.tags.filter",
+        "fields.text.filter",
+        "fields.bool.data-view-codec",
+        "fields.date.data-view-codec",
+        "fields.number.data-view-codec",
+        "fields.enum.column-config"
       ],
       "extends": [],
       "excludes": []
