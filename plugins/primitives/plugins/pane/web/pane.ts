@@ -8,7 +8,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
+import { defineSlot, useDeferredLoadState, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { SurfaceIdContext } from "@plugins/primitives/plugins/surface-id/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
@@ -1459,7 +1459,38 @@ export function usePaneRoute(basePath: string): PaneMatch | null {
   useSyncPaneRegistry();
   const route = useRoute();
   const index = useIndexMatch(basePath);
-  return route ?? index;
+  const pathname = usePathname();
+  const { deferredComplete } = useDeferredLoadState();
+
+  if (route) return route;
+
+  // No resolved route. `resolveRoute` returns null for TWO different situations
+  // that must NOT be treated alike:
+  //   1. Genuine bare app root (`/pages`) — the index/landing pane is correct.
+  //   2. A deep link (`/pages/page/:id`) whose target pane isn't registered yet
+  //      because its plugin is still loading in the post-paint deferred tier.
+  //      `parseUrl` scans the pane registry to match segments, so an unregistered
+  //      pane matches nothing and yields an EMPTY route — indistinguishable from
+  //      the bare root at the route level.
+  // Falling back to `index` in case (2) flashes the app homepage at the deep-link
+  // URL until the plugin registers (the URL never changes — routing is
+  // route-first — so it reads as "reload redirected me to the homepage"). The URL
+  // is the discriminator: the index pane is bare-root content, so only a bare-root
+  // URL should render it. While the deferred tier is still settling, a deep-link
+  // URL with an empty route is a load gap — return null so the layout renders
+  // DeferredRouteFallback (a loader that becomes the real pane once its plugin
+  // registers) instead of the homepage. Once the tier has settled, an empty route
+  // is a genuine no-match, so we keep the prior index fallback unchanged.
+  //
+  // Gated on `store.live`: only the focused store mirrors the browser URL. A
+  // background/keep-alive store's route comes from `restoreRoute`, not the URL,
+  // so reading window.location there would be the *focused* tab's path — for
+  // those, keep the plain index fallback.
+  if (store.live && !deferredComplete) {
+    const deepLink = stripBasePath(pathname, basePath);
+    if (deepLink !== "/" && deepLink !== "") return null;
+  }
+  return index;
 }
 
 // ---------------------------------------------------------------------------
