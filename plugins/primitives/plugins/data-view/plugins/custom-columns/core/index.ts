@@ -7,5 +7,10 @@ export { customColumnValuesResource } from "./internal/resource";
 export {
   setCustomColumnValue,
   SetCustomColumnValueBodySchema,
+  deleteCustomColumnValues,
+  DeleteCustomColumnValuesBodySchema,
 } from "./internal/endpoints";
-export type { SetCustomColumnValueBody } from "./internal/endpoints";
+export type {
+  SetCustomColumnValueBody,
+  DeleteCustomColumnValuesBody,
+} from "./internal/endpoints";

@@ -17,3 +17,17 @@ export const setCustomColumnValue = defineEndpoint({
   route: "POST /api/data-view/custom-values",
   body: SetCustomColumnValueBodySchema,
 });
+
+export const DeleteCustomColumnValuesBodySchema = z.object({
+  dataViewId: z.string(),
+  columnId: z.string(),
+});
+export type DeleteCustomColumnValuesBody = z.infer<
+  typeof DeleteCustomColumnValuesBodySchema
+>;
+
+/** Delete every per-row value for one column across a surface (column removal). */
+export const deleteCustomColumnValues = defineEndpoint({
+  route: "POST /api/data-view/custom-values/delete-column",
+  body: DeleteCustomColumnValuesBodySchema,
+});

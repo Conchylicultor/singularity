@@ -4,7 +4,9 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   customColumnValuesResource,
   setCustomColumnValue,
+  deleteCustomColumnValues,
   type SetCustomColumnValueBody,
+  type DeleteCustomColumnValuesBody,
 } from "../../core";
 
 /** `Map<rowKey, Map<columnId, value>>` for O(1) per-cell reads. */
@@ -39,5 +41,13 @@ export function useSetCustomColumnValue(): (
   args: SetCustomColumnValueBody,
 ) => void {
   const { mutate } = useEndpointMutation(setCustomColumnValue);
+  return useCallback((args) => mutate({ body: args }), [mutate]);
+}
+
+/** Delete every per-row value for one column across a surface (column removal). */
+export function useDeleteCustomColumnValues(): (
+  args: DeleteCustomColumnValuesBody,
+) => void {
+  const { mutate } = useEndpointMutation(deleteCustomColumnValues);
   return useCallback((args) => mutate({ body: args }), [mutate]);
 }

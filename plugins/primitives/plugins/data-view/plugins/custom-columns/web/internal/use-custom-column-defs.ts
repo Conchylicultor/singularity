@@ -5,6 +5,7 @@ import type { FieldsRecord } from "@plugins/fields/core";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { CustomColumnDef } from "../../core";
 import { readCustomColumnDefs } from "../../shared/read-custom-column-defs";
+import { useDeleteCustomColumnValues } from "./use-custom-column-values";
 
 export interface CustomColumnDefsController {
   defs: CustomColumnDef[];
@@ -18,7 +19,7 @@ export interface CustomColumnDefsController {
 
 /** Stable join key for a new column row (no collision with consumer field ids). */
 function columnId(): string {
-  return `cc-${Math.random().toString(36).slice(2, 10)}`;
+  return `cc-${crypto.randomUUID()}`;
 }
 
 /**
@@ -38,7 +39,10 @@ function columnId(): string {
  */
 export function useCustomColumnDefs(
   descriptor: ConfigDescriptor<FieldsRecord> | undefined,
+  dataViewId: string,
 ): CustomColumnDefsController {
+  const deleteValues = useDeleteCustomColumnValues();
+
   if (!descriptor) {
     throw new Error(
       "custom-columns: useCustomColumnDefs requires a resolved config descriptor " +
@@ -113,9 +117,10 @@ export function useCustomColumnDefs(
 
   const deleteColumn = useCallback(
     (id: string) => {
+      deleteValues({ dataViewId, columnId: id });
       commit(mirror.filter((c) => c.id !== id));
     },
-    [commit, mirror],
+    [commit, mirror, deleteValues, dataViewId],
   );
 
   return useMemo(

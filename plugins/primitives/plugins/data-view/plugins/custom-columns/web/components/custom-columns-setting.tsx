@@ -4,6 +4,7 @@ import type { FieldsRecord } from "@plugins/fields/core";
 import {
   getDataViewDescriptor,
   useDataViewSettings,
+  type DataViewId,
 } from "@plugins/primitives/plugins/data-view/web";
 import { useCustomColumnDefs } from "../internal/use-custom-column-defs";
 import { CustomColumnsFields } from "./data-view-settings-button";
@@ -26,14 +27,16 @@ export function CustomColumnsFieldsSetting(): ReactNode {
   const { storageKey } = useDataViewSettings();
   const descriptor = getDataViewDescriptor(storageKey);
   if (!descriptor) return null;
-  return <Fields descriptor={descriptor} />;
+  return <Fields descriptor={descriptor} storageKey={storageKey} />;
 }
 
 function Fields({
   descriptor,
+  storageKey,
 }: {
   descriptor: ConfigDescriptor<FieldsRecord>;
+  storageKey: DataViewId;
 }): ReactNode {
-  const { defs, ...actions } = useCustomColumnDefs(descriptor);
+  const { defs, ...actions } = useCustomColumnDefs(descriptor, storageKey);
   return <CustomColumnsFields defs={defs} actions={actions} />;
 }

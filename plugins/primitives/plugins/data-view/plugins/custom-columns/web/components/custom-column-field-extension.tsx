@@ -73,7 +73,7 @@ function Inner({
   rowKey: (row: unknown, index: number) => string;
   render: (fields: FieldDef<unknown>[]) => ReactNode;
 }): ReactNode {
-  const { defs } = useCustomColumnDefs(descriptor);
+  const { defs } = useCustomColumnDefs(descriptor, storageKey);
   const values = useCustomColumnValues(storageKey);
   const setValue = useSetCustomColumnValue();
   const rowKeyRef = useLatestRef(rowKey);
