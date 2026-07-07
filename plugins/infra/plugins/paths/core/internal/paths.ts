@@ -4,6 +4,13 @@ import { join, resolve } from "node:path";
 export const REPO_ROOT           = resolve(import.meta.dir, "..", "..", "..", "..", "..", "..");
 export const PLUGINS_DIR         = join(REPO_ROOT, "plugins");
 
+// The git-layer config tree (`config/<hier>/<name>.origin.jsonc`, overrides, and
+// `@app/<id>` scopes). Read directly at runtime by config_v2's raw-diff panel and
+// per-app un-fork check. In a release `REPO_ROOT` resolves into the compiled
+// binary's virtual FS (un-shipped, unreachable), so `launch.ts` points this at the
+// vendored tree via `SINGULARITY_REPO_CONFIG_DIR`; in dev it falls back to the repo.
+export const REPO_CONFIG_DIR     = process.env.SINGULARITY_REPO_CONFIG_DIR ?? join(REPO_ROOT, "config");
+
 // Canonical location of the built frontend. `./singularity build` publishes the
 // Vite output here and the gateway serves it. This is the ONE source of truth:
 // the build CLI, the frontend-hash stale-tab signal, and the git-status

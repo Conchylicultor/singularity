@@ -1,5 +1,6 @@
 import {
   closeSync,
+  cpSync,
   existsSync,
   mkdirSync,
   openSync,
@@ -661,4 +662,34 @@ export function seedReleaseAssetMirror(opts: {
   log?: LogFn;
 }): void {
   seedAssetMirrorCache(opts);
+}
+
+/**
+ * Seed the release bundle's resolved config defaults into the app-data dir on
+ * first run (copy-if-absent), so a released app's config_v2 "default-for-everyone"
+ * values resolve on first boot instead of falling back to hardcoded schema
+ * defaults. `release.ts` vendored the propagated seed under
+ * `<bundleRoot>/config-seed/config/<worktree>/…`; this copies it to
+ * `<dataDir>/config/<worktree>/`, the exact path config_v2's config-dir.ts reads
+ * (`CONFIG_DIR = SINGULARITY_DIR/config/<worktree>`).
+ *
+ * The `config/<worktree>` formula is inlined here rather than imported from
+ * config_v2, matching this file's / launch.ts's existing handling of the other
+ * vendored trees (migrations, PG, PgBouncer, parcel-watcher): the launcher must
+ * type-check under the DOM-free `tools` tsconfig, but the config_v2 barrels
+ * transitively pull DOM-typed endpoint code that does not. Keep this formula in
+ * lockstep with `config-dir.ts`.
+ */
+export function seedReleaseConfig(opts: {
+  bundleRoot: string;
+  dataDir: string;
+  worktreeName: string;
+  log?: LogFn;
+}): void {
+  const src = join(opts.bundleRoot, "config-seed", "config", opts.worktreeName);
+  const dest = join(opts.dataDir, "config", opts.worktreeName);
+  if (!existsSync(src)) return; // dev / no seed baked → no-op
+  if (existsSync(dest)) return; // already seeded (or user has a config dir) → don't clobber
+  cpSync(src, dest, { recursive: true });
+  opts.log?.(`Seeded config defaults → ${dest}`);
 }

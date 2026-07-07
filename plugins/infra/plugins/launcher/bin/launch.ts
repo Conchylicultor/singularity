@@ -52,6 +52,10 @@ process.env.SINGULARITY_PARCEL_WATCHER_NODE ??= join(
   "parcel-watcher",
   "watcher.node",
 );
+// The raw git-layer config tree is read by getRawFileContent (Settings "View
+// raw") and gitBacksScope (per-app un-fork). REPO_ROOT resolves into the compiled
+// binary's virtual FS, so point these at the vendored tree.
+process.env.SINGULARITY_REPO_CONFIG_DIR ??= join(bundleRoot, "config");
 // Reroot the embedded-PG and PgBouncer Unix sockets onto a short `/tmp` path
 // (both read this single override). The data root above may be a long versioned
 // `<out>/data` (`releases/<wt>/<comp>-<target>/<run-id>/data`), which would blow
@@ -90,7 +94,7 @@ async function main(): Promise<void> {
 
   // Imported AFTER env is set, so the launcher's path constants freeze under the
   // release root.
-  const { bootSelfContainedApp, writeReleaseDatabaseConfig, seedReleaseAssetMirror } =
+  const { bootSelfContainedApp, writeReleaseDatabaseConfig, seedReleaseAssetMirror, seedReleaseConfig } =
     await import("@plugins/infra/plugins/launcher/server");
 
   // Write the release database.json FIRST, so bootSelfContainedApp's internal
@@ -115,6 +119,18 @@ async function main(): Promise<void> {
   seedReleaseAssetMirror({
     bundleRoot,
     dataDir: process.env.SINGULARITY_DIR!,
+    log: console.log,
+  });
+
+  // Seed the resolved config defaults into the writable data dir (copy-if-absent),
+  // so a released app's config-backed defaults resolve on first boot. worktreeName
+  // = composition = the runtime SINGULARITY_WORKTREE, so this lands exactly where
+  // config-dir.ts reads (SINGULARITY_DIR/config/<worktree>). Runs before the
+  // gateway spawns the backend, so CONFIG_DIR is populated on first read.
+  seedReleaseConfig({
+    bundleRoot,
+    dataDir: process.env.SINGULARITY_DIR!,
+    worktreeName: name,
     log: console.log,
   });
 

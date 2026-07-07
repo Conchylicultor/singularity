@@ -2,7 +2,7 @@ import { existsSync, unlinkSync, rmdirSync } from "node:fs";
 import { join } from "node:path";
 import { APP_SCOPE_DIR, scopeAppId } from "../../core";
 import type { ConfigDescriptor, JsonValue } from "../../core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { REPO_CONFIG_DIR } from "@plugins/infra/plugins/paths/server";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import { userScopedDir } from "./scope-paths";
 import { getScopedDescriptors, getDescriptorByStorePath, getHierarchyPath } from "./resource";
@@ -30,7 +30,7 @@ async function forkDescriptor(descriptor: ConfigDescriptor, hierarchyPath: strin
 function gitBacksScope(hierarchyPath: string, scopeId: string, name: string): boolean {
   const appId = scopeAppId(scopeId);
   if (!appId) return false;
-  return existsSync(join(REPO_ROOT, "config", hierarchyPath, APP_SCOPE_DIR, appId, `${name}.jsonc`));
+  return existsSync(join(REPO_CONFIG_DIR, hierarchyPath, APP_SCOPE_DIR, appId, `${name}.jsonc`));
 }
 
 // Un-fork ONE descriptor: drop the user's runtime scoped override. For a scope

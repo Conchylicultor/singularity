@@ -28,6 +28,7 @@ import {
 import { resolveIconSvgNodes } from "@plugins/primitives/plugins/icon-picker/server";
 import { appIconToSvg } from "@plugins/apps-core/plugins/app-icon/core";
 import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/server";
+import { propagateConfigToUser } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 // ── Staged bundle layout (the `--dev` output, also the pack input) ────────────
 //
@@ -40,6 +41,8 @@ import { runAssetMirrorPrewarm } from "@plugins/infra/plugins/asset-mirror/serve
 //     pgbouncer/pgbouncer-start    compiled PgBouncer start binary
 //     pgbouncer/native/bin/pgbouncer  vendored PgBouncer native binary
 //     parcel-watcher/watcher.node   vendored @parcel/watcher native addon
+//     config/                      raw git-layer config tree (SINGULARITY_REPO_CONFIG_DIR)
+//     config-seed/config/<comp>/   resolved config defaults, seeded into <data>/config on first run
 //     web/                         filtered Vite dist (served statically)
 //     RELEASE.json                 { composition, target, platform, builtAt, port, runId }
 //     dist/<comp>-<target>-<platform>   web target: self-extracting binary (the shippable)
@@ -609,6 +612,31 @@ export function registerRelease(program: Command) {
         await runAssetMirrorPrewarm({
           destRoot: join(out, "asset-mirror"),
           log: console.log,
+        });
+
+        // ── 3.6. Vendor config: raw git-layer tree (raw-diff/un-fork reads) +
+        //         resolved default seed (effective values). ────────────────────
+        // Nothing config-related was shipped before, so a released app dropped
+        // every config_v2 "default-for-everyone" value at runtime. release.ts runs
+        // in the full dev toolchain, so it reuses codegen's exact propagation.
+        console.log("\n[3.6] Vendoring config defaults...");
+
+        // (a) Raw git-layer tree → REPO_CONFIG_DIR at runtime (raw-diff panel +
+        //     per-app un-fork check, which read REPO_ROOT/config directly).
+        console.log("  • git-layer config tree");
+        cpSync(join(root, "config"), join(out, "config"), { recursive: true });
+
+        // (b) Resolved default-for-everyone seed for the composition (effective
+        //     values). propagateConfigToUser writes <singularityDir>/config/<worktree>/… ;
+        //     an empty staging root yields ONLY resolved origins (+ @app scoped
+        //     origins), no personal overrides/ancestors. discoverConfigs walks the
+        //     full config/ tree — shipping origins for plugins absent from the
+        //     composition is harmless (the backend only reads registered descriptors).
+        console.log("  • resolved config defaults");
+        await propagateConfigToUser({
+          root,
+          worktreeName: opts.composition,
+          singularityDir: join(out, "config-seed"),
         });
 
         // ── 4. Tauri target: wrap the staged bundle in the desktop shell ─────

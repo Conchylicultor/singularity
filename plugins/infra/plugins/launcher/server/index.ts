@@ -14,6 +14,7 @@ export {
   awaitPgReady,
   bootSelfContainedApp,
   seedReleaseAssetMirror,
+  seedReleaseConfig,
   teardownSelfContainedApp,
   gatewayPidFile,
   zeroCacheSpec,

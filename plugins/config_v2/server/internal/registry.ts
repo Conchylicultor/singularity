@@ -17,7 +17,7 @@ import { configV2ServerResource, configV2ConflictServerResource, configV2TiersSe
 import { getFieldStorageProvider } from "./field-storage-providers";
 import { writeScopedOriginSnapshot } from "./scope-snapshot";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT, REPO_CONFIG_DIR } from "@plugins/infra/plugins/paths/server";
 import { CONFIG_DIR } from "./config-dir";
 
 interface CacheEntry {
@@ -645,8 +645,8 @@ export function getRawFileContent(
   const dir = parts.slice(0, -1).join("/");
   const name = parts[parts.length - 1]!;
   const gitScopeSeg = scopeSegment(scopeId);
-  const gitOverridePath = join(REPO_ROOT, "config", dir, gitScopeSeg, `${name}.jsonc`);
-  const gitOriginPath = join(REPO_ROOT, "config", dir, `${name}.origin.jsonc`);
+  const gitOverridePath = join(REPO_CONFIG_DIR, dir, gitScopeSeg, `${name}.jsonc`);
+  const gitOriginPath = join(REPO_CONFIG_DIR, dir, `${name}.origin.jsonc`);
 
   // Paths are returned relative to their layer root (user config dir / repo root)
   // so the UI can label each section with a compact, non-wrapping location rather
