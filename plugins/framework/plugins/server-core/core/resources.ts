@@ -16,6 +16,7 @@ import {
   chargeWait,
   getRuntimeProfile,
   getReadSetIndex,
+  getLastLoaderReadSet,
   registerGateGauge,
 } from "./profiler-hooks";
 import { defineServerContribution } from "./contributions";
@@ -226,6 +227,11 @@ const runtime = createResourceRuntime({
   // loader actually read, captured at the DB pool chokepoint. central: omitted
   // (field absent). Surfaces gaps/over-broad edges vs the hand-drawn dependsOn.
   readSet: (key) => getReadSetIndex()[key] ?? [],
+  // Per-run read-set of the key's LAST loader run — the self-healing capture the
+  // runtime persists after a FULL recompute (replace, not union), so a dropped
+  // dependency is shed from the durable `tables_read` seed instead of carried
+  // forever. central: omitted (undefined → persist falls back to `readSet`).
+  lastReadSet: (key) => getLastLoaderReadSet(key),
   // Resolve a read-set relation to its identity base table, so the _debug ceiling
   // compares the base-resolved read-set against the base-table `coveredOrigins`.
   // The closure reads the boot-injected holder at call time (set by change-feed

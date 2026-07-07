@@ -4,6 +4,7 @@ export {
   chargeWait,
   recordReadTables,
   getReadSetIndex,
+  getLastLoaderReadSet,
   seedReadSetIndex,
   removeReadSetTable,
   currentCallerKind,

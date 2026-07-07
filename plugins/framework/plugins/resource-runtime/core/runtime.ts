@@ -670,6 +670,24 @@ export interface ResourceRuntimeOptions {
    */
   readSet?: (key: string) => string[];
   /**
+   * The tables the resource's MOST RECENT loader run read (per-run capture,
+   * REPLACED each run — not the append-only union `readSet` returns), or
+   * `undefined` if none was captured. Used ONLY on the L2 persist seam: after a
+   * FULL recompute, the runtime persists THIS into `tables_read` (replace, not
+   * union) so a dependency a code change removed — or a historical mis-attribution
+   * baked into the seed — is shed instead of carried forever. It is authoritative
+   * because every persisted resource FULL-recomputes wholesale, so its last run
+   * observed the complete current table set (there are no data-dependent
+   * conditional queries among persisted resources — the safety basis; see
+   * research/2026-07-07-global-read-set-self-heal-on-full-recompute.md).
+   *
+   * Deliberately does NOT feed `applyDbChange`'s live routing — that keeps using
+   * the union `readSet`, an over-approximation, so a stale extra edge only causes a
+   * wasteful recompute, never a missed live delivery. server: getLastLoaderReadSet();
+   * central: omitted (undefined → the persist falls back to `readSet`).
+   */
+  lastReadSet?: (key: string) => string[] | undefined;
+  /**
    * Map a captured read-set relation to its identity base table, so the debug
    * ceiling compares like-for-like with `coveredOrigins` (stated in base-table
    * space): a view-backed loader records the VIEW (`conversations_v`), but
@@ -1046,6 +1064,21 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const obj: ResourceParams = {};
     for (const k of keys) obj[k] = params[k]!;
     return JSON.stringify(obj);
+  }
+
+  // The read-set to persist alongside a FULL value: the tables the loader read on
+  // its LAST run (authoritative + self-healing — sheds an edge a code change
+  // removed or a historical mis-attribution left behind), falling back to the
+  // accumulated union when the per-run capture is unavailable (central runtime, or
+  // a scoped-membership persist whose cycle ran no loader). REPLACE semantics: the
+  // persist SQL sets `tables_read = EXCLUDED`, so feeding it the per-run set here is
+  // what makes the durable seed converge. The in-memory union (`opts.readSet`) is
+  // deliberately left untouched — it stays an over-approximation so live
+  // `applyDbChange` routing never under-delivers. Must be read SYNCHRONOUSLY right
+  // after awaiting the loader; every persisted resource is param-less (single pk),
+  // so no concurrent same-key run can clobber the per-run capture in between.
+  function persistReadSet(key: string): string[] {
+    return opts.lastReadSet?.(key) ?? opts.readSet?.(key) ?? [];
   }
 
   // Internal refill primitive — the ONLY place `entry.loader` runs. The loader
@@ -1782,7 +1815,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         return; // never ship or cascade a torn read; snapshot untouched
       }
       if (persisted && watermark !== undefined && opts.persistSnapshot) {
-        const tablesRead = opts.readSet?.(entry.key) ?? [];
+        const tablesRead = persistReadSet(entry.key);
         try {
           await opts.persistSnapshot(entry.key, pk, value, watermark, tablesRead);
         } catch (err) {
@@ -1930,7 +1963,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // the jsonb is byte-identical to a FULL persist.
     if (persisted && watermark !== undefined && opts.persistSnapshot) {
       const full = [...nextSnapshot.values()].map((hash) => JSON.parse(hash));
-      const tablesRead = opts.readSet?.(entry.key) ?? [];
+      const tablesRead = persistReadSet(entry.key);
       try {
         await opts.persistSnapshot(entry.key, pk, full, watermark, tablesRead);
       } catch (err) {
@@ -2083,10 +2116,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         // simply stays current.
         if (persisted && watermark !== undefined && opts.persistSnapshot) {
           // The loader has already run (via `getResourceValue` above), so its
-          // captured read-set is flushed into the read-set index — `opts.readSet`
-          // returns the tables this resource read, persisted alongside the value
-          // so the next cold boot can route catch-up by it without a loader run.
-          const tablesRead = opts.readSet?.(entry.key) ?? [];
+          // per-run read-set is captured — `persistReadSet` returns the tables THIS
+          // run read (replace, self-healing), persisted alongside the value so the
+          // next cold boot routes catch-up by the current set without a loader run.
+          const tablesRead = persistReadSet(entry.key);
           try {
             await opts.persistSnapshot(entry.key, pk, value, watermark, tablesRead);
           } catch (err) {

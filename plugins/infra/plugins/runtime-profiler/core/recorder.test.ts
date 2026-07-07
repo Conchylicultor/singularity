@@ -7,12 +7,14 @@ import {
   __contribute,
   captureFlightWindow,
   chargeWait,
+  getLastLoaderReadSet,
   getReadSetIndex,
   getRuntimeProfile,
   installClock,
   installSpanContextRuntime,
   readGateGauges,
   recordEntrySpan,
+  recordReadTables,
   recordSpan,
   registerGateGauge,
   removeReadSetTable,
@@ -408,6 +410,46 @@ describe("read-set index — removeReadSetTable", () => {
     const index = getReadSetIndex();
     expect(index.attempts).toEqual(["attempts_v"]);
     expect(index.notifications).toEqual(["notifications"]); // kept
+  });
+});
+
+describe("read-set index — per-run capture (getLastLoaderReadSet)", () => {
+  // Simulate a loader run that reads `tables`, keyed by the loader label. Mirrors
+  // the DB pool chokepoint: recordReadTables fires INSIDE the loader entry.
+  async function runLoader(key: string, tables: string[]): Promise<void> {
+    await recordEntrySpan("loader", key, () => {
+      recordReadTables(tables);
+    });
+  }
+
+  test("returns only the LAST run's tables (replace), while the index is the union", async () => {
+    await runLoader("attempts", ["attempts_v", "conversations_v"]);
+    // A later run reads a DIFFERENT set (e.g. a code change dropped conversations_v
+    // and a prior mis-attribution had added `notifications`).
+    await runLoader("attempts", ["attempts_v"]);
+
+    // The append-only index still carries every table ever read (over-approximation).
+    expect(getReadSetIndex().attempts).toEqual(["attempts_v", "conversations_v"]);
+    // The per-run capture is ONLY the most recent run — the self-healing set.
+    expect(getLastLoaderReadSet("attempts")).toEqual(["attempts_v"]);
+  });
+
+  test("undefined for a key with no captured loader run", () => {
+    expect(getLastLoaderReadSet("never-ran")).toBeUndefined();
+  });
+
+  test("a run that reads no tables leaves the prior per-run capture intact", async () => {
+    await runLoader("p", ["p_table"]);
+    // A subsequent loader entry that reads nothing must NOT replace a real set with
+    // empty (same gate as the index): the capture keeps the last non-empty run.
+    await recordEntrySpan("loader", "p", () => {});
+    expect(getLastLoaderReadSet("p")).toEqual(["p_table"]);
+  });
+
+  test("resetRuntimeProfile clears the per-run capture", async () => {
+    await runLoader("p", ["p_table"]);
+    resetRuntimeProfile();
+    expect(getLastLoaderReadSet("p")).toBeUndefined();
   });
 });
 

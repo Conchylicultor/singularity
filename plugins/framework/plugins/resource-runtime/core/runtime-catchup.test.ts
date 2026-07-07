@@ -94,7 +94,8 @@ describe("recomputeResource", () => {
 
 describe("L2 persist-hook calling contract", () => {
   // A persisted keyed resource + injected fakes recording into a shared ordered
-  // call-log. `shouldPersist` selects the key; `readSet` supplies `tablesRead`.
+  // call-log. `shouldPersist` selects the key; `lastReadSet` (the per-run capture)
+  // supplies `tablesRead`, falling back to the `readSet` union when absent.
   function persistHarness(overrides: {
     captureWatermark?: () => Promise<string>;
     persistSnapshot?: (
@@ -105,11 +106,13 @@ describe("L2 persist-hook calling contract", () => {
       tables: readonly string[],
     ) => Promise<void>;
     loader?: (ctx?: { affectedIds: readonly string[] }) => { id: string; n: number }[];
+    lastReadSet?: (key: string) => string[] | undefined;
   }) {
     const log: string[] = [];
     const persistArgs: Array<{ key: string; pk: string; value: unknown; wm: string; tables: readonly string[] }> = [];
     const h = createHarness({
       readSet: (k) => (k === "p" ? ["p_table"] : []),
+      lastReadSet: overrides.lastReadSet,
       shouldPersist: (k) => k === "p",
       captureWatermark:
         overrides.captureWatermark ??
@@ -155,11 +158,36 @@ describe("L2 persist-hook calling contract", () => {
     expect(persistArgs).toHaveLength(1);
     expect(persistArgs[0]!.value).toEqual([{ id: "a", n: 1 }]); // the FULL value
     expect(persistArgs[0]!.wm).toBe("xmin-7"); // the captured watermark
-    expect(persistArgs[0]!.tables).toEqual(["p_table"]); // opts.readSet("p")
+    expect(persistArgs[0]!.tables).toEqual(["p_table"]); // fallback to opts.readSet (no lastReadSet)
     expect(persistArgs[0]!.pk).toBe(JSON.stringify({})); // param-less pk
 
     // Nothing shipped (no subscriber) — persistence is decoupled from delivery.
     expect(h.frames).toHaveLength(0);
+  });
+
+  test("persists the PER-RUN read-set (replace, self-healing) over the union when lastReadSet is present", async () => {
+    // The union (`readSet`) still carries a stale `notifications` edge from a past
+    // mis-attribution; the per-run capture (`lastReadSet`) has only what this FULL
+    // run actually read. The persist must use the per-run set so the durable seed
+    // sheds the stale edge instead of re-persisting it forever.
+    const persistArgs: Array<{ tables: readonly string[] }> = [];
+    const h = createHarness({
+      readSet: (k) => (k === "p" ? ["p_table", "notifications"] : []), // stale union
+      lastReadSet: (k) => (k === "p" ? ["p_table"] : undefined), // clean per-run
+      shouldPersist: (k) => k === "p",
+      captureWatermark: async () => "xmin-9",
+      persistSnapshot: async (_key, _pk, _value, _wm, tables) => {
+        persistArgs.push({ tables });
+      },
+    });
+    h.runtime.defineResource(
+      { key: "p", schema: rowsSchema, keyed: { keyOf } },
+      { identityTable: "p_table", loader: () => [{ id: "a", n: 1 }] },
+    );
+    h.runtime.recomputeResource("p");
+    await tick();
+    expect(persistArgs).toHaveLength(1);
+    expect(persistArgs[0]!.tables).toEqual(["p_table"]); // per-run wins, `notifications` shed
   });
 
   test("a persisted entry is forced to FULL even on a scoped change (loader gets ctx === undefined)", async () => {

@@ -14,6 +14,7 @@ import {
   chargeWait,
   getRuntimeProfile,
   getReadSetIndex,
+  getLastLoaderReadSet,
   registerGateGauge,
   type EntryContext,
   type SpanKind,
@@ -54,6 +55,7 @@ setProfilerHooks({
     recordSpan(kind as SpanKind, label, durationMs),
   chargeWait,
   getReadSetIndex,
+  getLastLoaderReadSet,
   registerGateGauge: (layer: string, read: () => unknown): void =>
     registerGateGauge(layer, read as () => GateGauge),
   getRuntimeProfile: () => {

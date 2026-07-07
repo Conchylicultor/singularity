@@ -34,6 +34,8 @@ export interface ProfilerHooks {
   chargeWait(layer: string, ms: number): void;
   getRuntimeProfile(): RuntimeProfileView;
   getReadSetIndex(): Record<string, string[]>;
+  /** Per-run read-set of a key's most recent loader run (undefined if none). */
+  getLastLoaderReadSet(key: string): string[] | undefined;
   registerGateGauge(layer: string, read: () => unknown): void;
 }
 
@@ -74,6 +76,10 @@ export function getRuntimeProfile(): RuntimeProfileView {
 
 export function getReadSetIndex(): Record<string, string[]> {
   return hooks ? hooks.getReadSetIndex() : {};
+}
+
+export function getLastLoaderReadSet(key: string): string[] | undefined {
+  return hooks ? hooks.getLastLoaderReadSet(key) : undefined;
 }
 
 export function registerGateGauge(layer: string, read: () => unknown): void {

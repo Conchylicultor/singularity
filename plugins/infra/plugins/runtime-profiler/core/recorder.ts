@@ -404,7 +404,27 @@ let sinceMs = now();
 // set is unioned in here under its `label` (which, for loader entries, IS the
 // resource key) when the entry finishes. Built up via `recordReadTables` mid-load
 // and flushed in `recordEntrySpan`'s finally; surfaced by `getReadSetIndex`.
+//
+// This index is APPEND-ONLY (union): it never sheds a table once captured. That
+// makes it a safe over-approximation for live change-feed routing (`applyDbChange`
+// inverts it table→resource — a stale extra edge only over-recomputes, never
+// misses), which is exactly why it stays union: shedding a table a loader reads
+// only for SOME data (a data-dependent conditional query) would drop a real live
+// dependency. The self-healing counterpart is `lastLoaderReadSet` below, used only
+// on the durable/persisted seam where under-approximation is corrected by the
+// sub-ack re-load. See research/2026-07-07-global-read-set-self-heal-on-full-recompute.md.
 const readSetIndex = new Map<string, Set<string>>();
+
+// Per-loader PER-RUN read-set: the exact tables the MOST RECENT completed loader
+// run for a key read (overwritten each run, NOT unioned). Where `readSetIndex`
+// answers "every table this loader has EVER read", this answers "every table this
+// loader read on its LAST run" — the authoritative, self-healing capture the
+// resource runtime persists after a FULL recompute so a dependency dropped by a
+// code change (or a historical mis-attribution) is shed from the durable
+// `tables_read` column instead of carried forever. Only written for loader entries
+// that actually read ≥1 table (same gate as `readSetIndex`), so a run that reads
+// nothing leaves the prior capture intact (never replaces a real set with empty).
+const lastLoaderReadSet = new Map<string, Set<string>>();
 
 function parentKey(parent: SpanRef): string {
   return `${parent.kind}:${parent.label}`;
@@ -916,6 +936,10 @@ export async function recordEntrySpan<T>(
         readSetIndex.set(label, set);
       }
       for (const table of ctx.tables) set.add(table);
+      // Also record this run's exact table set (replace, not union) for the
+      // self-healing persist seam. A fresh Set — `ctx.tables` is discarded with
+      // the closed context, so we own this copy.
+      lastLoaderReadSet.set(label, new Set(ctx.tables));
     }
   }
 }
@@ -978,6 +1002,23 @@ export function getReadSetIndex(): Record<string, string[]> {
 }
 
 /**
+ * The tables the MOST RECENT completed loader run for `key` read (sorted), or
+ * `undefined` if no loader run has captured tables for it since the last reset.
+ * Unlike `getReadSetIndex` (the append-only union of every run), this is the
+ * per-run snapshot — REPLACED, not unioned, each run — so it reflects what the
+ * loader reads for the CURRENT data/code, shedding a dependency a code change
+ * removed. The resource runtime persists this after a FULL recompute so the
+ * durable `tables_read` seed self-heals instead of carrying a stale edge forever.
+ *
+ * Read it synchronously right after awaiting the loader (before any further
+ * await), so the value is that load's own capture and not a concurrent run's.
+ */
+export function getLastLoaderReadSet(key: string): string[] | undefined {
+  const set = lastLoaderReadSet.get(key);
+  return set ? Array.from(set).sort() : undefined;
+}
+
+/**
  * Seed the loader→table read-set index from a persisted snapshot of it (the
  * durable `tables_read` column on `live_state_snapshot`). Each `seed[key]`'s
  * tables are UNIONED into `readSetIndex[key]` — append-only, identical to how a
@@ -1030,6 +1071,7 @@ export function resetRuntimeProfile(): void {
     slowest[kind].length = 0;
   }
   readSetIndex.clear();
+  lastLoaderReadSet.clear();
   // The flight ring is profile data — clear it. Gate gauges are structural
   // registrations (like slow-span subscribers), not profile data, so they
   // survive. `openEntries` is owned by the in-flight calls themselves: each
