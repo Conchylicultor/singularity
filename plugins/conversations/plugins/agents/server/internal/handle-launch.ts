@@ -33,7 +33,10 @@ export const handleLaunch = implement(launchAgent, async ({ params, body }) => {
     throw new HttpError(400, "Agent has no prompt (folder node)");
   }
 
-  const model = normalizeModel(body.model ?? agent.model ?? DEFAULT_MODEL);
+  // body.model is a validated ConversationModel (strict enum) — use it as-is.
+  // Only the stored agent.model fallback (a DB value that may hold a legacy id)
+  // goes through normalizeModel.
+  const model = body.model ?? normalizeModel(agent.model ?? DEFAULT_MODEL);
 
   const now = new Date();
   const task = await createTask({

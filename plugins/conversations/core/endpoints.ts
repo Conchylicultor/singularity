@@ -2,6 +2,7 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ConversationSchema } from "@plugins/tasks/plugins/tasks-core/core";
 import { EffortLevelSchema } from "@plugins/conversations/plugins/effort-provider/core";
+import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 
 // --- Body schemas ---
 
@@ -10,7 +11,11 @@ export const CreateConversationBodySchema = z.object({
   attemptId: z.string().optional(),
   prompt: z.string().optional(),
   runtime: z.string().optional(),
-  model: z.string().optional(),
+  // Strict enum — an unknown/typo model id is rejected loudly at the endpoint
+  // boundary (400) rather than silently coerced to DEFAULT_MODEL. This is an
+  // *input* schema; stored model fields read back from the DB stay tolerant via
+  // StoredModelSchema / normalizeModel.
+  model: ConversationModelSchema.optional(),
   forkFromConversationId: z.string().optional(),
   prepromptId: z.string().optional(),
   effort: EffortLevelSchema.optional(),

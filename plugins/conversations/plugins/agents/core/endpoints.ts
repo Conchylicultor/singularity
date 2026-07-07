@@ -1,15 +1,21 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
+import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
 import { AgentSchema, AgentLaunchWithStatusSchema } from "./schemas";
 
 // --- Body schemas ---
+//
+// `model` is the strict ConversationModel enum on every input schema: an
+// unknown/typo id is rejected loudly at the endpoint boundary (400) rather than
+// stored or launched as a silent DEFAULT_MODEL fallback. Stored agent.model
+// values read back at launch time stay tolerant via normalizeModel.
 
 export const CreateAgentBodySchema = z.object({
   parentId: z.string().nullable().optional(),
   name: z.string().optional(),
   prompt: z.string().nullable().optional(),
-  model: z.string().nullable().optional(),
+  model: ConversationModelSchema.nullable().optional(),
   icon: z.string().nullable().optional(),
   iconColor: z.string().nullable().optional(),
   iconSvgNodes: z.string().nullable().optional(),
@@ -19,7 +25,7 @@ export type CreateAgentBody = z.infer<typeof CreateAgentBodySchema>;
 export const UpdateAgentBodySchema = z.object({
   name: z.string().optional(),
   prompt: z.string().nullable().optional(),
-  model: z.string().nullable().optional(),
+  model: ConversationModelSchema.nullable().optional(),
   icon: z.string().nullable().optional(),
   iconColor: z.string().nullable().optional(),
   iconSvgNodes: z.string().nullable().optional(),
@@ -30,7 +36,7 @@ export const UpdateAgentBodySchema = z.object({
 export type UpdateAgentBody = z.infer<typeof UpdateAgentBodySchema>;
 
 export const LaunchAgentBodySchema = z.object({
-  model: z.string().optional(),
+  model: ConversationModelSchema.optional(),
 });
 export type LaunchAgentBody = z.infer<typeof LaunchAgentBodySchema>;
 

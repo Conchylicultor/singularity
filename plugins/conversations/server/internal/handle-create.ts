@@ -1,13 +1,12 @@
 import { recordReport } from "@plugins/reports/server";
-import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createConversation as createConversationEndpoint } from "../../core/endpoints";
 import { createConversation } from "./lifecycle";
 
 export const handleCreate = implement(createConversationEndpoint, async ({ body }) => {
-  const model =
-    body.model !== undefined ? normalizeModel(body.model) : undefined;
-
+  // body.model is already a validated ConversationModel | undefined (the endpoint
+  // body schema is the strict enum), so no normalization/coercion is needed here —
+  // an unknown id was already rejected with a 400 before reaching this handler.
   let session;
   try {
     session = await createConversation({
@@ -15,7 +14,7 @@ export const handleCreate = implement(createConversationEndpoint, async ({ body 
       attemptId: body.attemptId,
       prompt: body.prompt,
       runtimeId: body.runtime,
-      model,
+      model: body.model,
       forkFromConversationId: body.forkFromConversationId,
       prepromptId: body.prepromptId,
       effort: body.effort,

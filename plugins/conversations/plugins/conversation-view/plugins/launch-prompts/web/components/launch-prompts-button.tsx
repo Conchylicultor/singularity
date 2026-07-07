@@ -28,7 +28,10 @@ export function LaunchPromptsButton({
     try {
       await fetchEndpoint(createConversation, {}, {
         body: {
-          model: item.model,
+          // item.model is a stored config value (enum-constrained at authoring
+          // time but typed as string) — normalize on read to a concrete
+          // ConversationModel before it enters the strict createConversation body.
+          model: normalizeModel(item.model),
           prompt: item.prompt,
           attemptId: conversation.attemptId,
         },
