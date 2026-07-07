@@ -10,7 +10,7 @@
   - Uses: `apps-core/tabs.navigate`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `shell/action-bar.ActionBar`, `shell/toast.showToast`
   - Exports: Types: `ToastArgs`; Values: `notificationsResource`, `toast`
 - Server:
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/query-resource.queryResource`
+  - Uses: `database.db`, `database/live-state-snapshot.reconcileReadSetTable`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/query-resource.queryResource`, `primitives/log-channels.Log`
   - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
   - Exports: Types: `RecordNotificationInput`; Values: `_notifications`, `notificationsResource`, `recordNotification`, `setMutedByMetadata`
   - Register: `defineJob('notifications.ttl-cleanup')`

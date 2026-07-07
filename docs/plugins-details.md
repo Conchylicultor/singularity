@@ -2472,10 +2472,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`, `database/change-feed.routeChange`, `infra/jobs.defineJob`, `primitives/log-channels.Log`
         - DB schema: `plugins/database/plugins/live-state-snapshot/server/internal/tables-ddl.ts`
-        - Exports: Values: `clearPersistedSnapshots`, `readPersistedSnapshots`
+        - Exports: Values: `clearPersistedSnapshots`, `readPersistedSnapshots`, `reconcileReadSetTable`
         - Register: `defineJob('database.live-state-changelog-prune')`
       - Cross-plugin:
-        - Imported by: `debug/profiling/boot-bench`, `infra/boot-snapshot`
+        - Imported by: `debug/profiling/boot-bench`, `infra/boot-snapshot`, `shell/notifications`
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
         - Uses: `database/derived-views.rebuildDerivedViews`, `primitives/log-channels.Log`
@@ -3763,7 +3763,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `infra/endpoints`
       - Core:
-        - Exports: Types: `Aggregate`, `EntryContext`, `FlightSpan`, `FlightWindow`, `GateGauge`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `Track`, `WaitBreakdown`; Values: `__contribute`, `captureFlightWindow`, `chargeWait`, `currentCallerKind`, `getReadSetIndex`, `getRuntimeProfile`, `installClock`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `readGateGauges`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `registerGateGauge`, `resetRuntimeProfile`, `runWithoutProfiling`, `seedReadSetIndex`, `waitSplit`
+        - Exports: Types: `Aggregate`, `EntryContext`, `FlightSpan`, `FlightWindow`, `GateGauge`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `Track`, `WaitBreakdown`; Values: `__contribute`, `captureFlightWindow`, `chargeWait`, `currentCallerKind`, `getReadSetIndex`, `getRuntimeProfile`, `installClock`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `readGateGauges`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `registerGateGauge`, `removeReadSetTable`, `resetRuntimeProfile`, `runWithoutProfiling`, `seedReadSetIndex`, `waitSplit`
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
       - Cross-plugin:
         - Imported by: `apps-core/surface/floating/wallpaper`, `apps-core/surface/floating/wallpaper/openverse`, `apps/browser/proxy`, `apps/mail/remote-images`, `apps/sonata/sources/ultimate-guitar`, `apps/workflows/steps/http-request`, `page/bookmark`
@@ -4934,7 +4934,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports: Types: `ClientMessage`, `EmitLogsBody`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`; Values: `emitLogs`, `EmitLogsBodySchema`, `getLogChannels`
       - Cross-plugin:
-        - Imported by: `apps/mail/sync`, `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database`, `database/change-feed`, `database/derived-tables`, `database/derived-views`, `database/live-state-snapshot`, `database/migrations`, `debug/flight-recorder`, `debug/health-monitor`, `debug/op-rate`, `debug/render-profiler`, `debug/slow-ops`, `debug/worktree-cleanup`, `infra/attachments`, `primitives/live-state`, `release`, `reports/render-loop`
+        - Imported by: `apps/mail/sync`, `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database`, `database/change-feed`, `database/derived-tables`, `database/derived-views`, `database/live-state-snapshot`, `database/migrations`, `debug/flight-recorder`, `debug/health-monitor`, `debug/op-rate`, `debug/render-profiler`, `debug/slow-ops`, `debug/worktree-cleanup`, `infra/attachments`, `primitives/live-state`, `release`, `reports/render-loop`, `shell/notifications`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot.MarkdownEnhancerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
@@ -5403,7 +5403,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `apps-core/tabs.navigate`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `shell/action-bar.ActionBar`, `shell/toast.showToast`
         - Exports: Types: `ToastArgs`; Values: `notificationsResource`, `toast`
       - Server:
-        - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/query-resource.queryResource`
+        - Uses: `database.db`, `database/live-state-snapshot.reconcileReadSetTable`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/query-resource.queryResource`, `primitives/log-channels.Log`
         - DB schema: `plugins/shell/plugins/notifications/server/internal/tables.ts`
         - Exports: Types: `RecordNotificationInput`; Values: `_notifications`, `notificationsResource`, `recordNotification`, `setMutedByMetadata`
         - Register: `defineJob('notifications.ttl-cleanup')`

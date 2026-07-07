@@ -5,6 +5,7 @@ export {
   recordReadTables,
   getReadSetIndex,
   seedReadSetIndex,
+  removeReadSetTable,
   currentCallerKind,
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,

@@ -7,6 +7,7 @@ import {
   __contribute,
   captureFlightWindow,
   chargeWait,
+  getReadSetIndex,
   getRuntimeProfile,
   installClock,
   installSpanContextRuntime,
@@ -14,7 +15,9 @@ import {
   recordEntrySpan,
   recordSpan,
   registerGateGauge,
+  removeReadSetTable,
   resetRuntimeProfile,
+  seedReadSetIndex,
   type Aggregate,
   type EntryContext,
   type FlightWindow,
@@ -391,6 +394,20 @@ describe("flight recorder — gate gauges", () => {
     resetRuntimeProfile();
     expect(captureFlightWindow({ windowStartMs: 0 }).completed).toHaveLength(0);
     expect(readGateGauges()["reset-gate"]).toEqual({ active: 1, queued: 0, max: 1 });
+  });
+});
+
+describe("read-set index — removeReadSetTable", () => {
+  test("evicts a mis-attributed table from non-kept keys, leaving kept keys untouched", () => {
+    seedReadSetIndex({
+      attempts: ["attempts_v", "notifications"],
+      notifications: ["notifications"],
+    });
+    const changed = removeReadSetTable("notifications", ["notifications"]);
+    expect(changed).toEqual(["attempts"]);
+    const index = getReadSetIndex();
+    expect(index.attempts).toEqual(["attempts_v"]);
+    expect(index.notifications).toEqual(["notifications"]); // kept
   });
 });
 

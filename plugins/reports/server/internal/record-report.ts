@@ -172,24 +172,33 @@ export async function recordReport(
   // (report × time-bucket), which previously grew the undismissed set without
   // bound. See research/perfs/2026-06-29-notifications-unbounded-resource-root-cause.md.
   const cooldownMs = spec.meta.notifCooldownMs;
-  void recordNotification({
-    type: "report",
-    title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
-    description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
-    variant: spec.meta.variant,
-    muted: row.noise,
-    dedupeKey: row.id,
-    resurfaceAfterMs: cooldownMs,
-    // Deep-link to the report's detail sidepane in Debug → Reports, never a task.
-    // Investigation tasks are filed on demand from that pane.
-    linkTo: reportDetailRoute.link(debugApp, { reportId: row.id }),
-    metadata: {
-      reportId: row.id,
-      source: row.source,
-      fingerprint: fp,
-      clientId: clientId ?? null,
-      buildId: buildId ?? null,
-    },
-  });
+  // The bell write is observability output on the same report path as the
+  // `_reports` upsert above — suppress its profiling for the same reasons: its
+  // INSERT must never be attributed to whichever loader's ambient context
+  // triggered this report (fabricating a `notifications` read-set edge), and a
+  // slow notification INSERT must never re-enter the slow-op → report →
+  // notification self-feedback loop. The suppression ALS binds the whole detached
+  // async chain (AsyncLocalStorage semantics); `void` keeps it fire-and-forget.
+  void runWithoutProfiling(() =>
+    recordNotification({
+      type: "report",
+      title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
+      description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
+      variant: spec.meta.variant,
+      muted: row.noise,
+      dedupeKey: row.id,
+      resurfaceAfterMs: cooldownMs,
+      // Deep-link to the report's detail sidepane in Debug → Reports, never a task.
+      // Investigation tasks are filed on demand from that pane.
+      linkTo: reportDetailRoute.link(debugApp, { reportId: row.id }),
+      metadata: {
+        reportId: row.id,
+        source: row.source,
+        fingerprint: fp,
+        clientId: clientId ?? null,
+        buildId: buildId ?? null,
+      },
+    }),
+  );
   return { reportId: row.id, taskId: row.taskId, rateLimited: false };
 }

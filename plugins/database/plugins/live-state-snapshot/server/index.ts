@@ -23,6 +23,9 @@ export {
   readPersistedSnapshots,
   clearPersistedSnapshots,
 } from "./internal/public-snapshots";
+// db-parametrized (takes `db` explicitly) — a table's owner calls it in its own
+// `onReady` to assert its reader-set invariant and evict a stale read-set edge.
+export { reconcileReadSetTable } from "./internal/persist";
 
 export default {
   description:

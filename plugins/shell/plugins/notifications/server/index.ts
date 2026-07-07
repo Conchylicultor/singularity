@@ -6,6 +6,7 @@ import { handleDismiss } from "./internal/handle-dismiss";
 import { handleDismissAll } from "./internal/handle-dismiss-all";
 import { handleMarkAllRead } from "./internal/handle-mark-read";
 import { ttlCleanupJob } from "./internal/ttl-cleanup";
+import { reconcileNotificationsReadSet } from "./internal/reconcile-read-set";
 import {
   createNotification,
   dismissAllNotifications,
@@ -25,6 +26,10 @@ export default {
   // ttlCleanupJob declares `schedule` — the jobs worker seeds its cron item at
   // startup, so no onReady enqueue is needed.
   register: [ttlCleanupJob],
+  // Assert the notifications-table sole-reader invariant on boot, evicting any
+  // stale read-set edge a past mis-attribution baked in. See
+  // ./internal/reconcile-read-set.ts for the full rationale.
+  onReady: reconcileNotificationsReadSet,
   httpRoutes: {
     [createNotification.route]: handleCreate,
     [dismissAllNotifications.route]: handleDismissAll,

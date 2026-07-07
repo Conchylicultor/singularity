@@ -12,6 +12,7 @@ import {
   readPersistedReadSets,
   readPersistedSnapshots,
   clearPersistedSnapshots,
+  reconcileReadSetTable,
 } from "./persist";
 
 // Real-DB invariant suite for the L2 persist SQL: xid8 watermark monotonicity,
@@ -184,5 +185,28 @@ describe("clearPersistedSnapshots", () => {
     const deleted = await clearPersistedSnapshots(t.db, []);
     expect(deleted).toBe(0);
     expect(await countRows()).toBe(1);
+  });
+});
+
+describe("reconcileReadSetTable", () => {
+  test("removes the table from non-kept rows, returns changed count, leaves kept rows intact", async () => {
+    // `attempts` carries a stale `notifications` edge; the owner row keeps it.
+    await persistSnapshot(t.db, "attempts", "{}", {}, "1", [
+      "attempts_v",
+      "conversations_v",
+      "notifications",
+    ]);
+    await persistSnapshot(t.db, "notifications", "{}", {}, "1", ["notifications"]);
+
+    const changed = await reconcileReadSetTable(t.db, "notifications", ["notifications"]);
+    expect(changed).toBe(1);
+
+    // The stale edge is evicted from `attempts`, order otherwise preserved.
+    expect((await selectRow("attempts", "{}"))!.tables_read).toEqual([
+      "attempts_v",
+      "conversations_v",
+    ]);
+    // The sole legitimate reader row is untouched.
+    expect((await selectRow("notifications", "{}"))!.tables_read).toEqual(["notifications"]);
   });
 });

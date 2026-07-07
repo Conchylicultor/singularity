@@ -70,15 +70,28 @@ registerGateGauge("db-pool", () => {
   };
 });
 
-// Extract the table read-set from compiled SQL by matching quoted identifiers
-// after FROM / JOIN / INTO / UPDATE / DELETE FROM. Drizzle always double-quotes
-// table identifiers, so this is reliable for ORM queries; raw sql`` and CTE
-// aliases fall to coarse over-capture, which is acceptable for this read-set.
-function extractTablesFromSql(text: string): string[] {
-  const re = /\b(?:from|join|into|update|delete\s+from)\s+"([^"]+)"/gi;
+// A loader's read-set contains ONLY the tables it READS — matched from the read
+// clauses FROM / JOIN. Write targets (INSERT INTO / UPDATE / DELETE) are
+// deliberately excluded: loaders are read-only by contract, so any write captured
+// under a loader's ambient context is a foreign observability leak (e.g. the
+// report path's `INSERT INTO "notifications"` running inside whatever loader
+// happened to be open), never a genuine read dependency. Drizzle always
+// double-quotes table identifiers, so this is reliable for ORM reads; raw sql``
+// and CTE aliases fall to coarse over-capture, which is acceptable for this
+// read-set. Exported for co-located unit testing.
+//
+// `DELETE FROM` reuses the `FROM` keyword, so we capture the leading clause
+// keyword and skip a `delete from` match — otherwise a delete's write target
+// would slip in through the bare `from` branch. `INSERT INTO` / `UPDATE` targets
+// never follow FROM/JOIN, so no such guard is needed for them.
+export function extractReadTablesFromSql(text: string): string[] {
+  const re = /\b(from|join|delete\s+from)\s+"([^"]+)"/gi;
   const tables = new Set<string>();
   let m: RegExpExecArray | null;
-  while ((m = re.exec(text)) !== null) tables.add(m[1]!);
+  while ((m = re.exec(text)) !== null) {
+    if (m[1]!.toLowerCase().startsWith("delete")) continue; // write target, not a read
+    tables.add(m[2]!);
+  }
   return Array.from(tables);
 }
 
@@ -201,7 +214,7 @@ function installQueryWrapper(pool: Pool): void {
       // Capture the loader's table read-set into its ambient entry context (still
       // active here, before the gated promise). Observation-only — does not affect
       // timing or gating.
-      recordReadTables(extractTablesFromSql(text));
+      recordReadTables(extractReadTablesFromSql(text));
       return loaderDbGate.run(runTimed, (waitMs) =>
         chargeWait("loader-acquire", waitMs),
       );

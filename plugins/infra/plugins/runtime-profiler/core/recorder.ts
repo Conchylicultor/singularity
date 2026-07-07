@@ -999,6 +999,27 @@ export function seedReadSetIndex(seed: Record<string, readonly string[]>): void 
   }
 }
 
+/**
+ * Remove `table` from the in-memory read-set of every resource key EXCEPT those
+ * in `keepKeys`. The read-set index is append-only (see `seedReadSetIndex`), so a
+ * table mis-attributed to a resource that never reads it persists forever with no
+ * eviction path. A table's OWNER (which knows its true reader set) uses this to
+ * assert its invariant and evict stale edges. Safe: dropping a table a resource
+ * does not read only removes a spurious catch-up recompute trigger, never causes
+ * staleness. Returns the resource keys whose read-set changed (for logging).
+ */
+export function removeReadSetTable(table: string, keepKeys: readonly string[]): string[] {
+  const keep = new Set(keepKeys);
+  const changed: string[] = [];
+  for (const [key, set] of readSetIndex) {
+    if (keep.has(key)) continue;
+    // Do NOT delete now-empty sets: an empty read-set is meaningful (matches the
+    // existing semantics — `getReadSetIndex` still lists the key with []).
+    if (set.delete(table)) changed.push(key);
+  }
+  return changed;
+}
+
 // Clears every per-aggregate accumulator (the new maxAtMs/recentBuckets/totals
 // live on the aggregate objects, so dropping the maps drops them too). Live
 // EntryContexts are intentionally untouched: an in-flight entry records into
