@@ -2,9 +2,18 @@
 
 In-memory, per-worktree runtime span recorder (`http` / `db` / `loader`, plus the `sub` /
 `push` *origin* entries that trigger loaders). Zero-dependency
-and **isomorphic** (`core` only, no Node APIs) so it can sit at the bottom of the DAG and be
-imported by `endpoints/core`, `database/server`, and `server-core/core` without forming a
-cycle. The store is bounded and lost on restart — fine for live iterate-and-measure.
+and **isomorphic** (`core` only, no Node APIs) so `core` can sit low in the DAG and be
+imported by `endpoints/core` and `database/server`. The store is bounded and lost on
+restart — fine for live iterate-and-measure.
+
+> **Do not import this plugin from `server-core/core`.** `server-core/core` defines
+> `ServerPluginDefinition`, which *this plugin's* `server/index.ts` imports — so a
+> `server-core → runtime-profiler` import closes a cross-plugin cycle at the plugin level
+> (the boundary checker collapses a plugin's runtimes to one node and counts type-only
+> edges). server-core's resource runtime instead calls the no-op profiler seam it owns
+> (`server-core/core/profiler-hooks.ts`), and this plugin **injects** the real recorder into
+> it at boot from `server/internal/install.ts` (`setProfilerHooks(...)`), mirroring
+> `setErrorReporter`. Keep the dependency pointing this way.
 
 ## Caller attribution (ambient tier)
 
