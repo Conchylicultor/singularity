@@ -8,6 +8,7 @@ import {
 import {
   createSongRow,
   songAttachments,
+  updateSongMeta,
 } from "@plugins/apps/plugins/sonata/plugins/library/server";
 import { MIDI_SOURCE_ID } from "../../shared/constants";
 import { deriveMidiSongMeta, parseMidi } from "../../shared/parse";
@@ -103,6 +104,19 @@ async function writeMidiSong({
   // `.set` (not `.add`): replace the song's linked attachments with just the new
   // one so a re-import of an edited file leaves no orphaned previous attachment.
   await songAttachments.set(id, [attachmentId]);
+
+  // Make the library row authoritative over the file on every re-import: the
+  // reuse branches (existingSongId re-import, content-hash adopt) skip
+  // createSongRow, so without this the recomputed title/duration/endBeat from an
+  // edited file would never reach the generic sonata_songs row. No-op on a fresh
+  // insert (createSongRow just wrote the same values); corrects a drifted row.
+  await updateSongMeta({
+    id,
+    title: meta.title,
+    composer: meta.composer,
+    durationSec: meta.durationSec,
+    endBeat: meta.endBeat,
+  });
 
   return id;
 }
