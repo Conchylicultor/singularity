@@ -56,12 +56,14 @@ process.env.SINGULARITY_PARCEL_WATCHER_NODE ??= join(
 // raw") and gitBacksScope (per-app un-fork). REPO_ROOT resolves into the compiled
 // binary's virtual FS, so point these at the vendored tree.
 process.env.SINGULARITY_REPO_CONFIG_DIR ??= join(bundleRoot, "config");
-// Reroot the embedded-PG and PgBouncer Unix sockets onto a short `/tmp` path
-// (both read this single override). The data root above may be a long versioned
-// `<out>/data` (`releases/<wt>/<comp>-<target>/<run-id>/data`), which would blow
-// the 104-byte socket-path cap; the socket dir is decoupled so length never
+// Reroot the embedded-PG / PgBouncer sockets AND the gateway's per-worktree
+// backend sockets onto short `/tmp` paths (each reads a single env override).
+// The data root above may be a long versioned `<out>/data`
+// (`releases/<wt>/<comp>-<target>/<run-id>/data`), which would blow the 104-byte
+// AF_UNIX socket-path cap; the socket dirs are decoupled so length never
 // constrains where a release is staged.
 process.env.SINGULARITY_PG_SOCKET_DIR ??= mkdtempSync(join("/tmp", "sgs-"));
+process.env.SINGULARITY_SOCKETS_DIR ??= mkdtempSync(join("/tmp", "sgw-"));
 
 interface ReleaseManifest {
   composition: string;

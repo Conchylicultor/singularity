@@ -35,10 +35,12 @@ otherwise file a crash report every boot.
   — versioned per run, not overwrite-in-place, so builds are kept and a `latest`
   symlink (written by the CLI) points at the current `<run-id>`. The 104-byte
   Unix-socket cap no longer constrains this path: `launcher/bin/launch.ts` reroots
-  both the embedded-PG and PgBouncer sockets onto a short `/tmp/sgs-XXXXXX` dir via
-  `SINGULARITY_PG_SOCKET_DIR`, so a long `<run-id>` is safe even for a direct
-  `<out>/launch`. For **preview**, the data root is a `/tmp/sgp-XXXXXX` mkdtemp —
-  short by construction.
+  the embedded-PG, PgBouncer, and gateway per-worktree backend sockets onto short
+  `/tmp` dirs — the PG/PgBouncer sockets to a `/tmp/sgs-XXXXXX` dir via
+  `SINGULARITY_PG_SOCKET_DIR`, the backend worktree sockets to a `/tmp/sgw-XXXXXX`
+  dir via `SINGULARITY_SOCKETS_DIR` — so a long `<run-id>` is safe even for a
+  direct `<out>/launch`. For **preview**, the data root is a `/tmp/sgp-XXXXXX`
+  mkdtemp — short by construction.
 - **Preview** (`server/internal/preview-manager.ts`) spawns the staged `launch`
   binary with `SINGULARITY_DIR=<tmp>` + `PORT=<free>`, tracked in an in-memory
   Map projected into the `release.previews` external resource. Stop kills the

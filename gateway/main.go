@@ -55,8 +55,11 @@ func parseFlags() Config {
 	flag.StringVar(&cfg.LogDir, "log-dir", defaultLogDir, "directory for the gateway and per-worktree log files")
 	defaultRegistry := filepath.Join(dataDir, "worktrees")
 	flag.StringVar(&cfg.RegistryDir, "registry-dir", defaultRegistry, "directory of worktree JSON files")
-	defaultSockets := filepath.Join(dataDir, "sockets")
-	flag.StringVar(&cfg.SocketsDir, "sockets-dir", defaultSockets, "directory for per-worktree Unix sockets")
+	defaultSockets := os.Getenv("SINGULARITY_SOCKETS_DIR")
+	if defaultSockets == "" {
+		defaultSockets = filepath.Join(dataDir, "sockets")
+	}
+	flag.StringVar(&cfg.SocketsDir, "sockets-dir", defaultSockets, "directory for per-worktree Unix sockets (env: SINGULARITY_SOCKETS_DIR; short /tmp dir for deep release roots)")
 	defaultCentralRoutes := filepath.Join(dataDir, "central-routes.json")
 	flag.StringVar(&cfg.CentralRoutesFile, "central-routes-file", defaultCentralRoutes, "path to the central routing manifest")
 	// Fallback namespace for subdomain-less requests. Empty ⇒ such requests 404

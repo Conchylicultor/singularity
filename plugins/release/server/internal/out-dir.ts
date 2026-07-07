@@ -20,9 +20,11 @@ export function newReleaseRunId(): string {
  * stable dir key shared with the engine's DB row.
  *
  * The 104-byte Unix-socket length cap no longer constrains this path: the
- * launcher (`launcher/bin/launch.ts`) reroots both the embedded-PG and PgBouncer
- * sockets onto a short `/tmp` dir via `SINGULARITY_PG_SOCKET_DIR`, so a long
- * versioned `<run-id>` segment is safe even for a direct `<out>/launch`.
+ * launcher (`launcher/bin/launch.ts`) reroots the embedded-PG, PgBouncer, and
+ * gateway per-worktree backend sockets onto short `/tmp` dirs — the PG/PgBouncer
+ * sockets via `SINGULARITY_PG_SOCKET_DIR`, the backend worktree sockets via
+ * `SINGULARITY_SOCKETS_DIR` — so a long versioned `<run-id>` segment is safe even
+ * for a direct `<out>/launch`.
  *
  * Lives in `server/internal/` (not `shared/`): it imports the server-only paths
  * module, and `shared/` may only import shared/core.

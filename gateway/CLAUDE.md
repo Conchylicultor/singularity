@@ -167,6 +167,8 @@ The backend's own ppid-poll escape hatch (`server-core/bin/index.ts` — self-ex
 
 macOS `sun_path` is 104 bytes. With the standard prefix (`/Users/<user>/.singularity/sockets/`) and `.next.sock` suffix (the longer of the two per-worktree sockets), worktree names up to ~62 chars fit. If a worktree's name produces an overlong path, `NewWorktree` returns an error and the worktree is rejected at registration. Rename or shorten the worktree to recover.
 
+This ~62-char budget applies to the dev `~/.singularity/sockets/` prefix. A packaged release stages its data root at a deep versioned path (`releases/<wt>/<comp>-<target>/<run-id>/data`) that would blow the cap, so `launch.ts` reroots the sockets dir to a short `/tmp` path via `SINGULARITY_SOCKETS_DIR` (the env override read by `-sockets-dir`'s default) — a deep release data root therefore does not constrain worktree names. The dev limit itself is unchanged.
+
 ## File permissions
 
 `Bun.serve({ unix })` creates the socket with umask-derived default permissions (typically world-readable). On a single-user dev machine this is acceptable. If multi-user use becomes a requirement, this is the right place to revisit (Bun does not currently expose a `mode` option; see also `chmod`-after-bind, which is racy).
