@@ -14,6 +14,7 @@ import {
   emptyScore,
   currentLine,
   foldLoopTime,
+  leadInBeats,
   mergeAnnotations,
   mergeScores,
   nextLine,
@@ -553,6 +554,21 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // allocation-free tempo-time source instead of re-sorting the tempo map.
   const tempoIndex = useMemo(() => buildTempoIndex(score), [score]);
 
+  // One-bar lead-in (Synthesia-style pre-roll): a stretch of empty timeline at
+  // NEGATIVE beats `[-leadIn, 0)` the transport parks/starts at, so the piano
+  // roll's first notes have a bar of travel toward the strike line instead of
+  // opening pinned to it. It carries no notes/sound; the tempo index extrapolates
+  // it linearly and the audio scheduler simply schedules beat-0 notes one bar
+  // into the future — so nothing downstream special-cases it. Zero for an empty
+  // score (nothing to lead into, so the cursor rests at 0 as before). `score`
+  // and `baseScore` share the same beat-space time-sig map, so tempo scaling
+  // doesn't move it. Read through a ref by the score-reset effect below.
+  const leadIn = useMemo(
+    () => (scoreEndBeat(score) > 0 ? leadInBeats(score) : 0),
+    [score],
+  );
+  const leadInRef = useLatestRef(leadIn);
+
   // --- Transport: a requestAnimationFrame loop (no polling). ----------------
   // We anchor at the playback clock's time + beat where playback started, then
   // each frame invert the tempo map: find the beat whose `beatToSeconds` equals
@@ -700,7 +716,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // start playback from the top once the new score is composed instead of
   // stopping; `play`'s own guards keep an empty/0% score from starting.
   useEffect(() => {
-    cursor.setBeat(0, { seek: true });
+    // Park at the lead-in (negative pre-roll beat), not beat 0, so a freshly
+    // loaded song opens with an empty bar below its first notes and — whether it
+    // auto-plays or the user presses play — the notes fall INTO the strike line
+    // rather than starting on it. `leadInRef` mirrors the memo derived from this
+    // same score, so by the time this post-commit effect runs it already holds
+    // the new song's lead-in.
+    const start = -leadInRef.current;
+    cursor.setBeat(start, { seek: true });
     // Drop any A–B loop: it belongs to the previous content's beat span. Cleared
     // unconditionally (even when auto-playing) so a freshly loaded song never
     // inherits a stale practice loop.
@@ -712,14 +735,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     setCountIn(null);
     if (playOnLoadRef.current) {
       playOnLoadRef.current = false;
-      // Re-base the transport to beat 0 BEFORE (re)starting. When the previous
-      // song was already playing, `isPlaying` stays true across the switch, so
-      // `play()` causes no play/pause transition and the rAF loop — still
-      // anchored to the previous song — would clobber the `setBeat(0)` above on
-      // its next tick. Re-anchoring here (and bumping `seekEpoch` so the audio
-      // scheduler restarts from the new cursor) makes every loaded song start
-      // from the top, whether or not playback was already running.
-      reanchor(0);
+      // Re-base the transport to the lead-in start BEFORE (re)starting. When the
+      // previous song was already playing, `isPlaying` stays true across the
+      // switch, so `play()` causes no play/pause transition and the rAF loop —
+      // still anchored to the previous song — would clobber the `setBeat(start)`
+      // above on its next tick. Re-anchoring here (and bumping `seekEpoch` so the
+      // audio scheduler restarts from the new cursor) makes every loaded song
+      // start from its lead-in, whether or not playback was already running.
+      reanchor(start);
       setSeekEpoch((n) => n + 1);
       play();
     } else {

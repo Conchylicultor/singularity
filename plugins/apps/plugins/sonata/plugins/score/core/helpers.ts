@@ -39,6 +39,23 @@ export function scoreEndBeat(score: Score): number {
 }
 
 /**
+ * Length in quarter-note beats of the song's OPENING bar — the one-bar lead-in
+ * the transport parks before beat 0 so the piano roll's first notes have room to
+ * fall toward the strike line (a Synthesia-style pre-roll) instead of starting
+ * pinned to it. Derived from the first time signature (`n × 4/d`, mirroring
+ * {@link bars}), defaulting to a 4/4 bar. Guards a degenerate non-positive meter
+ * back to 4 beats so the lead-in is always a real, finite bar. Pure.
+ */
+export function leadInBeats(score: Score): number {
+  const first =
+    score.timeSigMap.length > 0
+      ? [...score.timeSigMap].sort((a, b) => a.beat - b.beat)[0]!
+      : { beat: 0, numerator: 4, denominator: 4 };
+  const len = first.numerator * (4 / first.denominator);
+  return len > 0 ? len : 4;
+}
+
+/**
  * The epsilon that keeps a "strict" line lookup from sticking on the line it
  * just landed on (sub-millibeat — well below any musical grid spacing).
  */
