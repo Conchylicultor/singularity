@@ -135,12 +135,28 @@ screencapture -o -x -l"$(swift /tmp/winid.swift)" /tmp/app-window.png
 ```
 
 A **fresh** release boots an empty app-data DB, so data-backed surfaces are
-legitimately empty. Note the current gap this does not cover: config_v2
-"default-for-everyone" values (e.g. Sonata's Library view tabs) are **absent** in
-a release because the repo `config/` origin tier is neither vendored nor
-reachable (`REPO_ROOT/config` does not resolve inside a compiled binary) — an
-empty config-driven surface is that gap, not the fresh-DB state. See the filed
-follow-up task.
+legitimately empty — distinct from a config-driven surface, which now renders its
+committed defaults. Two release-completeness gaps that once left config-driven
+surfaces (the worked example was Sonata's Library view tabs → "No views
+configured") empty are both **closed** — verified end-to-end by cutting a Sonata
+release and confirming the Cards/All/Longest/Composed tabs + toolbar render:
+
+1. **config_v2 defaults are vendored + reachable.** `release.ts` step 3.6 ships
+   the git-layer `config/` tree and a `propagateConfigToUser`-resolved
+   `config-seed/`; `launch.ts` points `SINGULARITY_REPO_CONFIG_DIR` at the former
+   and seeds the latter into `<data>/config/<worktree>` (copy-if-absent) on first
+   boot. So `config-v2.values` resolves the real defaults at runtime (verified: the
+   full value, e.g. the 4 Library views, reaches the browser over the WS sub-ack).
+2. **DataView renderers are in the composition closure.** A `<DataView>`'s
+   view-type + per-field cell/editor renderers are `DataViewSlots.*` contributions
+   nothing hard-imports, so a filtered release closure omits them and the surface
+   fail-soft-skips every config-authored view row → "No views configured" *despite*
+   the config shipping. Any app hosting a DataView now `extends` the **`data-views`**
+   composition pack (`plugin-meta/composition/core/config.ts`). **Residual
+   follow-up:** the `DataViewSlots.{Filter,ValueCodec,ColumnConfig}` contributors
+   are not yet composition-selectable (the closure classifier does not surface them
+   as soft-option edges, so `composition-closure` rejects selecting them), so a
+   released DataView's Filter pill / typed value-codecs degrade to fail-soft.
 
 ## Deploy handoff note
 

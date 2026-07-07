@@ -96,7 +96,7 @@ export const compositionsConfig = defineConfig({
         // disjointness. Rolling the same excludes out to the other served apps is
         // a follow-up. The guard mechanism is live; see
         // plugins/.../checks/.../composition-closure.
-        app("sonata", "a6", "apps.sonata", [], ["agent-runtime", "auth"]),
+        app("sonata", "a6", "apps.sonata", ["data-views"], ["agent-runtime", "auth"]),
         app("story", "a7", "apps.story"),
         app("debug", "a8", "apps.debug"),
         app("deploy", "a9", "apps.deploy"),
@@ -200,6 +200,47 @@ export const compositionsConfig = defineConfig({
           "apps-core.surface.docked",
           "apps-core.surface.floating",
           "apps-core.surface.solo",
+        ]),
+        // The DataView RENDERING ecosystem: the four view-type renderers plus the
+        // per-field-type cell (`DataViewSlots.Cell`) and inline-editor
+        // (`DataViewSlots.CellEditor`) contributors. All are `DataViewSlots.*`
+        // contributions to `data-view` — graph dead-ends nothing hard-imports (same
+        // "force it in" rationale as the toast host / app-chrome). Without them a
+        // released DataView has ZERO registered view types, so `buildInstanceFromRow`
+        // fail-soft-skips every config-authored view row and the surface renders
+        // "No views configured" even though the config value ships. Any app hosting
+        // a `<DataView>` `extends` this pack. (Config-authored views live in
+        // config_v2; this pack makes the RENDERERS available — the two are
+        // orthogonal.)
+        //
+        // NOTE: the `DataViewSlots.{Filter,ValueCodec,ColumnConfig}` contributors
+        // (fields.*.filter / *.data-view-codec / fields.enum.column-config) are
+        // deliberately NOT here: the closure classifier does not surface their
+        // contribution as a soft-option edge (unlike Cell/CellEditor/View), so
+        // `composition-closure` rejects selecting them ("not a genuine soft option").
+        // The Filter pill / typed value codecs therefore degrade gracefully in a
+        // release (fail-soft to identity behaviour) — tracked as a follow-up to make
+        // those slots composition-selectable. The view tabs + cell rendering (the
+        // reported bug) do not depend on them.
+        pack("data-views", "aR", [
+          "primitives.data-view.gallery",
+          "primitives.data-view.table",
+          "primitives.data-view.list",
+          "primitives.data-view.tree",
+          "fields.bool.table",
+          "fields.color.table",
+          "fields.date.table",
+          "fields.enum.table",
+          "fields.image.table",
+          "fields.number.table",
+          "fields.tags.table",
+          "fields.text.table",
+          "fields.bool.inline",
+          "fields.date.inline",
+          "fields.enum.inline",
+          "fields.number.inline",
+          "fields.tags.inline",
+          "fields.text.inline",
         ]),
       ],
     }),
