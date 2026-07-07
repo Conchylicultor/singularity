@@ -1,5 +1,5 @@
 import { join } from "path";
-import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { findImports, lineAt, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { currentScanTree } from "./scan-context";
 
 export interface CodeMatch {
@@ -37,26 +37,14 @@ export async function grepCode(opts: GrepCodeOptions): Promise<CodeMatch[]> {
   const pathspecs = opts.pathspecs ?? ["*.ts", "*.tsx"];
   const maskStrings = opts.maskStrings ?? true;
 
-  // The cache key is computed from this tree-ish; scanning it (rather than the
-  // working tree) guarantees a recorded PASS reflects the exact bytes hashed —
-  // including files that were untracked when the cache entry was written. Null
-  // (uncached / non-git run) falls back to the working tree.
-  const tree = currentScanTree();
-  const candidates = await listCandidates(opts.root, opts.grepArg, opts.fixed ?? false, pathspecs, tree);
-  if (candidates.length === 0) return [];
-
-  const blobs = tree ? await readTreeBlobs(opts.root, tree, candidates) : null;
+  const candidates = await readCandidates(opts.root, opts.grepArg, opts.fixed ?? false, pathspecs);
 
   // Ensure the global flag so the line scan iterates all matches; build a fresh
   // matcher per file so lastIndex never leaks across files.
   const flags = opts.pattern.flags.includes("g") ? opts.pattern.flags : opts.pattern.flags + "g";
 
   const matches: CodeMatch[] = [];
-  for (const rel of candidates) {
-    const src = blobs
-      ? blobs.get(rel) ?? null
-      : await Bun.file(join(opts.root, rel)).text().catch(() => null);
-    if (src == null) continue;
+  for (const { rel, src } of candidates) {
     const masked = maskSource(src, { strings: maskStrings });
     const maskedLines = masked.split("\n");
     const origLines = src.split("\n");
@@ -69,6 +57,90 @@ export async function grepCode(opts: GrepCodeOptions): Promise<CodeMatch[]> {
     }
   }
   return matches;
+}
+
+export interface ImportMatch {
+  /** File path relative to `root` (as reported by `git grep`). */
+  path: string;
+  /** 1-based line number of the import statement. */
+  line: number;
+  /** The module specifier (between the quotes), read from the ORIGINAL source. */
+  specifier: string;
+  /** The ORIGINAL (unmasked) line text containing the import, trailing-trimmed. */
+  text: string;
+}
+
+interface GrepImportsOptions {
+  root: string;
+  /** Narrows candidate files via `git grep -l` (fast pre-filter). */
+  grepArg: string;
+  /** Keep only imports whose specifier passes this predicate. */
+  filter: (specifier: string) => boolean;
+  /** Pass `-F` (fixed-string) instead of `-E` (extended regexp) to git grep. */
+  fixed?: boolean;
+  /** Pathspecs scoping the git grep (default ["*.ts", "*.tsx"]). */
+  pathspecs?: string[];
+}
+
+/**
+ * Find real-code static imports across the repo whose specifier passes `filter`,
+ * ignoring occurrences that live in comments, strings or regex literals.
+ *
+ * `git grep -l` narrows the candidate file set fast; each candidate is then read
+ * and scanned with `findImports`, which masks strings FULLY and reads the
+ * specifier back by offset — so an import written *inside* a string/template
+ * literal (a test fixture, a docs snippet, a codegen template) can never match.
+ * String-safe by construction: no `maskStrings` knob is needed.
+ */
+export async function grepImports(opts: GrepImportsOptions): Promise<ImportMatch[]> {
+  const pathspecs = opts.pathspecs ?? ["*.ts", "*.tsx"];
+
+  const candidates = await readCandidates(opts.root, opts.grepArg, opts.fixed ?? false, pathspecs);
+
+  const matches: ImportMatch[] = [];
+  for (const { rel, src } of candidates) {
+    const origLines = src.split("\n");
+    for (const imp of findImports(src)) {
+      if (!opts.filter(imp.specifier)) continue;
+      const line = lineAt(src, imp.index);
+      const text = (origLines[line - 1] ?? "").replace(/\s+$/, "");
+      matches.push({ path: rel, line, specifier: imp.specifier, text });
+    }
+  }
+  return matches;
+}
+
+/**
+ * Narrow candidate files via `git grep -l`, then read each one's source —
+ * shared by `grepCode` (masked line re-scan) and `grepImports` (structured
+ * import scan) so the git plumbing lives in one place.
+ *
+ * The cache key is computed from this tree-ish; scanning it (rather than the
+ * working tree) guarantees a recorded PASS reflects the exact bytes hashed —
+ * including files that were untracked when the cache entry was written. Null
+ * (uncached / non-git run) falls back to the working tree.
+ */
+async function readCandidates(
+  root: string,
+  grepArg: string,
+  fixed: boolean,
+  pathspecs: string[],
+): Promise<Array<{ rel: string; src: string }>> {
+  const tree = currentScanTree();
+  const candidates = await listCandidates(root, grepArg, fixed, pathspecs, tree);
+  if (candidates.length === 0) return [];
+
+  const blobs = tree ? await readTreeBlobs(root, tree, candidates) : null;
+
+  const out: Array<{ rel: string; src: string }> = [];
+  for (const rel of candidates) {
+    const src = blobs
+      ? blobs.get(rel) ?? null
+      : await Bun.file(join(root, rel)).text().catch(() => null);
+    if (src == null) continue;
+    out.push({ rel, src });
+  }
+  return out;
 }
 
 async function listCandidates(

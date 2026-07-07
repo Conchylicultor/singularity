@@ -2259,6 +2259,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-icon-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/import-scan-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-import-scan-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-promise-safety",
       "version": "0.0.1",
@@ -5703,6 +5707,8 @@
     "@singularity/plugin-framework-tooling-lint-hover-reveal-safety": ["@singularity/plugin-framework-tooling-lint-hover-reveal-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/hover-reveal-safety"],
 
     "@singularity/plugin-framework-tooling-lint-icon-safety": ["@singularity/plugin-framework-tooling-lint-icon-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety"],
+
+    "@singularity/plugin-framework-tooling-lint-import-scan-safety": ["@singularity/plugin-framework-tooling-lint-import-scan-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/import-scan-safety"],
 
     "@singularity/plugin-framework-tooling-lint-promise-safety": ["@singularity/plugin-framework-tooling-lint-promise-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety"],
 

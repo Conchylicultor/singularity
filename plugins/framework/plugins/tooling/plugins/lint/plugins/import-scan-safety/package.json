@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-lint-import-scan-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "import-scan-safety lint rule: no-adhoc-import-scan"
+}

@@ -18,7 +18,6 @@
 // ============================================================================
 
 import {
-  stripComments,
   splitTopLevelStatements,
   extractFromSpecifier,
   parseBindingList,
@@ -89,8 +88,7 @@ function isExportStmt(s: string): boolean {
 }
 
 function parseFile(src: string): ParsedFile {
-  const stripped = stripComments(src);
-  const stmts = splitTopLevelStatements(stripped);
+  const stmts = splitTopLevelStatements(src);
   const imports = new Map<string, ImportBinding>();
   const fromReexports: FromReexport[] = [];
   const bareReexports: BareReexport[] = [];

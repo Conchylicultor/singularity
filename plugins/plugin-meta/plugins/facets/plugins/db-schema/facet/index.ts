@@ -16,6 +16,7 @@ import {
   readIfExists,
   stripTypes,
   findMarkerCalls,
+  findImports,
   maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type DbSchemaFacetData, dbSchemaFacetDef } from "../core";
@@ -30,13 +31,35 @@ interface ImportBinding {
 
 function parseImports(src: string): Map<string, ImportBinding> {
   const map = new Map<string, ImportBinding>();
-  const namedRe = /import\s+(?:([A-Za-z_$][\w$]*)\s*,\s*)?\{([^}]+)\}\s*from\s*["']([^"']+)["']/g;
-  let m: RegExpExecArray | null;
-  while ((m = namedRe.exec(src))) {
-    const defLocal = m[1];
-    const names = m[2]!;
-    const mod = m[3]!;
-    if (defLocal) map.set(defLocal, { local: defLocal, original: "default", module: mod });
+  // `findImports` masks strings/comments/regex fully and reads each specifier
+  // back by offset, so an import written inside a string can never register a
+  // phantom binding. The old namedRe/defRe were `import`-only and never matched
+  // a whole-statement `import type …` or a namespace `import * as X`, so those
+  // are filtered out to keep behavior identical.
+  for (const imp of findImports(src)) {
+    if (imp.keyword !== "import") continue;
+    if (imp.sideEffect) continue;
+    if (imp.typeOnly) continue;
+    const clause = imp.clause;
+    if (/^\s*\*\s/.test(clause)) continue; // namespace `import * as X`
+    const mod = imp.specifier;
+    const braceIdx = clause.indexOf("{");
+    if (braceIdx < 0) {
+      // Default-only `import Foo from` — the whole clause is the local id (defRe).
+      const head = clause.trim();
+      if (/^[A-Za-z_$][\w$]*$/.test(head)) {
+        map.set(head, { local: head, original: "default", module: mod });
+      }
+      continue;
+    }
+    // Default alongside named (`import Foo, { … } from`) — the namedRe m[1] branch.
+    const defMatch = clause.slice(0, braceIdx).match(/([A-Za-z_$][\w$]*)\s*,/);
+    if (defMatch) {
+      const defLocal = defMatch[1]!;
+      map.set(defLocal, { local: defLocal, original: "default", module: mod });
+    }
+    const closeIdx = clause.indexOf("}", braceIdx);
+    const names = clause.slice(braceIdx + 1, closeIdx < 0 ? clause.length : closeIdx);
     for (const raw of names.split(",")) {
       let s = raw.trim();
       if (!s) continue;
@@ -46,8 +69,6 @@ function parseImports(src: string): Map<string, ImportBinding> {
       else if (/^\w+$/.test(s)) map.set(s, { local: s, original: s, module: mod });
     }
   }
-  const defRe = /import\s+([A-Za-z_$][\w$]*)\s+from\s*["']([^"']+)["']/g;
-  while ((m = defRe.exec(src))) map.set(m[1]!, { local: m[1]!, original: "default", module: m[2]! });
   return map;
 }
 

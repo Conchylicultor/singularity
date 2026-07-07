@@ -1,4 +1,4 @@
-import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { grepImports } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -17,12 +17,13 @@ const check: Check = {
     "Plugin server files must import from `@server/` alias, not relative `../../server/src/` paths",
   async run() {
     const root = await getRoot();
-    // strings: false — the offending value lives in the import path string.
-    const matches = await grepCode({
+    // grepImports is string-safe by construction: findImports masks strings
+    // fully, so an import written inside a string/fixture can never match. The
+    // filter runs on the bare specifier (no leading `from "`), anchored at `^`.
+    const matches = await grepImports({
       root,
-      pattern: /from ['"](\.\.\/)+plugins\/framework\/plugins\/server-core\/core\//,
       grepArg: `from ['"](\\.\\./)+plugins/framework/plugins/server-core/core/`,
-      maskStrings: false,
+      filter: (s) => /^(\.\.\/)+plugins\/framework\/plugins\/server-core\/core\//.test(s),
       pathspecs: ["plugins/"],
     });
 

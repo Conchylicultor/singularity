@@ -12,20 +12,38 @@ correctness bug (it once made codegen emit a phantom `<dir>.generated.ts` from a
 `defineCollectedDir("…")` written in a comment, which broke `tsc`). **Never**
 `readFileSync`-and-regex or bare `git grep` for a marker. Route through one of:
 
+- **`findImports(src)`** — the single static-import scanner: every
+  `import … from "…"`, `export … from "…"`, and bare `import "…"` not in a
+  comment/string/regex. Returns `ImportRef[]` (`specifier`, `index`, `keyword`,
+  `clause`, `typeOnly`, `sideEffect`). It masks strings FULLY and reads each
+  specifier back by offset, so an import written *inside* a string/template
+  literal (a test fixture, docs snippet, codegen template) can never be mistaken
+  for a real import. **Always scan static imports with this — never hand-roll an
+  `import … from "…"` regex** (enforced by the `no-adhoc-import-scan` lint rule).
+  Dynamic `import()` / `require()` are calls, not static imports, and are out of
+  scope — mask fully with `maskSource(src)` and read the quote span by offset.
 - **`maskSource(src, { strings })`** — returns a same-length copy (offsets +
   newlines preserved 1:1) with comments, regex literals, and — when
   `strings !== false` (default `true`) — string interiors blanked to spaces.
   Run your detection regex on the masked text, then read real values from the
-  *original* at the matched offset. Use `{ strings: false }` when the value you
-  extract *lives in* a string (import paths, route URLs, model ids, path/color
-  literals); omit it (mask strings too) when detecting a *code construct* that
-  must never match inside a string (`new WebSocket(`, `x as T`, `defineX(`).
+  *original* at the matched offset. `{ strings: false }` is reserved for a
+  **marker/value scanner** whose value lives in a string (a slot id, a route
+  URL, a model id) AND which locates the enclosing call via `markerCallSpans` /
+  `findMarkerCalls` / `matchBracket` — never for import scanning (use
+  `findImports`) and never for a *code-construct* detector (`export default`,
+  `new WebSocket(`, `x as T`, `defineX(`), which mask strings too so the
+  construct can't match inside a string.
+- **`markerCallSpans(masked, "defineX")`** — byte spans of every genuine
+  `defineX[<…>](…)` call in already-masked source (caller chooses `strings`);
+  the `<…>`-tolerant scanner every marker-value scan routes through.
 - **`findMarkerCalls(src, "defineX")`** — every genuine `defineX(...)` call not in
   a comment/string/regex; returns `{ index, argsText }` (args sliced from the
   original) to parse with `parseStringField` / `parseBoolField` / `matchBracket`.
-- For `git grep`-style checks, use **`grepCode`** from
+- For `git grep`-style checks, use **`grepCode`** (line-oriented) or
+  **`grepImports`** (import-specifier scanner, `findImports`-backed) from
   `@plugins/framework/plugins/tooling/plugins/checks/core` (git grep narrows
-  candidate files, then `maskSource` + re-scan yields real-code matches only).
+  candidate files, then `maskSource` + re-scan / `findImports` yields real-code
+  matches only).
 
 `maskSource` supersedes the old per-scanner skip-loops (the boundary checker's
 private `stripComments`, and the inline logic in `matchBracket`).

@@ -15,8 +15,8 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
 
 - Description: Check runner and built-in checks for ./singularity check
 - Core:
-  - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/paths.SINGULARITY_DIR`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
-  - Exports: Types: `CheckCache`, `CodeMatch`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
+  - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/paths.SINGULARITY_DIR`, `plugin-meta/parse-utils.findImports`, `plugin-meta/parse-utils.lineAt`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
+  - Exports: Types: `CheckCache`, `CodeMatch`, `ImportMatch`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `grepImports`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
   - **`apps-paths-from-app-ref`**

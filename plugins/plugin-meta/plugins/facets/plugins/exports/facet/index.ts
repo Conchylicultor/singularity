@@ -28,9 +28,11 @@ export default createFacet<ExportsData>({
     const parse = (runtime: RuntimeFolder): ExportedSymbol[] => {
       const raw = readIfExists(join(ctx.dir, runtime, "index.ts"));
       if (!raw) return [];
-      // Mask comments/regex (keep export-name structure) so a commented-out
-      // `export default` / `export const X` can't register a phantom symbol.
-      const src = maskSource(raw, { strings: false });
+      // Fully mask comments/regex/strings (parseBarrelExports reads only
+      // export-name identifiers, never a string value) so neither a commented-out
+      // `export const X` nor an `export … from "…"` written inside a string can
+      // register a phantom symbol.
+      const src = maskSource(raw);
       return parseBarrelExports(src).map(({ name, kind }) => ({
         name,
         kind,

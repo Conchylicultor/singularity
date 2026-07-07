@@ -33,11 +33,14 @@ export default createFacet<ContributionsFacetData>({
       // stripTypes drops comments on the happy path; masking comments/regex
       // (keeping slot/prop strings) additionally defends the transpile-failure
       // fallback so a commented contribution call is never parsed as real.
-      const webSrc = maskSource(stripTypes(webIndex), { strings: false });
+      const stripped = stripTypes(webIndex);
+      const webSrc = maskSource(stripped, { strings: false });
       const paneDefs = parsePaneDefinitions(join(ctx.dir, "web"));
       const block = extractContributionsBlock(webSrc);
       if (block !== null) {
-        const importMap = parseImports(webSrc);
+        // parseImports masks internally via findImports, so it takes the raw
+        // (type-stripped) source directly, not the string-preserving copy.
+        const importMap = parseImports(stripped);
         for (const call of findCalls(block)) {
           const [head, ...rest] = call.callee.split(".");
           const tail = rest.join(".");

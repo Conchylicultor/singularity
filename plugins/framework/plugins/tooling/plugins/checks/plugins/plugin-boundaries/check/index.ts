@@ -4,7 +4,7 @@ import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { standardPluginDirs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { runtimeNames } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 import { findImports, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { stripComments, splitTopLevelStatements } from "./parse";
+import { splitTopLevelStatements } from "./parse";
 import { collectForeignReexports } from "./reexport-provenance";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -574,8 +574,7 @@ function dirContainsTsFiles(dir: string): boolean {
 function checkBarrelPurity(absPath: string, relPath: string, violations: Violation[]) {
   const raw = safeRead(absPath);
   if (!raw) return;
-  const stripped = stripComments(raw);
-  const stmts = splitTopLevelStatements(stripped);
+  const stmts = splitTopLevelStatements(raw);
   for (const { text, line } of stmts) {
     const trimmed = text.trim();
     if (!trimmed) continue;

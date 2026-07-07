@@ -39,9 +39,12 @@ const check: Check = {
         const barrel = join(node.dir, runtime, "index.ts");
         if (!existsSync(barrel)) continue;
 
-        // Mask comments + regex literals (keep string interiors) so a default-export
-        // shape mentioned in a comment can't be mistaken for a real barrel default.
-        const src = maskSource(readFileSync(barrel, "utf8"), { strings: false });
+        // Fully mask comments, regex literals, AND string interiors: the three
+        // regexes only detect code constructs (`export default`, `export { …
+        // default … } from`), never read a string value — so masking strings
+        // closes the string-embedded false-positive (a default-export shape
+        // mentioned in a comment or string can't be mistaken for a real one).
+        const src = maskSource(readFileSync(barrel, "utf8"));
         const rel = relative(root, barrel);
 
         if (!ANY_DEFAULT_RE.test(src)) {

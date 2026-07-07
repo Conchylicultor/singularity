@@ -2,6 +2,7 @@ import { sep } from "path";
 import {
   walkFiles,
   readIfExists,
+  findImports,
   findMarkerCalls,
   parseStringField,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -67,10 +68,21 @@ export function buildDescriptorIndex(sources: string[]): Map<string, DescriptorI
  */
 export function parseImportAliases(src: string): Map<string, string> {
   const map = new Map<string, string>();
-  const importRe = /import\s+(?:type\s+)?\{([^}]*)\}\s+from\s+["'][^"']+["']/g;
-  let m: RegExpExecArray | null;
-  while ((m = importRe.exec(src))) {
-    for (const raw of m[1]!.split(",")) {
+  // `findImports` masks strings/comments/regex fully and reads each specifier
+  // back by offset, so an import written inside a string/template literal can
+  // never register a phantom alias. The old regex matched `import { … } from` AND
+  // `import type { … } from` (type-only INCLUDED) but only when the named `{ … }`
+  // block followed `import` directly (no default/namespace prefix), so we mirror
+  // that: keep `import` (not `export`), keep type-only, and only parse a clause
+  // whose post-`type` head is the named block.
+  for (const imp of findImports(src)) {
+    if (imp.keyword !== "import" || imp.sideEffect) continue;
+    const clause = imp.clause.replace(/^\s*type\s+/, "");
+    const braceIdx = clause.indexOf("{");
+    if (braceIdx < 0 || clause.slice(0, braceIdx).trim() !== "") continue;
+    const closeIdx = clause.indexOf("}", braceIdx);
+    const names = clause.slice(braceIdx + 1, closeIdx < 0 ? clause.length : closeIdx);
+    for (const raw of names.split(",")) {
       const spec = raw.trim().replace(/^type\s+/, "");
       const aliased = /^([A-Za-z_$][\w$]*)\s+as\s+([A-Za-z_$][\w$]*)$/.exec(spec);
       if (aliased) map.set(aliased[2]!, aliased[1]!);

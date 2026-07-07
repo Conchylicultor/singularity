@@ -1,4 +1,4 @@
-import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { grepImports } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { compositionRoots } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -12,8 +12,9 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-const PLUGIN_IMPORT_RE =
-  /(?:from|require|export\s+\*\s+from)\s+['"][^'"]*(?:\/plugins\/|@singularity\/plugin-|@plugins\/)/;
+// A plugin-runtime specifier: contains `/plugins/`, or starts with the
+// workspace-name (`@singularity/plugin-`) or `@plugins/` alias forms.
+const PLUGIN_IMPORT_SPEC_RE = /(?:\/plugins\/|^@singularity\/plugin-|^@plugins\/)/;
 
 const ALLOWED_PLUGIN_IMPORT_RE = /@plugins\/packages\/|@plugins\/plugin-meta\/plugins\/plugin-tree\/|@plugins\/[^'"]*\/core\b/;
 
@@ -29,22 +30,23 @@ const check: Check = {
     "Non-plugin code may only import from `@plugins/*/core` (public API). Other plugin runtimes (web, server, shared) are off-limits.",
   async run() {
     const root = await getRoot();
-    // git grep narrows candidate files (same broad import shape as before); then
-    // grepCode re-scans masked source with PLUGIN_IMPORT_RE (the source of truth).
-    // strings: false — the offending value lives in the import path string.
-    const matches = await grepCode({
+    // git grep narrows candidate files (broad import shape); then grepImports
+    // structurally scans each via findImports and keeps only plugin-runtime
+    // specifiers. String-safe by construction — an import written inside a
+    // string/fixture can never match, so no `maskStrings` knob is needed.
+    const matches = await grepImports({
       root,
-      pattern: PLUGIN_IMPORT_RE,
       grepArg: `(from|require|export \\* from) ['"][^'""]*(\/plugins\/|@singularity\/plugin-|@plugins\/)`,
-      maskStrings: false,
+      filter: (spec) => PLUGIN_IMPORT_SPEC_RE.test(spec),
     });
 
     const offenders = matches
-      .map((m) => `${m.path}:${m.line}:${m.text}`)
-      .filter((line) => !ALLOWED_DIRS.some((dir) => line.startsWith(dir)))
-      .filter((line) => !COMPOSITION_ROOTS.some((f) => line.startsWith(f + ":")))
-      .filter((line) => PLUGIN_IMPORT_RE.test(line))
-      .filter((line) => !ALLOWED_PLUGIN_IMPORT_RE.test(line));
+      // ALLOWED_DIRS / COMPOSITION_ROOTS are path predicates; ALLOWED_PLUGIN_IMPORT_RE
+      // is a specifier predicate (matches @plugins/…/core and the exempt paths).
+      .filter((m) => !ALLOWED_DIRS.some((dir) => m.path.startsWith(dir)))
+      .filter((m) => !COMPOSITION_ROOTS.some((f) => m.path === f))
+      .filter((m) => !ALLOWED_PLUGIN_IMPORT_RE.test(m.specifier))
+      .map((m) => `${m.path}:${m.line}:${m.text}`);
 
     if (offenders.length === 0) return { ok: true };
 

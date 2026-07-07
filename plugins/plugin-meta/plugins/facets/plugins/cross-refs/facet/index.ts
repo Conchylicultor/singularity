@@ -12,26 +12,21 @@ import {
   type RuntimeFolder,
   asPath,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { walkFiles, readIfExists, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { walkFiles, readIfExists, findImports } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type CrossRefsData, type RawUse, crossRefsFacetDef } from "../core";
 
 // ── Helpers ────────────────────────────────────────────────────────────
 
 // Records every `@plugins/…` import in `runtimeDir` as a RawUse. No tree is
 // available at extract() time, so we do NOT resolve, self-skip, or filter by
-// runtime here — that happens in relate(). Comments/regex are masked (keeping
-// import-path strings) so a commented-out import doesn't register a phantom use.
+// runtime here — that happens in relate(). `findImports` masks comments/regex/
+// strings and reads each specifier back by offset, so an import statement
+// written inside a string or comment never registers a phantom use.
 function parseRawUses(runtimeDir: string): RawUse[] {
   const files: string[] = [];
   walkFiles(runtimeDir, files);
   const uses: RawUse[] = [];
   const seen = new Set<string>();
-  const namedRe =
-    /import\s+(?:([A-Za-z_$][\w$]*)\s*,\s*)?\{([^}]+)\}\s*from\s*["']([^"']+)["']/g;
-  const nsRe =
-    /import\s+\*\s+as\s+[A-Za-z_$][\w$]*\s+from\s*["']([^"']+)["']/g;
-  const defRe = /import\s+[A-Za-z_$][\w$]*\s+from\s*["']([^"']+)["']/g;
-  const sideRe = /import\s*["']([^"']+)["']/g;
 
   const add = (specifier: string, symbol?: string) => {
     const key = `${specifier}::${symbol ?? ""}`;
@@ -43,29 +38,42 @@ function parseRawUses(runtimeDir: string): RawUse[] {
   for (const f of files) {
     const raw = readIfExists(f);
     if (!raw) continue;
-    const src = maskSource(raw, { strings: false });
-    let m: RegExpExecArray | null;
-    namedRe.lastIndex = 0;
-    while ((m = namedRe.exec(src))) {
-      const mod = m[3]!;
-      if (!mod.startsWith("@plugins/")) continue;
-      // A default import alongside named ones (`import Foo, { a, b } from …`)
-      // is a default — record it without a symbol.
-      if (m[1]) add(mod);
-      for (const part of m[2]!.split(",")) {
+    for (const imp of findImports(raw)) {
+      // The old namedRe/nsRe/defRe/sideRe were all `import`-only (never
+      // `export … from`), and none of them ever matched a whole-statement
+      // `import type …` (the leading `type` keyword breaks each pattern), so we
+      // keep both filters to preserve behavior byte-for-byte.
+      if (imp.keyword !== "import") continue;
+      if (!imp.specifier.startsWith("@plugins/")) continue;
+      if (imp.sideEffect) {
+        add(imp.specifier); // bare `import "@plugins/…"` — mirrors old sideRe.
+        continue;
+      }
+      if (imp.typeOnly) continue;
+      const clause = imp.clause;
+      // Namespace `import * as X` — a use of the plugin, no named symbol (nsRe).
+      if (/^\s*\*\s+as\s+/.test(clause)) {
+        add(imp.specifier);
+        continue;
+      }
+      const braceIdx = clause.indexOf("{");
+      if (braceIdx < 0) {
+        // Default-only `import Foo from` — the whole clause is the local id (defRe).
+        if (/^\s*[A-Za-z_$][\w$]*\s*$/.test(clause)) add(imp.specifier);
+        continue;
+      }
+      // A default alongside named ones (`import Foo, { a, b } from …`) is a
+      // default — record it without a symbol (mirrors the namedRe m[1] branch).
+      if (/[A-Za-z_$][\w$]*\s*,/.test(clause.slice(0, braceIdx))) add(imp.specifier);
+      const closeIdx = clause.indexOf("}", braceIdx);
+      const names = clause.slice(braceIdx + 1, closeIdx < 0 ? clause.length : closeIdx);
+      for (const part of names.split(",")) {
         let s = part.trim();
         if (!s) continue;
         s = s.replace(/^type\s+/, "");
         const asMatch = s.match(/^(\w+)\s+as\s+\w+$/);
         const orig = asMatch ? asMatch[1]! : s;
-        if (/^\w+$/.test(orig)) add(mod, orig);
-      }
-    }
-    for (const re of [nsRe, defRe, sideRe]) {
-      re.lastIndex = 0;
-      while ((m = re.exec(src))) {
-        const mod = m[1]!;
-        if (mod.startsWith("@plugins/")) add(mod);
+        if (/^\w+$/.test(orig)) add(imp.specifier, orig);
       }
     }
   }

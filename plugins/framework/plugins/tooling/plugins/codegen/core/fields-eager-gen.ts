@@ -54,9 +54,10 @@ const MANIFEST_HEADER = [
 const CAPABILITY_RE = /^fields\/plugins\/[^/]+\/plugins\/(?:storage|filter-sql)$/;
 
 function hasDefaultExport(file: string): boolean {
-  // Mask comments/regex (keep string interiors) so a commented-out `export
-  // default` can't make an entryless barrel look like an entry.
-  const src = maskSource(readFileSync(file, "utf8"), { strings: false });
+  // Mask comments/regex/strings so a commented-out or string-embedded `export
+  // default` can't make an entryless barrel look like an entry. This is a pure
+  // code-construct detector — the string interior is never read back.
+  const src = maskSource(readFileSync(file, "utf8"));
   return (
     /(^|\n)\s*export\s+default\b/.test(src) ||
     /(^|\n)\s*export\s*\{[^}]*\bdefault\b[^}]*\}/.test(src)

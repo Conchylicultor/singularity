@@ -1,8 +1,8 @@
 import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import {
+  findImports,
   findMarkerCalls,
-  maskSource,
   parseBoolField,
   readIfExists,
   walkFiles,
@@ -212,13 +212,17 @@ const DESCRIPTOR_FACTORIES = [
   "queryResourceDescriptor",
 ];
 
-/** Every identifier imported from any `@plugins/` specifier in masked source. */
-function pluginImportedIdents(masked: string): Set<string> {
+/** Every identifier imported from any `@plugins/` specifier in `src`. */
+function pluginImportedIdents(src: string): Set<string> {
   const idents = new Set<string>();
-  const re = /import\s+(?:type\s+)?([\s\S]*?)\s+from\s*["']@plugins\/[^"']+["']/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(masked))) {
-    for (const w of m[1]!.match(/[A-Za-z_$][\w$]*/g) ?? []) idents.add(w);
+  // `findImports` masks comments/regex/strings and reads specifiers by offset,
+  // so an import written inside a string/comment never contributes idents.
+  for (const imp of findImports(src)) {
+    if (imp.keyword !== "import" || imp.sideEffect) continue;
+    if (!imp.specifier.startsWith("@plugins/")) continue;
+    // `clause` excludes `from`/quotes/`;`, so this is the same token set the old
+    // bindings-capture word-scan collected.
+    for (const w of imp.clause.match(/[A-Za-z_$][\w$]*/g) ?? []) idents.add(w);
   }
   return idents;
 }
@@ -240,7 +244,7 @@ function scanWatchedSlot(pluginDir: string): string | null {
   for (const f of filesUnder(pluginDir, ["web", "core", "shared"])) {
     const src = readIfExists(f);
     if (src == null) continue;
-    const idents = pluginImportedIdents(maskSource(src, { strings: false }));
+    const idents = pluginImportedIdents(src);
     for (const { marker, head } of WATCHED_SLOTS) {
       if (!idents.has(head)) continue;
       if (!src.includes(marker)) continue; // cheap fast-path

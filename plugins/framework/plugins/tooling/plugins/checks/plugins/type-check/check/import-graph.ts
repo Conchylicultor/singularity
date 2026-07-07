@@ -12,6 +12,7 @@
 
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
+import { findImports, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 // Mirror eslint.config.ts ignore globs so the graph covers exactly the linted
 // set. The flat-config ignores are:
@@ -74,85 +75,42 @@ export function safeRead(absPath: string): string | null {
 }
 
 /**
- * Strip only comments (line and block), preserving string-literal contents so
- * module specifiers in imports survive. Maintains line positions.
- * (Copied from plugin-boundaries check.)
- */
-function stripComments(src: string): string {
-  let out = "";
-  let i = 0;
-  const n = src.length;
-  while (i < n) {
-    const c = src[i]!;
-    const next = src[i + 1];
-    if (c === "/" && next === "/") {
-      while (i < n && src[i] !== "\n") {
-        out += src[i] === "\n" ? "\n" : " ";
-        i++;
-      }
-      continue;
-    }
-    if (c === "/" && next === "*") {
-      out += "  ";
-      i += 2;
-      while (i < n && !(src[i] === "*" && src[i + 1] === "/")) {
-        out += src[i] === "\n" ? "\n" : " ";
-        i++;
-      }
-      if (i < n) {
-        out += "  ";
-        i += 2;
-      }
-      continue;
-    }
-    if (c === '"' || c === "'" || c === "`") {
-      const quote = c;
-      out += c;
-      i++;
-      while (i < n && src[i] !== quote) {
-        if (src[i] === "\\" && i + 1 < n) {
-          out += src[i]! + src[i + 1]!;
-          i += 2;
-          continue;
-        }
-        out += src[i];
-        i++;
-      }
-      if (i < n) {
-        out += src[i];
-        i++;
-      }
-      continue;
-    }
-    out += c;
-    i++;
-  }
-  return out;
-}
-
-/**
  * Extract every module specifier this file depends on at compile time:
  *   - static `import ... from "<mod>"` (incl. `import type`)
  *   - `export ... from "<mod>"` re-exports (incl. `export type ... from`)
  *   - bare side-effect `import "<mod>"`
  *   - inline `import("<literal>")` type/dynamic expressions
- * Returns the raw specifier strings (comments stripped, string contents kept).
+ * Returns the raw specifier strings.
+ *
+ * The static forms route through `findImports` (the shared static-import
+ * scanner), which masks comments/regex/strings fully and reads each specifier
+ * back by offset — so an import written inside a string or template literal (a
+ * test fixture, a docs snippet, a codegen template) is never mistaken for a real
+ * edge. This is a compile-time import GRAPH, so we keep ALL of them: type-only
+ * imports (`import type …` / `export type … from`) are real compile edges, and
+ * bare side-effect imports too.
  */
 function extractImportSpecifiers(rawSrc: string): string[] {
-  const src = stripComments(rawSrc);
   const results: string[] = [];
 
-  // `import ... from "..."` / `export ... from "..."`
-  const withFromRe = /^[ \t]*(?:import|export)\s+[\s\S]*?\s+from\s+["']([^"']+)["']/gm;
-  // Bare side-effect import: `import "..."`
-  const bareRe = /^[ \t]*import\s+["']([^"']+)["']/gm;
-  // Inline import("literal") — type position or dynamic.
-  const inlineRe = /\bimport\s*\(\s*["']([^"']+)["']\s*\)/g;
+  // Static `import … from "…"` / `export … from "…"` / bare `import "…"`.
+  for (const imp of findImports(rawSrc)) results.push(imp.specifier);
 
+  // Inline `import("literal")` — type-position or dynamic. `findImports` treats
+  // it as a call, not a static import, so it is out of scope there; scan for it
+  // here over MASKED source and read the specifier back by offset, so an
+  // `import("…")` inside a string/template literal is never mistaken for a real
+  // one.
+  const masked = maskSource(rawSrc);
+  const re = /\bimport\s*\(\s*(["'`])/g;
   let m: RegExpExecArray | null;
-  while ((m = withFromRe.exec(src))) results.push(m[1]!);
-  while ((m = bareRe.exec(src))) results.push(m[1]!);
-  while ((m = inlineRe.exec(src))) results.push(m[1]!);
+  while ((m = re.exec(masked))) {
+    const openQuoteIdx = m.index + m[0].length - 1;
+    const quote = masked[openQuoteIdx]!;
+    const closeIdx = masked.indexOf(quote, openQuoteIdx + 1);
+    if (closeIdx < 0) continue;
+    results.push(rawSrc.slice(openQuoteIdx + 1, closeIdx));
+  }
 
   return results;
 }
