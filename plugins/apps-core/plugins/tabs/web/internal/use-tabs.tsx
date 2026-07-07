@@ -25,7 +25,10 @@ import {
   defaultApp,
   resolveAppForPath,
 } from "@plugins/apps-core/web";
-import { getDefaultPlacement } from "./placement-registry";
+import {
+  getDefaultPlacement,
+  usePlacementCapabilities,
+} from "./placement-registry";
 import {
   appPathFor,
   loadPersistedTabs,
@@ -255,8 +258,9 @@ function bootTabs(apps: AppList, seedAppId: string): BootState {
   focused.store.live = true;
 
   // Restore the persisted surface mode, or fall back to the registry default
-  // (which is "" until `surface` registers — SurfaceBody resolves that to the
-  // default at render, and the provider heals it once the registry populates).
+  // (which is "" until `surface` registers). The provider resolves this raw
+  // value against the registry on every render (see the `mode` derivation in
+  // TabsProvider), so a pre-registration "" seed never leaks to consumers.
   const mode = persisted?.mode ?? getDefaultPlacement();
 
   return { tabs, focusedTabId: focused.tabId, mode };
@@ -285,8 +289,21 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // The ONE surface rendering mode (docked / windows / solo). Per-surface, never
   // per-tab: every tab is displayed under this single value, so two modes can
   // never be visible at once. `previousMode` backs the solo (fullscreen) exit.
-  const [mode, setModeState] = useState<Placement>(initialMode);
+  const [rawMode, setModeState] = useState<Placement>(initialMode);
   const previousModeRef = useRef<Placement>(initialMode);
+  // Resolve the stored mode against the placement registry: `""` (the boot seed
+  // when the surface hasn't registered yet) and a stale id (a removed placement
+  // sub-plugin) both resolve to the registered default — the same resolution
+  // SurfaceBody applies at render. Publishing the RESOLVED mode is what keeps
+  // every consumer (chrome theme scope, the mode control's highlight, the
+  // persisted payload) agreeing with what the surface actually paints; before
+  // this, a cold boot published `""` forever and the rail/tab bar dropped the
+  // focused app's theme while the docked tab kept it.
+  const capabilities = usePlacementCapabilities();
+  const mode =
+    capabilities !== null && !capabilities.ids.has(rawMode)
+      ? capabilities.defaultId
+      : rawMode;
   // Per-tab content titles, published by the title reporter mounted inside each
   // tab's pane surface. Derived (not persisted): each tab re-reports on mount.
   const [titles, setTitles] = useState<Record<string, string>>({});

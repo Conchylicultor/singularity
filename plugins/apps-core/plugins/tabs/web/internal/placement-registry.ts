@@ -16,6 +16,9 @@ import { useSyncExternalStore } from "react";
 export interface PlacementCapabilities {
   /** The id of the default surface mode (the one the surface boots into). */
   defaultId: string;
+  /** Every registered placement id. Lets the provider resolve a stale/empty
+   * stored mode to `defaultId`, so the published mode is always a real id. */
+  ids: Set<string>;
   /** Modes for which `+` reads as "new window" (i.e. windows mode). */
   newTabFollows: Set<string>;
   /** Modes whose chrome wears the app theme. */
@@ -63,6 +66,24 @@ export function useDefaultPlacement(): string {
     },
     () => capabilities?.defaultId ?? "",
     () => capabilities?.defaultId ?? "",
+  );
+}
+
+/**
+ * Reactive read of the full capabilities snapshot — `null` until `surface`
+ * registers. Backs the tab provider's mode resolution: an empty/stale stored
+ * mode id resolves to `defaultId` the moment the registry populates, so every
+ * mode consumer (theme scope, mode control, persistence) agrees with what the
+ * surface actually renders.
+ */
+export function usePlacementCapabilities(): PlacementCapabilities | null {
+  return useSyncExternalStore(
+    (cb) => {
+      subscribers.add(cb);
+      return () => subscribers.delete(cb);
+    },
+    () => capabilities,
+    () => capabilities,
   );
 }
 

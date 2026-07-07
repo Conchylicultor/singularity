@@ -63,6 +63,7 @@ export function SurfaceBody() {
   useEffect(() => {
     registerPlacementCapabilities({
       defaultId,
+      ids: new Set(sorted.map((d) => d.id)),
       newTabFollows: new Set(
         sorted.filter((d) => d.newTabFollows).map((d) => d.id),
       ),
