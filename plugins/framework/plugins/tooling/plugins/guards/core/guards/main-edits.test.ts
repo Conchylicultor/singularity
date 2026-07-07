@@ -3,7 +3,8 @@ import { createContext } from "../context";
 import type { Verdict } from "../types";
 import { mainEditsGuard } from "./main-edits";
 
-const REPO = "/Users/u/dev/repo";
+// A deliberately fake repo root (not under /Users — see paths:no-hardcoded-paths).
+const REPO = "/r/repo";
 const WT = `${REPO}/.claude/worktrees/att-123-abcd`;
 const OTHER_WT = `${REPO}/.claude/worktrees/att-999-zzzz`;
 
