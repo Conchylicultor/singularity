@@ -36,7 +36,7 @@ export interface ViewsConfigHandle {
 /** Stable random id for new config rows (the listField also injects one on the
  *  server, but we need one client-side for the optimistic mirror). */
 function newId(): string {
-  return `view-${Math.random().toString(36).slice(2, 10)}`;
+  return `view-${crypto.randomUUID()}`;
 }
 
 /**

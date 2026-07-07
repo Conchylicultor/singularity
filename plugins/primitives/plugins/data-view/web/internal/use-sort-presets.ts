@@ -16,7 +16,7 @@ export interface SortPresetsController {
 /** Stable id for a new preset row — mirrors view-core's `newId`, so the
  *  optimistic row and the persisted row share identity across the round-trip. */
 function presetId(): string {
-  return `preset-${Math.random().toString(36).slice(2, 10)}`;
+  return `preset-${crypto.randomUUID()}`;
 }
 
 /**
