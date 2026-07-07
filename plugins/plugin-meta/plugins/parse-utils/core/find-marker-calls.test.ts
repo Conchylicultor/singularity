@@ -92,3 +92,48 @@ test("findMarkerCalls picks up the generic call form too", () => {
   expect(calls).toHaveLength(1);
   expect(calls[0]!.argsText).toBe(`{ key: "x" }`);
 });
+
+test("findMarkerCalls finds a call whose generic type-arg contains parens", () => {
+  // A shallow `<[^()]*?>` generic skip stops at the `(` in `() => void` and
+  // silently drops the whole call — the real-world blind spot this guards.
+  const src = `const s = defineFoo<{ f: () => void }>("id");`;
+  const calls = findMarkerCalls(src, "defineFoo");
+  expect(calls).toHaveLength(1);
+  expect(calls[0]!.argsText).toBe(`"id"`);
+});
+
+test("findMarkerCalls finds a call with a nested-generic type-arg", () => {
+  const src = `const s = defineFoo<A<B>>("nested");`;
+  const calls = findMarkerCalls(src, "defineFoo");
+  expect(calls.map((c) => c.argsText)).toEqual([`"nested"`]);
+});
+
+test("findMarkerCalls finds a multi-line generic containing an arrow type", () => {
+  const src = [
+    `const App = defineRenderSlot<{`,
+    `  onClick?: () => void;`,
+    `  badge?: ComponentType<{ className?: string }>;`,
+    `}>("apps.app", { foo: 1 });`,
+  ].join("\n");
+  const calls = findMarkerCalls(src, "defineRenderSlot");
+  expect(calls).toHaveLength(1);
+  expect(calls[0]!.argsText).toBe(`"apps.app", { foo: 1 }`);
+});
+
+test("findMarkerCalls still finds the plain (non-generic) call form", () => {
+  const src = `const s = defineFoo("plain");`;
+  const calls = findMarkerCalls(src, "defineFoo");
+  expect(calls.map((c) => c.argsText)).toEqual([`"plain"`]);
+});
+
+test("findMarkerCalls ignores a call embedded inside a string literal", () => {
+  // A `defineFoo("phantom")` written INSIDE a string literal (a codegen
+  // template, test fixture, or docs snippet) is blanked by the full string mask
+  // and must never surface as a real call — only the genuine adjacent call is.
+  const src = [
+    `const code = 'defineFoo("phantom")';`,
+    `const real = defineFoo("real");`,
+  ].join("\n");
+  const calls = findMarkerCalls(src, "defineFoo");
+  expect(calls.map((c) => c.argsText)).toEqual([`"real"`]);
+});

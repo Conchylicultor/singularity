@@ -129,10 +129,18 @@ export default createFacet<RoutesData>({
       }
       const hit = new Set<string>();
       for (const f of files) {
+        // Skip test/fixture files: an `/api/<prefix>` inside a fixture string is
+        // not a real caller, and (unlike a marker-value scan) full masking can't
+        // exclude it since the URL genuinely lives in a string — so drop the
+        // fixture leg of the false positive by path.
+        if (/\.test\.tsx?$/.test(f) || f.includes("/__tests__/")) continue;
         const raw = readIfExists(f);
         if (!raw) continue;
-        // Mask comments/regex (keep URL string literals) so a commented or
-        // documented `/api/<prefix>` doesn't register a phantom endpoint caller.
+        // Sanctioned token-in-string scan: the `/api/<prefix>` URL lives inside
+        // caller string literals (passed to fetch) with NO enclosing marker
+        // call, so masking fully would erase it. We mask comments/regex but KEEP
+        // strings so a commented or documented `/api/<prefix>` doesn't register a
+        // phantom caller. Allowlisted in `no-adhoc-marker-scan`.
         const src = maskSource(raw, { strings: false });
         re.lastIndex = 0;
         let m: RegExpExecArray | null;

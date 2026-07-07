@@ -56,9 +56,11 @@ const check: Check = {
       let depth = 0;
       for (let i = 0; i < firstArg.length; i++) {
         const c = firstArg[i];
-        // Comments are already blanked by `maskSource`; strings are kept (so
-        // `mode`'s value is readable), so skip string interiors here lest a
-        // `keyed:`-looking substring inside a string mislead the depth scan.
+        // `firstArg` is sliced from the ORIGINAL call text (so `mode`'s string
+        // value stays readable), meaning string interiors are present — skip
+        // them here lest a `keyed:`-looking substring inside a string mislead the
+        // depth scan. The enclosing call was located over a FULL mask, so a
+        // string-embedded `defineResource(...)` never reaches this walk.
         if (c === '"' || c === "'" || c === "`") {
           const q = c;
           i++;
@@ -87,13 +89,16 @@ const check: Check = {
         .text()
         .catch(() => null);
       if (src == null) continue;
-      // Mask comments + regex literals but KEEP string interiors (`strings:
-      // false`): we must read the STRING VALUE of `mode` (`"keyed"`), which a
-      // full string-mask would blank to `""`. Comments are still blanked, so a
-      // commented-out `mode:`/`keyed:` never counts as a real declaration.
-      const masked = maskSource(src, { strings: false });
+      // FULL mask (comments + regex + string interiors blanked): a
+      // `defineResource(...)` written inside a string or template literal
+      // vanishes from the mask, so `markerCallSpans` can never surface a
+      // string-embedded call as real. Each genuine call is located over the
+      // mask; its `block` is sliced from the ORIGINAL at the matched offsets
+      // (they align 1:1), so `parseStringField(block, "mode")` reads the real
+      // `"keyed"` value that a full string-mask would have blanked to `""`.
+      const masked = maskSource(src);
       for (const span of markerCallSpans(masked, "defineResource")) {
-        const block = masked.slice(span.open, span.close + 1);
+        const block = src.slice(span.open, span.close + 1);
         const line = lineAt(masked, span.identifier);
 
         // Rule 1 — flat keyed bypass. The sanctioned two-arg keyed form passes an

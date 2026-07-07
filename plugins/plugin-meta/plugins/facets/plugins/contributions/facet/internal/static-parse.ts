@@ -65,25 +65,51 @@ export function parseImports(src: string): Map<string, ImportBinding> {
   return map;
 }
 
-export function extractContributionsBlock(src: string): string | null {
-  const idx = src.search(/\bcontributions\s*:\s*\[/);
-  if (idx < 0) return null;
-  const start = src.indexOf("[", idx);
-  const end = matchBracket(src, start, "[", "]");
-  if (end < 0) return null;
-  return src.slice(start + 1, end);
+/** Inner offsets of the `contributions: [ … ]` array body (into the buffer). */
+export interface ContributionsBlock {
+  /** Offset of the first char *inside* the `[`. */
+  start: number;
+  /** Offset of the closing `]`. */
+  end: number;
 }
 
-export function findCalls(block: string): { callee: string; argsBody: string }[] {
+/**
+ * Locate the `contributions: [ … ]` array over a FULLY-MASKED buffer (string /
+ * comment / regex interiors blanked) so a `contributions: [` written inside a
+ * string or template literal can never match. `maskSource` preserves every
+ * offset 1:1, so the returned bounds index straight back into the original.
+ */
+export function extractContributionsBlock(masked: string): ContributionsBlock | null {
+  const idx = masked.search(/\bcontributions\s*:\s*\[/);
+  if (idx < 0) return null;
+  const start = masked.indexOf("[", idx);
+  const end = matchBracket(masked, start, "[", "]");
+  if (end < 0) return null;
+  return { start: start + 1, end };
+}
+
+/**
+ * Find each `Head.member(...{ … })` contribution call inside the block. The call
+ * is *located* over `maskedBlock` (fully masked, so a call written inside a
+ * string literal in a fixture/docs snippet has vanished), while the `callee` and
+ * `argsBody` are *sliced from `origBlock`* at the matched offsets — so a real
+ * call's blanked string args (`{ pane: "editorPane" }`) are recovered intact.
+ * `maskedBlock` and `origBlock` are the same slice of the masked / original
+ * buffers, so their offsets align 1:1.
+ */
+export function findCalls(
+  maskedBlock: string,
+  origBlock: string,
+): { callee: string; argsBody: string }[] {
   const out: { callee: string; argsBody: string }[] = [];
   const re = /([A-Za-z_$][\w$]*(?:\.[A-Za-z_$][\w$]*)+)\s*\(\s*\{/g;
   let m: RegExpExecArray | null;
-  while ((m = re.exec(block))) {
-    const callee = m[1]!;
+  while ((m = re.exec(maskedBlock))) {
+    const callee = origBlock.slice(m.index, m.index + m[1]!.length);
     const openIdx = m.index + m[0].length - 1;
-    const closeIdx = matchBracket(block, openIdx, "{", "}");
+    const closeIdx = matchBracket(maskedBlock, openIdx, "{", "}");
     if (closeIdx < 0) continue;
-    out.push({ callee, argsBody: block.slice(openIdx + 1, closeIdx) });
+    out.push({ callee, argsBody: origBlock.slice(openIdx + 1, closeIdx) });
   }
   return out;
 }

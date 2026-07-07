@@ -7,7 +7,7 @@ import {
   stripTypes,
   maskSource,
   parseDefineGroup,
-  matchBracket,
+  markerCallSpans,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type SlotDef, slotsFacetDef } from "../core";
 
@@ -25,19 +25,17 @@ function isSlotLike(v: unknown): v is { id: string } {
  * by the builder — `"render"` (always reorderable) or `"mount"` (never).
  */
 function parseSlotCalls(
-  src: string,
+  original: string,
+  masked: string,
   builder: "defineRenderSlot" | "defineMountSlot" | "defineWrapperSlot",
   kind: "render" | "mount" | "wrap",
 ): SlotDef[] {
   const out: SlotDef[] = [];
-  const callRe = new RegExp(`${builder}\\s*(?:<[^]*?>)?\\s*\\(`, "g");
-  let m: RegExpExecArray | null;
-  while ((m = callRe.exec(src))) {
-    const parenStart = src.indexOf("(", m.index + builder.length - 1);
-    if (parenStart < 0) continue;
-    const parenEnd = matchBracket(src, parenStart, "(", ")");
-    if (parenEnd < 0) continue;
-    const argsBody = src.slice(parenStart + 1, parenEnd);
+  // Locate calls over the FULL mask so a `defineRenderSlot("x")` written inside a
+  // string/template literal is never matched; read the id back from the ORIGINAL
+  // at the call's arg span.
+  for (const span of markerCallSpans(masked, builder)) {
+    const argsBody = original.slice(span.open + 1, span.close);
 
     const idMatch = /^\s*"([^"]+)"|^\s*'([^']+)'|^\s*`([^`]+)`/.exec(argsBody);
     const slotId = idMatch ? (idMatch[1] ?? idMatch[2] ?? idMatch[3]) : undefined;
@@ -45,8 +43,10 @@ function parseSlotCalls(
     // `${id}.section` inside defineDetailSections) — not statically resolvable.
     if (!slotId) continue;
 
-    // The member/group name is the nearest `Word:` or `const Word =` before the call.
-    const prefix = src.slice(0, m.index);
+    // The member/group name is the nearest `Word:` or `const Word =` before the
+    // call, computed over the MASKED prefix so a `Word:` inside a string can't
+    // invent a false member.
+    const prefix = masked.slice(0, span.identifier);
     const nameMatch = /(\w+)\s*:\s*$|(?:export\s+)?const\s+(\w+)\s*=\s*$/.exec(
       prefix.replace(/<[^>]*>\s*$/, ""),
     );
@@ -165,22 +165,24 @@ export default createFacet<SlotDef[]>({
     const slots: SlotDef[] = [];
     const src = readIfExists(join(ctx.dir, "web", "slots.ts"));
     if (src) {
-      // stripTypes drops comments on the happy path; masking comments/regex
-      // (keeping slot-id strings) additionally defends the transpile-failure
-      // fallback so a commented `defineSlot("x")` is never parsed as a real slot.
-      const stripped = maskSource(stripTypes(src), { strings: false });
+      // stripTypes drops comments on the happy path; a FULL mask additionally
+      // defends the transpile-failure fallback — a `defineSlot("x")` written in a
+      // comment or string/template literal is blanked away and never parsed as a
+      // real slot, while each real id is read back from the original by offset.
+      const original = stripTypes(src);
+      const masked = maskSource(original);
       // Render and mount slots first: scanned by builder name (distinct from
       // `defineSlot`, so the group parser below won't double-count them).
-      slots.push(...parseSlotCalls(stripped, "defineRenderSlot", "render"));
-      slots.push(...parseSlotCalls(stripped, "defineMountSlot", "mount"));
-      slots.push(...parseSlotCalls(stripped, "defineWrapperSlot", "wrap"));
+      slots.push(...parseSlotCalls(original, masked, "defineRenderSlot", "render"));
+      slots.push(...parseSlotCalls(original, masked, "defineMountSlot", "mount"));
+      slots.push(...parseSlotCalls(original, masked, "defineWrapperSlot", "wrap"));
       slots.push(...parseDefineGroup(
-        stripped,
+        original,
         "defineSlot",
         (memberName, slotId, groupName): SlotDef => ({ memberName, slotId, groupName, kind: "slot", contributors: [] }),
       ));
       slots.push(...parseDefineGroup(
-        stripped,
+        original,
         "defineDispatchSlot",
         (memberName, slotId, groupName): SlotDef => ({ memberName, slotId, groupName, kind: "dispatch", contributors: [] }),
       ));

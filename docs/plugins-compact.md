@@ -224,6 +224,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan
+            - **`marker-scan-safety`** — marker-scan-safety lint rule: no-adhoc-marker-scan
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
             - **`resize-observer-safety`** — resize-observer-safety lint rule: no-raw-resize-observer

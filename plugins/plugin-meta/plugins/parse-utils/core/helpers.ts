@@ -1,5 +1,7 @@
 import { existsSync, readdirSync, readFileSync, type Dirent } from "fs";
 import { dirname, join } from "path";
+import { maskSource } from "./mask-source";
+import { markerCallSpans } from "./find-marker-calls";
 
 // ── Types ──────────────────────────────────────────────────────────
 
@@ -132,20 +134,34 @@ export function parseDefineGroup<T>(
   make: (memberName: string, id: string, groupName: string) => T,
 ): T[] {
   const out: T[] = [];
+  // FULL-mask the source so a `defineSlot("x")` written inside a comment,
+  // string, or template literal (a test fixture, docs snippet, codegen template)
+  // is blanked away and never matched; each real id is read back from the
+  // ORIGINAL `src` by offset. The mask is the same length as `src`, so every
+  // offset aligns 1:1 — this is what makes the scan string-embedding-safe
+  // regardless of the buffer the caller hands in.
+  const masked = maskSource(src);
+  const spans = markerCallSpans(masked, builder);
   const groupRe = /export\s+const\s+([A-Z]\w*)\s*=\s*\{/g;
   let m: RegExpExecArray | null;
-  while ((m = groupRe.exec(src))) {
+  while ((m = groupRe.exec(masked))) {
     const groupName = m[1]!;
-    const braceStart = src.indexOf("{", m.index);
-    const braceEnd = matchBracket(src, braceStart, "{", "}");
+    const braceStart = masked.indexOf("{", m.index);
+    const braceEnd = matchBracket(masked, braceStart, "{", "}");
     if (braceEnd < 0) continue;
-    const body = src.slice(braceStart + 1, braceEnd);
-    const memberRe = new RegExp(
-      `([A-Z]\\w*)\\s*:\\s*${builder}\\s*\\(\\s*"([^"]+)"`,
-      "g",
-    );
-    let mm: RegExpExecArray | null;
-    while ((mm = memberRe.exec(body))) out.push(make(mm[1]!, mm[2]!, groupName));
+    // Each `Member: builder(...)` call inside this group's body: located over the
+    // masked text, id read from the original at the call's arg span.
+    for (const span of spans) {
+      if (span.identifier < braceStart || span.close > braceEnd) continue;
+      // Member name: the nearest `Word:` immediately before the builder call.
+      const memberMatch = /([A-Z]\w*)\s*:\s*$/.exec(masked.slice(0, span.identifier));
+      if (!memberMatch) continue;
+      const args = src.slice(span.open + 1, span.close);
+      const idMatch = /^\s*"([^"]+)"|^\s*'([^']+)'|^\s*`([^`]+)`/.exec(args);
+      const id = idMatch ? (idMatch[1] ?? idMatch[2] ?? idMatch[3]) : undefined;
+      if (!id) continue;
+      out.push(make(memberMatch[1]!, id, groupName));
+    }
   }
   return out;
 }

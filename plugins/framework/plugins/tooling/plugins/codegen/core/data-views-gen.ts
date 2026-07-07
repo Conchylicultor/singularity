@@ -2,7 +2,6 @@ import { existsSync, readFileSync, writeFileSync } from "fs";
 import { join } from "path";
 import {
   findMarkerCalls,
-  maskSource,
   readIfExists,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -59,8 +58,10 @@ export interface DataViewEntry {
  * Walk the plugin tree (barrel-free static scan) and collect every
  * `defineDataView("<id>")` id keyed to its DEFINING plugin (the node whose
  * `web/**` owns the marker). Scans each node's `web/**` source via the blessed
- * `findMarkerCalls` scanner (over a comment/regex-masked copy, strings kept so
- * the string-literal id survives). Deduped by id (FIRST definer wins, stable
+ * `findMarkerCalls` scanner (which full-masks internally and reads each id back
+ * from the ORIGINAL by offset, so a `defineDataView("x")` written inside a
+ * string/template literal is never mistaken for a real marker). Deduped by id
+ * (FIRST definer wins, stable
  * since `tree.byDir` iteration is deterministic) and sorted by id.
  *
  * Uses `{ skipBarrelImport: true }`: this collector only reads `node.dir` /
@@ -88,12 +89,11 @@ export async function collectDataViews(root: string): Promise<DataViewEntry[]> {
     for (const file of files) {
       const src = readIfExists(file);
       if (!src || !src.includes("defineDataView")) continue;
-      // `{ strings: false }`: the id we extract LIVES IN a string literal, so we
-      // must not blank string interiors (only comments / regex literals).
-      const calls = findMarkerCalls(
-        maskSource(src, { strings: false }),
-        "defineDataView",
-      );
+      // `findMarkerCalls` full-masks internally (a `defineDataView("x")` written
+      // inside a string/template literal vanishes and is never matched) and
+      // slices `argsText` from the ORIGINAL, so the string-literal id survives
+      // for `firstStringArg` to read.
+      const calls = findMarkerCalls(src, "defineDataView");
       for (const call of calls) {
         const id = firstStringArg(call.argsText);
         // Skip ids built from template/identifier expressions (not statically

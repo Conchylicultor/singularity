@@ -30,18 +30,24 @@ export default createFacet<ContributionsFacetData>({
     const staticContributions: Contribution[] = [];
     const webIndex = readIfExists(join(ctx.dir, "web", "index.ts"));
     if (webIndex) {
-      // stripTypes drops comments on the happy path; masking comments/regex
-      // (keeping slot/prop strings) additionally defends the transpile-failure
-      // fallback so a commented contribution call is never parsed as real.
+      // Mask the source FULLY (comments/regex AND string interiors blanked) and
+      // locate the block + each call over the mask, then read the real slot
+      // name / prop values back from the ORIGINAL by offset. A contribution call
+      // written inside a string or template literal (a fixture, a docs snippet)
+      // then vanishes from the mask, while a real call's blanked string args are
+      // recovered from the original — closing the string-embedding false-positive
+      // class. `maskSource` preserves offsets 1:1, so masked and stripped align.
       const stripped = stripTypes(webIndex);
-      const webSrc = maskSource(stripped, { strings: false });
+      const masked = maskSource(stripped);
       const paneDefs = parsePaneDefinitions(join(ctx.dir, "web"));
-      const block = extractContributionsBlock(webSrc);
+      const block = extractContributionsBlock(masked);
       if (block !== null) {
         // parseImports masks internally via findImports, so it takes the raw
-        // (type-stripped) source directly, not the string-preserving copy.
+        // (type-stripped) source directly, not the masked copy.
         const importMap = parseImports(stripped);
-        for (const call of findCalls(block)) {
+        const maskedBlock = masked.slice(block.start, block.end);
+        const origBlock = stripped.slice(block.start, block.end);
+        for (const call of findCalls(maskedBlock, origBlock)) {
           const [head, ...rest] = call.callee.split(".");
           const tail = rest.join(".");
           const imp = importMap.get(head!);

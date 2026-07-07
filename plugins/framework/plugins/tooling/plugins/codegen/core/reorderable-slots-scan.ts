@@ -2,6 +2,8 @@ import { existsSync } from "fs";
 import { join } from "path";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
+  findMarkerCalls,
+  markerCallSpans,
   matchBracket,
   maskSource,
   readIfExists,
@@ -46,21 +48,6 @@ function leadingStringLiteral(text: string): string | undefined {
 }
 
 /**
- * Match `marker` followed by an optional balanced `<…>` type-argument block and
- * then `(`, returning the body between the matched `(` and its balanced `)`.
- *
- * `masked` must be a comment/regex-masked copy of `src` with string interiors
- * KEPT (`maskSource(src, { strings: false })`) so the leading string literal
- * survives for the caller to read. Offsets in `masked` and `src` line up 1:1.
- */
-interface MarkerCall {
-  /** Index of the marker identifier's first char. */
-  index: number;
-  /** Text between the call's `(` and its balanced `)`. */
-  argsText: string;
-}
-
-/**
  * From `<` at `masked[start]`, return the index just past the matching `>` of a
  * TypeScript type-argument block, or -1 if unbalanced. Counts `<`/`>` nesting but
  * ignores the `>` in arrow tokens (`=>`) — type args routinely contain function
@@ -79,35 +66,6 @@ function skipTypeArgs(masked: string, start: number): number {
     }
   }
   return -1;
-}
-
-function findCallsWithOptionalGeneric(
-  src: string,
-  masked: string,
-  marker: string,
-): MarkerCall[] {
-  const escaped = marker.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const re = new RegExp(`\\b${escaped}\\b`, "g");
-  const out: MarkerCall[] = [];
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(masked))) {
-    let i = m.index + marker.length;
-    // Skip whitespace.
-    while (i < masked.length && /\s/.test(masked[i]!)) i++;
-    // Optional balanced `<…>` type-argument block (TS generics may span lines and
-    // contain nested generics, object types, and arrow function types).
-    if (masked[i] === "<") {
-      const after = skipTypeArgs(masked, i);
-      if (after < 0) continue;
-      i = after;
-      while (i < masked.length && /\s/.test(masked[i]!)) i++;
-    }
-    if (masked[i] !== "(") continue;
-    const closeParen = matchBracket(masked, i, "(", ")");
-    if (closeParen < 0) continue;
-    out.push({ index: m.index, argsText: src.slice(i + 1, closeParen) });
-  }
-  return out;
 }
 
 interface FactoryProducer {
@@ -133,7 +91,7 @@ interface FactoryProducer {
  * parameter (a bare identifier) and whose tail is a STATIC string are accepted —
  * anything else is not statically resolvable and is intentionally skipped.
  */
-function collectFactoryProducers(masked: string): FactoryProducer[] {
+function collectFactoryProducers(raw: string, masked: string): FactoryProducer[] {
   const out: FactoryProducer[] = [];
   // Each `export function NAME(` opens a factory candidate. We read its first
   // parameter name and the slice of source spanning its body, then scan the body
@@ -167,12 +125,16 @@ function collectFactoryProducers(masked: string): FactoryProducer[] {
     bodyStart = braceIdx;
     const bodyEnd = matchBracket(masked, bodyStart, "{", "}");
     if (bodyEnd < 0) continue;
-    const body = masked.slice(bodyStart, bodyEnd + 1);
+    // Locate each `defineRenderSlot(…)` over the FULL-masked body (so a marker
+    // written inside a string/template literal is never matched), then read its
+    // id expression from the ORIGINAL body at the matched span — offsets align
+    // 1:1, so a real template/passthrough id survives for the checks below.
+    const bodyMasked = masked.slice(bodyStart, bodyEnd + 1);
+    const bodyRaw = raw.slice(bodyStart, bodyEnd + 1);
 
     const suffixes = new Set<string>();
-    const calls = findCallsWithOptionalGeneric(body, body, RENDER_SLOT_MARKER);
-    for (const call of calls) {
-      const idExpr = call.argsText;
+    for (const span of markerCallSpans(bodyMasked, RENDER_SLOT_MARKER)) {
+      const idExpr = bodyRaw.slice(span.open + 1, span.close);
       // Template literal: `${firstParam}.<static-suffix>`
       const tmpl = /^\s*`\$\{\s*([A-Za-z_$][\w$]*)\s*\}([^`]*)`/.exec(idExpr);
       if (tmpl) {
@@ -219,8 +181,8 @@ export function collectRenderSlotsStatic(tree: PluginTree): StaticRenderSlot[] {
   // Pass 1: discover slot-producing factories from ALL web source. A factory and
   // its call sites can live in different plugins, so producers are global.
   const producersByName = new Map<string, FactoryProducer>();
-  // Cache masked source per file (reused by pass 2).
-  const maskedByFile = new Map<string, string>();
+  // Cache raw source per file (reused by pass 2). Pass 2 reads every id through
+  // `findMarkerCalls` (which full-masks internally), so no per-file mask is cached.
   const rawByFile = new Map<string, string>();
   const filesByDir = new Map<string, string[]>();
 
@@ -231,12 +193,14 @@ export function collectRenderSlotsStatic(tree: PluginTree): StaticRenderSlot[] {
       const raw = readIfExists(file);
       if (raw == null) continue;
       rawByFile.set(file, raw);
-      // `{ strings: false }`: ids we extract live INSIDE string literals, so keep
-      // string interiors; mask only comments / regex literals.
-      const masked = maskSource(raw, { strings: false });
-      maskedByFile.set(file, masked);
       if (!raw.includes(RENDER_SLOT_MARKER)) continue;
-      for (const producer of collectFactoryProducers(masked)) {
+      // FULL mask (comments + regex + string interiors blanked): factory
+      // detection reads the structural `export function … { … }` shape from the
+      // mask and each `defineRenderSlot` id from the ORIGINAL by offset, so a
+      // marker written inside a string/template literal can never invent a
+      // phantom factory.
+      const masked = maskSource(raw);
+      for (const producer of collectFactoryProducers(raw, masked)) {
         // First definition of a factory name wins (deterministic).
         if (!producersByName.has(producer.name)) {
           producersByName.set(producer.name, producer);
@@ -255,12 +219,13 @@ export function collectRenderSlotsStatic(tree: PluginTree): StaticRenderSlot[] {
     const files = filesByDir.get(node.dir) ?? [];
     for (const file of files) {
       const raw = rawByFile.get(file);
-      const masked = maskedByFile.get(file);
-      if (raw == null || masked == null) continue;
+      if (raw == null) continue;
 
-      // Direct literal render slots.
+      // Direct literal render slots. `findMarkerCalls` full-masks internally and
+      // slices `argsText` from the ORIGINAL, so a string-embedded marker is never
+      // matched while a real literal id survives for `leadingStringLiteral`.
       if (raw.includes(RENDER_SLOT_MARKER)) {
-        for (const call of findCallsWithOptionalGeneric(raw, masked, RENDER_SLOT_MARKER)) {
+        for (const call of findMarkerCalls(raw, RENDER_SLOT_MARKER)) {
           const id = leadingStringLiteral(call.argsText);
           // Skip template/identifier ids (factory-internal, not resolvable here).
           if (id) record(id, node.id);
@@ -270,7 +235,7 @@ export function collectRenderSlotsStatic(tree: PluginTree): StaticRenderSlot[] {
       // Factory call sites: defineX("literal", …) → literal + suffix.
       for (const producer of producersByName.values()) {
         if (!raw.includes(producer.name)) continue;
-        for (const call of findCallsWithOptionalGeneric(raw, masked, producer.name)) {
+        for (const call of findMarkerCalls(raw, producer.name)) {
           const base = leadingStringLiteral(call.argsText);
           if (base === undefined) continue;
           for (const suffix of producer.suffixes) record(base + suffix, node.id);

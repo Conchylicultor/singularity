@@ -26,16 +26,30 @@ correctness bug (it once made codegen emit a phantom `<dir>.generated.ts` from a
   newlines preserved 1:1) with comments, regex literals, and — when
   `strings !== false` (default `true`) — string interiors blanked to spaces.
   Run your detection regex on the masked text, then read real values from the
-  *original* at the matched offset. `{ strings: false }` is reserved for a
-  **marker/value scanner** whose value lives in a string (a slot id, a route
-  URL, a model id) AND which locates the enclosing call via `markerCallSpans` /
-  `findMarkerCalls` / `matchBracket` — never for import scanning (use
-  `findImports`) and never for a *code-construct* detector (`export default`,
-  `new WebSocket(`, `x as T`, `defineX(`), which mask strings too so the
-  construct can't match inside a string.
+  *original* at the matched offset. A **marker-value scan** — reading the string
+  argument of a real `defineX(...)` call (a slot id, a route URL, a model id) —
+  MUST FULL-mask and read the value from the original by offset: use
+  `findMarkerCalls(src, "defineX")`, or `markerCallSpans(maskSource(src), …)`
+  when you also need the surrounding context (a preceding member/group name).
+  Full masking is what makes it string-embedding-safe — a `defineX("id")`
+  written inside a string/template literal (a test fixture, docs snippet,
+  codegen template) is blanked away and never matched, while a real call's
+  blanked id is recovered from the original. **Do NOT use `{ strings: false }`
+  for this**, even with `markerCallSpans`: the span scanner matches the call
+  against the text it is *given*, so a strings-kept mask surfaces a
+  string-embedded call as a real one — exactly the trap the `no-adhoc-marker-scan`
+  lint rule now forbids. `{ strings: false }` is reserved ONLY for a genuine
+  **token-in-string scan** — a token that legitimately lives inside a string and
+  has NO enclosing marker call (an `/api/…` URL or MIME string a caller passes to
+  `fetch(...)`, e.g. `grepCode({ maskStrings: false })`); such a scan must be
+  allowlisted in `no-adhoc-marker-scan`. Never use `{ strings: false }` for
+  import scanning (use `findImports`) or a *code-construct* detector
+  (`export default`, `new WebSocket(`, `x as T`, `defineX(`), which mask strings
+  too so the construct can't match inside a string.
 - **`markerCallSpans(masked, "defineX")`** — byte spans of every genuine
-  `defineX[<…>](…)` call in already-masked source (caller chooses `strings`);
-  the `<…>`-tolerant scanner every marker-value scan routes through.
+  `defineX[<…>](…)` call in already-masked source; the `<…>`-tolerant scanner
+  every marker-value scan routes through. Pass a FULL mask (`maskSource(src)`) to
+  be string-embedding-safe — a strings-kept mask surfaces a string-embedded call.
 - **`findMarkerCalls(src, "defineX")`** — every genuine `defineX(...)` call not in
   a comment/string/regex; returns `{ index, argsText }` (args sliced from the
   original) to parse with `parseStringField` / `parseBoolField` / `matchBracket`.

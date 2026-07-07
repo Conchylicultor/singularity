@@ -11,6 +11,11 @@
 // extractFromSpecifier/parseBindingList still see real module specifiers.
 // extractFromSpecifier pulls a trailing `from "<mod>"`; parseBindingList parses
 // an ESM binding clause.
+//
+// The `maskSource(src, { strings: false })` below is a sanctioned dual-mask —
+// statement structure comes from the FULL `masked` copy, and only the final
+// statement text is sliced from this strings-kept copy at identical offsets — so
+// it is allowlisted in `no-adhoc-marker-scan`.
 // ============================================================================
 
 import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
