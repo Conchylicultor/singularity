@@ -2096,12 +2096,22 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       }
 
       if (subs.length > 0) {
-        // Fresh ETag to ride any `update` frame for a revalidatable resource, so
-        // the client's stored signature advances with the pushed value (else its
-        // next resubscribe would send a stale ETag and force a needless
-        // recompute). Undefined — with NO await — for a resource that never opted
-        // in, so the frames below are byte-identical to before. Ungated (push
-        // path); computed once per drained pk.
+        // Fresh ETag to ride any `update`/`delta` frame for a revalidatable
+        // resource, so the client's stored signature advances with the pushed
+        // value (else its next resubscribe would send a stale ETag and force a
+        // needless recompute). Undefined — with NO await — for a resource that
+        // never opted in, so the frames below are byte-identical to before.
+        // Ungated (push path); computed once per drained pk.
+        //
+        // Unlike the read path (handleSub / handleResourceHttp), the etag-AFTER-
+        // value order is SAFE here and deliberately not reordered: these frames
+        // CARRY the value, and any change landing between the value read and this
+        // etag read fires its own notify → flushAgain → another drainEntry that
+        // ships a fresh value + etag, so a momentarily skewed frame is always
+        // superseded (self-healing). Invalidate-mode pushes carry no etag at all
+        // (see the branch below), so no skew is possible there. drainEntry must
+        // compute the value first (it diffs against the snapshot); reordering here
+        // would be invasive and buys nothing given the self-heal.
         const updateEtag =
           entry.revalidate ? await pushEtag(entry, params) : undefined;
         if (entry.mode === "invalidate") {
@@ -2332,24 +2342,30 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const version = entry.versions.get(pk) ?? 0;
 
     // Conditional revalidation (ETag / 304 semantics): if this resource declares
-    // a cheap signature AND the client supplied its last-known ETag, answer "is
-    // what you already have still current?" without running the full loader. A
-    // backend restart does not reload the page, so the client's cache still holds
-    // the last value — on a match we send an `up-to-date` frame (the WS analogue
-    // of HTTP 304) and the client keeps that cached value, adopting `version` so
-    // a later real update isn't stale-dropped. This is the herd cure: a
-    // resubscribe for an unchanged resource costs one cheap signature, not a full
-    // loader. Only engaged when both sides opted in; otherwise the code below is
-    // byte-identical to the pre-revalidation full-loader path.
-    if (entry.revalidate && clientEtag != null) {
-      const cur = await computeEtag(entry, params);
-      if (cur !== undefined && cur === clientEtag) {
-        sendJson(state.ws, { kind: "up-to-date", id, key, params, version });
-        return;
-      }
-      // ETag miss (or the signature threw → cur undefined): fall through to the
-      // full loader below. Its sub-ack carries a fresh signature so the client's
-      // stored ETag advances.
+    // a cheap signature, answer "is what you already have still current?" without
+    // running the full loader when the client's last-known ETag matches. A backend
+    // restart does not reload the page, so the client's cache still holds the last
+    // value — on a match we send an `up-to-date` frame (the WS analogue of HTTP
+    // 304) and the client keeps that cached value, adopting `version` so a later
+    // real update isn't stale-dropped. This is the herd cure: a resubscribe for an
+    // unchanged resource costs one cheap signature, not a full loader.
+    //
+    // Compute the signature ONCE, BEFORE the value, and reuse it for both the
+    // up-to-date short-circuit and the sub-ack stamp. The ordering is load-bearing:
+    // the ETag must reflect a state NO NEWER than the value it accompanies.
+    // Computed AFTER the value, a change landing in between would ship a stale
+    // value stamped with an already-current ETag — a later resubscribe would then
+    // be answered `up-to-date` and keep the stale value forever (invalidate-mode
+    // pushes carry no value, so nothing heals it). Computing it first makes any
+    // post-value change advance the ETag, forcing a real refetch (a needless
+    // recompute at worst, never a stale read). `computeEtag` is fail-safe: it
+    // returns undefined when the resource never opted in OR the signature threw,
+    // so a broken signature degrades to the plain full-loader path and never
+    // serves stale.
+    const freshEtag = entry.revalidate ? await computeEtag(entry, params) : undefined;
+    if (freshEtag !== undefined && clientEtag != null && freshEtag === clientEtag) {
+      sendJson(state.ws, { kind: "up-to-date", id, key, params, version });
+      return;
     }
 
     let value: unknown;
@@ -2368,13 +2384,8 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     if (entry.mode === "keyed") {
       (entry.snapshots ??= new Map()).set(pk, snapshotOf(entry, value));
     }
-    // For a revalidatable resource, attach a fresh signature (computed AFTER the
-    // value, so it reflects state ≥ the value's) so the client can store it and
-    // condition its next resubscribe. Absent for non-opted-in resources → the
-    // frame is byte-identical to before. A brief value/ETag skew (a change landed
-    // mid-sub) self-heals: any real change also fires a push carrying a fresh
-    // value + ETag.
-    const freshEtag = await computeEtag(entry, params);
+    // Attach the signature computed above (BEFORE the value). Absent for
+    // non-opted-in resources → the frame is byte-identical to before.
     sendJson(state.ws, {
       kind: "sub-ack",
       id,
@@ -2461,15 +2472,17 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const resourceParams: ResourceParams = {};
     for (const [k, v] of url.searchParams) resourceParams[k] = v;
 
-    // Conditional revalidation: on an ETag match, short-circuit with 304 and no
-    // body — no loader run. `computeEtag` is fail-safe (undefined on a throw), so
-    // a broken signature falls through to the full value below.
+    // Conditional revalidation: compute the signature ONCE, BEFORE the value (see
+    // handleSub — the order is load-bearing), and reuse it for both the
+    // If-None-Match/304 short-circuit and the stamped `ETag` response header, so
+    // the ETag never reflects a state newer than the value it accompanies. On a
+    // match, short-circuit with 304 and no body — no loader run. `computeEtag` is
+    // fail-safe (undefined on opt-out or a throwing signature), so a broken
+    // signature falls through to the full value below and stamps no ETag.
     const ifNoneMatch = req.headers.get("If-None-Match");
-    if (entry.revalidate && ifNoneMatch != null) {
-      const cur = await computeEtag(entry, resourceParams);
-      if (cur !== undefined && cur === ifNoneMatch) {
-        return new Response(null, { status: 304 });
-      }
+    const freshEtag = entry.revalidate ? await computeEtag(entry, resourceParams) : undefined;
+    if (freshEtag !== undefined && ifNoneMatch != null && freshEtag === ifNoneMatch) {
+      return new Response(null, { status: 304 });
     }
 
     let value: unknown;
@@ -2482,10 +2495,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const pk = paramsKey(resourceParams);
     const version = entry.versions.get(pk) ?? 0;
     const headers: Record<string, string> = { "content-type": "application/json" };
-    // Stamp a fresh ETag (computed after the value, mirroring the WS sub-ack) so
-    // the client can send it as `If-None-Match` next time. Only for opted-in
-    // resources — absent otherwise, so the response is unchanged.
-    const freshEtag = await computeEtag(entry, resourceParams);
+    // Stamp the signature computed above (BEFORE the value) so the client can send
+    // it as `If-None-Match` next time. Only for opted-in resources — absent
+    // otherwise, so the response is unchanged.
     if (freshEtag !== undefined) headers["ETag"] = freshEtag;
     return new Response(JSON.stringify({ value, version }), { headers });
   }

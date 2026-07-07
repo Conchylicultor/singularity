@@ -126,6 +126,13 @@ seam (see `research/2026-07-03-global-live-state-server-invariant-harness.md`):
   diff → no frame) and the L2 persist-hook calling contract
   (`captureWatermark`-before-load, persist-on-success-only, persisted-FULL forcing,
   hook-failure never blocks delivery).
+- `runtime-revalidate.test.ts` — conditional revalidation (ETag / 304) read path:
+  WS up-to-date hit / etag miss / fresh stamp, the HTTP 304 vs 200+ETag paths, the
+  `revalidate`-throws fail-safe (value delivered, no etag, never short-circuited),
+  and the client version-adoption guard after an `up-to-date`. Its load-bearing
+  case pins the etag-BEFORE-value ordering: a change landing mid-load must never
+  ship a stale value under an already-current etag (would pin it forever via a
+  later `up-to-date`/`304`) — the resub must converge to current server truth.
 
 Seam boundary: the xmin/changelog-floor arithmetic in
 `live-state-snapshot/catch-up.ts`, `persist.ts` SQL, and `change-feed/listener.ts`
