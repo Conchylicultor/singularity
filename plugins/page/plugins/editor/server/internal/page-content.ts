@@ -108,6 +108,19 @@ function rowsToForest(blocks: StoredBlock[], pageId: string): SerializedBlock[] 
  *
  * General-purpose (history restore, page duplication, template apply). Does NOT
  * change any existing editor behavior — purely additive.
+ *
+ * **Content-doc invariant (per-block CRDT).** The fresh-id mint is
+ * load-bearing: deleting every old content row FK-cascades
+ * its `page_block_docs` state away, and the restored rows — being NEW ids with
+ * no stored doc — re-seed their content docs client-side from the restored
+ * `data.text` on next mount (the first-writer-wins doc-init path). Open
+ * editors re-bind automatically: the `blocksChanged`/live push unmounts the
+ * old ids' editors (their pending doc flushes 409-drop against the cascaded
+ * rows; their `data.text` projections are `updateOnly` so they can never
+ * resurrect a wiped row) and mounts the restored ones. If this function ever
+ * changes to PRESERVE block ids, it must explicitly delete the affected
+ * `page_block_docs` rows and push a rebind signal instead — otherwise a bound
+ * `Y.Doc` would remain authoritative over the pre-restore text.
  */
 export async function replacePageContent(
   pageId: string,

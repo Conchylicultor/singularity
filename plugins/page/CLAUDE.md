@@ -15,6 +15,7 @@
   - **`cover`** — Links a page's cover image: registers the cover attachment-id collector with the shared block↔attachment reconcile so the cover isn't orphan-swept.
   - **`divider`** — Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut.
   - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
+  - **`editor-collab`** — Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block keyed live resource, the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
   - **`embed`** — Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe.
   - **`file`** — File block type: attach any file as a downloadable card; served via attachments.
   - **`formatting`** — Inline rich-text formatting marks for the page editor's selection toolbar.

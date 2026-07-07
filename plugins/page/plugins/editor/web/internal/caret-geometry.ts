@@ -186,24 +186,10 @@ export function placeCaretAtOffset(editor: LexicalEditor, offset: number): void 
  * Inside an editor update: collapse the caret to the linear `offset` across the
  * block's paragraphs (the body of `placeCaretAtOffset`, delegating to the shared
  * leaf-walking primitive). Exposed so a caller already inside an `editor.update()`
- * (e.g. value-sync's rebuild) can restore the caret without nesting an update.
+ * can restore the caret without nesting an update.
  */
 export function $placeCaretAtOffset(offset: number): void {
   $placeCaretAtLinearOffset(offset);
-}
-
-/**
- * Inside an editor read/update: the collapsed caret's linear offset across the
- * block's paragraphs (stored-runs basis), or null when this editor has no
- * collapsed caret (unfocused, or a non-empty range). Lets value-sync capture the
- * caret before a rebuild so an external text change doesn't yank a focused user
- * back to offset 0; the leaf-aware walk keeps the offset correct in formatted
- * paragraphs (previously it returned the anchor-text-node-relative offset).
- */
-export function $caretOffsetWithinParagraph(): number | null {
-  const selection = $getSelection();
-  if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
-  return $linearCaretOffset();
 }
 
 /** Focus `editor` and collapse the caret to the very start or end of its content. */

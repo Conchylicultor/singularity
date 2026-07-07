@@ -29,6 +29,18 @@ export interface UseOptimisticResourceArgs<
    * Override for precise content checks (e.g. "row id X present").
    */
   isConfirmedBy?: (serverData: Data, vars: Vars) => boolean;
+  /**
+   * Op identity for cascade confirmation (content-based mode only): do `a` and
+   * `b` write the SAME entity/key? When provided, confirming an op also drops
+   * older RESOLVED ops on the same target — a newer confirmed write to a
+   * target proves the snapshot already contains the older write's (possibly
+   * overwritten) effect, so an older op that still doesn't match can never
+   * match any future snapshot (the stuck-inverse-pair hazard; see
+   * `confirmPass`). Without it, only directly-confirmed ops are dropped —
+   * older resolved ops on UNRELATED targets always survive until their own
+   * confirming push arrives.
+   */
+  sameTarget?: (a: Vars, b: Vars) => boolean;
   onError?: (err: unknown, vars: Vars) => void;
   /** Names the thing being saved; surfaced in the sync-status error state. */
   label?: string;
@@ -37,6 +49,14 @@ export interface UseOptimisticResourceArgs<
 export interface UseOptimisticResourceResult<Data, Vars> {
   /** Server truth with all pending ops replayed; never undefined. */
   data: Data;
+  /**
+   * Raw authoritative server truth — the overlay base, with NO pending ops
+   * applied (`resource.initialData` until the first push). For consumers that
+   * must distinguish "the server has really absorbed this row" from the
+   * optimistic prediction (e.g. gating a dependent write on a row's real,
+   * FK-satisfying existence).
+   */
+  serverData: Data;
   /** Forwarded from useResource (true until the first authoritative value). */
   pending: boolean;
   /** Enqueue an overlay op + fire `mutate`; returns the minted opId. */
@@ -59,7 +79,7 @@ export function useOptimisticResource<
 >(
   args: UseOptimisticResourceArgs<Data, Vars, P>,
 ): UseOptimisticResourceResult<Data, Vars> {
-  const { resource, params, apply, mutate, isConfirmedBy, onError, label } = args;
+  const { resource, params, apply, mutate, isConfirmedBy, sameTarget, onError, label } = args;
   const queryClient = useQueryClient();
   const result = useResource(resource, params);
   const base = result.pending ? resource.initialData : result.data;
@@ -73,6 +93,7 @@ export function useOptimisticResource<
   // the resource's lifetime without re-subscribing on every render.
   const applyRef = useLatestRef(apply);
   const isConfirmedByRef = useLatestRef(isConfirmedBy);
+  const sameTargetRef = useLatestRef(sameTarget);
 
   const targetKey = useMemo(
     () => JSON.stringify(queryKeyFor(resource.key, params)),
@@ -91,7 +112,7 @@ export function useOptimisticResource<
       const serverData = event.query.state.data as Data | undefined;
       if (serverData === undefined) return;
       setPending((prev) => {
-        const next = confirmPass(prev, serverData, isConfirmedByRef.current);
+        const next = confirmPass(prev, serverData, isConfirmedByRef.current, sameTargetRef.current);
         return next.length === prev.length ? prev : next;
       });
     });
@@ -189,7 +210,7 @@ export function useOptimisticResource<
 
   // Stable identity so the result can feed memo deps / combineResources gates.
   return useMemo(
-    () => ({ data, pending: result.pending, dispatch, inFlight, failed, retry }),
-    [data, result.pending, dispatch, inFlight, failed, retry],
+    () => ({ data, serverData: base, pending: result.pending, dispatch, inFlight, failed, retry }),
+    [data, base, result.pending, dispatch, inFlight, failed, retry],
   );
 }

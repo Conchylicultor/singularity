@@ -72,16 +72,49 @@ function safeApply<Data, Vars>(
  *     vars)` returns true.
  * Un-resolved ops (mutate still in flight) are always kept. Insertion order is
  * preserved for the survivors.
+ *
+ * **Cascade confirmation** (content-based mode, opt-in via `sameTarget`): when
+ * an op is confirmed, every RESOLVED op *older* than it (earlier in the pending
+ * order) **on the same target** is dropped too, even if the snapshot doesn't
+ * match it. Same-target ops resolve in dispatch order in practice, so a
+ * snapshot reflecting a newer write to a target already CONTAINS the older
+ * resolved write's effect on that target — possibly overwritten by the newer
+ * one. If such an op still doesn't match the snapshot, it can never match any
+ * future snapshot either; keeping it would replay stale state forever. The
+ * concrete failure this closes: undo dispatches patch P (e.g. "delete row X"),
+ * redo dispatches its inverse P⁻¹ ("restore X") before a push carrying P's
+ * state arrives — the eventual push shows X present, confirming P⁻¹ but never
+ * P, and the stuck P would keep deleting X from every rendered state from then
+ * on.
+ *
+ * The containment argument above is only valid WITHIN one entity/key: an older
+ * resolved op on an UNRELATED target (whose own confirming push simply hasn't
+ * arrived yet) must never be cascade-dropped — that would transiently revert
+ * its surface to stale server data. `sameTarget(a, b)` is the consumer's
+ * declaration of op identity ("do these two ops write the same entity?");
+ * without it the pass is conservative and drops only directly-confirmed ops.
  */
 export function confirmPass<Data, Vars>(
   pending: ReadonlyArray<PendingOp<Vars>>,
   serverData: Data,
   isConfirmedBy?: (serverData: Data, vars: Vars) => boolean,
+  sameTarget?: (a: Vars, b: Vars) => boolean,
 ): PendingOp<Vars>[] {
-  return pending.filter((op) => {
+  if (!isConfirmedBy) {
+    // Coarse: resolved + a push landed ⇒ confirmed ⇒ drop.
+    return pending.filter((op) => !op.resolved);
+  }
+  const confirmed = pending.map((op) => op.resolved && isConfirmedBy(serverData, op.vars));
+  return pending.filter((op, i) => {
     if (!op.resolved) return true;
-    if (isConfirmedBy) return !isConfirmedBy(serverData, op.vars);
-    return false; // coarse: resolved + a push landed ⇒ confirmed ⇒ drop
+    if (confirmed[i]) return false;
+    if (!sameTarget) return true; // conservative: no cross-op cascade
+    // Cascade within the target group: a NEWER confirmed write to the same
+    // entity supersedes this op (the snapshot already contains its effect).
+    for (let j = i + 1; j < pending.length; j++) {
+      if (confirmed[j] && sameTarget(op.vars, pending[j]!.vars)) return false;
+    }
+    return true;
   });
 }
 

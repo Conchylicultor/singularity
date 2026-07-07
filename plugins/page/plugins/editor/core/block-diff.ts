@@ -19,11 +19,22 @@ import { BlockSchema, type Block } from "./schemas";
 export interface BlockPatch {
   upserts: Block[];
   deleteIds: string[];
+  /**
+   * When true the patch never CREATES rows: an upsert whose id no longer
+   * exists is skipped, on both the client overlay and the server writer.
+   * Used by the CRDT-mode text projection (Stage 4a): a debounced projection
+   * flush racing a concurrent delete — most importantly a history RESTORE,
+   * which replaces every content row — must never resurrect a deleted block
+   * with its pre-delete text. Undo/redo patches deliberately do NOT set this:
+   * undoing a delete requires re-creating rows.
+   */
+  updateOnly?: boolean;
 }
 
 export const BlockPatchSchema = z.object({
   upserts: z.array(BlockSchema),
   deleteIds: z.array(z.string()),
+  updateOnly: z.boolean().optional(),
 });
 
 // ---------------------------------------------------------------------------

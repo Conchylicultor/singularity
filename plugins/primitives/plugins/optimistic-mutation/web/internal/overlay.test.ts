@@ -150,6 +150,75 @@ describe("confirmPass (content-based isConfirmedBy)", () => {
     // Server reflects neither ⇒ both kept.
     expect(confirmPass(pending, [1], isConfirmedBy).map((o) => o.opId)).toEqual(["a", "b"]);
   });
+
+  // Cascade confirmation is scoped by op identity: ops on the same number are
+  // "the same target". A newer confirmed write to a target supersedes older
+  // resolved writes to THAT target only.
+  const sameN = (a: Vars, b: Vars): boolean => a.n === b.n;
+
+  test("cascade (sameTarget): the stuck-inverse pair on ONE entity resolves", () => {
+    const isConfirmedBy = (serverData: number[], vars: Vars): boolean =>
+      vars.kind === "push"
+        ? serverData.includes(vars.n)
+        : !serverData.includes(vars.n);
+
+    // The stuck-inverse-pair scenario: undo removes 9 (resolved), redo pushes 9
+    // back (resolved) before any push carrying the removal arrives. The eventual
+    // snapshot shows 9 present — it confirms the redo but can never confirm the
+    // undo. Without the same-target cascade the undo would replay "remove 9"
+    // forever.
+    const pending = [
+      op("undo", { kind: "remove", n: 9 }, true),
+      op("redo", { kind: "push", n: 9 }, true),
+    ];
+    expect(confirmPass(pending, [1, 9], isConfirmedBy, sameN)).toEqual([]);
+  });
+
+  test("cascade never drops an older resolved op on an UNRELATED target", () => {
+    const isConfirmedBy = (serverData: number[], vars: Vars): boolean =>
+      vars.kind === "push" && serverData.includes(vars.n);
+    // Two independent entities: op "a" writes 2, op "b" writes 3. Both resolved;
+    // the NEWER one's confirming push arrives first (snapshot has 3, not 2).
+    // "a" must survive until its own push lands — dropping it would transiently
+    // revert its entity to stale server data.
+    const pending = [
+      op("a", { kind: "push", n: 2 }, true), // resolved, not yet reflected
+      op("b", { kind: "push", n: 3 }, true), // confirmed by this snapshot
+    ];
+    expect(confirmPass(pending, [1, 3], isConfirmedBy, sameN).map((o) => o.opId)).toEqual(["a"]);
+    // ...and the eventual push reflecting 2 confirms it normally.
+    expect(confirmPass(pending, [1, 2, 3], isConfirmedBy, sameN)).toEqual([]);
+  });
+
+  test("without sameTarget the pass is conservative: no cross-op cascade at all", () => {
+    const isConfirmedBy = (serverData: number[], vars: Vars): boolean =>
+      vars.kind === "push" && serverData.includes(vars.n);
+    const pending = [
+      op("a", { kind: "push", n: 2 }, true), // resolved, not reflected — kept
+      op("b", { kind: "push", n: 3 }, true), // confirmed — dropped
+    ];
+    expect(confirmPass(pending, [1, 3], isConfirmedBy).map((o) => o.opId)).toEqual(["a"]);
+  });
+
+  test("cascade never drops UNRESOLVED older ops, even on the same target", () => {
+    const isConfirmedBy = (serverData: number[], vars: Vars): boolean =>
+      vars.kind === "push" && serverData.includes(vars.n);
+    const pending = [
+      op("a", { kind: "remove", n: 3 }, false), // still in flight — must survive
+      op("b", { kind: "push", n: 3 }, true), // confirmed by the snapshot
+    ];
+    expect(confirmPass(pending, [1, 3], isConfirmedBy, sameN).map((o) => o.opId)).toEqual(["a"]);
+  });
+
+  test("cascade leaves newer unconfirmed resolved ops alone", () => {
+    const isConfirmedBy = (serverData: number[], vars: Vars): boolean =>
+      vars.kind === "push" && serverData.includes(vars.n);
+    const pending = [
+      op("a", { kind: "push", n: 2 }, true), // confirmed
+      op("b", { kind: "remove", n: 2 }, true), // same target, newer, not yet reflected — kept
+    ];
+    expect(confirmPass(pending, [1, 2], isConfirmedBy, sameN).map((o) => o.opId)).toEqual(["b"]);
+  });
 });
 
 describe("markResolved", () => {

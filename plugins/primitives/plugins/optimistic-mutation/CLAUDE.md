@@ -23,12 +23,13 @@ a cache-write prediction would race exactly like waiting for the refetch does.
 ## API
 
 ```ts
-const { data, pending, dispatch, inFlight, failed, retry } = useOptimisticResource({
+const { data, serverData, pending, dispatch, inFlight, failed, retry } = useOptimisticResource({
   resource,            // ResourceDescriptor<Data, P> from live-state
   params,              // optional resource params
   apply,               // (current: Data, vars: Vars) => Data — PURE predicted next state
   mutate,              // (vars: Vars) => Promise<void> — the network call (resolves on 2xx)
   isConfirmedBy,       // optional (serverData, vars) => boolean — content-based confirmation
+  sameTarget,          // optional (a, b) => boolean — op identity; enables same-target cascade
   onError,             // optional (err, vars) => void
   label,               // optional string — names the thing being saved (sync-status error state)
 });
@@ -43,6 +44,12 @@ const { data, pending, dispatch, inFlight, failed, retry } = useOptimisticResour
 - `failed` is the list of `{opId, vars}` whose `mutate` rejected. `retry(opId)`
   drops that entry from `failed` and re-runs the op by calling `dispatch(vars)`
   again (which re-adds it to the overlay and re-fires `mutate`).
+- `serverData` is the raw authoritative overlay base — server truth with NO
+  pending ops applied (`resource.initialData` until the first push). For
+  consumers that must distinguish "the server has really absorbed this row"
+  from the optimistic prediction — e.g. the page editor gates a block's
+  content-doc seed (an FK-dependent write) on the block id appearing here,
+  never in the overlaid `data`.
 - **Forced sync-status reporting:** the hook calls `useReportSync` internally
   (`@plugins/primitives/plugins/sync-status/web`) with
   `phase = failed.length ? "error" : inFlight.length ? "syncing" : "idle"`, the
@@ -60,6 +67,27 @@ const { data, pending, dispatch, inFlight, failed, retry } = useOptimisticResour
   On each push, resolved ops are dropped: coarse by default ("a push after my
   mutation resolved confirms me"), or precisely when `isConfirmedBy(serverData,
   vars)` returns true.
+- **Cascade confirmation** (content-based mode, opt-in via `sameTarget`):
+  confirming an op also drops every RESOLVED op older than it in the pending
+  order **that writes the same entity/key**, even when the snapshot doesn't
+  match those ops. A snapshot reflecting a newer write to a target already
+  contains an older resolved write's effect on that target (possibly
+  overwritten), so an older same-target op that still doesn't match can never
+  match any future snapshot — keeping it would replay stale state forever.
+  Concretely this closes the stuck-inverse-pair hazard (undo dispatches
+  "delete X", redo dispatches "restore X" before the push carrying the
+  deletion arrives: every later snapshot shows X present, confirming the redo
+  but never the undo — without the cascade the stuck undo would delete X from
+  every rendered state from then on). The containment argument is only valid
+  WITHIN one entity, so the cascade requires the consumer to declare op
+  identity: pass `sameTarget: (a, b) => boolean` ("do these two ops write the
+  same entity?"). Without it the pass is conservative — only directly-confirmed
+  ops are dropped, and an older resolved op on an UNRELATED target always
+  survives until its own confirming push arrives (cascade-dropping it would
+  transiently revert that entity to stale server data). Unresolved ops are
+  never cascade-dropped. Current `sameTarget` consumers: the page editor
+  (`sameOverlayTarget` — block-id-set intersection over ops/patches) and
+  config_v2 staging (`(pluginId, configName)` equality).
 - `apply` must be pure. For the "this op no longer applies to the current base"
   case (e.g. the server already absorbed it and the row it referenced is gone),
   throw `OpNoLongerApplies` (exported from the barrel) — the replay drops just

@@ -2643,7 +2643,17 @@
         "@lexical/link": "^0.44.0",
         "@lexical/react": "^0.44.0",
         "@lexical/selection": "^0.44.0",
+        "@lexical/yjs": "^0.44.0",
         "lexical": "^0.44.0",
+        "y-protocols": "^1.0.6",
+        "yjs": "^13.6.20",
+      },
+    },
+    "plugins/page/plugins/editor-collab": {
+      "name": "@singularity/plugin-page-editor-collab",
+      "version": "0.0.1",
+      "dependencies": {
+        "yjs": "^13.6.20",
       },
     },
     "plugins/page/plugins/embed": {
@@ -3036,6 +3046,18 @@
     "plugins/primitives/plugins/breadcrumb": {
       "name": "@singularity/plugin-primitives-breadcrumb",
       "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/collab-doc": {
+      "name": "@singularity/plugin-primitives-collab-doc",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/yjs": "^0.44.0",
+        "lexical": "^0.44.0",
+        "yjs": "^13.6.20",
+      },
+      "devDependencies": {
+        "@lexical/link": "^0.44.0",
+      },
     },
     "plugins/primitives/plugins/collapsible": {
       "name": "@singularity/plugin-primitives-collapsible",
@@ -5990,6 +6012,8 @@
 
     "@singularity/plugin-page-editor": ["@singularity/plugin-page-editor@workspace:plugins/page/plugins/editor"],
 
+    "@singularity/plugin-page-editor-collab": ["@singularity/plugin-page-editor-collab@workspace:plugins/page/plugins/editor-collab"],
+
     "@singularity/plugin-page-embed": ["@singularity/plugin-page-embed@workspace:plugins/page/plugins/embed"],
 
     "@singularity/plugin-page-file": ["@singularity/plugin-page-file@workspace:plugins/page/plugins/file"],
@@ -6169,6 +6193,8 @@
     "@singularity/plugin-primitives-bar": ["@singularity/plugin-primitives-bar@workspace:plugins/primitives/plugins/bar"],
 
     "@singularity/plugin-primitives-breadcrumb": ["@singularity/plugin-primitives-breadcrumb@workspace:plugins/primitives/plugins/breadcrumb"],
+
+    "@singularity/plugin-primitives-collab-doc": ["@singularity/plugin-primitives-collab-doc@workspace:plugins/primitives/plugins/collab-doc"],
 
     "@singularity/plugin-primitives-collapsible": ["@singularity/plugin-primitives-collapsible@workspace:plugins/primitives/plugins/collapsible"],
 
@@ -8323,6 +8349,8 @@
     "xmlchars": ["xmlchars@2.2.0", "", {}, "sha512-JZnDKK8B0RCDw84FNdDAIpZK+JuJw+s7Lz8nksI7SIuU3UXJJslUthsi+uWBUYOwPFwW7W7PRLRfUKpxjtjFCw=="],
 
     "xtend": ["xtend@4.0.2", "", {}, "sha512-LKYU1iAXJXUgAXn9URjiu+MWhyUXHsvfp7mcuYm9dSUKK0/CjtrUwFAxD82/mCWbtLsGjFIad0wIsod4zrTAEQ=="],
+
+    "y-protocols": ["y-protocols@1.0.7", "", { "dependencies": { "lib0": "^0.2.85" }, "peerDependencies": { "yjs": "^13.0.0" } }, "sha512-YSVsLoXxO67J6eE/nV4AtFtT3QEotZf5sK5BHxFBXso7VDUT3Tx07IfA6hsu5Q5OmBdMkQVmFZ9QOA7fikWvnw=="],
 
     "y18n": ["y18n@5.0.8", "", {}, "sha512-0pfFzegeDWJHJIAmTLRP2DwHjdF5s7jo9tuztdQxAhINCdvS+3nGINqPd00AphqJR/0LhANUS6/+7SCb98YOfA=="],
 

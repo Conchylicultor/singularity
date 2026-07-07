@@ -13,10 +13,6 @@
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { OpNoLongerApplies } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { applyBlockOp, type BlockNode, type BlockOp, type BlockPatch } from "../../core";
-// `prevSibling` is a same-plugin helper not re-exported from the editor's public
-// barrel (it stays plugin-internal); import it directly from the source, mirroring
-// how the server's handle-apply-block-op reaches into `core/block-ops`.
-import { prevSibling } from "../../core/block-ops";
 import type { Block } from "../../core";
 
 /**
@@ -41,14 +37,54 @@ export type OpEffect =
  *  - `patch` — a minimal `BlockPatch` (upsert rows + delete ids) applied
  *    directly onto the client `Block[]` (the undo/redo inverse path). Confirmed
  *    when every upsert is reflected and every deleted id is absent.
- *
- * `textOwners` are the block ids whose TEXT this overlay rewrites (frozen against
- * autosave while in flight) — the op's text-bearing blocks, or for a patch the
- * upserted ids (their stored content is being restored authoritatively).
  */
 export type BlockOverlayOp =
-  | { tag: "op"; op: BlockOp; effect: OpEffect; textOwners: string[] }
-  | { tag: "patch"; patch: BlockPatch; textOwners: string[] };
+  | { tag: "op"; op: BlockOp; effect: OpEffect }
+  | { tag: "patch"; patch: BlockPatch };
+
+/**
+ * Block ids an overlay op writes — the op-identity basis for cascade
+ * confirmation (`sameTarget` on `useOptimisticResource`). A patch touches its
+ * upserted + deleted rows; a structural op touches the rows the `BlockOp`
+ * names (`blockId`, and the minted `newId` for split/insert). Deliberately an
+ * UNDER-approximation where an op has row side effects it doesn't name (e.g.
+ * merge also rewrites the unnamed target row): missing a target only means
+ * less cascading — the op survives until its own confirming push — never a
+ * wrong drop.
+ */
+function overlayOpTargets(v: BlockOverlayOp): string[] {
+  if (v.tag === "patch") {
+    return [...v.patch.upserts.map((b) => b.id), ...v.patch.deleteIds];
+  }
+  const op = v.op;
+  switch (op.kind) {
+    case "split":
+      return [op.blockId, op.newId];
+    case "insert":
+      return [op.newId];
+    case "merge":
+    case "delete":
+    case "indent":
+    case "outdent":
+    case "move":
+      return [op.blockId];
+  }
+}
+
+/**
+ * Do two overlay ops write at least one common block row? The `sameTarget`
+ * predicate for cascade confirmation: only a newer CONFIRMED op on the same
+ * row(s) may supersede an older resolved one (the snapshot provably contains
+ * the older write's effect on that row). The stuck-inverse-pair case this
+ * keeps fixed — an undo patch and its redo inverse — always shares its full
+ * id set, so the pair cascades; unrelated rows (e.g. a `projectText` patch on
+ * another block) never do.
+ */
+export function sameOverlayTarget(a: BlockOverlayOp, b: BlockOverlayOp): boolean {
+  const aIds = overlayOpTargets(a);
+  const bIds = new Set(overlayOpTargets(b));
+  return aIds.some((id) => bIds.has(id));
+}
 
 /** Has `blocks` already absorbed `e`? Single predicate for guard + confirmation. */
 export function isReflected(blocks: Block[], e: OpEffect): boolean {
@@ -77,8 +113,14 @@ export function isPatchReflected(blocks: Block[], patch: BlockPatch): boolean {
   const byId = new Map(blocks.map((b) => [b.id, b]));
   for (const up of patch.upserts) {
     const cur = byId.get(up.id);
+    if (!cur) {
+      // Update-only upsert onto a row that no longer exists: vacuously
+      // absorbed — the server writer skipped it too (never resurrects), so
+      // this op can and must confirm against a base without the row.
+      if (patch.updateOnly) continue;
+      return false;
+    }
     if (
-      !cur ||
       cur.parentId !== up.parentId ||
       cur.type !== up.type ||
       String(cur.rank) !== String(up.rank) ||
@@ -124,9 +166,13 @@ export function applyPatch(blocks: Block[], patch: BlockPatch): Block[] {
     next.push(up ?? b);
     seen.add(b.id);
   }
-  // Append any upserts that weren't already present (re-created / inserted rows).
-  for (const up of patch.upserts) {
-    if (!seen.has(up.id) && !dropped.has(up.id)) next.push(up);
+  // Append any upserts that weren't already present (re-created / inserted
+  // rows) — unless the patch is update-only, which never creates rows (the
+  // absent row was deleted out from under it; mirrors the server writer).
+  if (!patch.updateOnly) {
+    for (const up of patch.upserts) {
+      if (!seen.has(up.id) && !dropped.has(up.id)) next.push(up);
+    }
   }
   return next;
 }
@@ -193,33 +239,23 @@ export function applyOverlayOp(blocks: Block[], v: BlockOverlayOp): Block[] {
 
 /** Build the overlay vars for a minimal patch (the undo/redo inverse path). */
 export function buildPatchOverlayOp(patch: BlockPatch): BlockOverlayOp {
-  return { tag: "patch", patch, textOwners: patch.upserts.map((b) => b.id) };
+  return { tag: "patch", patch };
 }
 
 /**
- * Build the overlay op for `op`, capturing its effect + textOwners from the
- * CURRENT optimistic `rows` (post prior-pending ops) — this is what makes chained
- * ops compose. See the plan's op→(effect, textOwners) table.
+ * Build the overlay op for `op`, capturing its effect from the CURRENT
+ * optimistic `rows` (post prior-pending ops) — this is what makes chained ops
+ * compose.
  */
 export function buildOverlayOp(op: BlockOp, rows: Block[]): BlockOverlayOp {
   switch (op.kind) {
     case "split":
-      // The new block is created; the origin block's text is truncated.
-      return { tag: "op", op, effect: { kind: "create", id: op.newId }, textOwners: [op.blockId] };
     case "insert":
-      // The new block is created and empty — no text owner to freeze.
-      return { tag: "op", op, effect: { kind: "create", id: op.newId }, textOwners: [] };
-    case "merge": {
-      // The block is removed; its text concatenates into the prev sibling, whose
-      // text therefore grows — freeze both.
-      const nodes = toNodes(rows);
-      const block = nodes.find((b) => b.id === op.blockId);
-      const prev = block ? prevSibling(nodes, block) : null;
-      const textOwners = prev ? [op.blockId, prev.id] : [op.blockId];
-      return { tag: "op", op, effect: { kind: "remove", id: op.blockId }, textOwners };
-    }
+      // The new block is created.
+      return { tag: "op", op, effect: { kind: "create", id: op.newId } };
+    case "merge":
     case "delete":
-      return { tag: "op", op, effect: { kind: "remove", id: op.blockId }, textOwners: [] };
+      return { tag: "op", op, effect: { kind: "remove", id: op.blockId } };
     case "indent":
     case "outdent":
     case "move": {
@@ -234,7 +270,6 @@ export function buildOverlayOp(op: BlockOp, rows: Block[]): BlockOverlayOp {
           tag: "op",
           op,
           effect: { kind: "reparent", id: op.blockId, parentId: moved.parentId, rank: moved.rank },
-          textOwners: [],
         };
       }
       // Defensive: the node vanished after apply (shouldn't happen). Fall back to
@@ -249,7 +284,6 @@ export function buildOverlayOp(op: BlockOp, rows: Block[]): BlockOverlayOp {
           parentId: cur?.parentId ?? null,
           rank: cur?.rank ?? "",
         },
-        textOwners: [],
       };
     }
   }

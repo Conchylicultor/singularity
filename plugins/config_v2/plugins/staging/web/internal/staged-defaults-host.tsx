@@ -82,6 +82,12 @@ export function StagedDefaultsOverlayHost() {
       ).then(() => undefined),
     isConfirmedBy: (rows, vars) =>
       rows.some((r) => sameKey(r, vars) && valueEqual(r.value, vars.value)),
+    // Op identity for cascade confirmation: stages are last-write-wins per
+    // (pluginId, configName), so only a newer confirmed stage of the SAME key
+    // may supersede an older resolved one (its value can never reappear in a
+    // snapshot). A confirmation for one config must never drop another
+    // config's still-pending stage.
+    sameTarget: (a, b) => a.pluginId === b.pluginId && a.configName === b.configName,
   });
 
   const stage = useCallback(

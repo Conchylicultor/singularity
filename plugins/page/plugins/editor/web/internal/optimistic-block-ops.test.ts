@@ -20,6 +20,7 @@ import {
   buildPatchOverlayOp,
   isPatchReflected,
   isReflected,
+  sameOverlayTarget,
   type BlockOverlayOp,
   type OpEffect,
 } from "./optimistic-block-ops";
@@ -172,7 +173,7 @@ describe("chained compose", () => {
     expect(moved.parentId).toBe(null);
   });
 
-  test("buildOverlayOp captures the right effect + textOwners per kind", () => {
+  test("buildOverlayOp captures the right effect per kind", () => {
     const r1 = a;
     const r2 = after(r1);
     const rows = [mk("P1", null, r1, { text: "one" }), mk("P2", null, r2, { text: "two" })];
@@ -186,20 +187,15 @@ describe("chained compose", () => {
 
     const split = expectOp(buildOverlayOp({ kind: "split", blockId: "P1", position: 1, newId: "S" }, rows));
     expect(split.effect).toEqual({ kind: "create", id: "S" });
-    expect(split.textOwners).toEqual(["P1"]);
 
     const ins = expectOp(buildOverlayOp({ kind: "insert", newId: "I", type: "text" }, rows));
     expect(ins.effect).toEqual({ kind: "create", id: "I" });
-    expect(ins.textOwners).toEqual([]);
 
-    // merge P2 into its prev sibling P1 ⇒ both are text owners.
     const merge = expectOp(buildOverlayOp({ kind: "merge", blockId: "P2" }, rows));
     expect(merge.effect).toEqual({ kind: "remove", id: "P2" });
-    expect(merge.textOwners).toEqual(["P2", "P1"]);
 
     const del = expectOp(buildOverlayOp({ kind: "delete", blockId: "P1" }, rows));
     expect(del.effect).toEqual({ kind: "remove", id: "P1" });
-    expect(del.textOwners).toEqual([]);
 
     expect(merge.op.kind).toBe("merge");
   });
@@ -242,18 +238,93 @@ describe("isPatchReflected", () => {
     expect(isPatchReflected([...base, mk("B", null, after(a))], patch)).toBe(false);
   });
 
-  test("buildPatchOverlayOp freezes the upserted ids as text owners", () => {
-    const overlay = buildPatchOverlayOp({
-      upserts: [mk("A", null, a), mk("B", null, after(a))],
-      deleteIds: ["C"],
-    });
-    expect(overlay.tag).toBe("patch");
-    expect(overlay.textOwners).toEqual(["A", "B"]);
-  });
-
   test("applyOverlayOp on a patch that the base already reflects throws", () => {
     const base = [mk("A", null, a)];
     const overlay = buildPatchOverlayOp({ upserts: [mk("A", null, a)], deleteIds: [] });
     expect(() => applyOverlayOp(base, overlay)).toThrow(OpNoLongerApplies);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Update-only patches (Stage 4a): the CRDT text projection's write mode. An
+// update-only patch never CREATES rows — a debounced projection flush racing a
+// concurrent delete (most importantly a history RESTORE, which replaces every
+// content row) must never resurrect a deleted block with pre-delete text.
+// These pin the client half; the server half is the symmetric insert-skip in
+// handle-patch-blocks.ts.
+// ---------------------------------------------------------------------------
+
+describe("updateOnly patches", () => {
+  const projected = {
+    upserts: [mk("A", null, a, { text: "projected" })],
+    deleteIds: [],
+    updateOnly: true,
+  };
+
+  test("applyPatch updates a present row like a normal patch", () => {
+    const out = applyPatch([mk("A", null, a, { text: "old" }), mk("B", null, after(a))], projected);
+    expect(out.map((b) => b.id)).toEqual(["A", "B"]);
+    expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe("projected");
+  });
+
+  test("applyPatch NEVER re-creates an absent row (no resurrection)", () => {
+    // Base without A — e.g. a restore replaced the page's rows.
+    const out = applyPatch([mk("B", null, after(a))], projected);
+    expect(out.map((b) => b.id)).toEqual(["B"]);
+  });
+
+  test("isPatchReflected treats an absent row as vacuously absorbed (confirms, never sticks)", () => {
+    // Row gone from server truth: the server writer skipped the update, so the
+    // op must confirm against this base instead of replaying forever.
+    expect(isPatchReflected([mk("B", null, after(a))], projected)).toBe(true);
+    // Same base, plain patch: NOT reflected (the row should have been created).
+    expect(
+      isPatchReflected([mk("B", null, after(a))], { ...projected, updateOnly: undefined }),
+    ).toBe(false);
+  });
+
+  test("isPatchReflected still compares persisted columns for present rows", () => {
+    const moved = {
+      upserts: [mk("A", "B", a)],
+      deleteIds: [],
+      updateOnly: true,
+    };
+    expect(isPatchReflected([mk("A", null, a)], moved)).toBe(false);
+    expect(isPatchReflected([mk("A", "B", a)], moved)).toBe(true);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// sameOverlayTarget (op identity for cascade confirmation)
+// ---------------------------------------------------------------------------
+
+describe("sameOverlayTarget", () => {
+  const patchOn = (ids: string[], deleteIds: string[] = []): BlockOverlayOp =>
+    buildPatchOverlayOp({ upserts: ids.map((id) => mk(id, null, a)), deleteIds });
+
+  test("an undo patch and its redo inverse share their id set (the stuck-inverse pair cascades)", () => {
+    const undoP = patchOn([], ["X"]); // undo: delete X
+    const redoP = patchOn(["X"]); // redo: restore X
+    expect(sameOverlayTarget(undoP, redoP)).toBe(true);
+  });
+
+  test("patches on disjoint blocks are unrelated (a projectText on another block never cascades)", () => {
+    expect(sameOverlayTarget(patchOn(["A"]), patchOn(["B"]))).toBe(false);
+    expect(sameOverlayTarget(patchOn([], ["A"]), patchOn(["B"], ["C"]))).toBe(false);
+  });
+
+  test("structural ops target the rows the BlockOp names", () => {
+    const rows = [mk("A", null, a), mk("B", null, after(a))];
+    const split = buildOverlayOp(
+      { kind: "split", blockId: "A", position: 1, newId: "NEW" },
+      rows,
+    );
+    const del = buildOverlayOp({ kind: "delete", blockId: "A" }, rows);
+    const other = buildOverlayOp({ kind: "delete", blockId: "B" }, rows);
+    expect(sameOverlayTarget(split, del)).toBe(true); // both touch A
+    expect(sameOverlayTarget(split, other)).toBe(false);
+    // op ↔ patch across the same row
+    expect(sameOverlayTarget(del, patchOn(["A"]))).toBe(true);
+    expect(sameOverlayTarget(del, patchOn(["B"]))).toBe(false);
   });
 });

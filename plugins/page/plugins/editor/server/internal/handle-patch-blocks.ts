@@ -45,7 +45,11 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
     .map((r) => r.id);
 
   // Partition upserts into inserts (id not currently present) and updates.
-  const inserts = body.upserts.filter((b) => !byId.has(b.id));
+  // An update-only patch (the CRDT text projection) never creates rows: an
+  // absent id means the row was deleted since the patch was computed (block
+  // delete, history restore) — inserting it would RESURRECT the deleted block
+  // with stale pre-delete text, so it is skipped deliberately.
+  const inserts = body.updateOnly ? [] : body.upserts.filter((b) => !byId.has(b.id));
   const updates = body.upserts.filter((b) => byId.has(b.id));
 
   await db.transaction(async (tx) => {

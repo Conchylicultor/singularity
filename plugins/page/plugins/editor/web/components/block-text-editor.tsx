@@ -9,11 +9,10 @@ import { ClickableLinkPlugin } from "@lexical/react/LexicalClickableLinkPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { LinkNode } from "@lexical/link";
 import type { LexicalEditor } from "lexical";
-import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { runsOf, type Block, type BlockTextVariant, type RichText } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import { useBlockEditor } from "../block-editor-context";
-import { ValueSyncPlugin } from "./value-sync-plugin";
+import { CollabTextPlugin } from "./collab-text-plugin";
 import { KeyboardPlugin } from "./keyboard-plugin";
 import { SlashMenuPlugin } from "./slash-menu-plugin";
 import { MarkdownShortcutPlugin } from "./markdown-shortcut-plugin";
@@ -23,11 +22,15 @@ import { BlockPastePlugin } from "./block-paste-plugin";
 import { blockTextNodes, getBlockTextExtensions } from "../internal/block-text-extensions";
 import { isValidLinkUrl } from "../internal/link-url";
 import {
-  $caretOffsetWithinParagraph,
   placeCaretAtBoundary,
   placeCaretAtColumn,
   placeCaretAtOffset,
 } from "../internal/caret-geometry";
+import {
+  appendRunsAtJoin,
+  focusHydratingAware,
+  truncateBlockTextFrom,
+} from "../internal/collab-text-surgery";
 import "./block-document-scale.css";
 
 /**
@@ -66,8 +69,8 @@ function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<Lexi
 
 /**
  * Reusable editable-text block renderer. Owns the entire Lexical pipeline —
- * value sync, structural keyboard handling, the slash menu, and the markdown
- * block-shortcut affordance — so every text-bearing block type (text,
+ * the per-block CRDT binding, structural keyboard handling, the slash menu, and
+ * the markdown block-shortcut affordance — so every text-bearing block type (text,
  * bulleted-list, and future heading/quote/to-do types) is a thin wrapper that
  * supplies a `marker` and `placeholder`.
  */
@@ -102,36 +105,8 @@ export function BlockTextEditor({
 }) {
   const runs = runsOf((block.data as Record<string, unknown> | null)?.text);
   const isEmpty = runs.length === 0;
-  const { registerFocusHandle, frozenIds, commitText } = useBlockEditor();
+  const { registerFocusHandle } = useBlockEditor();
   const lexicalEditorRef = useRef<LexicalEditor | null>(null);
-
-  // `useEditableField` is a string-keyed debounced-autosave hook (self-echo
-  // suppression via `Object.is`). Rich text is structured, so we carry its
-  // canonical JSON form through the field — a stable string key that `Object.is`
-  // compares correctly — and parse/serialize at the boundary (ValueSyncPlugin
-  // does the JSON↔Lexical translation).
-  const serialized = useMemo(() => JSON.stringify(runs), [runs]);
-
-  const field = useEditableField<string>({
-    value: serialized,
-    // Persist text through the unified optimistic-patch + undo pipeline
-    // (`commitText`), NOT the per-block `PATCH /api/blocks/:id`. `commitText`
-    // clones the row and replaces only `data.text`, so sibling data (e.g. a
-    // to-do's `checked`) is preserved. Capture the caret offset at save time
-    // (the same read ValueSyncPlugin uses) so undo/redo can restore it.
-    onSave: (nextJson) => {
-      const next = JSON.parse(nextJson) as RichText;
-      const ed = lexicalEditorRef.current;
-      const caretOffset = ed
-        ? (ed.getEditorState().read(() => $caretOffsetWithinParagraph()) ?? 0)
-        : 0;
-      commitText(block.id, next, caretOffset);
-    },
-    // While a structural op owns this block's text (split/merge in flight), the
-    // server owns the field: mirror incoming `value`, never autosave — so a stale
-    // blur-flush can't clobber the reducer's text edit.
-    frozen: frozenIds.has(block.id),
-  });
 
   const initialConfig = useMemo(
     () => ({
@@ -155,13 +130,24 @@ export function BlockTextEditor({
       // at app bootstrap, so present before any block editor mounts.
       nodes: [LinkNode, ...blockTextNodes()],
       onError: console.error,
+      // Skip Lexical's default empty-paragraph bootstrap — content arrives
+      // exclusively via the collab sync (the pre-seeded per-block doc), and a
+      // locally-bootstrapped paragraph would be a divergent local edit.
+      editorState: null,
     }),
     [block.id],
   );
 
   useEffect(() => {
     return registerFocusHandle(block.id, {
-      focus: () => lexicalEditorRef.current?.focus(),
+      focus: () => {
+        const ed = lexicalEditorRef.current;
+        if (!ed) return;
+        // The content doc syncs async after mount, and Lexical's focus() is a
+        // no-op on a still-empty root — use the hydration-aware focus (DOM
+        // focus now, caret to content start on first sync).
+        focusHydratingAware(ed);
+      },
       focusAtColumn: (x, edge) => {
         const ed = lexicalEditorRef.current;
         if (ed) placeCaretAtColumn(ed, x, edge);
@@ -173,6 +159,17 @@ export function BlockTextEditor({
       focusOffset: (n) => {
         const ed = lexicalEditorRef.current;
         if (ed) placeCaretAtOffset(ed, n);
+      },
+      // Content surgery: split/merge drive the LIVE content through Lexical so
+      // the collab binding syncs the change into the block's content doc
+      // (marks + decorator tokens preserved, like any local edit).
+      truncateAt: (offset: number) => {
+        const ed = lexicalEditorRef.current;
+        if (ed) truncateBlockTextFrom(ed, offset);
+      },
+      appendRunsAtEnd: (runs: RichText) => {
+        const ed = lexicalEditorRef.current;
+        if (ed) appendRunsAtJoin(ed, runs);
       },
     });
   }, [block.id, registerFocusHandle]);
@@ -198,11 +195,7 @@ export function BlockTextEditor({
             contentEditable={
               <ContentEditable
                 className={cn("outline-none pr-md py-xs", VARIANT_CLASS[textVariant], contentClassName)}
-                onFocus={() => {
-                  field.onFocus();
-                  editor.onFocus();
-                }}
-                onBlur={field.onBlur}
+                onFocus={() => editor.onFocus()}
               />
             }
             placeholder={
@@ -220,7 +213,10 @@ export function BlockTextEditor({
               Notion-like editable-link UX. */}
           <LinkPlugin validateUrl={isValidLinkUrl} />
           <ClickableLinkPlugin newTab />
-          <ValueSyncPlugin value={field.value} onChange={field.onChange} />
+          {/* Per-block CRDT binding: content syncs through the block's Y.Doc,
+              split/merge are content-doc-aware, and text edits ride the
+              unified undo stack via the seam's Y.UndoManager. */}
+          <CollabTextPlugin block={block} />
           <KeyboardPlugin blockId={block.id} editor={editor} />
           <SlashMenuPlugin editor={editor} />
           <MarkdownShortcutPlugin block={block} editor={editor} />
