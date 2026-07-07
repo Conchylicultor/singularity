@@ -1,15 +1,14 @@
 import { MdAdd, MdRemove, MdSwapVert } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import {
   useSetTransposeSemitones,
   useSonata,
   useTransposeSemitones,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { ToolbarControl } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/toolbar-control/web";
 import { saveTranspose } from "../actions";
 
 /** Transpose bounds — a full octave each way (matches the endpoint clamp). */
@@ -48,52 +47,45 @@ export function TransposeControl() {
   };
 
   return (
-    <WithTooltip content="Transpose — shift the whole song by semitones">
-      <Stack
-        direction="row"
-        align="center"
-        gap="none"
-        className={cn(
-          "rounded-md border border-border",
-          !hasScore && "pointer-events-none opacity-40",
-        )}
+    <ToolbarControl
+      icon={<MdSwapVert className="size-3.5" />}
+      tooltip="Transpose — shift the whole song by semitones"
+      disabled={!hasScore}
+    >
+      <IconButton
+        icon={MdRemove}
+        label="Transpose down a semitone"
+        disabled={!hasScore || semitones <= MIN_SEMITONES}
+        onClick={() => setTranspose(semitones - 1)}
+      />
+      {/* Center readout; clicking resets to the original key (interactive only
+          when transposed). */}
+      <button
+        type="button"
+        disabled={semitones === 0}
+        aria-label={semitones === 0 ? "Transpose (no shift)" : "Reset transpose"}
+        title={semitones === 0 ? undefined : "Reset to original key"}
+        onClick={() => setTranspose(0)}
+        className="min-w-[3rem] border-x border-border px-xs text-center enabled:cursor-pointer disabled:cursor-default"
       >
-        <MdSwapVert className="ml-2xs size-3.5 text-muted-foreground" />
-        <IconButton
-          icon={MdRemove}
-          label="Transpose down a semitone"
-          disabled={!hasScore || semitones <= MIN_SEMITONES}
-          onClick={() => setTranspose(semitones - 1)}
-        />
-        {/* Center readout; clicking resets to the original key (interactive only
-            when transposed). */}
-        <button
-          type="button"
-          disabled={semitones === 0}
-          aria-label={semitones === 0 ? "Transpose (no shift)" : "Reset transpose"}
-          title={semitones === 0 ? undefined : "Reset to original key"}
-          onClick={() => setTranspose(0)}
-          className="min-w-[3rem] border-x border-border px-xs text-center enabled:cursor-pointer disabled:cursor-default"
+        <Text
+          as="span"
+          variant="caption"
+          className={cn(
+            "font-medium tabular-nums",
+            semitones === 0 && "text-muted-foreground opacity-40",
+          )}
         >
-          <Text
-            as="span"
-            variant="caption"
-            className={cn(
-              "font-medium tabular-nums",
-              semitones === 0 && "text-muted-foreground opacity-40",
-            )}
-          >
-            {formatOffset(semitones)}
-            <span className="ml-2xs text-muted-foreground">st</span>
-          </Text>
-        </button>
-        <IconButton
-          icon={MdAdd}
-          label="Transpose up a semitone"
-          disabled={!hasScore || semitones >= MAX_SEMITONES}
-          onClick={() => setTranspose(semitones + 1)}
-        />
-      </Stack>
-    </WithTooltip>
+          {formatOffset(semitones)}
+          <span className="ml-2xs text-muted-foreground">st</span>
+        </Text>
+      </button>
+      <IconButton
+        icon={MdAdd}
+        label="Transpose up a semitone"
+        disabled={!hasScore || semitones >= MAX_SEMITONES}
+        onClick={() => setTranspose(semitones + 1)}
+      />
+    </ToolbarControl>
   );
 }

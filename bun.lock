@@ -504,8 +504,16 @@
       "name": "@singularity/plugin-apps-sonata-primitives-inertial-drag",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/primitives/plugins/jog-wheel": {
+      "name": "@singularity/plugin-apps-sonata-primitives-jog-wheel",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard": {
       "name": "@singularity/plugin-apps-sonata-primitives-keyboard",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/primitives/plugins/toolbar-control": {
+      "name": "@singularity/plugin-apps-sonata-primitives-toolbar-control",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/sonata/plugins/progress": {
@@ -4914,7 +4922,11 @@
 
     "@singularity/plugin-apps-sonata-primitives-inertial-drag": ["@singularity/plugin-apps-sonata-primitives-inertial-drag@workspace:plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag"],
 
+    "@singularity/plugin-apps-sonata-primitives-jog-wheel": ["@singularity/plugin-apps-sonata-primitives-jog-wheel@workspace:plugins/apps/plugins/sonata/plugins/primitives/plugins/jog-wheel"],
+
     "@singularity/plugin-apps-sonata-primitives-keyboard": ["@singularity/plugin-apps-sonata-primitives-keyboard@workspace:plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard"],
+
+    "@singularity/plugin-apps-sonata-primitives-toolbar-control": ["@singularity/plugin-apps-sonata-primitives-toolbar-control@workspace:plugins/apps/plugins/sonata/plugins/primitives/plugins/toolbar-control"],
 
     "@singularity/plugin-apps-sonata-progress": ["@singularity/plugin-apps-sonata-progress@workspace:plugins/apps/plugins/sonata/plugins/progress"],
 

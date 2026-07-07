@@ -19,7 +19,7 @@
       - **`fx-ripples`** — Fancy piano-roll FX (opt-in): expanding sound-wave ripple rings from each note strike, chords merging into one stronger ripple. Server registration of the fx-ripples enabled toggle.
       - **`fx-shatter`** — Fancy piano-roll FX (opt-in): notes shatter into tinted debris that arcs up and falls under gravity at the strike line. Server registration of the fx-shatter enabled toggle.
   - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), shows stats on each library card (Library.CardMeta), and contributes Plays / Last-played fields (Library.Fields) so they appear in the DataView's sort, filter, and table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
-  - **`primitives`** [2 sub-plugins] — Umbrella for Sonata-local client primitives.
+  - **`primitives`** [4 sub-plugins] — Umbrella for Sonata-local client primitives.
   - **`progress`** [5 sub-plugins] — Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.
   - **`rich`** [10 sub-plugins] — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
   - **`score`**

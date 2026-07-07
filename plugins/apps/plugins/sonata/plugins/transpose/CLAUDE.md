@@ -37,7 +37,7 @@ semitones (±12), surfaced as a compact toolbar stepper and remembered per song.
 - Description: Per-song global transpose offset: persists a semitone shift, syncs it into the shell's score pipeline via a headless Sonata.Effect observer, and exposes a toolbar stepper control. Owns the sonata_songs_ext_transpose side-table: per-song global transpose offset (semitones). Serves the reactive rollup.
 - Web:
   - Contributes: `Sonata.Effect` "transpose-sync" → `TransposeObserver`, `SonataToolbar.End` "transpose" → `TransposeControl`
-  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.useSetTransposeSemitones`, `apps/sonata/shell.useSonata`, `apps/sonata/shell.useTransposeSemitones`, `infra/endpoints.fetchEndpoint`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/tooltip.WithTooltip`
+  - Uses: `apps/sonata/primitives/toolbar-control.ToolbarControl`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.useSetTransposeSemitones`, `apps/sonata/shell.useSonata`, `apps/sonata/shell.useTransposeSemitones`, `infra/endpoints.fetchEndpoint`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`
   - Exports: Values: `saveTranspose`
 - Server:
   - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`

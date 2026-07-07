@@ -1,11 +1,7 @@
 import { MdSpeed } from "react-icons/md";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
+import { JogWheel } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/jog-wheel/web";
 
 /** Playback-speed bounds, as authored-tempo fractions (0% … 400%). A frozen 0%
  *  is a stopped transport; 400% is the practical ceiling the stepper also used. */
@@ -36,7 +32,7 @@ const asPercent = (scale: number) => `${Math.round(scale * 100)}%`;
 export function TempoWheel() {
   const { tempoScale, setTempoScale } = useSonata();
 
-  const { handlers, phase } = useInertialDrag({
+  const drag = useInertialDrag({
     axis: "x",
     unitsPerPixel: SENSITIVITY,
     bounds: [MIN_SCALE, MAX_SCALE],
@@ -45,49 +41,21 @@ export function TempoWheel() {
   });
 
   return (
-    <WithTooltip content="Playback speed — drag to scrub (↑/↓ to nudge)">
-      <Stack direction="row" align="center" gap="none" className="rounded-md border border-border">
-        <MdSpeed className="ml-2xs size-3.5 text-muted-foreground" />
-        {/* The ribbed wheel face. The tick pattern + its sliding position are
-            inline styles (no Tailwind spacing/radius to lint); the value-bound
-            background-position makes the ribs travel as the wheel is dragged. */}
-        <Clip
-          {...handlers}
-          role="slider"
-          aria-label="Playback speed"
-          aria-valuemin={Math.round(MIN_SCALE * 100)}
-          aria-valuemax={Math.round(MAX_SCALE * 100)}
-          aria-valuenow={Math.round(tempoScale * 100)}
-          aria-valuetext={asPercent(tempoScale)}
-          className={cn(
-            "relative h-6 w-16 touch-none select-none",
-            phase === "idle" ? "cursor-ew-resize" : "cursor-grabbing",
-          )}
-          style={{
-            backgroundImage:
-              "repeating-linear-gradient(90deg, var(--border) 0 1px, transparent 1px 9px)",
-            // Position tracks the linear tempo so the ribs travel at a constant
-            // rate across the whole range (matching the linear-space drag).
-            backgroundPositionX: `${tempoScale * RIB_SCALE}px`,
-            // Fade the ribs out at both edges so the strip reads as a wheel.
-            maskImage:
-              "linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent)",
-            WebkitMaskImage:
-              "linear-gradient(90deg, transparent, #000 25%, #000 75%, transparent)",
-          }}
-        >
-          {/* Center index mark the ribs travel past. */}
-          {/* eslint-disable-next-line layout/no-adhoc-layout -- decorative center rule: horizontally centered (left-1/2 + translate) yet vertically stretched with a constant inset; not a single Pin anchor */}
-          <div className="pointer-events-none absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-primary" />
-        </Clip>
-        <Text
-          as="span"
-          variant="caption"
-          className="min-w-[3rem] border-l border-border px-xs text-center font-medium tabular-nums"
-        >
-          {asPercent(tempoScale)}
-        </Text>
-      </Stack>
-    </WithTooltip>
+    <JogWheel
+      icon={<MdSpeed className="size-3.5" />}
+      tooltip="Playback speed — drag to scrub (↑/↓ to nudge)"
+      drag={drag}
+      // Position tracks the linear tempo so the ribs travel at a constant rate
+      // across the whole range (matching the linear-space drag).
+      ribOffsetPx={tempoScale * RIB_SCALE}
+      readout={asPercent(tempoScale)}
+      aria={{
+        label: "Playback speed",
+        valueMin: Math.round(MIN_SCALE * 100),
+        valueMax: Math.round(MAX_SCALE * 100),
+        valueNow: Math.round(tempoScale * 100),
+        valueText: asPercent(tempoScale),
+      }}
+    />
   );
 }
