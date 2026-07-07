@@ -333,9 +333,7 @@ func (w *Worktree) Ensure(ctx context.Context) (*backend, error) {
 		w.mu.Lock()
 		w.active = bk
 		w.mu.Unlock()
-		timeout := adaptiveTimeout(w.cfg.ReadyTimeout, w.cfg.ReadyTimeoutMax)
-		logAdaptiveTimeout(w.Name, w.cfg.ReadyTimeout, timeout)
-		spawnErr = waitReady(socketPath, timeout, bk.exitCh)
+		spawnErr = w.awaitBackendReady(bk, socketPath)
 	}
 
 	if spawnErr != nil {
@@ -428,9 +426,7 @@ func (w *Worktree) Restart(ctx context.Context) error {
 
 	// --- Step 3: Wait for readiness ---
 	if spawnErr == nil {
-		timeout := adaptiveTimeout(w.cfg.ReadyTimeout, w.cfg.ReadyTimeoutMax)
-		logAdaptiveTimeout(w.Name, w.cfg.ReadyTimeout, timeout)
-		spawnErr = waitReady(newSocketPath, timeout, newBk.exitCh)
+		spawnErr = w.awaitBackendReady(newBk, newSocketPath)
 	}
 
 	// --- Step 4 (failure): keep old backend, revert state ---
@@ -840,7 +836,8 @@ const taskpolicyPath = "/usr/sbin/taskpolicy"
 // (taskpolicy -B -p <pid>) once it is ready — the boot burst is over, and
 // steady-state serving (the user browsing the worktree's app) should run on
 // all cores. Best-effort: a failed promote just leaves the backend on the
-// efficiency cores, which is safe.
+// efficiency cores, which is safe. Idempotent: success clears bk.demoted, so
+// the post-ready call after a mid-boot escalation promote is a no-op.
 func promoteBackend(bk *backend, name string) {
 	if bk == nil || !bk.demoted || bk.cmd == nil || bk.cmd.Process == nil {
 		return
@@ -851,6 +848,7 @@ func promoteBackend(bk *backend, name string) {
 			"worktree", name, "pid", bk.cmd.Process.Pid, "err", err, "out", strings.TrimSpace(string(out)))
 		return
 	}
+	bk.demoted = false
 	slog.Info("backend promoted to default priority", "worktree", name, "pid", bk.cmd.Process.Pid)
 }
 
@@ -974,6 +972,20 @@ func logAdaptiveTimeout(worktree string, base, chosen time.Duration) {
 		"base", base, "chosen", chosen)
 }
 
+// awaitBackendReady waits for a freshly-spawned backend to pass its readiness
+// probe. Slow boots escalate (lift the darwinbg demotion, extend the wait)
+// instead of being killed — see waitReady for the wedge-vs-slow reasoning.
+func (w *Worktree) awaitBackendReady(bk *backend, socketPath string) error {
+	base := adaptiveTimeout(w.cfg.ReadyTimeout, w.cfg.ReadyTimeoutMax)
+	logAdaptiveTimeout(w.Name, w.cfg.ReadyTimeout, base)
+	return waitReady(socketPath, base, w.cfg.ReadyTimeoutMax, bk.demoted, func(respondedHTTP bool) {
+		slog.Warn("backend slow to become ready; lifting demotion and extending wait instead of killing",
+			"worktree", w.Name, "respondedHTTP", respondedHTTP,
+			"base", base, "extension", w.cfg.ReadyTimeoutMax)
+		promoteBackend(bk, w.Name)
+	}, bk.exitCh)
+}
+
 // waitReady polls the backend's `GET /api/health/ready` over its Unix socket
 // until the backend reports ready, exits, or the deadline expires. This gates
 // the hot-swap on genuine readiness (migrations applied, DB warm, registry
@@ -984,7 +996,24 @@ func logAdaptiveTimeout(worktree string, base, chosen time.Duration) {
 //   - 404 → endpoint absent (backend predates this change); fall back to
 //     "HTTP-reachable = ready" so older worktrees still start.
 //   - 503 / transport error (socket still coming up) → not ready yet; keep polling.
-func waitReady(socketPath string, timeout time.Duration, exitCh <-chan struct{}) error {
+//
+// Wedge detection is progress-aware and escalates before it kills. The base
+// (load-adaptive) deadline is the wedge threshold, but its expiry alone does
+// not prove a wedge:
+//   - a backend that has answered HTTP at all (even a 503) is alive and
+//     mid-boot, not wedged;
+//   - a darwinbg-demoted boot competes only for the E-cores, so under host
+//     load it can legitimately need longer than base even to bind its socket
+//     (measured 14s+ to first listen during the 2026-07-07 spawn-kill loop —
+//     killing it discards near-complete work and re-adds load, which is
+//     self-amplifying under sustained contention).
+//
+// In both cases onEscalate fires once (the caller lifts the demotion so the
+// boot finishes at default priority) and the deadline extends by extension.
+// Only a silent, never-demoted backend is declared wedged at base. A real
+// crash is still caught instantly via exitCh, so the generous extension never
+// delays crash detection.
+func waitReady(socketPath string, base, extension time.Duration, demoted bool, onEscalate func(respondedHTTP bool), exitCh <-chan struct{}) error {
 	client := &http.Client{
 		Timeout: 2 * time.Second,
 		Transport: &http.Transport{
@@ -994,8 +1023,9 @@ func waitReady(socketPath string, timeout time.Duration, exitCh <-chan struct{})
 			},
 		},
 	}
-	deadline := time.Now().Add(timeout)
-	for time.Now().Before(deadline) {
+	deadline := time.Now().Add(base)
+	responded, escalated := false, false
+	for {
 		resp, err := client.Get("http://backend/api/health/ready")
 		if err == nil {
 			status := resp.StatusCode
@@ -1004,6 +1034,20 @@ func waitReady(socketPath string, timeout time.Duration, exitCh <-chan struct{})
 			if status == http.StatusOK || status == http.StatusNotFound {
 				return nil
 			}
+			responded = true
+		}
+		if !time.Now().Before(deadline) {
+			if !escalated && (responded || demoted) {
+				escalated = true
+				deadline = time.Now().Add(extension)
+				if onEscalate != nil {
+					onEscalate(responded)
+				}
+			} else if escalated {
+				return fmt.Errorf("readiness timeout: still not ready %s after escalation (answered HTTP: %v)", extension, responded)
+			} else {
+				return fmt.Errorf("readiness timeout after %s (backend never answered HTTP)", base)
+			}
 		}
 		select {
 		case <-exitCh:
@@ -1011,7 +1055,6 @@ func waitReady(socketPath string, timeout time.Duration, exitCh <-chan struct{})
 		case <-time.After(100 * time.Millisecond):
 		}
 	}
-	return fmt.Errorf("readiness timeout after %s", timeout)
 }
 
 // killPgid sends a signal to a whole process group (negative pid), so backends

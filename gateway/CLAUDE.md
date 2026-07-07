@@ -44,7 +44,7 @@ Location: `~/.singularity/worktrees/<name>/spec.json`. Directory name = worktree
 }
 ```
 
-Two fields, both required, both absolute paths. The gateway hardcodes the launch convention (`bun bin/index.ts`, `SOCKET_PATH` env var, 15s readiness timeout). No per-worktree overrides in v1. Other per-worktree files (build logs, profiling data) also live in the same subdirectory.
+Two fields, both required, both absolute paths. The gateway hardcodes the launch convention (`bun bin/index.ts`, `SOCKET_PATH` env var, escalating readiness timeout — see "Backend Contract"). No per-worktree overrides in v1. Other per-worktree files (build logs, profiling data) also live in the same subdirectory.
 
 ### Discovery: dir-level watch + lazy resolve + periodic reconcile
 
@@ -146,6 +146,8 @@ The gateway expects backends to:
 
 1. Read their socket path from the `SOCKET_PATH` env var (required; backends should error out if missing)
 2. Bind that Unix socket and accept HTTP/1.1 + WebSocket connections on it. The gateway polls readiness via `GET /api/health/ready` over the socket — it hot-swaps only once that returns `200` (backend fully ready: migrations applied, DB warm, registry built), not on a bare socket accept. A `404` (backend predates the readiness endpoint) falls back to "HTTP-reachable = ready"; `503` means still booting.
+
+   **Wedge detection is progress-aware and escalates before it kills.** The base deadline (`-ready-timeout`, load-adaptive up to `-ready-timeout-max`) is only the wedge *threshold*: when it expires but the backend has answered HTTP at all (even `503`), or was spawned darwinbg-demoted (an E-core boot legitimately exceeds base under host load — even to first socket bind), the gateway lifts the demotion (`taskpolicy -B`) and extends the wait by `-ready-timeout-max` instead of SIGKILLing near-complete boot work. Only a silent, never-demoted backend is declared wedged at base; a crashed backend is always caught instantly via its exit channel. This closes the 2026-07-07 spawn-kill loop, where healthy demoted boots were killed at 15s four times in a row under load, turning a slow cold start into a ~2-minute outage.
 3. Use relative redirects (gateway does not rewrite `Location` headers)
 4. Handle `/api/*` and `/ws/*` routes
 

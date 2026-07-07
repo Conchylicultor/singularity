@@ -2,6 +2,7 @@ import { resolve } from "node:path";
 import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { defineGuard } from "../define-guard";
 import type { FileInput } from "../types";
+import { worktreeContextOf } from "../worktree-root";
 
 export const mainEditsGuard = defineGuard<FileInput>({
   name: "main-edits",
@@ -12,7 +13,11 @@ export const mainEditsGuard = defineGuard<FileInput>({
     if (!f) return null;
     if (!f.startsWith("/")) f = resolve(ctx.cwd, f);
 
-    if (f === ctx.cwd || f.startsWith(`${ctx.cwd}/`)) return null;
+    // The allowed boundary is the worktree ROOT, not raw cwd — the hook cwd
+    // tracks the shell's persistent `cd` and can sit in any subdirectory.
+    const wt = worktreeContextOf(ctx.cwd);
+    const workRoot = wt?.worktreeRoot ?? ctx.cwd;
+    if (f === workRoot || f.startsWith(`${workRoot}/`)) return null;
 
     if (/^\/tmp\//.test(f)) return null;
 
@@ -39,17 +44,19 @@ export const mainEditsGuard = defineGuard<FileInput>({
       };
     }
 
-    const worktreeMarker = "/.claude/worktrees/";
-    const markerIdx = ctx.cwd.indexOf(worktreeMarker);
-    const repoRoot = markerIdx !== -1 ? ctx.cwd.slice(0, markerIdx) : null;
+    // Re-base a main-checkout path onto the worktree for the hint — but only
+    // when f is genuinely in the main checkout. A path inside ANOTHER agent's
+    // worktree must not be re-based (it would compose a nonsense path).
     const relPath =
-      repoRoot && f.startsWith(`${repoRoot}/`) ? f.slice(repoRoot.length) : null;
+      wt && f.startsWith(`${wt.repoRoot}/`) && worktreeContextOf(f) === null
+        ? f.slice(wt.repoRoot.length)
+        : null;
 
     return {
-      blocked: `Refusing to edit ${f} — this path is not in the allowlist (worktree ${ctx.cwd}, ~/.claude/projects/*/memory/, /tmp).`,
+      blocked: `Refusing to edit ${f} — this path is not in the allowlist (worktree ${workRoot}, ~/.claude/projects/*/memory/, /tmp).`,
       hint: relPath
-        ? `Edit \`${ctx.cwd}${relPath}\` instead — your worktree IS your working copy of the repo.`
-        : `Your worktree IS your working copy of the repo — it contains everything the main repo does, including .claude/skills/ and .claude/settings.json. Edit those files at ${ctx.cwd}/.claude/** instead of the shared root.`,
+        ? `Edit \`${workRoot}${relPath}\` instead — your worktree IS your working copy of the repo.`
+        : `Your worktree IS your working copy of the repo — it contains everything the main repo does, including .claude/skills/ and .claude/settings.json. Edit those files at ${workRoot}/.claude/** instead of the shared root.`,
     };
   },
 });

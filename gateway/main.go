@@ -38,7 +38,7 @@ func parseFlags() Config {
 	flag.DurationVar(&cfg.IdleTimeout, "idle-timeout", 10*time.Minute, "backend idle timeout")
 	flag.DurationVar(&cfg.ShutdownGrace, "shutdown-grace", 5*time.Second, "grace period before SIGKILL")
 	flag.DurationVar(&cfg.ReadyTimeout, "ready-timeout", 15*time.Second, "max wait for backend readiness")
-	flag.DurationVar(&cfg.ReadyTimeoutMax, "ready-timeout-max", 90*time.Second, "ceiling for the load-adaptive backend readiness timeout")
+	flag.DurationVar(&cfg.ReadyTimeoutMax, "ready-timeout-max", 90*time.Second, "ceiling for the load-adaptive backend readiness timeout; also the extra wait granted when a slow-but-alive boot escalates instead of being killed")
 	flag.DurationVar(&cfg.SweepInterval, "sweep-interval", 30*time.Second, "idle sweeper tick")
 	flag.DurationVar(&cfg.ReconcileInterval, "reconcile-interval", 10*time.Second, "registry-dir reconcile tick (registers worktrees the fsnotify watch missed, unregisters vanished ones)")
 	flag.DurationVar(&cfg.BrokenCooldown, "broken-cooldown", 10*time.Second, "wait before retrying a failed spawn")

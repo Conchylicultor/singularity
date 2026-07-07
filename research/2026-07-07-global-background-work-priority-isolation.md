@@ -113,6 +113,7 @@ New edges: `database/admin → {packages/host-semaphore, infra/runtime-profiler}
 4. **darwinbg IO throttle stretches IO-heavy spawn wall-clock under disk contention** → longer gate holds. Bounded (only bg waiters queue). Escape hatch: `DEMOTE_FLAGS = ["-b","-t","0"]`. Watch `db-fork-acquire` / `worktree-mutate-acquire` hold times after deploy.
 5. **taskpolicy missing / non-darwin** — helper falls back to `nice -n 10`, then no-op; spawns never break.
 6. **Nested demotion** (3a session ∘ 3d build) — harmless re-application.
+7. **Demoted boot vs the gateway readiness timeout** (hit in production 2026-07-07, hours after 3e landed): an E-core-pinned boot under host load needs >15s just to bind its socket, so the gateway's readiness deadline SIGKILLed healthy demoted boots four times in a row — a self-amplifying spawn-kill loop (each kill discards near-complete work and re-adds load) that turned one cold page load into a ~2-minute outage. **Fixed:** `waitReady` now escalates before killing — on base-deadline expiry with the backend either answering HTTP (503 = alive, mid-boot) or spawn-demoted, the gateway lifts the demotion (`taskpolicy -B`) and extends the wait by `-ready-timeout-max`; only a silent never-demoted backend is declared wedged at base (crashes still short-circuit via exitCh). See `gateway/worktree.go` (`waitReady`, `awaitBackendReady`).
 
 ## What NOT to do
 

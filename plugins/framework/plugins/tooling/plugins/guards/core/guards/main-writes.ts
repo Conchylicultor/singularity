@@ -3,6 +3,7 @@ import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";
 import type { ShellCall } from "../parse-shell";
 import type { BashInput } from "../types";
+import { worktreeContextOf } from "../worktree-root";
 
 const DEST_LAST_CMDS = new Set(["cp", "mv", "rsync", "install"]);
 const ALL_ARGS_CMDS = new Set([
@@ -79,30 +80,35 @@ export const mainWritesGuard = defineGuard<BashInput>({
   matcher: "Bash",
   bypassToken: ".allow-main",
   check(input, ctx) {
-    if (!ctx.cwd.includes("/worktrees/")) return null;
+    // Derive both boundaries from the worktree marker, never from raw cwd —
+    // the hook cwd tracks the shell's persistent `cd`, and a subdirectory cwd
+    // would both mis-derive the repo root (silently un-protecting main) and
+    // flag legitimate writes to sibling dirs of the agent's own worktree.
+    const wt = worktreeContextOf(ctx.cwd);
+    if (!wt) return null;
     const cmd = input.command;
     if (!cmd) return null;
 
-    const repo = resolve(ctx.cwd, "../../..");
+    const { worktreeRoot, repoRoot } = wt;
 
     // A resolved, absolute path that lands inside the repo root but outside the
     // agent's own worktree IS a write to main. Relative args are resolved
     // against each call's effective cwd before reaching here.
     const isMainBranch = (p: string) =>
-      (p === repo || p.startsWith(`${repo}/`)) &&
-      p !== ctx.cwd &&
-      !p.startsWith(`${ctx.cwd}/`);
+      (p === repoRoot || p.startsWith(`${repoRoot}/`)) &&
+      p !== worktreeRoot &&
+      !p.startsWith(`${worktreeRoot}/`);
 
     for (const call of parseShell(cmd, ctx.cwd).calls) {
       for (const r of call.redirections) {
         const target = resolve(call.cwd, r.target);
         if (isMainBranch(target)) {
-          return violation(`redirection target '${r.target}'`, repo, ctx.cwd);
+          return violation(`redirection target '${r.target}'`, repoRoot, worktreeRoot);
         }
       }
       for (const target of writeTargets(call)) {
         if (isMainBranch(target)) {
-          return violation(`${call.name} target '${target}'`, repo, ctx.cwd);
+          return violation(`${call.name} target '${target}'`, repoRoot, worktreeRoot);
         }
       }
     }
@@ -110,10 +116,10 @@ export const mainWritesGuard = defineGuard<BashInput>({
   },
 });
 
-function violation(target: string, repo: string, cwd: string) {
+function violation(target: string, repoRoot: string, worktreeRoot: string) {
   return {
-    blocked: `Blocked write to main branch: ${target} is under ${repo} (outside worktree ${cwd}).`,
+    blocked: `Blocked write to main branch: ${target} is under ${repoRoot} (outside worktree ${worktreeRoot}).`,
     why: "Writing directly to the main branch from a worktree corrupts shared state — a previous agent ran `cp <worktree>/file <main>/file` and leaked uncommitted changes.",
-    hint: `Write to files inside your worktree (${cwd}) instead.`,
+    hint: `Write to files inside your worktree (${worktreeRoot}) instead.`,
   };
 }

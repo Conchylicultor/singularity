@@ -48,7 +48,7 @@ func TestWaitReadyOverUDS(t *testing.T) {
 	}()
 
 	exitCh := make(chan struct{})
-	if err := waitReady(socketPath, 2*time.Second, exitCh); err != nil {
+	if err := waitReady(socketPath, 2*time.Second, 2*time.Second, false, nil, exitCh); err != nil {
 		t.Fatalf("waitReady: %v", err)
 	}
 }
@@ -57,13 +57,21 @@ func TestWaitReadyTimesOutWhenSocketAbsent(t *testing.T) {
 	socketPath := filepath.Join(t.TempDir(), "nope.sock")
 	exitCh := make(chan struct{})
 	start := time.Now()
-	err := waitReady(socketPath, 200*time.Millisecond, exitCh)
+	err := waitReady(socketPath, 200*time.Millisecond, 5*time.Second, false, nil, exitCh)
 	elapsed := time.Since(start)
 	if err == nil {
 		t.Fatal("waitReady should have timed out, got nil")
 	}
+	// A silent, never-demoted backend is the one case that must still be
+	// declared wedged at the base deadline — no escalation, no extension.
+	if !strings.Contains(err.Error(), "never answered") {
+		t.Fatalf("unexpected error: %v", err)
+	}
 	if elapsed < 150*time.Millisecond {
 		t.Fatalf("waitReady returned too quickly: %s", elapsed)
+	}
+	if elapsed > 2*time.Second {
+		t.Fatalf("silent non-demoted backend should not get the extension: %s", elapsed)
 	}
 }
 
@@ -78,12 +86,109 @@ func TestWaitReadyReturnsWhenBackendExits(t *testing.T) {
 		close(exitCh)
 	}()
 
-	err := waitReady(socketPath, 5*time.Second, exitCh)
+	err := waitReady(socketPath, 5*time.Second, 5*time.Second, false, nil, exitCh)
 	if err == nil {
 		t.Fatal("waitReady should have errored on early exit, got nil")
 	}
 	if !strings.Contains(err.Error(), "exited before ready") {
 		t.Fatalf("unexpected error: %v", err)
+	}
+}
+
+// serve503ThenReady stands up an HTTP server on socketPath whose readiness
+// endpoint answers 503 until readyAfter has elapsed, then 200 — the shape of a
+// real backend mid readiness-barrier (migrations, DB warm, registry build).
+// Goroutine-safe: reports failures via t.Errorf, never FailNow.
+func serve503ThenReady(t *testing.T, socketPath string, readyAfter time.Duration) {
+	t.Helper()
+	l, err := net.Listen("unix", socketPath)
+	if err != nil {
+		t.Errorf("listen unix: %v", err)
+		return
+	}
+	t.Cleanup(func() { _ = l.Close() })
+	start := time.Now()
+	srv := &http.Server{
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if time.Since(start) < readyAfter {
+				w.WriteHeader(http.StatusServiceUnavailable)
+				return
+			}
+			w.WriteHeader(http.StatusOK)
+		}),
+	}
+	t.Cleanup(func() { _ = srv.Close() })
+	go func() { _ = srv.Serve(l) }()
+}
+
+// TestWaitReadyEscalatesWhileBooting covers the 2026-07-07 spawn-kill loop: a
+// backend answering 503 (alive, mid-boot) past the base deadline must not be
+// declared wedged — waitReady escalates exactly once and keeps waiting.
+func TestWaitReadyEscalatesWhileBooting(t *testing.T) {
+	socketPath := filepath.Join(shortTempDir(t), "boot.sock")
+	serve503ThenReady(t, socketPath, 400*time.Millisecond)
+
+	escalations := 0
+	err := waitReady(socketPath, 150*time.Millisecond, 5*time.Second, false, func(responded bool) {
+		escalations++
+		if !responded {
+			t.Error("escalation for a 503-answering backend should report respondedHTTP=true")
+		}
+	}, make(chan struct{}))
+	if err != nil {
+		t.Fatalf("waitReady should succeed after escalation: %v", err)
+	}
+	if escalations != 1 {
+		t.Fatalf("expected exactly 1 escalation, got %d", escalations)
+	}
+}
+
+// TestWaitReadyEscalatesDemotedSilentBackend: a darwinbg-demoted boot competes
+// only for E-cores and can be socket-silent past the base deadline under host
+// load — its silence is not proof of a wedge, so it escalates instead of dying.
+func TestWaitReadyEscalatesDemotedSilentBackend(t *testing.T) {
+	socketPath := filepath.Join(shortTempDir(t), "slow.sock")
+	// The socket appears only after the base deadline has expired.
+	go func() {
+		time.Sleep(300 * time.Millisecond)
+		serve503ThenReady(t, socketPath, 0)
+	}()
+
+	escalations := 0
+	err := waitReady(socketPath, 100*time.Millisecond, 5*time.Second, true, func(responded bool) {
+		escalations++
+		if responded {
+			t.Error("silent demoted backend should escalate with respondedHTTP=false")
+		}
+	}, make(chan struct{}))
+	if err != nil {
+		t.Fatalf("waitReady should succeed after demoted-silent escalation: %v", err)
+	}
+	if escalations != 1 {
+		t.Fatalf("expected exactly 1 escalation, got %d", escalations)
+	}
+}
+
+// TestWaitReadyEscalationBounded: the extension is a ceiling, not forever — a
+// backend stuck answering 503 is eventually declared wedged after base+extension.
+func TestWaitReadyEscalationBounded(t *testing.T) {
+	socketPath := filepath.Join(shortTempDir(t), "stuck.sock")
+	serve503ThenReady(t, socketPath, time.Hour) // 503 forever
+
+	start := time.Now()
+	err := waitReady(socketPath, 100*time.Millisecond, 200*time.Millisecond, false, nil, make(chan struct{}))
+	elapsed := time.Since(start)
+	if err == nil {
+		t.Fatal("waitReady should time out after the escalation extension, got nil")
+	}
+	if !strings.Contains(err.Error(), "after escalation") {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if elapsed < 250*time.Millisecond {
+		t.Fatalf("returned before base+extension elapsed: %s", elapsed)
+	}
+	if elapsed > 3*time.Second {
+		t.Fatalf("escalated wait should stay bounded: %s", elapsed)
 	}
 }
 
