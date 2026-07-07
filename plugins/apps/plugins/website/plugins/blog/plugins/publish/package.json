@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-website-blog-publish",
+  "description": "Blog publish marker: page_blocks_ext_blog_post side-table (slug/summary/publishedAt), blogPostsResource, set/clear endpoints, useBlogPosts/useBlogPost.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -1,8 +1,9 @@
-// @hash 21a1ede5952c
+// @hash b7e356f2f0ed
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "apps.pages.page-tree:backlinks",
-    "apps.story.pages-integration:story"
+    "apps.story.pages-integration:story",
+    "apps.website.blog.pages-integration:blog"
   ]
 }

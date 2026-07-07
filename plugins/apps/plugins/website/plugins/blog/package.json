@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-website-blog",
+  "description": "Blog: pages-authored posts published to the public site.",
+  "private": true,
+  "version": "0.0.1"
+}

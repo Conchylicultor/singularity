@@ -1,0 +1,10 @@
+// @hash 7c7ce7d404b8
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.website.blog.site:blog",
+    "apps.website.downloads:download"
+  ]
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-website-demos",
+  "description": "Interactive toy demos of Singularity features embedded in the public site.",
+  "private": true,
+  "version": "0.0.1"
+}

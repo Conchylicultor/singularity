@@ -1296,6 +1296,13 @@
       "tag": "20260702_160301_80568cde__mail_message_has_attachments",
       "hash": "80568cde",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1783437145000,
+      "tag": "20260707_151225_7887e252__add_blog_post_ext",
+      "hash": "7887e252",
+      "breakpoints": true
     }
   ]
 }

@@ -1,0 +1,9 @@
+// @hash 7c7ce7d404b8
+{
+  // Site nav, left to right: plain links first, the primary Download CTA last
+  // (rightmost — the standard marketing-header position).
+  "items": [
+    "apps.website.blog.site:blog",
+    "apps.website.downloads:download"
+  ]
+}

@@ -1,0 +1,11 @@
+// @hash 9c3becfc6cce
+{
+  // Landing-page reading order, top to bottom: open with the hero, explain the
+  // product (features), let the visitor play (theme demo), close with the CTA.
+  "items": [
+    "apps.website.landing.hero:hero",
+    "apps.website.landing.features:features",
+    "apps.website.demos.theme-toy:theme-toy",
+    "apps.website.landing.cta:cta"
+  ]
+}

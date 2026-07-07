@@ -775,6 +775,58 @@
       "name": "@singularity/plugin-apps-studio-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/website": {
+      "name": "@singularity/plugin-apps-website",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/blog": {
+      "name": "@singularity/plugin-apps-website-blog",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/blog/plugins/pages-integration": {
+      "name": "@singularity/plugin-apps-website-blog-pages-integration",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/blog/plugins/publish": {
+      "name": "@singularity/plugin-apps-website-blog-publish",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/blog/plugins/site": {
+      "name": "@singularity/plugin-apps-website-blog-site",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/demos": {
+      "name": "@singularity/plugin-apps-website-demos",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/demos/plugins/theme-toy": {
+      "name": "@singularity/plugin-apps-website-demos-theme-toy",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/downloads": {
+      "name": "@singularity/plugin-apps-website-downloads",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/landing": {
+      "name": "@singularity/plugin-apps-website-landing",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/landing/plugins/cta": {
+      "name": "@singularity/plugin-apps-website-landing-cta",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/landing/plugins/features": {
+      "name": "@singularity/plugin-apps-website-landing-features",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/landing/plugins/hero": {
+      "name": "@singularity/plugin-apps-website-landing-hero",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/shell": {
+      "name": "@singularity/plugin-apps-website-shell",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/workflows": {
       "name": "@singularity/plugin-apps-workflows",
       "version": "0.0.1",
@@ -4987,6 +5039,32 @@
     "@singularity/plugin-apps-studio-release-release-logs": ["@singularity/plugin-apps-studio-release-release-logs@workspace:plugins/apps/plugins/studio/plugins/release/plugins/release-logs"],
 
     "@singularity/plugin-apps-studio-shell": ["@singularity/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
+
+    "@singularity/plugin-apps-website": ["@singularity/plugin-apps-website@workspace:plugins/apps/plugins/website"],
+
+    "@singularity/plugin-apps-website-blog": ["@singularity/plugin-apps-website-blog@workspace:plugins/apps/plugins/website/plugins/blog"],
+
+    "@singularity/plugin-apps-website-blog-pages-integration": ["@singularity/plugin-apps-website-blog-pages-integration@workspace:plugins/apps/plugins/website/plugins/blog/plugins/pages-integration"],
+
+    "@singularity/plugin-apps-website-blog-publish": ["@singularity/plugin-apps-website-blog-publish@workspace:plugins/apps/plugins/website/plugins/blog/plugins/publish"],
+
+    "@singularity/plugin-apps-website-blog-site": ["@singularity/plugin-apps-website-blog-site@workspace:plugins/apps/plugins/website/plugins/blog/plugins/site"],
+
+    "@singularity/plugin-apps-website-demos": ["@singularity/plugin-apps-website-demos@workspace:plugins/apps/plugins/website/plugins/demos"],
+
+    "@singularity/plugin-apps-website-demos-theme-toy": ["@singularity/plugin-apps-website-demos-theme-toy@workspace:plugins/apps/plugins/website/plugins/demos/plugins/theme-toy"],
+
+    "@singularity/plugin-apps-website-downloads": ["@singularity/plugin-apps-website-downloads@workspace:plugins/apps/plugins/website/plugins/downloads"],
+
+    "@singularity/plugin-apps-website-landing": ["@singularity/plugin-apps-website-landing@workspace:plugins/apps/plugins/website/plugins/landing"],
+
+    "@singularity/plugin-apps-website-landing-cta": ["@singularity/plugin-apps-website-landing-cta@workspace:plugins/apps/plugins/website/plugins/landing/plugins/cta"],
+
+    "@singularity/plugin-apps-website-landing-features": ["@singularity/plugin-apps-website-landing-features@workspace:plugins/apps/plugins/website/plugins/landing/plugins/features"],
+
+    "@singularity/plugin-apps-website-landing-hero": ["@singularity/plugin-apps-website-landing-hero@workspace:plugins/apps/plugins/website/plugins/landing/plugins/hero"],
+
+    "@singularity/plugin-apps-website-shell": ["@singularity/plugin-apps-website-shell@workspace:plugins/apps/plugins/website/plugins/shell"],
 
     "@singularity/plugin-apps-workflows": ["@singularity/plugin-apps-workflows@workspace:plugins/apps/plugins/workflows"],
 

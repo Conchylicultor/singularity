@@ -86,6 +86,23 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`release-info`** — Status, composition, target, platform, and timing section in the release detail pane.
             - **`release-logs`** — Live + persisted release log stream section in the release detail pane.
         - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
+    - **`website`** — Website — the public-facing site of Singularity (brand: equin): landing, downloads, blog, demos.
+      - Plugins:
+        - **`blog`** — Blog: pages-authored posts published to the public site.
+          - Plugins:
+            - **`pages-integration`** — Pages integration for Blog: an embedded publish panel (slug + summary, Publish/Unpublish, View on site) in the page-detail pane for turning a page into a public blog post.
+            - **`publish`** — Blog publish marker (read hooks + set/clear mutations). No UI: useBlogPosts/useBlogPost, setBlogPost/clearBlogPost. Blog publish marker: page_blocks_ext_blog_post side-table (entity-extensions), blogPostsResource, set/clear endpoints.
+            - **`site`** — Public blog surfaces for the equin website: the /website/blog list and /website/blog/:slug post panes (page content rendered read-only), plus the Blog nav link in the shared site header.
+        - **`demos`** — Interactive toy demos of Singularity features embedded in the public site.
+          - Plugins:
+            - **`theme-toy`** — Interactive theme-customizer toy on the public site: a preset switcher that restyles a sample app vignette live via locally-scoped CSS variables (no config writes, no persistence).
+        - **`downloads`** — Downloads page for the equin website: the /website/download pane (per-platform download cards, current-platform highlight) plus the primary Download CTA in the shared site header.
+        - **`landing`** — Landing-page sections of the public website (hero, features, closing CTA).
+          - Plugins:
+            - **`cta`** — Landing closing CTA band: a short headline and a primary Download button that navigates to the downloads pane.
+            - **`features`** — Landing features band: a heading over a responsive grid of feature cards describing what equin ships (agent manager, pages, mail, theming, plugins, workflows).
+            - **`hero`** — Landing hero band: the eyebrow + headline + subheadline opening statement for the equin public site.
+        - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry and the landing pane, owns the shared site toolbar (wordmark + nav zones) every site pane opts into, and defines the Website.Section landing slot.
     - **`workflows`** [13 sub-plugins] — Workflows app.
 
 - **`apps-core`** [load-bearing] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.

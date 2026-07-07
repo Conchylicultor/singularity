@@ -1,4 +1,4 @@
-// @hash 2f8e8439ad44
+// @hash 02bbb824bbdf
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -17,6 +17,7 @@
     "apps.sonata.shell:sonata",
     "apps.story.shell:story",
     "apps.studio.shell:studio",
+    "apps.website.shell:website",
     "apps.workflows.shell:workflows"
   ]
 }
