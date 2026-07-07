@@ -95,13 +95,23 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`site`** — Public blog surfaces for the equin website: the /website/blog list and /website/blog/:slug post panes (page content rendered read-only), plus the Blog nav link in the shared site header.
         - **`demos`** — Interactive toy demos of Singularity features embedded in the public site.
           - Plugins:
-            - **`theme-toy`** — Interactive theme-customizer toy on the public site: a preset switcher that restyles a sample app vignette live via locally-scoped CSS variables (no config writes, no persistence).
+            - **`agent-run`** — Agent-run simulator on the public site's Agents page: a fake task list where the visitor launches agents and watches each race through worktree → edit → build → merge, several concurrently — a deterministic, client-only replay of the real loop.
+            - **`app-gallery`** — App-gallery demo band on the public site's Apps page: a SegmentedControl over four app vignettes (Pages, Mail, Sonata, Workflows), each genuinely interactive. Pages/Mail/Workflows are toy replicas; the Sonata vignette embeds the REAL Sonata keyboard plugin and sampled grand — the app platform, playable in the browser.
+            - **`plugin-pyramid`** — Interactive pyramid composer on the public site's Platform page: the visitor toggles plugin blocks on/off and watches a sample app's regions appear or empty into labelled slots, with the top tier showing the release targets the one composition ships to — the plugins → apps → releases architecture made visible.
+            - **`release-switcher`** — Release-targets switcher demo band for the equin landing page: the same sample app re-hosted live in a native desktop window, a browser tab, and a window inside the equin workspace — proving one composition ships three ways.
+            - **`sample-app`** — Shared fake-app vignette ('Project Aurora') built from real UI primitives, reused by the site demos (theme toy, release switcher). No contributions — a pure component library plugin.
+            - **`theme-toy`** — Interactive theme-customizer toy on the public site's Platform page: a preset switcher that restyles a sample app vignette live via locally-scoped CSS variables (no config writes, no persistence) — theming as a plugin, demonstrated.
         - **`downloads`** — Downloads page for the equin website: the /website/download pane (per-platform download cards, current-platform highlight) plus the primary Download CTA in the shared site header.
-        - **`landing`** — Landing-page sections of the public website (hero, features, closing CTA).
+        - **`landing`** — Landing-page sections of the public website (hero, three pillars, closing CTA).
           - Plugins:
             - **`cta`** — Landing closing CTA band: a short headline and a primary Download button that navigates to the downloads pane.
-            - **`features`** — Landing features band: a heading over a responsive grid of feature cards describing what equin ships (agent manager, pages, mail, theming, plugins, workflows).
             - **`hero`** — Landing hero band: the eyebrow + headline + subheadline opening statement for the equin public site.
+            - **`pillars`** — Landing three-pillars band: one teaser card per pillar (the apps, the agents, the platform), each opening its dedicated pillar page.
+        - **`pillars`** — The three pillar pages of the public website: the apps, the agent manager, and the plugin platform.
+          - Plugins:
+            - **`agents`** — Agents pillar page of the equin website: the /website/agents pane telling the agent-manager story (nested tasks, isolated worktrees, the race), its Agents nav link, and the WebsiteAgents.Section slot demo plugins contribute into.
+            - **`apps`** — Apps pillar page of the equin website: the /website/apps pane showcasing the real apps (Pages, Mail, Sonata, Workflows), its Apps nav link, and the WebsiteApps.Section slot demo plugins contribute into.
+            - **`platform`** — Platform pillar page of the equin website: the /website/platform pane telling the developer-facing behind-the-scenes story (slots, boundaries, the plugins → apps → releases pyramid), its Platform nav link, and the WebsitePlatform.Section slot demo plugins contribute into.
         - **`shell`** — App shell for the Website (equin public site). Registers the /website app entry and the landing pane, owns the shared site toolbar (wordmark + nav zones) every site pane opts into, and defines the Website.Section landing slot.
     - **`workflows`** [13 sub-plugins] — Workflows app.
 

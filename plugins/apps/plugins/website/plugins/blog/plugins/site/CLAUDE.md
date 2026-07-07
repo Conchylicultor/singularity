@@ -6,7 +6,7 @@
 
 - Description: Public blog surfaces for the equin website: the /website/blog list and /website/blog/:slug post panes (page content rendered read-only), plus the Blog nav link in the shared site header.
 - Web:
-  - Slots: `blogListPane.Actions`, `blogListPane.Start` ← `apps.website.shell`, `blogListPane.End` ← `apps.website.blog.site`, `apps.website.downloads`, `blogPostPane.Actions`
+  - Slots: `blogListPane.Actions`, `blogListPane.Start` ← `apps.website.shell`, `blogListPane.End` ← `apps.website.blog.site`, `apps.website.downloads`, `apps.website.pillars.agents`, `apps.website.pillars.apps`, `apps.website.pillars.platform`, `blogPostPane.Actions`
   - Contributes: `Pane.Register` "website-blog", `Pane.Register` "website-blog-post", `blogListPane.End` "blog" → `BlogNavItem`
   - Uses: `apps/website/blog/publish.useBlogPosts`, `apps/website/shell.WebsiteNavLink`, `apps/website/shell.WebsitePage`, `apps/website/shell.WebsiteToolbar`, `page/read-only-view.buildForest`, `page/read-only-view.ReadOnlyBlocks`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`
   - Exports: Values: `blogListPane`, `blogPostPane`

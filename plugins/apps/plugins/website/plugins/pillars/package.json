@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-website-pillars",
+  "description": "The three pillar pages of the public website: the apps, the agent manager, and the plugin platform.",
+  "private": true,
+  "version": "0.0.1"
+}

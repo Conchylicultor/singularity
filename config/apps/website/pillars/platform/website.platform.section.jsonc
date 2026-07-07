@@ -1,0 +1,13 @@
+// @hash a5f4b3db043e
+{
+  // Platform pillar page, top to bottom: hero, the architecture cards, the
+  // pyramid composer (plugins → apps → releases, interactive), the theme-toy
+  // demo (theming as a plugin), then the closing cross-links.
+  "items": [
+    "apps.website.pillars.platform:hero",
+    "apps.website.pillars.platform:architecture",
+    "apps.website.demos.plugin-pyramid:plugin-pyramid",
+    "apps.website.demos.theme-toy:theme-toy",
+    "apps.website.pillars.platform:closing"
+  ]
+}

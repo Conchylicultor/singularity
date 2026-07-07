@@ -1,0 +1,12 @@
+// @hash a64896fefa3c
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.website.demos.agent-run:agent-run",
+    "apps.website.pillars.agents:hero",
+    "apps.website.pillars.agents:how-it-works",
+    "apps.website.pillars.agents:closing"
+  ]
+}

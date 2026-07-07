@@ -1,0 +1,13 @@
+// @hash a5f4b3db043e
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.website.demos.plugin-pyramid:plugin-pyramid",
+    "apps.website.demos.theme-toy:theme-toy",
+    "apps.website.pillars.platform:hero",
+    "apps.website.pillars.platform:architecture",
+    "apps.website.pillars.platform:closing"
+  ]
+}

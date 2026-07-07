@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-apps-website-landing",
-  "description": "Landing-page sections of the public website (hero, features, closing CTA).",
+  "description": "Landing-page sections of the public website (hero, three pillars, closing CTA).",
   "private": true,
   "version": "0.0.1"
 }

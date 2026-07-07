@@ -1,11 +1,13 @@
-// @hash 9c3becfc6cce
+// @hash 5effd0a7e320
 {
-  // Landing-page reading order, top to bottom: open with the hero, explain the
-  // product (features), let the visitor play (theme demo), close with the CTA.
+  // Landing-page reading order, top to bottom: open with the hero, present the
+  // three pillars (the site's narrative spine), prove them with the
+  // release-switcher demo (one composition shipping three ways), close with
+  // the CTA.
   "items": [
     "apps.website.landing.hero:hero",
-    "apps.website.landing.features:features",
-    "apps.website.demos.theme-toy:theme-toy",
+    "apps.website.landing.pillars:pillars",
+    "apps.website.demos.release-switcher:release-switcher",
     "apps.website.landing.cta:cta"
   ]
 }

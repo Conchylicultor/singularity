@@ -1,0 +1,12 @@
+// @hash 7a80cce34662
+{
+  // Apps pillar page, top to bottom: hero, the app showcase grid, the
+  // interactive app-gallery demo (try the apps, incl. the real Sonata piano),
+  // then the closing cross-links.
+  "items": [
+    "apps.website.pillars.apps:hero",
+    "apps.website.pillars.apps:showcase",
+    "apps.website.demos.app-gallery:app-gallery",
+    "apps.website.pillars.apps:closing"
+  ]
+}

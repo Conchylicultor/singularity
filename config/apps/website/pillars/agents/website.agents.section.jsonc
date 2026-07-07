@@ -1,0 +1,12 @@
+// @hash a64896fefa3c
+{
+  // Agents pillar page, top to bottom: hero, the how-it-works cards, the
+  // interactive agent-run simulator (launch agents, watch them race), then
+  // the closing cross-links.
+  "items": [
+    "apps.website.pillars.agents:hero",
+    "apps.website.pillars.agents:how-it-works",
+    "apps.website.demos.agent-run:agent-run",
+    "apps.website.pillars.agents:closing"
+  ]
+}

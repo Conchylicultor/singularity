@@ -1,8 +1,12 @@
-// @hash 7c7ce7d404b8
+// @hash 4a0a8b66c34e
 {
-  // Site nav, left to right: plain links first, the primary Download CTA last
-  // (rightmost — the standard marketing-header position).
+  // Site nav, left to right: the three pillar pages in narrative order
+  // (apps → agents → platform), then Blog, then the primary Download CTA
+  // last (rightmost — the standard marketing-header position).
   "items": [
+    "apps.website.pillars.apps:apps",
+    "apps.website.pillars.agents:agents",
+    "apps.website.pillars.platform:platform",
     "apps.website.blog.site:blog",
     "apps.website.downloads:download"
   ]

@@ -807,6 +807,26 @@
       "name": "@singularity/plugin-apps-website-demos",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/website/plugins/demos/plugins/agent-run": {
+      "name": "@singularity/plugin-apps-website-demos-agent-run",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/demos/plugins/app-gallery": {
+      "name": "@singularity/plugin-apps-website-demos-app-gallery",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/demos/plugins/plugin-pyramid": {
+      "name": "@singularity/plugin-apps-website-demos-plugin-pyramid",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/demos/plugins/release-switcher": {
+      "name": "@singularity/plugin-apps-website-demos-release-switcher",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/demos/plugins/sample-app": {
+      "name": "@singularity/plugin-apps-website-demos-sample-app",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/website/plugins/demos/plugins/theme-toy": {
       "name": "@singularity/plugin-apps-website-demos-theme-toy",
       "version": "0.0.1",
@@ -823,12 +843,28 @@
       "name": "@singularity/plugin-apps-website-landing-cta",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/website/plugins/landing/plugins/features": {
-      "name": "@singularity/plugin-apps-website-landing-features",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/website/plugins/landing/plugins/hero": {
       "name": "@singularity/plugin-apps-website-landing-hero",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/landing/plugins/pillars": {
+      "name": "@singularity/plugin-apps-website-landing-pillars",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/pillars": {
+      "name": "@singularity/plugin-apps-website-pillars",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/pillars/plugins/agents": {
+      "name": "@singularity/plugin-apps-website-pillars-agents",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/pillars/plugins/apps": {
+      "name": "@singularity/plugin-apps-website-pillars-apps",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/website/plugins/pillars/plugins/platform": {
+      "name": "@singularity/plugin-apps-website-pillars-platform",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/website/plugins/shell": {
@@ -5072,6 +5108,16 @@
 
     "@singularity/plugin-apps-website-demos": ["@singularity/plugin-apps-website-demos@workspace:plugins/apps/plugins/website/plugins/demos"],
 
+    "@singularity/plugin-apps-website-demos-agent-run": ["@singularity/plugin-apps-website-demos-agent-run@workspace:plugins/apps/plugins/website/plugins/demos/plugins/agent-run"],
+
+    "@singularity/plugin-apps-website-demos-app-gallery": ["@singularity/plugin-apps-website-demos-app-gallery@workspace:plugins/apps/plugins/website/plugins/demos/plugins/app-gallery"],
+
+    "@singularity/plugin-apps-website-demos-plugin-pyramid": ["@singularity/plugin-apps-website-demos-plugin-pyramid@workspace:plugins/apps/plugins/website/plugins/demos/plugins/plugin-pyramid"],
+
+    "@singularity/plugin-apps-website-demos-release-switcher": ["@singularity/plugin-apps-website-demos-release-switcher@workspace:plugins/apps/plugins/website/plugins/demos/plugins/release-switcher"],
+
+    "@singularity/plugin-apps-website-demos-sample-app": ["@singularity/plugin-apps-website-demos-sample-app@workspace:plugins/apps/plugins/website/plugins/demos/plugins/sample-app"],
+
     "@singularity/plugin-apps-website-demos-theme-toy": ["@singularity/plugin-apps-website-demos-theme-toy@workspace:plugins/apps/plugins/website/plugins/demos/plugins/theme-toy"],
 
     "@singularity/plugin-apps-website-downloads": ["@singularity/plugin-apps-website-downloads@workspace:plugins/apps/plugins/website/plugins/downloads"],
@@ -5080,9 +5126,17 @@
 
     "@singularity/plugin-apps-website-landing-cta": ["@singularity/plugin-apps-website-landing-cta@workspace:plugins/apps/plugins/website/plugins/landing/plugins/cta"],
 
-    "@singularity/plugin-apps-website-landing-features": ["@singularity/plugin-apps-website-landing-features@workspace:plugins/apps/plugins/website/plugins/landing/plugins/features"],
-
     "@singularity/plugin-apps-website-landing-hero": ["@singularity/plugin-apps-website-landing-hero@workspace:plugins/apps/plugins/website/plugins/landing/plugins/hero"],
+
+    "@singularity/plugin-apps-website-landing-pillars": ["@singularity/plugin-apps-website-landing-pillars@workspace:plugins/apps/plugins/website/plugins/landing/plugins/pillars"],
+
+    "@singularity/plugin-apps-website-pillars": ["@singularity/plugin-apps-website-pillars@workspace:plugins/apps/plugins/website/plugins/pillars"],
+
+    "@singularity/plugin-apps-website-pillars-agents": ["@singularity/plugin-apps-website-pillars-agents@workspace:plugins/apps/plugins/website/plugins/pillars/plugins/agents"],
+
+    "@singularity/plugin-apps-website-pillars-apps": ["@singularity/plugin-apps-website-pillars-apps@workspace:plugins/apps/plugins/website/plugins/pillars/plugins/apps"],
+
+    "@singularity/plugin-apps-website-pillars-platform": ["@singularity/plugin-apps-website-pillars-platform@workspace:plugins/apps/plugins/website/plugins/pillars/plugins/platform"],
 
     "@singularity/plugin-apps-website-shell": ["@singularity/plugin-apps-website-shell@workspace:plugins/apps/plugins/website/plugins/shell"],
 

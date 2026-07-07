@@ -1,12 +1,12 @@
-// @hash 9c3becfc6cce
+// @hash 5effd0a7e320
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "apps.website.demos.theme-toy:theme-toy",
+    "apps.website.demos.release-switcher:release-switcher",
     "apps.website.landing.cta:cta",
-    "apps.website.landing.features:features",
-    "apps.website.landing.hero:hero"
+    "apps.website.landing.hero:hero",
+    "apps.website.landing.pillars:pillars"
   ]
 }
