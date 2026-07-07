@@ -169,7 +169,10 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    *
    * MUST be a BASE TABLE name, never a view name — `applyDbChange`'s `origin` is
    * always the base table that changed, so a view name here silently never matches
-   * and the resource quietly stays on FULL recompute.
+   * and the resource quietly stays on FULL recompute. This is enforced at boot:
+   * the change-feed's `assertScopePoliciesCovered` throws if this table is not one
+   * it installed a trigger on (a view / rollup / excluded / typo'd name), so the
+   * silent degrade is now a loud boot failure rather than a latent footgun.
    */
   identityTable?: string;
   /**

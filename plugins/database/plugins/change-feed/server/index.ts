@@ -7,9 +7,9 @@ import {
 import { db } from "@plugins/database/server";
 import { relationIdentityBase } from "@plugins/database/plugins/derived-views/server";
 import { feedExemptTables } from "@plugins/database/plugins/derived-tables/server";
-import { rebuildTriggers } from "./internal/triggers";
+import { rebuildTriggers, getCoveredTables } from "./internal/triggers";
 import { excludedTableNames } from "./internal/exclusion";
-import { assertNoDeadScopePolicies } from "./internal/identity-coverage";
+import { assertScopePoliciesCovered } from "./internal/identity-coverage";
 import { startListener, stopListener } from "./internal/listener";
 import { buildViewDeps } from "./internal/view-deps";
 
@@ -37,13 +37,25 @@ export default {
   // (started in onReady, after the barrier) is guaranteed to find them.
   async onReadyBlocking() {
     await rebuildTriggers(db);
-    // Reject dead scope policy: a keyed resource whose identityTable names an
-    // excluded table can never receive its declared scoped delivery (the excluded
-    // table has no trigger). Both inputs are authoritative here — contributions
-    // were collected before this barrier, and the resource registry is populated
-    // at module-import. Throws loudly (blocks boot) rather than warning: it is
-    // always a definite bug, never transient drift. See ./internal/identity-coverage.
-    assertNoDeadScopePolicies(scopedResourceIdentities(), excludedTableNames());
+    // Reject dead scope policy: a keyed resource whose identityTable names a table
+    // the feed installed no trigger on can never receive its declared scoped
+    // delivery (scoped fires only on origin === identityTable, and only a
+    // triggered table produces that origin). `getCoveredTables()` is the single
+    // authoritative set — just populated by `rebuildTriggers` above — so this one
+    // check subsumes the ExcludeFromChangeFeed case AND catches typo / view /
+    // rollup / nonexistent identity tables; the exclusion + exempt sets only
+    // classify the reason for the diagnostic. All inputs are authoritative here —
+    // contributions were collected before this barrier and the resource registry
+    // is populated at module-import. Throws loudly (blocks boot) rather than
+    // warning: it is always a definite bug, never transient drift. A legitimate
+    // base table is present in the covered set by construction, so a miss is never
+    // a false positive. See ./internal/identity-coverage.
+    assertScopePoliciesCovered(
+      scopedResourceIdentities(),
+      new Set(getCoveredTables()),
+      excludedTableNames(),
+      new Set(feedExemptTables()),
+    );
   },
   // The LISTEN consumer is a background watcher, so it starts after the ready
   // barrier (same phase as git-watcher's startGitWatcher). The view-dependency
