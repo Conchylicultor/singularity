@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-overflow-menu",
+  "description": "Single-line row that collapses overflowing children into a ⋯ dropdown menu.",
+  "private": true,
+  "version": "0.0.1"
+}

@@ -42,8 +42,10 @@ export function SongTitle() {
 export function DisplayPicker() {
   const { effectiveDisplayId, setActiveDisplay } = useSonata();
   const displays = Sonata.Display.useContributions();
+  // `w-full` gives the row a defined width to overflow against; below it, the
+  // chips collapse into the ⋯ menu (the active display is pinned inline).
   return (
-    <Stack direction="row" align="center" gap="sm">
+    <Stack direction="row" align="center" gap="sm" className="w-full">
       <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
         Display
       </span>
