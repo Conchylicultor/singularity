@@ -1,7 +1,9 @@
-// @hash 626d05662d72
+// @hash d8ddeef61dc3
 {
   // Play a click on every beat through the song.
   "continuous": false,
+  // Clicks per beat: 1 = quarter notes, 2 = eighths, 3 = triplets, 4 = sixteenths.
+  "subdivision": 1,
   // Bars of metronome clicks before playback begins (0 = off, 1 or 2 bars).
   "countInBars": 0,
   // Loudness of the metronome click (independent of the music).

@@ -1,14 +1,18 @@
 import type { InstrumentVoices } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { ACCENT_PITCH } from "./constants";
+import { ACCENT_PITCH, SUB_PITCH } from "./constants";
 
-// Click timbre constants. An accent (bar downbeat) is a higher, fuller blip; a
-// normal beat is lower and quieter so the downbeat stands out. A click is a
-// short percussive transient: a near-instant attack then an exponential decay to
-// silence in ~50ms, so successive clicks never overlap or ring.
+// Click timbre constants, one triplet per accent tier. An accent (bar downbeat)
+// is a higher, fuller blip; a normal beat is lower and quieter so the downbeat
+// stands out; a subdivision click (the extra ticks between beats) is higher but
+// much quieter — a light tick that fills in the pulse without competing with the
+// main beat. A click is a short percussive transient: a near-instant attack then
+// an exponential decay to silence in ~50ms, so successive clicks never overlap.
 const ACCENT_FREQ_HZ = 1900;
 const NORMAL_FREQ_HZ = 1100;
+const SUB_FREQ_HZ = 1500;
 const ACCENT_LEVEL = 1;
 const NORMAL_LEVEL = 0.7;
+const SUB_LEVEL = 0.32;
 const ATTACK_SEC = 0.001;
 const DECAY_SEC = 0.05;
 const STOP_SEC = 0.06;
@@ -39,15 +43,22 @@ export function createClickVoices(
   return {
     loaded: Promise.resolve(),
     schedule({ pitch, when }) {
+      // Three tiers: accent (downbeat) > normal (main beat) > sub (subdivision).
       const accent = pitch >= ACCENT_PITCH;
+      const sub = pitch <= SUB_PITCH;
       const volume = Math.max(0, Math.min(1, getVolume()));
-      const level = (accent ? ACCENT_LEVEL : NORMAL_LEVEL) * volume;
+      const tierLevel = accent ? ACCENT_LEVEL : sub ? SUB_LEVEL : NORMAL_LEVEL;
+      const level = tierLevel * volume;
       if (level <= 0) return; // muted — nothing to sound.
 
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       osc.type = "square";
-      osc.frequency.value = accent ? ACCENT_FREQ_HZ : NORMAL_FREQ_HZ;
+      osc.frequency.value = accent
+        ? ACCENT_FREQ_HZ
+        : sub
+          ? SUB_FREQ_HZ
+          : NORMAL_FREQ_HZ;
 
       // Percussive envelope: snap up to `level`, then exponential-decay to silence.
       gain.gain.setValueAtTime(SILENCE, when);

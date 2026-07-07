@@ -1,10 +1,18 @@
 /**
  * Click encoding shared by the click voice, the synthetic click-note builder,
- * and the count-in scheduler. A click is just a note whose `pitch` carries the
- * accent flag (no real pitch): `ACCENT_PITCH` for a bar downbeat, `NORMAL_PITCH`
- * for an off-beat. The click voice reads `pitch >= ACCENT_PITCH` to choose the
- * brighter accent timbre.
+ * and the count-in scheduler. A click is just a note whose `pitch` carries its
+ * accent *tier* (no real pitch): the click voice reads the tier to choose the
+ * timbre. Three tiers, brightest → quietest:
+ *
+ *  - `ACCENT_PITCH` — a bar downbeat (the first beat of each bar).
+ *  - `NORMAL_PITCH` — a main (notated) beat that is not a downbeat.
+ *  - `SUB_PITCH`    — an in-between subdivision click (eighths / triplets / …),
+ *                     a lighter, quieter tick so the main pulse still stands out.
+ *
+ * Ordered so `pitch >= ACCENT_PITCH` still means "accent" and `pitch <= SUB_PITCH`
+ * means "subdivision", leaving `NORMAL_PITCH` in the middle.
  */
+export const SUB_PITCH = -1;
 export const NORMAL_PITCH = 0;
 export const ACCENT_PITCH = 1;
 

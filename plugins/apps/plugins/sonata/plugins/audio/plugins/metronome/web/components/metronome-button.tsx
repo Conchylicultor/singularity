@@ -23,6 +23,15 @@ const COUNT_IN_OPTIONS = [
   { id: "2", label: "2 bars" },
 ] as const;
 
+// Clicks-per-beat, presented as the standard musical subdivisions. The id maps
+// 1:1 to the `subdivision` int; the `title` names the note value on hover.
+const SUBDIVISION_OPTIONS = [
+  { id: "1", label: "1", title: "Quarter notes (one click per beat)" },
+  { id: "2", label: "2", title: "Eighth notes (two per beat)" },
+  { id: "3", label: "3", title: "Triplets (three per beat)" },
+  { id: "4", label: "4", title: "Sixteenth notes (four per beat)" },
+] as const;
+
 /**
  * The metronome toolbar control (`SonataToolbar.End`): a single button that opens
  * the metronome popover. The button itself reflects the click-track state (filled
@@ -34,7 +43,7 @@ const COUNT_IN_OPTIONS = [
  */
 export function MetronomeButton() {
   const { score } = useSonata();
-  const { continuous, countInBars, volume, accentDownbeat } =
+  const { continuous, countInBars, volume, accentDownbeat, subdivision } =
     useConfig(metronomeConfig);
   const setConfig = useSetConfig(metronomeConfig);
   const hasScore = scoreEndBeat(score) > 0;
@@ -65,6 +74,16 @@ export function MetronomeButton() {
         </Stack>
 
         <Separator />
+
+        <Stack gap="xs">
+          <SectionLabel>Subdivision</SectionLabel>
+          <SegmentedControl
+            options={SUBDIVISION_OPTIONS}
+            value={String(subdivision)}
+            onChange={(id) => setConfig("subdivision", Number(id))}
+            variant="ghost"
+          />
+        </Stack>
 
         <Stack gap="xs">
           <SectionLabel>Count-in</SectionLabel>

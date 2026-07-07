@@ -57,7 +57,7 @@ export function MetronomeEngine() {
     finishCountIn,
   } = useSonata();
 
-  const { continuous, countInBars, volume, accentDownbeat } =
+  const { continuous, countInBars, volume, accentDownbeat, subdivision } =
     useConfig(metronomeConfig);
 
   // Imperative per-surface cursor facade (stable). The count-in provider reads
@@ -198,13 +198,13 @@ export function MetronomeEngine() {
   // schedule rebuilds only on a real beat/accent change — never on a tempo frame
   // (the retime effect handles tempo). Mirrors the engine's stable-key discipline.
   const clickNotes = useMemo(
-    () => buildClickNotes(score, accentDownbeat),
-    [score, accentDownbeat],
+    () => buildClickNotes(score, accentDownbeat, subdivision),
+    [score, accentDownbeat, subdivision],
   );
   const clickNotesRef = useLatestRef(clickNotes);
   const clickNotesKey = `${JSON.stringify(score.timeSigMap)}|${
     score.meta.pickupBeats ?? 0
-  }|${scoreEndBeat(score)}|${accentDownbeat}`;
+  }|${scoreEndBeat(score)}|${accentDownbeat}|${subdivision}`;
 
   // Rebuild effect: anchor on play, schedule the click track upfront, silence on
   // stop / when continuous is off. Mirrors the audio engine's rebuild effect.
