@@ -94,7 +94,6 @@ export {
   listExistingConversationIds,
   listConversationsForDisplay,
   listActiveConversations,
-  listActiveSystemConversations,
   conversationCascadeSignatures,
   listGoneConversations,
   getConversation,

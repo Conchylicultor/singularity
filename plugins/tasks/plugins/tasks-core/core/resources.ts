@@ -64,18 +64,24 @@ export const pushesResource = resourceDescriptor<Push[]>("pushes", z.array(PushS
 // stats resource (replaces the old aggregate `conversationsResource`). Keyed
 // resources read like push resources via `useResource` (the delta-merge is
 // invisible to consumers); the client recombines them through use-conversations.
-export const conversationsActiveResource = keyedResourceDescriptor<Conversation[]>(
+//
+// The active/system scans are fully declarative: their server halves are
+// `queryResource`s (derived loader + scoped refill + identityTable + M5
+// scopedMembership), so their descriptors are `queryResourceDescriptor`s — a keyed
+// `ResourceDescriptor` over `Conversation[]` plus the `queryPk` the server asserts
+// its derived keyField against (a boot-time throw on drift). Web consumers still
+// read only key/origin/schema/keyOf, so the swap is additive (mirrors the
+// `tasksResource` precedent above).
+export const conversationsActiveResource = queryResourceDescriptor<Conversation>(
   "conversations-active",
-  z.array(ConversationSchema),
-  [],
-  (r) => (r as Conversation).id,
+  ConversationSchema,
+  "id",
   { bootCritical: true },
 );
-export const conversationsSystemResource = keyedResourceDescriptor<Conversation[]>(
+export const conversationsSystemResource = queryResourceDescriptor<Conversation>(
   "conversations-system",
-  z.array(ConversationSchema),
-  [],
-  (r) => (r as Conversation).id,
+  ConversationSchema,
+  "id",
   { bootCritical: true },
 );
 export const conversationsGoneResource = keyedResourceDescriptor<Conversation[]>(

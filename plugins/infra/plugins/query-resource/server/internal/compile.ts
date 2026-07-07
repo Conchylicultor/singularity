@@ -32,6 +32,28 @@ export interface CompiledQuery<Row, P extends ResourceParams> {
 export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
   spec: QueryResourceSpec<P>,
 ): CompiledQuery<Row, P> {
+  // M5: `scopedMembership` is incompatible with a windowed/LIMIT read (a row
+  // entering/leaving the window is a membership change a per-id refill can't place)
+  // and with the `recompute: { full }` opt-out (the opposite policy — no
+  // identityTable to scope against). Both are declaration-time bugs → loud throw at
+  // module eval, so a bad spec is a boot crash, never a silent misbehavior.
+  if (spec.scopedMembership) {
+    if (spec.limit != null) {
+      throw new Error(
+        "compileQuery: scopedMembership is incompatible with `limit` — a windowed " +
+          "read cannot membership-scope (a row entering/leaving the window is a " +
+          "membership change a per-id refill can't express). Use `recompute: { full }`.",
+      );
+    }
+    if (spec.recompute != null) {
+      throw new Error(
+        "compileQuery: scopedMembership and `recompute` are mutually exclusive — " +
+          "scopedMembership IS the incremental-membership policy, `recompute: { full }` " +
+          "is the whole-set FULL opt-out. Pick one.",
+      );
+    }
+  }
+
   // One boundary cast: the real drizzle `db` satisfies `QueryDb` structurally,
   // but its precise generics fight a plain assignment (the entities plugin sets
   // the `as unknown as` precedent at its own runtime/type boundary).
@@ -90,6 +112,20 @@ export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
     return query as unknown as Promise<Row[]>;
   };
 
+  // M5 orderOf: the ids-only "full ORDER BY'd id list for these params" query the
+  // runtime runs ONLY when a refill returns a row that entered membership (needs
+  // authoritative placement). Same select→from→where→orderBy shape as the FULL
+  // loader but projecting ONLY the pk (never a limit), through the same `QueryDb`
+  // seam so it is fake-db unit-testable. Rows map to `String(row[keyField])`.
+  const orderOf = async (params: P): Promise<string[]> => {
+    let q: QueryStep = db.select({ [keyField]: pkColumn }).from(rel);
+    const w = resolveWhere(params);
+    if (w) q = q.where(w);
+    if (orderBy) q = q.orderBy(...orderBy);
+    const rows = (await q) as Record<string, unknown>[];
+    return rows.map((r) => String(r[keyField]));
+  };
+
   const dependsOn: DependsOnEntry[] | undefined = spec.edges?.map((edge) =>
     compileEdge(edge, db),
   );
@@ -102,6 +138,7 @@ export function compileQuery<Row, P extends ResourceParams = ResourceParams>(
     loader,
     ...(dependsOn ? { dependsOn } : {}),
     ...(spec.debounceMs != null ? { debounceMs: spec.debounceMs } : {}),
+    ...(spec.scopedMembership ? { scopedMembership: { orderOf } } : {}),
     ...scopePolicy,
   } as ServerResourceOptions<Row[], P> & ScopePolicy;
 

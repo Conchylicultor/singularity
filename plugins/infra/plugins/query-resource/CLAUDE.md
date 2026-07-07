@@ -69,9 +69,9 @@ refill of an out-of-window row would corrupt the snapshot. Declare
 query and ignores `ctx.affectedIds`, while still gaining Layer-1 keyed row
 diffing. `releaseHistoryResource` / `buildHistoryResource` are the archetype.
 
-## RULE: a mutable-column `where` requires `recompute: {full}`
+## RULE: a mutable-column `where` requires `scopedMembership` or `recompute:{full}`
 
-**`where` + the default `identityTable` scoping is sound only when every column
+**`where` + the plain `identityTable` scoping is sound only when every column
 the `where` reads is immutable post-insert.** The scoped refill runs
 `and(where, pk IN affectedIds)` and merges what comes back — but
 `diffKeyedScoped` **never emits deletes** (a scoped notify never asserts
@@ -84,18 +84,59 @@ The compiler cannot detect column mutability statically, so this is a declared
 rule, checked at review time:
 
 - `where` on **immutable** columns (a parent FK like `threadId`, a fixed `type`
-  discriminator, anything never UPDATEd) → K/scoped is fine.
+  discriminator, anything never UPDATEd) → plain K/scoped is fine.
 - `where` on a **mutable** column (`dismissed`, a status, any flag a mutation
-  flips) → declare `recompute: { kind: "full", reason: "where-filtered
-  membership: …" }`. The FULL loader re-runs the whole query and `diffKeyedFull`
-  ships the disappearance as a real per-row delete — while in-place field flips
-  still ship as single-row upserts (the Layer-1 win survives).
-- No `where` at all → membership only changes via INSERT/DELETE, which the feed
-  already delivers as FULL (`op: "I" | "D"`). K/scoped is safe.
+  flips) → declare EITHER:
+  - **`scopedMembership: true`** (M5, the preferred choice for a non-windowed
+    scan): a where-flip is detected as a membership **exit** (the scoped refill
+    fails to return a requested id) and shipped as a real delete + `order`, so
+    the row leaves every client snapshot incrementally — no whole-list FULL. An
+    INSERT enters via the derived `orderOf`; a plain field flip still ships one
+    upsert. See the next section.
+  - **`recompute: { kind: "full", reason: "where-filtered membership: …" }`** —
+    the fallback for windowed reads (which cannot membership-scope). The FULL
+    loader re-runs the whole query and `diffKeyedFull` ships the disappearance as
+    a real per-row delete, while in-place flips still ship as single-row upserts.
+- No `where` at all → membership only changes via INSERT/DELETE. Without
+  `scopedMembership` the feed delivers those as FULL (`op: "I" | "D"`); with it
+  they ship incrementally (see the next section). Either is correct.
 
 `notificationsResource` (`where dismissed = false`, flipped by dismiss/dismiss-all)
-is the archetype of the mutable case. M5 (opt-in scoped membership: DELETE then
-INSERT semantics) may relax this.
+is the archetype of the mutable case; it currently uses `recompute:{full}` and is
+a candidate to migrate to `scopedMembership`. The `conversations-active` /
+`conversations-system` scans (`where active = true`, `active` flipped when a
+conversation ends) are the first `scopedMembership` adopters.
+
+## `scopedMembership: true` — incremental membership (M5)
+
+Opt a **non-windowed** keyed scan into row-level membership scoping so an
+INSERT / DELETE / where-flip no longer forces a FULL recompute. The compiler
+derives, alongside the FULL + scoped loaders, an **`orderOf`** query — the
+ids-only `select(pk).from(rel)[.where][.orderBy]` (**never a limit**) — and emits
+`scopedMembership: { orderOf }` into `serverOpts`. The runtime
+(`resource-runtime`) reconciles each flush's changed ids against the per-pk
+snapshot:
+
+- **DELETE** → delete + new `order` (prior order minus the id), **zero DB
+  queries** (no loader, no `orderOf` — the order comes from the in-memory
+  snapshot).
+- **where-flip exit** (UPDATE where the refill returns nothing for a requested
+  id) → same delete + order shape, one scoped refill, no `orderOf`.
+- **INSERT / where-flip entry** (a refilled id absent from the snapshot) → upsert
+  + `order`; `orderOf` runs **exactly once** to place the entrant.
+- **in-place field flip** → a single upsert, `order` omitted (identical to plain
+  K/scoped).
+
+`orderOf`'s cost model: it runs **only when a row enters** membership; exits and
+in-place changes derive their order from the prior snapshot, so the common
+status-flip path issues no extra query.
+
+Incompatibilities (loud throw at module eval in `compileQuery`): `scopedMembership`
+cannot combine with `limit` (a windowed read cannot membership-scope) or with
+`recompute` (the opposite policy — `recompute:{full}` has no `identityTable`).
+Absent ⇒ byte-identical to the pre-M5 FULL-on-membership-change behavior. See
+`research/2026-07-03-global-scoped-membership-m5.md` and the runtime section in
+`plugins/framework/plugins/resource-runtime/CLAUDE.md`.
 
 ## Ordering-staleness caveat
 

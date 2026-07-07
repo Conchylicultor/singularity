@@ -261,6 +261,78 @@ describe("compileQuery — SQL", () => {
   });
 });
 
+describe("compileQuery — scopedMembership (M5)", () => {
+  test("orderOf renders SELECT pk FROM rel WHERE ... ORDER BY ... (no limit) and maps rows", async () => {
+    const { db, calls } = fakeDb(() => [{ id: "a" }, { id: "b" }]);
+    const { serverOpts } = compileQuery({
+      from: rows,
+      select: { id: rows.id, n: rows.n },
+      where: eq(rows.n, 1),
+      orderBy: desc(rows.n),
+      scopedMembership: true,
+      db,
+    });
+    expect(serverOpts.scopedMembership).toBeDefined();
+    const ids = await serverOpts.scopedMembership!.orderOf({});
+    // Projects ONLY the pk, keeps where + orderBy, and carries NO limit.
+    expect(calls[0]!.sql).toBe(
+      `select "id" from "rows" where "rows"."n" = $1 order by "rows"."n" desc`,
+    );
+    expect(calls[0]!.params).toEqual([1]);
+    expect(ids).toEqual(["a", "b"]); // rows mapped to String(row[keyField])
+  });
+
+  test("orderOf on an aliased projection keys on the alias, selecting the pk column", async () => {
+    const { db, calls } = fakeDb(() => [{ conversationId: "x" }]);
+    const { serverOpts } = compileQuery({
+      from: rows,
+      identity: { pk: rows.parentId },
+      select: { conversationId: rows.parentId, n: rows.n },
+      scopedMembership: true,
+      db,
+    });
+    const ids = await serverOpts.scopedMembership!.orderOf({});
+    expect(calls[0]!.sql).toBe(`select "parent_id" from "rows"`);
+    expect(ids).toEqual(["x"]); // read off the alias key `conversationId`
+  });
+
+  test("scopedMembership + limit throws at compile", () => {
+    const { db } = fakeDb();
+    expect(() =>
+      compileQuery({ from: rows, select: { id: rows.id }, limit: 10, scopedMembership: true, db }),
+    ).toThrow(/scopedMembership is incompatible with `limit`/);
+  });
+
+  test("scopedMembership + recompute throws at compile", () => {
+    const { db } = fakeDb();
+    expect(() =>
+      compileQuery({
+        from: rows,
+        select: { id: rows.id },
+        recompute: { kind: "full", reason: "x" },
+        scopedMembership: true,
+        db,
+      }),
+    ).toThrow(/mutually exclusive/);
+  });
+
+  test("serverOpts carries scopedMembership.orderOf only when opted in", () => {
+    const { db } = fakeDb();
+    const optedIn = compileQuery({
+      from: rows,
+      select: { id: rows.id },
+      scopedMembership: true,
+      db,
+    });
+    expect(typeof optedIn.serverOpts.scopedMembership?.orderOf).toBe("function");
+    // The scope policy is still the plain identityTable (never recompute).
+    expect(optedIn.serverOpts).toMatchObject({ identityTable: "rows" });
+
+    const plain = compileQuery({ from: rows, select: { id: rows.id }, db });
+    expect("scopedMembership" in plain.serverOpts).toBe(false);
+  });
+});
+
 describe("rel() → dependsOn", () => {
   test("single hop self-queries the FK (selectDistinct) and maps ids", async () => {
     const { db, calls } = fakeDb(() => [{ v: "p1" }, { v: "p2" }]);

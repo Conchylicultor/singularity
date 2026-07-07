@@ -234,7 +234,18 @@ an `affectedMap?(upstreamAffected, upstreamParams) => string[]` on each
 `dependsOn` edge (upstream-FULL, missing map, or a throwing map ⇒ downstream
 FULL). `affectedMap` must self-query the DB rather than read the upstream value,
 so it does not force the upstream loader to run. The conversation poller and
-`insertPush` are the first adopters.
+`insertPush` were the first adopters.
+
+**M5 exception (`scopedMembership`)**: a keyed resource that opts into scoped
+membership on the server CAN ship a scoped delta that asserts membership — real
+`deletes` plus the full `order` list — for row-level INSERT/DELETE/where-flip
+changes (a DELETE ships with zero DB queries; an INSERT runs the scoped refill
+plus one ids-only `orderOf` query). The client needs **zero changes**: when
+`order` is present it already rebuilds the array from it (the same path a FULL
+membership delta uses), and `deletes` stays informational. See
+`plugins/framework/plugins/resource-runtime/CLAUDE.md` and
+`research/2026-07-03-global-scoped-membership-m5.md`. The
+`conversations-active`/`conversations-system` scans are the first adopters.
 
 ### Future escape hatch (NOT yet implemented)
 

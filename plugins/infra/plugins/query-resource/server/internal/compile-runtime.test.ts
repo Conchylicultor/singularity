@@ -88,6 +88,11 @@ interface SentFrame {
   key: string;
   kind: string;
   version?: number;
+  // Keyed-delta payload fields, captured for the M5 membership assertions
+  // (present only on `delta` frames).
+  upserts?: [string, unknown][];
+  deletes?: string[];
+  order?: string[];
 }
 
 function harness(readSetMap: Record<string, string[]>) {
@@ -96,9 +101,24 @@ function harness(readSetMap: Record<string, string[]>) {
   let seq = 0;
   const ws = {
     send(raw: string) {
-      const msg = JSON.parse(raw) as { kind: string; key?: string; version?: number };
+      const msg = JSON.parse(raw) as {
+        kind: string;
+        key?: string;
+        version?: number;
+        upserts?: [string, unknown][];
+        deletes?: string[];
+        order?: string[];
+      };
       if (msg.kind === "ping") return;
-      frames.push({ seq: seq++, key: msg.key ?? "", kind: msg.kind, version: msg.version });
+      frames.push({
+        seq: seq++,
+        key: msg.key ?? "",
+        kind: msg.kind,
+        version: msg.version,
+        upserts: msg.upserts,
+        deletes: msg.deletes,
+        order: msg.order,
+      });
     },
   };
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -485,5 +505,143 @@ describe("compiled query-resource — rel() cascade edges end-to-end", () => {
     expect(h.pushesFor("down_s")).toHaveLength(1); // still just the first frame
     expect(loads).toEqual([true]); // down never re-loaded
     expect(distinctCalls).toBe(1); // affectedMap not consulted the second time
+  });
+});
+
+// M5 scopedMembership, end-to-end through the compiled query-resource → runtime
+// membership path. Each test registers a `scopedMembership: true` resource, seeds
+// the snapshot at sub-ack, then drives one op through `applyDbChange`, asserting
+// the shipped delta AND the exact number of loader / orderOf queries. The fake db
+// flips to "scoped" on the first `.where()` (the scoped refill's `pk IN (…)`);
+// `orderOf` never calls `.where()` here, so it resolves to the FULL script — the
+// post-change ordered set. See research/2026-07-03-global-scoped-membership-m5.md.
+describe("compiled query-resource — scopedMembership (M5) end-to-end", () => {
+  // Register a scopedMembership resource, wrapping the loader (scoped-vs-full) AND
+  // the derived `orderOf` so the test can count each independently.
+  function registerSm(
+    runtime: ReturnType<typeof createResourceRuntime>,
+    key: string,
+    db: QueryDb,
+    loads: boolean[],
+    orderOfCalls: { n: number },
+    subscribed: () => boolean,
+  ) {
+    const { serverOpts } = compileQuery({ from: rows, identity: { pk: rows.id }, scopedMembership: true, db });
+    const innerLoader = serverOpts.loader;
+    const innerOrderOf = serverOpts.scopedMembership!.orderOf;
+    const wrapped = {
+      ...serverOpts,
+      loader: (p: ResourceParams, ctx?: { affectedIds: readonly string[] }) => {
+        if (subscribed()) loads.push(ctx !== undefined);
+        return innerLoader(p, ctx);
+      },
+      scopedMembership: {
+        orderOf: (p: ResourceParams) => {
+          if (subscribed()) orderOfCalls.n++;
+          return innerOrderOf(p);
+        },
+      },
+    } as ServerResourceOptions<{ id: string; n: number }[]> & ScopePolicy;
+    return runtime.defineResource(keyed(key), wrapped);
+  }
+
+  test("op I: refill + orderOf (one each) → delta with upsert + order", async () => {
+    // Before the insert the set is {a}; the insert adds `b`. The scoped refill
+    // returns only `b`; `b` is not in the snapshot ⇒ orderOf runs once to place it.
+    let inserted = false;
+    const h = harness({ rows: ["rows"] });
+    const loads: boolean[] = [];
+    const orderOfCalls = { n: 0 };
+    let subscribed = false;
+    registerSm(
+      h.runtime,
+      "rows",
+      fakeDb(
+        () => (inserted ? [{ id: "a", n: 1 }, { id: "b", n: 1 }] : [{ id: "a", n: 1 }]),
+        () => [{ id: "b", n: 1 }],
+      ),
+      loads,
+      orderOfCalls,
+      () => subscribed,
+    );
+    await h.subscribe("rows"); // sub-ack seeds the snapshot = {a}
+    subscribed = true;
+    inserted = true;
+
+    h.runtime.applyDbChange({ table: "rows", op: "I", ids: ["b"], origin: "rows", identityBase: "rows" });
+    await tick();
+
+    const pushes = h.pushesFor("rows");
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]!.kind).toBe("delta");
+    expect(pushes[0]!.upserts).toEqual([["b", { id: "b", n: 1 }]]);
+    expect(pushes[0]!.order).toEqual(["a", "b"]); // membership asserted via orderOf
+    expect(loads).toEqual([true]); // exactly one scoped refill
+    expect(orderOfCalls.n).toBe(1); // exactly one orderOf (a row entered)
+  });
+
+  test("op D: ZERO queries → delta with deletes + order (from the snapshot)", async () => {
+    const h = harness({ rows: ["rows"] });
+    const loads: boolean[] = [];
+    const orderOfCalls = { n: 0 };
+    let subscribed = false;
+    registerSm(
+      h.runtime,
+      "rows",
+      fakeDb(
+        () => [{ id: "a", n: 1 }, { id: "b", n: 1 }],
+        () => [],
+      ),
+      loads,
+      orderOfCalls,
+      () => subscribed,
+    );
+    await h.subscribe("rows"); // snapshot = {a, b}
+    subscribed = true;
+
+    h.runtime.applyDbChange({ table: "rows", op: "D", ids: ["a"], origin: "rows", identityBase: "rows" });
+    await tick();
+
+    const pushes = h.pushesFor("rows");
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]!.kind).toBe("delta");
+    expect(pushes[0]!.deletes).toEqual(["a"]);
+    expect(pushes[0]!.order).toEqual(["b"]); // prior order minus the deleted id
+    expect(loads).toEqual([]); // a pure DELETE runs NO loader
+    expect(orderOfCalls.n).toBe(0); // and NO orderOf — order derived from the snapshot
+  });
+
+  test("op U where-flip: one refill (empty), no orderOf → delta with a membership exit", async () => {
+    // The UPDATE flips `a` out of the filter: the scoped refill returns nothing for
+    // it, so it is a membership EXIT — shipped as a real delete + order (the
+    // correctness win over a plain scoped refill, which would leave it stale).
+    const h = harness({ rows: ["rows"] });
+    const loads: boolean[] = [];
+    const orderOfCalls = { n: 0 };
+    let subscribed = false;
+    registerSm(
+      h.runtime,
+      "rows",
+      fakeDb(
+        () => [{ id: "a", n: 1 }, { id: "b", n: 1 }],
+        () => [], // the refilled id `a` no longer matches ⇒ empty ⇒ exit
+      ),
+      loads,
+      orderOfCalls,
+      () => subscribed,
+    );
+    await h.subscribe("rows"); // snapshot = {a, b}
+    subscribed = true;
+
+    h.runtime.applyDbChange({ table: "rows", op: "U", ids: ["a"], origin: "rows", identityBase: "rows" });
+    await tick();
+
+    const pushes = h.pushesFor("rows");
+    expect(pushes).toHaveLength(1);
+    expect(pushes[0]!.kind).toBe("delta");
+    expect(pushes[0]!.deletes).toEqual(["a"]);
+    expect(pushes[0]!.order).toEqual(["b"]);
+    expect(loads).toEqual([true]); // one scoped refill for the requested id
+    expect(orderOfCalls.n).toBe(0); // no entry ⇒ no orderOf
   });
 });

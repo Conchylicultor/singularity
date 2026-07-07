@@ -24,10 +24,12 @@ import {
   buildSnapshot,
   diffKeyedFull,
   diffKeyedScoped,
+  diffKeyedScopedMembership,
   type KeyedSnapshot,
 } from "./keyed-diff";
-// mulberry32 PRNG is single-sourced in test-support (deduped from here).
-import { rng } from "./test-support";
+// mulberry32 PRNG + the faithful client-view simulator are single-sourced in
+// test-support (deduped from here).
+import { rng, makeClientView, type RecordedFrame } from "./test-support";
 
 type Row = { id: string; v: number };
 const keyOf = (r: unknown) => (r as Row).id;
@@ -226,5 +228,251 @@ describe("diffKeyedScoped — property (random partial recomputes)", () => {
         expect(nextSnapshot.get(id)).toBe(expectedHash);
       }
     }
+  });
+});
+
+// --- M5: membership-aware scoped diff ---------------------------------------
+
+describe("diffKeyedScopedMembership — scenarios", () => {
+  const set = (...ids: string[]) => new Set(ids);
+
+  test("pure delete: no refill, delete + order shipped, snapshot loses the id", () => {
+    const prev = snapOf([{ id: "A", v: 1 }, { id: "B", v: 1 }, { id: "C", v: 1 }]);
+    const r = diffKeyedScopedMembership(prev, [], { requestedIds: set(), deletedIds: set("B") }, keyOf);
+    expect(r.upserts).toEqual([]);
+    expect(r.deletes).toEqual(["B"]);
+    expect(r.order).toEqual(["A", "C"]);
+    expect([...r.nextSnapshot.keys()]).toEqual(["A", "C"]);
+  });
+
+  test("where-flip exit: a requested id absent from the refill leaves membership (no orderedIds needed)", () => {
+    const prev = snapOf([{ id: "A", v: 1 }, { id: "B", v: 1 }]);
+    // A's `where` flipped false → the refill of {A} returns nothing.
+    const r = diffKeyedScopedMembership(prev, [], { requestedIds: set("A"), deletedIds: set() }, keyOf);
+    expect(r.upserts).toEqual([]);
+    expect(r.deletes).toEqual(["A"]);
+    expect(r.order).toEqual(["B"]);
+    expect([...r.nextSnapshot.keys()]).toEqual(["B"]);
+  });
+
+  test("insert entering at position: orderedIds places the new row; upsert + order shipped", () => {
+    const prev = snapOf([{ id: "A", v: 1 }, { id: "C", v: 1 }]);
+    const r = diffKeyedScopedMembership(
+      prev,
+      [{ id: "B", v: 1 }],
+      { requestedIds: set("B"), deletedIds: set(), orderedIds: ["A", "B", "C"] },
+      keyOf,
+    );
+    expect(r.upserts).toEqual([["B", { id: "B", v: 1 }]]);
+    expect(r.deletes).toEqual([]);
+    expect(r.order).toEqual(["A", "B", "C"]);
+    expect([...r.nextSnapshot.keys()]).toEqual(["A", "B", "C"]);
+  });
+
+  test("insert-then-delete of a brand-new id (coalesced): no-op, order omitted", () => {
+    const prev = snapOf([{ id: "A", v: 1 }]);
+    // X was inserted then deleted in one flush: requested ∪ deleted both name it,
+    // but it is in neither prev nor the refill → nothing happens.
+    const r = diffKeyedScopedMembership(prev, [], { requestedIds: set("X"), deletedIds: set("X") }, keyOf);
+    expect(r.upserts).toEqual([]);
+    expect(r.deletes).toEqual([]);
+    expect(r.order).toBeUndefined();
+    expect([...r.nextSnapshot.keys()]).toEqual(["A"]);
+  });
+
+  test("delete-then-reinsert of an existing id (coalesced): plain in-place upsert, order omitted", () => {
+    const prev = snapOf([{ id: "A", v: 1 }, { id: "B", v: 1 }]);
+    // A deleted then reinserted with new content: still a member, still in place.
+    const r = diffKeyedScopedMembership(
+      prev,
+      [{ id: "A", v: 2 }],
+      { requestedIds: set("A"), deletedIds: set("A") },
+      keyOf,
+    );
+    expect(r.upserts).toEqual([["A", { id: "A", v: 2 }]]);
+    expect(r.deletes).toEqual([]);
+    expect(r.order).toBeUndefined();
+    expect([...r.nextSnapshot.keys()]).toEqual(["A", "B"]);
+    expect(r.nextSnapshot.get("A")).toBe(JSON.stringify({ id: "A", v: 2 }));
+  });
+
+  test("reactivation entry (where-flip false→true): treated as an entry, placed via orderedIds", () => {
+    const prev = snapOf([{ id: "A", v: 1 }]);
+    // B existed with where=false (not a member); an UPDATE flipped it true.
+    const r = diffKeyedScopedMembership(
+      prev,
+      [{ id: "B", v: 5 }],
+      { requestedIds: set("B"), deletedIds: set(), orderedIds: ["A", "B"] },
+      keyOf,
+    );
+    expect(r.upserts).toEqual([["B", { id: "B", v: 5 }]]);
+    expect(r.deletes).toEqual([]);
+    expect(r.order).toEqual(["A", "B"]);
+    expect([...r.nextSnapshot.keys()]).toEqual(["A", "B"]);
+  });
+
+  test("unknown orderedIds id (in the order list but neither refilled nor prev): dropped from order + snapshot", () => {
+    const prev = snapOf([{ id: "A", v: 1 }]);
+    const r = diffKeyedScopedMembership(
+      prev,
+      [{ id: "B", v: 1 }],
+      { requestedIds: set("B"), deletedIds: set(), orderedIds: ["A", "B", "Z"] },
+      keyOf,
+    );
+    expect(r.order).toEqual(["A", "B"]); // Z is unresolvable → dropped
+    expect([...r.nextSnapshot.keys()]).toEqual(["A", "B"]);
+  });
+
+  test("requested id absent from both snapshot and refill (insert filtered by where): no-op", () => {
+    const prev = snapOf([{ id: "A", v: 1 }]);
+    const r = diffKeyedScopedMembership(prev, [], { requestedIds: set("B"), deletedIds: set() }, keyOf);
+    expect(r.upserts).toEqual([]);
+    expect(r.deletes).toEqual([]);
+    expect(r.order).toBeUndefined();
+    expect([...r.nextSnapshot.keys()]).toEqual(["A"]);
+  });
+
+  test("in-place update (member content change, no membership change): order omitted, only the changed row upserted", () => {
+    const prev = snapOf([{ id: "A", v: 1 }, { id: "B", v: 1 }]);
+    const r = diffKeyedScopedMembership(
+      prev,
+      [{ id: "B", v: 2 }],
+      { requestedIds: set("B"), deletedIds: set() },
+      keyOf,
+    );
+    expect(r.upserts).toEqual([["B", { id: "B", v: 2 }]]);
+    expect(r.deletes).toEqual([]);
+    expect(r.order).toBeUndefined();
+    expect(r.nextSnapshot.get("B")).toBe(JSON.stringify({ id: "B", v: 2 }));
+  });
+
+  test("does not mutate the prior snapshot", () => {
+    const prev = snapOf([{ id: "A", v: 1 }, { id: "B", v: 1 }]);
+    const before = new Map(prev);
+    diffKeyedScopedMembership(prev, [], { requestedIds: set(), deletedIds: set("B") }, keyOf);
+    expect(prev).toEqual(before);
+  });
+});
+
+/**
+ * Property fuzz: random INSERT/UPDATE/DELETE/where-flip op batches over a
+ * simulated table. Each batch is applied incrementally through
+ * `diffKeyedScopedMembership` and, independently, FULL-recomputed through the
+ * `diffKeyedFull` ORACLE over the true membership. The two must agree on the
+ * snapshot (id order + hashes) after every batch, AND the incremental frames fed
+ * to the real client-view simulator must converge to true membership with ZERO
+ * drift-resubs — i.e. the incremental path is observationally identical to always
+ * FULL-recomputing.
+ */
+describe("diffKeyedScopedMembership — property (random op batches vs FULL oracle)", () => {
+  interface Cell {
+    n: number;
+    where: boolean;
+  }
+  type MRow = { id: string; n: number };
+  const IDS = ["A", "B", "C", "D", "E", "F"];
+
+  test("incremental snapshot ≡ FULL oracle; client converges with zero drift", () => {
+    let totalBatches = 0;
+    for (let seed = 1; seed <= 200; seed++) {
+      const rand = rng(seed);
+      const table = new Map<string, Cell>();
+      // Random initial membership (some where=true, some in-table-but-false).
+      for (const id of IDS) {
+        if (rand() < 0.5) table.set(id, { n: Math.floor(rand() * 4), where: rand() < 0.6 });
+      }
+
+      const rowOf = (id: string): MRow => ({ id, n: table.get(id)!.n });
+      const sortedMembers = (): string[] =>
+        [...table.entries()].filter(([, c]) => c.where).map(([id]) => id).sort();
+      const memberRows = (): MRow[] => sortedMembers().map(rowOf);
+      const snap = (rows: MRow[]): Map<string, string> => buildSnapshot(rows, keyOf);
+
+      // Seed both snapshots + the client from the initial membership.
+      let membershipSnap: KeyedSnapshot = snap(memberRows());
+      let oracleSnap: KeyedSnapshot = snap(memberRows());
+      const client = makeClientView(keyOf);
+      let version = 0;
+      client.apply({ seq: 0, socket: 0, kind: "update", key: "k", version, value: memberRows() });
+
+      for (let step = 0; step < 20; step++) {
+        const requestedIds = new Set<string>();
+        const deletedIds = new Set<string>();
+        const ops = 1 + Math.floor(rand() * 3);
+        for (let o = 0; o < ops; o++) {
+          const roll = rand();
+          const inTable = [...table.keys()];
+          const notInTable = IDS.filter((id) => !table.has(id));
+          if (roll < 0.4 && notInTable.length > 0) {
+            // INSERT a new row (maybe a non-member if where=false).
+            const id = notInTable[Math.floor(rand() * notInTable.length)]!;
+            table.set(id, { n: Math.floor(rand() * 4), where: rand() < 0.65 });
+            requestedIds.add(id);
+          } else if (roll < 0.8 && inTable.length > 0) {
+            // UPDATE: change content and/or flip `where` (entry/exit).
+            const id = inTable[Math.floor(rand() * inTable.length)]!;
+            const cell = table.get(id)!;
+            table.set(id, {
+              n: rand() < 0.5 ? cell.n : cell.n + 1,
+              where: rand() < 0.5 ? cell.where : !cell.where,
+            });
+            requestedIds.add(id);
+          } else if (inTable.length > 0) {
+            // DELETE.
+            const id = inTable[Math.floor(rand() * inTable.length)]!;
+            table.delete(id);
+            deletedIds.add(id);
+          }
+        }
+        if (requestedIds.size === 0 && deletedIds.size === 0) continue;
+
+        // The refill: rows for the requested ids that STILL match `where=true`.
+        const refillRows = [...requestedIds]
+          .filter((id) => table.get(id)?.where)
+          .map(rowOf);
+        const refillIds = new Set(refillRows.map((r) => r.id));
+        // orderedIds only when a refilled id entered membership.
+        let entered = false;
+        for (const id of refillIds) if (!membershipSnap.has(id)) entered = true;
+        const orderedIds = entered ? sortedMembers() : undefined;
+
+        const result = diffKeyedScopedMembership(
+          membershipSnap,
+          refillRows,
+          { requestedIds, deletedIds, orderedIds },
+          keyOf,
+        );
+        membershipSnap = result.nextSnapshot;
+
+        // FULL oracle over the true membership, in the same (sorted) order.
+        const oracle = diffKeyedFull(oracleSnap, memberRows(), keyOf);
+        oracleSnap = oracle.nextSnapshot;
+
+        // (1) Incremental snapshot ≡ FULL oracle (id order AND content hashes).
+        expect([...membershipSnap.entries()]).toEqual([...oracleSnap.entries()]);
+
+        // (2) Client converges: ship a delta only on a real change (mirrors the
+        // runtime's "empty diff → no frame, no version bump").
+        const changed = result.upserts.length > 0 || result.deletes.length > 0;
+        if (changed) {
+          version++;
+          const frame: RecordedFrame = {
+            seq: 0,
+            socket: 0,
+            kind: "delta",
+            key: "k",
+            version,
+            upserts: result.upserts,
+            deletes: result.deletes,
+            order: result.order,
+          };
+          client.apply(frame);
+        }
+        expect(client.driftResubs).toBe(0);
+        expect(client.value).toEqual(memberRows());
+        totalBatches++;
+      }
+    }
+    expect(totalBatches).toBeGreaterThan(1000);
   });
 });

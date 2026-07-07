@@ -102,26 +102,12 @@ export function listConversationsForDisplay(
   return queryConversations({ taskIds }, { col: conversations.createdAt, dir: "desc" });
 }
 
-// User-visible + active=true. Backs conversationsActiveResource. Pass `convIds`
-// to scope to just those conversations (keyed scoped recompute — a real
-// `WHERE id IN (…)` rather than an in-memory filter); omit it for the full list.
-export function listActiveConversations(convIds?: readonly string[]): Promise<Conversation[]> {
-  return queryConversations(
-    { active: true, convIds },
-    { col: conversations.createdAt, dir: "desc" },
-  );
-}
-
-// Active system-kind conversations only. Used to surface running plumbing
-// in the sidebar behind a debug toggle. UI lists must NOT mix these into
-// the regular active list. Pass `convIds` for a keyed scoped recompute.
-export function listActiveSystemConversations(
-  convIds?: readonly string[],
-): Promise<Conversation[]> {
-  return queryConversations(
-    { onlySystem: true, active: true, convIds },
-    { col: conversations.createdAt, dir: "desc" },
-  );
+// User-visible + active=true. Server-side batch callers (backup, transcript
+// retention, cross-table mutations). The conversations-active/-system live-state
+// resources no longer route through here — they are declarative `queryResource`s
+// (see ../resources.ts), so this needs no scoped-recompute id parameter.
+export function listActiveConversations(): Promise<Conversation[]> {
+  return queryConversations({ active: true }, { col: conversations.createdAt, dir: "desc" });
 }
 
 export async function countGoneConversations(): Promise<number> {

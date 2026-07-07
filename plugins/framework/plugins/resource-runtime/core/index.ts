@@ -19,5 +19,6 @@ export {
   buildSnapshot,
   diffKeyedFull,
   diffKeyedScoped,
+  diffKeyedScopedMembership,
 } from "./keyed-diff";
-export type { KeyedDiff, KeyedSnapshot } from "./keyed-diff";
+export type { KeyedDiff, KeyedSnapshot, KeyedMembershipInput } from "./keyed-diff";

@@ -123,3 +123,134 @@ export function diffKeyedScoped(
   }
   return { upserts, nextSnapshot: next };
 }
+
+/**
+ * The membership-scope inputs to `diffKeyedScopedMembership`: the id sets that
+ * frame a single flush's row-level change for a `scopedMembership` keyed
+ * resource. See `research/2026-07-03-global-scoped-membership-m5.md`.
+ *
+ * - `requestedIds` — the ids the loader was asked to refill (op-I ∪ op-U ids). An
+ *   id present here but ABSENT from `refillRows` is a membership EXIT (its
+ *   mutable-`where` flipped to false, or it was concurrently deleted).
+ * - `deletedIds` — op-D ids. Never queried (a deleted row can't be refilled); an
+ *   id here that is in `prev` is an EXIT, listed in `deletes`.
+ * - `orderedIds` — the full ORDER BY'd id list from the resource's `orderOf`,
+ *   supplied ONLY when the refill ENTERED at least one id not already in `prev`
+ *   (an entry needs an authoritative placement). Absent for an exit-only or
+ *   in-place change: the order is then derived from the prior snapshot minus the
+ *   exits, so no `orderOf` query runs.
+ */
+export interface KeyedMembershipInput {
+  requestedIds: ReadonlySet<string>;
+  deletedIds: ReadonlySet<string>;
+  orderedIds?: readonly string[];
+}
+
+/**
+ * Membership-aware scoped diff (M5): the counterpart to `diffKeyedScoped` for a
+ * keyed resource that opted into row-level INSERT/DELETE/where-flip scoping.
+ * `refillRows` is a PARTIAL array — only the `requestedIds` the loader
+ * re-selected — so this both merges those rows in AND resolves membership
+ * exits/entries against `prev`, returning a delta that MAY assert `order`
+ * (unlike `diffKeyedScoped`, which never does). Pure — never mutates `prev`.
+ *
+ * Wire contract (see `keyed-delta-merge.ts`): the client rebuilds the keyed array
+ * PURELY from `order`, so any membership change MUST ship the full `order`; and an
+ * `order` id resolvable from neither the `upserts` nor the client's base forces a
+ * drift-resub. Both are honored here — `nextSnapshot` is rebuilt FROM `order` so
+ * snapshot ≡ wire order, and `upserts`/`order` are sanitized to the surviving ids.
+ *
+ * Algorithm:
+ *   1. Merge `refillRows` into a copy of `prev`; a changed/new row is an upsert.
+ *   2. Exits = ids in (`requestedIds` ∪ `deletedIds`) that are in `prev` but were
+ *      NOT returned by the refill → removed from the snapshot, listed in `deletes`.
+ *   3. Entries = refill ids absent from `prev`. No entries AND no exits ⇒ Case A:
+ *      `{ upserts, deletes: [], order: undefined }` — the exact `diffKeyedScoped`
+ *      shape (in-place upserts, membership/order unchanged).
+ *   4. Otherwise membership changed. The order SOURCE is `orderedIds` when
+ *      supplied (an entry happened), else the prior snapshot order (exit-only).
+ *      `finalOrder = orderSource.filter(id => merged.has(id))` drops ids the order
+ *      source no longer agrees on (an `orderedIds` id absent from the merge, or a
+ *      merged id concurrently deleted out of `orderedIds`); `nextSnapshot` is
+ *      rebuilt from `finalOrder`; `upserts` are filtered to the survivors.
+ */
+export function diffKeyedScopedMembership(
+  prev: KeyedSnapshot,
+  refillRows: readonly unknown[],
+  input: KeyedMembershipInput,
+  keyOf: (row: unknown) => string,
+): {
+  upserts: [string, unknown][];
+  deletes: string[];
+  order: string[] | undefined;
+  nextSnapshot: Map<string, string>;
+} {
+  const { requestedIds, deletedIds, orderedIds } = input;
+
+  // (1) Merge the partial refill into a copy of prev. A row whose hash differs
+  // (changed) or is absent (new) is an upsert; carried-over rows stay intact.
+  const merged = new Map<string, string>(prev);
+  const upserts: [string, unknown][] = [];
+  const refillIds = new Set<string>();
+  for (const row of refillRows) {
+    const id = keyOf(row);
+    refillIds.add(id);
+    const hash = JSON.stringify(row);
+    if (merged.get(id) !== hash) {
+      upserts.push([id, row]);
+      merged.set(id, hash);
+    }
+  }
+
+  // (2) Exits: a requested/deleted id that WAS a member but the refill did not
+  // return (where-flip to false, or a concurrent delete). Deduped across the two
+  // sets — an id can appear in both (insert-then-delete coalesced in one flush).
+  const deletes: string[] = [];
+  const exitCandidates = new Set<string>();
+  for (const id of requestedIds) exitCandidates.add(id);
+  for (const id of deletedIds) exitCandidates.add(id);
+  for (const id of exitCandidates) {
+    if (prev.has(id) && !refillIds.has(id)) {
+      merged.delete(id);
+      deletes.push(id);
+    }
+  }
+
+  // (3) Entries: a refilled id that was not previously a member.
+  let entered = false;
+  for (const id of refillIds) {
+    if (!prev.has(id)) {
+      entered = true;
+      break;
+    }
+  }
+
+  // Case A: no membership change — identical shape to `diffKeyedScoped`. `merged`
+  // preserves prev's key order (no add/remove), so `order` is correctly omitted.
+  if (!entered && deletes.length === 0) {
+    return { upserts, deletes: [], order: undefined, nextSnapshot: merged };
+  }
+
+  // (4) Membership changed. Order source = the caller's authoritative list when an
+  // entry happened (needs placement), else prev order minus exits (exit-only).
+  // An entry WITHOUT `orderedIds` is a caller-contract violation: falling back to
+  // the prior order would silently drop the entering row from both the wire and
+  // the snapshot — an invisible data loss. Fail loudly instead.
+  if (entered && orderedIds === undefined) {
+    throw new Error(
+      "diffKeyedScopedMembership: a refilled id entered membership but no orderedIds " +
+        "was supplied — the caller must run orderOf whenever the refill returns an " +
+        "id absent from the prior snapshot",
+    );
+  }
+  const orderSource = orderedIds ?? [...prev.keys()];
+  const finalOrder = orderSource.filter((id) => merged.has(id));
+  // Rebuild the snapshot FROM finalOrder so snapshot ≡ wire order. Any merged id
+  // not in finalOrder (an `orderedIds` disagreement / concurrent delete) drops out
+  // — its own feed event later becomes a no-op.
+  const survivors = new Set(finalOrder);
+  const nextSnapshot = new Map<string, string>();
+  for (const id of finalOrder) nextSnapshot.set(id, merged.get(id)!);
+  const survivingUpserts = upserts.filter(([id]) => survivors.has(id));
+  return { upserts: survivingUpserts, deletes, order: finalOrder, nextSnapshot };
+}

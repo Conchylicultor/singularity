@@ -7,6 +7,7 @@ import {
   buildSnapshot,
   diffKeyedFull,
   diffKeyedScoped as diffKeyedScopedPure,
+  diffKeyedScopedMembership,
   type KeyedDiff,
 } from "./keyed-diff";
 
@@ -185,6 +186,24 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    */
   recompute?: { kind: "full"; reason: string };
   /**
+   * Opt-in row-level membership scoping (M5) for a keyed resource. When present,
+   * an INSERT/DELETE/where-flip on the resource's identity table no longer forces
+   * a FULL recompute: the runtime refills only the changed rows and reconciles
+   * membership against the per-pk snapshot, shipping an incremental delta that
+   * asserts the new `order`. `orderOf` is the ids-only "full ORDER BY'd id list
+   * for these params" query the runtime runs ONLY when a row ENTERS membership
+   * (an exit or in-place change derives its order from the prior snapshot, so no
+   * query runs). It is an injected closure so `resource-runtime` stays DB-free.
+   *
+   * Requires `mode: "keyed"` + `identityTable` (an own-identity scoped resource) —
+   * enforced with a loud throw in `createResource`, so it is incompatible with the
+   * `recompute: { full }` opt-out (which has no identityTable). Absent ⇒
+   * byte-identical to the pre-M5 FULL-on-membership-change behavior. Also relaxes
+   * the mutable-`where` rule (a where-flip is detected as an exit/entry). See
+   * research/2026-07-03-global-scoped-membership-m5.md.
+   */
+  scopedMembership?: { orderOf: (params: P) => Promise<string[]> };
+  /**
    * Fixed-window trailing debounce (ms) for this resource's flushes. When set
    * (and > 0), a `notify()` (or cascaded `mergePending`) into this entry does
    * NOT ride the immediate microtask flush; instead it arms a per-entry timer
@@ -279,7 +298,7 @@ export type ScopePolicy =
 export type DefineResourceInput<T, P extends ResourceParams = ResourceParams> =
   Omit<
     ResourceDefinition<T, P>,
-    "mode" | "keyOf" | "identityTable" | "recompute" | "bootCritical"
+    "mode" | "keyOf" | "identityTable" | "recompute" | "scopedMembership" | "bootCritical"
   > & {
     mode?: "push" | "invalidate";
     identityTable?: string;
@@ -340,6 +359,13 @@ export interface ServerResourceOptions<T, P extends ResourceParams = ResourcePar
   mode?: Exclude<ResourceMode, "keyed">;
   dependsOn?: ResourceDefinition<T, P>["dependsOn"];
   identityTable?: string;
+  /**
+   * Opt-in row-level membership scoping (M5) — see
+   * `ResourceDefinition.scopedMembership`. Only meaningful on the KEYED overload
+   * (its `ScopePolicy` supplies the required `identityTable`); `createResource`
+   * throws if it is set without keyed mode + identityTable.
+   */
+  scopedMembership?: ResourceDefinition<T, P>["scopedMembership"];
   debounceMs?: number;
   onFirstSubscribe?: ResourceDefinition<T, P>["onFirstSubscribe"];
   onLastUnsubscribe?: ResourceDefinition<T, P>["onLastUnsubscribe"];
@@ -370,6 +396,7 @@ function contractToDefinition<T, P extends ResourceParams>(
     dependsOn: opts.dependsOn,
     identityTable: opts.identityTable,
     recompute: opts.recompute,
+    scopedMembership: opts.scopedMembership,
     debounceMs: opts.debounceMs,
     onFirstSubscribe: opts.onFirstSubscribe,
     onLastUnsubscribe: opts.onLastUnsubscribe,
@@ -442,6 +469,15 @@ interface PendingNotify {
   params: ResourceParams;
   affected: Set<string> | null;
   /**
+   * op-D row ids (M5 `scopedMembership` only). Set ONLY for a scopedMembership
+   * entry's DELETE — `affected` then carries no id for them (a deleted row cannot
+   * be refilled), so `deleted` is the separate channel that drives the membership
+   * diff's exit path. Absorbed/dropped by a FULL contributor exactly like
+   * `affected` (see `mergePending`). Undefined for every non-membership pending, so
+   * the legacy scoped/FULL paths are byte-identical.
+   */
+  deleted?: Set<string>;
+  /**
    * `performance.now()` of the FIRST notify that opened this pending entry — the
    * moment the resource became stale. Set only in the `!existing` branch of
    * `mergePending` and NEVER overwritten on re-merge (coalesce / debounce re-arm
@@ -486,6 +522,16 @@ interface RegistryEntry {
    * documented choice rather than a silent default.
    */
   recompute?: { kind: "full"; reason: string };
+  /**
+   * Opt-in row-level membership scoping (M5), declared via `scopedMembership`.
+   * Present ⇒ `applyDbChange` scopes INSERT/DELETE (not just UPDATE) to this
+   * resource's own keys and `drainEntry` runs the incremental membership path
+   * (`diffKeyedScopedMembership`) instead of a FULL recompute. `orderOf` is the
+   * ids-only ordered-membership query, run only on an entry. Undefined ⇒ the
+   * pre-M5 FULL-on-membership-change behavior (byte-identical). See
+   * research/2026-07-03-global-scoped-membership-m5.md.
+   */
+  scopedMembership?: { orderOf: (params: ResourceParams) => Promise<string[]> };
   /**
    * Per-pk snapshot of id→hash for keyed entries. Allocated lazily only when
    * `mode === "keyed"`. Lets the diff ship only changed rows. Evicted per-pk on
@@ -1107,11 +1153,25 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // Coalesce an incoming notify into the pending map for one pk, applying the
   // FULL-absorbing union: a null `incoming` (or an existing FULL) sticks the pk
   // at FULL; otherwise the incoming ids union into the existing scoped set.
+  //
+  // `deleted` (M5 `scopedMembership` only) is the op-D channel. It rides ALONGSIDE
+  // a scoped `incoming` and follows the same rules — FULL absorbs it, a degrade to
+  // FULL drops it, scoped∪scoped unions it:
+  //
+  //   existing | incoming | deleted | result
+  //   none     | null     |   —     | FULL (no deleted)
+  //   none     | Set A    | Set D   | copy both
+  //   FULL     | anything | anything| unchanged (absorbs; drops incoming deleted)
+  //   scoped   | null     |   —     | degrade FULL, drop deleted
+  //   scoped   | Set A    | Set D   | union both
+  //
+  // Omitting `deleted` (every legacy caller) is byte-identical to the pre-M5 merge.
   function mergePending(
     map: Map<string, PendingNotify>,
     pk: string,
     params: ResourceParams,
     incoming: Set<string> | null,
+    deleted?: Set<string>,
   ): void {
     const existing = map.get(pk);
     if (!existing) {
@@ -1119,16 +1179,25 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       map.set(pk, {
         params,
         affected: incoming === null ? null : new Set(incoming),
+        // A FULL first-merge carries no deleted set (FULL recomputes wholesale).
+        ...(incoming !== null && deleted && deleted.size > 0
+          ? { deleted: new Set(deleted) }
+          : {}),
         enqueuedAt: performance.now(),
       });
       return;
     }
-    if (existing.affected === null) return; // FULL absorbs everything
+    if (existing.affected === null) return; // FULL absorbs everything (incl. deleted)
     if (incoming === null) {
       existing.affected = null; // degrade to FULL
+      existing.deleted = undefined; // FULL recomputes wholesale — drop op-D ids
       return;
     }
     for (const id of incoming) existing.affected.add(id);
+    if (deleted && deleted.size > 0) {
+      const d = (existing.deleted ??= new Set<string>());
+      for (const id of deleted) d.add(id);
+    }
   }
 
   // Single internal builder. Produces the full runtime object (with a working
@@ -1151,6 +1220,24 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       throw new Error(
         `defineResource: mode "keyed" requires a keyOf for key "${def.key}"`,
       );
+    }
+    // M5: `scopedMembership` is only sound on a keyed OWN-IDENTITY resource — the
+    // membership diff reconciles the loader's own row ids against the per-pk
+    // snapshot, and INSERT/DELETE scope through the identity view. Requiring
+    // `identityTable` also makes it incompatible with `recompute: { full }` (the
+    // ScopePolicy is identityTable XOR recompute), so a FULL opt-out can never
+    // also claim membership scoping. Fail loudly at registration.
+    if (def.scopedMembership) {
+      if (mode !== "keyed") {
+        throw new Error(
+          `defineResource: scopedMembership requires mode "keyed" for key "${def.key}"`,
+        );
+      }
+      if (!def.identityTable) {
+        throw new Error(
+          `defineResource: scopedMembership requires an identityTable (an own-identity scoped resource) for key "${def.key}"`,
+        );
+      }
     }
     const upstreamKeys: string[] = [];
     const ownDownstreamEdges: Array<{ upstreamKey: string; edge: DownstreamEdge }> = [];
@@ -1194,6 +1281,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       keyOf: def.keyOf as ((row: unknown) => string) | undefined,
       identityTable: def.identityTable,
       recompute: def.recompute,
+      scopedMembership: def.scopedMembership as
+        | { orderOf: (params: ResourceParams) => Promise<string[]> }
+        | undefined,
       snapshots: mode === "keyed" ? new Map() : undefined,
       versions: new Map(),
       pendingNotifies: new Map(),
@@ -1407,7 +1497,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     entry: RegistryEntry,
     params: ResourceParams,
     affected: Set<string> | null,
-    opts?: { source?: "hand" | "feed" | "synthetic" },
+    opts?: { source?: "hand" | "feed" | "synthetic"; deleted?: Set<string> },
   ): void {
     const pk = paramsKey(params);
     // Self-verification recorder (cascade is byte-identical regardless of source).
@@ -1438,7 +1528,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         }
       }
     }
-    mergePending(entry.pendingNotifies, pk, params, affected);
+    mergePending(entry.pendingNotifies, pk, params, affected, opts?.deleted);
     if (batchDepth > 0) return;
     // Debounced entries do not ride the immediate flush: arm a per-entry
     // fixed-window timer (only if not already armed — never re-armed within a
@@ -1558,6 +1648,330 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     } while (flushAgain);
   }
 
+  // Cascade this entry's change into its downstream edges. Shared by the legacy
+  // per-pk path AND the M5 membership path (`drainMembershipScoped`) — both supply
+  // an EFFECTIVE affected set: `null` forces a FULL downstream cascade (and clears
+  // remembered edge signatures), a non-null Set flows through the per-edge
+  // relevance-signature gate + `affectedMap`. `value`/`valueComputed` feed a
+  // value-aware downstream `map`. Extracted verbatim from `drainEntry`'s original
+  // inline loop so both callers route through one implementation.
+  async function cascadeDownstream(
+    entry: RegistryEntry,
+    params: ResourceParams,
+    affected: Set<string> | null,
+    value: unknown,
+    valueComputed: boolean,
+  ): Promise<void> {
+    for (const edge of entry.downstream) {
+      const down = registry.get(edge.downstreamKey);
+      if (!down) continue;
+      let derived: ResourceParams[];
+      if (edge.map) {
+        try {
+          derived = edge.map(params, valueComputed ? value : undefined);
+        } catch (err) {
+          reportLoaderError(
+            `dependsOn map failed (${entry.key} → ${edge.downstreamKey})`,
+            err,
+          );
+          continue;
+        }
+      } else {
+        derived = [params];
+      }
+      // Compute the downstream affected set. Upstream FULL ⇒ FULL; no
+      // affectedMap ⇒ FULL; a throwing affectedMap fails safe to FULL. Never
+      // silently narrows a membership change.
+      let downAffected: Set<string> | null;
+      if (affected === null) {
+        // FULL cascade: propagate everything. Drop remembered signatures — the
+        // new upstream values weren't observed here, so a stale entry could
+        // wrongly skip the next scoped change back to a pre-FULL signature.
+        edge.lastSignatures.clear();
+        downAffected = null;
+      } else if (!edge.affectedMap) {
+        downAffected = null;
+      } else {
+        // Relevance gate (Layer 2): keep only the upstream ids whose
+        // downstream-relevant signature changed, so a scoped change that
+        // touched only fields this downstream ignores (e.g. a conversation's
+        // waitingFor/updatedAt vs the tasks/attempts aggregates) stops here
+        // instead of forcing a recompute that diffs to empty. No signature on
+        // the edge ⇒ every delivered id passes (prior behavior).
+        let relevant: ReadonlySet<string> = affected;
+        if (edge.signature) {
+          try {
+            const sigs = await edge.signature(affected, params);
+            const kept = new Set<string>();
+            for (const id of affected) {
+              const sig = sigs.get(id);
+              if (sig === undefined || sig !== edge.lastSignatures.get(id)) {
+                kept.add(id);
+                if (sig !== undefined) edge.lastSignatures.set(id, sig);
+              }
+            }
+            relevant = kept;
+          } catch (err) {
+            reportLoaderError(
+              `signature failed (${entry.key} → ${edge.downstreamKey})`,
+              err,
+            );
+            relevant = affected; // fail-safe: cascade everything
+          }
+        }
+        if (relevant.size === 0) continue; // nothing relevant changed → skip edge
+        try {
+          downAffected = new Set(await edge.affectedMap(relevant, params));
+        } catch (err) {
+          reportLoaderError(
+            `affectedMap failed (${entry.key} → ${edge.downstreamKey})`,
+            err,
+          );
+          downAffected = null;
+        }
+      }
+      for (const dp of derived) {
+        mergePending(down.pendingNotifies, paramsKey(dp), dp, downAffected);
+      }
+    }
+  }
+
+  // M5 membership FULL path (drainEntry branches 2 & 3): a `scopedMembership`
+  // entry that is either sticky-FULL (an id-less contributor coalesced in) or has
+  // NO snapshot yet (first post-boot change, eviction, a race). It FULL-recomputes
+  // and — unlike the legacy keyed FULL path, which only touches the snapshot when
+  // a subscriber is present — SEEDS/REPLACES the per-pk snapshot whenever the value
+  // is computed (persisted or subscribed), so the next incremental membership diff
+  // has a base. Cascades FULL. See research/2026-07-03-global-scoped-membership-m5.md.
+  async function drainMembershipFull(
+    entry: RegistryEntry,
+    pendingEntry: PendingNotify,
+    persisted: boolean,
+  ): Promise<void> {
+    const { params } = pendingEntry;
+    const pk = paramsKey(params);
+    const version = (entry.versions.get(pk) ?? 0) + 1;
+    entry.versions.set(pk, version);
+    const subs = subscribersFor(entry.key, pk);
+    const hasValueAwareDownstream = entry.downstream.some((d) => d.map !== undefined);
+    // The snapshot must be maintained whenever it could be needed later: a
+    // persisted entry recomputes every change (and survives N→0), and a subscribed
+    // entry needs a diff base. With neither (nor a value-aware downstream) there is
+    // nothing to seed — matching the legacy `needValue` gate.
+    const needValue = persisted || subs.length > 0 || hasValueAwareDownstream;
+
+    let value: unknown;
+    let valueComputed = false;
+    if (needValue) {
+      let watermark: string | undefined;
+      if (persisted && opts.captureWatermark) {
+        try {
+          watermark = await opts.captureWatermark();
+        } catch (err) {
+          reportLoaderError(`watermark capture failed for ${entry.key}`, err);
+          watermark = undefined;
+        }
+      }
+      try {
+        value = await (opts.wrapOrigin
+          ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, undefined))
+          : getResourceValue(entry, params, undefined));
+        valueComputed = true;
+      } catch (err) {
+        reportLoaderError(`loader failed for ${entry.key}`, err);
+        return; // never ship or cascade a torn read; snapshot untouched
+      }
+      if (persisted && watermark !== undefined && opts.persistSnapshot) {
+        const tablesRead = opts.readSet?.(entry.key) ?? [];
+        try {
+          await opts.persistSnapshot(entry.key, pk, value, watermark, tablesRead);
+        } catch (err) {
+          reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
+        }
+      }
+    }
+
+    if (subs.length > 0 && valueComputed) {
+      const updateEtag = entry.revalidate ? await pushEtag(entry, params) : undefined;
+      const hadSnapshot = entry.snapshots?.has(pk) ?? false;
+      const { upserts, deletes, order } = diffKeyed(entry, pk, value); // seeds/replaces snapshot
+      if (!hadSnapshot) {
+        const msg = {
+          kind: "update" as const,
+          key: entry.key,
+          params,
+          value,
+          version,
+          ...(updateEtag !== undefined ? { etag: updateEtag } : {}),
+        };
+        for (const s of subs) sendJson(s.ws, msg);
+        opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
+      } else {
+        const msg = {
+          kind: "delta" as const,
+          key: entry.key,
+          params,
+          upserts,
+          deletes,
+          order,
+          version,
+        };
+        for (const s of subs) sendJson(s.ws, msg);
+        opts.onPush?.(entry.key, {
+          subscribers: subs.length,
+          changed: upserts.length > 0 || deletes.length > 0 || order !== undefined,
+        });
+      }
+      opts.onDelivered?.(entry.key, performance.now() - pendingEntry.enqueuedAt, subs.length);
+    } else if (valueComputed) {
+      // Zero subscribers but a value was computed (persisted / value-aware
+      // downstream): still seed/replace the snapshot so the next membership diff
+      // has a base. This is the M5 difference from the legacy keyed FULL path.
+      diffKeyed(entry, pk, value);
+    }
+
+    // A FULL recompute cascades FULL (clears edge signatures inside the helper).
+    await cascadeDownstream(entry, params, null, value, valueComputed);
+  }
+
+  // M5 membership incremental path (drainEntry branch 4): a `scopedMembership`
+  // entry with a scoped pending AND a live snapshot. Refills only the requested
+  // ids (skipping the loader entirely for a pure DELETE), runs `orderOf` only when
+  // a row entered, reconciles membership via `diffKeyedScopedMembership`, ships an
+  // incremental delta (with `order` iff membership changed), and — for a persisted
+  // entry — reconstructs the FULL value from the post-diff snapshot and persists it
+  // (byte-identical jsonb to a FULL persist). Any loader/orderOf failure falls back
+  // to the FULL path so torn membership is never shipped. See the M5 plan doc.
+  async function drainMembershipScoped(
+    entry: RegistryEntry,
+    pendingEntry: PendingNotify,
+    persisted: boolean,
+  ): Promise<void> {
+    const sm = entry.scopedMembership!;
+    const keyOf = entry.keyOf!;
+    const { params } = pendingEntry;
+    const pk = paramsKey(params);
+    const requestedIds = pendingEntry.affected ?? new Set<string>();
+    const deletedIds = pendingEntry.deleted ?? new Set<string>();
+    // Nothing actually changed (an empty scoped set with no deletes) → skip
+    // entirely: no version bump, no frame, no cascade.
+    if (requestedIds.size === 0 && deletedIds.size === 0) return;
+
+    const snapshots = (entry.snapshots ??= new Map());
+    const prev = snapshots.get(pk)!; // caller only routes here when a snapshot exists
+
+    // Persisted: capture the watermark BEFORE any read, so a write invisible to the
+    // refill/orderOf snapshot has xid >= this floor and is replayed by catch-up.
+    let watermark: string | undefined;
+    if (persisted && opts.captureWatermark) {
+      try {
+        watermark = await opts.captureWatermark();
+      } catch (err) {
+        reportLoaderError(`watermark capture failed for ${entry.key}`, err);
+        watermark = undefined;
+      }
+    }
+
+    // Refill only the requested (op-I ∪ op-U) ids — a pure DELETE runs NO loader.
+    let refillRows: unknown[] = [];
+    let loaderRan = false;
+    if (requestedIds.size > 0) {
+      try {
+        const ctx = { affectedIds: [...requestedIds] };
+        const v = await (opts.wrapOrigin
+          ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, ctx))
+          : getResourceValue(entry, params, ctx));
+        if (!Array.isArray(v)) {
+          throw new Error(`keyed resource "${entry.key}" loader must return an array`);
+        }
+        refillRows = v as unknown[];
+        loaderRan = true;
+      } catch (err) {
+        reportLoaderError(`loader failed for ${entry.key}`, err);
+        await drainMembershipFull(entry, pendingEntry, persisted); // never ship torn membership
+        return;
+      }
+    }
+
+    // `orderOf` runs ONLY when a refilled id is not already a member (an entry
+    // needs authoritative placement); an exit-only / in-place change derives its
+    // order from the prior snapshot, so no query runs.
+    let entered = false;
+    for (const row of refillRows) {
+      if (!prev.has(keyOf(row))) {
+        entered = true;
+        break;
+      }
+    }
+    let orderedIds: string[] | undefined;
+    if (entered) {
+      try {
+        orderedIds = await (opts.wrapOrigin
+          ? opts.wrapOrigin("push", entry.key, () => sm.orderOf(params))
+          : sm.orderOf(params));
+      } catch (err) {
+        reportLoaderError(`orderOf failed for ${entry.key}`, err);
+        await drainMembershipFull(entry, pendingEntry, persisted);
+        return;
+      }
+    }
+
+    const { upserts, deletes, order, nextSnapshot } = diffKeyedScopedMembership(
+      prev,
+      refillRows,
+      { requestedIds, deletedIds, orderedIds },
+      keyOf,
+    );
+    snapshots.set(pk, nextSnapshot);
+
+    // Persisted: reconstruct the FULL value from the post-diff snapshot (ordered
+    // id list + canonical-JSON hashes) and persist it. `JSON.parse` of the stored
+    // hash round-trips to the identical row object a FULL loader would persist, so
+    // the jsonb is byte-identical to a FULL persist.
+    if (persisted && watermark !== undefined && opts.persistSnapshot) {
+      const full = [...nextSnapshot.values()].map((hash) => JSON.parse(hash));
+      const tablesRead = opts.readSet?.(entry.key) ?? [];
+      try {
+        await opts.persistSnapshot(entry.key, pk, full, watermark, tablesRead);
+      } catch (err) {
+        reportLoaderError(`snapshot persist failed for ${entry.key}`, err);
+      }
+    }
+
+    // Ship the delta + bump the version only on a real change. `order` is present
+    // iff membership changed (entries/exits), so its presence implies a change.
+    const changed = upserts.length > 0 || deletes.length > 0;
+    const subs = subscribersFor(entry.key, pk);
+    if (changed) {
+      const version = (entry.versions.get(pk) ?? 0) + 1;
+      entry.versions.set(pk, version);
+      if (subs.length > 0) {
+        const msg = {
+          kind: "delta" as const,
+          key: entry.key,
+          params,
+          upserts,
+          deletes,
+          order,
+          version,
+        };
+        for (const s of subs) sendJson(s.ws, msg);
+        opts.onDelivered?.(entry.key, performance.now() - pendingEntry.enqueuedAt, subs.length);
+      }
+    }
+    // Mirror the legacy scoped path's accounting: an empty diff is a recorded
+    // no-op push (changed:false) to any subscriber.
+    if (subs.length > 0) {
+      opts.onPush?.(entry.key, { subscribers: subs.length, changed });
+    }
+
+    // Downstream cascade: a DELETE forces FULL (a vanished row has no value for an
+    // affectedMap to translate) and clears edge signatures; otherwise the requested
+    // ids (incl. where-flip exits, whose rows still exist) flow through the gate.
+    const cascadeAffected = deletedIds.size > 0 ? null : requestedIds;
+    await cascadeDownstream(entry, params, cascadeAffected, refillRows, loaderRan);
+  }
+
   // Drain one entry's pending notifies: load (await), send frames, cascade.
   // Begins with a synchronous snapshot+clear of pending and a debounce-timer
   // cancel, so concurrent sibling entries in the same level never tear each
@@ -1589,6 +2003,20 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     for (const pendingEntry of pending) {
       const { params, affected } = pendingEntry;
       const pk = paramsKey(params);
+      // M5: a `scopedMembership` entry runs the incremental membership path
+      // instead of the legacy scoped/FULL branches. Branch 2/3 (FULL: sticky-FULL
+      // `affected === null`, or no snapshot yet) vs branch 4 (incremental, snapshot
+      // present). The legacy body below is byte-identical for every non-membership
+      // entry — early-branch out so it is never touched. See the M5 plan doc.
+      if (entry.scopedMembership) {
+        const hasSnapshot = entry.snapshots?.get(pk) !== undefined;
+        if (affected === null || !hasSnapshot) {
+          await drainMembershipFull(entry, pendingEntry, persisted);
+        } else {
+          await drainMembershipScoped(entry, pendingEntry, persisted);
+        }
+        continue;
+      }
       // Scoped notify (Layer 2): `affected !== null` means recompute only those
       // row ids. An empty scoped set = nothing actually changed → skip the send
       // entirely (no version bump, no empty delta, no cascade). A persisted entry
@@ -1783,78 +2211,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         opts.onDelivered?.(entry.key, performance.now() - pendingEntry.enqueuedAt, subs.length);
       }
 
-      for (const edge of entry.downstream) {
-        const down = registry.get(edge.downstreamKey);
-        if (!down) continue;
-        let derived: ResourceParams[];
-        if (edge.map) {
-          try {
-            derived = edge.map(params, valueComputed ? value : undefined);
-          } catch (err) {
-            reportLoaderError(
-              `dependsOn map failed (${entry.key} → ${edge.downstreamKey})`,
-              err,
-            );
-            continue;
-          }
-        } else {
-          derived = [params];
-        }
-        // Compute the downstream affected set. Upstream FULL ⇒ FULL; no
-        // affectedMap ⇒ FULL; a throwing affectedMap fails safe to FULL. Never
-        // silently narrows a membership change.
-        let downAffected: Set<string> | null;
-        if (affected === null) {
-          // FULL cascade: propagate everything. Drop remembered signatures — the
-          // new upstream values weren't observed here, so a stale entry could
-          // wrongly skip the next scoped change back to a pre-FULL signature.
-          edge.lastSignatures.clear();
-          downAffected = null;
-        } else if (!edge.affectedMap) {
-          downAffected = null;
-        } else {
-          // Relevance gate (Layer 2): keep only the upstream ids whose
-          // downstream-relevant signature changed, so a scoped change that
-          // touched only fields this downstream ignores (e.g. a conversation's
-          // waitingFor/updatedAt vs the tasks/attempts aggregates) stops here
-          // instead of forcing a recompute that diffs to empty. No signature on
-          // the edge ⇒ every delivered id passes (prior behavior).
-          let relevant: ReadonlySet<string> = affected;
-          if (edge.signature) {
-            try {
-              const sigs = await edge.signature(affected, params);
-              const kept = new Set<string>();
-              for (const id of affected) {
-                const sig = sigs.get(id);
-                if (sig === undefined || sig !== edge.lastSignatures.get(id)) {
-                  kept.add(id);
-                  if (sig !== undefined) edge.lastSignatures.set(id, sig);
-                }
-              }
-              relevant = kept;
-            } catch (err) {
-              reportLoaderError(
-                `signature failed (${entry.key} → ${edge.downstreamKey})`,
-                err,
-              );
-              relevant = affected; // fail-safe: cascade everything
-            }
-          }
-          if (relevant.size === 0) continue; // nothing relevant changed → skip edge
-          try {
-            downAffected = new Set(await edge.affectedMap(relevant, params));
-          } catch (err) {
-            reportLoaderError(
-              `affectedMap failed (${entry.key} → ${edge.downstreamKey})`,
-              err,
-            );
-            downAffected = null;
-          }
-        }
-        for (const dp of derived) {
-          mergePending(down.pendingNotifies, paramsKey(dp), dp, downAffected);
-        }
-      }
+      await cascadeDownstream(entry, params, affected, value, valueComputed);
     }
   }
 
@@ -2054,7 +2411,15 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       entry.subCounts.delete(pk);
       // Bound keyed-snapshot memory to actively-observed pks. Re-subscribe
       // re-hydrates via a full sub-ack and rebuilds the snapshot.
-      entry.snapshots?.delete(pk);
+      // M5 exception: a PERSISTED `scopedMembership` entry recomputes on every
+      // change regardless of subscribers and reconstructs its persisted value FROM
+      // the snapshot — so it must survive N→0, or the next change would degrade to
+      // a needless FULL. Bounded to opted-in persisted resources.
+      const keepSnapshot =
+        entry.scopedMembership !== undefined &&
+        !entry.externalSource &&
+        (opts.shouldPersist?.(entry.key) ?? false);
+      if (!keepSnapshot) entry.snapshots?.delete(pk);
       if (entry.onLastUnsubscribe) {
         try {
           entry.onLastUnsubscribe(params);
@@ -2334,10 +2699,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         return;
       }
       // A single-row UPDATE with ids scopes to those rows (Layer-2 `WHERE id IN
-      // (…)`); INSERT/DELETE, a null/empty id list, or an over-cap statement is a
-      // membership/order change that can't be a scoped set → FULL.
-      const scopable = change.op === "U" && change.ids != null && change.ids.length > 0;
-      const scopedAffected: Set<string> | null = scopable ? new Set(change.ids!) : null;
+      // (…)`) for ANY scoped keyed resource. INSERT/DELETE additionally scope for
+      // an M5 `scopedMembership` entry (decided per-entry below, since the field is
+      // per-resource); otherwise they remain a membership/order change → FULL. A
+      // null/empty id list, or an over-cap statement, is always FULL.
+      const hasIds = change.ids != null && change.ids.length > 0;
+      const scopedUpdate: Set<string> | null =
+        change.op === "U" && hasIds ? new Set(change.ids!) : null;
 
       for (const key of affectedKeys) {
         const entry = registry.get(key);
@@ -2345,15 +2713,33 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
 
         // Per-resource scope decision (the unifying rule: an affectedMap edge /
         // the resource's own identity view takes precedence over any other
-        // read-set match for the same origin).
+        // read-set match for the same origin). `deleted` (M5) rides alongside a
+        // scoped `affected` for a scopedMembership DELETE (see below).
         let affected: Set<string> | null;
+        let deleted: Set<string> | undefined;
         if (coveredOriginsFor(key).has(change.origin)) {
           if (change.origin === entry.identityTable) {
             // Identity-origin change: the identity view is the authoritative path.
             // Drop a duplicate arriving via a SECONDARY view so it can't FULL the
             // scoped identity delivery.
             if (change.identityBase !== entry.identityTable) continue;
-            affected = scopedAffected;
+            // UPDATE always scopes (today). For an M5 scopedMembership entry an
+            // INSERT scopes to the new ids and a DELETE scopes to an EMPTY affected
+            // set carrying the op-D ids in `deleted` — a deleted row can't be
+            // refilled, so the membership diff resolves the exit from `deleted`
+            // with ZERO loader runs. A non-membership entry keeps the pre-M5 FULL.
+            if (change.op === "U") {
+              affected = scopedUpdate;
+            } else if (entry.scopedMembership && hasIds) {
+              if (change.op === "I") {
+                affected = new Set(change.ids!);
+              } else {
+                affected = new Set<string>();
+                deleted = new Set(change.ids!);
+              }
+            } else {
+              affected = null;
+            }
           } else {
             // Edge-covered origin: an affectedMap edge delivers it (scoped) via
             // the DAG cascade. Drop EVERY feed delivery for this origin so it
@@ -2369,9 +2755,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         // Build the RecomputeIntent (the shared L4 contract). Today it is routed
         // straight through `scheduleNotify`; a future work-admission scheduler
         // consumes it on the admit side. Construct it so the producer side is the
-        // stable contract surface.
+        // stable contract surface. Use the REAL op; a scopedMembership DELETE
+        // names its removed ids (`deleted`), everything else the refill ids.
         const delta: RecomputeIntent["delta"] =
-          affected !== null ? { table: change.table, ids: [...affected], op: "U" } : "FULL";
+          affected === null
+            ? "FULL"
+            : { table: change.table, ids: [...(deleted ?? affected)], op: change.op };
 
         const subscribed = subscribedParamsFor(key);
         // Fan out to every subscribed params tuple. A param-less resource is
@@ -2382,7 +2771,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         for (const params of targets) {
           const intent: RecomputeIntent = { resource: key, key: params, delta };
           void intent;
-          scheduleNotify(entry, params, affected, { source: "feed" });
+          scheduleNotify(entry, params, affected, { source: "feed", deleted });
         }
       }
     } catch (err) {

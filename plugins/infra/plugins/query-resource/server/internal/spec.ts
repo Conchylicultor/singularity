@@ -95,13 +95,17 @@ export interface QueryResourceSpec<P extends ResourceParams = ResourceParams> {
   /**
    * Static predicate or a per-params one (`(params) => SQL | undefined`).
    *
-   * RULE: under the default `identityTable` scoping, every column the `where`
+   * RULE: under the plain `identityTable` scoping, every column the `where`
    * reads must be IMMUTABLE post-insert. An UPDATE that flips a `where` column
    * removes the row from the result set, but the scoped refill can only upsert
    * rows it gets back — `diffKeyedScoped` never emits deletes — so the excluded
    * row would sit stale in every client snapshot until the next FULL. A `where`
-   * on a mutable column (a `dismissed` flag, a status) MUST pair with
-   * `recompute: { kind: "full", … }`. See the plugin CLAUDE.md.
+   * on a mutable column (a `dismissed` flag, a status) must therefore pair with
+   * EITHER `recompute: { kind: "full", … }` OR `scopedMembership: true`. The
+   * latter is now the preferred choice for a non-windowed scan: a where-flip is
+   * detected as a membership EXIT (the refill fails to return a requested id) and
+   * shipped as a real delete + order, so the row leaves every client snapshot
+   * without a whole-list FULL. See the plugin CLAUDE.md.
    */
   where?: SQL | ((params: P) => SQL | undefined);
   /** Static ORDER BY — applied to the FULL query only (never the scoped refill). */
@@ -116,6 +120,24 @@ export interface QueryResourceSpec<P extends ResourceParams = ResourceParams> {
    * FULL query and ignores `ctx.affectedIds`.
    */
   recompute?: { kind: "full"; reason: string };
+  /**
+   * Opt into row-level membership scoping (M5). Emits a `scopedMembership` server
+   * option so an INSERT/DELETE/where-flip on the identity table no longer forces a
+   * FULL recompute: the compiler derives the `orderOf` ids-only ordered-membership
+   * query the runtime runs ONLY when a row ENTERS membership, and the runtime
+   * reconciles exits/entries against the per-pk snapshot, shipping an incremental
+   * delta that asserts `order`.
+   *
+   * Incompatible with `limit` and `recompute` — a windowed/LIMIT read cannot
+   * membership-scope (a row entering/leaving the window is a membership change a
+   * per-id refill can't place), and `recompute: { full }` is the opposite policy
+   * (no identityTable to scope against). `compileQuery` throws (module eval) on
+   * either combination. It also RELAXES the mutable-`where` rule above — a
+   * where-flip becomes a detected exit/entry — so it is the preferred choice for a
+   * non-windowed mutable-`where` scan. See
+   * research/2026-07-03-global-scoped-membership-m5.md.
+   */
+  scopedMembership?: true;
   /** `rel()` cascade edges — compiled into `dependsOn` (see `Edge`). */
   edges?: Edge[];
   /** Fixed-window trailing debounce (ms) for this resource's flushes. */

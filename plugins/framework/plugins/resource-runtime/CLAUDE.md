@@ -62,6 +62,47 @@ See `research/2026-06-08-global-unify-live-state-resource-runtime.md` for the
 unification rationale and `plugins/primitives/plugins/live-state/CLAUDE.md` for
 the client side and the keyed/scoped delta semantics.
 
+## Opt-in scoped membership (`scopedMembership`, M5)
+
+A keyed resource may pass `scopedMembership: { orderOf }` (only on the two-arg
+keyed form, which supplies the required `identityTable`; `createResource` throws
+otherwise). It makes an INSERT / DELETE / where-flip on the identity table ship an
+incremental delta instead of a FULL recompute — the runtime refills only the
+changed rows and reconciles membership against the per-pk snapshot via
+`diffKeyedScopedMembership`. Absent ⇒ byte-identical to the pre-M5
+FULL-on-membership-change behavior (every legacy path untouched). See
+`research/2026-07-03-global-scoped-membership-m5.md`.
+
+The membership path (`drainMembershipScoped`, `drainEntry` branch 4):
+
+- **DELETE** → delete + full `order` with **zero DB queries**: no loader (a
+  deleted row can't be refilled) and no `orderOf` (the order is the prior snapshot
+  minus the id). Carried via `PendingNotify.deleted`, the op-D channel that rides
+  alongside a scoped `affected` (FULL absorbs it exactly like `affected`).
+- **INSERT / where-flip entry** (a refilled id absent from the snapshot) → upsert
+  + `order`; `orderOf` runs **exactly once** to place the entrant.
+- **where-flip exit** (the refill omits a requested id) → delete + `order`, one
+  scoped refill, no `orderOf`.
+- **in-place flip** → one upsert, `order` omitted.
+
+A **membership delta always ships the full `order`** — the client rebuilds the
+keyed array purely from `order`, so an incremental membership change must assert
+it. `diffKeyedScopedMembership` rebuilds `nextSnapshot` FROM the wire `order`
+(snapshot ≡ order) and sanitizes upserts/order to surviving ids, so an
+`orderedIds` disagreement or concurrent delete drops out with no client
+drift-resub. It **throws** if a refill id entered membership but no `orderedIds`
+was supplied (the caller must run `orderOf` on any entry).
+
+Persisted (`bootCritical`) scopedMembership entries reconstruct the FULL value
+from the post-diff snapshot (`JSON.parse` of each stored canonical-JSON hash →
+byte-identical jsonb to a FULL persist) and persist it with a watermark captured
+**before** the refill/`orderOf` reads. Their snapshot is **kept across N→0 subs**
+(they recompute on every change regardless of subscribers and need the diff base);
+branch 2/3 (`drainMembershipFull`) seeds/replaces the snapshot even with zero subs
+so the next incremental diff has a base. A DELETE cascades downstream FULL (a
+vanished row has no value for an `affectedMap` to translate); inserts/updates
+cascade scoped.
+
 ## Invariant harness (`core/*.test.ts` + `core/test-support.ts`)
 
 The runtime's hardest correctness invariants are pinned by co-located `bun:test`
@@ -102,7 +143,7 @@ and those plugins' `CLAUDE.md`.
 
 - Core:
   - Uses: `packages/inflight.createInflight`, `packages/semaphore.createSemaphore`
-  - Exports: Types: `DefineResourceInput`, `DependsOnEntry`, `ExternalResource`, `KeyedDiff`, `KeyedResourceContract`, `KeyedSnapshot`, `RecomputeIntent`, `Resource`, `ResourceContract`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`, `ScopePolicy`, `ServerResourceOptions`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`
+  - Exports: Types: `DefineResourceInput`, `DependsOnEntry`, `ExternalResource`, `KeyedDiff`, `KeyedMembershipInput`, `KeyedResourceContract`, `KeyedSnapshot`, `RecomputeIntent`, `Resource`, `ResourceContract`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`, `ScopePolicy`, `ServerResourceOptions`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`, `diffKeyedScopedMembership`
 - Cross-plugin:
   - Imported by: `framework/central-core`, `framework/server-core`
 

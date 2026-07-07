@@ -1,4 +1,4 @@
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, ne } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import {
@@ -7,7 +7,7 @@ import {
   rel,
 } from "@plugins/infra/plugins/query-resource/server";
 import { _attempts, _conversations, pushes } from "./tables";
-import { attempts, tasks } from "./views";
+import { attempts, conversations, tasks } from "./views";
 import type { Task, TaskListItem } from "./schema";
 // `key` / `schema` / keyed-ness come from the shared client descriptors — the
 // single source of truth both runtimes read. The server adds only the DB half
@@ -31,8 +31,6 @@ import type {
 import {
   conversationCascadeSignatures,
   countGoneConversations,
-  listActiveConversations,
-  listActiveSystemConversations,
   listConversationSummariesByAttempt,
   listGoneConversations,
 } from "./queries/conversations";
@@ -42,30 +40,51 @@ import {
 // status change now ships ONE keyed-delta upsert on `conversations-active`
 // instead of re-shipping the whole list to every subscriber.
 //
+// The active/system scans are fully declarative via `queryResource`: the compiler
+// derives the FULL loader, the Layer-2 scoped refill (`WHERE id IN (…)`), the
+// `identityTable: "conversations"` scope policy (from the conversations_v view
+// identity), and the client keyField — replacing the former hand-written loaders.
+//
+// `scopedMembership: true` (M5) is what makes the mutable-`where` sound here: the
+// filter reads `active` (flipped false when a conversation ends), a MUTABLE column.
+// Pre-M5 that mandated `recompute: { full }` (the plain scoped refill never emits
+// deletes, so a row leaving the filter would sit stale). With scopedMembership the
+// runtime detects a where-flip as a membership EXIT — the refill fails to return a
+// requested id — and ships it as a real delete + order, so an ended conversation
+// leaves the list incrementally with no whole-list FULL. An INSERT enters via the
+// derived `orderOf`; a plain field flip still ships one upsert.
+//
 // These MUST be defined before `attemptsResource`: the runtime wires a downstream
 // edge only if the upstream entry already exists, and attempts depends on the
-// active sub-resource below.
-export const conversationsActiveResource = defineResource(conversationsActiveDescriptor, {
-  // The loader reads the whole `conversations` table, so the L4 feed delivers
-  // EVERY conversation UPDATE here scoped to its id (read-sets are table-level) —
-  // which is why attempts can cascade off this one sub-resource alone: the
-  // delivered affected set drives the downstream edge regardless of whether this
-  // active-filtered payload actually changed.
-  identityTable: "conversations",
+// active sub-resource below. The active loader's read-set covers the whole
+// `conversations` table, so the L4 feed delivers EVERY conversation change here
+// scoped to its id — which is why attempts can cascade off this one sub-resource
+// alone (the derived edge fires on the delivered affected set, not on whether the
+// active-filtered payload changed).
+export const conversationsActiveResource = queryResource(conversationsActiveDescriptor, {
+  from: conversations,
+  // conversations_v PgView. The identity base table is declared explicitly
+  // (matching the View({ view: conversations, identityTable: "conversations" })
+  // contribution): it cannot be derived here — this call resolves at module eval,
+  // before the boot-time contribution collection that populates identity bases.
+  identity: { table: "conversations", pk: conversations.id },
+  where: and(eq(conversations.active, true), ne(conversations.kind, "system")),
+  orderBy: desc(conversations.createdAt),
+  scopedMembership: true,
   // Highest fan-out source: one notify cascades to attempts → tasks. The poller
   // can notify multiple times per tick; a fixed-window trailing debounce
   // collapses a tick's status changes into one flush. Source-only — never on the
   // keyed attempts/tasks resources.
   // See research/2026-06-15-global-live-state-cascade-contention.md.
   debounceMs: 250,
-  loader: async (_p, ctx): Promise<Conversation[]> =>
-    listActiveConversations(ctx?.affectedIds),
 });
 
-export const conversationsSystemResource = defineResource(conversationsSystemDescriptor, {
-  identityTable: "conversations",
-  loader: async (_p, ctx): Promise<Conversation[]> =>
-    listActiveSystemConversations(ctx?.affectedIds),
+export const conversationsSystemResource = queryResource(conversationsSystemDescriptor, {
+  from: conversations,
+  identity: { table: "conversations", pk: conversations.id },
+  where: and(eq(conversations.kind, "system"), eq(conversations.active, true)),
+  orderBy: desc(conversations.createdAt),
+  scopedMembership: true,
 });
 
 export const conversationsGoneResource = defineResource(conversationsGoneDescriptor, {
