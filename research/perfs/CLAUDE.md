@@ -50,6 +50,29 @@ rather than inheriting it.
 > log **and its own Causes — checklist** (✅ confirmed · ❌ discarded · 🔬 open). One doc per issue
 > (not a global log) so the history scales as issues accrue.
 
+### Host saturation — agent build/check fleets starve the main backend (Ongoing)
+
+The user-facing "main app slow + data doesn't refresh" bursts (most working days since ~Jun 18) are
+**host-level scheduler starvation**, not main's code: concurrent agent build/check runs (4 admitted
+by design — `floor(cpus/4)` build slots, each fanning ~4–7 full-TS-program type-check workers +
+eslint + vite) push an 18-core host to load 25–35 with GBs of swap; the single-threaded main backend
+(default QoS, same tier as the storm) stalls to event-loop p99 950–1700 ms (healthy: 3–15 ms), the
+WS cuts every ~10–12 s, and each reconnect replays ~116 subscriptions into the starved backend —
+lost pushes read as "stale data". Confirmed by cross-backend control (an idle unrelated worktree
+backend stalls at the same minutes), deploy/onset separation, dose–response recovery with no change
+on main, and a live mid-burst intervention. **⚠ Instrumentation trap recorded in the doc:** `ps ni`
+does NOT reflect darwinbg (zsh `bgnice` forged the ni=5 "demoted" readings; `pri` decays for
+sleepers AND hogs) — `taskpolicy -b` failures are loud on stderr; silence means it took.
+**Fixes landed on main 2026-07-08 (`2a7660401`), NOT yet re-validated under a live burst:**
+(1) type-check workers self-demote at their spawn site unless on branch `main` (no inheritance
+reliance); (2) `boostInteractiveQos()` — the main backend raises its event-loop thread to
+user-interactive QoS at boot, strictly `isMain()`-gated (verified 0x11→0x21 readback; gate tested
+±). Open: A/B main's p99 during the next burst; sweep pre-Jul-7 undemoted agent sessions;
+admission-control tightening (4 slots × ~8 children over-admits; memory guard is per-fleet only);
+4.2 GB unrotated `live-state.jsonl`; which timeout cuts the WS at ~10–12 s. Full evidence +
+counterfactuals + implementation →
+**[`2026-07-08-host-saturation-agent-checks-starve-main.md`](./2026-07-08-host-saturation-agent-checks-starve-main.md)**.
+
 ### Git-derived loaders — `edited-files` / `commits-graph` (Ongoing)
 
 The dominant remaining real cost now that the churn is fixed — and the *original* cause (A), masked
