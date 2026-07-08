@@ -14,6 +14,10 @@ import {
   clearPersistedSnapshots,
   reconcileReadSetTable,
 } from "./persist";
+import {
+  onReadSetShrink,
+  type ReadSetShrinkEvent,
+} from "./read-set-shrink-hook";
 
 // Real-DB invariant suite for the L2 persist SQL: xid8 watermark monotonicity,
 // the ON CONFLICT upsert, the text[] `tables_read` round-trip (incl. the empty
@@ -185,6 +189,46 @@ describe("clearPersistedSnapshots", () => {
     const deleted = await clearPersistedSnapshots(t.db, []);
     expect(deleted).toBe(0);
     expect(await countRows()).toBe(1);
+  });
+});
+
+describe("read-set shrink detection", () => {
+  // Capture emitted shrink events via the seam. The handler is process-global
+  // (last-writer-wins), so we install a spy for this block and restore a no-op at
+  // the end. `captured` is reset between assertions.
+  const captured: ReadSetShrinkEvent[] = [];
+
+  test("emits ONCE on a shed, never on fresh insert / grow / unchanged", async () => {
+    onReadSetShrink((e) => captured.push(e));
+
+    // Fresh insert (no prior row) → NO emit.
+    captured.length = 0;
+    await persistSnapshot(t.db, "k", "{}", {}, "1", ["a", "b"]);
+    expect(captured).toHaveLength(0);
+
+    // Shrink ["a","b"] → ["a"] drops "b" → emit ONCE.
+    captured.length = 0;
+    await persistSnapshot(t.db, "k", "{}", {}, "2", ["a"]);
+    expect(captured).toHaveLength(1);
+    expect(captured[0]).toEqual({
+      resourceKey: "k",
+      droppedTables: ["b"],
+      oldTables: ["a", "b"],
+      newTables: ["a"],
+    });
+
+    // Grow ["a"] → ["a","c"] (no dropped table) → NO emit.
+    captured.length = 0;
+    await persistSnapshot(t.db, "k", "{}", {}, "3", ["a", "c"]);
+    expect(captured).toHaveLength(0);
+
+    // Unchanged ["a","c"] → ["a","c"] → NO emit.
+    captured.length = 0;
+    await persistSnapshot(t.db, "k", "{}", {}, "4", ["a", "c"]);
+    expect(captured).toHaveLength(0);
+
+    // Restore the no-op handler so no later suite inherits this spy.
+    onReadSetShrink(() => {});
   });
 });
 

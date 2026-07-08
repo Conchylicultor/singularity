@@ -3,6 +3,7 @@ import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import { LIVE_STATE_SNAPSHOT_TABLE } from "@plugins/database/plugins/derived-views/core";
 import { removeReadSetTable } from "@plugins/infra/plugins/runtime-profiler/core";
+import { emitReadSetShrink } from "./read-set-shrink-hook";
 
 // The set of resource keys L2 persists: boot-critical AND DB-backed. `bootCritical`
 // is read GENERICALLY from the shared Resource.Declare collection (never by naming
@@ -54,6 +55,12 @@ export async function captureWatermark(db: NodePgDatabase): Promise<string> {
 // `sql` template into a comma-separated list of bound params (NOT a single array
 // value), so an `ARRAY[…]` constructor is built explicitly via `sql.join`. An
 // empty array yields `ARRAY[]::text[]`, a valid empty text[] literal.
+//
+// The upsert ALSO reads its own pre-upsert `tables_read` back (via a data-modifying
+// CTE) to detect a read-set SHED — the new set dropping a table the old set had —
+// and emits it on the read-set-shrink seam for human confirmation. This is pure
+// observability: the persisted set is written exactly as before (REPLACE), and the
+// emit is a synchronous in-memory hand-off that never throws into the persist path.
 export async function persistSnapshot(
   db: NodePgDatabase,
   key: string,
@@ -66,8 +73,19 @@ export async function persistSnapshot(
     tablesRead.map((t) => drizzleSql`${t}`),
     drizzleSql`, `,
   )}]::text[]`;
-  await db.execute(
+  // Single-statement upsert that ALSO returns the PRE-upsert `tables_read` (via a
+  // data-modifying CTE — the `prev` SELECT sees the row as of statement start,
+  // before the ON CONFLICT update takes effect) alongside the freshly-written set.
+  // Comparing them detects a SHED (the new read-set drops a table the old one had)
+  // with zero extra round-trip. On a first INSERT there is no prior row → `prev`
+  // is empty → old_tables is NULL → treated as "no shed".
+  const res = await db.execute<{ old_tables: string[] | null; new_tables: string[] }>(
     drizzleSql`
+      WITH prev AS (
+        SELECT tables_read AS old_tables
+        FROM ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
+        WHERE resource_key = ${key} AND params_key = ${paramsKey}
+      )
       INSERT INTO ${drizzleSql.raw(LIVE_STATE_SNAPSHOT_TABLE)}
         (resource_key, params_key, value, position, tables_read, updated_at)
       VALUES (
@@ -83,8 +101,31 @@ export async function persistSnapshot(
             position = EXCLUDED.position,
             tables_read = EXCLUDED.tables_read,
             updated_at = EXCLUDED.updated_at
+      RETURNING
+        (SELECT old_tables FROM prev) AS old_tables,
+        tables_read AS new_tables
     `,
   );
+  // Read-set shrink detection: every persisted resource is boot-critical, so a
+  // dropped dependency in its durable read-set is the ambiguous shed described in
+  // research/2026-07-08-global-read-set-shrink-guard.md — safe if a code change
+  // removed the dependency, unsafe if a data-dependent conditional query didn't
+  // fire. Indistinguishable here, so we SURFACE it (debug/read-set-shrink monitor)
+  // for human confirmation instead of changing behaviour. Emit is a pure in-memory
+  // hand-off (no I/O, never throws on the persist path).
+  const row = res.rows[0];
+  if (row?.old_tables) {
+    const newSet = new Set(row.new_tables);
+    const dropped = row.old_tables.filter((t) => !newSet.has(t));
+    if (dropped.length > 0) {
+      emitReadSetShrink({
+        resourceKey: key,
+        droppedTables: dropped,
+        oldTables: row.old_tables,
+        newTables: row.new_tables,
+      });
+    }
+  }
 }
 
 // Read the persisted read-sets for the param-less ("{}") snapshots in ONE query,

@@ -6,7 +6,7 @@
 
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 - Web:
-  - Slots: `Reports.KindView` ← `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `reports.crash`
+  - Slots: `Reports.KindView` ← `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `reports.crash`
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/slot-render.defineDispatchSlot`, `primitives/tab-id.getTabId`
   - Exports: Types: `ReportContext`; Values: `investigate`, `report`, `Reports`
 - Server:
@@ -19,7 +19,7 @@
   - Uses: `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
   - Exports: Types: `Report`; Values: `reportDetailRoute`, `ReportSchema`, `reportsResource`, `reportsRootRoute`
 - Cross-plugin:
-  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/render-loop`, `tasks/reports-investigation`
+  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/render-loop`, `tasks/reports-investigation`
 - Sub-plugins:
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).

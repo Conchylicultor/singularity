@@ -10,6 +10,7 @@ export const SERVER_REPORT_SOURCES = [
   "server-queue-monitor",
   "server-live-state-monitor",
   "server-op-rate-monitor",
+  "server-read-set-monitor",
 ] as const;
 export const CLIENT_REPORT_SOURCES = [
   "browser-error",
