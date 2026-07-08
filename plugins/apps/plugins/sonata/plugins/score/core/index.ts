@@ -34,6 +34,7 @@ export type {
 export {
   emptyScore,
   scoreEndBeat,
+  scoreStartBeat,
   leadInBeats,
   beatToSeconds,
   scaleTempo,

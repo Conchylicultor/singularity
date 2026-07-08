@@ -118,7 +118,11 @@ export function ProgressBar() {
       // tech; updating it every frame is a per-frame attribute mutation for no
       // benefit, so write it only when its rounded value changes.
       if (slider) {
-        const rounded = Math.round(beat);
+        // Clamp to the slider's declared domain `[0, endBeat]` — the lead-in
+        // pre-roll sits at negative beats where the handle visually pins to the
+        // left edge (see `beatToFraction`), so the ARIA value tracks the shown
+        // position and never drops below `aria-valuemin={0}`.
+        const rounded = Math.round(Math.max(0, Math.min(endBeat, beat)));
         if (rounded !== lastAria) {
           lastAria = rounded;
           slider.setAttribute("aria-valuenow", String(rounded));
@@ -127,7 +131,7 @@ export function ProgressBar() {
     };
     paint();
     return cursor.subscribe(paint);
-  }, [cursor, beatToFraction, tempo, ready, totalText]);
+  }, [cursor, beatToFraction, tempo, ready, totalText, endBeat]);
 
   // Map a pointer's clientX to a beat and seek there. Used by both press and
   // drag so the math lives in exactly one place.

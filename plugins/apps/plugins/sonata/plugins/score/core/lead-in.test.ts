@@ -1,5 +1,5 @@
 import { describe, expect, it } from "bun:test";
-import { emptyScore, leadInBeats } from "./helpers";
+import { emptyScore, leadInBeats, scoreStartBeat } from "./helpers";
 import type { Score, TimeSigEvent } from "./types";
 
 /** A minimal score carrying just a time-sig map + one note, for the lead-in math. */
@@ -41,5 +41,18 @@ describe("leadInBeats", () => {
 
   it("guards a degenerate non-positive meter back to a 4-beat bar", () => {
     expect(leadInBeats(scoreWith([{ beat: 0, numerator: 0, denominator: 4 }]))).toBe(4);
+  });
+});
+
+describe("scoreStartBeat", () => {
+  it("is the NEGATIVE lead-in for a non-empty score (the empty pre-roll bar)", () => {
+    // 4/4 default → one 4-beat bar of lead-in before beat 0.
+    expect(scoreStartBeat(scoreWith([]))).toBe(-4);
+    // 3/4 → the origin sits 3 beats before the first note.
+    expect(scoreStartBeat(scoreWith([{ beat: 0, numerator: 3, denominator: 4 }]))).toBe(-3);
+  });
+
+  it("is 0 for an empty score — nothing to lead into, so the cursor rests at 0", () => {
+    expect(scoreStartBeat(emptyScore())).toBe(0);
   });
 });

@@ -56,6 +56,21 @@ export function leadInBeats(score: Score): number {
 }
 
 /**
+ * The lowest beat the transport parks/starts at — the mirror of
+ * {@link scoreEndBeat}. A non-empty score opens on a one-bar lead-in pre-roll at
+ * NEGATIVE beats `[-leadIn, 0)` (see {@link leadInBeats}) so the piano roll's
+ * first notes fall toward the strike line, so the seekable/navigable span is
+ * `[scoreStartBeat, scoreEndBeat]` — NOT `[0, scoreEndBeat]`. This is THE single
+ * source of truth for the timeline's lower bound: the transport parks here on
+ * load, rewind/scrub bottom out here, and `seekTo` clamps to it, so every path
+ * agrees on where "the start" is (the empty lead-in bar, not the first note).
+ * Zero for an empty score (nothing to lead into). Pure; never mutates.
+ */
+export function scoreStartBeat(score: Score): number {
+  return scoreEndBeat(score) > 0 ? -leadInBeats(score) : 0;
+}
+
+/**
  * The epsilon that keeps a "strict" line lookup from sticking on the line it
  * just landed on (sub-millibeat — well below any musical grid spacing).
  */
@@ -68,10 +83,20 @@ const LINE_EPS = 1e-3;
  * backward pivot, and the hold-scrub — through these three, so the line math
  * lives here once rather than being re-derived per grid. All pure; never mutate.
  *
- * `prevLine` — the line strictly before `beat` (or 0 when there is none).
+ * The backward lookups take a `min` clamp (default 0) — symmetric to
+ * {@link nextLine}'s `end` upper bound — so they bottom out at the caller's
+ * timeline origin ({@link scoreStartBeat}, i.e. the lead-in pre-roll) rather
+ * than a hardcoded 0. A grid needn't carry a line at `min`; the clamp itself is
+ * the backward-most stop.
+ *
+ * `prevLine` — the line strictly before `beat` (or `min` when there is none).
  */
-export function prevLine(lines: { startBeat: number }[], beat: number): number {
-  let best = 0;
+export function prevLine(
+  lines: { startBeat: number }[],
+  beat: number,
+  min = 0,
+): number {
+  let best = min;
   for (const l of lines) {
     if (l.startBeat < beat - LINE_EPS && l.startBeat > best) best = l.startBeat;
   }
@@ -95,15 +120,17 @@ export function nextLine(
 }
 
 /**
- * The line at or before `beat` (or 0 before the first). Unlike {@link prevLine}
- * it is *inclusive*, so a `beat` sitting exactly on a line returns that same
- * line — the start of the unit `beat` falls in.
+ * The line at or before `beat` (or `min`, default 0, before the first). Unlike
+ * {@link prevLine} it is *inclusive*, so a `beat` sitting exactly on a line
+ * returns that same line — the start of the unit `beat` falls in. `min` is the
+ * backward clamp (see {@link prevLine}).
  */
 export function currentLine(
   lines: { startBeat: number }[],
   beat: number,
+  min = 0,
 ): number {
-  let best = 0;
+  let best = min;
   for (const l of lines) {
     if (l.startBeat <= beat + LINE_EPS && l.startBeat > best) best = l.startBeat;
   }

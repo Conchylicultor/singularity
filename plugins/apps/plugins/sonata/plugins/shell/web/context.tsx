@@ -14,13 +14,13 @@ import {
   emptyScore,
   currentLine,
   foldLoopTime,
-  leadInBeats,
   mergeAnnotations,
   mergeScores,
   nextLine,
   prevLine,
   scaleTempo,
   scoreEndBeat,
+  scoreStartBeat,
   spellScore,
   subdivideBars,
   type Score,
@@ -554,20 +554,22 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // allocation-free tempo-time source instead of re-sorting the tempo map.
   const tempoIndex = useMemo(() => buildTempoIndex(score), [score]);
 
-  // One-bar lead-in (Synthesia-style pre-roll): a stretch of empty timeline at
-  // NEGATIVE beats `[-leadIn, 0)` the transport parks/starts at, so the piano
-  // roll's first notes have a bar of travel toward the strike line instead of
-  // opening pinned to it. It carries no notes/sound; the tempo index extrapolates
-  // it linearly and the audio scheduler simply schedules beat-0 notes one bar
-  // into the future — so nothing downstream special-cases it. Zero for an empty
-  // score (nothing to lead into, so the cursor rests at 0 as before). `score`
-  // and `baseScore` share the same beat-space time-sig map, so tempo scaling
-  // doesn't move it. Read through a ref by the score-reset effect below.
-  const leadIn = useMemo(
-    () => (scoreEndBeat(score) > 0 ? leadInBeats(score) : 0),
-    [score],
-  );
-  const leadInRef = useLatestRef(leadIn);
+  // The timeline origin: the beat the transport parks/starts at and the
+  // backward-most stop every rewind/scrub bottoms out on. For a non-empty score
+  // this is the one-bar Synthesia-style lead-in pre-roll — a stretch of empty
+  // timeline at NEGATIVE beats `[startBeat, 0)` — so the piano roll's first
+  // notes have a bar of travel toward the strike line instead of opening pinned
+  // to it. It carries no notes/sound; the tempo index extrapolates it linearly
+  // and the audio scheduler simply schedules beat-0 notes one bar into the
+  // future — so nothing downstream special-cases it. Zero for an empty score
+  // (nothing to lead into, so the cursor rests at 0 as before). `scoreStartBeat`
+  // is THE single source of truth for this bound (mirror of `scoreEndBeat`), so
+  // the reset effect, `seekTo`'s clamp, and the bar-seek/scrub floors all agree
+  // that "the start" is the empty lead-in bar — not the first note. `score` and
+  // `baseScore` share the same beat-space time-sig map, so tempo scaling doesn't
+  // move it. Read through a ref by the score-reset effect below.
+  const startBeat = useMemo(() => scoreStartBeat(score), [score]);
+  const startBeatRef = useLatestRef(startBeat);
 
   // --- Transport: a requestAnimationFrame loop (no polling). ----------------
   // We anchor at the playback clock's time + beat where playback started, then
@@ -716,13 +718,13 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // start playback from the top once the new score is composed instead of
   // stopping; `play`'s own guards keep an empty/0% score from starting.
   useEffect(() => {
-    // Park at the lead-in (negative pre-roll beat), not beat 0, so a freshly
-    // loaded song opens with an empty bar below its first notes and — whether it
-    // auto-plays or the user presses play — the notes fall INTO the strike line
-    // rather than starting on it. `leadInRef` mirrors the memo derived from this
-    // same score, so by the time this post-commit effect runs it already holds
-    // the new song's lead-in.
-    const start = -leadInRef.current;
+    // Park at the timeline origin (the negative lead-in pre-roll beat), not beat
+    // 0, so a freshly loaded song opens with an empty bar below its first notes
+    // and — whether it auto-plays or the user presses play — the notes fall INTO
+    // the strike line rather than starting on it. `startBeatRef` mirrors the memo
+    // derived from this same score, so by the time this post-commit effect runs
+    // it already holds the new song's origin.
+    const start = startBeatRef.current;
     cursor.setBeat(start, { seek: true });
     // Drop any A–B loop: it belongs to the previous content's beat span. Cleared
     // unconditionally (even when auto-playing) so a freshly loaded song never
@@ -780,8 +782,13 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // Stable (reads refs internally), so pointer handlers stay correct mid-drag.
   const seekTo = useCallback(
     (beat: number) => {
-      const end = scoreEndBeat(scoreRef.current);
-      const next = Math.max(0, Math.min(end, beat));
+      const score = scoreRef.current;
+      const end = scoreEndBeat(score);
+      // Clamp to the full timeline `[scoreStartBeat, end]` — the lower bound is
+      // the lead-in origin, NOT 0, so rewinding/scrubbing can reach the empty
+      // pre-roll bar (where the first note is still falling) rather than flooring
+      // on the first note itself.
+      const next = Math.max(scoreStartBeat(score), Math.min(end, beat));
       // A seek aborts a pending count-in (you've repositioned; the lead-in is
       // stale). No-op re-render when already null — React bails on the same value.
       setCountIn(null);
@@ -810,6 +817,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       const score = scoreRef.current;
       const here = cursor.getBeat();
       const end = scoreEndBeat(score);
+      // The seek grid runs `[0, end]`; the timeline origin (the lead-in pre-roll)
+      // sits one unit below it, supplied as the backward `min` clamp so a rewind
+      // off beat 0 lands on the empty lead-in bar rather than sticking at 0.
+      const start = scoreStartBeat(score);
       const grid = subdivideBars(score, seekSubdivisions(tempoScaleRef.current));
       if (direction > 0) {
         seekTo(nextLine(grid, here, end));
@@ -820,9 +831,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       // unit. The target is always ≤ the current line ≤ here, so repeated taps
       // walk strictly backward — drift-proof while playing, with no play/pause
       // special-case (this subsumes the old `currentBarLine` anchor).
-      const cur = currentLine(grid, here);
+      const cur = currentLine(grid, here, start);
       const next = nextLine(grid, here, end);
-      seekTo(here > (cur + next) / 2 ? cur : prevLine(grid, cur));
+      seekTo(here > (cur + next) / 2 ? cur : prevLine(grid, cur, start));
     },
     [seekTo, cursor],
   );
@@ -844,6 +855,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     const score = scoreRef.current;
     const end = scoreEndBeat(score);
     if (end <= 0) return;
+    // Backward hold bottoms out at the timeline origin (the lead-in pre-roll),
+    // not 0 — same lower bound as the tap-rewind and `seekTo` clamp.
+    const start = scoreStartBeat(score);
 
     // The seek grid for this hold — captured once: playback is suspended for the
     // duration, so neither the score nor the tempo can shift the unit mid-hold.
@@ -873,7 +887,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
         acc = 0;
         const here = cursor.getBeat();
         const next =
-          direction < 0 ? prevLine(grid, here) : nextLine(grid, here, end);
+          direction < 0 ? prevLine(grid, here, start) : nextLine(grid, here, end);
         // Move the visual cursor directly — no `seekTo` (no re-anchor / seekEpoch
         // bump) since playback is suspended. The store write is read back by the
         // next step's `cursor.getBeat()` and the final `endScrub` commit. A
