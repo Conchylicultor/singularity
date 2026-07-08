@@ -64,5 +64,13 @@ describe("main-edits guard", () => {
     test("/tmp", () => {
       expect(blocks("/tmp/scratch/x.md", `${WT}/gateway`)).toBe(false);
     });
+
+    test("/private/tmp — macOS-resolved scratchpad (2026-07-08 false positive)", () => {
+      // /tmp is a symlink to /private/tmp on macOS, so the harness scratchpad
+      // surfaces as /private/tmp/claude-501/.../scratchpad/...
+      expect(blocks("/private/tmp/claude-501/session/scratchpad/gen_funk.py", `${WT}/gateway`)).toBe(
+        false,
+      );
+    });
   });
 });

@@ -19,7 +19,9 @@ export const mainEditsGuard = defineGuard<FileInput>({
     const workRoot = wt?.worktreeRoot ?? ctx.cwd;
     if (f === workRoot || f.startsWith(`${workRoot}/`)) return null;
 
-    if (/^\/tmp\//.test(f)) return null;
+    // `/tmp` is a symlink to `/private/tmp` on macOS, so the scratchpad the
+    // harness hands agents surfaces as its resolved `/private/tmp/...` form.
+    if (/^\/(private\/)?tmp\//.test(f)) return null;
 
     const projectsPrefix = `${HOME_DIR}/.claude/projects/`;
     if (f.startsWith(projectsPrefix)) {
