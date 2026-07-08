@@ -1,9 +1,10 @@
 import type { Command } from "commander";
 import os from "node:os";
-import { existsSync, lstatSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
+import { existsSync, lstatSync, mkdirSync, writeFileSync } from "fs";
 import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { adaptiveTimeoutMs } from "./adaptive-timeout";
+import { acquireBuildLock } from "../build-lock";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
@@ -132,53 +133,6 @@ const STAGING_PREFIX = "dist.staging.";
 const LIVE_PREFIX = "dist.live.";
 const SWAP_PREFIX = "dist.swap.";
 const OLD_PREFIX = "dist.old.";
-
-// Cross-process build mutex via atomic symlink. Protects against the narrow
-// race where a detached build orphaned by a SIGKILLed backend (idle-sweep)
-// runs concurrently with a fresh build in the replacement backend. Stale
-// locks from crashed holders are stolen after a PID probe.
-async function acquireBuildLock(lockPath: string): Promise<() => void> {
-  const holder = `pid-${process.pid}-${Date.now()}`;
-  let warned = false;
-  for (let attempt = 0; attempt < 600; attempt++) {
-    try {
-      await symlink(holder, lockPath);
-      const release = () => {
-        try {
-          unlinkSync(lockPath);
-        // eslint-disable-next-line promise-safety/no-bare-catch
-        } catch {}
-      };
-      process.on("exit", release);
-      return release;
-    } catch (err) {
-      if ((err as NodeJS.ErrnoException).code !== "EEXIST") throw err;
-    }
-    try {
-      const target = await readlink(lockPath);
-      const m = target.match(/^pid-(\d+)-/);
-      if (m) {
-        try {
-          process.kill(parseInt(m[1]!, 10), 0);
-        } catch (err) {
-          if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
-          try {
-            await unlink(lockPath);
-          // eslint-disable-next-line promise-safety/no-bare-catch
-          } catch {}
-          continue;
-        }
-      }
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch {}
-    if (!warned) {
-      console.log("Another build is in progress; waiting...");
-      warned = true;
-    }
-    await Bun.sleep(500);
-  }
-  throw new Error(`Timed out waiting for build lock at ${lockPath}`);
-}
 
 // Reclaim build leftovers and self-heal a crashed publish. `dist` is a symlink
 // → `dist.live.<pid>`; a publish killed mid-swap can leave `dist` missing or
@@ -821,8 +775,26 @@ export function registerBuild(program: Command) {
         });
       };
       process.on("exit", () => finalizeBuildLog(false));
-      process.on("SIGINT", () => process.exit(130));
-      process.on("SIGTERM", () => process.exit(143));
+
+      // Catchable fatal signals → graceful exit so the exit handlers above
+      // (build-log finalize) and the lock release run. SIGKILL is uncatchable —
+      // the dead-holder ESRCH steal in acquireBuildLock is the backstop there.
+      for (const [sig, code] of [
+        ["SIGINT", 130], ["SIGTERM", 143], ["SIGHUP", 129], ["SIGQUIT", 131],
+      ] as const) {
+        process.on(sig, () => process.exit(code));
+      }
+
+      // A foreground `./singularity build` dies with its invoker so an orphaned
+      // build never holds the build lock indefinitely. macOS has no PDEATHSIG, so
+      // poll ppid (reparented orphans get ppid 1); unref so it never keeps the
+      // process alive. The detached self-restart build (run-build.ts) opts out via
+      // SINGULARITY_BUILD_DETACHED — it intends to outlive the backend it restarts.
+      if (process.ppid !== 1 && !process.env.SINGULARITY_BUILD_DETACHED) {
+        setInterval(() => {
+          if (process.ppid === 1) process.exit(140); // 128+12: orphaned
+        }, 2000).unref();
+      }
 
       endSpan = buildProfilerStart("nameValidation", "build:preflight", "name validation");
       if (!NAME_REGEX.test(name)) {

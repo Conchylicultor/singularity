@@ -176,7 +176,7 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     stdout: "pipe",
     stderr: "pipe",
     detached: true,
-    env: { ...process.env, SINGULARITY_BUILD_ID: buildId },
+    env: { ...process.env, SINGULARITY_BUILD_ID: buildId, SINGULARITY_BUILD_DETACHED: "1" },
   });
 
   await db.update(_buildRuns).set({ pid: proc.pid }).where(eq(_buildRuns.id, buildId));
