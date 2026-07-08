@@ -120,8 +120,17 @@ function GroupStyle({
       state.presets[0] ??
       null);
 
-  const { mergedLight, mergedDark } = useMemo(() => {
-    if (!active) return { mergedLight: null, mergedDark: null };
+  // Resolve straight to the final CSS text (null while a dynamic preset source
+  // is pending). The DOM effects below depend on this STRING, not on the merged
+  // value objects: upstream hooks (useTokenGroupPresets, useConfig, useAdjustment)
+  // rebuild their objects on every render, and object-identity deps made the
+  // effect re-run — remove + re-append its <style> — on every boot commit. That
+  // churn (~64 elements per commit) let mid-task style recalcs observe a
+  // theme-less document, which retriggered `transition-*` on themed elements
+  // over and over: the visible "flicker until boot settles" bug. A string dep
+  // makes no-op re-renders structurally unable to touch the DOM.
+  const text = useMemo(() => {
+    if (!active) return null;
 
     let mergedLight: Record<string, string>;
     let mergedDark: Record<string, string>;
@@ -149,39 +158,55 @@ function GroupStyle({
     // schema `default`, or a `resolve` path dropping a key.
     assertComplete(group, mergedLight, mergedDark);
 
-    return { mergedLight, mergedDark };
-  }, [active, config.overrides, group]);
+    return renderGroupBlock(
+      group.descriptor,
+      transformValues(mergedLight, adjustment),
+      transformValues(mergedDark, adjustment),
+      scopeToken ? themeScopeSelectors(scopeToken) : undefined,
+    );
+  }, [active, config.overrides, group, adjustment, scopeToken]);
 
+  // Scoped overrides get a distinct `theme-scope-` id; the global path keeps the
+  // `theme-engine-` id the pre-paint replay and cache rely on. Both id families
+  // feed the aggregator and the claim-based prune set.
+  const id = scopeToken
+    ? `theme-scope-${scopeToken}-${group.id}`
+    : styleIdFor(group.id);
+
+  // Element lifecycle — runs once per (emit, id), NOT on theme changes. Adopts
+  // the replay-injected element in place (by id) or creates it, and claims the
+  // id so the prune pass keeps it. Claiming here (even while a preset source is
+  // still pending) also protects the replayed pre-paint CSS from a prune
+  // triggered by an already-resolved sibling. The element is only removed on
+  // true unmount / emit-flip — never as part of a content update.
   useLayoutEffect(() => {
-    if (!emit || !mergedLight || !mergedDark) return;
-    // Scoped overrides get a distinct `theme-scope-` id; the global path keeps the
-    // `theme-engine-` id the pre-paint replay and cache rely on. Both id families
-    // feed the aggregator and the claim-based prune set.
-    const id = scopeToken ? `theme-scope-${scopeToken}-${group.id}` : styleIdFor(group.id);
-    // Adopt the replay-injected element in place (by id) before any prune pass.
+    if (!emit) return;
     let el = document.getElementById(id) as HTMLStyleElement | null;
     if (!el) {
       el = document.createElement("style");
       el.id = id;
       document.head.appendChild(el);
     }
-    const text = renderGroupBlock(
-      group.descriptor,
-      transformValues(mergedLight, adjustment),
-      transformValues(mergedDark, adjustment),
-      scopeToken ? themeScopeSelectors(scopeToken) : undefined,
-    );
-    el.textContent = text;
-    // Claim this id so the prune pass keeps the element, and feed the pre-paint
-    // cache (both scoped and unscoped blocks).
     claimPaintStyle(id);
-    reportPaintStyle(id, text);
     return () => {
       el.remove();
       releasePaintStyle(id);
       reportPaintStyle(id, null);
     };
-  }, [emit, mergedLight, mergedDark, group.descriptor, group.id, adjustment, scopeToken]);
+  }, [emit, id]);
+
+  // Content update — writes textContent in place only when the rendered CSS
+  // actually changed, and feeds the pre-paint cache. Runs after the lifecycle
+  // effect above (same commit, declaration order), so the element exists. While
+  // `text` is null (dynamic preset source pending) it leaves the replayed
+  // pre-paint CSS untouched — falling back to the default preset here would
+  // overwrite it with wrong values for one window (see tweakcn's boot task).
+  useLayoutEffect(() => {
+    if (!emit || text === null) return;
+    const el = document.getElementById(id);
+    if (el && el.textContent !== text) el.textContent = text;
+    reportPaintStyle(id, text);
+  }, [emit, id, text]);
 
   return null;
 }
