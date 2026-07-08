@@ -2,7 +2,12 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { searchEndpoint } from "../core/endpoints";
 import { handleSearch } from "./internal/handle-search";
 
-export { upsertSearchDocs, deleteSearchDocs, deleteSource } from "./internal/index-api";
+export {
+  upsertSearchDocs,
+  deleteSearchDocs,
+  deleteSource,
+  getSourceDocMetadata,
+} from "./internal/index-api";
 
 export default {
   description:

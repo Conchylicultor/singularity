@@ -1609,6 +1609,10 @@
       "name": "@singularity/plugin-debug",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/boot-budget": {
+      "name": "@singularity/plugin-debug-boot-budget",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/boot-profile": {
       "name": "@singularity/plugin-debug-boot-profile",
       "version": "0.0.1",
@@ -2494,6 +2498,10 @@
       "name": "@singularity/plugin-infra-contention",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/corpus-index": {
+      "name": "@singularity/plugin-infra-corpus-index",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/endpoints": {
       "name": "@singularity/plugin-infra-endpoints",
       "version": "0.0.1",
@@ -2562,6 +2570,10 @@
       "name": "@singularity/plugin-infra-query-resource",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/retention": {
+      "name": "@singularity/plugin-infra-retention",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/runtime-profiler": {
       "name": "@singularity/plugin-infra-runtime-profiler",
       "version": "0.0.1",
@@ -2576,6 +2588,10 @@
       "optionalDependencies": {
         "@napi-rs/keyring": "^1.1.6",
       },
+    },
+    "plugins/infra/plugins/warmup": {
+      "name": "@singularity/plugin-infra-warmup",
+      "version": "0.0.1",
     },
     "plugins/infra/plugins/worktree": {
       "name": "@singularity/plugin-infra-worktree",
@@ -5558,6 +5574,8 @@
 
     "@singularity/plugin-debug": ["@singularity/plugin-debug@workspace:plugins/debug"],
 
+    "@singularity/plugin-debug-boot-budget": ["@singularity/plugin-debug-boot-budget@workspace:plugins/debug/plugins/boot-budget"],
+
     "@singularity/plugin-debug-boot-profile": ["@singularity/plugin-debug-boot-profile@workspace:plugins/debug/plugins/boot-profile"],
 
     "@singularity/plugin-debug-broadcasts": ["@singularity/plugin-debug-broadcasts@workspace:plugins/debug/plugins/broadcasts"],
@@ -5978,6 +5996,8 @@
 
     "@singularity/plugin-infra-contention": ["@singularity/plugin-infra-contention@workspace:plugins/infra/plugins/contention"],
 
+    "@singularity/plugin-infra-corpus-index": ["@singularity/plugin-infra-corpus-index@workspace:plugins/infra/plugins/corpus-index"],
+
     "@singularity/plugin-infra-endpoints": ["@singularity/plugin-infra-endpoints@workspace:plugins/infra/plugins/endpoints"],
 
     "@singularity/plugin-infra-entities": ["@singularity/plugin-infra-entities@workspace:plugins/infra/plugins/entities"],
@@ -6010,11 +6030,15 @@
 
     "@singularity/plugin-infra-query-resource": ["@singularity/plugin-infra-query-resource@workspace:plugins/infra/plugins/query-resource"],
 
+    "@singularity/plugin-infra-retention": ["@singularity/plugin-infra-retention@workspace:plugins/infra/plugins/retention"],
+
     "@singularity/plugin-infra-runtime-profiler": ["@singularity/plugin-infra-runtime-profiler@workspace:plugins/infra/plugins/runtime-profiler"],
 
     "@singularity/plugin-infra-safe-fetch": ["@singularity/plugin-infra-safe-fetch@workspace:plugins/infra/plugins/safe-fetch"],
 
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
+
+    "@singularity/plugin-infra-warmup": ["@singularity/plugin-infra-warmup@workspace:plugins/infra/plugins/warmup"],
 
     "@singularity/plugin-infra-worktree": ["@singularity/plugin-infra-worktree@workspace:plugins/infra/plugins/worktree"],
 

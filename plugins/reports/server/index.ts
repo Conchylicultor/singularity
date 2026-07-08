@@ -6,7 +6,8 @@ import { reportsResource } from "./internal/resources";
 import { recordReport } from "./internal/record-report";
 import { ExcludeFromChangeFeed } from "@plugins/database/plugins/change-feed/server";
 import { _reports } from "./internal/tables";
-import { backfillNoiseClassification } from "./internal/backfill-noise";
+import { backfillNoiseWarmup } from "./internal/backfill-noise";
+import { reportsRetention } from "./internal/retention";
 import { flushBufferedReports, installProcessHooks } from "./internal/process-hooks";
 import { submitReport, investigateReport } from "../shared/endpoints";
 
@@ -39,7 +40,14 @@ export default {
         "High-churn deduped crash/report counter; live-ticking it amplifies load during the exact crash storms it records. Pane hydrates on open.",
     }),
   ],
+  register: [backfillNoiseWarmup, reportsRetention],
   onReady: async () => {
+    // Cheap, serving-critical error-capture wiring stays EAGER: it installs the
+    // process crash hooks + the server error reporter and drains the on-disk
+    // crash buffer from the previous boot. These are near-instant (register a
+    // listener; flush a small JSONL buffer) and must run before first request so
+    // crashes are captured from t=0. Only the heavy `_reports` scan moved to the
+    // deferred/throttled backfill warm-up (see backfillNoiseWarmup).
     installProcessHooks();
     setErrorReporter((report) => {
       void recordReport({
@@ -50,8 +58,5 @@ export default {
       });
     });
     await flushBufferedReports();
-    // Self-heal classifications snapshotted before the current noise rules
-    // existed (e.g. pre-2026-06-07 ResizeObserver crashes left un-muted).
-    await backfillNoiseClassification();
   },
 } satisfies ServerPluginDefinition;

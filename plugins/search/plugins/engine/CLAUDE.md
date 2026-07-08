@@ -8,7 +8,7 @@
 - Server:
   - Uses: `database.db`, `infra/endpoints.implement`
   - DB schema: `plugins/search/plugins/engine/server/internal/tables.ts`
-  - Exports: Values: `deleteSearchDocs`, `deleteSource`, `upsertSearchDocs`
+  - Exports: Values: `deleteSearchDocs`, `deleteSource`, `getSourceDocMetadata`, `upsertSearchDocs`
   - Routes: `GET /api/search`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

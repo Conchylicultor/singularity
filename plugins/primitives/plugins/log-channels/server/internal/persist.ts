@@ -1,8 +1,11 @@
 import {
   appendFileSync,
+  closeSync,
+  fstatSync,
   mkdirSync,
+  openSync,
   readdirSync,
-  readFileSync,
+  readSync,
   renameSync,
   statSync,
   unlinkSync,
@@ -43,6 +46,9 @@ function logsDir(): string {
 // synchronous hot path. Cap at 128 MB, keep 3 rotated files.
 const MAX_CHANNEL_BYTES = 128 * 1024 * 1024;
 const KEEP_ROTATIONS = 3;
+// Max bytes a tail read pulls off disk via a positioned read, so even a full
+// (≤MAX_CHANNEL_BYTES) live file is never materialized whole into memory.
+const READ_TAIL_BYTES = 8 * 1024 * 1024;
 
 // Live-file path → its current byte size (seeded once from disk on first miss).
 const channelBytes = new Map<string, number>();
@@ -162,25 +168,57 @@ function tryParseEntry(
   }
 }
 
+// Bounded tail read: pull at most the last READ_TAIL_BYTES off disk via a
+// positioned read, so even a full (≤MAX_CHANNEL_BYTES) live file is never
+// materialized whole in memory. When we didn't start at offset 0 the first line
+// is (probably) partial — drop it. Rotated history (`channel.jsonl.N`) is
+// intentionally NOT stitched in: `tail` is a recent-lines request and rotated
+// files are cold; the live file's tail is the contract.
+export function readTail(
+  file: string,
+  tail: number,
+): { t: number; stream?: LogStream; line: string }[] | null {
+  let fd: number;
+  try {
+    fd = openSync(file, "r");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
+    throw err;
+  }
+  try {
+    const size = fstatSync(fd).size;
+    const start = Math.max(0, size - READ_TAIL_BYTES);
+    const length = size - start;
+    const buf = Buffer.allocUnsafe(length);
+    let offset = 0;
+    while (offset < length) {
+      const read = readSync(fd, buf, offset, length - offset, start + offset);
+      if (read === 0) break;
+      offset += read;
+    }
+    let text = buf.toString("utf8", 0, offset);
+    if (start > 0) {
+      const nl = text.indexOf("\n");
+      text = nl === -1 ? "" : text.slice(nl + 1);
+    }
+    const entries: { t: number; stream?: LogStream; line: string }[] = [];
+    for (const line of text.split("\n")) {
+      if (!line) continue;
+      const parsed = tryParseEntry(line);
+      // Tolerate corrupt/partial lines (e.g. a half-flushed append).
+      if (parsed) entries.push(parsed);
+    }
+    return entries.slice(-tail);
+  } finally {
+    closeSync(fd);
+  }
+}
+
 export function readChannelEntries(
   worktree: string,
   channel: string,
   tail: number,
 ): { t: number; stream?: LogStream; line: string }[] | null {
   const file = join(logsDirFor(worktree), sanitizeChannel(channel) + ".jsonl");
-  let raw: string;
-  try {
-    raw = readFileSync(file, "utf8");
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return null;
-    throw err;
-  }
-  const entries: { t: number; stream?: LogStream; line: string }[] = [];
-  for (const line of raw.split("\n")) {
-    if (!line) continue;
-    const parsed = tryParseEntry(line);
-    // Tolerate corrupt/partial lines (e.g. a half-flushed append).
-    if (parsed) entries.push(parsed);
-  }
-  return entries.slice(-tail);
+  return readTail(file, tail);
 }

@@ -12,7 +12,7 @@ import {
 } from "./internal/handle-dependencies";
 import { handleInsertBetween } from "./internal/handle-insert-between";
 import { handleRepoInfo } from "./internal/handle-repo-info";
-import { pushIngestJob, runInitialReconcile } from "./internal/push-watcher";
+import { pushIngestJob, pushReconcileWarmup } from "./internal/push-watcher";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
 import { ContainerTask } from "@plugins/tasks/plugins/container-tasks/server";
@@ -53,7 +53,7 @@ export default {
     [removeTaskDependency.route]: handleRemoveDependency,
     [getRepoInfo.route]: handleRepoInfo,
   },
-  register: [addTaskTool, pushIngestJob],
+  register: [addTaskTool, pushIngestJob, pushReconcileWarmup],
   contributions: [
     Trigger({ on: refAdvanced.where({ refName: "refs/heads/main" }), do: pushIngestJob, with: {}, oneShot: false }),
     ContainerTask({ id: CONVERSATIONS_META_TASK_ID }),
@@ -63,8 +63,8 @@ export default {
     if (created) {
       await backfillConversationsMetaParent();
     }
-    // Reconcile catches any commits that landed while the server was down.
-    // The git-watcher trigger keeps us live from this point forward.
-    await runInitialReconcile();
+    // The one-shot boot reconcile now runs as the host-scoped
+    // `tasks.push-reconcile` warm-up (main-only, deferred + throttled). The
+    // git-watcher trigger keeps ingestion live from this point forward.
   },
 } satisfies ServerPluginDefinition;

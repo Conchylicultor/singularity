@@ -6,6 +6,7 @@
 
 - Description: Debug tools umbrella plugin.
 - Sub-plugins:
+  - **`boot-budget`** — Boot-budget report renderer: a one-line Debug → Reports summary for the boot-budget kind, plus the per-phase budget config registration. Boot-budget monitor: a cheap per-worktree scheduled job that reads the post-boot profile once and files a deduped boot-budget report per server boot hook (onReadyBlocking / onReady / onAllReady) or warmup span whose wall-time exceeds its per-phase budget, so a heavy boot hook is loud immediately instead of invisible-until-threshold.
   - **`boot-profile`** — Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots. Persists captured browser boot traces under a unique id (POST), serves one snapshot (GET) and a metadata-only list (GET) for the permalink + browse panes, and sweeps snapshots older than 30 days via a scheduled job.
   - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
   - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.

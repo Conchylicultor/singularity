@@ -8,7 +8,12 @@ export type PhaseId =
   | "socketBind"
   | "onReadyBlocking"
   | "onReady"
-  | "onAllReady";
+  | "onAllReady"
+  // Post-serving heavy warm-up drain (infra/warmup), after the onAllReady
+  // barrier. `drainWarmups` is the wrapping phase; each `warmup:<name>` span
+  // sits under `warmup`.
+  | "drainWarmups"
+  | "warmup";
 
 export interface Span {
   id: string;

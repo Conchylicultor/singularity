@@ -29,7 +29,7 @@ export const _searchDocuments = pgTable(
     title: text("title").notNull().default(""),
     body: text("body").notNull().default(""),
     route: text("route").notNull(),
-    metadata: jsonb("metadata").notNull().default({}),
+    metadata: jsonb("metadata").$type<Record<string, unknown>>().notNull().default({}),
     tsv: tsvector("tsv").generatedAlwaysAs(
       (): ReturnType<typeof sql> =>
         sql`setweight(to_tsvector('english', coalesce(title,'')), 'A') || setweight(to_tsvector('english', coalesce(body,'')), 'B')`,

@@ -19,6 +19,7 @@ import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { serverEntries } from "@composition-server-registry";
 import { boostInteractiveQos } from "@plugins/packages/plugins/spawn-priority/server";
 import { isMain } from "@plugins/infra/plugins/paths/core";
+import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
 import { topoSortPlugins } from "./topo";
 
 // ── QoS boost (main backend only) ───────────────────────────────
@@ -376,6 +377,23 @@ await Promise.all(
   }),
 );
 recordMemoryCheckpoint("after-onAllReady");
+
+// ── drainWarmups ────────────────────────────────────────────────
+// Declared heavy boot warm-ups (infra/warmup) run LAST, after every phase has
+// settled — the backend is already serving (since markServerReady), so the
+// drain throttles itself (concurrency gate + host heavy-read slot + macrotask
+// yield) and never competes with first requests. `host`-scoped warm-ups run
+// only on main; a warm-up throw is logged, never fatal. Empty until a consumer
+// declares one — this is the keystone the migrations land on.
+{
+  const end = profilerStart("drainWarmups", "drainWarmups", "Drain Warmups");
+  try {
+    await drainWarmups();
+  } finally {
+    end();
+  }
+}
+recordMemoryCheckpoint("after-drainWarmups");
 
 // Graceful shutdown: drain workers, flush state, release DB connections.
 // Guarded against double-entry so both SIGTERM and a follow-up SIGINT can't

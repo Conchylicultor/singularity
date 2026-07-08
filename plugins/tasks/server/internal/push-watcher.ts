@@ -7,6 +7,7 @@ import {
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 
 const FORMAT =
@@ -139,6 +140,18 @@ export async function runInitialReconcile(): Promise<void> {
     console.error("[tasks.push-watcher] initial reconcile failed", err);
   }
 }
+
+// Host-scoped boot warm-up: the one-shot catch-up runs ONLY on the main backend
+// (the every-worktree full-history walk was pure redundancy — worktree DBs are
+// forked from main and already hold the rows), deferred past serving-ready and
+// throttled by the warmup executor instead of competing with first requests on
+// onReady. Steady-state ingestion continues to flow through the git.refAdvanced
+// trigger; this warm-up only heals commits that landed while the server was down.
+export const pushReconcileWarmup = defineWarmup({
+  name: "tasks.push-reconcile",
+  scope: "host",
+  run: () => runInitialReconcile(),
+});
 
 // Trigger handler bound to git.refAdvanced. Walks the commit range
 // (previousSha..sha] and ingests any trailer-bearing commits.

@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { getServerBuildId } from "@plugins/build/plugins/server-build-id/server";
 import { setMutedByMetadata } from "@plugins/shell/plugins/notifications/server";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { _reports } from "./tables";
 import { isNoiseReport } from "./noise-rules";
 
@@ -67,3 +68,17 @@ export async function backfillNoiseClassification(): Promise<void> {
   await setMutedByMetadata("reportId", noiseIds, true);
   await setMutedByMetadata("reportId", signalIds, false);
 }
+
+// Worktree-scoped boot warm-up: the full `_reports` scan + reconcile is a heavy,
+// unbounded read that ran eagerly from `onReady` on EVERY boot in EVERY worktree,
+// competing with first requests on the serving-critical path. `_reports` is a
+// per-worktree table, so the reconcile must still run on every backend — but
+// deferred past serving-ready and throttled by the warmup executor instead. It
+// is a pure self-healing OPTIMISATION (reclassifying stale rows against the
+// current noise rules); a throw is logged and the drain continues, and steady
+// state is a single SELECT + zero writes.
+export const backfillNoiseWarmup = defineWarmup({
+  name: "reports.backfill-noise",
+  scope: "worktree",
+  run: () => backfillNoiseClassification(),
+});

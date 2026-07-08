@@ -9,18 +9,21 @@ import {
   isMain,
 } from "@plugins/infra/plugins/paths/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
-import { createFileWatcher } from "@plugins/infra/plugins/file-watcher/server";
+import { defineCorpusIndex } from "@plugins/infra/plugins/corpus-index/server";
+import { defineWarmup } from "@plugins/infra/plugins/warmup/server";
 import { idForCliName } from "@plugins/conversations/plugins/model-provider/core";
 import { ccusageCostSource } from "./ccusage-cost-source";
 import {
   ensurePriced,
-  loadIndex,
-  refreshIndex,
+  INDEX_VERSION,
+  loadPricing,
+  parseTranscript,
   rollup,
   type DailyRow,
-  type IndexDeps,
+  type FilePartial,
+  type PricingDeps,
+  type PricingHolder,
   type SessionRollup,
-  type UsageIndex,
 } from "./usage-index";
 
 export type { DailyRow } from "./usage-index";
@@ -59,6 +62,7 @@ interface AggregateBundle {
 }
 
 const INDEX_PATH = join(COST_USAGE_DIR, "index.json");
+const PRICING_PATH = join(COST_USAGE_DIR, "pricing.json");
 
 // Pricing (the heavy off-loop ccusage pass) refreshes at most once per this
 // window; token freshness is independent and updates on every change. Lazy
@@ -66,41 +70,40 @@ const INDEX_PATH = join(COST_USAGE_DIR, "index.json");
 // subprocess per window.
 const PRICE_TTL_MS = 5 * 60_000;
 
-// The in-memory index, loaded from disk once per process then kept fresh by
-// incremental refresh. A watcher marks it dirty on corpus changes (push-based,
-// no TTL poll); every loadBundle also does an on-demand stat-diff as the
-// correctness fallback.
-let index: UsageIndex | null = null;
-let dirty = true;
-let refreshInflight: Promise<void> | null = null;
+// The incremental host-global transcript index — the generic mechanics
+// (enumerate → (mtime,size) fingerprint diff → bounded parse → atomic persist →
+// drop-vanished) live in `infra/corpus-index`; this instance supplies the
+// cost-specific `parseTranscript`. Only main persists the shared index; worktree
+// backends read it and compute any delta in-memory (scope: "host"). Every
+// loadBundle calls `ensureFresh()` — the lazy on-read stat-diff correctness
+// fallback that makes the deferred warmup safe.
+const costIndex = defineCorpusIndex<FilePartial>({
+  name: "stats.cost.usage",
+  roots: [CLAUDE_PROJECTS_DIR],
+  match: (p) => p.endsWith(".jsonl"),
+  parse: parseTranscript,
+  indexPath: INDEX_PATH,
+  scope: "host",
+  version: INDEX_VERSION,
+  concurrency: 6,
+});
+
+// Pricing is persisted separately from the corpus index (a sibling
+// `pricing.json`) so each file has a single writer: the corpus index owns
+// `index.json`, this holder owns `pricing.json`. Loaded from disk once per
+// process, then kept fresh (TTL) via the throttled off-loop pass.
+const pricingHolder: PricingHolder = {};
+let pricingLoaded = false;
 let pricingInflight: Promise<void> | null = null;
-let watcherStarted = false;
 
-function deps(): IndexDeps {
+function pricingDeps(): PricingDeps {
   return {
-    projectsRoot: CLAUDE_PROJECTS_DIR,
-    indexPath: INDEX_PATH,
     costSource: ccusageCostSource,
-    // Only main persists the shared host-global index; worktree backends read it
-    // and compute any delta in-memory without racing on the write.
+    // Only main persists the shared host-global pricing snapshot; worktree
+    // backends read it and compute in-memory without racing on the write.
     persist: isMain(),
+    pricingPath: PRICING_PATH,
   };
-}
-
-async function ensureRefreshed(): Promise<void> {
-  index ??= await loadIndex(INDEX_PATH);
-  // Main clears `dirty` after a refresh and relies on the watcher to set it
-  // again. Worktree backends have no watcher, so they always re-check.
-  if (!dirty && isMain()) return;
-  refreshInflight ??= (async () => {
-    try {
-      await refreshIndex(index!, deps());
-      dirty = false;
-    } finally {
-      refreshInflight = null;
-    }
-  })();
-  await refreshInflight;
 }
 
 // Refresh the cached price map if stale (>PRICE_TTL_MS), single-flighted so
@@ -110,7 +113,11 @@ async function ensureRefreshed(): Promise<void> {
 async function ensurePricedOnce(): Promise<void> {
   pricingInflight ??= (async () => {
     try {
-      await ensurePriced(index!, deps(), { ttlMs: PRICE_TTL_MS });
+      if (!pricingLoaded) {
+        pricingHolder.pricing = await loadPricing(PRICING_PATH);
+        pricingLoaded = true;
+      }
+      await ensurePriced(pricingHolder, pricingDeps(), { ttlMs: PRICE_TTL_MS });
     } finally {
       pricingInflight = null;
     }
@@ -119,12 +126,12 @@ async function ensurePricedOnce(): Promise<void> {
 }
 
 async function buildBundle(): Promise<AggregateBundle> {
-  await ensureRefreshed();
+  await costIndex.ensureFresh();
   await ensurePricedOnce();
   const mainRoot = await ensureMainWorktreeRoot();
   const [{ daily, sessions }, projectIsSingularity, convBySession] =
     await Promise.all([
-      Promise.resolve(rollup(index!)),
+      Promise.resolve(rollup(costIndex.entries(), pricingHolder.pricing)),
       classifyProjects(mainRoot),
       loadConvBySession(),
     ]);
@@ -146,30 +153,23 @@ export async function loadBundle(): Promise<AggregateBundle> {
   return buildBundle();
 }
 
-// Called from the server plugin's onReady hook (main-only) so the index is warm
-// and the corpus watcher is live before any chart fires its first fetch.
-export function prewarmBundle(): void {
-  void warmAndWatch();
-}
+// Declared heavy boot warm-up (replacing the former raw `onReady` prewarm): warm
+// the host-global usage index + pricing and start the corpus watcher on MAIN
+// ONLY (`scope: "host"`), DEFERRED past serving-ready and THROTTLED by the
+// warmup executor instead of competing with first requests on `onReady`. The
+// index is shared across worktrees, so a single writer keeps it fresh and no
+// worktree backend pays the parse. A request arriving before the drain still
+// serves correctly via the on-demand `ensureFresh()` fallback in `loadBundle`.
+export const costUsageWarmup = defineWarmup({
+  name: "stats.cost.usage",
+  scope: "host",
+  run: warmAndWatch,
+});
 
 async function warmAndWatch(): Promise<void> {
-  await startWatcher();
+  // Watcher first so no corpus change is missed between warm and watch-start.
+  await costIndex.startWatcher();
   await loadBundle();
-}
-
-async function startWatcher(): Promise<void> {
-  if (watcherStarted || !isMain()) return;
-  watcherStarted = true;
-  await createFileWatcher({
-    dirs: [CLAUDE_PROJECTS_DIR],
-    extensions: [".jsonl"],
-    onChange: () => {
-      // A new/changed transcript: mark the index stale and warm it in the
-      // background so the next request finds nothing to do.
-      dirty = true;
-      void loadBundle();
-    },
-  });
 }
 
 // ─── helpers ─────────────────────────────────────────────────────────────────

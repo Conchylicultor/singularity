@@ -61,3 +61,24 @@ export async function deleteSearchDocs(
 export async function deleteSource(source: string): Promise<void> {
   await db.delete(_searchDocuments).where(eq(_searchDocuments.source, source));
 }
+
+// Read back the (entityId → metadata) pairs currently indexed for a source, so a
+// consumer's backfill can compare its own per-doc bookkeeping stamped into
+// `metadata` (e.g. a content fingerprint) against freshly-derived state and skip
+// upserting docs that are unchanged. Domain-agnostic: the engine round-trips the
+// opaque `metadata` bag and never interprets it.
+export async function getSourceDocMetadata(
+  source: string,
+): Promise<{ entityId: string; metadata: Record<string, unknown> }[]> {
+  const rows = await db
+    .select({
+      entityId: _searchDocuments.entityId,
+      metadata: _searchDocuments.metadata,
+    })
+    .from(_searchDocuments)
+    .where(eq(_searchDocuments.source, source));
+  return rows.map((r) => ({
+    entityId: r.entityId,
+    metadata: r.metadata,
+  }));
+}

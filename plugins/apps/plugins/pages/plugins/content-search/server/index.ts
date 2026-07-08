@@ -3,12 +3,16 @@ import { Trigger } from "@plugins/infra/plugins/events/server";
 import { blocksChanged, BlockLifecycle } from "@plugins/page/plugins/editor/server";
 import { reindexPageSearchJob } from "./internal/reindex-job";
 import { backfillPagesSearchJob } from "./internal/backfill-job";
+import { pagesSearchBackfillWarmup } from "./internal/backfill-warmup";
 import { deletePagesSearchHook } from "./internal/delete-hook";
 
 export default {
   description:
     "Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged and seeding existing pages via a one-shot boot backfill.",
-  register: [reindexPageSearchJob, backfillPagesSearchJob],
+  // The backfill warm-up enqueues the seed scan off the serving-critical boot
+  // path (see backfill-warmup.ts); the jobs back both it and the steady-state
+  // reindex trigger.
+  register: [reindexPageSearchJob, backfillPagesSearchJob, pagesSearchBackfillWarmup],
   contributions: [
     // Reindex a page's search doc whenever its blocks change. Declared (not
     // imperatively bound) so the events plugin makes it idempotent across
@@ -19,9 +23,4 @@ export default {
     // page itself; drop its stale search doc.
     BlockLifecycle.BeforeDelete(deletePagesSearchHook),
   ],
-  // Seed pages that predate this plugin. Runs once the DB + registry are ready;
-  // `dedup: "singleton"` keeps repeated boots to one outstanding backfill.
-  onReady: async () => {
-    await backfillPagesSearchJob.enqueue({});
-  },
 } satisfies ServerPluginDefinition;

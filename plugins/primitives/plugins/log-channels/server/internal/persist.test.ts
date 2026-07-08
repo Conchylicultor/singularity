@@ -2,7 +2,7 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { appendEntryToDir, listChannelsInDir, rotateChannel } from "./persist";
+import { appendEntryToDir, listChannelsInDir, readTail, rotateChannel } from "./persist";
 
 // Hermetic: everything runs in an isolated temp dir. We never touch the real
 // ~/.singularity logs. appendEntryToDir takes an explicit dir + cap so we can force
@@ -71,5 +71,27 @@ describe("log-channels rotation", () => {
     // Must not throw when there is nothing to rotate.
     expect(() => rotateChannel(dir, "channel")).not.toThrow();
     expect(rotatedFiles()).toEqual([]);
+  });
+});
+
+describe("log-channels bounded tail read", () => {
+  test("returns the last N entries of the live file", () => {
+    const cap = 1 << 20; // no rotation — keep everything in the live file
+    for (let i = 0; i < 10; i++) appendEntryToDir(dir, "channel", line(i), cap);
+    const entries = readTail(join(dir, "channel.jsonl"), 3);
+    expect(entries?.map((e) => e.line)).toEqual(["line-7", "line-8", "line-9"]);
+  });
+
+  test("tolerates a corrupt/partial trailing line", () => {
+    const cap = 1 << 20;
+    appendEntryToDir(dir, "channel", line(1), cap);
+    // A half-flushed append: a non-JSON fragment with no newline.
+    appendEntryToDir(dir, "channel", line(2), cap);
+    const entries = readTail(join(dir, "channel.jsonl"), 10);
+    expect(entries?.map((e) => e.line)).toEqual(["line-1", "line-2"]);
+  });
+
+  test("missing file returns null (ENOENT), not an empty success", () => {
+    expect(readTail(join(dir, "does-not-exist.jsonl"), 5)).toBeNull();
   });
 });

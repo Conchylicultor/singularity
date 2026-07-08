@@ -1,24 +1,29 @@
 import { afterAll, beforeAll, expect, test } from "bun:test";
-import { mkdtemp, mkdir, rm, writeFile, appendFile } from "node:fs/promises";
+import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   ensurePriced,
-  loadIndex,
-  refreshIndex,
+  loadPricing,
+  parseTranscript,
   rollup,
   type CostSource,
-  type IndexDeps,
-  type UsageIndex,
+  type FilePartial,
+  type PricingDeps,
+  type PricingHolder,
 } from "./usage-index";
 
 // ─── Fixture ─────────────────────────────────────────────────────────────────
 // A tiny `projects/<dir>/<session>.jsonl` tree, standing in for ~/.claude/projects
-// so the test never touches the real corpus.
+// so the test never touches the real corpus. The generic incremental index
+// mechanics (enumerate / fingerprint-diff / persist / drop-vanished) are covered
+// by `infra/corpus-index`'s own test; here we cover the COST-SPECIFIC halves:
+// the token parse (`parseTranscript`), the pricing throttle (`ensurePriced`),
+// and the token-share rollup (`rollup`).
 
 let root: string;
 let projectsRoot: string;
-let indexPath: string;
+let pricingPath: string;
 
 const ALPHA = "-Users-me-proj-alpha";
 const BETA = "-Users-me-proj-beta";
@@ -56,14 +61,27 @@ const costSource: CostSource = {
   },
 };
 
-function deps(): IndexDeps {
-  return { projectsRoot, indexPath, costSource, persist: false };
+function pricingDeps(): PricingDeps {
+  return { costSource, persist: false, pricingPath };
+}
+
+// Build the entries map (path → FilePartial) the way `corpusIndex.entries()`
+// would, by parsing every fixture file through the cost parse.
+async function buildEntries(): Promise<Map<string, FilePartial>> {
+  const paths = [
+    join(projectsRoot, ALPHA, "sess-1111.jsonl"),
+    join(projectsRoot, ALPHA, "sess-2222.jsonl"),
+    join(projectsRoot, BETA, "sess-3333.jsonl"),
+  ];
+  const out = new Map<string, FilePartial>();
+  for (const p of paths) out.set(p, await parseTranscript(p));
+  return out;
 }
 
 beforeAll(async () => {
   root = await mkdtemp(join(tmpdir(), "cost-usage-test-"));
   projectsRoot = join(root, "projects");
-  indexPath = join(root, "index.json");
+  pricingPath = join(root, "pricing.json");
   await mkdir(join(projectsRoot, ALPHA), { recursive: true });
   await mkdir(join(projectsRoot, BETA), { recursive: true });
   await writeFile(
@@ -85,72 +103,60 @@ afterAll(async () => {
   await rm(root, { recursive: true, force: true });
 });
 
-test("refreshIndex re-parses zero unchanged files and does NOT price", async () => {
-  const index: UsageIndex = await loadIndex(indexPath);
-  const before = bulkCalls;
-  await refreshIndex(index, deps());
-
-  expect(Object.keys(index.files).length).toBe(3);
-  expect(index.pricing).toBeUndefined(); // token refresh never prices
-  expect(bulkCalls).toBe(before); // …and never calls the cost source
-
-  const snapshot = new Map(Object.entries(index.files));
-  const { changed } = await refreshIndex(index, deps());
-  expect(changed).toBe(false);
-  for (const [path, e] of Object.entries(index.files)) {
-    expect(e).toBe(snapshot.get(path)!); // same object → not re-parsed
-  }
-});
-
-test("appending to one file re-parses exactly that file", async () => {
-  const index: UsageIndex = await loadIndex(indexPath);
-  await refreshIndex(index, deps());
-  const before = new Map(Object.entries(index.files));
-
-  const changedPath = join(projectsRoot, ALPHA, "sess-1111.jsonl");
-  await appendFile(
-    changedPath,
-    entry("r5", "m5", "model-opus", "2026-07-01", [7, 3]),
-  );
-
-  await refreshIndex(index, deps());
-
-  let reparsed = 0;
-  for (const [path, e] of Object.entries(index.files)) {
-    if (e !== before.get(path)) reparsed++;
-  }
-  expect(reparsed).toBe(1);
-  expect(index.files[changedPath]!.partial.inputTokens).toBe(1000 + 100 + 7);
+test("parseTranscript sums tokens, derives session/project from the path, and dedups by hash", async () => {
+  const p = join(projectsRoot, ALPHA, "sess-1111.jsonl");
+  const partial = await parseTranscript(p);
+  expect(partial.sessionId).toBe("sess-1111");
+  expect(partial.projectDir).toBe(ALPHA);
+  expect(partial.inputTokens).toBe(1000 + 100);
+  expect(partial.outputTokens).toBe(500 + 50);
+  expect(partial.totalTokens).toBe(1000 + 100 + 500 + 50);
+  expect(partial.lastActivity).toBe("2026-07-01");
+  expect(partial.modelsUsed).toEqual(["model-opus"]);
+  // Token parse is pricing-free — parsing never calls the cost source.
+  expect(bulkCalls).toBe(0);
 });
 
 test("ensurePriced re-prices only past the TTL", async () => {
-  const index: UsageIndex = { version: 2, files: {} };
+  const holder: PricingHolder = {};
   const start = bulkCalls;
 
   // First call → prices (no snapshot yet).
-  const r1 = await ensurePriced(index, deps(), { ttlMs: 1000, now: 1000 });
+  const r1 = await ensurePriced(holder, pricingDeps(), { ttlMs: 1000, now: 1000 });
   expect(r1.priced).toBe(true);
   expect(bulkCalls).toBe(start + 1);
-  expect(index.pricing?.pricedAt).toBe(1000);
+  expect(holder.pricing?.pricedAt).toBe(1000);
 
   // Within the TTL → no-op, no new subprocess call.
-  const r2 = await ensurePriced(index, deps(), { ttlMs: 1000, now: 1500 });
+  const r2 = await ensurePriced(holder, pricingDeps(), { ttlMs: 1000, now: 1500 });
   expect(r2.priced).toBe(false);
   expect(bulkCalls).toBe(start + 1);
 
   // Past the TTL → re-prices.
-  const r3 = await ensurePriced(index, deps(), { ttlMs: 1000, now: 3000 });
+  const r3 = await ensurePriced(holder, pricingDeps(), { ttlMs: 1000, now: 3000 });
   expect(r3.priced).toBe(true);
   expect(bulkCalls).toBe(start + 2);
-  expect(index.pricing?.pricedAt).toBe(3000);
+  expect(holder.pricing?.pricedAt).toBe(3000);
+});
+
+test("ensurePriced persists an atomic, re-loadable pricing.json when persist is set", async () => {
+  const holder: PricingHolder = {};
+  await ensurePriced(
+    holder,
+    { ...pricingDeps(), persist: true },
+    { ttlMs: 1000, now: 5000 },
+  );
+  const loaded = await loadPricing(pricingPath);
+  expect(loaded?.pricedAt).toBe(5000);
+  expect(new Map(loaded?.projectCosts).get(ALPHA)).toBe(5);
 });
 
 test("rollup distributes per-project cost by token share; totals exact", async () => {
-  const index: UsageIndex = { version: 2, files: {} };
-  await refreshIndex(index, deps());
-  await ensurePriced(index, deps(), { ttlMs: 60_000, now: 1 });
+  const entries = await buildEntries();
+  const holder: PricingHolder = {};
+  await ensurePriced(holder, pricingDeps(), { ttlMs: 60_000, now: 1 });
 
-  const { daily, sessions } = rollup(index);
+  const { daily, sessions } = rollup(entries, holder.pricing);
 
   const sum = (rows: { totalCost?: number; cost?: number }[], key: "totalCost" | "cost") =>
     rows.reduce((s, r) => s + (r[key] ?? 0), 0);
@@ -189,21 +195,21 @@ test("a failed pricing pass throttles the retry (one attempt per TTL)", async ()
       throw new Error("subprocess exited 1: vanished file");
     },
   };
-  const index: UsageIndex = { version: 2, files: {} };
-  const d = { ...deps(), costSource: flaky };
+  const holder: PricingHolder = {};
+  const d: PricingDeps = { ...pricingDeps(), costSource: flaky };
 
   // First attempt: surfaces the failure loudly…
-  expect(await didThrow(ensurePriced(index, d, { ttlMs: 1000, now: 1000 }))).toBe(true);
+  expect(await didThrow(ensurePriced(holder, d, { ttlMs: 1000, now: 1000 }))).toBe(true);
   expect(calls).toBe(1);
-  expect(index.pricing?.pricedAt).toBe(1000); // …but stamps the attempt.
+  expect(holder.pricing?.pricedAt).toBe(1000); // …but stamps the attempt.
 
   // Within the TTL: throttled — no re-spawn, no throw.
-  const r = await ensurePriced(index, d, { ttlMs: 1000, now: 1500 });
+  const r = await ensurePriced(holder, d, { ttlMs: 1000, now: 1500 });
   expect(r.priced).toBe(false);
   expect(calls).toBe(1);
 
   // Past the TTL: attempts again.
-  expect(await didThrow(ensurePriced(index, d, { ttlMs: 1000, now: 3000 }))).toBe(true);
+  expect(await didThrow(ensurePriced(holder, d, { ttlMs: 1000, now: 3000 }))).toBe(true);
   expect(calls).toBe(2);
 });
 
@@ -217,18 +223,18 @@ test("a project with a $0 price is omitted from the map; rollup yields 0 for it"
       ]);
     },
   };
-  const index: UsageIndex = { version: 2, files: {} };
-  await refreshIndex(index, deps());
+  const entries = await buildEntries();
+  const holder: PricingHolder = {};
   await ensurePriced(
-    index,
-    { ...deps(), costSource: zeroSource },
+    holder,
+    { ...pricingDeps(), costSource: zeroSource },
     { ttlMs: 60_000, now: 1 },
   );
 
   // $0 project omitted so it retries next pass (never cached as a wrong $0).
-  expect(index.pricing!.projectCosts.some(([p]) => p === ALPHA)).toBe(false);
+  expect(holder.pricing!.projectCosts.some(([p]) => p === ALPHA)).toBe(false);
 
-  const { sessions } = rollup(index);
+  const { sessions } = rollup(entries, holder.pricing);
   for (const s of sessions.filter((x) => x.projectDir === ALPHA)) {
     expect(s.cost).toBe(0);
   }
