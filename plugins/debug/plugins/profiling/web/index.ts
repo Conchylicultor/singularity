@@ -28,6 +28,9 @@ export { useGanttZoom } from "./components/use-gantt-zoom";
 export type { ZoomWindow } from "./components/use-gantt-zoom";
 export { DragSelection } from "./components/drag-selection";
 export type { DragState } from "./components/drag-selection";
+export { WaitWorkRow } from "./components/wait-work-row";
+export { MultiSpanLane } from "./components/multi-span-lane";
+export type { SpanBar } from "./components/multi-span-lane";
 
 export default {
   description: "Gantt chart of build steps and server startup phases.",

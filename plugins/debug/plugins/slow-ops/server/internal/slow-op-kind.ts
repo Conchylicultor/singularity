@@ -1,5 +1,7 @@
 import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
+import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import {
   SlowOpReportPayloadSchema,
   type SlowOpReportPayload,
@@ -63,10 +65,18 @@ function renderDescription(row: ReportRow, d: SlowOpReportPayload): string {
         `still a real regression to fix at the source.)`,
     );
   }
+  if (d.traceId) {
+    lines.push("");
+    lines.push(
+      `**Trace:** the coherent-instant flight window (spans / gates / contention) ` +
+        `captured for this trip is at \`${traceDetailRoute.link(debugApp, { id: d.traceId })}\` ` +
+        `(Debug → Slow Events).`,
+    );
+  }
   lines.push("");
   lines.push(
     "See this op's full ranked breakdown — total time, max, and caller " +
-      "attribution — in **Debug → Slow Ops**.",
+      "attribution — in **Debug → Slow Events → Aggregates**.",
   );
   lines.push("");
   lines.push(`**Occurrences:** ${row.count}`);

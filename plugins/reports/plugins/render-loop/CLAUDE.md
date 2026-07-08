@@ -6,8 +6,8 @@
 
 - Description: Render-loop detector: a single invisible global controller (mounted via Core.Root) that installs one MutationObserver and files a deduped render-loop report when a subtree is rebuilt/re-mutated at a sustained high rate while idle, visible, and doing no meaningful work (wasted DOM thrash). Render-loop report kind: validates render-loop payloads, fingerprints by signature + mutation class, and renders per-loop perf tasks. Re-arms periodically (6h) since a still-present loop is a warning, not a one-shot crash.
 - Web:
-  - Contributes: `Core.Root` → `RenderLoopController`
-  - Uses: `primitives/log-channels.clientLog`, `reports.report`
+  - Contributes: `Core.Root` → `RenderLoopController`, `Reports.KindView` → `RenderLoopKindView`
+  - Uses: `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/log-channels.clientLog`, `reports.report`, `reports.Reports`
 - Server:
   - Uses: `reports.ReportKind`
 - Core:

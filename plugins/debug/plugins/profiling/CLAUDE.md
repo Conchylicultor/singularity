@@ -9,9 +9,9 @@
   - Slots: `Profiling.Section` ← `debug.profiling.boot`, `debug.profiling.build`, `debug.profiling.push`, `debug.profiling.runtime`, `debug.profiling.stats`, `profilingPane.Actions`
   - Contributes: `Pane.Register` "debug-profiling", `DebugApp.Sidebar` "Profiling" → `component`
   - Uses: `apps/debug/shell.DebugApp`, `primitives/app-shell.sidebarNavItem`, `primitives/css/center.Center`, `primitives/css/column.Column`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/slot-render.defineRenderSlot`
-  - Exports: Types: `DragState`, `GanttContainerContextValue`, `PhaseConfig`, `ProfilingContextValue`, `Span`, `ZoomWindow`; Values: `DragSelection`, `formatDuration`, `GanttContainer`, `GanttSection`, `groupByPhase`, `PhaseGroup`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `SpanRow`, `TimeAxis`, `useGanttContainerContext`, `useGanttZoom`, `useProfilingContext`
+  - Exports: Types: `DragState`, `GanttContainerContextValue`, `PhaseConfig`, `ProfilingContextValue`, `Span`, `SpanBar`, `ZoomWindow`; Values: `DragSelection`, `formatDuration`, `GanttContainer`, `GanttSection`, `groupByPhase`, `MultiSpanLane`, `PhaseGroup`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `SpanRow`, `TimeAxis`, `useGanttContainerContext`, `useGanttZoom`, `useProfilingContext`, `WaitWorkRow`
 - Cross-plugin:
-  - Imported by: `build/build-profiling`, `debug/boot-profile`, `debug/profiling/boot`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/push/push-gantt`, `debug/profiling/runtime`, `debug/profiling/stats`
+  - Imported by: `build/build-profiling`, `debug/boot-profile`, `debug/profiling/boot`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/push/push-gantt`, `debug/profiling/runtime`, `debug/profiling/stats`, `debug/trace/pane`, `debug/trace/spans`
 - Sub-plugins:
   - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.
   - **`boot-bench`** — Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it.

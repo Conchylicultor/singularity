@@ -7,8 +7,10 @@ import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
 import type { ConfigValues } from "@plugins/config_v2/core";
 import { recordReport } from "@plugins/reports/server";
+import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { opRateConfig } from "../../core";
+import { windowDelta, computeRollup, type LabelDelta } from "./op-time-math";
 
 type Thresholds = ConfigValues<(typeof opRateConfig)["fields"]>;
 
@@ -23,9 +25,11 @@ const WINDOW_MS = 5 * 60_000;
 // helper below.
 const KINDS = ["http", "db", "loader", "sub", "push", "flush", "job"] as const;
 
-// Cap on reports filed per tick, so a pathological burst across many ops can
-// never storm task creation. Over-threshold ops past the cap are logged (no
-// silent truncation, per repo policy).
+// Cap on per-op reports filed per tick, so a pathological burst across many ops
+// can never storm task creation. Shared by op-rate AND op-time per-op trips in
+// ONE combined ranking (over-cap trips are logged, never silently dropped, per
+// repo policy). Per-kind rollup reports are separate (≤ one per kind, ≤ 7 total)
+// and not subject to this cap.
 const TOP_N = 20;
 
 // Per-process baseline of each op's cumulative `count` at the previous tick,
@@ -35,17 +39,46 @@ const TOP_N = 20;
 // the SAME worktree process.
 const lastCount = new Map<string, number>();
 
+// The aggregate-time twin of `lastCount`: each op's cumulative `totalMs` at the
+// previous tick, same `${kind}:${label}` key, same reset-safe delta + seed
+// semantics (see op-time-math.windowDelta). Diffed to catch count×cost breaches
+// that per-call latency and call count alone miss.
+const lastTotalMs = new Map<string, number>();
+
 // Drop-count log for over-cap ops (one line per tick when the cap trips).
 const opRateLog = Log.channel("op-rate");
 
-// Cheap scheduled call-rate monitor. Runs every 5 min in EACH worktree's own
-// process (perWorktree) because the runtime profiler is per-process in-memory
-// state, so call counts accumulate per-backend and must be sampled per-backend.
-// `dedup: "singleton"` means the monitor itself can never pile up, and
-// `maxAttempts: 3` keeps a transiently-broken monitor from becoming a dead-job
-// storm of its own. Reads the profile through getRuntimeProfile() (pull-only, no
-// recorder hook) and diffs the cumulative `count` against the previous tick.
-// Reports fire only when a per-kind threshold trips (silent when healthy).
+// One per-op trip queued for reporting this tick. Discriminated by `type`:
+// op-rate ranks on its call delta, op-time on its ms delta — different units,
+// but both land in ONE combined ranking whose only job is to bound task creation
+// (the `delta` sort key decides which trips to drop under the shared cap, not any
+// cross-op-comparable severity).
+type PerOpTrip =
+  | {
+      type: "op-rate";
+      kind: SpanKind;
+      label: string;
+      delta: number; // calls in window
+      threshold: number;
+    }
+  | {
+      type: "op-time";
+      kind: SpanKind;
+      label: string;
+      delta: number; // ms in window (the rank key)
+      callsDelta: number;
+      budgetMs: number;
+    };
+
+// Cheap scheduled call-rate + aggregate-time monitor. Runs every 5 min in EACH
+// worktree's own process (perWorktree) because the runtime profiler is
+// per-process in-memory state, so counts/totals accumulate per-backend and must
+// be sampled per-backend. `dedup: "singleton"` means the monitor itself can never
+// pile up, and `maxAttempts: 3` keeps a transiently-broken monitor from becoming
+// a dead-job storm of its own. Reads the profile through getRuntimeProfile()
+// (pull-only, no recorder hook) and diffs the cumulative `count` (op-rate) and
+// `totalMs` (op-time) against the previous tick. Reports fire only when a
+// per-kind threshold/budget trips (silent when healthy).
 export const opRateMonitorJob = defineJob({
   name: "debug.op-rate-monitor",
   input: z.object({}),
@@ -58,55 +91,138 @@ export const opRateMonitorJob = defineJob({
     if (!cfg.enabled) return;
 
     const { aggregates } = getRuntimeProfile();
-    const hot: { kind: SpanKind; label: string; delta: number; threshold: number }[] =
-      [];
+    const perOp: PerOpTrip[] = [];
+    // Per-kind rollup accumulator: every op's ms delta this window (so a kind
+    // whose cost is smeared across many under-budget labels still trips), plus
+    // the summed call delta so the rollup report carries an honest calls count.
+    const rollups: {
+      kind: SpanKind;
+      budgetMs: number;
+      deltas: LabelDelta[];
+      callsSum: number;
+    }[] = [];
+
     for (const kind of KINDS) {
       const threshold = kindThreshold(kind, cfg);
+      const budgetMs = kindMsBudget(kind, cfg);
+      const kindDeltas: LabelDelta[] = [];
+      let callsSum = 0;
       for (const agg of aggregates[kind]) {
         const key = `${kind}:${agg.label}`;
-        const prev = lastCount.get(key);
+
+        // --- op-rate: cumulative call-count delta ---
+        const prevCount = lastCount.get(key);
         lastCount.set(key, agg.count);
-        // First observation of a label seeds the baseline and fires nothing —
-        // avoids a false spike from the full since-boot count on the first tick.
-        if (prev === undefined) continue;
-        // Reset-safe: if count regressed (profile was reset, or the label is
-        // new this tick), treat the full current count as the window delta.
-        const delta = agg.count >= prev ? agg.count - prev : agg.count;
-        if (delta > threshold)
-          hot.push({ kind, label: agg.label, delta, threshold });
+        const countDelta = windowDelta(prevCount, agg.count);
+        if (countDelta !== null && countDelta > threshold)
+          perOp.push({
+            type: "op-rate",
+            kind,
+            label: agg.label,
+            delta: countDelta,
+            threshold,
+          });
+
+        // --- op-time: cumulative wall-clock (totalMs) delta ---
+        const prevTotal = lastTotalMs.get(key);
+        lastTotalMs.set(key, agg.totalMs);
+        const msDelta = windowDelta(prevTotal, agg.totalMs);
+        if (msDelta === null) continue; // first observation seeds, fires nothing
+        kindDeltas.push({ label: agg.label, deltaMs: msDelta });
+        callsSum += countDelta ?? 0;
+        if (msDelta > budgetMs)
+          perOp.push({
+            type: "op-time",
+            kind,
+            label: agg.label,
+            delta: msDelta,
+            callsDelta: countDelta ?? 0,
+            budgetMs,
+          });
       }
+      rollups.push({ kind, budgetMs, deltas: kindDeltas, callsSum });
     }
 
-    // Cap at top-N over-threshold ops per tick, ranked by delta desc, to bound
-    // task creation. Log (don't silently drop) when more than N trip.
-    hot.sort((a, b) => b.delta - a.delta);
-    const top = hot.slice(0, TOP_N);
-    if (hot.length > top.length) {
+    // Cap the COMBINED per-op ranking (op-rate + op-time) at top-N per tick,
+    // ranked by delta desc, to bound task creation. Log (don't silently drop)
+    // when more than N trip.
+    perOp.sort((a, b) => b.delta - a.delta);
+    const top = perOp.slice(0, TOP_N);
+    if (perOp.length > top.length) {
       opRateLog.publish(
-        `${hot.length - top.length} over-threshold ops not reported (top-${TOP_N} cap)`,
+        `${perOp.length - top.length} over-threshold ops not reported (top-${TOP_N} cap)`,
       );
     }
 
     for (const h of top) {
+      if (h.type === "op-rate") {
+        await recordReport({
+          kind: "op-rate",
+          source: "server-op-rate-monitor",
+          data: {
+            kind: h.kind,
+            label: h.label,
+            callsInWindow: h.delta,
+            windowMs: WINDOW_MS,
+            threshold: h.threshold,
+          },
+          message: `${h.kind} ${h.label} — ${h.delta} calls/window (threshold ${h.threshold})`,
+        });
+      } else {
+        // Evidence FIRST: captureTrace grabs the coherent-instant flight window
+        // (what is in flight right now while this op burns time), proving the
+        // generic trigger API from a second call site. Normal engine admission
+        // (cooldown + global cap + enabled) applies; returns the minted id for
+        // linkage or null when rate-limited / disabled — never throws.
+        const trace = captureTrace({
+          kind: "op-time",
+          label: h.label,
+          durationMs: h.delta,
+          thresholdMs: h.budgetMs,
+        });
+        await recordReport({
+          kind: "op-time",
+          source: "server-op-rate-monitor",
+          data: {
+            kind: h.kind,
+            label: h.label,
+            msInWindow: h.delta,
+            callsInWindow: h.callsDelta,
+            windowMs: WINDOW_MS,
+            budgetMs: h.budgetMs,
+            ...(trace ? { traceId: trace.id } : {}),
+          },
+          message: `${h.kind} ${h.label} — ${(h.delta / 1000).toFixed(1)}s/window across ${h.callsDelta} calls (budget ${(h.budgetMs / 1000).toFixed(1)}s)`,
+        });
+      }
+    }
+
+    // Per-kind rollup: one report per kind whose summed per-op ms deltas exceed
+    // its budget × rollupFactor. Not capped (≤ 7 kinds) and no trace (no single
+    // op to point at). Carries the top-10 contributing labels.
+    for (const r of rollups) {
+      const breach = computeRollup(r.deltas, r.budgetMs, cfg.rollupFactor);
+      if (!breach) continue;
       await recordReport({
-        kind: "op-rate",
+        kind: "op-time",
         source: "server-op-rate-monitor",
         data: {
-          kind: h.kind,
-          label: h.label,
-          callsInWindow: h.delta,
+          kind: r.kind,
+          msInWindow: breach.sumDeltaMs,
+          callsInWindow: r.callsSum,
           windowMs: WINDOW_MS,
-          threshold: h.threshold,
+          budgetMs: breach.rollupBudgetMs,
+          topLabels: breach.topLabels,
         },
-        message: `${h.kind} ${h.label} — ${h.delta} calls/window (threshold ${h.threshold})`,
+        message: `${r.kind} rollup — ${(breach.sumDeltaMs / 1000).toFixed(1)}s/window across ${r.deltas.length} labels (budget ${(breach.rollupBudgetMs / 1000).toFixed(1)}s)`,
       });
     }
   },
 });
 
-// Map each SpanKind to its per-kind threshold field (same shape as slow-ops'
-// thresholdFor). Typed over the exported SpanKind so adding a kind is a tsc
-// error here until its threshold is wired.
+// Map each SpanKind to its per-kind call-rate threshold field (same shape as
+// slow-ops' thresholdFor). Typed over the exported SpanKind so adding a kind is a
+// tsc error here until its threshold is wired.
 function kindThreshold(kind: SpanKind, cfg: Thresholds): number {
   switch (kind) {
     case "http":
@@ -128,5 +244,27 @@ function kindThreshold(kind: SpanKind, cfg: Thresholds): number {
     // than getting its own knob.
     case "cascade":
       return cfg.loaderPerWindow;
+  }
+}
+
+// Map each SpanKind to its per-kind aggregate-time (ms) budget field — the
+// op-time twin of kindThreshold. Typed over SpanKind so adding a kind is a tsc
+// error here until its budget is wired.
+function kindMsBudget(kind: SpanKind, cfg: Thresholds): number {
+  switch (kind) {
+    case "http":
+      return cfg.httpMsPerWindow;
+    case "loader":
+      return cfg.loaderMsPerWindow;
+    case "sub":
+      return cfg.subMsPerWindow;
+    case "push":
+      return cfg.pushMsPerWindow;
+    case "flush":
+      return cfg.flushMsPerWindow;
+    case "db":
+      return cfg.dbMsPerWindow;
+    case "job":
+      return cfg.jobMsPerWindow;
   }
 }

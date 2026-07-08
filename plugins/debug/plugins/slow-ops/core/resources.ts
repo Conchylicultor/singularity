@@ -39,11 +39,14 @@ export const WaitBreakdownSchema = z.record(z.string(), z.number());
 // One captured contention sample: the box state at the instant a span tripped
 // its threshold, with the span's own duration. Stored as a capped ring on the
 // aggregate row (newest first, last 10) so a storm's shape is visible per op
-// without unbounded growth. Mirrors the `callers` ring pattern.
+// without unbounded growth. Mirrors the `callers` ring pattern. `traceId` links
+// the freshest sample to the durable trace the same trip captured (when the
+// engine admitted one), so the aggregate view can deep-link the evidence.
 export const SlowOpSampleSchema = z.object({
   atTime: z.coerce.date(),
   durationMs: z.number(),
   snapshot: ContentionSnapshotSchema,
+  traceId: z.string().optional(),
 });
 export type SlowOpSample = z.infer<typeof SlowOpSampleSchema>;
 

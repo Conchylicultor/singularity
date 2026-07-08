@@ -1,1 +1,0 @@
-export { flightRecorderConfig } from "./config";

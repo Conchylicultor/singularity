@@ -6,8 +6,9 @@ import type { slowOpConfig } from "../../core";
 
 export type Thresholds = ConfigValues<(typeof slowOpConfig)["fields"]>;
 
-// Map a span to its configured threshold — the single source of "what is slow"
-// (shared with the flight-recorder plugin via the server barrel). The
+// Map a span to its configured threshold — the single source of "what is slow",
+// internal to the slow-ops pipeline (the sole consumer, since flight-recorder
+// was folded into the trace engine). The
 // `sub`/`push` origin entries and the `flush` notify-flush cycle all wrap
 // loaders, so they share the loader threshold (no separate config knob). The
 // `job` case resolves the per-job override (`defineJob({ slowThresholdMs })`)

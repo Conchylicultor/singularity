@@ -1,10 +1,10 @@
-// @hash f6d2ea394f9c
+// @hash 4b398d3931c6
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "debug.logs:logs",
     "debug.reports:reports",
-    "debug.slow-ops.pane:slow-ops",
+    "debug.trace.pane:trace-slow-events",
     "debug.profiling:profiling",
     "debug.boot-profile:boot-profile",
     "debug.boot-profile:boot-profiles-list",

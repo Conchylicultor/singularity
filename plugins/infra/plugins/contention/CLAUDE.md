@@ -11,7 +11,7 @@ Server-only infra primitive exposing a cached, cluster-wide system-contention sn
   - Uses: `database.db`
   - Exports: Types: `ContentionSnapshot`; Values: `getContentionSnapshot`
 - Cross-plugin:
-  - Imported by: `debug/flight-recorder`, `debug/slow-ops`
+  - Imported by: `debug/slow-ops`, `debug/trace/contention`
 - Core:
   - Exports: Types: `ContentionSnapshot`, `ContentionTopDatabase`; Values: `ContentionSnapshotSchema`, `ContentionTopDatabaseSchema`
 

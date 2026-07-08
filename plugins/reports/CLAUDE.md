@@ -6,7 +6,11 @@
 
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 - Web:
+<<<<<<< .merge_file_zKzw1A
   - Slots: `Reports.KindView` ← `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `reports.crash`
+=======
+  - Slots: `Reports.KindView` ← `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.slow-ops`, `reports.crash`, `reports.render-loop`
+>>>>>>> .merge_file_JtEic2
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/slot-render.defineDispatchSlot`, `primitives/tab-id.getTabId`
   - Exports: Types: `ReportContext`; Values: `investigate`, `report`, `Reports`
 - Server:
@@ -17,7 +21,7 @@
   - Routes: `POST /api/reports`, `POST /api/reports/:id/investigate`
 - Core:
   - Uses: `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
-  - Exports: Types: `Report`; Values: `reportDetailRoute`, `ReportSchema`, `reportsResource`, `reportsRootRoute`
+  - Exports: Types: `Report`, `ReportSource`; Values: `CLIENT_REPORT_SOURCES`, `reportDetailRoute`, `ReportSchema`, `reportsResource`, `reportsRootRoute`, `SERVER_REPORT_SOURCES`
 - Cross-plugin:
   - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/plugin-load-errors`, `reports/render-loop`, `tasks/reports-investigation`
 - Sub-plugins:

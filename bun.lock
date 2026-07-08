@@ -1621,10 +1621,6 @@
       "name": "@singularity/plugin-debug-claude-cli-calls",
       "version": "0.0.1",
     },
-    "plugins/debug/plugins/flight-recorder": {
-      "name": "@singularity/plugin-debug-flight-recorder",
-      "version": "0.0.1",
-    },
     "plugins/debug/plugins/health-monitor": {
       "name": "@singularity/plugin-debug-health-monitor",
       "version": "0.0.1",
@@ -1730,6 +1726,30 @@
     },
     "plugins/debug/plugins/slow-ops/plugins/pane": {
       "name": "@singularity/plugin-debug-slow-ops-pane",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/trace": {
+      "name": "@singularity/plugin-debug-trace",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/trace/plugins/contention": {
+      "name": "@singularity/plugin-debug-trace-contention",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/trace/plugins/engine": {
+      "name": "@singularity/plugin-debug-trace-engine",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/trace/plugins/gates": {
+      "name": "@singularity/plugin-debug-trace-gates",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/trace/plugins/pane": {
+      "name": "@singularity/plugin-debug-trace-pane",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/trace/plugins/spans": {
+      "name": "@singularity/plugin-debug-trace-spans",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/worktree-cleanup": {
@@ -5540,8 +5560,6 @@
 
     "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
 
-    "@singularity/plugin-debug-flight-recorder": ["@singularity/plugin-debug-flight-recorder@workspace:plugins/debug/plugins/flight-recorder"],
-
     "@singularity/plugin-debug-health-monitor": ["@singularity/plugin-debug-health-monitor@workspace:plugins/debug/plugins/health-monitor"],
 
     "@singularity/plugin-debug-heap-snapshot": ["@singularity/plugin-debug-heap-snapshot@workspace:plugins/debug/plugins/heap-snapshot"],
@@ -5593,6 +5611,18 @@
     "@singularity/plugin-debug-slow-ops-cluster": ["@singularity/plugin-debug-slow-ops-cluster@workspace:plugins/debug/plugins/slow-ops/plugins/cluster"],
 
     "@singularity/plugin-debug-slow-ops-pane": ["@singularity/plugin-debug-slow-ops-pane@workspace:plugins/debug/plugins/slow-ops/plugins/pane"],
+
+    "@singularity/plugin-debug-trace": ["@singularity/plugin-debug-trace@workspace:plugins/debug/plugins/trace"],
+
+    "@singularity/plugin-debug-trace-contention": ["@singularity/plugin-debug-trace-contention@workspace:plugins/debug/plugins/trace/plugins/contention"],
+
+    "@singularity/plugin-debug-trace-engine": ["@singularity/plugin-debug-trace-engine@workspace:plugins/debug/plugins/trace/plugins/engine"],
+
+    "@singularity/plugin-debug-trace-gates": ["@singularity/plugin-debug-trace-gates@workspace:plugins/debug/plugins/trace/plugins/gates"],
+
+    "@singularity/plugin-debug-trace-pane": ["@singularity/plugin-debug-trace-pane@workspace:plugins/debug/plugins/trace/plugins/pane"],
+
+    "@singularity/plugin-debug-trace-spans": ["@singularity/plugin-debug-trace-spans@workspace:plugins/debug/plugins/trace/plugins/spans"],
 
     "@singularity/plugin-debug-worktree-cleanup": ["@singularity/plugin-debug-worktree-cleanup@workspace:plugins/debug/plugins/worktree-cleanup"],
 

@@ -1,0 +1,11 @@
+// @hash f6f7a1e819d9
+{
+  // When off, captureTrace is a no-op and no traces are recorded (existing rows are untouched).
+  "enabled": true,
+  // Minimum time between two traces for the same trigger (kind:label). A repeatedly-tripping trigger produces one trace per cooldown window, not one per occurrence.
+  "cooldownMs": 10000,
+  // Hard cap on traces persisted per minute across all triggers, so a slow-event storm cannot saturate the engine.
+  "maxPerMin": 30,
+  // Minimum lookback for the captured window; the actual window is max(trigger duration, this), so a long trip always covers its own lifetime.
+  "windowMs": 10000
+}

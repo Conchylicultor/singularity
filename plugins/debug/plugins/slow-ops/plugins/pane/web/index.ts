@@ -1,30 +1,23 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
-import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
-import { MdSpeed, MdComputer } from "react-icons/md";
-import { slowOpsPane } from "./panes";
-import { SlowOps } from "./slots";
+import { MdComputer } from "react-icons/md";
+import { SlowEvents } from "@plugins/debug/plugins/trace/plugins/pane/web";
 import { SlowOpsView } from "./components/slow-ops-view";
 
-export { slowOpsPane } from "./panes";
-export { SlowOps } from "./slots";
-
+// The per-worktree ranked slow-op aggregate — no longer its own sidebar pane.
+// It contributes as the **Aggregates** tab of the unified Debug → Slow Events
+// pane (owned by trace/pane), alongside the trace Events list and the Cluster
+// tab. Import direction: slow-ops → trace/pane (slot token); trace never imports
+// slow-ops, so the graph stays acyclic.
 export default {
   description:
-    "Debug pane showing a global, ranked overview of slow operations with per-operation caller attribution.",
+    "Aggregates tab of the Slow Events pane: a global, ranked overview of slow operations with per-operation caller attribution.",
   contributions: [
-    Pane.Register({ pane: slowOpsPane }),
-    SlowOps.View({
-      id: "local",
-      title: "Local",
+    SlowEvents.View({
+      id: "aggregates",
+      title: "Aggregates",
       icon: MdComputer,
-      order: 10,
+      order: 20,
       component: SlowOpsView,
-    }),
-    DebugApp.Sidebar({
-      id: "slow-ops",
-      ...sidebarNavItem({ title: "Slow Ops", icon: MdSpeed, onClick: () => openPane(slowOpsPane, {}, { mode: "root" }) }),
     }),
   ],
 } satisfies PluginDefinition;

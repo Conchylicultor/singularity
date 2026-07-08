@@ -3,13 +3,15 @@ import { ConfigV2 } from "@plugins/config_v2/web";
 import { Reports } from "@plugins/reports/web";
 import { opRateConfig } from "../core";
 import { OpRateSummary } from "./components/op-rate-summary";
+import { OpTimeSummary } from "./components/op-time-summary";
 
 export default {
   collapsed: true,
   description:
-    "Op-rate report renderer: a one-line Debug → Reports summary for the op-rate kind, plus the per-kind threshold config registration.",
+    "Op-rate + op-time report renderers: one-line Debug → Reports summaries for the op-rate (call-count) and op-time (aggregate-time, with View-trace chip) kinds, plus the per-kind threshold/budget config registration.",
   contributions: [
     ConfigV2.WebRegister({ descriptor: opRateConfig }),
     Reports.KindView({ match: "op-rate", component: OpRateSummary }),
+    Reports.KindView({ match: "op-time", component: OpTimeSummary }),
   ],
 } satisfies PluginDefinition;

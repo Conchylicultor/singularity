@@ -10,19 +10,19 @@ import {
   getContentionSnapshot,
   type ContentionSnapshot,
 } from "@plugins/infra/plugins/contention/server";
+import type { ReportSource } from "@plugins/reports/core";
 import type {
   CallerBreakdown,
   CallerRef,
   SlowOpMarker,
   SlowOpSample,
 } from "../../core";
-
-// The only two report sources a slow-op originates from. Kept as a local literal
-// union rather than imported, since reports' ReportSource lives in its private
-// `shared/` (cross-plugin shared imports are forbidden); recordReport validates
-// the value against its own source enum at ingest regardless.
-type SlowOpSource = "server-slow-op" | "client-slow-op";
 import { _slowOps } from "./tables";
+
+// The only two report sources a slow-op originates from — narrowed from the
+// canonical ReportSource union (now in reports/core), so this stays a checked
+// subset of the real origins rather than a drifting hand-rolled copy.
+type SlowOpSource = Extract<ReportSource, "server-slow-op" | "client-slow-op">;
 
 // A slim overlay marker per recorded slow op, dual-written to a persisted log
 // channel. Mirrors the health sampler's `Log.channel("health", { persist: true })`
@@ -54,6 +54,11 @@ export interface RecordSlowOpInput {
   // `data` (jsonb — no migration) so the report title/description says WHY.
   transportColdStart?: boolean;
   transportWaitMs?: number;
+  // The durable trace captured for this same trip (when the engine admitted
+  // one). Stamped into the newest recentSamples entry and the report `data` so
+  // the aggregate view and the slow-op task both deep-link the evidence. Null
+  // when the trace was rate-limited or the engine is disabled.
+  traceId?: string;
 }
 
 // Merge a caller into the existing breakdown list: bump an existing entry
@@ -103,8 +108,12 @@ function mergeSample(
   samples: SlowOpSample[],
   snapshot: ContentionSnapshot,
   durationMs: number,
+  traceId: string | undefined,
 ): SlowOpSample[] {
-  return [{ atTime: new Date(), durationMs, snapshot }, ...samples].slice(0, 10);
+  return [{ atTime: new Date(), durationMs, snapshot, traceId }, ...samples].slice(
+    0,
+    10,
+  );
 }
 
 // THE single ingest funnel for every slow-op signal — the server span hook and
@@ -123,6 +132,7 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
     waits,
     transportColdStart,
     transportWaitMs,
+    traceId,
   } = input;
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
 
@@ -188,6 +198,7 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
         row.recentSamples,
         snapshot,
         durationMs,
+        traceId,
       );
       await tx
         .update(_slowOps)
@@ -225,6 +236,8 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
       // Optional cold-start attribution — surfaced in the report title/desc.
       ...(transportColdStart !== undefined ? { transportColdStart } : {}),
       ...(transportWaitMs !== undefined ? { transportWaitMs } : {}),
+      // Optional link to the coherent-instant trace captured for this trip.
+      ...(traceId !== undefined ? { traceId } : {}),
     },
     message: `${operationKind} ${operation} took ${durationRounded}ms (threshold ${thresholdMs}ms)`,
   });

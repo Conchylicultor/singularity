@@ -69,5 +69,71 @@ export const opRateConfig = defineConfig({
       description:
         "File an op-rate report when a job label runs more than this many times within one monitor window.",
     }),
+    // Per-kind aggregate-time (count×cost) budgets for the op-time trip-wire. Same
+    // scheduled monitor, same tick: alongside the call-count delta above, the job
+    // diffs each op's cumulative `totalMs` and trips when a single op burned more
+    // than this many ms of wall-clock inside one monitor window — catching a
+    // fast-but-hammered op OR a moderately-called op that is individually slow,
+    // neither of which per-call latency (slow-op) nor call count (op-rate) alone
+    // sees. Defaults sit well above typical 5-min per-op deltas (single-digit
+    // seconds in a healthy env) so a breach is a genuine cost signal. `sub` is
+    // tighter (subscription origin work should be cheap); `job` is loosest
+    // (backfills/syncs legitimately run long).
+    httpMsPerWindow: intField({
+      default: 30000,
+      min: 0,
+      label: "HTTP ms per window",
+      description:
+        "File an op-time report when an HTTP request label consumes more than this many ms of wall-clock within one monitor window.",
+    }),
+    loaderMsPerWindow: intField({
+      default: 60000,
+      min: 0,
+      label: "Loader ms per window",
+      description:
+        "File an op-time report when a resource loader label consumes more than this many ms of wall-clock within one monitor window.",
+    }),
+    subMsPerWindow: intField({
+      default: 15000,
+      min: 0,
+      label: "Subscription ms per window",
+      description:
+        "File an op-time report when a WS-subscription origin entry consumes more than this many ms of wall-clock within one monitor window.",
+    }),
+    pushMsPerWindow: intField({
+      default: 30000,
+      min: 0,
+      label: "Push ms per window",
+      description:
+        "File an op-time report when a push/cascade origin entry consumes more than this many ms of wall-clock within one monitor window.",
+    }),
+    flushMsPerWindow: intField({
+      default: 60000,
+      min: 0,
+      label: "Flush ms per window",
+      description:
+        "File an op-time report when a live-state notify-flush cycle consumes more than this many ms of wall-clock within one monitor window.",
+    }),
+    dbMsPerWindow: intField({
+      default: 60000,
+      min: 0,
+      label: "DB ms per window",
+      description:
+        "File an op-time report when a database query label consumes more than this many ms of wall-clock within one monitor window.",
+    }),
+    jobMsPerWindow: intField({
+      default: 120000,
+      min: 0,
+      label: "Job ms per window",
+      description:
+        "File an op-time report when a job label consumes more than this many ms of wall-clock within one monitor window (backfills/syncs run long, so this is loose).",
+    }),
+    rollupFactor: intField({
+      default: 4,
+      min: 1,
+      label: "Rollup factor",
+      description:
+        "Per-kind rollup trips when the sum of a kind's per-op ms deltas exceeds its per-kind ms budget times this factor — catching cost smeared across many labels, each under its own per-op budget.",
+    }),
   },
 });

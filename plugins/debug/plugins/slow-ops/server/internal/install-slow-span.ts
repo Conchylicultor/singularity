@@ -1,5 +1,6 @@
 import { onSlowSpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { SlowSpan } from "@plugins/infra/plugins/runtime-profiler/core";
+import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { recordSlowOp } from "./record-slow-op";
 import { resolveSlowThreshold, type Thresholds } from "./resolve-threshold";
 
@@ -33,6 +34,26 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
     (span: SlowSpan) => {
       const threshold = resolveSlowThreshold(span, thresholds);
       if (span.durationMs < threshold) return;
+      // 1. Evidence FIRST, synchronously: captureTrace's admission + the sync
+      // coherent-instant capture must run before any await so the flight window
+      // (open spans, gate occupancy) describes THIS trip's instant. Admission is
+      // one Map lookup per slow span in a storm; enrich + persist detach inside.
+      // Returns the minted trace id (for linkage) or null when rate-limited /
+      // disabled — never throws into this profiler hot path.
+      const trace = captureTrace({
+        kind: span.kind,
+        label: span.label,
+        durationMs: span.durationMs,
+        thresholdMs: threshold,
+        detail: {
+          parent: span.parent,
+          waits: span.waits,
+          waitMs: span.waitMs,
+          childMs: span.childMs,
+          selfMs: span.selfMs,
+        },
+      });
+      // 2. Aggregate + report — the existing funnel, now stamped with the link.
       // Fire-and-forget: detaching the promise keeps the profiler hot path
       // non-blocking, and a failed recordSlowOp surfaces as an unhandled
       // rejection that the reports plugin captures and files — never silently
@@ -46,6 +67,7 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         source: "server-slow-op",
         caller: span.parent,
         waits: span.waits,
+        traceId: trace?.id,
       });
     },
     { thresholdMs: floor },

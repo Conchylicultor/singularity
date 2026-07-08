@@ -1,0 +1,6 @@
+// @hash 6ec84829688d
+{
+  "views": [
+    { "name": "All", "view": { "type": "table", "sort": { "fieldId": "createdAt", "direction": "desc" } } }
+  ]
+}

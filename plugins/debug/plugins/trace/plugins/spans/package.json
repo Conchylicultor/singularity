@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-debug-trace-spans",
+  "description": "Built-in trace event class: the flight window (open + recently-completed spans with wait/child/self decomposition) captured synchronously at the trip instant via captureFlightWindow.",
+  "private": true,
+  "version": "0.0.1"
+}

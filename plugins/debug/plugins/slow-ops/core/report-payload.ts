@@ -18,5 +18,9 @@ export const SlowOpReportPayloadSchema = z.object({
   // pointing the investigation at transport/boot readiness, not the resource.
   transportColdStart: z.boolean().optional(),
   transportWaitMs: z.number().optional(),
+  // The durable trace captured for the trip that filed this report (when the
+  // engine admitted one). Stored in the jsonb `data` (no migration) so the
+  // slow-op KindView / renderTask can deep-link the coherent-instant evidence.
+  traceId: z.string().optional(),
 });
 export type SlowOpReportPayload = z.infer<typeof SlowOpReportPayloadSchema>;

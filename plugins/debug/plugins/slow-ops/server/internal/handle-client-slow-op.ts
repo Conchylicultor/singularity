@@ -1,4 +1,5 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
 import { submitClientSlowOp } from "../../shared/endpoints";
 import { recordSlowOp } from "./record-slow-op";
 
@@ -16,6 +17,23 @@ export const handleClientSlowOp = implement(
       body.transportWaitMs && body.transportWaitMs > 0
         ? { "notifications-transport": body.transportWaitMs }
         : undefined;
+    // Capture the server-side coherent instant AROUND receipt of this client
+    // signal. A slow settle is ~all transport/server wait, so the server window
+    // at receipt is exactly the evidence sought; its window is anchored at
+    // receipt, not the client moment (documented clock-skew acceptability). The
+    // trigger kind is the client operationKind ("page-load" / "element") so it
+    // slots into the same open trigger vocabulary as server spans.
+    const trace = captureTrace({
+      kind: body.operationKind,
+      label: body.operation,
+      durationMs: body.durationMs,
+      thresholdMs: body.thresholdMs,
+      detail: {
+        caller: body.caller ?? null,
+        transportColdStart: body.transportColdStart,
+        transportWaitMs: body.transportWaitMs,
+      },
+    });
     await recordSlowOp({
       operationKind: body.operationKind,
       operation: body.operation,
@@ -26,6 +44,7 @@ export const handleClientSlowOp = implement(
       waits,
       transportColdStart: body.transportColdStart,
       transportWaitMs: body.transportWaitMs,
+      traceId: trace?.id,
     });
     return { ok: true };
   },

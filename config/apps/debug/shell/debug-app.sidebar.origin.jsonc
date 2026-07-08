@@ -1,4 +1,4 @@
-// @hash f6d2ea394f9c
+// @hash 4b398d3931c6
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -21,7 +21,7 @@
     "debug.read-set:read-set",
     "debug.render-profiler:render-profiler",
     "debug.reports:reports",
-    "debug.slow-ops.pane:slow-ops",
+    "debug.trace.pane:trace-slow-events",
     "debug.worktree-cleanup:worktree-cleanup",
     "debug.zero-test:zero-test",
     "infra.events-test:events-test",

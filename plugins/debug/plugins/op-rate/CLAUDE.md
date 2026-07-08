@@ -1,23 +1,46 @@
 # op-rate
 
-`slow_ops` only fires on per-call latency — a **fast-but-hammered** op (or one
-whose call count balloons) stays invisible. This plugin makes call-rate spikes
-**loud** by filing them into the existing reports engine (the same surface that
-captures crashes and queue-health), modeled byte-for-byte on `debug/queue-health`
-(durable signal → `ReportKind` → deduped task via a cheap per-worktree scheduled
-`defineJob`). It points at the **cause** (the hot op) instead of only the **blast
+The **profiler-diff monitor**. Per-call latency (`slow_ops`) misses a
+**fast-but-hammered** op; call count alone misses an op that is individually slow;
+and neither sees **count×cost** — an op whose per-call time × call volume burns
+serious wall-clock. This plugin closes both blind spots from **one** cheap
+scheduled job that diffs the runtime profiler each tick, filing everything into
+the existing reports engine (the same surface that captures crashes and
+queue-health), modeled byte-for-byte on `debug/queue-health` (durable signal →
+`ReportKind` → deduped task via a cheap per-worktree scheduled `defineJob`). It
+points at the **cause** (the hot / over-budget op) instead of only the **blast
 radius** (the collateral slow spans).
 
 ## What it monitors
 
 One cheap scheduled monitor job (`debug.op-rate-monitor`) samples
-`getRuntimeProfile()` per tick, diffs each op's cumulative `count` against the
-previous tick, and files reports only when a per-kind threshold trips:
+`getRuntimeProfile()` per tick and diffs each op's cumulative counters against the
+previous tick along **two** axes — `count` (op-rate) and `totalMs` (op-time) —
+firing reports only when a per-kind threshold/budget trips:
 
 - **`op-rate`** (variant `warning`) — an op (`${kind}:${label}`) called more than
   its per-kind threshold within one monitor window. **One report per distinct hot
   op** (fingerprint `op-rate:<kind>:<label>`), so each over-called op gets its own
   task pointing straight at the cause.
+- **`op-time`** (variant `warning`) — the aggregate-time (count×cost) twin. Two
+  shapes discriminated by `label`:
+  - **per-op** (`op-time:<kind>:<label>`) — one op consumed more than its per-kind
+    **ms budget** (`kindMsBudget`) within the window. Carries both `msInWindow` and
+    `callsInWindow` so the renderer states the rate×cost decomposition ("N calls ×
+    ~M ms avg"). Each per-op trip also calls `captureTrace({ kind: "op-time", … })`
+    (normal engine admission) to grab the coherent-instant flight window — what was
+    in flight *while the op burned time* — and stamps the returned `traceId` into
+    the report `data`, so the KindView / renderTask can deep-link the evidence
+    (Debug → Slow Events). This is the second `captureTrace` call site, proving the
+    generic trigger API beyond slow-ops.
+  - **rollup** (`op-time:rollup:<kind>`) — the sum of a kind's per-op ms deltas
+    exceeded `budgetMs × rollupFactor`, catching cost smeared across many labels
+    each under its own per-op budget. `data.topLabels` carries the top-10
+    contributors by ms delta. No single op to point at, so no trace.
+
+The delta/rollup arithmetic is extracted into the pure, unit-tested
+`server/internal/op-time-math.ts` (`windowDelta`, `computeRollup`); the job owns
+only the module-level baseline maps and report emission.
 
 ### Windowing & counter-reset handling
 
@@ -34,20 +57,34 @@ previous tick, and files reports only when a per-kind threshold trips:
 
 ### Top-N cap
 
-A pathological burst across many ops is capped at the top **20** over-threshold
-ops per tick (ranked by delta desc) to bound task creation. Over-cap ops are not
-silently dropped — the dropped count is logged to the `op-rate` log channel (per
-repo policy: no silent truncation).
+A pathological burst across many ops is capped at the top **20** per-op trips per
+tick (ranked by delta desc) to bound task creation. The cap is **combined** across
+op-rate and op-time per-op trips — one ranking, one budget — so a storm on either
+axis can never storm task creation. The sort key is each trip's own delta (calls
+for op-rate, ms for op-time); the units differ, so the ranking exists only to
+decide which trips to drop under the shared cap, not to compare severity across
+op types. Over-cap trips are not silently dropped — the dropped count is logged to
+the `op-rate` log channel (per repo policy: no silent truncation). Per-kind rollup
+reports are separate (≤ one per kind, ≤ 7 total) and not subject to this cap.
 
-## Thresholds (config_v2, mirroring slowOpConfig)
+## Thresholds & budgets (config_v2, mirroring slowOpConfig)
 
-`enabled = true`, plus a per-kind `…PerWindow` threshold for each span kind:
-`httpPerWindow = 500`, `loaderPerWindow = 500`, `subPerWindow = 500`,
-`pushPerWindow = 500`, `flushPerWindow = 1000`, `dbPerWindow = 5000`. `db` (every
-query) and `flush` (each internal notify cycle) are inherently high-count, so a
-single threshold would drown the signal — hence per-kind. A `kindThreshold(kind,
-cfg)` helper maps each `SpanKind` to its field. Read live each tick via
-`getConfig`, editable in Settings → Config.
+`enabled = true`, plus, for each span kind, a `…PerWindow` **call-rate** threshold
+(op-rate) and a `…MsPerWindow` **aggregate-time** budget (op-time), read live each
+tick via `getConfig` and editable in Settings → Config:
+
+- Call-rate: `httpPerWindow = 500`, `loaderPerWindow = 500`, `subPerWindow = 500`,
+  `pushPerWindow = 500`, `flushPerWindow = 1000`, `dbPerWindow = 5000`. `db` (every
+  query) and `flush` (each internal notify cycle) are inherently high-count, so a
+  single threshold would drown the signal — hence per-kind. `kindThreshold(kind,
+  cfg)` maps each `SpanKind` to its field.
+- Aggregate-time (ms/window): `httpMsPerWindow = 30000`, `loaderMsPerWindow =
+  60000`, `subMsPerWindow = 15000`, `pushMsPerWindow = 30000`, `flushMsPerWindow =
+  60000`, `dbMsPerWindow = 60000`, `jobMsPerWindow = 120000`, plus `rollupFactor =
+  4`. Defaults sit ~1–2 orders of magnitude above typical healthy 5-min per-op
+  deltas (single-digit seconds), so a breach is a genuine cost signal; `sub` is
+  tighter (origin work should be cheap), `job` loosest (backfills/syncs run long).
+  `kindMsBudget(kind, cfg)` maps each `SpanKind` to its field.
 
 ## Why a pull-diff job (not a recorder hook)
 
@@ -74,15 +111,15 @@ live-state-churn's accumulator + scheduled job.)
 
 ## Plugin reference
 
-- Description: Op-rate report renderer: a one-line Debug → Reports summary for the op-rate kind, plus the per-kind threshold config registration. Op-rate monitor: a cheap per-worktree scheduled job that diffs the runtime profiler's per-op call counts each tick and files one deduped report per hot op when its calls-in-window cross a per-kind threshold, through the existing reports engine.
+- Description: Op-rate + op-time report renderers: one-line Debug → Reports summaries for the op-rate (call-count) and op-time (aggregate-time, with View-trace chip) kinds, plus the per-kind threshold/budget config registration. Profiler-diff monitor: a cheap per-worktree scheduled job that diffs the runtime profiler's per-op call counts (op-rate) AND cumulative wall-clock time (op-time count×cost) each tick, files deduped reports per hot/over-budget op plus a per-kind aggregate-time rollup, and captures a coherent-instant trace on each op-time per-op trip — all through the existing reports engine.
 - Web:
-  - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `OpRateSummary`
-  - Uses: `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `reports.Reports`
+  - Contributes: `ConfigV2.WebRegister`, `Reports.KindView` → `OpRateSummary`, `Reports.KindView` → `OpTimeSummary`
+  - Uses: `apps-core/tabs.navigate`, `config_v2.ConfigV2`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/link-chip.LinkChip`, `reports.Reports`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `infra/jobs.defineJob`, `primitives/log-channels.Log`, `reports.recordReport`, `reports.ReportKind`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `debug/trace/engine.captureTrace`, `infra/jobs.defineJob`, `primitives/log-channels.Log`, `reports.recordReport`, `reports.ReportKind`
   - Register: `defineJob('debug.op-rate-monitor')`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/int/config.intField`
-  - Exports: Types: `OpRatePayload`; Values: `opRateConfig`, `OpRatePayloadSchema`
+  - Exports: Types: `OpRatePayload`, `OpTimePayload`; Values: `opRateConfig`, `OpRatePayloadSchema`, `OpTimePayloadSchema`
 
 <!-- AUTOGENERATED:END -->

@@ -1,4 +1,5 @@
 import { useMemo, type ReactElement } from "react";
+import { MdBolt } from "react-icons/md";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -8,12 +9,21 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { navigate } from "@plugins/apps-core/plugins/tabs/web";
+import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
+import { traceDetailRoute } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import {
   slowOpsResource,
   type SlowOp,
   type CallerBreakdown,
 } from "@plugins/debug/plugins/slow-ops/core";
+
+// Newest captured sample first; deep-link its trace when the engine admitted one.
+function newestTraceId(op: SlowOp): string | undefined {
+  return op.recentSamples[0]?.traceId;
+}
 
 const SLOW_OPS_LOCAL = defineDataView("debug.slow-ops.local");
 
@@ -96,6 +106,19 @@ function SlowOpsViewInner({ ops }: { ops: SlowOp[] }) {
             </Text>
             {r.callers.length > 0 && <CallerBreakdownLines callers={r.callers} />}
             {Object.keys(r.waits).length > 0 && <WaitBreakdownLines waits={r.waits} />}
+            {newestTraceId(r) && (
+              <Stack direction="row" gap="2xs" align="start">
+                <LinkChip
+                  leading={<MdBolt className="icon-auto" />}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    navigate(traceDetailRoute.link(debugApp, { id: newestTraceId(r)! }));
+                  }}
+                >
+                  trace
+                </LinkChip>
+              </Stack>
+            )}
           </Stack>
         ),
       },

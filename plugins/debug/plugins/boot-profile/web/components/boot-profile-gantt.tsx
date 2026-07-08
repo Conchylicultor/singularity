@@ -12,6 +12,7 @@ import {
   PhaseGroup,
   ProfilingContext,
   SpanDetail,
+  WaitWorkRow,
   formatDuration,
   type PhaseConfig,
   type Span,
@@ -23,7 +24,6 @@ import {
   type BootTrace,
 } from "@plugins/primitives/plugins/perfs/plugins/boot-trace/web";
 import { BootSummary } from "./boot-summary";
-import { WaitWorkRow } from "./wait-work-row";
 
 const PHASE_ORDER: BootPhase[] = [
   "navigation",

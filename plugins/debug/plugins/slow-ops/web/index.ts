@@ -1,8 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Core } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
+import { Reports } from "@plugins/reports/web";
 import { slowOpConfig } from "../core";
 import { SlowOpCollector } from "./components/slow-op-collector";
+import { SlowOpKindView } from "./components/slow-op-kind-view";
 
 export default {
   collapsed: true,
@@ -11,5 +13,6 @@ export default {
   contributions: [
     ConfigV2.WebRegister({ descriptor: slowOpConfig }),
     Core.Root({ component: SlowOpCollector }),
+    Reports.KindView({ match: "slow-op", component: SlowOpKindView }),
   ],
 } satisfies PluginDefinition;

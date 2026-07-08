@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-debug-trace-engine",
+  "description": "The generic slow-event trace engine: the TraceEventClass contribution registry, captureTrace() admission + coherent-instant capture + async enrich/persist, the durable traces table, list/get endpoints, sweep job, and the Trace.Lane / Trace.TriggerSummary web dispatch slots.",
+  "private": true,
+  "version": "0.0.1"
+}
