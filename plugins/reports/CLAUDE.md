@@ -6,11 +6,7 @@
 
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 - Web:
-<<<<<<< .merge_file_zKzw1A
-  - Slots: `Reports.KindView` ← `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `reports.crash`
-=======
-  - Slots: `Reports.KindView` ← `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.slow-ops`, `reports.crash`, `reports.render-loop`
->>>>>>> .merge_file_JtEic2
+  - Slots: `Reports.KindView` ← `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.slow-ops`, `reports.crash`, `reports.render-loop`
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/slot-render.defineDispatchSlot`, `primitives/tab-id.getTabId`
   - Exports: Types: `ReportContext`; Values: `investigate`, `report`, `Reports`
 - Server:
