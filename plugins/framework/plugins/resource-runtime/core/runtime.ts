@@ -1780,6 +1780,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           if (relevant.size === 0) return SKIP_EDGE; // nothing relevant changed
           try {
             return new Set(await affectedMap(relevant, params));
+          // eslint-disable-next-line promise-safety/no-absorbed-failure -- the error IS reported (reportLoaderError), and null is not an absorbable empty here: it is the documented "unscoped" sentinel that forces the downstream entry into a FULL recompute from source — the fail-safe direction (recompute everything), never a false "nothing changed"
           } catch (err) {
             reportLoaderError(
               `affectedMap failed (${entry.key} → ${edge.downstreamKey})`,
