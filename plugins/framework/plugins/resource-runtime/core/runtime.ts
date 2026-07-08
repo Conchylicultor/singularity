@@ -1159,6 +1159,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       const run = () => readLoadGate.run(() => revalidate(params), chargeReadGateWait);
       const raw = await (opts.wrapOrigin ? opts.wrapOrigin("sub", entry.key, run) : run());
       return normalizeEtag(raw);
+    // eslint-disable-next-line promise-safety/no-absorbed-failure -- the loader error IS reported (reportLoaderError); returning undefined skips this push so the live-state sub retains its last-good value (documented stale-safe behavior), never publishing a false empty
     } catch (err) {
       reportLoaderError(`revalidate failed for ${entry.key}`, err);
       return undefined;
@@ -1182,6 +1183,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       const run = () => revalidate(params);
       const raw = await (opts.wrapOrigin ? opts.wrapOrigin("push", entry.key, run) : run());
       return normalizeEtag(raw);
+    // eslint-disable-next-line promise-safety/no-absorbed-failure -- the loader error IS reported (reportLoaderError); returning undefined skips this push so the live-state sub retains its last-good value (documented stale-safe behavior), never publishing a false empty
     } catch (err) {
       reportLoaderError(`revalidate failed for ${entry.key}`, err);
       return undefined;

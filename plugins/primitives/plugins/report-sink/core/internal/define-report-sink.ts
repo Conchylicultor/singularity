@@ -16,7 +16,7 @@ export function defineReportSink<TBody, TResult = void>(): ReportSink<TBody, TRe
     emit(body) {
       try {
         return handler?.(body);
-        // eslint-disable-next-line promise-safety/no-bare-catch -- reporting must never throw on the error path; a throw from the registered handler is swallowed here
+        // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- reporting must never throw on the error path; a throw from the registered handler is swallowed here
       } catch {
         return undefined;
       }

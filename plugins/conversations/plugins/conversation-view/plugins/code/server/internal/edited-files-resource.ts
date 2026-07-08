@@ -58,17 +58,19 @@ export const editedFilesResource = defineExternalResource({
   revalidate: async ({ id }: Params): Promise<string> => {
     const wt = await worktreeFor(id);
     if (!wt) return "none";
-    const [headSha, mergeBaseRaw, statusZ] = await Promise.all([
+    // runGit throws on failure (never a manufactured value) — the throw propagates
+    // into the revalidate path, which the live-state cascade treats as stale-safe
+    // (recompute skipped, prior ETag retained). This keeps the ETag from ever being
+    // built from a failed read and colliding across two different failures.
+    const [headSha, mergeBase, statusZ] = await Promise.all([
       runGit(["rev-parse", "HEAD"], wt),
       runGit(["merge-base", "main", "HEAD"], wt),
       runGit(["status", "--porcelain", "--no-renames", "--untracked-files=all", "-z"], wt),
     ]);
-    // Mirror the loader's merge-base fallback so the ETag agrees with the value.
-    const mergeBase = mergeBaseRaw?.trim() ?? "main";
     const entries = await Promise.all(
       parsePorcelainZ(statusZ).map((e) => statEntry(wt, e)),
     );
-    return editedFilesEtag(headSha ?? "", mergeBase, entries);
+    return editedFilesEtag(headSha, mergeBase.trim(), entries);
   },
   async onFirstSubscribe({ id }: Params) {
     if (unsubscribes.has(id)) return;

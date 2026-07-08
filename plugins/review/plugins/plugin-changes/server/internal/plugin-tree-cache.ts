@@ -31,9 +31,11 @@ export function getMainPluginTree(mainPluginsDir: string): Promise<PluginTree> {
   return mainTreeMemo.get(
     mainPluginsDir,
     async () =>
+      // runGit throws on failure — a failed read must never coalesce to "" and
+      // poison the cache signature (two different failures would collide). A throw
+      // aborts the memo recompute, retaining the previous cached tree (stale-safe).
       lastKnownMainSha() ??
-      (await runGit(["rev-parse", "main"], mainPluginsDir))?.trim() ??
-      "",
+      (await runGit(["rev-parse", "main"], mainPluginsDir)).trim(),
     () =>
       withHeavyReadSlot(() =>
         buildPluginTree(mainPluginsDir, { skipBarrelImport: true, facets: true }),

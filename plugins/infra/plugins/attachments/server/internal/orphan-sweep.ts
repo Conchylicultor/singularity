@@ -43,6 +43,7 @@ export const orphanSweepJob = defineJob({
       .delete(_attachments)
       .where(and(lt(_attachments.createdAt, cutoff), unreferenced))
       .returning({ diskPath: _attachments.diskPath });
+    // eslint-disable-next-line promise-safety/no-absorbed-failure -- best-effort disk cleanup after the DB rows are already deleted; per-file unlink failures must not abort the sweep of the remaining orphans (result discarded, never a data decision)
     await Promise.all(rows.map((r) => unlink(r.diskPath).catch(() => undefined)));
     if (rows.length > 0) {
       log.publish(`orphan sweep removed ${rows.length} files`);

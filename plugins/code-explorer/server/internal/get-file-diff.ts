@@ -1,7 +1,7 @@
 import { resolve, sep } from "node:path";
 import { isAllowedRef } from "./resolve-ref";
+import { tryRunGit } from "@plugins/primitives/plugins/commit-list/server";
 
-import { GIT } from "@plugins/infra/plugins/paths/server";
 const MAX_BYTES = 2 * 1024 * 1024;
 
 export type FileDiffResult =
@@ -11,23 +11,6 @@ export type FileDiffResult =
 function isPathInside(root: string, target: string): boolean {
   const rootNorm = root.endsWith(sep) ? root : root + sep;
   return target === root || target.startsWith(rootNorm);
-}
-
-async function runGit(
-  args: string[],
-  cwd: string,
-  tolerateExit1 = false,
-): Promise<string | null> {
-  const proc = Bun.spawn([GIT, "--no-optional-locks", "-C", cwd, ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [out, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    proc.exited,
-  ]);
-  if (code === 0 || (tolerateExit1 && code === 1)) return out;
-  return null;
 }
 
 export async function getFileDiff(
@@ -62,10 +45,19 @@ export async function getFileDiff(
     }
   }
 
-  const resolvedBase =
-    base === "main"
-      ? ((await runGit(["merge-base", "main", "HEAD"], absRoot))?.trim() ?? base)
-      : base;
+  // Resolving "main" to the merge-base is a probe: `git merge-base` exits 1 when
+  // the branches share no common ancestor — a legit "no merge-base" case where
+  // falling back to the literal "main" ref is correct. Any OTHER non-zero exit is
+  // a real git failure and must surface as an error, not silently become "main".
+  let resolvedBase = base;
+  if (base === "main") {
+    const mb = await tryRunGit(["merge-base", "main", "HEAD"], absRoot);
+    if (mb.ok) {
+      resolvedBase = mb.stdout.trim() || base;
+    } else if (mb.exitCode !== 1) {
+      return { kind: "error", status: 500, message: "git merge-base failed" };
+    }
+  }
 
   // Range diff (commit-to-commit). Untracked / working-tree handling does not
   // apply — both sides are real refs. -M / -C let git emit a unified rename
@@ -73,28 +65,28 @@ export async function getFileDiff(
   if (head !== undefined) {
     const pathArgs =
       fromPath !== undefined ? ["--", fromPath, relPath] : ["--", relPath];
-    const diff = await runGit(
+    const res = await tryRunGit(
       ["diff", "--no-color", "-M", "-C", resolvedBase, head, ...pathArgs],
       absRoot,
     );
-    if (diff === null) {
+    if (!res.ok) {
       return { kind: "error", status: 500, message: "git diff failed" };
     }
-    if (diff.length > MAX_BYTES) {
+    if (res.stdout.length > MAX_BYTES) {
       return { kind: "error", status: 413, message: "Diff too large" };
     }
-    return { kind: "ok", diff };
+    return { kind: "ok", diff: res.stdout };
   }
 
-  const status = await runGit(
+  const status = await tryRunGit(
     ["status", "--porcelain", "--", relPath],
     absRoot,
   );
-  if (status === null) {
+  if (!status.ok) {
     return { kind: "error", status: 500, message: "git status failed" };
   }
 
-  const statusLine = status.split("\n").find((l) => l.length > 0);
+  const statusLine = status.stdout.split("\n").find((l) => l.length > 0);
   const isUntracked = statusLine?.startsWith("??") ?? false;
 
   if (!statusLine && resolvedBase === "HEAD") {
@@ -105,28 +97,38 @@ export async function getFileDiff(
     return { kind: "ok", diff: "" };
   }
 
-  const diff = isUntracked
-    ? await runGit(
-        ["diff", "--no-color", "--no-index", "--", "/dev/null", relPath],
-        absRoot,
-        true,
-      )
-    : await runGit(
-        [
-          "diff",
-          "--no-color",
-          "-M",
-          "-C",
-          resolvedBase,
-          "--",
-          ...(fromPath !== undefined ? [fromPath, relPath] : [relPath]),
-        ],
-        absRoot,
-      );
-
-  if (diff === null) {
-    return { kind: "error", status: 500, message: "git diff failed" };
+  let diff: string;
+  if (isUntracked) {
+    // `git diff --no-index` is an exit-code-as-signal command: exit 1 means "the
+    // files differ" and the diff is on stdout — NOT a failure. Only exit >1 is a
+    // real error.
+    const res = await tryRunGit(
+      ["diff", "--no-color", "--no-index", "--", "/dev/null", relPath],
+      absRoot,
+    );
+    if (!res.ok && res.exitCode !== 1) {
+      return { kind: "error", status: 500, message: "git diff failed" };
+    }
+    diff = res.stdout;
+  } else {
+    const res = await tryRunGit(
+      [
+        "diff",
+        "--no-color",
+        "-M",
+        "-C",
+        resolvedBase,
+        "--",
+        ...(fromPath !== undefined ? [fromPath, relPath] : [relPath]),
+      ],
+      absRoot,
+    );
+    if (!res.ok) {
+      return { kind: "error", status: 500, message: "git diff failed" };
+    }
+    diff = res.stdout;
   }
+
   if (diff.length > MAX_BYTES) {
     return { kind: "error", status: 413, message: "Diff too large" };
   }

@@ -40,7 +40,7 @@ export async function report(body: ClientReportBody): Promise<ReportResult | nul
       buildId: import.meta.env.VITE_BUILD_ID ?? null,
     };
     return await fetchEndpoint(submitReport, {}, { body: stamped, keepalive: true, report: false });
-  // eslint-disable-next-line promise-safety/no-bare-catch -- this is called during crash/error handling (keepalive fetch at page unload); propagating here would hide the original error and crash the error handler itself
+  // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- this is called during crash/error handling (keepalive fetch at page unload); propagating here would hide the original error and crash the error handler itself
   } catch {
     return null;
   }

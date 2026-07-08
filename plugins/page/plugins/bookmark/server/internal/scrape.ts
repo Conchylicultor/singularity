@@ -164,6 +164,7 @@ async function cacheImage(
     if (!(err instanceof SsrfError)) throw err;
     return undefined;
   }
+  // eslint-disable-next-line promise-safety/no-absorbed-failure -- best-effort OG-image scrape; undefined means "no preview image", the correct degraded result (guarded below by `if (!res || !res.ok) return undefined`), not a swallowed data failure
   const res = await safeFetch(parsed, { headers: { "user-agent": USER_AGENT } }).catch(
     () => undefined,
   );

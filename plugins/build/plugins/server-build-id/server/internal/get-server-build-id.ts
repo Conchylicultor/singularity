@@ -15,7 +15,7 @@ import { readFileSync } from "node:fs";
 export function getServerBuildId(): string | null {
   try {
     return readFileSync(`${WEB_DIST_DIR}/.build-id`, "utf8").trim() || null;
-    // eslint-disable-next-line promise-safety/no-bare-catch -- best-effort optional dotfile read; a missing/unreadable .build-id (before first build or in dev) legitimately means "build id unknown" → staleness detection inert, never a bug to surface
+    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- best-effort optional dotfile read; a missing/unreadable .build-id (before first build or in dev) legitimately means "build id unknown" → staleness detection inert, never a bug to surface
   } catch {
     return null;
   }

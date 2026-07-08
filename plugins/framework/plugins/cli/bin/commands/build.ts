@@ -381,6 +381,7 @@ async function waitForPg(): Promise<void> {
         await c.query("SELECT 1");
         await c.end();
         return true;
+      // eslint-disable-next-line promise-safety/no-absorbed-failure -- readiness-probe retry: null signals "not ready yet, keep retrying" (lastErr captured for the deadline message); a genuine failure surfaces loudly via onDeadline → process.exit(1)
       } catch (err) {
         lastErr = err instanceof Error ? err.message : String(err);
         // eslint-disable-next-line promise-safety/no-bare-catch
@@ -516,6 +517,7 @@ async function probeHealth(
           // one proves the new backend is live AND ready. Without this a failed
           // hot-restart leaves the old backend answering ok and the build
           // falsely passes.
+          // eslint-disable-next-line promise-safety/no-absorbed-failure -- health-probe body read; null means "no/unparseable startedAt", handled below as "stale backend, keep polling" — not a data result the caller trusts
           const body = (await resp.json().catch(() => null)) as { startedAt?: unknown } | null;
           const startedAt = typeof body?.startedAt === "number" ? body.startedAt : null;
           if (startedAt != null && startedAt > previousStartedAt) return true;

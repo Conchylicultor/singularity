@@ -47,6 +47,7 @@ export async function deleteAttachment(id: string): Promise<boolean> {
     .returning({ diskPath: _attachments.diskPath });
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
+  // eslint-disable-next-line promise-safety/no-absorbed-failure -- best-effort disk cleanup after the DB row is already deleted; the awaited result is discarded (fire-and-forget), so undefined only prevents an unhandled rejection, never feeds a decision
   await unlink(row.diskPath).catch(() => undefined);
   return true;
 }

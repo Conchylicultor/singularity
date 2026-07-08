@@ -14,6 +14,7 @@ async function getFrontendHash(): Promise<string> {
   try {
     const content = await Bun.file(`${WEB_DIST_DIR}/index.html`).text();
     return createHash("md5").update(content).digest("hex").slice(0, 8);
+  // eslint-disable-next-line promise-safety/no-absorbed-failure -- the read failure IS surfaced (buildLog.publish below); "" is a deliberate "hash unknown" sentinel the web treats as "don't arm the reload dot", chosen so a transient read error can't wedge the live-state sub
   } catch (err) {
     // A running app is always serving this file, so a read failure means the
     // built frontend is missing or the path drifted — surface it instead of

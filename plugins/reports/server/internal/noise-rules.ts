@@ -25,7 +25,7 @@ export function isNoiseReport(input: ReportNoiseInput): boolean {
   return ReportNoiseRule.getContributions().some((rule) => {
     try {
       return rule.matches(input);
-    // eslint-disable-next-line promise-safety/no-bare-catch -- this runs inside the report pipeline itself; propagating any error here would break report recording, which is worse than swallowing a buggy noise-rule match
+    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- this runs inside the report pipeline itself; propagating any error here would break report recording, which is worse than swallowing a buggy noise-rule match
     } catch {
       return false; // a buggy rule must never break the report pipeline (itself the error path)
     }

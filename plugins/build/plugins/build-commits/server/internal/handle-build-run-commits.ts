@@ -33,7 +33,8 @@ export const handleBuildRunCommits = implement(getBuildRunCommits, async ({ para
     ? ["log", `--format=${LOG_FORMAT}`, `${prevRun.commitHash}..${thisRun.commitHash}`]
     : ["log", "--max-count=50", `--format=${LOG_FORMAT}`, thisRun.commitHash];
 
+  // runGit throws on failure — a failed log must never be absorbed as an empty
+  // commit list; the throw surfaces as an endpoint 500 (already-safe surface).
   const out = await runGit(args, REPO_ROOT);
-  if (out === null) return [];
   return parseGitLog(out);
 });

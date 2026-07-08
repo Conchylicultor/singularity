@@ -74,7 +74,7 @@ const check: Check = {
       });
       const mainRef = proc.success ? proc.stdout.toString().trim() : "no-main";
       return `${hash.digest("hex")}:${mainRef}`;
-      // eslint-disable-next-line promise-safety/no-bare-catch -- a signature is a pure best-effort optimization; any failure (missing dir, git error) safely degrades to "never cache" (return null), which only re-runs the cheap fast-path check
+      // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- a signature is a pure best-effort optimization; any failure (missing dir, git error) safely degrades to "never cache" (return null), which only re-runs the cheap fast-path check
     } catch {
       return null;
     }

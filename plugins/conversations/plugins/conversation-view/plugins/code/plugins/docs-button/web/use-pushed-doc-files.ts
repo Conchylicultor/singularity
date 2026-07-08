@@ -32,7 +32,7 @@ export function usePushedDocFiles(attemptId: string): EditedFile[] | null {
     let cancelled = false;
     void Promise.all(
       ids.map((pushId) =>
-        // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab fetches doc files for its own display, no cross-tab write to deduplicate
+        // eslint-disable-next-line reactive-server-io/no-reactive-server-io, promise-safety/no-absorbed-failure -- read-only per-tab view refresh on live-state change (no cross-tab write to deduplicate); the .catch(() => []) is a best-effort per-push doc-file probe whose failure just omits that push's chips from this tab's display, never a shared data decision
         fetchEndpoint(getPushFiles, { worktree: "main" }, { query: { pushId } })
           .then((data) => data.files.filter((f) => isDocFile(f.path)))
           .catch(() => [] as EditedFile[]),

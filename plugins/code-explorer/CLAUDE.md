@@ -10,7 +10,7 @@
   - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `conversations/conversation-view/code/file-pane.FilePaneView`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ResizableHandle`, `primitives/css/ui-kit.ResizablePanel`, `primitives/css/ui-kit.ResizablePanelGroup`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/data-view.HierarchyConfig`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneScroll`, `primitives/pane.type`, `shell.Shell`
   - Exports: Values: `FileTree`
 - Server:
-  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.GIT`, `infra/paths.HOME_DIR`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`, `primitives/commit-list.runGit`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesByPushId`
+  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.GIT`, `infra/paths.HOME_DIR`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`, `primitives/commit-list.tryRunGit`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesByPushId`
   - Exports: Values: `getRangeFiles`, `resolveParentSha`, `resolveWorktreePath`
 - Cross-plugin:
   - Imported by: `code-explorer/file-resolve`, `plugin-meta/plugin-view/file-tree`, `review/plugin-changes`

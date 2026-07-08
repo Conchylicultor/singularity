@@ -1,7 +1,8 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export { LOG_FORMAT, parseGitLog } from "./internal/parse-git-log";
-export { runGit } from "./internal/run-git";
+export { GitError, runGit, tryRunGit } from "./internal/run-git";
+export type { GitResult } from "./internal/run-git";
 
 export default {
   description:

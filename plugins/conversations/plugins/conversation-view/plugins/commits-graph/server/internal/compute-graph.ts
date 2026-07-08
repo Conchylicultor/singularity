@@ -1,5 +1,5 @@
 import type { CommitDelta, CommitRow, CommitsGraph } from "../../shared/protocol";
-import { runGit, LOG_FORMAT, parseGitLog } from "@plugins/primitives/plugins/commit-list/server";
+import { runGit, tryRunGit, GitError, LOG_FORMAT, parseGitLog } from "@plugins/primitives/plugins/commit-list/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
 import { createGitStateMemo } from "@plugins/infra/plugins/git-read-cache/server";
 import { lastKnownMainSha } from "@plugins/infra/plugins/git-watcher/server";
@@ -17,34 +17,51 @@ const ZERO_DELTA: CommitDelta = {
 };
 
 async function readBranch(worktreePath: string): Promise<string | null> {
-  const out = await runGit(["rev-parse", "--abbrev-ref", "HEAD"], worktreePath);
-  const trimmed = out?.trim();
+  // runGit throws on a real git failure; a detached HEAD legitimately reports
+  // the literal "HEAD" (no branch name) → null.
+  const trimmed = (await runGit(["rev-parse", "--abbrev-ref", "HEAD"], worktreePath)).trim();
   if (!trimmed || trimmed === "HEAD") return null;
   return trimmed;
 }
 
 async function readMergeBase(worktreePath: string): Promise<string | null> {
-  const out = await runGit(["merge-base", MAIN, "HEAD"], worktreePath);
-  const trimmed = out?.trim();
-  return trimmed && trimmed.length > 0 ? trimmed : null;
+  // `git merge-base` exits 1 legitimately when the branches share no common
+  // ancestor — that is a real "no merge-base" answer (→ null), NOT a failure.
+  // Any other non-zero exit is a genuine failure and must throw so the caller
+  // aborts the recompute and keeps its previous cache (never a "" collision).
+  const res = await tryRunGit(["merge-base", MAIN, "HEAD"], worktreePath);
+  if (!res.ok) {
+    if (res.exitCode === 1) return null;
+    throw new GitError({
+      args: ["merge-base", MAIN, "HEAD"],
+      cwd: worktreePath,
+      exitCode: res.exitCode,
+      stderr: res.stderr,
+    });
+  }
+  const trimmed = res.stdout.trim();
+  return trimmed.length > 0 ? trimmed : null;
 }
 
 async function readDeltaCounts(
   worktreePath: string,
-): Promise<{ ahead: number; behind: number } | null> {
+): Promise<{ ahead: number; behind: number }> {
   // `--left-right --count <left>...<right>` prints "<left-only>\t<right-only>".
   // left  = main only  = behind
   // right = HEAD only  = ahead
+  // runGit throws on failure — a false 0/0 is never manufactured from a failed read.
   const out = await runGit(
     ["rev-list", "--left-right", "--count", `${MAIN}...HEAD`],
     worktreePath,
   );
-  if (out === null) return null;
   const parts = out.trim().split(/\s+/);
-  if (parts.length < 2) return null;
-  const behind = Number.parseInt(parts[0] ?? "0", 10);
-  const ahead = Number.parseInt(parts[1] ?? "0", 10);
-  if (Number.isNaN(behind) || Number.isNaN(ahead)) return null;
+  const behind = Number.parseInt(parts[0] ?? "", 10);
+  const ahead = Number.parseInt(parts[1] ?? "", 10);
+  if (Number.isNaN(behind) || Number.isNaN(ahead)) {
+    throw new Error(
+      `rev-list --left-right --count returned unparseable output: ${JSON.stringify(out)}`,
+    );
+  }
   return { ahead, behind };
 }
 
@@ -53,9 +70,13 @@ async function readDeltaCounts(
 // large divergences). Splitting the count this way lets `ahead` live in the
 // pending half and `behind` in the behind half, each validated by its own key.
 async function readCount(range: string, worktreePath: string): Promise<number> {
+  // runGit throws on failure — a failed rev-list must never be absorbed as 0.
   const out = await runGit(["rev-list", "--count", range], worktreePath);
-  const n = Number.parseInt(out?.trim() ?? "", 10);
-  return Number.isNaN(n) ? 0 : n;
+  const n = Number.parseInt(out.trim(), 10);
+  if (Number.isNaN(n)) {
+    throw new Error(`rev-list --count ${range} returned non-numeric output: ${JSON.stringify(out)}`);
+  }
+  return n;
 }
 
 async function computeDeltaCore(worktreePath: string): Promise<CommitDelta> {
@@ -65,9 +86,6 @@ async function computeDeltaCore(worktreePath: string): Promise<CommitDelta> {
     return { ...ZERO_DELTA, branch };
   }
   const counts = await readDeltaCounts(worktreePath);
-  if (counts === null) {
-    return { ...ZERO_DELTA, branch, mergeBase };
-  }
   return { ahead: counts.ahead, behind: counts.behind, mergeBase, branch };
 }
 
@@ -85,9 +103,12 @@ export async function probeHeadMain(
   // Both reads are the thin ungated `runGit` (a rev-parse is microseconds);
   // `main` is read from git-watcher's in-memory sha when seeded, else an ungated
   // `rev-parse main` (never trust a missing watcher as "main unchanged").
-  const headSha = (await runGit(["rev-parse", "HEAD"], worktreePath))?.trim() ?? "";
+  // runGit throws on failure — a failed read must NEVER coalesce to "" and poison
+  // the cache signature (two different failures would collide on the same "|"
+  // key). A throw here aborts the memo recompute, retaining the previous entry.
+  const headSha = (await runGit(["rev-parse", "HEAD"], worktreePath)).trim();
   const mainSha =
-    lastKnownMainSha() ?? (await runGit(["rev-parse", MAIN], worktreePath))?.trim() ?? "";
+    lastKnownMainSha() ?? (await runGit(["rev-parse", MAIN], worktreePath)).trim();
   return { headSha, mainSha };
 }
 
@@ -107,11 +128,11 @@ async function computeCommitsFromShas(
   worktreePath: string,
 ): Promise<CommitRow[]> {
   if (shas.length === 0) return [];
+  // runGit throws on failure — a failed log must never be absorbed as an empty chain.
   const out = await runGit(
     ["log", "--no-walk", `--format=${LOG_FORMAT}`, ...shas],
     worktreePath,
   );
-  if (out === null) return [];
   return parseGitLog(out);
 }
 
@@ -239,7 +260,7 @@ async function recomputePending(
     readCount(pendingRange, worktreePath),
     readBranch(worktreePath),
   ]);
-  const commits = out === null ? [] : parseGitLog(out);
+  const commits = parseGitLog(out);
   return { key, commits, ahead, branch };
 }
 
@@ -249,7 +270,7 @@ async function recomputeBehind(worktreePath: string, key: string): Promise<Behin
     runGit(["log", `--max-count=${MAX_BEHIND}`, `--format=${LOG_FORMAT}`, behindRange], worktreePath),
     readCount(behindRange, worktreePath),
   ]);
-  const behindCommits = out === null ? [] : parseGitLog(out);
+  const behindCommits = parseGitLog(out);
   return { key, behindCommits, behind };
 }
 

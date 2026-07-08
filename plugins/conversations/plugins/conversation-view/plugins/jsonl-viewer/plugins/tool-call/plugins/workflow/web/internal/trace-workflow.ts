@@ -232,6 +232,7 @@ export async function traceWorkflow(
       body,
     );
     await fn(agent, parallel, pipeline, phase, log, args, budget, workflow);
+  // eslint-disable-next-line promise-safety/no-absorbed-failure -- null is a deliberate "unparseable / unmodeled workflow shape → fall back to meta rendering" tri-state the caller branches on; the TruncatedSignal case is handled separately (keeps the partial graph)
   } catch (err) {
     if (!(err instanceof TruncatedSignal)) {
       // Syntax error, runtime throw, or an unmodeled shape — fall back to meta.

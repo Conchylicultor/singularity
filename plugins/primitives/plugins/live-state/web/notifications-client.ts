@@ -31,7 +31,7 @@ function trace(line: string): void {
 function verboseTraceOn(): boolean {
   try {
     return localStorage.getItem("liveState.verboseTrace") === "1";
-  // eslint-disable-next-line promise-safety/no-bare-catch
+  // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- SSR / denied-storage safety for a local debug flag; any access failure means "verbose trace off" (return false), the correct default, never a signal to surface
   } catch {
     return false;
   }

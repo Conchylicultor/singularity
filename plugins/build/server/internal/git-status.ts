@@ -15,11 +15,13 @@ export async function getMainAhead(): Promise<MainAheadCount> {
     const stored = (await commitFile.text()).trim();
     if (stored) base = stored;
   }
+  // runGit throws on failure — a false {count:0} (which hides the rebuild-needed
+  // banner) is never manufactured. The throw propagates to the mainAheadCount
+  // resource loader, which the live-state cascade treats as stale-safe.
   const out = await runGit(
     ["log", `--format=${LOG_FORMAT}`, `${base}..refs/heads/main`],
     REPO_ROOT,
   );
-  if (out === null) return { count: 0, commits: [] };
   const commits = parseGitLog(out);
   return { count: commits.length, commits };
 }

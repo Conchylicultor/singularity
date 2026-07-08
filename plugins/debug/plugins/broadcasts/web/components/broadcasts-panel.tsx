@@ -58,6 +58,7 @@ export function BroadcastsPanel() {
       }
       void refetch();
       return true;
+    // eslint-disable-next-line promise-safety/no-absorbed-failure -- the error IS surfaced to the user via setError(String(e)); false is the save-handler's failure status the caller branches on, not a swallowed error
     } catch (e) {
       setError(String(e));
       return false;

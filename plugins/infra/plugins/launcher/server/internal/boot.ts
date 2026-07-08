@@ -98,7 +98,7 @@ export async function isGatewayListening(port: number): Promise<boolean> {
       signal: AbortSignal.timeout(1000),
     });
     return resp.ok;
-    // eslint-disable-next-line promise-safety/no-bare-catch -- any network error (connection refused, timeout, DNS) means the gateway is not listening; propagating would misrepresent a probe failure as a fatal error
+    // eslint-disable-next-line promise-safety/no-bare-catch, promise-safety/no-absorbed-failure -- any network error (connection refused, timeout, DNS) means the gateway is not listening; propagating would misrepresent a probe failure as a fatal error
   } catch {
     return false;
   }
@@ -421,6 +421,7 @@ export async function awaitPgReady(
       try {
         await getAdminPool().query("SELECT 1");
         return true;
+      // eslint-disable-next-line promise-safety/no-absorbed-failure -- retryUntil probe: null signals "not ready yet, retry" (lastErr captured for the deadline); a genuine failure surfaces when the retry deadline elapses
       } catch (err) {
         lastErr = err;
         return null;
@@ -463,6 +464,7 @@ async function awaitAppReady(name: string, port: number): Promise<void> {
         if (resp.ok) return true;
         lastErr = new Error(`health/ready returned ${resp.status}`);
         return null;
+      // eslint-disable-next-line promise-safety/no-absorbed-failure -- retryUntil probe: null signals "not ready yet, retry" (lastErr captured for the deadline); a genuine failure surfaces when the retry deadline elapses
       } catch (err) {
         lastErr = err;
         return null;

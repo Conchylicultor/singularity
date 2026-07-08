@@ -90,19 +90,21 @@ export async function computeEditedFiles(
   return withHeavyReadSlot(async () => {
     const byPath = new Map<string, FileEntry>();
 
-    const mergeBase =
-      (await runGit(["merge-base", "main", "HEAD"], worktreePath))?.trim() ?? "main";
+    // A git failure here must NOT be conflated with "no merge-base" — a manufactured
+    // "main" fallback (or an empty diff below) would publish a false-empty edited-files
+    // list that a destructive "Drop & Close" then acts on. runGit throws on failure;
+    // the throw propagates to the resource loader (stale-safe: the live-state cascade
+    // skips the push and keeps the last-known-good).
+    const mergeBase = (await runGit(["merge-base", "main", "HEAD"], worktreePath)).trim();
 
     // -M / -C enable rename/copy detection; -z disambiguates the from/to pair.
     const diff = await runGit(
       ["diff", "-M", "-C", "-z", "--name-status", mergeBase],
       worktreePath,
     );
-    if (diff) {
-      for (const rec of parseDiffNameStatusZ(diff)) {
-        const entry = ensureEntry(byPath, rec.path, rec.status);
-        if (rec.from) entry.from = rec.from;
-      }
+    for (const rec of parseDiffNameStatusZ(diff)) {
+      const entry = ensureEntry(byPath, rec.path, rec.status);
+      if (rec.from) entry.from = rec.from;
     }
 
     // Working-tree changes are layered on top of the branch diff. We pass
@@ -112,21 +114,19 @@ export async function computeEditedFiles(
       ["status", "--porcelain", "--no-renames", "--untracked-files=all"],
       worktreePath,
     );
-    if (status) {
-      for (const line of status.split("\n")) {
-        if (!line) continue;
-        const code = line.slice(0, 2);
-        const path = line.slice(3);
-        if (code === "??") {
-          ensureEntry(byPath, path, "untracked");
-        } else if (code.includes("D")) {
-          const entry = ensureEntry(byPath, path, "deleted");
-          entry.status = "deleted";
-        } else if (code.includes("A")) {
-          ensureEntry(byPath, path, "added");
-        } else {
-          ensureEntry(byPath, path, "modified");
-        }
+    for (const line of status.split("\n")) {
+      if (!line) continue;
+      const code = line.slice(0, 2);
+      const path = line.slice(3);
+      if (code === "??") {
+        ensureEntry(byPath, path, "untracked");
+      } else if (code.includes("D")) {
+        const entry = ensureEntry(byPath, path, "deleted");
+        entry.status = "deleted";
+      } else if (code.includes("A")) {
+        ensureEntry(byPath, path, "added");
+      } else {
+        ensureEntry(byPath, path, "modified");
       }
     }
 
@@ -136,13 +136,11 @@ export async function computeEditedFiles(
       ["diff", "-M", "-C", "-z", "--numstat", mergeBase],
       worktreePath,
     );
-    if (numstat) {
-      for (const rec of parseDiffNumstatZ(numstat)) {
-        const entry = byPath.get(rec.path);
-        if (!entry) continue;
-        entry.additions = rec.additions;
-        entry.deletions = rec.deletions;
-      }
+    for (const rec of parseDiffNumstatZ(numstat)) {
+      const entry = byPath.get(rec.path);
+      if (!entry) continue;
+      entry.additions = rec.additions;
+      entry.deletions = rec.deletions;
     }
 
     // Untracked files don't appear in numstat — count their lines as additions.

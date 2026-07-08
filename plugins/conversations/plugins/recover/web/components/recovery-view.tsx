@@ -140,6 +140,20 @@ export function RecoveryView() {
       <Scroll axis="both" fill>
         {isLoading && items.length === 0 ? (
           <Loading />
+        ) : q.isError && items.length === 0 ? (
+          <Stack gap="sm" className="items-start py-sm">
+            <Placeholder tone="error">
+              Couldn't load recently closed conversations
+              {q.error instanceof Error ? `: ${q.error.message}` : ""}.
+            </Placeholder>
+            <div className="px-md">
+              <ControlSizeProvider size="sm">
+                <Button variant="outline" onClick={() => void q.refetch()}>
+                  Retry
+                </Button>
+              </ControlSizeProvider>
+            </div>
+          </Stack>
         ) : items.length === 0 ? (
           <Placeholder>No recently closed conversations.</Placeholder>
         ) : (

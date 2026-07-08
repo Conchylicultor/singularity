@@ -29,6 +29,7 @@ const toolResult = () => ({
 afterEach(async () => {
   while (tmpFiles.length) {
     const p = tmpFiles.pop()!;
+    // eslint-disable-next-line promise-safety/no-absorbed-failure -- best-effort temp-file teardown in afterEach; the awaited result is discarded, so undefined only prevents an unhandled rejection when a test already removed the file
     await Bun.file(p).delete().catch(() => undefined);
   }
 });

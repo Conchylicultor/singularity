@@ -37,6 +37,7 @@ function TaskDescriptionInner({
 
   const buildLaunchRequest = useCallback(async () => {
     await flushAll();
+    // eslint-disable-next-line promise-safety/no-absorbed-failure -- best-effort fresh-task refetch before launch; null falls back to the already-loaded detailTask (`fresh ?? detailTask ?? {}`), a deliberate stale-but-present degradation, not a lost result
     const fresh = await fetchEndpoint(getTaskEndpoint, { id: taskId }).catch(() => null);
     return { taskId, prompt: buildTaskPrompt(fresh ?? detailTask ?? {}) };
   }, [taskId, detailTask, flushAll]);

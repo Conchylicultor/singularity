@@ -49,7 +49,18 @@ export async function runGoogleDriveTarget(
     accessToken,
   );
 
-  await pruneOldBackups(folderId, keepLast, accessToken);
+  const { failures } = await pruneOldBackups(folderId, keepLast, accessToken);
+
+  // The upload succeeded, but if retention could not delete old archives the
+  // run is degraded, not ok. The schema has no per-target partial state, so
+  // report ok:false with a detail that preserves the upload link.
+  if (failures.length > 0) {
+    return {
+      targetId: "google-drive",
+      ok: false,
+      detail: `Uploaded (${webViewLink}), but retention failed to delete ${failures.length} old backup(s): ${failures.join("; ")}`,
+    };
+  }
 
   return { targetId: "google-drive", ok: true, detail: webViewLink };
 }

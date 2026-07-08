@@ -8,7 +8,34 @@ import { createPushProfiler, type PushProfiler } from "../push-profiler";
 import { withHostSlot } from "../host-semaphore";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writePushHolder, clearPushHolder, PUSH_LOCK_PATH } from "@plugins/infra/plugins/worktree/server";
 
-async function run(
+// Throws-by-default spawn: a non-zero exit prints the command + captured
+// stderr and exits(1) like `exec`, so a caller can never read a failed git
+// call's empty stdout as real data (e.g. a failed `git status` absorbed as a
+// "clean tree" and pushed over uncommitted changes). Returns trimmed stdout.
+// For the sites that genuinely branch on the exit code, use `runAllowFail`.
+async function run(cmd: string[], cwd?: string): Promise<string> {
+  const proc = Bun.spawn(cmd, {
+    cwd,
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  const [stdout, stderr] = await Promise.all([
+    new Response(proc.stdout).text(),
+    new Response(proc.stderr).text(),
+  ]);
+  const exitCode = await proc.exited;
+  if (exitCode !== 0) {
+    console.error(`Command failed (exit ${exitCode}): ${cmd.join(" ")}`);
+    if (stderr.trim()) console.error(stderr.trim());
+    process.exit(1);
+  }
+  return stdout.trim();
+}
+
+// Old behavior — returns both stdout and exitCode without throwing. Only for
+// the sites that branch on the exit code themselves (a git command whose
+// non-zero exit is an expected, handled outcome, e.g. a conflicting rebase).
+async function runAllowFail(
   cmd: string[],
   cwd?: string,
 ): Promise<{ stdout: string; exitCode: number }> {
@@ -82,7 +109,7 @@ async function runChecksUnderPushSlot(
 }
 
 async function getWorktreeRoot(): Promise<string> {
-  const { stdout } = await run(["git", "rev-parse", "--show-toplevel"]);
+  const stdout = await run(["git", "rev-parse", "--show-toplevel"]);
   if (!stdout) {
     console.error("Not in a git repository");
     process.exit(1);
@@ -91,7 +118,7 @@ async function getWorktreeRoot(): Promise<string> {
 }
 
 async function getGitDir(): Promise<string> {
-  const { stdout } = await run(["git", "rev-parse", "--git-dir"]);
+  const stdout = await run(["git", "rev-parse", "--git-dir"]);
   if (!stdout) {
     console.error("Not in a git repository");
     process.exit(1);
@@ -188,7 +215,7 @@ async function postRebaseNormalize(root: string, pushId: string): Promise<void> 
     }
   }
 
-  const { stdout: dirty } = await run(["git", "status", "--porcelain"], root);
+  const dirty = await run(["git", "status", "--porcelain"], root);
   if (!dirty) return;
   console.log("Amending head commit with regenerated artifacts...");
   await exec(["git", "add", "-A"], root);
@@ -208,7 +235,7 @@ async function postRebaseNormalize(root: string, pushId: string): Promise<void> 
 }
 
 async function getMainWorktree(): Promise<string> {
-  const { stdout } = await run(["git", "worktree", "list", "--porcelain"]);
+  const stdout = await run(["git", "worktree", "list", "--porcelain"]);
   // First worktree listed is always the main one
   const match = stdout.match(/^worktree (.+)$/m);
   if (!match) {
@@ -219,7 +246,7 @@ async function getMainWorktree(): Promise<string> {
 }
 
 async function getCurrentBranch(): Promise<string> {
-  const { stdout, exitCode } = await run([
+  const { stdout, exitCode } = await runAllowFail([
     "git",
     "rev-parse",
     "--abbrev-ref",
@@ -347,7 +374,7 @@ export function registerPush(program: Command) {
       };
 
       // 1. Commit if -m provided, otherwise require clean tree
-      const { stdout: status } = await run(["git", "status", "--porcelain"]);
+      const status = await run(["git", "status", "--porcelain"]);
       if (opts.message) {
         if (status) {
           const files = status.split("\n").map((l) => l.trim());
@@ -452,7 +479,7 @@ export function registerPush(program: Command) {
           //    Singularity-Push trailer so the server can group all commits in
           //    this push as a single event.
           profiler.stepStart("rebase");
-          const { exitCode: rebaseExit } = await run([
+          const { exitCode: rebaseExit } = await runAllowFail([
             "git",
             "rebase",
             "main",
@@ -461,7 +488,9 @@ export function registerPush(program: Command) {
           ]);
           profiler.stepEnd("rebase");
           if (rebaseExit !== 0) {
-            await run(["git", "rebase", "--abort"]);
+            // Best-effort cleanup on the failure path; do not let an abort
+            // failure mask the actionable rebase-conflict message printed below.
+            await runAllowFail(["git", "rebase", "--abort"]);
             console.error(
               [
                 `Rebase of ${branch} onto main failed (aborted).`,

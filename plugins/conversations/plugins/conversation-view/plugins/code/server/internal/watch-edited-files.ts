@@ -25,7 +25,12 @@ interface Room {
   subscription: parcel.AsyncSubscription | null;
   opening: Promise<void> | null;
   serialized: string;
-  lastFiles: EditedFile[];
+  // null = never successfully computed. A git-failed initial load must NOT
+  // manufacture an empty list here — an empty `[]` is a legitimate "no edits"
+  // value a new subscriber would absorb as truth. While null, new subscribers
+  // are handed nothing and fall back to the resource loader (which throws on a
+  // git failure — stale-safe). Only a real successful compute sets this.
+  lastFiles: EditedFile[] | null;
   debounceTimer: ReturnType<typeof setTimeout> | null;
   lastRecomputeAt: number;
   ceilingTimer: ReturnType<typeof setTimeout> | null;
@@ -45,7 +50,7 @@ export function watchEditedFiles(
       subscription: null,
       opening: null,
       serialized: "",
-      lastFiles: [],
+      lastFiles: null,
       debounceTimer: null,
       lastRecomputeAt: 0,
       ceilingTimer: null,
@@ -53,8 +58,11 @@ export function watchEditedFiles(
     };
     rooms.set(worktreePath, room);
     void openRoom(room);
-  } else {
-    // Fire the new subscriber with the last known list on next tick.
+  } else if (room.lastFiles !== null) {
+    // Fire the new subscriber with the last known list on next tick — but ONLY if
+    // we have a real, successfully-computed list. If the room has never computed
+    // (initial load failed / still in flight), we hand the new subscriber nothing;
+    // the resource loader is the source of truth and throws on a git failure.
     const snapshot = room.lastFiles;
     queueMicrotask(() => {
       if (room!.subscribers.has(onChange)) onChange(snapshot);

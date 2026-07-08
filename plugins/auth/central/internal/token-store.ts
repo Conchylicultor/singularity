@@ -86,6 +86,7 @@ async function persist(): Promise<void> {
 
 function enqueueWrite<T>(fn: () => Promise<T>): Promise<T> {
   const next = writeChain.then(fn, fn);
+  // eslint-disable-next-line promise-safety/no-absorbed-failure -- chain-tail catch only keeps the retained `writeChain` from becoming an unhandled rejection; the real error still propagates to the caller via the returned `next`
   writeChain = next.catch(() => undefined);
   return next;
 }

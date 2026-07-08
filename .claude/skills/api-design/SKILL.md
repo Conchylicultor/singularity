@@ -37,6 +37,34 @@ guide the design.
     — across functions, files, and modules. If a value is called `origin` in one
     place and `provenance` in another, pick one.
 
+## Failure must be a type, not an absorbable value
+
+When a function can fail, the failure must be **impossible to mistake for
+data**: either **throw**, or return a **discriminated result**
+(`{ ok: true, … } | { ok: false, … }` / `{ kind: … }`). Never signal failure
+with `null`, `[]`, `""`, `0`, or `false` when the same value can also mean a
+legitimate empty/absent success — consumers will absorb it (`?? []`,
+`if (x)`) and downstream layers will cache/publish the false-empty as settled
+truth (this produced the pane-route, plugin-chunk, and runGit incidents; see
+`research/2026-07-08-global-absorbable-failure-guardrail.md`).
+
+Decision rule — **throw by default**; return a discriminated result only when
+the union is the real semantics:
+
+-   **Probe** ("does this ref/file/key exist?") — the caller genuinely
+    branches on absence: return a result (e.g. `tryRunGit` → `GitResult`).
+-   **Batch partial failure** ("3 pruned, 2 failed") — throwing loses the
+    partial outcome: return `{ done, failures[] }`.
+-   **Maps to an HTTP status** — return the union the handler translates
+    (e.g. `FileDiffResult`).
+
+Corollaries: a caches/memo key must never be built from a failed read (abort
+the recompute and keep the old entry — stale-safe beats false-fresh); a
+watcher/store must keep last-known-good on a failed refresh, never overwrite
+with a manufactured empty; "never computed yet" is not the same state as
+"computed: empty". The `no-absorbed-failure` lint rule enforces the
+catch-block half of this; the producer signature is on you at design time.
+
 ## Layered architecture
 
 Organize code in clear dependency layers. Lower layers are general-purpose
