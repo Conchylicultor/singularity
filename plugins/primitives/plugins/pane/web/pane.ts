@@ -8,7 +8,7 @@ import {
   type ComponentType,
   type ReactNode,
 } from "react";
-import { defineSlot, useDeferredLoadState, type Slot } from "@plugins/framework/plugins/web-sdk/core";
+import { defineSlot, getDeferredLoadState, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { SurfaceIdContext } from "@plugins/primitives/plugins/surface-id/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
@@ -317,7 +317,19 @@ function matchSegmentParts(
   return { params, consumed };
 }
 
-export function parseUrl(pathname: string): PaneSlot[] | null {
+/**
+ * The result of parsing a (base-path-stripped) URL pathname into a route. A
+ * discriminated union so callers can tell a genuine match — including the empty
+ * bare-root route — from a URL that matched no registered pane. Distinguishing
+ * the two is the whole point of the tri-state route: `matched []` is a bare app
+ * root, while `unresolved` is a load-gap (the target pane's plugin may still be
+ * loading in the deferred tier) or a genuinely dead link.
+ */
+export type ParsedRoute =
+  | { status: "matched"; slots: PaneSlot[] } // slots [] ⇒ bare app root (explicit)
+  | { status: "unresolved"; rawPath: string }; // a segment matched no registered pane
+
+export function parseUrl(pathname: string): ParsedRoute {
   const normalized =
     pathname === "/" ? "" : pathname.replace(/^\/+|\/+$/g, "");
   const urlSegments = normalized ? normalized.split("/") : [];
@@ -340,19 +352,24 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
       }
     }
 
-    if (!bestMatch) return null;
+    // A segment matched no registered pane: the URL is not resolvable at this
+    // moment. `rawPath` is the normalized (slash-trimmed) app-relative path so a
+    // consumer can seed a pending route (deferred plugin still loading) or, once
+    // loading has settled, surface a not-found. Kept distinct from `matched []`.
+    if (!bestMatch) return { status: "unresolved", rawPath: normalized };
 
     route.push(createSlot(bestMatch.pane.id, bestMatch.params));
     cursor += bestMatch.consumed;
   }
 
-  // A bare app root (basePath-stripped pathname is "/") yields an EMPTY route.
-  // The index/landing pane is NOT injected here: it is a main-area-renderer
-  // concern, resolved by `useIndexMatch` (see below) and rendered only by
-  // MillerColumns. Keeping it out of the route store means an overlay host
-  // (e.g. Sonata's PaneOverlayHost) sees "nothing opened" at a bare root and
-  // renders no overlay, instead of inheriting another app's index pane.
-  return route.length > 0 ? route : null;
+  // A bare app root (basePath-stripped pathname is "/") yields an EMPTY MATCHED
+  // route — explicitly a match, not an unresolved URL. The index/landing pane is
+  // NOT injected here: it is a main-area-renderer concern, resolved by
+  // `useIndexMatch` (see below) and rendered only by MillerColumns. Keeping it
+  // out of the route store means an overlay host (e.g. Sonata's PaneOverlayHost)
+  // sees "nothing opened" at a bare root and renders no overlay, instead of
+  // inheriting another app's index pane.
+  return { status: "matched", slots: route };
 }
 
 export function buildRouteUrl(route: PaneSlot[]): string {
@@ -387,15 +404,53 @@ export function buildRouteUrl(route: PaneSlot[]): string {
 // the focused one.
 // ---------------------------------------------------------------------------
 
+/**
+ * The store-internal route state. Two states — the public tri-state
+ * (pending / not-found) is folded at read time from the deferred-load signal, so
+ * it is never persisted here (it flips on load progress).
+ *
+ * - `resolved` — the route is `slots` (possibly `[]` for the bare app root).
+ * - `unresolved` — the URL matched no registered pane; `rawPath` is the
+ *   normalized app-relative path to seed a pending route or surface a not-found.
+ */
+export type RouteState =
+  | { kind: "resolved"; slots: PaneSlot[] }
+  | { kind: "unresolved"; rawPath: string };
+
+// Stable module-const empties so snapshot identity never churns between
+// mutations: `getRoute()` returns this exact array for any unresolved state, and
+// the server / initial snapshot of `useRouteState()` is this exact object.
+const EMPTY: PaneSlot[] = [];
+const RESOLVED_EMPTY: RouteState = { kind: "resolved", slots: EMPTY };
+
 export interface PaneStore {
-  /** Current in-memory route (the authoritative source of truth). */
+  /** Current in-memory route slots (`[]` for a bare root OR an unresolved URL). */
   getRoute(): PaneSlot[];
   /** Snapshot for `useSyncExternalStore` (identity-stable until mutation). */
   getRouteSnapshot(): PaneSlot[];
+  /** Current tri-state route state (resolved slots vs unresolved rawPath). */
+  getRouteState(): RouteState;
+  /** Snapshot for `useSyncExternalStore` (identity-stable until mutation). */
+  getRouteStateSnapshot(): RouteState;
   /** Subscribe to route changes; returns an unsubscribe. */
   subscribeRoute(cb: () => void): () => void;
-  /** Replace the route. Mirrors to the browser when `live`. */
+  /** Replace the route (resolved). Mirrors to the browser when `live`. */
   setRoute(route: PaneSlot[], replace?: boolean): void;
+  /**
+   * Seed an unresolved (pending) route from a raw app-relative path — NO
+   * url/history side-effects. Used at boot and for background tabs, where the URL
+   * is owned elsewhere (the address bar / the focused tab).
+   */
+  seedPending(rawPath: string): void;
+  /**
+   * Live navigation to a not-yet-resolvable URL: set unresolved AND write
+   * `history.state = { pending: rawPath }` + the URL, dispatching
+   * `popstate`/`shell:navigate` like `setRoute`. Pushes a new history entry by
+   * default; pass `replace` to mirror the URL in place (no stray entry — used by
+   * the tab activate() to assert a freshly-focused pending tab's URL). No-ops the
+   * history part when the store is not `live`.
+   */
+  navigatePending(rawPath: string, replace?: boolean): void;
   /** Re-derive the route from a (base-path-stripped) URL pathname. */
   syncRouteFromUrl(pathname: string): void;
   /** popstate/shell:navigate handler — restore from history.state or URL. */
@@ -423,10 +478,18 @@ export interface PaneStore {
 }
 
 function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
-  let currentRoute: PaneSlot[] = [];
+  let currentState: RouteState = RESOLVED_EMPTY;
   const routeListeners = new Set<() => void>();
   let currentBasePath = "";
   let prevResolvedByUuid = new Map<string, MatchEntry>();
+
+  // The slots the rest of the store reads/mutates. An unresolved route has no
+  // slots — it presents as the stable module-const EMPTY, so the slot-reading
+  // mutators (open/close/reorder/…) behave exactly as they did when an
+  // unresolved URL yielded `[]`.
+  function currentSlots(): PaneSlot[] {
+    return currentState.kind === "resolved" ? currentState.slots : EMPTY;
+  }
 
   function notifyRouteListeners(): void {
     for (const fn of routeListeners) fn();
@@ -439,7 +502,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   }
 
   function setRoute(route: PaneSlot[], replace = false): void {
-    currentRoute = route;
+    currentState = { kind: "resolved", slots: route };
     notifyRouteListeners();
     // Background stores update in-memory route + notify their own listeners
     // only; they never touch the browser URL/history.
@@ -456,7 +519,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
 
   function reorderRoute(fromIndex: number, toIndex: number): void {
     if (typeof window === "undefined") return;
-    const route = [...currentRoute];
+    const route = [...currentSlots()];
     if (fromIndex < 0 || fromIndex >= route.length) return;
     if (toIndex < 0 || toIndex >= route.length) return;
     if (fromIndex === toIndex) return;
@@ -479,11 +542,54 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     setRoute([]);
   }
 
+  function seedPending(rawPath: string): void {
+    currentState = { kind: "unresolved", rawPath };
+    notifyRouteListeners();
+  }
+
+  function navigatePending(rawPath: string, replace = false): void {
+    currentState = { kind: "unresolved", rawPath };
+    notifyRouteListeners();
+    if (!store.live) return;
+    const fullUrl = applyBasePath("/" + rawPath);
+    const method = replace ? "replaceState" : "pushState";
+    window.history[method]({ pending: rawPath }, "", fullUrl);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    window.dispatchEvent(new CustomEvent("shell:navigate"));
+  }
+
   function syncRouteFromUrl(pathname: string): void {
     const parsed = parseUrl(pathname);
-    const newRoute = parsed ?? [];
-    if (routesEqual(currentRoute, newRoute)) return;
-    currentRoute = newRoute;
+    if (parsed.status === "matched") {
+      // A matched parse always wins (equality-guarded, as today) — the URL now
+      // resolves to concrete panes.
+      if (currentState.kind === "resolved" && routesEqual(currentState.slots, parsed.slots)) {
+        return;
+      }
+      currentState = { kind: "resolved", slots: parsed.slots };
+      notifyRouteListeners();
+      return;
+    }
+
+    // Unresolved: the URL matched no registered pane. THE NO-CLOBBER RULE (the
+    // linchpin of the tri-state route): a pre-registry parse during cold boot
+    // must NOT wipe a route that was restored from persistence / prior
+    // navigation — that is exactly the historical cold-boot clobber. So adopt the
+    // unresolved state ONLY when the current state is not a resolved non-empty
+    // route, OR loading has settled. After settle a genuinely dead link must
+    // become visible (NotFound / error) instead of leaving a stale pane on
+    // screen. (Within a session this path is nearly unreachable: address-bar
+    // edits are full reloads and back/forward restores from `history.state`, so
+    // this is really boot protection.)
+    if (currentState.kind === "unresolved") {
+      if (currentState.rawPath === parsed.rawPath) return;
+      currentState = { kind: "unresolved", rawPath: parsed.rawPath };
+      notifyRouteListeners();
+      return;
+    }
+    const settled = getDeferredLoadState().deferredComplete;
+    if (currentState.slots.length > 0 && !settled) return;
+    currentState = { kind: "unresolved", rawPath: parsed.rawPath };
     notifyRouteListeners();
   }
 
@@ -539,11 +645,21 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     // their route only from `restoreRoute` (persistence) or from being
     // navigated while focused (held in memory).
     if (!store.live) return;
-    const state = window.history.state as { route?: Array<{ paneId: string; params: Record<string, string>; input?: PaneInput; uuid?: string }> } | null;
+    const state = window.history.state as {
+      route?: Array<{ paneId: string; params: Record<string, string>; input?: PaneInput; uuid?: string }>;
+      pending?: string;
+    } | null;
     if (state?.route) {
       const newRoute = state.route.map(s => createSlot(s.paneId, s.params, s.input ?? {}, s.uuid));
-      if (routesEqual(currentRoute, newRoute)) return;
-      currentRoute = newRoute;
+      if (currentState.kind === "resolved" && routesEqual(currentState.slots, newRoute)) return;
+      currentState = { kind: "resolved", slots: newRoute };
+      notifyRouteListeners();
+    } else if (typeof state?.pending === "string") {
+      // A pending (unresolved) route round-trips through back/forward via
+      // `history.state.pending` — restore it without re-parsing the URL, just as
+      // the `state.route` branch restores a resolved route.
+      if (currentState.kind === "unresolved" && currentState.rawPath === state.pending) return;
+      currentState = { kind: "unresolved", rawPath: state.pending };
       notifyRouteListeners();
     } else {
       const pathname = stripBasePath(window.location.pathname, currentBasePath);
@@ -557,7 +673,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
     implOpts?: { root?: boolean; input?: PaneInput },
   ): void {
     const replace = !internal.chrome.history;
-    const route = currentRoute;
+    const route = currentSlots();
     const ownParams = extractOwnParams(internal, params);
     const input = implOpts?.input ?? {};
 
@@ -596,7 +712,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
 
   function close(internal: PaneInternal, instanceId: number): void {
     if (typeof window === "undefined") return;
-    const route = currentRoute;
+    const route = currentSlots();
     const idx = route.findIndex((s) => s.instanceId === instanceId);
     if (idx <= 0) return;
     const newRoute = route.slice(0, idx);
@@ -606,7 +722,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
 
   function unwrap(instanceId: number): void {
     if (typeof window === "undefined") return;
-    const route = currentRoute;
+    const route = currentSlots();
     const idx = route.findIndex((s) => s.instanceId === instanceId);
     if (idx < 0) return;
     const newRoute = [...route.slice(0, idx), ...route.slice(idx + 1)];
@@ -615,7 +731,7 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
 
   function promote(internal: PaneInternal, instanceId: number): void {
     if (typeof window === "undefined") return;
-    const route = currentRoute;
+    const route = currentSlots();
     const idx = route.findIndex((s) => s.instanceId === instanceId);
     if (idx < 0) return;
     const fullParams: Record<string, string> = {};
@@ -626,13 +742,17 @@ function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
   }
 
   const store: PaneStore = {
-    getRoute: () => currentRoute,
-    getRouteSnapshot: () => currentRoute,
+    getRoute: () => currentSlots(),
+    getRouteSnapshot: () => currentSlots(),
+    getRouteState: () => currentState,
+    getRouteStateSnapshot: () => currentState,
     subscribeRoute: (cb) => {
       routeListeners.add(cb);
       return () => routeListeners.delete(cb);
     },
     setRoute,
+    seedPending,
+    navigatePending,
     syncRouteFromUrl,
     handleLocationChange,
     reorderRoute,
@@ -715,6 +835,16 @@ export function useSurfaceAppId(): string | undefined {
   return useContext(PaneSurfaceAppContext);
 }
 
+// ---------------------------------------------------------------------------
+// Load-scope context. The fs plugin-path prefix (e.g. "apps/plugins/pages/") of
+// the app owning this surface, so a fallback surface can ask "did a plugin under
+// THIS app's subtree fail to load" (`useHasLoadErrorUnder`) and show an app-load
+// error instead of a blank/not-found. Empty string ("") outside any surface that
+// provides it — `hasLoadErrorUnder("")` is always false, never a global flag.
+// ---------------------------------------------------------------------------
+
+export const PaneLoadScopeContext = createContext<string>("");
+
 /**
  * Single provider supplying BOTH the active {@link PaneStore} (via
  * {@link PaneStoreContext}) and the app base path (via the existing
@@ -729,6 +859,7 @@ export function PaneSurfaceProvider({
   basePath,
   appId,
   surfaceId,
+  loadScopePrefix,
   children,
 }: {
   store: PaneStore;
@@ -738,6 +869,13 @@ export function PaneSurfaceProvider({
   /** Stable per-surface-instance id (the tab's `tabId`); read via `useSurfaceTabId`
    *  from `@plugins/primitives/plugins/surface-id/web`. */
   surfaceId?: string;
+  /**
+   * Fs plugin-path prefix of the app owning this surface (e.g.
+   * "apps/plugins/pages/"); provided via {@link PaneLoadScopeContext} so the
+   * fallback surface can scope a load-error check to this app. Omit for surfaces
+   * with no app subtree (defaults to "").
+   */
+  loadScopePrefix?: string;
   children: ReactNode;
 }): ReactNode {
   return createElement(
@@ -749,7 +887,11 @@ export function PaneSurfaceProvider({
       createElement(
         PaneSurfaceAppContext.Provider,
         { value: appId },
-        createElement(SurfaceIdContext.Provider, { value: surfaceId }, children),
+        createElement(
+          PaneLoadScopeContext.Provider,
+          { value: loadScopePrefix ?? "" },
+          createElement(SurfaceIdContext.Provider, { value: surfaceId }, children),
+        ),
       ),
     ),
   );
@@ -797,6 +939,22 @@ export function getBasePath(): string {
 function useRouteSlots(): PaneSlot[] {
   const store = usePaneStore();
   return useSyncExternalStore(store.subscribeRoute, store.getRouteSnapshot, () => []);
+}
+
+/**
+ * The context surface's tri-state route state (resolved slots vs unresolved
+ * rawPath), reactive over the same store subscription as {@link useRoute}. The
+ * server / initial snapshot is the module-const resolved-empty. Consumers fold
+ * the public pending / not-found distinction from this plus the deferred-load
+ * signal (see {@link usePaneRoute} and the layout's fallback surface).
+ */
+export function useRouteState(): RouteState {
+  const store = usePaneStore();
+  return useSyncExternalStore(
+    store.subscribeRoute,
+    store.getRouteStateSnapshot,
+    () => RESOLVED_EMPTY,
+  );
 }
 
 function routesEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
@@ -1371,7 +1529,17 @@ export function useSyncPaneRegistry(): void {
 export function useRoute(): PaneMatch | null {
   const store = usePaneStore();
   const route = useRouteSlots();
-  return useMemo(() => store.resolveRoute(route), [store, route]);
+  // `resolveRoute` is a pure function of BOTH the route slots AND the pane
+  // registry, so the memo must invalidate when either changes. Tracking only
+  // `route` leaves a resolved route whose panes register in a LATER deferred
+  // batch stuck as null: the registry fills, but `syncRouteFromUrl` short-circuits
+  // on `routesEqual` (same slots) so the route array identity never changes and
+  // the memo never re-runs. Depending on the `Pane.Register` contributions
+  // identity (which tracks the registry, same as `useIndexMatch`) re-resolves the
+  // instant the target pane's plugin loads — e.g. an instant-restored deep link.
+  const contributions = PaneSlots.Register.useContributions();
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- `contributions` identity tracks the module-level registry Map read inside resolveRoute; it is the registry-version signal, not an unused dep.
+  return useMemo(() => store.resolveRoute(route), [store, route, contributions]);
 }
 
 /**
@@ -1458,39 +1626,19 @@ export function usePaneRoute(basePath: string): PaneMatch | null {
   }, [store, basePath]);
   useSyncPaneRegistry();
   const route = useRoute();
+  const state = useRouteState();
   const index = useIndexMatch(basePath);
-  const pathname = usePathname();
-  const { deferredComplete } = useDeferredLoadState();
 
+  // A resolved route whose slots all match registered panes → render it.
   if (route) return route;
-
-  // No resolved route. `resolveRoute` returns null for TWO different situations
-  // that must NOT be treated alike:
-  //   1. Genuine bare app root (`/pages`) — the index/landing pane is correct.
-  //   2. A deep link (`/pages/page/:id`) whose target pane isn't registered yet
-  //      because its plugin is still loading in the post-paint deferred tier.
-  //      `parseUrl` scans the pane registry to match segments, so an unregistered
-  //      pane matches nothing and yields an EMPTY route — indistinguishable from
-  //      the bare root at the route level.
-  // Falling back to `index` in case (2) flashes the app homepage at the deep-link
-  // URL until the plugin registers (the URL never changes — routing is
-  // route-first — so it reads as "reload redirected me to the homepage"). The URL
-  // is the discriminator: the index pane is bare-root content, so only a bare-root
-  // URL should render it. While the deferred tier is still settling, a deep-link
-  // URL with an empty route is a load gap — return null so the layout renders
-  // DeferredRouteFallback (a loader that becomes the real pane once its plugin
-  // registers) instead of the homepage. Once the tier has settled, an empty route
-  // is a genuine no-match, so we keep the prior index fallback unchanged.
-  //
-  // Gated on `store.live`: only the focused store mirrors the browser URL. A
-  // background/keep-alive store's route comes from `restoreRoute`, not the URL,
-  // so reading window.location there would be the *focused* tab's path — for
-  // those, keep the plain index fallback.
-  if (store.live && !deferredComplete) {
-    const deepLink = stripBasePath(pathname, basePath);
-    if (deepLink !== "/" && deepLink !== "") return null;
-  }
-  return index;
+  // The ONLY case that renders the index/landing pane is a GENUINE bare app root:
+  // a resolved route with zero slots. Everything else — an unresolved (pending /
+  // not-found) URL, or a resolved route whose slots don't resolve yet (a deferred
+  // plugin still loading, or stale paneIds from an old bundle) — returns null so
+  // the layout renders its tri-state DeferredRouteFallback (spinner while
+  // loading, then NotFound / app-load-error), never the homepage at a deep link.
+  if (state.kind === "resolved" && state.slots.length === 0) return index;
+  return null;
 }
 
 // ---------------------------------------------------------------------------

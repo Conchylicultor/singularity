@@ -6,6 +6,8 @@ import {
   partitionWebEntries,
   markDeferredPluginsLoaded,
   markDeferredLoadComplete,
+  markDeferredPluginsFailed,
+  pluginLoadReportSink,
   UNSAFE_unsealSlotComponent,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { LoadedPlugin, PluginLoadError } from "@plugins/framework/plugins/web-sdk/core";
@@ -88,6 +90,18 @@ function resolveActiveAppPrefix(
   return m ? m[1] + "/" : null;
 }
 
+// Publish a batch's load failures on the deferred-load signal (so consumers can
+// distinguish "plugin chunk failed" from "not resolvable yet") and fire one
+// report per failure (the reports plugin files a crash task). No-op on success.
+function recordErrors(errors: PluginLoadError[]): void {
+  if (errors.length === 0) return;
+  markDeferredPluginsFailed(errors.map((e) => e.pluginPath));
+  for (const e of errors) {
+    const message = e.error instanceof Error ? e.error.message : String(e.error);
+    pluginLoadReportSink.emit({ pluginPath: e.pluginPath, message });
+  }
+}
+
 function RootRenderer() {
   const roots = Core.Root.useContributions();
   return (
@@ -128,6 +142,7 @@ export default function App() {
           : { plugins, errors },
       );
       markDeferredPluginsLoaded(plugins.map((p) => p.id));
+      recordErrors(errors);
     };
 
     const loadDeferredBatch = async (batch: WebEntry[]): Promise<void> => {
@@ -166,6 +181,7 @@ export default function App() {
       markBootInstant("set-state", "paint", "App setState (first render)");
       if (cancelled) return;
       setState({ plugins: eagerResult.plugins, errors: eagerResult.errors });
+      recordErrors(eagerResult.errors);
 
       // Layer 3 — deferred tier, AFTER first paint (never blocks chrome).
       // Active-app-first: front-load the deep-linked app's content as one awaited

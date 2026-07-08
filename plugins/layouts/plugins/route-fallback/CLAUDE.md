@@ -6,7 +6,7 @@
 
 - Description: Loading placeholder for an unmatched pane route while the deferred plugin tier is still loading; renders null once loading settles so a genuinely-invalid URL falls through to not-found.
 - Web:
-  - Uses: `primitives/css/center.Center`, `primitives/loading.Loading`
+  - Uses: `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/loading.Loading`, `primitives/pane.PaneLoadScopeContext`, `primitives/pane.useRouteState`
   - Exports: Values: `DeferredRouteFallback`
 - Cross-plugin:
   - Imported by: `layouts/full-pane`, `layouts/miller`

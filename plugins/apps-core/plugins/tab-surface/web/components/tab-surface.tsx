@@ -5,6 +5,7 @@ import {
   PaneSurfaceProvider,
   PaneBasePathContext,
   useRoute,
+  useRouteState,
   useIndexMatch,
   usePaneTitle,
 } from "@plugins/primitives/plugins/pane/web";
@@ -15,6 +16,7 @@ import {
 import { Apps } from "@plugins/apps-core/web";
 import {
   appPathFor,
+  loadScopePrefixFor,
   useTabs,
   type Tab,
 } from "@plugins/apps-core/plugins/tabs/web";
@@ -36,6 +38,7 @@ export function TabSurface({ tab }: { tab: Tab }) {
       basePath={appPathFor(tab.appId, apps)}
       appId={tab.appId}
       surfaceId={tab.tabId}
+      loadScopePrefix={loadScopePrefixFor(app._pluginId)}
     >
       <TabTitleReporter tabId={tab.tabId} />
       <SyncStatusProvider>
@@ -60,19 +63,29 @@ export function TabSurface({ tab }: { tab: Tab }) {
  */
 function TabTitleReporter({ tabId }: { tabId: string }) {
   const route = useRoute();
+  const state = useRouteState();
   const panes = route?.panes ?? [];
   const leaf = panes.length > 0 ? panes[panes.length - 1]! : null;
-  return leaf ? (
-    <LeafTitleReporter
-      key={leaf.pane.id}
-      tabId={tabId}
-      pane={leaf.pane}
-      params={leaf.fullParams}
-      input={leaf.input}
-    />
-  ) : (
-    <IndexTitleReporter key="index" tabId={tabId} />
-  );
+  if (leaf) {
+    return (
+      <LeafTitleReporter
+        key={leaf.pane.id}
+        tabId={tabId}
+        pane={leaf.pane}
+        params={leaf.fullParams}
+        input={leaf.input}
+      />
+    );
+  }
+  // Index title ONLY at a GENUINE bare app root (resolved with zero slots).
+  // Anything else that renders no leaf — a pending / not-found URL (unresolved)
+  // or a resolved route whose slots don't resolve yet (unresolvable paneIds) —
+  // clears the title so the tab bar shows the app name, never a homepage-title
+  // misreport during the load gap.
+  if (state.kind === "resolved" && state.slots.length === 0) {
+    return <IndexTitleReporter key="index" tabId={tabId} />;
+  }
+  return <TitleClear key="clear" tabId={tabId} />;
 }
 
 /**

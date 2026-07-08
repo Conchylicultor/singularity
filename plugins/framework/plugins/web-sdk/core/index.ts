@@ -15,5 +15,10 @@ export {
   subscribeDeferredLoadState,
   markDeferredPluginsLoaded,
   markDeferredLoadComplete,
+  markDeferredPluginsFailed,
+  hasLoadErrorUnder,
+  useHasLoadErrorUnder,
+  pluginLoadReportSink,
+  resetDeferredLoadStateForTests,
 } from "./deferred-load-store";
-export type { DeferredLoadState } from "./deferred-load-store";
+export type { DeferredLoadState, PluginLoadReport } from "./deferred-load-store";

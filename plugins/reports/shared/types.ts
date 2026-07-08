@@ -21,6 +21,7 @@ export const CLIENT_REPORT_SOURCES = [
   "client-slow-op",
   "client-render-loop",
   "boot-snapshot",
+  "plugin-load",
 ] as const;
 export type ReportSource =
   | (typeof SERVER_REPORT_SOURCES)[number]

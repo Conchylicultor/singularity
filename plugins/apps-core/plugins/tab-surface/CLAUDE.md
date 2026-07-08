@@ -6,7 +6,7 @@
 
 - Description: Per-tab surface render core: TabSurface mounts a tab's PaneSurfaceProvider and reports its leaf title; AppTabsBody is the keep-alive fallback body that stacks every open tab.
 - Web:
-  - Uses: `apps-core.Apps`, `apps-core/tabs.appPathFor`, `apps-core/tabs.Tab`, `apps-core/tabs.useTabs`, `primitives/css/ui-kit.appThemeScope`, `primitives/css/ui-kit.PortalThemeScopeProvider`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneSurfaceProvider`, `primitives/pane.useIndexMatch`, `primitives/pane.usePaneTitle`, `primitives/pane.useRoute`, `primitives/slot-render.renderIsolated`, `primitives/sync-status.SyncStatusIndicator`, `primitives/sync-status.SyncStatusProvider`
+  - Uses: `apps-core.Apps`, `apps-core/tabs.appPathFor`, `apps-core/tabs.loadScopePrefixFor`, `apps-core/tabs.Tab`, `apps-core/tabs.useTabs`, `primitives/css/ui-kit.appThemeScope`, `primitives/css/ui-kit.PortalThemeScopeProvider`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneSurfaceProvider`, `primitives/pane.useIndexMatch`, `primitives/pane.usePaneTitle`, `primitives/pane.useRoute`, `primitives/pane.useRouteState`, `primitives/slot-render.renderIsolated`, `primitives/sync-status.SyncStatusIndicator`, `primitives/sync-status.SyncStatusProvider`
   - Exports: Values: `AppTabsBody`, `TabSurface`
 - Cross-plugin:
   - Imported by: `apps-core/layout`, `apps-core/surface`

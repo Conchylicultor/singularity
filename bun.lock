@@ -3618,6 +3618,10 @@
       "name": "@singularity/plugin-reports-noise-rules",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/plugin-load-errors": {
+      "name": "@singularity/plugin-reports-plugin-load-errors",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/render-loop": {
       "name": "@singularity/plugin-reports-render-loop",
       "version": "0.0.1",
@@ -6463,6 +6467,8 @@
     "@singularity/plugin-reports-mutation-errors": ["@singularity/plugin-reports-mutation-errors@workspace:plugins/reports/plugins/mutation-errors"],
 
     "@singularity/plugin-reports-noise-rules": ["@singularity/plugin-reports-noise-rules@workspace:plugins/reports/plugins/noise-rules"],
+
+    "@singularity/plugin-reports-plugin-load-errors": ["@singularity/plugin-reports-plugin-load-errors@workspace:plugins/reports/plugins/plugin-load-errors"],
 
     "@singularity/plugin-reports-render-loop": ["@singularity/plugin-reports-render-loop@workspace:plugins/reports/plugins/render-loop"],
 

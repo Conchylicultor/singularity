@@ -1,8 +1,15 @@
 import { useEffect } from "react";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  useDeferredLoadState,
+  useHasLoadErrorUnder,
+  type Contribution,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { TooltipProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Button, TooltipProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   setBasePath,
   useSyncPaneRegistry,
@@ -17,6 +24,7 @@ import {
 } from "@plugins/apps-core/web";
 import { TabsProvider, useTabs } from "@plugins/apps-core/plugins/tabs/web";
 import { AppTabsBody } from "@plugins/apps-core/plugins/tab-surface/web";
+import { shouldRedirectToDefaultApp } from "../internal/redirect-gate";
 
 /** Replace the URL and notify the router/pathname subscribers. */
 function redirectTo(url: string) {
@@ -69,20 +77,48 @@ export function AppsLayout() {
   const activeApp = useActiveApp();
   const pathname = usePathname();
   const apps = Apps.App.useContributions();
+  const { deferredComplete } = useDeferredLoadState();
+  // Coarse by design: when ANY app shell's subtree failed to load, the URL→app
+  // mapping is unknowable (a failed shell never registered its path), so a load
+  // error anywhere under the apps tier suppresses the destructive redirect. The
+  // safe failure direction — preserve the URL, show the error surface.
+  const anyAppShellLoadError = useHasLoadErrorUnder("apps/plugins/");
 
   const matchedId = activeApp?.id;
   const defaultPath = defaultApp(apps)?.path;
 
-  // Any path that matches no app — the bare root `/`, or a stale deep link whose
-  // app was removed — redirects to the default app (the one declaring
-  // `default: true`, else the only/first registered app). Every app owns its
-  // `path` prefix and emits full-path deep links under it (e.g. `/agents/c/:id`),
-  // so a resolvable URL always matches an app directly; there is no catch-all
-  // app. Runs before the tabs surface mounts, normalizing the URL the seed tab
-  // reads. No-ops when no apps are registered (nothing to redirect to).
+  // Canonicalize a path that matches no app to the default app (the one declaring
+  // `default: true`, else the only/first registered app). This is the ONLY raw
+  // `replaceState` redirect in the app, and it is DESTRUCTIVE — it overwrites the
+  // address bar — so it must never fire on a URL that could still resolve.
+  //
+  // - Bare `/` ⇒ redirect immediately: there is nothing to destroy, and this
+  //   keeps the common cold-start instant.
+  // - A non-bare unmatched path ⇒ redirect ONLY once the deferred tier has
+  //   SETTLED and no app shell failed to load. While loading, an app shell whose
+  //   `path` owns this URL may still register; redirecting now would wipe a valid
+  //   deep link. If a shell failed, we render an error surface instead of ever
+  //   destroying the URL (see the suppressed-surface branch below).
   useEffect(() => {
-    if (!matchedId && defaultPath) redirectTo(defaultPath);
-  }, [pathname, matchedId, defaultPath]);
+    if (
+      shouldRedirectToDefaultApp({
+        matched: !!matchedId,
+        hasDefault: !!defaultPath,
+        isBareRoot: pathname === "/",
+        deferredComplete,
+        anyAppShellLoadError,
+      })
+    ) {
+      redirectTo(defaultPath!);
+    }
+  }, [pathname, matchedId, defaultPath, deferredComplete, anyAppShellLoadError]);
+
+  // While the redirect is suppressed for a non-bare unmatched path, show a
+  // loading (still settling) or error (a shell failed) surface in the tabs area
+  // instead of letting the seed tab paint the default app at the wrong URL.
+  const suppressed = !matchedId && !!defaultPath && pathname !== "/";
+  const showLoadError = suppressed && deferredComplete && anyAppShellLoadError;
+  const showLoading = suppressed && !deferredComplete;
 
   const basePath = activeApp?.path ?? "";
 
@@ -113,11 +149,43 @@ export function AppsLayout() {
           <TabBarHost />
           {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible fill leaf below the rigid tab bar; bounds the framed surface's own scroll */}
           <div className="min-h-0 min-w-0 flex-1">
-            <FramedSurface />
+            {showLoadError ? (
+              <AppLoadErrorSurface />
+            ) : showLoading ? (
+              <Center className="size-full">
+                <Loading variant="spinner" label="Loading…" />
+              </Center>
+            ) : (
+              <FramedSurface />
+            )}
           </div>
         </Stack>
       </TabsProvider>
     </TooltipProvider>
+  );
+}
+
+/**
+ * Shown in the tabs area when the default-app redirect is suppressed because an
+ * app shell failed to load (settled + unhealthy). We never destroy the URL in
+ * this state, so the user gets a plain Retry (full reload) instead of a silent
+ * jump to the homepage. Mirrors the route-fallback plugin's app-load-error copy.
+ */
+function AppLoadErrorSurface() {
+  return (
+    <Center className="size-full">
+      <Stack gap="sm" align="center">
+        <Stack gap="2xs" align="center">
+          <Text variant="heading">Couldn't load the app</Text>
+          <Text variant="body" tone="muted">
+            Part of the app failed to load. Reloading usually fixes it.
+          </Text>
+        </Stack>
+        <Button variant="outline" onClick={() => location.reload()}>
+          Retry
+        </Button>
+      </Stack>
+    </Center>
   );
 }
 

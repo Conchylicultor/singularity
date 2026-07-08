@@ -14,6 +14,7 @@ import {
   createPaneStore,
   parseUrl,
   setLiveStore,
+  type ParsedRoute,
   type PaneSlot,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
@@ -36,6 +37,7 @@ import {
   type PersistedTab,
   type Tab,
 } from "./tabs-store";
+import { isDeadUnresolvedLink, loadScopePrefixFor } from "./load-scope";
 
 export interface TabsApi {
   tabs: Tab[];
@@ -194,6 +196,12 @@ function rebuildBackgroundTab(persisted: PersistedTab, apps: AppList): Tab {
   const store = makeBackgroundStore(persisted.appId, apps);
   if (persisted.route.length > 0) {
     store.restoreRoute(persisted.route);
+  } else if (persisted.rawPath) {
+    // A backgrounded PENDING tab (empty route + a non-empty rawPath it was
+    // waiting to resolve) survives the reload as pending — re-seed it so the tab
+    // reopens on its unresolved URL, not blank. A bare-root tab (rawPath "") is
+    // falsy here and correctly stays a resolved-empty index.
+    store.seedPending(persisted.rawPath);
   }
   return {
     tabId: persisted.tabId,
@@ -210,18 +218,33 @@ interface BootState {
 }
 
 /**
+ * What a tab is seeded with when it is activated (made the live focused tab).
+ * `route` is a resolved cross-app deep link; `pending` is a not-yet-resolvable
+ * URL (its pane's plugin is still loading). Absent target = a plain focus switch
+ * that keeps whatever route the tab already holds.
+ */
+type ActivateTarget =
+  | { kind: "route"; route: PaneSlot[] }
+  | { kind: "pending"; rawPath: string };
+
+/**
  * Construct the initial tab set exactly once: restore from sessionStorage, or
  * seed a single tab from the current URL's app. Pure store construction only —
  * the live-store wiring side-effect runs separately in a one-time effect.
  */
-function bootTabs(apps: AppList, seedAppId: string): BootState {
+export function bootTabs(apps: AppList, seedAppId: string): BootState {
   // The current URL — not the persisted focus — is authoritative for which
   // app/pane is focused on load. Resolve it up front (same source of truth as
   // the cross-app `navigate()`), so a reload or deep link always lands on the
   // URL's app, never the last-focused app from a previous session.
   const resolved = resolveAppForPath(window.location.pathname, apps);
   const urlAppId = resolved?.app.id ?? seedAppId;
-  const urlRoute = resolved ? (parseUrl(resolved.routePath) ?? []) : [];
+  // Parse the URL into the tri-state route. A URL that matches no app (bare `/`,
+  // or a stale link — apps-layout redirects it) is treated as a bare-root match,
+  // preserving the historical "empty route ⇒ index" behavior for the seed tab.
+  const parsed: ParsedRoute = resolved
+    ? parseUrl(resolved.routePath)
+    : { status: "matched", slots: [] };
 
   // Rebuild every persisted tab as a background tab. Keep-alive must survive a
   // reload, so no other app's tab is dropped; the focused tab is chosen and made
@@ -250,11 +273,31 @@ function bootTabs(apps: AppList, seedAppId: string): BootState {
   // Promote the chosen tab to the live focused tab, hydrating its route from the
   // address bar (the URL wins over the tab's own persisted route). Seed while
   // still background so it's an in-memory update with no spurious history entry,
-  // then flip it live.
+  // then flip it live. Four branches over the tri-state parse:
+  //
+  //   1. matched, non-empty  ⇒ the registry already has these panes; restore them.
+  //   2. matched, empty      ⇒ a genuine bare app root ⇒ index.
+  //   3. unresolved, but the persisted focused tab held a non-empty route for
+  //      THIS exact URL (a plain reload of the same deep link) ⇒ restore the
+  //      persisted slots INSTANTLY — no spinner, no wait for the deferred tier.
+  //   4. unresolved, anything else (a different / never-seen deep link) ⇒ seed a
+  //      pending route so the fallback surface shows a spinner until the pane's
+  //      plugin loads (or a not-found once loading settles), never a stale pane.
   const focused = tabs[focusIdx]!;
   focused.store.setBasePath(appPathFor(focused.appId, apps));
-  if (urlRoute.length > 0) focused.store.restoreRoute(urlRoute);
-  else focused.store.clearRoute();
+  const persistedFocused = persisted?.tabs.find((t) => t.tabId === focused.tabId);
+  if (parsed.status === "matched" && parsed.slots.length > 0) {
+    focused.store.restoreRoute(parsed.slots);
+  } else if (parsed.status === "matched") {
+    focused.store.clearRoute();
+  } else if (
+    persistedFocused?.route.length &&
+    persistedFocused.rawPath === parsed.rawPath
+  ) {
+    focused.store.restoreRoute(persistedFocused.route);
+  } else {
+    focused.store.seedPending(parsed.rawPath);
+  }
   focused.store.live = true;
 
   // Restore the persisted surface mode, or fall back to the registry default
@@ -367,23 +410,36 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
 
   /**
    * Flip liveness from the current focused store onto `next` and mirror its
-   * route into the URL. When `targetRoute` is given (cross-app navigation), it
-   * is seeded into the still-background store FIRST — a background `setRoute` is
-   * an in-memory-only update (no history op), so the single live mirror below
-   * lands directly on the target URL in one `replaceState`, with no stray
-   * intermediate entry at the bare app root and no double event dispatch.
+   * route into the URL. When `target` is given (cross-app navigation), it is
+   * seeded into the still-background store FIRST — a background seed is an
+   * in-memory-only update (no history op), so the single live mirror below lands
+   * directly on the target URL in one `replaceState`, with no stray intermediate
+   * entry at the bare app root and no double event dispatch.
+   *
+   * The URL mirror is derived from the store's CURRENT state, not from `target`:
+   * a resolved route is asserted via `setRoute`, a pending (unresolved) one via
+   * `navigatePending`. Deriving from state is load-bearing for the no-target
+   * focus switch — focusing a background PENDING tab must re-assert its pending
+   * URL, NOT `setRoute([])` an empty resolved route over it (which would wipe the
+   * pending state and jump the address bar to the bare app root).
    */
-  const activate = useCallback((next: Tab, targetRoute?: PaneSlot[]) => {
+  const activate = useCallback((next: Tab, target?: ActivateTarget) => {
     const current = tabsRef.current.find((t) => t.tabId === focusedRef.current);
     if (current && current.tabId !== next.tabId) current.store.live = false;
     next.store.setBasePath(appPathFor(next.appId, appsRef.current));
-    // Seed the target route while still background (in-memory only).
-    if (targetRoute) next.store.setRoute(targetRoute);
+    // Seed the target while still background (in-memory only, no history op).
+    if (target?.kind === "route") next.store.setRoute(target.route);
+    else if (target?.kind === "pending") next.store.seedPending(target.rawPath);
     next.store.live = true;
     setLiveStore(next.store);
-    // Assert the (now possibly seeded) in-memory route into the URL so it
-    // mirrors the focused tab and `useActiveApp` (URL-driven) resolves to it.
-    next.store.setRoute(next.store.getRoute(), /* replace */ true);
+    // Mirror the (now possibly seeded) in-memory route into the URL so it matches
+    // the focused tab and `useActiveApp` (URL-driven) resolves to it.
+    const state = next.store.getRouteState();
+    if (state.kind === "unresolved") {
+      next.store.navigatePending(state.rawPath, /* replace */ true);
+    } else {
+      next.store.setRoute(state.slots, /* replace */ true);
+    }
   }, []);
 
   const focusTab = useCallback(
@@ -435,7 +491,31 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       nextTabs[idx] = tab;
       tabsRef.current = nextTabs;
       setTabs(nextTabs);
-      activate(tab, route);
+      activate(tab, { kind: "route", route });
+      focusedRef.current = tabId;
+      setFocusedTabId(tabId);
+      persist();
+    },
+    [activate, persist],
+  );
+
+  // Cross-app twin of `replaceTabAppWithRoute` for a not-yet-resolvable deep
+  // link: swap the focused tab to `appId` and seed a PENDING route (rawPath) so
+  // the URL is preserved and the fallback surface shows a spinner until the
+  // target pane's plugin loads. Same fresh-background-store → activate → focus
+  // shape, so the focused tab's appId never drifts from the URL.
+  const replaceTabAppWithPending = useCallback(
+    (tabId: string, appId: string, rawPath: string) => {
+      const idx = tabsRef.current.findIndex((t) => t.tabId === tabId);
+      if (idx < 0) return;
+      tabsRef.current[idx]!.store.live = false;
+      const store = makeBackgroundStore(appId, appsRef.current);
+      const tab: Tab = { tabId, appId, store };
+      const nextTabs = [...tabsRef.current];
+      nextTabs[idx] = tab;
+      tabsRef.current = nextTabs;
+      setTabs(nextTabs);
+      activate(tab, { kind: "pending", rawPath });
       focusedRef.current = tabId;
       setFocusedTabId(tabId);
       persist();
@@ -465,8 +545,32 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
           `navigate(): no registered app owns path "${pathname}" — the link is unrooted or points to an unregistered app`,
         );
       }
-      const route = parseUrl(resolved.routePath) ?? [];
+      const parsed = parseUrl(resolved.routePath);
       const focused = tabsRef.current.find((t) => t.tabId === focusedRef.current);
+      if (parsed.status === "unresolved") {
+        // The path resolves to no registered pane RIGHT NOW. If the deferred tier
+        // has settled AND nothing under this app's subtree failed to load, the
+        // pane will never appear — the link is dead (a stale link, or a pane that
+        // loaded without registering). Throw, mirroring the unmatched-app throw
+        // above: an uncaught error here is caught by the global crash collector
+        // and filed as a deduped report+task, so a dead deep link surfaces loudly
+        // rather than seeding a route that spins forever. Otherwise the pane may
+        // still arrive (tier loading) or its app failed to load (error surface) —
+        // seed a pending route so the URL is preserved and the fallback renders.
+        const prefix = loadScopePrefixFor(resolved.app._pluginId);
+        if (isDeadUnresolvedLink(prefix)) {
+          throw new Error(
+            `navigate(): path "${pathname}" resolves to no registered pane in app "${resolved.app.id}" — the link is dead (deferred load settled with no load error under "${prefix || "<app root>"}")`,
+          );
+        }
+        if (focused && focused.appId === resolved.app.id) {
+          focused.store.navigatePending(parsed.rawPath);
+          return;
+        }
+        replaceTabAppWithPending(focusedRef.current, resolved.app.id, parsed.rawPath);
+        return;
+      }
+      const route = parsed.slots;
       if (focused && focused.appId === resolved.app.id) {
         // Already on this app — set the route on its live store (normal push,
         // preserving a back target).
@@ -478,7 +582,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       // consistent with the rail's in-place app switch.
       replaceTabAppWithRoute(focusedRef.current, resolved.app.id, route);
     },
-    [replaceTabAppWithRoute],
+    [replaceTabAppWithRoute, replaceTabAppWithPending],
   );
 
   // Push focus changes into the shortcuts focused-surface signal (push-based, no

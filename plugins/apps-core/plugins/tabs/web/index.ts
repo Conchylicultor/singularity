@@ -11,6 +11,7 @@ export {
   type TabsApi,
 } from "./internal/use-tabs";
 export { appPathFor, appContributionFor, type Tab } from "./internal/tabs-store";
+export { loadScopePrefixFor } from "./internal/load-scope";
 export {
   registerPlacementCapabilities,
   getDefaultPlacement,

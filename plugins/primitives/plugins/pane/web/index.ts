@@ -12,6 +12,7 @@ export {
   getBasePath,
   stripBasePath,
   useRoute,
+  useRouteState,
   usePaneTitle,
   useIndexMatch,
   usePathname,
@@ -33,6 +34,7 @@ export {
   PaneSurfaceProvider,
   PaneSurfaceAppContext,
   useSurfaceAppId,
+  PaneLoadScopeContext,
 } from "./pane";
 export type {
   PaneObject,
@@ -46,6 +48,8 @@ export type {
   PaneInternal,
   PaneInput,
   PaneSlot,
+  ParsedRoute,
+  RouteState,
   PaneOpenMode,
   OpenPaneFn,
   ResolveHook,

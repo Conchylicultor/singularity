@@ -1,5 +1,10 @@
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
-import type { PaneInput, PaneSlot, PaneStore } from "@plugins/primitives/plugins/pane/web";
+import {
+  stripBasePath,
+  type PaneInput,
+  type PaneSlot,
+  type PaneStore,
+} from "@plugins/primitives/plugins/pane/web";
 import type { Placement } from "@plugins/apps-core/core";
 import type { ActiveApp } from "@plugins/apps-core/web";
 
@@ -42,6 +47,19 @@ export interface PersistedTab {
   tabId: string;
   appId: string;
   route: PersistedSlot[];
+  /**
+   * The tab's current app-relative URL path, normalized SLASH-TRIMMED (no
+   * leading/trailing slash; `""` for a bare app root) — the same normalization
+   * `parseUrl` applies to a URL before matching (see {@link normalizeRawPath}).
+   * Persisted for EVERY tab and used as the cold-boot discriminator: a resolved
+   * tab stores the URL its `route` maps to, while a pending (unresolved) tab
+   * stores `route: []` plus the rawPath it is waiting to resolve. On the next
+   * boot, `bootTabs` compares this against the address bar — an exact match on
+   * the focused tab restores its persisted `route` instantly (no spinner, no
+   * registry), while a mismatch seeds a pending route instead of showing a stale
+   * pane. Optional so payloads written before this field load unchanged.
+   */
+  rawPath?: string;
 }
 
 export interface PersistedTabs {
@@ -71,6 +89,48 @@ export function serializeRoute(store: PaneStore): PersistedSlot[] {
 }
 
 /**
+ * The single rawPath normalization for the persisted-tabs discriminator: strip
+ * leading/trailing slashes, mapping the bare root ("/" or "") to "". Byte-for-byte
+ * the same normalization `parseUrl` applies (its `rawPath` output), so a persisted
+ * rawPath compares equal to `parseUrl(...).rawPath` for the same URL.
+ */
+function normalizeRawPath(path: string): string {
+  return path === "/" ? "" : path.replace(/^\/+|\/+$/g, "");
+}
+
+/**
+ * The app-relative rawPath to persist for a tab, normalized as
+ * {@link normalizeRawPath}. Derivation avoids `buildRouteUrl` (which throws on a
+ * pane that is not registered yet — routine during the deferred-load window when
+ * a background tab's app has not loaded):
+ *
+ * - **unresolved (pending)** ⇒ the store's own `rawPath`.
+ * - **resolved bare root** ⇒ `""`.
+ * - **resolved, live (focused) tab** ⇒ derived from the address bar: the live
+ *   store's URL mirrors its resolved route, so the app-relative pathname IS the
+ *   rawPath `buildRouteUrl(route)` would produce — but without touching the pane
+ *   registry, so it never throws even for an instant-restored deep link whose
+ *   panes have not loaded yet.
+ * - **resolved, background tab** ⇒ carry forward the previously-persisted rawPath.
+ *   A background tab's route is immutable while unfocused, so its rawPath still
+ *   describes it; rebuilding from its (possibly unregistered) panes would throw.
+ */
+function rawPathForTab(
+  tab: Tab,
+  prevRawByTab: ReadonlyMap<string, string | undefined>,
+): string | undefined {
+  const state = tab.store.getRouteState();
+  if (state.kind === "unresolved") return state.rawPath;
+  if (state.slots.length === 0) return "";
+  if (tab.store.live) {
+    return normalizeRawPath(
+      stripBasePath(window.location.pathname, tab.store.getBasePath()),
+    );
+  }
+  return prevRawByTab.get(tab.tabId);
+}
+
+/**
  * Read the persisted tab set for this browser tab, or null if none. Throws on
  * a present-but-malformed key — we fail loud rather than silently resetting,
  * so a corruption bug surfaces instead of quietly losing the user's tabs.
@@ -95,11 +155,19 @@ export function savePersistedTabs(
   mode: Placement,
 ): void {
   if (typeof window === "undefined") return;
+  // Read the prior payload so a resolved BACKGROUND tab can carry forward its
+  // rawPath (see rawPathForTab). Safe: bootTabs already read this key once and
+  // fails loud on genuine corruption, so a present key is well-formed here.
+  const prev = loadPersistedTabs();
+  const prevRawByTab = new Map<string, string | undefined>(
+    (prev?.tabs ?? []).map((t) => [t.tabId, t.rawPath] as const),
+  );
   const payload: PersistedTabs = {
     tabs: tabs.map((t) => ({
       tabId: t.tabId,
       appId: t.appId,
       route: serializeRoute(t.store),
+      rawPath: rawPathForTab(t, prevRawByTab),
     })),
     focusedTabId,
     mode,
