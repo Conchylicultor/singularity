@@ -20,6 +20,7 @@ const KIND_CONFIG: Record<SpanKind, { label: string; bar: string; dot: string; b
   sub: { label: "Sub", bar: "bg-categorical-2", dot: "bg-categorical-2", bg: "bg-categorical-2/5" },
   push: { label: "Push", bar: "bg-categorical-3", dot: "bg-categorical-3", bg: "bg-categorical-3/5" },
   flush: { label: "Flush", bar: "bg-categorical-4", dot: "bg-categorical-4", bg: "bg-categorical-4/5" },
+  cascade: { label: "Cascade", bar: "bg-categorical-8", dot: "bg-categorical-8", bg: "bg-categorical-8/5" },
   loader: { label: "Loader", bar: "bg-categorical-5", dot: "bg-categorical-5", bg: "bg-categorical-5/5" },
   job: { label: "Job", bar: "bg-categorical-6", dot: "bg-categorical-6", bg: "bg-categorical-6/5" },
   db: { label: "DB", bar: "bg-categorical-7", dot: "bg-categorical-7", bg: "bg-categorical-7/5" },

@@ -74,7 +74,7 @@ export interface NormalizedSpans {
   lanes: NormalizedLane[];
 }
 
-const KIND_ORDER: SpanKind[] = ["http", "sub", "push", "flush", "loader", "job", "db"];
+const KIND_ORDER: SpanKind[] = ["http", "sub", "push", "flush", "cascade", "loader", "job", "db"];
 
 function clamp(v: number, lo: number, hi: number): number {
   return Math.max(lo, Math.min(hi, v));

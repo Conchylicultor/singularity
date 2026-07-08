@@ -23,7 +23,7 @@ const WINDOW_MS = 5 * 60_000;
 // recorder does not export its KINDS array). Kept in lock-step with
 // runtime-profiler's SpanKind union, which IS exported and types the threshold
 // helper below.
-const KINDS = ["http", "db", "loader", "sub", "push", "flush", "job"] as const;
+const KINDS = ["http", "db", "loader", "sub", "push", "flush", "job", "cascade"] as const;
 
 // Cap on per-op reports filed per tick, so a pathological burst across many ops
 // can never storm task creation. Shared by op-rate AND op-time per-op trips in
@@ -266,5 +266,9 @@ function kindMsBudget(kind: SpanKind, cfg: Thresholds): number {
       return cfg.dbMsPerWindow;
     case "job":
       return cfg.jobMsPerWindow;
+    // `cascade` shares the loader budget for the same reason it shares the
+    // loader rate bar in kindThreshold above: loader-class background DB work.
+    case "cascade":
+      return cfg.loaderMsPerWindow;
   }
 }
