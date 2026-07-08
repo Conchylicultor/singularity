@@ -67,11 +67,19 @@ sleepers AND hogs) — `taskpolicy -b` failures are loud on stderr; silence mean
 (1) type-check workers self-demote at their spawn site unless on branch `main` (no inheritance
 reliance); (2) `boostInteractiveQos()` — the main backend raises its event-loop thread to
 user-interactive QoS at boot, strictly `isMain()`-gated (verified 0x11→0x21 readback; gate tested
-±). Open: A/B main's p99 during the next burst; sweep pre-Jul-7 undemoted agent sessions;
-admission-control tightening (4 slots × ~8 children over-admits; memory guard is per-fleet only);
-4.2 GB unrotated `live-state.jsonl`; which timeout cuts the WS at ~10–12 s. Full evidence +
-counterfactuals + implementation →
-**[`2026-07-08-host-saturation-agent-checks-starve-main.md`](./2026-07-08-host-saturation-agent-checks-starve-main.md)**.
+±). **Second pass 2026-07-08 (containment, on branch `claude-web/att-1783531920-69mu`, not yet
+pushed):** (3) the ~10–12 s WS-cut is Bun's default 10 s **top-level `Bun.serve` `idleTimeout`**
+(runtime-confirmed: it cuts in-flight *unix* requests whose handler writes no bytes, sweep
+grid-quantized ~N+4 s → nominal 10 s = the observed cadence) — set to `idleTimeout: 60`, killing the
+reconnect/resubscribe amplifier; (4) log rotation on the log-channels substrate (128 MB cap / keep 3,
+in-memory byte-counter gate) bounds the 4 GB unrotated `live-state.jsonl`; push-check E-core latency
+**measured & cleared** (within noise on a quiet warm host — the representative push case; undemoting
+would defeat the isolation, so no change). Open: A/B main's p99 during the next burst; sweep pre-Jul-7
+undemoted agent sessions; admission-control tightening (4 slots × ~8 children over-admits; memory guard
+is per-fleet only); rate-limit the always-on live-state trace tier (the ~4 lines/s origin behind the
+log growth). Full evidence + counterfactuals + implementation →
+**[`2026-07-08-host-saturation-agent-checks-starve-main.md`](./2026-07-08-host-saturation-agent-checks-starve-main.md)**
+(+ finish plan **[`2026-07-08-host-saturation-remediation-PLAN.md`](./2026-07-08-host-saturation-remediation-PLAN.md)**).
 
 ### Git-derived loaders — `edited-files` / `commits-graph` (Ongoing)
 

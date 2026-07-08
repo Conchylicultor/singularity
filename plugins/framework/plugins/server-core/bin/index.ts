@@ -220,6 +220,14 @@ async function safeHandle(
 const endSocketBind = profilerStart("socketBind", "socketBind", "Socket Bind");
 Bun.serve<WsData>({
   unix: socketPath,
+  // Was Bun's default 10s. Under a host-saturation event-loop stall, an in-flight
+  // HTTP handler or a WS-upgrade attempt writes no bytes for >10s and Bun drops it,
+  // triggering a reconnect/resubscribe storm that amplifies the stall. This is a
+  // gateway-fronted unix-socket-only listener, so 60s still reaps genuinely dead
+  // HTTP conns within a minute while sitting above the gateway's load-scaled
+  // readiness timeout. (The live WS is separately governed by the unset,
+  // 120s-default websocket.idleTimeout — not this key.)
+  idleTimeout: 60,
   fetch(req, server) {
     const url = new URL(req.url);
 

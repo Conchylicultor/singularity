@@ -93,7 +93,27 @@ So there are two symmetric moves, and they multiply:
 
 ## Remaining open questions
 
-1. **Which timeout cuts the WS at ~10–12 s under stall?** Candidates: backend heartbeat/ping, Bun `idleTimeout`, gateway proxy read timeout. Read the timeout constants in `gateway/` and the notifications socket code (`primitives/live-state`, server WS route). Would raise the feedback-loop mechanism to ~certain.
+1. **~~Which timeout cuts the WS at ~10–12 s under stall?~~ ANSWERED (2026-07-08):**
+   Bun's **top-level `Bun.serve` `idleTimeout`, default 10 s** — *not* the WS
+   heartbeat (20 s, `runtime.ts:895` — a ping scheduler that closes nothing), the
+   nested `websocket.idleTimeout` (120 s default, unset — empirically confirmed
+   NOT to trip an already-upgraded WS in 10–12 s), the client (no no-ping
+   watchdog; purely reactive reconnect), or the gateway (raw `io.Copy` on the WS
+   relay, no deadline). Bun's docs: a connection is idle when *"no data is being
+   sent or received, **including in-flight requests where your handler is still
+   running but hasn't written any bytes**"* — the exact stalled-event-loop shape.
+   The `reverse proxy error: EOF` lines come from `newReverseProxy`'s
+   `ErrorHandler` (`gateway/worktree.go:1226`), wired to the **HTTP** path only;
+   WS reconnect attempts are new HTTP upgrade requests subject to the same 10 s
+   timer, so they track the same cadence. **Runtime-confirmed** with a direct
+   probe on the installed Bun 1.3.13: an in-flight request on a `unix:` listener
+   whose handler was pending 5 s (writing no bytes) under `idleTimeout: 2` was cut
+   at **4.1 s** (Bun's idle sweep is grid-quantized ~4 s, so nominal N fires in
+   ~(N, N+4] — nominal 10 s → ~10–14 s, matching the observed ~10–12 s). A
+   fully-idle socket that never sends a request byte is NOT cut (the HTTP idle
+   timer arms per in-flight request), so only proxied requests are affected — but
+   every gateway request is exactly that. **Fixed** (see second-pass implemented
+   block below).
 2. **Precise onset date** — Jun 11 (`ed1c73fa9`, type-check parallel worker fleet, ~4× instantaneous CPU per run) is the best dated candidate, but surviving telemetry starts after it; a gradual ramp crossing the CPU ceiling mid-June fits equally well. Doesn't change remediation.
 3. **Was every past episode this signature?** If an episode exists with an idle host, there's a second cause not covered here.
 
@@ -133,6 +153,56 @@ grep 'reverse proxy error' ~/.singularity/logs/gateway.log | tail
    The boost's real-world effect on main's p99 under a burst still needs an
    A/B measurement after it reaches main.
 
-Not yet done: pre-Jul-7 session sweep (item 2 of the remediation list),
-admission-control tightening (item 4), log rotation (item 5), and the WS-cut
-timeout identification (open question 1).
+## Implemented (2026-07-08, second pass — branch `claude-web/att-1783531920-69mu`)
+
+Companion plan: [`2026-07-08-host-saturation-remediation-PLAN.md`](./2026-07-08-host-saturation-remediation-PLAN.md).
+All three below are **containment** (remove the amplifier / bound the growth), not
+cures for the host saturation itself (that is the priority-isolation work above +
+the still-deferred admission-control tightening).
+
+3. **WS-cut containment — explicit `Bun.serve` `idleTimeout`** (open question 1's
+   fix). `plugins/framework/plugins/server-core/bin/index.ts:230` now sets
+   `idleTimeout: 60` (was Bun's 10 s default). A transient event-loop stall no
+   longer drops in-flight HTTP handlers and WS-upgrade attempts at ~10 s →
+   removes the reconnect/resubscribe storm (each reconnect replayed ~116 subs
+   into the starved backend). A gateway-fronted unix-socket listener, so 60 s
+   still reaps genuinely dead HTTP conns within a minute; the live WS stays on
+   the unset 120 s `websocket.idleTimeout`. Needed a one-line `@types/bun` module
+   augmentation (`bin/bun-serve-augment.d.ts`) because the type declares the
+   top-level `idleTimeout` only on the TCP branch, not `unix` — the type is too
+   narrow; runtime honors it on unix (proven by the probe above).
+4. **Log rotation on the log-channels substrate.**
+   `plugins/primitives/plugins/log-channels/server/internal/persist.ts` — every
+   persisted line funnels through `appendEntry`, which had zero size management
+   (`live-state.jsonl` reached ~4 GB). Now size-gated by an in-memory per-file
+   byte counter (no `statSync` per append on this synchronous hot path): rotate at
+   a 128 MB cap, keep 3 files named `channel.jsonl.N` (suffix after `.jsonl` so
+   `listChannels`' `endsWith(".jsonl")` filter excludes them). ENOENT-tolerant,
+   rethrows anything else. Hermetic `bun:test` (`persist.test.ts`, 4/4 pass).
+   **Boundary invariant** (no channel grows unbounded, for any writer). The
+   *origin* — the always-on live-state transition/drop tracing (`trace()` →
+   `clientLog("live-state", …)`, `notifications-client.ts:24`) emitting ~4 lines/s
+   at fleet scale (the high-volume per-apply line IS correctly gated behind
+   `localStorage["liveState.verboseTrace"]`; the transition tier is not) — is a
+   noted follow-up (rate-limit/summarize `sendSub`/`sub-ack`/`drop` per
+   `replaySubs` batch), NOT addressed here; rotation is the disk-growth fix.
+
+**Push-check latency on E-cores — measured, NO fix needed (was a remediation-list
+concern).** `workerDemotion()` demotes type-check workers for any non-main branch,
+which includes user-waited `push` checks. A/B (demoted vs
+`SINGULARITY_NO_SPAWN_PRIORITY=1`, the built-in harness): on a **quiet host, warm
+cache (the representative push case — a push always follows a build), demoted vs
+undemoted is within noise (~0–9 %, ~3.1–3.5 s)** across 4+ interleaved pairs.
+Runs that showed a large delta (54.7 s / 45.5 s demoted vs ~5–17 s undemoted) were
+**confounded** — the demoted run happened to start mid-burst (load 14–18, 4
+competing worker fleets) while its undemoted pair ran quiet; the gap is ambient
+contention, not a clean demotion penalty. Conclusion: push-check latency is
+acceptable; the rare burst-time slowdown is the deliberate isolation trade-off,
+and undemoting push checks would re-introduce main-backend starvation from the
+push's own 4-worker fleet — the exact thing the priority isolation fixes. The
+lever for burst-time push latency is admission-control tightening (deferred item
+4), not undemotion. No code change.
+
+Still not done: pre-Jul-7 session sweep (item 2), admission-control tightening
+(item 4), and the A/B validation of the two first-pass fixes under a live burst
+(needs a saturation burst; deferred — see the plan doc's "Out of scope").
