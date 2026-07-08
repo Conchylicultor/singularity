@@ -1,18 +1,21 @@
 import { z } from "zod";
+import { SPAN_KINDS } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { SpanKind, FlightWindow } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { TraceSnapshot } from "@plugins/debug/plugins/trace/plugins/engine/core";
 
 // Web-side zod mirror of the profiler's FlightWindow. The detail endpoint
 // validates the whole snapshot (events as an opaque classId→unknown record), so
 // the spans section is NOT re-validated per-class on read — this parses it
-// loudly here instead of casting `unknown`. Pinned to the source type by the
-// compile-time assertion below (the same discipline the server class file uses).
+// loudly here instead of casting `unknown`. The `kind` enum is DERIVED from the
+// recorder's single SPAN_KINDS source (not hand-written) so a new span kind can
+// never silently drift out and drop the whole section on parse.
+const spanKindSchema = z.enum(SPAN_KINDS);
 const SpanRefSchema = z.object({
-  kind: z.enum(["http", "db", "loader", "sub", "push", "flush", "job"]),
+  kind: spanKindSchema,
   label: z.string(),
 });
 const FlightSpanSchema = z.object({
-  kind: z.enum(["http", "db", "loader", "sub", "push", "flush", "job"]),
+  kind: spanKindSchema,
   label: z.string(),
   t0: z.number(),
   t1: z.number().nullable(),

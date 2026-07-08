@@ -1,21 +1,26 @@
 import { z } from "zod";
 import {
   captureFlightWindow,
+  SPAN_KINDS,
   type FlightWindow,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineTraceEventClass } from "@plugins/debug/plugins/trace/plugins/engine/server";
 
 // Zod mirror of the profiler's FlightWindow (open + recently-completed spans).
-// The `kind` enum is pinned to SpanKind by the compile-time assertion below, so
-// if the profiler adds a span kind, tsc forces this schema to keep up — the
-// boot-profile pinned-mirror discipline.
+// The `kind` enum is DERIVED from the recorder's single SPAN_KINDS source, not
+// hand-written, so a new span kind can never silently drift out of this schema.
+// (A hand-mirrored enum passed tsc — the compile-time guard below only checks
+// the schema is assignable TO FlightWindow, so a narrower enum slipped through —
+// but rejected `cascade` at runtime. Deriving ends that failure mode.)
+const spanKindSchema = z.enum(SPAN_KINDS);
+
 const SpanRefSchema = z.object({
-  kind: z.enum(["http", "db", "loader", "sub", "push", "flush", "job"]),
+  kind: spanKindSchema,
   label: z.string(),
 });
 
 const FlightSpanSchema = z.object({
-  kind: z.enum(["http", "db", "loader", "sub", "push", "flush", "job"]),
+  kind: spanKindSchema,
   label: z.string(),
   t0: z.number(),
   t1: z.number().nullable(), // null => still open at capture

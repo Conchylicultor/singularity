@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   getRuntimeProfile,
+  SPAN_KINDS,
   type SpanKind,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
@@ -19,11 +20,10 @@ type Thresholds = ConfigValues<(typeof opRateConfig)["fields"]>;
 // per-kind threshold, so cron skew never changes correctness.
 const WINDOW_MS = 5 * 60_000;
 
-// The span kinds the runtime profiler tracks, re-derived locally as a const (the
-// recorder does not export its KINDS array). Kept in lock-step with
-// runtime-profiler's SpanKind union, which IS exported and types the threshold
-// helper below.
-const KINDS = ["http", "db", "loader", "sub", "push", "flush", "job", "cascade"] as const;
+// The span kinds the runtime profiler tracks — the recorder's single SPAN_KINDS
+// source, iterated here to fan the per-op deltas across every kind. Not
+// hand-mirrored, so a newly added kind is monitored with zero edits here.
+const KINDS = SPAN_KINDS;
 
 // Cap on per-op reports filed per tick, so a pathological burst across many ops
 // can never storm task creation. Shared by op-rate AND op-time per-op trips in
