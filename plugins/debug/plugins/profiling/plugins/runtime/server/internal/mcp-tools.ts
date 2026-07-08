@@ -2,10 +2,12 @@ import { z } from "zod";
 import { basename } from "path";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import { type SpanKind, waitSplit } from "@plugins/infra/plugins/runtime-profiler/core";
+import { type SpanKind, SPAN_KINDS, waitSplit } from "@plugins/infra/plugins/runtime-profiler/core";
 import { runtimeProfileSchema } from "../../shared/endpoints";
 
-const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push", "flush", "job"];
+// The filter enum is SPAN_KINDS + the "all" sentinel, derived from the single
+// source so a new kind never drifts out of the tool's filter (see SPAN_KINDS).
+const KIND_FILTER = [...SPAN_KINDS, "all"] as const;
 
 // This tool proxies to arbitrary worktree backends, which may still run code
 // predating the wall-clock-decomposition fields. Backfill the missing numerics
@@ -43,7 +45,7 @@ export const runtimeProfileTool = Mcp.tool({
   name: "get_runtime_profile",
   description: `Slowest HTTP routes, DB queries, and live-state loaders in a worktree's server (in-memory window since last reset). Use to debug app/page slowness, N+1 patterns, and queueing/head-of-line blocking. Aggregates are sorted by \`recentMaxMs\` (max within a rolling ~5-min window — "is it slow NOW"); \`maxMs\` is the since-boot peak and \`maxAgeMs\` how long ago it was set, so an old spike reads as old instead of a live problem. Each db/loader aggregate includes a \`byParent\` breakdown attributing it to the enclosing request/loader that issued it, and each \`slowest\` span carries its immediate \`parent\`.
 
-Kinds: \`http\` (routes; the span encloses the per-route dedupe/concurrency gates, so its wall-clock matches client-observed latency), \`db\` (queries + the pool \`[acquire]\` connect-wait), \`loader\` (live-state resource loads), the origin entries \`sub\` (a tab subscribed) / \`push\` (a notify cascade) that trigger loaders — a loader's \`parent\` names which one triggered it — and \`job\` (background queue jobs). \`flush\` is the live-state notify-flush cycle (\`flushNotifies\`): its \`byParent\` names which resource dominated a cycle (head-of-line), and \`push\` carries \`deliver:<key>\` leaves whose duration is the first-notify→send delivery latency (the "UI is stale" window) for that resource.
+Kinds: \`http\` (routes; the span encloses the per-route dedupe/concurrency gates, so its wall-clock matches client-observed latency), \`db\` (queries + the pool \`[acquire]\` connect-wait), \`loader\` (live-state resource loads), the origin entries \`sub\` (a tab subscribed) / \`push\` (a notify cascade) that trigger loaders — a loader's \`parent\` names which one triggered it — and \`job\` (background queue jobs). \`flush\` is the live-state notify-flush cycle (\`flushNotifies\`): its \`byParent\` names which resource dominated a cycle (head-of-line), and \`push\` carries \`deliver:<key>\` leaves whose duration is the first-notify→send delivery latency (the "UI is stale" window) for that resource. \`cascade\` is a dependsOn edge's ids-translation reads (a scoped cascade's \`signature\`/\`affectedMap\` queries) run inside the flush; its label is the downstream resource key the edge feeds, and it is gated like a loader (routes through \`loader-acquire\`) but does not contribute to any resource's read-set.
 
 Wall-clock decomposition: EVERY entry — including composite ones like \`flush\` — decomposes its per-call time into \`waitMs\` (time covered by named gate/pool waits at ANY depth of its subtree; gate waits propagate to every open ancestor as an interval UNION over the entry's own timeline, so waitMs ≤ wall even with many concurrent waiters), \`childMs\` (time covered by direct-child entries), and \`selfMs\` (the remainder — own orchestration; on composite spans a conservative upper bound of own work). The \`waits\` map names each gate layer's union ms. Reading a composite: a flush with \`childMs\` ≈ avg, \`waits\` naming \`loader-acquire\`/\`db-acquire\`, and small \`selfMs\` spent its wall awaiting gate-blocked children — it did no work itself. Reading a leaf: mostly \`waitMs\` = head-of-line-blocked (the op itself is fast); mostly \`selfMs\` = genuinely slow.
 
@@ -52,7 +54,7 @@ Wait layers: \`loader-acquire\` (per-backend DB loader gate slot), \`db-acquire\
 Default: profiles the current conversation's worktree server. Pass \`worktree\` to target a different worktree (e.g. "att-1778089188-7uvf" or "singularity" for main).`,
   inputSchema: {
     kind: z
-      .enum(["http", "db", "loader", "sub", "push", "flush", "job", "all"])
+      .enum(KIND_FILTER)
       .optional()
       .describe('Span kind to filter. Defaults to "all".'),
     limit: z
@@ -95,7 +97,7 @@ Default: profiles the current conversation's worktree server. Pass \`worktree\` 
     }
     const profile = runtimeProfileSchema.parse(backfillStaleProfile(await res.json()));
     const targetKinds: readonly SpanKind[] =
-      kind === "all" ? KINDS : [kind as SpanKind];
+      kind === "all" ? SPAN_KINDS : [kind as SpanKind];
 
     interface ParentRow {
       parentKind: SpanKind;

@@ -19,6 +19,7 @@ export {
   captureFlightWindow,
   registerGateGauge,
   readGateGauges,
+  SPAN_KINDS,
   __contribute,
 } from "./recorder";
 export type {

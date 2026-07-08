@@ -63,7 +63,34 @@
 // `job` is a top-level background-work entry recorded around each
 // graphile-worker `job.run()`, analogous to `http` but triggered by the queue
 // rather than an incoming request; its label is the job name.
-export type SpanKind = "http" | "db" | "loader" | "sub" | "push" | "flush" | "job";
+// `cascade` is an origin entry (sibling to `sub`/`push`) recorded around a
+// dependsOn edge's `signature`/`affectedMap` DB reads — the ids-translation work
+// a scoped cascade runs to compute which downstream rows a change touched. It
+// exists so those reads (a) route through the loader DB gate like a loader and
+// (b) are attributed as their own kind in the profiler, instead of running
+// unmeasured and ungated under the enclosing `flush` entry. Its label is the
+// downstream resource key the edge feeds. Deliberately NOT a `loader` kind: edge
+// reads are a cascade mechanism, not the downstream's value dependencies, so they
+// must NOT enter the loader read-set index (that would create false silent-FULL
+// flags). See research/2026-07-07-global-read-set-notifications-attribution-noise.md.
+//
+// SINGLE SOURCE OF TRUTH: `SPAN_KINDS` is the one enumeration of every span kind.
+// `SpanKind`, this module's iteration set, the MCP tool's filter, and the
+// endpoint response's zod enum are all DERIVED from it — so adding a kind here
+// updates every mirror at once. (The `Record<SpanKind, …>` literals below are
+// tsc-enforced to be exhaustive, so they need no derivation.) Do not hand-write a
+// parallel list of kinds anywhere.
+export const SPAN_KINDS = [
+  "http",
+  "db",
+  "loader",
+  "sub",
+  "push",
+  "flush",
+  "job",
+  "cascade",
+] as const;
+export type SpanKind = (typeof SPAN_KINDS)[number];
 
 /** A reference to an enclosing entry point (the immediate parent of a span). */
 export interface SpanRef {
@@ -180,7 +207,7 @@ const SLOWEST_CAP = 50;
 const BUCKET_MS = 30_000;
 const WINDOW_BUCKETS = 10;
 
-const KINDS: readonly SpanKind[] = ["http", "db", "loader", "sub", "push", "flush", "job"];
+const KINDS: readonly SpanKind[] = SPAN_KINDS;
 
 // --- Injected clock ---
 
@@ -382,6 +409,7 @@ const aggregates: Record<SpanKind, Map<string, AggregateInternal>> = {
   push: new Map(),
   flush: new Map(),
   job: new Map(),
+  cascade: new Map(),
 };
 
 // Per-kind "slowest recent" buffer. We keep a slowest-N set rather than a plain
@@ -396,6 +424,7 @@ const slowest: Record<SpanKind, SlowSpan[]> = {
   push: [],
   flush: [],
   job: [],
+  cascade: [],
 };
 
 let sinceMs = now();

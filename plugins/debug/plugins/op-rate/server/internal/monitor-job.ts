@@ -123,5 +123,10 @@ function kindThreshold(kind: SpanKind, cfg: Thresholds): number {
       return cfg.dbPerWindow;
     case "job":
       return cfg.jobPerWindow;
+    // `cascade` (a dependsOn edge's ids-translation reads inside the flush) is
+    // loader-class background DB work, so it shares the loader rate bar rather
+    // than getting its own knob.
+    case "cascade":
+      return cfg.loaderPerWindow;
   }
 }

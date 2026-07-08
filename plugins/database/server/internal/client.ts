@@ -208,13 +208,22 @@ function installQueryWrapper(pool: Pool): void {
         { delay: queryRetryDelay },
       );
 
-    // Gate only background/loader queries; interactive (http) and context-less
+    // Gate background/loader queries; interactive (http) and context-less
     // (jobs/migrations/pollers) queries run ungated against the reserved capacity.
-    if (currentCallerKind() === "loader") {
+    // A `cascade` entry (a dependsOn edge's signature/affectedMap ids-translation
+    // reads, run inside the flush cascade) is gated exactly like a loader — it is
+    // background DB load that must share the reserved-interactive floor — but its
+    // reads are NOT captured into the read-set: they are edge (ids-translation)
+    // reads, not the downstream resource's value dependencies, so indexing them
+    // would raise a false silent-FULL flag (see the resource-runtime cascade).
+    const callerKind = currentCallerKind();
+    if (callerKind === "loader") {
       // Capture the loader's table read-set into its ambient entry context (still
       // active here, before the gated promise). Observation-only — does not affect
       // timing or gating.
       recordReadTables(extractReadTablesFromSql(text));
+    }
+    if (callerKind === "loader" || callerKind === "cascade") {
       return loaderDbGate.run(runTimed, (waitMs) =>
         chargeWait("loader-acquire", waitMs),
       );

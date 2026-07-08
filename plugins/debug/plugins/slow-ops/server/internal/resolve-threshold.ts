@@ -29,6 +29,9 @@ export function resolveSlowThreshold(span: SlowSpan, t: Thresholds): number {
     case "sub":
     case "push":
     case "flush":
+    // `cascade` is a dependsOn edge's ids-translation DB reads run inside the
+    // flush cascade — loader-class background work, so it shares the loader bar.
+    case "cascade":
       return t.loaderMs;
   }
 }

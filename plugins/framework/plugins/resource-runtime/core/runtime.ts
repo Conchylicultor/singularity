@@ -606,7 +606,7 @@ export interface ResourceRuntimeOptions {
    * research/2026-06-19-global-wait-attribution-instrumentation.md.
    */
   wrapOrigin?: <R>(
-    kind: "sub" | "push",
+    kind: "sub" | "push" | "cascade",
     key: string,
     fn: () => Promise<R>,
   ) => Promise<R>;
@@ -916,6 +916,11 @@ const READ_LOAD_CONCURRENCY = 6;
 function normalizeEtag(raw: string): string {
   return createHash("sha1").update(raw).digest("hex");
 }
+
+// Sentinel returned by a cascade edge's ids-translation closure to signal "this
+// edge is irrelevant this flush, skip it" — the closure can't `continue` the
+// caller's loop across the wrapOrigin boundary, so it returns this instead.
+const SKIP_EDGE = Symbol("skip-edge");
 
 export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): ResourceRuntime {
   const registry = new Map<string, RegistryEntry>();
@@ -1725,43 +1730,67 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       } else if (!edge.affectedMap) {
         downAffected = null;
       } else {
+        // The relevance gate (`signature`) and `affectedMap` both self-query the
+        // DB to translate the changed upstream ids into downstream ids. Run that
+        // translation under a `cascade` origin entry (server: recordEntrySpan;
+        // central: identity) so those reads (a) route through the loader DB gate —
+        // otherwise a large scoped fan-out issues ungated queries that contend
+        // with interactive work past the reserved-interactive floor — and (b) are
+        // attributed in the profiler as `cascade:<downstreamKey>` instead of
+        // running unmeasured under the enclosing `flush`. These are edge
+        // (ids-translation) reads, NOT the downstream's value dependencies, so
+        // they are deliberately NOT captured into the loader read-set index: a
+        // standalone change to a table only `affectedMap` reads never requires the
+        // downstream to recompute (only the upstream cascade does, already
+        // scoped), so indexing them would raise a false silent-FULL flag.
+        const affectedMap = edge.affectedMap;
+        const signature = edge.signature;
         // Relevance gate (Layer 2): keep only the upstream ids whose
-        // downstream-relevant signature changed, so a scoped change that
-        // touched only fields this downstream ignores (e.g. a conversation's
+        // downstream-relevant signature changed, so a scoped change that touched
+        // only fields this downstream ignores (e.g. a conversation's
         // waitingFor/updatedAt vs the tasks/attempts aggregates) stops here
-        // instead of forcing a recompute that diffs to empty. No signature on
-        // the edge ⇒ every delivered id passes (prior behavior).
-        let relevant: ReadonlySet<string> = affected;
-        if (edge.signature) {
-          try {
-            const sigs = await edge.signature(affected, params);
-            const kept = new Set<string>();
-            for (const id of affected) {
-              const sig = sigs.get(id);
-              if (sig === undefined || sig !== edge.lastSignatures.get(id)) {
-                kept.add(id);
-                if (sig !== undefined) edge.lastSignatures.set(id, sig);
+        // instead of forcing a recompute that diffs to empty. No signature on the
+        // edge ⇒ every delivered id passes (prior behavior). Returns SKIP_EDGE
+        // when nothing relevant changed (the closure cannot `continue` across the
+        // wrapOrigin boundary).
+        const translate = async (): Promise<Set<string> | null | typeof SKIP_EDGE> => {
+          let relevant: ReadonlySet<string> = affected;
+          if (signature) {
+            try {
+              const sigs = await signature(affected, params);
+              const kept = new Set<string>();
+              for (const id of affected) {
+                const sig = sigs.get(id);
+                if (sig === undefined || sig !== edge.lastSignatures.get(id)) {
+                  kept.add(id);
+                  if (sig !== undefined) edge.lastSignatures.set(id, sig);
+                }
               }
+              relevant = kept;
+            } catch (err) {
+              reportLoaderError(
+                `signature failed (${entry.key} → ${edge.downstreamKey})`,
+                err,
+              );
+              relevant = affected; // fail-safe: cascade everything
             }
-            relevant = kept;
+          }
+          if (relevant.size === 0) return SKIP_EDGE; // nothing relevant changed
+          try {
+            return new Set(await affectedMap(relevant, params));
           } catch (err) {
             reportLoaderError(
-              `signature failed (${entry.key} → ${edge.downstreamKey})`,
+              `affectedMap failed (${entry.key} → ${edge.downstreamKey})`,
               err,
             );
-            relevant = affected; // fail-safe: cascade everything
+            return null;
           }
-        }
-        if (relevant.size === 0) continue; // nothing relevant changed → skip edge
-        try {
-          downAffected = new Set(await edge.affectedMap(relevant, params));
-        } catch (err) {
-          reportLoaderError(
-            `affectedMap failed (${entry.key} → ${edge.downstreamKey})`,
-            err,
-          );
-          downAffected = null;
-        }
+        };
+        const result = await (opts.wrapOrigin
+          ? opts.wrapOrigin("cascade", edge.downstreamKey, translate)
+          : translate());
+        if (result === SKIP_EDGE) continue; // nothing relevant changed → skip edge
+        downAffected = result;
       }
       for (const dp of derived) {
         mergePending(down.pendingNotifies, paramsKey(dp), dp, downAffected);
