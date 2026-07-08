@@ -52,6 +52,10 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
   const inserts = body.updateOnly ? [] : body.upserts.filter((b) => !byId.has(b.id));
   const updates = body.upserts.filter((b) => byId.has(b.id));
 
+  // A no-op update-only patch against an absent row (target deleted since the
+  // patch was computed) writes nothing — don't fan out `blocksChanged`.
+  const didWrite = inserts.length > 0 || updates.length > 0 || rootIds.length > 0;
+
   await db.transaction(async (tx) => {
     if (inserts.length > 0) {
       const now = new Date();
@@ -90,13 +94,15 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
     }
   });
 
-  // Derive a primary type for the sidebar-refresh heuristic: any upserted row's
-  // type (else a deleted row's), defaulting to a content type.
-  const primaryType = body.upserts[0]?.type ?? deletedRows[0]?.type ?? "block";
-  await notifyStructuralChange({ pageId: params.pageId, primaryType, deletedRows });
+  if (didWrite) {
+    // Derive a primary type for the sidebar-refresh heuristic: any upserted
+    // row's type (else a deleted row's), defaulting to a content type.
+    const primaryType = body.upserts[0]?.type ?? deletedRows[0]?.type ?? "block";
+    await notifyStructuralChange({ pageId: params.pageId, primaryType, deletedRows });
 
-  // Hooks re-push state that depended on the now-deleted rows (e.g. backlinks).
-  for (const cb of afterCallbacks) await cb();
+    // Hooks re-push state that depended on the now-deleted rows (e.g. backlinks).
+    for (const cb of afterCallbacks) await cb();
+  }
 
   const finalRows = await db
     .select()

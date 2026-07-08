@@ -72,10 +72,13 @@ export async function initBlockDoc(
 /**
  * Merge an incremental Yjs update into a block's stored doc, atomically:
  * `SELECT … FOR UPDATE` serializes concurrent merges on the row, the merge is
- * `applyUpdate(stored) + applyUpdate(incoming) → encodeStateAsUpdate` (CRDT
- * merge — idempotent and commutative, so replays and races converge), and the
- * UPDATE commits state + updatedAt together. The committed UPDATE fires the DB
- * change-feed, which pushes `blockContentResource` to the block's subscribers.
+ * `Y.mergeUpdates` on the raw update bytes (CRDT merge — idempotent and
+ * commutative, so replays and races converge) with no intermediate `Y.Doc`,
+ * and the UPDATE commits state + updatedAt together. The committed UPDATE fires
+ * the DB change-feed, which pushes `blockContentResource` to the block's
+ * subscribers. `Y.mergeUpdates` requires the v1 update format (the Yjs default
+ * used throughout — stored `state` is an `encodeStateAsUpdate` full state,
+ * `update` a v1 incremental), so it is byte-equivalent to the doc rebuild.
  *
  * 409 when the doc was never initialized: auto-seeding here would reopen the
  * duplicate-seed hazard `doc-init` exists to close.
@@ -97,10 +100,7 @@ export async function mergeBlockDocUpdate(
         `block ${blockId} has no content doc — POST /api/blocks/${blockId}/doc-init first`,
       );
     }
-    const doc = new Y.Doc();
-    Y.applyUpdate(doc, row.state);
-    Y.applyUpdate(doc, update);
-    const merged = Y.encodeStateAsUpdate(doc);
+    const merged = Y.mergeUpdates([row.state, update]);
     await tx
       .update(_pageBlockDocs)
       .set({ state: merged, updatedAt: new Date() })

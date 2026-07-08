@@ -48,8 +48,11 @@ export type BlockOp =
       siblingType?: string;
       /**
        * Authoritative current rich-text runs from the editor; falls back to the
-       * stored block runs when absent. Lets the reducer split the live (possibly
-       * not-yet-autosaved) content rather than stale stored content.
+       * stored block runs (`runsOfNode`) when absent. Lets the reducer split the
+       * live (doc-fresh, projection may lag ~1s) content rather than the lagged
+       * projection. The LIVE split path ALWAYS sets this; the fallback is reached
+       * only by the pure reducer (tests / non-live callers), for whom `data.text`
+       * IS the intended basis — so the fallback must stay.
        */
       runs?: RichText;
     }
@@ -58,7 +61,9 @@ export type BlockOp =
       blockId: string;
       /**
        * Authoritative current rich-text runs of the merging block from the
-       * editor; falls back to the stored block runs when absent.
+       * editor; falls back to the stored block runs (`runsOfNode`) when absent.
+       * Same seam as split: LIVE merge always supplies this, the fallback is the
+       * pure reducer's projection basis — do not remove it.
        */
       runs?: RichText;
     } // merge into prev sibling
@@ -183,7 +188,17 @@ export function textOf(node: { data?: unknown }): string {
   return plainOf(asObject(node.data).text);
 }
 
-/** The block's text payload as structured rich-text runs (coerced; `[]` when none). */
+/**
+ * The block's text payload as structured rich-text runs (coerced; `[]` when none).
+ *
+ * Reads `data.text`, the debounced projection of the live content doc — it lags
+ * the doc by up to ~1s. That lag is by design here: this is only the reducer's
+ * FALLBACK basis (`op.runs ?? runsOfNode(...)` at the split/merge seams). Every
+ * LIVE caller supplies `op.runs` (authoritative current runs from the bound
+ * editor), so the projection is never used on the live path; reducer-only / test
+ * callers, which operate from row data alone, accept the projection basis by
+ * construction.
+ */
 export function runsOfNode(node: { data?: unknown }): RichText {
   return coerceRuns(asObject(node.data).text);
 }
@@ -244,6 +259,8 @@ function applySplit(
   const block = byId(blocks, op.blockId);
   if (!block) return blocks;
 
+  // Live callers pass authoritative `op.runs`; the `runsOfNode` fallback (lagged
+  // `data.text` projection) is the pure reducer's basis (tests / non-live).
   const runs = op.runs ?? runsOfNode(block);
   const [beforeRuns, afterRuns] = splitRuns(runs, op.position);
 
@@ -296,7 +313,9 @@ function applyMerge(
   const prev = prevVisibleLeaf(blocks, block);
   if (!prev) return blocks; // no-op
 
-  // Concatenate runs into prev (coalescing the seam).
+  // Concatenate runs into prev (coalescing the seam). `op.runs` is the live
+  // merging runs on the live path; `runsOfNode` (lagged projection) is only the
+  // pure reducer's fallback basis (tests / non-live).
   let mergedPrev = withRuns(prev, mergeRuns(runsOfNode(prev), op.runs ?? runsOfNode(block)));
 
   // Adopt the block's children under prev, appended after prev's existing

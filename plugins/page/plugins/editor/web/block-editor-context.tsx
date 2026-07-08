@@ -86,6 +86,56 @@ function fromOpResult(before: Block[], op: BlockOp): Block[] {
 }
 
 /**
+ * Shared before→after derivation for the two structural recorders
+ * (`recordPatchEntry` and `recordStructuralWithDocEdit`): diff the two full-row
+ * snapshots into a minimal forward/reverse `BlockPatch` pair, splice the optional
+ * `undoTextOverride` into the reverse patch's upserts (no-op when undefined — pins
+ * a restored row's `data.text` to LIVE runs captured at op time, used by merge),
+ * and derive the per-direction focus targets. Returns `null` when BOTH patches are
+ * empty; the caller decides whether that is a full bail (patch-only entry) or a
+ * still-record (a docEdit-only entry). Redo keeps the `focusId` the user was on;
+ * undo PREFERS the block the reverse patch restores (`undoPatch.upserts[0]`) over
+ * `focusId` — undoing a split deletes the new block, so landing focus on it would
+ * drop focus to <body>, whereas the reverse upsert is the surviving block — falling
+ * back to `focusId` then the forward upsert so every op still lands somewhere sane.
+ */
+function derivePatchEntry(
+  before: Block[],
+  after: Block[],
+  focusId: string | null,
+  undoTextOverride?: { blockId: string; runs: RichText },
+): {
+  undoPatch: BlockPatch;
+  redoPatch: BlockPatch;
+  undoFocus: string | null;
+  redoFocus: string | null;
+} | null {
+  const patches = patchesFromDiff(diffBlocks(before, after));
+  const redoPatch = patches.redo;
+  let undoPatch = patches.undo;
+  if (undoTextOverride) {
+    undoPatch = {
+      ...undoPatch,
+      upserts: undoPatch.upserts.map((b) =>
+        b.id === undoTextOverride.blockId
+          ? {
+              ...b,
+              data: {
+                ...((b.data as Record<string, unknown> | null) ?? {}),
+                text: undoTextOverride.runs,
+              },
+            }
+          : b,
+      ),
+    };
+  }
+  if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return null;
+  const redoFocus = focusId ?? redoPatch.upserts[0]?.id ?? null;
+  const undoFocus = undoPatch.upserts[0]?.id ?? focusId ?? null;
+  return { undoPatch, redoPatch, undoFocus, redoFocus };
+}
+
+/**
  * A block's focus capabilities, registered by its renderer. Every focusable
  * block provides `focus`; text editors additionally provide caret-precise
  * placement so the coordinator can land the caret at a pixel column or boundary.
@@ -342,16 +392,9 @@ export function BlockEditorProvider({
       focusId: string | null,
       coalesceKey?: string,
     ) => {
-      const { undo: undoPatch, redo: redoPatch } = patchesFromDiff(diffBlocks(before, after));
-      if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return;
-      // Focus targets per direction. Redo keeps the `focusId` the user was on
-      // (e.g. the freshly-split block). Undo PREFERS the block the reverse patch
-      // restores (`undoPatch.upserts[0]`) over `focusId`: undoing a split deletes
-      // the new block — landing focus on it would drop focus to <body> — whereas
-      // the reverse upsert is the original surviving block. Falls back to `focusId`
-      // then the forward upsert so every op still lands somewhere sane.
-      const redoFocus = focusId ?? redoPatch.upserts[0]?.id ?? null;
-      const undoFocus = undoPatch.upserts[0]?.id ?? focusId ?? null;
+      const derived = derivePatchEntry(before, after, focusId);
+      if (!derived) return;
+      const { undoPatch, redoPatch, undoFocus, redoFocus } = derived;
       record({
         label,
         coalesceKey,
@@ -396,29 +439,18 @@ export function BlockEditorProvider({
       docEdit: CapturedBlockDocEdit | null,
       undoTextOverride?: { blockId: string; runs: RichText },
     ) => {
-      const patches = patchesFromDiff(diffBlocks(before, after));
-      const redoPatch = patches.redo;
-      let undoPatch = patches.undo;
-      if (undoTextOverride) {
-        undoPatch = {
-          ...undoPatch,
-          upserts: undoPatch.upserts.map((b) =>
-            b.id === undoTextOverride.blockId
-              ? {
-                  ...b,
-                  data: {
-                    ...((b.data as Record<string, unknown> | null) ?? {}),
-                    text: undoTextOverride.runs,
-                  },
-                }
-              : b,
-          ),
-        };
-      }
-      if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch) && !docEdit) return;
-      // Same focus derivation as `recordPatchEntry` (see its comment).
-      const redoFocus = focusId ?? redoPatch.upserts[0]?.id ?? null;
-      const undoFocus = undoPatch.upserts[0]?.id ?? focusId ?? null;
+      const derived = derivePatchEntry(before, after, focusId, undoTextOverride);
+      // Bail only when there is NOTHING to record: empty patches AND no doc edit.
+      // A docEdit-only entry (empty structural diff) must still record so its
+      // content-doc reverse/re-apply lands on the stack; its (empty) patches
+      // no-op through `dispatchPatch` and focus falls back to `focusId`.
+      if (!derived && !docEdit) return;
+      const { undoPatch, redoPatch, undoFocus, redoFocus } = derived ?? {
+        undoPatch: { upserts: [], deleteIds: [] },
+        redoPatch: { upserts: [], deleteIds: [] },
+        undoFocus: focusId,
+        redoFocus: focusId,
+      };
       record({
         label,
         undo: async () => {
@@ -633,6 +665,22 @@ export function BlockEditorProvider({
     [optimistic, recordStructural],
   );
 
+  // Overlay-dispatch triplet shared by the split / offscreen-merge executors:
+  // snapshot the current optimistic rows, compute the after-state with the SAME
+  // pure `applyBlockOp` the server runs, dispatch the structural overlay (instant
+  // prediction + network call), and return both snapshots for the combined record.
+  // NOT used by the mounted-merge site, whose dispatch is deliberately deferred
+  // into a microtask after the append lands (see the merge executor, issue #7).
+  const applyOverlay = useCallback(
+    (op: BlockOp): { before: Block[]; after: Block[] } => {
+      const before = rowsRef.current;
+      const after = fromOpResult(before, op);
+      optimistic.dispatch(buildOverlayOp(op, before));
+      return { before, after };
+    },
+    [optimistic],
+  );
+
   // Focus a freshly-minted block by its known id. If its text editor has already
   // mounted, focus immediately; otherwise queue it so `registerFocusHandle`
   // focuses it on mount (the live push will mount it shortly).
@@ -729,9 +777,7 @@ export function BlockEditorProvider({
         // fold and double-recording as a plain text entry. One microtask puts
         // it outside the outer update; record order is unaffected (no other
         // record can interleave within the same task).
-        const before = rowsRef.current;
-        const after = fromOpResult(before, op);
-        optimistic.dispatch(buildOverlayOp(op, before));
+        const { before, after } = applyOverlay(op);
         queueMicrotask(() => {
           const docEdit = captureBlockDocEdit(blockId, () => {
             focusHandlesRef.current.get(blockId)?.truncateAt?.(position);
@@ -763,16 +809,25 @@ export function BlockEditorProvider({
         const targetHandle = focusHandlesRef.current.get(target.id);
         const op: BlockOp = { kind: "merge", blockId, runs: opts?.runs };
         if (targetHandle?.appendRunsAtEnd) {
-          // Mounted target: drive its bound editor (append + caret at the
-          // live join). Structure first, append in a microtask — deferred so
-          // the current keydown can't act on the newly-focused block. The
-          // capture (and the combined record) rides the same microtask.
+          // Mounted target: drive its bound editor (append + caret at the live
+          // join). Append-FIRST ordering (issue #7): the append rides a microtask
+          // (deferred so the current keydown can't act on the newly-focused
+          // block), and the structural delete overlay is dispatched only AFTER the
+          // append lands — so a throwing append leaves BOTH blocks intact (a loud
+          // unhandled rejection, overlay never dispatched), matching the offscreen
+          // branch's guarantee, instead of removing the source row with its text
+          // un-transferred. `before`/`after` are captured up front so they snapshot
+          // the pre-merge rows; the dispatch is kept explicit here (not
+          // `applyOverlay`) precisely because its ordering is deferred.
           const append = targetHandle.appendRunsAtEnd;
           const before = rowsRef.current;
           const after = fromOpResult(before, op);
-          optimistic.dispatch(buildOverlayOp(op, before));
           queueMicrotask(() => {
+            // `captureBlockDocEdit` runs `append` synchronously (surgery uses
+            // `discrete: true`), so a throw propagates out of the microtask
+            // BEFORE the dispatch — the source row is never removed.
             const docEdit = captureBlockDocEdit(target.id, () => append(mergingRuns));
+            optimistic.dispatch(buildOverlayOp(op, before));
             recordStructuralWithDocEdit(before, after, OP_LABELS.merge, blockId, docEdit, {
               blockId,
               runs: mergingRuns,
@@ -792,9 +847,7 @@ export function BlockEditorProvider({
           const targetId = target.id;
           void appendRunsToBlockDoc(targetId, runsOfNode(target), mergingRuns).then(
             ({ joinOffset }) => {
-              const before = rowsRef.current;
-              const after = fromOpResult(before, op);
-              optimistic.dispatch(buildOverlayOp(op, before));
+              const { before, after } = applyOverlay(op);
               const targetDataText = () =>
                 (rowsRef.current.find((b) => b.id === targetId)?.data as
                   | Record<string, unknown>
@@ -867,7 +920,15 @@ export function BlockEditorProvider({
         setFocusedBlockId(blockId);
       },
     }),
-    [dispatchOp, focusNew, focusBlock, commitRow, optimistic, recordStructuralWithDocEdit],
+    [
+      dispatchOp,
+      focusNew,
+      focusBlock,
+      commitRow,
+      optimistic,
+      applyOverlay,
+      recordStructuralWithDocEdit,
+    ],
   );
 
   const value = useMemo<BlockEditorContextValue>(

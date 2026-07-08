@@ -98,31 +98,46 @@ interface CollabDocEntry {
 const registry = new Map<string, CollabDocEntry>();
 
 /**
- * Deterministic Yjs clientID for a seed doc, derived from the runs content
- * (FNV-1a over the canonical runs JSON). Identical runs → identical clientID →
- * (with the sequential single-client construction in `runsToXmlText`)
- * byte-identical seed encodings, so replicas seeding the same block
- * independently converge by no-op merge — which is what makes the provider's
- * INSTANT local pre-seed safe (Stage 4a). Different runs → different clientID,
- * so mismatched seeds can only ever DUPLICATE (plain CRDT merge), never
- * corrupt by colliding item ids.
+ * Deterministic Yjs clientID for a seed doc, keyed on BOTH the runs content
+ * AND the active extension set (FNV-1a over the canonical runs JSON plus a
+ * canonical extension-id fingerprint, NUL-separated) — matching the
+ * determinism contract on `RunsXmlTextOptions.clientID` in `core/runs-yjs.ts`.
+ * Identical runs AND identical extension set → identical clientID → (with the
+ * sequential single-client construction in `runsToXmlText`) byte-identical seed
+ * encodings, so replicas seeding the same block independently converge by no-op
+ * merge — which is what makes the provider's INSTANT local pre-seed safe
+ * (Stage 4a). Folding the extension set in closes the mid-rollout hazard: two
+ * replicas with DIFFERENT extension sets seeding the same block produce
+ * structurally-different seed bytes, so they MUST NOT share a clientID (that
+ * would collide item ids and corrupt). Different runs OR a mismatched extension
+ * set now yields a different clientID, so a divergent seed can only ever
+ * DUPLICATE (plain CRDT merge), never corrupt by colliding item ids.
  */
-function seedClientID(runsJson: string): number {
+function seedClientID(runsJson: string, extIds: string): number {
   let h = 0x811c9dc5;
-  for (let i = 0; i < runsJson.length; i++) {
-    h ^= runsJson.charCodeAt(i);
-    h = Math.imul(h, 0x01000193);
-  }
+  const fold = (s: string): void => {
+    for (let i = 0; i < s.length; i++) {
+      h ^= s.charCodeAt(i);
+      h = Math.imul(h, 0x01000193);
+    }
+  };
+  fold(runsJson);
+  fold("\0"); // separator that can't appear inside a run-string collision
+  fold(extIds);
   return h >>> 0;
 }
 
 /** Build deterministic seed-state bytes for `dataText` (see {@link seedClientID}). */
 function buildSeedStateFor(dataText: unknown): Uint8Array {
   const runs = runsOf(dataText);
+  const extensions = getBlockTextExtensions();
+  // Canonical fingerprint of the active extension set: sorted ids, so the
+  // clientID keys on the set's identity independent of registration order.
+  const extIds = [...extensions].map((e) => e.id).sort().join(",");
   const xmlText = runsToXmlText(runs, {
-    extensions: getBlockTextExtensions(),
+    extensions,
     nodes: blockTextNodes(),
-    clientID: seedClientID(JSON.stringify(runs)),
+    clientID: seedClientID(JSON.stringify(runs), extIds),
   });
   const seedDoc = xmlText.doc;
   if (!seedDoc) {
@@ -505,6 +520,15 @@ export async function appendRunsToBlockDoc(
  * headless Lexical edit, incremental doc-update). Position-based rather than
  * CRDT-relative — acceptable because the shared stack is LIFO, so any later
  * edits to the same block were undone (and flushed) before this runs.
+ *
+ * FRAGILITY: the cut is a position, not a CRDT-relative anchor, so it is safe
+ * ONLY under single-client LIFO. A concurrent append PAST `offset` landing
+ * between the merge and this undo would be silently deleted — a cross-client
+ * lost write. Dormant today: this offscreen path runs only when the target
+ * editor is UNMOUNTED, which needs virtualization the page editor does not do
+ * (so single-client LIFO holds and nothing writes past `offset` here). The
+ * trigger that would require a CRDT-relative rewrite is a virtualized +
+ * multi-writer (my-devices + agents) target — see the residual-edge note.
  */
 export async function truncateBlockDocFrom(
   blockId: string,

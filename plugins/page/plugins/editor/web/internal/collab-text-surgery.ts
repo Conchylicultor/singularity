@@ -30,6 +30,10 @@ import {
  * stored-runs plain-text basis — the same basis as the split `position` and
  * `splitRuns`) to the very end. Pure node-graph + model-selection ops, so it
  * runs identically in a live editor and a headless replica (`editYDocState`).
+ *
+ * The cut is a POSITION, not a CRDT-relative anchor: a concurrent append past
+ * `offset` would be swept along with the tail — fine under single-client LIFO,
+ * fragile under a virtualized multi-writer target (see `truncateBlockDocFrom`).
  */
 export function $truncateFromLinearOffset(offset: number): void {
   if (offset >= $paragraphsPlainLength()) return; // caret at end — nothing to cut

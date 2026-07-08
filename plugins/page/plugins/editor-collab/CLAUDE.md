@@ -1,13 +1,11 @@
 # editor-collab
 
-Stage 1 of the per-block CRDT migration
-(`research/2026-07-07-page-per-block-crdt-plan-b.md`): the **content-agnostic**
-server side of per-block collaborative text. It merges and stores opaque Yjs
-update bytes and broadcasts state — it never interprets doc content (no runs,
-no Lexical, no decorator tokens; those live in the editor's web runtime, so
-only a client can build a decorator-correct doc). The editor does not bind to
-any of this yet (`ValueSyncPlugin` + the `data.text` autosave path are
-untouched); the web binding lands in Stage 2.
+The **content-agnostic** server side of per-block collaborative text — the
+only text pipeline (see the editor's § "Per-block CRDT text (unconditional)").
+It merges and stores opaque Yjs update bytes and broadcasts state; it never
+interprets doc content (no runs, no Lexical, no decorator tokens; those live in
+the editor's web runtime, so only a client can build a decorator-correct doc).
+Originated as Plan B (`research/2026-07-07-page-per-block-crdt-plan-b.md`).
 
 ## Model
 
