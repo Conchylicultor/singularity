@@ -15,6 +15,7 @@ export {
   LEGACY_AUTH_KEY,
   ATTACHMENTS_DIR,
   REPORTS_DIR,
+  COST_USAGE_DIR,
   WORKTREES_DIR,
   worktreeDataDir,
   worktreeArtifacts,

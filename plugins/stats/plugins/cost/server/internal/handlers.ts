@@ -1,6 +1,11 @@
-import type { DailyUsage } from "ccusage/data-loader";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { canonicalModel, loadBundle, type PerSession, type Scope } from "./load-usage";
+import {
+  canonicalModel,
+  loadBundle,
+  type DailyRow,
+  type PerSession,
+  type Scope,
+} from "./load-usage";
 import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import {
@@ -20,15 +25,12 @@ function modelFamily(canonical: string): string {
 }
 
 function filterDaily(
-  rows: DailyUsage[],
+  rows: DailyRow[],
   scope: Scope,
   isSingularity: Map<string, boolean>,
-): DailyUsage[] {
+): DailyRow[] {
   if (scope === "all") return rows;
-  return rows.filter((r) => {
-    const proj = (r as { project?: string }).project;
-    return proj ? (isSingularity.get(proj) ?? false) : false;
-  });
+  return rows.filter((r) => isSingularity.get(r.project) ?? false);
 }
 
 function filterSessions(rows: PerSession[], scope: Scope): PerSession[] {

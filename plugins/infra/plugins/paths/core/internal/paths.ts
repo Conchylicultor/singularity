@@ -45,6 +45,10 @@ export const LEGACY_AUTH_BLOB    = join(LEGACY_AUTH_DIR, "tokens.json.enc");
 export const LEGACY_AUTH_KEY     = join(LEGACY_AUTH_DIR, ".key");
 export const ATTACHMENTS_DIR     = join(SINGULARITY_DIR, "attachments");
 export const REPORTS_DIR         = join(SINGULARITY_DIR, "reports");
+// Host-global incremental usage index for stats/cost. The `~/.claude/projects`
+// corpus is shared by every backend, so its aggregate is identical across
+// worktrees — the cache lives under the host-global root, not a per-worktree DB.
+export const COST_USAGE_DIR      = join(SINGULARITY_DIR, "cost-usage");
 
 // Root dir holding every worktree's per-worktree singularity state. Each
 // worktree owns `<WORKTREES_DIR>/<name>/` (build/release artifacts, logs,

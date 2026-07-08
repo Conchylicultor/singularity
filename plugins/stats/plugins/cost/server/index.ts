@@ -1,5 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { ConfigV2 } from "@plugins/config_v2/server";
+import { isMain } from "@plugins/infra/plugins/paths/server";
 import { costConfig } from "../shared/config";
 import {
   handleAvgPerConversation,
@@ -38,8 +39,10 @@ export default {
     [getCostAvgPerConversation.route]: handleAvgPerConversation,
   },
   onReady: () => {
-    // Walk ~/.claude/projects in the background so the first chart fetch hits
-    // a warm cache instead of waiting on ~1k JSONL reads.
-    prewarmBundle();
+    // Warm the host-global usage index and start the corpus watcher on MAIN
+    // ONLY: the index is shared across worktrees, so a single writer keeps it
+    // fresh and no worktree backend pays the parse. After the first host warm,
+    // refreshes are incremental and trivial.
+    if (isMain()) prewarmBundle();
   },
 } satisfies ServerPluginDefinition;
