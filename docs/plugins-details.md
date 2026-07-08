@@ -3942,11 +3942,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `framework/resource-runtime`, `infra/endpoints`
       - Core:
         - Exports: Types: `Semaphore`; Values: `createSemaphore`
-    - **`spawn-priority`** — OS-priority demotion for background subprocess spawns: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends.
+    - **`spawn-priority`** — OS scheduling-priority isolation: backgroundArgv/backgroundPrefix wrap heavy background work (DB forks, agent sessions, builds, worktree checkouts, type-check workers) in darwinbg (taskpolicy -b) so it yields host CPU/IO to the interactive backends; boostInteractiveQos raises the calling thread to user-interactive QoS (main backend's event loop only).
       - Cross-plugin:
         - Imported by: `conversations/runtime-tmux`, `database/admin`, `infra/worktree`
       - Server:
-        - Exports: Values: `backgroundArgv`, `backgroundPrefix`
+        - Exports: Values: `backgroundArgv`, `backgroundPrefix`, `boostInteractiveQos`
 
 - **`page`** — Block-based page editor.
   - Plugins:

@@ -945,9 +945,10 @@ export function registerBuild(program: Command) {
       // inherits darwinbg (runtime-tmux demotes the whole session) — but this
       // keeps the invariant when a build of an agent branch is started from an
       // undemoted shell. Main-branch builds stay undemoted: the user is
-      // waiting on them. Residual: on the non-`--skip-checks` path the checks
-      // runner's internal tsc/eslint workers are only demoted via session
-      // inheritance, not here.
+      // waiting on them. The checks runner's type-check workers apply the same
+      // branch rule at their own spawn site (type-check/check/index.ts), so
+      // they are covered on every path (build, standalone check, push) without
+      // relying on session inheritance.
       const demote = slotKind === "build" ? backgroundArgv : (argv: string[]) => argv;
       let endSlotWaitSpan: (() => void) | undefined;
 

@@ -17,7 +17,23 @@ import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 // `core/server.composition.generated.ts`, so the bundler's closure IS the
 // composition closure (no runtime dynamic specifier to defeat `bun --compile`).
 import { serverEntries } from "@composition-server-registry";
+import { boostInteractiveQos } from "@plugins/packages/plugins/spawn-priority/server";
+import { isMain } from "@plugins/infra/plugins/paths/core";
 import { topoSortPlugins } from "./topo";
+
+// ── QoS boost (main backend only) ───────────────────────────────
+// Raise the event-loop thread to user-interactive QoS BEFORE any boot work, so
+// both boot and serving latency sit above default-priority bulk load (agent
+// builds / type-check fleets) — the same scheduler tier that keeps GUI apps
+// responsive during a build storm. STRICTLY main-only: isMain() is true only
+// when the gateway spawned this backend with SINGULARITY_WORKTREE=singularity;
+// an agent-worktree backend runs this same code under its own worktree name
+// and never qualifies. Boosting agent backends would lift the fleet above its
+// own builds and defeat priority isolation. See
+// research/perfs/2026-07-08-host-saturation-agent-checks-starve-main.md.
+if (isMain() && boostInteractiveQos()) {
+  console.log("[boot] main backend event-loop thread raised to user-interactive QoS");
+}
 
 // ── Per-phase RSS attribution (boot Gantt) ──────────────────────
 // We record a memory checkpoint at each clean boot-phase boundary below.

@@ -24,6 +24,7 @@ import {
   tsBuildInfoPath,
   type TscTarget,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
 import { buildImportGraphs } from "./import-graph";
 import { computeClosureFingerprints } from "./fingerprint";
 import { openClosureCache } from "./closure-cache";
@@ -43,6 +44,20 @@ const WORKER = fileURLToPath(new URL("../shared/worker.ts", import.meta.url));
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], { stdout: "pipe", stderr: "pipe" });
   return (await new Response(proc.stdout).text()).trim();
+}
+
+// Priority isolation at the spawn site: workers for a non-main branch run
+// darwinbg (E-cores + background IO tier) so N concurrent agent fleets can't
+// starve the interactive main backend — regardless of whether the parent
+// session/CLI was itself demoted. Relying on inheritance is how 10 of 11
+// workers ran undemoted on 2026-07-08 (see
+// research/perfs/2026-07-08-host-saturation-agent-checks-starve-main.md).
+// Main-branch runs stay undemoted — the user is waiting on them (same rule as
+// build.ts's `branch === "main"` slot exemption).
+async function workerDemotion(): Promise<(argv: string[]) => string[]> {
+  const proc = Bun.spawn(["git", "rev-parse", "--abbrev-ref", "HEAD"], { stdout: "pipe", stderr: "pipe" });
+  const branch = (await new Response(proc.stdout).text()).trim();
+  return branch === "main" ? (argv) => argv : backgroundArgv;
 }
 
 const toRel = (root: string, abs: string): string => relative(root, abs).split("\\").join("/");
@@ -103,7 +118,12 @@ async function mapConcurrent<T, R>(items: T[], limit: number, fn: (item: T) => P
   return out;
 }
 
-async function runWorker(root: string, target: TscTarget, lintFiles: string[]): Promise<WorkerResult> {
+async function runWorker(
+  root: string,
+  target: TscTarget,
+  lintFiles: string[],
+  demote: (argv: string[]) => string[],
+): Promise<WorkerResult> {
   const jobPath = join(os.tmpdir(), `type-check-${target.name}-${process.pid}.json`);
   writeFileSync(jobPath, JSON.stringify({
     root,
@@ -112,7 +132,7 @@ async function runWorker(root: string, target: TscTarget, lintFiles: string[]): 
     buildInfoPath: tsBuildInfoPath(root, target.name),
     lintFiles,
   }));
-  const proc = Bun.spawn([process.execPath, WORKER, jobPath], { cwd: root, stdout: "pipe", stderr: "pipe" });
+  const proc = Bun.spawn(demote([process.execPath, WORKER, jobPath]), { cwd: root, stdout: "pipe", stderr: "pipe" });
   const [stdout, stderr, exitCode] = await Promise.all([
     new Response(proc.stdout).text(),
     new Response(proc.stderr).text(),
@@ -170,9 +190,10 @@ const check: Check = {
     );
     const results: WorkerResult[] = [];
     const crashes: { name: string; error: string }[] = [];
+    const demote = await workerDemotion();
     await mapConcurrent(targets, limit, async (t) => {
       try {
-        results.push(await runWorker(root, t, lintByTarget.get(t.name) ?? []));
+        results.push(await runWorker(root, t, lintByTarget.get(t.name) ?? [], demote));
       } catch (err) {
         crashes.push({ name: t.name, error: (err as Error).message });
       }
