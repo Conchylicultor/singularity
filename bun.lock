@@ -2347,6 +2347,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-entity-projection-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/git-grep-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-git-grep-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/hover-reveal-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-hover-reveal-safety",
       "version": "0.0.1",
@@ -5877,6 +5881,8 @@
     "@singularity/plugin-framework-tooling-lint-element-type-safety": ["@singularity/plugin-framework-tooling-lint-element-type-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/element-type-safety"],
 
     "@singularity/plugin-framework-tooling-lint-entity-projection-safety": ["@singularity/plugin-framework-tooling-lint-entity-projection-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/entity-projection-safety"],
+
+    "@singularity/plugin-framework-tooling-lint-git-grep-safety": ["@singularity/plugin-framework-tooling-lint-git-grep-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/git-grep-safety"],
 
     "@singularity/plugin-framework-tooling-lint-hover-reveal-safety": ["@singularity/plugin-framework-tooling-lint-hover-reveal-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/hover-reveal-safety"],
 

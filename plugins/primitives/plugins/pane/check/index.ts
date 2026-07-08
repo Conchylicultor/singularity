@@ -1,43 +1,9 @@
 import ts from "typescript";
+import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { normalizeSegmentPattern } from "../core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function git(root: string, args: string[]): Promise<string> {
-  const proc = Bun.spawn(["git", ...args], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const out = await new Response(proc.stdout).text();
-  await proc.exited;
-  return out;
-}
-
-async function getRoot(): Promise<string> {
-  return (await git(process.cwd(), ["rev-parse", "--show-toplevel"])).trim();
-}
-
-// Files that may author a pane segment: any source mentioning `Pane.define`
-// (inline segment) or `defineRoute` (segment authored on the route). Tests are
-// excluded — they register throwaway panes that never ship.
-async function candidateFiles(root: string): Promise<string[]> {
-  const out = await git(root, [
-    "grep",
-    "-l",
-    "-e",
-    "Pane.define",
-    "-e",
-    "defineRoute",
-    "--",
-    "plugins/**/*.ts",
-    "plugins/**/*.tsx",
-    ":(exclude)**/*.test.ts",
-    ":(exclude)**/*.test.tsx",
-  ]);
-  return out.split("\n").filter(Boolean);
-}
 
 interface SegmentSite {
   raw: string;
@@ -109,13 +75,22 @@ const check: Check = {
   description:
     "pane URL segments must be globally unique (no two panes match the same URLs)",
   async run() {
-    const root = await getRoot();
-    const files = await candidateFiles(root);
+    // Files that may author a pane segment: any source mentioning `Pane.define`
+    // (inline segment) or `defineRoute` (segment authored on the route). Tests
+    // are excluded — they register throwaway panes that never ship.
+    const sources = await listCandidateSources({
+      grepArg: "Pane\\.define|defineRoute",
+      pathspecs: [
+        "plugins/**/*.ts",
+        "plugins/**/*.tsx",
+        ":(exclude)**/*.test.ts",
+        ":(exclude)**/*.test.tsx",
+      ],
+    });
 
     const byPattern = new Map<string, SegmentSite[]>();
-    for (const file of files) {
-      const source = await Bun.file(`${root}/${file}`).text();
-      for (const site of collectSegments(file, source)) {
+    for (const { rel, src } of sources) {
+      for (const site of collectSegments(rel, src)) {
         // Index/empty-segment panes resolve via appPath, not URL matching —
         // multiple empties are legal (mirrors useSyncPaneRegistry).
         if (site.raw === "" || site.raw === "/") continue;

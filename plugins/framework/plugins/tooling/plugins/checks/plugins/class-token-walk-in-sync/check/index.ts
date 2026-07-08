@@ -1,15 +1,7 @@
-import { join } from "node:path";
+import { listCandidateSources } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
-
-async function getRoot(): Promise<string> {
-  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  return (await new Response(proc.stdout).text()).trim();
-}
 
 // The six `no-adhoc-*` class rules that carry a byte-identical copy of the
 // shared class-token walk. The walk is DUPLICATED (not imported) on purpose:
@@ -30,27 +22,25 @@ const START = "// >>> shared:class-token-walk";
 const END = "// <<< shared:class-token-walk";
 
 /**
- * Discover every rule file carrying the shared-walk start sentinel. Uses
- * `git grep -l` (the repo's `find`-free file-discovery primitive) so the set is
- * read straight from tracked source.
+ * Discover every rule file carrying the shared-walk start sentinel, paired with
+ * its source. Uses `listCandidateSources` (the scan-tree/untracked-aware file
+ * discovery shared with `grepCode`) rather than a bare `git grep`, so a
+ * not-yet-committed rule file — the exact thing an agent produces when adding a
+ * 7th rule — is still seen instead of slipping past until runtime.
  */
-async function discoverFiles(root: string): Promise<string[]> {
-  const proc = Bun.spawn(["git", "grep", "-l", "-F", START, "--", "*.ts"], {
-    cwd: root,
-    stdout: "pipe",
-    stderr: "pipe",
+async function discoverFiles(): Promise<Array<{ rel: string; src: string }>> {
+  const sources = await listCandidateSources({
+    grepArg: START,
+    fixed: true,
+    pathspecs: ["*.ts"],
   });
-  const stdout = (await new Response(proc.stdout).text()).trim();
-  await proc.exited;
-  if (stdout === "") return [];
   // The shared walk only ever lives in a lint RULE file (`<plugin>/lint/*.ts`).
   // Restrict to those so this check's OWN file — which carries the sentinel text
   // inside its `START`/`END` string constants, under `check/` — isn't discovered
   // as a (spurious) participant.
-  return stdout
-    .split("\n")
-    .filter((l) => l.length > 0 && l.includes("/lint/"))
-    .sort();
+  return sources
+    .filter(({ rel }) => rel.includes("/lint/"))
+    .sort((a, b) => a.rel.localeCompare(b.rel));
 }
 
 /**
@@ -71,8 +61,8 @@ const check: Check = {
   description:
     "The six no-adhoc-* class rules must carry a byte-identical copy of the shared class-token walk (it can't be imported — lint rules dual-load under jiti, which can't resolve @plugins/*).",
   async run() {
-    const root = await getRoot();
-    const found = await discoverFiles(root);
+    const discovered = await discoverFiles();
+    const found = discovered.map((d) => d.rel);
 
     // The discovered set must EXACTLY equal the known expected set, so a 6th
     // rule adopting the sentinel (or a copy losing it) fails loudly.
@@ -97,8 +87,7 @@ const check: Check = {
 
     // All discovered blocks must be byte-identical.
     const blocks = new Map<string, string>();
-    for (const rel of found) {
-      const src = await Bun.file(join(root, rel)).text();
+    for (const { rel, src } of discovered) {
       const block = extractBlock(src);
       if (block === null) {
         return {

@@ -8,7 +8,9 @@ what keeps the copies in lockstep instead.
 
 Each copy is fenced by `// >>> shared:class-token-walk … >>>` /
 `// <<< shared:class-token-walk <<<` sentinel lines; the check discovers every
-file carrying the start sentinel (via `git grep -l`), asserts that set exactly
+file carrying the start sentinel (via the scan-tree/untracked-aware
+`listCandidateSources` from `checks/core`, so an as-yet-uncommitted rule file is
+still seen), asserts that set exactly
 equals the known `EXPECTED` six, and compares the text strictly between the
 markers byte-for-byte. A 7th rule adopting the sentinel, a copy losing it, or a
 drifted body all fail loudly.

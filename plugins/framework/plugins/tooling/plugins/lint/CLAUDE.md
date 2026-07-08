@@ -13,6 +13,7 @@
   - **`context-safety`** — context-safety lint rule: no-unstable-context-value
   - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
   - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
+  - **`git-grep-safety`** — git-grep-safety lint rule: no-adhoc-git-grep
   - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
   - **`icon-safety`** — icon-safety lint rules: no-lucide-react
   - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan

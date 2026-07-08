@@ -110,6 +110,47 @@ export async function grepImports(opts: GrepImportsOptions): Promise<ImportMatch
   return matches;
 }
 
+export interface CandidateSource {
+  /** File path relative to `root`. */
+  rel: string;
+  /** The file's source text (read from the scan tree, or the working tree). */
+  src: string;
+}
+
+export interface ListCandidateSourcesOptions {
+  /** Repo root to scan (defaults to `git rev-parse --show-toplevel`). */
+  root?: string;
+  /** Narrows candidate files via `git grep -l` (fast pre-filter). */
+  grepArg: string;
+  /** Pass `-F` (fixed-string) instead of `-E` (extended regexp) to git grep. */
+  fixed?: boolean;
+  /** Pathspecs scoping the git grep (default ["*.ts", "*.tsx"]). */
+  pathspecs?: string[];
+}
+
+/**
+ * Public candidate-source lister: the scan-tree/untracked-aware file discovery
+ * behind `grepCode`/`grepImports`, exposed for AST-based checks that parse each
+ * candidate themselves (rather than regex-scanning lines). A thin pass-through
+ * to `readCandidates` so the git plumbing — including seeing not-yet-committed
+ * untracked files — stays single-sourced. A bare `git grep` searches only
+ * tracked files and would miss a freshly-created source; use this instead.
+ */
+export async function listCandidateSources(
+  opts: ListCandidateSourcesOptions,
+): Promise<CandidateSource[]> {
+  const root = opts.root ?? (await getRoot());
+  return readCandidates(root, opts.grepArg, opts.fixed ?? false, opts.pathspecs ?? ["*.ts", "*.tsx"]);
+}
+
+async function getRoot(): Promise<string> {
+  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  return (await new Response(proc.stdout).text()).trim();
+}
+
 /**
  * Narrow candidate files via `git grep -l`, then read each one's source —
  * shared by `grepCode` (masked line re-scan) and `grepImports` (structured

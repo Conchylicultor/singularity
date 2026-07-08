@@ -6,8 +6,8 @@ export type { TscTarget } from "./discover";
 export { computeTreeHash } from "./tree-hash";
 export { openCheckCache } from "./cache";
 export type { CheckCache } from "./cache";
-export { grepCode, grepImports } from "./grep-code";
-export type { CodeMatch, ImportMatch } from "./grep-code";
+export { grepCode, grepImports, listCandidateSources } from "./grep-code";
+export type { CodeMatch, ImportMatch, CandidateSource, ListCandidateSourcesOptions } from "./grep-code";
 // NOTE: token-group-vars.generated.ts is intentionally NOT re-exported. Checks
 // must read token-group vars FRESH via codegen core's collectTokenGroupVars() —
 // a static import of the generated manifest is frozen in the ESM module cache

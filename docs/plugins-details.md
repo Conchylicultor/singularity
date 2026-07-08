@@ -3467,7 +3467,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/paths.SINGULARITY_DIR`, `plugin-meta/parse-utils.findImports`, `plugin-meta/parse-utils.lineAt`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
-            - Exports: Types: `CheckCache`, `CodeMatch`, `ImportMatch`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `grepImports`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
+            - Exports: Types: `CandidateSource`, `CheckCache`, `CodeMatch`, `ImportMatch`, `ListCandidateSourcesOptions`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `grepImports`, `listAllChecks`, `listCandidateSources`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
           - Plugins:
             - **`app-css-utilities-in-sync`**
             - **`apps-paths-from-app-ref`**
@@ -3534,6 +3534,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`context-safety`** — context-safety lint rule: no-unstable-context-value
             - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
             - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection
+            - **`git-grep-safety`** — git-grep-safety lint rule: no-adhoc-git-grep
             - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`import-scan-safety`** — import-scan-safety lint rule: no-adhoc-import-scan
