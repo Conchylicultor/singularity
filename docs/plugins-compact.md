@@ -175,6 +175,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`debug`** — Debug tools umbrella plugin.
   - Plugins:
+    - **`boot-budget`** — Boot-budget report renderer: a one-line Debug → Reports summary for the boot-budget kind, plus the per-phase budget config registration. Boot-budget monitor: a cheap per-worktree scheduled job that reads the post-boot profile once and files a deduped boot-budget report per server boot hook (onReadyBlocking / onReady / onAllReady) or warmup span whose wall-time exceeds its per-phase budget, so a heavy boot hook is loud immediately instead of invisible-until-threshold.
     - **`boot-profile`** — Browser boot profiler Gantt debug page: the request → first-paint timeline plus per-resource wait/work split, with shareable permalinks and a browsable list of saved snapshots. Persists captured browser boot traces under a unique id (POST), serves one snapshot (GET) and a metadata-only list (GET) for the permalink + browse panes, and sweeps snapshots older than 30 days via a scheduled job.
     - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
@@ -272,6 +273,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`boot-snapshot`** — Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint.
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
     - **`contention`** — Cached, cluster-wide system-contention snapshot (OS load average + Postgres backend counts) stamped onto slow ops.
+    - **`corpus-index`** — Fingerprint-keyed incremental file index: defineCorpusIndex enumerates files under roots matching a predicate, re-parses only those whose (mtimeMs,size) changed through a bounded heavy-read-gated pipeline, drops vanished entries, and persists atomically (host scope ⇒ main-only). ensureFresh is the lazy on-read correctness fallback; startWatcher is main-only push freshness.
     - **`endpoints`** [load-bearing] — Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
     - **`entities`** — Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.
     - **`entity-extensions`** [load-bearing] — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
@@ -288,9 +290,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`ndjson-stream`** — Client NDJSON stream reader: an async generator yielding one parsed JSON frame per line from a streamed endpoint, guarding res.ok and reporting via EndpointError. NDJSON (application/x-ndjson) streaming Response builder: wrap a frame-emitting producer into a chunked stream that survives Bun's idle timeout and lets clients render rows progressively.
     - **`paths`**
     - **`query-resource`** — Declarative SQL query→resource compiler: one drizzle-based declaration derives the loader, scoped loader, identityTable, and client keyOf for keyed live-state resources.
+    - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl), and markFirehose declares unbounded-growth tables. The retention:firehose-bounded check fails when a declared firehose table has neither a retention policy nor a cascade owner.
     - **`runtime-profiler`** [load-bearing]
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
     - **`secrets`** [load-bearing] — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
+    - **`warmup`** — Declared heavy boot warm-up category: defineWarmup registers a deferred, throttled, scope-gated warm-up; drainWarmups drains them after onAllReady under a concurrency gate + heavy-read slot + macrotask yield.
     - **`worktree`**
 
 - **`integrations`** — Umbrella for third-party service integrations that consume an auth connection (Gmail, …).
