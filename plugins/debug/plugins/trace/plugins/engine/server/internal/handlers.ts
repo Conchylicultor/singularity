@@ -1,4 +1,4 @@
-import { eq, desc } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { listTraces, getTrace } from "../../shared/endpoints";
@@ -23,6 +23,13 @@ export const handleListTraces = implement(listTraces, async () => {
       durationMs: _traces.durationMs,
       thresholdMs: _traces.thresholdMs,
       createdAt: _traces.createdAt,
+      // Two scalar json extractions off the (unselected) snapshot blob — the
+      // wall-clock interval end + width, for read-side incident grouping. No
+      // migration: every persisted snapshot carries these.
+      wallTime: sql<string>`${_traces.snapshot} ->> 'wallTime'`,
+      windowSpanMs: sql<number>`
+        (${_traces.snapshot} ->> 'atMs')::float8
+        - (${_traces.snapshot} ->> 'windowStartMs')::float8`,
     })
     .from(_traces)
     .orderBy(desc(_traces.createdAt))
@@ -36,6 +43,8 @@ export const handleListTraces = implement(listTraces, async () => {
       durationMs: r.durationMs,
       thresholdMs: r.thresholdMs,
       createdAt: r.createdAt.toISOString(),
+      wallTime: r.wallTime,
+      windowSpanMs: r.windowSpanMs,
     })),
   };
 });

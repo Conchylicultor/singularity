@@ -19,6 +19,8 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { listTraces } from "@plugins/debug/plugins/trace/plugins/engine/web";
 import type { TraceListItem } from "@plugins/debug/plugins/trace/plugins/engine/web";
 import { triggerVariant } from "../internal/trigger-meta";
+import { groupIncidents } from "../internal/incidents";
+import { IncidentBadge } from "./incident-badge";
 import { traceDetailPane } from "../panes";
 
 // Marker scraped by codegen (data-views.generated.ts). Must live in web/**.
@@ -35,6 +37,7 @@ export function EventsView(): ReactElement {
   const selectedId = traceDetailPane.useRouteEntry()?.params.id;
 
   const rows = useMemo(() => data?.items ?? [], [data]);
+  const incidents = useMemo(() => groupIncidents(rows), [rows]);
 
   const fields = useMemo<FieldDef<TraceListItem>[]>(() => {
     const kinds = [...new Set(rows.map((r) => r.triggerKind))].sort();
@@ -51,6 +54,22 @@ export function EventsView(): ReactElement {
         ),
         sortable: true,
         width: "7rem",
+      },
+      {
+        id: "incident",
+        label: "Incident",
+        type: "number",
+        align: "start",
+        // Co-occurrence count (≥1); solo traces render nothing in the cell so the
+        // column is noise-free, but the value stays numerically meaningful.
+        value: (r) => incidents.get(r.id)?.size ?? 1,
+        cell: (r) => {
+          const info = incidents.get(r.id);
+          return info && info.size > 1 ? (
+            <IncidentBadge info={info} windowSpanMs={r.windowSpanMs} />
+          ) : null;
+        },
+        width: "4rem",
       },
       {
         id: "triggerKind",
@@ -108,7 +127,7 @@ export function EventsView(): ReactElement {
         width: "6rem",
       },
     ];
-  }, [rows]);
+  }, [rows, incidents]);
 
   if (error) {
     return (

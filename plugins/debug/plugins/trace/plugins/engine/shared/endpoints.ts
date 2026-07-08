@@ -12,6 +12,8 @@ export const TraceListItemSchema = z.object({
   durationMs: z.number(),
   thresholdMs: z.number(),
   createdAt: z.string(),
+  wallTime: z.string(), // ISO trip anchor (snapshot.wallTime); the interval END.
+  windowSpanMs: z.number(), // snapshot.atMs − snapshot.windowStartMs; interval width.
 });
 export type TraceListItem = z.infer<typeof TraceListItemSchema>;
 

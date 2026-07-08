@@ -4,10 +4,14 @@ import {
   getEndpointErrorMessage,
   EndpointError,
 } from "@plugins/infra/plugins/endpoints/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -18,9 +22,13 @@ import {
 import {
   Trace,
   getTrace,
+  listTraces,
   type TraceSelection,
 } from "@plugins/debug/plugins/trace/plugins/engine/web";
 import type { TraceSnapshot } from "@plugins/debug/plugins/trace/plugins/engine/core";
+import { overlaps } from "../internal/incidents";
+import { triggerVariant } from "../internal/trigger-meta";
+import { traceDetailPane } from "../panes";
 
 // Detail render: load one trace's full snapshot, then paint the unified Gantt —
 // the trip row (rendered here from the generic trigger, naming no class) + one
@@ -54,7 +62,81 @@ export function TraceDetail({ id }: { id: string }): ReactElement {
     );
   }
 
-  return <TraceGantt snapshot={data.snapshot} />;
+  return (
+    <>
+      <AlsoInWindow id={id} snapshot={data.snapshot} />
+      <TraceGantt snapshot={data.snapshot} />
+    </>
+  );
+}
+
+// "Also in this window" — the sibling traces whose wall-clock window overlaps
+// this trace's window, from the same cheap 200-newest metadata the Events tab
+// uses (deduped by the endpoint layer). One-click hop between the co-occurring
+// traces of a single incident. The count is a LOWER BOUND — rate-limited
+// siblings never persist — so the subtitle says groups may be incomplete.
+// Hidden entirely for a solo trace.
+function AlsoInWindow({
+  id,
+  snapshot,
+}: {
+  id: string;
+  snapshot: TraceSnapshot;
+}): ReactElement | null {
+  const openPane = useOpenPane();
+  const { data: list } = useEndpoint(listTraces, {});
+
+  const siblings = useMemo(() => {
+    const end = Date.parse(snapshot.wallTime);
+    const self = { startMs: end - (snapshot.atMs - snapshot.windowStartMs), endMs: end };
+    return (list?.items ?? [])
+      .filter((t) => {
+        if (t.id === id) return false;
+        const tEnd = Date.parse(t.wallTime);
+        return overlaps(self, { startMs: tEnd - t.windowSpanMs, endMs: tEnd });
+      })
+      .map((t) => ({ ...t, deltaS: (Date.parse(t.wallTime) - end) / 1000 }))
+      .sort((a, b) => a.deltaS - b.deltaS);
+  }, [list, id, snapshot.wallTime, snapshot.atMs, snapshot.windowStartMs]);
+
+  if (siblings.length === 0) return null;
+
+  return (
+    <div className="border-b px-lg py-sm">
+      <Stack gap="xs">
+        <Text as="div" variant="caption" tone="muted">
+          Also in this window ({siblings.length}) — groups may be incomplete
+          (siblings can be rate-limited).
+        </Text>
+        <Stack gap="2xs">
+          {siblings.map((t) => (
+            <Row
+              key={t.id}
+              size="sm"
+              hover="muted"
+              title={t.triggerLabel}
+              onClick={() => openPane(traceDetailPane, { id: t.id }, { mode: "push" })}
+              icon={
+                <Badge variant={triggerVariant(t.triggerKind)} mono>
+                  {t.triggerKind}
+                </Badge>
+              }
+            >
+              <Fill>
+                <Text as="span" variant="caption" className="font-mono">
+                  {t.triggerLabel}
+                </Text>
+              </Fill>
+              <Text as="span" variant="caption" tone="muted" className="tabular-nums">
+                {t.deltaS >= 0 ? "+" : ""}
+                {t.deltaS.toFixed(1)}s
+              </Text>
+            </Row>
+          ))}
+        </Stack>
+      </Stack>
+    </div>
+  );
 }
 
 function TraceGantt({ snapshot }: { snapshot: TraceSnapshot }): ReactElement {
