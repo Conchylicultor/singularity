@@ -12,7 +12,7 @@ import {
   type PendingOp,
 } from "./overlay";
 
-export interface UseOptimisticResourceArgs<
+interface OptimisticBaseArgs<
   Data,
   Vars,
   P extends Record<string, string> = Record<string, string>,
@@ -23,28 +23,43 @@ export interface UseOptimisticResourceArgs<
   apply: (current: Data, vars: Vars) => Data;
   /** Network thunk; resolves on server 2xx (the op was accepted). */
   mutate: (vars: Vars) => Promise<void>;
-  /**
-   * Has this freshly-arrived server snapshot already reflected `vars`?
-   * Default (coarse): clear a resolved op on the first push after it resolved.
-   * Override for precise content checks (e.g. "row id X present").
-   */
-  isConfirmedBy?: (serverData: Data, vars: Vars) => boolean;
-  /**
-   * Op identity for cascade confirmation (content-based mode only): do `a` and
-   * `b` write the SAME entity/key? When provided, confirming an op also drops
-   * older RESOLVED ops on the same target — a newer confirmed write to a
-   * target proves the snapshot already contains the older write's (possibly
-   * overwritten) effect, so an older op that still doesn't match can never
-   * match any future snapshot (the stuck-inverse-pair hazard; see
-   * `confirmPass`). Without it, only directly-confirmed ops are dropped —
-   * older resolved ops on UNRELATED targets always survive until their own
-   * confirming push arrives.
-   */
-  sameTarget?: (a: Vars, b: Vars) => boolean;
   onError?: (err: unknown, vars: Vars) => void;
   /** Names the thing being saved; surfaced in the sync-status error state. */
   label?: string;
 }
+
+/**
+ * Confirmation mode. Coarse (neither field) clears a resolved op on the first
+ * push after it resolved. Content-based REQUIRES both fields together:
+ * `isConfirmedBy(serverData, vars)` asks "has this freshly-arrived server
+ * snapshot already reflected `vars`?" (precise content check, e.g. "row id X
+ * present"), and `sameTarget(a, b)` declares op identity ("do `a` and `b` write
+ * the SAME entity/key?").
+ *
+ * Precise per-op matching implies concurrent per-entity ops in flight — i.e. a
+ * structurally multi-target consumer — which needs the same-target cascade to
+ * avoid the stuck-inverse-pair replay: confirming an op also drops older
+ * RESOLVED ops on the same target, because a newer confirmed write to a target
+ * proves the snapshot already contains the older write's (possibly overwritten)
+ * effect, so an older op that still doesn't match can never match any future
+ * snapshot (see `confirmPass`). An older resolved op on an UNRELATED target,
+ * whose own confirming push simply hasn't arrived yet, is never cascade-dropped.
+ *
+ * `isConfirmedBy` without `sameTarget` (or vice versa) is therefore
+ * unrepresentable.
+ */
+type ConfirmationArgs<Data, Vars> =
+  | { isConfirmedBy?: undefined; sameTarget?: undefined }
+  | {
+      isConfirmedBy: (serverData: Data, vars: Vars) => boolean;
+      sameTarget: (a: Vars, b: Vars) => boolean;
+    };
+
+export type UseOptimisticResourceArgs<
+  Data,
+  Vars,
+  P extends Record<string, string> = Record<string, string>,
+> = OptimisticBaseArgs<Data, Vars, P> & ConfirmationArgs<Data, Vars>;
 
 export interface UseOptimisticResourceResult<Data, Vars> {
   /** Server truth with all pending ops replayed; never undefined. */
@@ -79,7 +94,13 @@ export function useOptimisticResource<
 >(
   args: UseOptimisticResourceArgs<Data, Vars, P>,
 ): UseOptimisticResourceResult<Data, Vars> {
-  const { resource, params, apply, mutate, isConfirmedBy, sameTarget, onError, label } = args;
+  const { resource, params, apply, mutate, onError, label } = args;
+  // Narrow on the object (not a destructure) so TS keeps the union correlation:
+  // when `args.isConfirmedBy` is truthy, `args` is the paired arm and
+  // `args.sameTarget` is known-defined.
+  const confirmation = args.isConfirmedBy
+    ? { isConfirmedBy: args.isConfirmedBy, sameTarget: args.sameTarget }
+    : undefined;
   const queryClient = useQueryClient();
   const result = useResource(resource, params);
   const base = result.pending ? resource.initialData : result.data;
@@ -92,8 +113,7 @@ export function useOptimisticResource<
   // Latest-value refs so the QueryCache subscription effect can stay mounted for
   // the resource's lifetime without re-subscribing on every render.
   const applyRef = useLatestRef(apply);
-  const isConfirmedByRef = useLatestRef(isConfirmedBy);
-  const sameTargetRef = useLatestRef(sameTarget);
+  const confirmationRef = useLatestRef(confirmation);
 
   const targetKey = useMemo(
     () => JSON.stringify(queryKeyFor(resource.key, params)),
@@ -112,12 +132,12 @@ export function useOptimisticResource<
       const serverData = event.query.state.data as Data | undefined;
       if (serverData === undefined) return;
       setPending((prev) => {
-        const next = confirmPass(prev, serverData, isConfirmedByRef.current, sameTargetRef.current);
+        const next = confirmPass(prev, serverData, confirmationRef.current);
         return next.length === prev.length ? prev : next;
       });
     });
     // The subscription stays mounted for the resource's lifetime and reads the
-    // freshest predicate off the stable `isConfirmedByRef.current` at call time.
+    // freshest confirmation off the stable `confirmationRef.current` at call time.
   }, [queryClient, targetKey]);
 
   const data = useMemo(

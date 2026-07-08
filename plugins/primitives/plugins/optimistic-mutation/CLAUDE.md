@@ -28,8 +28,9 @@ const { data, serverData, pending, dispatch, inFlight, failed, retry } = useOpti
   params,              // optional resource params
   apply,               // (current: Data, vars: Vars) => Data — PURE predicted next state
   mutate,              // (vars: Vars) => Promise<void> — the network call (resolves on 2xx)
-  isConfirmedBy,       // optional (serverData, vars) => boolean — content-based confirmation
-  sameTarget,          // optional (a, b) => boolean — op identity; enables same-target cascade
+  // Content-based confirmation is an all-or-nothing PAIR (omit both for coarse):
+  isConfirmedBy,       // (serverData, vars) => boolean — content-based confirmation
+  sameTarget,          // (a, b) => boolean — op identity; REQUIRED with isConfirmedBy (same-target cascade)
   onError,             // optional (err, vars) => void
   label,               // optional string — names the thing being saved (sync-status error state)
 });
@@ -67,25 +68,28 @@ const { data, serverData, pending, dispatch, inFlight, failed, retry } = useOpti
   On each push, resolved ops are dropped: coarse by default ("a push after my
   mutation resolved confirms me"), or precisely when `isConfirmedBy(serverData,
   vars)` returns true.
-- **Cascade confirmation** (content-based mode, opt-in via `sameTarget`):
-  confirming an op also drops every RESOLVED op older than it in the pending
-  order **that writes the same entity/key**, even when the snapshot doesn't
-  match those ops. A snapshot reflecting a newer write to a target already
-  contains an older resolved write's effect on that target (possibly
-  overwritten), so an older same-target op that still doesn't match can never
-  match any future snapshot — keeping it would replay stale state forever.
-  Concretely this closes the stuck-inverse-pair hazard (undo dispatches
-  "delete X", redo dispatches "restore X" before the push carrying the
-  deletion arrives: every later snapshot shows X present, confirming the redo
-  but never the undo — without the cascade the stuck undo would delete X from
-  every rendered state from then on). The containment argument is only valid
-  WITHIN one entity, so the cascade requires the consumer to declare op
-  identity: pass `sameTarget: (a, b) => boolean` ("do these two ops write the
-  same entity?"). Without it the pass is conservative — only directly-confirmed
-  ops are dropped, and an older resolved op on an UNRELATED target always
+- **Cascade confirmation** (content-based mode): `sameTarget` is **required**
+  alongside `isConfirmedBy` — the two are a paired, all-or-nothing arm of a
+  discriminated union (`isConfirmedBy` without `sameTarget`, or vice versa, is
+  unrepresentable). Precise per-op matching implies concurrent per-entity ops
+  in flight — a structurally multi-target consumer — which needs the cascade to
+  avoid the stuck-inverse-pair replay. So whenever an op is confirmed, every
+  RESOLVED op older than it in the pending order **that writes the same
+  entity/key** is dropped too, even when the snapshot doesn't match those ops. A
+  snapshot reflecting a newer write to a target already contains an older
+  resolved write's effect on that target (possibly overwritten), so an older
+  same-target op that still doesn't match can never match any future snapshot —
+  keeping it would replay stale state forever. Concretely this closes the
+  stuck-inverse-pair hazard (undo dispatches "delete X", redo dispatches
+  "restore X" before the push carrying the deletion arrives: every later
+  snapshot shows X present, confirming the redo but never the undo — without the
+  cascade the stuck undo would delete X from every rendered state from then on).
+  The containment argument is only valid WITHIN one entity, so the consumer
+  declares op identity via `sameTarget: (a, b) => boolean` ("do these two ops
+  write the same entity?"); an older resolved op on an UNRELATED target always
   survives until its own confirming push arrives (cascade-dropping it would
-  transiently revert that entity to stale server data). Unresolved ops are
-  never cascade-dropped. Current `sameTarget` consumers: the page editor
+  transiently revert that entity to stale server data). Unresolved ops are never
+  cascade-dropped. Current `sameTarget` consumers: the page editor
   (`sameOverlayTarget` — block-id-set intersection over ops/patches) and
   config_v2 staging (`(pluginId, configName)` equality).
 - `apply` must be pure. For the "this op no longer applies to the current base"

@@ -134,6 +134,13 @@ describe("confirmPass (coarse)", () => {
 });
 
 describe("confirmPass (content-based isConfirmedBy)", () => {
+  // Cascade confirmation is scoped by op identity: ops on the same number are
+  // "the same target". A newer confirmed write to a target supersedes older
+  // resolved writes to THAT target only. `sameTarget` is required alongside
+  // `isConfirmedBy`, so content-based mode is always the `{ isConfirmedBy,
+  // sameTarget }` pair.
+  const sameN = (a: Vars, b: Vars): boolean => a.n === b.n;
+
   test("only drops a resolved op when isConfirmedBy accepts the snapshot", () => {
     const isConfirmedBy = (serverData: number[], vars: Vars): boolean =>
       vars.kind === "push" && serverData.includes(vars.n);
@@ -144,17 +151,16 @@ describe("confirmPass (content-based isConfirmedBy)", () => {
     ];
 
     // Server only reflects 2 so far ⇒ a is confirmed, b is not.
-    expect(confirmPass(pending, [1, 2], isConfirmedBy).map((o) => o.opId)).toEqual(["b"]);
+    expect(
+      confirmPass(pending, [1, 2], { isConfirmedBy, sameTarget: sameN }).map((o) => o.opId),
+    ).toEqual(["b"]);
     // Server reflects both ⇒ both dropped.
-    expect(confirmPass(pending, [1, 2, 3], isConfirmedBy)).toEqual([]);
+    expect(confirmPass(pending, [1, 2, 3], { isConfirmedBy, sameTarget: sameN })).toEqual([]);
     // Server reflects neither ⇒ both kept.
-    expect(confirmPass(pending, [1], isConfirmedBy).map((o) => o.opId)).toEqual(["a", "b"]);
+    expect(
+      confirmPass(pending, [1], { isConfirmedBy, sameTarget: sameN }).map((o) => o.opId),
+    ).toEqual(["a", "b"]);
   });
-
-  // Cascade confirmation is scoped by op identity: ops on the same number are
-  // "the same target". A newer confirmed write to a target supersedes older
-  // resolved writes to THAT target only.
-  const sameN = (a: Vars, b: Vars): boolean => a.n === b.n;
 
   test("cascade (sameTarget): the stuck-inverse pair on ONE entity resolves", () => {
     const isConfirmedBy = (serverData: number[], vars: Vars): boolean =>
@@ -171,7 +177,7 @@ describe("confirmPass (content-based isConfirmedBy)", () => {
       op("undo", { kind: "remove", n: 9 }, true),
       op("redo", { kind: "push", n: 9 }, true),
     ];
-    expect(confirmPass(pending, [1, 9], isConfirmedBy, sameN)).toEqual([]);
+    expect(confirmPass(pending, [1, 9], { isConfirmedBy, sameTarget: sameN })).toEqual([]);
   });
 
   test("cascade never drops an older resolved op on an UNRELATED target", () => {
@@ -185,19 +191,11 @@ describe("confirmPass (content-based isConfirmedBy)", () => {
       op("a", { kind: "push", n: 2 }, true), // resolved, not yet reflected
       op("b", { kind: "push", n: 3 }, true), // confirmed by this snapshot
     ];
-    expect(confirmPass(pending, [1, 3], isConfirmedBy, sameN).map((o) => o.opId)).toEqual(["a"]);
+    expect(
+      confirmPass(pending, [1, 3], { isConfirmedBy, sameTarget: sameN }).map((o) => o.opId),
+    ).toEqual(["a"]);
     // ...and the eventual push reflecting 2 confirms it normally.
-    expect(confirmPass(pending, [1, 2, 3], isConfirmedBy, sameN)).toEqual([]);
-  });
-
-  test("without sameTarget the pass is conservative: no cross-op cascade at all", () => {
-    const isConfirmedBy = (serverData: number[], vars: Vars): boolean =>
-      vars.kind === "push" && serverData.includes(vars.n);
-    const pending = [
-      op("a", { kind: "push", n: 2 }, true), // resolved, not reflected — kept
-      op("b", { kind: "push", n: 3 }, true), // confirmed — dropped
-    ];
-    expect(confirmPass(pending, [1, 3], isConfirmedBy).map((o) => o.opId)).toEqual(["a"]);
+    expect(confirmPass(pending, [1, 2, 3], { isConfirmedBy, sameTarget: sameN })).toEqual([]);
   });
 
   test("cascade never drops UNRESOLVED older ops, even on the same target", () => {
@@ -207,7 +205,9 @@ describe("confirmPass (content-based isConfirmedBy)", () => {
       op("a", { kind: "remove", n: 3 }, false), // still in flight — must survive
       op("b", { kind: "push", n: 3 }, true), // confirmed by the snapshot
     ];
-    expect(confirmPass(pending, [1, 3], isConfirmedBy, sameN).map((o) => o.opId)).toEqual(["a"]);
+    expect(
+      confirmPass(pending, [1, 3], { isConfirmedBy, sameTarget: sameN }).map((o) => o.opId),
+    ).toEqual(["a"]);
   });
 
   test("cascade leaves newer unconfirmed resolved ops alone", () => {
@@ -217,7 +217,9 @@ describe("confirmPass (content-based isConfirmedBy)", () => {
       op("a", { kind: "push", n: 2 }, true), // confirmed
       op("b", { kind: "remove", n: 2 }, true), // same target, newer, not yet reflected — kept
     ];
-    expect(confirmPass(pending, [1, 2], isConfirmedBy, sameN).map((o) => o.opId)).toEqual(["b"]);
+    expect(
+      confirmPass(pending, [1, 2], { isConfirmedBy, sameTarget: sameN }).map((o) => o.opId),
+    ).toEqual(["b"]);
   });
 });
 
@@ -256,7 +258,8 @@ describe("integration: chained dispatch + interleaved push + reject", () => {
     // resolved ops, but content-based keeps b until the server reflects it.
     const isConfirmedBy = (s: number[], v: Vars): boolean =>
       v.kind === "push" && s.includes(v.n);
-    pending = confirmPass(pending, [1, 2], isConfirmedBy);
+    const sameTarget = (a: Vars, b: Vars): boolean => a.n === b.n;
+    pending = confirmPass(pending, [1, 2], { isConfirmedBy, sameTarget });
     expect(pending.map((o) => o.opId)).toEqual(["b"]);
 
     // the push moved base forward to [1,2]; b still replays on top
