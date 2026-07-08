@@ -829,12 +829,21 @@ export function chargeWait(layer: string, ms: number): void {
  * triggered the slow span. Without this guard those suppressed writes (e.g.
  * `INSERT INTO reports`, the report's `createTask`/`getTask`) would be
  * mis-attributed to that loader's read-set, fabricating dependency edges.
+ *
+ * Skips a CLOSED context (`!cur.closed`), exactly like `chargeWait` and
+ * `recordEntrySpan`'s child-propagation loop: a detached/fire-and-forget
+ * continuation still carries its originating loader's `EntryContext` via the
+ * ambient runtime after `recordEntrySpan`'s `finally` has closed the entry and
+ * flushed `ctx.tables` into `readSetIndex`. An append to a finished context's
+ * `tables` would be silently lost (the entry flushes exactly once), so making
+ * it a structural no-op keeps capture correctness from silently depending on
+ * every loader DB read completing before the loader's own return chain settles.
  */
 export function recordReadTables(tables: readonly string[]): void {
   if (process.env.SINGULARITY_PROFILING === "0") return;
   if (suppressionRuntime.suppressed()) return;
   const cur = contextRuntime.current();
-  if (cur) {
+  if (cur && !cur.closed) {
     cur.tables ??= new Set();
     for (const table of tables) cur.tables.add(table);
   }

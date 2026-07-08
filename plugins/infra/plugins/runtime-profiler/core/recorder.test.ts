@@ -186,6 +186,37 @@ describe("closed-ancestor safety", () => {
     expect(detached.selfTotalMs).toBe(50);
   });
 
+  test("recordReadTables on a closed context is a no-op (the entry already flushed its read-set)", async () => {
+    // A detached, fire-and-forget continuation still carries its loader's
+    // EntryContext across the await (ALS semantics — same as the detached-child
+    // test above), so it records a late read AFTER the loader entry closed and
+    // flushed its tables into the index.
+    let captured!: EntryContext;
+    const gate = deferred();
+    let late!: Promise<void>;
+    await recordEntrySpan("loader", "l", () => {
+      captured = als.getStore()!;
+      recordReadTables(["real_table"]);
+      late = (async () => {
+        await gate.promise;
+        recordReadTables(["late_table"]); // the context is closed by now
+      })();
+    });
+
+    // The entry flushed exactly its one real read at finish.
+    expect(getReadSetIndex().l).toEqual(["real_table"]);
+    expect(captured.closed).toBe(true);
+
+    // Let the late write land on the (now closed) context — it must be dropped.
+    gate.resolve();
+    await late;
+
+    // Neither the closed context's own set nor the flushed index gained the
+    // late table: the append was a structural no-op, not a silently-lost write.
+    expect(captured.tables && [...captured.tables]).toEqual(["real_table"]);
+    expect(getReadSetIndex().l).toEqual(["real_table"]);
+  });
+
   test("a closed intermediate ancestor is skipped, an open grandparent still charged", async () => {
     await recordEntrySpan("flush", "f", async () => {
       const gate = deferred();
