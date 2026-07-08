@@ -78,6 +78,7 @@ export function boostInteractiveQos(): boolean {
       return false;
     }
     return true;
+  // eslint-disable-next-line promise-safety/no-absorbed-failure -- false is a real answer ("not boosted, default QoS"), identical to the non-darwin and rc!==0 paths; documented fail-open contract above: a dlopen/symbol failure must degrade loudly (console.error) to default priority, never abort main's boot
   } catch (err) {
     console.error("[spawn-priority] QoS boost unavailable; staying at default QoS", err);
     return false;
