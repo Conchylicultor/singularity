@@ -92,11 +92,12 @@ function tick(): void {
   };
   // Drain the JSC sampler for this window BEFORE resetting the histogram so the
   // drained samples and eventLoopMaxMs describe the same window. On a stall this
-  // dumps the dominant blocking stack; otherwise it just bounds memory. Main only
-  // (no-op elsewhere — the profiler is never armed off-main). windowMs is the
-  // actual elapsed wall-time, which on a stall is ~the block duration.
+  // captures a `stall` trace with the dominant blocking stack; otherwise it just
+  // bounds memory. Main only (no-op elsewhere — the profiler is never armed
+  // off-main). The 2nd arg is the actual elapsed wall-time since the previous
+  // drain, which on a stall is ~the block duration.
   if (isMain()) {
-    drainAndMaybeDump(sample.eventLoopMaxMs, sample.sampledAt, sample.sampledAt - lastTickAt);
+    drainAndMaybeDump(sample.eventLoopMaxMs, sample.sampledAt - lastTickAt);
   }
   lastTickAt = sample.sampledAt;
   histogram.reset();

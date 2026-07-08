@@ -29,8 +29,12 @@ export function captureTrace(trigger: TraceTrigger): { id: string } | null {
   // section describes the SAME instant.
   const atMs = performance.now();
   const key = `${trigger.kind}:${trigger.label}`;
-  // Admission first, so a slow-event storm costs one Map lookup per trip.
-  if (!admitTrace(key, atMs, cfg.cooldownMs, cfg.maxPerMin)) return null;
+  // Admission first, so a slow-event storm costs one Map lookup per trip. A
+  // critical trigger (a frozen backend) bypasses the per-minute cap but still
+  // honors its cooldown — never starved, never duplicated.
+  if (!admitTrace(key, atMs, cfg.cooldownMs, cfg.maxPerMin, trigger.critical)) {
+    return null;
+  }
 
   // Mint the id synchronously so linkage (a report / a slow_ops sample) can
   // reference it before persistence even begins.

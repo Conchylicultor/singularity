@@ -24,6 +24,11 @@ export const TraceTriggerSchema = z.object({
   // Trigger-specific extras (a SpanRef parent, wait breakdown, self/child ms…).
   // Opaque to the engine; a TriggerSummary web view narrows it by kind.
   detail: z.unknown().optional(),
+  // A critical trigger (e.g. an event-loop stall — a frozen backend) bypasses the
+  // global per-minute cap so a slow-event storm can never starve the most severe
+  // signal. The per-trigger cooldown still applies (recurring identical incidents
+  // dedupe). Reserve for genuinely severe, low-frequency signals.
+  critical: z.boolean().optional(),
 });
 export type TraceTrigger = z.infer<typeof TraceTriggerSchema>;
 

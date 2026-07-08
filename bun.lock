@@ -1752,6 +1752,10 @@
       "name": "@singularity/plugin-debug-trace-spans",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/trace/plugins/stall": {
+      "name": "@singularity/plugin-debug-trace-stall",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/worktree-cleanup": {
       "name": "@singularity/plugin-debug-worktree-cleanup",
     },
@@ -5623,6 +5627,8 @@
     "@singularity/plugin-debug-trace-pane": ["@singularity/plugin-debug-trace-pane@workspace:plugins/debug/plugins/trace/plugins/pane"],
 
     "@singularity/plugin-debug-trace-spans": ["@singularity/plugin-debug-trace-spans@workspace:plugins/debug/plugins/trace/plugins/spans"],
+
+    "@singularity/plugin-debug-trace-stall": ["@singularity/plugin-debug-trace-stall@workspace:plugins/debug/plugins/trace/plugins/stall"],
 
     "@singularity/plugin-debug-worktree-cleanup": ["@singularity/plugin-debug-worktree-cleanup@workspace:plugins/debug/plugins/worktree-cleanup"],
 

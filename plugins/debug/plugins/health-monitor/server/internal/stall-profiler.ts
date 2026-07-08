@@ -1,10 +1,12 @@
-import { join } from "node:path";
-import { readFileSync, statSync, writeFileSync } from "node:fs";
 import { startSamplingProfiler, samplingProfilerStackTraces } from "bun:jsc";
-import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
-import { worktreeDataDir, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
+import type {
+  StallSection,
+  StallLeaf,
+  StallStack,
+} from "@plugins/debug/plugins/trace/plugins/stall/core";
 
-// On-stall stack-trace flight recorder. Folded into the health sampler's tick.
+// On-stall stack-trace capture. Folded into the health sampler's tick.
 //
 // Mechanism: JSC's sampling profiler runs on a SEPARATE thread, so it keeps
 // sampling the blocked main-thread JS stack DURING a synchronous block — exactly
@@ -14,15 +16,21 @@ import { worktreeDataDir, currentWorktreeName } from "@plugins/infra/plugins/pat
 // samples since the last read), so a single drain-per-tick bounds memory AND
 // aligns the captured samples to the same window as `eventLoopMaxMs`.
 //
-// Why drain-then-dump aligns: during a 40 s block no setInterval tick fires (the
-// timer lives on the blocked loop), so the JSC buffer accumulates the entire
+// Why drain-then-capture aligns: during a 40 s block no setInterval tick fires
+// (the timer lives on the blocked loop), so the JSC buffer accumulates the entire
 // block's samples; the first tick after the block reads histogram.max ≈ 40 s AND
 // drains ~40 s of samples — both describe the same stall.
 //
+// On a stall the aggregated stacks are handed to the trace engine as a `stall`
+// trigger (kind "stall", critical: true), NOT dumped to a dead-end JSONL. The
+// evidence then surfaces in Debug → Slow Events like every other slow signal, and
+// the `trace/plugins/stall` event class renders it as a histogram lane.
+//
 // Note: bun:jsc (1.3.x) exposes `startSamplingProfiler` and
 // `samplingProfilerStackTraces` but NO explicit stop. `stopStallProfiler()`
-// therefore just disarms our consumer (we stop draining/dumping); the JSC sampler
-// thread idles harmlessly. This is fine — the sampler lives for the process.
+// therefore just disarms our consumer (we stop draining/capturing); the JSC
+// sampler thread idles harmlessly. This is fine — the sampler lives for the
+// process.
 //
 // `samplingProfilerStackTraces` exists at runtime but is absent from bun-types,
 // so we augment the module below. `startSamplingProfiler(optionalDirectory?)`'s
@@ -39,9 +47,6 @@ declare module "bun:jsc" {
 
 // Matches the "stalls > 3 s" cohort the investigation tracks in health.jsonl.
 const STALL_THRESHOLD_MS = 3_000;
-
-// Entries are a few KB each (~34/day ≈ ~100 KB/day); a modest cap is plenty.
-const MAX_FILE_BYTES = 2_000_000;
 
 // Cap the per-trace stack signature so a deep recursion can't bloat a line.
 const MAX_SIGNATURE_FRAMES = 40;
@@ -66,45 +71,7 @@ interface ProfilerTrace {
   frames: ProfilerFrame[];
 }
 
-interface LeafEntry {
-  key: string;
-  count: number;
-  pct: number;
-}
-
-interface StackEntry {
-  stack: string;
-  count: number;
-  pct: number;
-}
-
 let armed = false;
-let channel: LogChannel | null = null;
-
-function stallFilePath(): string {
-  return join(
-    worktreeDataDir(currentWorktreeName()),
-    "logs",
-    "stall-profiles.jsonl",
-  );
-}
-
-// Same bounded-without-a-job pattern as process-sampler's health rotation: trim
-// to the newest half once the file grows past the cap. One sync rewrite per
-// growth cycle; statSync is cheap and entries are tiny.
-function rotateIfNeeded(): void {
-  const file = stallFilePath();
-  let size: number;
-  try {
-    size = statSync(file).size;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
-    throw err;
-  }
-  if (size <= MAX_FILE_BYTES) return;
-  const lines = readFileSync(file, "utf8").split("\n").filter(Boolean);
-  writeFileSync(file, lines.slice(Math.floor(lines.length / 2)).join("\n") + "\n");
-}
 
 // Render a source path relative to the worktree root so keys stay readable and
 // stable (the absolute prefix is noise and machine-specific).
@@ -141,8 +108,8 @@ function topN<T>(
 }
 
 export function aggregateTraces(traces: ProfilerTrace[]): {
-  topLeaves: LeafEntry[];
-  topStacks: StackEntry[];
+  topLeaves: StallLeaf[];
+  topStacks: StallStack[];
 } {
   const leafCounts = new Map<string, number>();
   const stackCounts = new Map<string, number>();
@@ -176,7 +143,6 @@ export function aggregateTraces(traces: ProfilerTrace[]): {
 
 export function startStallProfiler(): void {
   if (armed) return;
-  channel = Log.channel("stall-profiles", { persist: true });
   startSamplingProfiler();
   armed = true;
 }
@@ -185,18 +151,13 @@ export function startStallProfiler(): void {
 // idles for the rest of the process lifetime.
 export function stopStallProfiler(): void {
   armed = false;
-  channel = null;
 }
 
 // Always drain (bounds memory + aligns the window). If the window stalled past
-// the threshold, aggregate the drained samples and append one line; else discard.
-// `windowMs` is the actual wall-time since the previous drain (the tick fires
-// late after a block), so nSamples/window is the true sample rate for the stall.
-export function drainAndMaybeDump(
-  eventLoopMaxMs: number,
-  sampledAt: number,
-  windowMs: number,
-): void {
+// the threshold, aggregate the drained samples and capture a `stall` trace; else
+// discard. `windowMs` is the actual wall-time since the previous drain (the tick
+// fires late after a block), so nSamples/window is the true sample rate.
+export function drainAndMaybeDump(eventLoopMaxMs: number, windowMs: number): void {
   if (!armed) return;
   const traces = samplingProfilerStackTraces().traces ?? [];
 
@@ -207,15 +168,18 @@ export function drainAndMaybeDump(
   const sampleRateHz = windowSeconds > 0 ? Math.round(traces.length / windowSeconds) : 0;
   const { topLeaves, topStacks } = aggregateTraces(traces);
 
-  rotateIfNeeded();
-  channel?.publish(
-    JSON.stringify({
-      sampledAt,
-      eventLoopMaxMs: Math.round(eventLoopMaxMs),
-      nSamples: traces.length,
-      sampleRateHz,
-      topLeaves,
-      topStacks,
-    }),
-  );
+  const section: StallSection = { nSamples: traces.length, sampleRateHz, topLeaves, topStacks };
+
+  // A frozen backend is the most severe slow event: mark it `critical` so a
+  // post-freeze burst of slow spans can never starve it out of the per-minute
+  // trace budget. The dominant hot frame becomes the label (→ the Slow Events
+  // list row + the trace's `stall` lane).
+  captureTrace({
+    kind: "stall",
+    label: topLeaves[0]?.key ?? "event-loop stall",
+    durationMs: eventLoopMaxMs,
+    thresholdMs: STALL_THRESHOLD_MS,
+    critical: true,
+    detail: section,
+  });
 }

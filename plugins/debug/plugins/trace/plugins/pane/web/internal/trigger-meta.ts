@@ -4,6 +4,7 @@ import type { BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge
 // (any plugin may mint a trigger kind), so this is a best-effort tint with a
 // muted fallback — it never gates which kinds render, only how they look.
 const KIND_VARIANT: Record<string, BadgeVariant> = {
+  stall: "destructive",
   "op-time": "destructive",
   loader: "warning",
   http: "info",

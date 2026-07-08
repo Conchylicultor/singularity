@@ -19,12 +19,16 @@ export function admitTrace(
   atMs: number,
   cooldownMs: number,
   maxPerMin: number,
+  // A critical trigger skips the global per-minute cap (never starved by a
+  // slow-event storm) but still honors the per-trigger cooldown below, so
+  // recurring identical incidents dedupe. See TraceTrigger.critical.
+  critical = false,
 ): boolean {
   if (atMs - minuteStart >= 60_000) {
     minuteStart = atMs;
     minuteCount = 0;
   }
-  if (minuteCount >= maxPerMin) return false;
+  if (!critical && minuteCount >= maxPerMin) return false;
 
   const last = lastByOp.get(key);
   if (last !== undefined && atMs - last < cooldownMs) return false;
