@@ -7,8 +7,8 @@
  */
 
 import { test, expect } from "bun:test";
+import { parseSchemaGlobs } from "@plugins/database/plugins/migrations/core";
 import {
-  parseSchemaGlobs,
   isCandidatePath,
   parseImperativeTableNameConsts,
   isImperativeReadHandle,

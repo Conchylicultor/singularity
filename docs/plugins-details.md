@@ -2532,6 +2532,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `dryRunPendingMigrations`, `migrationsReady`, `runMigrations`
       - Cross-plugin:
         - Imported by: `database`
+      - Core:
+        - Exports: Values: `parseSchemaGlobs`, `schemaGlobFiles`
       - Structure:
         - Non-standard folders: `data/`
         - Loose top-level files: `drizzle.config.ts`

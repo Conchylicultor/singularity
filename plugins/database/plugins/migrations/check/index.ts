@@ -11,6 +11,7 @@ import { buildConnectionString, readDatabaseConfig } from "@plugins/database/cor
 import { dryRunPendingMigrations } from "@plugins/database/plugins/migrations/server";
 import orphanedTablesCheck from "./orphaned-tables";
 import imperativeCreateTableAllowlistedCheck from "./imperative-create-table-allowlisted";
+import schemaFilesLoadableCheck from "./internal/schema-files-loadable";
 
 // Inlined minimal Check shape (mirrors the other plugin-contributed checks, e.g.
 // data-migration-dml-only / migration-hashes-unique) to avoid a cross-plugin
@@ -130,4 +131,9 @@ const check: Check = {
   },
 };
 
-export default [check, orphanedTablesCheck, imperativeCreateTableAllowlistedCheck];
+export default [
+  check,
+  orphanedTablesCheck,
+  imperativeCreateTableAllowlistedCheck,
+  schemaFilesLoadableCheck,
+];

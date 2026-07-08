@@ -1,6 +1,7 @@
 import { readFileSync } from "fs";
-import { relative, resolve } from "path";
+import { resolve } from "path";
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { schemaGlobFiles } from "@plugins/database/plugins/migrations/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -39,10 +40,6 @@ const TABLE_FACTORIES: { name: string; definedIn: string }[] = [
 ];
 
 const FACTORY_DEFINITION_FILES = new Set(TABLE_FACTORIES.map((f) => f.definedIn));
-
-// drizzle.config.ts lives here; its `schema: [...]` globs are relative to it.
-const MIGRATIONS_PLUGIN_DIR = "plugins/database/plugins/migrations";
-const DRIZZLE_CONFIG = `${MIGRATIONS_PLUGIN_DIR}/drizzle.config.ts`;
 
 // The imperative-public-table allowlist (the same single source the
 // orphaned-db-tables check reads): each entry is a public table created
@@ -86,38 +83,6 @@ export function isImperativeReadHandle(
 }
 
 /**
- * Parse the `schema: [ ... ]` string-literal array out of drizzle.config.ts.
- * Returns the array of raw glob patterns (still relative to the config file), or
- * `null` if the array can't be located (the caller fails loudly).
- */
-export function parseSchemaGlobs(configText: string): string[] | null {
-  // Grab the array body between `schema:` `[` and the matching `]`.
-  const arrayMatch = configText.match(/schema\s*:\s*\[([^\]]*)\]/);
-  if (!arrayMatch) return null;
-  const body = arrayMatch[1]!;
-  // Pull each quoted string literal out of the array body.
-  const patterns = [...body.matchAll(/["'`]([^"'`]+)["'`]/g)].map((m) => m[1]!);
-  if (patterns.length === 0) return null;
-  return patterns;
-}
-
-/**
- * Resolve drizzle's config-relative globs to repo-relative globs (the form
- * `git grep` / `Bun.Glob` report paths in), then expand them against the repo.
- */
-function computeGlobFiles(root: string, configRelativeGlobs: string[]): Set<string> {
-  const files = new Set<string>();
-  for (const pattern of configRelativeGlobs) {
-    const abs = resolve(root, MIGRATIONS_PLUGIN_DIR, pattern);
-    const repoRelativeGlob = relative(root, abs);
-    for (const match of new Bun.Glob(repoRelativeGlob).scanSync({ cwd: root })) {
-      files.add(match);
-    }
-  }
-  return files;
-}
-
-/**
  * A path is an in-scope candidate for table-definition scanning iff it is a
  * server file, not a test, and not already a drizzle schema (glob-matched) file.
  */
@@ -136,24 +101,9 @@ const check: Check = {
   async run() {
     const root = await getRoot();
 
-    // 1. Glob-matched file set — derived from drizzle.config.ts (single source).
-    let configText: string;
-    try {
-      configText = readFileSync(resolve(root, DRIZZLE_CONFIG), "utf-8");
-    } catch (err) {
-      return {
-        ok: false,
-        message: `could not read ${DRIZZLE_CONFIG}: ${(err as Error).message}`,
-      };
-    }
-    const schemaGlobs = parseSchemaGlobs(configText);
-    if (!schemaGlobs) {
-      return {
-        ok: false,
-        message: `could not parse the \`schema: [...]\` glob array from ${DRIZZLE_CONFIG}`,
-      };
-    }
-    const globFiles = computeGlobFiles(root, schemaGlobs);
+    // 1. Glob-matched file set — derived from drizzle.config.ts (single source),
+    // enumerated by the shared migrations/core helper (fails loud if unparseable).
+    const globFiles = new Set(schemaGlobFiles(root));
 
     // The sanctioned imperative-table name constants (read once): a `pgTable`
     // read handle on one of these is exempt — the table is created imperatively,

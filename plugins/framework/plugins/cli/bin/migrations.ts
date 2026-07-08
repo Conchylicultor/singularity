@@ -543,6 +543,22 @@ export async function generateMigration(opts: {
     process.exit(1);
   }
 
+  const combined = `${result.stdoutBuf}\n${result.stderrBuf}`;
+  if (
+    /require\(\) async module|async module.*unsupported|\bTypeError\b|Cannot find module|Cannot use import statement/i.test(
+      combined,
+    )
+  ) {
+    console.error(
+      "\nError: drizzle-kit exited 0 but failed to load a schema file — the table(s) it\n" +
+        "defines would be SILENTLY DROPPED from migration generation. A schema-glob file\n" +
+        "(server/**/internal/{tables,schema}.ts) has an async-only module (top-level await,\n" +
+        "e.g. lexical/@lexical/yjs) in its import graph. Fix the offending import; run\n" +
+        "`./singularity check schema-files-loadable` to see exactly which file.",
+    );
+    process.exit(1);
+  }
+
   // INVARIANT: never keep a migration generated with prompts unless answers were
   // provided. In keyed (regen) mode `migrationAnswers` is undefined but answers
   // come from the sidecar map — so exclude keyed mode here; its own unanswered
