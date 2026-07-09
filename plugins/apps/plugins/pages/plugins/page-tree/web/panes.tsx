@@ -1,10 +1,14 @@
-import { type ReactElement } from "react";
+import { useRef, type ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { pageDetailRoute } from "@plugins/apps/plugins/pages/plugins/page-tree/core";
-import { BlockEditor, BLOCK_GUTTER } from "@plugins/page/plugins/editor/web";
+import {
+  BlockEditor,
+  BLOCK_GUTTER,
+  type BlockEditorHandle,
+} from "@plugins/page/plugins/editor/web";
 import { PageHeader } from "./components/page-header";
 import { PageBreadcrumb } from "./components/page-breadcrumb";
 import { PageCover } from "./components/page-cover";
@@ -57,6 +61,9 @@ function usePageTitle({ pageId }: { pageId: string }): string | undefined {
 function PageDetailBody(): ReactElement {
   const { pageId } = pageDetailPane.useParams();
   const openPane = useOpenPane();
+  // The title renders above (outside) the editor's provider, so its Enter key
+  // reaches the block tree through the editor's imperative handle.
+  const editorRef = useRef<BlockEditorHandle>(null);
 
   return (
     // The breadcrumb trail is the page's single home for its title — it lives in
@@ -88,9 +95,13 @@ function PageDetailBody(): ReactElement {
               content. */}
           <Stack gap="none">
             <div className={READING_MEASURE} style={{ paddingRight: BLOCK_GUTTER }}>
-              <PageHeader pageId={pageId} />
+              <PageHeader
+                pageId={pageId}
+                onEnter={() => editorRef.current?.insertFirstBlock()}
+              />
             </div>
             <BlockEditor
+              ref={editorRef}
               pageId={pageId}
               contentClassName={READING_MEASURE}
               onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}

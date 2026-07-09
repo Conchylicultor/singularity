@@ -22,6 +22,7 @@ import {
   prevVisibleLeaf,
   runsOfNode,
   applyBlockOp,
+  childrenOf,
   diffBlocks,
   patchesFromDiff,
   isEmptyPatch,
@@ -215,6 +216,12 @@ interface BlockEditorContextValue {
    * once the live resource re-renders the list.
    */
   insert: (type: string, data: unknown) => void;
+  /**
+   * Create a block of the given type at the TOP of the page and focus it —
+   * prepended before the current first top-level block (or appended when the
+   * page has no content yet). Drives the page title's Enter affordance.
+   */
+  insertFirst: (type: string, data: unknown) => void;
   /**
    * Projection writer: persist the content doc's current runs to `data.text`
    * WITHOUT recording on the undo stack (Yjs owns text history). Keeps row
@@ -707,6 +714,24 @@ export function BlockEditorProvider({
     [pageId, dispatchOp, focusNew],
   );
 
+  // Insert a new block at the TOP of the page, before the current first
+  // top-level block (`beforeId` — the reducer ranks it ahead of that sibling).
+  // An empty page has no such sibling, so it falls back to the plain
+  // parent-append, which is equivalent there.
+  const insertFirst = useCallback(
+    (type: string, data: unknown) => {
+      const newId = crypto.randomUUID();
+      focusNew(newId);
+      const first = childrenOf(toNodes(rowsRef.current), pageId)[0];
+      dispatchOp(
+        first
+          ? { kind: "insert", newId, type, data, beforeId: first.id }
+          : { kind: "insert", newId, type, data, parentId: pageId },
+      );
+    },
+    [pageId, dispatchOp, focusNew],
+  );
+
   const makeBlockAPI = useCallback(
     (blockId: string): BlockEditorAPI => ({
       update(data: unknown) {
@@ -952,6 +977,7 @@ export function BlockEditorProvider({
       bulkDuplicate,
       paste,
       insert,
+      insertFirst,
       projectText,
       recordTextEdit,
       undo,
@@ -979,6 +1005,7 @@ export function BlockEditorProvider({
       bulkDuplicate,
       paste,
       insert,
+      insertFirst,
       projectText,
       recordTextEdit,
       undo,

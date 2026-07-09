@@ -24,6 +24,16 @@ export interface BlockHandle<T> {
    * without a `label` is not offered in the editor's "add block" menu.
    */
   label?: string;
+  /**
+   * Marks THE plain-paragraph type: the block the editor falls back to whenever
+   * it must create text the user never picked a type for — Enter from the page
+   * title, a click below the last block, a markdown paragraph on paste. Exactly
+   * one block type declares it (`page/text`), and `defaultTextHandle` selects it
+   * by this flag alone. Declared, never inferred: the old "no prefix, no marker,
+   * no toggle, has a label" heuristic silently matched whichever void block type
+   * (audio, bookmark, …) happened to register first.
+   */
+  defaultText?: boolean;
   /** Optional insert-menu icon. */
   icon?: ComponentType<{ className?: string }>;
   /**
@@ -104,6 +114,7 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
   type: string;
   schema: S;
   label?: string;
+  defaultText?: boolean;
   icon?: ComponentType<{ className?: string }>;
   aliases?: string[];
   empty?: () => z.infer<S>;
@@ -124,6 +135,7 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
     schema: opts.schema,
     parse: (data) => opts.schema.parse(data),
     label: opts.label,
+    defaultText: opts.defaultText,
     icon: opts.icon,
     aliases: opts.aliases,
     empty: opts.empty,

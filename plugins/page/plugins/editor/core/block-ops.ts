@@ -74,7 +74,11 @@ export type BlockOp =
       newId: string;
       type: string;
       data?: unknown;
-      afterId?: string | null; // afterId wins over parentId
+      // Placement, in precedence order: after a sibling, before a sibling, or
+      // appended as the last child of `parentId`. `afterId`/`beforeId` both
+      // inherit the named sibling's parent.
+      afterId?: string | null;
+      beforeId?: string | null;
       parentId?: string | null;
     }
   | { kind: "delete"; blockId: string }
@@ -106,6 +110,7 @@ export const BlockOpSchema: z.ZodType<BlockOp> = z.discriminatedUnion("kind", [
     type: z.string(),
     data: z.unknown().optional(),
     afterId: z.string().nullable().optional(),
+    beforeId: z.string().nullable().optional(),
     parentId: z.string().nullable().optional(),
   }),
   z.object({ kind: z.literal("delete"), blockId: z.string() }),
@@ -426,6 +431,7 @@ function applyInsert(
   let pageId: string | null;
 
   const afterId = op.afterId ?? null;
+  const beforeId = op.beforeId ?? null;
   if (afterId) {
     const after = byId(blocks, afterId);
     if (!after) return blocks;
@@ -436,6 +442,16 @@ function applyInsert(
       afterNext ? Rank.from(afterNext.rank) : null,
     );
     pageId = after.pageId;
+  } else if (beforeId) {
+    const before = byId(blocks, beforeId);
+    if (!before) return blocks;
+    const beforePrev = prevSibling(blocks, before);
+    newParentId = before.parentId;
+    newRank = Rank.between(
+      beforePrev ? Rank.from(beforePrev.rank) : null,
+      Rank.from(before.rank),
+    );
+    pageId = before.pageId;
   } else {
     newParentId = op.parentId ?? null;
     const lastChild = lastOf(childrenOf(blocks, newParentId));

@@ -18,19 +18,34 @@ import { PageIconButton, PageIconPicker, type PageIconValue } from "./page-icon-
 import { ChangeCoverPopover } from "./change-cover-popover";
 import "./page-header.css";
 
-export function PageHeader({ pageId }: { pageId: string }) {
+export function PageHeader({
+  pageId,
+  onEnter,
+}: {
+  pageId: string;
+  /** Enter pressed in the title — the host opens the top of the page body. */
+  onEnter?: () => void;
+}) {
   const result = useResource(pagesResource);
   return (
     <ResourceView resource={result} fallback={<Loading variant="rows" />}>
       {(pages) => {
         const page = pages.find((d) => d.id === pageId);
-        return <PageHeaderInner pageId={pageId} page={page} />;
+        return <PageHeaderInner pageId={pageId} page={page} onEnter={onEnter} />;
       }}
     </ResourceView>
   );
 }
 
-function PageHeaderInner({ pageId, page }: { pageId: string; page: Block | undefined }) {
+function PageHeaderInner({
+  pageId,
+  page,
+  onEnter,
+}: {
+  pageId: string;
+  page: Block | undefined;
+  onEnter?: () => void;
+}) {
   const data = page ? pageData(page) : undefined;
   const hasIcon = data?.iconSvgNodes != null && data.iconSvgNodes.length > 0;
   const hasCover = data?.cover != null;
@@ -119,11 +134,19 @@ function PageHeaderInner({ pageId, page }: { pageId: string; page: Block | undef
         </Stack>
       )}
 
+      {/* A title is one line: Enter moves the caret into the page body rather
+          than inserting a newline. The ensuing blur flushes the title's
+          debounced save, so no keystroke is lost on the way down. */}
       <input
         value={title.value}
         onChange={(e) => title.onChange(e.target.value)}
         onFocus={title.onFocus}
         onBlur={title.onBlur}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+          e.preventDefault();
+          onEnter?.();
+        }}
         placeholder="Untitled"
         className="page-doc-title w-full truncate bg-transparent outline-none"
       />

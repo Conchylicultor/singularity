@@ -475,6 +475,36 @@ describe("insert", () => {
     expect(newNode.expanded).toBe(false);
   });
 
+  test("beforeId → inserts between target and its previous sibling, inherits parent", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [mk("A", null, r1), mk("B", null, r2)];
+    const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", beforeId: "B" });
+    expect(ids(out, null)).toEqual(["A", "NEW", "B"]);
+    expect(out.find((b) => b.id === "NEW")!.parentId).toBe(null);
+  });
+
+  test("beforeId on the first sibling → becomes the new first child", () => {
+    const blocks = [mk("A", "PAGE", a, { pageId: "PAGE" })];
+    const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", beforeId: "A" });
+    expect(ids(out, "PAGE")).toEqual(["NEW", "A"]);
+    expect(out.find((b) => b.id === "NEW")!.pageId).toBe("PAGE");
+  });
+
+  test("afterId wins over beforeId", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [mk("A", null, r1), mk("B", null, r2)];
+    const out = run(blocks, {
+      kind: "insert",
+      newId: "NEW",
+      type: "text",
+      afterId: "B",
+      beforeId: "A",
+    });
+    expect(ids(out, null)).toEqual(["A", "B", "NEW"]);
+  });
+
   test("append under parentId → after the last child, opens parent", () => {
     const k1 = a;
     const blocks = [

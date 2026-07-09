@@ -8,6 +8,7 @@ export { useFormatToolbar } from "./internal/format-toolbar-context";
 export type { FormatToolbarValue } from "./internal/format-toolbar-context";
 export type { BlockEditorAPI, BlockRendererProps } from "./types";
 export { BlockEditor } from "./components/block-editor";
+export type { BlockEditorHandle } from "./components/block-editor";
 export { BLOCK_GUTTER } from "./components/block-row";
 export { BlockTextRenderer } from "./components/block-text-renderer";
 export { BlockTextEditor } from "./components/block-text-editor";

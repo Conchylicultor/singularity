@@ -1,4 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useImperativeHandle,
+  useMemo,
+  useRef,
+  useState,
+  type Ref,
+} from "react";
 import { MdDragIndicator } from "react-icons/md";
 import {
   DndContext,
@@ -105,12 +113,28 @@ function rowAtPointer(y: number): { id: string; zone: DropZone } | null {
   return nearest;
 }
 
+/**
+ * Imperative affordances a host needs on the editor surface but cannot reach
+ * through the context, because it renders OUTSIDE the provider (the page title
+ * sits above `<BlockEditor>`, not inside it).
+ */
+export interface BlockEditorHandle {
+  /**
+   * Open the top of the page for typing: focus the first block when it is
+   * already an empty text block, otherwise insert a fresh one before it. Drives
+   * the page title's Enter key.
+   */
+  insertFirstBlock(): void;
+}
+
 export function BlockEditor({
   pageId,
   onOpenPage,
   contentClassName,
+  ref,
 }: {
   pageId: string;
+  ref?: Ref<BlockEditorHandle>;
   /**
    * Optional navigation callback for link/mention block renderers. Decoupled
    * from any host app's pane (mirrors file-links' `onFileOpen`); the host wires
@@ -133,17 +157,23 @@ export function BlockEditor({
     // `useUndoRedo()` to record at the mutation chokepoints.
     <UndoRedoProvider>
       <BlockEditorProvider pageId={pageId} onOpenPage={onOpenPage}>
-        <BlockEditorInner contentClassName={contentClassName} />
+        <BlockEditorInner contentClassName={contentClassName} handleRef={ref} />
       </BlockEditorProvider>
     </UndoRedoProvider>
   );
 }
 
-function BlockEditorInner({ contentClassName }: { contentClassName?: string }) {
+function BlockEditorInner({
+  contentClassName,
+  handleRef,
+}: {
+  contentClassName?: string;
+  handleRef?: Ref<BlockEditorHandle>;
+}) {
   // `blocks`/`pending` come from the provider's optimistic resource so `rowsRef`
   // (set by the effect below) tracks optimistic state — required for chained-op
   // intent resolution (e.g. Enter then Shift+Tab resolving against post-split).
-  const { setFlatOrder, setRows, blocks, pending } = useBlockEditor();
+  const { setFlatOrder, setRows, blocks, pending, insertFirst, focusBlock } = useBlockEditor();
 
   // Surface-level (focus-independent) undo/redo. Bindings are scoped to THIS
   // surface tab — eligible whenever this tab is focused, regardless of which DOM
@@ -172,6 +202,27 @@ function BlockEditorInner({ contentClassName }: { contentClassName?: string }) {
   }, [flat, rows, setFlatOrder, setRows]);
 
   const orderedIds = useMemo(() => flat.map((f) => f.block.id), [flat]);
+
+  // The one imperative seam for hosts rendering above the editor (the page
+  // title). Reuses `onEmptyClick`'s rule for the trailing block, mirrored to the
+  // leading one: never stack a second blank paragraph on top of an existing one.
+  const contributions = Editor.Block.useContributions();
+  useImperativeHandle(
+    handleRef,
+    () => ({
+      insertFirstBlock() {
+        const fallback = defaultTextHandle(contributions.map((c) => c.block));
+        if (!fallback) return;
+        const first = flat[0]?.block;
+        if (first && first.type === fallback.type && textOf(first) === "") {
+          focusBlock(first.id);
+          return;
+        }
+        insertFirst(fallback.type, fallback.empty?.() ?? {});
+      },
+    }),
+    [contributions, flat, focusBlock, insertFirst],
+  );
 
   if (pending) {
     return (

@@ -31,20 +31,14 @@ function orderedHandle(handles: Handle[]): Handle | undefined {
   return handles.find((h) => h.ordinalMarker);
 }
 
+/**
+ * THE plain-paragraph block type, selected by its own `defaultText` declaration
+ * — never inferred from the absence of other traits. Undefined only when the
+ * composition ships no such block type at all; every caller treats that as
+ * "nothing to create" rather than substituting an arbitrary type.
+ */
 export function defaultTextHandle(handles: Handle[]): Handle | undefined {
-  // The plain-text type: editable text, no markdown prefix, marker, toggle, or
-  // forced chevron. Falls back to the first labelled type.
-  return (
-    handles.find(
-      (h) =>
-        !h.markdownPrefixes?.length &&
-        !h.toggle &&
-        !h.collapsible &&
-        !h.marker &&
-        !h.ordinalMarker &&
-        h.label !== undefined,
-    ) ?? handles.find((h) => h.label !== undefined)
-  );
+  return handles.find((h) => h.defaultText);
 }
 
 /** Generic leading-prefix rules (bullets, toggle `> `, …) — excludes fences and
