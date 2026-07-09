@@ -1117,16 +1117,38 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // Scoped keyed-delta loads (ctx.affectedIds, Layer 2) return a PARTIAL array and
   // NEVER coalesce: a plain subscriber must not attach to a partial load (torn
   // snapshot), and two scoped loads with different affectedIds are not the same
-  // work. They run the refill directly.
-  function getResourceValue(
+  // work. They run the refill directly, and never carry an ETag — a partial value
+  // is not a snapshot any signature describes.
+  //
+  // THE VALUE AND ITS ETAG ARE CO-PRODUCED BY ONE FLIGHT. `seedEtag` is the
+  // signature the CALLER probed before asking for the value; the resolved `etag`
+  // is the signature the flight that actually produced the value was seeded with.
+  // For the STARTER they are the same string. For a JOINER they differ: joiners
+  // receive the starter's object and therefore **adopt the starter's seed,
+  // discarding their own**. That discard is the whole point.
+  //
+  // Without it: two `handleSub`s probe their own signatures either side of a
+  // change (starter reads S1, joiner reads S2), coalesce onto ONE loader run whose
+  // value is the S1 snapshot, and the joiner stamps `(V@S1, S2)` on its sub-ack.
+  // Its next revalidation sends S2, the server recomputes S2 from unchanged state
+  // and answers `up-to-date`/`304` — and for an `invalidate`-mode resource, whose
+  // pushes carry no value, nothing ever heals it. The client holds the stale value
+  // FOREVER. Adopting the starter's older seed inverts the error into the safe
+  // direction: an ETag describing a snapshot older than its value costs one
+  // needless recompute on the next revalidation, and can never serve stale.
+  //
+  // A flight started by a caller with no seed (push path, `loadResourceByKey`)
+  // resolves `etag: undefined`, and every joiner adopts that too — see `handleSub`.
+  async function getResourceValue(
     entry: RegistryEntry,
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
-  ): Promise<unknown> {
-    if (ctx) return timedLoad(entry, params, ctx);
+    seedEtag?: string,
+  ): Promise<{ value: unknown; etag: string | undefined }> {
+    if (ctx) return { value: await timedLoad(entry, params, ctx), etag: undefined };
     return inflight.run(
       `${entry.key} ${paramsKey(params)}`,
-      () => timedLoad(entry, params),
+      async () => ({ value: await timedLoad(entry, params), etag: seedEtag }),
       opts.onCoalesceWait,
     );
   }
@@ -1139,8 +1161,21 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // gate sits OUTSIDE `getResourceValue`, so it admits before the single-flight
   // dedup: under a herd the keys are distinct (one per conversation), so the
   // extra-slot-for-a-deduped-caller cost the DB gate avoids does not arise here.
-  function gatedRead(entry: RegistryEntry, params: ResourceParams): Promise<unknown> {
-    const run = () => readLoadGate.run(() => getResourceValue(entry, params), chargeReadGateWait);
+  //
+  // `seedEtag` is the caller's freshly-probed signature, offered to the flight this
+  // call may START. The returned `etag` is the one the flight was actually seeded
+  // with — the caller's own iff it started the flight. Callers must stamp the
+  // RETURNED etag, never their own (see `getResourceValue`).
+  function gatedRead(
+    entry: RegistryEntry,
+    params: ResourceParams,
+    seedEtag?: string,
+  ): Promise<{ value: unknown; etag: string | undefined }> {
+    const run = () =>
+      readLoadGate.run(
+        () => getResourceValue(entry, params, undefined, seedEtag),
+        chargeReadGateWait,
+      );
     return opts.wrapOrigin ? opts.wrapOrigin("sub", entry.key, run) : run();
   }
 
@@ -1838,9 +1873,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         }
       }
       try {
-        value = await (opts.wrapOrigin
+        ({ value } = await (opts.wrapOrigin
           ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, undefined))
-          : getResourceValue(entry, params, undefined));
+          : getResourceValue(entry, params, undefined)));
         valueComputed = true;
       } catch (err) {
         reportLoaderError(`loader failed for ${entry.key}`, err);
@@ -1943,7 +1978,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     if (requestedIds.size > 0) {
       try {
         const ctx = { affectedIds: [...requestedIds] };
-        const v = await (opts.wrapOrigin
+        const { value: v } = await (opts.wrapOrigin
           ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, ctx))
           : getResourceValue(entry, params, ctx));
         if (!Array.isArray(v)) {
@@ -2130,9 +2165,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           // Origin = the push/cascade flush: re-establishes an entry context
           // (this runs in a bare microtask with no ambient context) so the
           // loader span attributes to this `push` instead of `parent: null`.
-          value = await (opts.wrapOrigin
+          ({ value } = await (opts.wrapOrigin
             ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, ctx))
-            : getResourceValue(entry, params, ctx));
+            : getResourceValue(entry, params, ctx)));
           valueComputed = true;
         } catch (err) {
           reportLoaderError(`loader failed for ${entry.key}`, err);
@@ -2191,9 +2226,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             // unsafe for diffKeyed — reload the FULL value and diff that.
             let full: unknown;
             try {
-              full = await (opts.wrapOrigin
+              ({ value: full } = await (opts.wrapOrigin
                 ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, undefined))
-                : getResourceValue(entry, params, undefined));
+                : getResourceValue(entry, params, undefined)));
             } catch (err) {
               reportLoaderError(`loader failed for ${entry.key}`, err);
               continue;
@@ -2415,18 +2450,34 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // real update isn't stale-dropped. This is the herd cure: a resubscribe for an
     // unchanged resource costs one cheap signature, not a full loader.
     //
-    // Compute the signature ONCE, BEFORE the value, and reuse it for both the
-    // up-to-date short-circuit and the sub-ack stamp. The ordering is load-bearing:
-    // the ETag must reflect a state NO NEWER than the value it accompanies.
-    // Computed AFTER the value, a change landing in between would ship a stale
-    // value stamped with an already-current ETag — a later resubscribe would then
-    // be answered `up-to-date` and keep the stale value forever (invalidate-mode
-    // pushes carry no value, so nothing heals it). Computing it first makes any
-    // post-value change advance the ETag, forcing a real refetch (a needless
-    // recompute at worst, never a stale read). `computeEtag` is fail-safe: it
-    // returns undefined when the resource never opted in OR the signature threw,
-    // so a broken signature degrades to the plain full-loader path and never
-    // serves stale.
+    // THE INVARIANT: the ETag and the value must be produced by the SAME FLIGHT
+    // over the same snapshot. An ETag may describe a snapshot OLDER than the value
+    // it accompanies (costing one needless recompute on the next revalidation); it
+    // must NEVER describe a newer one — that serves the stale value forever, since
+    // the client's next revalidation matches the ETag, is answered
+    // `up-to-date`/`304`, and an `invalidate`-mode push carries no value to heal it.
+    //
+    // Two mechanisms would break it, and both are closed here:
+    //
+    // 1. ORDERING. Computed AFTER the value, a change landing in between would ship
+    //    a stale value stamped with an already-current ETag. So `computeEtag` runs
+    //    FIRST, and any post-value change advances the ETag, forcing a real refetch.
+    //    Still load-bearing — do not reorder.
+    //
+    // 2. COALESCING. Ordering alone is only sufficient if reading the value at time
+    //    T yields the state at T. It does not when the flight COALESCES: two
+    //    `handleSub`s that probed their own signatures either side of a change share
+    //    one loader run, so the joiner holds the starter's older value while its own
+    //    `freshEtag` names the newer state. So `freshEtag` is passed to `gatedRead`
+    //    as a SEED and the flight hands back the etag it was actually seeded with
+    //    (see `getResourceValue`). We stamp THAT — never `freshEtag` directly.
+    //
+    // `freshEtag` remains the right operand for the `up-to-date` short-circuit
+    // below: that comparison is against THIS subscriber's `clientEtag` and asks
+    // only "is your cached snapshot still current?", which no flight participates
+    // in. `computeEtag` is fail-safe — undefined when the resource never opted in
+    // OR the signature threw — so a broken signature degrades to the plain
+    // full-loader path and never serves stale.
     const freshEtag = entry.revalidate ? await computeEtag(entry, params) : undefined;
     if (freshEtag !== undefined && clientEtag != null && freshEtag === clientEtag) {
       sendJson(state.ws, { kind: "up-to-date", id, key, params, version });
@@ -2434,11 +2485,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
 
     let value: unknown;
+    let etag: string | undefined;
     try {
       // Origin = the subscription: establishes an entry context so the loader
       // span (and any gate waits it charges) is attributed to this `sub` request
       // instead of running with `parent: null`. Gated by the read-admission cap.
-      value = await gatedRead(entry, params);
+      ({ value, etag } = await gatedRead(entry, params, freshEtag));
     } catch (err) {
       reportLoaderError(`loader failed for ${key}`, err);
       sendJson(state.ws, { kind: "sub-error", id, key, reason: "loader-failed" });
@@ -2449,8 +2501,15 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     if (entry.mode === "keyed") {
       (entry.snapshots ??= new Map()).set(pk, snapshotOf(entry, value));
     }
-    // Attach the signature computed above (BEFORE the value). Absent for
-    // non-opted-in resources → the frame is byte-identical to before.
+    // Stamp the etag the FLIGHT carried, not `freshEtag`. Three cases:
+    //   - we started the flight  → `etag === freshEtag` (the common path).
+    //   - we joined a read flight → the starter's older seed. Safe direction.
+    //   - we joined a flight started by a push-path caller (no seed) → undefined
+    //     → OMIT the etag entirely. The client then stores no etag for this value
+    //     and its next revalidation does a full load. Falling back to `freshEtag`
+    //     here would stamp a signature strictly newer than the value we are
+    //     shipping — precisely the skew this whole comment exists to prevent.
+    // Absent for non-opted-in resources → the frame is byte-identical to before.
     sendJson(state.ws, {
       kind: "sub-ack",
       id,
@@ -2458,7 +2517,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       params,
       value,
       version,
-      ...(freshEtag !== undefined ? { etag: freshEtag } : {}),
+      ...(etag !== undefined ? { etag } : {}),
     });
   }
 
@@ -2537,13 +2596,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const resourceParams: ResourceParams = {};
     for (const [k, v] of url.searchParams) resourceParams[k] = v;
 
-    // Conditional revalidation: compute the signature ONCE, BEFORE the value (see
-    // handleSub — the order is load-bearing), and reuse it for both the
-    // If-None-Match/304 short-circuit and the stamped `ETag` response header, so
-    // the ETag never reflects a state newer than the value it accompanies. On a
-    // match, short-circuit with 304 and no body — no loader run. `computeEtag` is
-    // fail-safe (undefined on opt-out or a throwing signature), so a broken
-    // signature falls through to the full value below and stamps no ETag.
+    // Conditional revalidation: compute the signature ONCE, BEFORE the value, and
+    // use it for the If-None-Match/304 short-circuit — a match means the caller's
+    // cached snapshot is still current, so 304 with no body and no loader run.
+    // `computeEtag` is fail-safe (undefined on opt-out or a throwing signature), so
+    // a broken signature falls through to the full value below and stamps no ETag.
     const ifNoneMatch = req.headers.get("If-None-Match");
     const freshEtag = entry.revalidate ? await computeEtag(entry, resourceParams) : undefined;
     if (freshEtag !== undefined && ifNoneMatch != null && freshEtag === ifNoneMatch) {
@@ -2551,8 +2608,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
 
     let value: unknown;
+    let etag: string | undefined;
     try {
-      value = await gatedRead(entry, resourceParams);
+      // Same-flight co-production, exactly as `handleSub` (read its comment for the
+      // full argument): `freshEtag` SEEDS the flight; the flight hands back the etag
+      // it was actually seeded with, which is the caller's own only if this call
+      // started it. A joiner adopts the starter's older seed, or `undefined` when a
+      // push-path caller started the flight.
+      ({ value, etag } = await gatedRead(entry, resourceParams, freshEtag));
     } catch (err) {
       reportLoaderError(`loader failed for ${key}`, err);
       return new Response("Loader failed", { status: 500 });
@@ -2560,10 +2623,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const pk = paramsKey(resourceParams);
     const version = entry.versions.get(pk) ?? 0;
     const headers: Record<string, string> = { "content-type": "application/json" };
-    // Stamp the signature computed above (BEFORE the value) so the client can send
-    // it as `If-None-Match` next time. Only for opted-in resources — absent
-    // otherwise, so the response is unchanged.
-    if (freshEtag !== undefined) headers["ETag"] = freshEtag;
+    // Stamp the etag the FLIGHT carried, never `freshEtag` — stamping a signature
+    // newer than the body would let the next conditional GET 304 onto a stale
+    // value forever. Undefined (opt-out, throwing signature, or a joined push-path
+    // flight) → OMIT the header; the client then sends no If-None-Match next time
+    // and gets a full body.
+    if (etag !== undefined) headers["ETag"] = etag;
     return new Response(JSON.stringify({ value, version }), { headers });
   }
 
@@ -2673,13 +2738,17 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
 
   // Load any registered resource by key through the same `timedLoad` path
   // `handleSub` uses (schema parse + profiler span). Throws on an unknown key.
-  function loadResourceByKey(
+  async function loadResourceByKey(
     key: string,
     params?: ResourceParams,
   ): Promise<unknown> {
     const entry = registry.get(key);
     if (!entry) throw new Error(`unknown resource key: ${key}`);
-    return getResourceValue(entry, params ?? {});
+    // Bare value: this caller has no ETag to seed and none to report. Any read-path
+    // subscriber that coalesces onto the flight it starts adopts its `undefined`
+    // etag and stamps none (see `handleSub`).
+    const { value } = await getResourceValue(entry, params ?? {});
+    return value;
   }
 
   // Run one full first-subscribe lifecycle and time it, then tear it down.

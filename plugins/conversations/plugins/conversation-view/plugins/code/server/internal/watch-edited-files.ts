@@ -1,7 +1,9 @@
 import type * as parcel from "@parcel/watcher";
 import { getParcelWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import type { EditedFile } from "../../core/protocol";
-import { computeEditedFiles, getEditedFiles } from "./get-edited-files";
+import { computeEditedFiles } from "./compute-edited-files";
+import { editedFilesSignature } from "./edited-files-signature";
+import { getEditedFiles } from "./get-edited-files";
 import { evictEditedFiles, primeEditedFiles } from "./edited-files-cache";
 
 const DEBOUNCE_MS = 200;
@@ -80,17 +82,19 @@ export function watchEditedFiles(
 
 async function openRoom(room: Room): Promise<void> {
   try {
-    // Initial load reads THROUGH the memo: at first-subscribe the cache is empty
-    // (generation 0), so this is a compute either way — but going through the memo
-    // shares the embedded single-flight with a concurrent resource-loader read,
-    // collapsing the first-subscribe race to one git batch. (Recompute below stays
-    // on the direct compute, so the watcher never reads a stale gen-N cache.) Then
-    // prime at the new generation so the loader's next read is a hit.
+    // Initial load reads THROUGH the memo, and does NOT prime. The memo probes its
+    // own content signature and caches under it, so a read-through already leaves
+    // the cache correctly populated — and it keeps the embedded single-flight that
+    // collapses the first-subscribe race with a concurrent resource-loader read
+    // into one git batch. Direct-compute-then-prime here would double the
+    // first-subscribe cost for no correctness gain.
+    //
+    // (`recompute` below still computes directly, because a watcher that read its
+    // own cache could fan out a value it never re-derived — see there.)
     const files = await getEditedFiles(room.worktreePath);
     room.lastFiles = files;
     room.serialized = JSON.stringify(files);
     room.lastRecomputeAt = Date.now();
-    primeEditedFiles(room.worktreePath, files);
     fanOut(room, files);
   // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
@@ -146,15 +150,26 @@ async function recompute(room: Room): Promise<void> {
     room.ceilingTimer = null;
   }
   try {
-    // Direct (un-memoized) compute, then prime the memo at the new generation —
-    // BEFORE the unchanged-JSON early return, so the memo always holds the
-    // freshly-confirmed list at the latest generation (the loader's signature
-    // tracks "number of completed watcher computes"). Returning the same files at
-    // a new generation is correct, never stale; the early return only skips the
-    // fanOut, not the prime.
+    // Direct (un-memoized) compute: the watcher must never read its own cache. A
+    // memo hit here could be ≤1 event stale (the mid-flight joiner contract), and
+    // the watcher FANS THAT OUT — with no further filesystem event, nothing would
+    // ever correct it.
+    //
+    // Ordering contract (the memo's `prime` precondition): capture the signature
+    // BEFORE the compute. A change landing mid-compute then leaves the stored
+    // signature older than the value it labels, so the next `get` probes a newer
+    // signature, misses, and recomputes. That over-invalidates by one needless
+    // recompute; it can never serve a torn value under a matching signature.
+    // Capturing it after would invert the skew — the entry would claim a snapshot
+    // newer than its value and every subsequent `get` would hit it.
+    //
+    // The prime stays BEFORE the unchanged-JSON early return, so the memo always
+    // holds the freshly-confirmed list under the freshly-probed signature; the
+    // early return only skips the fanOut.
+    const signature = await editedFilesSignature(room.worktreePath);
     const files = await computeEditedFiles(room.worktreePath);
     const serialized = JSON.stringify(files);
-    primeEditedFiles(room.worktreePath, files);
+    primeEditedFiles(room.worktreePath, signature, files);
     if (serialized === room.serialized) return;
     room.serialized = serialized;
     room.lastFiles = files;
@@ -178,8 +193,11 @@ function fanOut(room: Room, files: EditedFile[]): void {
 
 function closeRoom(room: Room): void {
   rooms.delete(room.worktreePath);
-  // Drop the memo + generation entry on the last subscriber (lifecycle cleanup);
-  // a re-subscribe re-primes cheaply via openRoom's compute.
+  // Drop the memo entry on the last subscriber (pure lifecycle cleanup); a
+  // re-subscribe repopulates it via openRoom's read-through. A recompute still in
+  // flight across this evict is harmless: it write-backs {contentSig, value}, and
+  // any later reader probes the CURRENT content signature, so a surviving entry is
+  // served only if it genuinely matches git state.
   evictEditedFiles(room.worktreePath);
   if (room.debounceTimer) clearTimeout(room.debounceTimer);
   if (room.ceilingTimer) clearTimeout(room.ceilingTimer);

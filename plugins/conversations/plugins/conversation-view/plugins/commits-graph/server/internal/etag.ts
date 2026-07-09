@@ -13,9 +13,12 @@
 // merge-base(main, HEAD), and `rev-list --left-right --count main...HEAD`. Every
 // one of those is fully determined by the pair (headSha, mainSha): commits are
 // immutable, so if neither tip moved the merge-base and both rev-lists are
-// unchanged. This is byte-identical to the signature the loader's own
-// `deltaMemo` already keys on (`${headSha}|${mainSha}`), so the ETag inherits the
-// exact recompute contract that cache is already trusted with.
+// unchanged.
+//
+// This is `deltaMemo`'s bound `signature` — the ETag on the wire and the key the
+// loader's read-through caches under are the same string from the same call, not
+// two twins kept in step by hand (see compute-graph.ts and
+// research/2026-07-09-global-etag-value-coproduction.md).
 export function deltaEtag(headSha: string, mainSha: string): string {
   return `${headSha}|${mainSha}`;
 }

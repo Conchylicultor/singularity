@@ -6,7 +6,7 @@ import { createGitStateMemo } from "@plugins/infra/plugins/git-read-cache/server
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
 import { lastKnownMainSha } from "@plugins/infra/plugins/git-watcher/server";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
-import { currentGeneration } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
+import { editedFilesSignature } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 
 // buildPluginTree is a build-time primitive: a fully synchronous recursive
 // readdirSync walk over hundreds of plugin dirs plus per-node facet extraction
@@ -43,13 +43,23 @@ export function getMainPluginTree(mainPluginsDir: string): Promise<PluginTree> {
   );
 }
 
-// WORKTREE tree: keyed by worktreePath. Signature = the edited-files generation
-// counter — monotonic, bumped on every completed worktree recompute, and never
-// bumped by a bare ref advance (the @parcel watcher fires on worktree
-// filesystem events only). So a refHead fan-out (only main moved) is a pure hit
-// here, while any real worktree edit bumps the generation → miss → rebuild.
-// Faithful and never stale: a stale tree would require a worktree file change
-// that did NOT bump the generation, which cannot happen.
+// WORKTREE tree: keyed by worktreePath. Signature = the edited-files CONTENT
+// signature (headSha, merge-base, and each dirty file's lstat mtime+size) — the
+// same cheap ungated probe the edited-files resource keys on. It moves on any
+// worktree file save, so it is faithful and never stale: a stale tree would
+// require a worktree file change that left every dirty file's mtime/size and the
+// two SHAs untouched, which cannot happen.
+//
+// It replaces the edited-files watcher generation counter, which was not a
+// fingerprint of git state at all (see
+// research/2026-07-09-global-etag-value-coproduction.md). The content signature
+// is strictly fresher — the counter only advanced after the watcher's 200ms/2s
+// debounce — and a safe over-approximation in the other direction: a bare `main`
+// advance now moves the merge-base and forces one worktree-tree rebuild that the
+// counter would have hit. Correctness is unaffected either way; this memo is not
+// skewed (pluginChangesResource is `mode: "push"` with no `revalidate`, so it has
+// no ETag/value pair to keep in agreement) and it only needs a faithful, fresh
+// signal.
 const worktreeTreeMemo = createGitStateMemo<PluginTree>({
   name: "review.plugin-changes.worktree-tree",
 });
@@ -60,7 +70,7 @@ export function getWorktreePluginTree(
 ): Promise<PluginTree> {
   return worktreeTreeMemo.get(
     worktreePath,
-    () => Promise.resolve(String(currentGeneration(worktreePath))),
+    () => editedFilesSignature(worktreePath),
     () =>
       withHeavyReadSlot(() =>
         buildPluginTree(worktreePluginsDir, { skipBarrelImport: true, facets: true }),

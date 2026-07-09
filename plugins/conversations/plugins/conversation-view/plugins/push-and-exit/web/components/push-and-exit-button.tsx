@@ -2,7 +2,7 @@ import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { IconType } from "react-icons";
-import { MdDeleteForever, MdLogout, MdPlayArrow, MdPlaylistAdd, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
+import { MdDeleteForever, MdErrorOutline, MdLogout, MdPlayArrow, MdPlaylistAdd, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
 import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useHasActiveSiblingInWorktree, useConversation, useConversationById } from "@plugins/conversations/web";
 import { postConversationTurn, stopConversation } from "@plugins/conversations/core";
@@ -17,8 +17,7 @@ import { useResource, useCombinedResources } from "@plugins/primitives/plugins/l
 import { pushesResource } from "@plugins/tasks/plugins/tasks-core/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
-
-type Mode = "send" | "queue" | "push-and-exit" | "exit" | "drop-and-exit" | "go" | "restore" | "stop";
+import { deriveExitMode, type Mode } from "./exit-mode";
 
 // One action per mode: a `run` thunk owning its typed fetchEndpoint call (so
 // each mode's differing param/body/response types stay encapsulated in its own
@@ -53,6 +52,7 @@ const ICONS: Record<Mode, IconType> = {
   go: MdPlayArrow,
   "push-and-exit": MdRocketLaunch,
   exit: MdLogout,
+  "exit-error": MdErrorOutline,
   "drop-and-exit": MdDeleteForever,
 };
 
@@ -64,6 +64,9 @@ const BUTTON_CLASS: Record<Mode, string> = {
   stop: "gap-1.5 bg-destructive text-destructive-foreground hover:bg-destructive/90",
   "push-and-exit": PRIMARY,
   exit: PRIMARY,
+  // Degraded, never destructive: the exit decision is unknown, but closing is
+  // always safe.
+  "exit-error": PRIMARY,
   "drop-and-exit": PRIMARY,
 };
 
@@ -75,6 +78,7 @@ const LABELS: Record<Mode, string> = {
   go: "Go",
   "push-and-exit": "Push & Close",
   exit: "Close",
+  "exit-error": "Close (state unknown)",
   "drop-and-exit": "Drop & Close",
 };
 
@@ -107,26 +111,10 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     files: filesResult,
   });
 
-  const isNotRunning = live?.status === "gone" || live?.status === "done";
-
-  const { mode, provisional } = useMemo((): { mode: Mode; provisional: boolean } => {
-    if (!conversation || !live) return { mode: "exit", provisional: false };
-    if (isNotRunning) return { mode: "restore", provisional: false };
-    // A draft while the agent is working is queued (pasted without a C-c
-    // interrupt) rather than sent immediately — surface that as "Queue".
-    if (!isDraftEmpty(draft))
-      return { mode: live.status === "working" ? "queue" : "send", provisional: false };
-    if (live.status === "working") return { mode: "stop", provisional: false };
-    if (exitDecision.pending) return { mode: "exit", provisional: true };
-    const { pushes, hasSibling, files } = exitDecision.data;
-    if (files.length > 0) {
-      if (files.every((f) => f.path.startsWith("research/"))) return { mode: "go", provisional: false };
-      return { mode: "push-and-exit", provisional: false };
-    }
-    const hasPush = pushes.some((p) => p.attemptId === conversation.attemptId);
-    if (hasPush) return { mode: "exit", provisional: false };
-    return { mode: hasSibling ? "exit" : "drop-and-exit", provisional: false };
-  }, [isNotRunning, draft, exitDecision, conversation, live]);
+  const { mode, provisional } = useMemo(
+    () => deriveExitMode({ conversation, live, draftEmpty: isDraftEmpty(draft), exitDecision }),
+    [draft, exitDecision, conversation, live],
+  );
 
   if (!conversation || !live) return null;
 
@@ -179,7 +167,10 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
           verb: "Push & Close",
           run: () => fetchEndpoint(startPushAndExit, { id: convId }),
         };
+      // Same action either way: closing a conversation touches no task state,
+      // so it is safe to offer even when the exit decision is undecidable.
       case "exit":
+      case "exit-error":
         return {
           verb: "Close",
           successToast: "Conversation closed",

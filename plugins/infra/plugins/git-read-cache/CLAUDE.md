@@ -42,15 +42,19 @@ signature it belongs to, `set` stores `{ signature, value }` directly — bypass
 `signatureFn`/`computeFn`. The next `get` whose `signatureFn` returns the same
 signature is then a pure cache hit: no `computeFn`, no heavy slot.
 
-The motivating consumer is **edited-files**. The @parcel watcher is the sole
-source of truth for working-tree state; it computes the file list directly
-(un-memoized, so it never reads its own cache) and `set`s it under a **monotonic
-generation** signature it bumps on every completed recompute. The loader's `get`
-uses that generation as its `signatureFn`, so a read between file changes hits the
-watcher's latest list with zero git work. This is the only sound signature for
-edited-files: an uncommitted save changes the working-tree diff **without moving
-any SHA**, so a git-SHA signature would serve stale data — the generation counter,
-driven by the watcher (the real change signal), is what keeps it never-stale.
+The motivating consumer is **edited-files**, which reaches `set` through
+`createSignedMemo`'s `prime` (below). The @parcel watcher is the authoritative
+writer for working-tree state: it computes the file list directly (un-memoized, so
+it never reads its own cache) and primes it under the **content signature** it
+captured *before* that compute.
+
+The signature must move on an uncommitted save, which changes the working-tree diff
+**without moving any SHA** — so a bare git-SHA signature would serve stale data.
+edited-files therefore folds each dirty file's `(porcelain code, lstat mtime+size)`
+in alongside `(headSha, mergeBase)`. A **watcher generation counter** was used here
+originally; it was not a fingerprint of git state at all, only of how many times the
+watcher had run, and that divergence is what let a fresh ETag certify a stale value.
+See `research/2026-07-09-global-etag-value-coproduction.md`.
 
 `set` is the writer's responsibility for correctness: it must only store a value
 it knows matches the signature it passes. The 3-arg `get` signature is unchanged.
@@ -87,13 +91,59 @@ pollution), and with no active entry it records a 0ms `db [git-memo-hit:<name>]`
 span — a pure hit-rate signal. The 3-arg `get` signature is fixed; observability
 never changes it.
 
+## `createSignedMemo` — one authority for `revalidate` and `loader`
+
+`createGitStateMemo.get(key, signatureFn, computeFn)` takes both functions **per
+call**, so two call sites can pass functions that disagree about what "current"
+means. A resource's `revalidate` and its `loader` are exactly two such call sites.
+That is how `edited-files` drifted: `revalidate` probed git directly while the
+loader's memo keyed on a watcher generation counter, so a fresh ETag certified a
+stale value — and because the resource is `invalidate`-mode (pushes carry no
+value), nothing could ever heal the client. A permanent stale pin.
+
+`createSignedMemo({ name, signature, compute })` binds both **at construction**:
+
+```ts
+const memo = createSignedMemo<Files>({ name, signature, compute });
+// resource: { revalidate: (p) => memo.signature(p.wt), loader: (p) => memo.get(p.wt) }
+```
+
+`memo.signature` feeds `revalidate`, `memo.get` feeds the `loader`. They cannot
+diverge because there is nothing to pass — divergence becomes structurally
+unrepresentable rather than a comment two files apart. Everything else (cache,
+per-key single-flight, `chargeWait` markers, the ≤1-event staleness-sharing of a
+mid-flight joiner) is `createGitStateMemo`'s: `createSignedMemo` is a thin binding
+wrapper over exactly one cache implementation.
+
+### `prime(key, signature, value)` — the ordering contract
+
+The write-through prime for an authoritative external writer (the `set` of the
+bound API). **The writer must capture `signature` BEFORE running its compute.**
+A change landing mid-compute then leaves the stored signature *older* than the
+value it labels: the next `get` probes a newer signature, misses, and recomputes.
+That over-invalidates by one needless recompute; it can never serve a torn value
+under a matching signature. Capturing the signature *after* the compute inverts
+the skew — the entry would claim a snapshot newer than its value and every
+subsequent `get` would hit it.
+
+See `research/2026-07-09-global-etag-value-coproduction.md`.
+
 ## Consumers
 
-The two git live-state loaders consume it: **commits-graph** (its `delta` resource
-via the generic memo; its `graph` resource keeps a bespoke two-half cache for its
-genuinely-special split-signature incrementality) and **edited-files** (coalescing
-+ skip-in-flight, with the @parcel watcher as the cache writer via a monotonic
-generation signature).
+The two git live-state loaders consume it, both via `createSignedMemo` — because
+both pair a `revalidate` with a memoized `loader`, and that is exactly the pairing
+that must not drift:
+
+- **commits-graph** — its `delta` resource, signature `${headSha}|${mainSha}`. Its
+  `graph` resource keeps a bespoke two-half cache for its genuinely-special
+  split-signature incrementality, and is not a signed memo.
+- **edited-files** — coalescing + skip-in-flight, with the @parcel watcher priming
+  the cache under a pre-compute content signature.
+
+**`review/plugin-changes`** and **`plugin-meta/plugin-tree`** use the plain
+`createGitStateMemo`: their values back `mode: "push"` resources with no
+`revalidate`, so there is no ETag/value pair to keep in agreement — they need only
+a faithful, fresh signature.
 
 See `research/2026-06-19-global-incremental-git-loaders.md` (the unifying
 primitive and Stage 2.1).
@@ -102,10 +152,10 @@ primitive and Stage 2.1).
 
 ## Plugin reference
 
-- Description: Git-state-keyed result memo: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree.
+- Description: Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call; createSignedMemo binds them at construction so a resource's revalidate and loader cannot drift.
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `plugin-meta/plugin-tree`, `review/plugin-changes`
 - Server:
-  - Exports: Types: `GitStateMemo`; Values: `createGitStateMemo`
+  - Exports: Types: `GitStateMemo`, `SignedMemo`; Values: `createGitStateMemo`, `createSignedMemo`
 
 <!-- AUTOGENERATED:END -->

@@ -9,8 +9,8 @@
   - Uses: `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`
   - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
 - Server:
-  - Uses: `infra/file-watcher.getParcelWatcher`, `infra/git-read-cache.createGitStateMemo`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`
-  - Exports: Values: `currentGeneration`, `editedFilesResource`, `getEditedFiles`
+  - Uses: `infra/file-watcher.getParcelWatcher`, `infra/git-read-cache.createSignedMemo`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`
+  - Exports: Values: `editedFilesResource`, `editedFilesSignature`, `getEditedFiles`
   - Resources: `edited-files` (invalidate)
 - Core:
   - Uses: `primitives/live-state.resourceDescriptor`

@@ -37,7 +37,7 @@ async function computeWorktreePluginChanges(conversationId: string): Promise<Plu
 
   const worktreePluginsDir = join(conversation.worktreePath, "plugins");
   // Each side is memoized on its own cheap signature (main → main sha, worktree
-  // → edited-files generation) and owns its withHeavyReadSlot internally, so an
+  // → edited-files content signature) and owns its withHeavyReadSlot internally, so an
   // unchanged side is a pure hit that takes no slot. Steady-state recomputes
   // rebuild at most one tree.
   const [worktreeTree, mainTree] = await Promise.all([

@@ -281,3 +281,168 @@ describe("conditional revalidation — read path (ETag / 304)", () => {
     expect(cv.stale).toBe(false);
   });
 });
+
+/**
+ * Same-flight co-production — the invariant the ordering rule above is only half of.
+ *
+ * Ordering (etag BEFORE value) is sufficient only if reading the value at time T
+ * yields the state at T. Two things break that premise, and only the second is
+ * fixable inside this runtime:
+ *
+ *   - the loader answers from a MEMO whose as-of time lags its call time;
+ *   - the load COALESCES onto another caller's in-flight run (`getResourceValue`
+ *     single-flights full loads per `(key, params)`).
+ *
+ * Under coalescing, two `handleSub`s that probed their own signatures either side
+ * of a change share ONE loader run: the joiner receives the starter's older value
+ * and — pre-fix — stamped its OWN newer etag on the sub-ack. The client then holds
+ * `(V@S1, S2)`; its next revalidation sends S2, matches, is answered
+ * `up-to-date`/`304`, and for an `invalidate`-mode resource (whose pushes carry no
+ * value) nothing ever heals it. Permanently pinned.
+ *
+ * The cure: the flight carries the etag. `gatedRead(entry, params, freshEtag)`
+ * offers the caller's signature as a SEED; `createInflight` runs the factory only
+ * for the starter, so joiners receive the starter's `{value, etag}` object and
+ * adopt its seed, discarding their own. Callers stamp the RETURNED etag. An etag
+ * describing a snapshot OLDER than its value costs one needless recompute; a newer
+ * one serves stale forever.
+ */
+describe("conditional revalidation — value and etag are co-produced by one flight", () => {
+  test("memo skew: a fresh etag over a stale memoized value must not pin", async () => {
+    // Models the real `edited-files` shape: `revalidate` probes git directly
+    // (instantaneously fresh), while the loader answers from a watcher-populated
+    // memo that lags it. Here `gitState` is the signature authority and `memoValue`
+    // is the lagging loader authority — two clocks, independently controlled.
+    //
+    // A flight is parked holding the pre-change memo value "v1". `gitState` then
+    // advances 1→2. A second subscriber probes the NEW signature and coalesces onto
+    // that parked flight — so it receives "v1" while holding sig("2") in hand.
+    //
+    // The load-bearing assertion: no sub-ack anywhere pairs the stale value "v1"
+    // with the newer signature sig("2"). Pre-fix, the joiner's ack does exactly
+    // that, and the resub below is answered `up-to-date` — the permanent pin.
+    const h = createHarness({ sockets: 3 });
+    let gitState = 1;
+    const memo = controllable("v1"); // the loader's own (lagging) authority
+    h.runtime.defineExternalResource({
+      key: "edited",
+      mode: "invalidate",
+      schema: z.string(),
+      loader: memo.loader,
+      revalidate: async () => String(gitState),
+    });
+
+    memo.block(); // park the flight mid-load, holding the pre-change snapshot
+    await h.subscribe("edited", {}, { socket: 0 }); // probes sig("1"), starts the flight
+    expect(h.frames).toHaveLength(0);
+
+    gitState = 2; // the change lands: the signature authority advances, the memo does not
+    await h.subscribe("edited", {}, { socket: 1 }); // probes sig("2"), coalesces onto the flight
+    expect(h.frames).toHaveLength(0);
+
+    memo.release();
+    await tick();
+
+    const acks = h.frames.filter((f) => f.kind === "sub-ack");
+    expect(acks).toHaveLength(2);
+    for (const ack of acks) expect(ack.value).toBe("v1"); // one shared flight, one value
+    // Neither subscriber may hold the stale value under the post-change signature.
+    expect(acks.some((a) => a.value === "v1" && a.etag === sig("2"))).toBe(false);
+
+    // And the pin cannot form: whatever etag the joiner stored, its next
+    // revalidation must NOT be short-circuited while its value is stale.
+    const joinerAck = h.frames.find((f) => f.socket === 1 && f.kind === "sub-ack")!;
+    await h.subscribe("edited", {}, { socket: 2, etag: joinerAck.etag });
+    const resub = h.frames.find(
+      (f) => f.socket === 2 && (f.kind === "sub-ack" || f.kind === "up-to-date"),
+    )!;
+    expect(resub.kind).toBe("sub-ack"); // a real reload, never `up-to-date`
+  });
+
+  test("coalescing: a joiner adopts the starter's etag, never its own newer one", async () => {
+    // The mechanism, asserted directly. Same parked-flight setup; this time we name
+    // the exact token both acks must carry and prove the client converges.
+    const h = createHarness({ sockets: 3 });
+    let gitState = 1;
+    const ctl = controllable("v1");
+    h.runtime.defineExternalResource({
+      key: "edited",
+      mode: "invalidate",
+      schema: z.string(),
+      loader: ctl.loader,
+      revalidate: async () => String(gitState),
+    });
+
+    ctl.block();
+    await h.subscribe("edited", {}, { socket: 0 }); // STARTER — probes "1"
+    gitState = 2;
+    await h.subscribe("edited", {}, { socket: 1 }); // JOINER — probes "2", coalesces
+    ctl.release();
+    await tick();
+    ctl.setValue("v2"); // a re-run of the loader would now see post-change truth
+
+    const starterAck = h.frames.find((f) => f.socket === 0 && f.kind === "sub-ack")!;
+    const joinerAck = h.frames.find((f) => f.socket === 1 && f.kind === "sub-ack")!;
+    expect(starterAck.value).toBe("v1");
+    expect(joinerAck.value).toBe("v1"); // the starter's value — one loader run
+
+    // BOTH stamp the STARTER's seed. The joiner's own sig("2") is discarded: it
+    // names a snapshot the value it accompanies does not reflect.
+    expect(starterAck.etag).toBe(sig("1"));
+    expect(joinerAck.etag).toBe(sig("1"));
+
+    // Consequently the joiner's stored etag mismatches the now-current "2" on its
+    // next revalidation → a full reload → convergence to current server truth.
+    await h.subscribe("edited", {}, { socket: 2, etag: joinerAck.etag });
+    const resub = h.frames.find(
+      (f) => f.socket === 2 && (f.kind === "sub-ack" || f.kind === "up-to-date"),
+    )!;
+    expect(resub.kind).toBe("sub-ack");
+    expect(resub.value).toBe("v2");
+    expect(resub.etag).toBe(sig("2"));
+  });
+
+  test("a push-started flight joined by a read sub omits the etag", async () => {
+    // `loadResourceByKey` (and every push-path caller) starts a flight with NO seed
+    // — it has no signature to offer and none to report. A read subscriber that
+    // coalesces onto it therefore gets `etag: undefined` back and must OMIT the etag
+    // from its sub-ack, storing none client-side so its next revalidation does a full
+    // load. Falling back to the subscriber's own `freshEtag` would stamp a signature
+    // strictly newer than the value the flight produced — the same skew.
+    const h = createHarness({ sockets: 1 });
+    const ctl = controllable("v1");
+    h.runtime.defineExternalResource({
+      key: "edited",
+      mode: "invalidate",
+      schema: z.string(),
+      loader: ctl.loader,
+      revalidate: async () => "sig-1",
+    });
+
+    ctl.block();
+    const pushLoad = h.runtime.loadResourceByKey("edited"); // starts the unseeded flight
+    await h.subscribe("edited", {}, { socket: 0 }); // joins it
+    expect(h.frames).toHaveLength(0);
+
+    ctl.release();
+    await tick();
+    expect(await pushLoad).toBe("v1"); // the push-path caller still gets its bare value
+
+    const ack = h.frames.find((f) => f.kind === "sub-ack")!;
+    expect(ack.value).toBe("v1");
+    expect("etag" in ack).toBe(false); // no etag — never the joiner's own sig("sig-1")
+
+    // The HTTP twin: a GET joining an unseeded flight stamps no `ETag` header.
+    ctl.block();
+    const pushLoad2 = h.runtime.loadResourceByKey("edited");
+    const resP = h.runtime.handleResourceHttp(httpReq("edited"), { key: "edited" });
+    await tick(); // let the GET probe its signature and coalesce onto the parked flight
+    ctl.release();
+    const res = await resP;
+    await pushLoad2;
+    expect(res.status).toBe(200);
+    expect(res.headers.get("ETag")).toBeNull();
+    const body = (await res.json()) as { value: unknown };
+    expect(body.value).toBe("v1");
+  });
+});

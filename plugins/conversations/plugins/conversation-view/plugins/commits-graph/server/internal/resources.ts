@@ -9,8 +9,14 @@ import {
   type CommitDelta,
   type CommitsGraph,
 } from "../../shared/protocol";
-import { computeDelta, computeGraph, evictWorktree, probeHeadMain } from "./compute-graph";
-import { deltaEtag, graphEtag } from "./etag";
+import {
+  computeDelta,
+  computeGraph,
+  deltaSignature,
+  evictWorktree,
+  probeHeadMain,
+} from "./compute-graph";
+import { graphEtag } from "./etag";
 
 type Params = { attemptId: string };
 
@@ -99,16 +105,17 @@ export const commitDeltaResource = defineResource({
   },
   loader: ({ attemptId }: Params): Promise<CommitDelta> =>
     onWorktree(attemptId, EMPTY_DELTA, (wt) => computeDelta(wt)),
-  // Cheap ETag: the delta value derives entirely from (headSha, mainSha) — the
-  // same signature the loader's `deltaMemo` keys on — so an unchanged pair proves
-  // the ahead/behind/mergeBase are unchanged. No worktree ⇒ EMPTY_DELTA, so a
-  // stable "none" sentinel keeps an empty attempt up-to-date. Cost: 1–2 ungated
-  // `rev-parse` vs. the loader's `merge-base` + `rev-list --count`.
+  // Cheap ETag: literally `deltaMemo`'s own signature — the very key the loader's
+  // read-through caches under, not a separately-maintained twin of it. The two
+  // cannot drift, so a fresh ETag can never certify a stale value (see
+  // research/2026-07-09-global-etag-value-coproduction.md). It derives entirely
+  // from (headSha, mainSha), so an unchanged pair proves ahead/behind/mergeBase
+  // are unchanged. No worktree (or a reaped one) ⇒ EMPTY_DELTA, so a stable "none"
+  // sentinel keeps an empty attempt up-to-date — a consistent signature/value pair
+  // for a real state, matching the loader's own `onWorktree` collapse. Cost: 1–2
+  // ungated `rev-parse` vs. the loader's `merge-base` + `rev-list --count`.
   revalidate: ({ attemptId }: Params): Promise<string> =>
-    onWorktree(attemptId, "none", async (wt) => {
-      const { headSha, mainSha } = await probeHeadMain(wt);
-      return deltaEtag(headSha, mainSha);
-    }),
+    onWorktree(attemptId, "none", (wt) => deltaSignature(wt)),
 });
 
 export const commitsGraphResource = defineResource({

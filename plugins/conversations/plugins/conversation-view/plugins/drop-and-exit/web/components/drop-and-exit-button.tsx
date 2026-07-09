@@ -25,9 +25,16 @@ export function DropAndExitItem({
     hasOtherActive: siblingsResult,
   });
 
+  // `!decision.error` is what keeps `false` here meaning "settled, and this
+  // attempt has no push" rather than "we couldn't tell". An errored `pushes`
+  // still settles with the descriptor's `[]` initial data, which would flip the
+  // entry from "Complete & Close" to the destructive "Drop & Close" label. The
+  // guard below hides the entry entirely on error, so this is belt-and-braces —
+  // it keeps the invariant local to where `hasPush` is computed.
   const hasPush = useMemo(
     () =>
       !decision.pending &&
+      !decision.error &&
       decision.data.pushes.some((p) => p.attemptId === conversation.attemptId),
     [decision, conversation.attemptId],
   );
@@ -51,7 +58,13 @@ export function DropAndExitItem({
   // covers closing this one — hide this entry rather than degrade it to a
   // redundant "Close" (mirrors how Drop dependents hides when there's nothing
   // to drop).
-  if (decision.pending || decision.data.hasOtherActive) return null;
+  //
+  // Error hides it too, and must be checked before `decision.data` is read: a
+  // failed resource still settles (`pending: false`) carrying the descriptor's
+  // initial data, so an errored `hasOtherActive` reads `false` — exactly the
+  // value that would offer this destructive action. Unknown state is never a
+  // licence to drop a task.
+  if (decision.pending || decision.error || decision.data.hasOtherActive) return null;
 
   const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";
 

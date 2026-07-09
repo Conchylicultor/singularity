@@ -1,9 +1,10 @@
 import type { CommitDelta, CommitRow, CommitsGraph } from "../../shared/protocol";
 import { runGit, tryRunGit, GitError, LOG_FORMAT, parseGitLog } from "@plugins/primitives/plugins/commit-list/server";
 import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
-import { createGitStateMemo } from "@plugins/infra/plugins/git-read-cache/server";
+import { createSignedMemo } from "@plugins/infra/plugins/git-read-cache/server";
 import { lastKnownMainSha } from "@plugins/infra/plugins/git-watcher/server";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
+import { deltaEtag } from "./etag";
 
 const MAIN = "main";
 const MAX_COMMITS = 200;
@@ -89,14 +90,6 @@ async function computeDeltaCore(worktreePath: string): Promise<CommitDelta> {
   return { ahead: counts.ahead, behind: counts.behind, mergeBase, branch };
 }
 
-// ── delta: generic git-state memo (Stage 3) ────────────────────────────────
-// Signature `${headSha}|${mainSha}` covers every input ahead/behind/mergeBase
-// derive from. A hit (HEAD & main unchanged since last compute) returns the
-// cached delta with NO heavy slot; worktree-keying coalesces the N attempts on
-// one worktree onto one compute.
-
-const deltaMemo = createGitStateMemo<CommitDelta>({ name: "commits-graph.delta" });
-
 export async function probeHeadMain(
   worktreePath: string,
 ): Promise<{ headSha: string; mainSha: string }> {
@@ -112,15 +105,36 @@ export async function probeHeadMain(
   return { headSha, mainSha };
 }
 
-export async function computeDelta(worktreePath: string): Promise<CommitDelta> {
-  return deltaMemo.get(
-    worktreePath,
-    async () => {
-      const { headSha, mainSha } = await probeHeadMain(worktreePath);
-      return `${headSha}|${mainSha}`;
-    },
-    () => withHeavyReadSlot(() => computeDeltaCore(worktreePath)),
-  );
+// ── delta: signed memo — one authority for `revalidate` and the loader ──────
+// `deltaEtag(headSha, mainSha)` covers every input ahead/behind/mergeBase derive
+// from (commits are immutable, so unmoved tips ⇒ unmoved merge-base and
+// rev-lists). A hit (HEAD & main unchanged since last compute) returns the cached
+// delta with NO heavy slot; worktree-keying coalesces the N attempts on one
+// worktree onto one compute.
+//
+// `createSignedMemo` binds `signature` and `compute` at construction, so the
+// resource's `revalidate` (→ `deltaSignature`) and its loader (→ `computeDelta`)
+// are provably the same authority over the same inputs. Before this they were two
+// independent call sites agreeing only by a comment — the drift that made
+// `edited-files` certify a stale value with a fresh ETag, pinning the client on it
+// forever via 304. See research/2026-07-09-global-etag-value-coproduction.md.
+const deltaMemo = createSignedMemo<CommitDelta>({
+  name: "commits-graph.delta",
+  signature: async (worktreePath) => {
+    const { headSha, mainSha } = await probeHeadMain(worktreePath);
+    return deltaEtag(headSha, mainSha);
+  },
+  compute: (worktreePath) => withHeavyReadSlot(() => computeDeltaCore(worktreePath)),
+});
+
+/** The delta resource's `loader`: read through the memo. */
+export function computeDelta(worktreePath: string): Promise<CommitDelta> {
+  return deltaMemo.get(worktreePath);
+}
+
+/** The delta resource's `revalidate`: the memo's own signature, not a twin of it. */
+export function deltaSignature(worktreePath: string): Promise<string> {
+  return deltaMemo.signature(worktreePath);
 }
 
 async function computeCommitsFromShas(

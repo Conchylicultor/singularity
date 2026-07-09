@@ -1,33 +1,11 @@
-import { lstat } from "node:fs/promises";
-import { resolve } from "node:path";
 import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
-import { runGit } from "@plugins/primitives/plugins/commit-list/server";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
-import { EditedFilesPayloadSchema } from "../../core/protocol";
+import { type EditedFile, EditedFilesPayloadSchema } from "../../core/protocol";
+import { editedFilesMemo } from "./edited-files-cache";
 import { getEditedFiles } from "./get-edited-files";
-import { type DirtyEntry, editedFilesEtag, parsePorcelainZ } from "./edited-files-etag";
 import { watchEditedFiles } from "./watch-edited-files";
 
 type Params = { id: string };
-
-// lstat one dirty path for its (mtime, size) — git's stat-cache dirty signal.
-// A deleted/vanished path (status "D", or a race) can't be stat'd; ENOENT is the
-// expected case there, so we degrade to -1 sentinels (which still flip the ETag on
-// a present→deleted transition — the porcelain code changes too). Any OTHER error
-// is unexpected and re-thrown so it fails loudly rather than serving a signature
-// built on a silent read failure.
-async function statEntry(
-  worktreePath: string,
-  entry: { code: string; path: string },
-): Promise<DirtyEntry> {
-  try {
-    const st = await lstat(resolve(worktreePath, entry.path));
-    return { code: entry.code, path: entry.path, mtimeMs: st.mtimeMs, size: st.size };
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return { code: entry.code, path: entry.path, mtimeMs: -1, size: -1 };
-  }
-}
 
 const unsubscribes = new Map<string, () => void>();
 
@@ -36,42 +14,54 @@ async function worktreeFor(conversationId: string): Promise<string | null> {
   return row?.worktreePath ?? null;
 }
 
+// A conversation whose worktree we cannot resolve has an UNKNOWN file set, not an
+// empty one. Returning `[]` (or a `"none"` ETag standing in for it) is an
+// absorbable failure: the client renders a legitimate "no changes", which arms the
+// destructive "Drop & Close". Both halves throw instead — `revalidate`'s throw is
+// caught by the runtime's `computeEtag` (fail-safe → no short-circuit → full load)
+// and the loader's throw reaches the client as a resource error, which the exit
+// button renders as a non-destructive "Close (state unknown)".
+function missingWorktree(conversationId: string): Error {
+  return new Error(
+    `edited-files: conversation ${conversationId} has no worktreePath — the edited-file set is unknown, not empty`,
+  );
+}
+
+/** The `loader` half, resolved from a conversation id. */
+export async function loadEditedFilesFor(conversationId: string): Promise<EditedFile[]> {
+  const wt = await worktreeFor(conversationId);
+  if (!wt) throw missingWorktree(conversationId);
+  return getEditedFiles(wt);
+}
+
+/** The `revalidate` half — the same memo, hence the same authority. */
+export async function editedFilesSignatureFor(conversationId: string): Promise<string> {
+  const wt = await worktreeFor(conversationId);
+  if (!wt) throw missingWorktree(conversationId);
+  return editedFilesMemo.signature(wt);
+}
+
 export const editedFilesResource = defineExternalResource({
   key: "edited-files",
   mode: "invalidate",
   schema: EditedFilesPayloadSchema,
-  loader: async ({ id }: Params) => {
-    const wt = await worktreeFor(id);
-    if (!wt) return [];
-    return getEditedFiles(wt);
-  },
-  // Cheap ETag: covers both halves of the edited-files value. (headSha, mergeBase)
-  // covers the committed branch diff (immutable trees — a porcelain-only signature
-  // would miss an amend/rebase that leaves the working tree clean). The per-dirty
-  // -file (code, lstat mtimeMs+size) covers the uncommitted working-tree changes
-  // AND their line counts — a file already `M` gaining more edits keeps its
-  // porcelain code but changes its mtime/size. Over-approximation: an mtime touch
-  // with no content change forces a needless recompute (acceptable). No worktree ⇒
-  // "none". Cost: 1 `rev-parse` + 1 `merge-base` + 1 `git status` + an `lstat` per
-  // dirty file, vs. the loader's `merge-base` + two `git diff` passes + full
-  // content reads of untracked files.
-  revalidate: async ({ id }: Params): Promise<string> => {
-    const wt = await worktreeFor(id);
-    if (!wt) return "none";
-    // runGit throws on failure (never a manufactured value) — the throw propagates
-    // into the revalidate path, which the live-state cascade treats as stale-safe
-    // (recompute skipped, prior ETag retained). This keeps the ETag from ever being
-    // built from a failed read and colliding across two different failures.
-    const [headSha, mergeBase, statusZ] = await Promise.all([
-      runGit(["rev-parse", "HEAD"], wt),
-      runGit(["merge-base", "main", "HEAD"], wt),
-      runGit(["status", "--porcelain", "--no-renames", "--untracked-files=all", "-z"], wt),
-    ]);
-    const entries = await Promise.all(
-      parsePorcelainZ(statusZ).map((e) => statEntry(wt, e)),
-    );
-    return editedFilesEtag(headSha, mergeBase.trim(), entries);
-  },
+  loader: ({ id }: Params) => loadEditedFilesFor(id),
+  // The ETag and the value are produced by ONE authority: `editedFilesMemo` is a
+  // `createSignedMemo` binding `editedFilesSignature` (here) to `computeEditedFiles`
+  // (the loader's `getEditedFiles`) at its single declaration site. `revalidate` and
+  // `loader` are therefore provably the same function of the same inputs — they are
+  // not two probes agreeing by convention, which is precisely how this resource
+  // drifted into serving a stale value under a fresh ETag (permanent, because an
+  // `invalidate`-mode push carries no value that could heal it).
+  //
+  // The signature is content-addressed and cheap: (headSha, mergeBase) + a per-dirty
+  // -file (porcelain code, lstat mtime+size). It moves on an uncommitted save with no
+  // SHA change, and it survives a server restart — preserving the 304 herd-collapse
+  // this ETag exists for. Cost: 1 `rev-parse` + 1 `merge-base` + 1 `git status` + an
+  // `lstat` per dirty file, vs. the loader's `merge-base` + two `git diff` passes +
+  // full content reads of untracked files. See edited-files-signature.ts for the
+  // faithfulness argument and research/2026-07-09-global-etag-value-coproduction.md.
+  revalidate: ({ id }: Params): Promise<string> => editedFilesSignatureFor(id),
   async onFirstSubscribe({ id }: Params) {
     if (unsubscribes.has(id)) return;
     const wt = await worktreeFor(id);
