@@ -467,7 +467,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
     - **`node-types`** [2 sub-plugins] — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
 
-- **`reports`** [7 sub-plugins] — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
+- **`reports`** [8 sub-plugins] — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Plugins:

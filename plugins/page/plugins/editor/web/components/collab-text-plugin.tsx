@@ -11,6 +11,7 @@ import {
   useEventCallback,
   useLatestRef,
 } from "@plugins/primitives/plugins/latest-ref/web";
+import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import { coalesce, runsOf, type Block } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import { serializeBlockRuns } from "../internal/block-text-extensions";
@@ -103,6 +104,11 @@ function useTextProjection(block: Block): () => void {
  * maps never share a global registry (and `useCollaborationContext` — which
  * throws without a provider — is satisfied). Cursors are effectively off:
  * awareness is real but never broadcast, so no remote states ever render.
+ *
+ * Mounted exactly once per block, this is also where the block's prose reports
+ * into the surface's sync-status cloud: the `doc-update` pipeline is what makes
+ * text durable, so "Saved" must mean the provider's queue drained — not that
+ * the (~1 s, derived) `data.text` projection happened to settle.
  */
 export function CollabTextPlugin({ block }: { block: Block }) {
   const onContentChange = useTextProjection(block);
@@ -120,7 +126,7 @@ export function CollabTextPlugin({ block }: { block: Block }) {
   const onUndoableEdit = useEventCallback((edit: CapturedBlockDocEdit) =>
     recordTextEdit(block.id, edit),
   );
-  const providerFactory = useCollabBlockDoc(
+  const { providerFactory, saveState, retrySave } = useCollabBlockDoc(
     block.id,
     (block.data as Record<string, unknown> | null)?.text,
     rowConfirmed,
@@ -128,6 +134,17 @@ export function CollabTextPlugin({ block }: { block: Block }) {
     onUndoableEdit,
   );
   const [editor] = useLexicalComposerContext();
+
+  // One reporter per block; the surface's store aggregates them
+  // (error > syncing > saved > idle), so a single dirty block keeps the cloud
+  // spinning and a single durably-rejected one turns it red. Offline reports
+  // `syncing`, not `error` — the bytes are queued and retry push-based.
+  useReportSync({
+    phase: saveState.phase,
+    label: "text",
+    retry: saveState.phase === "error" ? retrySave : undefined,
+    savedAt: saveState.lastFlushedAt,
+  });
 
   // CollaborationPlugin force-installs its OWN per-block Y.UndoManager on
   // Lexical's UNDO/REDO commands. This app deliberately has NO per-block

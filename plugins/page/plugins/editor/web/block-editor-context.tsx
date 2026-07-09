@@ -301,6 +301,8 @@ export function BlockEditorProvider({
     // id set) without letting an unrelated block's confirmation drop another
     // block's still-pending write (e.g. a `projectText` projection patch).
     sameTarget: sameOverlayTarget,
+    // Bounded op summary for the divergence report (raw `vars` is never shipped).
+    describeOp: (v) => (v.tag === "patch" ? "patch" : v.op.kind),
   });
 
   // Render-fresh view of the optimistic rows. `rowsRef` (set by a consumer

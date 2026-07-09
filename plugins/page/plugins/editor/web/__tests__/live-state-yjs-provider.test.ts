@@ -25,6 +25,11 @@
  *     provider reports NOT ready-for-teardown, and the (single-slot) teardown
  *     listener fires push-based once a reconnect drains the queue — even
  *     though the editor already disconnected.
+ *
+ *  5. The save state the sync-status cloud reads must not lie: `syncing` while
+ *     bytes are owed (INCLUDING offline, where they are queued and retried),
+ *     `error` only on a durable HTTP rejection, `idle` + a `lastFlushedAt`
+ *     stamp only once the server has acked everything.
  */
 
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
@@ -272,3 +277,140 @@ describe("finding #4 — teardown must not lose buffered edits over a transient 
 function toBytesSafe(bytes: Uint8Array): Uint8Array {
   return bytes;
 }
+
+/**
+ * Run `body` with the process's `unhandledRejection` listeners swapped for a
+ * collector, and return what was rejected. A durable HTTP failure is rethrown
+ * out of the `void this.flushLoop()` / `void this.initDoc()` call sites BY
+ * DESIGN (fail loudly — it reaches the global crash reporter in the browser), so
+ * a test that exercises that path must observe the rejection rather than let the
+ * runner treat it as an accident.
+ */
+async function withUnhandledRejections(body: () => Promise<void>): Promise<unknown[]> {
+  const prior = process.listeners("unhandledRejection");
+  const collected: unknown[] = [];
+  process.removeAllListeners("unhandledRejection");
+  process.on("unhandledRejection", (reason) => collected.push(reason));
+  try {
+    await body();
+    // Node emits `unhandledRejection` at the end of a real event-loop turn,
+    // which fake timers never reach — hop onto real ones for a single tick so
+    // the rejection lands in `collected` before the runner's listeners return.
+    vi.useRealTimers();
+    await new Promise<void>((resolve) => setTimeout(resolve, 0));
+    vi.useFakeTimers();
+  } finally {
+    process.removeAllListeners("unhandledRejection");
+    for (const l of prior) process.on("unhandledRejection", l as never);
+  }
+  return collected;
+}
+
+describe("finding #5 — the save state reported to the sync-status cloud", () => {
+  async function syncedProvider(
+    blockId: string,
+  ): Promise<{ doc: Y.Doc; provider: LiveStateYjsProvider }> {
+    const doc = new Y.Doc();
+    const provider = new LiveStateYjsProvider(doc, blockId, () => encodedState(111, "seed"), true);
+    provider.connect();
+    provider.onServerState(toBase64(encodedState(222, "stored")));
+    await flushMicrotasks();
+    return { doc, provider };
+  }
+
+  test("idle → syncing on the first keystroke → idle + lastFlushedAt once the queue drains", async () => {
+    const { doc, provider } = await syncedProvider("blk-phases");
+    const onChange = vi.fn();
+    const unsubscribe = provider.onSaveState(onChange);
+
+    expect(provider.getSaveState()).toEqual({ phase: "idle", lastFlushedAt: null });
+
+    fetchEndpointMock.mockResolvedValue(undefined);
+    localEdit(doc, " typed");
+    // The bytes are owed to the server from the keystroke edge — NOT only once
+    // the 300ms debounce expires.
+    expect(provider.getSaveState().phase).toBe("syncing");
+    expect(onChange).toHaveBeenCalledTimes(1);
+
+    // Memoized snapshot: identity is stable while nothing changed, so a
+    // `useSyncExternalStore` consumer can't loop.
+    expect(provider.getSaveState()).toBe(provider.getSaveState());
+
+    await runFlush();
+    const saved = provider.getSaveState();
+    expect(saved.phase).toBe("idle");
+    expect(saved.lastFlushedAt).toBeGreaterThan(0);
+
+    unsubscribe();
+    provider.destroy();
+  });
+
+  test("OFFLINE is not an error: a network-level rejection stays `syncing` and never stamps a save", async () => {
+    const { doc, provider } = await syncedProvider("blk-offline");
+    vi.spyOn(console, "warn").mockImplementation(() => {});
+
+    fetchEndpointMock.mockRejectedValue(new TypeError("network down"));
+    localEdit(doc, " typed");
+    await runFlush();
+
+    // The bytes are re-queued at the head and retried push-based — nothing is
+    // lost, so the cloud must keep spinning rather than cry "Couldn't save".
+    expect(provider.getSaveState()).toEqual({ phase: "syncing", lastFlushedAt: null });
+
+    // The reconnect edge drains them and only then is the save stamped.
+    fetchEndpointMock.mockReset();
+    fetchEndpointMock.mockResolvedValue(undefined);
+    for (const cb of [...wsStatusListeners]) cb({ status: "open", url: "ws://x/worktree" });
+    await flushMicrotasks();
+
+    const saved = provider.getSaveState();
+    expect(saved.phase).toBe("idle");
+    expect(saved.lastFlushedAt).toBeGreaterThan(0);
+    provider.destroy();
+  });
+
+  test("a durable (non-409) HTTP rejection on flush → `error`, thrown loudly; retryFlush recovers", async () => {
+    const { doc, provider } = await syncedProvider("blk-rejected");
+
+    fetchEndpointMock.mockRejectedValueOnce(new EndpointError(500, null));
+    localEdit(doc, " typed");
+    const rejections = await withUnhandledRejections(() => runFlush());
+
+    // Fail loudly: the rejection still escapes (it reaches the crash reporter).
+    expect(rejections.some((r) => r instanceof EndpointError)).toBe(true);
+    expect(provider.getSaveState()).toEqual({ phase: "error", lastFlushedAt: null });
+
+    // Retry clears the error and re-runs the flush over the SAME re-queued bytes.
+    fetchEndpointMock.mockResolvedValue(undefined);
+    provider.retryFlush();
+    await flushMicrotasks();
+
+    const saved = provider.getSaveState();
+    expect(saved.phase).toBe("idle");
+    expect(saved.lastFlushedAt).toBeGreaterThan(0);
+    const flushed = fetchEndpointMock.mock.calls.at(-1)![2] as { body: Blob };
+    const bytes = new Uint8Array(await flushed.body.arrayBuffer());
+    const replay = new Y.Doc();
+    Y.applyUpdate(replay, encodedState(222, "stored"));
+    Y.applyUpdate(replay, bytes);
+    expect(docText(replay)).toContain("typed");
+    provider.destroy();
+  });
+
+  test("blockGone (409 → doc-init 404) is `idle`, not `error`: the bytes were deliberately dropped", async () => {
+    const { doc, provider } = await syncedProvider("blk-gone");
+    localEdit(doc, " typed");
+    fetchEndpointMock
+      .mockRejectedValueOnce(new EndpointError(409, null))
+      .mockRejectedValueOnce(new EndpointError(404, null));
+
+    await runFlush();
+    await flushMicrotasks();
+
+    // The content already moved with the merge / went with the delete — there
+    // is nothing for the user to save, so the cloud must not accuse anyone.
+    expect(provider.getSaveState().phase).toBe("idle");
+    expect(provider.readyForTeardown).toBe(true);
+    provider.destroy();
+  });
+});

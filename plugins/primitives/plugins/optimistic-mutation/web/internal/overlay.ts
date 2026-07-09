@@ -1,6 +1,8 @@
 // Pure overlay/replay logic for optimistic mutation. Lives apart from React so
 // it can be unit-tested directly without a render. The hook
-// (`use-optimistic-resource.ts`) is a thin React shell over these functions.
+// (`use-optimistic-resource.ts`) is a thin React shell over these functions:
+// the whole op lifecycle (dispatch → resolve → confirm → diverge) is decided
+// here, so the shell only owns state plumbing and the report emit.
 
 /**
  * The one error an `apply` reducer may throw to say "this op no longer applies
@@ -18,12 +20,43 @@ export class OpNoLongerApplies extends Error {
   }
 }
 
+/**
+ * How many consecutive authoritative pushes may land, after an op resolved,
+ * without confirming it before we declare the server durably disagrees.
+ *
+ * Safe at 3 because every write to the resource's key generates a push for that
+ * key: our own commit is long visible by the third post-resolve push. Reaching
+ * the limit means the server accepted the mutation (2xx) yet its snapshots keep
+ * not reflecting it — a real divergence, reported rather than replayed forever.
+ */
+export const DIVERGENCE_MISS_LIMIT = 3;
+
 /** One pending optimistic op. `vars` is replayed via `apply` on top of base. */
 export interface PendingOp<Vars> {
   opId: string;
   vars: Vars;
   /** Set once the network `mutate(vars)` promise resolves (server accepted). */
   resolved: boolean;
+  /**
+   * Cache generation (`dataUpdateCount`) observed at dispatch. Coarse
+   * confirmation compares against it: a strictly greater generation proves an
+   * authoritative push landed *after* this op was dispatched.
+   */
+  dispatchGen: number;
+  /** Consecutive authoritative pushes since resolve that did NOT confirm this op. */
+  misses: number;
+}
+
+/**
+ * The outcome of one lifecycle edge (a push, or a resolve). `pending` is the
+ * surviving overlay — returned by IDENTITY when nothing changed, so the React
+ * shell can bail out of a state write without comparing arrays. `diverged` holds
+ * the ops the server durably disagrees with: they are already removed from
+ * `pending` and are the caller's to report.
+ */
+export interface ReconcileResult<Vars> {
+  pending: ReadonlyArray<PendingOp<Vars>>;
+  diverged: ReadonlyArray<PendingOp<Vars>>;
 }
 
 /**
@@ -64,18 +97,22 @@ function safeApply<Data, Vars>(
 }
 
 /**
- * Confirmation pass run on each authoritative push. Drops every RESOLVED op the
- * server is judged to have absorbed:
- *   - default (coarse): any resolved op is dropped — "a push after my mutation
- *     resolved confirms me".
- *   - content-based: only drop a resolved op when `isConfirmedBy(serverData,
- *     vars)` returns true.
- * Un-resolved ops (mutate still in flight) are always kept. Insertion order is
- * preserved for the survivors.
+ * Confirmation mode. Coarse (no `Confirmation`) means "an authoritative push
+ * landed after this op was dispatched, and the op resolved ⇒ confirmed".
+ * Content-based asks the snapshot directly via `isConfirmedBy`, and declares op
+ * identity via `sameTarget` for the same-target cascade (see `dropConfirmed`).
+ */
+export interface Confirmation<Data, Vars> {
+  isConfirmedBy: (serverData: Data, vars: Vars) => boolean;
+  sameTarget: (a: Vars, b: Vars) => boolean;
+}
+
+/**
+ * Is op `i` superseded by a NEWER confirmed op writing the same target?
  *
  * **Cascade confirmation** (content-based mode): when an op is confirmed, every
  * RESOLVED op *older* than it (earlier in the pending order) **on the same
- * target** is dropped too, even if the snapshot doesn't match it. Same-target
+ * target** is absorbed too, even if the snapshot doesn't match it. Same-target
  * ops resolve in dispatch order in practice, so a snapshot reflecting a newer
  * write to a target already CONTAINS the older resolved write's effect on that
  * target — possibly overwritten by the newer one. If such an op still doesn't
@@ -93,32 +130,143 @@ function safeApply<Data, Vars>(
  * declaration of op identity ("do these two ops write the same entity?"). It is
  * required alongside `isConfirmedBy`, so content-based mode always cascades.
  */
-export interface Confirmation<Data, Vars> {
-  isConfirmedBy: (serverData: Data, vars: Vars) => boolean;
-  sameTarget: (a: Vars, b: Vars) => boolean;
+function supersededBy<Vars>(
+  pending: ReadonlyArray<PendingOp<Vars>>,
+  confirmed: ReadonlyArray<boolean>,
+  sameTarget: (a: Vars, b: Vars) => boolean,
+  i: number,
+): boolean {
+  for (let j = i + 1; j < pending.length; j++) {
+    if (confirmed[j] && sameTarget(pending[i]!.vars, pending[j]!.vars)) return true;
+  }
+  return false;
 }
 
+/**
+ * The one place an op leaves the overlay. Given a per-index `confirmed` verdict,
+ * drop every RESOLVED op that is confirmed or cascade-superseded, keep every
+ * UNRESOLVED op untouched, and decide the fate of the resolved-but-unconfirmed
+ * survivors:
+ *
+ * - `countMisses` (the push edge): a fresh authoritative snapshot arrived and
+ *   still doesn't reflect the op ⇒ `misses + 1`. Reaching `DIVERGENCE_MISS_LIMIT`
+ *   removes it from the overlay and returns it in `diverged`.
+ * - `!countMisses` (the resolve edge): no new snapshot arrived, so a
+ *   non-confirmation carries no information — the op survives unchanged.
+ *
+ * A cascade-dropped op is NEVER reported as diverged: being superseded by a
+ * newer write to the same target is the expected, healthy outcome.
+ *
+ * Returns `pending` BY IDENTITY when nothing changed, so the React shell can
+ * skip the state write (and the overlay recompute it would trigger).
+ */
+function dropConfirmed<Vars>(
+  pending: ReadonlyArray<PendingOp<Vars>>,
+  confirmed: ReadonlyArray<boolean>,
+  sameTarget: ((a: Vars, b: Vars) => boolean) | undefined,
+  countMisses: boolean,
+): ReconcileResult<Vars> {
+  const kept: PendingOp<Vars>[] = [];
+  const diverged: PendingOp<Vars>[] = [];
+  let changed = false;
+
+  for (let i = 0; i < pending.length; i++) {
+    const op = pending[i]!;
+    if (!op.resolved) {
+      kept.push(op);
+      continue;
+    }
+    if (confirmed[i]) {
+      changed = true; // the server absorbed it
+      continue;
+    }
+    if (sameTarget && supersededBy(pending, confirmed, sameTarget, i)) {
+      changed = true; // superseded by a newer confirmed write to the same target
+      continue;
+    }
+    if (!countMisses) {
+      kept.push(op);
+      continue;
+    }
+    changed = true;
+    const misses = op.misses + 1;
+    if (misses >= DIVERGENCE_MISS_LIMIT) diverged.push({ ...op, misses });
+    else kept.push({ ...op, misses });
+  }
+
+  return changed ? { pending: kept, diverged } : { pending, diverged };
+}
+
+/**
+ * The PUSH edge: an authoritative snapshot landed in the cache.
+ *
+ *   - default (coarse): any resolved op is dropped — "a push after my mutation
+ *     resolved confirms me".
+ *   - content-based: a resolved op is dropped when `isConfirmedBy(serverData,
+ *     vars)` accepts the snapshot, or when a newer confirmed op on the same
+ *     target supersedes it (the cascade, see `supersededBy`).
+ *
+ * Un-resolved ops (mutate still in flight) are always kept. Insertion order is
+ * preserved for the survivors. Resolved survivors accrue a miss; at
+ * `DIVERGENCE_MISS_LIMIT` they leave the overlay as `diverged`.
+ */
 export function confirmPass<Data, Vars>(
   pending: ReadonlyArray<PendingOp<Vars>>,
   serverData: Data,
   confirmation?: Confirmation<Data, Vars>,
-): PendingOp<Vars>[] {
+): ReconcileResult<Vars> {
   if (!confirmation) {
-    // Coarse: resolved + a push landed ⇒ confirmed ⇒ drop.
-    return pending.filter((op) => !op.resolved);
+    return dropConfirmed(pending, pending.map((op) => op.resolved), undefined, true);
   }
   const { isConfirmedBy, sameTarget } = confirmation;
   const confirmed = pending.map((op) => op.resolved && isConfirmedBy(serverData, op.vars));
-  return pending.filter((op, i) => {
-    if (!op.resolved) return true;
-    if (confirmed[i]) return false;
-    // Cascade within the target group: a NEWER confirmed write to the same
-    // entity supersedes this op (the snapshot already contains its effect).
-    for (let j = i + 1; j < pending.length; j++) {
-      if (confirmed[j] && sameTarget(op.vars, pending[j]!.vars)) return false;
-    }
-    return true;
+  return dropConfirmed(pending, confirmed, sameTarget, true);
+}
+
+/**
+ * The RESOLVE edge: `mutate(vars)` came back 2xx for `opId`. Mark it resolved,
+ * then attempt confirmation IMMEDIATELY against what the cache already holds —
+ * without this, an op whose confirming push arrived *before* its own HTTP
+ * response (the structurally-biased ordering: the DB change-feed pushes at
+ * commit, while the response waits on the handler's post-commit tail) would sit
+ * resolved-and-unconfirmed forever, because the only confirming push it will
+ * ever get has already been consumed.
+ *
+ * - content-based: confirm iff a snapshot exists and `isConfirmedBy` accepts it,
+ *   then run the same same-target cascade.
+ * - coarse: confirm iff `gen > op.dispatchGen` — an authoritative push landed
+ *   since dispatch.
+ *
+ * **Coarse soundness, stated explicitly.** `gen > dispatchGen` proves *a* push
+ * arrived after dispatch, not that it carries our commit. In the rare bad
+ * ordering (a push generated pre-commit, delivered post-dispatch) the op drops
+ * early and the UI briefly reverts until the real push lands — which is
+ * *guaranteed* to arrive, since the write committed. Bounded and self-healing;
+ * never a permanent zombie.
+ *
+ * No miss is counted here: no new snapshot arrived, so a non-confirmation
+ * carries no evidence of divergence.
+ *
+ * `serverData` must be an AUTHORITATIVE snapshot, or `undefined` when none has
+ * landed yet. A resource's `initialData` is a placeholder, never a snapshot, and
+ * must not be passed: an empty base "reflects" a remove and vacuously absorbs an
+ * update-only patch, so `isConfirmedBy` would confirm the op against data the
+ * server never sent.
+ */
+export function resolvePass<Data, Vars>(
+  pending: ReadonlyArray<PendingOp<Vars>>,
+  opId: string,
+  serverData: Data | undefined,
+  gen: number,
+  confirmation?: Confirmation<Data, Vars>,
+): ReconcileResult<Vars> {
+  const resolved = markResolved(pending, opId);
+  const confirmed = resolved.map((op) => {
+    if (op.opId !== opId) return false;
+    if (!confirmation) return gen > op.dispatchGen;
+    return serverData !== undefined && confirmation.isConfirmedBy(serverData, op.vars);
   });
+  return dropConfirmed(resolved, confirmed, confirmation?.sameTarget, false);
 }
 
 /** Mark the op with `opId` resolved, preserving array order. No-op if absent. */

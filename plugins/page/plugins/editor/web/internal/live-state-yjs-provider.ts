@@ -67,6 +67,16 @@ import {
  * live-state socket reopen (ws-status bus), the next server push, or the next
  * local edit — never a retry timer. Unexpected HTTP errors still throw loudly.
  *
+ * Save state (the sync-status seam): the provider is the ONLY place that knows
+ * whether a block's prose is durable, so it publishes a derived
+ * {@link CollabSaveState} through a fifth listener registry
+ * ({@link onSaveState} / {@link getSaveState}, a `useSyncExternalStore` pair).
+ * `syncing` while bytes are queued / debounced / in flight; `error` ONLY for a
+ * real HTTP rejection (non-409 on flush, non-404 on init) — offline is
+ * `syncing`, because those bytes are retried push-based and nothing is lost.
+ * `blockGone` is `idle`: the bytes were deliberately dropped, their content
+ * already moved with the merge.
+ *
  * Doc-row loss (`doc-update` 409 after sync): never assume which of the two
  * causes it was. A doc-init probe arbitrates: 404 (block genuinely deleted —
  * merge/delete FK cascade) is a quiet terminal stop; success (block alive,
@@ -90,6 +100,33 @@ import {
 
 /** Debounce window for batching local updates into one doc-update POST. */
 const FLUSH_DEBOUNCE_MS = 300;
+
+/**
+ * The block's prose durability, as the sync-status cloud understands it:
+ * `syncing` = local bytes not yet acknowledged by the server (queued, waiting
+ * out the debounce, or in flight); `error` = the server durably REJECTED them
+ * (a real HTTP status); `idle` = nothing outstanding. An offline/unreachable
+ * server is `syncing`, never `error` — the bytes are retried push-based.
+ */
+export type CollabSavePhase = "idle" | "syncing" | "error";
+
+/** Immutable, identity-stable save-state snapshot (a `useSyncExternalStore` value). */
+export interface CollabSaveState {
+  readonly phase: CollabSavePhase;
+  /** When the queue last drained after a successful doc-update POST. */
+  readonly lastFlushedAt: number | null;
+}
+
+/**
+ * The snapshot a provider starts at, and the one the owning hook reports before
+ * its first `acquireCollabDoc` (a render with no entry yet — nothing has been
+ * typed, so nothing can be unsaved). A shared frozen constant so that pre-entry
+ * render also has a stable `getSnapshot()` identity.
+ */
+export const IDLE_SAVE_STATE: CollabSaveState = Object.freeze({
+  phase: "idle" as const,
+  lastFlushedAt: null,
+});
 
 /** Decode the wire base64 (see editor-collab's `stateToBase64`) to bytes. */
 export function base64ToBytes(b64: string): Uint8Array {
@@ -153,6 +190,24 @@ export class LiveStateYjsProvider implements Provider {
   private flushInFlight = false;
   /** One offline warning per outage episode (reset on the next success). */
   private offlineWarned = false;
+  /**
+   * The last DURABLE rejection: a real HTTP status the transport could not
+   * arbitrate away (non-409 on doc-update, non-404 on doc-init). A
+   * network-level rejection is deliberately NOT stored — those bytes retry
+   * push-based and are not lost, so they read as `syncing` (see the module
+   * comment). Cleared on the next success and by {@link retryFlush}.
+   */
+  private lastError: EndpointError | null = null;
+  /** Stamped when the queue drains after a successful doc-update POST. */
+  private lastFlushedAt: number | null = null;
+  /**
+   * Memoized {@link CollabSaveState}: `getSaveState` must return a stable
+   * identity while nothing changed, or a `useSyncExternalStore` consumer loops.
+   * Replaced ONLY by {@link emitSaveState}, which is called at every transition
+   * point of the four inputs (`pendingUpdates` / `flushTimer` / `flushInFlight`
+   * / `lastError`, plus `blockGone` and `lastFlushedAt`).
+   */
+  private saveState: CollabSaveState = IDLE_SAVE_STATE;
   private readonly unsubscribeWsStatus: () => void;
   /**
    * Single-slot teardown notifier (registry-owned): invoked whenever the
@@ -166,6 +221,7 @@ export class LiveStateYjsProvider implements Provider {
   private readonly statusListeners = new Set<(arg: { status: string }) => void>();
   private readonly updateListeners = new Set<(arg: unknown) => void>();
   private readonly reloadListeners = new Set<(doc: Doc) => void>();
+  private readonly saveStateListeners = new Set<() => void>();
 
   constructor(
     doc: Doc,
@@ -260,6 +316,7 @@ export class LiveStateYjsProvider implements Provider {
     // so an unmount mid-typing-run never strands the last keystrokes.
     if (this.synced && this.pendingUpdates.length > 0) void this.flushLoop();
     this.emitStatus("disconnected");
+    this.emitSaveState(); // the cleared debounce timer may have been the only "syncing" input
   }
 
   on(type: "sync", cb: (isSynced: boolean) => void): void;
@@ -296,6 +353,69 @@ export class LiveStateYjsProvider implements Provider {
     else if (type === "status") this.statusListeners.delete(cb as (arg: { status: string }) => void);
     else if (type === "update") this.updateListeners.delete(cb as (arg: unknown) => void);
     else this.reloadListeners.delete(cb as (doc: Doc) => void);
+  }
+
+  // --- Save state (the sync-status seam) ------------------------------------
+
+  /**
+   * Subscribe to save-state transitions. Returns an unsubscribe. Bound arrow so
+   * its identity is stable across renders — pass it straight to
+   * `useSyncExternalStore`.
+   */
+  readonly onSaveState = (cb: () => void): (() => void) => {
+    this.saveStateListeners.add(cb);
+    return () => {
+      this.saveStateListeners.delete(cb);
+    };
+  };
+
+  /** The memoized snapshot — same reference until something actually changed. */
+  readonly getSaveState = (): CollabSaveState => this.saveState;
+
+  /**
+   * Re-run a flush the user asked to retry (the cloud's Retry button). Clears
+   * the durable error so the phase leaves `error`, then resumes whichever half
+   * of the pipeline stalled: a failed init (its `initStarted` latch is already
+   * re-armed by `initDoc`'s catch) or a failed flush. Push-based, never a timer.
+   */
+  readonly retryFlush = (): void => {
+    if (this.destroyed || this.blockGone) return;
+    this.lastError = null;
+    this.emitSaveState();
+    if (!this.synced) {
+      this.maybeInit();
+      return;
+    }
+    if (this.pendingUpdates.length > 0 && !this.flushInFlight) void this.flushLoop();
+  };
+
+  /**
+   * `blockGone` first: the bytes were deliberately dropped, so nothing is at
+   * risk regardless of what else is set. Then a durable rejection. Then anything
+   * still owed to the server — queued, waiting out the debounce, or in flight.
+   */
+  private computeSavePhase(): CollabSavePhase {
+    if (this.blockGone) return "idle";
+    if (this.lastError !== null) return "error";
+    if (this.pendingUpdates.length > 0 || this.flushInFlight || this.flushTimer !== null) {
+      return "syncing";
+    }
+    return "idle";
+  }
+
+  /**
+   * Recompute and publish. Idempotent: when neither the phase nor
+   * `lastFlushedAt` moved, the snapshot reference is untouched and no listener
+   * fires — which is what keeps `useSyncExternalStore` from looping and lets
+   * every transition point call this unconditionally.
+   */
+  private emitSaveState(): void {
+    const phase = this.computeSavePhase();
+    if (this.saveState.phase === phase && this.saveState.lastFlushedAt === this.lastFlushedAt) {
+      return;
+    }
+    this.saveState = Object.freeze({ phase, lastFlushedAt: this.lastFlushedAt });
+    for (const cb of [...this.saveStateListeners]) cb();
   }
 
   // --- Server → local (fed by the owning hook's live subscription) ----------
@@ -359,6 +479,9 @@ export class LiveStateYjsProvider implements Provider {
     if (origin === this) return;
     this.pendingUpdates.push(update);
     this.scheduleFlush();
+    // The keystroke edge: bytes now owed to the server ⇒ `syncing`, whether or
+    // not scheduleFlush armed a timer (it doesn't before sync completes).
+    this.emitSaveState();
   };
 
   private scheduleFlush(): void {
@@ -370,6 +493,7 @@ export class LiveStateYjsProvider implements Provider {
       this.flushTimer = null;
       void this.flushLoop();
     }, FLUSH_DEBOUNCE_MS);
+    this.emitSaveState();
   }
 
   /**
@@ -381,6 +505,9 @@ export class LiveStateYjsProvider implements Provider {
   private async flushLoop(): Promise<void> {
     if (this.flushInFlight) return;
     this.flushInFlight = true;
+    /** Did any doc-update POST land? Gates the `lastFlushedAt` stamp. */
+    let posted = false;
+    this.emitSaveState();
     try {
       while (this.pendingUpdates.length > 0 && this.synced) {
         const batch = this.pendingUpdates;
@@ -392,7 +519,9 @@ export class LiveStateYjsProvider implements Provider {
             { id: this.blockId },
             { body: new Blob([update as BlobPart]) },
           );
+          posted = true;
           this.offlineWarned = false;
+          this.lastError = null;
         } catch (err) {
           // 409 = "no doc row". We only flush AFTER a successful init/sync, so
           // the row existed — it vanished under us. Two causes with OPPOSITE
@@ -418,13 +547,19 @@ export class LiveStateYjsProvider implements Provider {
           }
           this.pendingUpdates.unshift(update);
           // Any HTTP response other than the arbitrated 409 above is a real
-          // server-side rejection — surface it loudly.
-          if (err instanceof EndpointError) throw err;
+          // server-side rejection — the bytes are durably refused, so the cloud
+          // must say so (and offer Retry). Surface it loudly too.
+          if (err instanceof EndpointError) {
+            this.lastError = err;
+            throw err;
+          }
           // Network-level failure (offline, server restarting): an EXPECTED
-          // state for a local-first doc, not a bug. The merged bytes are back
-          // at the queue head; retried push-based on socket-reopen / next
-          // server push / next local edit. Warn once per episode so the
-          // console shows edits are buffering.
+          // state for a local-first doc, not a bug — and therefore NOT an error
+          // phase: the merged bytes are back at the queue head and the provider
+          // stays `syncing` until a push-based retry lands them.
+          // Retried push-based on socket-reopen / next server push / next local
+          // edit. Warn once per episode so the console shows edits are
+          // buffering.
           if (!this.offlineWarned) {
             this.offlineWarned = true;
             console.warn(
@@ -437,8 +572,14 @@ export class LiveStateYjsProvider implements Provider {
       }
     } finally {
       this.flushInFlight = false;
+      // "Saved" means the server acked every byte we owed it. Stamped only when
+      // a POST actually landed AND the queue emptied — a 409 re-init, a
+      // requeued offline batch, or a thrown rejection all leave bytes owed.
+      if (posted && this.pendingUpdates.length === 0) this.lastFlushedAt = Date.now();
       // A drained queue may unblock a deferred destroy (see readyForTeardown).
       this.notifyTeardownReady();
+      // Runs on every exit — drain, early `return`, and the rethrown rejection.
+      this.emitSaveState();
     }
   }
 
@@ -495,11 +636,17 @@ export class LiveStateYjsProvider implements Provider {
         this.blockGone = true;
         this.pendingUpdates = [];
         this.notifyTeardownReady();
+        this.emitSaveState(); // → idle: the dropped bytes are not at risk
         return;
       }
-      if (err instanceof EndpointError) throw err;
-      // Network-level failure: expected offline state; the socket-reopen
-      // signal retries (see onTransportReconnected).
+      if (err instanceof EndpointError) {
+        // A real server-side rejection of the seed: the block can never sync.
+        this.lastError = err;
+        this.emitSaveState();
+        throw err;
+      }
+      // Network-level failure: expected offline state (NOT an error phase); the
+      // socket-reopen signal retries (see onTransportReconnected).
       if (!this.offlineWarned) {
         this.offlineWarned = true;
         console.warn(
@@ -511,6 +658,7 @@ export class LiveStateYjsProvider implements Provider {
     }
     if (this.destroyed) return;
     this.offlineWarned = false;
+    this.lastError = null;
     if (recovering) {
       // The block is ALIVE yet its doc row had vanished — no sanctioned path
       // does that (doc rows only die with their block). We recovered (row
@@ -556,6 +704,9 @@ export class LiveStateYjsProvider implements Provider {
     this.synced = true;
     this.emitSync(true);
     if (this.pendingUpdates.length > 0) void this.flushLoop();
+    // Covers the no-queue case (flushLoop, which emits, never runs) and the
+    // recovery push above.
+    this.emitSaveState();
   }
 
   // --- Lifecycle ---------------------------------------------------------------
@@ -604,6 +755,7 @@ export class LiveStateYjsProvider implements Provider {
     this.statusListeners.clear();
     this.updateListeners.clear();
     this.reloadListeners.clear();
+    this.saveStateListeners.clear();
   }
 
   private emitSync(isSynced: boolean): void {

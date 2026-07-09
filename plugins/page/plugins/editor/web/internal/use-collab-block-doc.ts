@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useMemo, useRef, useSyncExternalStore } from "react";
 import { Doc, encodeStateAsUpdate, UndoManager } from "yjs";
 import type { Provider } from "@lexical/yjs";
 import { LinkNode } from "@lexical/link";
@@ -21,14 +21,22 @@ import {
   getBlockTextExtensions,
 } from "./block-text-extensions";
 import { $truncateFromLinearOffset } from "./collab-text-surgery";
-import { base64ToBytes, LiveStateYjsProvider } from "./live-state-yjs-provider";
+import {
+  base64ToBytes,
+  IDLE_SAVE_STATE,
+  LiveStateYjsProvider,
+  type CollabSaveState,
+} from "./live-state-yjs-provider";
 
 /**
  * Per-block `{ doc, provider, undoManager }` registry + the `useCollabBlockDoc`
  * hook — THE single seam between the editor and the content-doc transport
  * (per-block CRDT plan, Stage 2). Everything transport- and undo-manager-shaped
  * lives behind this hook: a future delta-WS provider swaps in here and nothing
- * else in the editor changes.
+ * else in the editor changes. That includes "is this block's prose saved yet" —
+ * the hook surfaces the provider's derived {@link CollabSaveState} rather than
+ * handing the provider itself out, so the consumer reports to the sync-status
+ * cloud without ever touching the transport.
  *
  * The registry is module-level and ref-counted per block id so React
  * strict-mode double-mounts and any second reader of the same block share ONE
@@ -317,11 +325,25 @@ export type CollabProviderFactory = (
   yjsDocMap: Map<string, Doc>,
 ) => Provider;
 
+/** What {@link useCollabBlockDoc} hands its consumer. */
+export interface CollabBlockDoc {
+  /** For `CollaborationPlugin`'s `providerFactory` prop. */
+  providerFactory: CollabProviderFactory;
+  /**
+   * The block's prose durability, straight off the provider (`useSyncExternalStore`).
+   * Report it to the surface's sync-status cloud — the transport is the only
+   * thing that knows whether the bytes landed.
+   */
+  saveState: CollabSaveState;
+  /** Re-run a save the user retried. Only meaningful while `saveState.phase === "error"`. */
+  retrySave: () => void;
+}
+
 /**
  * Bind a block to its shared per-block content doc. Returns the
  * `providerFactory` for `CollaborationPlugin` (pass `id={blockId}` and
  * `shouldBootstrap={false}` — the doc is seeded server-side, never
- * bootstrapped by Lexical).
+ * bootstrapped by Lexical) plus this block's live save state.
  *
  * `dataText` (the block's `data.text`) is only ever read when the block has no
  * stored content doc yet: the first opener builds a throwaway seed from it via
@@ -364,7 +386,7 @@ export function useCollabBlockDoc(
   rowConfirmed: boolean,
   onContentChange?: () => void,
   onUndoableEdit?: (edit: CapturedBlockDocEdit) => void,
-): CollabProviderFactory {
+): CollabBlockDoc {
   const dataTextRef = useLatestRef(dataText);
   // Render-accurate row-confirmed view for provider CONSTRUCTION (the
   // pre-seed discriminator): an existing block renders with `rowConfirmed`
@@ -382,13 +404,17 @@ export function useCollabBlockDoc(
   // One hold per hook instance. Acquired lazily from whichever consumer runs
   // first (the providerFactory call or the subscription effect below) — both
   // run in effects, so a discarded render never leaks a ref-count.
+  //
+  // `id` is a PARAMETER, not a captured `blockId`: `ensure` is a stable
+  // `useEventCallback`, so every caller's dependence on the block id would
+  // otherwise be invisible — to a reader and to `exhaustive-deps` alike.
   const heldRef = useRef<CollabDocEntry | null>(null);
-  const ensure = useEventCallback((): CollabDocEntry => {
-    if (heldRef.current && heldRef.current.blockId !== blockId) {
+  const ensure = useEventCallback((id: string): CollabDocEntry => {
+    if (heldRef.current && heldRef.current.blockId !== id) {
       releaseCollabDoc(heldRef.current.blockId);
       heldRef.current = null;
     }
-    heldRef.current ??= acquireCollabDoc(blockId, buildSeedState, rowConfirmedRef.current);
+    heldRef.current ??= acquireCollabDoc(id, buildSeedState, rowConfirmedRef.current);
     return heldRef.current;
   });
 
@@ -406,7 +432,7 @@ export function useCollabBlockDoc(
   // this effect re-fires on the authoritative blocks push that flips
   // `rowConfirmed` true.
   useEffect(() => {
-    if (rowConfirmed) ensure().provider.markBlockRowConfirmed();
+    if (rowConfirmed) ensure(blockId).provider.markBlockRowConfirmed();
   }, [blockId, rowConfirmed, ensure]);
 
   // Doc-content observer for the projection consumer. `doc.on("update")` fires
@@ -414,7 +440,7 @@ export function useCollabBlockDoc(
   // (no payload) keeps this hook content-agnostic.
   useEffect(() => {
     if (!onContentChange) return;
-    const doc = ensure().doc;
+    const doc = ensure(blockId).doc;
     const notify = () => onContentChange();
     doc.on("update", notify);
     return () => doc.off("update", notify);
@@ -424,7 +450,7 @@ export function useCollabBlockDoc(
   // run to the consumer so it can be recorded onto the unified undo stack.
   useEffect(() => {
     if (!onUndoableEdit) return;
-    const entry = ensure();
+    const entry = ensure(blockId);
     entry.undoCaptureListeners.add(onUndoableEdit);
     return () => {
       entry.undoCaptureListeners.delete(onUndoableEdit);
@@ -440,22 +466,45 @@ export function useCollabBlockDoc(
     // While loading we can't tell "absent" (→ seed) from "not arrived yet",
     // so nothing is delivered until the subscription settles.
     if (contentRes.pending) return;
-    ensure().provider.onServerState(contentRes.data[0]?.state ?? null);
+    ensure(blockId).provider.onServerState(contentRes.data[0]?.state ?? null);
     // `contentRes` identity recomputes only on pending/data/error (structural
     // sharing in useResource), so this fires once per actual server change.
-  }, [contentRes, ensure]);
+  }, [blockId, contentRes, ensure]);
 
-  return useEventCallback((id: string, yjsDocMap: Map<string, Doc>): Provider => {
-    if (id !== blockId) {
-      throw new Error(
-        `useCollabBlockDoc: providerFactory id "${id}" != block id "${blockId}"`,
-      );
-    }
-    const entry = ensure();
-    // CollaborationPlugin reads the doc back out of the map it hands us.
-    yjsDocMap.set(id, entry.doc);
-    return entry.provider;
+  // OUT (observability): the provider's derived save state, for the surface's
+  // sync-status cloud. Keyed on `blockId` so a re-keyed hook resubscribes to the
+  // NEW provider's listener set instead of staying bound to the old entry's.
+  // `getSnapshot` tolerates "no entry yet" (a first render, before any effect
+  // has called `ensure()`): nothing has been typed, so nothing can be unsaved.
+  // The provider memoizes its snapshot, so this can't loop.
+  const subscribeSaveState = useCallback(
+    (onStoreChange: () => void) => ensure(blockId).provider.onSaveState(onStoreChange),
+    [blockId, ensure],
+  );
+  const getSaveState = useCallback(
+    (): CollabSaveState => heldRef.current?.provider.getSaveState() ?? IDLE_SAVE_STATE,
+    [],
+  );
+  const saveState = useSyncExternalStore(subscribeSaveState, getSaveState);
+  const retrySave = useEventCallback((): void => {
+    heldRef.current?.provider.retryFlush();
   });
+
+  const providerFactory = useEventCallback(
+    (id: string, yjsDocMap: Map<string, Doc>): Provider => {
+      if (id !== blockId) {
+        throw new Error(
+          `useCollabBlockDoc: providerFactory id "${id}" != block id "${blockId}"`,
+        );
+      }
+      const entry = ensure(blockId);
+      // CollaborationPlugin reads the doc back out of the map it hands us.
+      yjsDocMap.set(id, entry.doc);
+      return entry.provider;
+    },
+  );
+
+  return { providerFactory, saveState, retrySave };
 }
 
 /**

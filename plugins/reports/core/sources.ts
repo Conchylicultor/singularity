@@ -22,6 +22,7 @@ export const CLIENT_REPORT_SOURCES = [
   "live-state-wedge",
   "client-slow-op",
   "client-render-loop",
+  "client-optimistic-divergence",
   "boot-snapshot",
   "plugin-load",
 ] as const;
