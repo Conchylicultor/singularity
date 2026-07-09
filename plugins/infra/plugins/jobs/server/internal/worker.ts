@@ -11,7 +11,10 @@ import { db } from "@plugins/database/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
 import { isMain } from "@plugins/infra/plugins/paths/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
-import { recordEntrySpan } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  recordEntrySpan,
+  runInBackgroundLane,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { JOB_TASK, JOB_CONCURRENCY } from "./constants";
 import {
   getScheduledJobs,
@@ -233,8 +236,14 @@ async function dispatch(
     // satisfies `deadJobPredicate` and queue-health reaps it as one dead-letter.
     // If the budget-collapse write itself fails, we fall through to the throw
     // and graphile retries normally (the real cause was already reported above).
+    //
+    // The `job` entry span above wraps only `job.run()`, so this write lands with
+    // no ambient entry and would be classified context-less — hence ungated,
+    // running against the connections reserved for human-blocking work. Widening
+    // the span would corrupt the recorded job duration; declaring the lane is the
+    // right tool. See research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
     if (isNonRetryableError(err)) {
-      await markJobPermanentlyFailed(meta.jobId);
+      await runInBackgroundLane(() => markJobPermanentlyFailed(meta.jobId));
     }
     throw err;
   }
@@ -250,13 +259,22 @@ async function dispatch(
   // bounded (one workflow's worth) and harmless on replay — the next
   // dispatch of the same workflowRunId would short-circuit through the
   // cached steps. A periodic sweep can reap them later if it ever matters.
+  //
+  // Outside the `job` entry span (it wraps only `job.run()`), so without the
+  // explicit declaration these deletes are context-less and therefore ungated,
+  // taking connections reserved for interactive work to clean up after background
+  // work. Both awaits stay inside the lane scope so their pool connections are
+  // acquired under the declaration. See
+  // research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
   try {
-    await db
-      .delete(_jobSteps)
-      .where(eq(_jobSteps.workflowRunId, workflowRunId));
-    await db
-      .delete(_jobWaits)
-      .where(eq(_jobWaits.workflowRunId, workflowRunId));
+    await runInBackgroundLane(async () => {
+      await db
+        .delete(_jobSteps)
+        .where(eq(_jobSteps.workflowRunId, workflowRunId));
+      await db
+        .delete(_jobWaits)
+        .where(eq(_jobWaits.workflowRunId, workflowRunId));
+    });
   // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.warn(

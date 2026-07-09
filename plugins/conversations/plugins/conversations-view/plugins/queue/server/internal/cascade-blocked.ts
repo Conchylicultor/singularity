@@ -25,7 +25,7 @@ export async function cascadeBlockedDependents(
 
   while (frontier.length > 0) {
     const currentTaskId = frontier.shift()!;
-    const dependentTaskIds = await listDependentIds(currentTaskId);
+    const dependentTaskIds = await listDependentIds(currentTaskId, tx);
 
     for (const depTaskId of dependentTaskIds) {
       if (visited.has(depTaskId)) continue;
@@ -35,7 +35,7 @@ export async function cascadeBlockedDependents(
       const leadRow = await leadConversation(depTaskId, tx);
       if (!leadRow) continue;
 
-      const blockingTaskIds = await listBlockingDepIds(depTaskId);
+      const blockingTaskIds = await listBlockingDepIds(depTaskId, tx);
       if (blockingTaskIds.length === 0) continue;
 
       const requiredRank = await rankAfterBlockers(leadRow.id, blockingTaskIds, tx);

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
+import { db } from "@plugins/database/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import {
   getTask,
@@ -57,7 +58,7 @@ export const maybeLaunchTaskJob = defineJob({
       return;
     }
     // Some other dep is still blocking; another trigger will fire later.
-    if (await hasBlockingDep(taskId)) return;
+    if (await hasBlockingDep(taskId, db)) return;
 
     // Atomic claim: only one concurrent runner gets `true`. Every other
     // enqueue (duplicate trigger, retry, racing dep flip) sees the marker

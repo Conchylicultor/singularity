@@ -1,7 +1,10 @@
 import os from "node:os";
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  runInBackgroundLane,
+  runWithoutProfiling,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import type { ContentionSnapshot } from "../../core";
 
 // pg returns count(*) as a bigint, which node-postgres surfaces as a string.
@@ -33,17 +36,26 @@ export async function getContentionSnapshot(): Promise<ContentionSnapshot> {
   // recorder, so an un-suppressed query would be self-referential). The await
   // MUST run inside the suppression scope — a lazy unexecuted query would run
   // its spans after the ALS scope exits, defeating suppression.
-  const rows = await runWithoutProfiling(async () => {
-    const result = await db.execute<BackendCountRow>(sql`
-      SELECT datname,
-             count(*) FILTER (WHERE state = 'active') AS active,
-             count(*) AS total
-      FROM pg_stat_activity
-      WHERE datname IS NOT NULL
-      GROUP BY datname
-    `);
-    return result.rows;
-  });
+  //
+  // Wrapped OUTSIDE that in runInBackgroundLane: the snapshot is measurement,
+  // never the caller's own work, so it must not inherit its trigger's origin and
+  // spend a reserved-interactive connection describing a slowdown to itself. The
+  // await must stay inside the lane scope for the same reason it stays inside the
+  // suppression scope. See
+  // research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
+  const rows = await runInBackgroundLane(() =>
+    runWithoutProfiling(async () => {
+      const result = await db.execute<BackendCountRow>(sql`
+        SELECT datname,
+               count(*) FILTER (WHERE state = 'active') AS active,
+               count(*) AS total
+        FROM pg_stat_activity
+        WHERE datname IS NOT NULL
+        GROUP BY datname
+      `);
+      return result.rows;
+    }),
+  );
 
   let pgActiveBackends = 0;
   let pgTotalBackends = 0;

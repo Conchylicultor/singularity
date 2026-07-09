@@ -7,9 +7,11 @@ import {
   __contribute,
   captureFlightWindow,
   chargeWait,
+  currentOriginClass,
   getLastLoaderReadSet,
   getReadSetIndex,
   getRuntimeProfile,
+  installBackgroundLaneRuntime,
   installClock,
   installSpanContextRuntime,
   onSlowSpan,
@@ -20,6 +22,7 @@ import {
   registerGateGauge,
   removeReadSetTable,
   resetRuntimeProfile,
+  runInBackgroundLane,
   seedReadSetIndex,
   type Aggregate,
   type EntryContext,
@@ -34,6 +37,13 @@ const als = new AsyncLocalStorage<EntryContext>();
 installSpanContextRuntime({
   run: (ctx, fn) => als.run(ctx, fn),
   current: () => als.getStore(),
+});
+
+// The background-lane override, installed exactly as server/internal/install.ts does.
+const backgroundLaneAls = new AsyncLocalStorage<true>();
+installBackgroundLaneRuntime({
+  run: (fn) => backgroundLaneAls.run(true, fn),
+  active: () => backgroundLaneAls.getStore() === true,
 });
 
 let fakeNow = 0;
@@ -294,6 +304,106 @@ describe("chargeWait fallbacks and markers", () => {
     expect(a.waits).toEqual({ "git-memo-hit": 0 });
     expect(a.waitTotalMs).toBe(0);
     expect(a.selfTotalMs).toBe(20);
+  });
+});
+
+describe("origin class", () => {
+  // `currentOriginClass` reads the ROOT of the entry chain, not the innermost
+  // entry — the whole point is that a `loader` says nothing about *why* it runs.
+  test("a loader under flush → push is background (the cascade's root is flush)", async () => {
+    let seen: unknown;
+    await recordEntrySpan("flush", "flushNotifies", async () => {
+      await recordEntrySpan("push", "res:tasks", async () => {
+        await recordEntrySpan("loader", "tasks", () => {
+          seen = currentOriginClass();
+        });
+      });
+    });
+    expect(seen).toBe("background");
+  });
+
+  test("the same loader under a sub-ack root is interactive", async () => {
+    let seen: unknown;
+    await recordEntrySpan("sub", "res:tasks", async () => {
+      await recordEntrySpan("loader", "tasks", () => {
+        seen = currentOriginClass();
+      });
+    });
+    expect(seen).toBe("interactive");
+  });
+
+  test("the same loader under an http root is interactive", async () => {
+    let seen: unknown;
+    await recordEntrySpan("http", "GET /api/boot-snapshot", async () => {
+      await recordEntrySpan("loader", "tasks", () => {
+        seen = currentOriginClass();
+      });
+    });
+    expect(seen).toBe("interactive");
+  });
+
+  test("a bare root maps through the table: job → background, sub → interactive", async () => {
+    let job: unknown;
+    let sub: unknown;
+    await recordEntrySpan("job", "reindex", () => {
+      job = currentOriginClass();
+    });
+    await recordEntrySpan("sub", "res:tasks", () => {
+      sub = currentOriginClass();
+    });
+    expect(job).toBe("background");
+    expect(sub).toBe("interactive");
+  });
+
+  test("no enclosing entry → undefined (boot/migrations stay ungated)", () => {
+    expect(currentOriginClass()).toBeUndefined();
+  });
+
+  test("a detached continuation keeps its root's origin after the root closed", async () => {
+    // The walk deliberately does NOT skip closed ancestors: it only reads `kind`,
+    // and a fire-and-forget continuation spawned by a flush is still flush-origin
+    // work long after the flush entry recorded itself.
+    const gate = deferred();
+    let detached!: Promise<unknown>;
+    await recordEntrySpan("flush", "f", () => {
+      detached = (async () => {
+        await gate.promise;
+        return currentOriginClass();
+      })();
+    });
+    gate.resolve();
+    expect(await detached).toBe("background");
+  });
+
+  test("runInBackgroundLane overrides an interactive origin chain", async () => {
+    let inside: unknown;
+    let after: unknown;
+    await recordEntrySpan("http", "POST /api/tasks", async () => {
+      await recordEntrySpan("loader", "tasks", () => {
+        runInBackgroundLane(() => {
+          inside = currentOriginClass();
+        });
+        // The scope is exactly the callback: the enclosing request is human
+        // again the moment it returns.
+        after = currentOriginClass();
+      });
+    });
+    expect(inside).toBe("background");
+    expect(after).toBe("interactive");
+  });
+
+  test("runInBackgroundLane with no entry at all is background, not undefined", () => {
+    expect(runInBackgroundLane(() => currentOriginClass())).toBe("background");
+  });
+
+  test("the lane survives an await inside the scope (a transaction's whole life)", async () => {
+    // `runInBackgroundLane` returns whatever `fn` returns — including a promise —
+    // so ALS keeps the awaited DB work of an observability write in scope.
+    const seen = await runInBackgroundLane(async () => {
+      await Promise.resolve();
+      return currentOriginClass();
+    });
+    expect(seen).toBe("background");
   });
 });
 

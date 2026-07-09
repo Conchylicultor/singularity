@@ -57,12 +57,13 @@ recorded span).
 
 Reading it: a leaf loader that is mostly `waitMs` was head-of-line-blocked (the resource is
 fast); mostly `selfMs` = genuinely slow. A `flush` with `childMs ≈ wall`, `waits` naming
-`loader-acquire`/`db-acquire`, and small `selfMs` spent its life awaiting gate-blocked
+`background-acquire`/`db-acquire`, and small `selfMs` spent its life awaiting gate-blocked
 children. `waitSplit(agg)` returns the per-call averages `{ avgMs, waitMs, childMs, selfMs,
 waits }` from the aggregate's summed totals.
 
-Charging layers: `loader-acquire` (per-backend DB loader gate,
-`database/server/internal/client.ts`), `db-acquire` (pg pool connect wait, same file),
+Charging layers: `background-acquire` (per-backend background DB **query** gate) and
+`background-tx-acquire` (background DB **transaction** lease gate), both
+`database/server/internal/client.ts`; `db-acquire` (pg pool connect wait, same file),
 `heavy-read-acquire` / `heavy-read-local` (host-wide heavy-read pool,
 `infra/host-read-pool`), `read-admit` (resource read admission) and `read-coalesce` (joined
 an in-flight resource read) (`server-core/core/resources.ts`), `endpoint-concurrency` /
@@ -109,10 +110,32 @@ pure (no `node:async_hooks`, web bundle unaffected):
 - `chargeWait(layer, ms)` — called by a concurrency gate's `onWait` to union the wait
   interval into every open enclosing entry's tracks (falls back to a standalone
   `db [layer]` span when no entry is active).
-- `currentCallerKind()` — the `kind` of the innermost enclosing entry point (or `undefined`
-  when none is active). A thin read of the same ambient context; the DB pool wrapper uses it
-  to gate loader-originated queries (reserving connections for interactive work) without a
-  separate cost-class taxonomy. Read it synchronously, before any await.
+- `currentCallerKind()` — the `kind` of the **innermost** enclosing entry point (or
+  `undefined` when none is active). A thin read of the same ambient context; the DB pool
+  wrapper uses it to decide whether to capture a query's read-set. Read it synchronously,
+  before any await.
+- `currentOriginClass()` — the lane (`"interactive" | "background"`) of the **outermost**
+  enclosing entry, or `undefined` when none is active. Walks the `EntryContext.parent` chain
+  to the root and maps `root.kind` through an exhaustive `Record<SpanKind, OriginClass>` (so
+  adding a span kind is a tsc error until it picks a lane): `http`/`sub`/`loader` are
+  interactive, `flush`/`push`/`cascade`/`job` are background. The DB pool gates partition on
+  this. Root, not innermost, because inside a resource load the innermost kind is `loader`
+  regardless of *why* the load runs — the blindness that let a human's cold sub-ack load
+  queue behind hundreds of cascade recomputes. Unlike `chargeWait`, the walk does not skip
+  closed ancestors (it only reads `kind`, never mutates their tracks). Allocation-free;
+  read it synchronously, before any await.
+- `runInBackgroundLane(fn)` — declare that `fn` is background work whatever triggered it,
+  overriding the origin walk. Backed by its own AsyncLocalStorage (installed in
+  `server/internal/install.ts`, mirroring the suppression seam), so the declaration
+  propagates through awaited DB work — including down to the `pool.connect()` a nested
+  `db.transaction()` takes. Used by the observability writers (slow-ops, reports, trace
+  capture, contention) whose DB transactions would otherwise inherit the origin of whichever
+  human request happened to trip them, and by the jobs worker's post-run cleanup writes,
+  which sit outside the `job` entry span. Deliberately **separate** from
+  `runWithoutProfiling`: "don't record" and "isn't background" are different claims —
+  `debug/profiling/boot-bench`'s load-generator wants the former while deliberately holding
+  real gate slots. See
+  `research/2026-07-09-global-interactive-lane-origin-based-db-gating.md`.
 
 `getRuntimeProfile()` returns each aggregate (sorted by `recentMaxMs` desc) with its
 `byParent` breakdown (sorted by count desc) and summed `waitTotalMs`/`childTotalMs`/
@@ -228,6 +251,6 @@ inside `captureFlightWindow`, i.e. only on a (rate-limited) slow-event trip.
 - Cross-plugin:
   - Imported by: `infra/endpoints`
 - Core:
-  - Exports: Types: `Aggregate`, `EntryContext`, `FlightSpan`, `FlightWindow`, `GateGauge`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `Track`, `WaitBreakdown`; Values: `__contribute`, `captureFlightWindow`, `chargeWait`, `currentCallerKind`, `getLastLoaderReadSet`, `getReadSetIndex`, `getRuntimeProfile`, `installClock`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `readGateGauges`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `registerGateGauge`, `removeReadSetTable`, `resetRuntimeProfile`, `runWithoutProfiling`, `seedReadSetIndex`, `SPAN_KINDS`, `waitSplit`
+  - Exports: Types: `Aggregate`, `EntryContext`, `FlightSpan`, `FlightWindow`, `GateGauge`, `OriginClass`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `Track`, `WaitBreakdown`; Values: `__contribute`, `captureFlightWindow`, `chargeWait`, `currentCallerKind`, `currentOriginClass`, `getLastLoaderReadSet`, `getReadSetIndex`, `getRuntimeProfile`, `installBackgroundLaneRuntime`, `installClock`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `readGateGauges`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `registerGateGauge`, `removeReadSetTable`, `resetRuntimeProfile`, `runInBackgroundLane`, `runWithoutProfiling`, `seedReadSetIndex`, `SPAN_KINDS`, `waitSplit`
 
 <!-- AUTOGENERATED:END -->

@@ -9,6 +9,7 @@ import { setProfilerHooks } from "@plugins/framework/plugins/server-core/core";
 import {
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,
+  installBackgroundLaneRuntime,
   recordEntrySpan,
   recordSpan,
   chargeWait,
@@ -41,6 +42,20 @@ const suppressAls = new AsyncLocalStorage<true>();
 installProfilingSuppressionRuntime({
   run: (fn) => suppressAls.run(true, fn),
   suppressed: () => suppressAls.getStore() === true,
+});
+
+// Separate ALS for the background-lane declaration. Backs runInBackgroundLane so
+// the observability subsystem's own writes and the queue's job-cleanup writes are
+// classified background whatever triggered them. AsyncLocalStorage propagates
+// `true` across the awaited DB work spawned synchronously inside the scope — that
+// propagation is exactly what routes a nested `db.transaction()`'s
+// `pool.connect()` (and every query it awaits) into the background lane, rather
+// than only the first synchronous statement.
+const backgroundLaneAls = new AsyncLocalStorage<true>();
+
+installBackgroundLaneRuntime({
+  run: (fn) => backgroundLaneAls.run(true, fn),
+  active: () => backgroundLaneAls.getStore() === true,
 });
 
 // Inject the profiler into server-core's resource runtime. server-core declares

@@ -38,8 +38,13 @@ export async function getTask(id: string): Promise<Task | null> {
 // and the UI status badge derive blocking from one definition rather than two
 // hand-mirrored single-hop queries. A task with no row in the view has no
 // dependencies → not blocked.
-export async function hasBlockingDep(taskId: string): Promise<boolean> {
-  const [row] = await db
+//
+// `exec` is REQUIRED — see the note on `listBlockingDepIds` below.
+export async function hasBlockingDep(
+  taskId: string,
+  exec: DbExecutor,
+): Promise<boolean> {
+  const [row] = await exec
     .select({ blocking: taskBlocking.hasBlockingDep })
     .from(taskBlocking)
     .where(eq(taskBlocking.taskId, taskId))
@@ -79,8 +84,17 @@ export async function isDescendant(
 // / TaskGraph.activeBlockers): callers feed the result to `rankAfterBlockers` and
 // walk the frontier themselves, so this must stay the direct-dependency frontier,
 // not the transitive closure. Do NOT "consolidate" it onto the transitive view.
-export async function listBlockingDepIds(taskId: string): Promise<string[]> {
-  const rows = await db
+//
+// `exec` is REQUIRED (no `= db` default) precisely so a caller inside a
+// transaction cannot silently read off the pool: that would hold one connection
+// while queueing for a second (hold-and-wait, fatal under pool exhaustion) and
+// read a snapshot that misses the transaction's own uncommitted writes. Pass
+// `tx` inside a transaction, `db` outside one.
+export async function listBlockingDepIds(
+  taskId: string,
+  exec: DbExecutor,
+): Promise<string[]> {
+  const rows = await exec
     .select({ depTaskId: _taskDependencies.dependsOnTaskId })
     .from(_taskDependencies)
     .innerJoin(_tasks, eq(_tasks.id, _taskDependencies.dependsOnTaskId))
@@ -98,9 +112,11 @@ export async function listBlockingDepIds(taskId: string): Promise<string[]> {
   return rows.map((r) => r.depTaskId);
 }
 
+// `exec` is REQUIRED for the same reason as `listBlockingDepIds` above: a
+// defaulted executor let a transaction-bound caller silently query the pool.
 export async function listDependentIds(
   taskId: string,
-  exec: DbExecutor = db,
+  exec: DbExecutor,
 ): Promise<string[]> {
   const rows = await exec
     .select({ taskId: _taskDependencies.taskId })

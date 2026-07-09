@@ -1,6 +1,9 @@
 import { sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  runInBackgroundLane,
+  runWithoutProfiling,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { getServerBuildId } from "@plugins/build/plugins/server-build-id/server";
 import { reportDetailRoute } from "@plugins/reports/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
@@ -101,47 +104,58 @@ export async function recordReport(
   // report, which writes again — a self-amplifying loop. Suppressing here covers
   // every report kind (crash + slow-op). The ALS propagates through the awaited
   // query, so the connection-acquire and query spans are suppressed too.
-  const [row] = await runWithoutProfiling(async () => {
-    // The await MUST run inside the suppression scope. A bare `() => db…`
-    // returns the lazy query unexecuted, so its execution (and the acquire +
-    // query spans) would run after the ALS scope exits — defeating suppression
-    // and re-opening the self-feedback loop.
-    const rows = await db
-      .insert(_reports)
-      .values({
-        id,
-        kind,
-        fingerprint: fp,
-        worktree,
-        source,
-        message,
-        url: url ?? null,
-        userAgent: userAgent ?? null,
-        data,
-        rateLimited: limited,
-        noise,
-        lastClientId: clientId ?? null,
-        lastBuildId: buildId ?? null,
-      })
-      .onConflictDoUpdate({
-        target: [_reports.fingerprint, _reports.worktree],
-        // Repeats land on the same row (the fingerprint is stable per kind): bump
-        // the count, refresh the latest message + payload + attribution.
-        set: {
+  //
+  // Wrapped OUTSIDE that in runInBackgroundLane: a report is filed from whatever
+  // context tripped it, so under origin-based DB gating this write would inherit
+  // a human's lane and queue against the connections reserved for the request it
+  // is describing. During the 2026-07-09 incident report fingerprint counts ran
+  // into the thousands. Declaring it background is the fix; suppression alone is
+  // a different claim ("don't record"), not a lane. See
+  // research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
+  const [row] = await runInBackgroundLane(() =>
+    runWithoutProfiling(async () => {
+      // The await MUST run inside the suppression scope. A bare `() => db…`
+      // returns the lazy query unexecuted, so its execution (and the acquire +
+      // query spans) would run after the ALS scope exits — defeating suppression
+      // and re-opening the self-feedback loop. Likewise it must stay inside the
+      // enclosing lane scope, or its connection is taken un-declared.
+      const rows = await db
+        .insert(_reports)
+        .values({
+          id,
+          kind,
+          fingerprint: fp,
+          worktree,
+          source,
           message,
+          url: url ?? null,
+          userAgent: userAgent ?? null,
           data,
-          count: sql`${_reports.count} + 1`,
-          lastSeenAt: new Date(),
-          updatedAt: new Date(),
-          rateLimited: sql`${_reports.rateLimited} OR ${limited}`,
+          rateLimited: limited,
           noise,
           lastClientId: clientId ?? null,
           lastBuildId: buildId ?? null,
-        },
-      })
-      .returning();
-    return rows;
-  });
+        })
+        .onConflictDoUpdate({
+          target: [_reports.fingerprint, _reports.worktree],
+          // Repeats land on the same row (the fingerprint is stable per kind): bump
+          // the count, refresh the latest message + payload + attribution.
+          set: {
+            message,
+            data,
+            count: sql`${_reports.count} + 1`,
+            lastSeenAt: new Date(),
+            updatedAt: new Date(),
+            rateLimited: sql`${_reports.rateLimited} OR ${limited}`,
+            noise,
+            lastClientId: clientId ?? null,
+            lastBuildId: buildId ?? null,
+          },
+        })
+        .returning();
+      return rows;
+    }),
+  );
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return { reportId: null, taskId: null, rateLimited: limited };
@@ -179,26 +193,32 @@ export async function recordReport(
   // slow notification INSERT must never re-enter the slow-op → report →
   // notification self-feedback loop. The suppression ALS binds the whole detached
   // async chain (AsyncLocalStorage semantics); `void` keeps it fire-and-forget.
-  void runWithoutProfiling(() =>
-    recordNotification({
-      type: "report",
-      title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
-      description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
-      variant: spec.meta.variant,
-      muted: row.noise,
-      dedupeKey: row.id,
-      resurfaceAfterMs: cooldownMs,
-      // Deep-link to the report's detail sidepane in Debug → Reports, never a task.
-      // Investigation tasks are filed on demand from that pane.
-      linkTo: reportDetailRoute.link(debugApp, { reportId: row.id }),
-      metadata: {
-        reportId: row.id,
-        source: row.source,
-        fingerprint: fp,
-        clientId: clientId ?? null,
-        buildId: buildId ?? null,
-      },
-    }),
+  // The background-lane declaration wraps it for the same reason as the `_reports`
+  // upsert above — nobody is waiting on this bell write, so it must never take a
+  // connection reserved for someone who is
+  // (research/2026-07-09-global-interactive-lane-origin-based-db-gating.md).
+  void runInBackgroundLane(() =>
+    runWithoutProfiling(() =>
+      recordNotification({
+        type: "report",
+        title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
+        description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
+        variant: spec.meta.variant,
+        muted: row.noise,
+        dedupeKey: row.id,
+        resurfaceAfterMs: cooldownMs,
+        // Deep-link to the report's detail sidepane in Debug → Reports, never a task.
+        // Investigation tasks are filed on demand from that pane.
+        linkTo: reportDetailRoute.link(debugApp, { reportId: row.id }),
+        metadata: {
+          reportId: row.id,
+          source: row.source,
+          fingerprint: fp,
+          clientId: clientId ?? null,
+          buildId: buildId ?? null,
+        },
+      }),
+    ),
   );
   return { reportId: row.id, taskId: row.taskId, rateLimited: false };
 }

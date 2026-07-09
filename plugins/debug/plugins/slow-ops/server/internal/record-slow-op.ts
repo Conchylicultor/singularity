@@ -1,6 +1,7 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import {
+  runInBackgroundLane,
   runWithoutProfiling,
   type WaitBreakdown,
 } from "@plugins/infra/plugins/runtime-profiler/core";
@@ -144,68 +145,85 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
   // Hoisted out of the suppression callback so the dual-write marker below can
   // reuse the same captured box state. Assigned inside the scope (the await must
   // stay there); non-null after the callback resolves.
+  //
+  // Wrapped OUTSIDE that in runInBackgroundLane: without the declaration this
+  // write inherits the origin of whatever tripped it, so a slow op recorded
+  // inside a `sub` load would ride the interactive lane and compete for the
+  // reserved connections with the very human it is measuring. Concurrent
+  // slow_ops upserts serialize for seconds on this row lock — the observability
+  // subsystem amplifying the outage it records. Suppression ("don't record") and
+  // the lane ("isn't human-blocking") are separate axes; both apply here. See
+  // research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
   let snapshot!: ContentionSnapshot;
-  await runWithoutProfiling(async () => {
-    // Capture the box state at the instant this span tripped. Cached (≤1s) so a
-    // storm of slow ops collapses onto one read; inside runWithoutProfiling so
-    // its own pg query never re-feeds this recorder. The await MUST stay inside
-    // the suppression scope (same reason as the transaction below).
-    snapshot = await getContentionSnapshot();
+  await runInBackgroundLane(() =>
+    runWithoutProfiling(async () => {
+      // Capture the box state at the instant this span tripped. Cached (≤1s) so a
+      // storm of slow ops collapses onto one read; inside runWithoutProfiling so
+      // its own pg query never re-feeds this recorder. The await MUST stay inside
+      // the suppression scope (same reason as the transaction below).
+      snapshot = await getContentionSnapshot();
 
-    // The await MUST run inside the suppression scope. A bare `() => db…`
-    // returns the lazy query unexecuted, so its execution (and the acquire +
-    // query spans the pool wrapper records) would run after the ALS scope exits
-    // — defeating suppression and re-opening the self-feedback loop.
-    await db.transaction(async (tx) => {
-      const [row] = await tx
-        .insert(_slowOps)
-        .values({
-          worktree,
-          operationKind,
-          operation,
-          count: 1,
-          totalMs: durationMs,
-          maxMs: durationMs,
-          lastMs: durationMs,
-          thresholdMs,
-          callers: [],
-        })
-        .onConflictDoUpdate({
-          target: [_slowOps.operationKind, _slowOps.operation, _slowOps.worktree],
-          set: {
-            count: sql`${_slowOps.count} + 1`,
-            totalMs: sql`${_slowOps.totalMs} + ${durationMs}`,
-            maxMs: sql`greatest(${_slowOps.maxMs}, ${durationMs})`,
+      // The await MUST run inside the suppression scope. A bare `() => db…`
+      // returns the lazy query unexecuted, so its execution (and the acquire +
+      // query spans the pool wrapper records) would run after the ALS scope exits
+      // — defeating suppression and re-opening the self-feedback loop. The same
+      // hazard applies to the enclosing lane scope: an escaped await would take
+      // its pool connection outside the background declaration.
+      await db.transaction(async (tx) => {
+        const [row] = await tx
+          .insert(_slowOps)
+          .values({
+            worktree,
+            operationKind,
+            operation,
+            count: 1,
+            totalMs: durationMs,
+            maxMs: durationMs,
             lastMs: durationMs,
             thresholdMs,
-            lastSeenAt: new Date(),
-          },
-        })
-        .returning();
+            callers: [],
+          })
+          .onConflictDoUpdate({
+            target: [
+              _slowOps.operationKind,
+              _slowOps.operation,
+              _slowOps.worktree,
+            ],
+            set: {
+              count: sql`${_slowOps.count} + 1`,
+              totalMs: sql`${_slowOps.totalMs} + ${durationMs}`,
+              maxMs: sql`greatest(${_slowOps.maxMs}, ${durationMs})`,
+              lastMs: durationMs,
+              thresholdMs,
+              lastSeenAt: new Date(),
+            },
+          })
+          .returning();
 
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-      if (!row) throw new Error("recordSlowOp: upsert returned no row");
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+        if (!row) throw new Error("recordSlowOp: upsert returned no row");
 
-      // A second read-modify-write within the same row-locked transaction so
-      // both ring merges stay race-safe. recentSamples is ALWAYS updated (every
-      // slow op gets a contention sample); callers is merged additionally only
-      // when a caller is known (page-load passes null).
-      const callers = caller
-        ? mergeCaller(row.callers, caller, durationMs)
-        : row.callers;
-      const nextWaits = waits ? mergeWaits(row.waits, waits) : row.waits;
-      const recentSamples = mergeSample(
-        row.recentSamples,
-        snapshot,
-        durationMs,
-        traceId,
-      );
-      await tx
-        .update(_slowOps)
-        .set({ callers, waits: nextWaits, recentSamples })
-        .where(eq(_slowOps.id, row.id));
-    });
-  });
+        // A second read-modify-write within the same row-locked transaction so
+        // both ring merges stay race-safe. recentSamples is ALWAYS updated (every
+        // slow op gets a contention sample); callers is merged additionally only
+        // when a caller is known (page-load passes null).
+        const callers = caller
+          ? mergeCaller(row.callers, caller, durationMs)
+          : row.callers;
+        const nextWaits = waits ? mergeWaits(row.waits, waits) : row.waits;
+        const recentSamples = mergeSample(
+          row.recentSamples,
+          snapshot,
+          durationMs,
+          traceId,
+        );
+        await tx
+          .update(_slowOps)
+          .set({ callers, waits: nextWaits, recentSamples })
+          .where(eq(_slowOps.id, row.id));
+      });
+    }),
+  );
 
   // Dual-write a slim marker for the health-monitor overlay (one line per
   // recorded slow op). The snapshot was captured inside the suppression scope

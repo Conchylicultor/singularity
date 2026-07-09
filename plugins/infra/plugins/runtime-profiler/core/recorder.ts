@@ -376,6 +376,53 @@ export function runWithoutProfiling<T>(fn: () => T): T {
   return suppressionRuntime.run(fn);
 }
 
+// --- Injected background-lane runtime ---
+//
+// The origin walk below infers a work item's lane from the outermost entry that
+// triggered it. Some work is background REGARDLESS of what triggered it: the
+// observability subsystem's own writes (slow-ops / reports / trace / contention)
+// and the queue's job-cleanup writes would otherwise inherit the origin of
+// whatever human request happened to trip them, and ride the interactive lane
+// they exist to protect. This scope is that explicit declaration.
+//
+// Deliberately SEPARATE from `runWithoutProfiling`: "don't record" and "is
+// background" are different claims on orthogonal axes. `debug/profiling/boot-bench`'s
+// load generator relies on suppression precisely while wanting real gate slots,
+// and the observability writes want the reverse — suppressed AND background.
+//
+// Same injection shape as the two runtimes above, so core stays Node-free; the
+// server installs an AsyncLocalStorage-backed runtime at boot.
+
+interface BackgroundLaneRuntime {
+  run<T>(fn: () => T): T;
+  active(): boolean;
+}
+
+let backgroundLaneRuntime: BackgroundLaneRuntime = {
+  run: (fn) => fn(),
+  active: () => false,
+};
+
+export function installBackgroundLaneRuntime(rt: BackgroundLaneRuntime): void {
+  backgroundLaneRuntime = rt;
+}
+
+/**
+ * Declare that the work in `fn` is background, whatever triggered it — the
+ * explicit override `currentOriginClass()` honors before it walks the entry
+ * chain. Use it for the observability subsystem's own DB writes and the queue's
+ * job-cleanup writes, whose transactions must never charge against the capacity
+ * reserved for human-blocking work.
+ *
+ * Not `async` by design: `fn`'s return value passes straight through, so an
+ * awaited DB operation kicked off inside `fn` stays in scope for its whole life
+ * (AsyncLocalStorage semantics on the server) — that propagation is what routes
+ * a nested `db.transaction()`'s `pool.connect()` into the background lane.
+ */
+export function runInBackgroundLane<T>(fn: () => T): T {
+  return backgroundLaneRuntime.run(fn);
+}
+
 // --- Slow-span push seam ---
 
 // The push counterpart to the pull-only getRuntimeProfile(). Subscribers are
@@ -1003,6 +1050,80 @@ export function recordReadTables(tables: readonly string[]): void {
  */
 export function currentCallerKind(): SpanKind | undefined {
   return contextRuntime.current()?.kind;
+}
+
+/**
+ * The lane a unit of work belongs to: `interactive` = a human is blocked on it;
+ * `background` = nobody is waiting on this millisecond. Shared-capacity layers
+ * (the DB pool gates) partition by this so background demand, however deep its
+ * queue grows, can never eat the capacity reserved for a human.
+ */
+export type OriginClass = "interactive" | "background";
+
+// The lane of an entry kind when it is the ROOT of a chain. Exhaustive over
+// `SpanKind` by type, so adding a span kind is a tsc error until it picks a lane
+// — the classification can never silently default.
+const ORIGIN_CLASS: Record<SpanKind, OriginClass> = {
+  // A request handler or mutation: the browser is waiting on the response. Also
+  // the root of boot-snapshot's cold fan-out, which awaits its `loadResourceByKey`
+  // calls inside the endpoint's own `http` entry rather than detaching.
+  http: "interactive",
+  // A legitimate root, and interactive: `GET /api/resources/:key` is a raw
+  // `httpRoutes` handler (`server-core/bin/index.ts:184`) that opens no `http`
+  // span, but `gatedRead` wraps it in a `sub` origin. A tab is waiting on it.
+  sub: "interactive",
+  // A bare `loader` root is reachable only via `loadResourceByKey` /
+  // `measureSubscribeCycle`, both human reads today. A future background caller
+  // must declare itself by wrapping in its own origin (or `runInBackgroundLane`)
+  // rather than relying on this default.
+  loader: "interactive",
+  // A leaf kind — a `db` span never opens an EntryContext, so it can never be a
+  // root. Present for exhaustiveness only.
+  db: "interactive",
+  // The live-state notify-flush cycle. Nobody is blocked on a recompute landing
+  // this millisecond; a late recompute still computes current truth.
+  flush: "background",
+  // Cascade recompute. Never a root: every `wrapOrigin("push", …)` in
+  // `resource-runtime/core/runtime.ts` is reachable only under `flushNotifies` →
+  // `wrapFlush`, so a push chain's root is always `flush`. Classified anyway so
+  // the table states the intent rather than relying on that reachability.
+  push: "background",
+  // A dependsOn edge's ids-translation reads. Never a root, for the same reason
+  // as `push`.
+  cascade: "background",
+  // A graphile-worker job body: queued work, by definition nobody is waiting.
+  job: "background",
+};
+
+/**
+ * The lane of the OUTERMOST enclosing entry at the current call site, or
+ * `undefined` when no entry is active — boot, migrations, `warmPool`, graphile
+ * internals, the change-feed listener. Context-less work stays UNGATED so boot
+ * can never deadlock on a lane gate.
+ *
+ * The explicit `runInBackgroundLane` declaration wins over the walk: work
+ * declared background is background even when a human triggered it.
+ *
+ * Unlike `currentCallerKind`, this reads the ROOT of the chain, not the
+ * innermost entry — inside a resource load the innermost kind is `loader`
+ * regardless of *why* the load runs, which is precisely the blindness that let a
+ * human's cold sub-ack queue behind hundreds of cascade recomputes. The walk does
+ * NOT skip closed ancestors: a detached continuation's origin is still the entry
+ * it was spawned from. (Contrast `chargeWait`, which skips them because it
+ * MUTATES their materialized tracks; this only reads `kind`.)
+ *
+ * Deliberately does not honor `runWithoutProfiling`: suppression means "don't
+ * record", not "isn't background" — separate axes.
+ *
+ * Must be read synchronously, before any await, so the ambient context is still
+ * active. Allocation-free: a pointer walk of a chain that is ≤4 deep.
+ */
+export function currentOriginClass(): OriginClass | undefined {
+  if (backgroundLaneRuntime.active()) return "background";
+  let ctx = contextRuntime.current();
+  if (!ctx) return undefined;
+  while (ctx.parent) ctx = ctx.parent;
+  return ORIGIN_CLASS[ctx.kind];
 }
 
 /**

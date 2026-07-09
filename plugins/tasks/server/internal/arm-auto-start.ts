@@ -1,3 +1,4 @@
+import { db } from "@plugins/database/server";
 import { hasBlockingDep } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/server";
 import { maybeLaunchTaskJob } from "@plugins/conversations/server";
@@ -16,7 +17,7 @@ export async function armTaskAutoStart(args: {
   const { taskId, model, cause } = args;
   await setTaskAutoStart(taskId, { model });
 
-  if (!(await hasBlockingDep(taskId))) {
+  if (!(await hasBlockingDep(taskId, db))) {
     await maybeLaunchTaskJob.enqueue({ taskId, cause });
   }
 }

@@ -1,8 +1,8 @@
 import { drizzle } from "drizzle-orm/node-postgres";
-import { Pool } from "pg";
+import { Pool, type PoolClient } from "pg";
 import { retryUntil, exponential, withJitter } from "@plugins/packages/plugins/retry/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
-import { recordSpan, chargeWait, currentCallerKind, recordReadTables, registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
+import { recordSpan, chargeWait, currentCallerKind, currentOriginClass, recordReadTables, registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { readDatabaseConfig, buildConnectionString } from "@plugins/database/core";
 
@@ -34,32 +34,80 @@ const conn = config.pgbouncer
       user: process.env.PGUSER ?? config.connection.user,
     };
 
-const POOL_MAX = 16;
+export const POOL_MAX = 16;
 
-// The one concurrency gate, at the only place the scarce resource is consumed.
+// The concurrency gates, at the only place the scarce resource is consumed.
+//
 // Of the pool's `max` connections, RESERVED_INTERACTIVE are always kept free for
-// interactive (HTTP/mutation) work; the rest is the ceiling for background/loader
-// queries. A live-state cascade flush can fire ~10 dependent loaders in one
-// microtask; gating here (rather than around whole loader bodies) means an
-// in-memory loader that issues no query never waits, and a loader holds a slot
-// only for the duration of one query — so cheap loaders stop being
-// head-of-line-blocked behind DB/git work, and background load can never starve
-// interactive work of connections. Gating by caller kind (read from the
-// profiler's ambient context) needs no cost-class hints: the gate measures the
-// real scarce thing — held connections — so a loader that doesn't query isn't
-// counted. See research/2026-06-19-global-live-state-unified-read-path-v2.md
-// (Task 2) and research/2026-06-15-global-live-state-cascade-contention.md.
-const RESERVED_INTERACTIVE = 6;
-const loaderDbGate = createSemaphore(POOL_MAX - RESERVED_INTERACTIVE);
+// interactive work; the rest is the ceiling for background work. The partition
+// is by ORIGIN CLASS — the lane of the outermost entry that triggered the query
+// (`currentOriginClass()`), not the kind of the innermost one. Inside a resource
+// load the innermost kind is `loader` regardless of *why* the load runs, so a
+// caller-kind gate cannot tell a human's cold sub-ack load from a cascade
+// recompute and queues the human behind hundreds of machine recomputes. Origin
+// class can. See research/2026-07-09-global-interactive-lane-under-load.md.
+//
+// Gating at the query (rather than around whole loader bodies) means an
+// in-memory loader that issues no query never waits, and a query holds a slot
+// only for its own duration — the gate measures the real scarce thing, held
+// connections, so cheap loaders stop being head-of-line-blocked behind DB work.
+// See research/2026-06-19-global-live-state-unified-read-path-v2.md (Task 2) and
+// research/2026-06-15-global-live-state-cascade-contention.md.
+//
+// TWO background gates, not one, and the split is a deadlock proof rather than a
+// tuning knob. A background transaction (`pool.connect()` → `client.query`, the
+// path drizzle's `db.transaction()` takes) holds a pool connection for its whole
+// life and may `await` a plain `pool.query` inside its callback. Under ONE shared
+// background gate, N transactions each holding a slot while awaiting a slot for
+// their inner query deadlock the background lane permanently — the classic
+// hold-and-wait cycle. Under two, the wait-for graph is acyclic by construction:
+//
+//     bg-tx → bg-query → pool connection → {interactive, boot}
+//
+// and the terminal holders always complete. Concretely: bg-tx holders pin at most
+// BACKGROUND_TX_MAX connections and bg-query holders at most BACKGROUND_QUERY_MAX,
+// so as long as
+//
+//     BACKGROUND_TX_MAX + BACKGROUND_QUERY_MAX ≤ POOL_MAX − RESERVED_INTERACTIVE
+//
+// at least RESERVED_INTERACTIVE connections always remain free — the bg-query
+// holders can therefore always finish and release the slots the transactions are
+// waiting on, and no cycle can close. That inequality IS the proof, so it is
+// asserted below at module load rather than left in prose.
+// Exported for co-located unit testing: the deadlock proof is an arithmetic
+// relation between these four, so the test asserts the relation rather than
+// re-deriving the numbers.
+export const RESERVED_INTERACTIVE = 6;
+const BACKGROUND_MAX = POOL_MAX - RESERVED_INTERACTIVE;
+export const BACKGROUND_TX_MAX = 3;
+export const BACKGROUND_QUERY_MAX = BACKGROUND_MAX - BACKGROUND_TX_MAX;
+
+if (BACKGROUND_TX_MAX + BACKGROUND_QUERY_MAX > POOL_MAX - RESERVED_INTERACTIVE) {
+  throw new Error(
+    `DB lane invariant violated: BACKGROUND_TX_MAX (${BACKGROUND_TX_MAX}) + ` +
+      `BACKGROUND_QUERY_MAX (${BACKGROUND_QUERY_MAX}) exceeds POOL_MAX (${POOL_MAX}) - ` +
+      `RESERVED_INTERACTIVE (${RESERVED_INTERACTIVE}). The background lane can deadlock: ` +
+      `a transaction holding a connection can wait forever for a query slot that never frees.`,
+  );
+}
+
+const backgroundQueryGate = createSemaphore(BACKGROUND_QUERY_MAX);
+const backgroundTxGate = createSemaphore(BACKGROUND_TX_MAX);
 
 // Occupancy gauges for the flight recorder's gate snapshot: layer names join to
-// the corresponding `chargeWait` layers in span `waits`. `loader-acquire` is the
-// loader gate itself; `db-pool` is the gauge for the `db-acquire` wait layer —
-// occupancy of the raw pg pool (held connections + queued checkouts), not the
-// loader gate. pg.Pool's totalCount/idleCount/waitingCount are free property reads.
-// Both gauges register at module load; `db-pool` reads the pool lazily and reports
-// an empty occupancy until the pool is first built (no worktree touched to sample).
-registerGateGauge("loader-acquire", () => loaderDbGate.stats());
+// the corresponding `chargeWait` layers in span `waits`. `background-acquire` is
+// the background query gate and `background-tx-acquire` the background
+// transaction gate; `db-pool` is the gauge for the `db-acquire` wait layer —
+// occupancy of the raw pg pool (held connections + queued checkouts), not either
+// gate. pg.Pool's totalCount/idleCount/waitingCount are free property reads.
+//
+// `background-acquire` is the former `loader-acquire`, renamed with the gate's
+// semantics: the gate no longer means "a loader is querying" — jobs, flush's own
+// direct queries, and the observability writes all charge to it now, while a
+// loader running under a `sub` origin does not. Keeping the old name would make
+// every trace lie about who is queueing.
+registerGateGauge("background-acquire", () => backgroundQueryGate.stats());
+registerGateGauge("background-tx-acquire", () => backgroundTxGate.stats());
 registerGateGauge("db-pool", () => {
   const p = poolSingleton;
   if (!p) return { active: 0, queued: 0, max: POOL_MAX };
@@ -125,10 +173,13 @@ function retryableSqlState(err: unknown): string | null {
   return RETRYABLE_SQLSTATES.has(code) ? code : null;
 }
 
-// Install the timing/gating wrapper onto a freshly-built pool's `query`. Called
-// exactly once, from `pool()`, so the wrapper is bound to the same pool instance
-// `db` and `awaitDbReady`/`warmPool` use. See the block comment on each concern.
-function installQueryWrapper(pool: Pool): void {
+// Install the timing/gating wrapper onto a freshly-built pool's `query` and
+// `connect`. Called exactly once, from `pool()`, so the wrapper is bound to the
+// same pool instance `db` and `awaitDbReady`/`warmPool` use. See the block
+// comment on each concern. Exported for co-located unit testing: the invariants
+// it enforces (lane partition, tx lease accounting) are testable against a fake
+// `pg.Pool`-shaped object, with no database.
+export function installQueryWrapper(pool: Pool): void {
   const origQuery = pool.query.bind(pool);
   const origConnect = pool.connect.bind(pool);
 
@@ -146,16 +197,16 @@ function installQueryWrapper(pool: Pool): void {
   // uses it). Direct pool.connect() → client.query paths still bypass timing —
   // see plugins/database/CLAUDE.md.
   //
-  // Loader-originated queries (caller kind === "loader") additionally route
-  // through `loaderDbGate`, so background load caps at POOL_MAX - RESERVED_INTERACTIVE
-  // concurrent connections and interactive work keeps reserved capacity. The gate
-  // wait is CHARGED to the enclosing loader entry (via chargeWait) under the
-  // "loader-acquire" layer, so the wait lands on the waiting resource's own span
-  // (work = total − Σwaits, lock-vs-work readable directly) instead of in a
-  // label-shared `db [loader-acquire]` bucket. The caller kind is read
-  // synchronously, before any await, so the profiler's ambient context is still
-  // active. The pool's own `[acquire]` (connect) and `<sql>` (execute) leaf spans
-  // stay — those are real per-query measurements, not gate waits.
+  // Background-origin queries additionally route through `backgroundQueryGate`, so
+  // background query load caps at BACKGROUND_QUERY_MAX concurrent connections and
+  // interactive work keeps reserved capacity. The gate wait is CHARGED to the
+  // enclosing entry (via chargeWait) under the "background-acquire" layer, so the
+  // wait lands on the waiting resource's own span (work = total − Σwaits,
+  // lock-vs-work readable directly) instead of in a label-shared
+  // `db [background-acquire]` bucket. The origin class is read synchronously,
+  // before any await, so the profiler's ambient context is still active. The
+  // pool's own `[acquire]` (connect) and `<sql>` (execute) leaf spans stay —
+  // those are real per-query measurements, not gate waits.
   // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
   pool.query = ((...a: Parameters<typeof origQuery>): any => {
     const last = a[a.length - 1];
@@ -208,28 +259,108 @@ function installQueryWrapper(pool: Pool): void {
         { delay: queryRetryDelay },
       );
 
-    // Gate background/loader queries; interactive (http) and context-less
-    // (jobs/migrations/pollers) queries run ungated against the reserved capacity.
-    // A `cascade` entry (a dependsOn edge's signature/affectedMap ids-translation
-    // reads, run inside the flush cascade) is gated exactly like a loader — it is
-    // background DB load that must share the reserved-interactive floor — but its
-    // reads are NOT captured into the read-set: they are edge (ids-translation)
-    // reads, not the downstream resource's value dependencies, so indexing them
-    // would raise a false silent-FULL flag (see the resource-runtime cascade).
-    const callerKind = currentCallerKind();
-    if (callerKind === "loader") {
-      // Capture the loader's table read-set into its ambient entry context (still
-      // active here, before the gated promise). Observation-only — does not affect
-      // timing or gating.
+    // Read-set capture is keyed on the CALLER kind and is orthogonal to the lane:
+    // only a `loader` entry has a read-set (the tables its resource depends on),
+    // and it has one whether a human or the cascade is driving it. A `cascade`
+    // entry's reads are deliberately not captured — they are edge
+    // (ids-translation) reads, not the downstream resource's value dependencies,
+    // so indexing them would raise a false silent-FULL flag (see the
+    // resource-runtime cascade). Observation-only: affects neither timing nor
+    // gating.
+    if (currentCallerKind() === "loader") {
       recordReadTables(extractReadTablesFromSql(text));
     }
-    if (callerKind === "loader" || callerKind === "cascade") {
-      return loaderDbGate.run(runTimed, (waitMs) =>
-        chargeWait("loader-acquire", waitMs),
+
+    // Gate by ORIGIN class, not caller kind. What changes versus the old
+    // `callerKind === "loader" | "cascade"` condition:
+    //   - a `sub`-origin loader query is now UNGATED — a human's cold pane load no
+    //     longer queues FIFO behind hundreds of cascade recomputes (Gap A);
+    //   - a `job`-origin query is now GATED — graphile jobs are background by
+    //     nature and used to run against the reserved floor (Gap C);
+    //   - a `flush` entry's own DIRECT queries are now GATED — caller kind
+    //     `"flush"` matched neither arm of the old condition, so the flush cycle's
+    //     own reads slipped through the gate they exist to sit behind.
+    // Interactive stays UNGATED, matching today's `http` semantics: it is already
+    // bounded upstream by `readLoadGate` (READ_LOAD_CONCURRENCY = 6,
+    // resource-runtime/core/runtime.ts:906) for cold reads and by per-route
+    // endpoint concurrency gates for mutations, and adding a third bound here
+    // would only re-serialize the lane we are trying to keep free.
+    // Context-less work (boot, migrations, `warmPool`, the change-feed listener)
+    // has no ambient entry and stays UNGATED, so boot can never deadlock on a gate.
+    if (currentOriginClass() === "background") {
+      return backgroundQueryGate.run(runTimed, (waitMs) =>
+        chargeWait("background-acquire", waitMs),
       );
     }
     return runTimed();
   }) as typeof pool.query;
+
+  // Gate background TRANSACTIONS. `pool.connect()` hands out a raw pooled client
+  // that bypasses the `pool.query` wrapper entirely — no timing, no lane gate,
+  // and (until now) no reservation. It is the path drizzle's `db.transaction()`
+  // takes (`NodePgSession` does `await this.client.connect()` when
+  // `client instanceof Pool`, which is why `db` must keep proxying a real
+  // `pg.Pool`). Under event-loop lag a transaction holds its connection across
+  // every `await` continuation, so inflated background transactions ate all 16
+  // connections *including the reserved 6* — this bypass is what turned the
+  // 2026-07-09 afternoon incident from slow into unusable.
+  //
+  // The gate is a LEASE, not a scope: the slot is taken when the client is handed
+  // out and freed when the caller releases it, because that is exactly the window
+  // in which the connection is pinned. `origConnect` was captured above, before
+  // this override, and `runOnce` calls it — so a query-path checkout is charged to
+  // the query gate only and is never double-gated here.
+  // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded connect signature.
+  pool.connect = ((...a: Parameters<typeof origConnect>): any => {
+    // Callback form — untouched, exactly like `pool.query`'s. Nothing in the repo
+    // uses it; pg's own internals may.
+    if (typeof a[0] === "function") return origConnect(...a);
+
+    // Read the lane synchronously, before any await, while the ambient entry
+    // context is still the caller's. Interactive checkouts (HTTP mutations) and
+    // context-less ones (`awaitDbReady`, `warmPool`) pass straight through: the
+    // former are allowed the reserved floor, and the latter must never be able to
+    // wait on a gate at boot.
+    if (currentOriginClass() !== "background") return origConnect();
+
+    return (async (): Promise<PoolClient> => {
+      const releaseSlot = await backgroundTxGate.acquire((waitMs) =>
+        chargeWait("background-tx-acquire", waitMs),
+      );
+      let client: PoolClient;
+      try {
+        client = await origConnect();
+      } catch (err) {
+        // The checkout failed, so nothing will ever call `release()` on a client
+        // we never got. Hand the slot back before rethrowing, or the gate leaks a
+        // slot per failed connect and eventually wedges the background lane shut.
+        releaseSlot();
+        throw err;
+      }
+
+      // pg assigns `release` per checkout as an own property, so patching it here
+      // affects only this lease. The `released` guard makes the slot free exactly
+      // once: pg throws on a double release, and a second `releaseSlot()` would
+      // hand back a slot this lease never held, pushing occupancy past the cap and
+      // silently voiding the gate. The second call still reaches pg's own release
+      // so its double-release error stays loud. `err` and the return value are
+      // forwarded unchanged — pg's `release(err?: Error | boolean)` destroys the
+      // connection rather than returning it when `err` is truthy, and swallowing
+      // that argument would quietly return a poisoned connection to the pool.
+      const origRelease = client.release.bind(client);
+      let released = false;
+      client.release = (err?: Error | boolean): void => {
+        if (released) return origRelease(err);
+        released = true;
+        try {
+          return origRelease(err);
+        } finally {
+          releaseSlot();
+        }
+      };
+      return client;
+    })();
+  }) as typeof pool.connect;
 }
 
 // Lazily-constructed singleton pool. Importing this module never builds a pool or

@@ -1,6 +1,9 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  runInBackgroundLane,
+  runWithoutProfiling,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { _reports } from "./tables";
 import { reportInvestigationSink } from "./investigation-sink";
 import { ReportKind } from "./report-kinds";
@@ -41,46 +44,60 @@ export async function investigateReport(
     // never re-feed the slow-op recorder. The suppression ALS propagates through
     // every awaited query, including across the awaited sink emit into the
     // handler's cross-plugin getTask/createTask DB calls.
-    return await runWithoutProfiling(async () => {
-      const [row] = await db
-        .select()
-        .from(_reports)
-        .where(eq(_reports.id, reportId))
-        .limit(1);
-      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-      if (!row) {
-        throw new Error(`investigateReport: no report found for id "${reportId}"`);
-      }
+    //
+    // The enclosing runInBackgroundLane declares the same I/O background for the
+    // DB gate. It fans out into another plugin's writes (createTask), so under
+    // origin-based gating it would otherwise charge the caller's origin — an
+    // `http` handler — against the reserved-interactive floor. Filing an
+    // investigation task is bookkeeping about an incident, never the incident's
+    // critical path. See
+    // research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
+    return await runInBackgroundLane(() =>
+      runWithoutProfiling(async () => {
+        const [row] = await db
+          .select()
+          .from(_reports)
+          .where(eq(_reports.id, reportId))
+          .limit(1);
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+        if (!row) {
+          throw new Error(
+            `investigateReport: no report found for id "${reportId}"`,
+          );
+        }
 
-      const spec = ReportKind.getContributions().find((k) => k.kind === row.kind);
-      if (!spec) {
-        // A persisted report whose kind has no registered spec is a wiring bug,
-        // not a runtime condition to paper over.
-        throw new Error(
-          `investigateReport: no ReportKind registered for kind "${row.kind}"`,
+        const spec = ReportKind.getContributions().find(
+          (k) => k.kind === row.kind,
         );
-      }
+        if (!spec) {
+          // A persisted report whose kind has no registered spec is a wiring bug,
+          // not a runtime condition to paper over.
+          throw new Error(
+            `investigateReport: no ReportKind registered for kind "${row.kind}"`,
+          );
+        }
 
-      const { title, description } = spec.renderTask(row);
-      const result = await reportInvestigationSink.emit({
-        existingTaskId: row.taskId,
-        title,
-        description: `${description}\n\n${DEBUG_SKILL_HINT}`,
-        author: "reports-plugin",
-      });
-      if (!result) {
-        throw new Error(
-          "investigateReport: no investigation-task handler registered (tasks capability absent in this composition)",
-        );
-      }
-      if (result.taskId !== row.taskId) {
-        await db
-          .update(_reports)
-          .set({ taskId: result.taskId, updatedAt: new Date() })
-          .where(eq(_reports.id, row.id));
-      }
-      return { taskId: result.taskId };
-    });
+        const { title, description } = spec.renderTask(row);
+        const result = await reportInvestigationSink.emit({
+          existingTaskId: row.taskId,
+          title,
+          description: `${description}\n\n${DEBUG_SKILL_HINT}`,
+          author: "reports-plugin",
+        });
+        if (!result) {
+          throw new Error(
+            "investigateReport: no investigation-task handler registered (tasks capability absent in this composition)",
+          );
+        }
+        if (result.taskId !== row.taskId) {
+          await db
+            .update(_reports)
+            .set({ taskId: result.taskId, updatedAt: new Date() })
+            .where(eq(_reports.id, row.id));
+        }
+        return { taskId: result.taskId };
+      }),
+    );
   } finally {
     taskCreationLocks.delete(reportId);
     release();

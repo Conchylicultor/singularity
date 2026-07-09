@@ -28,25 +28,76 @@ eagerly opens + validates connections up to the pool's `max` so the boot
 thundering herd hits warm connections instead of paying establishment cost.
 node-postgres `min` does **not** pre-connect, so this explicit step is required.
 
-## Connection gate (loader vs interactive)
+## Connection lanes (interactive vs background)
 
-`pool.query` is also the one concurrency gate. Of the pool's `max` connections,
-`RESERVED_INTERACTIVE` are kept free for interactive (HTTP/mutation) work; the
-rest is the ceiling for **loader-kind** queries (caller kind read from the
-runtime-profiler's ambient context via `currentCallerKind()`, synchronously
-before any await). Loader queries route through a `createSemaphore` gate;
-interactive and context-less (jobs/migrations/pollers) queries run ungated. This
-puts the gate on the actual scarce resource — held connections — so an in-memory
-loader that issues no query never waits, and a loader holds a slot only for the
-duration of one query (it can't head-of-line-block cheap loaders or starve
-interactive work). The gate wait is **charged to the enclosing loader entry**
-via `chargeWait("loader-acquire", ms)`, so the wait lands on the waiting
-resource's own span (work = total − Σwaits, lock-vs-work readable directly)
-instead of a label-shared `db [loader-acquire]` bucket; the pool's own
-`[acquire]` (connect) and `<sql>` (execute) leaf spans stay. (This gate replaced
-an older semaphore that wrapped whole loader *bodies* in
-`server-core/core/resources.ts`.) Transactions and other `pool.connect()` →
-`client.query` paths bypass the gate, same as they bypass timing. See
+Every shared DB-capacity layer is partitioned by **origin class**, not by caller
+kind. `currentOriginClass()` (runtime-profiler) walks the ambient entry chain to
+its **root** and maps that root's kind to a lane:
+
+| root entry kind | lane |
+|---|---|
+| `http`, `sub`, `loader` | `interactive` — a human is blocked |
+| `flush`, `push`, `cascade`, `job` | `background` — nobody waits on this ms |
+| *(no entry)* | ungated — boot, migrations, `warmPool`, graphile, the change-feed listener |
+
+Reading the **root** rather than the innermost entry is the whole point: inside a
+resource load the innermost caller kind is `loader` no matter *why* the load runs,
+so the old `currentCallerKind()` gate could not distinguish a human's cold sub-ack
+load from a cascade recompute — and queued the human behind hundreds of them.
+`runInBackgroundLane(fn)` overrides the walk for work that is background whatever
+triggered it (the observability writes; job cleanup).
+
+Two gates, both on `createSemaphore`, both read synchronously before any await:
+
+- **`backgroundQueryGate`** (`BACKGROUND_QUERY_MAX = 7`) — every background-origin
+  `pool.query`. Wait charged to the enclosing entry as `background-acquire` (the
+  former `loader-acquire`; renamed because jobs, `flush`'s own queries, and
+  observability writes charge to it now, while a `sub`-origin loader does not).
+- **`backgroundTxGate`** (`BACKGROUND_TX_MAX = 3`) — a **lease**, not a scope, over
+  `pool.connect()`: taken when the client is handed out, freed when
+  `client.release()` is called. This is the path `db.transaction()` takes, which
+  until now bypassed both the wrapper *and* the reservation — inflated background
+  transactions ate all 16 connections including the reserved 6. Wait charged as
+  `background-tx-acquire`.
+
+Interactive and context-less work runs **ungated**, so boot can never deadlock on a
+gate and a human always finds a connection. Interactive demand is already bounded
+upstream by `readLoadGate` (`READ_LOAD_CONCURRENCY = 6`) and the per-route endpoint
+concurrency gates.
+
+### The lane-capacity invariant is a deadlock proof
+
+```
+BACKGROUND_TX_MAX + BACKGROUND_QUERY_MAX ≤ POOL_MAX − RESERVED_INTERACTIVE
+        3         +          7           ≤    16    −         6
+```
+
+A background transaction pins a connection for its whole life and may `await` a
+plain `pool.query` inside its callback. Under **one** shared background gate, N
+transactions each holding a slot while awaiting a slot for their inner query
+deadlock the lane permanently. Under **two**, the wait-for graph is acyclic by
+construction — `bg-tx → bg-query → pool connection → {interactive, boot}` — and
+the terminal holders always complete: bg-tx holders pin ≤3 connections and
+bg-query holders ≤7, so ≥`RESERVED_INTERACTIVE` connections always remain free for
+the query holders to finish and release the slots the transactions wait on. The
+inequality is asserted at module load, not left in prose. **Never raise either cap
+without re-checking it.**
+
+Transaction hold-time is bounded by two halves of one guardrail: the
+`database/no-pool-await-in-transaction` ESLint rule (no awaiting the pool inside a
+`db.transaction` callback — hold-and-wait), and the **required** `exec` parameter on
+query helpers like `listBlockingDepIds`, which turns the transitive version of that
+leak into a tsc error.
+
+Gating at the query (rather than around whole loader bodies) puts the gate on the
+actual scarce resource — held connections — so an in-memory loader that issues no
+query never waits. (It replaced an older semaphore that wrapped whole loader
+*bodies* in `server-core/core/resources.ts`.) Waits are charged to the enclosing
+entry so `work = total − Σwaits` stays readable per span; the pool's own
+`[acquire]` (connect) and `<sql>` (execute) leaf spans remain.
+
+See `research/2026-07-09-global-interactive-lane-origin-based-db-gating.md` and its
+forensic companion `research/2026-07-09-global-interactive-lane-under-load.md`; also
 `research/2026-06-19-global-live-state-unified-read-path-v2.md` (Task 2) and
 `research/2026-06-19-global-wait-attribution-instrumentation.md`.
 
@@ -103,7 +154,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
   - Uses: `infra/paths.SINGULARITY_DIR`
   - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
 - Cross-plugin:
-  - Imported by: `active-data`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/deploy/servers`, `apps/mail/attachments`, `apps/mail/inbox`, `apps/mail/mail-core`, `apps/mail/mailbox`, `apps/mail/sync`, `apps/mail/thread-list`, `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transpose`, `apps/story/generation`, `apps/story/marker`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/website/blog/publish`, `apps/workflows/engine`, `backup`, `build`, `build/build-commits`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/notes`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/session-chain`, `conversations/summary`, `database/change-feed`, `database/live-state-snapshot`, `debug/boot-profile`, `debug/profiling/boot-bench`, `debug/slow-ops`, `debug/trace/engine`, `history/engine`, `improve`, `infra/attachments`, `infra/claude-cli`, `infra/contention`, `infra/entity-extensions`, `infra/events`, `infra/events-test`, `infra/jobs`, `infra/query-resource`, `infra/retention`, `page/attachment-block`, `page/editor`, `page/editor-collab`, `page/inline-date`, `page/links`, `plugin-meta/plugin-health`, `primitives/data-view/custom-columns`, `primitives/rank`, `release`, `reports`, `search/engine`, `shell/notifications`, `stats/commits`, `stats/cost`, `tasks/auto-start`, `tasks/task-effort`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`, `ui/tweakcn/community-browser`
+  - Imported by: `active-data`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/deploy/servers`, `apps/mail/attachments`, `apps/mail/inbox`, `apps/mail/mail-core`, `apps/mail/mailbox`, `apps/mail/sync`, `apps/mail/thread-list`, `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transpose`, `apps/story/generation`, `apps/story/marker`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/website/blog/publish`, `apps/workflows/engine`, `backup`, `build`, `build/build-commits`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/notes`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/session-chain`, `conversations/summary`, `database/change-feed`, `database/live-state-snapshot`, `debug/boot-profile`, `debug/profiling/boot-bench`, `debug/slow-ops`, `debug/trace/engine`, `history/engine`, `improve`, `infra/attachments`, `infra/claude-cli`, `infra/contention`, `infra/entity-extensions`, `infra/events`, `infra/events-test`, `infra/jobs`, `infra/query-resource`, `infra/retention`, `page/attachment-block`, `page/editor`, `page/editor-collab`, `page/inline-date`, `page/links`, `plugin-meta/plugin-health`, `primitives/data-view/custom-columns`, `primitives/rank`, `release`, `reports`, `search/engine`, `shell/notifications`, `stats/commits`, `stats/cost`, `tasks`, `tasks/auto-start`, `tasks/task-effort`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`, `ui/tweakcn/community-browser`
 - Sub-plugins:
   - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
   - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.

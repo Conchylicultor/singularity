@@ -8,10 +8,13 @@ export {
   seedReadSetIndex,
   removeReadSetTable,
   currentCallerKind,
+  currentOriginClass,
   installSpanContextRuntime,
   installProfilingSuppressionRuntime,
+  installBackgroundLaneRuntime,
   installClock,
   runWithoutProfiling,
+  runInBackgroundLane,
   getRuntimeProfile,
   resetRuntimeProfile,
   onSlowSpan,
@@ -23,6 +26,7 @@ export {
   __contribute,
 } from "./recorder";
 export type {
+  OriginClass,
   SpanKind,
   SpanRef,
   SlowSpan,

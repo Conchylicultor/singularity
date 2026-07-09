@@ -39,7 +39,7 @@ export async function repairBlockedOrder(): Promise<void> {
       }
 
       for (const [taskId, lead] of taskLeads) {
-        const blockingTaskIds = await listBlockingDepIds(taskId);
+        const blockingTaskIds = await listBlockingDepIds(taskId, tx);
         if (blockingTaskIds.length === 0) continue;
 
         const requiredRank = await rankAfterBlockers(lead.convId, blockingTaskIds, tx);

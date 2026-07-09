@@ -25,7 +25,7 @@ export const taskStatusPinJob = defineJob({
     const becameUnblocked = event?.previousStatus === "blocked" && event.status !== "blocked";
 
     if (becameBlocked && event?.taskId) {
-      const blockingTaskIds = await listBlockingDepIds(event.taskId);
+      const blockingTaskIds = await listBlockingDepIds(event.taskId, db);
       if (blockingTaskIds.length > 0) {
         await rerankTaskConversations(event.taskId, (convId, tx) =>
           rankAfterBlockers(convId, blockingTaskIds, tx),

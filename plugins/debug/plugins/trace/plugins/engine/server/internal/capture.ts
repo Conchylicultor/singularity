@@ -1,6 +1,9 @@
 import { randomUUID } from "node:crypto";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
-import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  runInBackgroundLane,
+  runWithoutProfiling,
+} from "@plugins/infra/plugins/runtime-profiler/core";
 import { getConfig } from "@plugins/config_v2/server";
 import { traceConfig, type TraceTrigger, type TripContext } from "../../core";
 import {
@@ -58,10 +61,19 @@ export function captureTrace(trigger: TraceTrigger): { id: string } | null {
   // the insert) never re-feeds the profiler it was captured for. Fire-and-forget
   // by design: a failure surfaces as an unhandled rejection the reports plugin
   // captures — never silently swallowed.
-  void runWithoutProfiling(async () => {
-    const events = await assembleEvents(specs, ctx, atTripByClass);
-    await persistTrace(ctx, events);
-  });
+  //
+  // runInBackgroundLane on the outside declares that IO background for the DB
+  // gate. captureTrace runs in the caller's hot path, so the detached chain would
+  // otherwise inherit the tripping span's origin — a trace captured under a `sub`
+  // load would take its connections from the reserved-interactive floor, at
+  // precisely the moment the system is already saturated. Nobody awaits this
+  // write. See research/2026-07-09-global-interactive-lane-origin-based-db-gating.md.
+  void runInBackgroundLane(() =>
+    runWithoutProfiling(async () => {
+      const events = await assembleEvents(specs, ctx, atTripByClass);
+      await persistTrace(ctx, events);
+    }),
+  );
 
   return { id };
 }

@@ -16,7 +16,7 @@ export const handlePromote = implement(promoteQueue, async ({ body }) => {
     await upsertRank(conversationId, rank, tx);
     await reseatGroupMembers(conversationId, rank, tx);
 
-    const blocked = await hasBlockingDep(conv.taskId);
+    const blocked = await hasBlockingDep(conv.taskId, tx);
     if (blocked) {
       await validatePin(tx);
     } else {

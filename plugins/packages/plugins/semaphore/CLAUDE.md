@@ -10,12 +10,22 @@ profiler. `stats()` returns a zero-cost occupancy snapshot
 (`{ active, queued, max }`) so a gate owner can expose a gauge — e.g. sample
 occupancy into a flight recorder — again without profiler coupling.
 
+`acquire(onWait?)` is the same slot, leased: it resolves once a slot is free and
+hands back the release fn, for lifetimes that are not a function call — `run` is
+`acquire` plus a `finally`, and both share the one slot-accounting path. Its
+motivating consumer is the background *transaction* gate, where the slot is taken
+when `pool.connect()` hands out a client and freed when `client.release()` is
+called. The returned release fn is **idempotent**: a lease outlives the call that
+took it, so its owner may release twice (`pg`'s `client.release` is call-once, and
+the DB wrapper patches it) — a second free would return a slot the lease never
+held, letting occupancy exceed `max` and silently voiding the gate's invariant.
+
 Used at the per-worktree DB connection gate
 (`plugins/database/server/internal/client.ts`) to cap concurrent loader-kind
 queries below the Postgres pool `max`, reserving capacity for interactive
 (HTTP/mutation) work — so a cascade flush's queries queue at the semaphore
 instead of stampeding `pool.connect()`. The seam records `onWait` as a
-`db [loader-acquire]` span (sibling to the pool's own `[acquire]`) so a saturated
+`db [background-acquire]` span (sibling to the pool's own `[acquire]`) so a saturated
 gate stays visible in the profiler rather than hiding queue-wait. (Previously the
 gate wrapped whole loader *bodies* at the live-state `wrapLoad` seam; it moved to
 the connection — the actual scarce resource — so in-memory loaders that issue no

@@ -203,7 +203,7 @@ const runtime = createResourceRuntime({
   // time per resource (first-notify staleness window). Attributes to the resource.
   onDelivered: (key, latencyMs) => recordSpan("push", `deliver:${key}`, latencyMs),
   // Read-admission gate queue-wait, charged to the enclosing `sub` entry (mirrors
-  // the DB loader gate's `loader-acquire`), so a saturated read cap is visible in
+  // the DB background query gate's `background-acquire`), so a saturated read cap is visible in
   // get_runtime_profile as a `read-admit` wait rather than hidden queue time.
   onReadGateWait: (ms) => chargeWait("read-admit", ms),
   // Read-path single-flight coalescing wait (mirrors read-admit): the time a

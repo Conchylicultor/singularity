@@ -92,7 +92,7 @@ function CallerBreakdown({ parents }: { parents: ParentRow[] }): ReactElement {
   );
 }
 
-// The per-layer wait split beneath an entry's label: ⏳ loader-acquire 1700ms.
+// The per-layer wait split beneath an entry's label: ⏳ background-acquire 1700ms.
 // Makes head-of-line blocking visible inline (which gate, how long).
 function WaitBreakdownLines({ waits }: { waits: Record<string, number> }): ReactElement {
   return (
