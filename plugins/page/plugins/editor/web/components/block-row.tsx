@@ -10,23 +10,12 @@ import { useSelectionControl } from "../selection-control";
 import { Editor } from "../slots";
 import { BlockTypeMenu } from "./block-type-menu";
 import { BlockActionsMenu } from "./block-actions-menu";
+import { BLOCK_GUTTER, BLOCK_INDENT } from "../internal/page-column";
 
-export const INDENT = 24;
-
-/**
- * Width (px) of the left gutter rail. Each row reserves it as its OWN
- * padding-left (not the list container's) so the rail is inside the row's box:
- * the hover controls (+ / drag / chevron) sit at -60/-40/-20 from the content
- * edge, and the pointer entering the rail from anywhere — including from the
- * far left, or across the gap left by an absent chevron — hovers the row and
- * reveals them. Reserving the rail on the container instead would put it
- * outside every row, and since the controls are `pointer-events-none` while
- * hidden, nothing under the pointer could ever reveal them. Must stay wider
- * than the leftmost button's offset. The page header reserves the same rail
- * for its page icon so the title text and block text share one content-left
- * edge — keep both in sync via this constant.
- */
-export const BLOCK_GUTTER = 64;
+// The column geometry (rail width, per-depth indent, content inset) lives in
+// `../internal/page-column` — see its module doc for the invariant. Hosts align
+// their own chrome onto the block content edge via `PageContentColumn`, never by
+// re-deriving it from `BLOCK_GUTTER`.
 
 export function BlockRow({
   block,
@@ -71,7 +60,7 @@ export function BlockRow({
   // The gutter rail lives in the row's padding, so every offset below is
   // relative to the row — the controls hang back into the rail, and a drop
   // lands as a sibling of this row, so the line sits at this row's depth.
-  const contentLeft = BLOCK_GUTTER + depth * INDENT;
+  const contentLeft = BLOCK_GUTTER + depth * BLOCK_INDENT;
 
   return (
     <div

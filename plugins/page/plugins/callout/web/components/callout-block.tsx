@@ -1,5 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { BlockTextEditor, type BlockRendererProps } from "@plugins/page/plugins/editor/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { BLOCK_INSET, BlockTextEditor, type BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { calloutBlock, type CalloutColor } from "../../core";
 import { CalloutIcon } from "./callout-icon";
 
@@ -29,7 +30,7 @@ const COLOR_TEXT: Record<CalloutColor, string> = {
 export function CalloutBlock({ block, isFocused, editor }: BlockRendererProps) {
   const data = calloutBlock.parse(block.data);
   return (
-    <div className="px-md py-xs">
+    <Inset x={BLOCK_INSET} y="xs">
       <div className={cn("rounded-md", COLOR_BG[data.color])}>
         <BlockTextEditor
           block={block}
@@ -51,6 +52,6 @@ export function CalloutBlock({ block, isFocused, editor }: BlockRendererProps) {
           placeholder="Type something…"
         />
       </div>
-    </div>
+    </Inset>
   );
 }

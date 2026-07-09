@@ -7,9 +7,10 @@ import {
 } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
-import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
+import { BLOCK_INSET, type BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { imageBlock } from "../../core";
 
 const MIN_W = 80;
@@ -85,7 +86,7 @@ function FilledImageBlock({
   }
 
   return (
-    <div className="px-md py-xs">
+    <Inset x={BLOCK_INSET} y="xs">
       <div
         ref={wrapperRef}
         className={cn(hoverRevealGroup, "relative inline-block max-w-full")}
@@ -124,6 +125,6 @@ function FilledImageBlock({
       {lightbox ? (
         <Lightbox attachmentId={attachmentId} alt={alt} onClose={() => setLightbox(false)} />
       ) : null}
-    </div>
+    </Inset>
   );
 }

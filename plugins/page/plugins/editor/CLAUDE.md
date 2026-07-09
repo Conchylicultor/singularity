@@ -1,5 +1,44 @@
 # editor
 
+## The page column (one owner for the content-left edge)
+
+`web/internal/page-column.ts` is the **single declaration site** for the column's
+horizontal geometry. The invariant:
+
+> A page's block content box has a left edge `C`.
+>
+> - Block **decorations** start at `C`: the quote's left border, the callout tint,
+>   the code background, the image, the divider rule, the selection highlight, the
+>   diff rail.
+> - Block **content** (text, media) insets from `C` by `BLOCK_INSET`.
+> - Anything a host renders *alongside* blocks that is not itself a block — the
+>   page title, the page icon, the section list — sits at `C + BLOCK_INSET`.
+
+The editable surface reserves the hover rail (`BLOCK_GUTTER`, 64px) to the **left**
+of `C`, inside each row's own padding so the `+` / drag / chevron controls are
+hoverable. That rail is editable-surface-only: `read-only-view` has no rail, so its
+`C` is simply the renderer's left edge. `BLOCK_INSET` is shared by both.
+
+**Hosts never compute the edge.** `BLOCK_GUTTER` is deliberately *not* exported from
+the web barrel — a host that adds it to whatever padding its own wrapper carries is
+exactly how the title and the block text drifted onto different edges (and why the
+residual gap moved with the density preset). Instead:
+
+- Editable page surface → wrap chrome in **`<PageContentColumn>`** (rail + inset).
+- Read-only surfaces (blog post, version-history preview) → wrap chrome in
+  `<Inset x={BLOCK_INSET}>`; `<ReadOnlyBlocks>` stays flush at `C`.
+- A new block type gets the inset via `<Inset x={BLOCK_INSET} y="…">`. Vertical
+  padding is *not* part of `BLOCK_INSET` — it differs per block.
+
+Never splice a ramp step into a class name (`` `pl-${BLOCK_INSET}` ``): Tailwind emits
+an `@utility` only for literal tokens it can scan. Use `<Inset>`, or `insetClass()`
+from the spacing primitive when you only have a `className`.
+
+Two known deviations from the invariant, both pre-existing: the callout tint and the
+code background sit at `C + BLOCK_INSET` rather than bleeding to `C` (their `px`
+wrapper is outside the decoration), and the quote's 2px border pushes its text to
+`C + 2 + BLOCK_INSET`.
+
 ## Undo / redo (one unified stack)
 
 Undo/redo is wired through the generic
@@ -299,8 +338,8 @@ history restore):**
 - Description: Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
 - Web:
   - Slots: `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.quote`, `page.text`, `page.to-do`, `page.toggle`, `page.video`, `Editor.TurnInto` ← `page.turn-into-page`, `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
-  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/overlay.Overlay`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/floating-surface.FloatingSurface`, `primitives/icon-button.IconButton`, `primitives/icon-picker.SvgIcon`, `primitives/latest-ref.useEventCallback`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/networking.subscribeWsStatus`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.DispatchContribution`, `primitives/undo-redo.UndoRedoProvider`, `primitives/undo-redo.useUndoRedo`, `primitives/undo-redo.useUndoRedoShortcuts`
-  - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockEditorHandle`, `BlockPasteHandler`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `FormatToolbarValue`, `MarkButtonProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BLOCK_GUTTER`, `BlockEditor`, `BlockTextEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `caretAnchor`, `colorCssValue`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `isValidLinkUrl`, `MarkButton`, `normalizeLinkUrl`, `OPEN_LINK_POPOVER_COMMAND`, `PageIcon`, `PageOptionsList`, `registerBlockPasteHandler`, `registerBlockTextExtension`, `useBlockEditor`, `useFormatToolbar`, `useInsertableBlocks`, `usePageOptions`
+  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/overlay.Overlay`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/spacing.Inset`, `primitives/css/spacing.insetClass`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/floating-surface.FloatingSurface`, `primitives/icon-button.IconButton`, `primitives/icon-picker.SvgIcon`, `primitives/latest-ref.useEventCallback`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/networking.subscribeWsStatus`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.DispatchContribution`, `primitives/undo-redo.UndoRedoProvider`, `primitives/undo-redo.useUndoRedo`, `primitives/undo-redo.useUndoRedoShortcuts`
+  - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockEditorHandle`, `BlockPasteHandler`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `FormatToolbarValue`, `MarkButtonProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BLOCK_INDENT`, `BLOCK_INSET`, `BlockEditor`, `BlockTextEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `caretAnchor`, `colorCssValue`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `isValidLinkUrl`, `MarkButton`, `MARKER_GUTTER`, `normalizeLinkUrl`, `OPEN_LINK_POPOVER_COMMAND`, `PageContentColumn`, `PageIcon`, `PageOptionsList`, `registerBlockPasteHandler`, `registerBlockTextExtension`, `useBlockEditor`, `useFormatToolbar`, `useInsertableBlocks`, `usePageOptions`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `primitives/rank.nextRankUnder`
   - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`
@@ -311,7 +350,7 @@ history restore):**
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/collab-doc.readYDoc`, `primitives/collab-doc.yDocContent`, `primitives/collab-doc.yDocFromLexical`, `primitives/live-state.resourceDescriptor`, `primitives/rank.Rank`, `primitives/rank.RankSchema`, `primitives/tree.isDescendant`, `primitives/tree.subtreeIds`
   - Exports: Types: `Block`, `BlockDiff`, `BlockHandle`, `BlockNode`, `BlockOp`, `BlockPatch`, `BlockTextVariant`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `ColorToken`, `CreateBlockBody`, `Mark`, `MoveBlockBody`, `PageCover`, `PageData`, `PasteBlocksBody`, `RichText`, `RunsTokenExtension`, `RunsXmlTextOptions`, `SerializedBlock`, `TextData`, `TextRun`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockPatchSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `childrenOf`, `coalesce`, `COLOR_TOKENS`, `colorCssValue`, `createBlock`, `CreateBlockBodySchema`, `defineBlock`, `deleteBlock`, `diffBlocks`, `isEmptyPatch`, `listBlocks`, `listPages`, `MARK_ORDER`, `mergeRuns`, `moveBlock`, `MoveBlockBodySchema`, `PAGE_BLOCK_TYPE`, `PageCoverSchema`, `pageData`, `PageDataSchema`, `pagesResource`, `pasteBlocks`, `PasteBlocksBodySchema`, `patchBlocks`, `patchesFromDiff`, `plainOf`, `prevVisibleLeaf`, `RichTextSchema`, `runsLength`, `runsOf`, `runsOfNode`, `runsToLexical`, `runsToXmlText`, `serializeBlockRuns`, `SerializedBlockSchema`, `sortMarks`, `splitRuns`, `SvgNodeSchema`, `textBlockSchema`, `textDataSchema`, `textOf`, `TextRunSchema`, `tokenOf`, `updateBlock`, `UpdateBlockBodySchema`, `withRuns`, `xmlTextToRuns`
 - Cross-plugin:
-  - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome/recent-pages`, `apps/story/marker`, `apps/story/shell`, `apps/website/blog/publish`, `page/attachment-block`, `page/audio`, `page/bookmark`, `page/bulleted-list`, `page/callout`, `page/code-block`, `page/divider`, `page/editor-collab`, `page/embed`, `page/file`, `page/formatting/bold`, `page/formatting/code`, `page/formatting/color`, `page/formatting/italic`, `page/formatting/link`, `page/formatting/strikethrough`, `page/formatting/underline`, `page/heading/heading-1`, `page/heading/heading-2`, `page/heading/heading-3`, `page/image`, `page/inline-date`, `page/inline-page-link`, `page/links`, `page/math/equation`, `page/math/inline`, `page/numbered-list`, `page/page-link`, `page/quote`, `page/read-only-view`, `page/text`, `page/to-do`, `page/toggle`, `page/turn-into-page`, `page/url-paste`, `page/video`
+  - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome/recent-pages`, `apps/story/marker`, `apps/story/shell`, `apps/website/blog/publish`, `apps/website/blog/site`, `page/attachment-block`, `page/audio`, `page/bookmark`, `page/bulleted-list`, `page/callout`, `page/code-block`, `page/divider`, `page/editor-collab`, `page/embed`, `page/file`, `page/formatting/bold`, `page/formatting/code`, `page/formatting/color`, `page/formatting/italic`, `page/formatting/link`, `page/formatting/strikethrough`, `page/formatting/underline`, `page/heading/heading-1`, `page/heading/heading-2`, `page/heading/heading-3`, `page/image`, `page/inline-date`, `page/inline-page-link`, `page/links`, `page/math/equation`, `page/math/inline`, `page/numbered-list`, `page/page-link`, `page/quote`, `page/read-only-view`, `page/text`, `page/to-do`, `page/toggle`, `page/turn-into-page`, `page/url-paste`, `page/video`
   - Extended by: `apps/website/blog/publish` (table `page_blocks_ext_blog_post`), `apps/pages/starred` (table `page_blocks_ext_starred`), `apps/story/marker` (table `page_blocks_ext_story`)
   - Endpoint callers: `editor-collab`
 

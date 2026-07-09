@@ -27,7 +27,7 @@ const PL_CLASS: Record<SpaceStep, string> = {
   none: "pl-none", "2xs": "pl-2xs", xs: "pl-xs", sm: "pl-sm", md: "pl-md", lg: "pl-lg", xl: "pl-xl", "2xl": "pl-2xl",
 };
 
-export interface InsetProps extends React.HTMLAttributes<HTMLElement> {
+export interface InsetSides {
   /** Padding on all sides. */
   pad?: SpaceStep;
   /** Horizontal padding (overrides `pad` on the X axis). */
@@ -39,6 +39,31 @@ export interface InsetProps extends React.HTMLAttributes<HTMLElement> {
   r?: SpaceStep;
   b?: SpaceStep;
   l?: SpaceStep;
+}
+
+/**
+ * Resolve ramp steps to their padding utility classes, general→specific. For
+ * consumers that can only take a `className` string (Lexical ContentEditable,
+ * `<Text>`, third-party props) and therefore cannot wrap in `<Inset>`. Prefer
+ * `<Inset>` when you control the element.
+ *
+ * A ramp step is never spliced into a class name at the call site — the class
+ * strings live here as literals so Tailwind's source scanner emits the
+ * `@utility` they name.
+ */
+export function insetClass({ pad, x, y, t, r, b, l }: InsetSides): string {
+  return cn(
+    pad && P_CLASS[pad],
+    x && PX_CLASS[x],
+    y && PY_CLASS[y],
+    t && PT_CLASS[t],
+    r && PR_CLASS[r],
+    b && PB_CLASS[b],
+    l && PL_CLASS[l],
+  );
+}
+
+export interface InsetProps extends React.HTMLAttributes<HTMLElement>, InsetSides {
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
   /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
@@ -67,16 +92,7 @@ export function Inset({
   return (
     <As
       ref={ref}
-      className={cn(
-        pad && P_CLASS[pad],
-        x && PX_CLASS[x],
-        y && PY_CLASS[y],
-        t && PT_CLASS[t],
-        r && PR_CLASS[r],
-        b && PB_CLASS[b],
-        l && PL_CLASS[l],
-        className,
-      )}
+      className={cn(insetClass({ pad, x, y, t, r, b, l }), className)}
       {...rest}
     >
       {children}

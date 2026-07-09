@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
@@ -21,6 +22,7 @@ import { FormatShortcutsPlugin } from "./format-shortcuts-plugin";
 import { BlockPastePlugin } from "./block-paste-plugin";
 import { blockTextNodes, getBlockTextExtensions } from "../internal/block-text-extensions";
 import { isValidLinkUrl } from "../internal/link-url";
+import { BLOCK_INSET, MARKER_GUTTER } from "../internal/page-column";
 import {
   placeCaretAtBoundary,
   placeCaretAtColumn,
@@ -32,16 +34,6 @@ import {
   truncateBlockTextFrom,
 } from "../internal/collab-text-surgery";
 import "./block-document-scale.css";
-
-/**
- * Width of the leading-marker gutter — the fixed column that holds a block's
- * bullet / number / checkbox / icon to the LEFT of its text. Every text block
- * routes its marker through this one column, so the text content edge is
- * identical across all marker types (bulleted, numbered, to-do, …) — the
- * Notion `notion-list-item-box-left` model. Wider markers (e.g. the callout
- * icon) expand the column via `min-width` without shifting narrow ones.
- */
-const MARKER_GUTTER = "1.5rem";
 
 // Maps a semantic typography variant to its document-scale role. The block
 // editor is a *document* surface, so its editable text uses the larger, airier
@@ -176,7 +168,7 @@ export function BlockTextEditor({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <div className={cn("relative flex gap-xs", inset && "pl-md")}>
+      <div className={cn("relative flex gap-xs", inset && insetClass({ l: BLOCK_INSET }))}>
         {/* Leading-marker gutter: a fixed-width column shared by every marker
             type so the text content edge is identical across block types.
             `justify-center` + `min-width` centers narrow glyphs (bullet,
@@ -194,13 +186,13 @@ export function BlockTextEditor({
           <RichTextPlugin
             contentEditable={
               <ContentEditable
-                className={cn("outline-none pr-md py-xs", VARIANT_CLASS[textVariant], contentClassName)}
+                className={cn("outline-none py-xs", insetClass({ r: BLOCK_INSET }), VARIANT_CLASS[textVariant], contentClassName)}
                 onFocus={() => editor.onFocus()}
               />
             }
             placeholder={
               isEmpty && isFocused && placeholder ? (
-                <div className={cn("text-muted-foreground pointer-events-none absolute left-0 top-0 pr-md py-xs", VARIANT_CLASS[textVariant])}>
+                <div className={cn("text-muted-foreground pointer-events-none absolute left-0 top-0 py-xs", insetClass({ r: BLOCK_INSET }), VARIANT_CLASS[textVariant])}>
                   {placeholder}
                 </div>
               ) : null

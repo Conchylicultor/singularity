@@ -6,7 +6,7 @@ import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { pageDetailRoute } from "@plugins/apps/plugins/pages/plugins/page-tree/core";
 import {
   BlockEditor,
-  BLOCK_GUTTER,
+  PageContentColumn,
   type BlockEditorHandle,
 } from "@plugins/page/plugins/editor/web";
 import { PageHeader } from "./components/page-header";
@@ -15,13 +15,17 @@ import { PageCover } from "./components/page-cover";
 import { PageDetail } from "./slots";
 
 // The centered reading measure shared by the page header, the block editor's
-// content, and the section list, so the page icon, title, and every block line
-// up on one left rail with the measure centered in the pane. The block editor's
+// content, and the section list. It supplies width + centering ONLY — no
+// horizontal padding. The column's horizontal geometry (the hover rail and the
+// decoration→content inset) is owned by the editor and applied through
+// `PageContentColumn`; a measure that also padded its sides would shift the
+// header's rail origin away from the editor's, which is exactly how the title
+// and the block text came to sit on different left edges. The block editor's
 // pointer/marquee surface spans the full pane width (it receives this only as
 // its content wrapper), so drag-to-select works from the whitespace beside the
 // column — the header and sections, which carry no such surface, apply the
 // measure to themselves directly.
-const READING_MEASURE = "mx-auto w-full max-w-4xl px-lg";
+const READING_MEASURE = "mx-auto w-full max-w-4xl";
 
 // Panes are declared first so their types are known before the component
 // bodies reference them. The component identifiers below are hoisted function
@@ -82,10 +86,11 @@ function PageDetailBody(): ReactElement {
           the header and section list are centered on the shared reading measure,
           while the block editor spans the full pane width (centering only its
           own content via the same measure) so a marquee drag can begin from the
-          whitespace beside the column. The header and block content each inset
-          their text by BLOCK_GUTTER on the left (page icon / hover-control rail)
-          and a matching right gutter, so the icon, title, and every block line
-          up while the measure stays centered. */}
+          whitespace beside the column. Neither the header nor the section list is
+          a block, so each wraps itself in `PageContentColumn` — the editor's own
+          declaration of where a block's *content* starts. That is the single
+          owner of the column geometry: the icon, title, sections, and every block
+          land on one left edge, and this file never names the rail width. */}
       <Stack gap="none">
         <PageCover pageId={pageId} />
         <Stack gap="lg" className="pb-2xl">
@@ -94,11 +99,13 @@ function PageDetailBody(): ReactElement {
               is click-to-edit — so there's no dead strip between title and
               content. */}
           <Stack gap="none">
-            <div className={READING_MEASURE} style={{ paddingRight: BLOCK_GUTTER }}>
-              <PageHeader
-                pageId={pageId}
-                onEnter={() => editorRef.current?.insertFirstBlock()}
-              />
+            <div className={READING_MEASURE}>
+              <PageContentColumn>
+                <PageHeader
+                  pageId={pageId}
+                  onEnter={() => editorRef.current?.insertFirstBlock()}
+                />
+              </PageContentColumn>
             </div>
             <BlockEditor
               ref={editorRef}
@@ -107,10 +114,12 @@ function PageDetailBody(): ReactElement {
               onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
             />
           </Stack>
-          <div className={READING_MEASURE} style={{ paddingRight: BLOCK_GUTTER }}>
-            <PageDetail.Section.Render>
-              {(s) => <s.component pageId={pageId} />}
-            </PageDetail.Section.Render>
+          <div className={READING_MEASURE}>
+            <PageContentColumn>
+              <PageDetail.Section.Render>
+                {(s) => <s.component pageId={pageId} />}
+              </PageDetail.Section.Render>
+            </PageContentColumn>
           </div>
         </Stack>
       </Stack>

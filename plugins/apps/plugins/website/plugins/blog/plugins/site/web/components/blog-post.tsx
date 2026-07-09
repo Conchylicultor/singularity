@@ -1,5 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { blocksResource } from "@plugins/page/plugins/editor/core";
+import { BLOCK_INSET } from "@plugins/page/plugins/editor/web";
 import {
   ReadOnlyBlocks,
   buildForest,
@@ -78,19 +79,24 @@ function BlogPostContent({ post }: { post: BlogPost }) {
       <Inset pad="2xl">
         <Stack gap="xl">
           <Stack gap="sm">
-            <Stack gap="xs">
-              <Text as="h1" variant="title" className="tracking-tight">
-                {post.title || "Untitled"}
-              </Text>
-              <Text variant="caption" tone="muted">
-                {formatDate(post.publishedAt)}
-              </Text>
-              {post.summary ? (
-                <Text as="p" variant="body" tone="muted">
-                  {post.summary}
+            {/* Title/date/summary are chrome, not blocks: they sit on the block
+                content edge (`C + BLOCK_INSET`), like the page-detail header. */}
+            <Inset x={BLOCK_INSET}>
+              <Stack gap="xs">
+                <Text as="h1" variant="title" className="tracking-tight">
+                  {post.title || "Untitled"}
                 </Text>
-              ) : null}
-            </Stack>
+                <Text variant="caption" tone="muted">
+                  {formatDate(post.publishedAt)}
+                </Text>
+                {post.summary ? (
+                  <Text as="p" variant="body" tone="muted">
+                    {post.summary}
+                  </Text>
+                ) : null}
+              </Stack>
+            </Inset>
+            {/* A decoration — bleeds to `C`, the full measure. */}
             <div className="border-b" />
           </Stack>
           {forest.length > 0 ? (

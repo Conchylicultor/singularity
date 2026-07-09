@@ -7,7 +7,7 @@
 - Description: Callout block type: a tinted highlight box with a changeable leading icon and semantic color, for notes/tips/warnings.
 - Web:
   - Contributes: `Editor.Block` "callout" → `CalloutBlock`
-  - Uses: `page/editor.BlockRendererProps`, `page/editor.BlockTextEditor`, `page/editor.Editor`, `page/editor.PageIcon`, `primitives/css/center.Center`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/icon-picker.IconPicker`
+  - Uses: `page/editor.BLOCK_INSET`, `page/editor.BlockRendererProps`, `page/editor.BlockTextEditor`, `page/editor.Editor`, `page/editor.PageIcon`, `primitives/css/center.Center`, `primitives/css/row.Row`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/icon-picker.IconPicker`
   - Exports: Values: `calloutBlock`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.SvgNodeSchema`, `page/editor.textBlockSchema`

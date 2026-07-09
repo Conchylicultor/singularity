@@ -55,7 +55,8 @@ import {
   type SelectionControl,
 } from "../selection-control";
 import { AddBlockMenu } from "./add-block-menu";
-import { BlockRow, BLOCK_GUTTER } from "./block-row";
+import { BlockRow } from "./block-row";
+import { BLOCK_GUTTER } from "../internal/page-column";
 import { FileDropOverlay } from "./file-drop-overlay";
 import {
   resolveBlockPasteHandler,
@@ -903,14 +904,13 @@ function SelectionLayer({
             above={<FileDropOverlay active={fileDragging} />}
             className="min-h-40 w-full cursor-text pb-sm pt-md outline-none"
           >
-            {/* The LEFT rail (the three hover controls hang into it at
-                -20/-40/-60 from the content edge) is each row's own padding, so
-                the rail is inside the row's hover box — see BLOCK_GUTTER. This
-                wrapper therefore zeroes its own left padding (overriding the
-                measure class's `px-*`) and hands the full inset to the rows, so
-                block content lands exactly where a `paddingLeft: BLOCK_GUTTER`
-                here would have put it. The matching right gutter stays here,
-                keeping the text measure symmetric. */}
+            {/* This wrapper owns the horizontal gutters: `contentClassName`
+                supplies width/centering only (no horizontal padding of its own).
+                The LEFT rail lives inside each row's own padding (the three hover
+                controls hang into it at -20/-40/-60 from the content edge — see
+                page-column's BLOCK_GUTTER), so this wrapper zeroes its own left
+                padding and hands the full inset to the rows; the matching right
+                gutter stays here, keeping the text measure symmetric. */}
             <div
               ref={contentRef}
               className={cn("relative", contentClassName)}

@@ -1,6 +1,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useEffect, useRef } from "react";
 import {
+  BLOCK_INSET,
   useBlockEditor,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
@@ -54,18 +56,20 @@ export function DividerBlock({ block, isFocused, editor }: BlockRendererProps) {
   }
 
   return (
-    <div
+    <Inset
+      x={BLOCK_INSET}
+      y="sm"
       ref={ref}
       tabIndex={0}
       onKeyDown={onKeyDown}
       onFocus={() => editor.onFocus()}
       aria-label="Divider"
       className={cn(
-        "cursor-default px-md py-sm outline-none",
+        "cursor-default outline-none",
         isFocused && "ring-primary/30 rounded-md ring-1",
       )}
     >
       <hr className="border-border border-t" />
-    </div>
+    </Inset>
   );
 }

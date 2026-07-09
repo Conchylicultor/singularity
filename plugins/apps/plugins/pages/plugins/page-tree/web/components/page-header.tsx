@@ -10,7 +10,6 @@ import {
   type Block,
   type PageCover,
 } from "@plugins/page/plugins/editor/core";
-import { BLOCK_GUTTER } from "@plugins/page/plugins/editor/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
@@ -85,12 +84,14 @@ function PageHeaderInner({
   };
 
   return (
-    // `group/header` drives the hover-revealed affordance row. Content is inset
-    // by BLOCK_GUTTER so the title and affordances line up with the block
-    // editor's text column. When a cover is present the large icon rises to
-    // overlap its bottom edge (a one-off visual overlap the spacing ramp doesn't
-    // model — applied via inline negative margin, never a margin utility).
-    <Stack gap="xs" className={cn(hoverRevealGroup, "group/header pt-lg")} style={{ paddingLeft: BLOCK_GUTTER }}>
+    // `group/header` drives the hover-revealed affordance row. The header owns no
+    // horizontal geometry: the enclosing `PageContentColumn` already places it on
+    // the block editor's content edge, so the title `<input>` below sits directly
+    // on that edge with no padding of its own. When a cover is present the large
+    // icon rises to overlap its bottom edge (a one-off visual overlap the spacing
+    // ramp doesn't model — applied via inline negative margin, never a margin
+    // utility).
+    <Stack gap="xs" className={cn(hoverRevealGroup, "group/header pt-lg")}>
       {hasIcon && (
         <PageIconButton
           value={iconValue}

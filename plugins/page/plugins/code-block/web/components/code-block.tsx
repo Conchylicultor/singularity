@@ -11,10 +11,10 @@ import {
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
-import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
+import { BLOCK_INSET, type BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { codeBlock } from "../../core";
 import { detectLanguage } from "../detect-language";
 
@@ -135,7 +135,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   );
 
   return (
-    <div className="px-md py-xs">
+    <Inset x={BLOCK_INSET} y="xs">
       <Clip className={cn(hoverRevealGroup, "group relative rounded-md bg-muted")}>
         {/* Hover/focus toolbar: language picker + copy. */}
         <Pin to="top-right" offset="xs" layer="raised">
@@ -230,6 +230,6 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
           )}
         />
       </Clip>
-    </div>
+    </Inset>
   );
 }

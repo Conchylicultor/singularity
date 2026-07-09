@@ -12,10 +12,17 @@ import {
 } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text, type TextVariant } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Inset, insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
-import { Editor, PageIcon } from "@plugins/page/plugins/editor/web";
+import {
+  Editor,
+  PageIcon,
+  BLOCK_INDENT,
+  BLOCK_INSET,
+  MARKER_GUTTER,
+} from "@plugins/page/plugins/editor/web";
 import type { BlockHandle, BlockTextVariant } from "@plugins/page/plugins/editor/core";
 import { RunsRenderer } from "./runs-renderer";
 import { PlaceholderCard } from "./placeholder-card";
@@ -29,9 +36,6 @@ import type { BlockDiffKind, ReadOnlyNode } from "../node";
 function asTextVariant(v: BlockTextVariant | undefined): TextVariant {
   return (v ?? "body") as TextVariant;
 }
-
-/** Width of the leading-marker gutter — mirrors the editor's MARKER_GUTTER. */
-const MARKER_GUTTER = "1.5rem";
 
 /** A record-view of a block's `data`. */
 function asRecord(data: unknown): Record<string, unknown> {
@@ -115,10 +119,10 @@ function TextLikeBlock({
       : null;
     return (
       <>
-        <div className="px-md py-xs">
+        <Inset x={BLOCK_INSET} y="xs">
           {/* eslint-disable-next-line radius/no-adhoc-radius -- rounded-md token matches the callout block chrome */}
           <div className={cn("rounded-md", CALLOUT_BG[color] ?? CALLOUT_BG.default)}>
-            <div className="flex gap-xs px-md">
+            <Inset x={BLOCK_INSET} className="flex gap-xs">
               <div
                 className={cn("flex flex-none select-none justify-center py-xs", CALLOUT_TEXT[color] ?? CALLOUT_TEXT.default)}
                 style={{ minWidth: MARKER_GUTTER }}
@@ -126,13 +130,17 @@ function TextLikeBlock({
                 <PageIcon nodes={iconNodes} fallback={MdLightbulb} className="size-5" />
               </div>
               <div className="min-w-0 flex-1">
-                <Text as="div" variant="body" className="pr-md py-xs whitespace-pre-wrap break-words">
+                <Text
+                  as="div"
+                  variant="body"
+                  className={cn(insetClass({ r: BLOCK_INSET }), "py-xs whitespace-pre-wrap break-words")}
+                >
                   <RunsRenderer value={data.text} />
                 </Text>
               </div>
-            </div>
+            </Inset>
           </div>
-        </div>
+        </Inset>
         {children}
       </>
     );
@@ -167,7 +175,7 @@ function TextLikeBlock({
       : undefined;
 
   const text = (
-    <div className="flex gap-xs pl-md">
+    <Inset l={BLOCK_INSET} className="flex gap-xs">
       {marker != null ? (
         <div
           className="flex flex-none select-none justify-center"
@@ -180,12 +188,16 @@ function TextLikeBlock({
         <Text
           as="div"
           variant={asTextVariant(handle.textVariant)}
-          className={cn("pr-md py-xs whitespace-pre-wrap break-words", doneClass)}
+          className={cn(
+            insetClass({ r: BLOCK_INSET }),
+            "py-xs whitespace-pre-wrap break-words",
+            doneClass,
+          )}
         >
           <RunsRenderer value={data.text} />
         </Text>
       </div>
-    </div>
+    </Inset>
   );
 
   // The quote block wraps the shared text in a left-border italic rail.
@@ -217,9 +229,9 @@ function MediaBlock({
 }): ReactNode {
   if (type === "divider") {
     return (
-      <div className="px-md py-sm">
+      <Inset x={BLOCK_INSET} y="sm">
         <hr className="border-border border-t" />
-      </div>
+      </Inset>
     );
   }
 
@@ -227,9 +239,9 @@ function MediaBlock({
     const code = typeof data.code === "string" ? data.code : "";
     const lang = typeof data.language === "string" ? data.language : null;
     return (
-      <div className="px-md py-xs">
+      <Inset x={BLOCK_INSET} y="xs">
         <HighlightedCode code={code} lang={lang} />
-      </div>
+      </Inset>
     );
   }
 
@@ -242,12 +254,12 @@ function MediaBlock({
     }
     const style: CSSProperties = { width: width ? `${width}px` : undefined, maxWidth: "100%" };
     return (
-      <div className="px-md py-xs">
+      <Inset x={BLOCK_INSET} y="xs">
         <div className="inline-block max-w-full" style={style}>
           {/* eslint-disable-next-line radius/no-adhoc-radius -- rounded-md token matches the editor's image chrome */}
           <img src={attachmentUrl(attachmentId)} alt={alt} className="block w-full rounded-md" />
         </div>
-      </div>
+      </Inset>
     );
   }
 
@@ -320,8 +332,9 @@ function NodeView({
   // own ordinal counter, reset on type change (matches the editor's numbering).
   const children =
     node.children.length > 0 ? (
-      // eslint-disable-next-line spacing/no-adhoc-spacing -- nested children indent via the editor's pl gutter, owned here
-      <div className="pl-md">
+      // One depth of the editor's per-depth indent: the child forest's content
+      // box starts `BLOCK_INDENT` right of this block's.
+      <div style={{ paddingLeft: BLOCK_INDENT }}>
         <ForestView forest={node.children} handles={handles} diff={diff} />
       </div>
     ) : null;
