@@ -16,7 +16,11 @@ import { Runtime, flushInteractivePrompt, type RuntimeInfo } from "./runtime";
 import { autoAnswerConfig } from "../../shared/config";
 import { hibernationConfig } from "../../core/hibernation-config";
 import { decideMissingProcessAction } from "./hibernation-decision";
-import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
+import {
+  findTranscriptPath,
+  refreshConversationChain,
+} from "@plugins/conversations/plugins/transcript-watcher/server";
+import { recordSessionId } from "@plugins/conversations/plugins/session-chain/server";
 import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
 function liveStatusFor(info: RuntimeInfo): ConversationStatus {
@@ -178,6 +182,23 @@ async function tick(): Promise<void> {
     if (waitingForChanged) patch.waitingFor = desiredWaitingFor;
     if (resurrecting) patch.endedAt = null;
     await updateConversation(id, patch);
+
+    // `conversations.claude_session_id` is the live TAIL (what `claude --resume`
+    // hands back); the chain is the full ordered history the transcript readers
+    // merge. Every id the poller adopts — including the first, since `null → sid`
+    // flows through this same branch — is appended here, behind the transcript
+    // gate above, so a session with no file on disk never enters the chain.
+    //
+    // Chain ORDER comes from `seenAt` = the DB's `now()`, which is TRANSACTION
+    // START time. Safe here: each call is its own implicit transaction, and ticks
+    // are ≥1s apart. A future caller appending two ids inside one transaction
+    // would give them an identical `seenAt` and scramble the chain order.
+    if (sessionChanged && sessionCandidate) {
+      await recordSessionId(id, sessionCandidate);
+      // Let any live subscriber follow the new file now, rather than at the next
+      // 30s watcher reconcile.
+      await refreshConversationChain(id);
+    }
 
     if (titleChanged && desiredTitle && !UNINFORMATIVE_TITLES.includes(desiredTitle)) {
       await updateTaskTitle(dbRow.taskId, desiredTitle, UNINFORMATIVE_TITLES);

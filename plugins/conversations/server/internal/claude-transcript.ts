@@ -2,6 +2,7 @@ import {
   activeLineUuids,
   isInterruptContent,
 } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { readChainLines } from "@plugins/conversations/plugins/transcript-watcher/server";
 
 export type TurnRole = "user" | "assistant";
 
@@ -72,26 +73,33 @@ export async function rewindLastUserTurn(path: string): Promise<string | null> {
   return null;
 }
 
-export async function readTurns(
-  path: string,
+export function readTurns(path: string, sinceIso?: string): Promise<Turn[]> {
+  return readTurnsFromChain([path], sinceIso);
+}
+
+/**
+ * Read the turns of a conversation spread over a chain of session files.
+ *
+ * `readChainLines` concatenates the chain in order and drops duplicate uuids
+ * (a forked session copies its ancestor's lines verbatim), then `activeLineUuids`
+ * keeps only each root tree's live leaf→root path. Both passes are required over
+ * a chain: without the branch filter, a fork's copied spine renders twice.
+ * `sinceIso` stays a post-parse filter — it must not narrow the forest the
+ * branch filter reasons over.
+ */
+export async function readTurnsFromChain(
+  paths: string[],
   sinceIso?: string,
 ): Promise<Turn[]> {
-  const file = Bun.file(path);
-  if (!(await file.exists())) return [];
-  const raw = await file.text();
+  const lines = await readChainLines(paths);
+  const active = activeLineUuids(lines);
 
   const turns: Turn[] = [];
   const assistantByMsgId = new Map<string, Turn>();
 
-  for (const line of raw.split("\n")) {
-    if (!line) continue;
-    let obj: Record<string, unknown>;
-    try {
-      obj = JSON.parse(line);
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err;
-      continue;
-    }
+  for (const obj of lines) {
+    const uuid = typeof obj.uuid === "string" ? obj.uuid : null;
+    if (uuid && !active.has(uuid)) continue; // abandoned rewind branch
     const ts = typeof obj.timestamp === "string" ? obj.timestamp : null;
     if (!ts) continue;
     if (sinceIso && ts < sinceIso) continue;

@@ -1,13 +1,8 @@
-import { readFile } from "node:fs/promises";
-import { CLAUDE_SESSIONS_DIR, PGREP } from "@plugins/infra/plugins/paths/server";
+import { readFile, stat } from "node:fs/promises";
+import { CLAUDE_SESSIONS_DIR } from "@plugins/infra/plugins/paths/server";
+import { subtreePids, type ProcessTree } from "./process-tree";
 
 const SESSIONS_DIR = CLAUDE_SESSIONS_DIR;
-
-// Positive-only cache. A null result (sessions file not yet on disk)
-// must be re-checked on the next poller tick — otherwise an early race
-// where the poller fires before Claude has written ~/.claude/sessions/<pid>.json
-// would pin `claudeSessionId` to NULL for the life of the pane.
-const pidCache = new Map<number, string>();
 
 // Claude CLI session status values (undocumented internal state from
 // ~/.claude/sessions/<pid>.json). Exhaustive as of CLI v2.1.141.
@@ -22,81 +17,98 @@ export interface SessionState {
   waitingFor: string | null;
 }
 
+// Not an absorbed failure: the sessions file legitimately does not exist yet
+// when the poller fires before Claude has written ~/.claude/sessions/<pid>.json.
+// Every caller re-resolves on the next tick, so this must stay a value, not a throw.
 const NULL_STATE: SessionState = { sessionId: null, status: null, waitingFor: null };
 
-async function readSessionState(pid: number): Promise<SessionState> {
-  try {
-    const raw = await readFile(`${SESSIONS_DIR}/${pid}.json`, "utf8");
-    const parsed = JSON.parse(raw);
-    let status: CliSessionStatus | null = null;
-    if (typeof parsed.status === "string") {
-      if (!KNOWN_STATUSES.has(parsed.status)) {
-        throw new Error(
-          `Unknown Claude CLI session status "${parsed.status}" in ${SESSIONS_DIR}/${pid}.json — update the status map`,
-        );
-      }
-      status = parsed.status as CliSessionStatus;
-    }
-    return {
-      sessionId: typeof parsed.sessionId === "string" ? parsed.sessionId : null,
-      status,
-      waitingFor: typeof parsed.waitingFor === "string" ? parsed.waitingFor : null,
-    };
-  } catch (err) {
-    // Re-throw unknown-status errors; swallow ENOENT / parse failures.
-    if (err instanceof Error && err.message.startsWith("Unknown Claude CLI")) throw err;
-    return NULL_STATE;
-  }
+/** Session-file IO, injectable so resolution is testable without a real /proc. */
+export interface SessionFileDeps {
+  /** Raw file contents, or null when the pid has no sessions file (ENOENT). */
+  readSessionFile: (pid: number) => Promise<string | null>;
+  /** File mtime in epoch ms, or null when the pid has no sessions file (ENOENT). */
+  statSessionFile: (pid: number) => Promise<number | null>;
 }
 
-async function pgrepChildren(pid: number): Promise<number[]> {
-  const proc = Bun.spawn([PGREP, "-P", String(pid)], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const text = await new Response(proc.stdout).text();
-  await proc.exited;
-  return text
-    .trim()
-    .split("\n")
-    .map((l) => Number(l))
-    .filter((n) => Number.isFinite(n));
+function isEnoent(err: unknown): boolean {
+  return (err as NodeJS.ErrnoException).code === "ENOENT";
+}
+
+const defaultDeps: SessionFileDeps = {
+  async readSessionFile(pid) {
+    try {
+      return await readFile(`${SESSIONS_DIR}/${pid}.json`, "utf8");
+    } catch (err) {
+      if (isEnoent(err)) return null;
+      throw err;
+    }
+  },
+  async statSessionFile(pid) {
+    try {
+      return (await stat(`${SESSIONS_DIR}/${pid}.json`)).mtimeMs;
+    } catch (err) {
+      if (isEnoent(err)) return null;
+      throw err;
+    }
+  },
+};
+
+function parseSessionState(raw: string, pid: number): SessionState {
+  const parsed = JSON.parse(raw);
+  let status: CliSessionStatus | null = null;
+  if (typeof parsed.status === "string") {
+    if (!KNOWN_STATUSES.has(parsed.status)) {
+      throw new Error(
+        `Unknown Claude CLI session status "${parsed.status}" in ${SESSIONS_DIR}/${pid}.json — update the status map`,
+      );
+    }
+    status = parsed.status as CliSessionStatus;
+  }
+  return {
+    sessionId: typeof parsed.sessionId === "string" ? parsed.sessionId : null,
+    status,
+    waitingFor: typeof parsed.waitingFor === "string" ? parsed.waitingFor : null,
+  };
 }
 
 /**
  * Resolve session state (sessionId + status + waitingFor) for a tmux pane.
  *
- * The pane's root process is typically `zsh -l -c 'claude'`, which execs into
- * `claude` directly — so `pane_pid` itself usually IS the claude process. If
- * the sessions file for that pid is missing, fall back to walking direct
- * children (handles configurations where an extra shell layer sits between
- * tmux and claude).
+ * The pane's root process is usually the claude process itself, but Claude Code
+ * can relocate the live session into a daemon-hosted child several levels down
+ * (`launcher → daemon run → --bg-pty-host → session`). The launcher's own
+ * sessions file is never deleted, so it survives as a tombstone naming a dead
+ * session id. Reading `pane_pid` alone therefore pins the pane to that dead id.
+ *
+ * So: read every sessions file in the pane's process subtree and keep the
+ * most recently written one. Freshness is only ever compared *within* the
+ * subtree — an idle interactive session can go weeks without writing its file,
+ * so mtime against wall-clock says nothing about staleness. Subtree membership
+ * is what identifies the live session; mtime only orders the candidates inside it.
+ *
+ * Ties (identical mtime) resolve to the pid visited last in the BFS — the
+ * deepest / latest sibling — so a daemon-hosted child beats its own launcher.
  */
 export async function resolveSessionState(
   panePid: number,
+  tree: ProcessTree,
+  deps: SessionFileDeps = defaultDeps,
 ): Promise<SessionState> {
-  const cached = pidCache.get(panePid);
-  if (cached) {
-    // sessionId is cached; still need fresh status/waitingFor.
-    const state = await readSessionState(panePid);
-    if (state.sessionId) return state;
-    for (const child of await pgrepChildren(panePid)) {
-      const childState = await readSessionState(child);
-      if (childState.sessionId) return childState;
-    }
-    // Cache hit but file disappeared — return cached sessionId with null state.
-    return { sessionId: cached, status: null, waitingFor: null };
-  }
-
-  let state = await readSessionState(panePid);
-  if (state.sessionId == null) {
-    for (const child of await pgrepChildren(panePid)) {
-      state = await readSessionState(child);
-      if (state.sessionId) break;
+  let best: SessionState | null = null;
+  let bestMtimeMs = -Infinity;
+  for (const pid of subtreePids(tree, panePid)) {
+    const raw = await deps.readSessionFile(pid);
+    if (raw == null) continue;
+    const state = parseSessionState(raw, pid);
+    if (state.sessionId == null) continue;
+    const mtimeMs = await deps.statSessionFile(pid);
+    if (mtimeMs == null) continue; // exited and cleaned up between read and stat
+    if (mtimeMs >= bestMtimeMs) {
+      best = state;
+      bestMtimeMs = mtimeMs;
     }
   }
-  if (state.sessionId) pidCache.set(panePid, state.sessionId);
-  return state;
+  return best ?? NULL_STATE;
 }
 
 /**
@@ -105,10 +117,7 @@ export async function resolveSessionState(
  */
 export async function resolveClaudeSessionId(
   panePid: number,
+  tree: ProcessTree,
 ): Promise<string | null> {
-  return (await resolveSessionState(panePid)).sessionId;
-}
-
-export function forgetPid(pid: number): void {
-  pidCache.delete(pid);
+  return (await resolveSessionState(panePid, tree)).sessionId;
 }

@@ -1,9 +1,10 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { startTranscriptWatcher, stopTranscriptWatcher } from "./internal/watcher";
 
-export { watchTranscript } from "./internal/watcher";
-export { readJsonlEvents } from "./internal/parse-jsonl";
+export { watchTranscript, refreshConversationChain } from "./internal/watcher";
+export { readJsonlEvents, readJsonlEventsFromChain, readChainLines } from "./internal/parse-jsonl";
 export { findTranscriptPath } from "./internal/find-transcript-path";
+export { resolveConversationTranscriptPaths } from "./internal/resolve-chain";
 
 export default {
   description:

@@ -2,7 +2,7 @@ import { cp, stat } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { getConfig } from "@plugins/config_v2/server";
 import { listActiveConversations } from "@plugins/tasks/plugins/tasks-core/server";
-import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
+import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { BackupSourceReport } from "@plugins/backup/core";
 import { transcriptsSourceConfig } from "../../shared/config";
 
@@ -16,14 +16,20 @@ export async function assembleTranscripts(
   }
 
   let count = 0;
+  let files = 0;
   let sizeBytes = 0;
   for (const conv of await listActiveConversations()) {
-    if (!conv.claudeSessionId) continue;
-    const path = await findTranscriptPath(conv.claudeSessionId);
-    if (!path) continue;
-    const dest = join(dir, basename(path));
-    await cp(path, dest);
-    sizeBytes += (await stat(dest)).size;
+    // A conversation spans its whole session chain; backing up only the live tail
+    // would lose every earlier segment. Chain files are distinct `<sessionId>.jsonl`
+    // names, so flattening them into `dir` by basename cannot collide.
+    const paths = await resolveConversationTranscriptPaths(conv.id);
+    if (paths.length === 0) continue;
+    for (const path of paths) {
+      const dest = join(dir, basename(path));
+      await cp(path, dest);
+      sizeBytes += (await stat(dest)).size;
+      files++;
+    }
     count++;
   }
 
@@ -31,7 +37,9 @@ export async function assembleTranscripts(
     id: "transcripts",
     name: "Transcripts",
     skipped: false,
-    items: [{ label: "transcripts", detail: `${count} conversations`, count }],
+    items: [
+      { label: "transcripts", detail: `${files} files across ${count} conversations`, count },
+    ],
     sizeBytes,
   };
 }

@@ -1,14 +1,13 @@
 import { lstat } from "node:fs/promises";
 import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
 import {
-  findTranscriptPath,
-  readJsonlEvents,
+  resolveConversationTranscriptPaths,
+  readJsonlEventsFromChain,
   watchTranscript,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
-import { getConversationClaudeSessionId } from "@plugins/tasks/plugins/tasks-core/server";
 import { JsonlEventsPayloadSchema } from "../../core/protocol";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { jsonlEtag } from "./jsonl-etag";
+import { jsonlChainEtag } from "./jsonl-etag";
 
 type Params = { id: string };
 
@@ -22,32 +21,28 @@ export const jsonlEventsResource = defineExternalResource({
   loader: async ({ id }: Params) => {
     const cached = cachedEvents.get(id);
     if (cached) return cached;
-    const claudeSessionId = await getConversationClaudeSessionId(id);
-    if (!claudeSessionId) return [];
-    const path = await findTranscriptPath(claudeSessionId);
-    if (!path) return [];
-    return readJsonlEvents(path);
+    return readJsonlEventsFromChain(await resolveConversationTranscriptPaths(id));
   },
-  // Cheap ETag: the transcript file is the source of truth, and an appended event
-  // changes its (mtime, size). We fingerprint the FILE via one `lstat`, NOT the
-  // in-memory `cachedEvents` map (empty after a restart, exactly when this matters).
-  // No session / no path / vanished file ⇒ "none" — which never matches a prior
-  // real path-etag, so it degrades to a recompute (safe), never a stale match.
-  // Cost: 1 `lstat` vs. the loader's full file read + JSON parse of the transcript.
+  // Cheap ETag: the conversation's session-chain files are the source of truth, and
+  // an appended event changes a file's (mtime, size). We fingerprint every chain
+  // file via one `lstat` each, NOT the in-memory `cachedEvents` map (empty after a
+  // restart, exactly when this matters). Cost: N `lstat`s vs. the loader's full read
+  // + JSON parse + merge of the whole chain.
   revalidate: async ({ id }: Params): Promise<string> => {
-    const claudeSessionId = await getConversationClaudeSessionId(id);
-    if (!claudeSessionId) return "none";
-    const path = await findTranscriptPath(claudeSessionId);
-    if (!path) return "none";
-    try {
-      const st = await lstat(path);
-      return jsonlEtag(path, st.mtimeMs, st.size);
-    } catch (err) {
-      // ENOENT: the resolved path vanished — degrade to a recompute. Anything else
-      // is unexpected and re-thrown so it fails loudly.
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-      return "none";
+    const paths = await resolveConversationTranscriptPaths(id);
+    const files: { path: string; mtimeMs: number; size: number }[] = [];
+    for (const path of paths) {
+      try {
+        const st = await lstat(path);
+        files.push({ path, mtimeMs: st.mtimeMs, size: st.size });
+      } catch (err) {
+        // ENOENT: this chain file vanished between resolve and stat — omit it, which
+        // moves the signature and degrades to a recompute. Anything else is
+        // unexpected and re-thrown so it fails loudly.
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+      }
     }
+    return jsonlChainEtag(paths.length, files);
   },
   async onFirstSubscribe({ id }: Params) {
     if (unsubscribes.has(id)) return;

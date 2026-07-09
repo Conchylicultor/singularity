@@ -15,6 +15,7 @@ import { backgroundPrefix } from "@plugins/packages/plugins/spawn-priority/serve
 import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
 import { resolveSessionState, type SessionState } from "./claude-session";
+import { captureProcessTree } from "./process-tree";
 // Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
 // legacy prefix kept so zombie sessions still get picked up by the poller.
 const SESSION_NAME_RE = /^(conv|claude)-\d+(-[a-z0-9]+)?$/;
@@ -487,7 +488,15 @@ async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
   );
 }
 
-async function listPanes(): Promise<
+/**
+ * Live tmux panes we manage, keyed by conversation id (the tmux session name).
+ *
+ * Exported so out-of-plugin observers (the session-divergence monitor) can join
+ * a conversation to its pane pid through this one implementation rather than
+ * re-deriving `tmux list-panes` — including its "no server running" empty-state
+ * nuance, which a second copy would inevitably get wrong.
+ */
+export async function listPanes(): Promise<
   Map<
     string,
     { rawTitle: string; panePid: number; dead: boolean; worktreePath: string }
@@ -556,7 +565,7 @@ async function paneIsWorking(conversationId: string): Promise<boolean> {
   if (!pane || pane.dead) return false;
   let state: SessionState;
   try {
-    state = await resolveSessionState(pane.panePid);
+    state = await resolveSessionState(pane.panePid, await captureProcessTree());
   } catch (err) {
     void recordReport({
       kind: "crash",
@@ -580,10 +589,14 @@ export const tmuxRuntime: ConversationRuntime = {
     const panes = await listPanes();
     const ids = Array.from(panes.keys());
     const NULL_SESSION: SessionState = { sessionId: null, status: null, waitingFor: null };
+    // One process snapshot for every pane. A failure here throws out of list(),
+    // which the poller reads as "runtime state unknown" — same contract as a
+    // failed `tmux list-panes`, and far safer than resolving against an empty tree.
+    const tree = await captureProcessTree();
     const states = await Promise.all(
       ids.map(async (id) => {
         try {
-          return await resolveSessionState(panes.get(id)!.panePid);
+          return await resolveSessionState(panes.get(id)!.panePid, tree);
         } catch (err) {
           void recordReport({
             kind: "crash",

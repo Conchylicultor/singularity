@@ -1506,6 +1506,10 @@
       "name": "@singularity/plugin-conversations-runtime-tmux",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/session-chain": {
+      "name": "@singularity/plugin-conversations-session-chain",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/summary": {
       "name": "@singularity/plugin-conversations-summary",
       "version": "0.0.1",
@@ -1718,6 +1722,10 @@
     },
     "plugins/debug/plugins/reports": {
       "name": "@singularity/plugin-debug-reports",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/session-divergence": {
+      "name": "@singularity/plugin-debug-session-divergence",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/slow-ops": {
@@ -5542,6 +5550,8 @@
 
     "@singularity/plugin-conversations-runtime-tmux": ["@singularity/plugin-conversations-runtime-tmux@workspace:plugins/conversations/plugins/runtime-tmux"],
 
+    "@singularity/plugin-conversations-session-chain": ["@singularity/plugin-conversations-session-chain@workspace:plugins/conversations/plugins/session-chain"],
+
     "@singularity/plugin-conversations-summary": ["@singularity/plugin-conversations-summary@workspace:plugins/conversations/plugins/summary"],
 
     "@singularity/plugin-conversations-transcript-api": ["@singularity/plugin-conversations-transcript-api@workspace:plugins/conversations/plugins/transcript-api"],
@@ -5635,6 +5645,8 @@
     "@singularity/plugin-debug-render-profiler": ["@singularity/plugin-debug-render-profiler@workspace:plugins/debug/plugins/render-profiler"],
 
     "@singularity/plugin-debug-reports": ["@singularity/plugin-debug-reports@workspace:plugins/debug/plugins/reports"],
+
+    "@singularity/plugin-debug-session-divergence": ["@singularity/plugin-debug-session-divergence@workspace:plugins/debug/plugins/session-divergence"],
 
     "@singularity/plugin-debug-slow-ops": ["@singularity/plugin-debug-slow-ops@workspace:plugins/debug/plugins/slow-ops"],
 

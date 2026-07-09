@@ -13,6 +13,7 @@ export const SERVER_REPORT_SOURCES = [
   "server-op-rate-monitor",
   "server-read-set-monitor",
   "server-boot-budget-monitor",
+  "server-session-monitor",
 ] as const;
 export const CLIENT_REPORT_SOURCES = [
   "browser-error",

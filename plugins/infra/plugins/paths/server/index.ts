@@ -27,7 +27,7 @@ export {
   currentWorktreeName,
 } from "../core/internal/paths";
 
-export { GIT, PGREP, CLAUDE, TMUX } from "./internal/bins";
+export { GIT, PGREP, PS, CLAUDE, TMUX } from "./internal/bins";
 
 export {
   pruneWorktreeBuildArtifacts,

@@ -2,7 +2,13 @@
 
 Single `@parcel/watcher`-based JSONL transcript watcher. Replaces the dual 500ms pollers (`turn-emitter` file reads + `watch-jsonl`) with one fan-out subscription per active conversation.
 
-One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A per-conversation room resolves the transcript path once and registers it in a reverse index for O(1) dispatch. A 30s reconcile timer catches any missed parcel events.
+One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A per-conversation room resolves the conversation's **session chain** — every JSONL file it has run under, oldest → newest — and registers all of them in a reverse index for O(1) dispatch. A 30s reconcile timer catches any missed parcel events.
+
+**The chain, not one file.** Claude Code relocates a live session into a new id (a fork copies its ancestor's lines; a fresh daemon-hosted session inherits nothing). `resolveConversationTranscriptPaths(conversationId)` composes the recorded chain ([`session-chain`](../session-chain)) with the projects-dir glob (`findTranscriptPath`) and is the **only** sanctioned way to go from a conversation to its files. It returns `string[]`: empty means "nothing on disk yet"; a DB or glob failure throws. Reads go through `readJsonlEventsFromChain` / `readTurnsFromChain`, which merge the chain and dedup by `uuid`.
+
+**Writes go to the tail only.** `paths.at(-1)` is the live file `claude --resume` appends to. Anything destructive (`rewindLastUserTurn`) must target it and nothing else — truncating an ancestor corrupts the history the read path merges.
+
+**Following a session switch.** A room resolved at subscribe time would stay pinned to the file it found. The poller calls `refreshConversationChain(conversationId)` the moment it records a new session id, which re-resolves the room and fans out; the 30s reconcile re-resolves too, as a backstop for a missed notify.
 
 **Restart recovery**: room creation triggers an immediate seed read, so any events that landed during server downtime are delivered to subscribers on reconnect. `turn-emitter`'s `hasPendingTrigger` logic hooks into this seed callback.
 
@@ -12,10 +18,10 @@ One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A p
 
 - Description: Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
 - Server:
-  - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.CLAUDE_PROJECTS_DIR`, `tasks/tasks-core.getConversationClaudeSessionId`
-  - Exports: Values: `findTranscriptPath`, `readJsonlEvents`, `watchTranscript`
+  - Uses: `conversations/session-chain.listSessionChain`, `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.CLAUDE_PROJECTS_DIR`, `tasks/tasks-core.getConversationClaudeSessionId`
+  - Exports: Values: `findTranscriptPath`, `readChainLines`, `readJsonlEvents`, `readJsonlEventsFromChain`, `refreshConversationChain`, `resolveConversationTranscriptPaths`, `watchTranscript`
 - Cross-plugin:
-  - Imported by: `backup/sources/transcripts`, `conversations`, `conversations/conversation-view/jsonl-viewer`, `conversations/transcript-api`, `conversations/transcript-retention`
+  - Imported by: `backup/sources/transcripts`, `conversations`, `conversations/conversation-view/jsonl-viewer`, `conversations/transcript-api`, `conversations/transcript-retention`, `debug/session-divergence`
 - Core:
   - Exports: Types: `JsonlEvent`, `TeammateMessage`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`; Values: `activeLineUuids`, `extractPreprompt`, `extractTeammateMessages`, `isInterruptContent`, `JsonlEventSchema`, `PREPROMPT_TAG`, `stripRelayBoilerplate`, `TokenUsageSchema`, `unwrapRelayEnvelopes`, `wrapPreprompt`
 

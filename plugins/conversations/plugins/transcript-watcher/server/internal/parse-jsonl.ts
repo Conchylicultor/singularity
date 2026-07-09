@@ -193,24 +193,86 @@ function extractText(content: unknown): string {
   return parts.join("");
 }
 
-export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
-  const file = Bun.file(path);
-  if (!(await file.exists())) return [];
-  const raw = await file.text();
-
-  // Parse every line once up front. The transcript is a forest (uuid /
-  // parentUuid); a rewind/edit leaves the abandoned branch in the file. Compute
-  // which lines belong to the live conversation and skip the rest, so the view
-  // shows the path the user kept rather than abandoned attempts inline.
-  const parsed: Record<string, unknown>[] = [];
-  for (const line of raw.split("\n")) {
-    if (!line) continue;
-    try {
-      parsed.push(JSON.parse(line) as Record<string, unknown>);
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err;
+/**
+ * Merge a conversation's chained transcript files into one line array, in chain
+ * order, keeping the first copy of each `uuid`.
+ *
+ * A conversation spans several Claude session files: the session id changes when
+ * Claude forks or restarts a session, and each id gets its own file. A forked
+ * session copies its ancestor's lines *verbatim, `uuid` included*, so first-wins
+ * uuid dedup collapses the overlap and preserves the ancestor's original
+ * timestamps. A fresh session shares no uuids and lands as a disjoint root tree,
+ * which `activeLineUuids` keeps whole. Lines with no `uuid` (`mode`,
+ * `permission-mode`, `ai-title`, `file-history-snapshot`, `last-prompt`) are not
+ * in the forest and all survive.
+ *
+ * CAVEAT — this is the one place the merge can hide a line. A fork taken from a
+ * *midpoint* leaves the ancestor's post-fork lines as a branch hanging off the
+ * merged spine, and the `activeLineUuids` pass the callers run drops them as an
+ * abandoned branch. Arguably correct (they are abandoned), but it is a loss the
+ * per-file parse would not have had. Pinned by a test in `parse-jsonl.test.ts`.
+ */
+export function mergeChainLines(
+  files: readonly { path: string; raw: string }[],
+): Record<string, unknown>[] {
+  const merged: Record<string, unknown>[] = [];
+  const seenUuids = new Set<string>();
+  for (const { raw } of files) {
+    for (const line of raw.split("\n")) {
+      if (!line) continue;
+      let obj: Record<string, unknown>;
+      try {
+        obj = JSON.parse(line) as Record<string, unknown>;
+      } catch (err) {
+        if (!(err instanceof SyntaxError)) throw err;
+        continue;
+      }
+      const uuid = typeof obj.uuid === "string" ? obj.uuid : null;
+      if (uuid) {
+        if (seenUuids.has(uuid)) continue;
+        seenUuids.add(uuid);
+      }
+      merged.push(obj);
     }
   }
+  return merged;
+}
+
+/**
+ * Read every file of a session chain and merge them. A chain entry whose
+ * transcript has not landed on disk yet is skipped (the poller records the
+ * session id before Claude writes the file); any other read failure propagates.
+ */
+export async function readChainLines(
+  paths: string[],
+): Promise<Record<string, unknown>[]> {
+  const files: { path: string; raw: string }[] = [];
+  for (const path of paths) {
+    const file = Bun.file(path);
+    if (!(await file.exists())) continue;
+    files.push({ path, raw: await file.text() });
+  }
+  return mergeChainLines(files);
+}
+
+export function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
+  return readJsonlEventsFromChain([path]);
+}
+
+export async function readJsonlEventsFromChain(
+  paths: string[],
+): Promise<JsonlEvent[]> {
+  return buildEvents(await readChainLines(paths));
+}
+
+async function buildEvents(
+  parsed: Record<string, unknown>[],
+): Promise<JsonlEvent[]> {
+  // The merged transcript is a forest (uuid / parentUuid); a rewind/edit leaves
+  // the abandoned branch behind. Compute which lines belong to the live
+  // conversation and skip the rest, so the view shows the path the user kept
+  // rather than abandoned attempts inline. Run once over the whole chain — a
+  // per-file pass would keep each file's own abandoned leaf.
   const keptUuids = activeLineUuids(parsed);
 
   const events: JsonlEvent[] = [];
@@ -227,6 +289,9 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
   // <special_instructions>). Lift it out into a dedicated `preprompt` event so
   // it renders as a collapsed Instructions card, not as raw user text. Only
   // ever appears once; set true on a real hit so a later turn can't re-trigger.
+  // Scoped to one parse of the whole chain: a chained tail that re-injects
+  // <special_instructions> would emit a second `preprompt` event. Not observed;
+  // no global dedup until a test shows it firing.
   let seenPreprompt = false;
 
   // One home for user-turn text handling, shared by the string-content branch

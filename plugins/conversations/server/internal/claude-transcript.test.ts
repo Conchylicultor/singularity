@@ -1,7 +1,7 @@
 import { afterEach, describe, expect, test } from "bun:test";
 import { tmpdir } from "os";
 import { join } from "path";
-import { rewindLastUserTurn } from "./claude-transcript";
+import { readTurns, readTurnsFromChain, rewindLastUserTurn } from "./claude-transcript";
 
 // rewindLastUserTurn reads + truncates a real file, so each case writes a temp
 // transcript and inspects what comes back and what's left on disk.
@@ -90,5 +90,99 @@ describe("rewindLastUserTurn", () => {
       toolResult(),
     ]);
     expect(await rewindLastUserTurn(path)).toBeNull();
+  });
+});
+
+// ---------------------------------------------------------------------------
+// readTurns / readTurnsFromChain. Unlike rewindLastUserTurn, these need real
+// uuid/parentUuid lines: the chain merge dedups on uuid and the branch filter
+// walks the forest.
+// ---------------------------------------------------------------------------
+
+const T1 = "2026-06-30T01:00:00.000Z";
+const T2 = "2026-06-30T02:00:00.000Z";
+const T3 = "2026-06-30T03:00:00.000Z";
+const FORK_T1 = "2026-06-30T09:00:00.000Z";
+
+const uLine = (uuid: string, parentUuid: string | null, text: string, at: string) => ({
+  type: "user",
+  uuid,
+  parentUuid,
+  timestamp: at,
+  message: { role: "user", content: text },
+});
+const aLine = (uuid: string, parentUuid: string | null, text: string, at: string) => ({
+  type: "assistant",
+  uuid,
+  parentUuid,
+  timestamp: at,
+  message: { role: "assistant", content: [{ type: "text", text }] },
+});
+
+describe("readTurnsFromChain", () => {
+  test("a forked session's copied lines render once, at the ancestor's times", async () => {
+    const first = await writeTranscript([
+      uLine("u1", null, "hello", T1),
+      aLine("u2", "u1", "hi", T2),
+    ]);
+    const forked = await writeTranscript([
+      uLine("u1", null, "hello", FORK_T1),
+      aLine("u2", "u1", "hi", FORK_T1),
+      uLine("u3", "u2", "continue", T3),
+    ]);
+
+    const turns = await readTurnsFromChain([first, forked]);
+    expect(turns.map((t) => [t.role, t.text])).toEqual([
+      ["user", "hello"],
+      ["assistant", "hi"],
+      ["user", "continue"],
+    ]);
+    expect(turns[0]!.at).toBe(T1);
+  });
+
+  test("sinceIso filters after the merge, not before it", async () => {
+    const first = await writeTranscript([
+      uLine("u1", null, "hello", T1),
+      aLine("u2", "u1", "hi", T2),
+    ]);
+    const forked = await writeTranscript([
+      uLine("u1", null, "hello", FORK_T1),
+      aLine("u2", "u1", "hi", FORK_T1),
+      uLine("u3", "u2", "continue", T3),
+    ]);
+
+    const turns = await readTurnsFromChain([first, forked], T3);
+    expect(turns.map((t) => t.text)).toEqual(["continue"]);
+  });
+
+  test("a chain entry with no transcript on disk yet is skipped", async () => {
+    const first = await writeTranscript([uLine("u1", null, "hello", T1)]);
+    const absent = join(tmpdir(), `absent-${crypto.randomUUID()}.jsonl`);
+    expect((await readTurnsFromChain([first, absent])).map((t) => t.text)).toEqual([
+      "hello",
+    ]);
+  });
+});
+
+describe("readTurns", () => {
+  test("returns [] for a missing file", async () => {
+    expect(await readTurns(join(tmpdir(), "does-not-exist.jsonl"))).toEqual([]);
+  });
+
+  test("drops an abandoned rewind branch (behavior change: the branch filter now runs)", async () => {
+    // `abandoned` hangs off root but is not on the live leaf→root path, so it is
+    // no longer emitted. Before the chain work, readTurns rendered it inline.
+    const path = await writeTranscript([
+      uLine("root", null, "hello", T1),
+      aLine("abandoned", "root", "abandoned attempt", T2),
+      aLine("spine", "root", "real answer", T2),
+      uLine("leaf", "spine", "continue", T3),
+    ]);
+
+    expect((await readTurns(path)).map((t) => t.text)).toEqual([
+      "hello",
+      "real answer",
+      "continue",
+    ]);
   });
 });

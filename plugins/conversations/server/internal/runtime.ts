@@ -1,13 +1,10 @@
 import type { Registration } from "@plugins/framework/plugins/server-core/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { EffortLevel } from "@plugins/conversations/plugins/effort-provider/core";
+import { getConversationRuntime } from "@plugins/tasks/plugins/tasks-core/server";
+import { resolveConversationTranscriptPaths } from "@plugins/conversations/plugins/transcript-watcher/server";
 import {
-  getConversationRuntime,
-  getConversationClaudeSessionId,
-} from "@plugins/tasks/plugins/tasks-core/server";
-import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
-import {
-  readTurns,
+  readTurnsFromChain,
   rewindLastUserTurn,
   type Turn,
 } from "./claude-transcript";
@@ -146,17 +143,16 @@ export async function readConversationTurns(
   id: string,
   since?: string,
 ): Promise<Turn[]> {
-  const claudeSessionId = await getConversationClaudeSessionId(id);
-  if (!claudeSessionId) return [];
-  const path = await findTranscriptPath(claudeSessionId);
-  if (!path) return [];
-  return readTurns(path, since);
+  return readTurnsFromChain(await resolveConversationTranscriptPaths(id), since);
 }
 
 export async function rewindConversationTurn(id: string): Promise<string | null> {
-  const claudeSessionId = await getConversationClaudeSessionId(id);
-  if (!claudeSessionId) return null;
-  const path = await findTranscriptPath(claudeSessionId);
-  if (!path) return null;
-  return rewindLastUserTurn(path);
+  const paths = await resolveConversationTranscriptPaths(id);
+  // The LIVE TAIL ONLY. `rewindLastUserTurn` truncates the file it is handed, and
+  // the Stop button calls this on every stopped turn; truncating an ancestor would
+  // destroy the history the merged read path now depends on. An empty chain means
+  // there is no transcript to rewind.
+  const tail = paths.at(-1);
+  if (!tail) return null;
+  return rewindLastUserTurn(tail);
 }

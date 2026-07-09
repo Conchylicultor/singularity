@@ -12,6 +12,7 @@ function resolveBin(name: string, extraCandidates: string[]): string {
 
 export const GIT   = Bun.which("git")   ?? "git";
 export const PGREP = Bun.which("pgrep") ?? "pgrep";
+export const PS    = Bun.which("ps")    ?? "ps";
 
 export const CLAUDE =
   process.env.SINGULARITY_CLAUDE_BIN ??
