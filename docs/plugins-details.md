@@ -3898,10 +3898,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `QueryResourceContract`; Values: `queryResourceDescriptor`
       - Cross-plugin:
         - Imported by: `apps/browser/bookmarks`, `apps/mail/reading-pane`, `apps/pages/starred`, `apps/story/generation`, `build`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-progress`, `plugin-meta/plugin-health`, `release`, `shell/notifications`, `tasks/auto-start`, `tasks/tasks-core`
-    - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl), and markFirehose declares unbounded-growth tables. The retention:firehose-bounded check fails when a declared firehose table has neither a retention policy nor a cascade owner.
+    - **`retention`** — Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
       - Server:
         - Uses: `database.db`, `infra/jobs.defineJob`, `infra/jobs.JobFactory`
-        - Exports: Types: `RetentionJob`, `RetentionSpec`; Values: `defineRetention`, `markFirehose`
+        - Exports: Types: `GrowthBound`, `RetentionJob`, `RetentionSpec`; Values: `defineRetention`, `getGrowthBounds`, `markCascadeBounded`
       - Cross-plugin:
         - Imported by: `history/engine`, `reports`
     - **`runtime-profiler`**

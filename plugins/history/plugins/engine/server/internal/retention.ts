@@ -31,15 +31,14 @@ import { _entityVersions } from "./tables";
 // `perWorktree: true`: `entity_versions` lives in the per-worktree DB fork, so
 // each backend sweeps its own rows; main-only would leave every fork unbounded.
 //
-// `firehose: true` has zero runtime effect on the sweep. It only writes a
-// module-level registry read by the `retention:firehose-bounded` check, and it
-// cannot fail for this table: the same call also declares retention coverage, and
-// the check process never imports this module. We pass it for an accurate,
-// greppable inventory of known-unbounded tables and symmetry with `_reports`.
+// This `defineRetention` call IS `entity_versions`'s growth bound — there is no
+// separate "firehose" declaration to make. The bound is recorded in the
+// growth-bound registry only when `entityVersionsRetention` is mounted in
+// `register: [...]` (see `../index.ts`), so a defined-but-unmounted policy records
+// nothing rather than lying about coverage.
 export const entityVersionsRetention = defineRetention({
   table: _entityVersions,
   column: "createdAt",
   ttlDays: 30,
   perWorktree: true,
-  firehose: true,
 });
