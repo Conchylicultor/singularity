@@ -2284,7 +2284,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `ConversationsView.View` ← `conversations.conversations-view.grouped`, `conversations.conversations-view.history`, `conversations.conversations-view.queue`
         - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
-        - Uses: `conversations.useConversations`, `conversations/conversation-view.conversationPane`, `conversations/conversations-view/sidebar-region.conversationsSidebarRegionWeb`, `conversations/pane-restore.loadRouteForConversation`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.SidebarPaneSection`, `primitives/css/column.Column`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/cursor-pagination.useCursorPagination`, `primitives/launch.LaunchControl`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/tabbed-view.defineTabbedView`, `shell.Shell`
+        - Uses: `conversations.useConversations`, `conversations/conversation-view.conversationPane`, `conversations/conversations-view/sidebar-region.conversationsSidebarRegionWeb`, `conversations/pane-restore.loadRouteForConversation`, `conversations/pane-restore.reportCorruptSavedRoute`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.SidebarPaneSection`, `primitives/css/column.Column`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/cursor-pagination.useCursorPagination`, `primitives/launch.LaunchControl`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/tabbed-view.defineTabbedView`, `shell.Shell`
         - Exports: Types: `ViewProps`; Values: `ConversationsView`, `useGoneConversationsPagination`
       - Cross-plugin:
         - Imported by: `conversations/conversations-view/classic`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`
@@ -2394,8 +2394,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-view/branch`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/launch-prompts`, `conversations/runtime-tmux`, `debug/claude-cli-calls`, `infra/claude-cli`, `primitives/launch`, `tasks`, `tasks/task-draft-form`, `tasks/task-header`, `tasks/tasks-core`
     - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
       - Web:
-        - Uses: `primitives/pane.getRoute`, `primitives/pane.PaneInput`
-        - Exports: Values: `loadRouteForConversation`
+        - Uses: `primitives/pane.getRoute`, `primitives/pane.PaneInput`, `reports.report`
+        - Exports: Types: `RouteRestore`; Values: `loadRouteForConversation`, `reportCorruptSavedRoute`
       - Cross-plugin:
         - Imported by: `conversations/conversations-view`
     - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.
@@ -5409,7 +5409,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
     - Exports: Types: `Report`, `ReportSource`; Values: `CLIENT_REPORT_SOURCES`, `reportDetailRoute`, `ReportSchema`, `reportsResource`, `reportsRootRoute`, `SERVER_REPORT_SOURCES`
   - Cross-plugin:
-    - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/boot-budget`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/optimistic-divergence`, `reports/plugin-load-errors`, `reports/render-loop`, `tasks/reports-investigation`
+    - Imported by: `conversations`, `conversations/model-provider`, `conversations/pane-restore`, `conversations/runtime-tmux`, `debug/boot-budget`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/optimistic-divergence`, `reports/plugin-load-errors`, `reports/render-loop`, `tasks/reports-investigation`
   - Plugins:
     - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
       - Web:

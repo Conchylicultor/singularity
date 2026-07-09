@@ -86,10 +86,11 @@ describe("pane-restore save listener", () => {
     tabA.restoreRoute([{ paneId: "conversation", params: { convId: "X" } }]);
     await delay(90);
 
-    expect(loadRouteForConversation("X")).toEqual([
-      { paneId: "conversation", params: { convId: "X" }, input: {} },
-    ]);
-    expect(loadRouteForConversation("Y")).toBeNull();
+    expect(loadRouteForConversation("X")).toEqual({
+      kind: "restored",
+      slots: [{ paneId: "conversation", params: { convId: "X" }, input: {} }],
+    });
+    expect(loadRouteForConversation("Y")).toEqual({ kind: "none" });
 
     // Focus switches to Tab B — conversation Y with a deeper route.
     tabA.live = false;
@@ -101,13 +102,47 @@ describe("pane-restore save listener", () => {
     ]);
     await delay(90);
 
-    expect(loadRouteForConversation("Y")).toEqual([
-      { paneId: "conversation", params: { convId: "Y" }, input: {} },
-      { paneId: "file-pane", params: { path: "a.ts" }, input: {} },
-    ]);
+    expect(loadRouteForConversation("Y")).toEqual({
+      kind: "restored",
+      slots: [
+        { paneId: "conversation", params: { convId: "Y" }, input: {} },
+        { paneId: "file-pane", params: { path: "a.ts" }, input: {} },
+      ],
+    });
     // X's persisted route is untouched by Tab B's navigation.
-    expect(loadRouteForConversation("X")).toEqual([
-      { paneId: "conversation", params: { convId: "X" }, input: {} },
-    ]);
+    expect(loadRouteForConversation("X")).toEqual({
+      kind: "restored",
+      slots: [{ paneId: "conversation", params: { convId: "X" }, input: {} }],
+    });
+  });
+});
+
+describe("pane-restore corruption handling", () => {
+  // A genuine storage-read failure must never collapse into the same "nothing
+  // to restore" signal as an absent/expired key — it is reported as `corrupt`
+  // and the poisoned key is self-healed so it can't recur on every navigation.
+  it("flags malformed JSON as corrupt and drops the poisoned key", () => {
+    localStorage.setItem("route.restore.X", "{not valid json");
+
+    expect(loadRouteForConversation("X")).toEqual({
+      kind: "corrupt",
+      reason: "malformed JSON",
+    });
+    // Self-healed: the unreadable entry is gone, so the next read is a clean
+    // "nothing to restore" rather than a repeat fault.
+    expect(localStorage.getItem("route.restore.X")).toBeNull();
+    expect(loadRouteForConversation("X")).toEqual({ kind: "none" });
+  });
+
+  it("flags a valid-JSON-but-wrong-shape entry as corrupt (schema drift)", () => {
+    // Parses fine, but not our Envelope shape — the realistic corruption after
+    // a future SavedSlot/Envelope refactor reads an old entry.
+    localStorage.setItem("route.restore.X", JSON.stringify({ ts: Date.now(), v: [{ nope: 1 }] }));
+
+    expect(loadRouteForConversation("X")).toEqual({
+      kind: "corrupt",
+      reason: "unrecognized shape",
+    });
+    expect(localStorage.getItem("route.restore.X")).toBeNull();
   });
 });

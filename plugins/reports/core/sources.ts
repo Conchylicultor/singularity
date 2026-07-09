@@ -25,6 +25,7 @@ export const CLIENT_REPORT_SOURCES = [
   "client-optimistic-divergence",
   "boot-snapshot",
   "plugin-load",
+  "client-storage",
 ] as const;
 export type ReportSource =
   | (typeof SERVER_REPORT_SOURCES)[number]

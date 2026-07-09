@@ -20,7 +20,7 @@
   - Uses: `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
   - Exports: Types: `Report`, `ReportSource`; Values: `CLIENT_REPORT_SOURCES`, `reportDetailRoute`, `ReportSchema`, `reportsResource`, `reportsRootRoute`, `SERVER_REPORT_SOURCES`
 - Cross-plugin:
-  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/boot-budget`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/optimistic-divergence`, `reports/plugin-load-errors`, `reports/render-loop`, `tasks/reports-investigation`
+  - Imported by: `conversations`, `conversations/model-provider`, `conversations/pane-restore`, `conversations/runtime-tmux`, `debug/boot-budget`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/optimistic-divergence`, `reports/plugin-load-errors`, `reports/render-loop`, `tasks/reports-investigation`
 - Sub-plugins:
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
