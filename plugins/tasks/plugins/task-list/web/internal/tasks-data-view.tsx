@@ -8,7 +8,6 @@ import { createTask } from "@plugins/tasks/core";
 import type { TaskListItem, TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { patchTask } from "@plugins/tasks/web";
 import { STATUS_META, StatusIcon, StatusBadge } from "@plugins/tasks/plugins/task-status/web";
-import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { Tasks } from "../slots";
 
 // The generic tree primitive speaks `parentId`; the tasks domain stores the
@@ -16,9 +15,13 @@ import { Tasks } from "../slots";
 // domain-neutral and the folder concept never leaks into it.
 export async function createTaskRow(args: {
   parentId: string | null;
-  rank?: Rank;
+  afterId?: string;
 }): Promise<string> {
-  const task = await fetchEndpoint(createTask, {}, { body: { folderId: args.parentId, rank: args.rank?.toString() } });
+  const task = await fetchEndpoint(
+    createTask,
+    {},
+    { body: { folderId: args.parentId, afterId: args.afterId } },
+  );
   return task.id;
 }
 

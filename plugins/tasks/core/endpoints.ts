@@ -16,6 +16,10 @@ export const CreateTaskBodySchema = z.object({
   description: z.string().nullable().optional(),
   author: z.string().optional(),
   rank: z.string().optional(),
+  // Positional intent: place the new task immediately after this sibling.
+  // Resolved server-side against the complete sibling set (see rankAfterSibling)
+  // and takes precedence over `rank` / plain append.
+  afterId: z.string().optional(),
   dependencies: z.array(z.string()).optional(),
   autoStart: z
     .object({

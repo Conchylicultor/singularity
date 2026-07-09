@@ -1,0 +1,1 @@
+ALTER TABLE "page_blocks" ADD CONSTRAINT "page_blocks_parent_rank_uq" UNIQUE NULLS NOT DISTINCT("parent_id","rank");

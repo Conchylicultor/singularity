@@ -12,7 +12,6 @@ import {
   type DraggableSyntheticListeners,
 } from "@dnd-kit/core";
 import { useRankReorderItem } from "@plugins/primitives/plugins/rank-reorder/web";
-import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { TreeNode } from "../../core";
 import { pendingFocus } from "./pending-focus";
 import type { TreeItem } from "./types";
@@ -27,7 +26,7 @@ export type TreeListContextValue<T extends TreeItem> = {
   /** Omitted for a read-only tree — `canCreate` is then false and Add disappears. */
   onCreate?: (args: {
     parentId: string | null;
-    rank?: Rank;
+    afterId?: string;
   }) => Promise<string | null | undefined>;
   Row: (props: { node: TreeNode<T>; depth: number }) => ReactNode;
   /** True when the tree is in multi-select mode → RowChrome renders a checkbox. */
@@ -157,26 +156,19 @@ export function useTreeRow<T extends TreeItem>(
     ctx.onSelect(id);
   }, [ctx, node.id]);
 
+  // Positional intent only. `ctx.rows` may be a *filtered projection* of a
+  // shared ordering space (the pages sidebar sees only `type='page'` rows of the
+  // `page_blocks` forest), so a rank minted here over the visible siblings can
+  // collide with an invisible one. The consumer's endpoint resolves `afterId`
+  // against the complete sibling set.
   const addBelow = useCallback(async () => {
     const create = ctx.onCreate;
     if (!create) return;
-    const siblings = ctx.rows
-      .filter((r) => r.parentId === node.parentId)
-      .sort((a, b) => Rank.compare(a.rank, b.rank));
-    const idx = siblings.findIndex((s) => s.id === node.id);
-    const next = siblings[idx + 1];
-    let rank: Rank;
-    try {
-      rank = Rank.between(node.rank, next?.rank ?? null);
-    // eslint-disable-next-line promise-safety/no-bare-catch -- Rank.between throws a plain Error when neighbor rank is invalid/exhausted; fallback to open-ended insertion after node is the correct recovery
-    } catch {
-      rank = Rank.between(node.rank, null);
-    }
-    const id = await create({ parentId: node.parentId, rank });
+    const id = await create({ parentId: node.parentId, afterId: node.id });
     if (!id) return;
     pendingFocus.set(id);
     ctx.onSelect(id);
-  }, [ctx, node.id, node.parentId, node.rank]);
+  }, [ctx, node.id, node.parentId]);
 
   return {
     isSelected,

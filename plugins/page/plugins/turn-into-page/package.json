@@ -1,6 +1,6 @@
 {
   "name": "@singularity/plugin-page-turn-into-page",
-  "description": "Turn into → Page block action: collapse a block and its subtree into a new sub-page, leaving a clickable link in place.",
+  "description": "Turn into → Page block action: convert a block into a sub-page in place, keeping its id, position, and subtree; the page row renders inline as the link.",
   "private": true,
   "version": "0.0.1"
 }

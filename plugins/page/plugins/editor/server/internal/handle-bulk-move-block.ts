@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { eq, inArray, isNull } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   isDescendant,
@@ -13,6 +13,7 @@ import { _blocks } from "./tables";
 import { blocksChanged } from "./tables-events";
 import { recomputePageIdSubtree } from "./page-id";
 import { loadPageBlocks, rankWindow } from "./forest";
+import { parkRanks } from "./rank-park";
 
 export const handleBulkMoveBlock = implement(
   bulkMoveBlocks,
@@ -36,27 +37,57 @@ export const handleBulkMoveBlock = implement(
       }
     }
 
-    // Rank window under the destination parent, excluding everything that is
-    // moving (so the moved roots don't bound their own insertion window).
     const movingSubtree = new Set(roots.flatMap((r) => subtreeIds(rows, r)));
-    const [prev, next] = rankWindow(
-      rows,
-      body.parentId,
-      body.afterId,
-      movingSubtree,
-    );
-    const ranks = Rank.nBetween(prev, next, roots.length);
+    const byId = new Map(rows.map((r) => [r.id, r]));
 
     await db.transaction(async (tx) => {
-      for (let i = 0; i < roots.length; i++) {
+      // Rank arithmetic is only valid over the COMPLETE sibling set. `rows` is
+      // page-scoped (`loadPageBlocks` = `WHERE page_id = ?`), so when the
+      // destination parent is a `page` row its children — keyed
+      // `page_id = <that row>` — are absent from it, and a window computed over
+      // `rows` would mint `"a0"` straight onto the sub-page's existing first
+      // child. Query the destination's true siblings by `parent_id` alone: no
+      // `page_id` filter, no `type` filter. Read inside the transaction so the
+      // window can't go stale before the writes land.
+      const destSiblings = await tx
+        .select()
+        .from(_blocks)
+        .where(
+          body.parentId === null
+            ? isNull(_blocks.parentId)
+            : eq(_blocks.parentId, body.parentId),
+        );
+
+      // Exclude everything that is moving, so the moved roots don't bound their
+      // own insertion window.
+      const [prev, next] = rankWindow(
+        destSiblings,
+        body.parentId,
+        body.afterId,
+        movingSubtree,
+      );
+      const ranks = Rank.nBetween(prev, next, roots.length);
+      const placements = roots.map((id, i) => ({
+        id,
+        currentParentId: byId.get(id)!.parentId,
+        parentId: body.parentId,
+        rank: ranks[i]!.toJSON(),
+      }));
+
+      // Two-phase park-then-place. The window above EXCLUDES the moving ids, so
+      // a computed key can equal a rank a still-unmoved root holds (siblings
+      // B="a1", C="a2", D="a3"; move {B,D} after C ⇒ keys ["a3","a4"], and
+      // B → "a3" lands while D still sits at "a3"). The `(parent_id, rank)`
+      // unique index is per-tuple, so that transient duplicate aborts the
+      // transaction. Parking each root beyond its parent's max first makes the
+      // final keys collision-free in any order. See `rank-park.ts`.
+      await parkRanks(tx, { placements });
+
+      for (const p of placements) {
         await tx
           .update(_blocks)
-          .set({
-            parentId: body.parentId,
-            rank: ranks[i]!.toJSON(),
-            updatedAt: new Date(),
-          })
-          .where(eq(_blocks.id, roots[i]!));
+          .set({ parentId: p.parentId, rank: p.rank, updatedAt: new Date() })
+          .where(eq(_blocks.id, p.id));
       }
       if (body.parentId) {
         await tx
@@ -68,14 +99,21 @@ export const handleBulkMoveBlock = implement(
       for (const root of roots) await recomputePageIdSubtree(root, tx);
     });
 
-    await blocksChanged.emit({ pageId: params.pageId });
-
+    // Re-read the moved roots BY ID, not by page scope: a move into a sub-page
+    // re-stamps their `page_id`, so a `WHERE page_id = params.pageId` read would
+    // silently return fewer rows than were moved.
     const moved = await db
       .select()
       .from(_blocks)
-      .where(eq(_blocks.pageId, params.pageId));
-    return moved
-      .filter((r) => roots.includes(r.id))
-      .map((r) => BlockSchema.parse(r));
+      .where(inArray(_blocks.id, roots));
+
+    // Fan out to reindex subscribers for the source page AND every destination
+    // page the selection landed in, deduped — the same both-scopes emit
+    // `handleMoveBlock` does.
+    const affected = new Set<string>([params.pageId]);
+    for (const r of moved) if (r.pageId !== null) affected.add(r.pageId);
+    for (const pageId of affected) await blocksChanged.emit({ pageId });
+
+    return moved.map((r) => BlockSchema.parse(r));
   },
 );

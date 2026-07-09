@@ -6,6 +6,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
 } from "drizzle-orm/pg-core";
 import { rankText } from "@plugins/primitives/plugins/rank/core";
 
@@ -38,5 +39,22 @@ export const _blocks = pgTable(
   (t) => [
     index("page_blocks_page_parent_rank_idx").on(t.pageId, t.parentId, t.rank),
     index("page_blocks_page_id_idx").on(t.pageId),
+    // Siblings order by `rank`, so two of them sharing one is not a near-miss —
+    // it is an unordered pair, and `Rank.between(r, r)` throws rather than
+    // inventing a key. That crash is how this was found: the sidebar minted a
+    // rank over the `type='page'` projection of a `(parent_id, rank)` space it
+    // only half sees, and landed on a content block's key.
+    //
+    // `NULLS NOT DISTINCT` because root pages share `parent_id IS NULL` — they
+    // are one sibling list, and the default NULL semantics would exempt exactly
+    // that list from the guard.
+    //
+    // NOT deferrable: drizzle cannot emit `DEFERRABLE`, and hand-written DDL is
+    // barred (generated migrations are hash-guarded; data migrations are
+    // DML-only). So the check is per-tuple, and any writer that PERMUTES ranks
+    // among siblings must vacate the pairs it reassigns before claiming them —
+    // see `rank-park.ts`. A plain swap has no safe update order; only a scratch
+    // value does.
+    unique("page_blocks_parent_rank_uq").on(t.parentId, t.rank).nullsNotDistinct(),
   ],
 );

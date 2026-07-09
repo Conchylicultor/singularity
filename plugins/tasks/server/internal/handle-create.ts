@@ -1,9 +1,11 @@
 import {
+  _tasks,
   taskAttachments,
   addTaskDependency,
   createTask,
   getTask,
 } from "@plugins/tasks/plugins/tasks-core/server";
+import { rankAfterSibling } from "@plugins/primitives/plugins/rank/server";
 import {
   scheduleTaskTitleUpdate,
   synthesiseTitleFallback,
@@ -21,14 +23,22 @@ export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
   // Haiku then upgrades it asynchronously via scheduleTaskTitleUpdate.
   const fallbackTitle = description ? synthesiseTitleFallback(description) : null;
   const title = explicitTitle ?? fallbackTitle ?? "Untitled";
+  const folderId = body.folderId ?? null;
+  // Positional intent wins over a plain append: only the server can interpolate
+  // against the complete sibling set (the client may hold a filtered view).
+  const rank = body.afterId
+    ? await rankAfterSibling(_tasks, _tasks.folderId, folderId, body.afterId, _tasks.id)
+    : body.rank
+      ? Rank.from(body.rank)
+      : undefined;
   const row = await createTask({
-    folderId: body.folderId ?? null,
+    folderId,
     title,
     // A caller-supplied title is human-authored; a synthesised fallback is not.
     titleAuto: !explicitTitle,
     description,
     author: body.author ?? "user",
-    rank: body.rank ? Rank.from(body.rank) : undefined,
+    rank,
   });
 
   if (!explicitTitle && description && fallbackTitle) {

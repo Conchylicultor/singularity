@@ -6,6 +6,7 @@ import { handleCreateBlock } from "./internal/handle-create-block";
 import { handleUpdateBlock } from "./internal/handle-update-block";
 import { handleDeleteBlock } from "./internal/handle-delete-block";
 import { handleMoveBlock } from "./internal/handle-move-block";
+import { handleTurnIntoPage } from "./internal/handle-turn-into-page";
 import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
 import { handlePatchBlocks } from "./internal/handle-patch-blocks";
 import { handleBulkDeleteBlock } from "./internal/handle-bulk-delete-block";
@@ -21,6 +22,7 @@ import {
   updateBlock,
   deleteBlock,
   moveBlock,
+  turnIntoPage,
   applyBlockOpEndpoint,
   patchBlocks,
   bulkDeleteBlocks,
@@ -49,6 +51,7 @@ export default {
     [updateBlock.route]: handleUpdateBlock,
     [deleteBlock.route]: handleDeleteBlock,
     [moveBlock.route]: handleMoveBlock,
+    [turnIntoPage.route]: handleTurnIntoPage,
     [applyBlockOpEndpoint.route]: handleApplyBlockOp,
     [patchBlocks.route]: handlePatchBlocks,
     [bulkDeleteBlocks.route]: handleBulkDeleteBlock,

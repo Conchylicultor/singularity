@@ -597,3 +597,367 @@ describe("move", () => {
     expect(out).toEqual(blocks);
   });
 });
+
+// ---------------------------------------------------------------------------
+// Sub-pages inline: page rows are members of the content forest
+// ---------------------------------------------------------------------------
+
+/**
+ * `blocksLiveResource` no longer filters `type <> 'page'`, so the client's
+ * reducer sees exactly the forest the server's has always seen: every block
+ * whose nearest page ancestor is this page, sub-page rows included. Two
+ * consequences are load-bearing.
+ *
+ *  1. `(parent_id, rank)` is ONE complete ordering space. A minted rank must
+ *     never collide with a rank already live under the same parent — a duplicate
+ *     is precisely the state that makes the next `Rank.between` of that pair
+ *     throw (`a0 >= a0`).
+ *  2. A sub-page row is a LEAF of this forest: its own content lives under a
+ *     different `page_id`. `split`/`merge`/`indent` therefore treat it as an
+ *     illegal target, not a conditionally-handled one — reparenting or
+ *     text-merging across the boundary would strand rows whose `parent_id` and
+ *     `page_id` disagree, unreachable by any page-scoped query. The reducer
+ *     upholds the in-page invariant (it never restamps `pageId`), so the only
+ *     correct answer is a no-op.
+ */
+
+/** The page whose content forest these fixtures describe. Never a member of it. */
+const PAGE = "PAGE";
+
+function content(id: string, parentId: string, rank: string, text?: string): BlockNode {
+  return mk(id, parentId, rank, { text: text ?? id, expanded: true, pageId: PAGE });
+}
+
+function subPage(id: string, parentId: string, rank: string): BlockNode {
+  return {
+    ...mk(id, parentId, rank, { expanded: true, pageId: PAGE, type: PAGE_BLOCK_TYPE }),
+    data: { title: id, icon: null },
+  };
+}
+
+describe("page rows — split", () => {
+  // Under PAGE: T1 (text), S1 (sub-page), T2 (text). The sub-page sits exactly
+  // in the gap a split of T1 mints into — a neighbour the editor could not see
+  // before, and whose rank it therefore used to ignore.
+  const forest = (): BlockNode[] => {
+    const r1 = a;
+    const r2 = after(r1);
+    const r3 = after(r2);
+    return [content("T1", PAGE, r1, "helloworld"), subPage("S1", PAGE, r2), content("T2", PAGE, r3)];
+  };
+
+  test("splitting a text block whose next sibling is a page row mints a rank strictly inside the gap", () => {
+    const blocks = forest();
+    const out = run(blocks, { kind: "split", blockId: "T1", position: 5, newId: "NEW" });
+
+    // `run` already asserts strictly-ascending (⇒ distinct) sibling ranks.
+    expect(ids(out, PAGE)).toEqual(["T1", "NEW", "S1", "T2"]);
+    const minted = out.find((b) => b.id === "NEW")!;
+    const s1 = out.find((b) => b.id === "S1")!;
+    expect(Rank.compare(Rank.from(minted.rank), Rank.from(s1.rank))).toBe(-1);
+    expect(minted.rank).not.toBe(s1.rank);
+  });
+
+  test("splitting a page row → no-op", () => {
+    const blocks = forest();
+    const out = run(blocks, { kind: "split", blockId: "S1", position: 0, newId: "NEW" });
+    expect(out).toEqual(blocks);
+  });
+
+  test("splitting a page row asChild → no-op (never seeds into the sub-page's partition)", () => {
+    const blocks = forest();
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "S1",
+      position: 0,
+      newId: "NEW",
+      asChild: true,
+      childType: "text",
+    });
+    expect(out).toEqual(blocks);
+    expect(ids(out, "S1")).toEqual([]);
+  });
+});
+
+describe("page rows — indent", () => {
+  test("indenting a block whose previous sibling is a page row → no-op", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const r3 = after(r2);
+    const blocks = [content("T1", PAGE, r1), subPage("S1", PAGE, r2), content("T2", PAGE, r3)];
+    const out = run(blocks, { kind: "indent", blockId: "T2" });
+    expect(out).toEqual(blocks);
+    expect(ids(out, "S1")).toEqual([]);
+  });
+
+  test("indenting under a text previous sibling still works (the guard is targeted)", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const r3 = after(r2);
+    const blocks = [content("T1", PAGE, r1), content("T2", PAGE, r2), subPage("S1", PAGE, r3)];
+    const out = run(blocks, { kind: "indent", blockId: "T2" });
+    expect(out.find((b) => b.id === "T2")!.parentId).toBe("T1");
+    expect(ids(out, PAGE)).toEqual(["T1", "S1"]);
+  });
+
+  test("indenting a page row under a text sibling is allowed (the sub-page just nests)", () => {
+    // Legal: the sub-page's own `pageId` (the outer page) is unchanged, and its
+    // content lives in a different partition either way. Only the reverse —
+    // nesting content INTO a page row — is forbidden.
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [content("T1", PAGE, r1), subPage("S1", PAGE, r2)];
+    const out = run(blocks, { kind: "indent", blockId: "S1" });
+    expect(out.find((b) => b.id === "S1")!.parentId).toBe("T1");
+  });
+});
+
+describe("page rows — merge", () => {
+  test("merging into a previous page row → no-op, and the page keeps its PageData payload", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [subPage("S1", PAGE, r1), content("T1", PAGE, r2, "tail")];
+    const out = run(blocks, { kind: "merge", blockId: "T1" });
+    expect(out).toEqual(blocks);
+    // No bogus `data.text` written onto a PageDataSchema-shaped payload.
+    expect(out.find((b) => b.id === "S1")!.data).toEqual({ title: "S1", icon: null });
+  });
+
+  test("the page row is caught as prevVisibleLeaf, not merely as prevSibling", () => {
+    // T1's previous sibling is T0, whose deepest last expanded descendant is the
+    // sub-page S1. The guard must inspect the LEAF the caret would land on.
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [content("T0", PAGE, r1), subPage("S1", "T0", a), content("T1", PAGE, r2, "tail")];
+    const out = run(blocks, { kind: "merge", blockId: "T1" });
+    expect(out).toEqual(blocks);
+  });
+
+  test("merging a page row away → no-op (a keystroke must not delete a sub-page)", () => {
+    // Symmetric to the split guard: `merge` REMOVES the merged block, which for
+    // a page row would FK-cascade its entire content away.
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [content("T1", PAGE, r1), subPage("S1", PAGE, r2)];
+    const out = run(blocks, { kind: "merge", blockId: "S1" });
+    expect(out).toEqual(blocks);
+  });
+
+  test("merging into a previous text leaf still works, children adopted", () => {
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks = [
+      content("T1", PAGE, r1, "head"),
+      content("T2", PAGE, r2, "tail"),
+      content("C1", "T2", a, "child"),
+    ];
+    const out = run(blocks, { kind: "merge", blockId: "T2" });
+    expect(out.find((b) => b.id === "T2")).toBeUndefined();
+    expect(ids(out, "T1")).toEqual(["C1"]);
+    expect(textOf(out.find((b) => b.id === "T1")!)).toBe("headtail");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Property tests over random forests containing page rows
+// ---------------------------------------------------------------------------
+
+// Deterministic PRNG (mulberry32) so a fuzz failure is reproducible from its
+// seed — `Math.random()` would make a red run impossible to replay. Mirrors
+// `plugins/primitives/plugins/tree/core/internal/tree.test.ts`.
+function rng(seed: number): () => number {
+  let s = seed >>> 0;
+  return () => {
+    s |= 0;
+    s = (s + 0x6d2b79f5) | 0;
+    let t = Math.imul(s ^ (s >>> 15), 1 | s);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/**
+ * A random content forest rooted at the (absent) page row `PAGE`, with valid
+ * acyclic parent links and sibling-unique ranks. Page rows are emitted as leaves
+ * — never chosen as a parent — because that is exactly what the `page_id`
+ * partition guarantees about `loadPageBlocks`.
+ */
+function randomForest(rand: () => number, n: number): BlockNode[] {
+  const rows: BlockNode[] = [];
+  const lastRankUnder = new Map<string, Rank | null>();
+  const contentIds: string[] = []; // only content blocks may parent
+
+  for (let i = 0; i < n; i++) {
+    const id = `n${i}`;
+    const parentId =
+      contentIds.length > 0 && rand() < 0.6
+        ? contentIds[Math.floor(rand() * contentIds.length)]!
+        : PAGE;
+    const rank = Rank.between(lastRankUnder.get(parentId) ?? null, null);
+    lastRankUnder.set(parentId, rank);
+
+    if (rand() < 0.3) {
+      rows.push({ ...subPage(id, parentId, rank.toJSON()), expanded: rand() < 0.5 });
+    } else {
+      contentIds.push(id);
+      rows.push({ ...content(id, parentId, rank.toJSON()), expanded: rand() < 0.8 });
+    }
+  }
+  return rows;
+}
+
+/** Ids of every page row's children, as a `pageRowId -> childIds` map. */
+function pageRowChildren(blocks: BlockNode[]): Map<string, string[]> {
+  const out = new Map<string, string[]>();
+  for (const b of blocks) {
+    if (b.type !== PAGE_BLOCK_TYPE) continue;
+    out.set(b.id, blocks.filter((c) => c.parentId === b.id).map((c) => c.id).sort());
+  }
+  return out;
+}
+
+/** One op of every kind, instantiated against a random node of `rows`. */
+function randomOp(rand: () => number, rows: BlockNode[], nonce: number): BlockOp {
+  const kinds = ["split", "merge", "indent", "outdent", "insert", "delete", "move"] as const;
+  const kind = kinds[Math.floor(rand() * kinds.length)]!;
+  const target = rows[Math.floor(rand() * rows.length)]!;
+  const newId = `x${nonce}`;
+
+  switch (kind) {
+    case "split":
+      return { kind: "split", blockId: target.id, position: Math.floor(rand() * 4), newId };
+    case "merge":
+      return { kind: "merge", blockId: target.id };
+    case "indent":
+      return { kind: "indent", blockId: target.id };
+    case "outdent":
+      return { kind: "outdent", blockId: target.id };
+    case "delete":
+      return { kind: "delete", blockId: target.id };
+    case "insert":
+      return rand() < 0.5
+        ? { kind: "insert", newId, type: "text", data: { text: "" }, afterId: target.id }
+        : { kind: "insert", newId, type: "text", data: { text: "" }, parentId: target.id };
+    case "move": {
+      // The caller mints the rank against the destination's TRUE sibling set —
+      // the whole point of the one-forest change. Page rows are not destinations
+      // (a move into a sub-page is a cross-partition op the server recomputes).
+      const dest =
+        target.type === PAGE_BLOCK_TYPE || rand() < 0.3 ? PAGE : target.id;
+      const kids = childrenOf(rows, dest);
+      const last = kids.length > 0 ? Rank.from(kids[kids.length - 1]!.rank) : null;
+      const moved = rows[Math.floor(rand() * rows.length)]!;
+      return {
+        kind: "move",
+        blockId: moved.id,
+        parentId: dest,
+        rank: Rank.between(last, null).toJSON(),
+      };
+    }
+  }
+}
+
+describe("page rows — property (no minted rank collides with a live sibling)", () => {
+  test("every op kind over a page-row-bearing forest leaves sibling ranks strictly ascending", () => {
+    let applied = 0;
+    let noOps = 0;
+
+    for (let seed = 1; seed <= 3000; seed++) {
+      const rand = rng(seed);
+      const rows = randomForest(rand, 3 + Math.floor(rand() * 18));
+      assertRankOrdering(rows); // the generator itself never mints a collision
+
+      const before = structuredClone(rows);
+      const next = applyBlockOp(rows, randomOp(rand, rows, seed));
+      if (next === rows) noOps++;
+      else applied++;
+
+      // The load-bearing invariant: no minted rank equals a rank concurrently
+      // live under the same parent — for EVERY op kind.
+      assertRankOrdering(next);
+      // pageId is never rewritten for a surviving node (the in-page invariant).
+      assertPageIdInvariant(before, next);
+      // The reducer never mutates its input.
+      expect(rows).toEqual(before);
+    }
+
+    // Non-vacuity floor: the fuzz exercised both real applications and guards.
+    expect(applied).toBeGreaterThan(500);
+    expect(noOps).toBeGreaterThan(50);
+  });
+
+  test("split/merge/indent no-op exactly when a page row is the target, and page rows stay leaves", () => {
+    let splitGuarded = 0;
+    let mergeGuarded = 0;
+    let indentGuarded = 0;
+
+    for (let seed = 1; seed <= 500; seed++) {
+      const rand = rng(seed);
+      const rows = randomForest(rand, 4 + Math.floor(rand() * 12));
+      const leavesBefore = pageRowChildren(rows);
+      // Precondition: a page row is a leaf of the content forest.
+      for (const [, kids] of leavesBefore) expect(kids).toEqual([]);
+
+      for (const b of rows) {
+        const sibs = childrenOf(rows, b.parentId);
+        const prev = sibs[sibs.findIndex((s) => s.id === b.id) - 1] ?? null;
+        // The previous VISIBLE leaf, computed independently of the reducer.
+        let leaf = prev;
+        while (leaf?.expanded) {
+          const kids = childrenOf(rows, leaf.id);
+          if (kids.length === 0) break;
+          leaf = kids[kids.length - 1]!;
+        }
+
+        const split = applyBlockOp(rows, { kind: "split", blockId: b.id, position: 0, newId: "x" });
+        const indent = applyBlockOp(rows, { kind: "indent", blockId: b.id });
+        const merge = applyBlockOp(rows, { kind: "merge", blockId: b.id });
+
+        if (b.type === PAGE_BLOCK_TYPE) {
+          expect(split).toBe(rows);
+          splitGuarded++;
+        } else {
+          expect(split).not.toBe(rows);
+        }
+
+        if (prev === null || prev.type === PAGE_BLOCK_TYPE) {
+          expect(indent).toBe(rows);
+          if (prev?.type === PAGE_BLOCK_TYPE) indentGuarded++;
+        } else {
+          expect(indent.find((r) => r.id === b.id)!.parentId).toBe(prev.id);
+        }
+
+        if (b.type === PAGE_BLOCK_TYPE || leaf === null || leaf.type === PAGE_BLOCK_TYPE) {
+          expect(merge).toBe(rows);
+          if (leaf?.type === PAGE_BLOCK_TYPE) mergeGuarded++;
+        } else {
+          expect(merge.find((r) => r.id === b.id)).toBeUndefined();
+        }
+
+        // Page rows never gain a child through any of the three guarded ops —
+        // a child there would carry the OUTER page's `page_id` forever.
+        for (const out of [split, indent, merge]) {
+          for (const [, kids] of pageRowChildren(out)) expect(kids).toEqual([]);
+        }
+      }
+    }
+
+    expect(splitGuarded).toBeGreaterThan(100);
+    expect(indentGuarded).toBeGreaterThan(50);
+    expect(mergeGuarded).toBeGreaterThan(50);
+  });
+});
+
+describe("page rows — op-sequence simulation", () => {
+  test("a long chain of ops keeps every parent's sibling ranks strictly ascending", () => {
+    for (let seed = 1; seed <= 300; seed++) {
+      const rand = rng(seed);
+      let rows = randomForest(rand, 5 + Math.floor(rand() * 12));
+
+      for (let step = 0; step < 60 && rows.length > 0; step++) {
+        rows = applyBlockOp(rows, randomOp(rand, rows, step));
+        assertRankOrdering(rows);
+      }
+    }
+  });
+});

@@ -11,6 +11,7 @@ import {
   MdLightbulb,
 } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Text, type TextVariant } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Inset, insetClass } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
@@ -23,6 +24,7 @@ import {
   BLOCK_INSET,
   MARKER_GUTTER,
 } from "@plugins/page/plugins/editor/web";
+import { PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
 import type { BlockHandle, BlockTextVariant } from "@plugins/page/plugins/editor/core";
 import { RunsRenderer } from "./runs-renderer";
 import { PlaceholderCard } from "./placeholder-card";
@@ -266,6 +268,29 @@ function MediaBlock({
   return null;
 }
 
+/**
+ * A sub-page rendered inert: icon + title, no navigation. Sub-pages are members
+ * of a page's content forest (one ordering space), so a read-only render — the
+ * public blog site, a version-history preview — sees them and must show
+ * something honest rather than an "Unknown block: page" placeholder card. The
+ * chip is deliberately not a link: a read-only surface has no page router, and
+ * the target may not even be published.
+ */
+function SubPageChip({ data }: { data: Record<string, unknown> }) {
+  const iconNodes = Array.isArray(data.iconSvgNodes)
+    ? (data.iconSvgNodes as Parameters<typeof PageIcon>[0]["nodes"])
+    : null;
+  const title = typeof data.title === "string" && data.title ? data.title : "Untitled";
+  return (
+    <Inset x="md" y="xs">
+      <Inline gap="xs">
+        <PageIcon nodes={iconNodes} className="text-muted-foreground size-4" />
+        <Text className="font-medium">{title}</Text>
+      </Inline>
+    </Inset>
+  );
+}
+
 /** Exotic blocks → labeled placeholder card (documented fidelity gap). */
 const PLACEHOLDER_ICONS: Record<string, typeof MdWidgets> = {
   embed: MdLinkIcon,
@@ -340,7 +365,17 @@ function NodeView({
     ) : null;
 
   let body: ReactNode;
-  if (MEDIA_TYPES.has(node.type)) {
+  if (node.type === PAGE_BLOCK_TYPE) {
+    // Must precede the generic fallback: a sub-page's handle carries no `label`
+    // and its data has no `text`, so it would otherwise land on the placeholder
+    // card and leak "Unknown block: page" onto the public blog site.
+    body = (
+      <>
+        <SubPageChip data={data} />
+        {children}
+      </>
+    );
+  } else if (MEDIA_TYPES.has(node.type)) {
     body = (
       <>
         <MediaBlock type={node.type} data={data} />
@@ -413,7 +448,7 @@ function ForestView({
  *    toggle, quote, callout) render fully faithfully — heading size, marker,
  *    checkbox, rich text.
  *  - Self-contained media (image, code-block, divider) render a faithful static
- *    equivalent.
+ *    equivalent, and sub-pages render as an inert icon+title chip.
  *  - Exotic blocks (embed, equation, bookmark, audio, video, file) render a clean
  *    labeled placeholder card — the documented fidelity gap.
  */

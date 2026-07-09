@@ -13,6 +13,10 @@ import { AgentSchema, AgentLaunchWithStatusSchema } from "./schemas";
 
 export const CreateAgentBodySchema = z.object({
   parentId: z.string().nullable().optional(),
+  // Positional intent: place the new agent immediately after this sibling.
+  // Resolved server-side against the complete sibling set (see rankAfterSibling);
+  // omitted ⇒ append at the end.
+  afterId: z.string().optional(),
   name: z.string().optional(),
   prompt: z.string().nullable().optional(),
   model: ConversationModelSchema.nullable().optional(),

@@ -26,7 +26,6 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   buildTree,
-  computeDrop,
   isDescendant,
   selectionRoots,
   subtreeIds,
@@ -65,7 +64,9 @@ import {
 } from "../internal/block-paste-handlers";
 
 type FlatBlock = { block: Block; depth: number; hasChildren: boolean; ordinal: number };
-type DropTarget = { id: string; zone: DropZone };
+/** The editor drops *between* rows only — it has no tree `child` reparent zone. */
+type SiblingZone = Extract<DropZone, "before" | "after">;
+type DropTarget = { id: string; zone: SiblingZone };
 
 /** Custom clipboard MIME carrying a serialized block forest (round-trips full
  *  structure); `text/plain` carries a markdown fallback for external apps. */
@@ -95,15 +96,15 @@ function flattenTree(nodes: TreeNode<Block>[], depth: number, out: FlatBlock[]):
 // pointer sits in its top (before) or bottom (after) half. Reads live DOM rects
 // rather than dnd-kit's cached droppable rects, which drift off-by-one as block
 // heights settle. Falls back to the nearest row when between/outside rows.
-function rowAtPointer(y: number): { id: string; zone: DropZone } | null {
+function rowAtPointer(y: number): DropTarget | null {
   const els = document.querySelectorAll<HTMLElement>("[data-block-id]");
-  let nearest: { id: string; zone: DropZone } | null = null;
+  let nearest: DropTarget | null = null;
   let nearestDist = Infinity;
   for (const el of els) {
     const id = el.dataset.blockId;
     if (!id) continue;
     const r = el.getBoundingClientRect();
-    const zone: DropZone = y < r.top + r.height / 2 ? "before" : "after";
+    const zone: SiblingZone = y < r.top + r.height / 2 ? "before" : "after";
     if (y >= r.top && y <= r.bottom) return { id, zone };
     const dist = y < r.top ? r.top - y : y - r.bottom;
     if (dist < nearestDist) {
@@ -728,17 +729,9 @@ function SelectionLayer({
       return;
     }
 
-    const dest = computeDrop(rows, dragged, target.zone, target.id);
-    if (!dest) return;
-    const current = rows.find((r) => r.id === dragged);
-    if (
-      current &&
-      current.parentId === dest.parentId &&
-      Rank.equals(current.rank, dest.rank)
-    ) {
-      return;
-    }
-    move(dragged, dest);
+    // Positional intent; `move` resolves the destination parent + predicted rank
+    // over the editor's complete forest and posts `{parentId, targetId, zone}`.
+    move(dragged, target.zone, target.id);
   };
 
   const onDragCancel = () => {

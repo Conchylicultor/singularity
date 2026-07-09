@@ -1,6 +1,5 @@
-import { and, asc, eq, gt, isNull } from "drizzle-orm";
-import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { nextRankUnder } from "@plugins/primitives/plugins/rank/server";
+import { eq } from "drizzle-orm";
+import { nextRankUnder, rankAfterSibling } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createBlock } from "../../core/endpoints";
@@ -26,24 +25,15 @@ export const handleCreateBlock = implement(createBlock, async ({ body }) => {
     if (!after) throw new HttpError(404, "Block not found");
 
     parentId = after.parentId;
-    const parentFilter = after.parentId === null
-      ? isNull(_blocks.parentId)
-      : eq(_blocks.parentId, after.parentId);
-    const [nextSibling] = await db
-      .select()
-      .from(_blocks)
-      .where(and(parentFilter, gt(_blocks.rank, after.rank)))
-      .orderBy(asc(_blocks.rank))
-      .limit(1);
-
-    const afterRank = Rank.from(after.rank as unknown as string);
-    const nextRank = nextSibling
-      ? Rank.from(nextSibling.rank as unknown as string)
-      : null;
-    rank = Rank.between(afterRank, nextRank);
+    rank = await rankAfterSibling(
+      _blocks,
+      _blocks.parentId,
+      parentId,
+      body.afterId,
+      _blocks.id,
+    );
   } else {
-    rank = body.rank
-      ?? await nextRankUnder(_blocks, _blocks.parentId, parentId);
+    rank = await nextRankUnder(_blocks, _blocks.parentId, parentId);
   }
 
   const pageId = await computePageId(parentId);

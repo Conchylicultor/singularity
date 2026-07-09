@@ -4,7 +4,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { InlinePopover, type InlinePopoverProps } from "@plugins/primitives/plugins/popover/web";
-import type { Block } from "../../core";
+import { PAGE_BLOCK_TYPE, type Block } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import { Editor } from "../slots";
 import { useInsertableBlocks, BlockTypeList } from "./block-type-list";
@@ -13,7 +13,8 @@ import { useInsertableBlocks, BlockTypeList } from "./block-type-list";
  * Per-block actions popover, opened from the gutter drag handle. A single
  * popover (no nested submenus): a "Turn into" section listing insertable block
  * types (→ `api.convertTo`) plus any `Editor.TurnInto` contributions, and a
- * "Delete" item (→ `api.remove`).
+ * "Delete" item (→ `api.remove`). Sub-page rows get only "Delete" — see
+ * `convertible` below.
  */
 export function BlockActionsMenu({
   trigger,
@@ -32,6 +33,12 @@ export function BlockActionsMenu({
   const [activeIndex, setActiveIndex] = useState(-1);
   const blocks = useInsertableBlocks();
 
+  // A page row is not convertible. Converting it away from `page` would orphan
+  // every row keyed `page_id = <this block's id>` — that subtree lives in
+  // another partition and no query would ever reach it again. (The server
+  // rejects the transition too; this hides the affordance that produces it.)
+  const convertible = block.type !== PAGE_BLOCK_TYPE;
+
   return (
     <InlinePopover
       open={open}
@@ -46,27 +53,31 @@ export function BlockActionsMenu({
       trigger={trigger}
     >
       <Stack gap="xs">
-        <Text
-          as="div"
-          variant="caption"
-          className="text-muted-foreground px-sm pt-xs font-medium uppercase tracking-wide"
-        >
-          Turn into
-        </Text>
-        <BlockTypeList
-          blocks={blocks}
-          activeIndex={activeIndex}
-          onHoverIndex={setActiveIndex}
-          onSelect={(handle) => {
-            api.convertTo(handle.type, handle.empty?.() ?? {});
-            setOpen(false);
-          }}
-        />
-        <Editor.TurnInto.Render>
-          {(a) => <a.component block={block} api={api} close={() => setOpen(false)} />}
-        </Editor.TurnInto.Render>
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- my-0.5 is a hairline separator's own inset between the menu's two zones; not a Stack-gap rhythm (the surrounding gap-xs is intentionally tighter) */}
-        <div className="bg-border my-0.5 h-px" />
+        {convertible ? (
+          <>
+            <Text
+              as="div"
+              variant="caption"
+              className="text-muted-foreground px-sm pt-xs font-medium uppercase tracking-wide"
+            >
+              Turn into
+            </Text>
+            <BlockTypeList
+              blocks={blocks}
+              activeIndex={activeIndex}
+              onHoverIndex={setActiveIndex}
+              onSelect={(handle) => {
+                api.convertTo(handle.type, handle.empty?.() ?? {});
+                setOpen(false);
+              }}
+            />
+            <Editor.TurnInto.Render>
+              {(a) => <a.component block={block} api={api} close={() => setOpen(false)} />}
+            </Editor.TurnInto.Render>
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- my-0.5 is a hairline separator's own inset between the menu's two zones; not a Stack-gap rhythm (the surrounding gap-xs is intentionally tighter) */}
+            <div className="bg-border my-0.5 h-px" />
+          </>
+        ) : null}
         <Row
           className="text-destructive"
           icon={<MdDelete />}

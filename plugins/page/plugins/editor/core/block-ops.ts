@@ -263,6 +263,11 @@ function applySplit(
 ): BlockNode[] {
   const block = byId(blocks, op.blockId);
   if (!block) return blocks;
+  // A page row owns no text, so there is nothing to split, and `asChild` would
+  // seed the new node into the sub-page's own `page_id` partition without ever
+  // stamping it. Structurally unreachable (the renderer registers no text
+  // surface, so Enter can't originate here) — the guard is the belt.
+  if (block.type === PAGE_BLOCK_TYPE) return blocks;
 
   // Live callers pass authoritative `op.runs`; the `runsOfNode` fallback (lagged
   // `data.text` projection) is the pure reducer's basis (tests / non-live).
@@ -312,11 +317,21 @@ function applyMerge(
 ): BlockNode[] {
   const block = byId(blocks, op.blockId);
   if (!block) return blocks;
+  // A page row carries no text to merge away, and merging DELETES the merged
+  // block — which would take the whole sub-page (and its FK-cascaded content)
+  // with it, from a keystroke.
+  if (block.type === PAGE_BLOCK_TYPE) return blocks;
+
   // Merge into the previous VISIBLE block (the deepest last expanded descendant
   // of the prev sibling), not the immediate sibling — so the caret lands where
   // the text visually joins, matching document order.
   const prev = prevVisibleLeaf(blocks, block);
   if (!prev) return blocks; // no-op
+  // Merging into a page row would write a `data.text` onto a `PageDataSchema`
+  // payload AND adopt this block's children across the page boundary (under a
+  // row whose subtree lives in another `page_id` partition). Neither is
+  // representable — refuse.
+  if (prev.type === PAGE_BLOCK_TYPE) return blocks;
 
   // Concatenate runs into prev (coalescing the seam). `op.runs` is the live
   // merging runs on the live path; `runsOfNode` (lagged projection) is only the
@@ -353,6 +368,11 @@ function applyIndent(
   if (!block) return blocks;
   const prev = prevSibling(blocks, block);
   if (!prev) return blocks; // no-op
+  // Reparenting under a page row moves the block into that sub-page's subtree
+  // while its `page_id` still names the outer page — a row reachable by no
+  // page-scoped query. The reducer cannot restamp `page_id` (in-page
+  // invariant), so Tab-into-a-page is simply not a move.
+  if (prev.type === PAGE_BLOCK_TYPE) return blocks;
 
   const lastChild = lastOf(childrenOf(blocks, prev.id));
   const newRank = Rank.between(lastChild ? Rank.from(lastChild.rank) : null, null);

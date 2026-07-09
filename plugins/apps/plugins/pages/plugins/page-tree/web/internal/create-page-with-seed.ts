@@ -1,7 +1,6 @@
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { createBlock, PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/core";
 import { textBlock } from "@plugins/page/plugins/text/core";
-import type { Rank } from "@plugins/primitives/plugins/rank/core";
 
 /** A single content block to seed into a freshly created page, in order. */
 export type PageSeedBlock = { type: string; data: unknown };
@@ -36,7 +35,10 @@ export type PageSeedBlock = { type: string; data: unknown };
  */
 export async function createPageWithSeed(args: {
   parentId: string | null;
-  rank?: Rank;
+  /** Position the new page immediately after this existing sibling block. The
+   *  server resolves it against the true sibling set (page rows AND the content
+   *  rows sharing their `(parent_id, rank)` space); omit to append at the end. */
+  afterId?: string;
   page?: { title?: string };
   seed?: PageSeedBlock[];
 }): Promise<string> {
@@ -48,7 +50,7 @@ export async function createPageWithSeed(args: {
         parentId: args.parentId,
         type: PAGE_BLOCK_TYPE,
         data: { title: args.page?.title ?? "", icon: null },
-        rank: args.rank,
+        afterId: args.afterId,
       },
     },
   );

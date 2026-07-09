@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { nextRankIn, nextRankUnder } from "./internal/helpers";
+export { nextRankIn, nextRankUnder, rankAfterSibling } from "./internal/helpers";
 export type { RankExecutor } from "./internal/helpers";
 // Re-exported so agents implementing a ranked table find both the column type
 // and the helpers in one place.

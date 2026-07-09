@@ -113,11 +113,22 @@ export function PagesSidebar() {
               isExpanded: (b) => b.expanded,
               onToggleExpanded: (id, next) =>
                 void fetchEndpoint(updateBlock, { id }, { body: { expanded: next } }),
+              // Positional intent only — never `dest.rank`. These rows are the
+              // `type='page'` projection of the `page_blocks` forest, so a rank
+              // computed over them collides with the content blocks sharing the
+              // same `(parent_id, rank)` space. `handleMoveBlock` mints the rank
+              // against the complete sibling set.
               onMove: (id, dest) =>
                 void fetchEndpoint(
                   moveBlock,
                   { id },
-                  { body: { parentId: dest.parentId, rank: dest.rank } },
+                  {
+                    body: {
+                      parentId: dest.parentId,
+                      targetId: dest.targetId,
+                      zone: dest.zone,
+                    },
+                  },
                 ),
               onCreate: (args) => createPageWithSeed(args),
             }}

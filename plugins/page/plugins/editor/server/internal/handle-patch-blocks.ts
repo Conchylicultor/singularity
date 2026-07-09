@@ -1,12 +1,13 @@
 import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { patchBlocks } from "../../core/endpoints";
-import { BlockSchema } from "../../core/schemas";
+import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { loadPageBlocks } from "./forest";
 import { notifyStructuralChange } from "./notify-structural-change";
 import { BlockLifecycle } from "./document-hooks";
+import { parkRanks, pairChanged } from "./rank-park";
 
 /**
  * Generic minimal-change patch handler (the undo/redo inverse path). Upserts the
@@ -52,11 +53,55 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
   const inserts = body.updateOnly ? [] : body.upserts.filter((b) => !byId.has(b.id));
   const updates = body.upserts.filter((b) => byId.has(b.id));
 
+  // --- Page-type transition guard -------------------------------------------
+  // A `page` row owns every row keyed `page_id = <its id>`. Flipping it to a
+  // content type would leave that content unreachable by any query, forever;
+  // flipping a content row INTO a page would claim no content and leave its
+  // existing children mis-scoped (their `page_id` still names the outer page).
+  // Neither is expressible as a row-level patch — the only sanctioned in-place
+  // transition into `page` is `POST /api/blocks/:id/turn-into-page`, which
+  // reparents the descendants' `page_id` in the same transaction. Fail loudly
+  // rather than silently orphan.
+  for (const b of updates) {
+    const before = byId.get(b.id)!;
+    if (before.type === b.type) continue;
+    if (before.type === PAGE_BLOCK_TYPE || b.type === PAGE_BLOCK_TYPE) {
+      throw new HttpError(
+        409,
+        `Cannot change block ${b.id} from type "${before.type}" to "${b.type}": ` +
+          `a "${PAGE_BLOCK_TYPE}" row scopes its own content by page_id. ` +
+          `Use POST /api/blocks/:id/turn-into-page.`,
+      );
+    }
+  }
+
+  // Rows whose `(parentId, rank)` pair moves must be parked before the final
+  // writes land — see `rank-park.ts`. This is a blind writer: undoing a swap
+  // hands two rows each other's ranks, which the per-tuple `(parent_id, rank)`
+  // unique index would reject mid-loop.
+  const reranked = updates.flatMap((b) => {
+    const before = byId.get(b.id)!;
+    const next = { parentId: b.parentId, rank: b.rank.toJSON() };
+    if (!pairChanged(before, next)) return [];
+    return [{ id: b.id, currentParentId: before.parentId, ...next }];
+  });
+  const incoming = inserts.map((b) => ({
+    parentId: b.parentId,
+    rank: b.rank.toJSON(),
+  }));
+
   // A no-op update-only patch against an absent row (target deleted since the
   // patch was computed) writes nothing — don't fan out `blocksChanged`.
   const didWrite = inserts.length > 0 || updates.length > 0 || rootIds.length > 0;
 
   await db.transaction(async (tx) => {
+    // Vacate the `(parent_id, rank)` pairs this patch reassigns before anything
+    // claims them. Parking runs first so the inserts below can take a pair a
+    // re-ranked row is moving off (and so a swap-undo never trips the per-tuple
+    // unique index mid-loop). Parking only bumps `rank`, never `parent_id`, so
+    // it cannot depend on a row `inserts` has not created yet.
+    await parkRanks(tx, { placements: reranked, incoming });
+
     if (inserts.length > 0) {
       const now = new Date();
       await tx.insert(_blocks).values(

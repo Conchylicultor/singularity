@@ -38,15 +38,28 @@ export type TreeListProps<T extends TreeItem> = {
   rootId?: string;
   onSelect: (id: string) => void;
   onToggleExpanded: (id: string, next: boolean) => void | Promise<void>;
-  /** DnD reorder/reparent. Omit for a read-only tree — the drag handle disappears. */
+  /**
+   * DnD reorder/reparent. Omit for a read-only tree — the drag handle disappears.
+   * `dest.rank` is computed over `rows`; `dest.targetId`/`dest.zone` carry the
+   * raw positional intent (`targetId: null` + `"after"` = append under
+   * `dest.parentId`, which is what the `child` reparent zone resolves to).
+   * Consumers whose `rows` are a filtered projection of a shared ordering space
+   * must forward `targetId`/`zone` to their endpoint and ignore `dest.rank`.
+   */
   onMove?: (
     id: string,
-    dest: { parentId: string | null; rank: Rank },
+    dest: {
+      parentId: string | null;
+      rank: Rank;
+      targetId: string | null;
+      zone: "before" | "after";
+    },
   ) => void | Promise<void>;
-  /** Create child/sibling. Omit for a read-only tree — every Add affordance disappears. */
+  /** Create child/sibling. Omit for a read-only tree — every Add affordance disappears.
+   * `afterId` is positional intent (place the new row right after that sibling). */
   onCreate?: (args: {
     parentId: string | null;
-    rank?: Rank;
+    afterId?: string;
   }) => Promise<string | null | undefined>;
   /** The component used to render every row. Recursion through children is
    * handled by RowChrome (which reads this from context). */
@@ -133,9 +146,9 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   );
 
   const createAtRoot = useCallback(
-    async (parentId: string | null, rank?: Rank) => {
+    async (parentId: string | null) => {
       if (!onCreate) return;
-      const id = await onCreate({ parentId, rank });
+      const id = await onCreate({ parentId });
       if (!id) return;
       pendingFocus.set(id);
       setPendingFocusId(id);
@@ -258,7 +271,14 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       ) {
         return;
       }
-      void onMove(draggedId, dest);
+      // The raw positional intent alongside the computed rank. A `child` drop
+      // reparents under the target and lands last, which as neighbour intent is
+      // "after the end of the parent's child list" — i.e. a null target.
+      void onMove(draggedId, {
+        ...dest,
+        targetId: zone === "child" ? null : targetId,
+        zone: zone === "child" ? "after" : zone,
+      });
     },
     [rows, onMove],
   );

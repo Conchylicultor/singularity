@@ -17,6 +17,20 @@ domain (C collation = byte order), and never need a full-list rewrite.
   Both accept an optional `executor` (a `tx` from `db.transaction`) so they
   compose safely inside transactions.
 
+- **`rankAfterSibling` (this plugin, server barrel)** — server-side *positional*
+  inserts: the rank that places a new row immediately after an anchor row among
+  its true siblings (`afterId === null` prepends at the start). The positional
+  twin of `nextRankUnder`, and likewise `executor`-composable.
+
+  **Rank arithmetic is only valid over the COMPLETE sibling set**, which is why
+  this is a server API. A client usually holds a *filtered projection* of a
+  shared ordering space (a searched tree, a status-filtered list): a rank it
+  mints between two *visible* neighbours can collide with an invisible row
+  sitting between them (this really happened — two `page_blocks` siblings both
+  at `"a0"`). So a client must send **positional intent** — an anchor id — and
+  never a client-minted rank. A bad anchor throws; it never silently degrades
+  into an append.
+
 ## Import paths
 
 ```ts
@@ -25,6 +39,11 @@ import { nextRankIn } from "@plugins/primitives/plugins/rank/server";
 
 // Server — inserting under a parent (parentId, groupId, etc.)
 import { nextRankUnder } from "@plugins/primitives/plugins/rank/server";
+
+// Server — inserting immediately after an anchor sibling (positional intent)
+import { rankAfterSibling } from "@plugins/primitives/plugins/rank/server";
+// rankAfterSibling(table, parentCol, parentId, afterId, idCol, executor?)
+// afterId === null → prepend at the start of the sibling list
 
 // Server — declaring a rank column on a new table schema
 import { rankText } from "@plugins/primitives/plugins/rank/server";
@@ -56,7 +75,7 @@ import { RankSchema } from "@plugins/primitives/plugins/rank/shared";
 - Description: Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
 - Server:
   - Uses: `database.db`
-  - Exports: Types: `RankExecutor`; Values: `nextRankIn`, `nextRankUnder`, `rankText`
+  - Exports: Types: `RankExecutor`; Values: `nextRankIn`, `nextRankUnder`, `rankAfterSibling`, `rankText`
 - Cross-plugin:
   - Imported by: `apps/pages/starred`, `apps/story/story-core`, `apps/studio/explorer`, `conversations/agents`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `page/editor`, `primitives/data-view/view-core`, `primitives/tree`, `tasks`, `tasks/tasks-core`
 - Web:

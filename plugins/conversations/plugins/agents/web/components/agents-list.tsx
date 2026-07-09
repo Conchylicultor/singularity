@@ -5,7 +5,6 @@ import type {
   RowChromeMenuHelpers,
   RowMenuItem,
 } from "@plugins/primitives/plugins/tree/web";
-import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   Avatar,
   AVATAR_COLOR_KEYS,
@@ -40,13 +39,17 @@ function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
   try { return JSON.parse(raw) as SvgNode[]; } catch (err) { if (!(err instanceof SyntaxError)) throw err; return null; }
 }
 
+// Fields are listed explicitly rather than spread: a key the body schema doesn't
+// declare is silently stripped at the boundary, which is exactly how `rank` used
+// to vanish here — the new agent always landed at the end of the sibling list.
 async function createAgentRow(args: {
   parentId: string | null;
-  rank?: Rank;
+  afterId?: string;
 }): Promise<string | null> {
   const agent = await fetchEndpoint(createAgent, {}, {
     body: {
-      ...args,
+      parentId: args.parentId,
+      afterId: args.afterId,
       name: "New agent",
       prompt: "",
       iconColor: randomFrom(AVATAR_COLOR_KEYS),

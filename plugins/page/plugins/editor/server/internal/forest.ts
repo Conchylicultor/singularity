@@ -110,3 +110,58 @@ export function rankWindow(
       : (siblings.find((r) => Rank.compare(r, prev) > 0) ?? null);
   return [prev, next];
 }
+
+/**
+ * Mint the rank that places a block immediately `zone` of `targetId` among the
+ * siblings of `parentId`. The twin of `rankWindow` for a single block, and the
+ * `page_blocks` analogue of the queue's `rankAdjacentTo` (which is the live
+ * precedent for "the wire carries positional intent, the server carries the
+ * rank": `plugins/conversations/.../queue/server/internal/queue-ranks.ts`).
+ *
+ * `targetId === null` addresses the sibling-list boundary rather than a
+ * neighbour: `"after"` appends at the end, `"before"` prepends at the start.
+ *
+ * `excludeIds` are blocks leaving this sibling list (the moved block itself), so
+ * they never bound their own insertion point.
+ *
+ * `rows` MUST be the COMPLETE sibling set — every row with that `parent_id`,
+ * unfiltered by `page_id` and unfiltered by `type`. `page_blocks` has one
+ * ordering space that several live resources project disjointly; arithmetic over
+ * a filtered projection mints keys that collide with the invisible siblings.
+ * Pure over `rows` (the caller loads them, inside its own transaction).
+ *
+ * Throws (via `Rank.between`) when the neighbourhood is degenerate — two live
+ * siblings already sharing a rank. That is the correct, loud signal: it means
+ * the ordering space is already corrupt, and no fallback key would be sound.
+ */
+export function rankAdjacentTo(
+  rows: BlockRow[],
+  parentId: string | null,
+  targetId: string | null,
+  zone: "before" | "after",
+  excludeIds: ReadonlySet<string>,
+): Rank {
+  const siblings = rows
+    .filter((r) => r.parentId === parentId && !excludeIds.has(r.id))
+    .map((r) => Rank.from(r.rank))
+    .sort((a, b) => Rank.compare(a, b));
+
+  if (targetId === null) {
+    return zone === "after"
+      ? Rank.between(siblings[siblings.length - 1] ?? null, null)
+      : Rank.between(null, siblings[0] ?? null);
+  }
+
+  const targetRow = rows.find((r) => r.id === targetId);
+  if (!targetRow) {
+    throw new Error(`rankAdjacentTo: target ${targetId} is not among the siblings`);
+  }
+  const target = Rank.from(targetRow.rank);
+
+  if (zone === "before") {
+    const preds = siblings.filter((r) => Rank.compare(r, target) < 0);
+    return Rank.between(preds[preds.length - 1] ?? null, target);
+  }
+  const succ = siblings.find((r) => Rank.compare(r, target) > 0) ?? null;
+  return Rank.between(target, succ);
+}

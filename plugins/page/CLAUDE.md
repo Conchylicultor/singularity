@@ -45,10 +45,11 @@
   - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index.
   - **`quote`** — Quote / blockquote block type for the page editor.
   - **`read-only-view`** — Faithful, non-editable renderer for a page block forest, with optional per-block diff highlighting. Reuses the editor's block-handle metadata + rich-text runs model without mounting Lexical.
+  - **`sub-page`** — Sub-page block type: renders a child page inline in its parent's content flow as a clickable Notion-style page row. A void, text-less block — selectable and arrow-navigable, but Enter/Backspace can never originate in it.
   - **`text`** — Plain-text block type for the page editor.
   - **`to-do`** — To-do / checkbox block type for the page editor.
   - **`toggle`** — Toggle (collapsible) block type for the page editor.
-  - **`turn-into-page`** — Turn into → Page block action: collapse a block and its subtree into a new sub-page, leaving a clickable link in place.
+  - **`turn-into-page`** — Turn into → Page block action: convert a block into a sub-page in place, keeping its id, position, and subtree; the page row renders inline as the link.
   - **`url-paste`** — Paste a URL into an empty text block to turn it into a bookmark or embed.
   - **`video`** — Video block type: upload a video file and play it inline.
 

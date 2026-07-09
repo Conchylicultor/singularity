@@ -1,4 +1,4 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
@@ -21,8 +21,16 @@ export const pagesLiveResource = defineResource<Block[]>({
       .orderBy(asc(_blocks.rank), asc(_blocks.createdAt)) as unknown as Promise<Block[]>,
 });
 
-// A page's content: non-page blocks scoped by `pageId`. The `type <> 'page'`
-// filter keeps sub-pages out of the content editor (substrate-only UX).
+// A page's content forest: EVERY block whose nearest page ancestor is `pageId`,
+// sub-page rows included. There is no type filter, and there must not be — the
+// server's reducer (`loadPageBlocks`) has always run over exactly this set, so
+// filtering here made client and server mint fractional-index ranks over
+// different sibling sets, which is how two siblings ended up sharing `"a0"`.
+//
+// A sub-page row is automatically a LEAF of this forest: its own content carries
+// `page_id = <the sub-page's id>`, a different partition. So `(parent_id, rank)`
+// is one real, rendered ordering — the sidebar's page tree is a filtered
+// subsequence of it, not a separate ordering space.
 export const blocksLiveResource = defineResource<Block[], { pageId: string }>({
   key: blocksResource.key,
   mode: "push",
@@ -31,6 +39,6 @@ export const blocksLiveResource = defineResource<Block[], { pageId: string }>({
     db
       .select()
       .from(_blocks)
-      .where(and(eq(_blocks.pageId, pageId), ne(_blocks.type, PAGE_BLOCK_TYPE)))
+      .where(eq(_blocks.pageId, pageId))
       .orderBy(asc(_blocks.rank), asc(_blocks.createdAt)) as unknown as Promise<Block[]>,
 });

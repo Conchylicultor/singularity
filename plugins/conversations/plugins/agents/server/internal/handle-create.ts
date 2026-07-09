@@ -5,12 +5,15 @@ import { createAgent } from "../../core/endpoints";
 import { AgentSchema } from "../../core/schemas";
 import { _agents } from "./tables";
 import { agents } from "./views";
-import { nextAgentRankUnder } from "./rank";
+import { agentRankAfterSibling, nextAgentRankUnder } from "./rank";
 
 export const handleCreate = implement(createAgent, async ({ body }) => {
   const id = `agent-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const parentId = body.parentId ?? null;
-  const rank = await nextAgentRankUnder(parentId);
+  // Positional intent when the client anchored the insert; plain append otherwise.
+  const rank = body.afterId
+    ? await agentRankAfterSibling(parentId, body.afterId)
+    : await nextAgentRankUnder(parentId);
   await db
     .insert(_agents)
     .values({

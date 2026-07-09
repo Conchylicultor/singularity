@@ -1,4 +1,4 @@
-import { and, asc, eq, ne } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { listBlocks } from "../../core/endpoints";
@@ -13,10 +13,17 @@ export const handleListBlocks = implement(listBlocks, async ({ params }) => {
     .limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!page) throw new HttpError(404, "Page not found");
+  // The page's content forest, sub-page rows included — the SAME set as
+  // `blocksLiveResource` and as the reducer's `loadPageBlocks`. This endpoint is
+  // the HTTP twin of that resource, so it must not project the forest
+  // differently: `(parent_id, rank)` is one ordering space, and a consumer that
+  // sees only part of it mints fractional keys that collide with the rows it
+  // cannot see. A sub-page is a leaf here — its own content is keyed
+  // `page_id = <the sub-page>`, a different partition.
   const rows = await db
     .select()
     .from(_blocks)
-    .where(and(eq(_blocks.pageId, params.pageId), ne(_blocks.type, PAGE_BLOCK_TYPE)))
+    .where(eq(_blocks.pageId, params.pageId))
     .orderBy(asc(_blocks.rank));
   return rows.map((r) => BlockSchema.parse(r));
 });

@@ -12,8 +12,8 @@ import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpo
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
-import type { Rank } from "@plugins/primitives/plugins/rank/core";
-import { subtreeIds } from "@plugins/primitives/plugins/tree/core";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
+import { computeDrop, subtreeIds } from "@plugins/primitives/plugins/tree/core";
 import {
   moveBlock,
   applyBlockOpEndpoint,
@@ -197,7 +197,11 @@ interface BlockEditorContextValue {
    */
   focusBlock: (id: string, caretOffset?: number) => void;
   focusBlockBoundary: (id: string, edge: "start" | "end") => boolean;
-  move: (id: string, dest: { parentId: string | null; rank: Rank }) => void;
+  /**
+   * Reorder/reparent `id` to sit immediately `zone` of `targetId`. Positional
+   * intent, not a rank — the server owns the rank (see `moveBlock`).
+   */
+  move: (id: string, zone: "before" | "after", targetId: string) => void;
   /** Bulk operations on a set of selected block ids (see server endpoints). */
   bulkDelete: (ids: string[]) => void;
   bulkMove: (args: {
@@ -635,11 +639,23 @@ export function BlockEditorProvider({
   );
 
   const move = useCallback(
-    (id: string, dest: { parentId: string | null; rank: Rank }) => {
-      // Record before firing: the destination parent/rank is client-known, so the
-      // resulting rows are exactly `applyBlockOp(before, move)` (the same reducer
-      // the server's move path is consistent with for a single in-page reparent).
+    (id: string, zone: "before" | "after", targetId: string) => {
+      // The WIRE carries positional intent only — `moveBlock` mints the rank
+      // against the true sibling set. But this editor legitimately holds the
+      // COMPLETE forest for the page (`blocksResource` is unfiltered), so it can
+      // predict the resulting rank locally for the optimistic overlay and the
+      // undo record. The server's value is authoritative on reconcile.
       const before = rowsRef.current;
+      const dest = computeDrop(before, id, zone, targetId);
+      if (!dest) return;
+      const current = before.find((r) => r.id === id);
+      if (
+        current &&
+        current.parentId === dest.parentId &&
+        Rank.equals(current.rank, dest.rank)
+      ) {
+        return;
+      }
       const after = fromOpResult(before, {
         kind: "move",
         blockId: id,
@@ -647,11 +663,11 @@ export function BlockEditorProvider({
         rank: dest.rank.toJSON(),
       });
       recordStructural(before, after, OP_LABELS.move, id);
-      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: DnD rank/parent write; blocksResource push re-renders, drag again to fix.
+      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: DnD parent/position write; blocksResource push re-renders, drag again to fix.
       void fetchEndpoint(
         moveBlock,
         { id },
-        { body: { parentId: dest.parentId, rank: dest.rank } },
+        { body: { parentId: dest.parentId, targetId, zone } },
       );
     },
     [recordStructural],

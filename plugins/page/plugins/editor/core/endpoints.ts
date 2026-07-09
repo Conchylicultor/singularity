@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import { BlockSchema } from "./schemas";
 import { BlockOpSchema } from "./block-ops";
 import { BlockPatchSchema } from "./block-diff";
@@ -10,10 +9,16 @@ export const CreateBlockBodySchema = z.object({
   parentId: z.string().nullable().optional(),
   type: z.string(),
   data: z.unknown().optional(),
-  rank: RankSchema.optional(),
   /**
    * When set, position the new block immediately after this existing block —
    * same parent, rank between it and its next sibling. Overrides `parentId`.
+   *
+   * This is the ONLY positional mechanism: no caller may hand the server a rank.
+   * `page_blocks` has one ordering space `(parent_id, rank)` that several live
+   * resources project *disjointly* (the sidebar sees only `type='page'` rows,
+   * the editor sees the rest), so a client minting a fractional key over the
+   * rows it can see collides with the siblings it cannot. The server computes
+   * every rank against the complete sibling set.
    */
   afterId: z.string().optional(),
 });
@@ -26,9 +31,19 @@ export const UpdateBlockBodySchema = z.object({
 });
 export type UpdateBlockBody = z.infer<typeof UpdateBlockBodySchema>;
 
+/**
+ * Positional intent, never a rank (see `CreateBlockBodySchema.afterId`). The
+ * block lands among `parentId`'s children, immediately `zone` of `targetId`.
+ *
+ * `targetId: null` addresses the sibling-list boundary instead of a neighbour:
+ * `"after"` appends at the end of `parentId`'s children, `"before"` prepends at
+ * the start. That is what a tree "drop onto this row as a child" gesture means.
+ * A non-null `targetId` MUST already be a child of `parentId`.
+ */
 export const MoveBlockBodySchema = z.object({
   parentId: z.string().nullable(),
-  rank: RankSchema,
+  targetId: z.string().nullable(),
+  zone: z.enum(["before", "after"]),
 });
 export type MoveBlockBody = z.infer<typeof MoveBlockBodySchema>;
 
@@ -99,6 +114,28 @@ export const deleteBlock = defineEndpoint({
 export const moveBlock = defineEndpoint({
   route: "POST /api/blocks/:id/move",
   body: MoveBlockBodySchema,
+  response: BlockSchema,
+});
+
+export const TurnIntoPageBodySchema = z.object({
+  title: z.string(),
+  /**
+   * Type + data for the empty content block seeded when the target block has no
+   * children (a page with zero children renders nothing typeable). Supplied by
+   * the caller because the editor must not import a concrete block type — the
+   * same seam as `CreateBlockBodySchema.type`.
+   */
+  seedChild: z.object({ type: z.string(), data: z.unknown().optional() }),
+});
+export type TurnIntoPageBody = z.infer<typeof TurnIntoPageBodySchema>;
+
+// Turn an existing block into a sub-page **in place**: set `type="page"` and
+// `data={title, icon:null}`, seed `seedChild` when it had no children, and
+// recompute `pageId` across the new page boundary for its whole subtree. The
+// page row *is* the inline link — no separate `page-link` row is created.
+export const turnIntoPage = defineEndpoint({
+  route: "POST /api/blocks/:id/turn-into-page",
+  body: TurnIntoPageBodySchema,
   response: BlockSchema,
 });
 

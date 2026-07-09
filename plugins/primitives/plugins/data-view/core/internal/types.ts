@@ -56,15 +56,39 @@ export interface HierarchyConfig<TRow> {
   /** Server-persisted expand state. Omit → tree manages expand locally. */
   isExpanded?: (row: TRow) => boolean;
   onToggleExpanded?: (id: string, next: boolean) => void | Promise<void>;
-  /** DnD reorder/reparent. Omit → read-only nav tree (no drag). */
+  /**
+   * DnD reorder/reparent. Omit → read-only nav tree (no drag). `dest.parentId`
+   * is the destination parent; `dest.rank` is the rank the tree computed over
+   * the rows it was handed. `dest.targetId` / `dest.zone` are the drop
+   * neighbour's row id + side (`"before"`/`"after"`), with `targetId: null`
+   * meaning the parent's child-list boundary (`"after"` = append at the end —
+   * what a drop-onto-a-row reparent resolves to): rank-based consumers persist
+   * `dest.rank` and ignore them; endpoint-based (neighbor-based) consumers
+   * forward `targetId`/`zone` and ignore `dest.rank`.
+   *
+   * Mirrors `ManualOrderConfig.onMove` — a consumer whose rows are a *filtered
+   * projection* of one shared ordering space MUST be endpoint-based, since a
+   * rank minted over the rows it can see collides with the siblings it cannot.
+   */
   onMove?: (
     id: string,
-    dest: { parentId: string | null; rank: Rank },
+    dest: {
+      parentId: string | null;
+      rank: Rank;
+      targetId: string | null;
+      zone: "before" | "after";
+    },
   ) => void | Promise<void>;
-  /** Create child/sibling. Omit → no add buttons. */
+  /**
+   * Create child/sibling. Omit → no add buttons. `afterId` is positional intent
+   * — place the new row immediately after that existing sibling (absent = the
+   * consumer's own default position, normally the end of `parentId`'s children).
+   * There is no `rank`: the tree must never mint a key over rows that may be a
+   * filtered projection.
+   */
   onCreate?: (args: {
     parentId: string | null;
-    rank?: Rank;
+    afterId?: string;
   }) => Promise<string | null | undefined>;
 }
 
