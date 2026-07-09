@@ -14,11 +14,17 @@ import { BlockActionsMenu } from "./block-actions-menu";
 export const INDENT = 24;
 
 /**
- * Width (px) of the left gutter rail reserved by the block list. The hover
- * controls (+ / drag / chevron) hang into it at -60/-40/-20 from the content
- * edge, so it must stay wider than the leftmost button's offset. The page
- * header reserves the same rail for its page icon so the title text and block
- * text share one content-left edge — keep both in sync via this constant.
+ * Width (px) of the left gutter rail. Each row reserves it as its OWN
+ * padding-left (not the list container's) so the rail is inside the row's box:
+ * the hover controls (+ / drag / chevron) sit at -60/-40/-20 from the content
+ * edge, and the pointer entering the rail from anywhere — including from the
+ * far left, or across the gap left by an absent chevron — hovers the row and
+ * reveals them. Reserving the rail on the container instead would put it
+ * outside every row, and since the controls are `pointer-events-none` while
+ * hidden, nothing under the pointer could ever reveal them. Must stay wider
+ * than the leftmost button's offset. The page header reserves the same rail
+ * for its page icon so the title text and block text share one content-left
+ * edge — keep both in sync via this constant.
  */
 export const BLOCK_GUTTER = 64;
 
@@ -61,15 +67,18 @@ export function BlockRow({
   // from the pointer's position within this rect (single target → single line).
   const { setNodeRef: setDropRef } = useDroppable({ id: block.id });
 
-  // A drop lands as a sibling of this row, so the line sits at this row's depth.
-  const lineIndent = depth * INDENT;
+  // Left edge of this row's content, measured from the row's own border box.
+  // The gutter rail lives in the row's padding, so every offset below is
+  // relative to the row — the controls hang back into the rail, and a drop
+  // lands as a sibling of this row, so the line sits at this row's depth.
+  const contentLeft = BLOCK_GUTTER + depth * INDENT;
 
   return (
     <div
       ref={setDropRef}
       data-block-id={block.id}
       className="group/row relative"
-      style={{ paddingLeft: depth * INDENT }}
+      style={{ paddingLeft: contentLeft }}
     >
       {/* Chevron — collapses/expands this block's children. Closest to the
           content; pinned visible while collapsed so hidden content is
@@ -86,7 +95,7 @@ export function BlockRow({
             "text-muted-foreground hover:bg-accent cursor-pointer",
             collapsed ? "opacity-60" : "opacity-0 pointer-events-none group-hover/row:opacity-60 group-hover/row:pointer-events-auto",
           )}
-          style={{ left: depth * INDENT - 20 }}
+          style={{ left: contentLeft - 20 }}
         >
           <MdChevronRight className={cn("size-4 transition-transform", !collapsed && "rotate-90")} />
         </button>
@@ -106,7 +115,7 @@ export function BlockRow({
               "text-muted-foreground hover:bg-accent cursor-pointer",
               "opacity-0 pointer-events-none group-hover/row:opacity-60 group-hover/row:pointer-events-auto",
             )}
-            style={{ left: depth * INDENT - 60 }}
+            style={{ left: contentLeft - 60 }}
           >
             <MdAdd className="size-4" />
           </button>
@@ -132,7 +141,7 @@ export function BlockRow({
               "text-muted-foreground hover:bg-accent cursor-grab active:cursor-grabbing",
               "opacity-0 pointer-events-none group-hover/row:opacity-60 group-hover/row:pointer-events-auto",
             )}
-            style={{ left: depth * INDENT - 40 }}
+            style={{ left: contentLeft - 40 }}
           >
             <MdDragIndicator className="size-4" />
           </button>
@@ -163,7 +172,7 @@ export function BlockRow({
             "bg-primary pointer-events-none absolute right-1 z-raised h-[2px] rounded-full",
             dropZone === "before" ? "top-0" : "bottom-0",
           )}
-          style={{ left: lineIndent + 4 }}
+          style={{ left: contentLeft + 4 }}
         >
           {/* eslint-disable-next-line layout/no-adhoc-layout -- decorative endpoint dot offset onto the line via fractional negative coords */}
           <div className="bg-primary absolute -left-1 -top-[3px] size-2 rounded-full" />

@@ -585,9 +585,12 @@ function SelectionLayer({
       if (e.button !== 0) return;
       const el = e.target as HTMLElement;
       // Only start on empty background — never over a block, gutter button, or
-      // editable text (those have their own pointer behavior).
+      // editable text (those have their own pointer behavior). A row's gutter
+      // rail is its own padding, so a hit on the row element ITSELF is the rail
+      // (background); only a hit on a descendant is block content.
+      const row = el.closest("[data-block-id]");
       if (
-        el.closest("[data-block-id]") ||
+        (row && row !== el) ||
         el.closest("button") ||
         el.closest('[contenteditable="true"]')
       ) {
@@ -900,15 +903,18 @@ function SelectionLayer({
             above={<FileDropOverlay active={fileDragging} />}
             className="min-h-40 w-full cursor-text pb-sm pt-md outline-none"
           >
-            {/* Symmetric BLOCK_GUTTER reserves the left rail the three hover
-                controls (chevron, drag handle, +) hang into at -20/-40/-60 from
-                the content edge, and a matching right gutter so the text measure
-                stays centered. Block content aligns with the page title, which
-                reserves the same left rail for its icon. */}
+            {/* The LEFT rail (the three hover controls hang into it at
+                -20/-40/-60 from the content edge) is each row's own padding, so
+                the rail is inside the row's hover box — see BLOCK_GUTTER. This
+                wrapper therefore zeroes its own left padding (overriding the
+                measure class's `px-*`) and hands the full inset to the rows, so
+                block content lands exactly where a `paddingLeft: BLOCK_GUTTER`
+                here would have put it. The matching right gutter stays here,
+                keeping the text measure symmetric. */}
             <div
               ref={contentRef}
               className={cn("relative", contentClassName)}
-              style={{ paddingLeft: BLOCK_GUTTER, paddingRight: BLOCK_GUTTER }}
+              style={{ paddingLeft: 0, paddingRight: BLOCK_GUTTER }}
             >
               {flat.map((f) => (
                 <BlockRow
