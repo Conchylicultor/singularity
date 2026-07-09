@@ -1,6 +1,6 @@
 {
-  "id": "01af8278-35c3-46b7-b1a3-7f1614f88b40",
-  "prevId": "8d33a580-811b-4aea-88c3-08de2e8726b5",
+  "id": "2d074111-77d5-4afa-a4da-f9ea8ae2d5c4",
+  "prevId": "69bb6581-427e-4488-89bc-4d74ce02cba1",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -4722,7 +4722,16 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
+      "uniqueConstraints": {
+        "page_blocks_parent_rank_uq": {
+          "name": "page_blocks_parent_rank_uq",
+          "nullsNotDistinct": true,
+          "columns": [
+            "parent_id",
+            "rank"
+          ]
+        }
+      },
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false

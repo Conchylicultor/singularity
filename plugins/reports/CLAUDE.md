@@ -6,30 +6,28 @@
 
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 - Web:
-  - Slots: `Reports.KindView` ← `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.session-divergence`, `debug.slow-ops`, `reports.crash`, `reports.render-loop`
+  - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.session-divergence`, `debug.slow-ops`, `reports.crash`, `reports.optimistic-divergence`, `reports.render-loop`
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/slot-render.defineDispatchSlot`, `primitives/tab-id.getTabId`
   - Exports: Types: `ReportContext`; Values: `investigate`, `report`, `Reports`
 - Server:
-  - Uses: `build/server-build-id.getServerBuildId`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`
+  - Uses: `build/server-build-id.getServerBuildId`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `infra/retention.defineRetention`, `infra/warmup.defineWarmup`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`
   - DB schema: `plugins/reports/server/internal/tables.ts`
   - Exports: Types: `InvestigationTaskRequest`, `ReportKindSpec`, `ReportKindVariant`, `ReportNoiseInput`, `ReportNoiseRuleSpec`, `ReportRow`; Values: `_reports`, `recordReport`, `reportInvestigationSink`, `ReportKind`, `ReportNoiseRule`, `reportsResource`
+  - Register: `defineWarmup('reports.backfill-noise')`, `defineJob('retention.reports')`
   - Resources: `reports` (push)
   - Routes: `POST /api/reports`, `POST /api/reports/:id/investigate`
 - Core:
   - Uses: `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
   - Exports: Types: `Report`, `ReportSource`; Values: `CLIENT_REPORT_SOURCES`, `reportDetailRoute`, `ReportSchema`, `reportsResource`, `reportsRootRoute`, `SERVER_REPORT_SOURCES`
 - Cross-plugin:
-<<<<<<< .merge_file_o8bdMu
-  - Imported by: `conversations`, `conversations/model-provider`, `conversations/pane-restore`, `conversations/runtime-tmux`, `debug/boot-budget`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/reports`, `debug/slow-ops`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/optimistic-divergence`, `reports/plugin-load-errors`, `reports/render-loop`, `tasks/reports-investigation`
-=======
-  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/reports`, `debug/session-divergence`, `debug/slow-ops`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/plugin-load-errors`, `reports/render-loop`, `tasks/reports-investigation`
->>>>>>> .merge_file_JAqp14
+  - Imported by: `conversations`, `conversations/model-provider`, `conversations/pane-restore`, `conversations/runtime-tmux`, `debug/boot-budget`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/reports`, `debug/session-divergence`, `debug/slow-ops`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/optimistic-divergence`, `reports/plugin-load-errors`, `reports/render-loop`, `tasks/reports-investigation`
 - Sub-plugins:
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
   - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
   - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.
   - **`noise-rules`** — Built-in noise classification rules for low-signal crashes (e.g. ResizeObserver loop warnings).
+  - **`optimistic-divergence`** — Optimistic-divergence collector: drains the optimistic-mutation primitive's report sink (a predicted op the server never confirmed) into a deduped report, plus the Debug → Reports summary view. Optimistic-divergence report kind: validates divergence payloads, fingerprints by resource + label + ops (excluding the volatile miss count), and renders per-divergence correctness tasks. Re-arms periodically (6h) since a still-present divergence is a recurring warning, not a one-shot crash.
   - **`plugin-load-errors`** — Files crash tasks for plugins whose chunk failed to load in the deferred tier.
   - **`render-loop`** — Render-loop detector: a single invisible global controller (mounted via Core.Root) that installs one MutationObserver and files a deduped render-loop report when a subtree is rebuilt/re-mutated at a sustained high rate while idle, visible, and doing no meaningful work (wasted DOM thrash). Render-loop report kind: validates render-loop payloads, fingerprints by signature + mutation class, and renders per-loop perf tasks. Re-arms periodically (6h) since a still-present loop is a warning, not a one-shot crash.
 
