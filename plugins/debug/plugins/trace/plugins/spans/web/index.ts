@@ -4,6 +4,6 @@ import { SpansLane } from "./components/spans-lane";
 
 export default {
   description:
-    "Spans trace lane: the flight window (open + recently-completed spans) rendered as window-relative Gantt bars grouped by span kind, one row per (kind,label), with wait/work segments and a click-to-detail bar.",
+    "Spans trace lane: the flight window rendered as a nested call-tree waterfall — one window-relative Gantt row per span instance, depth-indented under its true parent (per-instance parentId), collapsible, with wait/work segments and a click-to-detail bar.",
   contributions: [Trace.Lane({ match: "spans", component: SpansLane })],
 } satisfies PluginDefinition;

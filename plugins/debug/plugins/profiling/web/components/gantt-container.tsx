@@ -153,6 +153,19 @@ function useGanttDrag(
 
   function handlePointerDown(e: PointerEvent): void {
     if (e.button !== 0) return;
+    // A drag-zoom must never START on an interactive control. Controls that sit
+    // inside the track's x-band (a lane header's expand/collapse buttons, the
+    // zoom-reset ✕) would otherwise be silently un-clickable: `setPointerCapture`
+    // below retargets the ensuing `click` to this container, so the control's
+    // own onClick never fires. Guarding at the source rather than making every
+    // consumer remember an `onPointerDown={stopPropagation}` — a control is never
+    // a drag surface. Bars are plain divs (not matched here) and keep their own
+    // stopPropagation, so bar clicks and empty-track drags are unaffected.
+    if (
+      e.target instanceof Element &&
+      e.target.closest("button, a, input, select, textarea, [role='button']")
+    )
+      return;
     const bounds = getBarBounds();
     if (!bounds) return;
     if (e.clientX < bounds.left || e.clientX > bounds.left + bounds.width)

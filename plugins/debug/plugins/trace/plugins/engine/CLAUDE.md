@@ -133,20 +133,34 @@ victim*:
    queued 11` on that layer confirms the gate was the bottleneck. Gate names use
    the `chargeWait` layer vocabulary, so `trigger.detail.waits`, each span's
    `waits`, and the `gates` keys all join directly.
-3. **The `spans` lanes whose `waits` include that layer are the co-queuers.** The
-   span among them with dominant `selfMs`/`childMs` overlapping the window is the
-   **holder** — the op actually occupying the gate while everyone else queued.
-   Click any bar for its label, kind, t0/t1 (wall + relative), parent chain, and
+3. **The `spans` tree names the holder — read it, don't guess it.** The spans
+   section is a **nested call-tree waterfall**: every span carries a per-instance
+   `id` / `parentId` minted by the recorder, so each row sits under the exact
+   parent *run* that opened it (two concurrent `flush`es draining the same loader
+   label are two rows under their own parents, not one bucket). The co-queuers are
+   the rows whose `waits` include the saturated layer; the **holder** is the one
+   with dominant `selfMs`/`childMs` among them. Walk the trip row's subtree — its
+   children are literally the work it was blocked behind. Click any bar for its
+   label, kind, t0/t1 (wall + relative), resolved ancestor chain, and
    wait/child/self split in the bottom detail strip.
 4. **The `contention` card** distinguishes "queued behind a gate" from "the whole
    host was saturated" — a high `loadAvg` vs `cpuCount`, or a spike in pg
    backends, points at host/DB pressure rather than a single holder.
 
-Caveats surfaced in the UI: spans carry no per-instance ids, so `parent` is
-`{kind,label}` and exact tree reconstruction is heuristic for concurrent
-same-label spans (the Gantt groups by kind, shows parent chains in the strip);
-completed spans <5 ms never enter the flight ring, so the Gantt shows ≥5 ms
-completed spans only.
+Caveats surfaced in the UI. The *shape* of the tree is exact — nesting is read off
+instance ids, never inferred from time overlap — but the window it is drawn from is
+bounded, and the wait *positions* are not measured:
+
+- **The ≥5 ms flight-ring floor.** Completed spans shorter than 5 ms never enter
+  the ring, so they are absent from the Gantt entirely.
+- **Orphan rows.** A span whose `parentId` resolves to nothing in the window
+  renders as a root, marked as such: its parent either closed in <5 ms (never
+  entered the ring) or it is a detached, fire-and-forget child that outlived its
+  parent. The row is real; only its edge is missing.
+- **The leading wait segment's position is approximate.** Waits are stored as union
+  *totals* per layer, not as intervals, so the segment's *size* is real but its
+  placement at the head of the bar is a rendering convention. The detail strip
+  labels it "position approximate".
 
 ## Adding a new event class
 

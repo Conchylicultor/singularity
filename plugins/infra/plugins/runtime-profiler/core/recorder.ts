@@ -98,6 +98,25 @@ export interface SpanRef {
   label: string;
 }
 
+// --- Per-instance span identity ---
+//
+// `{kind,label}` names a span CLASS, not a span RUN: two concurrent
+// `loader:tasks` runs under different parents are indistinguishable by label, so
+// a captured flight window cannot be reassembled into a call tree from labels
+// alone. Every span run therefore gets an `id` from this counter, and carries
+// the `id` of the entry it ran inside as `parentId` — the exact edge, resolved
+// against the live `EntryContext.parent` chain the recorder already threads.
+//
+// Monotonic and process-lifetime. NEVER reset it — not even in
+// `resetRuntimeProfile()`, which deliberately leaves live EntryContexts alone
+// (they deregister in their own `finally`). A restarted counter would hand an
+// in-flight parent's id to a fresh child, silently splicing one call tree into
+// another.
+//
+// A parent always OPENS before its child, so `parentId < id` holds for every
+// span: the tree a consumer builds from these edges is acyclic by construction.
+let nextSpanId = 1;
+
 /**
  * Per-layer wait breakdown charged to an entry while it ran: gate/lock name →
  * ms of the entry's own timeline covered by waits on that layer (an interval
@@ -127,6 +146,10 @@ export interface ParentBreakdown {
 }
 
 export interface SlowSpan {
+  /** This span RUN's identity — see `nextSpanId`. Names the exact instance that tripped. */
+  id: number;
+  /** The `id` of the enclosing entry RUN, or null at the top level. */
+  parentId: number | null;
   kind: SpanKind;
   label: string;
   durationMs: number;
@@ -255,6 +278,13 @@ export { contribute as __contribute };
  * works without threading state.
  */
 export interface EntryContext {
+  /**
+   * This entry RUN's identity (see `nextSpanId`), minted when the entry OPENS —
+   * before `fn` runs — so a child can name its parent while the parent is still
+   * in flight. There is deliberately no `parentId` field: `parent?.id` already
+   * answers it off the live chain below.
+   */
+  id: number;
   kind: SpanKind;
   label: string;
   /**
@@ -484,12 +514,12 @@ const FLIGHT_RING_MIN_MS = 5; // sub-5ms spans can't matter to a >=500ms window
 
 interface FlightRingSlot {
   used: boolean;
+  id: number;
+  parentId: number | null;
   kind: SpanKind;
   label: string;
   t0: number;
   t1: number;
-  parentKind: SpanKind | null;
-  parentLabel: string | null;
   waitMs: number;
   childMs: number;
   selfMs: number;
@@ -497,26 +527,28 @@ interface FlightRingSlot {
 
 const flightRing: FlightRingSlot[] = Array.from({ length: FLIGHT_RING_CAPACITY }, () => ({
   used: false,
+  id: 0,
+  parentId: null,
   kind: "db" as SpanKind,
   label: "",
   t0: 0,
   t1: 0,
-  parentKind: null,
-  parentLabel: null,
   waitMs: 0,
   childMs: 0,
   selfMs: 0,
 }));
 let flightRingHead = 0;
 
-// Called at the END of record(), so it naturally sits behind the
-// SINGULARITY_PROFILING kill-switch and suppression early-returns.
+// Called from record(), just above the slow-span notify loop, so it sits behind
+// the SINGULARITY_PROFILING kill-switch and suppression early-returns while
+// still landing BEFORE any handler can capture a window (see `record`).
 function pushCompleted(
   kind: SpanKind,
   label: string,
   t1: number,
   durationMs: number,
-  parent: SpanRef | null,
+  spanId: number,
+  parentId: number | null,
   waitMs: number,
   childMs: number,
   selfMs: number,
@@ -524,12 +556,12 @@ function pushCompleted(
   if (durationMs < FLIGHT_RING_MIN_MS) return;
   const slot = flightRing[flightRingHead]!;
   slot.used = true;
+  slot.id = spanId;
+  slot.parentId = parentId;
   slot.kind = kind;
   slot.label = label;
   slot.t0 = t1 - durationMs;
   slot.t1 = t1;
-  slot.parentKind = parent ? parent.kind : null;
-  slot.parentLabel = parent ? parent.label : null;
   slot.waitMs = waitMs;
   slot.childMs = childMs;
   slot.selfMs = selfMs;
@@ -567,6 +599,16 @@ export function readGateGauges(): Record<string, GateGauge> {
 
 /** One span in a captured flight window — open (still running) or completed. */
 export interface FlightSpan {
+  /** This span RUN's identity — unique across `open ∪ completed` (see `nextSpanId`). */
+  id: number;
+  /**
+   * The enclosing entry RUN's `id`, or null at the top level. Always `< id`, so
+   * the edge set is an acyclic forest. A `parentId` that resolves to nothing in
+   * the window is an ORPHAN, not corruption: the parent may be a sub-5 ms span
+   * the ring never took, or one evicted before capture. Consumers render such a
+   * span as a root.
+   */
+  parentId: number | null;
   kind: SpanKind;
   label: string;
   t0: number;
@@ -574,8 +616,6 @@ export interface FlightSpan {
   t1: number | null;
   /** (t1 ?? captureAt) − t0. */
   ageMs: number;
-  /** Innermost→outermost, capped depth. Completed spans: immediate parent only. */
-  parents: SpanRef[];
   waitMs: number;
   childMs: number;
   selfMs: number;
@@ -596,25 +636,53 @@ export interface FlightWindow {
  * context's `unionMs` mid-flight is sound — a track's union is monotonic
  * accumulated coverage, so a partial read is simply the coverage so far. This
  * is the only place in the substrate that allocates (trip-time only).
+ *
+ * The open set is **ancestor-closed**: `maxOpen` bounds the entries taken from
+ * the registry, then every still-open ancestor of a taken entry is pulled in
+ * too. So `maxOpen` is a SOFT cap (hard-bounded by `openEntries.size`) — the
+ * alternative, a hole in the middle of a chain, would silently reparent a whole
+ * subtree onto a root it never ran under, which is worse than a few extra rows.
  */
 export function captureFlightWindow(opts: {
   windowStartMs: number;
   maxOpen?: number;
   maxCompleted?: number;
-  maxParentDepth?: number;
 }): FlightWindow {
   const atMs = now();
   const maxOpen = opts.maxOpen ?? 200;
   const maxCompleted = opts.maxCompleted ?? 400;
-  const maxParentDepth = opts.maxParentDepth ?? 8;
+
+  const ctxs: EntryContext[] = [];
+  const taken = new Set<EntryContext>();
+  for (const ctx of openEntries) {
+    if (ctxs.length >= maxOpen) break;
+    ctxs.push(ctx);
+    taken.add(ctx);
+  }
+  // Ancestor closure. `ctxs` grows in place while the index loop walks it, so a
+  // pulled-in ancestor is itself visited and its own chain closed — one pass
+  // suffices. The walk stops at a CLOSED ancestor: nothing above it can be the
+  // `parentId` of an open span that isn't already covered by that span's own
+  // walk (a closed ancestor is a legitimate orphan edge, not a hole we can fill).
+  //
+  // Today this pass adds nothing: `openEntries` is a Set, a parent is always
+  // added before its child, and a Set iterates in insertion order — so any
+  // `maxOpen` prefix is already ancestor-closed. It is kept because that is an
+  // accident of the registry's *representation*, not of this function's
+  // contract: the moment `openEntries` stops being an insertion-ordered Set (a
+  // Map re-keyed by id, a re-registration, a bucketed store), a silent
+  // mid-chain hole would reparent a whole subtree onto a root it never ran
+  // under. The cost is one bounded walk on a (rate-limited) trip.
+  for (let i = 0; i < ctxs.length; i++) {
+    for (let a = ctxs[i]!.parent; a && !a.closed; a = a.parent) {
+      if (taken.has(a)) break;
+      taken.add(a);
+      ctxs.push(a);
+    }
+  }
 
   const open: FlightSpan[] = [];
-  for (const ctx of openEntries) {
-    if (open.length >= maxOpen) break;
-    const parents: SpanRef[] = [];
-    for (let a = ctx.parent, depth = 0; a && depth < maxParentDepth; a = a.parent, depth++) {
-      parents.push({ kind: a.kind, label: a.label });
-    }
+  for (const ctx of ctxs) {
     const ageMs = atMs - ctx.startMs;
     let waits: WaitBreakdown | undefined;
     if (ctx.layerUnions.size > 0) {
@@ -622,12 +690,13 @@ export function captureFlightWindow(opts: {
       for (const [layer, track] of ctx.layerUnions) waits[layer] = track.unionMs;
     }
     open.push({
+      id: ctx.id,
+      parentId: ctx.parent ? ctx.parent.id : null,
       kind: ctx.kind,
       label: ctx.label,
       t0: ctx.startMs,
       t1: null,
       ageMs,
-      parents,
       waitMs: ctx.waitUnion.unionMs,
       childMs: ctx.childUnion.unionMs,
       selfMs: Math.max(0, ageMs - ctx.busyUnion.unionMs),
@@ -635,18 +704,25 @@ export function captureFlightWindow(opts: {
     });
   }
 
+  // Completed spans need NO closure pass: a parent finishes AFTER its child, so
+  // it is newer in the ring and its `t1 ≥ child.t1 ≥ windowStartMs`. It
+  // therefore survives both the window filter and the newest-first `maxCompleted`
+  // cut strictly before its children do — a truncation can drop a child, never
+  // strand one. (A parent that closed in <5 ms never entered the ring at all;
+  // its children are orphans by construction, which the consumer renders as roots.)
   const completed: FlightSpan[] = [];
   for (let i = 0; i < FLIGHT_RING_CAPACITY && completed.length < maxCompleted; i++) {
     const slot = flightRing[(flightRingHead - 1 - i + FLIGHT_RING_CAPACITY) % FLIGHT_RING_CAPACITY]!;
     if (!slot.used) continue;
     if (slot.t1 < opts.windowStartMs) continue;
     completed.push({
+      id: slot.id,
+      parentId: slot.parentId,
       kind: slot.kind,
       label: slot.label,
       t0: slot.t0,
       t1: slot.t1,
       ageMs: slot.t1 - slot.t0,
-      parents: slot.parentKind ? [{ kind: slot.parentKind, label: slot.parentLabel! }] : [],
       waitMs: slot.waitMs,
       childMs: slot.childMs,
       selfMs: slot.selfMs,
@@ -657,12 +733,17 @@ export function captureFlightWindow(opts: {
 }
 
 // Core write path: update aggregates + slowest ring, attributing to `parent`.
-// `waitMs`/`childMs`/`selfMs` are the entry's decomposition (see module
-// header); leaf spans take the defaults (no waits, no children, all self).
+// `spanId`/`parentId` identify this span RUN and its enclosing entry run (see
+// `nextSpanId`) — the per-instance edge, carried alongside the per-label
+// `parent` snapshot the aggregates group by. `waitMs`/`childMs`/`selfMs` are the
+// entry's decomposition (see module header); leaf spans take the defaults (no
+// waits, no children, all self).
 function record(
   kind: SpanKind,
   label: string,
   durationMs: number,
+  spanId: number,
+  parentId: number | null,
   parent: SpanRef | null,
   waits?: WaitBreakdown,
   waitMs = 0,
@@ -754,7 +835,19 @@ function record(
   }
 
   const ring = slowest[kind];
-  ring.push({ kind, label: cappedLabel, durationMs, atMs, parent, waits, waitMs, childMs, selfMs });
+  ring.push({
+    id: spanId,
+    parentId,
+    kind,
+    label: cappedLabel,
+    durationMs,
+    atMs,
+    parent,
+    waits,
+    waitMs,
+    childMs,
+    selfMs,
+  });
   if (ring.length > SLOWEST_CAP) {
     // Drop the single fastest entry to keep the slowest N.
     let minIdx = 0;
@@ -764,12 +857,23 @@ function record(
     ring.splice(minIdx, 1);
   }
 
+  // The flight-ring write MUST precede the notify loop: a slow-span handler
+  // calls captureFlightWindow synchronously, and by the time we get here the
+  // span is already out of `openEntries` (recordEntrySpan's finally deregisters
+  // before record()). Written after, the tripping span would be in neither
+  // source — absent from its own trace, with its children rendering as orphan
+  // roots. Both early-returns above still guard it, so the kill-switch and
+  // suppression semantics are unchanged, and the write is allocation-free.
+  pushCompleted(kind, cappedLabel, atMs, durationMs, spanId, parentId, waitMs, childMs, selfMs);
+
   // Push seam: notify subscribers past their floor. Only build the span when
   // someone is listening to keep the hot path cheap. The handler is a
   // non-throwing fire-and-forget scheduler, so we don't guard it — failing
   // loudly is correct per repo policy.
   if (slowSpanSubs.length > 0) {
     const span: SlowSpan = {
+      id: spanId,
+      parentId,
       kind,
       label: cappedLabel,
       durationMs,
@@ -784,18 +888,26 @@ function record(
       if (durationMs >= sub.thresholdMs) sub.handler(span);
     }
   }
-
-  pushCompleted(kind, cappedLabel, atMs, durationMs, parent, waitMs, childMs, selfMs);
 }
 
 /**
  * Record a leaf span (e.g. a DB query), attributed to the innermost enclosing
  * entry point if one is active. Used by the DB pool wrapper. A leaf has no
  * decomposition: waitMs/childMs default to 0, selfMs to the full duration.
+ *
+ * A leaf never opens an `EntryContext`, so it mints its id here, at record time
+ * — it has no in-flight window during which a child could reference it.
  */
 export function recordSpan(kind: SpanKind, label: string, durationMs: number): void {
   const cur = contextRuntime.current();
-  record(kind, label, durationMs, cur ? { kind: cur.kind, label: cur.label } : null);
+  record(
+    kind,
+    label,
+    durationMs,
+    nextSpanId++,
+    cur ? cur.id : null,
+    cur ? { kind: cur.kind, label: cur.label } : null,
+  );
 }
 
 /**
@@ -824,7 +936,9 @@ export function chargeWait(layer: string, ms: number): void {
   if (suppressionRuntime.suppressed()) return;
   const cur = contextRuntime.current();
   if (!cur) {
-    record("db", `[${layer}]`, ms, null);
+    // Context-less by definition, so the fallback span is a root leaf: mint an
+    // id, no parent.
+    record("db", `[${layer}]`, ms, nextSpanId++, null, null);
     return;
   }
   const end = now();
@@ -919,7 +1033,10 @@ export async function recordEntrySpan<T>(
   // Fresh accumulators per entry, chained to the live parent context: a gate
   // charge deep inside `fn` walks this chain and unions into every open level.
   // All tracks start their frontier at t0 so pre-entry time can never count.
+  // The id is minted HERE, at open — children run inside `fn` and must be able
+  // to name this run as their parent while it is still in flight.
   const ctx: EntryContext = {
+    id: nextSpanId++,
     kind,
     label,
     parent: cur,
@@ -962,7 +1079,8 @@ export async function recordEntrySpan<T>(
       waits = {};
       for (const [layer, track] of ctx.layerUnions) waits[layer] = track.unionMs;
     }
-    record(kind, label, wall, parent, waits, waitMs, childMs, selfMs);
+    const parentId = ctx.parent ? ctx.parent.id : null;
+    record(kind, label, wall, ctx.id, parentId, parent, waits, waitMs, childMs, selfMs);
     // Flush the loader's captured table read-set into the index, keyed by label
     // (the resource key). Gating on `loader` kind means a stray table captured
     // under a non-loader entry is never indexed. Done after `record` so it can
@@ -1114,7 +1232,9 @@ export function resetRuntimeProfile(): void {
   // registrations (like slow-span subscribers), not profile data, so they
   // survive. `openEntries` is owned by the in-flight calls themselves: each
   // live context deregisters in its own finally, so clearing here would only
-  // break the add/delete pairing.
+  // break the add/delete pairing. `nextSpanId` is likewise NOT reset: those
+  // same live contexts keep their ids, and a restarted counter would reissue
+  // them to fresh spans (see `nextSpanId`).
   for (const slot of flightRing) slot.used = false;
   flightRingHead = 0;
   sinceMs = now();

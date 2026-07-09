@@ -2873,10 +2873,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `SlowEvents`, `slowEventsPane`, `traceDetailPane`
           - Cross-plugin:
             - Imported by: `debug/slow-ops/cluster`, `debug/slow-ops/pane`
-        - **`spans`** — Spans trace lane: the flight window (open + recently-completed spans) rendered as window-relative Gantt bars grouped by span kind, one row per (kind,label), with wait/work segments and a click-to-detail bar. Built-in trace event class 'spans': the flight window (open + recently-completed spans with wait/child/self decomposition) captured synchronously at the trip instant.
+        - **`spans`** — Spans trace lane: the flight window rendered as a nested call-tree waterfall — one window-relative Gantt row per span instance, depth-indented under its true parent (per-instance parentId), collapsible, with wait/work segments and a click-to-detail bar. Built-in trace event class 'spans': the flight window (open + recently-completed spans with wait/child/self decomposition) captured synchronously at the trip instant.
           - Web:
             - Contributes: `Trace.Lane` → `SpansLane`
-            - Uses: `debug/profiling.formatDuration`, `debug/profiling.MultiSpanLane`, `debug/profiling.SpanBar`, `debug/trace/engine.Trace`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`
+            - Uses: `debug/profiling.formatDuration`, `debug/profiling.MultiSpanLane`, `debug/profiling.SpanBar`, `debug/trace/engine.Trace`, `primitives/css/fill.Fill`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SingleLineProvider`
           - Server:
             - Uses: `debug/trace/engine.defineTraceEventClass`
         - **`stall`** — Stall trace lane: a histogram card of the sampled JS call stacks (top frames + collapsed stack signatures) captured during an event-loop freeze. Built-in trace event class 'stall': the sampled JS call-stack histogram (top leaves + collapsed stack signatures) captured during an event-loop freeze, passed in by the health-monitor sampler via the stall trigger's detail.
@@ -4689,7 +4689,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `FillAxis`, `FillProps`; Values: `Fill`, `fillClasses`
           - Cross-plugin:
-            - Imported by: `apps/mail/inbox`, `apps/mail/reading-pane`, `apps/mail/search`, `apps/mail/sync-status`, `apps/mail/thread-list`, `apps/sonata/library`, `apps/sonata/sources/ultimate-guitar`, `apps/studio/release/release-logs`, `apps/website/demos/release-switcher`, `apps/website/landing/pillars`, `apps/website/shell`, `apps/workflows/editor`, `auth/apple-signing/setup-wizard`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `debug/trace/pane`, `debug/trace/stall`, `primitives/data-view`
+            - Imported by: `apps/mail/inbox`, `apps/mail/reading-pane`, `apps/mail/search`, `apps/mail/sync-status`, `apps/mail/thread-list`, `apps/sonata/library`, `apps/sonata/sources/ultimate-guitar`, `apps/studio/release/release-logs`, `apps/website/demos/release-switcher`, `apps/website/landing/pillars`, `apps/website/shell`, `apps/workflows/editor`, `auth/apple-signing/setup-wizard`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `debug/trace/pane`, `debug/trace/spans`, `debug/trace/stall`, `primitives/data-view`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`

@@ -12,6 +12,7 @@ import {
   getRuntimeProfile,
   installClock,
   installSpanContextRuntime,
+  onSlowSpan,
   readGateGauges,
   recordEntrySpan,
   recordReadTables,
@@ -22,6 +23,7 @@ import {
   seedReadSetIndex,
   type Aggregate,
   type EntryContext,
+  type FlightSpan,
   type FlightWindow,
   type SpanKind,
   type Track,
@@ -295,8 +297,202 @@ describe("chargeWait fallbacks and markers", () => {
   });
 });
 
+describe("per-instance span identity", () => {
+  // Every completed span ≥5ms lands in the flight ring, which is the only place
+  // ids are observable — the aggregates group by label, by design.
+  function completedByLabel(): Map<string, FlightSpan> {
+    const w = captureFlightWindow({ windowStartMs: 0 });
+    return new Map(w.completed.map((s) => [s.label, s]));
+  }
+
+  test("ids are unique and increase monotonically across entry and leaf spans", async () => {
+    await recordEntrySpan("http", "e", async () => {
+      fakeNow = 10;
+      recordSpan("db", "q1", 10); // leaf: mints at record time
+      fakeNow = 20;
+    });
+    recordSpan("db", "q2", 10);
+
+    const spans = completedByLabel();
+    const e = spans.get("e")!;
+    const q1 = spans.get("q1")!;
+    const q2 = spans.get("q2")!;
+    // The entry mints at OPEN, so it precedes the leaf it encloses even though
+    // it records last.
+    expect(e.id).toBeLessThan(q1.id);
+    expect(q1.id).toBeLessThan(q2.id);
+    expect(new Set([e.id, q1.id, q2.id]).size).toBe(3);
+  });
+
+  test("resetRuntimeProfile does NOT restart the counter (live contexts keep their ids)", async () => {
+    await recordEntrySpan("loader", "before", async () => {
+      fakeNow = 10;
+    });
+    const before = completedByLabel().get("before")!.id;
+
+    resetRuntimeProfile();
+    fakeNow = 100;
+    await recordEntrySpan("loader", "after", async () => {
+      fakeNow = 110;
+    });
+    expect(completedByLabel().get("after")!.id).toBeGreaterThan(before);
+  });
+
+  test("a child entry's parentId is its enclosing entry's id; a top-level entry has none", async () => {
+    await recordEntrySpan("flush", "f", async () => {
+      fakeNow = 10;
+      await recordEntrySpan("push", "p", async () => {
+        fakeNow = 20;
+      });
+      fakeNow = 30;
+    });
+
+    const spans = completedByLabel();
+    const f = spans.get("f")!;
+    const p = spans.get("p")!;
+    expect(f.parentId).toBeNull();
+    expect(p.parentId).toBe(f.id);
+    // A parent always OPENS first, so the edge always points backwards — this
+    // is what makes the reconstructed tree acyclic by construction.
+    expect(p.parentId!).toBeLessThan(p.id);
+  });
+
+  test("a leaf db span inside a loader entry carries that loader's id as parentId", async () => {
+    await recordEntrySpan("loader", "tasks", async () => {
+      fakeNow = 10;
+      recordSpan("db", "select tasks", 10);
+      fakeNow = 20;
+    });
+
+    const spans = completedByLabel();
+    expect(spans.get("select tasks")!.parentId).toBe(spans.get("tasks")!.id);
+  });
+
+  test("two concurrent same-label loaders are distinct instances under their own parents", async () => {
+    const gate = deferred();
+    const parents = ["p1", "p2"].map((label) =>
+      recordEntrySpan("push", label, async () => {
+        await recordEntrySpan("loader", "tasks", async () => {
+          await gate.promise;
+        });
+      }),
+    );
+    fakeNow = 20;
+    gate.resolve();
+    await Promise.all(parents);
+
+    const w = captureFlightWindow({ windowStartMs: 0 });
+    const loaders = w.completed.filter((s) => s.label === "tasks");
+    const p1 = w.completed.find((s) => s.label === "p1")!;
+    const p2 = w.completed.find((s) => s.label === "p2")!;
+    // Same {kind,label} — indistinguishable before ids existed. Now each names
+    // the exact push instance it ran under.
+    expect(loaders).toHaveLength(2);
+    expect(new Set(loaders.map((s) => s.parentId))).toEqual(new Set([p1.id, p2.id]));
+  });
+});
+
+describe("flight recorder — ancestor closure", () => {
+  test("open spans carry id/parentId matching the live EntryContext chain", async () => {
+    await recordEntrySpan("flush", "f", async () => {
+      const outer = als.getStore()!;
+      await recordEntrySpan("loader", "l", async () => {
+        const inner = als.getStore()!;
+        fakeNow = 30;
+        const w = captureFlightWindow({ windowStartMs: 0 });
+        const of = w.open.find((s) => s.label === "f")!;
+        const ol = w.open.find((s) => s.label === "l")!;
+        expect(of.id).toBe(outer.id);
+        expect(of.parentId).toBeNull();
+        expect(ol.id).toBe(inner.id);
+        expect(ol.parentId).toBe(outer.id);
+      });
+    });
+  });
+
+  test("a truncated open set never strands an OPEN ancestor", async () => {
+    const gate = deferred();
+    const live: EntryContext[] = [];
+    // flush → push → three concurrent loaders: five entries, all registered
+    // synchronously before the first await, all open at capture time.
+    const run = recordEntrySpan("flush", "f", async () => {
+      live.push(als.getStore()!);
+      await recordEntrySpan("push", "p", async () => {
+        live.push(als.getStore()!);
+        await Promise.all(
+          ["l1", "l2", "l3"].map((label) =>
+            recordEntrySpan("loader", label, async () => {
+              live.push(als.getStore()!);
+              await gate.promise;
+            }),
+          ),
+        );
+      });
+    });
+
+    const w = captureFlightWindow({ windowStartMs: 0, maxOpen: 2 });
+    expect(w.open.length).toBeGreaterThanOrEqual(2); // maxOpen is a SOFT cap
+    const returned = new Set(w.open.map((s) => s.id));
+    const byId = new Map(live.map((ctx) => [ctx.id, ctx]));
+    for (const span of w.open) {
+      if (span.parentId === null) continue;
+      const parent = byId.get(span.parentId);
+      // A hole in the middle of a chain would silently reparent a subtree. The
+      // parent must be in the window, unless it is not an open ancestor at all
+      // (closed, or never an entry) — a legitimate orphan.
+      const isOpenAncestor = parent !== undefined && !parent.closed;
+      expect(returned.has(span.parentId) || !isOpenAncestor).toBe(true);
+    }
+    // Uncapped: the whole live chain comes back, exactly linked.
+    const full = captureFlightWindow({ windowStartMs: 0 });
+    expect(full.open).toHaveLength(5);
+    const flush = full.open.find((s) => s.label === "f")!;
+    const push = full.open.find((s) => s.label === "p")!;
+    expect(push.parentId).toBe(flush.id);
+    for (const label of ["l1", "l2", "l3"]) {
+      expect(full.open.find((s) => s.label === label)!.parentId).toBe(push.id);
+    }
+
+    gate.resolve();
+    await run;
+  });
+});
+
+describe("flight recorder — ring write precedes the notify loop", () => {
+  test("a slow-span handler capturing synchronously sees the tripping span in completed", async () => {
+    let captured: FlightWindow | undefined;
+    let tripId: number | undefined;
+    // The trip span is deregistered from `openEntries` before record() runs, so
+    // only the ring can carry it. If the ring write came after this notify, the
+    // span would be absent from its own trace and `child` would be an orphan.
+    const sub = onSlowSpan(
+      (span) => {
+        if (span.label !== "trip") return;
+        tripId = span.id;
+        captured = captureFlightWindow({ windowStartMs: 0 });
+      },
+      { thresholdMs: 10 },
+    );
+    try {
+      await recordEntrySpan("http", "trip", async () => {
+        await recordEntrySpan("loader", "child", async () => {
+          fakeNow = 20;
+        });
+        fakeNow = 30;
+      });
+    } finally {
+      sub.dispose();
+    }
+
+    if (tripId === undefined) throw new Error("onSlowSpan never fired for the trip span");
+    const trip = captured!.completed.find((s) => s.id === tripId);
+    expect(trip?.label).toBe("trip");
+    expect(captured!.completed.find((s) => s.label === "child")!.parentId).toBe(tripId);
+  });
+});
+
 describe("flight recorder — open-entry registry", () => {
-  test("capture mid-flight lists nested open entries with parents/ageMs; empty after completion", async () => {
+  test("capture mid-flight lists nested open entries with parentId/ageMs; empty after completion", async () => {
     let mid!: FlightWindow;
     await recordEntrySpan("flush", "f", async () => {
       await recordEntrySpan("loader", "l", async () => {
@@ -312,10 +508,10 @@ describe("flight recorder — open-entry registry", () => {
     expect(loader.t0).toBe(0);
     expect(loader.t1).toBeNull();
     expect(loader.ageMs).toBe(30);
-    expect(loader.parents).toEqual([{ kind: "flush", label: "f" }]);
     expect(loader.waits).toBeUndefined(); // only materialized when non-empty
     const flush = mid.open.find((s) => s.kind === "flush")!;
-    expect(flush.parents).toEqual([]);
+    expect(flush.parentId).toBeNull();
+    expect(loader.parentId).toBe(flush.id);
     // Both entries closed → deregistered.
     expect(captureFlightWindow({ windowStartMs: 0 }).open).toHaveLength(0);
   });
@@ -363,11 +559,13 @@ describe("flight recorder — completed ring", () => {
     const completed = captureFlightWindow({ windowStartMs: 0 }).completed;
     // Newest→oldest: the enclosing push recorded last.
     expect(completed.map((s) => s.label)).toEqual(["p", "slow"]);
+    const push = completed[0]!;
     const slow = completed[1]!;
     expect(slow.t0).toBe(0);
     expect(slow.t1).toBe(20);
     expect(slow.ageMs).toBe(20);
-    expect(slow.parents).toEqual([{ kind: "push", label: "p" }]);
+    expect(slow.parentId).toBe(push.id);
+    expect(push.parentId).toBeNull();
   });
 
   test("windowStartMs excludes spans completed before the window", async () => {

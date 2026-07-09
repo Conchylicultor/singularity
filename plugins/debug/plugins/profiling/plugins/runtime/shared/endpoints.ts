@@ -50,6 +50,11 @@ const aggregateSchema = z.object({
 });
 
 const slowSpanSchema = z.object({
+  // Per-instance identity: `id` names this span RUN, `parentId` the enclosing
+  // entry run (null at the top level). The `parent` SpanRef below is the
+  // per-LABEL attribution — the two answer different questions.
+  id: z.number(),
+  parentId: z.number().nullable(),
   kind: spanKindSchema,
   label: z.string(),
   durationMs: z.number(),

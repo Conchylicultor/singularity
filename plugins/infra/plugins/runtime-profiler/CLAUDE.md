@@ -19,9 +19,15 @@ restart — fine for live iterate-and-measure.
 
 Each `db`/`loader` span records the single innermost enclosing request/loader it ran under
 (its immediate `parent`), so N+1 / fan-out patterns point straight at their source. This is
-the lightweight ambient tier — one level only, **not** full span trees. A loader triggered by
-a WS subscription or a push cascade nests inside a `sub` / `push` origin entry (see below), so
-its `parent` names the request class that triggered it instead of being `null`.
+the lightweight ambient tier — one level only, and keyed by **label** (`SpanRef` is
+`{kind,label}`), which is what the `byParent` aggregate breakdown groups by. A loader
+triggered by a WS subscription or a push cascade nests inside a `sub` / `push` origin entry
+(see below), so its `parent` names the request class that triggered it instead of being
+`null`.
+
+Per-*instance* identity is a separate, finer axis — `id` / `parentId`, see the
+flight-recorder section. `SpanRef` deliberately does **not** carry an id: an aggregate is a
+roll-up over many runs of one label, so an instance id there would be meaningless.
 
 ## Wall-clock decomposition (wait / child / self)
 
@@ -137,18 +143,21 @@ pool chokepoint, matching only `FROM`/`JOIN`) and flushes them in `recordEntrySp
 ## Flight-recorder substrate
 
 Three side-structures let a slow-event consumer materialize ONE coherent instant — who was
-in flight, who just finished, how saturated each gate was — from which a blocking chain can
-be named in a single read (see `research/2026-07-02-global-slow-event-flight-recorder.md`):
+in flight, who just finished, how saturated each gate was — from which the true call tree
+can be rebuilt in a single read (see
+`research/2026-07-02-global-slow-event-flight-recorder.md` and
+`research/2026-07-09-global-span-instance-identity-call-tree.md`):
 
 - **Open-entry registry** — a `Set<EntryContext>` maintained by `recordEntrySpan` (add
   before the run, delete in the `finally` — exactly paired on every path, including
   throws). EntryContexts are otherwise reachable only via the ambient async chain of one
   request; this is what lets a snapshot enumerate every concurrently in-flight op. Leaf
   `db` spans have no context and are not registered (the completed ring covers them). The
-  delete runs *before* `record()`, so a tripping span is never in its own `open` list.
-- **Recently-completed ring** — a preallocated 4096-slot circular buffer written at the end
-  of `record()` for spans ≥ 5 ms (the blocker often finishes before its victim's span
-  ends, so open entries alone can't name it). Slots are mutable and overwritten in place;
+  delete runs *before* `record()`, so a tripping span is never in its own `open` list —
+  the ring is what carries it (see the ordering note below).
+- **Recently-completed ring** — a preallocated 4096-slot circular buffer written inside
+  `record()` for spans ≥ 5 ms (the blocker often finishes before its victim's span ends,
+  so open entries alone can't name it). Slots are mutable and overwritten in place;
   placement inside `record()` means it sits behind the `SINGULARITY_PROFILING=0`
   kill-switch and the suppression early-returns.
 - **Gate-gauge registry** — `registerGateGauge(layer, read)` (throws on a duplicate layer)
@@ -156,19 +165,60 @@ be named in a single read (see `research/2026-07-02-global-slow-event-flight-rec
   above, so a snapshot's gate occupancy joins directly to span `waits`; gate *owners*
   self-register — the recorder never names a gate.
 
-`captureFlightWindow({ windowStartMs, maxOpen?, maxCompleted?, maxParentDepth? })`
-(defaults 200/400/8) synchronously materializes both span sources into a `FlightWindow`
-`{ atMs, open, completed }` of `FlightSpan`s: open spans carry `t1: null`, the live parent
-chain (innermost→outermost, depth-capped), and per-layer `waits` read mid-flight (sound —
-a track's union is monotonic accumulated coverage); completed spans (ring slots overlapping
-the window, newest first) carry the immediate parent only. `resetRuntimeProfile()` clears
-the ring (profile data) but keeps gauges (structural registrations) and leaves open entries
-to their own `finally`.
+### Per-instance identity (`id` / `parentId`)
 
-Overhead: one paired `Set.add`/`Set.delete` per *entry* span (entry spans are low-rate —
-never per-DB-query), and a comparison + ~10 field writes (zero allocation; label strings
-are shared references) per qualifying completed span. Allocation happens only inside
-`captureFlightWindow`, i.e. only on a (rate-limited) slow-event trip.
+`{kind,label}` names a span *class*, not a span *run*: two concurrent `loader:tasks` runs
+under different parents are indistinguishable by label, so a window keyed on labels cannot
+be reassembled into a tree. Every span run therefore gets an `id` from one monotonic
+process-lifetime counter, and carries the enclosing entry run's `id` as `parentId` (`null`
+at the top level) — resolved off the live `EntryContext.parent` chain the recorder already
+threads. An entry mints its id at **open**, before `fn` runs, so a child can name it while
+it is still in flight; a leaf mints at record time (it has no in-flight window). `SlowSpan`
+and `FlightSpan` both carry the pair.
+
+The counter is **never reset** — not by `resetRuntimeProfile()`, which deliberately leaves
+live EntryContexts alone (they deregister in their own `finally`). A restarted counter
+would hand an in-flight parent's id to a fresh child, silently splicing one call tree into
+another. Because a parent always opens before its child, `parentId < id` holds for every
+span: the edge set is **acyclic by construction**, and a consumer can refuse `parentId >= id`
+as corruption. A `parentId` that resolves to nothing in the window is an **orphan**, not
+corruption — the parent may be a sub-5 ms span the ring never took, one evicted before
+capture, or (for a detached child) one that closed long ago. Consumers render such a span
+as a root.
+
+### `captureFlightWindow`
+
+`captureFlightWindow({ windowStartMs, maxOpen?, maxCompleted? })` (defaults 200/400)
+synchronously materializes both span sources into a `FlightWindow` `{ atMs, open, completed }`
+of `FlightSpan`s. Open spans carry `t1: null` and per-layer `waits` read mid-flight (sound —
+a track's union is monotonic accumulated coverage); completed spans are the ring slots
+overlapping the window, newest first. Ids are unique across `open ∪ completed` (a context is
+deleted from the registry before its span reaches the ring), so a consumer indexes both by
+`id` and links by `parentId`.
+
+The open set is **ancestor-closed**: after taking up to `maxOpen` entries from the registry,
+every still-open ancestor of a taken entry is pulled in too — so `maxOpen` is a *soft* cap
+(hard-bounded by `openEntries.size`). A hole in the middle of a chain would silently reparent
+a whole subtree onto a root it never ran under, which is worse than a few extra rows. The
+walk stops at a closed ancestor: that edge is a legitimate orphan, not a fillable hole.
+Completed spans need no such pass — a parent finishes *after* its child, so it is newer in
+the ring and its `t1 ≥ child.t1 ≥ windowStartMs`; it survives both the window filter and the
+newest-first `maxCompleted` cut strictly before its children do.
+
+**Ordering inside `record()`: the ring write precedes the `onSlowSpan` notify loop.** A
+slow-span handler calls `captureTrace` → `captureFlightWindow` *synchronously*, and by then
+the tripping entry is already out of `openEntries` (deregistered in `recordEntrySpan`'s
+`finally`, before `record`). Written after the notify, the trip span would be in neither
+source — absent from its own trace, with its children rendering as orphan roots. Both
+early-returns still guard the write, so the kill-switch and suppression semantics are
+unchanged. `resetRuntimeProfile()` clears the ring (profile data) but keeps gauges
+(structural registrations), leaves open entries to their own `finally`, and does not touch
+the id counter.
+
+Overhead: one `++` per span, one paired `Set.add`/`Set.delete` per *entry* span (entry spans
+are low-rate — never per-DB-query), and a comparison + ~10 field writes (zero allocation;
+label strings are shared references) per qualifying completed span. Allocation happens only
+inside `captureFlightWindow`, i.e. only on a (rate-limited) slow-event trip.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 

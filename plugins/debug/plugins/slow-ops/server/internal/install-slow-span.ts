@@ -46,6 +46,10 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
         durationMs: span.durationMs,
         thresholdMs: threshold,
         detail: {
+          // The tripping span's per-instance id: the captured flight window
+          // contains this exact run (the ring write precedes this notify), so a
+          // reader can root the call tree at it rather than guessing by label.
+          spanId: span.id,
           parent: span.parent,
           waits: span.waits,
           waitMs: span.waitMs,
