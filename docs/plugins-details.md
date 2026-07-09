@@ -3658,9 +3658,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/pages/history`
     - **`engine`** — Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, and list/get/restore endpoints.
       - Server:
-        - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
+        - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/retention.defineRetention`
         - DB schema: `plugins/history/plugins/engine/server/internal/tables.ts`
         - Exports: Types: `HistorySource`; Values: `defineHistorySource`, `deleteVersions`, `recordVersion`
+        - Register: `defineJob('retention.entity_versions')`
         - Routes: `GET /api/history/:sourceId/:entityId/versions`, `GET /api/history/:sourceId/:entityId/versions/:versionId`, `POST /api/history/:sourceId/:entityId/versions/:versionId/restore`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
@@ -3902,7 +3903,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `database.db`, `infra/jobs.defineJob`, `infra/jobs.JobFactory`
         - Exports: Types: `RetentionJob`, `RetentionSpec`; Values: `defineRetention`, `markFirehose`
       - Cross-plugin:
-        - Imported by: `reports`
+        - Imported by: `history/engine`, `reports`
     - **`runtime-profiler`**
       - Cross-plugin:
         - Imported by: `infra/endpoints`
