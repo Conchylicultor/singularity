@@ -1,4 +1,5 @@
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";
 import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
 import { getAttempt, listPushesForAttempt, pushesResource } from "@plugins/tasks/plugins/tasks-core/server";
 import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
@@ -25,6 +26,28 @@ const EMPTY_GRAPH: CommitsGraph = { ...EMPTY_DELTA, commits: [], landedCommits: 
 async function worktreeFor(attemptId: string): Promise<string | null> {
   const row = await getAttempt(attemptId);
   return row?.worktreePath ?? null;
+}
+
+// An attempt outlives its worktree: the row (and the chip subscribed to it) stay
+// after worktree-cleanup reaps the directory, so `worktreePath` is a DB-held
+// claim about a dir that may be gone. That is the SAME determinate state as "no
+// worktree at all" — not a failed read — so both collapse onto the caller's
+// `gone` value. Checked by catching, not by stat-then-run: a reap racing the
+// compute would slip past any pre-check. Every other git failure propagates.
+async function onWorktree<T>(
+  attemptId: string,
+  gone: T,
+  compute: (worktreePath: string) => Promise<T>,
+): Promise<T> {
+  const wt = await worktreeFor(attemptId);
+  if (!wt) return gone;
+  try {
+    return await compute(wt);
+  } catch (err) {
+    if (!(err instanceof WorktreeGoneError)) throw err;
+    evictWorktree(wt);
+    return gone;
+  }
 }
 
 // `onLastUnsubscribe` is sync while `worktreeFor` is async, so drop the cache
@@ -74,22 +97,18 @@ export const commitDeltaResource = defineResource({
     activeDeltaAttempts.delete(attemptId);
     evictWorktreeFor(attemptId);
   },
-  loader: async ({ attemptId }: Params): Promise<CommitDelta> => {
-    const wt = await worktreeFor(attemptId);
-    if (!wt) return EMPTY_DELTA;
-    return computeDelta(wt);
-  },
+  loader: ({ attemptId }: Params): Promise<CommitDelta> =>
+    onWorktree(attemptId, EMPTY_DELTA, (wt) => computeDelta(wt)),
   // Cheap ETag: the delta value derives entirely from (headSha, mainSha) — the
   // same signature the loader's `deltaMemo` keys on — so an unchanged pair proves
   // the ahead/behind/mergeBase are unchanged. No worktree ⇒ EMPTY_DELTA, so a
   // stable "none" sentinel keeps an empty attempt up-to-date. Cost: 1–2 ungated
   // `rev-parse` vs. the loader's `merge-base` + `rev-list --count`.
-  revalidate: async ({ attemptId }: Params): Promise<string> => {
-    const wt = await worktreeFor(attemptId);
-    if (!wt) return "none";
-    const { headSha, mainSha } = await probeHeadMain(wt);
-    return deltaEtag(headSha, mainSha);
-  },
+  revalidate: ({ attemptId }: Params): Promise<string> =>
+    onWorktree(attemptId, "none", async (wt) => {
+      const { headSha, mainSha } = await probeHeadMain(wt);
+      return deltaEtag(headSha, mainSha);
+    }),
 });
 
 export const commitsGraphResource = defineResource({
@@ -107,13 +126,11 @@ export const commitsGraphResource = defineResource({
     activeGraphAttempts.delete(attemptId);
     evictWorktreeFor(attemptId);
   },
-  loader: async ({ attemptId }: Params): Promise<CommitsGraph> => {
-    const wt = await worktreeFor(attemptId);
-    if (!wt) return EMPTY_GRAPH;
-    const pushes = await listPushesForAttempt(attemptId);
-    const pushedShas = pushes.map((p) => p.sha);
-    return computeGraph(wt, pushedShas);
-  },
+  loader: ({ attemptId }: Params): Promise<CommitsGraph> =>
+    onWorktree(attemptId, EMPTY_GRAPH, async (wt) => {
+      const pushes = await listPushesForAttempt(attemptId);
+      return computeGraph(wt, pushes.map((p) => p.sha));
+    }),
   // Cheap ETag: the graph value derives from (headSha, mainSha, mergeBase,
   // pushedShas). mergeBase is a pure function of the two tips (immutable history),
   // so folding in both tips covers it without spawning `merge-base`; pushedShas
@@ -122,13 +139,12 @@ export const commitsGraphResource = defineResource({
   // worktree ⇒ EMPTY_GRAPH, so a stable "none" sentinel keeps an empty attempt
   // up-to-date. Cost: 1–2 ungated `rev-parse` + the same push DB read the loader
   // does, vs. the loader's additional `merge-base` and up-to-250-commit `git log`s.
-  revalidate: async ({ attemptId }: Params): Promise<string> => {
-    const wt = await worktreeFor(attemptId);
-    if (!wt) return "none";
-    const [{ headSha, mainSha }, pushes] = await Promise.all([
-      probeHeadMain(wt),
-      listPushesForAttempt(attemptId),
-    ]);
-    return graphEtag(headSha, mainSha, pushes.map((p) => p.sha));
-  },
+  revalidate: ({ attemptId }: Params): Promise<string> =>
+    onWorktree(attemptId, "none", async (wt) => {
+      const [{ headSha, mainSha }, pushes] = await Promise.all([
+        probeHeadMain(wt),
+        listPushesForAttempt(attemptId),
+      ]);
+      return graphEtag(headSha, mainSha, pushes.map((p) => p.sha));
+    }),
 });

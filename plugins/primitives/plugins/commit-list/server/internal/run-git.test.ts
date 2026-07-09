@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { GitError, runGit, tryRunGit } from "./run-git";
+import { GitError, WorktreeGoneError, runGit, tryRunGit } from "./run-git";
 
 // A real temp git repo with one commit, so success paths exercise real git output.
 let repo: string;
@@ -39,6 +39,44 @@ describe("runGit", () => {
     expect(gitErr.message).toContain("rev-parse");
     expect(gitErr.args).toContain("--verify");
     expect(gitErr.cwd).toBe(repo);
+  });
+});
+
+describe("a vanished cwd", () => {
+  const gone = join(tmpdir(), "run-git-test-definitely-not-a-directory");
+
+  test("runGit throws WorktreeGoneError, not a bare GitError", async () => {
+    let thrown: unknown;
+    try {
+      await runGit(["rev-parse", "HEAD"], gone);
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).toBeInstanceOf(WorktreeGoneError);
+    expect((thrown as WorktreeGoneError).cwd).toBe(gone);
+  });
+
+  // The whole point of the type: a probe must not report a reaped worktree as a
+  // legitimate negative answer (here `rev-parse <sha>^` reading as "root commit").
+  test("tryRunGit throws rather than returning ok:false", async () => {
+    let thrown: unknown;
+    try {
+      await tryRunGit(["rev-parse", "HEAD^"], gone);
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).toBeInstanceOf(WorktreeGoneError);
+  });
+
+  test("a real git failure in a live repo stays a plain GitError", async () => {
+    let thrown: unknown;
+    try {
+      await runGit(["rev-parse", "--verify", "refs/heads/definitely-missing"], repo);
+    } catch (err) {
+      thrown = err;
+    }
+    expect(thrown).toBeInstanceOf(GitError);
+    expect(thrown).not.toBeInstanceOf(WorktreeGoneError);
   });
 });
 

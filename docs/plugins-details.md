@@ -1866,7 +1866,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Pane.Register` "conv-commits-graph", `Pane.Register` "conv-commit-diff", `Conversation.ActionBar` → `CommitsChip`
             - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `infra/endpoints.EndpointError`, `infra/endpoints.useEndpoint`, `primitives/collapsible.CollapsibleChevron`, `primitives/commit-list.CommitRowItem`, `primitives/commit-list.MergeBaseMarker`, `primitives/css/column.Column`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/diff-view.DiffOrImageView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`
           - Server:
-            - Uses: `infra/git-read-cache.createGitStateMemo`, `infra/git-watcher.lastKnownMainSha`, `infra/git-watcher.refHeadResource`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.GitError`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `primitives/commit-list.tryRunGit`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesForAttempt`, `tasks/tasks-core.pushesResource`
+            - Uses: `infra/git-read-cache.createGitStateMemo`, `infra/git-watcher.lastKnownMainSha`, `infra/git-watcher.refHeadResource`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.GitError`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `primitives/commit-list.tryRunGit`, `primitives/commit-list.WorktreeGoneError`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesForAttempt`, `tasks/tasks-core.pushesResource`
             - Resources: `commits-graph.delta` (push), `commits-graph.graph` (push)
         - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
           - Web:
@@ -4622,7 +4622,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `CommitRow`; Values: `COMMIT_ROW_HEIGHT`, `CommitRail`, `CommitRowItem`, `CommitRowSchema`, `MergeBaseMarker`
       - Server:
         - Uses: `infra/paths.GIT`
-        - Exports: Types: `GitResult`; Values: `GitError`, `LOG_FORMAT`, `parseGitLog`, `runGit`, `tryRunGit`
+        - Exports: Types: `GitResult`; Values: `GitError`, `LOG_FORMAT`, `parseGitLog`, `runGit`, `tryRunGit`, `WorktreeGoneError`
       - Cross-plugin:
         - Imported by: `build`, `build/build-commits`, `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `infra/git-watcher`, `review/plugin-changes`
       - Core:

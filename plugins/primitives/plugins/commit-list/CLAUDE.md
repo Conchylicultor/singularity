@@ -10,7 +10,7 @@
   - Exports: Types: `CommitRow`; Values: `COMMIT_ROW_HEIGHT`, `CommitRail`, `CommitRowItem`, `CommitRowSchema`, `MergeBaseMarker`
 - Server:
   - Uses: `infra/paths.GIT`
-  - Exports: Types: `GitResult`; Values: `GitError`, `LOG_FORMAT`, `parseGitLog`, `runGit`, `tryRunGit`
+  - Exports: Types: `GitResult`; Values: `GitError`, `LOG_FORMAT`, `parseGitLog`, `runGit`, `tryRunGit`, `WorktreeGoneError`
 - Cross-plugin:
   - Imported by: `build`, `build/build-commits`, `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `infra/git-watcher`, `review/plugin-changes`
 - Core:

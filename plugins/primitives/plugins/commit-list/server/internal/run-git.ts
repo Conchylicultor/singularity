@@ -1,3 +1,4 @@
+import { stat } from "node:fs/promises";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 
 /**
@@ -29,6 +30,45 @@ export class GitError extends Error {
 }
 
 /**
+ * The git invocation's `cwd` does not exist. Distinct from a plain
+ * {@link GitError} because a vanished worktree is a determinate *state* — the
+ * directory was reaped by worktree-cleanup, or removed by hand — not a failed
+ * read. A `worktreePath` held in the DB (e.g. `attempts.worktreePath`) is a
+ * claim about a directory that outlives it, so every consumer that may hold a
+ * stale path can branch on this type instead of string-matching git's stderr.
+ *
+ * Thrown by BOTH {@link runGit} and {@link tryRunGit}: an absent cwd is never a
+ * legitimate exit-code answer, only a broken premise.
+ */
+export class WorktreeGoneError extends GitError {
+  constructor(opts: {
+    args: string[];
+    cwd: string;
+    exitCode: number;
+    stderr: string;
+  }) {
+    super(opts);
+    this.name = "WorktreeGoneError";
+  }
+}
+
+/**
+ * Classifies a failed invocation: did git fail because its `cwd` is gone?
+ * Answered by `stat`, not by parsing git's stderr, and only ever on the failure
+ * path — the success path pays nothing.
+ */
+async function cwdIsGone(cwd: string): Promise<boolean> {
+  try {
+    await stat(cwd);
+    return false;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "ENOENT" || code === "ENOTDIR") return true;
+    throw err;
+  }
+}
+
+/**
  * Discriminated result of a git invocation. Use {@link tryRunGit} (over
  * {@link runGit}) only when a non-zero exit is a legitimate answer the caller
  * must branch on — e.g. probing whether a ref exists, `git merge-base` exiting
@@ -49,6 +89,12 @@ export type GitResult =
 /**
  * Probe variant: runs git and returns a discriminated result, never throwing
  * on a non-zero exit. The caller inspects `.ok` and branches.
+ *
+ * One exception: a non-zero exit whose `cwd` no longer exists throws
+ * {@link WorktreeGoneError}. A probe answers a question *about a repository*;
+ * with no repository there is no answer, and returning `ok:false` would let a
+ * caller absorb a reaped worktree as a legitimate negative (`rev-parse <sha>^`
+ * exiting non-zero would read as "root commit", not "the worktree is gone").
  */
 export async function tryRunGit(
   args: string[],
@@ -63,13 +109,16 @@ export async function tryRunGit(
     new Response(proc.stderr).text(),
     proc.exited,
   ]);
-  return exitCode === 0
-    ? { ok: true, stdout }
-    : { ok: false, exitCode, stdout, stderr };
+  if (exitCode === 0) return { ok: true, stdout };
+  if (await cwdIsGone(cwd)) {
+    throw new WorktreeGoneError({ args, cwd, exitCode, stderr });
+  }
+  return { ok: false, exitCode, stdout, stderr };
 }
 
 /**
- * Runs git and returns stdout, throwing {@link GitError} on any non-zero exit.
+ * Runs git and returns stdout, throwing {@link GitError} on any non-zero exit —
+ * or the narrower {@link WorktreeGoneError} when `cwd` itself has vanished.
  * This is the default: a git failure is never conflated with an empty/absent
  * result. Reach for {@link tryRunGit} only for genuine probe semantics.
  */
