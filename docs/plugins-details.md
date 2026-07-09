@@ -1823,8 +1823,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`
             - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
           - Server:
-            - Uses: `infra/file-watcher.getParcelWatcher`, `infra/git-read-cache.createGitStateMemo`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`
-            - Exports: Values: `currentGeneration`, `editedFilesResource`, `getEditedFiles`
+            - Uses: `infra/file-watcher.getParcelWatcher`, `infra/git-read-cache.createSignedMemo`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`
+            - Exports: Values: `editedFilesResource`, `editedFilesSignature`, `getEditedFiles`
             - Resources: `edited-files` (invalidate)
           - Core:
             - Uses: `primitives/live-state.resourceDescriptor`
@@ -1866,7 +1866,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Pane.Register` "conv-commits-graph", `Pane.Register` "conv-commit-diff", `Conversation.ActionBar` → `CommitsChip`
             - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `infra/endpoints.EndpointError`, `infra/endpoints.useEndpoint`, `primitives/collapsible.CollapsibleChevron`, `primitives/commit-list.CommitRowItem`, `primitives/commit-list.MergeBaseMarker`, `primitives/css/column.Column`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/diff-view.DiffOrImageView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`
           - Server:
-            - Uses: `infra/git-read-cache.createGitStateMemo`, `infra/git-watcher.lastKnownMainSha`, `infra/git-watcher.refHeadResource`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.GitError`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `primitives/commit-list.tryRunGit`, `primitives/commit-list.WorktreeGoneError`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesForAttempt`, `tasks/tasks-core.pushesResource`
+            - Uses: `infra/git-read-cache.createSignedMemo`, `infra/git-watcher.lastKnownMainSha`, `infra/git-watcher.refHeadResource`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.GitError`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `primitives/commit-list.tryRunGit`, `primitives/commit-list.WorktreeGoneError`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesForAttempt`, `tasks/tasks-core.pushesResource`
             - Resources: `commits-graph.delta` (push), `commits-graph.graph` (push)
         - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
           - Web:
@@ -3793,11 +3793,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/prototypes/files`, `apps/sonata/sources/midi/folders`, `config_v2`, `conversations/conversation-view/code`, `conversations/conversation-view/op-status`, `conversations/transcript-watcher`, `infra/corpus-index`, `infra/git-watcher`, `plugin-meta/plugin-tree`
       - Server:
         - Exports: Types: `FileWatcher`, `FileWatcherOptions`; Values: `createFileWatcher`, `getParcelWatcher`
-    - **`git-read-cache`** — Git-state-keyed result memo: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree.
+    - **`git-read-cache`** — Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call; createSignedMemo binds them at construction so a resource's revalidate and loader cannot drift.
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `plugin-meta/plugin-tree`, `review/plugin-changes`
       - Server:
-        - Exports: Types: `GitStateMemo`; Values: `createGitStateMemo`
+        - Exports: Types: `GitStateMemo`, `SignedMemo`; Values: `createGitStateMemo`, `createSignedMemo`
     - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. Emits the git.refAdvanced trigger event (main only) and notifies the refHeadResource live-state resource on every advance.
       - Server:
         - Uses: `infra/events.defineTriggerEvent`, `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.GIT`, `infra/paths.isMain`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`, `primitives/commit-list.GitError`, `primitives/commit-list.tryRunGit`
@@ -5475,7 +5475,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.useEndpoint`, `primitives/collapsible.ExpandAllButton`, `primitives/collapsible.useExpandAll`, `primitives/css/badge.Badge`, `primitives/css/badge.formatStatusLabel`, `primitives/css/card.Card`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/slot-render.defineRenderSlot`, `review.ReviewSlots`
         - Exports: Types: `FacetDiff`; Values: `PluginChangesSlots`, `usePluginFacetDiffs`
       - Server:
-        - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `conversations/conversation-view/code.currentGeneration`, `conversations/conversation-view/code.editedFilesResource`, `conversations/conversation-view/code.getEditedFiles`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/git-read-cache.createGitStateMemo`, `infra/git-watcher.lastKnownMainSha`, `infra/git-watcher.refHeadResource`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.GIT`, `infra/paths.REPO_ROOT`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.listPushesByPushId`
+        - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `conversations/conversation-view/code.editedFilesResource`, `conversations/conversation-view/code.editedFilesSignature`, `conversations/conversation-view/code.getEditedFiles`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/git-read-cache.createGitStateMemo`, `infra/git-watcher.lastKnownMainSha`, `infra/git-watcher.refHeadResource`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.GIT`, `infra/paths.REPO_ROOT`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.listPushesByPushId`
         - Resources: `review.plugin-changes` (push)
         - Routes: `GET /api/review/plugin-changes`
       - Core:
