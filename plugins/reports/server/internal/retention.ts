@@ -9,9 +9,11 @@ import { _reports } from "./tables";
 // precedent for diagnostic telemetry: reports are crash/diagnostic records,
 // re-filed automatically if the underlying problem recurs.
 //
-// `firehose: true`: the same call both declares `_reports` a firehose AND
-// provides its retention coverage, so the retention:firehose-bounded check is
-// satisfied by this very policy.
+// This `defineRetention` call IS `_reports`'s growth bound — there is no separate
+// "firehose" declaration to make. The bound is recorded in the growth-bound
+// registry only when `reportsRetention` is mounted in `register: [...]` (see
+// `plugins/reports/server/index.ts`), so a defined-but-unmounted policy records
+// nothing rather than lying about coverage.
 //
 // `perWorktree: true`: `_reports` lives in the per-worktree DB fork, so the
 // sweep must run in every worktree backend (each over its own rows).
@@ -34,6 +36,5 @@ export const reportsRetention = defineRetention({
   column: "createdAt",
   ttlDays: 7,
   perWorktree: true,
-  firehose: true,
   where: isNull(_reports.taskId),
 });

@@ -1,15 +1,24 @@
 # retention
 
-Bounds unbounded-growth DB tables. Two pieces:
+Bounds unbounded-growth ("firehose") DB tables. A table's growth bound is a
+**closed union of two constructors**, and both are TRUE by construction — there
+is no "declared but unbounded" state to represent, so there is nothing to check
+for. The bad states are unrepresentable; the one claim that cannot be made
+unrepresentable (this FK really cascades) throws at boot.
 
 - **`defineRetention(spec)`** — a thin wrapper over `defineJob` that schedules a
   nightly `DELETE ... WHERE <column> < now() - ttlDays [AND <where>]` sweep.
   Mirrors the hand-rolled precedents (`debug.trace-cleanup`,
   `attachments.orphan-sweep`); generalizes them so a table gets a retention
-  policy in one line.
-- **`retention:firehose-bounded`** check — fails when a *declared-firehose* table
-  (one that grows unboundedly) has neither a retention policy naming it nor a
-  declared cascade owner.
+  policy in one line. Records a `{kind:"ttl"}` bound — but only when mounted.
+- **`markCascadeBounded(table, owner)`** — asserts, synchronously at module eval,
+  that `table` has an FK `onDelete: "cascade"` to `owner` (so deleting an owner
+  row reclaims the children), then records a `{kind:"cascade", owner}` bound. If
+  the cascade does not exist it **throws at boot**.
+- **`getGrowthBounds()`** — a copy of the `Map<tableName, GrowthBound>`. Its only
+  consumer is the deferred undeclared-growth monitor (a separate follow-up task),
+  which uses it as a *silencing* set — which is exactly why every entry must be
+  true (mounted for `ttl`, FK-verified for `cascade`), never merely declared.
 
 ## `defineRetention`
 
@@ -24,7 +33,6 @@ export const reportsRetention = defineRetention({
   cron: "0 4 * * *",     // 5-field UTC (default nightly 04:00)
   perWorktree: true,     // sweep runs in every worktree DB fork (default false = main-only)
   where: eq(_reports.pinned, false), // optional extra scope AND-ed onto the age predicate
-  firehose: true,        // also register into the firehose set (see below)
 });
 ```
 
@@ -41,63 +49,77 @@ The DELETE predicate is `column < cutoff` — **strict**, so a row exactly at th
 cutoff instant is kept. `cutoff` is recomputed each tick (not captured at define
 time). A missing `column` throws loudly at `defineRetention` call time.
 
-## Firehose check — declared set, not auto-detected
+## Coverage ⇔ mounted, by construction (G1)
 
-Automatic "is this table unbounded?" classification is undecidable and would
-false-positive on every lookup table, so the model is **inverted to a declared
-set**: a table opts in as firehose, and the check fails only when a *declared*
-firehose table has no growth bound.
+`defineRetention` records the `{kind:"ttl"}` bound **inside the returned
+factory's `register()`**, next to the wrapped `defineJob(...).register()` — never
+at call time. A `JobFactory` only becomes a live sweep when the consumer puts it
+in `register: [...]`; recording the bound anywhere else would let a policy that is
+*defined but never mounted* (its sweep silently never runs) still claim coverage.
+By writing the bound only in `register()`, the two facts — "the sweep is
+scheduled" and "the table is recorded as bounded" — happen in the same call or
+not at all. Forgetting `register: [x]` leaves the table in the same state as never
+writing the code: no false coverage, no lying registry. This is the
+"failure must never masquerade as a legitimate value" rule applied to the
+registry itself.
 
-- `defineRetention({ ..., firehose: true })` — the table is a firehose AND, by the
-  same call, gets a retention policy, so it is covered.
-- `markFirehose(table)` — declares a firehose with **no** bound yet; the check
-  fails until a `defineRetention` names it.
-- `markFirehose(table, { cascadeOwner: true })` — declares a firehose bounded by
-  an FK `onDelete: "cascade"` to an owner (deleting the owner reclaims the
-  children), so it needs no TTL sweep and is covered.
+## `markCascadeBounded` — verify the cascade where the truth lives (G2)
 
-### Why cascade coverage is a declared flag, not FK introspection
+A table whose rows are reclaimed by an FK cascade needs no TTL sweep, but the
+claim "this FK really cascades" must be checked, not trusted. `markCascadeBounded`
+reads `getTableConfig(table).foreignKeys` from `drizzle-orm/pg-core` — a
+synchronous, DB-free read of the drizzle table object — and requires an FK with
+`onDelete: "cascade"` whose `reference().foreignTable` is `owner`. On violation it
+throws, naming the table, the owner, and every FK actually found (name +
+`onDelete` + target).
 
-The firehose registry is keyed by table **name** (a string from
-`getTableName`), because the `./singularity check` runner is a standalone process
-that only ever holds names — it does not have the drizzle table objects, so it
-**cannot** introspect a table's foreign keys or their `onDelete` action at check
-time. Cascade coverage is therefore a deliberate, greppable declaration
-(`markFirehose(table, { cascadeOwner: true })`) rather than something inferred.
-This is the robust choice: no dependence on drizzle's internal FK metadata shape.
+- Reading the **drizzle declaration** (not `pg_constraint`) is correct and needs
+  no DB: `migrations-in-sync` already guarantees `tables.ts` ↔ committed
+  migrations, so the declaration *is* the schema. Dropping the `onDelete:
+  "cascade"` in a later edit makes the next boot fail at the `markCascadeBounded`
+  call.
+- Naming the `owner` explicitly (rather than a bare boolean flag) is what makes
+  the claim checkable at all, and keeps it greppable.
 
-### Registry loading model (current limitation)
+**This runs at MODULE EVAL of the consumer** — boot's import phase — so a
+violation is boot-fatal. `./singularity build` probes backend health after
+restart and fails loudly ("Check server logs") when the new backend never takes
+over, so a bad cascade claim surfaces as a failed build, not a silently-dead app.
+Precedent for a throwing boot invariant of exactly this shape:
+`plugins/database/plugins/change-feed/server/internal/identity-coverage.ts`.
 
-The firehose/retention registry is a **module-level set populated as a side
-effect** of `defineRetention` / `markFirehose` at call time (module eval of the
-consumer). The check reads whatever declarations are loaded **in its own
-process**. Today the initial firehose set is **empty** (no consumer declares a
-firehose yet — the `_reports` / `entity_versions` migrations land in a later
-phase), so the check passes trivially and `./singularity check` stays green.
+## Why there is no `./singularity check`
 
-When the first real firehose table is added, its declaration must be reachable
-from the check's import graph for the standalone check process to see it (e.g.
-the check imports the declaring module, or the declarations are surfaced via a
-build-time manifest / collected-dir). Wire that at the same time the first
-firehose table lands — do not leave a firehose declared where the check can't
-observe it.
+An earlier design had a `retention:firehose-bounded` check over a string-keyed
+registry. It was deleted: `./singularity check` runs in a standalone process that
+never loads server modules, so the registry was empty (and non-deterministically
+so under a full pass), and its only representable failure — a firehose declared
+with no bound — became **unrepresentable** once growth-bound declaration
+collapsed to the two always-true constructors above. The FK-cascade claim, which
+a name-only check genuinely could not verify, is instead verified in-process at
+module eval, where the drizzle table object is in hand. Making the bad states
+unrepresentable and throwing on the one residual claim is the structural fix; a
+check would have been a patch on a footgun.
 
 ## Boundaries
 
-- `server/` — `defineRetention`, `markFirehose` (owns all drizzle + `db` usage).
-- `shared/internal/firehose-registry.ts` — the plugin-private, string-keyed
-  registry + the pure `evaluateFirehoseCoverage` evaluator, imported by both the
-  server (to declare) and the check (to read). No drizzle; plugin-private.
-- `check/` — the `retention:firehose-bounded` Check (default export).
+- `server/` — the whole plugin (owns all drizzle + `db` usage):
+  - `internal/define-retention.ts` — `defineRetention` (bound recorded in
+    `register()`).
+  - `internal/assert-cascade.ts` — `markCascadeBounded` + the pure `findCascadeFk`
+    probe (barrel-private; exported only for its test).
+  - `internal/growth-bounds.ts` — the `GrowthBound` union + the process-global
+    registry (`declareGrowthBound`, `getGrowthBounds`). Server-private now that
+    no standalone check reads it.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl), and markFirehose declares unbounded-growth tables. The retention:firehose-bounded check fails when a declared firehose table has neither a retention policy nor a cascade owner.
+- Description: Retention primitive: defineRetention wraps defineJob into a nightly TTL sweep (DELETE WHERE column < now()-ttl) whose growth bound is recorded only when the sweep is mounted; markCascadeBounded verifies at module eval that an FK onDelete cascade really reclaims the rows. getGrowthBounds exposes the resulting true set of growth bounds.
 - Server:
   - Uses: `database.db`, `infra/jobs.defineJob`, `infra/jobs.JobFactory`
-  - Exports: Types: `RetentionJob`, `RetentionSpec`; Values: `defineRetention`, `markFirehose`
+  - Exports: Types: `GrowthBound`, `RetentionJob`, `RetentionSpec`; Values: `defineRetention`, `getGrowthBounds`, `markCascadeBounded`
 - Cross-plugin:
   - Imported by: `history/engine`, `reports`
 

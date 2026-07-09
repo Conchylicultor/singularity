@@ -3,10 +3,7 @@ import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineJob, type JobFactory } from "@plugins/infra/plugins/jobs/server";
-import {
-  declareFirehose,
-  declareRetentionCoverage,
-} from "../../shared/internal/firehose-registry";
+import { declareGrowthBound } from "./growth-bounds";
 import { retentionCutoff, retentionPredicate } from "./retention-sql";
 
 // Daily at 04:00 UTC — off the interactive peak, mirroring debug.trace-cleanup's
@@ -47,13 +44,6 @@ export interface RetentionSpec {
   perWorktree?: boolean;
   /** Extra scope AND-ed onto the age predicate (e.g. only a subset of rows). */
   where?: SQL;
-  /**
-   * Declare this table a firehose (unbounded-growth). Registers it into the
-   * firehose registry so the `retention:firehose-bounded` check sees it — and
-   * because this call also creates a retention policy, the table is
-   * automatically covered.
-   */
-  firehose?: boolean;
 }
 
 /**
@@ -61,8 +51,9 @@ export interface RetentionSpec {
  * `ttlDays`. Returns the same `JobFactory` `defineJob` returns — the consumer
  * mounts it via `register: [retentionJob]` on its `ServerPluginDefinition`.
  *
- * Side effect at call time: registers the table into the retention-coverage set
- * (and, when `firehose`, the firehose set) read by the firehose check.
+ * The `defineRetention` call itself IS the table's growth bound. But the bound
+ * is recorded only in the returned factory's `register()` (below), never here —
+ * see the comment there.
  */
 export function defineRetention(spec: RetentionSpec): RetentionJob {
   const tableName = getTableName(spec.table);
@@ -76,12 +67,7 @@ export function defineRetention(spec: RetentionSpec): RetentionJob {
     );
   }
 
-  // Coverage is recorded eagerly (call time), so importing a consumer module
-  // that declares retention populates the registry the check reads.
-  declareRetentionCoverage(tableName);
-  if (spec.firehose) declareFirehose(tableName, { cascadeOwner: false });
-
-  return defineJob({
+  const job = defineJob({
     name: `retention.${tableName}`,
     input: RETENTION_INPUT,
     event: RETENTION_EVENT,
@@ -95,18 +81,22 @@ export function defineRetention(spec: RetentionSpec): RetentionJob {
       await db.delete(spec.table).where(retentionPredicate(column, cutoff, spec.where));
     },
   });
-}
 
-/**
- * Declare a firehose table whose growth is bounded WITHOUT a TTL sweep — either
- * by an FK `onDelete: "cascade"` to an owner (`cascadeOwner: true`), or as a
- * plain declaration that still owes a `defineRetention` (the check then fails
- * until one exists). FK-cascade is a declared flag, not introspected: the check
- * only ever holds table names.
- */
-export function markFirehose(
-  table: PgTable,
-  opts?: { cascadeOwner?: boolean },
-): void {
-  declareFirehose(getTableName(table), { cascadeOwner: opts?.cascadeOwner ?? false });
+  return {
+    ...job,
+    // Coverage ⇔ mounted, BY CONSTRUCTION. The bound is recorded here — next to
+    // the wrapped job's own registry write — so it exists iff the consumer put
+    // this factory in `register: [...]`. A policy that is defined but never
+    // mounted (its sweep never runs) records NOTHING, so it can never masquerade
+    // as a covered table. Recording at call time instead would let a dead policy
+    // lie about coverage. (See growth-bounds.ts for why a true set matters.)
+    //
+    // `Registration.register()` is `void | Promise<void>`, so the inner write is
+    // awaited: the bound is declared only once the job registry write has
+    // actually landed (it throws on a duplicate job name), never before.
+    async register() {
+      await job.register();
+      declareGrowthBound(tableName, { kind: "ttl", ttlDays: spec.ttlDays });
+    },
+  };
 }
