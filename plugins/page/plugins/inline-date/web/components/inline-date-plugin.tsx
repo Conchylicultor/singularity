@@ -1,34 +1,31 @@
-import { useEffect, useMemo, useRef, useState } from "react";
-import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
+import { useMemo } from "react";
 import { MdCalendarToday, MdNotificationsActive } from "react-icons/md";
 import {
   $createTextNode,
   $getSelection,
   $isRangeSelection,
   $isTextNode,
-  BLUR_COMMAND,
-  COMMAND_PRIORITY_CRITICAL,
-  KEY_ARROW_DOWN_COMMAND,
-  KEY_ARROW_UP_COMMAND,
-  KEY_ENTER_COMMAND,
-  KEY_ESCAPE_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { FloatingSurface } from "@plugins/primitives/plugins/floating-surface/web";
-import { caretAnchor, type BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
+import {
+  atWordBoundary,
+  CaretTriggerMenu,
+  useCaretMenu,
+  useCaretQuery,
+} from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
+import { type BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
 import { $createDateMentionNode } from "./date-mention-node";
 import { buildMenu, type DateOption } from "../internal/date-options";
 
-const TRIGGER = "@";
-
 /**
- * Inline, Notion-style `@` date/reminder typeahead. Mirrors the inline page-link
- * (`[[`) plugin: open-state + query are derived from the live editor text (focus
- * never leaves the editor); arrows/Enter navigate, Esc dismisses; the menu
- * renders through `FloatingSurface`, caret-anchored since `@` appears mid-line.
+ * Inline, Notion-style `@` date/reminder typeahead, built on the shared
+ * caret-trigger primitive: open-state + query are DERIVED from the live editor
+ * text (never a latch — see the primitive's CLAUDE.md); arrows/Enter navigate,
+ * Esc / outside-press dismiss; the menu renders through `CaretTriggerMenu`,
+ * caret-anchored since `@` appears mid-line.
  *
  * The query is parsed by chrono into a concrete instant. Selecting the "date" row
  * inserts a `[[date:<iso>]]` chip; the "reminder" row mints a UUID and inserts a
@@ -36,88 +33,6 @@ const TRIGGER = "@";
  */
 export function InlineDatePlugin(_: BlockTextPluginProps) {
   const [lexicalEditor] = useLexicalComposerContext();
-
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  // Esc-dismissal latch: stays closed until the `@` trigger is removed.
-  const dismissedRef = useRef(false);
-
-  // The last query reflected into state, so the update listener can reset the
-  // active row exactly when the query changes (replacing a query-keyed effect).
-  const lastQueryRef = useRef("");
-
-  const menu = useMemo(() => buildMenu(query, new Date()), [query]);
-  const options = menu.options;
-
-  // Refs let the stable Lexical command callbacks read fresh state.
-  const openRef = useLatestRef(open);
-  const optionsRef = useLatestRef(options);
-  const activeIndexRef = useLatestRef(activeIndex);
-
-  function close() {
-    setOpen(false);
-    setQuery("");
-  }
-
-  // Derive open-state + query from the editor on every update.
-  useEffect(() => {
-    function sync() {
-      lexicalEditor.getEditorState().read(() => {
-        const sel = $getSelection();
-        if (!$isRangeSelection(sel) || !sel.isCollapsed()) {
-          close();
-          return;
-        }
-        const node = sel.anchor.getNode();
-        if (!$isTextNode(node)) {
-          close();
-          return;
-        }
-        const upToCaret = node.getTextContent().slice(0, sel.anchor.offset);
-        const idx = upToCaret.lastIndexOf(TRIGGER);
-        if (idx === -1) {
-          dismissedRef.current = false;
-          close();
-          return;
-        }
-        // `@` must start a word: preceded by start-of-text or whitespace, so it
-        // doesn't trigger inside emails or handles the user types deliberately.
-        const before = idx > 0 ? upToCaret[idx - 1] : "";
-        if (before && !/\s/.test(before)) {
-          dismissedRef.current = false;
-          close();
-          return;
-        }
-        const q = upToCaret.slice(idx + TRIGGER.length);
-        // A newline or a second `@` ends the mention — reset the latch and close.
-        if (/[@\n]/.test(q)) {
-          dismissedRef.current = false;
-          close();
-          return;
-        }
-        const model = buildMenu(q, new Date());
-        if (!model.open) {
-          dismissedRef.current = false;
-          close();
-          return;
-        }
-        // Reset the active row whenever the query changes, co-located with the
-        // setQuery write (this is the editor update-listener callback, not
-        // render) so the first option is highlighted synchronously — no
-        // render-behind flash and no separate query-keyed effect.
-        if (lastQueryRef.current !== q) {
-          lastQueryRef.current = q;
-          setActiveIndex(0);
-        }
-        setQuery(q);
-        setOpen(!dismissedRef.current);
-      });
-    }
-    sync();
-    return lexicalEditor.registerUpdateListener(sync);
-  }, [lexicalEditor]);
 
   function insertMention(option: DateOption) {
     const iso = option.date.toISOString();
@@ -129,7 +44,7 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
       if (!$isTextNode(node)) return;
       const full = node.getTextContent();
       const caretOffset = sel.anchor.offset;
-      const idx = full.slice(0, caretOffset).lastIndexOf(TRIGGER);
+      const idx = full.slice(0, caretOffset).lastIndexOf("@");
       if (idx === -1) return;
       const head = full.slice(0, idx);
       const tail = full.slice(caretOffset);
@@ -142,82 +57,33 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
       // Caret immediately after the inserted space.
       space.select(1, 1);
     });
-    setOpen(false);
-    setActiveIndex(0);
   }
-  const insertRef = useLatestRef(insertMention);
 
-  // Keyboard: registered ABOVE KeyboardPlugin (CRITICAL > HIGH) so menu nav wins
-  // when open, but falls through (return false) to split/focus-nav when closed.
-  useEffect(() => {
-    const move = (delta: number) => {
-      const list = optionsRef.current;
-      if (list.length === 0) return;
-      setActiveIndex((i) => (i + delta + list.length) % list.length);
-    };
+  const caret = useCaretQuery({
+    id: "date",
+    trigger: "@",
+    canOpen: atWordBoundary,
+    isQueryValid: (q) => !/[@\n]/.test(q) && buildMenu(q, new Date()).open,
+  });
 
-    const unregisterDown = lexicalEditor.registerCommand(
-      KEY_ARROW_DOWN_COMMAND,
-      () => {
-        if (!openRef.current) return false;
-        move(1);
-        return true;
-      },
-      COMMAND_PRIORITY_CRITICAL,
-    );
-    const unregisterUp = lexicalEditor.registerCommand(
-      KEY_ARROW_UP_COMMAND,
-      () => {
-        if (!openRef.current) return false;
-        move(-1);
-        return true;
-      },
-      COMMAND_PRIORITY_CRITICAL,
-    );
-    const unregisterEnter = lexicalEditor.registerCommand<KeyboardEvent | null>(
-      KEY_ENTER_COMMAND,
-      (event) => {
-        if (!openRef.current) return false;
-        const option = optionsRef.current[activeIndexRef.current];
-        if (!option) return false;
-        event?.preventDefault();
-        insertRef.current(option);
-        return true;
-      },
-      COMMAND_PRIORITY_CRITICAL,
-    );
-    const unregisterEscape = lexicalEditor.registerCommand(
-      KEY_ESCAPE_COMMAND,
-      () => {
-        if (!openRef.current) return false;
-        dismissedRef.current = true;
-        setOpen(false);
-        return true;
-      },
-      COMMAND_PRIORITY_CRITICAL,
-    );
-    // Close on genuine blur (clicks land via onMouseDown+preventDefault, which
-    // keeps focus, so selecting a row never triggers this).
-    const unregisterBlur = lexicalEditor.registerCommand(
-      BLUR_COMMAND,
-      () => {
-        setOpen(false);
-        return false;
-      },
-      COMMAND_PRIORITY_CRITICAL,
-    );
+  // `buildMenu` runs here for RENDER (hint vs. options) and again inside
+  // `isQueryValid` for the OPEN gate — the same double evaluation the old
+  // sync()+render performed; the model is deliberately not threaded through the hook.
+  const menu = useMemo(() => buildMenu(caret.query, new Date()), [caret.query]);
+  const options = menu.options;
 
-    return () => {
-      unregisterDown();
-      unregisterUp();
-      unregisterEnter();
-      unregisterEscape();
-      unregisterBlur();
-    };
-  }, [lexicalEditor]);
+  const { surfaceOpen, activeIndex, setActiveIndex } = useCaretMenu(caret, {
+    itemCount: options.length,
+    onCommit: (i) => insertMention(options[i]!),
+  });
 
   return (
-    <FloatingSurface open={open} anchor={caretAnchor()} reposition={query} width="lg" padding="xs">
+    <CaretTriggerMenu
+      caret={caret}
+      open={surfaceOpen}
+      width="lg"
+      padding="xs"
+    >
       {menu.hint ? (
         <Text as="div" variant="body" className="text-muted-foreground px-sm py-xs">
           Keep typing a date…
@@ -246,6 +112,6 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
           ))}
         </Stack>
       )}
-    </FloatingSurface>
+    </CaretTriggerMenu>
   );
 }

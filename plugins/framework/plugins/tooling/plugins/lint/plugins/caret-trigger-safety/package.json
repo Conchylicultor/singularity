@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-lint-caret-trigger-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "caret-trigger-safety lint rule: no-adhoc-caret-trigger"
+}

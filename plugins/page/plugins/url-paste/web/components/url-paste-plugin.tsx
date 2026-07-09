@@ -11,7 +11,8 @@ import { MdBookmark, MdLink, MdSmartDisplay } from "react-icons/md";
 import { FloatingSurface } from "@plugins/primitives/plugins/floating-surface/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { textOf } from "@plugins/page/plugins/editor/core";
-import { caretAnchor, type BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
+import { caretAnchor } from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
+import { type BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
 import { BOOKMARK_TYPE } from "@plugins/page/plugins/bookmark/core";
 import { EMBED_TYPE } from "@plugins/page/plugins/embed/core";
 

@@ -10,6 +10,7 @@
 - Sub-plugins:
   - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
   - **`button-safety`** — button-safety lint rule: no-async-raw-button
+  - **`caret-trigger-safety`** — caret-trigger-safety lint rule: no-adhoc-caret-trigger
   - **`context-safety`** — context-safety lint rule: no-unstable-context-value
   - **`element-type-safety`** — element-type-safety lint rule: no-post-mount-element-type
   - **`entity-projection-safety`** — entity-projection-safety lint rule: no-hand-rolled-entity-projection

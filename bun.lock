@@ -2375,6 +2375,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-button-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/caret-trigger-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-caret-trigger-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/context-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-context-safety",
       "version": "0.0.1",
@@ -3585,6 +3589,14 @@
     },
     "plugins/primitives/plugins/text-editor": {
       "name": "@singularity/plugin-primitives-text-editor",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
+    "plugins/primitives/plugins/text-editor/plugins/caret-trigger": {
+      "name": "@singularity/plugin-primitives-text-editor-caret-trigger",
       "version": "0.0.1",
       "dependencies": {
         "@lexical/react": "^0.44.0",
@@ -5960,6 +5972,8 @@
 
     "@singularity/plugin-framework-tooling-lint-button-safety": ["@singularity/plugin-framework-tooling-lint-button-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/button-safety"],
 
+    "@singularity/plugin-framework-tooling-lint-caret-trigger-safety": ["@singularity/plugin-framework-tooling-lint-caret-trigger-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/caret-trigger-safety"],
+
     "@singularity/plugin-framework-tooling-lint-context-safety": ["@singularity/plugin-framework-tooling-lint-context-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/context-safety"],
 
     "@singularity/plugin-framework-tooling-lint-element-type-safety": ["@singularity/plugin-framework-tooling-lint-element-type-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/element-type-safety"],
@@ -6511,6 +6525,8 @@
     "@singularity/plugin-primitives-terminal": ["@singularity/plugin-primitives-terminal@workspace:plugins/primitives/plugins/terminal"],
 
     "@singularity/plugin-primitives-text-editor": ["@singularity/plugin-primitives-text-editor@workspace:plugins/primitives/plugins/text-editor"],
+
+    "@singularity/plugin-primitives-text-editor-caret-trigger": ["@singularity/plugin-primitives-text-editor-caret-trigger@workspace:plugins/primitives/plugins/text-editor/plugins/caret-trigger"],
 
     "@singularity/plugin-primitives-text-editor-paste-images": ["@singularity/plugin-primitives-text-editor-paste-images@workspace:plugins/primitives/plugins/text-editor/plugins/paste-images"],
 

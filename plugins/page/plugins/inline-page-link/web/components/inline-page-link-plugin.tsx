@@ -1,22 +1,17 @@
-import { useEffect, useRef, useState } from "react";
-import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import {
   $createTextNode,
   $getSelection,
   $isRangeSelection,
   $isTextNode,
-  BLUR_COMMAND,
-  COMMAND_PRIORITY_CRITICAL,
-  KEY_ARROW_DOWN_COMMAND,
-  KEY_ARROW_UP_COMMAND,
-  KEY_ENTER_COMMAND,
-  KEY_ESCAPE_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { FloatingSurface } from "@plugins/primitives/plugins/floating-surface/web";
 import {
-  caretAnchor,
+  CaretTriggerMenu,
+  useCaretMenu,
+  useCaretQuery,
+} from "@plugins/primitives/plugins/text-editor/plugins/caret-trigger/web";
+import {
   usePageOptions,
   PageOptionsList,
   type BlockTextPluginProps,
@@ -25,94 +20,21 @@ import {
 import { $createPageLinkInlineNode } from "./page-link-inline-node";
 import { createLinkedPage } from "../internal/create-linked-page";
 
-const TRIGGER = "[[";
-
 /**
- * Inline, Notion-style `[[` page-mention typeahead. Mirrors the editor's slash
- * menu: open-state + query are derived from the live editor text (focus never
- * leaves the editor); arrows/Enter navigate, Esc dismisses. Unlike the slash menu
- * — which can anchor to the block because `/` is always leading — `[[` is
- * mid-line, so the menu renders through `FloatingSurface`, caret-anchored.
+ * Inline, Notion-style `[[` page-mention typeahead, built on the shared
+ * caret-trigger primitive: open-state + query are DERIVED from the live editor
+ * text (never a latch — see the primitive's CLAUDE.md); arrows/Enter navigate,
+ * Esc / outside-press dismiss. Since `[[` is mid-line the menu renders through
+ * `CaretTriggerMenu`, caret-anchored.
  *
  * On select, the `[[query` is replaced with an inline page-link node (+ a trailing
  * space); for "Create '<query>'" a new page is created first. The node persists as
- * a `[[<pageId>]]` token via the block-text extension's serializer.
+ * a `[[<pageId>]]` token via the block-text extension's serializer. Removing the
+ * `[[query` text inside the same `update()` re-derives "no trigger", so the menu
+ * closes by derivation — no explicit close.
  */
 export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
   const [lexicalEditor] = useLexicalComposerContext();
-
-  const [open, setOpen] = useState(false);
-  const [query, setQuery] = useState("");
-  const [activeIndex, setActiveIndex] = useState(0);
-
-  // Esc-dismissal latch: stays closed until the `[[` trigger is removed.
-  const dismissedRef = useRef(false);
-
-  // The last query reflected into state, so the update listener can reset the
-  // active row exactly when the query changes (replacing a query-keyed effect).
-  const lastQueryRef = useRef("");
-
-  const pageOptionsResult = usePageOptions(query, { allowCreate: true });
-  // Use settled options for keyboard navigation; [] while pending is safe here
-  // because commands return false (no-op) when the list is empty, and the menu
-  // shows a loading spinner rather than "No pages found".
-  const options = pageOptionsResult.pending ? [] : pageOptionsResult.options;
-
-  // Refs let the stable Lexical command callbacks read fresh state.
-  const openRef = useLatestRef(open);
-  const optionsRef = useLatestRef(options);
-  const activeIndexRef = useLatestRef(activeIndex);
-
-  function close() {
-    setOpen(false);
-    setQuery("");
-  }
-
-  // Derive open-state + query from the editor on every update.
-  useEffect(() => {
-    function sync() {
-      lexicalEditor.getEditorState().read(() => {
-        const sel = $getSelection();
-        if (!$isRangeSelection(sel) || !sel.isCollapsed()) {
-          close();
-          return;
-        }
-        const node = sel.anchor.getNode();
-        if (!$isTextNode(node)) {
-          close();
-          return;
-        }
-        const upToCaret = node.getTextContent().slice(0, sel.anchor.offset);
-        const idx = upToCaret.lastIndexOf(TRIGGER);
-        if (idx === -1) {
-          dismissedRef.current = false;
-          close();
-          return;
-        }
-        const q = upToCaret.slice(idx + TRIGGER.length);
-        // A `[`, `]`, or newline ends the mention — reset the latch and close.
-        if (/[[\]\n]/.test(q)) {
-          dismissedRef.current = false;
-          close();
-          return;
-        }
-        // Reset the active row whenever the query changes, co-located with the
-        // setQuery write (this is the editor update-listener callback, not
-        // render) so the first option is highlighted synchronously — no
-        // render-behind flash and no separate query-keyed effect. The keyboard
-        // handlers clamp via optionsRef, so a stale index on an async list grow
-        // never indexes out of range.
-        if (lastQueryRef.current !== q) {
-          lastQueryRef.current = q;
-          setActiveIndex(0);
-        }
-        setQuery(q);
-        setOpen(!dismissedRef.current);
-      });
-    }
-    sync();
-    return lexicalEditor.registerUpdateListener(sync);
-  }, [lexicalEditor]);
 
   function insertLink(pageId: string) {
     lexicalEditor.update(() => {
@@ -122,7 +44,7 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
       if (!$isTextNode(node)) return;
       const full = node.getTextContent();
       const caretOffset = sel.anchor.offset;
-      const idx = full.slice(0, caretOffset).lastIndexOf(TRIGGER);
+      const idx = full.slice(0, caretOffset).lastIndexOf("[[");
       if (idx === -1) return;
       const head = full.slice(0, idx);
       const tail = full.slice(caretOffset);
@@ -135,8 +57,6 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
       // Caret immediately after the inserted space.
       space.select(1, 1);
     });
-    setOpen(false);
-    setActiveIndex(0);
   }
 
   function handleSelect(option: PageOption) {
@@ -146,82 +66,27 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
       void createLinkedPage(option.title).then((id) => insertLink(id));
     }
   }
-  const handleSelectRef = useLatestRef(handleSelect);
 
-  // Keyboard: registered ABOVE KeyboardPlugin (CRITICAL > HIGH) so menu nav wins
-  // when open, but falls through (return false) to split/focus-nav when closed.
-  useEffect(() => {
-    const move = (delta: number) => {
-      const list = optionsRef.current;
-      if (list.length === 0) return;
-      setActiveIndex((i) => (i + delta + list.length) % list.length);
-    };
+  const caret = useCaretQuery({
+    id: "page-link",
+    trigger: "[[",
+    isQueryValid: (q) => !/[[\]\n]/.test(q),
+  });
 
-    const unregisterDown = lexicalEditor.registerCommand(
-      KEY_ARROW_DOWN_COMMAND,
-      () => {
-        if (!openRef.current) return false;
-        move(1);
-        return true;
-      },
-      COMMAND_PRIORITY_CRITICAL,
-    );
-    const unregisterUp = lexicalEditor.registerCommand(
-      KEY_ARROW_UP_COMMAND,
-      () => {
-        if (!openRef.current) return false;
-        move(-1);
-        return true;
-      },
-      COMMAND_PRIORITY_CRITICAL,
-    );
-    const unregisterEnter = lexicalEditor.registerCommand<KeyboardEvent | null>(
-      KEY_ENTER_COMMAND,
-      (event) => {
-        if (!openRef.current) return false;
-        const option = optionsRef.current[activeIndexRef.current];
-        if (!option) return false;
-        event?.preventDefault();
-        handleSelectRef.current(option);
-        return true;
-      },
-      COMMAND_PRIORITY_CRITICAL,
-    );
-    const unregisterEscape = lexicalEditor.registerCommand(
-      KEY_ESCAPE_COMMAND,
-      () => {
-        if (!openRef.current) return false;
-        dismissedRef.current = true;
-        setOpen(false);
-        return true;
-      },
-      COMMAND_PRIORITY_CRITICAL,
-    );
-    // Close on genuine blur (clicks land via onMouseDown+preventDefault, which
-    // keeps focus, so selecting a row never triggers this).
-    const unregisterBlur = lexicalEditor.registerCommand(
-      BLUR_COMMAND,
-      () => {
-        setOpen(false);
-        return false;
-      },
-      COMMAND_PRIORITY_CRITICAL,
-    );
+  const pageOptionsResult = usePageOptions(caret.query, { allowCreate: true });
+  // Settled options drive keyboard nav; [] while pending is safe — itemCount is
+  // 0 (not interactive) then, and the menu shows a spinner, not "No pages found".
+  const options = pageOptionsResult.pending ? [] : pageOptionsResult.options;
 
-    return () => {
-      unregisterDown();
-      unregisterUp();
-      unregisterEnter();
-      unregisterEscape();
-      unregisterBlur();
-    };
-  }, [lexicalEditor]);
+  const { surfaceOpen, activeIndex, setActiveIndex } = useCaretMenu(caret, {
+    itemCount: options.length,
+    onCommit: (i) => handleSelect(options[i]!),
+  });
 
   return (
-    <FloatingSurface
-      open={open}
-      anchor={caretAnchor()}
-      reposition={query}
+    <CaretTriggerMenu
+      caret={caret}
+      open={surfaceOpen}
       width="lg"
       padding="xs"
       maxHeight="md"
@@ -237,6 +102,6 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
           onHoverIndex={setActiveIndex}
         />
       )}
-    </FloatingSurface>
+    </CaretTriggerMenu>
   );
 }

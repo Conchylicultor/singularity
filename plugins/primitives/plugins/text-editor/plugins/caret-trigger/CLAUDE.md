@@ -1,0 +1,156 @@
+# caret-trigger
+
+A caret-anchored **trigger menu** primitive for Lexical editors — the shared
+substrate behind the page editor's `/` (slash), `[[` (page-link), `@` (date),
+and `$$` (inline-math) menus. Type a trigger string mid-line and a floating
+surface opens at the caret; the text after the trigger is the live query.
+
+## Why this exists — open-state is DERIVED, never latched
+
+Every one of those four menus was originally a hand-rolled copy of the same
+`registerUpdateListener` loop, each carrying a mutable `dismissedRef` boolean
+latch set on Esc / outside-press and *cleared* across several early-return
+branches of the listener. The obligation to clear the latch on every "no
+trigger" path is unwritten and easy to miss: an empty Lexical block has **no
+TextNode** (the selection anchor is the ParagraphNode), so the branch that
+cleared the latch when the `/` disappeared was unreachable exactly when the
+block was empty — the menu wedged permanently closed for that block. Four
+copies, three different reset-branch counts: one bug, patched independently
+four times.
+
+The fix is to stop treating open-state as a latch mutated across N branches and
+make it a **pure derivation of the editor**:
+
+```
+open = trigger !== null && dismissedId !== triggerId(trigger) && focused && isCaretOwner
+```
+
+`reduceTriggerState` is the single place `dismissedId` is ever cleared: the
+`trigger === null` transition (no selection, non-collapsed, not a text node, no
+trigger, boundary fail, invalid query — *all* collapse to one `null`) clears it.
+No branch can forget, because there are no branches — the empty block is just
+"no trigger", the same state as "never typed one".
+
+## Two calls, not one — the `query → items → menu` flow is one-way
+
+The primitive is deliberately **two hooks**, called in order:
+
+```ts
+const caret = useCaretQuery({ id, trigger, canOpen?, isQueryValid? });
+const items = /* consumer computes items FROM caret.query */;
+const { surfaceOpen, activeIndex, setActiveIndex } = useCaretMenu(caret, {
+  itemCount: items.length,
+  onCommit: (i) => commit(items[i]!),
+});
+```
+
+- `useCaretQuery` derives the trigger from the editor alone — it depends on
+  **nothing** the consumer computes. It owns the update listener
+  (`findTrigger` + `reduceTriggerState`), the arbiter candidacy, the `focused`
+  dimension, `dismiss()`, and the `activeIndex` **state** (reset to 0 *inside*
+  the update listener on every query change — co-located with the state write,
+  not a render effect, so the highlight starts at the top with no flash).
+- `useCaretMenu` consumes that handle **plus** the item count the consumer
+  derived from `caret.query`. It owns the `open`/`interactive`/`surfaceOpen`
+  derivation, the `activeIndex` clamp + wrap-around `move()`, and the three
+  keyboard gates.
+
+**Why two.** Every consumer derives its item count from the OUTPUT `query`
+(page-link fetches page options for the query; date builds a menu; math has one
+item iff the query is non-empty; slash filters block types). A single hook that
+took `itemCount` as an input forced every consumer into a render-phase feedback
+loop — `const [itemCount, setItemCount] = useState(0)` fed back in from a value
+computed off `query`, with `if (n !== itemCount) setItemCount(n)` during render.
+That is the exact class of latent-coupling defect this primitive exists to
+delete, duplicated once per consumer. Splitting the seam makes the dependency
+`query → items → menu` flow one way and enforced by call order: there is no
+cycle and no render-phase `setState`, so the workaround is unrepresentable.
+
+`CaretQuery` is a stable-enough handle (`editor`, `dismiss`, `setActiveIndex`
+are stable identities) that `useCaretMenu`'s command effects register once and
+read fresh state through refs — `query` never lands on an effect dep array that
+would re-register Lexical commands on every keystroke.
+
+## The three gates (they are genuinely distinct)
+
+A single gate would be wrong in both directions, so the hook registers three:
+
+- **Arrows + Enter** gate on `interactive` (`open && itemCount > 0`) — there
+  must be something to commit. Arrows are registered *only* when `navigate !==
+  false`; `$$` passes `navigate: false` so arrows still move the caret through
+  LaTeX.
+- **Esc** gates on `surfaceOpen` — the exact boolean driving the surface's
+  visibility. `[[`'s loading spinner and `@`'s "keep typing" hint are visible
+  with zero items, and Esc must dismiss them; but Esc must *not* be swallowed
+  when a no-match `/zzzz` query shows nothing.
+- **Blur** flips the `focused` dimension and **never latches** (`return false`,
+  non-consuming) — returning to a block whose text still holds the trigger
+  re-derives `open` correctly.
+
+## The single-owner arbiter
+
+Two triggers can be live in one node (`@friday [[bar|` — `chrono` parses
+"friday" so `@` opens, and `[[` opens too). A module-level
+`WeakMap<LexicalEditor, Arbiter>` — **not** a React Provider, because a provider
+you must remember to mount is exactly the "you must also update X" coupling this
+change deletes — resolves a single owner: the candidate whose trigger starts
+**closest to the caret** (max `triggerIndex`). Losers derive `open = false`, so
+at most one menu is ever open and Enter is unambiguous.
+
+## Asymmetric failure is the whole point of `triggerId`
+
+Identity is `nodeKey:triggerIndex` and **excludes the query**, so typing after
+Esc stays dismissed. Lexical can invalidate that identity (a mark application
+splits text nodes; inserting before the trigger shifts the index). That is safe
+**by construction**: every identity mistake makes `dismissedId !==
+triggerId(trigger)`, i.e. the menu *re-opens* — a benign spurious re-open, never
+a wedge. A plain boolean latch would be immune to re-keying but retains a narrow
+member of the original bug class (dismiss at `/foo`, click back to an earlier
+`/bar`, stuck closed). We trade a harmless re-open for the elimination of every
+wedge.
+
+## Tests
+
+Three layers, because the bug lived in state that neither tsc nor a pure test can
+see:
+
+```bash
+bun test plugins/primitives/plugins/text-editor/plugins/caret-trigger/web/internal
+bun run test:dom plugins/primitives/plugins/text-editor/plugins/caret-trigger
+bun e2e/caret-trigger-wedge.mjs --origin http://<worktree>.localhost:9000
+```
+
+- **`web/internal/*.test.ts` (bun:test)** — the pure derivation: `scanTrigger`,
+  `reduceTriggerState`, `triggerId`, `atWordBoundary`. Scope the path to
+  `web/internal`; `bun test <plugin-dir>` would recurse into `web/__tests__/` and
+  cross-load the vitest files.
+- **`web/__tests__/wedge.test.tsx` (vitest/jsdom)** — the wedge itself, against a
+  real `LexicalComposer`: dismiss → clear to a childless paragraph (no TextNode)
+  → retype → `open` returns. It asserts the hook's derived `open`, not the
+  rendered surface: the surface is caret-rect anchored and jsdom has no layout,
+  so `FloatingSurface` would never paint. The derivation is where the bug lived.
+  Note its `type()` helper appends to the **existing** TextNode — rebuilding the
+  node mints a fresh `nodeKey` and legitimately resets the dismissal identity.
+- **`e2e/caret-trigger-wedge.mjs` (playwright)** — all four triggers end-to-end in
+  the real app, plus blur/refocus, the arbiter (`@friday [[bar` → only `[[`), and
+  that `$$` still lets arrows move the caret. It creates and deletes its own
+  scratch page. Three things it has to get right, all learned the hard way:
+  `waitUntil: "networkidle"` never settles (the app holds a notifications
+  WebSocket); SPA boot can take tens of seconds when this repo's builds have the
+  host oversubscribed, so the timeouts are generous rather than tight; and
+  clearing a block by backspacing past its start can delete + remount it, which
+  drops editor focus — and `open` is focus-gated, so the harness must re-focus or
+  every later assertion fails for the wrong reason.
+
+<!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
+
+## Plugin reference
+
+- Description: Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text, a single-owner arbiter, and the shared caretAnchor.
+- Web:
+  - Uses: `primitives/floating-surface.FloatingSurface`, `primitives/floating-surface.FloatingSurfaceProps`, `primitives/latest-ref.useEventCallback`, `primitives/latest-ref.useLatestRef`
+  - Exports: Types: `CanOpenCtx`, `CaretQuery`, `CaretTriggerMenuProps`, `Trigger`, `UseCaretMenuOpts`, `UseCaretMenuResult`, `UseCaretQueryOpts`; Values: `atWordBoundary`, `caretAnchor`, `CaretTriggerMenu`, `useCaretMenu`, `useCaretQuery`
+- Cross-plugin:
+  - Imported by: `page/editor`, `page/inline-date`, `page/inline-page-link`, `page/math/inline`, `page/url-paste`
+
+<!-- AUTOGENERATED:END -->
