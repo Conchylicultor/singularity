@@ -4,7 +4,8 @@
  * The grid text is the **authored truth**, written in the chord-grid
  * mini-language (see `parse-grid.ts`): whitespace/newline-separated cells, each
  * one bar; a group `( … )` shares a bar between several chords; a hold `.`
- * sustains the previous chord. Each chord becomes a `source:"authored"` chord
+ * sustains the previous chord; a `#` opening a cell comments out the rest of the
+ * line. Each chord becomes a `source:"authored"` chord
  * annotation; the chord *notes* are not produced here — the shell's reactive
  * re-voicing step regenerates them from these annotations under the global
  * voicing config, so this source emits annotations only.

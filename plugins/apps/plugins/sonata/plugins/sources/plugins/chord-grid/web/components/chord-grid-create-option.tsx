@@ -16,9 +16,14 @@ import { createChordGridSong } from "../../shared/endpoints";
  * imported), computes its metrics client-side via `compile`, persists it, then
  * opens it immediately (via the imperative `openSongImperative`) so the user
  * lands in the editor. Fully imperative — no React hooks.
+ *
+ * The starter is the mini-language's real first impression — the loader's
+ * placeholder never shows, since a new grid is born non-empty. So it leads with
+ * a `#` comment (teaching the section-label idiom) and keeps the legacy `|`
+ * form, which still parses.
  */
 const STARTER: ChordGridRaw = {
-  text: "| C  G | Am  F |",
+  text: "# Verse\n| C  G | Am  F |",
 };
 
 export const chordGridCreateOption: CreateOption = {

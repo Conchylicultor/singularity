@@ -4,15 +4,27 @@
 
 The grid is authored in a small mini-language, parsed by
 [`web/parse-grid.ts`](web/parse-grid.ts) into timed chord events. Three building
-blocks, nothing else:
+blocks plus a comment, nothing else:
 
 | Form | Meaning |
 | --- | --- |
 | `Cmaj7` | A **chord** — fills one bar. Parsed by `theory`'s `parseChordSymbol` (`F#m`, `Bb13`, `Ebm7b5`, `Eb6/9`, `G7(♯5)`, `Gsus4(♭9)`, …). |
 | `(E E6)` | A **group** — several items share one bar, split equally (`E` for 2 beats, `E6` for 2). |
-
-**Parens do double duty**, disambiguated by whitespace: a `(` at a **cell boundary** opens a bar *group*; a `(` **attached** to a chord (no preceding space) is a parenthetical *alteration* and is absorbed into the chord token. So `G7(♯5)` is one altered chord, while `(G7 C)` is a two-chord bar — and `(G7(♯5) C)` correctly nests both.
 | `.` | A **hold** — sustains the previous chord instead of striking a new one (no re-strike). |
+| `# verse` | A **comment** — the rest of the line is ignored. Contributes no bar. |
+
+**Two characters do double duty**, and both are disambiguated the same way — by
+what *precedes* them:
+
+- **`(`** at a **cell boundary** opens a bar *group*; a `(` **attached** to a
+  chord (no preceding space) is a parenthetical *alteration*, absorbed into the
+  chord token. So `G7(♯5)` is one altered chord, `(G7 C)` is a two-chord bar,
+  and `(G7(♯5) C)` correctly nests both.
+- **`#`** **opening a cell** (start of text, or after whitespace / a `|`) starts
+  a *comment*; a `#` reached anywhere else is a *sharp* belonging to the token
+  being read. So `F#m`, `G7(#5)` and `(C#m E)` are untouched, while `C G # tag`
+  plays two bars. No chord symbol may *begin* with `#`, so nothing legal is
+  shadowed.
 
 Rules:
 
@@ -24,6 +36,11 @@ Rules:
   (`Cmaj7 . .` → one Cmaj7 sustained across 3 bars). A hold extends whatever
   chord last sounded, even across a bar boundary; a hold with nothing before it
   is silence.
+- **Comments are trivia.** They are stripped before tokenizing (`stripComments`),
+  so a comment can sit anywhere a space can — including inside a `( … )` group —
+  without the grammar knowing about it. The terminating newline survives, so a
+  comment never glues two lines into one cell. Label sections, park an
+  alternative progression, annotate a turnaround.
 - **Repetition is just repetition.** To play a chord several times, write it in
   several cells (`Amaj9 Amaj9 Amaj9 Amaj9`). There is no repeat operator.
 - **`|` is optional.** A stray `|` between cells is accepted and ignored, so
@@ -35,10 +52,13 @@ Rules:
 Example:
 
 ```
+# Verse
 Amaj9 Am9 (E E6) (E E6)
 Cmaj7 Am7 Dm9 G13
+
+# Chorus — the F#m7 turnaround
 Fmaj7 Fm7 Em7 A7
-Dm7 G7 Cmaj7
+Dm7 G7 Cmaj7      # ...try Cmaj9 here?
 ```
 
 The parser returns `{ events, skipped }` (`ChordEvent` = `{ data, start, end }`

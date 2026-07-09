@@ -10,6 +10,9 @@
  *     single bar, splitting it equally between them;
  *   - a **hold** `.` extends the previous chord instead of striking a new one.
  *
+ * A `#` **opening a cell** starts a comment that runs to the end of the line
+ * (`# verse`); comments are lexical trivia, stripped before tokenizing.
+ *
  * Cells are separated by whitespace / newlines (newlines are purely cosmetic),
  * and a stray `|` is accepted and ignored so old `| C G | Am F |` grids keep
  * parsing. Each top-level cell is one bar (`BEATS_PER_BAR` quarter-note beats).
@@ -33,24 +36,62 @@ const BEATS_PER_BAR = 4;
 /** The hold marker: extends the previous chord rather than striking a new one. */
 const HOLD = ".";
 
+/** The comment marker — only when it opens a cell; inside a token it is a sharp. */
+const COMMENT = "#";
+
 /** A tokenized cell: a single chord, a parenthesised group, or a hold. */
 type Cell =
   | { kind: "chord"; token: string }
   | { kind: "group"; items: string[] }
   | { kind: "hold" };
 
+/**
+ * The insignificant characters: whitespace and the optional `|` bar separator.
+ * They separate cells and carry no meaning of their own — unlike `(`, `)` and
+ * `.`, which are part of the grammar.
+ */
+function isInsignificant(c: string): boolean {
+  return c === " " || c === "\t" || c === "\n" || c === "\r" || c === "|";
+}
+
+/**
+ * Does the `#` at `i` open a comment, or is it a sharp inside a token?
+ *
+ * `#` does double duty, disambiguated by what precedes it — the same trick the
+ * grammar already plays with `(` (group vs. attached alteration). A `#` opening
+ * a cell (start of text, or after an insignificant character) is a comment; a
+ * `#` reached anywhere else belongs to the token being written, so `F#m`,
+ * `G7(#5)` and `(C#m E)` are untouched. No chord symbol may *begin* with `#`, so
+ * nothing legal is shadowed.
+ */
+function opensComment(text: string, i: number): boolean {
+  return i === 0 || isInsignificant(text[i - 1]!);
+}
+
+/**
+ * Strip line comments — lexical trivia, removed before tokenizing so `(` groups,
+ * chord runs and holds never have to know about them. The terminating newline
+ * survives, so a comment can't glue two lines into one cell.
+ */
+function stripComments(text: string): string {
+  let out = "";
+  let i = 0;
+  const n = text.length;
+  while (i < n) {
+    const c = text[i]!;
+    if (c === COMMENT && opensComment(text, i)) {
+      while (i < n && text[i] !== "\n") i++;
+      continue;
+    }
+    out += c;
+    i++;
+  }
+  return out;
+}
+
 /** Characters that end a bare chord run (whitespace, group/bar/hold markers). */
 function isBoundary(c: string): boolean {
-  return (
-    c === " " ||
-    c === "\t" ||
-    c === "\n" ||
-    c === "\r" ||
-    c === "(" ||
-    c === ")" ||
-    c === "|" ||
-    c === HOLD
-  );
+  return isInsignificant(c) || c === "(" || c === ")" || c === HOLD;
 }
 
 /** Char-scan the grid text into cells (groups contain spaces, so no naive split). */
@@ -64,7 +105,7 @@ function tokenize(text: string): { cells: Cell[]; skipped: string[] } {
     const c = text[i]!;
 
     // Whitespace and the optional `|` bar separator are insignificant.
-    if (c === " " || c === "\t" || c === "\n" || c === "\r" || c === "|") {
+    if (isInsignificant(c)) {
       i++;
       continue;
     }
@@ -207,7 +248,7 @@ export function parseGrid(text: string): {
   events: ChordEvent[];
   skipped: string[];
 } {
-  const { cells, skipped: tokSkipped } = tokenize(text);
+  const { cells, skipped: tokSkipped } = tokenize(stripComments(text));
   const { events, skipped: expSkipped } = expand(cells);
   return { events, skipped: [...tokSkipped, ...expSkipped] };
 }
