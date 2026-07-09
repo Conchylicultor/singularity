@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export { createHostSemaphore } from "./internal/host-semaphore";
-export type { HostSemaphore } from "./internal/host-semaphore";
+export type { HostSemaphore, HostShare } from "./internal/host-semaphore";
 
 export default {
   description:

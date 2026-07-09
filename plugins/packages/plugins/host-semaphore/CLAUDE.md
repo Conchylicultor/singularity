@@ -36,6 +36,46 @@ to freeze. `broker.ts` imports nothing cross-plugin (only `node:*` + `bun:ffi`);
 its slot dir + size arrive via env, so it stays an independently-runnable script
 with no boundary concerns.
 
+## `acquireShare(max)` — a whole share up front, at most one broker
+
+`run` holds exactly one slot. A caller that fans out N units of heavy work would
+otherwise `run`-wrap each unit and spawn up to N brokers (one blocking wait per
+unit) precisely when the box is already under pressure. `acquireShare(max, onWait?)`
+is the answer: **acquire the whole share once, before fanning out.** It blocks until
+at least one slot is held, then greedily takes any additional free slots up to `max`
+with a single non-blocking sweep, returning a `HostShare { slots, release }` naming
+how many it actually got (`1 … min(max, size)`).
+
+- **Idle pool = pure fast path.** The up-front `flock(LOCK_NB)` sweep grabs up to
+  `max` free slots in-process — no subprocess, no broker. This is the whole story
+  when slots are free.
+- **All slots busy = exactly one broker.** Only when the sweep finds nothing do we
+  spawn a single broker to do the blocking wait for the *first* slot; once it grants,
+  a second non-blocking sweep picks up any extra slots that freed while we waited.
+  So a share is **at most one broker per call**, never one per slot.
+- `max` is clamped to `size` (asking for more than exists is capped, not an error);
+  a non-integer or `< 1` `max` throws loudly. `slots` is never `0` — the call blocks
+  or throws instead, so a caller never has to distinguish "got a share" from "got
+  nothing".
+- `release()` is idempotent: it closes the held fds (flock auto-release) and reaps
+  the broker if one was spawned. Trade-off: the whole share is held until `release`,
+  so there is some tail waste once only the slowest unit is left — releasing slots as
+  work drains is a possible later refinement.
+
+> **Known limitation — a waiter commits to one slot.** `broker.ts` blocks on a single
+> pid-hashed slot (`flock(LOCK_EX)` can only wait on one open file description), so if
+> a *different* slot frees while it waits, the broker is not woken and that slot sits
+> idle. The bound is never violated — this costs utilization and latency, not
+> correctness. It matters more for `acquireShare` than for `run`, because a share can
+> hold most of the pool for a long time. Reproduced and tracked in
+> `task-1783635702105-q3ipa7`; the same line exists in the CLI build pool
+> (`framework/cli/bin/host-semaphore.ts`), so the fix belongs with the host-admission
+> unification, not here.
+
+`run(fn, onWait)` is now a thin wrapper — `acquireShare(1, onWait)` then
+`try { fn() } finally { share.release() }` — so both entry points share one acquire
+path and `depth()` / crash-safety are identical between them.
+
 Crash-safety holds on both paths: the held fd is closed in a `finally`, so a
 rejecting `fn` never leaks a slot, and parent death closes every fd (or EOFs the
 broker), releasing whatever slot was held. See
@@ -54,7 +94,7 @@ export.
 - Description: Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
 - Server:
   - Uses: `infra/paths.SINGULARITY_DIR`
-  - Exports: Types: `HostSemaphore`; Values: `createHostSemaphore`
+  - Exports: Types: `HostSemaphore`, `HostShare`; Values: `createHostSemaphore`
 - Cross-plugin:
   - Imported by: `database/admin`, `debug/profiling/boot-bench`, `infra/host-read-pool`, `infra/worktree`
 

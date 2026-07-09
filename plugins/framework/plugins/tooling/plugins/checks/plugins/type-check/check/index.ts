@@ -25,6 +25,7 @@ import {
   type TscTarget,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
+import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
 import { buildImportGraphs } from "./import-graph";
 import { computeClosureFingerprints } from "./fingerprint";
 import { openClosureCache } from "./closure-cache";
@@ -144,6 +145,23 @@ async function runWorker(
   return JSON.parse(stdout) as WorkerResult;
 }
 
+// Host-wide worker budget `B`. Each worker builds a full multi-GB TS program, so
+// the ceiling is RAM- and CPU-bound. This is the number of flock SLOT FILES per
+// lane (`slot-0 … slot-(B-1)`), so it MUST be identical in every process — hence
+// a pure function of stable host facts (`os.cpus()`, `os.totalmem()`) and NO env
+// override: an override makes a mismatch possible, and a mismatch silently drops
+// the bound (a process naming slot-8 that another sized to 8 slots overcommits).
+// `targets.length` is deliberately NOT a term — it bounds THIS build's request
+// (`max` below), not the host's slot-file set. The CPU term is `cpus/2` (not the
+// old `cpus-1`), leaving headroom for the ~16 worktree backends, postgres, and
+// concurrent vite builds; on an 18-cpu / 64 GB host B = min(9, 12) = 9.
+const PER_WORKER_BYTES = 2.7e9;
+const hostWorkerBudget = (): number =>
+  Math.max(
+    1,
+    Math.min(Math.floor(os.cpus().length / 2), Math.floor((os.totalmem() * 0.5) / PER_WORKER_BYTES)),
+  );
+
 const check: Check = {
   id: "type-check",
   description: "TypeScript types and type-aware ESLint pass (one shared program per tsconfig target)",
@@ -183,21 +201,55 @@ const check: Check = {
     }
 
     // One worker per target: tsc for all, lint for those with assigned files.
-    const PER_WORKER_BYTES = 2.7e9;
-    const limit = Math.max(
-      1,
-      Math.min(targets.length, os.cpus().length - 1, Math.floor((os.totalmem() * 0.5) / PER_WORKER_BYTES)),
-    );
+    // The fleet is bounded HOST-WIDE per lane, not per build (the 2026-07-09
+    // thrash: N overlapping agent builds each spawned `targets.length` multi-GB
+    // workers, 30-40 at once on a 64 GB box). Lane is classified by the CLI
+    // (build/check/push) via SINGULARITY_LANE; unset defaults to background — the
+    // safe direction (bounded, never exempt). interactive = main build + push;
+    // background = agent build + direct agent check. Each lane gets its own pool
+    // of `B` flock slot files, so the host ceiling is 2·B workers and the common
+    // case (no main build, no push) runs at most `B`.
+    const lane = process.env.SINGULARITY_LANE === "interactive" ? "interactive" : "background";
+    const pool = createHostSemaphore({ name: `type-check-worker-${lane}`, size: hostWorkerBudget() });
+
     const results: WorkerResult[] = [];
     const crashes: { name: string; error: string }[] = [];
     const demote = await workerDemotion();
-    await mapConcurrent(targets, limit, async (t) => {
-      try {
-        results.push(await runWorker(root, t, lintByTarget.get(t.name) ?? [], demote));
-      } catch (err) {
-        crashes.push({ name: t.name, error: (err as Error).message });
-      }
+
+    // Acquire the whole share once, up front (at most one broker for this build),
+    // then fan out at exactly `share.slots` concurrency. `max` is THIS build's
+    // request — its target count, capped at the budget — never a term in `B`.
+    const max = Math.min(targets.length, hostWorkerBudget());
+    let waitedMs = 0;
+    const share = await pool.acquireShare(max, (waitMs) => {
+      waitedMs = waitMs;
     });
+    try {
+      // A reduced or waited-for share otherwise reads as an unexplained slowdown,
+      // so surface it — ONE plain stderr line (checks run under Promise.all in
+      // the runner, so never a blocking log or a progress bar). The wait term is
+      // thresholded because `onWait` also times the in-process fast-path sweep (a
+      // few ms of mkdir/open/flock even on an idle pool); only a real block on the
+      // broker (all slots busy) runs into the hundreds of ms. A reduced share
+      // (`slots < max`) is degraded regardless of how long we waited.
+      const WAIT_NOTE_MS = 100;
+      if (share.slots < max || waitedMs >= WAIT_NOTE_MS) {
+        process.stderr.write(
+          `type-check: ${share.slots}/${max} worker slots in the ${lane} lane` +
+            (waitedMs > 0 ? ` (waited ${(waitedMs / 1000).toFixed(1)}s)` : "") +
+            "\n",
+        );
+      }
+      await mapConcurrent(targets, share.slots, async (t) => {
+        try {
+          results.push(await runWorker(root, t, lintByTarget.get(t.name) ?? [], demote));
+        } catch (err) {
+          crashes.push({ name: t.name, error: (err as Error).message });
+        }
+      });
+    } finally {
+      await share.release();
+    }
 
     // Record per-file lint PASSes for every file we sent that did NOT fail.
     // (Conservative: a crashed worker records nothing — re-lints next time.)

@@ -27,6 +27,7 @@ import {
 } from "../paths";
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
 import { withHostSlot, type HostSlotKind } from "../host-semaphore";
+import { publishLane } from "../lane";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
 import { appendBuildLog } from "../build-log-writer-global";
@@ -940,6 +941,11 @@ export function registerBuild(program: Command) {
       // machine. Main-branch builds are exempt (never queued); agent builds share
       // the bounded build pool. See host-semaphore.ts.
       const slotKind: HostSlotKind = branch === "main" ? "exempt" : "build";
+      // Publish the lane from the same fact, BEFORE runChecks runs in-process
+      // below: a main build is human-blocking (interactive lane), an agent build
+      // is background. The type-check fleet keys its host-wide worker budget on
+      // this. See ../lane.ts.
+      publishLane(branch === "main");
       // Agent-branch builds additionally run their heavy children (tsc, vite)
       // darwinbg-demoted so even a single build can't starve the interactive
       // main backend (one build legitimately fans across every core). Usually

@@ -2,7 +2,7 @@ import { afterEach, describe, expect, test } from "bun:test";
 import { rmSync } from "node:fs";
 import { join } from "node:path";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
-import { createHostSemaphore } from "./host-semaphore";
+import { createHostSemaphore, type HostShare } from "./host-semaphore";
 
 // Unique slot dir per `createHostSemaphore` so parallel test runs (and the two
 // tests below) never collide on the same lock files.
@@ -102,5 +102,145 @@ describe("cross-process serialization", () => {
       ran = true;
     });
     expect(ran).toBe(true);
+  });
+});
+
+/**
+ * Await `p` and return the Error it rejected with; throw if it resolved instead.
+ * `expect(p).rejects.toThrow()` is typed `void` under bun:test, so awaiting it is
+ * a no-op the assertion never actually runs behind — the test would pass even if
+ * `p` resolved. This asserts the rejection for real, and hands back the error so
+ * the caller can pin its message.
+ */
+async function rejection(p: Promise<unknown>): Promise<Error> {
+  try {
+    await p;
+  } catch (err) {
+    return err as Error;
+  }
+  throw new Error("expected the promise to reject, but it resolved");
+}
+
+describe("acquireShare", () => {
+  test("throws on a non-positive-integer max", async () => {
+    const sem = createHostSemaphore({ name: uniqueName("share-arg"), size: 4 });
+    // Failure is a thrown type, never a `slots: 0` value a caller could absorb.
+    for (const bad of [0, -1, 1.5]) {
+      expect((await rejection(sem.acquireShare(bad))).message).toContain("positive integer");
+    }
+  });
+
+  test("on an idle pool takes the full share with no broker", async () => {
+    const sem = createHostSemaphore({ name: uniqueName("share-idle"), size: 4 });
+
+    // Spy on Bun.spawn to prove the fast path spawns no broker subprocess: on an
+    // idle pool the whole share is grabbed in-process by the non-blocking sweep.
+    const origSpawn = Bun.spawn;
+    let spawnCount = 0;
+    (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = ((...args: unknown[]) => {
+      spawnCount++;
+      return (origSpawn as (...a: unknown[]) => unknown)(...args);
+    }) as typeof Bun.spawn;
+
+    try {
+      const share = await sem.acquireShare(4);
+      expect(share.slots).toBe(4); // all four free slots taken greedily
+      expect(spawnCount).toBe(0); // no broker
+      await share.release();
+    } finally {
+      (Bun as unknown as { spawn: typeof Bun.spawn }).spawn = origSpawn;
+    }
+  });
+
+  test("with 3 of 4 slots held, returns the single remaining slot", async () => {
+    const sem = createHostSemaphore({ name: uniqueName("share-partial"), size: 4 });
+
+    // A holder (a distinct set of open file descriptions — flock conflicts even
+    // within one process) parks on 3 of the 4 slots.
+    const holder = await sem.acquireShare(3);
+    expect(holder.slots).toBe(3);
+
+    // The greedy sweep can only take what's free: exactly one slot, no broker.
+    const share = await sem.acquireShare(4);
+    expect(share.slots).toBe(1);
+
+    await share.release();
+    await holder.release();
+  });
+
+  test("with all 4 slots held, blocks then returns once one frees (broker path)", async () => {
+    const sem = createHostSemaphore({ name: uniqueName("share-full"), size: 4 });
+
+    const holder = await sem.acquireShare(4);
+    expect(holder.slots).toBe(4);
+
+    // Every slot busy → the sweep finds nothing → one broker does the blocking
+    // wait off the event loop. The share must not resolve while all slots are held.
+    let resolved = false;
+    const pending = sem.acquireShare(4).then((s) => {
+      resolved = true;
+      return s;
+    });
+    await sleep(100);
+    expect(resolved).toBe(false); // genuinely blocked on the broker
+
+    await holder.release(); // frees the slots → broker grants
+    const share = await pending;
+    expect(share.slots).toBeGreaterThanOrEqual(1);
+    expect(share.slots).toBeLessThanOrEqual(4);
+
+    await share.release();
+  });
+
+  test("two concurrent callers never hold more than 4 slots at once", async () => {
+    const sem = createHostSemaphore({ name: uniqueName("share-race"), size: 4 });
+
+    const held = new Set<HostShare>();
+    const totalHeld = () => [...held].reduce((n, s) => n + s.slots, 0);
+    let peak = 0;
+
+    async function worker(): Promise<void> {
+      const share = await sem.acquireShare(4);
+      held.add(share);
+      peak = Math.max(peak, totalHeld());
+      await sleep(40);
+      held.delete(share);
+      await share.release();
+    }
+
+    await Promise.all([worker(), worker()]);
+
+    expect(peak).toBeLessThanOrEqual(4); // the host ceiling is never exceeded
+    expect(held.size).toBe(0); // every share released
+  });
+
+  test("release is idempotent and leaks no slot when the caller's body throws", async () => {
+    const sem = createHostSemaphore({ name: uniqueName("share-rej"), size: 4 });
+
+    // Idempotent: a double release is a no-op, not a double-close error.
+    const first = await sem.acquireShare(4);
+    await first.release();
+    await first.release();
+
+    // No leak on a throwing body: release in the `finally` hands every slot back.
+    let rejected: unknown;
+    try {
+      const share = await sem.acquireShare(4);
+      try {
+        throw new Error("boom");
+      } finally {
+        await share.release();
+      }
+    } catch (err) {
+      rejected = err;
+    }
+    expect(rejected).toBeInstanceOf(Error);
+    expect((rejected as Error).message).toBe("boom");
+
+    // If either the double-release or the throwing body had leaked a slot, this
+    // fast-path acquire could not reclaim the whole pool.
+    const again = await sem.acquireShare(4);
+    expect(again.slots).toBe(4);
+    await again.release();
   });
 });

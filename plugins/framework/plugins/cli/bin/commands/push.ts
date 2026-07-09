@@ -6,6 +6,7 @@ import { SINGULARITY_DIR } from "../paths";
 import { checkBroadcasts } from "../broadcasts";
 import { createPushProfiler, type PushProfiler } from "../push-profiler";
 import { withHostSlot } from "../host-semaphore";
+import { LANE_ENV, laneFor } from "../lane";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writePushHolder, clearPushHolder, PUSH_LOCK_PATH } from "@plugins/infra/plugins/worktree/server";
 
 // Throws-by-default spawn: a non-zero exit prints the command + captured
@@ -73,6 +74,11 @@ async function runChecksSubprocess(root: string): Promise<boolean> {
     // acquiring a host slot — a second acquire of the single push slot would
     // deadlock, since this parent holds it and is awaiting the child here.
     SINGULARITY_HOST_SLOT_HELD: "1",
+    // A push is human-blocking, so its checks run in the interactive lane —
+    // even though they execute on the REBASED AGENT BRANCH, where a branch-based
+    // gate would wrongly demote them to background. The child's own publishLane
+    // not-clobbers this inherited value. See ../lane.ts.
+    [LANE_ENV]: laneFor(true),
   };
   const proc = Bun.spawn(["bun", "plugins/framework/plugins/cli/bin/index.ts", "check"], {
     cwd: root,

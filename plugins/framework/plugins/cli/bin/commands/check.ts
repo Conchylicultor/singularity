@@ -2,7 +2,8 @@ import { basename, join } from "path";
 import type { Command } from "commander";
 import { checkBroadcasts } from "../broadcasts";
 import { withHostSlot, type HostSlotKind } from "../host-semaphore";
-import { worktreeDataDir } from "../paths";
+import { MAIN_WORKTREE_NAME, worktreeDataDir } from "../paths";
+import { publishLane } from "../lane";
 import { listAllChecks, runChecks } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import { markWorktreeOpStart, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
 
@@ -50,6 +51,13 @@ export function registerCheck(program: Command) {
       // is truncated or piped through `tail`.
       const slug = await getWorktreeSlug();
       const logFile = join(worktreeDataDir(slug), "check.log");
+
+      // Publish the lane for the type-check fleet's host-wide worker budget: a
+      // direct check on the main worktree is human-blocking (interactive), any
+      // other direct check is background. publishLane not-clobbers, so a
+      // push-nested check keeps the interactive value push.ts already set in its
+      // env even though it runs on an agent branch. See ../lane.ts.
+      publishLane(slug === MAIN_WORKTREE_NAME);
 
       // Mark this worktree as having a check in flight so the conversation status
       // poller keeps the agent's pane reading as "working" while the CLI "shell"

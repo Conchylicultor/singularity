@@ -3983,7 +3983,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
       - Server:
         - Uses: `infra/paths.SINGULARITY_DIR`
-        - Exports: Types: `HostSemaphore`; Values: `createHostSemaphore`
+        - Exports: Types: `HostSemaphore`, `HostShare`; Values: `createHostSemaphore`
       - Cross-plugin:
         - Imported by: `database/admin`, `debug/profiling/boot-bench`, `infra/host-read-pool`, `infra/worktree`
     - **`inflight`**
