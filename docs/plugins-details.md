@@ -829,7 +829,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `config_v2.ConfigV2`
           - Core:
             - Uses: `apps/sonata/rhythm.effectiveOnsets`, `apps/sonata/score.bars`, `apps/sonata/score.scoreEndBeat`, `apps/sonata/theory.chordPitches`, `apps/sonata/theory.nearestVoicing`, `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/enum/config.enumField`, `fields/float/config.floatField`
-            - Exports: Types: `ChordEvent`, `Voicing`, `VoicingOptions`; Values: `CHORD_TRACK`, `DEFAULT_VOICING_ID`, `findVoicing`, `reVoiceChords`, `voicingConfig`, `VOICINGS`
+            - Exports: Types: `ChordEvent`, `Voicing`, `VoicingOptions`; Values: `CHORD_BASS_TRACK`, `CHORD_TRACK`, `DEFAULT_VOICING_ID`, `findVoicing`, `reVoiceChords`, `voicingConfig`, `VOICINGS`
     - **`story`** — Story Builder — author a page as a block tree and render it through pluggable lenses.
       - Plugins:
         - **`content`** — Story content widgets: per-block-type Story.Content renderers.

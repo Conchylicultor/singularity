@@ -29,11 +29,21 @@ import { effectiveOnsets } from "@plugins/apps/plugins/sonata/plugins/rhythm/cor
 import { findVoicing, type ChordEvent, type VoicingOptions } from "./voicing";
 
 /**
- * The single synthesized track that re-voiced chord notes live on. Distinct from
- * any source's own track id (e.g. chord-grid's `cg0`), since this chokepoint —
- * not the source — now owns chord notes.
+ * The synthesized track the re-voiced chord (upper-structure) notes live on.
+ * Distinct from any source's own track id (e.g. chord-grid's `cg0`), since this
+ * chokepoint — not the source — now owns chord notes. The bass root lives on its
+ * own {@link CHORD_BASS_TRACK}, so the two can be muted / hidden / instrumented
+ * independently through the generic track-mixer.
  */
 export const CHORD_TRACK = "chords";
+
+/**
+ * The synthesized track the re-voiced bass root lives on — split out from
+ * {@link CHORD_TRACK} so bass and chords are independently controllable in the
+ * mixer. Bass notes only exist when a voicing wants them (voice-leading on, or a
+ * rhythm hand active); with neither, this track carries no notes.
+ */
+export const CHORD_BASS_TRACK = "chords-bass";
 
 /** Note-id namespace for re-voiced chord notes (see VoicingOptions.idPrefix). */
 const CHORD_NOTE_PREFIX = "chord";
@@ -74,9 +84,9 @@ function resolvePattern(score: Score, pattern: RhythmPattern): number[] {
 /**
  * Regenerate chord notes from a score's authored chord annotations under `cfg`,
  * returning a new `Score`. All other tracks, notes, and annotations are kept
- * intact; only notes on {@link CHORD_TRACK} are replaced, and a `TrackMeta` for
- * it is ensured. When the score has no authored chord annotations the input is
- * returned unchanged.
+ * intact; only notes on {@link CHORD_TRACK} / {@link CHORD_BASS_TRACK} are
+ * replaced, and a `TrackMeta` for each is ensured. When the score has no
+ * authored chord annotations the input is returned unchanged.
  *
  * When `hands` is nullish the emitted notes are byte-for-byte today's (no
  * `rhythm` reaches the strategy). When present, each hand's pattern is resolved
@@ -99,6 +109,7 @@ export function reVoiceChords(
     octave: cfg.octave,
     voiceLead: cfg.realistic,
     track: CHORD_TRACK,
+    bassTrack: CHORD_BASS_TRACK,
     idPrefix: CHORD_NOTE_PREFIX,
   };
   if (hands) {
@@ -111,13 +122,18 @@ export function reVoiceChords(
   const chordNotes = findVoicing(cfg.strategyId).voice(events, opts);
 
   const notes = [
-    ...score.notes.filter((n) => n.track !== CHORD_TRACK),
+    ...score.notes.filter(
+      (n) => n.track !== CHORD_TRACK && n.track !== CHORD_BASS_TRACK,
+    ),
     ...chordNotes,
   ];
 
-  const tracks = score.tracks.some((t) => t.id === CHORD_TRACK)
-    ? score.tracks
-    : [...score.tracks, { id: CHORD_TRACK, name: "Chords" }];
+  // Ensure a TrackMeta for both synthesized tracks, preserving any existing
+  // metadata and the original track order (new entries appended).
+  const byId = new Map(score.tracks.map((t) => [t.id, t]));
+  if (!byId.has(CHORD_TRACK)) byId.set(CHORD_TRACK, { id: CHORD_TRACK, name: "Chords" });
+  if (!byId.has(CHORD_BASS_TRACK)) byId.set(CHORD_BASS_TRACK, { id: CHORD_BASS_TRACK, name: "Bass" });
+  const tracks = [...byId.values()];
 
   return { ...score, tracks, notes };
 }

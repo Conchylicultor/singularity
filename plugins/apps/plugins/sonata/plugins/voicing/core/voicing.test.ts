@@ -106,6 +106,40 @@ describe("bass decoupling", () => {
   });
 });
 
+describe("bassTrack split", () => {
+  it("routes bass to bassTrack while chord tones stay on track (block path)", () => {
+    const events = [cMaj(0, 4)];
+    const notes = findVoicing("block-full").voice(events, {
+      ...OPTS,
+      bassTrack: "chords-bass",
+      voiceLead: true, // wantsBass → a bass note is emitted in the block path
+    });
+
+    const bass = notes.filter((n) => n.voice === 0);
+    const upper = notes.filter((n) => n.voice === 1);
+    expect(bass.length).toBe(1);
+    expect(bass[0]!.track).toBe("chords-bass");
+    expect(upper.length).toBeGreaterThan(0);
+    for (const n of upper) expect(n.track).toBe("chords");
+  });
+
+  it("routes bass to bassTrack while chord tones stay on track (rhythm path)", () => {
+    const events = [cMaj(0, 4)];
+    const notes = findVoicing("block-full").voice(events, {
+      ...OPTS,
+      bassTrack: "chords-bass",
+      rhythm: { bass: [0], chord: [0] },
+    });
+
+    const bass = notes.filter((n) => n.voice === 0);
+    const upper = notes.filter((n) => n.voice === 1);
+    expect(bass.length).toBe(1);
+    expect(bass[0]!.track).toBe("chords-bass");
+    expect(upper.length).toBeGreaterThan(0);
+    for (const n of upper) expect(n.track).toBe("chords");
+  });
+});
+
 describe("duration clipping", () => {
   it("a note never rings across a chord change", () => {
     // C over [0,4), G over [4,8); a chord onset at beat 3 with the next onset at

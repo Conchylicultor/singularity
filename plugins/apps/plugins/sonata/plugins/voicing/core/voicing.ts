@@ -36,6 +36,13 @@ export interface VoicingOptions {
   /** -> TrackMeta.id the derived notes belong to (the caller owns its track). */
   track: string;
   /**
+   * -> TrackMeta.id the bass notes belong to, when the caller wants the bass on
+   * a track separate from the upper structure (so it can be muted / hidden /
+   * instrumented independently). Defaults to `track` when absent — bass and
+   * chord tones then share one track, byte-for-byte with the original.
+   */
+  bassTrack?: string;
+  /**
    * Note-id namespace, e.g. `"cg"` or `"ug"`. Ids are `${idPrefix}-${i}-${k}`;
    * each source picks its own prefix so derived notes never collide on id.
    */
@@ -121,14 +128,15 @@ function placeVoicings(
 
 /**
  * Emit the bass note for a placed chord, or `[]` when there is none. The bass is
- * a block note spanning the full chord duration on the same track, `voice: 0`,
- * with a `-b`-suffixed id so it never collides with the upper-structure notes.
+ * a block note spanning the full chord duration on `bassTrack` (falling back to
+ * `track`), `voice: 0`, with a `-b`-suffixed id so it never collides with the
+ * upper-structure notes.
  */
 function bassNote(
   ev: ChordEvent,
   placed: PlacedVoicing,
   i: number,
-  { track, idPrefix, velocity = DEFAULT_VELOCITY }: VoicingOptions,
+  { track, bassTrack, idPrefix, velocity = DEFAULT_VELOCITY }: VoicingOptions,
 ): Note[] {
   if (placed.bass === null) return [];
   return [
@@ -138,7 +146,7 @@ function bassNote(
       start: ev.start,
       duration: ev.end - ev.start,
       velocity,
-      track,
+      track: bassTrack ?? track,
       voice: 0,
     },
   ];
@@ -205,7 +213,7 @@ function voiceRhythm(
   ) => { pitch: number; k: number }[],
 ): Note[] {
   const rhythm = opts.rhythm!;
-  const { track, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
+  const { track, bassTrack, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
   const voice = upperVoice(opts);
 
   const chordNotes = emitRhythmicHand(
@@ -236,7 +244,7 @@ function voiceRhythm(
           start,
           duration,
           velocity,
-          track,
+          track: bassTrack ?? track,
           voice: 0,
         },
       ];
