@@ -39,7 +39,6 @@ code background sit at `C + BLOCK_INSET` rather than bleeding to `C` (their `px`
 wrapper is outside the decoration), and the quote's 2px border pushes its text to
 `C + 2 + BLOCK_INSET`.
 
-<<<<<<< .merge_file_dJJpvp
 ## The caret does not stop at the editor's edge (`CaretSurface`)
 
 A page is not just the block list: the title sits above it, outside the provider.
@@ -85,7 +84,7 @@ Two rules keep this from leaking:
   surface is waiting on the other side is the executor's business. That is why
   "Backspace goes back to the title" needed no new intent, no new op, and no new
   branch in the resolver.
-=======
+
 ## Block-selection mode: the container handles only keys it originated
 
 Block selection lives on `internal/use-block-selection.ts` — the range state, the
@@ -122,7 +121,6 @@ jsdom cannot reproduce the mid-dispatch flush (React's sync-lane work lands on a
 microtask that cannot run while the dispatch unwinds), so the unit test reaches the
 same *state* across two keystrokes; `e2e/block-selection-verify.mjs` covers the
 single-dispatch symptom in a real browser.
->>>>>>> .merge_file_JBp3b5
 
 ## The gutter `+` creates first, types second
 
