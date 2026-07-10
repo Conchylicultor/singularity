@@ -15,6 +15,8 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { PAGE_BLOCK_TYPE } from "./schemas";
 import {
   applyBlockOp,
+  canIndent,
+  canOutdent,
   childrenOf,
   prevVisibleLeaf,
   runsOfNode,
@@ -120,7 +122,7 @@ describe("outdent", () => {
       mk("C3", "P", r3),
       mk("C4", "P", r4),
     ];
-    const out = run(blocks, { kind: "outdent", blockId: "C2" });
+    const out = run(blocks, { kind: "outdent", blockIds: ["C2"] });
 
     // C2 became a top-level sibling immediately after P.
     const c2 = out.find((b) => b.id === "C2")!;
@@ -138,7 +140,7 @@ describe("outdent", () => {
   test("first child with no followers: moves up, gains no children, expanded unchanged", () => {
     const r1 = a;
     const blocks = [mk("P", null, a), mk("C1", "P", r1, { expanded: false })];
-    const out = run(blocks, { kind: "outdent", blockId: "C1" });
+    const out = run(blocks, { kind: "outdent", blockIds: ["C1"] });
     const c1 = out.find((b) => b.id === "C1")!;
     expect(c1.parentId).toBe(null);
     expect(ids(out, "C1")).toEqual([]);
@@ -156,7 +158,7 @@ describe("outdent", () => {
       mk("C2", "P", r2),
       mk("C3", "P", r3),
     ];
-    const out = run(blocks, { kind: "outdent", blockId: "C2" });
+    const out = run(blocks, { kind: "outdent", blockIds: ["C2"] });
     expect(ids(out, "P")).toEqual(["C1"]);
     expect(ids(out, "C2")).toEqual(["C3"]);
     expect(ids(out, null)).toEqual(["P", "C2"]);
@@ -178,14 +180,14 @@ describe("outdent", () => {
       mk("K1", "C", k1),
       mk("K2", "C", k2),
     ];
-    const out = run(blocks, { kind: "outdent", blockId: "C" });
+    const out = run(blocks, { kind: "outdent", blockIds: ["C"] });
     // Existing kids first, then followers in order.
     expect(ids(out, "C")).toEqual(["K1", "K2", "F1", "F2"]);
   });
 
   test("at top level → no-op", () => {
     const blocks = [mk("T", null, a)];
-    const out = run(blocks, { kind: "outdent", blockId: "T" });
+    const out = run(blocks, { kind: "outdent", blockIds: ["T"] });
     expect(out).toEqual(blocks);
   });
 
@@ -194,7 +196,7 @@ describe("outdent", () => {
       mk("PG", null, a, { type: PAGE_BLOCK_TYPE }),
       mk("C", "PG", a),
     ];
-    const out = run(blocks, { kind: "outdent", blockId: "C" });
+    const out = run(blocks, { kind: "outdent", blockIds: ["C"] });
     expect(out).toEqual(blocks);
   });
 });
@@ -442,7 +444,7 @@ describe("indent", () => {
       mk("CUR", null, r2),
       mk("PK", "PREV", pk),
     ];
-    const out = run(blocks, { kind: "indent", blockId: "CUR" });
+    const out = run(blocks, { kind: "indent", blockIds: ["CUR"] });
     const prev = out.find((b) => b.id === "PREV")!;
     const cur = out.find((b) => b.id === "CUR")!;
     expect(cur.parentId).toBe("PREV");
@@ -454,8 +456,133 @@ describe("indent", () => {
 
   test("no prev sibling → no-op", () => {
     const blocks = [mk("FIRST", null, a)];
-    const out = run(blocks, { kind: "indent", blockId: "FIRST" });
+    const out = run(blocks, { kind: "indent", blockIds: ["FIRST"] });
     expect(out).toEqual(blocks);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// bulk indent / outdent — a selection moves as one rigid body
+// ---------------------------------------------------------------------------
+
+/** Z, A, B, C as top-level siblings in that order. */
+function fourSiblings(): BlockNode[] {
+  const r1 = a;
+  const r2 = after(r1);
+  const r3 = after(r2);
+  const r4 = after(r3);
+  return [mk("Z", null, r1), mk("A", null, r2), mk("B", null, r3), mk("C", null, r4)];
+}
+
+describe("bulk indent", () => {
+  test("a run of siblings all nest under the block above, keeping their order", () => {
+    const out = run(fourSiblings(), { kind: "indent", blockIds: ["A", "B", "C"] });
+    expect(ids(out, null)).toEqual(["Z"]);
+    expect(ids(out, "Z")).toEqual(["A", "B", "C"]);
+    expect(out.find((b) => b.id === "Z")!.expanded).toBe(true);
+  });
+
+  test("order of `blockIds` is irrelevant — the fold runs in document order", () => {
+    const out = run(fourSiblings(), { kind: "indent", blockIds: ["C", "A", "B"] });
+    expect(ids(out, "Z")).toEqual(["A", "B", "C"]);
+  });
+
+  test("leading block cannot indent → the whole run holds still (never self-nests)", () => {
+    // Z is first, so it has no previous sibling. A/B must NOT nest into it.
+    const blocks = fourSiblings();
+    const out = run(blocks, { kind: "indent", blockIds: ["Z", "A", "B"] });
+    expect(out).toBe(blocks); // identity: a fully-refused op is a no-op
+  });
+
+  test("a gap in the selection still nests each root under its own prev sibling", () => {
+    // Z, A, B, C — select A and C (B unselected). A → under Z; C → under B.
+    const out = run(fourSiblings(), { kind: "indent", blockIds: ["A", "C"] });
+    expect(ids(out, null)).toEqual(["Z", "B"]);
+    expect(ids(out, "Z")).toEqual(["A"]);
+    expect(ids(out, "B")).toEqual(["C"]);
+  });
+
+  test("selected blocks carry their own children along", () => {
+    const blocks = [...fourSiblings(), mk("A1", "A", a)];
+    const out = run(blocks, { kind: "indent", blockIds: ["A", "B"] });
+    expect(ids(out, "Z")).toEqual(["A", "B"]);
+    expect(ids(out, "A")).toEqual(["A1"]);
+  });
+});
+
+describe("bulk outdent", () => {
+  test("a run of children lifts to the parent's level, keeping their order", () => {
+    const c2 = after(a);
+    const c3 = after(c2);
+    const blocks = [
+      mk("P", null, a, { expanded: true }),
+      mk("C1", "P", a),
+      mk("C2", "P", c2),
+      mk("C3", "P", c3),
+    ];
+    const out = run(blocks, { kind: "outdent", blockIds: ["C1", "C2", "C3"] });
+    expect(ids(out, null)).toEqual(["P", "C1", "C2", "C3"]);
+    expect(ids(out, "P")).toEqual([]);
+  });
+
+  test("an unselected follower is adopted by the LAST selected block, once", () => {
+    // P > [C1, C2, X] — outdent C1+C2. Bottom-up: C2 adopts X, then C1 lifts out
+    // with nothing left to adopt. (Top-down, C1 would swallow C2 as a child.)
+    const c2 = after(a);
+    const x = after(c2);
+    const blocks = [
+      mk("P", null, a, { expanded: true }),
+      mk("C1", "P", a),
+      mk("C2", "P", c2),
+      mk("X", "P", x),
+    ];
+    const out = run(blocks, { kind: "outdent", blockIds: ["C1", "C2"] });
+    expect(ids(out, null)).toEqual(["P", "C1", "C2"]);
+    expect(ids(out, "C1")).toEqual([]);
+    expect(ids(out, "C2")).toEqual(["X"]);
+  });
+
+  test("an unselected leader keeps its place; the rest lift past it", () => {
+    // P > [X, C1, C2] — outdent C1+C2. X stays P's only child.
+    const c1 = after(a);
+    const c2 = after(c1);
+    const blocks = [
+      mk("P", null, a, { expanded: true }),
+      mk("X", "P", a),
+      mk("C1", "P", c1),
+      mk("C2", "P", c2),
+    ];
+    const out = run(blocks, { kind: "outdent", blockIds: ["C1", "C2"] });
+    expect(ids(out, null)).toEqual(["P", "C1", "C2"]);
+    expect(ids(out, "P")).toEqual(["X"]);
+  });
+
+  test("top-level blocks are refused, the indented ones still lift", () => {
+    const blocks = [
+      mk("P", null, a, { expanded: true }),
+      mk("C", "P", a),
+      mk("T", null, after(a)),
+    ];
+    const out = run(blocks, { kind: "outdent", blockIds: ["C", "T"] });
+    expect(ids(out, null)).toEqual(["P", "C", "T"]);
+  });
+
+  test("a fully-refused bulk outdent is an identity no-op", () => {
+    const blocks = fourSiblings();
+    const out = run(blocks, { kind: "outdent", blockIds: ["A", "B"] });
+    expect(out).toBe(blocks);
+  });
+});
+
+describe("canIndent / canOutdent", () => {
+  test("mirror what the fold would actually do", () => {
+    const blocks = fourSiblings();
+    expect(canIndent(blocks, ["A", "B"])).toBe(true);
+    expect(canIndent(blocks, ["Z", "A"])).toBe(false); // Z blocks the run
+    expect(canOutdent(blocks, ["A", "B"])).toBe(false); // all top level
+    const nested = [...blocks, mk("A1", "A", a)];
+    expect(canOutdent(nested, ["A1"])).toBe(true);
+    expect(canIndent(nested, ["A1"])).toBe(false); // only child
   });
 });
 
@@ -685,7 +812,7 @@ describe("page rows — indent", () => {
     const r2 = after(r1);
     const r3 = after(r2);
     const blocks = [content("T1", PAGE, r1), subPage("S1", PAGE, r2), content("T2", PAGE, r3)];
-    const out = run(blocks, { kind: "indent", blockId: "T2" });
+    const out = run(blocks, { kind: "indent", blockIds: ["T2"] });
     expect(out).toEqual(blocks);
     expect(ids(out, "S1")).toEqual([]);
   });
@@ -695,7 +822,7 @@ describe("page rows — indent", () => {
     const r2 = after(r1);
     const r3 = after(r2);
     const blocks = [content("T1", PAGE, r1), content("T2", PAGE, r2), subPage("S1", PAGE, r3)];
-    const out = run(blocks, { kind: "indent", blockId: "T2" });
+    const out = run(blocks, { kind: "indent", blockIds: ["T2"] });
     expect(out.find((b) => b.id === "T2")!.parentId).toBe("T1");
     expect(ids(out, PAGE)).toEqual(["T1", "S1"]);
   });
@@ -707,7 +834,7 @@ describe("page rows — indent", () => {
     const r1 = a;
     const r2 = after(r1);
     const blocks = [content("T1", PAGE, r1), subPage("S1", PAGE, r2)];
-    const out = run(blocks, { kind: "indent", blockId: "S1" });
+    const out = run(blocks, { kind: "indent", blockIds: ["S1"] });
     expect(out.find((b) => b.id === "S1")!.parentId).toBe("T1");
   });
 });
@@ -829,9 +956,9 @@ function randomOp(rand: () => number, rows: BlockNode[], nonce: number): BlockOp
     case "merge":
       return { kind: "merge", blockId: target.id };
     case "indent":
-      return { kind: "indent", blockId: target.id };
+      return { kind: "indent", blockIds: [target.id] };
     case "outdent":
-      return { kind: "outdent", blockId: target.id };
+      return { kind: "outdent", blockIds: [target.id] };
     case "delete":
       return { kind: "delete", blockId: target.id };
     case "insert":
@@ -910,7 +1037,7 @@ describe("page rows — property (no minted rank collides with a live sibling)",
         }
 
         const split = applyBlockOp(rows, { kind: "split", blockId: b.id, position: 0, newId: "x" });
-        const indent = applyBlockOp(rows, { kind: "indent", blockId: b.id });
+        const indent = applyBlockOp(rows, { kind: "indent", blockIds: [b.id] });
         const merge = applyBlockOp(rows, { kind: "merge", blockId: b.id });
 
         if (b.type === PAGE_BLOCK_TYPE) {

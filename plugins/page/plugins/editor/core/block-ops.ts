@@ -67,8 +67,14 @@ export type BlockOp =
        */
       runs?: RichText;
     } // merge into prev sibling
-  | { kind: "indent"; blockId: string }
-  | { kind: "outdent"; blockId: string }
+  /**
+   * Nest each of `blockIds` under its previous sibling. Indentation is a SET
+   * operation — a single Tab in a block's text editor is simply the one-element
+   * case — so the whole selected run moves as one rigid body (see `foldIndent`).
+   */
+  | { kind: "indent"; blockIds: string[] }
+  /** Lift each of `blockIds` out to its parent's level (see `foldOutdent`). */
+  | { kind: "outdent"; blockIds: string[] }
   | {
       kind: "insert";
       newId: string;
@@ -102,8 +108,8 @@ export const BlockOpSchema: z.ZodType<BlockOp> = z.discriminatedUnion("kind", [
     runs: z.array(TextRunSchema).optional(),
   }),
   z.object({ kind: z.literal("merge"), blockId: z.string(), runs: z.array(TextRunSchema).optional() }),
-  z.object({ kind: z.literal("indent"), blockId: z.string() }),
-  z.object({ kind: z.literal("outdent"), blockId: z.string() }),
+  z.object({ kind: z.literal("indent"), blockIds: z.array(z.string()).min(1) }),
+  z.object({ kind: z.literal("outdent"), blockIds: z.array(z.string()).min(1) }),
   z.object({
     kind: z.literal("insert"),
     newId: z.string(),
@@ -229,6 +235,55 @@ export function add(blocks: BlockNode[], node: BlockNode): BlockNode[] {
   return [...blocks, node];
 }
 
+/**
+ * Every node in visible document (top-to-bottom) order: a rank-ordered DFS from
+ * the forest roots, descending into collapsed subtrees too (structure, not
+ * visibility, is what the reducer folds over).
+ *
+ * A block's `rank` is only comparable against its OWN siblings — a global rank
+ * sort is therefore NOT document order. The bulk indent/outdent folds depend on
+ * true document order to compose, so this is the one place that derives it.
+ */
+function documentOrder(blocks: BlockNode[]): string[] {
+  const present = new Set(blocks.map((b) => b.id));
+  // Forest roots: nodes whose parent is outside this array (the page row is not
+  // part of a page's content forest) or absent entirely.
+  const roots = blocks
+    .filter((b) => b.parentId === null || !present.has(b.parentId))
+    .sort((a, b) => Rank.compare(Rank.from(a.rank), Rank.from(b.rank)));
+  const out: string[] = [];
+  const walk = (node: BlockNode): void => {
+    out.push(node.id);
+    for (const child of childrenOf(blocks, node.id)) walk(child);
+  };
+  for (const root of roots) walk(root);
+  return out;
+}
+
+/** `ids` sorted top-to-bottom in document order; ids absent from the forest are dropped. */
+function inDocumentOrder(blocks: BlockNode[], ids: readonly string[]): string[] {
+  const wanted = new Set(ids);
+  return documentOrder(blocks).filter((id) => wanted.has(id));
+}
+
+/** The ids a `BlockOp` names — its write targets. Shared by the optimistic
+ *  overlay's op-identity predicate and the server's notify path. */
+export function opBlockIds(op: BlockOp): string[] {
+  switch (op.kind) {
+    case "split":
+      return [op.blockId, op.newId];
+    case "insert":
+      return [op.newId];
+    case "merge":
+    case "delete":
+    case "move":
+      return [op.blockId];
+    case "indent":
+    case "outdent":
+      return op.blockIds;
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Reducer
 // ---------------------------------------------------------------------------
@@ -245,9 +300,9 @@ export function applyBlockOp(blocks: BlockNode[], op: BlockOp): BlockNode[] {
     case "merge":
       return applyMerge(blocks, op);
     case "indent":
-      return applyIndent(blocks, op);
+      return foldIndent(blocks, op.blockIds).next;
     case "outdent":
-      return applyOutdent(blocks, op);
+      return foldOutdent(blocks, op.blockIds).next;
     case "insert":
       return applyInsert(blocks, op);
     case "delete":
@@ -360,19 +415,20 @@ function applyMerge(
   return remove(next, [block.id]);
 }
 
-function applyIndent(
-  blocks: BlockNode[],
-  op: Extract<BlockOp, { kind: "indent" }>,
-): BlockNode[] {
-  const block = byId(blocks, op.blockId);
-  if (!block) return blocks;
+/**
+ * Nest ONE block under its previous sibling. Returns `null` when the move is not
+ * available (no previous sibling, or the sibling is a page row).
+ */
+function indentOne(blocks: BlockNode[], blockId: string): BlockNode[] | null {
+  const block = byId(blocks, blockId);
+  if (!block) return null;
   const prev = prevSibling(blocks, block);
-  if (!prev) return blocks; // no-op
+  if (!prev) return null;
   // Reparenting under a page row moves the block into that sub-page's subtree
   // while its `page_id` still names the outer page — a row reachable by no
   // page-scoped query. The reducer cannot restamp `page_id` (in-page
   // invariant), so Tab-into-a-page is simply not a move.
-  if (prev.type === PAGE_BLOCK_TYPE) return blocks;
+  if (prev.type === PAGE_BLOCK_TYPE) return null;
 
   const lastChild = lastOf(childrenOf(blocks, prev.id));
   const newRank = Rank.between(lastChild ? Rank.from(lastChild.rank) : null, null);
@@ -382,19 +438,20 @@ function applyIndent(
   return next;
 }
 
-function applyOutdent(
-  blocks: BlockNode[],
-  op: Extract<BlockOp, { kind: "outdent" }>,
-): BlockNode[] {
-  const block = byId(blocks, op.blockId);
-  if (!block) return blocks;
-  if (!block.parentId) return blocks; // already at top level
+/**
+ * Lift ONE block out to its parent's level, adopting the siblings that followed
+ * it as its own children (Notion's outdent: the visual subtree below the block
+ * stays attached to it). Returns `null` when the move is not available (already
+ * top level, or the parent is a page row — outdenting past it escapes the page).
+ */
+function outdentOne(blocks: BlockNode[], blockId: string): BlockNode[] | null {
+  const block = byId(blocks, blockId);
+  if (!block) return null;
+  if (!block.parentId) return null; // already at top level
 
   const parent = byId(blocks, block.parentId);
-  if (!parent) return blocks;
-  // Content's top level is "directly under the page"; outdenting past that would
-  // escape the page — disallow.
-  if (parent.type === PAGE_BLOCK_TYPE) return blocks;
+  if (!parent) return null;
+  if (parent.type === PAGE_BLOCK_TYPE) return null;
 
   // Capture followers + the block's existing children from the PRE-move array,
   // before mutating anything.
@@ -439,6 +496,78 @@ function applyOutdent(
   });
 
   return next;
+}
+
+/** The result of a bulk fold: the next forest and which blocks actually moved. */
+type Fold = { next: BlockNode[]; moved: string[] };
+
+/**
+ * Indent a SET of blocks: fold `indentOne` over them in TOP-TO-BOTTOM document
+ * order.
+ *
+ * The direction is what makes the set move as one rigid body. A successful
+ * indent removes the mover from its sibling list, so the next selected sibling's
+ * previous sibling becomes that same new parent — the run lands as consecutive
+ * children of the block above it, preserving its internal shape.
+ *
+ * The `blockIds` guard is the other half: when a block cannot indent (it is the
+ * first child), the selected sibling below it would otherwise nest *into* it and
+ * silently reshape the selection. Refusing to nest under a selected block that
+ * stayed put makes that skip cascade down the run — the whole run holds still,
+ * which is what "indent these blocks" must mean.
+ */
+function foldIndent(blocks: BlockNode[], blockIds: readonly string[]): Fold {
+  if (blockIds.length === 0) return { next: blocks, moved: [] };
+  const selected = new Set(blockIds);
+  const moved: string[] = [];
+  let next = blocks;
+  for (const id of inDocumentOrder(blocks, blockIds)) {
+    const node = byId(next, id);
+    if (!node) continue;
+    const prev = prevSibling(next, node);
+    // Still a sibling of a selected block ⇒ that block failed to indent.
+    if (prev && selected.has(prev.id)) continue;
+    const applied = indentOne(next, id);
+    if (!applied) continue;
+    next = applied;
+    moved.push(id);
+  }
+  return { next, moved };
+}
+
+/**
+ * Outdent a SET of blocks: fold `outdentOne` over them in BOTTOM-TO-TOP document
+ * order — the mirror of `foldIndent`'s direction, for the mirror reason.
+ *
+ * `outdentOne` adopts the followers that remain below the block. Going bottom-up,
+ * every selected follower has already left its parent by the time an earlier
+ * block moves, so the selection's internal shape survives and only UNSELECTED
+ * followers are adopted — by the last selected block, exactly as outdenting that
+ * block alone would do. (Top-down, the first block would swallow the rest of the
+ * selection as children.) Landing each mover directly after its parent then
+ * stacks them back into their original relative order.
+ */
+function foldOutdent(blocks: BlockNode[], blockIds: readonly string[]): Fold {
+  if (blockIds.length === 0) return { next: blocks, moved: [] };
+  const moved: string[] = [];
+  let next = blocks;
+  for (const id of inDocumentOrder(blocks, blockIds).reverse()) {
+    const applied = outdentOne(next, id);
+    if (!applied) continue;
+    next = applied;
+    moved.push(id);
+  }
+  return { next, moved: moved.reverse() };
+}
+
+/** Would indenting `blockIds` move anything? Drives the selection bar's affordance. */
+export function canIndent(blocks: BlockNode[], blockIds: readonly string[]): boolean {
+  return foldIndent(blocks, blockIds).moved.length > 0;
+}
+
+/** Would outdenting `blockIds` move anything? Drives the selection bar's affordance. */
+export function canOutdent(blocks: BlockNode[], blockIds: readonly string[]): boolean {
+  return foldOutdent(blocks, blockIds).moved.length > 0;
 }
 
 function applyInsert(

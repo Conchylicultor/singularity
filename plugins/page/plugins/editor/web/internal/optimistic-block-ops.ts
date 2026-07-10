@@ -12,7 +12,7 @@
 
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { OpNoLongerApplies } from "@plugins/primitives/plugins/optimistic-mutation/web";
-import { applyBlockOp, type BlockNode, type BlockOp, type BlockPatch } from "../../core";
+import { applyBlockOp, opBlockIds, type BlockNode, type BlockOp, type BlockPatch } from "../../core";
 import type { Block } from "../../core";
 
 /**
@@ -25,7 +25,11 @@ import type { Block } from "../../core";
 export type OpEffect =
   | { kind: "create"; id: string } // split, insert → newId appears
   | { kind: "remove"; id: string } // merge, delete → blockId disappears
-  | { kind: "reparent"; id: string; parentId: string | null; rank: string }; // indent/outdent/move
+  // indent/outdent/move → every listed block sits at its predicted parent+rank.
+  // A list, not one id: indent/outdent are set operations (a single Tab is the
+  // one-element case). Only blocks that ACTUALLY moved are listed, so an op the
+  // reducer partially refused still confirms on exactly what it did.
+  | { kind: "reparent"; moves: { id: string; parentId: string | null; rank: string }[] };
 
 /**
  * The overlay `Vars` carried by `useOptimisticResource`. Two variants share the
@@ -56,19 +60,7 @@ function overlayOpTargets(v: BlockOverlayOp): string[] {
   if (v.tag === "patch") {
     return [...v.patch.upserts.map((b) => b.id), ...v.patch.deleteIds];
   }
-  const op = v.op;
-  switch (op.kind) {
-    case "split":
-      return [op.blockId, op.newId];
-    case "insert":
-      return [op.newId];
-    case "merge":
-    case "delete":
-    case "indent":
-    case "outdent":
-    case "move":
-      return [op.blockId];
-  }
+  return opBlockIds(v.op);
 }
 
 /**
@@ -94,11 +86,12 @@ export function isReflected(blocks: Block[], e: OpEffect): boolean {
     case "remove":
       return !blocks.some((b) => b.id === e.id);
     case "reparent":
-      return blocks.some(
-        (b) =>
-          b.id === e.id &&
-          b.parentId === e.parentId &&
-          String(b.rank) === e.rank,
+      // `moves` is never empty (a no-op op is never dispatched — `dispatchOp`
+      // drops it), so this is not vacuously true.
+      return e.moves.every((m) =>
+        blocks.some(
+          (b) => b.id === m.id && b.parentId === m.parentId && String(b.rank) === m.rank,
+        ),
       );
   }
 }
@@ -259,32 +252,23 @@ export function buildOverlayOp(op: BlockOp, rows: Block[]): BlockOverlayOp {
     case "indent":
     case "outdent":
     case "move": {
-      // Run the reducer once to read where the moved node lands, then key the
-      // reparent effect on its predicted parent + rank (byte-identical to the
-      // server, which runs the same reducer).
+      // Run the reducer once to read where the named blocks land, then key the
+      // reparent effect on their predicted parent + rank (byte-identical to the
+      // server, which runs the same reducer). Blocks the reducer refused to move
+      // (a bulk indent's first child, say) are left OUT of the effect: their
+      // parent+rank is unchanged, so listing them would make the apply-guard
+      // read the op as already-absorbed.
       const nodes = toNodes(rows);
-      const next = applyBlockOp(nodes, op);
-      const moved = next.find((b) => b.id === op.blockId);
-      if (moved) {
-        return {
-          tag: "op",
-          op,
-          effect: { kind: "reparent", id: op.blockId, parentId: moved.parentId, rank: moved.rank },
-        };
-      }
-      // Defensive: the node vanished after apply (shouldn't happen). Fall back to
-      // the block's current parent/rank so the op still dispatches as a near no-op.
-      const cur = nodes.find((b) => b.id === op.blockId);
-      return {
-        tag: "op",
-        op,
-        effect: {
-          kind: "reparent",
-          id: op.blockId,
-          parentId: cur?.parentId ?? null,
-          rank: cur?.rank ?? "",
-        },
-      };
+      const before = new Map(nodes.map((b) => [b.id, b]));
+      const after = new Map(applyBlockOp(nodes, op).map((b) => [b.id, b]));
+      const moves = opBlockIds(op).flatMap((id) => {
+        const next = after.get(id);
+        const prev = before.get(id);
+        if (!next) return []; // vanished after apply (defensive; shouldn't happen)
+        if (prev && prev.parentId === next.parentId && prev.rank === next.rank) return [];
+        return [{ id, parentId: next.parentId, rank: next.rank }];
+      });
+      return { tag: "op", op, effect: { kind: "reparent", moves } };
     }
   }
 }

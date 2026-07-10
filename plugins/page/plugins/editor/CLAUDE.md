@@ -39,6 +39,39 @@ code background sit at `C + BLOCK_INSET` rather than bleeding to `C` (their `px`
 wrapper is outside the decoration), and the quote's 2px border pushes its text to
 `C + 2 + BLOCK_INSET`.
 
+## Indent / outdent is a set operation
+
+`BlockOp`'s `indent` / `outdent` carry `blockIds: string[]`, not one id. Tab inside
+a block's text editor is simply the one-element case; Tab in block-selection mode
+passes the selection roots. One op kind, one reducer, one server handler — the
+optimistic overlay, the undo record, and the notify path all follow for free.
+
+The two folds run in **opposite directions**, and that is what makes a selection
+move as one rigid body rather than collapsing into a nested chain:
+
+- **`foldIndent` — top-to-bottom.** A successful indent removes the mover from its
+  sibling list, so the next selected sibling's previous sibling becomes that same
+  new parent: the run lands as consecutive children of the block above it. The
+  guard is the other half — a block whose previous sibling is *itself a selected
+  block that stayed put* refuses to move, so a leading block that cannot indent
+  (it is the first child) holds its whole run in place instead of being nested
+  into. Skipping cascades; a fully-refused op is an identity no-op.
+- **`foldOutdent` — bottom-to-top.** `outdentOne` adopts the followers left below
+  the block (Notion's outdent). Going bottom-up, every selected follower has
+  already left by the time an earlier block moves, so only UNSELECTED followers
+  are adopted, by the last selected block — exactly as outdenting that block alone
+  would do. Top-down, the first block would swallow the rest of the selection as
+  children.
+
+Ranks are only comparable within a parent, so the folds sort their input with
+`documentOrder` (a rank-ordered DFS) rather than trusting the caller's array order
+or a global rank sort.
+
+`dispatchOp` drops any op whose reducer diff is empty, so a refused Tab never
+reaches the undo stack, the overlay, or the network. `canIndent` / `canOutdent`
+run the same fold to drive the selection bar's disabled state — the affordance can
+never disagree with what the key does.
+
 ## Undo / redo (one unified stack)
 
 Undo/redo is wired through the generic
@@ -366,7 +399,7 @@ history restore):**
   - Routes: `GET /api/pages`, `GET /api/pages/:pageId/blocks`, `POST /api/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/blocks/:id/turn-into-page`, `POST /api/pages/:pageId/blocks/op`, `POST /api/pages/:pageId/blocks/patch`, `POST /api/pages/:pageId/blocks/bulk-delete`, `POST /api/pages/:pageId/blocks/bulk-move`, `POST /api/pages/:pageId/blocks/bulk-duplicate`, `POST /api/pages/:pageId/blocks/paste`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/collab-doc.readYDoc`, `primitives/collab-doc.yDocContent`, `primitives/collab-doc.yDocFromLexical`, `primitives/live-state.resourceDescriptor`, `primitives/rank.Rank`, `primitives/rank.RankSchema`, `primitives/tree.isDescendant`, `primitives/tree.subtreeIds`
-  - Exports: Types: `Block`, `BlockDiff`, `BlockHandle`, `BlockNode`, `BlockOp`, `BlockPatch`, `BlockTextVariant`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `ColorToken`, `CreateBlockBody`, `Mark`, `MoveBlockBody`, `PageCover`, `PageData`, `PasteBlocksBody`, `RichText`, `RunsTokenExtension`, `RunsXmlTextOptions`, `SerializedBlock`, `TextData`, `TextRun`, `TurnIntoPageBody`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockPatchSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `childrenOf`, `coalesce`, `COLOR_TOKENS`, `colorCssValue`, `createBlock`, `CreateBlockBodySchema`, `defineBlock`, `deleteBlock`, `diffBlocks`, `isEmptyPatch`, `listBlocks`, `listPages`, `MARK_ORDER`, `mergeRuns`, `moveBlock`, `MoveBlockBodySchema`, `PAGE_BLOCK_TYPE`, `PageCoverSchema`, `pageData`, `PageDataSchema`, `pagesResource`, `pasteBlocks`, `PasteBlocksBodySchema`, `patchBlocks`, `patchesFromDiff`, `plainOf`, `prevVisibleLeaf`, `RichTextSchema`, `runsLength`, `runsOf`, `runsOfNode`, `runsToLexical`, `runsToXmlText`, `serializeBlockRuns`, `SerializedBlockSchema`, `sortMarks`, `splitRuns`, `SvgNodeSchema`, `textBlockSchema`, `textDataSchema`, `textOf`, `TextRunSchema`, `tokenOf`, `turnIntoPage`, `TurnIntoPageBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `withRuns`, `xmlTextToRuns`
+  - Exports: Types: `Block`, `BlockDiff`, `BlockHandle`, `BlockNode`, `BlockOp`, `BlockPatch`, `BlockTextVariant`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `ColorToken`, `CreateBlockBody`, `Mark`, `MoveBlockBody`, `PageCover`, `PageData`, `PasteBlocksBody`, `RichText`, `RunsTokenExtension`, `RunsXmlTextOptions`, `SerializedBlock`, `TextData`, `TextRun`, `TurnIntoPageBody`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockPatchSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `canIndent`, `canOutdent`, `childrenOf`, `coalesce`, `COLOR_TOKENS`, `colorCssValue`, `createBlock`, `CreateBlockBodySchema`, `defineBlock`, `deleteBlock`, `diffBlocks`, `isEmptyPatch`, `listBlocks`, `listPages`, `MARK_ORDER`, `mergeRuns`, `moveBlock`, `MoveBlockBodySchema`, `opBlockIds`, `PAGE_BLOCK_TYPE`, `PageCoverSchema`, `pageData`, `PageDataSchema`, `pagesResource`, `pasteBlocks`, `PasteBlocksBodySchema`, `patchBlocks`, `patchesFromDiff`, `plainOf`, `prevVisibleLeaf`, `RichTextSchema`, `runsLength`, `runsOf`, `runsOfNode`, `runsToLexical`, `runsToXmlText`, `serializeBlockRuns`, `SerializedBlockSchema`, `sortMarks`, `splitRuns`, `SvgNodeSchema`, `textBlockSchema`, `textDataSchema`, `textOf`, `TextRunSchema`, `tokenOf`, `turnIntoPage`, `TurnIntoPageBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `withRuns`, `xmlTextToRuns`
 - Cross-plugin:
   - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome/recent-pages`, `apps/story/marker`, `apps/story/shell`, `apps/website/blog/publish`, `apps/website/blog/site`, `page/attachment-block`, `page/audio`, `page/bookmark`, `page/bulleted-list`, `page/callout`, `page/code-block`, `page/divider`, `page/editor-collab`, `page/embed`, `page/file`, `page/formatting/bold`, `page/formatting/code`, `page/formatting/color`, `page/formatting/italic`, `page/formatting/link`, `page/formatting/strikethrough`, `page/formatting/underline`, `page/heading/heading-1`, `page/heading/heading-2`, `page/heading/heading-3`, `page/image`, `page/inline-date`, `page/inline-page-link`, `page/links`, `page/math/equation`, `page/math/inline`, `page/numbered-list`, `page/page-link`, `page/quote`, `page/read-only-view`, `page/sub-page`, `page/text`, `page/to-do`, `page/toggle`, `page/turn-into-page`, `page/url-paste`, `page/video`
   - Extended by: `apps/website/blog/publish` (table `page_blocks_ext_blog_post`), `apps/pages/starred` (table `page_blocks_ext_starred`), `apps/story/marker` (table `page_blocks_ext_story`)

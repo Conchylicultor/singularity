@@ -73,14 +73,41 @@ describe("isReflected", () => {
   });
 
   test("reparent: matches on id + parentId + rank; rank mismatch → false", () => {
-    const target = blocks.find((b) => b.id === "B")!;
-    const rank = String(target.rank);
-    const e: OpEffect = { kind: "reparent", id: "B", parentId: null, rank };
+    const rank = String(blocks.find((b) => b.id === "B")!.rank);
+    const move = { id: "B", parentId: null, rank };
+    const e: OpEffect = { kind: "reparent", moves: [move] };
     expect(isReflected(blocks, e)).toBe(true);
     // Same parent, different rank ⇒ not yet reflected (a reorder is distinct).
-    expect(isReflected(blocks, { ...e, rank: after(rank) })).toBe(false);
+    expect(
+      isReflected(blocks, { kind: "reparent", moves: [{ ...move, rank: after(rank) }] }),
+    ).toBe(false);
     // Different parent ⇒ not reflected.
-    expect(isReflected(blocks, { ...e, parentId: "A" })).toBe(false);
+    expect(
+      isReflected(blocks, { kind: "reparent", moves: [{ ...move, parentId: "A" }] }),
+    ).toBe(false);
+  });
+
+  test("reparent: every listed move must be reflected (a bulk indent/outdent)", () => {
+    const rankA = String(blocks.find((b) => b.id === "A")!.rank);
+    const rankB = String(blocks.find((b) => b.id === "B")!.rank);
+    const both: OpEffect = {
+      kind: "reparent",
+      moves: [
+        { id: "A", parentId: null, rank: rankA },
+        { id: "B", parentId: null, rank: rankB },
+      ],
+    };
+    expect(isReflected(blocks, both)).toBe(true);
+    // One block still where it was ⇒ the whole op is not yet absorbed.
+    expect(
+      isReflected(blocks, {
+        kind: "reparent",
+        moves: [
+          { id: "A", parentId: null, rank: rankA },
+          { id: "B", parentId: "A", rank: rankB },
+        ],
+      }),
+    ).toBe(false);
   });
 });
 
@@ -161,7 +188,7 @@ describe("chained compose", () => {
       base,
     );
     const afterSplit = applyOverlayOp(base, splitOp);
-    const outdentOp = buildOverlayOp({ kind: "outdent", blockId: "NEW" }, afterSplit);
+    const outdentOp = buildOverlayOp({ kind: "outdent", blockIds: ["NEW"] }, afterSplit);
 
     // Simulate a base that already absorbed the split (server push landed):
     // re-running splitOp on it must drop (throw), while outdentOp still applies.

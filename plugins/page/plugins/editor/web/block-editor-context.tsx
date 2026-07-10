@@ -61,23 +61,27 @@ const OP_LABELS: Record<BlockOp["kind"], string> = {
   delete: "Delete block",
   split: "Split block",
   merge: "Merge blocks",
-  indent: "Indent block",
-  outdent: "Outdent block",
+  indent: "Indent blocks",
+  outdent: "Outdent blocks",
   move: "Move block",
 };
 
 /** The block id the user is "on" for an op, used to restore focus on undo/redo. */
-function opFocusId(op: BlockOp): string {
+function opFocusId(op: BlockOp): string | null {
   switch (op.kind) {
     case "insert":
     case "split":
       return op.newId;
     case "merge":
     case "delete":
-    case "indent":
-    case "outdent":
     case "move":
       return op.blockId;
+    case "indent":
+    case "outdent":
+      // A bulk indent/outdent is driven from block-SELECTION mode, where focus
+      // lives on the selection container, not in any block's editor. Undo/redo
+      // then falls back to the patch's own first upsert.
+      return op.blockIds.length === 1 ? (op.blockIds[0] ?? null) : null;
   }
 }
 
@@ -202,6 +206,15 @@ interface BlockEditorContextValue {
    * intent, not a rank — the server owns the rank (see `moveBlock`).
    */
   move: (id: string, zone: "before" | "after", targetId: string) => void;
+  /**
+   * Nest each of `blockIds` under its previous sibling — the selection-mode Tab.
+   * The set moves as one rigid body: a block that cannot indent holds the rest of
+   * its run in place rather than swallowing it (see `foldIndent`). A no-op is
+   * dropped before it reaches the undo stack or the network.
+   */
+  indentBlocks: (blockIds: string[]) => void;
+  /** Lift each of `blockIds` out to its parent's level — the selection-mode Shift+Tab. */
+  outdentBlocks: (blockIds: string[]) => void;
   /** Bulk operations on a set of selected block ids (see server endpoints). */
   bulkDelete: (ids: string[]) => void;
   bulkMove: (args: {
@@ -684,10 +697,36 @@ export function BlockEditorProvider({
     (op: BlockOp) => {
       const before = rowsRef.current;
       const after = fromOpResult(before, op);
+      // An op the reducer fully refused (Tab on a first child, Shift+Tab at top
+      // level, a bulk indent whose whole run is blocked) changes nothing. Drop it
+      // here rather than dispatching: an empty-effect overlay would read as
+      // already-absorbed to the apply-guard, and an empty patch pair would put a
+      // do-nothing entry on the undo stack.
+      const diff = diffBlocks(before, after);
+      if (diff.inserted.length === 0 && diff.updated.length === 0 && diff.deleted.length === 0) {
+        return;
+      }
       recordStructural(before, after, OP_LABELS[op.kind], opFocusId(op));
       optimistic.dispatch(buildOverlayOp(op, before));
     },
     [optimistic, recordStructural],
+  );
+
+  // Indent / outdent a SET of blocks (the selection roots). The single-block Tab
+  // in a text editor is the one-element case, routed through the same op — see
+  // `foldIndent`/`foldOutdent` for why a set moves as one rigid body.
+  const indentBlocks = useCallback(
+    (blockIds: string[]) => {
+      if (blockIds.length > 0) dispatchOp({ kind: "indent", blockIds });
+    },
+    [dispatchOp],
+  );
+
+  const outdentBlocks = useCallback(
+    (blockIds: string[]) => {
+      if (blockIds.length > 0) dispatchOp({ kind: "outdent", blockIds });
+    },
+    [dispatchOp],
   );
 
   // Overlay-dispatch triplet shared by the split / offscreen-merge executors:
@@ -914,14 +953,16 @@ export function BlockEditorProvider({
       },
       indent() {
         // Thin executor: the "has a previous sibling to nest under" guard is owned
-        // by `resolveKeystroke`; the reducer is a no-op if it somehow isn't.
-        dispatchOp({ kind: "indent", blockId });
+        // by `resolveKeystroke`; the reducer is a no-op if it somehow isn't. The
+        // caret stays in this block, so re-focus it — unlike the selection-mode
+        // bulk path, which keeps focus on the selection container.
+        indentBlocks([blockId]);
         focusBlock(blockId);
       },
       outdent() {
         // Thin executor: the "is indented" guard is owned by `resolveKeystroke`;
         // the reducer is a no-op for a top-level block.
-        dispatchOp({ kind: "outdent", blockId });
+        outdentBlocks([blockId]);
         focusBlock(blockId);
       },
       navigate(dir, caret) {
@@ -965,6 +1006,8 @@ export function BlockEditorProvider({
     }),
     [
       dispatchOp,
+      indentBlocks,
+      outdentBlocks,
       focusNew,
       focusBlock,
       commitRow,
@@ -990,6 +1033,8 @@ export function BlockEditorProvider({
       focusBlock,
       focusBlockBoundary,
       move,
+      indentBlocks,
+      outdentBlocks,
       bulkDelete,
       bulkMove,
       bulkDuplicate,
@@ -1018,6 +1063,8 @@ export function BlockEditorProvider({
       focusBlock,
       focusBlockBoundary,
       move,
+      indentBlocks,
+      outdentBlocks,
       bulkDelete,
       bulkMove,
       bulkDuplicate,

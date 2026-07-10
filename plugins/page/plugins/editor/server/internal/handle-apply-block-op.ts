@@ -2,7 +2,7 @@ import { asc, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { applyBlockOpEndpoint } from "../../core/endpoints";
-import { applyBlockOp } from "../../core/block-ops";
+import { applyBlockOp, opBlockIds } from "../../core/block-ops";
 import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { loadPageBlocks } from "./forest";
@@ -120,16 +120,18 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
   });
 
   // --- Notify (shared with the patch handler) --------------------------------
-  // The op's primary block lived on this page; derive a `type` from it (page vs
+  // The op's blocks lived on this page; derive a `type` from them (page vs
   // content) so a page edit also refreshes the sidebar; default to a content
-  // type otherwise. The shared helper notifies the content resource, emits
-  // `blocksChanged`, and fans out per emptied sub-page in the deleted subtree.
-  const primaryId =
-    "blockId" in body ? body.blockId : "newId" in body ? body.newId : null;
+  // type otherwise. An op can name SEVERAL blocks (a bulk indent/outdent), and a
+  // sub-page row can sit anywhere in the run — so prefer `page` over position.
+  // The shared helper notifies the content resource, emits `blocksChanged`, and
+  // fans out per emptied sub-page in the deleted subtree.
+  const touchedTypes = opBlockIds(body).flatMap((id) => {
+    const type = before.find((b) => b.id === id)?.type ?? after.find((b) => b.id === id)?.type;
+    return type ? [type] : [];
+  });
   const primaryType =
-    (primaryId ? before.find((b) => b.id === primaryId)?.type : undefined) ??
-    after.find((b) => b.id === primaryId)?.type ??
-    "block";
+    touchedTypes.find((t) => t === PAGE_BLOCK_TYPE) ?? touchedTypes[0] ?? "block";
   await notifyStructuralChange({ pageId: params.pageId, primaryType, deletedRows });
 
   // A `move` that crossed a page boundary also changed the DESTINATION page's

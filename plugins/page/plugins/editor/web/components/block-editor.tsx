@@ -7,7 +7,11 @@ import {
   useState,
   type Ref,
 } from "react";
-import { MdDragIndicator } from "react-icons/md";
+import {
+  MdDragIndicator,
+  MdFormatIndentDecrease,
+  MdFormatIndentIncrease,
+} from "react-icons/md";
 import {
   DndContext,
   DragOverlay,
@@ -37,10 +41,12 @@ import {
   SelectionBar,
   useMultiSelect,
 } from "@plugins/primitives/plugins/multi-select/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { UndoRedoProvider, useUndoRedoShortcuts } from "@plugins/primitives/plugins/undo-redo/web";
-import { textOf, type Block, type SerializedBlock } from "../../core";
+import { canIndent, canOutdent, textOf, type Block, type SerializedBlock } from "../../core";
+import { toNodes } from "../internal/optimistic-block-ops";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
 import { serializeForest } from "../serialize-blocks";
@@ -250,6 +256,8 @@ function SelectionLayer({
 }) {
   const {
     move,
+    indentBlocks,
+    outdentBlocks,
     bulkMove,
     bulkDelete,
     bulkDuplicate,
@@ -263,6 +271,16 @@ function SelectionLayer({
     useMultiSelect();
   const contributions = Editor.Block.useContributions();
   const handles = useMemo(() => contributions.map((c) => c.block), [contributions]);
+
+  // The minimal subtree roots of the selection: bulk structural ops act on these,
+  // descendants follow implicitly. Recomputed on every selection/row change so the
+  // selection bar's affordances reflect what the reducer would actually do.
+  const roots = useMemo(
+    () => selectionRoots(rows, selectedIds),
+    [rows, selectedIds],
+  );
+  const indentable = useMemo(() => canIndent(toNodes(rows), roots), [rows, roots]);
+  const outdentable = useMemo(() => canOutdent(toNodes(rows), roots), [rows, roots]);
 
   // `containerRef` is the full-width interaction surface (focus target for
   // keyboard/clipboard, marquee pointer origin); `contentRef` is the centered
@@ -481,6 +499,17 @@ function SelectionLayer({
         void bulkDuplicate([...selectedRef.current]);
         return;
       }
+      // `!mod` leaves Ctrl+Tab (browser tab switch) alone.
+      if (e.key === "Tab" && !mod) {
+        // Always consume: Tab must never walk DOM focus out of a live block
+        // selection, even when the reducer refuses the move (mirrors the
+        // in-block `noop` intent). The selection survives the reparent — the
+        // blocks keep their ids, so their rows just re-render one level over.
+        e.preventDefault();
+        if (e.shiftKey) outdentBlocks(roots);
+        else indentBlocks(roots);
+        return;
+      }
       if (e.key === "Backspace" || e.key === "Delete") {
         e.preventDefault();
         bulkDelete([...selectedRef.current]);
@@ -520,6 +549,9 @@ function SelectionLayer({
       orderedIds,
       bulkDuplicate,
       bulkDelete,
+      roots,
+      indentBlocks,
+      outdentBlocks,
       focusBlock,
       neighbor,
       applyRange,
@@ -833,6 +865,26 @@ function SelectionLayer({
         <SelectionBar
           actions={
             <>
+              <IconButton
+                icon={MdFormatIndentDecrease}
+                label="Outdent"
+                shortcut="shift+tab"
+                disabled={!outdentable}
+                onClick={() => {
+                  outdentBlocks(roots);
+                  focusContainer();
+                }}
+              />
+              <IconButton
+                icon={MdFormatIndentIncrease}
+                label="Indent"
+                shortcut="tab"
+                disabled={!indentable}
+                onClick={() => {
+                  indentBlocks(roots);
+                  focusContainer();
+                }}
+              />
               <button
                 type="button"
                 className="text-foreground hover:text-foreground/80"
