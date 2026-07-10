@@ -98,7 +98,7 @@ discriminators designed, unrun), `fseventsd` attribution, T1 acceptance test sti
 only (remediation deliberately not yet proposed) →
 **[`2026-07-10-host-saturation-post-fix-swap-amplifier-findings.md`](./2026-07-10-host-saturation-post-fix-swap-amplifier-findings.md)**.
 
-### Read-admission wedge — nested heavy-read slots deadlock the warmup drain (Ongoing)
+### Read-admission wedge — nested heavy-read slots deadlock the warmup drain (Completed)
 
 2026-07-10, 13:10 and again ~3 min after a 15:53 restart — **recurs on every main boot** since
 `0d50139c7`: the app renders but **no live-state data ever arrives**, on a quiet host (NOT the
@@ -112,10 +112,13 @@ no open data file; both corpus indexes never persist). Every heavy-read consumer
 (`edited-files`/`commits-graph.delta`) then starves at the local gate, and those starved loaders pin
 the 6-slot `read-admit` gate (admission precedes single-flight dedup ⇒ resubscribe-replay joiners
 burn the remaining slots, 3,833 queued) → `handleSub` never acks ANY sub while plain HTTP stays fast.
-An earlier "Bun lost spawn-exit" hypothesis is ❌ (killed by lsof). **Origin cure landed 2026-07-10:
-`withHeavyReadSlot` is now reentrant** (ambient AsyncLocalStorage holding-flag; regression test pins
-the deadlock shape both ways) — pending live re-validation on a main boot; gate-after-dedup and a
-slot-age watchdog remain open containments. Full evidence + checklist →
+An earlier "Bun lost spawn-exit" hypothesis is ❌ (killed by lsof). **Origin cure landed
+(`f3a35a905`) AND re-validated live 2026-07-10 ~16:20: `withHeavyReadSlot` is now reentrant**
+(ambient AsyncLocalStorage holding-flag; regression test pins the deadlock shape both ways) — on the
+16:17 boot both corpus warmups completed for the first time (midi index persisted, cost-usage
+refreshed), gates drained to 0-queued, and sub-acks flow again. Open containments (not built):
+gate-after-dedup (joiners must not burn read-admit slots), slot-age watchdog. Full evidence +
+checklist →
 **[`2026-07-10-read-admit-wedge-stuck-git-loaders.md`](./2026-07-10-read-admit-wedge-stuck-git-loaders.md)**.
 
 ### Git-derived loaders — `edited-files` / `commits-graph` (Ongoing)

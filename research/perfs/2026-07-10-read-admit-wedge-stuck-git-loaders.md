@@ -1,7 +1,13 @@
 # Read-admission wedge: nested heavy-read slots deadlock the warmup drain, latching "data loads forever"
 
-**Status:** Ongoing — root cause CONFIRMED at every layer (code + live gauges + lsof + timing);
-fix not yet landed. **Recurs on every main-backend boot** since `0d50139c7` (2026-07-10 12:07).
+**Status:** Completed — root cause CONFIRMED at every layer (code + live gauges + lsof + timing);
+origin cure landed (`f3a35a905`) AND re-validated live on `singularity` (2026-07-10 ~16:20, boot
+16:17): both corpus warmups drain to completion for the first time —
+`sonata/midi-folders-index.json` persisted at 16:19:30 (never existed before), `cost-usage`
+refreshed 16:20:50 — gates fully drained (`read-admit` 0/6 queued 0, `heavy-read-local` idle, zero
+open spans >60 s), every gated resource read answers in ms (`edited-files` 3.8 ms vs ∞), and
+worktree sub-acks flow again (144/window incl. `sonata-songs`, `page-blocks`). Pre-fix it
+**recurred on every main-backend boot** since `0d50139c7` (2026-07-10 12:07).
 **Symptom (2026-07-10, first 13:10, again ~15:56 after a restart):** the main app's UI renders but
 **no live-state data ever arrives** — every pane spins forever. Host is quiet (load 3.7, swap 0,
 event-loop p50 ~1 ms): NOT the host-saturation shape. Plain HTTP endpoints stay fast
