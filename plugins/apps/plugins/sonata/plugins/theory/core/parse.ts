@@ -32,6 +32,7 @@
  */
 
 import type { ChordData } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { applyModifierTail } from "./chord-body";
 import { qualitySymbol } from "./chords";
 
 /** Note letter → natural pitch-class. */
@@ -132,136 +133,6 @@ const HEADS_BY_LENGTH = [...HEADS].sort(
   (a, b) => b.suffix.length - a.suffix.length,
 );
 
-/**
- * Seed degree→semitone map per base quality (scale degree → semitones above the
- * root). Modifiers mutate this by degree. Kept consistent with `CHORD_TEMPLATES`
- * in chords.ts — the values equal that quality's interval set — so an unmodified
- * head realises exactly the template (though a plain head leaves `intervals`
- * absent and derives from `quality` directly).
- */
-const SEED: Record<string, ReadonlyArray<readonly [number, number]>> = {
-  maj: [[3, 4], [5, 7]],
-  min: [[3, 3], [5, 7]],
-  aug: [[3, 4], [5, 8]],
-  dim: [[3, 3], [5, 6]],
-  maj7: [[3, 4], [5, 7], [7, 11]],
-  dom7: [[3, 4], [5, 7], [7, 10]],
-  min7: [[3, 3], [5, 7], [7, 10]],
-  minmaj7: [[3, 3], [5, 7], [7, 11]],
-  halfdim7: [[3, 3], [5, 6], [7, 10]],
-  dim7: [[3, 3], [5, 6], [7, 9]],
-  augmaj7: [[3, 4], [5, 8], [7, 11]],
-  aug7: [[3, 4], [5, 8], [7, 10]],
-  maj6: [[3, 4], [5, 7], [6, 9]],
-  min6: [[3, 3], [5, 7], [6, 9]],
-  maj9: [[3, 4], [5, 7], [7, 11], [9, 14]],
-  dom9: [[3, 4], [5, 7], [7, 10], [9, 14]],
-  min9: [[3, 3], [5, 7], [7, 10], [9, 14]],
-  dom13: [[3, 4], [5, 7], [7, 10], [9, 14], [13, 21]],
-  sus2: [[2, 2], [5, 7]],
-  sus4: [[4, 5], [5, 7]],
-  six9: [[3, 4], [5, 7], [6, 9], [9, 14]],
-};
-
-// ---------------------------------------------------------------------------
-// Modifiers
-// ---------------------------------------------------------------------------
-
-/** Natural (unaltered) semitone for a scale degree. Alterations offset this. */
-const NATURAL_DEGREE: Record<number, number> = {
-  2: 2,
-  3: 4,
-  4: 5,
-  5: 7,
-  6: 9,
-  7: 10,
-  9: 14,
-  11: 17,
-  13: 21,
-};
-
-type Modifier =
-  | { kind: "sus"; deg: 2 | 4; len: number }
-  | { kind: "omit"; deg: number; len: number }
-  | { kind: "add"; deg: number; len: number }
-  | { kind: "alt"; deg: number; acc: 1 | -1; len: number };
-
-/**
- * One modifier token at the start of `rest`. Suspensions (`sus2`/`sus4`/`sus`),
- * omissions (`no3`/`omit5`), added tones (`add9`, or a bare natural tension
- * `6`/`9`/`11`/`13`), and altered tones (an accidental — `#`/`♯`/`+` sharp,
- * `b`/`♭`/`-` flat — before a degree). Bare `2`/`4`/`5` are intentionally NOT
- * added tones (`2`/`4` are the domain of `sus`; a bare `5` is ambiguous).
- */
-const MODIFIER =
-  /^(?:sus2|sus4|sus|(?:no|omit)(3|5)|add(2|4|6|9|11|13)|([+#♯b♭-])(2|4|5|6|9|11|13)|(6|9|11|13))/;
-
-function matchModifier(rest: string): Modifier | null {
-  const m = MODIFIER.exec(rest);
-  if (!m) return null;
-  const len = m[0].length;
-  if (m[0] === "sus2") return { kind: "sus", deg: 2, len };
-  if (m[0] === "sus4" || m[0] === "sus") return { kind: "sus", deg: 4, len };
-  if (m[1]) return { kind: "omit", deg: Number(m[1]), len };
-  if (m[2]) return { kind: "add", deg: Number(m[2]), len };
-  if (m[3]) {
-    const acc = m[3] === "+" || m[3] === "#" || m[3] === "♯" ? 1 : -1;
-    return { kind: "alt", deg: Number(m[4]), acc, len };
-  }
-  if (m[5]) return { kind: "add", deg: Number(m[5]), len };
-  return null;
-}
-
-/** Mutate the degree→semitone map by one modifier. */
-function applyModifier(degrees: Map<number, number>, mod: Modifier): void {
-  switch (mod.kind) {
-    case "sus":
-      degrees.delete(3);
-      degrees.set(mod.deg, mod.deg === 2 ? 2 : 5);
-      break;
-    case "omit":
-      degrees.delete(mod.deg);
-      break;
-    case "add":
-      degrees.set(mod.deg, NATURAL_DEGREE[mod.deg]!);
-      break;
-    case "alt":
-      degrees.set(mod.deg, NATURAL_DEGREE[mod.deg]! + mod.acc);
-      break;
-  }
-}
-
-/**
- * Canonical suffix for the modifier list, appended after the head suffix:
- * `sus2`/`sus4` first, then all altered tones grouped in a single degree-sorted
- * `(♯5♭9)`, then `addN`, then `(noN)`. E.g. `[alt ♯5]` → `"(♯5)"`, `[sus4, alt
- * ♭9]` → `"sus4(♭9)"`.
- */
-function formatModifiers(mods: readonly Modifier[]): string {
-  let out = "";
-  const sus = mods.find((m) => m.kind === "sus");
-  if (sus) out += sus.deg === 2 ? "sus2" : "sus4";
-
-  const alts = mods
-    .filter((m): m is Extract<Modifier, { kind: "alt" }> => m.kind === "alt")
-    .sort((a, b) => a.deg - b.deg);
-  if (alts.length > 0) {
-    out += "(" + alts.map((a) => (a.acc > 0 ? "♯" : "♭") + a.deg).join("") + ")";
-  }
-
-  const adds = mods
-    .filter((m) => m.kind === "add")
-    .sort((a, b) => a.deg - b.deg);
-  for (const a of adds) out += "add" + a.deg;
-
-  const omits = mods
-    .filter((m) => m.kind === "omit")
-    .sort((a, b) => a.deg - b.deg);
-  for (const o of omits) out += "(no" + o.deg + ")";
-
-  return out;
-}
-
 // ---------------------------------------------------------------------------
 // Body & symbol parsing
 // ---------------------------------------------------------------------------
@@ -279,29 +150,16 @@ function parseBody(body: string): ParsedBody | null {
   const head = HEADS_BY_LENGTH.find((h) => body.startsWith(h.suffix));
   if (!head) return null; // unreachable — the "" head always matches.
 
-  const degrees = new Map<number, number>(SEED[head.quality]);
-  const mods: Modifier[] = [];
+  // The head names the base quality; the shared modifier grammar realises the
+  // alteration tail (the same tail the Roman parser reuses on its own head).
+  const tail = applyModifierTail(head.quality, body.slice(head.suffix.length));
+  if (!tail) return null; // unrecognised trailing text → typo.
 
-  let rest = body.slice(head.suffix.length);
-  while (rest.length > 0) {
-    const sep = /^[\s,()]+/.exec(rest);
-    if (sep) {
-      rest = rest.slice(sep[0].length);
-      continue;
-    }
-    const mod = matchModifier(rest);
-    if (!mod) return null; // unrecognised trailing text → typo.
-    applyModifier(degrees, mod);
-    mods.push(mod);
-    rest = rest.slice(mod.len);
-  }
-
-  const suffix = qualitySymbol(head.quality) + formatModifiers(mods);
-  const intervals =
-    mods.length === 0
-      ? null
-      : Array.from(new Set(degrees.values())).sort((a, b) => a - b);
-  return { quality: head.quality, intervals, suffix };
+  return {
+    quality: head.quality,
+    intervals: tail.intervals,
+    suffix: qualitySymbol(head.quality) + tail.modSuffix,
+  };
 }
 
 /**

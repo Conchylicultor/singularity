@@ -26,7 +26,13 @@ is what you can type:
 - **Case is the third.** `V` major, `v` minor. `I7` is a dominant seventh, `i7`
   a minor seventh, `Imaj7` a major seventh, `imaj7` a minor-major seventh.
 - **Mark, then figure**, both optional: `vii°7`, `iiø7`, `III+`, `IVsus4`, `V9`,
-  `I6/9`. ASCII stands in for the glyphs (`o`/`dim` for `°`, `M7` for `maj7`).
+  `I6/9`. ASCII stands in for the glyphs (`o`/`dim` for `°`, `aug` for `+`, `M7`
+  for `maj7`). An **explicit mark fixes the third**, so the case then doesn't
+  matter — `Idim7` and `IIø7` read the same diminished/half-diminished chord as
+  the lowercase `i°7` / `iiø7` convention (lead sheets write both).
+- **Alterations & added tones tail the figure**, using the same grammar as
+  letter-name chords: `V7♭9`, `V7♯5`, `i7♭5`, `V13♭9`, `I7sus4`, `Iadd9`. ASCII
+  `b`/`#` (and parentheses) work: `V7b9` = `V7(♭9)`.
 - **A leading `♭`/`♯` chromaticizes the degree**: `♭VII`, `♭VI`, `♯iv°`. ASCII
   `bVII` and `#IV` work too — `#` is only ever a sharp.
 - **Degrees are the key's own scale.** In a minor key `VI` is the natural-minor

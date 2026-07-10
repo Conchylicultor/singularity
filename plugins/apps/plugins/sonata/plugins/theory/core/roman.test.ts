@@ -209,6 +209,79 @@ describe("parseRomanNumeral — rejects non-numerals", () => {
   }
 });
 
+describe("parseRomanNumeral — spelled-out marks are case-insensitive", () => {
+  // An explicit mark (°/ø/+, or spelled dim/aug) fixes the third, so the numeral
+  // reads the same with an upper- or lowercase glyph. The lowercase forms are the
+  // convention; the uppercase forms are how lead sheets often write them.
+  const cases: [string, string][] = [
+    ["Iaug", "aug"],
+    ["iaug", "aug"],
+    ["III+", "aug"],
+    ["Idim7", "dim7"],
+    ["IIdim7", "dim7"],
+    ["viidim7", "dim7"],
+    ["Idim", "dim"],
+    ["Iø7", "halfdim7"],
+    ["IIø7", "halfdim7"],
+    ["I+7", "aug7"],
+    ["Iaug7", "aug7"],
+    ["I+maj7", "augmaj7"],
+    ["Iaugmaj7", "augmaj7"],
+  ];
+  for (const [numeral, quality] of cases) {
+    it(`${numeral} → ${quality}`, () => {
+      expect(parseRomanNumeral(numeral, C_MAJOR)!.quality).toBe(quality);
+    });
+  }
+});
+
+describe("parseRomanNumeral — altered / extended tensions", () => {
+  it("V7♭9 in C major is an altered G dominant (b9)", () => {
+    const chord = parseRomanNumeral("V7b9", C_MAJOR)!;
+    expect(chord.root).toBe(7); // G
+    expect(chord.quality).toBe("dom7");
+    expect(chord.intervals).toEqual([4, 7, 10, 13]); // 3, 5, ♭7, ♭9
+    expect(chord.symbol).toBe("G7(♭9)");
+  });
+
+  it("accepts the ♯9 / ♯5 / ♭5 altered-dominant family", () => {
+    expect(parseRomanNumeral("V7#9", C_MAJOR)!.intervals).toEqual([
+      4, 7, 10, 15,
+    ]);
+    expect(parseRomanNumeral("V7#5", C_MAJOR)!.intervals).toEqual([4, 8, 10]);
+    expect(parseRomanNumeral("V7b5", C_MAJOR)!.intervals).toEqual([4, 6, 10]);
+  });
+
+  it("glyph and parenthesised spellings parse identically", () => {
+    const bare = parseRomanNumeral("V7b9", C_MAJOR)!;
+    expect(parseRomanNumeral("V7♭9", C_MAJOR)).toMatchObject({
+      intervals: bare.intervals,
+    });
+    expect(parseRomanNumeral("V7(♭9)", C_MAJOR)).toMatchObject({
+      intervals: bare.intervals,
+    });
+  });
+
+  it("lowercase minor takes alterations too (i7♭5 = min7♭5)", () => {
+    expect(parseRomanNumeral("i7b5", C_MAJOR)!.intervals).toEqual([3, 6, 10]);
+  });
+
+  it("applies suspensions and added tones on a numeral", () => {
+    expect(parseRomanNumeral("I7sus4", C_MAJOR)!.intervals).toEqual([5, 7, 10]);
+    expect(parseRomanNumeral("Iadd9", C_MAJOR)!.intervals).toEqual([4, 7, 14]);
+  });
+
+  it("still rejects a bare figure that names no quality for the case", () => {
+    expect(parseRomanNumeral("vsus4", C_MAJOR)).toBeNull();
+    expect(parseRomanNumeral("v13", C_MAJOR)).toBeNull();
+  });
+
+  it("still rejects unrecognised trailing text as a typo", () => {
+    expect(parseRomanNumeral("V7zz", C_MAJOR)).toBeNull();
+    expect(parseRomanNumeral("Idim7x", C_MAJOR)).toBeNull();
+  });
+});
+
 describe("romanNumeral ⇄ parseRomanNumeral round-trip", () => {
   const QUALITIES = CHORD_TEMPLATES.map((t) => t.quality);
   for (const key of [C_MAJOR, A_MINOR, { tonic: "Eb", mode: "major" } as const]) {

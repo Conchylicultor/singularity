@@ -34,6 +34,7 @@ import {
   type ChordData,
   type KeySignature,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { applyModifierTail } from "./chord-body";
 import { formatChordSymbol, formatSpelledChordSymbol } from "./chords";
 import { tonicPc } from "./key-detect";
 
@@ -175,49 +176,76 @@ export function romanNumeral(
 // The inverse: numeral + key → chord
 // ---------------------------------------------------------------------------
 
-/** A style triple, flattened to a lookup key: case + mark + figure. */
-function styleKey(lower: boolean, mark: string, figure: string): string {
-  return `${lower ? "l" : "u"}|${mark}|${figure}`;
-}
-
-/**
- * `STYLE` inverted — the numeral's case + mark + figure back to the quality that
- * produced it. Built at module eval, which **throws if two qualities share a
- * style**: `romanNumeral` would then be non-injective and no parser could undo
- * it. The invariant is enforced where it can't be forgotten, not tested for.
- */
-const QUALITY_BY_STYLE = new Map<string, string>();
-for (const [quality, style] of Object.entries(STYLE)) {
-  const k = styleKey(style.lower, style.mark ?? "", style.figure ?? "");
-  const clash = QUALITY_BY_STYLE.get(k);
-  if (clash) {
-    throw new Error(
-      `[theory] Roman-numeral style collision: "${quality}" and "${clash}" both render as ${k}`,
-    );
-  }
-  QUALITY_BY_STYLE.set(k, quality);
-}
-
 /** Numeral glyph → 1-based diatonic degree (the inverse of `NUMERALS`). */
 const DEGREE_BY_NUMERAL = new Map<string, number>(
   NUMERALS.map((glyph, i) => [glyph, i + 1]),
 );
 
 /**
- * Accepted spellings of a triad-quality mark, longest-first so `dim` is read
- * whole rather than as a `d` typo. `°`/`o`/`dim` are the diminished spellings,
- * `ø` half-diminished, `+` augmented.
+ * `STYLE` inverted, split by whether the quality carries an explicit triad mark:
+ *
+ * - **Unmarked** qualities (`maj`/`min`/`dom7`/`min7`/…) are told apart *only* by
+ *   the numeral's case, so they invert on `case|figure` — the case is
+ *   load-bearing (`V7` = dom7 vs `v7` = min7) and must match exactly.
+ * - **Marked** qualities (`°` dim, `ø` half-dim, `+` aug) are told apart by the
+ *   mark itself, which fixes the third regardless of case — so they invert on
+ *   `mark|figure` and the numeral's case is *not* consulted. This is why both
+ *   `vii°7` and the equally common uppercase `VII°7` / `VIIdim7` resolve to the
+ *   same diminished chord.
+ *
+ * Both maps are built at module eval and **throw on a collision**, so a
+ * non-injective `romanNumeral` (which no parser could undo) stays impossible.
+ */
+const UNMARKED_QUALITY = new Map<string, string>();
+const MARKED_QUALITY = new Map<string, string>();
+for (const [quality, style] of Object.entries(STYLE)) {
+  const figure = style.figure ?? "";
+  const [map, key] = style.mark
+    ? [MARKED_QUALITY, `${style.mark}|${figure}`]
+    : [UNMARKED_QUALITY, `${style.lower ? "l" : "u"}|${figure}`];
+  const clash = map.get(key);
+  if (clash) {
+    throw new Error(
+      `[theory] Roman-numeral style collision: "${quality}" and "${clash}" both render as ${key}`,
+    );
+  }
+  map.set(key, quality);
+}
+
+/**
+ * Accepted spellings of a triad-quality mark, longest-first so `dim`/`aug` are
+ * read whole rather than as a stray glyph. `°`/`o`/`dim` are the diminished
+ * spellings, `ø` half-diminished, `+`/`aug` augmented.
  */
 const MARK_ALIASES: ReadonlyArray<readonly [string, string]> = [
   ["dim", "°"],
+  ["aug", "+"],
   ["°", "°"],
   ["o", "°"],
   ["ø", "ø"],
   ["+", "+"],
 ];
 
-/** Accepted spellings of a seventh/extension figure, normalized to `STYLE`'s. */
-const FIGURE_ALIASES: Record<string, string> = { M7: "maj7", M9: "maj9" };
+/**
+ * Accepted spellings of a base seventh/extension figure, each paired with the
+ * canonical figure `STYLE` uses. Matched longest-first so `maj7` wins over the
+ * empty figure and `6/9` over `6`. The empty figure `""` is the always-matching
+ * fallback (a bare triad), whose case + mark then decide the quality.
+ */
+const FIGURE_ALIASES: ReadonlyArray<readonly [string, string]> = [
+  ["6/9", "6/9"],
+  ["maj9", "maj9"],
+  ["maj7", "maj7"],
+  ["sus2", "sus2"],
+  ["sus4", "sus4"],
+  ["M9", "maj9"],
+  ["M7", "maj7"],
+  ["13", "13"],
+  ["7", "7"],
+  ["6", "6"],
+  ["9", "9"],
+  ["", ""],
+];
 
 /**
  * A numeral: an optional chromatic accidental, then I–VII in a *uniform* case
@@ -225,24 +253,58 @@ const FIGURE_ALIASES: Record<string, string> = { M7: "maj7", M9: "maj9" };
  */
 const ROMAN = /^([♭♯b#]?)([IViv]+)(.*)$/;
 
-/** Split the tail into its (normalized) quality mark and figure. */
-function splitTail(tail: string): { mark: string; figure: string } {
-  const alias = MARK_ALIASES.find(([spelling]) => tail.startsWith(spelling));
-  const mark = alias ? alias[1] : "";
-  const rest = alias ? tail.slice(alias[0].length) : tail;
-  return { mark, figure: FIGURE_ALIASES[rest] ?? rest };
+/** A numeral head resolved to its base quality plus the modifier tail after it. */
+interface ResolvedHead {
+  quality: string;
+  /** Everything after the base figure — the modifier tail (`b9`, `sus4`, …). */
+  rest: string;
+}
+
+/**
+ * Split a numeral tail into its base quality (case + mark + figure) and the
+ * modifier tail that follows, or `null` when no known quality heads it.
+ *
+ * `lower` is the numeral's case (consulted only for *unmarked* qualities). The
+ * tail reads as `[mark][figure][modifiers]`: an optional triad mark, then the
+ * longest known base figure — their combination resolving a quality — and
+ * whatever remains is the modifier tail handed to the shared grammar.
+ */
+function resolveHead(lower: boolean, tail: string): ResolvedHead | null {
+  const markAlias = MARK_ALIASES.find(([spelling]) => tail.startsWith(spelling));
+  const mark = markAlias ? markAlias[1] : "";
+  const afterMark = markAlias ? tail.slice(markAlias[0].length) : tail;
+
+  // The "" figure always matches, so `find` never fails.
+  const figAlias = FIGURE_ALIASES.find(([spelling]) =>
+    afterMark.startsWith(spelling),
+  )!;
+  const figure = figAlias[1];
+
+  const quality = mark
+    ? MARKED_QUALITY.get(`${mark}|${figure}`)
+    : UNMARKED_QUALITY.get(`${lower ? "l" : "u"}|${figure}`);
+  if (quality === undefined) return null;
+
+  return { quality, rest: afterMark.slice(figAlias[0].length) };
 }
 
 /**
  * Resolve an authored Roman numeral to the concrete chord it names in `key` —
- * the exact inverse of `romanNumeral`. `"vi"` in C major → A minor, `"V7"` in
- * F major → C7, `"♭VII"` in C major → B♭ major, `"iiø7"` → a half-diminished ii.
+ * the inverse of `romanNumeral`, plus the alteration tail. `"vi"` in C major → A
+ * minor, `"V7"` in F major → C7, `"♭VII"` in C major → B♭ major, `"iiø7"` → a
+ * half-diminished ii, `"V7♭9"` → an altered dominant.
  *
  * The root is the numeral's diatonic degree in the key's scale (natural minor
  * for a minor key, so `VI` in A minor is F — not F♯) shifted by the leading
- * accidental; the quality is whatever `romanNumeral` would have rendered as this
- * case + mark + figure. ASCII stand-ins are accepted for the glyphs (`b`/`#` for
- * `♭`/`♯`, `o`/`dim` for `°`, `M7` for `maj7`).
+ * accidental; the base quality is whatever `romanNumeral` would have rendered as
+ * this case + mark + figure, and any trailing alterations (`♭9`, `♯5`, `sus4`,
+ * `add9`, …) are realised by the same modifier grammar letter-name chords use,
+ * so the numeral side and the letter side accept the same chord vocabulary.
+ *
+ * ASCII stand-ins are accepted for the glyphs (`b`/`#` for `♭`/`♯`, `o`/`dim`
+ * for `°`, `aug` for `+`, `M7` for `maj7`). An explicit mark (`°`/`ø`/`+` and
+ * their spellings) fixes the quality's third, so `Idim7` and `IIø7` are accepted
+ * with an uppercase numeral just as `i°7` / `iiø7` are with a lowercase one.
  *
  * The chord is spelled through the key (`spelledSymbol`) as well as normalized
  * to sharps (`symbol`), so `♭VII` in F major reads "E♭" rather than "D♯".
@@ -267,21 +329,26 @@ export function parseRomanNumeral(
   const n = DEGREE_BY_NUMERAL.get(numeral.toUpperCase());
   if (n === undefined) return null; // e.g. "IIII", "VV"
 
-  const { mark, figure } = splitTail(m[3]!);
-  const quality = QUALITY_BY_STYLE.get(styleKey(lower, mark, figure));
-  if (quality === undefined) return null;
+  const head = resolveHead(lower, m[3]!);
+  if (head === null) return null;
+
+  // The tail after the base figure is an alteration/extension tail (`♭9`, `sus4`,
+  // `add9`, …) — realised by the same grammar letter-name chords use.
+  const tail = applyModifierTail(head.quality, head.rest);
+  if (tail === null) return null;
 
   const accText = m[1]!;
   const acc = accText === "" ? 0 : accText === "♯" || accText === "#" ? 1 : -1;
   const scale = key.mode === "major" ? MAJOR_SCALE : MINOR_SCALE;
   const root = pc12(tonicPc(key.tonic) + scale[n - 1]! + acc);
 
-  const symbol = formatChordSymbol({ root, quality });
-  const spelledSymbol = formatSpelledChordSymbol(
-    { root, quality },
-    makeKeySpeller(key),
-  );
+  const { quality } = head;
+  const symbol = formatChordSymbol({ root, quality }) + tail.modSuffix;
+  const spelledSymbol =
+    formatSpelledChordSymbol({ root, quality }, makeKeySpeller(key)) +
+    tail.modSuffix;
   const data: ChordData = { root, quality, symbol };
+  if (tail.intervals) data.intervals = tail.intervals;
   if (spelledSymbol !== symbol) data.spelledSymbol = spelledSymbol;
   return data;
 }
