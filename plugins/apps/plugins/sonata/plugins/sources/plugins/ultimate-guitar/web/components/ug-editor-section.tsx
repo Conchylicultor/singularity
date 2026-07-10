@@ -1,74 +1,41 @@
-import { useEffect, useRef } from "react";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
-import {
-  beatToSeconds,
-  scoreEndBeat,
-} from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { UgTabSchema } from "../../core";
 import { UltimateGuitarLoader } from "../loader";
-import { compile } from "../compile";
 import { UG_SOURCE_ID } from "../constants";
-import { updateUltimateGuitarSong } from "../../shared/endpoints";
-
-const SAVE_DEBOUNCE_MS = 500;
 
 /**
  * In-player editor for an Ultimate Guitar song, contributed to `Sonata.Section`
  * (`area: "editor"`). Mounts the `UltimateGuitarLoader`, writing the fetched
- * `UgTab` straight into the context (`setSourceRaw` → live score recompile), and
- * debounce-persists a full snapshot to the server. Renders only for songs that
- * carry UG data (`sourceRaw` defined), so it stays hidden for other sources.
+ * `UgTab` straight into the context (`setSourceRaw` → live score recompile).
  *
- * Unlike the chord-grid editor, there is NO title input — a UG song is imported,
- * not authored, so its title derives from the tab's `songName`. The PUT persists
- * `title: tab.songName`, the DB change-feed pushes `songsResource`, and the
- * toolbar title updates live from the canonical row — no in-memory title sync.
+ * This component no longer persists or gates:
+ * - **Persistence** lives in the headless, always-mounted
+ *   `UltimateGuitarPersistObserver` (`Sonata.Effect`). It must stay outside this
+ *   body because the section body is unmounted while its card is collapsed, so an
+ *   in-body debounced save would be dropped on collapse.
+ * - **Visibility** is the contribution's `useAvailable` gate (raw defined ⇒ this
+ *   is a UG song), so the card never appears for other sources.
+ *
+ * There is NO title input — a UG song is imported, not authored, so its title
+ * derives from the tab's `songName`, persisted by the observer's `PUT`.
+ *
+ * Because the gate guarantees the raw is defined by the time this renders, a
+ * missing raw here is a genuine invariant violation — we throw loudly rather than
+ * paper over it with a non-null assertion or a silent `null`.
  */
 export function UltimateGuitarEditorSection() {
-  const { sourceRaw, setSourceRaw, currentSongId, songOpenEpoch } = useSonata();
+  const { sourceRaw, setSourceRaw } = useSonata();
 
   const rawValue = sourceRaw(UG_SOURCE_ID);
-
-  // Debounced server persistence. We treat the context (rawById) as the source
-  // of truth and sync the server eventually — never on the fresh load that
-  // opening a song triggers (which bumps `songOpenEpoch`), only on edits.
-  const seededEpoch = useRef(songOpenEpoch);
-  useEffect(() => {
-    if (!currentSongId || rawValue === undefined) return;
-    // Skip the echo right after a song opens (hydrate set raw / bumped epoch).
-    if (seededEpoch.current !== songOpenEpoch) {
-      seededEpoch.current = songOpenEpoch;
-      return;
-    }
-    const parsed = UgTabSchema.safeParse(rawValue);
-    if (!parsed.success) return;
-    const id = currentSongId;
-    const tab = parsed.data;
-    const timer = setTimeout(() => {
-      const score = compile(tab);
-      const endBeat = scoreEndBeat(score);
-      void fetchEndpoint(
-        updateUltimateGuitarSong,
-        { id },
-        {
-          body: { ...tab, durationSec: beatToSeconds(score, endBeat), endBeat },
-        },
-      );
-    }, SAVE_DEBOUNCE_MS);
-    return () => clearTimeout(timer);
-  }, [rawValue, currentSongId, songOpenEpoch]);
-
-  // Gate to Ultimate Guitar songs only (hooks above always run — rules-of-hooks safe).
-  if (rawValue === undefined) return null;
+  if (rawValue === undefined) {
+    throw new Error(
+      "UltimateGuitarEditorSection rendered without Ultimate Guitar raw — the section gate (useAvailable) should prevent this.",
+    );
+  }
 
   return (
-    <Card className="rounded-lg p-lg">
-      <UltimateGuitarLoader
-        raw={rawValue}
-        onRaw={(r) => setSourceRaw(UG_SOURCE_ID, r)}
-      />
-    </Card>
+    <UltimateGuitarLoader
+      raw={rawValue}
+      onRaw={(r) => setSourceRaw(UG_SOURCE_ID, r)}
+    />
   );
 }

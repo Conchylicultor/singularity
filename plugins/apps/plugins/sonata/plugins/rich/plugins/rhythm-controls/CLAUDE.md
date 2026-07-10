@@ -25,10 +25,19 @@ with the playhead.
   open, when the row is absent, or when `enabled` is false — so one song's groove
   never leaks into the next. Dependency arrow stays feature → shell.
 - **`hasAuthoredChord` gate.** The panel is a `Sonata.Section` gated exactly like
-  `voicing-controls`: a song must carry at least one `type === "chord"`,
-  `source === "authored"` annotation. So it appears for ANY chord source
-  (chord-grid, ultimate-guitar), not just the chord grid, and stays hidden for
-  MIDI-only songs.
+  `voicing-controls`, via the contribution's `useAvailable: useHasAuthoredChord`
+  (the shell's shared score gate): a song must carry at least one
+  `type === "chord"`, `source === "authored"` annotation. So it appears for ANY
+  chord source (chord-grid, ultimate-guitar), not just the chord grid, and stays
+  hidden for MIDI-only songs. The gate lives on the contribution rather than as a
+  `return null` in the body because the section-column host paints the card + its
+  title *around* the body — a body that returned `null` would leave an empty
+  titled card behind.
+- **On/Off lives in the card header.** The section column collapses every card to
+  its title by default, so the groove toggle is contributed as the section's
+  `actions` (the `RhythmActions` chip) and stays reachable without expanding.
+  Both it and the body read one shared `useGroove()` hook, so the collapsed
+  toggle and the open circle can never drive different grooves.
 - **The circle spins for free.** The panel derives a bar grid from
   `bars(score)` + `scoreEndBeat(score)` (existing `score/core` exports, time-sig
   aware) and drives `RhythmCircle.setPhase()` imperatively from the transport
@@ -61,7 +70,7 @@ already-effective onsets (`effectiveOnsets(pattern)`, rotation applied) and maps
 - Description: Sonata Section: per-song rhythm circle. A left-hand (bass) and right-hand (chords) onset necklace that spins with the playhead, persists per song, and feeds the shell's score pipeline via a headless Sonata.Effect observer. Shown only for songs with authored chord annotations. Owns the sonata_songs_ext_rhythm side-table: per-song rhythm groove (enabled + a bass and a chord RhythmPattern). Serves the reactive rollup.
 - Web:
   - Contributes: `Sonata.Effect` "rhythm-sync" → `RhythmObserver`, `Sonata.Section` "Rhythm" → `RhythmControls`
-  - Uses: `apps/sonata/primitives/rhythm-circle.RhythmCircle`, `apps/sonata/primitives/rhythm-circle.RhythmCircleHandle`, `apps/sonata/primitives/rhythm-circle.RhythmCircleTrack`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useRhythmHands`, `apps/sonata/shell.useSetRhythmHands`, `apps/sonata/shell.useSonata`, `infra/endpoints.useEndpointMutation`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`
+  - Uses: `apps/sonata/primitives/rhythm-circle.RhythmCircle`, `apps/sonata/primitives/rhythm-circle.RhythmCircleHandle`, `apps/sonata/primitives/rhythm-circle.RhythmCircleTrack`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useHasAuthoredChord`, `apps/sonata/shell.useRhythmHands`, `apps/sonata/shell.useSetRhythmHands`, `apps/sonata/shell.useSonata`, `infra/endpoints.useEndpointMutation`, `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`
   - Exports: Types: `RhythmGroove`; Values: `useSaveRhythm`
 - Server:
   - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`

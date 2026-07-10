@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdVpnKey } from "react-icons/md";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { KeyReadout } from "./components/key-readout";
+import { KeyReadoutActions } from "./components/key-readout-actions";
 
 export default {
   description:
@@ -13,6 +14,7 @@ export default {
       icon: MdVpnKey,
       component: KeyReadout,
       area: "player",
+      actions: KeyReadoutActions,
     }),
   ],
 } satisfies PluginDefinition;

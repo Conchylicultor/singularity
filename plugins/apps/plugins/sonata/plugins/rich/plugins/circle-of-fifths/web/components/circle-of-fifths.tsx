@@ -4,8 +4,6 @@ import {
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useLivePlay } from "@plugins/apps/plugins/sonata/plugins/audio/plugins/live-play/web";
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type {
   Annotation,
   ChordData,
@@ -82,7 +80,8 @@ function sector(rIn: number, rOut: number, a0: number, a1: number): string {
 }
 
 /**
- * The circle-of-fifths panel — a free-floating `Sonata.Section`, sibling to the
+ * The circle-of-fifths panel — the BODY of a `Sonata.Section` card whose chrome
+ * (Card + collapsible "Circle of fifths" title) the host paints; sibling to the
  * chord and key readouts. Reads the shared Score + cursor from `useSonata()` and
  * highlights the wedge for the chord under the playhead: a major-ish chord lights
  * its major key on the outer ring, a minor-ish chord lights its tonic on the
@@ -92,6 +91,10 @@ function sector(rIn: number, rOut: number, a0: number, a1: number): string {
  * triad on the outer ring, the relative minor on the inner ring) through the
  * live-play engine — a standalone audition of the chord that does NOT move the
  * playhead or start the song.
+ *
+ * Applicability is the contribution's `useAvailable` (`useHasChords`): the card
+ * is not painted for a chordless song, so this body never renders a
+ * "no chords" empty state.
  */
 export function CircleOfFifths() {
   const { score } = useSonata();
@@ -154,84 +157,64 @@ export function CircleOfFifths() {
   }, [current]);
 
   return (
-    <Card className="rounded-lg p-lg">
-      <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Circle of fifths
-      </div>
+    <svg
+      viewBox="0 0 160 160"
+      className="mx-auto block w-full max-w-[14rem]"
+      role="img"
+      aria-label="Circle of fifths"
+    >
+      {MAJOR_LABELS.map((label, i) => (
+        <Wedge
+          key={`maj-${i}`}
+          label={`${label} major`}
+          text={label}
+          rIn={R_MID}
+          rOut={R_OUT}
+          rLabel={R_MAJOR_LABEL}
+          index={i}
+          lit={i === majorPos}
+          fontSize={9}
+          baseFill="var(--muted)"
+          textFill="var(--foreground)"
+          onPlay={() =>
+            playChord(MAJOR_TRIAD.map((iv) => BASE_MIDI + MAJOR_PC[i]! + iv))
+          }
+        />
+      ))}
 
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the wheel from the section label inside the Card chrome; no flex parent owns a gap here */}
-      <div className="mt-3">
-        <svg
-          viewBox="0 0 160 160"
-          className="mx-auto block w-full max-w-[14rem]"
-          role="img"
-          aria-label="Circle of fifths"
-        >
-          {MAJOR_LABELS.map((label, i) => (
-            <Wedge
-              key={`maj-${i}`}
-              label={`${label} major`}
-              text={label}
-              rIn={R_MID}
-              rOut={R_OUT}
-              rLabel={R_MAJOR_LABEL}
-              index={i}
-              lit={i === majorPos}
-              fontSize={9}
-              baseFill="var(--muted)"
-              textFill="var(--foreground)"
-              onPlay={() =>
-                playChord(MAJOR_TRIAD.map((iv) => BASE_MIDI + MAJOR_PC[i]! + iv))
-              }
-            />
-          ))}
+      {MINOR_LABELS.map((label, i) => (
+        <Wedge
+          key={`min-${i}`}
+          label={`${label.replace("m", "")} minor`}
+          text={label}
+          rIn={R_IN}
+          rOut={R_MID}
+          rLabel={R_MINOR_LABEL}
+          index={i}
+          lit={i === minorPos}
+          fontSize={7}
+          baseFill="var(--background)"
+          textFill="var(--muted-foreground)"
+          onPlay={() =>
+            playChord(MINOR_TRIAD.map((iv) => BASE_MIDI + MINOR_PC[i]! + iv))
+          }
+        />
+      ))}
 
-          {MINOR_LABELS.map((label, i) => (
-            <Wedge
-              key={`min-${i}`}
-              label={`${label.replace("m", "")} minor`}
-              text={label}
-              rIn={R_IN}
-              rOut={R_MID}
-              rLabel={R_MINOR_LABEL}
-              index={i}
-              lit={i === minorPos}
-              fontSize={7}
-              baseFill="var(--background)"
-              textFill="var(--muted-foreground)"
-              onPlay={() =>
-                playChord(MINOR_TRIAD.map((iv) => BASE_MIDI + MINOR_PC[i]! + iv))
-              }
-            />
-          ))}
-
-          {/* Centre hole — the current chord symbol, or a dash before playback. */}
-          <circle cx={CX} cy={CY} r={R_IN} fill="var(--card)" />
-          <text
-            x={CX}
-            y={CY}
-            textAnchor="middle"
-            dominantBaseline="central"
-            fontSize={11}
-            fontWeight={700}
-            fill={current ? "var(--foreground)" : "var(--muted-foreground)"}
-          >
-            {current ? current.data.symbol : "—"}
-          </text>
-        </svg>
-      </div>
-
-      {chords.length === 0 && (
-        <Text
-          as="div"
-          variant="caption"
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the empty-state caption from the wheel above; no flex parent owns a gap
-          className="mt-2 text-center text-muted-foreground"
-        >
-          No chords detected.
-        </Text>
-      )}
-    </Card>
+      {/* Centre hole — the current chord symbol, or a dash before playback. */}
+      <circle cx={CX} cy={CY} r={R_IN} fill="var(--card)" />
+      <text
+        x={CX}
+        y={CY}
+        textAnchor="middle"
+        dominantBaseline="central"
+        fontSize={11}
+        fontWeight={700}
+        fill={current ? "var(--foreground)" : "var(--muted-foreground)"}
+      >
+        {current ? current.data.symbol : "—"}
+      </text>
+    </svg>
   );
 }
 

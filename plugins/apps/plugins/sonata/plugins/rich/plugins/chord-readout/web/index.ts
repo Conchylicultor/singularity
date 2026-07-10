@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdMusicNote } from "react-icons/md";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Sonata, useHasChords } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { ChordReadout } from "./components/chord-readout";
 
 export default {
@@ -13,6 +13,7 @@ export default {
       icon: MdMusicNote,
       component: ChordReadout,
       area: "player",
+      useAvailable: useHasChords,
     }),
   ],
 } satisfies PluginDefinition;

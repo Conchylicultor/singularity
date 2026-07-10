@@ -54,12 +54,6 @@ export default {
       "plugins/apps/plugins/pages/plugins/page-tree/web/components/pages-sidebar.tsx",
       // Track color/instrument/mute/hide toggles + reset; live-state push refreshes.
       "plugins/apps/plugins/sonata/plugins/track-mixer/web/actions.ts",
-      // Debounced chord-grid autosave; in-context state is source of truth, the
-      // next keystroke retries.
-      "plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/web/components/chord-grid-editor-section.tsx",
-      // Debounced Ultimate Guitar autosave; in-context state (the loaded UgTab)
-      // is source of truth, the next edit retries.
-      "plugins/apps/plugins/sonata/plugins/sources/plugins/ultimate-guitar/web/components/ug-editor-section.tsx",
       // Play-count telemetry; an off-by-one on failure has no UX consequence.
       "plugins/apps/plugins/sonata/plugins/playback-history/web/components/record-play-observer.tsx",
       // Per-song key-auto-detect toggle; set optimistically on the shell store

@@ -121,6 +121,20 @@ export function useTrackMixerEntries(): TrackMixerEntry[] {
   }, [score.tracks, score.notes, overrides, instrumentIndex]);
 }
 
+/**
+ * Whether the Tracks section has anything to show: a song is open and it carries
+ * at least one track. Drives the `Sonata.Section` `useAvailable` gate so the card
+ * (title + chrome) renders nothing for closed / trackless states — replacing the
+ * panel's old `return null`. Safe to call alongside the panel body:
+ * `useTrackMixerEntries` is a memoized live-state/context read, not expensive per
+ * call, so invoking it in both the gate and the body costs nothing extra.
+ */
+export function useTrackMixerAvailable(): boolean {
+  const { currentSongId } = useSonata();
+  const entries = useTrackMixerEntries();
+  return currentSongId != null && entries.length > 0;
+}
+
 /** Effective color per trackId — consumed by the piano-roll note renderer. */
 export function useTrackColorMap(): Map<string, string> {
   const entries = useTrackMixerEntries();

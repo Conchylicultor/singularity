@@ -3557,6 +3557,10 @@
       "name": "@singularity/plugin-primitives-search",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/section-card": {
+      "name": "@singularity/plugin-primitives-section-card",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/select-scope": {
       "name": "@singularity/plugin-primitives-select-scope",
       "version": "0.0.1",
@@ -6527,6 +6531,8 @@
     "@singularity/plugin-primitives-scoped-store": ["@singularity/plugin-primitives-scoped-store@workspace:plugins/primitives/plugins/scoped-store"],
 
     "@singularity/plugin-primitives-search": ["@singularity/plugin-primitives-search@workspace:plugins/primitives/plugins/search"],
+
+    "@singularity/plugin-primitives-section-card": ["@singularity/plugin-primitives-section-card@workspace:plugins/primitives/plugins/section-card"],
 
     "@singularity/plugin-primitives-select-scope": ["@singularity/plugin-primitives-select-scope@workspace:plugins/primitives/plugins/select-scope"],
 

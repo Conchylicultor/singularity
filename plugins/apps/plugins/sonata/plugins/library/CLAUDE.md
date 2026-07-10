@@ -44,6 +44,35 @@ imperative `openPane` (mirroring `useOpenSong`'s exact `mode:"root"` + `input`
 call). `useOpenSong` is kept for the gallery cards, which open from inside a
 component where the caller-aware context store is correct.
 
+## The section column (`SectionPane`)
+
+`web/components/section-pane.tsx` is the host for every `Sonata.Section`
+contribution — and it owns their **chrome**. A section supplies a `label`, an
+`icon`, and a body `component`; the host wraps each one in the shared
+[`SectionCard`](../../../../../primitives/plugins/section-card/CLAUDE.md)
+primitive (a `Card` + a collapsible title row). Three consequences worth knowing
+before you add a section:
+
+- **Cards are collapsed by default**, showing only the title row. Clicking the
+  title expands it; the choice persists per section, per device (`useDraft`,
+  key `sonata.section.<id>.open`). The column therefore reads as a list of
+  titles, not a wall of panels.
+- **A collapsed card's body is UNMOUNTED.** Anything that must keep running for
+  the open song regardless of the panel's state — debounced persistence, a
+  transport subscription that outlives the panel — belongs in a headless
+  always-mounted `Sonata.Effect`, not in the body. This is why the chord-grid and
+  Ultimate Guitar editors persist from `*PersistObserver` components rather than
+  from their editor sections, and why `rhythm-controls` writes the groove from
+  `RhythmObserver`.
+- **A section can no longer opt out with `return null`** — the host has already
+  painted the title by then, leaving an empty card. "This section doesn't apply
+  to the open song" is declared on the contribution as `useAvailable?: () =>
+  boolean` (the shell exports the shared `useHasChords` / `useHasAuthoredChord`
+  gates); the host runs it first and paints nothing when it is false.
+- Controls that must stay reachable while collapsed (an on/off switch, a reset
+  button) go in the contribution's `actions?: ComponentType`, rendered as a
+  sibling of the title trigger.
+
 ## Song title ownership
 
 `sonata_songs.title` has exactly **one** client-side owner: this plugin's
@@ -67,7 +96,7 @@ the title — a chord-grid save endpoint physically cannot carry one.
 - Web:
   - Slots: `Library.Source` ← `apps.sonata.sources.chord-grid`, `apps.sonata.sources.midi`, `apps.sonata.sources.ultimate-guitar`, `Library.CardMeta` ← `apps.sonata.playback-history`, `apps.sonata.sources.midi`, `apps.sonata.sources.midi.folders`, `Library.SongActions` ← `apps.sonata.library`, `Library.Fields` ← `apps.sonata.playback-history`
   - Contributes: `Sonata.Home` "library" → `SongLibrary`, `SonataToolbar.Start` "back" → `BackToLibrary`, `SonataToolbar.Start` "title" → `SongTitle`, `SonataToolbar.Start` "display-picker" → `DisplayPicker`, `Library.SongActions` "play" → `PlaySongAction`, `Pane.Register` "sonata-library", `Pane.Register` "sonata-player"
-  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.TEMPO_MATH_FLOOR`, `apps/sonata/shell.useSonata`, `infra/endpoints.useEndpointMutation`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/column.Column`, `primitives/css/fill.Fill`, `primitives/css/grid.Grid`, `primitives/css/line.Line`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.useControlSize`, `primitives/data-view.CreateOption`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineFieldExtensions`, `primitives/data-view.defineItemActions`, `primitives/editable-field.useEditableField`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useEventCallback`, `primitives/live-state.matchResource`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/overflow-menu.OverflowMenu`, `primitives/overflow-menu.OverflowMenuItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/persistent-draft.useDraft`, `primitives/relative-time.formatRelativeTime`, `primitives/slot-render.defineRenderSlot`
+  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataSection`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.TEMPO_MATH_FLOOR`, `apps/sonata/shell.useSonata`, `infra/endpoints.useEndpointMutation`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/column.Column`, `primitives/css/fill.Fill`, `primitives/css/grid.Grid`, `primitives/css/line.Line`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.useControlSize`, `primitives/data-view.CreateOption`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.defineFieldExtensions`, `primitives/data-view.defineItemActions`, `primitives/editable-field.useEditableField`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useEventCallback`, `primitives/live-state.matchResource`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/overflow-menu.OverflowMenu`, `primitives/overflow-menu.OverflowMenuItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/persistent-draft.useDraft`, `primitives/relative-time.formatRelativeTime`, `primitives/section-card.SectionCard`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Library`, `openSongImperative`, `useCurrentSong`, `useOpenSong`
 - Server:
   - Uses: `database.db`, `infra/attachments.Attachments`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defineEntity`

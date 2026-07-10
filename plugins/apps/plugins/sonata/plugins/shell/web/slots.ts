@@ -40,6 +40,39 @@ export interface InstrumentVoices {
 }
 
 /**
+ * One panel in the player's right-hand section column. The HOST owns the chrome:
+ * every contribution is wrapped in the same collapsible `SectionCard` (collapsed
+ * by default, the title expands it), so a section supplies a `label` and a body
+ * and can never drift on padding, radius, or title typography.
+ *
+ * A section body is UNMOUNTED while its card is collapsed. Anything that must
+ * keep running regardless (debounced persistence, transport subscriptions that
+ * outlive the panel) belongs in a headless `Sonata.Effect`, not in the body.
+ */
+export interface SonataSection {
+  label: string;
+  icon?: IconType;
+  component: ComponentType;
+  area?: "editor" | "player";
+  /**
+   * Header-right controls, kept reachable while the card is collapsed (an on/off
+   * switch, a reset button). Rendered as a sibling of the title trigger, so it
+   * keeps its own click.
+   */
+  actions?: ComponentType;
+  /**
+   * Gate hook: when it returns `false` the section is not rendered at all — no
+   * card, no title. This is how a section says "I don't apply to the open song"
+   * (no chords to voice, no tracks to mix, not this source's editor). Because
+   * the card chrome now lives in the host, a section can no longer express that
+   * by returning `null` from its body — the host would paint an empty titled
+   * card. The hook's PRESENCE is stable per contribution, so the host branches
+   * on it once and stays rules-of-hooks clean.
+   */
+  useAvailable?: () => boolean;
+}
+
+/**
  * The Sonata extension axes. Three axes, four contribution slots, plus the
  * existing free-floating `Section` panels:
  *
@@ -241,14 +274,9 @@ export const Sonata = {
     docLabel: (p) => p.id,
   }),
 
-  // EXISTING — free-floating panels (current-chord readout, controls) that read
-  // shared Score + cursor context.
-  Section: defineRenderSlot<{
-    label: string;
-    icon?: ComponentType<{ className?: string }>;
-    component: ComponentType;
-    area?: "editor" | "player";
-  }>("sonata.section", {
+  // SECTION — panels in the player's right-hand column, each a collapsible
+  // `SectionCard` painted by the host. See `SonataSection` above.
+  Section: defineRenderSlot<SonataSection>("sonata.section", {
     docLabel: (p) => p.label,
   }),
 };

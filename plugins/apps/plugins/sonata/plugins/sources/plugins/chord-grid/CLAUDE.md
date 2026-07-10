@@ -71,8 +71,8 @@ in quarter-note beats); the selected voicing strategy from the shared
 
 - Description: Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. compile() emits chord annotations only; the shell's reactive re-voicing step generates the notes under the global voicing config. Persists per-song grid text and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs and persists grid edits (syncing the parent song's derived duration only; the title is library-owned).
 - Web:
-  - Contributes: `Sonata.Source` "Chord Grid", `Library.Source` "chord-grid", `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`
-  - Uses: `apps/sonata/library.Library`, `apps/sonata/library.openSongImperative`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/css/card.Card`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`
+  - Contributes: `Sonata.Source` "Chord Grid", `Library.Source` "chord-grid", `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`, `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
+  - Uses: `apps/sonata/library.Library`, `apps/sonata/library.openSongImperative`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`
 - Server:
   - Uses: `apps/sonata/library._songs`, `apps/sonata/library.createSongRow`, `apps/sonata/library.updateSongMeta`, `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/server/internal/tables.ts`

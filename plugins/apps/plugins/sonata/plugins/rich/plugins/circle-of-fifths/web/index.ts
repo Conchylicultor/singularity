@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdDonutLarge } from "react-icons/md";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Sonata, useHasChords } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { CircleOfFifths } from "./components/circle-of-fifths";
 
 export default {
@@ -13,6 +13,7 @@ export default {
       icon: MdDonutLarge,
       component: CircleOfFifths,
       area: "player",
+      useAvailable: useHasChords,
     }),
   ],
 } satisfies PluginDefinition;

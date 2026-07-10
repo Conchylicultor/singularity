@@ -13,9 +13,8 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { formatChordLabel } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { useChordDisplayMode } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/chord-label/web";
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
@@ -77,17 +76,21 @@ function buildBars(score: Score, chords: ChordAnn[]): BarLine[] {
 }
 
 /**
- * The chord-progression strip — a `Sonata.Section` panel beside the piano roll.
- * Renders the whole progression as a lead sheet: one bar per line, each chord
- * chip sized by its beat-duration so the rhythm is visible at a glance. The
- * strip scrolls with the song — the bar under the playhead is kept centred in a
- * bounded scroll viewport — and the active chip highlights (both tracked via
- * `useCursorSelector`, so the panel reconciles only on bar / chord boundaries,
- * not every frame). Clicking a chip seeks to that chord.
+ * The chord-progression strip — the BODY of a `Sonata.Section` card whose chrome
+ * (Card + collapsible "Progression" title) the host paints. Renders the whole
+ * progression as a lead sheet: one bar per line, each chord chip sized by its
+ * beat-duration so the rhythm is visible at a glance. The strip scrolls with the
+ * song — the bar under the playhead is kept centred in a bounded scroll viewport
+ * — and the active chip highlights (both tracked via `useCursorSelector`, so the
+ * panel reconciles only on bar / chord boundaries, not every frame). Clicking a
+ * chip seeks to that chord.
  *
  * Each chip's text follows the shared chord-label mode (`symbol` / `roman` /
  * `both`) via `formatChordLabel` — the same label the piano-roll overlay shows —
  * so the two chord surfaces stay in lockstep.
+ *
+ * Applicability is the contribution's `useAvailable` (`useHasChords`): the card
+ * is not painted at all for a chordless song, so this body never renders empty.
  */
 export function ChordProgression() {
   const { score, seekTo } = useSonata();
@@ -151,39 +154,33 @@ export function ChordProgression() {
     container.scrollTo({ top: Math.max(0, top), behavior: "smooth" });
   }, [activeBar]);
 
-  if (chords.length === 0) return null;
-
   return (
-    <Card className="rounded-lg p-lg">
-      <SectionLabel>Progression</SectionLabel>
-      {/* Bounded, self-scrolling lead sheet. Inline overflow/maxHeight + the
-          relative positioning context drive the playhead-follow scroll; no
-          layout primitive covers a runtime-tracked scroll viewport. */}
-      <div
-        ref={scrollRef}
-        style={{
-          position: "relative",
-          marginTop: "0.5rem",
-          maxHeight: "18rem",
-          overflowY: "auto",
-        }}
-      >
-        <Stack gap="2xs">
-          {barLines.map((line, i) => (
-            <BarRow
-              key={i}
-              ref={(el) => {
-                rowRefs.current[i] = el;
-              }}
-              line={line}
-              active={active}
-              labelByChord={labelByChord}
-              onSeek={seekTo}
-            />
-          ))}
-        </Stack>
-      </div>
-    </Card>
+    // Bounded, self-scrolling lead sheet. Inline overflow/maxHeight + the
+    // relative positioning context drive the playhead-follow scroll; no layout
+    // primitive covers a runtime-tracked scroll viewport.
+    <div
+      ref={scrollRef}
+      style={{
+        position: "relative",
+        maxHeight: "18rem",
+        overflowY: "auto",
+      }}
+    >
+      <Stack gap="2xs">
+        {barLines.map((line, i) => (
+          <BarRow
+            key={i}
+            ref={(el) => {
+              rowRefs.current[i] = el;
+            }}
+            line={line}
+            active={active}
+            labelByChord={labelByChord}
+            onSeek={seekTo}
+          />
+        ))}
+      </Stack>
+    </div>
   );
 }
 

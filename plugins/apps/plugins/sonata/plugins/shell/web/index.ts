@@ -6,7 +6,7 @@ import { sonataApp } from "../core";
 import { SonataLayout } from "./components/sonata-layout";
 
 export { Sonata, SonataToolbar } from "./slots";
-export type { InstrumentVoices, ScheduledNote } from "./slots";
+export type { InstrumentVoices, ScheduledNote, SonataSection } from "./slots";
 export {
   useSonata,
   SonataProvider,
@@ -45,6 +45,7 @@ export {
   useLaneInsets,
   type LaneInsets,
 } from "./lane-insets";
+export { useHasChords, useHasAuthoredChord } from "./score-gates";
 
 export default {
   description:

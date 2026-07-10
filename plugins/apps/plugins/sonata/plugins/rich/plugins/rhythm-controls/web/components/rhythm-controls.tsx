@@ -1,31 +1,22 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
   useCursorApi,
-  useRhythmHands,
-  useSetRhythmHands,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { bars, scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
-  defaultBassPattern,
-  defaultChordPattern,
   effectiveOnsets,
   toggleOnset,
-  type RhythmHands,
 } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
 import {
   RhythmCircle,
   type RhythmCircleHandle,
   type RhythmCircleTrack,
 } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/rhythm-circle/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { rhythmResource } from "../../shared/resources";
-import { useSaveRhythm } from "../actions";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { useGroove } from "../use-groove";
 import { TrackConfig } from "./track-config";
 
 // Distinct theme tokens for the two concentric rings (outer = chords, inner = bass).
@@ -33,39 +24,28 @@ const CHORD_COLOR = "var(--chart-1)";
 const BASS_COLOR = "var(--chart-2)";
 
 /**
- * The "Rhythm" `Sonata.Section` panel — a per-song rhythm circle. A left hand
- * (bass) and right hand (chords) each strike an onset necklace; the circle spins
- * one revolution per bar with the playhead, its beads clickable to toggle onsets
- * ("Custom"). The persisted groove feeds the shell's score pipeline (via the
- * rhythm observer), so `reVoiceChords` renders the chords with real groove.
+ * The "Rhythm" section — the BODY of a `Sonata.Section` card whose chrome (Card +
+ * collapsible "Rhythm" title) the host paints. A per-song rhythm circle: a left
+ * hand (bass) and right hand (chords) each strike an onset necklace; the circle
+ * spins one revolution per bar with the playhead, its beads clickable to toggle
+ * onsets ("Custom"). The persisted groove feeds the shell's score pipeline (via
+ * the rhythm observer), so `reVoiceChords` renders the chords with real groove.
  *
- * The live resource is the panel's display truth (it remembers both patterns even
- * while disabled); the shell store carries the optimistic live value for instant
- * playback. Hidden for MIDI-only songs: a song must carry at least one authored
- * chord annotation for a groove to mean anything — mirroring the other
- * chord-driven sections' `return null` gate — so it serves ANY chord source.
+ * Resolved groove + the optimistic commit come from the shared `useGroove()`
+ * hook, which the header On/Off toggle (`RhythmActions`) also reads — so the
+ * collapsed card's toggle and the open card's circle drive one groove.
+ *
+ * Hidden for MIDI-only songs: a song must carry at least one authored chord
+ * annotation for a groove to mean anything. That applicability gate is the
+ * contribution's `useAvailable` (`useHasAuthoredChord`) — the card is not painted
+ * at all otherwise — so this body never needs a `return null`. It serves ANY
+ * chord source (chord-grid, ultimate-guitar), not just the chord grid.
  */
 export function RhythmControls() {
-  const { score, currentSongId } = useSonata();
-  const storeHands = useRhythmHands();
-  const setHands = useSetRhythmHands();
-  const saveRhythm = useSaveRhythm();
+  const { score } = useSonata();
+  const { enabled, bass, chord, commit } = useGroove();
   const cursor = useCursorApi();
   const circleRef = useRef<RhythmCircleHandle>(null);
-
-  const rows = useResource(rhythmResource);
-  const persisted = useMemo(() => {
-    if (rows.pending || !currentSongId) return null;
-    return rows.data.find((r) => r.songId === currentSongId) ?? null;
-  }, [rows, currentSongId]);
-
-  const hasAuthoredChord = useMemo(
-    () =>
-      score.annotations.some(
-        (a) => a.type === "chord" && a.source === "authored",
-      ),
-    [score.annotations],
-  );
 
   // Bar grid for the zero-render spin. `bars()` is time-signature aware (4/4
   // default); the last bar's span runs to `scoreEndBeat`.
@@ -103,24 +83,6 @@ export function RhythmControls() {
     });
   }, [cursor, barList, endBeat]);
 
-  if (!hasAuthoredChord) return null;
-
-  // Enabled ⇔ the shell store holds hands. Patterns come from the store (live,
-  // optimistic) when enabled, else the persisted row (remembered while disabled),
-  // else a sane default for a never-configured song.
-  const enabled = storeHands != null;
-  const bass = storeHands?.bass ?? persisted?.bass ?? defaultBassPattern();
-  const chord = storeHands?.chord ?? persisted?.chord ?? defaultChordPattern();
-
-  // Optimistically drive playback (shell store) and persist. The observer
-  // re-affirms the same value on the next push.
-  const commit = (next: RhythmHands, on: boolean) => {
-    setHands(on ? next : null);
-    if (currentSongId) {
-      saveRhythm(currentSongId, { enabled: on, bass: next.bass, chord: next.chord });
-    }
-  };
-
   const tracks: RhythmCircleTrack[] = [
     {
       id: "chord",
@@ -147,45 +109,33 @@ export function RhythmControls() {
   };
 
   return (
-    <Card className="rounded-lg p-lg">
-      <Stack gap="md">
-        <Stack direction="row" gap="sm" justify="between" align="center">
-          <SectionLabel>Rhythm</SectionLabel>
-          <ToggleChip
-            active={enabled}
-            onClick={() => commit({ bass, chord }, !enabled)}
-          >
-            {enabled ? "On" : "Off"}
-          </ToggleChip>
-        </Stack>
-
-        {enabled ? (
-          <>
-            <Center>
-              <RhythmCircle
-                ref={circleRef}
-                tracks={tracks}
-                onToggleOnset={onToggleOnset}
-                size={220}
-              />
-            </Center>
-            <TrackConfig
-              label="Left hand (bass)"
-              pattern={bass}
-              onChange={(next) => commit({ bass: next, chord }, true)}
+    <Stack gap="md">
+      {enabled ? (
+        <>
+          <Center>
+            <RhythmCircle
+              ref={circleRef}
+              tracks={tracks}
+              onToggleOnset={onToggleOnset}
+              size={220}
             />
-            <TrackConfig
-              label="Right hand (chords)"
-              pattern={chord}
-              onChange={(next) => commit({ bass, chord: next }, true)}
-            />
-          </>
-        ) : (
-          <Text as="div" variant="caption" tone="muted">
-            Turn on to play the chords with a left/right-hand groove.
-          </Text>
-        )}
-      </Stack>
-    </Card>
+          </Center>
+          <TrackConfig
+            label="Left hand (bass)"
+            pattern={bass}
+            onChange={(next) => commit({ bass: next, chord }, true)}
+          />
+          <TrackConfig
+            label="Right hand (chords)"
+            pattern={chord}
+            onChange={(next) => commit({ bass, chord: next }, true)}
+          />
+        </>
+      ) : (
+        <Text as="div" variant="caption" tone="muted">
+          Turn on to play the chords with a left/right-hand groove.
+        </Text>
+      )}
+    </Stack>
   );
 }

@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdMusicNote } from "react-icons/md";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile } from "./compile";
 import { UltimateGuitarLoader } from "./loader";
@@ -8,6 +8,7 @@ import { UG_SOURCE_ID } from "./constants";
 import { hydrate } from "./hydrate";
 import { ultimateGuitarCreateOption } from "./components/ug-create-option";
 import { UltimateGuitarEditorSection } from "./components/ug-editor-section";
+import { UltimateGuitarPersistObserver } from "./components/ug-persist-observer";
 
 export default {
   description:
@@ -31,6 +32,11 @@ export default {
       icon: MdMusicNote,
       component: UltimateGuitarEditorSection,
       area: "editor",
+      useAvailable: () => useSonata().sourceRaw(UG_SOURCE_ID) !== undefined,
+    }),
+    Sonata.Effect({
+      id: "ultimate-guitar-persist",
+      component: UltimateGuitarPersistObserver,
     }),
   ],
 } satisfies PluginDefinition;

@@ -1,11 +1,9 @@
 import { cn, ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState, type ComponentType } from "react";
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import {
   MdAutoMode,
   MdCheck,
   MdExpandMore,
-  MdRestartAlt,
   MdVisibility,
   MdVisibilityOff,
   MdVolumeOff,
@@ -14,11 +12,7 @@ import {
 import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
-import {
-  Collapsible,
-  CollapsibleContent,
-} from "@plugins/primitives/plugins/collapsible/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
@@ -32,7 +26,6 @@ import {
   setTrackHidden,
   setTrackInstrument,
   setTrackMuted,
-  resetTrackViews,
 } from "../actions";
 import { useTrackMixerEntries, type TrackMixerEntry } from "../hooks";
 import { TRACK_PALETTE, blackKeyColor } from "../palette";
@@ -286,8 +279,13 @@ function TrackRow({
  * The "Tracks" section panel (`Sonata.Section`, area "player"). Lists every
  * track of the open song with a compact, toggle-icon control set: categorical
  * color, mute (audio), and hide (piano-roll), a functional per-track instrument
- * picker, plus name / note count and a per-song reset. State persists per
- * (song, track).
+ * picker, plus name / note count. State persists per (song, track).
+ *
+ * The host (SectionCard) paints the card chrome, title, and collapse; the
+ * per-song reset is the section's header-right `actions` (`TrackMixerActions`).
+ * Visibility is gated by the contribution's `useAvailable`
+ * (`useTrackMixerAvailable`), so this body renders only with an open, tracked
+ * song — `currentSongId` is therefore guaranteed non-null here.
  */
 export function TrackMixerPanel() {
   const { currentSongId } = useSonata();
@@ -307,41 +305,22 @@ export function TrackMixerPanel() {
     [instruments],
   );
 
-  if (!currentSongId || entries.length === 0) return null;
-
-  const anyCustomized = entries.some((e) => e.customized);
+  if (!currentSongId) {
+    throw new Error(
+      "TrackMixerPanel rendered without an open song — the section gate (useTrackMixerAvailable) should prevent this.",
+    );
+  }
 
   return (
-    <Card className="rounded-lg p-lg">
-      <Collapsible defaultOpen>
-        <SectionHeaderRow
-          variant="eyebrow"
-          actions={
-            <ControlSizeProvider size="sm">
-              <IconButton
-                icon={MdRestartAlt}
-                label="Reset tracks to defaults"
-                disabled={!anyCustomized}
-                onClick={() => resetTrackViews(currentSongId)}
-              />
-            </ControlSizeProvider>
-          }
-        >
-          Tracks
-        </SectionHeaderRow>
-
-        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt separates the track list from the section header above (no named margin utility) */}
-        <CollapsibleContent className="mt-2 divide-y divide-border/60">
-          {entries.map((entry) => (
-            <TrackRow
-              key={entry.trackId}
-              songId={currentSongId}
-              options={options}
-              entry={entry}
-            />
-          ))}
-        </CollapsibleContent>
-      </Collapsible>
-    </Card>
+    <div className="divide-y divide-border/60">
+      {entries.map((entry) => (
+        <TrackRow
+          key={entry.trackId}
+          songId={currentSongId}
+          options={options}
+          entry={entry}
+        />
+      ))}
+    </div>
   );
 }

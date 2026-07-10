@@ -1,6 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdPiano } from "react-icons/md";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  Sonata,
+  useHasAuthoredChord,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { VoicingControls } from "./components/voicing-controls";
 
 export default {
@@ -13,6 +16,7 @@ export default {
       icon: MdPiano,
       component: VoicingControls,
       area: "player",
+      useAvailable: useHasAuthoredChord,
     }),
   ],
 } satisfies PluginDefinition;

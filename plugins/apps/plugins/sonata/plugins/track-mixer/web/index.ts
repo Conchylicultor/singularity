@@ -2,6 +2,8 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdTune } from "react-icons/md";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { TrackMixerPanel } from "./components/track-mixer-panel";
+import { TrackMixerActions } from "./components/track-mixer-actions";
+import { useTrackMixerAvailable } from "./hooks";
 
 export {
   useTrackMixerEntries,
@@ -23,6 +25,8 @@ export default {
       icon: MdTune,
       component: TrackMixerPanel,
       area: "player",
+      actions: TrackMixerActions,
+      useAvailable: useTrackMixerAvailable,
     }),
   ],
 } satisfies PluginDefinition;

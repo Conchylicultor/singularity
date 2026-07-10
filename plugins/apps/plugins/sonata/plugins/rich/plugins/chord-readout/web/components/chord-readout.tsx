@@ -3,8 +3,7 @@ import {
   useCursorSelector,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   chordPitches,
@@ -52,11 +51,17 @@ function centerInWindow(voicings: number[][]): number[][] {
 }
 
 /**
- * The "current chord" readout — a free-floating `Sonata.Section` panel (NOT a
+ * The "current chord" readout — the BODY of a `Sonata.Section` card whose chrome
+ * (Card + collapsible "Current chord" title) the host paints (NOT a
  * geometry-anchored overlay). Reads the shared Score + cursor from `useSonata()`
  * and shows the chord annotation covering the playhead, tracking it as the
  * transport advances. Below the symbol, a mini keyboard lights up the chord's
  * notes; an "Inversions" toggle stacks one mini keyboard per inversion.
+ *
+ * Applicability is the contribution's `useAvailable` (`useHasChords`): the card
+ * is not painted for a chordless song, so this body never renders a
+ * "no chords" empty state — only the `—` placeholder when the cursor sits past
+ * the last of the (existing) chords.
  */
 export function ChordReadout() {
   const { score } = useSonata();
@@ -104,115 +109,96 @@ export function ChordReadout() {
     return centerInWindow(root.map((_, k) => invertVoicing(root, k)));
   }, [current]);
 
+  if (!current) {
+    return (
+      // eslint-disable-next-line text/no-adhoc-typography -- large placeholder dash matching the 24px display readout (no equivalent variant above the title token, 20px)
+      <div className="text-2xl font-semibold text-muted-foreground/60">—</div>
+    );
+  }
+
   return (
-    <Card className="rounded-lg p-lg">
-      <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-        Current chord
-      </div>
-      {current ? (
-        <>
-          {/* Row: the big chord symbol, and — when a key is in force — its
-              Roman-numeral function trailing in the accent color, so the chord's
-              name and its harmonic role read side by side. */}
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separates the readout from the section label inside the Card chrome; no flex parent to own a gap */}
-          <div className="mt-2 flex items-baseline gap-sm">
-            {/* eslint-disable-next-line text/no-adhoc-typography -- large display readout (36px) exceeds the title token (20px), no equivalent variant */}
-            <div className="text-4xl font-bold tracking-tight text-foreground">
-              {current.data.symbol}
-            </div>
-            {roman && (
-              <Text
-                as="div"
-                variant="title"
-                tone="primary"
-                className="tabular-nums font-semibold"
+    <Stack gap="md">
+      <Stack gap="2xs">
+        {/* Row: the big chord symbol, and — when a key is in force — its
+            Roman-numeral function trailing in the accent color, so the chord's
+            name and its harmonic role read side by side. */}
+        <div className="flex items-baseline gap-sm">
+          {/* eslint-disable-next-line text/no-adhoc-typography -- large display readout (36px) exceeds the title token (20px), no equivalent variant */}
+          <div className="text-4xl font-bold tracking-tight text-foreground">
+            {current.data.symbol}
+          </div>
+          {roman && (
+            <Text
+              as="div"
+              variant="title"
+              tone="primary"
+              className="tabular-nums font-semibold"
+            >
+              {roman}
+            </Text>
+          )}
+        </div>
+        <Text as="div" variant="caption" className="text-muted-foreground">
+          {current.data.spelledSymbol ? `${current.data.spelledSymbol} · ` : ""}
+          {current.data.quality}
+          {current.confidence !== undefined
+            ? ` · ${(current.confidence * 100).toFixed(0)}% confidence`
+            : ""}
+        </Text>
+        <div className="text-2xs tabular-nums text-muted-foreground/70">
+          beats {current.start.toFixed(2)}–{current.end.toFixed(2)}
+        </div>
+      </Stack>
+
+      {voicings && (
+        <Stack gap="sm">
+          <div className="flex items-center justify-between">
+            <SectionLabel>Notes</SectionLabel>
+            {voicings.length > 1 && (
+              <ToggleChip
+                active={showInversions}
+                onClick={() => setShowInversions((v) => !v)}
               >
-                {roman}
-              </Text>
+                Inversions
+              </ToggleChip>
             )}
           </div>
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the spelled-symbol caption from the large readout above */}
-          <Text as="div" variant="caption" className="mt-1 text-muted-foreground">
-            {current.data.spelledSymbol ? `${current.data.spelledSymbol} · ` : ""}
-            {current.data.quality}
-            {current.confidence !== undefined
-              ? ` · ${(current.confidence * 100).toFixed(0)}% confidence`
-              : ""}
-          </Text>
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the beat-range line from the caption above */}
-          <div className="mt-1 text-2xs tabular-nums text-muted-foreground/70">
-            beats {current.start.toFixed(2)}–{current.end.toFixed(2)}
-          </div>
-
-          {voicings && (
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the voicings section from the beats line above; no flex parent to own a gap
-            <div className="mt-3">
-              <div className="flex items-center justify-between">
-                <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Notes
-                </div>
-                {voicings.length > 1 && (
-                  <ToggleChip
-                    active={showInversions}
-                    onClick={() => setShowInversions((v) => !v)}
-                  >
-                    Inversions
-                  </ToggleChip>
-                )}
-              </div>
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 top offset below the Notes header row inside the Card; no parent gap to own it */}
-              <Stack gap="sm" className="mt-2">
-                {(showInversions ? voicings : voicings.slice(0, 1)).map(
-                  (voicing, k) => {
-                    const slash = formatChordSymbol({
-                      root: current.data.root,
-                      quality: current.data.quality,
-                      bass: ((voicing[0]! % 12) + 12) % 12,
-                    });
-                    return (
-                      <Stack key={k} gap="xs">
-                        {/* Per-row caption — only when stacking inversions; the
-                            big symbol above already names the root chord. */}
-                        {showInversions && (
-                          <div className="text-2xs">
-                            <span className="font-medium text-foreground/80">
-                              {ORDINALS[k] ?? `${k}th`}
-                            </span>
-                            <span className="text-muted-foreground/70">
-                              {" · "}
-                              {slash}
-                            </span>
-                          </div>
-                        )}
-                        <Keyboard
-                          low={KB_LOW}
-                          high={KB_HIGH}
-                          lit={voicing}
-                          className="h-11 w-full"
-                        />
-                      </Stack>
-                    );
-                  },
-                )}
-              </Stack>
-            </div>
-          )}
-        </>
-      ) : chords.length === 0 ? (
-        <Text
-          as="div"
-          variant="body"
-          // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the empty-state line from the section label inside the Card chrome
-          className="mt-2 text-muted-foreground"
-        >
-          No chords detected.
-        </Text>
-      ) : (
-        // eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- large placeholder dash matching the 24px display readout (no equivalent variant above the title token, 20px); top offset separates it from the section label inside the Card chrome
-        <div className="mt-2 text-2xl font-semibold text-muted-foreground/60">
-          —
-        </div>
+          <Stack gap="sm">
+            {(showInversions ? voicings : voicings.slice(0, 1)).map(
+              (voicing, k) => {
+                const slash = formatChordSymbol({
+                  root: current.data.root,
+                  quality: current.data.quality,
+                  bass: ((voicing[0]! % 12) + 12) % 12,
+                });
+                return (
+                  <Stack key={k} gap="xs">
+                    {/* Per-row caption — only when stacking inversions; the
+                        big symbol above already names the root chord. */}
+                    {showInversions && (
+                      <div className="text-2xs">
+                        <span className="font-medium text-foreground/80">
+                          {ORDINALS[k] ?? `${k}th`}
+                        </span>
+                        <span className="text-muted-foreground/70">
+                          {" · "}
+                          {slash}
+                        </span>
+                      </div>
+                    )}
+                    <Keyboard
+                      low={KB_LOW}
+                      high={KB_HIGH}
+                      lit={voicing}
+                      className="h-11 w-full"
+                    />
+                  </Stack>
+                );
+              },
+            )}
+          </Stack>
+        </Stack>
       )}
-    </Card>
+    </Stack>
   );
 }

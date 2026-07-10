@@ -1,8 +1,12 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdGraphicEq } from "react-icons/md";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  Sonata,
+  useHasAuthoredChord,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { RhythmObserver } from "./components/rhythm-observer";
 import { RhythmControls } from "./components/rhythm-controls";
+import { RhythmActions } from "./components/rhythm-actions";
 
 export { useSaveRhythm } from "./actions";
 export type { RhythmGroove } from "./actions";
@@ -18,6 +22,8 @@ export default {
       icon: MdGraphicEq,
       component: RhythmControls,
       area: "player",
+      actions: RhythmActions,
+      useAvailable: useHasAuthoredChord,
     }),
   ],
 } satisfies PluginDefinition;

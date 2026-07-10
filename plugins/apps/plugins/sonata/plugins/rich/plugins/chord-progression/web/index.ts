@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdQueueMusic } from "react-icons/md";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Sonata, useHasChords } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { ChordProgression } from "./components/chord-progression";
 
 export default {
@@ -13,6 +13,7 @@ export default {
       icon: MdQueueMusic,
       component: ChordProgression,
       area: "player",
+      useAvailable: useHasChords,
     }),
   ],
 } satisfies PluginDefinition;

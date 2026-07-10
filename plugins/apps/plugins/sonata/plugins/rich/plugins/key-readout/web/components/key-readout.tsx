@@ -1,15 +1,10 @@
 import { useMemo } from "react";
 import {
   useCursorSelector,
-  useKeyAutoDetect,
-  useSetKeyAutoDetect,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { saveKeyAutoDetect } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { SectionLabel, Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import {
   accidentalGlyph,
@@ -47,17 +42,21 @@ const KB_HIGH = 95;
 const SCALE_TINT = "color-mix(in srgb, var(--primary) 32%, transparent)";
 
 /**
- * The "current key" readout — a free-floating `Sonata.Section` panel, sibling to
- * the chord readout. Reads the shared Score + cursor from `useSonata()` and shows
- * the key in force at the playhead (the song's `meta.key` plus mid-song `key`
+ * The "current key" readout — the BODY of a `Sonata.Section` card whose chrome
+ * (Card + collapsible "Current key" title) the host paints; sibling to the chord
+ * readout. Reads the shared Score + cursor from `useSonata()` and shows the key
+ * in force at the playhead (the song's `meta.key` plus mid-song `key`
  * annotations, reconciled by `effectiveKeyAt`). Where the chord readout lights a
  * chord's notes, this lights the key's *scale* notes — the tonic in the full
  * accent, the other six diatonic degrees in a softer tint.
+ *
+ * Always available (a key can be established without chords), so the section has
+ * no `useAvailable` gate; the keyless case stays an in-body "No key detected."
+ * The per-song "Auto-detect key" toggle lives in the contribution's `actions`
+ * (see `KeyReadoutActions`) so it stays reachable while the card is collapsed.
  */
 export function KeyReadout() {
-  const { score, currentSongId } = useSonata();
-  const keyAutoDetect = useKeyAutoDetect();
-  const setKeyAutoDetect = useSetKeyAutoDetect();
+  const { score } = useSonata();
 
   // Beat-indexed key entries — recomputed only when the Score changes. Walking
   // the memoized list (rather than `effectiveKeyAt`, which rebuilds it each call)
@@ -84,18 +83,6 @@ export function KeyReadout() {
     sameActiveKey,
   );
   const current = active?.key;
-
-  // Show the per-song "auto-detect key" toggle only for songs that carry an
-  // authored key to override — or that already have the override on (in which
-  // case the authored key is stripped from `entries`, so OR the live flag).
-  const showToggle =
-    entries.some((e) => e.source === "authored") || keyAutoDetect;
-
-  const toggleAutoDetect = () => {
-    const next = !keyAutoDetect;
-    setKeyAutoDetect(next); // optimistic: re-spell/readout update instantly
-    if (currentSongId) saveKeyAutoDetect(currentSongId, next); // persist per song
-  };
 
   const scale = useMemo(() => {
     if (!current) return null;
@@ -133,70 +120,47 @@ export function KeyReadout() {
   }, [current]);
 
   return (
-    <Card className="rounded-lg p-lg">
-      <Stack gap="sm">
-        <div className="flex items-center justify-between gap-sm">
-          <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Current key
-          </div>
-          {showToggle && (
-            <ToggleChip
-              active={keyAutoDetect}
-              variant="ghost"
-              onClick={toggleAutoDetect}
-              title={
-                keyAutoDetect
-                  ? "Using a key auto-detected from the notes. Turn off to use the song's own (MIDI) key."
-                  : "Using the song's own (MIDI) key. Turn on to auto-detect the key from the notes instead."
-              }
-            >
-              Auto-detect
-            </ToggleChip>
-          )}
-        </div>
-        {current && scale ? (
-          <>
-            <Stack gap="2xs">
-              {/* eslint-disable-next-line text/no-adhoc-typography -- large display readout (36px) matching the chord readout; exceeds the title token (20px), no equivalent variant */}
-              <div className="text-4xl font-bold tracking-tight text-foreground">
-                {current.tonic}{" "}
-                <span className="font-semibold text-muted-foreground">
-                  {current.mode}
-                </span>
-              </div>
-              <div className="flex items-baseline justify-between gap-sm">
-                <Text as="div" variant="caption" className="text-muted-foreground">
-                  relative {scale.relative.tonic} {scale.relative.mode}
-                </Text>
-                <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground/80">
-                  {active?.source === "derived" ? "Auto-detected" : "From MIDI"}
-                </span>
-              </div>
-            </Stack>
+    <Stack gap="sm">
+      {current && scale ? (
+        <>
+          <Stack gap="2xs">
+            {/* eslint-disable-next-line text/no-adhoc-typography -- large display readout (36px) matching the chord readout; exceeds the title token (20px), no equivalent variant */}
+            <div className="text-4xl font-bold tracking-tight text-foreground">
+              {current.tonic}{" "}
+              <span className="font-semibold text-muted-foreground">
+                {current.mode}
+              </span>
+            </div>
+            <div className="flex items-baseline justify-between gap-sm">
+              <Text as="div" variant="caption" className="text-muted-foreground">
+                relative {scale.relative.tonic} {scale.relative.mode}
+              </Text>
+              <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                {active?.source === "derived" ? "Auto-detected" : "From MIDI"}
+              </span>
+            </div>
+          </Stack>
 
-            <Stack gap="xs">
-              <div className="flex items-center justify-between">
-                <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Scale
-                </div>
-                <div className="text-2xs tabular-nums text-muted-foreground/80 text-right">
-                  {scale.names.join(" · ")}
-                </div>
+          <Stack gap="xs">
+            <div className="flex items-center justify-between">
+              <SectionLabel>Scale</SectionLabel>
+              <div className="text-2xs tabular-nums text-muted-foreground/80 text-right">
+                {scale.names.join(" · ")}
               </div>
-              <Keyboard
-                low={KB_LOW}
-                high={KB_HIGH}
-                lit={scale.lit}
-                className="h-11 w-full"
-              />
-            </Stack>
-          </>
-        ) : (
-          <Text as="div" variant="body" className="text-muted-foreground">
-            No key detected.
-          </Text>
-        )}
-      </Stack>
-    </Card>
+            </div>
+            <Keyboard
+              low={KB_LOW}
+              high={KB_HIGH}
+              lit={scale.lit}
+              className="h-11 w-full"
+            />
+          </Stack>
+        </>
+      ) : (
+        <Text as="div" variant="body" className="text-muted-foreground">
+          No key detected.
+        </Text>
+      )}
+    </Stack>
   );
 }
