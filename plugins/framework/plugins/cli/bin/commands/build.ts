@@ -22,6 +22,7 @@ import {
   libpqEnv,
   readDatabaseConfig,
   worktreeDataDir,
+  worktreeArtifacts,
   PG_LOG_FILE,
   SINGULARITY_DIR,
 } from "../paths";
@@ -30,6 +31,7 @@ import { withHostSlot, type HostSlotKind } from "../host-semaphore";
 import { publishLane } from "../lane";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
+import { renderStepBlock, orderStepsForDisplay, renderVerdict, emitVerdict, installVerdictGuard, type Verdict } from "../build-output";
 import { appendBuildLog } from "../build-log-writer-global";
 import { markWorktreeOpStart, clearWorktreeOp, writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
 import { zeroCacheSpec } from "@plugins/infra/plugins/launcher/server";
@@ -250,18 +252,10 @@ interface StepResult {
 }
 
 function printStepResults(results: StepResult[]): void {
-  for (const result of results) {
-    const icon = result.success ? "✓" : "✗";
-    const duration = (result.durationMs / 1000).toFixed(1);
-    const header = `── ${result.label} ${icon} (${duration}s) `;
-    const pad = Math.max(0, 60 - header.length);
-    console.log(header + "─".repeat(pad));
-    for (const line of result.lines) {
-      if (line.stream === "stderr") {
-        process.stderr.write(`  ${line.text}\n`);
-      } else {
-        process.stdout.write(`  ${line.text}\n`);
-      }
+  for (const result of orderStepsForDisplay(results)) {
+    for (const { text, stream } of renderStepBlock(result)) {
+      if (stream === "stderr") process.stderr.write(`${text}\n`);
+      else process.stdout.write(`${text}\n`);
     }
   }
 }
@@ -496,17 +490,23 @@ async function readHealthStartedAt(name: string): Promise<number | null> {
 // `resp.ok` is not enough — a failed hot-restart leaves the OLD backend
 // answering `{ok:true}` with stale code and the build would falsely pass.
 // `restartError` carries the gateway's 500 body, if any, for the failure message.
+// Returns a soft-degrade note when the server was still booting under host load
+// but the artifacts are valid (folded into the success verdict), or null on a
+// clean pass. An unambiguous deploy failure (a hot restart whose new backend
+// never took over) routes through `onDeployFailure`, which never returns.
 async function probeHealth(
   name: string,
   previousStartedAt: number | null,
   restartError: string | null,
-): Promise<void> {
+  onDeployFailure: (reason: string[]) => never,
+): Promise<string | null> {
   const isRestart = previousStartedAt != null;
   const deadline = adaptiveTimeoutMs(20_000, 120_000);
   console.log(`Probing /api/health... (deadline ${Math.round(deadline / 1000)}s)`);
   const url = `http://${name}.localhost:9000/api/health`;
+  const site = `http://${name}.localhost:9000`;
   let lastStatus: number | string = "no response";
-  await retryUntil<true, Promise<void>>(
+  const result = await retryUntil<true, Promise<string | null>>(
     async () => {
       try {
         const resp = await fetch(url, { signal: AbortSignal.timeout(5_000) });
@@ -546,15 +546,14 @@ async function probeHealth(
         // stale code. There is no lenient interpretation for this path — fail the
         // build. finalizeBuildLog runs via the process.on("exit") handler.
         if (isRestart) {
-          const detail = restartError ? `\nGateway restart error: ${restartError}` : "";
-          console.error(
-            `New backend never became ready within ${Math.round(deadline / 1000)}s — the gateway is still ` +
-              `serving the previous backend (stale code). The freshly-built backend failed its onReadyBlocking ` +
-              `ready barrier (last: ${lastStatus}).${detail}\n` +
-              `Inspect the backend log at ${join(worktreeDataDir(name), "logs")} for the throw.`,
-          );
-          writeBuildLogs(name);
-          process.exit(1);
+          const detail = restartError ? `Gateway restart error: ${restartError}` : "";
+          onDeployFailure([
+            `NOT DEPLOYED. ${site} still serves the previous backend (stale code).`,
+            `The freshly-built backend never became ready within ${Math.round(deadline / 1000)}s — ` +
+              `it failed its onReadyBlocking ready barrier (last: ${lastStatus}).`,
+            ...(detail ? [detail] : []),
+            `Inspect the backend log at ${join(worktreeDataDir(name), "logs")} for the throw.`,
+          ]);
         }
         const load1 = Math.round((os.loadavg()[0] ?? 0) * 10) / 10;
         const info = await getWorktreeState(name);
@@ -564,19 +563,18 @@ async function probeHealth(
               `(last: ${lastStatus}) and the gateway is unreachable. ` +
               `Build artifacts are valid; not blocking the build.`,
           );
-          return;
+          return "server still booting (gateway unreachable)";
         }
         switch (info.state) {
           case "broken":
-            console.error(
-              `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}. ` +
-                `Check server logs.`,
-            );
-            process.exit(1);
-            break;
+            return onDeployFailure([
+              `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}.`,
+              `NOT DEPLOYED. ${site} still serves the previous build.`,
+              `Inspect the backend log at ${join(worktreeDataDir(name), "logs")} for the throw.`,
+            ]);
           case "running":
             console.log("Server is up.");
-            return;
+            return null;
           case "starting":
           case "restarting":
           case "idle":
@@ -585,29 +583,30 @@ async function probeHealth(
                 `(load avg ${load1}). Build artifacts are valid; the gateway will finish ` +
                 `bringing it up on demand. Not blocking the build.`,
             );
-            return;
+            return "server still booting under host load";
           default:
             console.warn(
               `Server didn't respond on /api/health within ${Math.round(deadline / 1000)}s ` +
                 `(gateway state: ${info.state || "unknown"}, last: ${lastStatus}). ` +
                 `Build artifacts are valid; not blocking the build.`,
             );
-            return;
+            return "server still booting";
         }
       },
     },
   );
+  return result === true ? null : result;
 }
 
 // `/gateway/worktrees` is the gateway's own API and exists on every gateway
 // version — a 200 here proves the gateway is alive. Central's own readiness
 // is covered by the gateway's waitReady on its Unix socket; no separate
 // central-side liveness probe.
-async function probeGatewayHealth(): Promise<void> {
+async function probeGatewayHealth(): Promise<string | null> {
   console.log("Probing gateway /gateway/worktrees...");
   const url = "http://localhost:9000/gateway/worktrees";
   let lastStatus: number | string = "no response";
-  await retryUntil(
+  const result = await retryUntil<true, string | null>(
     async () => {
       try {
         const resp = await fetch(url);
@@ -626,9 +625,11 @@ async function probeGatewayHealth(): Promise<void> {
           `Gateway did not become healthy within 10s (last: ${lastStatus}). ` +
             `Build artifacts are valid; gateway will retry on next request.`,
         );
+        return "gateway still starting";
       },
     },
   );
+  return result === true ? null : result;
 }
 
 export function registerBuild(program: Command) {
@@ -778,6 +779,16 @@ export function registerBuild(program: Command) {
         });
       };
       process.on("exit", () => finalizeBuildLog(false));
+
+      // The build cannot terminate without printing its own verdict. Registered
+      // after finalizeBuildLog's exit hook so handlers run in order and the
+      // banner is written last. Earlier exits (getWorktreeRoot, name/branch
+      // guards, parseMigrationAnswers) fire before this point and before any
+      // artifact is touched, so there is no deploy ambiguity for them to resolve.
+      installVerdictGuard({
+        url: `http://${name}.localhost:9000`,
+        buildLogPath: worktreeArtifacts.buildLogText(name, buildId),
+      });
 
       // Catchable fatal signals → graceful exit so the exit handlers above
       // (build-log finalize) and the lock release run. SIGKILL is uncatchable —
@@ -1089,22 +1100,61 @@ export function registerBuild(program: Command) {
 
       printStepResults(stepResults);
 
+      const buildUrl = `http://${name}.localhost:9000`;
+      // Soft-degrade notes threaded out of the deploy-phase probes (server still
+      // booting under host load, gateway still starting). Folded into the OK
+      // verdict's headline so the reader's last impression is the truth, not an
+      // out-of-context warning.
+      const softNotes: string[] = [];
+
+      const stepRoster = (): Verdict["steps"] =>
+        stepResults.map((r) => ({ label: r.label, success: r.success }));
+
+      // The single fatal funnel. Every post-steps failure routes through here so
+      // the build's own verdict — with the failing step last, the full step
+      // roster, the NOT DEPLOYED consequence, and the log pointers as the literal
+      // last lines — is the terminal output on both console and build.log. The
+      // verdict's pointers name build.log's own path, so that path is computed
+      // (pure helper) and the verdict rendered BEFORE build.log is written.
+      const failBuild = (reason: string[], failedLabels: string[]): never => {
+        const buildLogPath = worktreeArtifacts.buildLogText(name, buildId);
+        const pointers = [`Full output: ${buildLogPath}`];
+        if (stepResults.some((r) => r.id === "checks" && !r.success)) {
+          pointers.push(`Check logs:  ${join(worktreeDataDir(name), "check.log")}`);
+        }
+        const v: Verdict = {
+          ok: false,
+          headline: `BUILD FAILED — ${failedLabels.length > 0 ? failedLabels.join(", ") : "deploy"}`,
+          reason,
+          pointers,
+          steps: stepRoster(),
+        };
+        writeBuildLogs(name, renderVerdict(v));
+        finalizeBuildLog(false);
+        emitVerdict(v);
+        process.exit(1);
+      };
+
+      const buildOkVerdict = (): Verdict => ({
+        ok: true,
+        headline: softNotes.length > 0 ? `BUILD OK — deployed (${softNotes.join("; ")})` : "BUILD OK — deployed",
+        notes: [buildUrl],
+        pointers: [],
+        steps: stepRoster(),
+      });
+
       const failedSteps = stepResults.filter((r) => !r.success);
       const failures = failedSteps.map((r) => r.label);
 
       if (failures.length > 0) {
         await rm(stagingPath, { recursive: true, force: true });
-        const buildLog = writeBuildLogs(name);
-        finalizeBuildLog(false);
-        // Final lines, so they survive `./singularity build | tail`. When the
-        // checks step failed, point straight at its full untruncated transcript
-        // so agents can read it directly without the build.log → check.log hop.
-        const pointers = [`Full output: ${buildLog}`];
-        if (failedSteps.some((r) => r.id === "checks")) {
-          pointers.push(`Check logs:  ${join(worktreeDataDir(name), "check.log")}`);
-        }
-        console.error(`\nBuild failed: ${failures.join(", ")}\n${pointers.join("\n")}`);
-        process.exit(1);
+        failBuild(
+          [
+            `NOT DEPLOYED. Nothing was published; ${buildUrl} still serves the previous build.`,
+            `The frontend compiled, but the artifact was discarded.`,
+          ],
+          failures,
+        );
       }
 
       // Write the commit hash at build time so the server can report drift.
@@ -1196,7 +1246,8 @@ export function registerBuild(program: Command) {
               { method: "POST", signal: AbortSignal.timeout(30_000) },
             );
             if (resp.ok) {
-              await probeGatewayHealth();
+              const gwNote = await probeGatewayHealth();
+              if (gwNote) softNotes.push(gwNote);
             } else if (resp.status !== 404) {
               console.warn(`Central restart returned ${resp.status}`);
             }
@@ -1210,10 +1261,12 @@ export function registerBuild(program: Command) {
 
       // 4. Restart the backend if the gateway has it running
       if (!opts.restart) {
+        softNotes.push("restart skipped");
         writeBuildProfile(name);
-        writeBuildLogs(name);
+        const okV = buildOkVerdict();
+        writeBuildLogs(name, renderVerdict(okV));
         finalizeBuildLog(true);
-        console.log(`Deployed to http://${name}.localhost:9000 (restart skipped)`);
+        emitVerdict(okV);
         return;
       }
       endSpan = buildProfilerStart("restartBackend", "build:deploy", "restart backend");
@@ -1241,12 +1294,14 @@ export function registerBuild(program: Command) {
           restartError = (await resp.text().catch(() => "")).trim() || null;
           const info = await getWorktreeState(name);
           if (info?.state === "broken") {
-            console.error(
-              `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}` +
-                `${restartError ? `: ${restartError}` : ""}. Check server logs.`,
+            failBuild(
+              [
+                `Server crashed during boot (state: broken): ${info.lastSpawnErr || "no error reported"}` +
+                  `${restartError ? `: ${restartError}` : ""}.`,
+                `NOT DEPLOYED. ${buildUrl} still serves the previous build. Check server logs.`,
+              ],
+              ["backend crashed"],
             );
-            finalizeBuildLog(false);
-            process.exit(1);
           }
           console.warn(
             `Backend restart returned 500${restartError ? `: ${restartError}` : ""} — verifying the new backend took over…`,
@@ -1269,13 +1324,17 @@ export function registerBuild(program: Command) {
       // and fail the build if the server can't come up.
       if (gatewayUp) {
         endSpan = buildProfilerStart("probeHealth", "build:deploy", "health probe");
-        await probeHealth(name, previousStartedAt, restartError);
+        const note = await probeHealth(name, previousStartedAt, restartError, (reason) =>
+          failBuild(reason, ["backend never ready"]),
+        );
+        if (note) softNotes.push(note);
         endSpan();
       }
 
       writeBuildProfile(name);
-      writeBuildLogs(name);
+      const okV = buildOkVerdict();
+      writeBuildLogs(name, renderVerdict(okV));
       finalizeBuildLog(true);
-      console.log(`Deployed to http://${name}.localhost:9000`);
+      emitVerdict(okV);
     });
 }
