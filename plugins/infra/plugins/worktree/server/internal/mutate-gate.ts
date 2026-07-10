@@ -21,12 +21,13 @@ import { cpus } from "node:os";
 // 6-way churn. The irreducible per-op cost (the 77 MB working tree) is a separate,
 // deeper lever (sparse-checkout). See
 // research/perfs/2026-07-02-worktree-mutation-host-gate-DESIGN.md.
+//
+// NO env override: `size` names the flock SLOT FILES (`slot-0 … slot-(N-1)`), so it
+// MUST be identical in every process — a backend sized to 3 only sweeps `slot-0..2`
+// and is blind to one holding `slot-5`, silently exceeding the bound. A pure function
+// of stable host facts (`os.cpus()`) is what prevents that; the primitive's size
+// sentinel only makes a residual mismatch loud.
 function mutateSize(): number {
-  const env = process.env.SINGULARITY_WORKTREE_MUTATE_CONCURRENCY;
-  if (env) {
-    const n = parseInt(env, 10);
-    if (n > 0) return n;
-  }
   return Math.max(2, Math.floor(cpus().length / 6)); // 18 CPUs -> 3; conservative
 }
 
@@ -55,6 +56,6 @@ export function withWorktreeMutateSlot<T>(fn: () => Promise<T>): Promise<T> {
         held--;
       }
     },
-    (waitMs) => chargeWait("worktree-mutate-acquire", waitMs),
+    { onAcquired: (waitMs) => chargeWait("worktree-mutate-acquire", waitMs) },
   );
 }

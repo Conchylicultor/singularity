@@ -1,8 +1,34 @@
 import { afterEach, describe, expect, test } from "bun:test";
-import { rmSync } from "node:fs";
+import { mkdirSync, rmSync } from "node:fs";
 import { join } from "node:path";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 import { createHostSemaphore, type HostShare } from "./host-semaphore";
+
+// The `flock-wait.ts` child script, resolved the same way the module resolves it.
+// Tests spawn it directly to stand in for an out-of-process slot holder.
+const FLOCK_WAIT_PATH = join(import.meta.dir, "..", "..", "scripts", "flock-wait.ts");
+
+// This very module, imported by the separate-process probe below. The probe must run
+// inside the repo (default cwd under `bun test`) so the transitive `@plugins/*` alias
+// resolves.
+const HOST_SEMAPHORE_MODULE = join(import.meta.dir, "host-semaphore.ts");
+
+// A one-shot fixture (run via `bun -e`): construct the named pool and acquire+release
+// one slot immediately, printing OK on success or THREW:<msg> on any error. Used to
+// hammer a fresh pool's first-acquire from many separate processes at once.
+const FIRST_ACQUIRE_FIXTURE = `
+  const { createHostSemaphore } = await import(process.env.HS_MOD);
+  const sem = createHostSemaphore({ name: process.env.HS_NAME, size: 4 });
+  try {
+    const share = await sem.acquireShare(1);
+    await share.release();
+    process.stdout.write("OK\\n");
+    process.exit(0);
+  } catch (err) {
+    process.stdout.write("THREW:" + (err && err.message) + "\\n");
+    process.exit(1);
+  }
+`;
 
 // Unique slot dir per `createHostSemaphore` so parallel test runs (and the two
 // tests below) never collide on the same lock files.
@@ -244,3 +270,232 @@ describe("acquireShare", () => {
     await again.release();
   });
 });
+
+/** Read `stream` until the literal `"granted\n"` token; throw if it closes first. */
+async function awaitGrantedRaw(stream: ReadableStream<Uint8Array>): Promise<void> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (value) buf += decoder.decode(value, { stream: true });
+      if (buf.includes("granted\n")) return;
+      if (done) throw new Error("flock-wait child exited before granting");
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/** Read the first newline-terminated JSON line from `stream`. */
+async function readJsonLine<T>(stream: ReadableStream<Uint8Array>): Promise<T> {
+  const reader = stream.getReader();
+  const decoder = new TextDecoder();
+  let buf = "";
+  try {
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (value) buf += decoder.decode(value, { stream: true });
+      const nl = buf.indexOf("\n");
+      if (nl >= 0) return JSON.parse(buf.slice(0, nl)) as T;
+      if (done) throw new Error("stream closed before a JSON line was produced");
+    }
+  } finally {
+    reader.releaseLock();
+  }
+}
+
+/** Spawn `flock-wait.ts` directly against one absolute lock file (a raw holder). */
+function spawnHolder(lockFile: string) {
+  return Bun.spawn([process.execPath, FLOCK_WAIT_PATH], {
+    stdin: "pipe",
+    stdout: "pipe",
+    stderr: "inherit",
+    env: { ...process.env, HOST_SEM_LOCK_FILE: lockFile },
+  });
+}
+
+/** True iff `pid` is still alive (signal-0 probe); ESRCH ⇒ gone. */
+function isAlive(pid: number): boolean {
+  try {
+    process.kill(pid, 0);
+    return true;
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ESRCH") return false;
+    throw err;
+  }
+}
+
+// The stranding gate. `acquireShare(1)` takes exactly the first free slot in file
+// order, so four handles deterministically hold slot-0…3. A fifth waiter finds every
+// slot busy and fans out. Releasing ANY one held slot must wake it — the whole point
+// of the fan-out. The old pid-hashed broker parked on one slot, so at least 3 of the
+// 4 releases hung; parameterizing k proves every slot wakes the waiter.
+describe("wakes on any freed slot (stranding gate)", () => {
+  for (const k of [0, 1, 2, 3]) {
+    test(`releasing held slot ${k} wakes the fan-out waiter`, async () => {
+      const sem = createHostSemaphore({ name: uniqueName(`strand-${k}`), size: 4 });
+
+      const handles: HostShare[] = [];
+      for (let i = 0; i < 4; i++) handles.push(await sem.acquireShare(1));
+      expect(handles.every((h) => h.slots === 1)).toBe(true); // one slot each, slot-0…3
+
+      const waiterP = sem.acquireShare(1);
+      await sleep(150); // let the waiter reach the slow path and fan out
+      await handles[k]!.release();
+
+      // Race the waiter against a 2s timeout sentinel; the old design would time out
+      // for k ∉ { winnerPid % 4 }.
+      const outcome = await Promise.race([
+        waiterP,
+        sleep(2000).then(() => "TIMEOUT" as const),
+      ]);
+      expect(outcome).not.toBe("TIMEOUT");
+      const share = outcome as HostShare;
+      expect(share.slots).toBeGreaterThanOrEqual(1);
+
+      await share.release();
+      for (let i = 0; i < 4; i++) if (i !== k) await handles[i]!.release();
+    });
+  }
+});
+
+test("a SIGKILLed out-of-process holder wakes a fan-out waiter", async () => {
+  // flock releases on holder *death*, not just graceful close — so a SIGKILL must
+  // wake the waiter. This is the case any userspace tick-file/watcher design fails.
+  const name = uniqueName("sigkill");
+  const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
+  mkdirSync(slotsDir, { recursive: true });
+
+  const holder = spawnHolder(join(slotsDir, "slot-0.lock"));
+  await awaitGrantedRaw(holder.stdout); // holder now owns the only slot
+
+  const sem = createHostSemaphore({ name, size: 1 });
+  const waiterP = sem.acquireShare(1);
+  await sleep(150); // waiter finds the slot busy and fans out
+  holder.kill(9); // hard kill — the flock releases as the process dies
+  await holder.exited;
+
+  const outcome = await Promise.race([waiterP, sleep(2000).then(() => "TIMEOUT" as const)]);
+  expect(outcome).not.toBe("TIMEOUT");
+  await (outcome as HostShare).release();
+});
+
+test("a fan-out child is not orphaned when its parent is SIGKILLed", async () => {
+  // A child blocked on flock must still exit when its parent dies with no chance to
+  // SIGTERM it — the orphan hole the old main-thread-flock broker had. The worker-
+  // thread design keeps the child's main thread free to observe stdin EOF.
+  const name = uniqueName("orphan");
+  const slotsDir = join(SINGULARITY_DIR, `${name}-slots`);
+  mkdirSync(slotsDir, { recursive: true });
+  const lockFile = join(slotsDir, "slot-0.lock");
+
+  // Grandparent (this test) holds the slot so the fan-out child blocks indefinitely.
+  const holder = spawnHolder(lockFile);
+  await awaitGrantedRaw(holder.stdout);
+
+  // Intermediate parent spawns a flock-wait child (piped stdin) and stays alive. It
+  // prints the child pid so the grandparent can watch it after the parent is killed.
+  const script = `
+    const child = Bun.spawn([process.execPath, "--smol", process.env.FW_PATH], {
+      stdin: "pipe", stdout: "inherit", stderr: "inherit",
+      env: { ...process.env, HOST_SEM_LOCK_FILE: process.env.FW_LOCK },
+    });
+    console.log(JSON.stringify({ childPid: child.pid }));
+    await new Promise(() => {});
+  `;
+  const intermediate = Bun.spawn([process.execPath, "-e", script], {
+    stdin: "ignore",
+    stdout: "pipe",
+    stderr: "inherit",
+    env: { ...process.env, FW_PATH: FLOCK_WAIT_PATH, FW_LOCK: lockFile },
+  });
+  const { childPid } = await readJsonLine<{ childPid: number }>(intermediate.stdout);
+
+  // SIGKILL the parent — nobody is left to SIGTERM the still-blocked child. Its stdin
+  // (piped from the parent) hits EOF, and its main thread (free, not blocked in flock)
+  // observes it and exits.
+  intermediate.kill(9);
+  await intermediate.exited;
+
+  await sleep(1500);
+  expect(isAlive(childPid)).toBe(false);
+
+  void holder.stdin.end();
+  holder.kill();
+  await holder.exited;
+});
+
+test("losers are reaped before the extras sweep, so no undercount", async () => {
+  // When a full share is released at once, all `size` fan-out children may each grab a
+  // different slot. The winner keeps one; the losers are SIGKILLed and awaited so their
+  // slots are back BEFORE the extras re-sweep — the waiter must reclaim more than one.
+  const sem = createHostSemaphore({ name: uniqueName("extras"), size: 4 });
+
+  const holder = await sem.acquireShare(4);
+  expect(holder.slots).toBe(4);
+
+  const waiterP = sem.acquireShare(4);
+  await sleep(150);
+  await holder.release(); // all four slots free simultaneously
+
+  const share = await waiterP;
+  expect(share.slots).toBeGreaterThan(1); // the extras sweep ran after losers exited
+  expect(share.slots).toBeLessThanOrEqual(4);
+  await share.release();
+});
+
+test("size is part of pool identity: a live size mismatch throws, an idle one resizes", async () => {
+  const name = uniqueName("identity");
+
+  // Establish the pool at size 4 and HOLD a slot so it is live.
+  const sem4 = createHostSemaphore({ name, size: 4 });
+  const held = await sem4.acquireShare(1);
+  expect(held.slots).toBe(1);
+
+  // A size-8 process on the same live pool would silently overcommit — it must crash.
+  const sem8 = createHostSemaphore({ name, size: 8 });
+  const err = await rejection(sem8.acquireShare(1));
+  expect(err.message).toContain("live at size");
+
+  // Once idle, a fresh size-8 pool resizes the sentinel silently and gets all 8.
+  await held.release();
+  const sem8b = createHostSemaphore({ name, size: 8 });
+  const share = await sem8b.acquireShare(8);
+  expect(share.slots).toBe(8);
+  await share.release();
+});
+
+test(
+  "concurrent first-acquire on a fresh pool never crashes on the size-guard race",
+  async () => {
+    // Many separate processes first-touching the same fresh pool contend on the
+    // `.size.lock` guard exactly while the sentinel is still absent (between flock and
+    // rename). A benign flock race must NOT crash — the old code threw "concurrent size
+    // initialization" for the loser. Each probe agrees on size, so every one must end
+    // OK (acquire → release), never THREW. In-process concurrency won't reproduce it
+    // (the promise memo dedupes); it needs separate processes racing on the flock.
+    const results: string[] = [];
+    for (let trial = 0; trial < 3; trial++) {
+      const name = uniqueName(`race-${trial}`);
+      const children = Array.from({ length: 12 }, () =>
+        Bun.spawn([process.execPath, "-e", FIRST_ACQUIRE_FIXTURE], {
+          stdout: "pipe",
+          stderr: "inherit",
+          env: { ...process.env, HS_MOD: HOST_SEMAPHORE_MODULE, HS_NAME: name },
+        }),
+      );
+      const outs = await Promise.all(
+        children.map(async (c) => (await new Response(c.stdout).text()).trim()),
+      );
+      await Promise.all(children.map((c) => c.exited));
+      results.push(...outs);
+    }
+
+    const threw = results.filter((r) => r.startsWith("THREW"));
+    expect(threw).toEqual([]); // no process crashed on the guard race
+    expect(results.every((r) => r === "OK")).toBe(true); // every one acquired
+  },
+  30_000,
+);

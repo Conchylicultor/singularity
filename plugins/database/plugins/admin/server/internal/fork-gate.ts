@@ -18,12 +18,13 @@ import { chargeWait, registerGateGauge } from "@plugins/infra/plugins/runtime-pr
 // queueing shows up attributed in get_runtime_profile / slow-ops / the flight
 // recorder, never as anonymous slowness.
 // See research/2026-07-07-global-background-work-priority-isolation.md.
+//
+// NO env override: `size` names the flock SLOT FILES (`slot-0 … slot-(N-1)`), so it
+// MUST be identical in every process — a process sized to 2 only sweeps `slot-0..1`
+// and is blind to one holding `slot-3`, silently exceeding the bound. A constant (or
+// a pure function of stable host facts) is what prevents that; the primitive's size
+// sentinel only makes a residual mismatch loud.
 function forkSize(): number {
-  const env = process.env.SINGULARITY_DB_FORK_CONCURRENCY;
-  if (env) {
-    const n = parseInt(env, 10);
-    if (n > 0) return n;
-  }
   return 2;
 }
 
@@ -48,6 +49,6 @@ export function withDbForkSlot<T>(fn: () => Promise<T>): Promise<T> {
         held--;
       }
     },
-    (waitMs) => chargeWait("db-fork-acquire", waitMs),
+    { onAcquired: (waitMs) => chargeWait("db-fork-acquire", waitMs) },
   );
 }

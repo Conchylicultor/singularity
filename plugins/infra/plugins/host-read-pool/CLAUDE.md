@@ -26,10 +26,14 @@ The pool *instance* (fixed name `heavy-read` + size) lives here rather than in
 the bare primitive because its name/size and the wait charging are policy, not
 mechanism.
 
-**Size:** `floor(cpus/4)`, overridable via `SINGULARITY_HEAVY_READ_CONCURRENCY`
-(mirrors `SINGULARITY_BUILD_CONCURRENCY`). Conservative start; can rise toward
-`floor(cpus/2)` if profiling shows the gate is the bottleneck while CPU is
-unsaturated.
+**Size:** `floor(cpus/4)`, with **no env override**. The size names the flock slot
+*files* (`slot-0 … slot-(N-1)`), so it must be identical in every backend — a
+process sized to 4 sweeps only `slot-0..3` and is blind to one holding `slot-7`,
+silently exceeding the bound. Keeping it a pure function of `os.cpus()` is what
+prevents that (`type-check`'s `hostWorkerBudget()` forbids an override for the same
+reason). Conservative start; can rise toward `floor(cpus/2)` if profiling shows the
+gate is the bottleneck while CPU is unsaturated — by editing the constant, in one
+place.
 
 **Two-tier gate (per-worktree fairness).** In front of the host-wide flock gate
 sits a small **in-process per-worktree `createSemaphore`** (size

@@ -1,7 +1,7 @@
 # host-semaphore
 
 Cross-process twin of `packages/semaphore`. `createHostSemaphore({ name, size })`
-returns the same `{ run(fn, onWait?) }` shape, but the bound is enforced *across*
+returns the same `{ run(fn, hooks?) }` shape, but the bound is enforced *across*
 processes — at most `size` `run` bodies execute at once across every process
 sharing the same `name`, not just within one. Use it to cap CPU-heavy work (git
 subprocesses, `git archive | tar`, filesystem walks, JSONL scans) across the ~16
@@ -15,71 +15,122 @@ holding process dies**, so a SIGKILLed server never leaks a slot — the same
 crash-safety the host-wide build pool relies on
 (`framework/cli/bin/host-semaphore.ts`).
 
-## Hybrid acquire — fast path in-process, broker only under contention
+## Hybrid acquire — fast path in-process, fan-out only under contention
 
 A blocking `flock(fd, LOCK_EX)` is fatal in a long-running server event loop (it
-freezes the loop until the lock frees). So `run` is hybrid:
+freezes the loop until the lock frees). So acquire is hybrid:
 
 - **Fast path (in-process):** a non-blocking `flock(LOCK_EX | LOCK_NB)` sweep over
   the N fds. A single `LOCK_NB` syscall is microseconds and never freezes the
   loop. When a slot is free this is the whole story — no subprocess, no tax.
-- **Slow path (all slots busy):** the parent spawns a one-shot **broker
-  subprocess** (`scripts/broker.ts`) that does the blocking `flock(LOCK_EX)` wait
-  off the parent's event loop and writes `granted\n` once it holds a slot. The
-  parent just `await`s that line (async stream read — loop never blocks). Closing
-  the broker's stdin gives it EOF → it exits → its fd closes → the flock releases.
-  If the broker's stdout closes without the token it died early → `run` throws
-  loudly rather than silently dropping the bound.
+- **Slow path (all slots busy):** we must *wait* for a slot without blocking the
+  loop, and without stranding on one slot. A blocking `flock(LOCK_EX)` parks on a
+  **single** open file description, so a waiter that picks one slot is never woken
+  when a *different* slot frees — that slot then sits idle. Instead the head waiter
+  **fans out**: it spawns one `flock-wait` child per slot (`scripts/flock-wait.ts`,
+  via `bun --smol`) and takes the **first** to grant `granted\n`. Any freed slot
+  wakes it — including one freed by a **SIGKILLed** holder, since flock releases on
+  death too. The losers are then SIGKILLed and reaped (`await exited`), which cancels
+  their blocked flocks and hands back any slot a loser had already grabbed, before the
+  caller re-sweeps for extras. If every child closes stdout without granting, acquire
+  throws loudly rather than silently dropping the bound.
 
-The blocking flock lives **only** in the broker — a subprocess has no event loop
-to freeze. `broker.ts` imports nothing cross-plugin (only `node:*` + `bun:ffi`);
-its slot dir + size arrive via env, so it stays an independently-runnable script
-with no boundary concerns.
+### The turnstile — only the head waiter fans out
 
-## `acquireShare(max)` — a whole share up front, at most one broker
+Fanning out `size` children *per waiter* would be `size × waiters` processes exactly
+when the box is already saturated. A per-pool **turnstile** (`turnstile.lock`, a
+single flock file) fixes that: a waiter first takes the turnstile (non-blocking
+in-process; if contended, it waits for it via one `flock-wait` child — a single file
+is an ordinary flock queue that cannot strand), re-sweeps once (a slot may have freed
+while queued), and only *then* fans out. So exactly one head waiter fans out at a
+time host-wide. Process cost per contended pool is `size + (W − 1)` (the head's
+`size` fan-out children plus one turnstile child per other waiter), versus a naive
+`size × W`. A size-1 pool degenerates to today's single child.
+
+**Deadlock-free.** The turnstile is only ever held by *waiters*; a slot-holder never
+needs it, and a turnstile-holder waits only for a slot, which holders always release.
+The wait-for graph is acyclic.
+
+**Barging is unchanged (no FIFO).** The fast-path sweep does not consult the
+turnstile, so a fresh caller can still take a slot a queued waiter was about to win.
+The turnstile buys serialized *wakeup*, not FIFO *fairness* — do not assume ordering.
+
+### Why the blocking flock runs on a worker thread
+
+`flock-wait.ts`'s **main thread** stays responsive; the blocking `flock(LOCK_EX)`
+runs on a `node:worker_threads` Worker (`scripts/flock-block.ts`). A synchronous FFI
+flock has no yield point, so a child that blocked on its *main* thread could not
+observe stdin EOF or signals while parked — and if its parent were SIGKILLed (agent
+builds are killed on deploy), nobody would be left to SIGTERM it and it would leak
+forever (the **orphan** hole). Parking the block on a worker keeps the main thread
+free to see stdin EOF and exit, closing that hole. The fd is process-wide, so process
+exit releases the lock; the worker deliberately never closes it.
+
+`flock-wait.ts` and `flock-block.ts` import nothing cross-plugin (only `node:*` +
+`bun:ffi`); the one lock file arrives via `HOST_SEM_LOCK_FILE`, so they stay
+independently-runnable scripts with no boundary concerns.
+
+### Size is part of the pool's identity
+
+`size` names the slot-file *set*, so an old-size process holding `slot-7.lock` is
+invisible to a new-size process that only sweeps `slot-0..3` — the bound would be
+silently exceeded. A `<dir>/size` sentinel makes any mismatch loud. On first acquire
+the check takes a guard on `<dir>/.size.lock` (non-blocking flock in-process; if
+contended — another process is mid-initialization, a benign race — it **waits** for
+the guard via one `flock-wait` child, never crashing on the contention), then
+read-modify-writes the sentinel: absent → write it; equal → proceed; different → a
+non-blocking sweep decides — if the pool is idle it resizes silently (rewrite the
+sentinel, unlink now-extra slot files), otherwise it **throws** (`pool is live at
+size <old>, but this process was built for <size>`). The check is memoized as an
+in-flight promise (concurrent in-process callers share one run) and cleared on
+failure. The only crash here is a genuine live size mismatch — a silent overcommit
+becoming a crash.
+
+## `acquireShare(max)` — a whole share up front
 
 `run` holds exactly one slot. A caller that fans out N units of heavy work would
-otherwise `run`-wrap each unit and spawn up to N brokers (one blocking wait per
-unit) precisely when the box is already under pressure. `acquireShare(max, onWait?)`
-is the answer: **acquire the whole share once, before fanning out.** It blocks until
-at least one slot is held, then greedily takes any additional free slots up to `max`
-with a single non-blocking sweep, returning a `HostShare { slots, release }` naming
-how many it actually got (`1 … min(max, size)`).
+otherwise `run`-wrap each unit precisely when the box is already under pressure.
+`acquireShare(max, hooks?)` is the answer: **acquire the whole share once, before
+fanning out.** It blocks until at least one slot is held, then greedily takes any
+additional free slots up to `max` with a single non-blocking sweep, returning a
+`HostShare { slots, release }` naming how many it actually got (`1 … min(max, size)`).
 
 - **Idle pool = pure fast path.** The up-front `flock(LOCK_NB)` sweep grabs up to
-  `max` free slots in-process — no subprocess, no broker. This is the whole story
-  when slots are free.
-- **All slots busy = exactly one broker.** Only when the sweep finds nothing do we
-  spawn a single broker to do the blocking wait for the *first* slot; once it grants,
-  a second non-blocking sweep picks up any extra slots that freed while we waited.
-  So a share is **at most one broker per call**, never one per slot.
+  `max` free slots in-process — no subprocess. This is the whole story when slots
+  are free.
+- **All slots busy = turnstile + fan-out.** Only when the sweep finds nothing does
+  the head waiter take the turnstile and fan out one child per slot (see above),
+  taking the first grant; a second non-blocking sweep then picks up any extra slots
+  that freed while we waited.
 - `max` is clamped to `size` (asking for more than exists is capped, not an error);
   a non-integer or `< 1` `max` throws loudly. `slots` is never `0` — the call blocks
   or throws instead, so a caller never has to distinguish "got a share" from "got
   nothing".
 - `release()` is idempotent: it closes the held fds (flock auto-release) and reaps
-  the broker if one was spawned. Trade-off: the whole share is held until `release`,
-  so there is some tail waste once only the slowest unit is left — releasing slots as
-  work drains is a possible later refinement.
+  the winner child if one was spawned. Trade-off: the whole share is held until
+  `release`, so there is some tail waste once only the slowest unit is left —
+  releasing slots as work drains is a possible later refinement.
 
-> **Known limitation — a waiter commits to one slot.** `broker.ts` blocks on a single
-> pid-hashed slot (`flock(LOCK_EX)` can only wait on one open file description), so if
-> a *different* slot frees while it waits, the broker is not woken and that slot sits
-> idle. The bound is never violated — this costs utilization and latency, not
-> correctness. It matters more for `acquireShare` than for `run`, because a share can
-> hold most of the pool for a long time. Reproduced and tracked in
-> `task-1783635702105-q3ipa7`; the same line exists in the CLI build pool
-> (`framework/cli/bin/host-semaphore.ts`), so the fix belongs with the host-admission
-> unification, not here.
-
-`run(fn, onWait)` is now a thin wrapper — `acquireShare(1, onWait)` then
+`run(fn, hooks)` is a thin wrapper — `acquireShare(1, hooks)` then
 `try { fn() } finally { share.release() }` — so both entry points share one acquire
 path and `depth()` / crash-safety are identical between them.
 
+## Hooks — observing the wait without coupling to a profiler
+
+`AcquireHooks` carries two optional callbacks, neither of which gates behavior:
+
+- `onWaitStart()` — fires when the slow path is entered (every slot busy), **before**
+  any child is spawned; never on the fast path. Lets a caller *open* a "waiting for a
+  slot" span.
+- `onAcquired(waitMs)` — fires once, fast path or slow, at acquisition before the body
+  runs, with the milliseconds waited (≈0 on the fast path). Replaces the old positional
+  `onWait` and keeps identical semantics.
+
 Crash-safety holds on both paths: the held fd is closed in a `finally`, so a
 rejecting `fn` never leaks a slot, and parent death closes every fd (or EOFs the
-broker), releasing whatever slot was held. See
-`research/2026-06-16-global-host-wide-cpu-admission-flock-broker.md` (Change 1).
+winner child), releasing whatever slot was held. See
+`research/2026-06-16-global-host-wide-cpu-admission-flock-broker.md` (Change 1) and
+`research/2026-07-10-global-host-semaphore-any-slot-wakeup.md` (fan-out + turnstile).
 
 Exposed from a **`server`** barrel (not `core`): it uses `bun:ffi`, `node:fs`, and
 `Bun.spawn`, none browser-safe. The barrel carries the conventional inert
@@ -94,7 +145,7 @@ export.
 - Description: Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
 - Server:
   - Uses: `infra/paths.SINGULARITY_DIR`
-  - Exports: Types: `HostSemaphore`, `HostShare`; Values: `createHostSemaphore`
+  - Exports: Types: `AcquireHooks`, `HostSemaphore`, `HostShare`; Values: `createHostSemaphore`
 - Cross-plugin:
   - Imported by: `database/admin`, `debug/profiling/boot-bench`, `infra/host-read-pool`, `infra/worktree`
 

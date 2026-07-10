@@ -221,14 +221,16 @@ const check: Check = {
     // request — its target count, capped at the budget — never a term in `B`.
     const max = Math.min(targets.length, hostWorkerBudget());
     let waitedMs = 0;
-    const share = await pool.acquireShare(max, (waitMs) => {
-      waitedMs = waitMs;
+    const share = await pool.acquireShare(max, {
+      onAcquired: (waitMs) => {
+        waitedMs = waitMs;
+      },
     });
     try {
       // A reduced or waited-for share otherwise reads as an unexplained slowdown,
       // so surface it — ONE plain stderr line (checks run under Promise.all in
       // the runner, so never a blocking log or a progress bar). The wait term is
-      // thresholded because `onWait` also times the in-process fast-path sweep (a
+      // thresholded because `onAcquired` also times the in-process fast-path sweep (a
       // few ms of mkdir/open/flock even on an idle pool); only a real block on the
       // broker (all slots busy) runs into the hundreds of ms. A reduced share
       // (`slots < max`) is degraded regardless of how long we waited.

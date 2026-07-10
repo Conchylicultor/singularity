@@ -34,7 +34,8 @@ a 64 GB box and the machine thrashed (see
 The bound is a lane-keyed `packages/host-semaphore` pool of `B` flock slot files
 (`~/.singularity/type-check-worker-{interactive,background}-slots/slot-0 … slot-(B-1)`).
 The check acquires its whole share once, up front (`pool.acquireShare(max)` — at
-most one broker per build), then fans out at exactly `share.slots` concurrency.
+most one wait per build, never one child per worker), then fans out at exactly
+`share.slots` concurrency.
 
 - **Two lanes, by who is waiting.** `interactive` = main build + push (a human is
   blocked); `background` = agent build + direct agent check. The CLI classifies
@@ -60,7 +61,7 @@ most one broker per build), then fans out at exactly `share.slots` concurrency.
   genuinely waited for, the check writes one plain stderr line
   (`type-check: 3/8 worker slots in the background lane (waited 12.4s)`). Checks
   run under `Promise.all`, so it must never be a blocking log or a progress bar.
-  The wait term is thresholded (`WAIT_NOTE_MS`), not `waitMs > 0`: `onWait` also
+  The wait term is thresholded (`WAIT_NOTE_MS`), not `waitMs > 0`: `onAcquired` also
   times the in-process fast-path sweep, which costs ~0.25 ms on a fully idle pool,
   so a bare `> 0` would print the note on every run and train the eye to ignore it.
 

@@ -3,12 +3,12 @@ import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { chargeWait, registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
 import { cpus } from "node:os";
 
+// Host-wide slot count. NO env override: `size` names the flock SLOT FILES
+// (`slot-0 … slot-(N-1)`), so it MUST be identical in every process — a backend
+// sized to 4 only sweeps `slot-0..3` and is blind to one holding `slot-7`, silently
+// exceeding the bound. A pure function of stable host facts (`os.cpus()`) is what
+// prevents that; the primitive's size sentinel only makes a residual mismatch loud.
 function heavyReadSize(): number {
-  const env = process.env.SINGULARITY_HEAVY_READ_CONCURRENCY;
-  if (env) {
-    const n = parseInt(env, 10);
-    if (n > 0) return n;
-  }
   return Math.max(1, Math.floor(cpus().length / 4));
 }
 
@@ -76,15 +76,15 @@ export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
             heldByThisProcess--;
           }
         },
-        (waitMs) => chargeWait("heavy-read-acquire", waitMs),
+        { onAcquired: (waitMs) => chargeWait("heavy-read-acquire", waitMs) },
       ),
     (waitMs) => chargeWait("heavy-read-local", waitMs),
   );
 }
 
-// The host-wide heavy-read gate's slot count (`floor(cpus/4)`, env-overridable).
-// Exposed so callers can size a same-named occupant pool to exactly saturate the
-// gate without re-deriving the formula.
+// The host-wide heavy-read gate's slot count (`floor(cpus/4)`). Exposed so callers
+// can size a same-named occupant pool to exactly saturate the gate without
+// re-deriving the formula.
 export function heavyReadSlotCount(): number {
   return heavyReadSize();
 }
