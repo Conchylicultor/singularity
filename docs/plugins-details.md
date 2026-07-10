@@ -1944,7 +1944,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `conversations/conversation-view/pending-turn.clearPendingTurn`, `conversations/conversation-view/pending-turn.PendingTurnEcho`, `conversations/conversation-view/pending-turn.usePendingTurn`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/copy-to-clipboard.useCopyToClipboard`, `primitives/css/badge.Badge`, `primitives/css/bouncing-dots.BouncingDots`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`
             - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`, `SectionExpand`; Values: `CopyTextAction`, `EventActionProvider`, `EventLine`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `RowActions`, `Timestamp`, `useJsonlConversationId`, `useLastAssistantEvent`, `useRowMarkdown`, `useSectionExpand`
           - Server:
-            - Uses: `conversations/transcript-watcher.readJsonlEventsFromChain`, `conversations/transcript-watcher.resolveConversationTranscriptPaths`, `conversations/transcript-watcher.watchTranscript`
+            - Uses: `conversations/transcript-watcher.readJsonlEventsFromChain`, `conversations/transcript-watcher.resolveConversationTranscriptPaths`, `conversations/transcript-watcher.transcriptChainSignature`, `conversations/transcript-watcher.watchTranscript`, `infra/git-read-cache.createSignedMemo`
             - Resources: `jsonl-events` (push)
           - Core:
             - Uses: `conversations/transcript-watcher.JsonlEvent`, `conversations/transcript-watcher.JsonlEventSchema`, `primitives/live-state.resourceDescriptor`
@@ -2466,7 +2466,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`transcript-watcher`** — Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
       - Server:
         - Uses: `conversations/session-chain.listSessionChain`, `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.CLAUDE_PROJECTS_DIR`, `tasks/tasks-core.getConversationClaudeSessionId`
-        - Exports: Values: `findTranscriptPath`, `readChainLines`, `readJsonlEvents`, `readJsonlEventsFromChain`, `refreshConversationChain`, `resolveConversationTranscriptPaths`, `watchTranscript`
+        - Exports: Types: `TranscriptSnapshot`; Values: `findTranscriptPath`, `readChainLines`, `readJsonlEvents`, `readJsonlEventsFromChain`, `refreshConversationChain`, `resolveConversationTranscriptPaths`, `transcriptChainSignature`, `watchTranscript`
       - Cross-plugin:
         - Imported by: `backup/sources/transcripts`, `conversations`, `conversations/conversation-view/jsonl-viewer`, `conversations/transcript-api`, `conversations/transcript-retention`, `debug/session-divergence`
       - Core:
@@ -3817,7 +3817,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `FileWatcher`, `FileWatcherOptions`; Values: `createFileWatcher`, `getParcelWatcher`
     - **`git-read-cache`** — Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call; createSignedMemo binds them at construction so a resource's revalidate and loader cannot drift.
       - Cross-plugin:
-        - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `plugin-meta/plugin-tree`, `review/plugin-changes`
+        - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer`, `plugin-meta/plugin-tree`, `review/plugin-changes`
       - Server:
         - Exports: Types: `GitStateMemo`, `SignedMemo`; Values: `createGitStateMemo`, `createSignedMemo`
     - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. Emits the git.refAdvanced trigger event (main only) and notifies the refHeadResource live-state resource on every advance.

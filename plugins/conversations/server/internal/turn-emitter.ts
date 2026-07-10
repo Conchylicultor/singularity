@@ -103,7 +103,7 @@ function subscribeToConversation(conversationId: string): () => void {
     }
   }
 
-  return watchTranscript(conversationId, (events) => {
+  return watchTranscript(conversationId, ({ events }) => {
     void handleEvents(events);
   });
 }

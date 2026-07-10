@@ -3,16 +3,29 @@ import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { resolveConversationTranscriptPaths } from "./resolve-chain";
 import { readJsonlEventsFromChain } from "./parse-jsonl";
+import { transcriptChainSignature } from "./chain-signature";
 import type { JsonlEvent } from "../../core";
 
-type Listener = (events: JsonlEvent[]) => void;
+/**
+ * A conversation's events, together with the chain signature they were read under.
+ *
+ * The signature is captured BEFORE the read, so it describes a snapshot no newer
+ * than `events` — `createSignedMemo.prime`'s precondition. A listener may therefore
+ * prime a signed memo with the pair directly.
+ */
+export interface TranscriptSnapshot {
+  events: JsonlEvent[];
+  signature: string;
+}
+
+type Listener = (snapshot: TranscriptSnapshot) => void;
 
 interface Room {
   conversationId: string;
   /** The conversation's session chain, oldest → newest. Grows on a session switch. */
   transcriptPaths: string[];
-  /** Last-processed mtime per chain file. A path absent here always reads as changed. */
-  lastMtimeMs: Map<string, number>;
+  /** Signature `lastEvents` was read under. `""` never matches a real one, so the first process always fans out. */
+  lastSignature: string;
   lastEvents: JsonlEvent[];
   subscribers: Set<Listener>;
   abort: AbortController;
@@ -66,7 +79,7 @@ export function watchTranscript(
     room = {
       conversationId,
       transcriptPaths: [],
-      lastMtimeMs: new Map(),
+      lastSignature: "",
       lastEvents: [],
       subscribers: new Set(),
       abort: new AbortController(),
@@ -80,8 +93,13 @@ export function watchTranscript(
       );
     });
   } else if (room.lastEvents.length > 0) {
-    // Late subscriber: deliver current snapshot immediately.
-    const snapshot = room.lastEvents;
+    // Late subscriber: deliver current snapshot immediately. Both halves are read
+    // here (and written in `processRoom`) together, so they can never be handed out
+    // as a mismatched pair.
+    const snapshot: TranscriptSnapshot = {
+      events: room.lastEvents,
+      signature: room.lastSignature,
+    };
     queueMicrotask(() => {
       if (room!.subscribers.has(onChange)) onChange(snapshot);
     });
@@ -166,30 +184,36 @@ function registerPaths(room: Room, paths: string[]): void {
 async function processRoom(room: Room): Promise<void> {
   if (room.transcriptPaths.length === 0 || !rooms.has(room.conversationId)) return;
   try {
-    let changed = false;
-    for (const path of room.transcriptPaths) {
-      const file = Bun.file(path);
-      if (!(await file.exists())) continue;
-      const mtime = file.lastModified;
-      // A path seen for the first time has no entry, so it always counts as changed.
-      if (room.lastMtimeMs.get(path) === mtime) continue;
-      room.lastMtimeMs.set(path, mtime);
-      changed = true;
-    }
-    if (!changed) return;
+    // Ordering contract (the memo's `prime` precondition): capture the signature
+    // BEFORE the read. A change landing mid-read then leaves the signature OLDER
+    // than the events it labels, so the next `get` probes a newer signature, misses,
+    // and recomputes. That over-invalidates by one needless read; it can never serve
+    // a torn value under a matching signature. Capturing it after would invert the
+    // skew — the pair would claim a snapshot newer than its value, and every
+    // subsequent `get` would hit it.
+    //
+    // The signature is also the room's SOLE change-detector, replacing the old
+    // per-path `Bun.file().lastModified` map. Strictly more sensitive (it also moves
+    // on a size-only change and on chain growth), and over-firing is safe.
+    const signature = await transcriptChainSignature(room.transcriptPaths);
+    if (signature === room.lastSignature) return;
     const events = await readJsonlEventsFromChain(room.transcriptPaths);
+    // Assigned together, AFTER a successful read. The old code stored the mtimes
+    // before reading, so a transient read failure permanently dropped those events
+    // until the next mtime change.
     room.lastEvents = events;
-    fanOut(room, events);
+    room.lastSignature = signature;
+    fanOut(room, { events, signature });
   // eslint-disable-next-line promise-safety/no-bare-catch
   } catch (err) {
     console.error(`[transcript-watcher] processRoom failed for ${room.conversationId}`, err);
   }
 }
 
-function fanOut(room: Room, events: JsonlEvent[]): void {
+function fanOut(room: Room, snapshot: TranscriptSnapshot): void {
   for (const listener of room.subscribers) {
     try {
-      listener(events);
+      listener(snapshot);
     // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {
       console.error("[transcript-watcher] listener threw", err);

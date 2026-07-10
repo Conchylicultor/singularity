@@ -1,11 +1,17 @@
 # git-read-cache
 
 A small server-side infra library — `createGitStateMemo` — that memoizes an
-expensive, gated git recompute behind a **cheap, ungated signature probe**. It is
+expensive, gated recompute behind a **cheap, ungated signature probe**. It is
 a pure library: a server barrel only (it uses the profiler and is never
 browser-safe) with **no default `ServerPluginDefinition` contributions**, exactly
 like `host-read-pool`. Three live-state levers collapse into this one
 abstraction.
+
+**The name is now a misnomer.** Nothing here is git-specific — the memo takes a
+signature and a compute, and `jsonl-events` uses it over `lstat`s of a Claude
+transcript chain, no git anywhere. The name records where the abstraction was
+first extracted, not what it is. A rename (`infra/read-cache`?) touches four
+importers plus the docs and has not been done.
 
 ## The git-state-keyed memo
 
@@ -130,15 +136,21 @@ See `research/2026-07-09-global-etag-value-coproduction.md`.
 
 ## Consumers
 
-The two git live-state loaders consume it, both via `createSignedMemo` — because
-both pair a `revalidate` with a memoized `loader`, and that is exactly the pairing
-that must not drift:
+**The rule: a resource that pairs a `revalidate` with a memoized `loader` uses
+`createSignedMemo`.** That pairing is exactly the one that must not drift, and the
+signed memo is the only thing that makes drift unrepresentable. Three do:
 
 - **commits-graph** — its `delta` resource, signature `${headSha}|${mainSha}`. Its
   `graph` resource keeps a bespoke two-half cache for its genuinely-special
   split-signature incrementality, and is not a signed memo.
 - **edited-files** — coalescing + skip-in-flight, with the @parcel watcher priming
   the cache under a pre-compute content signature.
+- **jsonl-events** — signature over the `lstat`s of a conversation's Claude session
+  chain, with the transcript watcher priming the cache under the signature it
+  captured before reading. No git involved. Its ETag previously came from a direct
+  `lstat` while its value came from a watcher-populated `Map`, and only
+  `mode: "push"` (whose frames carry the value) kept that from becoming a permanent
+  stale pin. See `research/2026-07-10-conversations-jsonl-events-shared-authority.md`.
 
 **`review/plugin-changes`** and **`plugin-meta/plugin-tree`** use the plain
 `createGitStateMemo`: their values back `mode: "push"` resources with no
@@ -154,7 +166,7 @@ primitive and Stage 2.1).
 
 - Description: Git-state-keyed result memos: skip a gated git recompute when a cheap ungated signature is unchanged; single-flight + coalesce per worktree. createGitStateMemo takes signature/compute per call; createSignedMemo binds them at construction so a resource's revalidate and loader cannot drift.
 - Cross-plugin:
-  - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `plugin-meta/plugin-tree`, `review/plugin-changes`
+  - Imported by: `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer`, `plugin-meta/plugin-tree`, `review/plugin-changes`
 - Server:
   - Exports: Types: `GitStateMemo`, `SignedMemo`; Values: `createGitStateMemo`, `createSignedMemo`
 

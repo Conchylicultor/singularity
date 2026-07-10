@@ -24,12 +24,14 @@ export interface GitStateMemo<T> {
    * Write-through prime: store `{ signature, value }` for `worktreePath`
    * directly, bypassing `signatureFn`/`computeFn`. For an **authoritative
    * external writer** that already computed the value and the signature it
-   * belongs to — e.g. the @parcel watcher behind edited-files, which is the
-   * sole source of truth for working-tree state and bumps a monotonic
-   * generation signature on every completed recompute. A subsequent `get` whose
-   * `signatureFn` returns the same signature is then a pure cache hit (no
-   * `computeFn`, no heavy slot). The writer owns correctness: it must only set a
-   * value it knows matches the signature.
+   * belongs to — e.g. the @parcel watcher behind edited-files, which is the sole
+   * source of truth for working-tree state, or the transcript watcher behind
+   * jsonl-events. A subsequent `get` whose `signatureFn` returns the same
+   * signature is then a pure cache hit (no `computeFn`, no heavy slot).
+   *
+   * The writer owns correctness: it must only set a value it knows matches the
+   * signature, and must capture that signature BEFORE running its compute (see
+   * `SignedMemo.prime`, which binds this method and documents the ordering).
    */
   set(worktreePath: string, signature: string, value: T): void;
   /** Drop the cached entry for `worktreePath` (subscription-lifecycle cleanup). */

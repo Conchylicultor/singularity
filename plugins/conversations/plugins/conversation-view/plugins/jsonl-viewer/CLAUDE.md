@@ -1,5 +1,24 @@
 # jsonl-viewer
 
+## `jsonl-events`: the ETag and the value share one authority
+
+`revalidate` and `loader` are the two **bound halves of one `createSignedMemo`**
+(`jsonl-events-cache.ts`): `memo.signature` feeds the former, `memo.get` the latter,
+over the same `transcriptChainSignature ∘ resolve` and `readJsonlEventsFromChain ∘
+resolve`. They cannot drift, because there is nothing to pass.
+
+Consequently **`mode: "push"` is a delivery choice, not a correctness crutch.** It
+was once the latter: `revalidate` `lstat`ed the chain (instantly fresh) while the
+loader returned a watcher-populated `cachedEvents` map (fresh only after the watcher
+fired), so a read landing in between shipped a stale value under a current ETag. Only
+value-carrying `update` frames masked it. Switching to `invalidate` — whose frames are
+a few bytes where `push` re-ships the entire event array — would have silently
+reintroduced a permanent stale pin. It is now a purely size-driven decision.
+
+The transcript watcher primes the memo from its `{ events, signature }` snapshot, so
+the full chain read stays off the read path. See
+`research/2026-07-10-conversations-jsonl-events-shared-authority.md`.
+
 ## Rules for `EventRenderer` contributors
 
 **Never use `uppercase` (all-caps) styling on labels.** Eyebrow labels rendered
@@ -30,7 +49,7 @@ do not duplicate it in `system`, `task-notification`, `meta-prompt`,
   - Uses: `conversations/conversation-view/pending-turn.clearPendingTurn`, `conversations/conversation-view/pending-turn.PendingTurnEcho`, `conversations/conversation-view/pending-turn.usePendingTurn`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/copy-to-clipboard.useCopyToClipboard`, `primitives/css/badge.Badge`, `primitives/css/bouncing-dots.BouncingDots`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`, `SectionExpand`; Values: `CopyTextAction`, `EventActionProvider`, `EventLine`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `RowActions`, `Timestamp`, `useJsonlConversationId`, `useLastAssistantEvent`, `useRowMarkdown`, `useSectionExpand`
 - Server:
-  - Uses: `conversations/transcript-watcher.readJsonlEventsFromChain`, `conversations/transcript-watcher.resolveConversationTranscriptPaths`, `conversations/transcript-watcher.watchTranscript`
+  - Uses: `conversations/transcript-watcher.readJsonlEventsFromChain`, `conversations/transcript-watcher.resolveConversationTranscriptPaths`, `conversations/transcript-watcher.transcriptChainSignature`, `conversations/transcript-watcher.watchTranscript`, `infra/git-read-cache.createSignedMemo`
   - Resources: `jsonl-events` (push)
 - Core:
   - Uses: `conversations/transcript-watcher.JsonlEvent`, `conversations/transcript-watcher.JsonlEventSchema`, `primitives/live-state.resourceDescriptor`
