@@ -11,7 +11,7 @@ import {
 import type * as parcel from "@parcel/watcher";
 import { midiFoldersConfig } from "../../shared/config";
 import { importMidiFileJob } from "./import-job";
-import { reconcile, watchedDirs } from "./reconcile";
+import { reconcile, watchedDirsSync } from "./reconcile";
 
 // Mirrors infra/git-watcher's manager: module-level mutable watcher, `started`
 // guard, async start/stop. The watcher set is rebuilt whenever the configured
@@ -37,17 +37,21 @@ async function onChange(events: parcel.Event[]): Promise<void> {
   }
 }
 
-// Tear down the current watcher and mount a fresh one over the configured dirs,
-// then reconcile (picks up files added while unmounted / in new folders). The
-// watcher emits no events for pre-existing files, so reconcile is mandatory.
-async function reconfigure(): Promise<void> {
+// Tear down the current watcher and mount a fresh one over the configured dirs.
+// The immediate (boot) call mounts the watcher ONLY — the heavy walk is deferred
+// to `midiFoldersWarmup`. A genuine later config-change (`{ reconcile: true }`)
+// still reconciles inline: it picks up files added while a folder was unmounted /
+// in a newly added folder, and it is user-initiated, not boot work. The watcher
+// emits no events for pre-existing files, so reconcile is mandatory on a real
+// config change.
+async function reconfigure(opts: { reconcile: boolean }): Promise<void> {
   // Chain onto the previous run so two config changes can't race two watchers.
   reconfiguring = reconfiguring.then(async () => {
     if (watcher) {
       await watcher.stop();
       watcher = null;
     }
-    const dirs = await watchedDirs();
+    const dirs = watchedDirsSync();
     if (dirs.length > 0) {
       watcher = await createFileWatcher({
         dirs,
@@ -60,7 +64,7 @@ async function reconfigure(): Promise<void> {
         },
       });
     }
-    await reconcile();
+    if (opts.reconcile) await reconcile();
   });
   await reconfiguring;
 }
@@ -69,10 +73,14 @@ export async function startMidiFolderWatcher(): Promise<void> {
   if (started) return;
   started = true;
   // watchConfig invokes the callback IMMEDIATELY on registration and again on
-  // every change. The immediate call performs the first mount — do NOT also
-  // call reconfigure() separately (that would double-mount).
+  // every change. The immediate call performs the first MOUNT ONLY (the boot
+  // walk is a separate warm-up) — do NOT also call reconfigure() separately
+  // (that would double-mount). Genuine later config-changes reconcile inline.
+  let firstCall = true;
   configSub = watchConfig(midiFoldersConfig, () => {
-    void reconfigure();
+    const reconcileNow = !firstCall;
+    firstCall = false;
+    void reconfigure({ reconcile: reconcileNow });
   });
 }
 

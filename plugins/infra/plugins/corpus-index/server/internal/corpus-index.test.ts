@@ -4,9 +4,13 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import {
   computePersist,
+  createCorpusIndex,
+  defineCorpusIndex,
   loadCorpusFile,
   refreshCorpus,
   type CorpusFile,
+  type CorpusIndexEnv,
+  type CorpusIndexSpec,
   type RefreshDeps,
 } from "./corpus-index";
 
@@ -156,4 +160,192 @@ test("computePersist: host scope persists only on main; worktree always persists
   expect(computePersist("host", false)).toBe(false); // host, non-main → no write
   expect(computePersist("worktree", true)).toBe(true);
   expect(computePersist("worktree", false)).toBe(true);
+});
+
+// ─── Instance-level (createCorpusIndex) — markDirty, ensureFresh delta ────────
+// Same injectable seam as refreshCorpus above, one level up: `env` stubs the
+// host wiring (isMain / heavy-read slot / macrotask yield / watcher) so the
+// dirty-latch and delta plumbing are observable without a real backend.
+
+function spec(overrides: Partial<CorpusIndexSpec<string>> = {}): CorpusIndexSpec<string> {
+  return {
+    name: "test.corpus",
+    roots: [corpusRoot],
+    match: (p) => p.endsWith(".txt"),
+    parse: async (p) => {
+      parseCount.set(p, (parseCount.get(p) ?? 0) + 1);
+      return await readFile(p, "utf8");
+    },
+    indexPath,
+    scope: "worktree",
+    version: VERSION,
+    concurrency: 4,
+    ...overrides,
+  };
+}
+
+function env(overrides: Partial<CorpusIndexEnv> = {}): CorpusIndexEnv {
+  return {
+    isMain: () => true,
+    withSlot: (fn) => fn(),
+    yieldServer: () => new Promise<void>((r) => setImmediate(r)),
+    startFileWatcher: async () => {},
+    ...overrides,
+  };
+}
+
+test("markDirty forces a re-walk on main after a clean ensureFresh (dirty-latch)", async () => {
+  // On main, ensureFresh clears `dirty` and short-circuits until re-dirtied.
+  const idx = createCorpusIndex(spec(), env({ isMain: () => true }));
+  const cold = await idx.ensureFresh();
+  expect(cold.addedPaths.length).toBe(3); // no prior entries ⇒ all added
+  expect(cold.modifiedPaths).toEqual([]); // nothing had an entry to modify
+  expect(idx.entries().size).toBe(3);
+
+  // A new file appears, but with no invalidation main short-circuits on !dirty.
+  const four = join(corpusRoot, "a", "four.txt");
+  await writeFile(four, "four");
+  const stale = await idx.ensureFresh();
+  expect(stale.addedPaths).toEqual([]); // did not re-walk
+  expect(stale.modifiedPaths).toEqual([]);
+  expect(idx.entries().size).toBe(3); // new file NOT seen — the regression
+
+  // markDirty() is the ONLY invalidation seam for a self-watching consumer.
+  idx.markDirty();
+  const fresh = await idx.ensureFresh();
+  expect(fresh.addedPaths).toEqual([four]); // no prior entry ⇒ added, not modified
+  expect(fresh.modifiedPaths).toEqual([]);
+  expect(idx.entries().size).toBe(4);
+});
+
+test("ensureFresh returns the delta: added / modified / removed / and empty when nothing moved", async () => {
+  // isMain:false ⇒ no dirty short-circuit, so every call actually re-walks.
+  const idx = createCorpusIndex(spec(), env({ isMain: () => false }));
+
+  const cold = await idx.ensureFresh();
+  expect(cold.addedPaths.length).toBe(3); // every matching file has no prior entry
+  expect(cold.modifiedPaths).toEqual([]); // "no prior fingerprint" ≠ "edited"
+  expect(cold.removedPaths).toEqual([]);
+
+  // Nothing moved → all arrays empty (a real empty success, not a failure).
+  const noop = await idx.ensureFresh();
+  expect(noop.addedPaths).toEqual([]);
+  expect(noop.modifiedPaths).toEqual([]);
+  expect(noop.removedPaths).toEqual([]);
+
+  // A brand-new file (no prior entry) lands in addedPaths — never modifiedPaths.
+  const four = join(corpusRoot, "a", "four.txt");
+  await writeFile(four, "four");
+  const added = await idx.ensureFresh();
+  expect(added.addedPaths).toEqual([four]);
+  expect(added.modifiedPaths).toEqual([]);
+  expect(added.removedPaths).toEqual([]);
+
+  // A touched file (prior entry, size/mtime bump) lands in modifiedPaths.
+  const one = join(corpusRoot, "a", "one.txt");
+  await appendFile(one, " more");
+  const touched = await idx.ensureFresh();
+  expect(touched.modifiedPaths).toEqual([one]);
+  expect(touched.addedPaths).toEqual([]);
+  expect(touched.removedPaths).toEqual([]);
+
+  // An unlinked file lands in removedPaths.
+  await rm(four);
+  const removed = await idx.ensureFresh();
+  expect(removed.addedPaths).toEqual([]);
+  expect(removed.modifiedPaths).toEqual([]);
+  expect(removed.removedPaths).toEqual([four]);
+});
+
+test("defineCorpusIndex with no parse yields CorpusIndex<null> and still indexes files", async () => {
+  // Enumerate-only: no `parse`. TPartial is pinned to `null` by the overload.
+  const idx = defineCorpusIndex({
+    name: "test.noparse",
+    roots: [corpusRoot],
+    match: (p) => p.endsWith(".txt"),
+    indexPath,
+    scope: "worktree",
+    version: VERSION,
+  });
+  const delta = await idx.ensureFresh();
+  expect(delta.addedPaths.length).toBe(3);
+  expect(delta.modifiedPaths).toEqual([]);
+
+  const entries = idx.entries();
+  expect(entries.size).toBe(3); // the .md is excluded by match
+  for (const value of entries.values()) {
+    // A `null` payload is the whole contract of the no-parse overload.
+    expect(value).toBeNull();
+  }
+});
+
+test("a second caller joining an in-flight ensureFresh receives the same delta", async () => {
+  // Hold `parse` open so the first refresh stays in-flight while the second
+  // caller enters; both must observe the SAME delta, never a silent empty one.
+  let release!: () => void;
+  const gate = new Promise<void>((r) => {
+    release = r;
+  });
+  const idx = createCorpusIndex(
+    spec({
+      parse: async (p) => {
+        await gate;
+        return await readFile(p, "utf8");
+      },
+    }),
+    env({ isMain: () => false }),
+  );
+
+  const first = idx.ensureFresh();
+  const second = idx.ensureFresh(); // joins the in-flight refresh
+  release();
+  const [d1, d2] = await Promise.all([first, second]);
+
+  expect(d1).toBe(d2); // same delta object — the join returned the real result
+  expect(d1.addedPaths.length).toBe(3);
+  expect(d1.modifiedPaths).toEqual([]);
+  expect(d1.removedPaths).toEqual([]);
+});
+
+test("a cold index reports every file as added, never modified", async () => {
+  // The regression: a `host`-scope backend never persists its index
+  // (computePersist("host", isMain()=false) === false), so a fresh process
+  // starts COLD — the on-disk index is absent/empty. Every file must land in
+  // addedPaths ("no prior fingerprint" ⇒ unknown), and modifiedPaths must be
+  // EMPTY. Treating added-as-modified is what re-imported the whole corpus on
+  // every worktree boot.
+
+  // First instance builds an in-memory index but persists nothing (worktree
+  // backend of a host-scope corpus never writes).
+  const first = createCorpusIndex(
+    spec({ scope: "host" }),
+    env({ isMain: () => false }),
+  );
+  const firstDelta = await first.ensureFresh();
+  expect(firstDelta.addedPaths.length).toBe(3);
+  expect(firstDelta.modifiedPaths).toEqual([]);
+
+  // The index file was never written — a second process boots cold.
+  const wrote = await readFile(indexPath, "utf8").then(
+    () => true,
+    (err: NodeJS.ErrnoException) => {
+      if (err.code === "ENOENT") return false;
+      throw err;
+    },
+  );
+  expect(wrote).toBe(false);
+
+  // A SECOND instance over the SAME dir with an absent index file. Even though
+  // the files are unchanged on disk, this cold index has no prior entries, so
+  // every file is `added` and NONE is `modified`.
+  const second = createCorpusIndex(
+    spec({ scope: "host" }),
+    env({ isMain: () => false }),
+  );
+  const secondDelta = await second.ensureFresh();
+  expect(secondDelta.modifiedPaths).toEqual([]); // ← the load-bearing assertion
+  expect(new Set(secondDelta.addedPaths)).toEqual(
+    new Set([...second.entries().keys()]),
+  );
+  expect(secondDelta.addedPaths.length).toBe(3);
 });

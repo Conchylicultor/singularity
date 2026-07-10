@@ -1,7 +1,7 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export { defineCorpusIndex } from "./internal/corpus-index";
-export type { CorpusIndexSpec, CorpusIndex } from "./internal/corpus-index";
+export type { CorpusIndexSpec, CorpusIndex, CorpusDelta } from "./internal/corpus-index";
 
 export default {
   description:

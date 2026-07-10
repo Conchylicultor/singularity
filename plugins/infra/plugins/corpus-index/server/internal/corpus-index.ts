@@ -29,8 +29,14 @@ export interface CorpusIndexSpec<TPartial> {
   roots: string[] | (() => string[]);
   /** Predicate on a full path deciding whether a file belongs to the corpus. */
   match: (path: string) => boolean;
-  /** Per-file parse. Side-effect-free — token/data only, never persists. */
-  parse: (path: string) => Promise<TPartial>;
+  /**
+   * Per-file parse. Side-effect-free — token/data only, never persists. OPTIONAL:
+   * omit it for an enumerate-only corpus (the incrementally-maintained,
+   * throttled, fingerprint-keyed set of paths with no per-file payload). When
+   * omitted the partial is `null` and `TPartial` is `null` (see the
+   * `defineCorpusIndex` no-`parse` overload).
+   */
+  parse?: (path: string) => Promise<TPartial>;
   /** On-disk index file path (host-global dir or a per-worktree data dir). */
   indexPath: string;
   /**
@@ -45,15 +51,51 @@ export interface CorpusIndexSpec<TPartial> {
   concurrency?: number;
 }
 
+/**
+ * The paths that moved during a refresh. An all-empty delta means nothing moved
+ * — a legitimate empty success, NOT an absorbed failure (a refresh that fails
+ * throws).
+ *
+ * `added` and `modified` are deliberately SEPARATE, and conflating them is a
+ * bug: a path is `added` when the index held no entry for it, which on a cold
+ * index — the first walk of a process, or any `host`-scope backend that never
+ * persists (`computePersist`) — is EVERY file. "No prior fingerprint" means
+ * *unknown*, not *edited*. Only `modified` (a prior entry existed and its
+ * `(mtimeMs,size)` differs) proves the bytes changed since the last walk, so
+ * only `modified` may drive "re-do the work for this file". A consumer deciding
+ * whether a file is new should ask its OWN store, not `addedPaths`.
+ */
+export interface CorpusDelta {
+  /** No prior index entry. On a cold index this is every file ⇒ means "unknown". */
+  addedPaths: string[];
+  /** Had an entry, fingerprint differs ⇒ genuinely edited since the last walk. */
+  modifiedPaths: string[];
+  /** Had an entry, file is gone ⇒ dropped from the index. */
+  removedPaths: string[];
+}
+
 export interface CorpusIndex<TPartial> {
   /**
    * Lazy `(mtimeMs,size)` stat-diff refresh — THE correctness fallback. Call on
    * every read: it makes warmup deferral safe (a cold first request just pays
-   * the incremental stat-diff, re-parsing only what changed). Single-flighted.
+   * the incremental stat-diff, re-parsing only what changed). Single-flighted;
+   * a second caller joining an in-flight refresh receives that refresh's delta.
+   * Returns the {@link CorpusDelta} of files that moved (all arrays empty when
+   * nothing changed, including the main-only clean short-circuit).
    */
-  ensureFresh(): Promise<void>;
+  ensureFresh(): Promise<CorpusDelta>;
   /** The current per-file partials, keyed by path. The rollup stays in the consumer. */
   entries(): Map<string, TPartial>;
+  /**
+   * Force the next {@link ensureFresh} to re-walk even on main. LOAD-BEARING (not
+   * convenience): `ensureFresh` short-circuits on `!dirty && isMain()`, and
+   * `dirty` is otherwise only re-set by {@link startWatcher}'s onChange. A
+   * consumer that owns its OWN file watcher must NOT call `startWatcher()` (it
+   * double-watches and is `isMain()`-gated), so `markDirty()` is its ONLY way to
+   * invalidate the index — without it every refresh after the first would
+   * silently reuse a stale index on the main backend.
+   */
+  markDirty(): void;
   /**
    * Main-only push freshness via `@parcel/watcher`: a corpus change marks the
    * index dirty and warms it in the background. No-op off main / if already started.
@@ -192,21 +234,34 @@ export interface RefreshDeps<TPartial> {
 export async function refreshCorpus<TPartial>(
   index: CorpusFile<TPartial>,
   deps: RefreshDeps<TPartial>,
-): Promise<{ changed: boolean }> {
+): Promise<{
+  changed: boolean;
+  addedPaths: string[];
+  modifiedPaths: string[];
+  removedPaths: string[];
+}> {
   const paths = await enumerate(deps.roots, deps.match);
   const live = new Set(paths);
-  let changed = false;
+  const addedPaths: string[] = [];
+  const modifiedPaths: string[] = [];
+  const removedPaths: string[] = [];
 
   // Drop entries for files that no longer exist.
   for (const path of Object.keys(index.files)) {
     if (!live.has(path)) {
       delete index.files[path];
-      changed = true;
+      removedPaths.push(path);
     }
   }
 
   // Stat all files; collect the ones whose fingerprint changed (or are new).
-  const toParse: Array<{ path: string; mtimeMs: number; size: number }> = [];
+  // `hadEntry` distinguishes the two, and the distinction is load-bearing for
+  // consumers (see the CorpusDelta doc): a file with NO prior entry is only
+  // "added" — on a cold index (first walk of a process, or a `host`-scope
+  // backend that never persists) that is EVERY file, which means "unknown",
+  // not "edited". Only a file that HAD an entry with a different fingerprint
+  // is genuinely "modified since the last walk".
+  const toParse: Array<{ path: string; mtimeMs: number; size: number; hadEntry: boolean }> = [];
   const statGate = createSemaphore(deps.concurrency);
   await Promise.all(
     paths.map((path) =>
@@ -222,7 +277,7 @@ export async function refreshCorpus<TPartial>(
         if (cached && cached.mtimeMs === st.mtimeMs && cached.size === st.size) {
           return; // unchanged file — skip
         }
-        toParse.push({ path, mtimeMs: st.mtimeMs, size: st.size });
+        toParse.push({ path, mtimeMs: st.mtimeMs, size: st.size, hadEntry: cached !== undefined });
       }),
     ),
   );
@@ -234,17 +289,18 @@ export async function refreshCorpus<TPartial>(
       parseGate.run(async () => {
         const partial = await deps.withSlot(() => deps.parse(item.path));
         index.files[item.path] = { mtimeMs: item.mtimeMs, size: item.size, partial };
-        changed = true;
+        (item.hadEntry ? modifiedPaths : addedPaths).push(item.path);
         // A macrotask breath so request serving interleaves between files.
         await deps.yieldServer();
       }),
     ),
   );
 
+  const changed = addedPaths.length > 0 || modifiedPaths.length > 0 || removedPaths.length > 0;
   if (changed && deps.persist) {
     await saveCorpusFile(deps.indexPath, index);
   }
-  return { changed };
+  return { changed, addedPaths, modifiedPaths, removedPaths };
 }
 
 // ─── index instance ────────────────────────────────────────────────────────────
@@ -271,9 +327,15 @@ export function createCorpusIndex<TPartial>(
   // correctness fallback.
   let index: CorpusFile<TPartial> | null = null;
   let dirty = true;
-  let refreshInflight: Promise<void> | null = null;
+  let refreshInflight: Promise<CorpusDelta> | null = null;
   let watcherStarted = false;
   const concurrency = spec.concurrency ?? DEFAULT_CONCURRENCY;
+
+  // An omitted `parse` ⇒ an enumerate-only corpus: the partial is always `null`.
+  // (The `defineCorpusIndex` overload pins `TPartial` to `null` in that case, so
+  // this single assertion is sound; it is the ONE place the default is applied.)
+  const parse: (path: string) => Promise<TPartial> =
+    spec.parse ?? (() => Promise.resolve(null as TPartial));
 
   const resolveRoots = (): string[] =>
     typeof spec.roots === "function" ? spec.roots() : spec.roots;
@@ -281,7 +343,7 @@ export function createCorpusIndex<TPartial>(
   const refreshDeps = (): RefreshDeps<TPartial> => ({
     roots: resolveRoots(),
     match: spec.match,
-    parse: spec.parse,
+    parse,
     indexPath: spec.indexPath,
     concurrency,
     persist: computePersist(spec.scope, env.isMain()),
@@ -289,20 +351,35 @@ export function createCorpusIndex<TPartial>(
     yieldServer: env.yieldServer,
   });
 
-  async function ensureFresh(): Promise<void> {
+  async function ensureFresh(): Promise<CorpusDelta> {
     index ??= await loadCorpusFile<TPartial>(spec.indexPath, spec.version);
-    // Main clears `dirty` after a refresh and relies on the watcher to set it
-    // again. Worktree backends have no watcher, so they always re-check.
-    if (!dirty && env.isMain()) return;
-    refreshInflight ??= (async () => {
+    // Main clears `dirty` after a refresh and relies on the watcher (or an
+    // explicit markDirty) to set it again. Worktree backends have no watcher, so
+    // they always re-check. Nothing moved ⇒ an empty delta (a real empty success).
+    if (!dirty && env.isMain()) {
+      return { addedPaths: [], modifiedPaths: [], removedPaths: [] };
+    }
+    // Single-flight: a concurrent second caller joins THIS promise and so
+    // receives the same delta the refresh computed — never a silent empty one.
+    refreshInflight ??= (async (): Promise<CorpusDelta> => {
       try {
-        await refreshCorpus(index!, refreshDeps());
+        const { addedPaths, modifiedPaths, removedPaths } = await refreshCorpus(
+          index!,
+          refreshDeps(),
+        );
         dirty = false;
+        return { addedPaths, modifiedPaths, removedPaths };
       } finally {
         refreshInflight = null;
       }
     })();
-    await refreshInflight;
+    return await refreshInflight;
+  }
+
+  // See the interface doc: the ONLY invalidation seam for a consumer that owns
+  // its own watcher (and therefore must not call startWatcher()).
+  function markDirty(): void {
+    dirty = true;
   }
 
   function entries(): Map<string, TPartial> {
@@ -340,14 +417,20 @@ export function createCorpusIndex<TPartial>(
     });
   }
 
-  return { ensureFresh, entries, startWatcher, warmup };
+  return { ensureFresh, entries, markDirty, startWatcher, warmup };
 }
 
 /**
  * Declare a fingerprint-keyed incremental file index over a file corpus. Wraps
  * {@link createCorpusIndex} with the real host wiring (`isMain`, the host-wide
  * heavy-read slot, a macrotask yield, and the `@parcel/watcher` primitive).
+ *
+ * Overloaded on `parse`: omit it for an enumerate-only corpus (`CorpusIndex<null>`
+ * — the incrementally-maintained set of paths with no per-file payload); supply
+ * it for a per-file `TPartial` payload.
  */
+export function defineCorpusIndex(spec: Omit<CorpusIndexSpec<null>, "parse">): CorpusIndex<null>;
+export function defineCorpusIndex<TPartial>(spec: CorpusIndexSpec<TPartial>): CorpusIndex<TPartial>;
 export function defineCorpusIndex<TPartial>(
   spec: CorpusIndexSpec<TPartial>,
 ): CorpusIndex<TPartial> {
