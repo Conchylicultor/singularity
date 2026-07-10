@@ -38,7 +38,10 @@ export interface RankReorderProviderProps {
   dragOverlay?: (id: string) => ReactNode;
   /** Re-measure droppables every frame (windowed lists). */
   measuringAlways?: boolean;
-  children: ReactNode;
+  /** Children. A render-prop receives the active drag id, which a windowed
+   *  consumer forwards as `keepMounted` so the drag source stays in the DOM when
+   *  it scrolls out of the window; a plain node ignores it. */
+  children: ReactNode | ((activeId: string | null) => ReactNode);
 }
 
 /**

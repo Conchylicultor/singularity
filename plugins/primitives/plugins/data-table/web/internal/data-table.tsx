@@ -32,8 +32,28 @@ const noRowDecoration = (): DataTableRowDecoration | undefined => undefined;
 
 /** Above this row count the table windows its rows via the shared virtualizer
  *  (keeps the subgrid + sticky header; only the visible slice is in the DOM).
- *  Smaller tables keep the plain map — no virtualizer overhead. */
-const VIRTUALIZE_THRESHOLD = 100;
+ *  Smaller tables keep the plain map — no virtualizer overhead. Exported because
+ *  a drag-reordering consumer must know whether the body windows to decide
+ *  whether its `RankReorderProvider` needs `measuringAlways`. */
+export const VIRTUALIZE_THRESHOLD = 100;
+
+/**
+ * Compose two callback refs into one. A row can be a drag source (decoration
+ * ref) AND a virtualizer measurement target (measure ref) at the same time, and
+ * a DOM node takes one `ref`. The repo has no `mergeRefs`/`composeRefs` helper
+ * today; lift this into a primitive if a second caller needs it.
+ */
+function composeRefs(
+  a: ((el: HTMLElement | null) => void) | undefined,
+  b: ((el: Element | null) => void) | undefined,
+): ((el: HTMLDivElement | null) => void) | undefined {
+  if (!a) return b;
+  if (!b) return a;
+  return (el) => {
+    a(el);
+    b(el);
+  };
+}
 
 /** Estimated px per row; dynamic measurement via `virtualizer.measureElement`
  *  refines it after mount. */
@@ -52,6 +72,7 @@ export function DataTable<TRow>({
   rowActions,
   selectedRowId,
   useRowDecoration,
+  keepMountedRowKeys,
   controlSize = "xs",
   stickyHeaderOffset = "0px",
 }: DataTableProps<TRow>) {
@@ -165,12 +186,13 @@ export function DataTable<TRow>({
       </Sticky>
       {groups
         ? renderGroupedBody(groups, renderRow, groupHeaderTop)
-        : !useRowDecoration && rows.length > VIRTUALIZE_THRESHOLD ? (
+        : rows.length > VIRTUALIZE_THRESHOLD ? (
             <VirtualTableBody
               rows={rows}
               rowKey={rowKey}
               selectedRowId={selectedRowId}
               renderRow={renderRow}
+              keepMounted={keepMountedRowKeys}
             />
           ) : (
             rows.map((row, i) => renderRow(row, i))
@@ -217,11 +239,13 @@ function DataTableRow<TRow>({
   const decorationProps = decoration?.props;
   const decorationClassName = decoration?.className;
   const decorationOverlay = decoration?.overlay;
+  // A decorated row in a windowed body is BOTH a drag source and a measurement
+  // target, so the two refs compose (they were mutually exclusive back when
+  // decoration disabled virtualization).
+  const rowRef = composeRefs(decorationRef, measure?.ref);
   return (
     <div
-      // decoration (drag source) and measure (windowing) are mutually exclusive
-      // — decoration disables virtualization — so a single ref suffices.
-      ref={decorationRef ?? measure?.ref}
+      ref={rowRef}
       data-index={measure?.index}
       // eslint-disable-next-line layout/no-adhoc-layout -- CSS subgrid row inheriting the outer grid's column tracks (no Frame/Grid equivalent for subgrid); `relative` hosts the decoration overlay
       className={cn(
@@ -275,16 +299,24 @@ function DataTableRow<TRow>({
 
 /**
  * Windowed table body: renders only the visible slice of rows in normal grid
- * flow between two `col-span-full` spacers that reserve the off-screen height —
- * so the outer subgrid column tracks and the sticky header stay intact (unlike
- * the absolute/translateY layout, which would drop rows out of grid flow).
- * A separate component so the virtualizer hook never runs for small tables.
+ * flow, with `col-span-full` spacers reserving the off-screen height — so the
+ * outer subgrid column tracks and the sticky header stay intact (unlike the
+ * absolute/translateY layout `VirtualRows` uses, which would drop rows out of
+ * grid flow). A separate component so the virtualizer hook never runs for small
+ * tables.
+ *
+ * `keepMounted` pins a row (an in-flight drag source) into the rendered range,
+ * which makes `virtualItems` a NON-contiguous index sequence. So there is one
+ * spacer per *gap*, not just a leading and a trailing one. With nothing pinned
+ * the range is contiguous, every interior gap is 0, and the emitted DOM is
+ * identical to the two-spacer form this generalizes.
  */
 function VirtualTableBody<TRow>({
   rows,
   rowKey,
   selectedRowId,
   renderRow,
+  keepMounted,
 }: {
   rows: readonly TRow[];
   rowKey: (row: TRow, index: number) => string;
@@ -294,6 +326,7 @@ function VirtualTableBody<TRow>({
     i: number,
     measure?: { ref: (el: Element | null) => void; index: number },
   ) => ReactNode;
+  keepMounted: readonly string[] | undefined;
 }) {
   // Reveal the selected row when selection changes off-screen.
   const selectedIndex = selectedRowId
@@ -306,6 +339,7 @@ function VirtualTableBody<TRow>({
       estimateSize: ROW_ESTIMATE,
       getKey: rowKey,
       scrollToIndex: selectedIndex >= 0 ? selectedIndex : null,
+      keepMounted,
     });
 
   // The marker sits at the start of the row region (right after the sticky
@@ -323,6 +357,10 @@ function VirtualTableBody<TRow>({
     );
   }
 
+  // Leading spacer: the rows above the first rendered one. `scrollMargin` is the
+  // region's offset inside the scroller, which the virtualizer folds into every
+  // `start`/`end` — so it is subtracted here (and at the trailing spacer), but
+  // cancels in an interior gap, where both endpoints carry it.
   const paddingTop = virtualItems[0]!.start - scrollMargin;
   const paddingBottom =
     totalSize - (virtualItems[virtualItems.length - 1]!.end - scrollMargin);
@@ -334,12 +372,24 @@ function VirtualTableBody<TRow>({
         // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the off-screen rows above the window
         <div aria-hidden className="col-span-full" style={{ height: paddingTop }} />
       )}
-      {virtualItems.map((vi) =>
-        renderRow(rows[vi.index]!, vi.index, {
-          ref: virtualizer.measureElement,
-          index: vi.index,
-        }),
-      )}
+      {virtualItems.map((vi, i) => {
+        // Interior gap: nonzero only where the range skips indexes — i.e. between
+        // a pinned row and the window. Contiguous items satisfy `start === prev.end`.
+        const prev = i > 0 ? virtualItems[i - 1]! : null;
+        const gap = prev ? vi.start - prev.end : 0;
+        return (
+          <Fragment key={vi.key}>
+            {gap > 0 && (
+              // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the rows skipped between a pinned row and the window
+              <div aria-hidden className="col-span-full" style={{ height: gap }} />
+            )}
+            {renderRow(rows[vi.index]!, vi.index, {
+              ref: virtualizer.measureElement,
+              index: vi.index,
+            })}
+          </Fragment>
+        );
+      })}
       {paddingBottom > 0 && (
         // eslint-disable-next-line layout/no-adhoc-layout -- full-span spacer reserving the off-screen rows below the window
         <div aria-hidden className="col-span-full" style={{ height: paddingBottom }} />

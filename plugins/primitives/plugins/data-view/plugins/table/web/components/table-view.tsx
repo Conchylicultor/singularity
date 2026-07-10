@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import {
   DataTable,
+  DATA_TABLE_VIRTUALIZE_THRESHOLD,
   type ColumnDef,
   type DataTableGroup,
   type DataTableRowDecoration,
@@ -202,15 +203,25 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     // both the column header (was hiding behind the toolbar) and the group headers
     // (were not sticky) — consistent with the list view's sticky group headers.
     stickyHeaderOffset: `var(${DATA_VIEW_HEADER_OFFSET_VAR}, 0px)`,
-    // Manual order: per-row drag affordances (disables virtualization in
-    // DataTable). Sort is already hidden by the host while manual order is on.
+    // Manual order: per-row drag affordances. Composes with DataTable's
+    // windowing. Sort is already hidden by the host while manual order is on.
     useRowDecoration: manualOrder ? useRowDecoration : undefined,
   };
 
-  // Ungrouped: the single implicit section renders as today (no group headers).
-  const table =
-    sections.length === 1 && sections[0]!.key === null ? (
-      <DataTable data={sections[0]!.entries.map((e) => e.row)} {...shared} />
+  // Ungrouped renders as one flat body (the only body DataTable windows);
+  // grouped interleaves a header row per section and never windows.
+  const ungrouped = sections.length === 1 && sections[0]!.key === null;
+
+  const renderTable = (activeId: string | null): ReactNode =>
+    ungrouped ? (
+      <DataTable
+        data={sections[0]!.entries.map((e) => e.row)}
+        // Pin the drag source so it stays mounted when the window scrolls past
+        // it — otherwise its draggable unregisters mid-gesture and dnd-kit
+        // cancels the drop.
+        keepMountedRowKeys={activeId ? [activeId] : undefined}
+        {...shared}
+      />
     ) : (
       // Grouped: interleave a full-width collapsible header row per section.
       <DataTable
@@ -245,9 +256,17 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
   // section, so a drag reseats within or across sections (the destination
   // section's key flows back as `dest.groupKey`).
   if (manualOrder) {
+    // Rows mount/unmount mid-drag only when the body windows; the shell then
+    // re-measures droppables every frame so a freshly mounted row (autoscrolled
+    // into view) is a valid drop target. `filter` is undefined here, so the
+    // table's row count is exactly the section's entry count.
+    const windowed =
+      ungrouped &&
+      sections[0]!.entries.length > DATA_TABLE_VIRTUALIZE_THRESHOLD;
     return (
       <RankReorderProvider
         items={manualOrderItems(sections, manualOrder)}
+        measuringAlways={windowed}
         onMove={(id, dest) =>
           manualOrder.onMove(id, {
             rank: dest.rank,
@@ -258,11 +277,11 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
         }
         dragOverlay={(id) => manualOrderOverlay(sections, columns, id)}
       >
-        {table}
+        {(activeId) => renderTable(activeId)}
       </RankReorderProvider>
     );
   }
-  return table;
+  return renderTable(null);
 }
 
 /** Flatten the sections into the rank-reorder item list (id + rank + group).

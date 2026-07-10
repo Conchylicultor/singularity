@@ -1,0 +1,22 @@
+// @hash 4178edb2e8b2
+{
+  // Fold order for the `DataViewSlots.RowOrder` slot. This slot is NOT a visual
+  // list: the host folds its contributions into a single `ManualOrderConfig` and
+  // the FIRST non-null one wins. So `items` order is a *precedence* order — the
+  // topmost contributor that claims a view's order owns it.
+  //
+  // `view-order` is the primitive's own per-view-instance order (persisted in
+  // `data_view_row_order`, keyed by `(dataViewId, viewId, rowKey)`). It is the
+  // only contributor today; a future one that should outrank it goes above it.
+  //
+  // A consumer's `DataViewProps.manualOrder` (a domain rank, e.g. the
+  // conversations queue's priority) outranks every contributor here — that is
+  // decided in the host, not by this file.
+  //
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "primitives.data-view.view-order:view-order"
+  ]
+}

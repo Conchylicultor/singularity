@@ -17,8 +17,9 @@ model, not two.
   dragOverlay?, measuringAlways? }`. Resolves each before/after drop to a
   destination `Rank` via `rank`'s `computeFlatReorder`, scoped to the drop
   target's **group** so manual order composes with group-by sections. `onMove(id,
-  { rank, group })` fires only for real (non-no-op) moves. Built on
-  `RankReorderDndContext`.
+  { rank, group })` fires only for real (non-no-op) moves. Its `children` may be
+  a render-prop receiving the active drag id (passed straight through to the
+  shell). Built on `RankReorderDndContext`.
 - **`useRankReorderItem(id, rank)`** — per-row draggable + before/after
   droppables. Returns `{ dragSource, isDragging, beforeRef, afterRef,
   isOverBefore, isOverAfter }`. The droppable data shape (`{ zone, targetId }`)
@@ -45,11 +46,22 @@ another group resolves the rank within that group and reports it via
 owns rank arithmetic + destination-group reporting; it has no field/status
 knowledge.
 
-## Scope
+## Windowing while dragging
 
-Manual order targets bounded lists — windowing across huge lists while dragging
-is out of scope. The data-view manual-order renders non-virtualized per section;
-the tree keeps its own windowing (passing `measuringAlways` + `keepMounted`).
+Every consumer windows **and** drags — an unbounded list stays reorderable. Two
+knobs compose to make it work, and a windowed consumer must pass both:
+
+- **`measuringAlways`** → `MeasuringStrategy.Always`, so a row that mounts
+  mid-drag (dnd-kit's autoscroll bringing an off-screen target into view) is
+  measured and becomes a valid drop target.
+- **the render-prop `activeId`** → the consumer forwards it as its virtualizer's
+  `keepMounted` (`virtual-rows`), pinning the drag source in the DOM. Without
+  it, scrolling the source out of the window unmounts its `useDraggable` and
+  dnd-kit cancels the drop.
+
+Only rows in the DOM are drop targets, which is exactly right: you can only drop
+where you can see. `tree` (`tree-list.tsx`), `data-view/list`, and
+`data-view/table` all compose the pair this way.
 
 ## Boundaries
 

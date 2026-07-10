@@ -3,7 +3,12 @@ import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import type { ComponentType, ReactNode } from "react";
 import type { ViewTypeMeta } from "@plugins/primitives/plugins/data-view/plugins/view-core/core";
 import type { LoadingVariant } from "@plugins/primitives/plugins/loading/web";
-import type { DataViewId, DataViewRenderProps, FieldDef } from "../core";
+import type {
+  DataViewId,
+  DataViewRenderProps,
+  FieldDef,
+  ManualOrderConfig,
+} from "../core";
 import type { DataViewSettingsContextValue } from "./components/settings/settings-context";
 import { Cell } from "./cell-slot";
 import { CellEditor } from "./cell-editor-slot";
@@ -92,6 +97,40 @@ export interface GlobalFieldExtensionContribution {
   order?: number;
 }
 
+/**
+ * Props a **global** row-order contribution receives. The twin of
+ * `GlobalFieldExtensionProps`: a single always-on slot every eligible DataView
+ * folds, so the host threads the surface coordinates a contributor needs to key
+ * a per-view-instance row order — the `storageKey` (which surface), the
+ * `viewId` (which view instance owns this order), and `rowKey` (how to identify
+ * a row). The row type is erased to `unknown` (a global slot spans disjoint
+ * consumer row types).
+ *
+ * `rows` is the view's **ordered set**: filter-applied, search-EXCLUDED,
+ * sort-suppressed. Search only affects what is *rendered*, never which rows the
+ * order covers — so a drag under an active search still rebuilds the full order
+ * and no hidden row is dropped.
+ */
+export interface GlobalRowOrderProps {
+  storageKey: DataViewId;
+  /** The ACTIVE view-instance id — the order's scope. */
+  viewId: string;
+  rowKey: (row: unknown, index: number) => string;
+  /** The view's ordered set: filter-applied, search-EXCLUDED, sort-suppressed. */
+  rows: readonly unknown[];
+  /** Hand the host this contributor's order, or `null` to defer to the next
+   *  contributor (called in render — the component is mounted, so it may load
+   *  hook-backed data first). */
+  render: (order: ManualOrderConfig<unknown> | null) => ReactNode;
+}
+
+export interface GlobalRowOrderContribution {
+  /** Stable id (React key + reorder/doc identity). */
+  id: string;
+  component: ComponentType<GlobalRowOrderProps>;
+  order?: number;
+}
+
 export const DataViewSlots = {
   View: defineSlot<DataViewContribution>("primitives.data-view.view", {
     docLabel: (p) => p.title,
@@ -106,6 +145,19 @@ export const DataViewSlots = {
    */
   FieldExtension: defineRenderSlot<GlobalFieldExtensionContribution>(
     "primitives.data-view.field-extension",
+    { docLabel: (p) => p.id },
+  ),
+  /**
+   * Global, always-on row-order slot: every DataView eligible for a manual order
+   * (list/table, no consumer `manualOrder`, no `dataSource`/`aggregate`/group-by)
+   * folds its contributions, threading `{ storageKey, viewId, rowKey, rows }` so
+   * a contributor can key a per-view-instance drag order over the surface.
+   * **First non-null wins** (the fold order is a committed reorder override), and
+   * a consumer-supplied `DataViewProps.manualOrder` still outranks every
+   * contributor.
+   */
+  RowOrder: defineRenderSlot<GlobalRowOrderContribution>(
+    "primitives.data-view.row-order",
     { docLabel: (p) => p.id },
   ),
   /** Contributable DataView settings menu entries (group-by, future per-view /

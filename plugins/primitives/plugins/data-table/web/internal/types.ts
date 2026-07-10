@@ -79,14 +79,21 @@ export interface DataTableProps<TRow> {
    * Per-row decoration HOOK, called once per rendered row INSIDE the row
    * component (so the consumer may call hooks — e.g. `useRankReorderItem` for
    * drag reorder). Returns a ref + props spread + classes + in-row overlay for
-   * the row element. When provided, virtualization is disabled (drag +
-   * windowing is out of scope). Inert when absent. The name must start with
-   * `use` (it is invoked as a hook). Stable per mount.
+   * the row element. Composes with windowing: a decorated row is still measured
+   * and windowed. Inert when absent. The name must start with `use` (it is
+   * invoked as a hook). Stable per mount.
    */
   useRowDecoration?: (
     row: TRow,
     index: number,
   ) => DataTableRowDecoration | undefined;
+  /**
+   * Row keys that must stay mounted when scrolled out of the window — an
+   * in-flight drag source, whose `useDraggable` would otherwise unregister
+   * mid-gesture and cancel the drop. Pass the active drag id while a drag is in
+   * flight, nothing otherwise. Ignored in grouped (non-windowed) mode.
+   */
+  keepMountedRowKeys?: readonly string[];
   /** Control density for the table's controls/badges; defaults to compact (`xs`). */
   controlSize?: ControlSize;
 }

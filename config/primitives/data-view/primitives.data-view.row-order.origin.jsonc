@@ -1,0 +1,9 @@
+// @hash 4178edb2e8b2
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "primitives.data-view.view-order:view-order"
+  ]
+}

@@ -143,36 +143,125 @@ except the two accessors, so a read-only nav tree supplies just those two. The
 hierarchy concern — declare `FieldDef.onEdit` on the primary field and the tree
 renders an inline editor (the same `onEdit` contract the table/gallery/list use).
 
-## Manual order (`manualOrder`)
+## Manual order
 
-Pass `manualOrder?: ManualOrderConfig<TRow>` to `<DataView>` to enable flat
-rank-based drag reordering — the flat twin of the tree-only `HierarchyConfig`:
+Flat rank-based drag reordering — the flat twin of the tree-only
+`HierarchyConfig`. It is described by one type:
 
 ```ts
 interface ManualOrderConfig<TRow> {
-  getRank: (row: TRow) => Rank;
-  onMove: (id: string, dest: { rank: Rank; groupKey?: string | null }) => void | Promise<void>;
+  getRank: (row: TRow) => Rank | null;
+  onMove: (id: string, dest: {
+    rank: Rank; groupKey?: string | null; targetId?: string; zone?: "before" | "after";
+  }) => void | Promise<void>;
 }
 ```
 
-It activates only on views that opt in via `supportsManualOrder` (the **list**
-and **table** views; gallery/tree do not). When active for the displayed view:
+### Two sources, one rule
+
+A `ManualOrderConfig` reaches the active view from exactly one of two places:
+
+1. **`DataViewProps.manualOrder`** — a **domain** order the consumer owns (a rank
+   column on its own rows, e.g. the conversations queue's priority). Surface-wide:
+   every view instance shares it.
+2. **The primitive's own per-view-instance order**, contributed through the global
+   **`DataViewSlots.RowOrder`** slot (see below). Scoped to `(storageKey, viewId)`,
+   so two instances of the same surface hold **different** orders.
+
+**The consumer's wins when both are present.** The host resolves
+`cfg = props.manualOrder ?? contributedRowOrder ?? null` once and never branches on
+provenance again — the render path treats the two identically.
+
+### Manual order is the default; a sort overrides it
+
+Notion's model, and ours:
+
+- With **no sort set**, a `list`/`table` view renders in manual order and rows are
+  draggable.
+- Setting a **field sort overrides** the manual order and suspends drag (the host
+  simply withholds the config; `useDataViewSections`'s `manualRank ⇒ sort: []` rule
+  is untouched).
+- **Clearing the sort restores** the manual order.
+
+Consequently the **Sort pill is no longer hidden** in manual mode — it must stay
+reachable to clear the sort. (It used to be, back when `manualOrder` and sort were
+mutually exclusive modes.)
+
+When a config is active for the displayed view:
 
 - the section pipeline **skips the field sort** and orders each section's entries
   by `getRank` (search/filter still run) — like the tree ignores `ViewState.sort`;
-- the host **hides the Sort control** for that view;
 - rows render with rank-reorder drag affordances via the **`rank-reorder`**
   primitive (`RankReorderProvider` + `useRankReorderItem`), the same DnD machinery
   the tree's sibling zones use — one reorder model, not two;
 - reordering is **within a section**; a cross-section drag reports the destination
   section via `onMove`'s `dest.groupKey` (the consumer maps the new group to its
   own field mutation — the primitive carries no field/status knowledge);
-- the view renders **non-virtualized** within each section (drag + windowing
-  across huge lists is out of scope — manual order targets bounded lists).
+- `list` and `table` **window *and* drag**. `rank-reorder`'s shell re-measures
+  droppables every frame (`measuringAlways`), and `virtual-rows` pins the drag
+  source through `keepMounted`, so an in-flight drag survives its source row
+  scrolling out — the composition `primitives/tree` already used.
 
 The table integration uses `DataTable`'s additive `useRowDecoration` per-row hook
-seam (drag source ref + props + in-row drop indicators); virtualization is
-disabled whenever that seam is supplied.
+seam (drag source ref + props + in-row drop indicators), composed with the
+windowing measure ref.
+
+### The global `RowOrder` slot (cross-plugin)
+
+The sibling of the global `FieldExtension` slot: a single always-on
+`defineRenderSlot` (`primitives.data-view.row-order`) whose contributors may claim
+a per-view-instance row order for **any** DataView, with the host importing
+nothing. Its props erase the row type (a global slot spans disjoint consumer row
+types) and carry the surface coordinates a contributor needs:
+
+```ts
+interface GlobalRowOrderProps {
+  storageKey: DataViewId;
+  viewId: string;                  // the ACTIVE view-instance id — the order's scope
+  rowKey: (row: unknown, index: number) => string;
+  rows: readonly unknown[];        // the ordered set (below)
+  render: (order: ManualOrderConfig<unknown> | null) => ReactNode;
+}
+```
+
+The host folds it in `CollectRowOrder` (`web/internal/row-order.tsx`), a recursive
+**component** fold mirroring `CollectFieldExtensions` — never a `.map` over
+contributed hooks, which `react-hooks/rules-of-hooks` rejects. Each contributor
+mounts error-boundary-isolated (`renderIsolated`), runs its own hooks, and hands
+back a config (or `null` to abstain) through `render`. **First non-null wins**;
+because the slot is a `defineRenderSlot`, that precedence is a committed reorder
+override (`config/primitives/data-view/primitives.data-view.row-order.jsonc`), not
+an import-order accident. `render` recurses to the next contributor, and the base
+case emits the resolved order into the host's children-callback — which is a plain
+function call, not a component, so it contains no hooks.
+
+**`rows` is the view's ordered set: filter-applied, search-EXCLUDED,
+sort-suppressed.** The host computes it with
+`useFlatRows(effectiveRows, fields, { ...activeState, sort: [], query: "" }, …)`.
+Rows the view filters out never receive a rank. Search only changes what is
+*rendered*, never which rows the order covers — so a drag under an active search
+still rebuilds the full order and no hidden row is dropped.
+
+### The `rowOrderEnabled` gate
+
+`CollectRowOrder` takes an `enabled` prop and short-circuits **before**
+`useContributions()` when false — so an ineligible DataView never mounts a
+contributor and never subscribes to its live resource. Each clause is a structural
+exclusion, not a preference:
+
+```ts
+const rowOrderEnabled =
+  activeSupportsManualOrder &&   // list / table only — gallery/tree have no flat rank axis
+  manualOrder == null &&         // a consumer's domain order wins
+  props.dataSource == null &&    // server-paginated ⇒ the client cannot own the order
+  aggregate == null &&           // an aggregate representative's rank cannot stand for its members
+  !activeState.groupBy;          // a cross-group drop would need a field write the primitive cannot do
+```
+
+**The sort test is deliberately absent here.** It lives in `manualOrderActive`
+(`cfg != null && activeSupportsManualOrder && activeState.sort.length === 0`)
+instead, so toggling a sort off and on does not tear down the contributor's live
+subscription — the host merely withholds the config while a sort is set.
 
 ## Aggregating sections (`aggregate`)
 
@@ -332,6 +421,13 @@ imports the slot and contributes itself (`custom-columns → data-view`, the leg
 parent-ward edge), rather than the host importing custom-columns' hooks. The slot
 is a `defineRenderSlot`, so its fold order is a committed reorder override
 (`config/primitives/data-view/primitives.data-view.field-extension.jsonc`).
+
+Its sibling is the global **`DataViewSlots.RowOrder`** slot — same shape (always-on,
+row-type-erased, surface coordinates threaded in, a recursive component fold, a
+committed reorder override), but it folds a single `ManualOrderConfig | null` on a
+first-non-null-wins rule instead of accumulating a `FieldDef[]`, and it is *gated*
+rather than unconditional. See ["The global `RowOrder` slot"](#the-global-roworder-slot-cross-plugin)
+under Manual order.
 
 ## Collection-consumer separation
 
@@ -539,15 +635,15 @@ and `research/2026-06-18-tree-view-virtualization.md`).
 
 - Description: Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
 - Web:
-  - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`, `DataViewSlots.Setting` ← `primitives.data-view`, `primitives.data-view.custom-columns`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`, `DataViewSlots.ValueCodec` ← `fields.bool.data-view-codec`, `fields.date.data-view-codec`, `fields.number.data-view-codec`, `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
+  - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.FieldExtension` ← `primitives.data-view.custom-columns`, `DataViewSlots.RowOrder` ← `primitives.data-view.view-order`, `DataViewSlots.Setting` ← `primitives.data-view`, `primitives.data-view.custom-columns`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`, `DataViewSlots.ValueCodec` ← `fields.bool.data-view-codec`, `fields.date.data-view-codec`, `fields.number.data-view-codec`, `DataViewSlots.ColumnConfig` ← `fields.enum.column-config`
   - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `DataViewSlots.Setting` "data-view.properties" → `PropertiesControl`, `DataViewSlots.Setting` "data-view.group-by" → `GroupByControl`
   - Uses: `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/css/center.Center`, `primitives/css/fill.Fill`, `primitives/css/inline.Inline`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/selection-indicator.CheckboxIndicator`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/sticky.Sticky`, `primitives/css/surface.Surface`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSection`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/css/ui-kit.SingleLineProvider`, `primitives/cursor-pagination.InfiniteScrollFooter`, `primitives/cursor-pagination.InfiniteScrollHandle`, `primitives/cursor-pagination.useInfiniteScroll`, `primitives/data-view/view-core.buildViewConfigContributions`, `primitives/data-view/view-core.buildViewDescriptors`, `primitives/data-view/view-core.EditableViewSwitcher`, `primitives/data-view/view-core.useViewModel`, `primitives/data-view/view-core.useViewVariants`, `primitives/element-size.useElementSize`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
-  - Exports: Types: `CellEditorProps`, `ColumnConfigProps`, `CreateOption`, `DataViewAggregateConfig`, `DataViewContribution`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `DataViewRowEntry`, `DataViewSection`, `DataViewSettingContribution`, `DataViewSettingsContextValue`, `FieldCellProps`, `FieldDef`, `FieldExtensionContribution`, `FieldExtensionProps`, `FieldExtensions`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `GlobalFieldExtensionContribution`, `GlobalFieldExtensionProps`, `GroupByController`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `ManualOrderConfig`, `SelectionConfig`, `ServerDataSourceResult`, `ServerDataSourceSpec`, `ServerPage`, `SortController`, `SortPreset`, `SortRule`, `TableCellProps`, `ValueCodec`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DATA_VIEW_HEADER_OFFSET_VAR`, `DataView`, `DataViewSlots`, `defineDataView`, `defineFieldExtensions`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `getDataViewDescriptor`, `IDENTITY_CODEC`, `isFilterGroup`, `isGroupableField`, `makeSortComparator`, `partitionIntoSections`, `pickPrimaryField`, `resolveBodyFields`, `useDataViewSections`, `useDataViewSettings`, `useFieldIdentities`, `useFilterController`, `useFlatRows`, `useGroupByController`, `useResolveCell`, `useResolveCellEditor`, `useResolveColumnConfig`, `useResolveOperatorSet`, `useResolveValueCodec`, `useServerDataSource`, `useSortController`
+  - Exports: Types: `CellEditorProps`, `ColumnConfigProps`, `CreateOption`, `DataViewAggregateConfig`, `DataViewContribution`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `DataViewRowEntry`, `DataViewSection`, `DataViewSettingContribution`, `DataViewSettingsContextValue`, `FieldCellProps`, `FieldDef`, `FieldExtensionContribution`, `FieldExtensionProps`, `FieldExtensions`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `GlobalFieldExtensionContribution`, `GlobalFieldExtensionProps`, `GlobalRowOrderContribution`, `GlobalRowOrderProps`, `GroupByController`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `ManualOrderConfig`, `SelectionConfig`, `ServerDataSourceResult`, `ServerDataSourceSpec`, `ServerPage`, `SortController`, `SortPreset`, `SortRule`, `TableCellProps`, `ValueCodec`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DATA_VIEW_HEADER_OFFSET_VAR`, `DataView`, `DataViewSlots`, `defineDataView`, `defineFieldExtensions`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `getDataViewDescriptor`, `IDENTITY_CODEC`, `isFilterGroup`, `isGroupableField`, `makeSortComparator`, `partitionIntoSections`, `pickPrimaryField`, `resolveBodyFields`, `useDataViewSections`, `useDataViewSettings`, `useFieldIdentities`, `useFilterController`, `useFlatRows`, `useGroupByController`, `useResolveCell`, `useResolveCellEditor`, `useResolveColumnConfig`, `useResolveOperatorSet`, `useResolveValueCodec`, `useServerDataSource`, `useSortController`
 - Server:
   - Uses: `config_v2.getConfig`, `primitives/data-view/view-core.buildViewConfigRegistrations`, `primitives/data-view/view-core.viewsDescriptor`
   - Exports: Values: `readDataViewConfigDoc`
 - Cross-plugin:
-  - Imported by: `apps/deploy/servers`, `apps/home/app-cards`, `apps/mail/inbox`, `apps/pages/page-tree`, `apps/prototypes/gallery`, `apps/sonata/library`, `apps/story/shell`, `apps/studio/explorer`, `apps/workflows/definitions`, `apps/workflows/executions`, `code-explorer`, `config_v2/settings`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversations-view/data-view/history`, `conversations/conversations-view/data-view/queue`, `debug/profiling/runtime`, `debug/reports`, `debug/slow-ops/cluster`, `debug/slow-ops/pane`, `debug/trace/pane`, `fields/bool/data-view-codec`, `fields/bool/filter`, `fields/bool/inline`, `fields/bool/table`, `fields/color/table`, `fields/date/data-view-codec`, `fields/date/filter`, `fields/date/inline`, `fields/date/table`, `fields/enum/column-config`, `fields/enum/filter`, `fields/enum/inline`, `fields/enum/table`, `fields/image/table`, `fields/number/data-view-codec`, `fields/number/filter`, `fields/number/inline`, `fields/number/table`, `fields/tags/filter`, `fields/tags/inline`, `fields/tags/table`, `fields/text/filter`, `fields/text/inline`, `fields/text/table`, `primitives/data-view/custom-columns`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/data-view/server-query`, `primitives/data-view/table`, `primitives/data-view/tree`, `tasks/task-list`, `ui/tweakcn/community-browser`
+  - Imported by: `apps/deploy/servers`, `apps/home/app-cards`, `apps/mail/inbox`, `apps/pages/page-tree`, `apps/prototypes/gallery`, `apps/sonata/library`, `apps/story/shell`, `apps/studio/explorer`, `apps/workflows/definitions`, `apps/workflows/executions`, `code-explorer`, `config_v2/settings`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversations-view/data-view/history`, `conversations/conversations-view/data-view/queue`, `debug/profiling/runtime`, `debug/reports`, `debug/slow-ops/cluster`, `debug/slow-ops/pane`, `debug/trace/pane`, `fields/bool/data-view-codec`, `fields/bool/filter`, `fields/bool/inline`, `fields/bool/table`, `fields/color/table`, `fields/date/data-view-codec`, `fields/date/filter`, `fields/date/inline`, `fields/date/table`, `fields/enum/column-config`, `fields/enum/filter`, `fields/enum/inline`, `fields/enum/table`, `fields/image/table`, `fields/number/data-view-codec`, `fields/number/filter`, `fields/number/inline`, `fields/number/table`, `fields/tags/filter`, `fields/tags/inline`, `fields/tags/table`, `fields/text/filter`, `fields/text/inline`, `fields/text/table`, `primitives/data-view/custom-columns`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/data-view/server-query`, `primitives/data-view/table`, `primitives/data-view/tree`, `primitives/data-view/view-order`, `tasks/task-list`, `ui/tweakcn/community-browser`
 - Core:
   - Exports: Types: `CellEditorProps`, `ColumnConfigProps`, `CreateOption`, `DataViewAggregateConfig`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `DataViewRowEntry`, `DataViewSection`, `FieldDef`, `FieldExtensionProps`, `FieldExtensionsDescriptor`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterPreset`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `ManualOrderConfig`, `SelectionConfig`, `ServerDataSourceSpec`, `ServerPage`, `SortPreset`, `SortRule`, `TableCellProps`, `ValueCodec`, `ViewState`; Values: `DATA_VIEW_HEADER_OFFSET_VAR`, `defineDataView`, `FilterGroupSchema`, `FilterNodeSchema`, `FilterRuleSchema`, `IDENTITY_CODEC`
 - Sub-plugins:
@@ -558,5 +654,6 @@ and `research/2026-06-18-tree-view-virtualization.md`).
   - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
   - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
   - **`view-core`** — Type-agnostic named-view-instance engine: instance model + resolver, config-descriptor machinery, debounced write-back, and the editable view-switcher chrome. Type-agnostic named-view-instance engine (server): the per-id `views` config descriptor + a generic registration helper. Consumers register their own ids under their own plugin.
+  - **`view-order`** — Per-view-instance manual row order for any DataView: subscribes to the persisted (dataViewId, viewId) ranks, synthesizes a total order, and contributes the resulting ManualOrderConfig back through data-view's global RowOrder slot. Persists a per-view-instance manual row order keyed by (dataViewId, viewId, rowKey): a generic DB table, a push live resource, and a full-replace reorder endpoint that regenerates dense ranks and self-GCs the rows that left the view's ordered set.
 
 <!-- AUTOGENERATED:END -->

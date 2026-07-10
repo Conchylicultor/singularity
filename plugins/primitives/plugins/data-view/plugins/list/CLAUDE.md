@@ -46,6 +46,25 @@ visible fields (Properties)" section.
 When `options.renderRow` is set it owns the whole body instead, but is still
 wrapped in the selectable/clickable `Row`.
 
+## Windowing + manual order
+
+A section windows through `VirtualRows` once its entry count exceeds 100; below
+that it renders as a plain `.map` inside a `<Stack className="p-sm">`. That single
+threshold is the *only* windowing decision — manual order does not bypass it.
+
+When the host hands down a `manualOrder`, both branches wrap each row in
+`ManualOrderRow` (drag source + before/after drop indicators), and the whole view
+is hosted by one `RankReorderProvider` spanning every section. The provider is
+mounted with `measuringAlways` whenever **any** section windows, and its
+render-prop `activeId` is threaded into each section's `VirtualRows` as
+`keepMounted` — so the drag source survives scrolling out of its own window.
+`VirtualRows` positions rows absolutely at their measured offsets, so a pinned
+off-screen source is invisible and harmless.
+
+A row whose `getRank` is `null` is non-orderable and renders plain, so
+`useRankReorderItem` is never mounted for it — an element-type choice, not a
+conditional hook.
+
 ## Options
 
 `options` (= `viewOptions.list`) is a `ListViewOptions<TRow>`:

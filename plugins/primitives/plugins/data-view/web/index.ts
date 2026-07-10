@@ -14,6 +14,8 @@ export type {
   DataViewSettingContribution,
   GlobalFieldExtensionProps,
   GlobalFieldExtensionContribution,
+  GlobalRowOrderProps,
+  GlobalRowOrderContribution,
 } from "./slots";
 export { getDataViewDescriptor } from "./internal/descriptors";
 export { useDataViewSettings } from "./components/settings/settings-context";

@@ -39,7 +39,7 @@ import type { ListViewOptions } from "../../core";
  * Wraps one list row with rank-reorder drag affordances: the whole row is the
  * drag source (Notion-style, no grip), with hover before/after drop indicators.
  * Mirrors the tree's RowChrome drop-indicator markup. Only mounted in
- * manual-order mode (which renders non-virtualized per section).
+ * manual-order mode, in both the windowed and the plain branch.
  */
 function ManualOrderRow({
   id,
@@ -228,31 +228,33 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
     </Row>
   );
 
+  // One entry's node, shared by both branches. In manual-order mode the row is
+  // wrapped in its drag affordances — except when its rank is null, which marks
+  // the row non-orderable: it renders plain, so the `useRankReorderItem` hook
+  // (inside ManualOrderRow) is never mounted for it. This is an element-type
+  // choice, not a conditional hook.
+  const renderEntry = (entry: DataViewRowEntry<unknown>): ReactNode => {
+    const row = renderRow(entry.row, entry.key, entry.aggregateCount);
+    if (!manualOrder) return row;
+    const rank = manualOrder.getRank(entry.row);
+    if (rank == null) return row;
+    return (
+      <ManualOrderRow key={entry.key} id={entry.key} rank={rank}>
+        {row}
+      </ManualOrderRow>
+    );
+  };
+
   // Window the render once a section is long enough to matter; otherwise keep the
-  // plain `.map`. VirtualRows discovers the scroll ancestor itself. In
-  // manual-order mode windowing is bypassed (drag + windowing is out of scope)
-  // and each row is wrapped with rank-reorder drag affordances.
+  // plain `.map`. VirtualRows discovers the scroll ancestor itself. Manual order
+  // composes with windowing: `activeId` (from the RankReorderProvider render-prop)
+  // pins the drag source so it stays mounted when it scrolls out of the window —
+  // it renders at its true measured offset, so it is invisible and harmless.
   const estimateSize = (options.size ?? "md") === "sm" ? 36 : 44;
-  const renderEntries = (entries: DataViewRowEntry<unknown>[]): ReactNode => {
-    if (manualOrder) {
-      return (
-        <Stack gap="none" className="p-sm">
-          {entries.map((entry) => {
-            // A null rank marks the row non-orderable: render it plain, so the
-            // `useRankReorderItem` hook (inside ManualOrderRow) is never mounted
-            // for it. This is an element-type choice, not a conditional hook.
-            const rank = manualOrder.getRank(entry.row);
-            return rank != null ? (
-              <ManualOrderRow key={entry.key} id={entry.key} rank={rank}>
-                {renderRow(entry.row, entry.key, entry.aggregateCount)}
-              </ManualOrderRow>
-            ) : (
-              renderRow(entry.row, entry.key, entry.aggregateCount)
-            );
-          })}
-        </Stack>
-      );
-    }
+  const renderEntries = (
+    entries: DataViewRowEntry<unknown>[],
+    activeId: string | null,
+  ): ReactNode => {
     if (entries.length > VIRTUALIZE_THRESHOLD) {
       return (
         <VirtualRows<DataViewRowEntry<unknown>>
@@ -260,25 +262,24 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
           estimateSize={estimateSize}
           getKey={(entry) => entry.key}
           itemClassName="px-sm"
+          keepMounted={activeId ? [activeId] : undefined}
         >
-          {(entry) => renderRow(entry.row, entry.key, entry.aggregateCount)}
+          {(entry) => renderEntry(entry)}
         </VirtualRows>
       );
     }
     return (
       <Stack gap="none" className="p-sm">
-        {entries.map((entry) =>
-          renderRow(entry.row, entry.key, entry.aggregateCount),
-        )}
+        {entries.map(renderEntry)}
       </Stack>
     );
   };
 
-  // Ungrouped: the single implicit section renders headerless — byte-for-byte
-  // the legacy markup.
-  const body =
+  const renderBody = (activeId: string | null): ReactNode =>
+    // Ungrouped: the single implicit section renders headerless — byte-for-byte
+    // the legacy markup.
     sections.length === 1 && sections[0]!.key === null ? (
-      renderEntries(sections[0]!.entries)
+      renderEntries(sections[0]!.entries, activeId)
     ) : (
       // Grouped: one collapsible section per group key.
       <Stack gap="none">
@@ -318,7 +319,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
                 </SectionHeaderRow>
               </Sticky>
               <CollapsibleContent>
-                {renderEntries(section.entries)}
+                {renderEntries(section.entries, activeId)}
               </CollapsibleContent>
             </Collapsible>
           );
@@ -330,9 +331,15 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
   // covering every section, so a drag can reseat within or ACROSS sections (the
   // destination section's key flows back as `dest.groupKey`).
   if (manualOrder) {
+    // Any windowed section ⇒ rows mount/unmount mid-drag as autoscroll runs, so
+    // the shell must re-measure droppables every frame.
+    const anyWindowed = sections.some(
+      (s) => s.entries.length > VIRTUALIZE_THRESHOLD,
+    );
     return (
       <RankReorderProvider
         items={manualOrderItems(sections, manualOrder)}
+        measuringAlways={anyWindowed}
         onMove={(id, dest) =>
           manualOrder.onMove(id, {
             rank: dest.rank,
@@ -358,11 +365,11 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
           );
         }}
       >
-        {body}
+        {(activeId) => renderBody(activeId)}
       </RankReorderProvider>
     );
   }
-  return body;
+  return renderBody(null);
 }
 
 /** Flatten the sections into the rank-reorder item list (id + rank + group).
