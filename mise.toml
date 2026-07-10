@@ -2,11 +2,11 @@
 #   - postgres 18+  (installed manually; runs as a system service)
 #   - claude CLI    (already installed at ~/.local/bin/claude)
 #
-# The `setup` task runs automatically after `mise install` to bootstrap the
-# base "singularity" Postgres DB:
+# The `setup` task runs automatically after `mise install` to:
+#   0. trust every worktree's mise.toml (once, machine-global)
 #   1. createdb singularity (if missing)
 #   2. apply server migrations via `./singularity apply-migrations`
-# Both steps are idempotent. Step 2 unblocks the very first
+# All steps are idempotent. Step 2 unblocks the very first
 # `./singularity build --allow-main`, which otherwise deadlocks waiting for
 # __singularity_migrations to be populated.
 
@@ -22,6 +22,18 @@ rust = "stable"  # cargo + rustc for the Tauri desktop release shell (tauri/); e
 [tasks.setup]
 description = "Bootstrap the base 'singularity' Postgres DB (idempotent)"
 run = '''
+# Trust every current & future worktree's mise.toml in one shot. Each `git
+# worktree add` inherits this committed config at a fresh, untrusted path, so
+# shim invocations (bun/go/tmux) inside .claude/worktrees/<wt> otherwise emit
+# "config not trusted" errors — including from Claude Code's PreToolUse Bash
+# hook. Registering the directory is path-glob based, so it covers worktrees
+# created by the server, by config-staging, AND by the Claude Code harness
+# alike. `settings add` dedupes, so re-running setup is a no-op here.
+# Derive the MAIN checkout from git (worktrees live at <main>/.claude/worktrees)
+# so this is correct whether setup runs from the main clone or from a worktree.
+main_root="$(cd "$(dirname "$(git rev-parse --git-common-dir)")" && pwd)"
+mise settings add trusted_config_paths "$main_root/.claude/worktrees"
+
 if ! command -v pg_isready >/dev/null 2>&1; then
   echo "setup: psql tools not on PATH — skipping (install postgres and re-run 'mise run setup')."
   exit 0
