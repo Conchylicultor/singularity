@@ -1,16 +1,31 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { useMemo } from "react";
+import { useMemo, type CSSProperties } from "react";
 import { MdAdd, MdChevronRight, MdDragIndicator } from "react-icons/md";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { DropZone } from "@plugins/primitives/plugins/tree/core";
 import { useMultiSelectItem } from "@plugins/primitives/plugins/multi-select/web";
-import type { Block } from "../../core";
+import type { Block, BlockTextVariant } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
 import { Editor } from "../slots";
 import { useInsertBlockBelow } from "./use-insert-block-below";
 import { BlockActionsMenu } from "./block-actions-menu";
 import { BLOCK_GUTTER, BLOCK_INDENT } from "../internal/page-column";
+import "./block-document-scale.css";
+
+// The block's first-line height, as a reference to the single-sourced
+// `--doc-lh-*` var (defined in block-document-scale.css). block-row feeds this to
+// `--gutter-line-height` so `.block-gutter-control` seats the +/drag/chevron on
+// the center of the block's first text line — whatever its variant. A block with
+// no text variant (image, divider, …) falls back to body.
+const GUTTER_LINE_HEIGHT: Record<BlockTextVariant, string> = {
+  title: "var(--doc-lh-title)",
+  heading: "var(--doc-lh-heading)",
+  subheading: "var(--doc-lh-subheading)",
+  body: "var(--doc-lh-body)",
+  label: "var(--doc-lh-label)",
+  caption: "var(--doc-lh-caption)",
+};
 
 // The column geometry (rail width, per-depth indent, content inset) lives in
 // `../internal/page-column` — see its module doc for the invariant. Hosts align
@@ -62,13 +77,14 @@ export function BlockRow({
   // relative to the row — the controls hang back into the rail, and a drop
   // lands as a sibling of this row, so the line sits at this row's depth.
   const contentLeft = BLOCK_GUTTER + depth * BLOCK_INDENT;
+  const gutterLineHeight = GUTTER_LINE_HEIGHT[handle?.textVariant ?? "body"];
 
   return (
     <div
       ref={setDropRef}
       data-block-id={block.id}
       className="group/row relative"
-      style={{ paddingLeft: contentLeft }}
+      style={{ paddingLeft: contentLeft, "--gutter-line-height": gutterLineHeight } as CSSProperties}
     >
       {/* Chevron — collapses/expands this block's children. Closest to the
           content; pinned visible while collapsed so hidden content is
@@ -81,7 +97,7 @@ export function BlockRow({
           onClick={() => api.setExpanded(collapsed)}
           // eslint-disable-next-line layout/no-adhoc-layout -- gutter handle positioned via JS coords (style left below); flex centering seats the glyph in the fixed-size button
           className={cn(
-            "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
+            "absolute block-gutter-control z-raised flex size-5 items-center justify-center rounded-md",
             "text-muted-foreground hover:bg-accent cursor-pointer",
             collapsed ? "opacity-60" : "opacity-0 pointer-events-none group-hover/row:opacity-60 group-hover/row:pointer-events-auto",
           )}
@@ -99,7 +115,7 @@ export function BlockRow({
         onClick={() => insertBelow(api)}
         // eslint-disable-next-line layout/no-adhoc-layout -- gutter handle positioned via JS coords (style left below); flex centering seats the glyph in the fixed-size button
         className={cn(
-          "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
+          "absolute block-gutter-control z-raised flex size-5 items-center justify-center rounded-md",
           "text-muted-foreground hover:bg-accent cursor-pointer",
           "opacity-0 pointer-events-none group-hover/row:opacity-60 group-hover/row:pointer-events-auto",
         )}
@@ -123,7 +139,7 @@ export function BlockRow({
             {...listeners}
             // eslint-disable-next-line layout/no-adhoc-layout -- gutter handle positioned via JS coords (style left below); flex centering seats the glyph in the fixed-size button
             className={cn(
-              "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
+              "absolute block-gutter-control z-raised flex size-5 items-center justify-center rounded-md",
               "text-muted-foreground hover:bg-accent cursor-grab active:cursor-grabbing",
               "opacity-0 pointer-events-none group-hover/row:opacity-60 group-hover/row:pointer-events-auto",
             )}

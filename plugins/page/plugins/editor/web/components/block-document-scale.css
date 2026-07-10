@@ -13,36 +13,70 @@
  * specific presentation and the shared token group is load-bearing. Font weights
  * still reference the token vars so they track the active typography preset.
  */
+/*
+ * Per-variant line-heights, single-sourced as CSS vars so two consumers stay in
+ * lockstep: the `.doc-text-*` roles below (the text itself) and the gutter
+ * controls (the +/drag/chevron in block-row), which must vertically center on a
+ * block's FIRST text line — whose height IS this line-height. See
+ * `.block-gutter-control` below.
+ */
+:root {
+  --doc-lh-title: 2.375rem;
+  --doc-lh-heading: 2rem;
+  --doc-lh-subheading: 1.75rem;
+  --doc-lh-body: 1.6rem;
+  --doc-lh-label: 1.6rem;
+  --doc-lh-caption: 1.375rem;
+}
+
 .doc-text-title {
   font-size: 1.875rem; /* 30px — in-document H1 block */
-  line-height: 2.375rem;
+  line-height: var(--doc-lh-title);
   font-weight: var(--font-weight-semibold);
   letter-spacing: -0.013em;
 }
 .doc-text-heading {
   font-size: 1.5rem; /* 24px — H2 */
-  line-height: 2rem;
+  line-height: var(--doc-lh-heading);
   font-weight: var(--font-weight-semibold);
   letter-spacing: -0.011em;
 }
 .doc-text-subheading {
   font-size: 1.25rem; /* 20px — H3 */
-  line-height: 1.75rem;
+  line-height: var(--doc-lh-subheading);
   font-weight: var(--font-weight-semibold);
   letter-spacing: -0.006em;
 }
 .doc-text-body {
   font-size: 1rem; /* 16px — body */
-  line-height: 1.6rem;
+  line-height: var(--doc-lh-body);
   font-weight: var(--font-weight-normal);
 }
 .doc-text-label {
   font-size: 1rem;
-  line-height: 1.6rem;
+  line-height: var(--doc-lh-label);
   font-weight: var(--font-weight-medium);
 }
 .doc-text-caption {
   font-size: 0.875rem; /* 14px */
-  line-height: 1.375rem;
+  line-height: var(--doc-lh-caption);
   font-weight: var(--font-weight-normal);
+}
+
+/*
+ * Gutter-control vertical alignment (the +/drag/chevron rail in block-row).
+ *
+ * A block's first text line box starts at the content's `py-xs` (`--space-xs`)
+ * top padding and is `--gutter-line-height` tall — block-row sets that var per
+ * row from the block's own text variant (defaulting to body). A size-5 (1.25rem)
+ * control seats its glyph-center on the line center when
+ *   top = space-xs + (line-height − control-size) / 2
+ * i.e. control-center = space-xs + line-height/2 = the first line's center.
+ *
+ * This replaces the old flat `top-1`, which ignored line-height and so drifted
+ * high — barely on body text, badly on headings (Notion parity: the gutter
+ * tracks the first line whatever its size).
+ */
+.block-gutter-control {
+  top: calc(var(--space-xs) + (var(--gutter-line-height, var(--doc-lh-body)) - 1.25rem) / 2);
 }
