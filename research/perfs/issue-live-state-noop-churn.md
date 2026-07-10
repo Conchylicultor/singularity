@@ -80,7 +80,7 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
 
 ## Sessions
 
-- **2026-06-28 — [boot & git-loader slowness assessment](./2026-06-28-boot-and-git-loader-slowness-assessment.md).**
+- **2026-06-28 — [boot & git-loader slowness assessment](./archive/2026-06-28-boot-and-git-loader-slowness-assessment.md).**
   First pass (genesis of all three perf threads). Concluded the bottleneck is server-side
   *work + contention*, not client↔DB transport, so adopting Rocicorp Zero would not help. Named three
   root causes: (A) git-derived loaders — see [git-derived loaders](./issue-git-derived-loaders.md);
@@ -88,7 +88,7 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   this issue. *Superseded in part by 2026-06-29: (B) turned out to be specifically
   DB-connection-pool exhaustion, itself a downstream symptom.*
 
-- **2026-06-29 — [DB-pool exhaustion vs git loaders (root-cause hunt)](./2026-06-29-db-pool-exhaustion-flush-cascade-findings.md).**
+- **2026-06-29 — [DB-pool exhaustion vs git loaders (root-cause hunt)](./archive/2026-06-29-db-pool-exhaustion-flush-cascade-findings.md).**
   Re-measured before building the planned git fix. The live profile shows the real bottleneck: across
   all loaders, **DB-connection-pool wait (`loader-acquire`) = 243,614 ms** vs **host heavy-read gate
   (`heavy-read-acquire`) = 17 ms**. `flushNotifies` (the live-state cascade) maxes at **97 s** and
@@ -96,7 +96,7 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   **Root cause not yet confirmed beyond doubt — see that doc's open questions.** *Superseded by the
   next session: pool exhaustion is a downstream, intermittent symptom, not the driver.*
 
-- **2026-06-29 (2) — [notifications unbounded resource = the driver (root cause confirmed)](./2026-06-29-notifications-unbounded-resource-root-cause.md).**
+- **2026-06-29 (2) — [notifications unbounded resource = the driver (root cause confirmed)](./archive/2026-06-29-notifications-unbounded-resource-root-cause.md).**
   Answered all five open questions with converging profile + DB + code evidence. The driver is a
   handful of **oversized monolithic `push` live-state resources** that load an entire unbounded table
   as one blob and re-serialize/re-snapshot/re-deliver the *whole* blob on every change — worst by 4×
@@ -108,7 +108,7 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   these big-blob storms, so it is a symptom. The fix (one notification row per fingerprint)
   **landed on main** (`a8f9da4b6`).
 
-- **2026-06-29 (3) — [snapshot TOAST bloat + unconditional no-op persist (root cause confirmed)](./2026-06-29-snapshot-toast-bloat-noop-persist.md).**
+- **2026-06-29 (3) — [snapshot TOAST bloat + unconditional no-op persist (root cause confirmed)](./archive/2026-06-29-snapshot-toast-bloat-noop-persist.md).**
   Re-validated the landed notifications fix: `notifications` value **1.88 MB → 42 kB**, undismissed
   report rows **21,803 → 27**. But the multi-second flush stalls persist one layer down. The new
   dominant event is a **22.4 s `flushNotifies` = one `live_state_snapshot` UPSERT stalling 21.9 s**
@@ -120,7 +120,7 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   logged `live-state-noop`). *Refined by session 4: the persist-skip is the tail; the no-op pushes
   themselves have an upstream origin.*
 
-- **2026-06-29 (4) — [no-op-push churn traced to its origin (the 1 Hz poller) + methodology](./2026-06-29-noop-push-churn-traced-to-origin.md).**
+- **2026-06-29 (4) — [no-op-push churn traced to its origin (the 1 Hz poller) + methodology](./archive/2026-06-29-noop-push-churn-traced-to-origin.md).**
   Traced the residual stalls *upstream* instead of optimizing the hotspot. Walked the chain three
   hops past "solved": no-op recompute (×12/s) ← FULL-table invalidation ← change-feed trigger firing
   on a **zero-row statement** ← `INSERT … ON CONFLICT DO NOTHING` that fully conflicts ← the
@@ -133,7 +133,7 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md) skill. **No code changes
   — handed off for implementation.**
 
-- **2026-06-29 (5) — [the layered fix implemented (boundary invariant + origin cure)](./2026-06-29-noop-churn-fix-implemented.md).**
+- **2026-06-29 (5) — [the layered fix implemented (boundary invariant + origin cure)](./archive/2026-06-29-noop-churn-fix-implemented.md).**
   Re-validated session 4 on fresh `singularity` data (did not inherit): `conversations` INSERT is
   **4.0/sec, 1200/1201 NULL-id** (zero-row); the churn is still live and neither prior fix had landed.
   Closed session 4's "one remaining hop": orphans are computed against the **active-only**
@@ -144,7 +144,7 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
   **Not pushed**; behavioral confirmation deferred to `singularity` (orphan adoption is
   `isMain()`-only).
 
-- **2026-06-29 (6) — [the layered fix validated on `singularity` (deferred behavioral confirmation)](./2026-06-29-noop-churn-fix-validated-on-main.md).**
+- **2026-06-29 (6) — [the layered fix validated on `singularity` (deferred behavioral confirmation)](./archive/2026-06-29-noop-churn-fix-validated-on-main.md).**
   The fix landed on main (`1f6b27092`). Re-measured `singularity` live (did not inherit): **all three
   lines converge on the churn being gone.** Profile: `flushNotifies` **22.4 s → 571 ms** (avg 77 ms,
   zero wait); the `[acquire]` pool wait fell off the board entirely. DB: `live_state_changelog`

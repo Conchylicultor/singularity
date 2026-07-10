@@ -1,12 +1,9 @@
 import { ndjsonResponse } from "@plugins/infra/plugins/ndjson-stream/server";
-import {
-  listDatabases,
-  openShortLivedClient,
-} from "@plugins/database/plugins/admin/server";
-import { listAttempts } from "@plugins/tasks/plugins/tasks-core/server";
+import { openShortLivedClient } from "@plugins/database/plugins/admin/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { SlowOpSchema, type SlowOp } from "@plugins/debug/plugins/slow-ops/core";
 import { type ClusterWorktree } from "../../shared/endpoints";
+import { listLiveForkDatabases } from "./live-fork-databases";
 
 // Bound the fan-out so a 16-worktree cluster never opens 16 pools at once. Each
 // short-lived pool is `max: 1`, so this caps concurrent backends we add to the
@@ -78,37 +75,17 @@ async function fetchWorktree(name: string): Promise<ClusterWorktree> {
   }
 }
 
-// A fork DB is only worth scanning if its attempt is still live: the host
-// accumulates 1000+ finished worktree forks (most without even a `slow_ops`
-// table), so blindly fanning out over every database in `listDatabases()` opens
-// a thousand pools to surface a handful of error rows. We restrict the fan-out
-// to the main DB plus forks whose attempt is active or created in the last 24h.
-const RECENT_FORK_WINDOW_MS = 24 * 60 * 60 * 1000;
-
-async function relevantDatabases(now: number): Promise<string[]> {
-  const [dbNames, attempts] = await Promise.all([listDatabases(), listAttempts()]);
-  const dbSet = new Set(dbNames);
-  const relevant = new Set<string>();
-  if (dbSet.has("singularity")) relevant.add("singularity");
-  for (const a of attempts) {
-    if (!dbSet.has(a.id)) continue;
-    const live = a.active || now - a.createdAt.getTime() < RECENT_FORK_WINDOW_MS;
-    if (live) relevant.add(a.id);
-  }
-  return [...relevant];
-}
-
 // Streamed as NDJSON rather than a single JSON response: the fan-out across ~16
 // worktree DB forks takes 20s+, so withholding the whole payload until the last
 // fork resolves leaves the user staring at a blank pane (and risks Bun's idle
-// timeout). Instead we emit a `{ total }` frame up front (after relevantDatabases())
+// timeout). Instead we emit a `{ total }` frame up front (after listLiveForkDatabases())
 // so the client can show a determinate "scanning X / N worktrees" progress bar,
 // then emit each `{ worktree }` as its fetch resolves so the two DataViews fill
 // in live. A producer throw is auto-framed as `{ error }` by ndjsonResponse;
 // per-DB failures are still surfaced inline as `ok: false` worktree rows.
 export function handleSlowOpsCluster(): Response {
   return ndjsonResponse(async (emit) => {
-    const names = await relevantDatabases(Date.now());
+    const names = await listLiveForkDatabases(Date.now());
     emit({ total: names.length });
     const semaphore = createSemaphore(FANOUT_CONCURRENCY);
     await Promise.all(

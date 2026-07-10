@@ -14,7 +14,7 @@ hot callers need only the cheap structural skeleton. Root-cause arc + the (cache
 structure-only) fix design →
 **[`2026-06-29-perfs-buildplugintree-eventloop-block-FIX.md`](./2026-06-29-perfs-buildplugintree-eventloop-block-FIX.md)**.
 **Read this first.** It supersedes the framing in
-[`2026-06-29-conversation-load-40s-fanout-herd.md`](./2026-06-29-conversation-load-40s-fanout-herd.md)
+[`2026-06-29-conversation-load-40s-fanout-herd.md`](./archive/2026-06-29-conversation-load-40s-fanout-herd.md)
 (that doc's lower-layer findings are correct but it stopped two layers too low — see "Discarded/superseded" below).
 Follow the [`perfs-investigation`](../../.claude/skills/perfs-investigation/SKILL.md) skill: **re-validate, do not inherit.**
 

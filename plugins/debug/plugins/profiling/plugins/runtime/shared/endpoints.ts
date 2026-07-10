@@ -97,3 +97,74 @@ export const getRuntimeProfile = defineEndpoint({
 export const resetRuntimeProfile = defineEndpoint({
   route: "POST /api/debug/profiling/runtime/reset",
 });
+
+// --- Flight window ----------------------------------------------------------
+
+export const FLIGHT_WINDOW_MS_DEFAULT = 15_000;
+export const FLIGHT_WINDOW_MS_MIN = 1_000;
+export const FLIGHT_WINDOW_MS_MAX = 120_000;
+
+// Out-of-range values are CLAMPED, not rejected: the caller is another
+// backend's enrich pass mid-incident — a mis-tuned windowMs should still yield
+// a bounded capture, not a 400. Non-numeric input still fails validation.
+export const flightWindowQuerySchema = z.object({
+  windowMs: z.coerce
+    .number()
+    .finite()
+    .default(FLIGHT_WINDOW_MS_DEFAULT)
+    .transform((v) =>
+      Math.min(FLIGHT_WINDOW_MS_MAX, Math.max(FLIGHT_WINDOW_MS_MIN, v)),
+    ),
+});
+
+// Mirrors the recorder's FlightSpan/FlightWindow shapes
+// (@plugins/infra/plugins/runtime-profiler/core), same client-safety rationale
+// as runtimeProfileSchema above.
+const waitBandSchema = z.object({
+  layer: z.string(),
+  t0: z.number(),
+  t1: z.number(),
+});
+
+const flightSpanSchema = z.object({
+  id: z.number(),
+  parentId: z.number().nullable(),
+  kind: spanKindSchema,
+  label: z.string(),
+  t0: z.number(),
+  // null => still open at capture.
+  t1: z.number().nullable(),
+  ageMs: z.number(),
+  waitMs: z.number(),
+  childMs: z.number(),
+  selfMs: z.number(),
+  waits: waitBreakdownSchema.optional(),
+  waitBands: z.array(waitBandSchema).optional(),
+});
+
+// All t0/t1/atMs values inside `window` are THIS backend's performance.now()
+// clock — meaningless to another process. `wallAnchor` pairs one instant on
+// that clock (`atMs`) with the wall clock (`wallTime`, ISO), so a cross-backend
+// consumer converts any profiler value t via:
+//   wall = Date.parse(wallTime) + (t - atMs)
+export const flightWindowResponseSchema = z.object({
+  wallAnchor: z.object({
+    atMs: z.number(),
+    wallTime: z.string(),
+  }),
+  window: z.object({
+    atMs: z.number(),
+    open: z.array(flightSpanSchema),
+    completed: z.array(flightSpanSchema),
+  }),
+});
+
+// Per-backend flight window (in-flight + recently-completed spans). Fetched
+// gateway-mediated by the Phase-B fleet-flights trace class during
+// cluster-onset captures, so a main-side trace can show what every running
+// backend was doing at the trip instant.
+export const getFlightWindow = defineEndpoint({
+  route: "GET /api/debug/profiling/flight-window",
+  query: flightWindowQuerySchema,
+  response: flightWindowResponseSchema,
+});

@@ -27,6 +27,18 @@ export const HealthSampleSchema = z.object({
   // are dropped by safeParse — a brief history gap as the rolling window refills,
   // exactly as `physFootprintMb` handled its own cutover above.
   heavyReadDepth: z.number(),
+  // Monitoring self-cost deltas for this tick, diffed from the runtime
+  // profiler's cumulative self-meter: `monitorOps` = outermost
+  // runWithoutProfiling scopes that started, `monitorMs` = their summed
+  // wall-clock. Everything suppressed is by definition monitoring work, so
+  // these are the ONLY visibility into the observability subsystem's own load
+  // (its spans are dropped by design). Optional — unlike `heavyReadDepth`,
+  // pre-cutover JSONL lines must still parse (the timeline heat strip wants
+  // uninterrupted history; a missing value renders as a gap, not a dropped
+  // sample). `.optional()` keeps input/output types symmetric, so the
+  // downstream `HealthSeries` props stay consistent.
+  monitorOps: z.number().optional(),
+  monitorMs: z.number().optional(),
 });
 export type HealthSample = z.infer<typeof HealthSampleSchema>;
 

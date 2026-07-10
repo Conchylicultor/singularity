@@ -15,6 +15,7 @@ export {
   installClock,
   runWithoutProfiling,
   runInBackgroundLane,
+  getSelfMeter,
   getRuntimeProfile,
   resetRuntimeProfile,
   onSlowSpan,

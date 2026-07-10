@@ -1,0 +1,1 @@
+export { duressConfig } from "./config";

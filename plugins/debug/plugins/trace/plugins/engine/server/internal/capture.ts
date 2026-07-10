@@ -13,6 +13,25 @@ import {
 } from "./registry";
 import { admitTrace } from "./rate-limit";
 import { persistTrace } from "./persist-trace";
+import { shouldShedTrace } from "./trace-shed";
+
+/**
+ * The trace admission knobs captureTrace reads per trip. Structural on purpose:
+ * getConfig(traceConfig) satisfies it, and tests inject plain literals via
+ * _setTraceConfigForTests (the duress _setShedConfigForTests precedent).
+ */
+interface TraceConfigValues {
+  enabled: boolean;
+  cooldownMs: number;
+  maxPerMin: number;
+  windowMs: number;
+}
+
+/** Override the config read (getConfig needs a booted registry). Pass null to restore. */
+let configOverride: TraceConfigValues | null = null;
+export function _setTraceConfigForTests(values: TraceConfigValues | null): void {
+  configOverride = values;
+}
 
 // ---------------------------------------------------------------------------
 // THE generic entry point for capturing a trace. Any plugin may trigger — a slow
@@ -24,7 +43,7 @@ import { persistTrace } from "./persist-trace";
 // the caller's hot path.
 // ---------------------------------------------------------------------------
 export function captureTrace(trigger: TraceTrigger): { id: string } | null {
-  const cfg = getConfig(traceConfig);
+  const cfg: TraceConfigValues = configOverride ?? getConfig(traceConfig);
   if (!cfg.enabled) return null;
 
   // Profiler-clock instant (performance.now domain — the same clock
@@ -38,6 +57,15 @@ export function captureTrace(trigger: TraceTrigger): { id: string } | null {
   if (!admitTrace(key, atMs, cfg.cooldownMs, cfg.maxPerMin, trigger.critical)) {
     return null;
   }
+
+  // Duress shed gate — AFTER admission, so cooldown / rate-limit semantics stay
+  // primary (a cooldown rejection never consumes a first-N grant). During a
+  // duress episode past first-N per trigger, the ENTIRE capture is skipped —
+  // the coherent-instant phases below are exactly the cost shedding exists to
+  // avoid — and only an accounting stub is buffered (see trace-shed.ts). The
+  // caller sees null, the same contract as a rate-limited trip. A `critical`
+  // trigger bypasses the gate inside shouldShedTrace.
+  if (shouldShedTrace(trigger)) return null;
 
   // Mint the id synchronously so linkage (a report / a slow_ops sample) can
   // reference it before persistence even begins.
@@ -118,6 +146,10 @@ export async function assembleEvents(
       let raw: unknown;
       if (spec.enrich) {
         raw = await spec.enrich(ctx, atTrip, ringSlice);
+        // Same skip semantics as captureAtTrip: undefined means "this trip is
+        // not for me" — an enrich-only class (e.g. one keyed on trigger.kind)
+        // opts out without a validation error or a report.
+        if (raw === undefined) continue;
       } else if (atTrip !== undefined) {
         raw = atTrip;
       } else if (ringSlice.length > 0) {

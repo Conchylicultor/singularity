@@ -5,6 +5,10 @@ import {
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { getServerBuildId } from "@plugins/build/plugins/server-build-id/server";
+import {
+  createShedBuffer,
+  type ShedSummary,
+} from "@plugins/infra/plugins/duress/server";
 import { reportDetailRoute } from "@plugins/reports/core";
 import { debugApp } from "@plugins/apps/plugins/debug/plugins/shell/core";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
@@ -50,6 +54,48 @@ function noiseFieldsFrom(data: Record<string, unknown>): {
   return { errorType, stack };
 }
 
+function shedSummaryMessage(s: ShedSummary): string {
+  const shed = Object.values(s.byCascade).reduce((a, c) => a + c.shed, 0);
+  const dropped = Object.values(s.byCascade).reduce((a, c) => a + c.dropped, 0);
+  return (
+    `duress episode cleared: ${s.kind} buffer shed ${shed} + dropped ${dropped} ` +
+    `across ${Object.keys(s.byCascade).length} cascade keys ` +
+    `(${s.replayed} replayed, ${s.replayErrors} replay errors)`
+  );
+}
+
+// Duress shed gate for the report durable path (Phase C2). During a host
+// duress episode, past the first-N-per-fingerprint grant the validated input
+// is buffered (with its fingerprint as the cascade key — the same axis the
+// upsert dedupes on) and the durable path below is skipped; after the episode
+// clears, replay re-drives recordReport per item, where the fingerprint upsert
+// dedupes and `count` accumulates truthfully.
+//
+// Why the accounting can't eat itself: the flush timer only fires when the
+// latch reads clear, but a flush is not atomic — duress can RE-TRIP while the
+// replay chunks and the trailing summary run. Replayed items simply re-enter
+// this gate and are re-buffered under the new episode (deferred again, never
+// lost). The flush SUMMARY, however, is the only record of what was
+// shed/dropped — if it were re-shed it could be dropped on buffer overflow and
+// the accounting silently lost. So the duress-shed kind declares itself
+// `duressExempt` (see ReportKindSpec) and bypasses the gate; "flush only
+// happens after clear" alone would not close that race.
+const reportShed = createShedBuffer<{ input: ReportInput; fingerprint: string }>({
+  kind: "reports",
+  cascadeKeyOf: (item) => item.fingerprint,
+  replay: async (items) => {
+    for (const item of items) await recordReport(item.input);
+  },
+  onFlushSummary: (s) => {
+    void recordReport({
+      kind: "duress-shed",
+      source: "server-duress-shed",
+      message: shedSummaryMessage(s),
+      data: { ...s },
+    });
+  },
+});
+
 // Single entry point used by the HTTP handler, the boot-time flush, and the
 // process-level crash hooks. Every source collapses here so dedup lives in one
 // place. The engine is fully generic: it looks up the matching ReportKindSpec
@@ -81,6 +127,19 @@ export async function recordReport(
   const data = input.data;
   const parsed = spec.schema.parse(data);
   const fp = await spec.fingerprint(parsed);
+
+  // Duress shed gate — after kind lookup + schema validation + fingerprinting
+  // (the cascade key), before any durable work. A shed report skips the
+  // velocity bump too: velocity suppresses bell churn on the durable path, and
+  // a shed report never reaches the bell; the replayed call bumps it once when
+  // the report actually lands. The null result mirrors the no-row path.
+  if (!spec.duressExempt) {
+    const admitted = reportShed.admit({ input, fingerprint: fp });
+    if (!admitted.persist) {
+      return { reportId: null, taskId: null, rateLimited: false };
+    }
+  }
+
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
   const message = clamp(rawMessage ?? "", MESSAGE_MAX);
   const limited = bumpWindowAndCheck(fp);

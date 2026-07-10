@@ -143,7 +143,7 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
     1.4 s ≠ the 40 s symptom: that floor is **legitimate cost**, and the 40 s is the
     [fan-out herd](./issue-cold-boot-fanout.md) (loaders are victims of the per-backend DB-pool gate,
     not the host git gate). Parallelizing the 4 spawns is a *containment* win on the floor, independent
-    of the herd cure. See [`2026-06-29-conversation-load-40s-fanout-herd.md`](./2026-06-29-conversation-load-40s-fanout-herd.md).
+    of the herd cure. See [`2026-06-29-conversation-load-40s-fanout-herd.md`](./archive/2026-06-29-conversation-load-40s-fanout-herd.md).
 - 🔬 **Per-worktree local heavy-read gate (size 2 = `ceil(host/2)`)** = 21,858 ms (session 2) and now
   the live wait for `commits-graph.delta` (workMs 82 vs ~843 ms `heavy-read-local`). Real, and no
   longer 2nd-order now that the big-blob churn is bounded — the gate behind which the git loaders
@@ -159,13 +159,13 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
 
 ## Sessions
 
-- **2026-06-28 — [boot & git-loader slowness assessment](./2026-06-28-boot-and-git-loader-slowness-assessment.md).**
+- **2026-06-28 — [boot & git-loader slowness assessment](./archive/2026-06-28-boot-and-git-loader-slowness-assessment.md).**
   Named cause (A): git-derived loaders (`edited-files`, `commits-graph`) on the first-subscribe
   critical path under the host heavy-read gate. Flagged as a primary suspect. *Superseded as the
   *primary* driver by the 2026-06-29 sessions (the churn dominated), but the underlying git cost was
   never disproven — only out-prioritized.*
 
-- **2026-06-29 — [DB-pool exhaustion vs git loaders (root-cause hunt)](./2026-06-29-db-pool-exhaustion-flush-cascade-findings.md).**
+- **2026-06-29 — [DB-pool exhaustion vs git loaders (root-cause hunt)](./archive/2026-06-29-db-pool-exhaustion-flush-cascade-findings.md).**
   Measured the git loaders directly: **16–315 ms in isolation, 172–448 ms under a fully-saturated
   host heavy-read gate** — not the 7 s symptom. Concluded they were *victims* of DB-pool exhaustion,
   and the `heavy-read-acquire` gate wait was then only 17 ms total. *Re-opened by session 6: with the

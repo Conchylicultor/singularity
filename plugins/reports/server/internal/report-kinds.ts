@@ -25,6 +25,13 @@ export interface ReportKindSpec<TData = unknown> {
   schema: z.ZodType<TData>;
   // Dedup strategy: repeats sharing a fingerprint collapse onto one row.
   fingerprint(data: TData): Promise<string> | string;
+  // When true, this kind bypasses the duress shed gate in recordReport. The
+  // engine names no kind — a kind DECLARES itself exempt. Reserve for kinds
+  // whose loss would break the shedding accounting itself: the duress-shed
+  // flush summary is filed at the tail of a flush, and a re-trip during that
+  // flush would otherwise shed (and, on buffer overflow, silently drop) the
+  // very record of what was shed.
+  duressExempt?: boolean;
   meta: {
     tag: string;
     notif: string;

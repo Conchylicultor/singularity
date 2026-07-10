@@ -3,8 +3,10 @@ import {
   handleRuntimeProfiling,
   handleResetRuntimeProfiling,
 } from "./internal/handle-runtime-profiling";
+import { handleFlightWindow } from "./internal/handle-flight-window";
 import { runtimeProfileTool } from "./internal/mcp-tools";
 import {
+  getFlightWindow,
   getRuntimeProfile,
   resetRuntimeProfile,
 } from "../shared/endpoints";
@@ -14,6 +16,7 @@ export default {
   httpRoutes: {
     [getRuntimeProfile.route]: handleRuntimeProfiling,
     [resetRuntimeProfile.route]: handleResetRuntimeProfiling,
+    [getFlightWindow.route]: handleFlightWindow,
   },
   register: [runtimeProfileTool],
 } satisfies ServerPluginDefinition;

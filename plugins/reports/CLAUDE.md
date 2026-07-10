@@ -6,11 +6,11 @@
 
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 - Web:
-  - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.session-divergence`, `debug.slow-ops`, `reports.crash`, `reports.optimistic-divergence`, `reports.render-loop`
+  - Slots: `Reports.KindView` ← `debug.boot-budget`, `debug.duress-shed`, `debug.live-state-churn.monitor`, `debug.op-rate`, `debug.queue-health`, `debug.read-set-shrink`, `debug.session-divergence`, `debug.slow-ops`, `reports.crash`, `reports.optimistic-divergence`, `reports.render-loop`
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/slot-render.defineDispatchSlot`, `primitives/tab-id.getTabId`
   - Exports: Types: `ReportContext`; Values: `investigate`, `report`, `Reports`
 - Server:
-  - Uses: `build/server-build-id.getServerBuildId`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `infra/retention.defineRetention`, `infra/warmup.defineWarmup`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`
+  - Uses: `build/server-build-id.getServerBuildId`, `database.db`, `database/change-feed.ExcludeFromChangeFeed`, `infra/duress.createShedBuffer`, `infra/duress.ShedSummary`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `infra/retention.defineRetention`, `infra/warmup.defineWarmup`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`
   - DB schema: `plugins/reports/server/internal/tables.ts`
   - Exports: Types: `InvestigationTaskRequest`, `ReportKindSpec`, `ReportKindVariant`, `ReportNoiseInput`, `ReportNoiseRuleSpec`, `ReportRow`; Values: `_reports`, `recordReport`, `reportInvestigationSink`, `ReportKind`, `ReportNoiseRule`, `reportsResource`
   - Register: `defineWarmup('reports.backfill-noise')`, `defineJob('retention.reports')`
@@ -20,7 +20,7 @@
   - Uses: `primitives/live-state.resourceDescriptor`, `primitives/pane.defineRoute`
   - Exports: Types: `Report`, `ReportSource`; Values: `CLIENT_REPORT_SOURCES`, `reportDetailRoute`, `ReportSchema`, `reportsResource`, `reportsRootRoute`, `SERVER_REPORT_SOURCES`
 - Cross-plugin:
-  - Imported by: `conversations`, `conversations/model-provider`, `conversations/pane-restore`, `conversations/runtime-tmux`, `debug/boot-budget`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/reports`, `debug/session-divergence`, `debug/slow-ops`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/optimistic-divergence`, `reports/plugin-load-errors`, `reports/render-loop`, `tasks/reports-investigation`
+  - Imported by: `conversations`, `conversations/model-provider`, `conversations/pane-restore`, `conversations/runtime-tmux`, `debug/boot-budget`, `debug/duress-shed`, `debug/live-state-churn/monitor`, `debug/op-rate`, `debug/queue-health`, `debug/read-set-shrink`, `debug/reports`, `debug/session-divergence`, `debug/slow-ops`, `debug/trace/engine`, `infra/boot-snapshot`, `reports/crash`, `reports/endpoint-errors`, `reports/launch-fix`, `reports/noise-rules`, `reports/optimistic-divergence`, `reports/plugin-load-errors`, `reports/render-loop`, `tasks/reports-investigation`
 - Sub-plugins:
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).

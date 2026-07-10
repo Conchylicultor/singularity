@@ -424,15 +424,87 @@ export function installProfilingSuppressionRuntime(
   suppressionRuntime = rt;
 }
 
+// --- Monitoring self-meter ---
+//
+// Suppression makes monitoring's own cost structurally invisible: every
+// observability write runs inside runWithoutProfiling, so the profiler — the
+// tool you'd reach for — cannot see it, and a monitoring-overload cannot be
+// diagnosed from the data (the observer-effect audit's finding). The fix is to
+// meter the suppression scope itself: everything inside runWithoutProfiling is
+// BY DEFINITION monitoring work, so two module counters at this one chokepoint
+// attribute all of it with zero per-callsite edits — and, being plain numbers
+// outside the recorder's span path, they can never re-feed the profiler.
+//
+// Semantics: one "op" = one OUTERMOST runWithoutProfiling scope; `totalMs` is
+// that scope's wall-clock from call to settlement (synchronous return, sync
+// throw, or promise settle). A scope opened while suppression is already active
+// (`suppressed()` — ALS semantics on the server, so nesting is detected across
+// awaits, not just sync frames) is the same monitoring op and adds neither
+// count nor time — nested wall time inside an outer scope is never
+// double-counted. Two CONCURRENT outermost scopes each meter their full wall
+// (a sum, like CPU-time accounting), which is correct: they are separate
+// monitoring work items. On the web the default runtime's `suppressed()` is
+// always false, so nesting is not detected there — acceptable: the meter is
+// consumed server-side (health sampler).
+//
+// Cumulative since boot and NEVER reset (not by resetRuntimeProfile either):
+// the consumer diffs successive readings, and a reset would surface as a
+// negative delta.
+let selfMeterCount = 0;
+let selfMeterTotalMs = 0;
+
+/**
+ * Cumulative monitoring self-cost since boot: `count` outermost
+ * `runWithoutProfiling` scopes, `totalMs` their summed wall-clock. Monotonic —
+ * consumers (the health sampler) diff successive readings for per-tick deltas.
+ */
+export function getSelfMeter(): { count: number; totalMs: number } {
+  return { count: selfMeterCount, totalMs: selfMeterTotalMs };
+}
+
+function isThenable(value: unknown): value is PromiseLike<unknown> {
+  return (
+    value !== null &&
+    (typeof value === "object" || typeof value === "function") &&
+    typeof (value as PromiseLike<unknown>).then === "function"
+  );
+}
+
 /**
  * Run `fn` in a scope where every span the recorder would otherwise capture is
  * dropped. Use this to wrap the observability subsystem's own I/O so the
  * profiler never measures itself. Suppression propagates to async continuations
  * spawned synchronously within `fn` (AsyncLocalStorage semantics on the server),
  * so an awaited DB operation kicked off inside `fn` is fully suppressed.
+ *
+ * The scope is also the monitoring self-meter's chokepoint (see above): the
+ * outermost scope's wall-clock accumulates into `getSelfMeter()`. An async `fn`
+ * is timed to settlement by observing the returned promise on a detached
+ * derived promise (both handlers, so it can never surface an unhandled
+ * rejection) — the ORIGINAL result is returned untouched, so the return type
+ * and promise identity are unchanged. Sync overhead beyond suppression: two
+ * clock reads and two number adds; the async path adds one closure.
  */
 export function runWithoutProfiling<T>(fn: () => T): T {
-  return suppressionRuntime.run(fn);
+  if (suppressionRuntime.suppressed()) return suppressionRuntime.run(fn);
+  selfMeterCount += 1;
+  const t0 = now();
+  let syncSettle = true;
+  try {
+    const result = suppressionRuntime.run(fn);
+    if (isThenable(result)) {
+      syncSettle = false;
+      const settle = (): void => {
+        selfMeterTotalMs += now() - t0;
+      };
+      void result.then(settle, settle);
+    }
+    return result;
+  } finally {
+    // A sync return or a sync throw settles here; a thenable settles in
+    // `settle` above instead.
+    if (syncSettle) selfMeterTotalMs += now() - t0;
+  }
 }
 
 // --- Injected background-lane runtime ---

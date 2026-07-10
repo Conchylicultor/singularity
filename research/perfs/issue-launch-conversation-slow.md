@@ -218,6 +218,9 @@ wired through slow-ops, with `POST /api/conversations` held to 1 s. No schema/mi
 **NOT yet done (do not promote to Completed):**
 - **Re-validate on `singularity`/main** — the whole win must be re-measured on main after a push
   (per the doc-currency rule). Not on main yet (needs the user's push).
+  **2026-07-10 verification: landed on main as `40ef2ae9f` (2026-07-02)** (and the `worktree-mutate`
+  gate as `a23732d29`) — the "not on main yet" above is stale. The post-merge re-measurement on
+  `singularity` has still not been recorded, so the status stays Ongoing.
 - **Residual ~390 ms in-process** is NOT the checkout (that's off-path) — it is the serial DB
   round-trips (`createTask`/`createAttempt`/`insertConversation`/preprompt+effort reads/`emit`) + the
   two job enqueues, measured while the DB pool was still draining the boot fan-out. A smaller,

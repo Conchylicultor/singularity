@@ -9,6 +9,12 @@ import { EventsView } from "./components/events-view";
 
 export { SlowEvents } from "./slots";
 export { slowEventsPane, traceDetailPane } from "./panes";
+export {
+  groupIncidents,
+  incidentColorClass,
+  type IncidentInfo,
+} from "./internal/incidents";
+export { IncidentBadge } from "./components/incident-badge";
 
 export default {
   description:

@@ -13,8 +13,10 @@ import {
   getLastLoaderReadSet,
   getReadSetIndex,
   getRuntimeProfile,
+  getSelfMeter,
   installBackgroundLaneRuntime,
   installClock,
+  installProfilingSuppressionRuntime,
   installSpanContextRuntime,
   onSlowSpan,
   readGateGauges,
@@ -25,6 +27,7 @@ import {
   removeReadSetTable,
   resetRuntimeProfile,
   runInBackgroundLane,
+  runWithoutProfiling,
   seedReadSetIndex,
   type Aggregate,
   type EntryContext,
@@ -70,6 +73,15 @@ const backgroundLaneAls = new AsyncLocalStorage<true>();
 installBackgroundLaneRuntime({
   run: (fn) => backgroundLaneAls.run(true, fn),
   active: () => backgroundLaneAls.getStore() === true,
+});
+
+// The suppression scope, installed exactly as server/internal/install.ts does —
+// the self-meter's nesting detection rides on `suppressed()`, so the tests need
+// the real ALS propagation across awaits.
+const suppressAls = new AsyncLocalStorage<true>();
+installProfilingSuppressionRuntime({
+  run: (fn) => suppressAls.run(true, fn),
+  suppressed: () => suppressAls.getStore() === true,
 });
 
 let fakeNow = 0;
@@ -1000,5 +1012,126 @@ describe("positioned wait bands", () => {
     expect(completed("l").waitBands).toEqual([{ layer: "db-acquire", t0: 0, t1: 30 }]);
     resetRuntimeProfile();
     expect(captureFlightWindow({ windowStartMs: 0 }).completed).toHaveLength(0);
+  });
+});
+
+describe("monitoring self-meter", () => {
+  // The meter is cumulative-since-boot module state (deliberately NOT cleared by
+  // resetRuntimeProfile — the consumer diffs readings), so every assertion here
+  // is on the DELTA across the exercised scopes.
+  function meterDelta(before: { count: number; totalMs: number }): {
+    count: number;
+    totalMs: number;
+  } {
+    const after = getSelfMeter();
+    return { count: after.count - before.count, totalMs: after.totalMs - before.totalMs };
+  }
+
+  test("a sync scope adds one op and its wall time", () => {
+    const before = getSelfMeter();
+    const out = runWithoutProfiling(() => {
+      fakeNow = 12;
+      return "ok";
+    });
+    expect(out).toBe("ok");
+    expect(meterDelta(before)).toEqual({ count: 1, totalMs: 12 });
+  });
+
+  test("a sync throw still settles the meter", () => {
+    const before = getSelfMeter();
+    expect(() =>
+      runWithoutProfiling(() => {
+        fakeNow += 7;
+        throw new Error("boom");
+      }),
+    ).toThrow("boom");
+    expect(meterDelta(before)).toEqual({ count: 1, totalMs: 7 });
+  });
+
+  test("nested scopes meter only the OUTERMOST scope's wall time", () => {
+    const before = getSelfMeter();
+    runWithoutProfiling(() => {
+      fakeNow += 10;
+      // Nested: already suppressed, so this scope adds neither count nor time —
+      // its 5ms is inside the outer wall, counted exactly once.
+      runWithoutProfiling(() => {
+        fakeNow += 5;
+      });
+      fakeNow += 10;
+    });
+    expect(meterDelta(before)).toEqual({ count: 1, totalMs: 25 });
+  });
+
+  test("an async scope is timed to settlement, nesting detected across awaits", async () => {
+    const before = getSelfMeter();
+    const gate = deferred();
+    const p = runWithoutProfiling(async () => {
+      await gate.promise;
+      // Nested async scope AFTER an await: ALS propagation keeps suppression
+      // active here, so it must not double-count.
+      runWithoutProfiling(() => {
+        fakeNow += 5;
+      });
+      fakeNow = 100;
+      return 42;
+    });
+    fakeNow = 40; // time passes while the scope is pending
+    gate.resolve();
+    expect(await p).toBe(42);
+    // settle is attached before the caller's await, so it has run by now.
+    expect(meterDelta(before)).toEqual({ count: 1, totalMs: 100 });
+  });
+
+  test("a rejected async scope still settles the meter (and stays rejected)", async () => {
+    const before = getSelfMeter();
+    const gate = deferred();
+    const p = runWithoutProfiling(async () => {
+      await gate.promise;
+      fakeNow = 30;
+      throw new Error("async-boom");
+    });
+    gate.resolve();
+    let message = "";
+    try {
+      await p;
+    } catch (err) {
+      message = (err as Error).message;
+    }
+    expect(message).toBe("async-boom");
+    // Let the detached settle continuation run (it was attached first, but be
+    // explicit rather than rely on continuation ordering).
+    await Promise.resolve();
+    expect(meterDelta(before)).toEqual({ count: 1, totalMs: 30 });
+  });
+
+  test("concurrent OUTERMOST scopes each meter their full wall (a sum)", async () => {
+    const before = getSelfMeter();
+    const gate = deferred();
+    const a = runWithoutProfiling(async () => {
+      await gate.promise; // opened at t=0
+    });
+    fakeNow = 10;
+    const b = runWithoutProfiling(async () => {
+      await gate.promise; // opened at t=10, fully overlapping a
+    });
+    fakeNow = 50;
+    gate.resolve();
+    await Promise.all([a, b]);
+    // Two separate monitoring work items: 50 + 40, not a wall union.
+    expect(meterDelta(before)).toEqual({ count: 2, totalMs: 90 });
+  });
+
+  test("suppression semantics are unchanged: spans inside the scope are dropped", async () => {
+    await runWithoutProfiling(async () => {
+      recordSpan("db", "suppressed-query", 500);
+      await recordEntrySpan("loader", "suppressed-loader", async () => {
+        fakeNow += 3;
+      });
+    });
+    const profile = getRuntimeProfile();
+    expect(profile.aggregates.db.find((a) => a.label === "suppressed-query")).toBeUndefined();
+    expect(
+      profile.aggregates.loader.find((a) => a.label === "suppressed-loader"),
+    ).toBeUndefined();
   });
 });

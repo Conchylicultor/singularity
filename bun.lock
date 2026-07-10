@@ -1629,6 +1629,10 @@
       "name": "@singularity/plugin-debug-boot-budget",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/boot-events": {
+      "name": "@singularity/plugin-debug-boot-events",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/boot-profile": {
       "name": "@singularity/plugin-debug-boot-profile",
       "version": "0.0.1",
@@ -1639,6 +1643,10 @@
     },
     "plugins/debug/plugins/claude-cli-calls": {
       "name": "@singularity/plugin-debug-claude-cli-calls",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/duress-shed": {
+      "name": "@singularity/plugin-debug-duress-shed",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/health-monitor": {
@@ -1736,6 +1744,10 @@
       "name": "@singularity/plugin-debug-reports",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/sentinel": {
+      "name": "@singularity/plugin-debug-sentinel",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/session-divergence": {
       "name": "@singularity/plugin-debug-session-divergence",
       "version": "0.0.1",
@@ -1750,6 +1762,10 @@
     },
     "plugins/debug/plugins/slow-ops/plugins/pane": {
       "name": "@singularity/plugin-debug-slow-ops-pane",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/timeline": {
+      "name": "@singularity/plugin-debug-timeline",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/trace": {
@@ -2524,6 +2540,10 @@
     },
     "plugins/infra/plugins/corpus-index": {
       "name": "@singularity/plugin-infra-corpus-index",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/duress": {
+      "name": "@singularity/plugin-infra-duress",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/endpoints": {
@@ -5632,11 +5652,15 @@
 
     "@singularity/plugin-debug-boot-budget": ["@singularity/plugin-debug-boot-budget@workspace:plugins/debug/plugins/boot-budget"],
 
+    "@singularity/plugin-debug-boot-events": ["@singularity/plugin-debug-boot-events@workspace:plugins/debug/plugins/boot-events"],
+
     "@singularity/plugin-debug-boot-profile": ["@singularity/plugin-debug-boot-profile@workspace:plugins/debug/plugins/boot-profile"],
 
     "@singularity/plugin-debug-broadcasts": ["@singularity/plugin-debug-broadcasts@workspace:plugins/debug/plugins/broadcasts"],
 
     "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
+
+    "@singularity/plugin-debug-duress-shed": ["@singularity/plugin-debug-duress-shed@workspace:plugins/debug/plugins/duress-shed"],
 
     "@singularity/plugin-debug-health-monitor": ["@singularity/plugin-debug-health-monitor@workspace:plugins/debug/plugins/health-monitor"],
 
@@ -5684,6 +5708,8 @@
 
     "@singularity/plugin-debug-reports": ["@singularity/plugin-debug-reports@workspace:plugins/debug/plugins/reports"],
 
+    "@singularity/plugin-debug-sentinel": ["@singularity/plugin-debug-sentinel@workspace:plugins/debug/plugins/sentinel"],
+
     "@singularity/plugin-debug-session-divergence": ["@singularity/plugin-debug-session-divergence@workspace:plugins/debug/plugins/session-divergence"],
 
     "@singularity/plugin-debug-slow-ops": ["@singularity/plugin-debug-slow-ops@workspace:plugins/debug/plugins/slow-ops"],
@@ -5691,6 +5717,8 @@
     "@singularity/plugin-debug-slow-ops-cluster": ["@singularity/plugin-debug-slow-ops-cluster@workspace:plugins/debug/plugins/slow-ops/plugins/cluster"],
 
     "@singularity/plugin-debug-slow-ops-pane": ["@singularity/plugin-debug-slow-ops-pane@workspace:plugins/debug/plugins/slow-ops/plugins/pane"],
+
+    "@singularity/plugin-debug-timeline": ["@singularity/plugin-debug-timeline@workspace:plugins/debug/plugins/timeline"],
 
     "@singularity/plugin-debug-trace": ["@singularity/plugin-debug-trace@workspace:plugins/debug/plugins/trace"],
 
@@ -6057,6 +6085,8 @@
     "@singularity/plugin-infra-contention": ["@singularity/plugin-infra-contention@workspace:plugins/infra/plugins/contention"],
 
     "@singularity/plugin-infra-corpus-index": ["@singularity/plugin-infra-corpus-index@workspace:plugins/infra/plugins/corpus-index"],
+
+    "@singularity/plugin-infra-duress": ["@singularity/plugin-infra-duress@workspace:plugins/infra/plugins/duress"],
 
     "@singularity/plugin-infra-endpoints": ["@singularity/plugin-infra-endpoints@workspace:plugins/infra/plugins/endpoints"],
 

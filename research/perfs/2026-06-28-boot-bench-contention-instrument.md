@@ -3,7 +3,7 @@
 **Date:** 2026-06-28
 **Category:** perfs
 **Plugin:** `plugins/debug/plugins/profiling/plugins/boot-bench/`
-**Companion:** [`research/perfs/2026-06-28-boot-and-git-loader-slowness-assessment.md`](./2026-06-28-boot-and-git-loader-slowness-assessment.md)
+**Companion:** [`research/perfs/archive/2026-06-28-boot-and-git-loader-slowness-assessment.md`](./archive/2026-06-28-boot-and-git-loader-slowness-assessment.md)
 
 ## Context
 

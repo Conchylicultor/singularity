@@ -8,6 +8,7 @@ import {
 import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
 import { physFootprintBytes } from "@plugins/framework/plugins/server-core/core";
 import { heavyReadQueueDepth } from "@plugins/infra/plugins/host-read-pool/server";
+import { getSelfMeter } from "@plugins/infra/plugins/runtime-profiler/core";
 import { worktreeDataDir, currentWorktreeName, isMain } from "@plugins/infra/plugins/paths/server";
 import type { HealthSample } from "../../shared/schema";
 import {
@@ -34,6 +35,16 @@ import {
 const SAMPLE_INTERVAL_MS = 10_000;
 const MAX_FILE_BYTES = 5_000_000; // ~2 days at 10s; tail-trimmed past this
 
+// Arm-on-elevated thresholds for NON-main backends (main is always armed): the
+// JSC stall profiler arms the first time a tick observes an elevated event
+// loop. Arming is ONE-WAY per process (bun:jsc has no stop — see
+// stall-profiler.ts), so this trades "the first stall of a previously-healthy
+// backend is missed" for "mostly-idle worktree backends never pay the ~230 Hz
+// sampler thread". Stalls under sustained congestion recur, so the evidence
+// still lands. Code constants like STALL_THRESHOLD_MS, not config.
+const STALL_ARM_P99_MS = 200;
+const STALL_ARM_MAX_MS = 1_000;
+
 let histogram: IntervalHistogram | null = null;
 let interval: ReturnType<typeof setInterval> | null = null;
 let channel: LogChannel | null = null;
@@ -41,10 +52,18 @@ let gcObserver: PerformanceObserver | null = null;
 let gcCount = 0;
 let gcTotalMs = 0;
 let lastHeapUsedBytes = 0;
+// Previous tick's reading of the runtime profiler's cumulative monitoring
+// self-meter, diffed each tick into the sample's per-tick monitorOps/monitorMs
+// deltas (same pattern as lastHeapUsedBytes).
+let lastMonitorOps = 0;
+let lastMonitorMs = 0;
 // Wall-time of the previous tick. A blocked loop fires its tick LATE, so the real
 // drain window (and the JSC sample count's denominator) is now - lastTickAt, not
-// the nominal interval. Used only on main where the stall profiler is armed.
+// the nominal interval. Used only while the stall profiler is armed.
 let lastTickAt = 0;
+// Whether the JSC stall profiler is armed in THIS process: main arms at boot,
+// worktree backends arm-on-elevated (one-way — bun:jsc has no stop).
+let stallArmed = false;
 
 function healthFilePath(): string {
   return join(worktreeDataDir(currentWorktreeName()), "logs", "health.jsonl");
@@ -69,6 +88,7 @@ function rotateIfNeeded(): void {
 function tick(): void {
   if (!histogram) return;
   const mem = process.memoryUsage();
+  const meter = getSelfMeter();
   const sample: HealthSample = {
     sampledAt: Date.now(),
     worktree: currentWorktreeName(),
@@ -89,21 +109,39 @@ function tick(): void {
     // Host-wide heavy-read gate queue depth at sample time (cross-process flock
     // gauge; cheap synchronous read). Surfaces backend contention in the pane.
     heavyReadDepth: heavyReadQueueDepth(),
+    // Monitoring self-cost this tick: the observability subsystem's own work
+    // (everything under runWithoutProfiling), invisible to the profiler by
+    // design — this delta is the only place it shows up.
+    monitorOps: meter.count - lastMonitorOps,
+    monitorMs: meter.totalMs - lastMonitorMs,
   };
   // Drain the JSC sampler for this window BEFORE resetting the histogram so the
   // drained samples and eventLoopMaxMs describe the same window. On a stall this
   // captures a `stall` trace with the dominant blocking stack; otherwise it just
-  // bounds memory. Main only (no-op elsewhere — the profiler is never armed
-  // off-main). The 2nd arg is the actual elapsed wall-time since the previous
+  // bounds memory. The 2nd arg is the actual elapsed wall-time since the previous
   // drain, which on a stall is ~the block duration.
-  if (isMain()) {
+  if (stallArmed) {
     drainAndMaybeDump(sample.eventLoopMaxMs, sample.sampledAt - lastTickAt);
+  } else if (
+    sample.eventLoopP99Ms > STALL_ARM_P99_MS ||
+    sample.eventLoopMaxMs > STALL_ARM_MAX_MS
+  ) {
+    // Non-main arm-on-elevated: trouble has appeared on this backend — arm the
+    // profiler now (one-way) so the NEXT stall carries stack evidence. Logged
+    // so the arming moment is auditable against later stall traces.
+    startStallProfiler();
+    stallArmed = true;
+    channel?.publish(
+      `stall profiler armed (eventLoopP99Ms=${sample.eventLoopP99Ms.toFixed(1)}, eventLoopMaxMs=${sample.eventLoopMaxMs.toFixed(1)})`,
+    );
   }
   lastTickAt = sample.sampledAt;
   histogram.reset();
   gcCount = 0;
   gcTotalMs = 0;
   lastHeapUsedBytes = mem.heapUsed;
+  lastMonitorOps = meter.count;
+  lastMonitorMs = meter.totalMs;
   rotateIfNeeded();
   channel?.publish(JSON.stringify(sample));
 }
@@ -126,10 +164,17 @@ export function startProcessSampler(): void {
     gcObserver.observe({ entryTypes: ["gc"] });
   }
   lastHeapUsedBytes = process.memoryUsage().heapUsed;
+  const meter = getSelfMeter();
+  lastMonitorOps = meter.count;
+  lastMonitorMs = meter.totalMs;
   lastTickAt = Date.now();
-  // Arm the on-stall stack-trace flight recorder. Main only: stalls are a
-  // main-backend problem (mirrors the host sampler, which is also main-only).
-  if (isMain()) startStallProfiler();
+  // Arm the on-stall stack-trace flight recorder. Main: always, at boot (the
+  // UX-critical backend). Worktree backends: arm-on-elevated in tick() — see
+  // the STALL_ARM_* constants.
+  if (isMain()) {
+    startStallProfiler();
+    stallArmed = true;
+  }
   interval = setInterval(tick, SAMPLE_INTERVAL_MS);
 }
 
@@ -138,7 +183,10 @@ export function stopProcessSampler(): void {
     clearInterval(interval);
     interval = null;
   }
-  if (isMain()) stopStallProfiler();
+  if (stallArmed) {
+    stopStallProfiler();
+    stallArmed = false;
+  }
   if (gcObserver) {
     gcObserver.disconnect();
     gcObserver = null;

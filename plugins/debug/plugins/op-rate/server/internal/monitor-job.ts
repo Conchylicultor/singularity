@@ -174,10 +174,16 @@ export const opRateMonitorJob = defineJob({
         // generic trigger API from a second call site. Normal engine admission
         // (cooldown + global cap + enabled) applies; returns the minted id for
         // linkage or null when rate-limited / disabled — never throws.
+        // `h.delta` is AGGREGATE time burned in the window (count×cost, summed
+        // across concurrent calls — routinely ≫ wall-clock), not an event
+        // duration. The engine widens the persisted trace window by durationMs,
+        // so passing the raw delta produced multi-hour "traces" that poisoned
+        // every wall-clock view. The honest lookback is the measurement window
+        // itself: the burn happened within the last WINDOW_MS.
         const trace = captureTrace({
           kind: "op-time",
           label: h.label,
-          durationMs: h.delta,
+          durationMs: Math.min(h.delta, WINDOW_MS),
           thresholdMs: h.budgetMs,
         });
         await recordReport({

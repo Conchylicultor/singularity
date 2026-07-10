@@ -16,7 +16,7 @@
 
 ## Context
 
-`research/perfs/2026-06-29-snapshot-toast-bloat-noop-persist.md` found that six keyed,
+`research/perfs/archive/2026-06-29-snapshot-toast-bloat-noop-persist.md` found that six keyed,
 boot-critical live-state resources (`tasks`, `attempts`, `conversations-system/gone/active`,
 `agent-launches`) each fire **~2 no-op pushes/sec**, sustained (32k logged `live-state-noop`).
 Each no-op push runs the loader, recomputes a byte-identical value, diffs it, walks the

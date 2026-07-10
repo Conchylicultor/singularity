@@ -2,7 +2,7 @@
 
 ## Context
 
-Performance investigation `research/perfs/2026-06-29-snapshot-toast-bloat-noop-persist.md`
+Performance investigation `research/perfs/archive/2026-06-29-snapshot-toast-bloat-noop-persist.md`
 confirmed (live profile + DB + code) the current dominant cause of multi-second page/flush
 stalls on main:
 

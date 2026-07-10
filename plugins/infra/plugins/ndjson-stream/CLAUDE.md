@@ -21,7 +21,7 @@ Bun's 10s idle timeout.
   - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.endpointErrorSink`
   - Exports: Values: `readNdjson`
 - Cross-plugin:
-  - Imported by: `debug/slow-ops/cluster`, `debug/worktree-cleanup`
+  - Imported by: `debug/slow-ops/cluster`, `debug/timeline`, `debug/worktree-cleanup`
 - Server:
   - Exports: Values: `ndjsonResponse`
 

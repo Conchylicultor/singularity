@@ -1,0 +1,13 @@
+// @hash 35e38cce666a
+{
+  // When off, shedding is disabled: every observability write persists through its normal durable path even under duress. Buffered items from earlier episodes still flush.
+  "enabled": true,
+  // During a duress episode, the first N items per cascade key still persist durably (the onset evidence); the rest are buffered in memory until the episode clears.
+  "persistFirstN": 3,
+  // Per-buffer cap on in-memory shed items. On overflow the newest incoming item is dropped (first-N already captured the onset); only its per-cascade dropped count survives into the shed summary.
+  "bufferMaxEntries": 2000,
+  // Soft per-buffer byte cap (JSON.stringify-length estimate, accumulated on insert). Overflow drops the newest incoming item, same as the entry cap.
+  "bufferMaxBytes": 4194304,
+  // One-shot delay between the first admit that observes the episode cleared and the buffered replay. Re-checked at fire time, so a re-trip never flushes mid-episode.
+  "flushDelayMs": 30000
+}

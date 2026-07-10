@@ -11,6 +11,10 @@ import {
   getContentionSnapshot,
   type ContentionSnapshot,
 } from "@plugins/infra/plugins/contention/server";
+import {
+  createShedBuffer,
+  type ShedSummary,
+} from "@plugins/infra/plugins/duress/server";
 import type { ReportSource } from "@plugins/reports/core";
 import type {
   CallerBreakdown,
@@ -117,12 +121,57 @@ function mergeSample(
   );
 }
 
+function shedSummaryMessage(s: ShedSummary): string {
+  const shed = Object.values(s.byCascade).reduce((a, c) => a + c.shed, 0);
+  const dropped = Object.values(s.byCascade).reduce((a, c) => a + c.dropped, 0);
+  return (
+    `duress episode cleared: ${s.kind} buffer shed ${shed} + dropped ${dropped} ` +
+    `across ${Object.keys(s.byCascade).length} cascade keys ` +
+    `(${s.replayed} replayed, ${s.replayErrors} replay errors)`
+  );
+}
+
+// Duress shed gate for the slow-op durable path (Phase C2). During a host
+// duress episode, past the first-N-per-cascade grant the FULL input is
+// buffered and the funnel below is skipped; after the episode clears, replay
+// re-drives recordSlowOp per item — the aggregate upsert's onConflictDoUpdate
+// merge is idempotent per item and order-insensitive, so counts / totals /
+// maxMs stay truthful post-flush. (Replayed recentSamples / marker timestamps
+// carry the replay instant, not the original trip — an accepted skew; the
+// aggregate numbers are the durable signal.)
+const slowOpShed = createShedBuffer<RecordSlowOpInput>({
+  kind: "slow-ops",
+  // The upsert key: the same axis the durable aggregate dedupes on.
+  cascadeKeyOf: (i) => `${i.operationKind}:${i.operation}`,
+  replay: async (items) => {
+    for (const item of items) await recordSlowOp(item);
+  },
+  // File the post-episode accounting through the reports funnel. The
+  // `duress-shed` kind is registered by debug/duress-shed and marks itself
+  // duressExempt, so this summary can never itself be shed.
+  onFlushSummary: (s) => {
+    void recordReport({
+      kind: "duress-shed",
+      source: "server-duress-shed",
+      message: shedSummaryMessage(s),
+      data: { ...s },
+    });
+  },
+});
+
 // THE single ingest funnel for every slow-op signal — the server span hook and
 // the client endpoint both collapse here. Upserts the deduped aggregate by
 // (operationKind, operation, worktree), merges the caller attribution, notifies
 // the live resource, and fires the per-operation report (fire-and-forget so a
 // slow report path never blocks recording). Failures propagate loudly.
 export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
+  // Duress shed gate on the durable-write funnel ONLY. The coherent-instant
+  // trace for the same trip is captured by the CALLERS (install-slow-span /
+  // handle-client-slow-op) BEFORE this call — evidence-first — and carries its
+  // own independent shed gate inside captureTrace, so first-N traces still
+  // land even when this row write is shed (and vice versa).
+  if (!slowOpShed.admit(input).persist) return;
+
   const {
     operationKind,
     operation,

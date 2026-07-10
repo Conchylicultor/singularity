@@ -229,12 +229,26 @@ function BackendSection({ series }: { series: HealthSeries }): ReactElement {
           ]}
         />
       </Grid>
-      <ChartBlock
-        label="Heap growth per interval (MB)"
-        data={rows}
-        markers={markers}
-        lines={[{ key: "heapGrowthMb", label: "Δ heap", color: "var(--warning)" }]}
-      />
+      <Grid cols={2} gap="xl">
+        <ChartBlock
+          label="Heap growth per interval (MB)"
+          data={rows}
+          markers={markers}
+          lines={[{ key: "heapGrowthMb", label: "Δ heap", color: "var(--warning)" }]}
+        />
+        {/* Monitoring self-cost: the observability subsystem's own work per 10s
+            tick (everything under runWithoutProfiling) — suppressed from the
+            profiler by design, so this chart is its only visibility. */}
+        <ChartBlock
+          label="Monitoring self-cost per interval (ops · ms)"
+          data={rows}
+          markers={markers}
+          lines={[
+            { key: "monitorOps", label: "ops", color: "var(--primary)" },
+            { key: "monitorMs", label: "ms", color: "var(--warning)" },
+          ]}
+        />
+      </Grid>
     </Stack>
   );
 }

@@ -67,17 +67,27 @@ sleepers AND hogs) — `taskpolicy -b` failures are loud on stderr; silence mean
 (1) type-check workers self-demote at their spawn site unless on branch `main` (no inheritance
 reliance); (2) `boostInteractiveQos()` — the main backend raises its event-loop thread to
 user-interactive QoS at boot, strictly `isMain()`-gated (verified 0x11→0x21 readback; gate tested
-±). **Second pass 2026-07-08 (containment, on branch `claude-web/att-1783531920-69mu`, not yet
-pushed):** (3) the ~10–12 s WS-cut is Bun's default 10 s **top-level `Bun.serve` `idleTimeout`**
+±). **Second pass landed on main 2026-07-08 (`e70d327f7`, containment):** (3) the ~10–12 s WS-cut is Bun's default 10 s **top-level `Bun.serve` `idleTimeout`**
 (runtime-confirmed: it cuts in-flight *unix* requests whose handler writes no bytes, sweep
 grid-quantized ~N+4 s → nominal 10 s = the observed cadence) — set to `idleTimeout: 60`, killing the
 reconnect/resubscribe amplifier; (4) log rotation on the log-channels substrate (128 MB cap / keep 3,
 in-memory byte-counter gate) bounds the 4 GB unrotated `live-state.jsonl`; push-check E-core latency
 **measured & cleared** (within noise on a quiet warm host — the representative push case; undemoting
-would defeat the isolation, so no change). Open: A/B main's p99 during the next burst; sweep pre-Jul-7
-undemoted agent sessions; admission-control tightening (4 slots × ~8 children over-admits; memory guard
-is per-fleet only); rate-limit the always-on live-state trace tier (the ~4 lines/s origin behind the
-log growth). Full evidence + counterfactuals + implementation →
+would defeat the isolation, so no change). **Admission-control tightening landed on main 2026-07-10
+(`e24e6040a`):** the type-check fleet is bounded host-wide by a lane-keyed flock budget
+(`min(cpus/2, 0.5·mem/2.7 GB)` via host-semaphore `acquireShare`) — see
+[`research/2026-07-09-global-interactive-lane-under-load.md`](../2026-07-09-global-interactive-lane-under-load.md);
+related boot-time work bounding (warmup/corpus-index/retention primitives, `4fb4b9d32` 2026-07-09) →
+[`research/2026-07-08-global-bounding-boot-time-work.md`](../2026-07-08-global-bounding-boot-time-work.md).
+**⚠ 2026-07-10 burst (09:03–09:21Z) — the symptom reproduced at FULL severity with the stack landed:**
+471 s `/agents` page load, spanning a main deploy restart + 13 concurrent build/check processes at
+load ~9.6–16; per live profiling the slow layer this time was **Postgres-side query latency under
+host contention + the boot burst — NOT backend event-loop stall and NOT pool-acquire wait** (both
+measured quiet; main health p99 ≤ 466 ms during the burst). The remediation stack is therefore NOT
+validated, and the dominant starvation channel may have shifted from the scheduler to Postgres/IO.
+Open: A/B the landed stack under the next burst (now including the Postgres-latency channel); sweep
+pre-Jul-7 undemoted agent sessions; rate-limit the always-on live-state trace tier (the ~4 lines/s
+origin behind the log growth). Full evidence + counterfactuals + implementation →
 **[`2026-07-08-host-saturation-agent-checks-starve-main.md`](./2026-07-08-host-saturation-agent-checks-starve-main.md)**
 (+ finish plan **[`2026-07-08-host-saturation-remediation-PLAN.md`](./2026-07-08-host-saturation-remediation-PLAN.md)**).
 **2026-07-09/10 continuation — pool collapse cured at its layer, swap-in named as the lag amplifier:**
@@ -163,11 +173,12 @@ max (+141 %)** under a 6-way remove/add churn (mirroring the 58 s `worktree-clea
 + Haiku classify closes the gap to ~13 s.
 **Not an event-loop block** — the cost is awaited-subprocess wall-clock that yields the loop;
 `workMs` is a profiler-labeling artifact here (do not re-diagnose as CPU starvation like
-`buildPluginTree`). **Likely cure (not built):** `git worktree add` is largely irreducible, so
-making it cheaper is containment — the structural fix is to take worktree setup + spawn **off the
-interactive response** into a durable job (mirroring the DB-fork pattern already in the same
-function), returning a `starting` row immediately. Open questions (row-reorder safety, the
-still-forking-DB race, index-lock invariant) tracked in the doc. Full evidence + Causes checklist
+`buildPluginTree`). **Cure BUILT — 2026-07-10 verification: landed on main as `40ef2ae9f`
+(2026-07-02):** worktree setup + spawn moved off the interactive response into the durable
+`conversations.spawn` job, returning a `starting` row immediately; worktree-validated at ~390 ms
+POST (was 3.8–13 s), **not yet re-measured on `singularity` post-merge**. The `worktree-mutate`
+host gate landed as `a23732d29` (2026-07-02); its launch-during-reap validation trace has still not
+run. Open questions (row-reorder safety, the still-forking-DB race) tracked in the doc. Full evidence + Causes checklist
 + next steps → **[`issue-launch-conversation-slow.md`](./issue-launch-conversation-slow.md)**.
 **Throughput follow-up (add/remove contention under load)** bounded by the host `worktree-mutate`
 semaphore (containment) → **[`2026-07-02-worktree-mutation-host-gate-DESIGN.md`](./2026-07-02-worktree-mutation-host-gate-DESIGN.md)**.
@@ -175,7 +186,8 @@ semaphore (containment) → **[`2026-07-02-worktree-mutation-host-gate-DESIGN.md
 edit < 1 % of the tree but the mandatory whole-tree `./singularity build` kills *sparse* checkout;
 the real lever is APFS directory `clonefile(2)` — materialize the (still-full) tree copy-on-write in
 **~0.24 s vs ~3.8 s (16×, 80× under load)**, dissolving the add-vs-reap contention the gate only
-bounds. Design + measurements (3 probes) + clean git integration → **[`2026-07-02-worktree-checkout-clonefile-DESIGN.md`](./2026-07-02-worktree-checkout-clonefile-DESIGN.md)**.
+bounds. Design + measurements (3 probes) + clean git integration → **[`2026-07-02-worktree-checkout-clonefile-DESIGN.md`](./2026-07-02-worktree-checkout-clonefile-DESIGN.md)**
+(**still design-only as of 2026-07-10** — no clonefile code in the tree).
 
 ### Conversation load 40+ s → main-thread event-loop block → `buildPluginTree` over-extraction (Ongoing)
 
@@ -214,7 +226,9 @@ faceted build); `/api/composition/data` now **84 ms** (`git-memo-hit` on the sha
 duplicate walk). Both corrections confirmed against live data: the explorer `disabled` cascade is served as
 `disabledIds` on `/api/composition/data` (**12** = `review.plugin-changes` seed + subtree + `render-diff`
 importers) and derived client-side; the detail pane reads `importedBy` off the full faceted aggregate (339
-nodes populated). All 60 `./singularity check`s pass. **Not yet on `singularity`/main (needs a push).**
+nodes populated). All 60 `./singularity check`s pass. **2026-07-10 verification: landed on main as
+`978a1d621` (2026-07-02).** Post-merge re-validation on `singularity` not yet recorded (corroboration:
+the latest stall capture, 2026-07-09, no longer names `buildPluginTree`).
 Residual: the rare faceted endpoint's cold build is still multi-second and can 502 under load (cached after;
 non-blocking). Full arc → newest implement doc
 **[`2026-06-30-buildplugintree-structure-only-IMPLEMENT.md`](./2026-06-30-buildplugintree-structure-only-IMPLEMENT.md)**;

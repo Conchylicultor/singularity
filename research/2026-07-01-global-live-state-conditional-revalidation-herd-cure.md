@@ -4,7 +4,7 @@
 **Category:** global (live-state runtime + networking + conversation git/fs resources)
 **Status:** design — not yet implemented.
 **Companion docs:** [`research/perfs/issue-cold-boot-fanout.md`](./perfs/issue-cold-boot-fanout.md),
-[`research/perfs/2026-06-29-conversation-load-40s-fanout-herd.md`](./perfs/2026-06-29-conversation-load-40s-fanout-herd.md).
+[`research/perfs/archive/2026-06-29-conversation-load-40s-fanout-herd.md`](./perfs/archive/2026-06-29-conversation-load-40s-fanout-herd.md).
 Update both (and the perfs index) when this lands.
 
 ## Context

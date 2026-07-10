@@ -5,6 +5,8 @@
 **Status:** **Altitude 2 (fast aggregate algorithm) IMPLEMENTED & validated on the worktree** (not yet on
 `singularity`/main — needs a push). Altitude 1 (structure-only hot path + client-derived disabled) and
 the follow-ups remain to do.
+**2026-07-10 verification: both altitudes landed on main as `978a1d621` (2026-07-02)** — the
+"needs a push" notes in this doc are stale. Post-merge re-validation on `singularity` not yet recorded.
 
 ## Altitude 2 — IMPLEMENTED & VALIDATED (2026-06-30, worktree `att-1782849943-zcr0`)
 

@@ -30,10 +30,17 @@ export interface TraceEventClassSpec<T = unknown> {
    * Phase 2 — async enrichment, run by the engine under runWithoutProfiling.
    * Receives the phase-1 output + this class's ring slice (events overlapping
    * [windowStartMs, atMs]). The returned value is schema-validated and
-   * persisted. When absent, the phase-1 output (or, failing that, the ring
-   * slice) is persisted directly.
+   * persisted. Return undefined to skip the section for this trip (no error,
+   * no report) — the same skip semantics as captureAtTrip, so an enrich-only
+   * class that only reacts to certain triggers can opt out cleanly. When
+   * absent, the phase-1 output (or, failing that, the ring slice) is persisted
+   * directly.
    */
-  enrich?(ctx: TripContext, atTrip: unknown, ringSlice: RingEvent[]): Promise<T> | T;
+  enrich?(
+    ctx: TripContext,
+    atTrip: unknown,
+    ringSlice: RingEvent[],
+  ): Promise<T | undefined> | T | undefined;
   /**
    * Ambient ring: the engine keeps a bounded in-memory ring of events this
    * class emits continuously (via the handle's `emit`). At a trip, events

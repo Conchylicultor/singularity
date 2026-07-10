@@ -12,7 +12,7 @@
 > `commits-graph.delta` 0.7 s) — they are **victims** of the simultaneous ~30-resource fan-out
 > saturating 10 loader slots + the single event loop, which is what produces the 40–75 s tails
 > (`[acquire]` max 75.9 s). Full session →
-> [`2026-06-29-conversation-load-40s-fanout-herd.md`](./2026-06-29-conversation-load-40s-fanout-herd.md).
+> [`2026-06-29-conversation-load-40s-fanout-herd.md`](./archive/2026-06-29-conversation-load-40s-fanout-herd.md).
 
 At backend boot every live-state resource re-subscribes at once. The git-derived loaders cold-miss
 (no warm memo) and contend on the **4-slot** host heavy-read gate, producing 9–18 s `edited-files` /
@@ -60,22 +60,22 @@ Legend: ✅ confirmed with data · ❌ discarded (with reason) · 🔬 open / ne
 
 ## Sessions
 
-- **2026-06-28 — [boot & git-loader slowness assessment](./2026-06-28-boot-and-git-loader-slowness-assessment.md).**
+- **2026-06-28 — [boot & git-loader slowness assessment](./archive/2026-06-28-boot-and-git-loader-slowness-assessment.md).**
   Framed the cold-start goal and identified boot fan-out + the host heavy-read gate as part of the
   contention picture (causes A/B).
 
-- **2026-06-29 (2) — [notifications unbounded resource = the driver](./2026-06-29-notifications-unbounded-resource-root-cause.md).**
+- **2026-06-29 (2) — [notifications unbounded resource = the driver](./archive/2026-06-29-notifications-unbounded-resource-root-cause.md).**
   **True cold-boot captured**: the live profile starting at backend boot shows atMs 5–33 s is the
   fan-out (all resources re-subscribe at once), reproducing the original ~7 s+ symptom (21.8 s worst
   flush — at the time the notifications mega-flush + a 14-query trigger herd). Noted `benchmark_boot`
   excludes server-boot work; deprioritized while the churn driver was being fixed.
 
-- **2026-06-29 (6) — [no-op churn validated on `singularity`](./2026-06-29-noop-churn-fix-validated-on-main.md).**
+- **2026-06-29 (6) — [no-op churn validated on `singularity`](./archive/2026-06-29-noop-churn-fix-validated-on-main.md).**
   With the churn gone, the residual boot-herd outliers are now the git loaders: 9–18 s `edited-files`
   / `commits-graph.delta` cold misses at atMs 5–15 s, contending on the 4-slot gate. Steady state is
   well within budget; the boot herd is the next legitimate target if the cold-start goal is pursued.
 
-- **2026-06-29 — [conversation load 40 s = the fan-out herd](./2026-06-29-conversation-load-40s-fanout-herd.md).**
+- **2026-06-29 — [conversation load 40 s = the fan-out herd](./archive/2026-06-29-conversation-load-40s-fanout-herd.md).**
   Fresh investigation of "loading a conversation takes 40+ s". Confirmed beyond doubt (live profile +
   `slow_ops` + `benchmark_boot`) that the symptom is this herd: loaders are victims (fast in isolation
   even under host-gate saturation), the real scarce resource is the **per-backend 10-slot DB loader
