@@ -1,20 +1,23 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { RowOrderRowSchema } from "./types";
 
 export const SetRowOrderBodySchema = z.object({
   dataViewId: z.string(),
   viewId: z.string(),
   /**
-   * The view instance's COMPLETE ordered key set, post-move, in display order.
-   * Every write is a full replace: the server drops every `(dataViewId, viewId)`
-   * row whose `rowKey` is absent here and regenerates dense ranks for the rest.
-   * `[]` degenerates to the delete alone. Duplicates are rejected (400).
+   * The **bounded** write set for one drag: the moved row plus any seeds
+   * materialized ahead of it, rank-ascending (client-minted — the server cannot
+   * reproduce seeds, as it does not know the view's source order). This is NOT a
+   * full replace: rows absent from `writes` keep their persisted rank, and
+   * nothing is deleted. `.min(1)` because a legitimate no-op is never POSTed
+   * (the client skips it).
    */
-  order: z.array(z.string()),
+  writes: z.array(RowOrderRowSchema).min(1),
 });
 export type SetRowOrderBody = z.infer<typeof SetRowOrderBodySchema>;
 
-/** Replace a view instance's entire manual row order. */
+/** Upsert a view instance's bounded row-order write set. */
 export const setRowOrder = defineEndpoint({
   route: "POST /api/data-view/row-order",
   body: SetRowOrderBodySchema,

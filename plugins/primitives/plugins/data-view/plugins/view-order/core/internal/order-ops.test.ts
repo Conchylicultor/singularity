@@ -1,12 +1,17 @@
 /**
- * Pure unit suite for the two order-ops. No React, no DB.
+ * Pure unit suite for the order-ops. No React, no DB.
  *
- * Run: `bun test plugins/primitives/plugins/data-view/plugins/view-order`
+ * Run: `bun test plugins/primitives/plugins/data-view/plugins/view-order/core`
  */
 
 import { describe, test, expect } from "bun:test";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { seedRanks, applyMove } from "./order-ops";
+import {
+  seedRanks,
+  applyMove,
+  computeMoveWrites,
+  type RowOrderWrite,
+} from "./order-ops";
 
 /** The displayed sequence: keys sorted by their (total) synthesized rank. */
 function displayOrder(ranks: ReadonlyMap<string, Rank>): string[] {
@@ -15,10 +20,51 @@ function displayOrder(ranks: ReadonlyMap<string, Rank>): string[] {
     .map(([key]) => key);
 }
 
-/** A dense persisted order, exactly what the server writes for `order`. */
+/** A dense persisted order, exactly what the server used to write for `order`. */
 function persist(order: readonly string[]): Map<string, Rank> {
   const ranks = Rank.nBetween(null, null, order.length);
   return new Map(order.map((key, i): [string, Rank] => [key, ranks[i]!]));
+}
+
+/**
+ * Fold a bounded write set into a persisted map (the server's upsert: nothing is
+ * deleted, present keys are overwritten). Returns a NEW map.
+ */
+function applyWrites(
+  persisted: ReadonlyMap<string, Rank>,
+  writes: readonly RowOrderWrite[],
+): Map<string, Rank> {
+  const next = new Map(persisted);
+  for (const w of writes) next.set(w.rowKey, w.rank);
+  return next;
+}
+
+/** The display order the client sees for `orderedKeys` under a persisted map. */
+function displayOf(
+  orderedKeys: readonly string[],
+  persisted: ReadonlyMap<string, Rank>,
+): string[] {
+  return displayOrder(seedRanks(orderedKeys, persisted));
+}
+
+/**
+ * The invariant `computeMoveWrites` preserves: under `seedRanks`, every persisted
+ * key sorts strictly before every seeded (unpersisted) key.
+ */
+function persistedBeforeSeeded(
+  orderedKeys: readonly string[],
+  persisted: ReadonlyMap<string, Rank>,
+): boolean {
+  const display = displayOf(orderedKeys, persisted);
+  let sawSeed = false;
+  for (const key of display) {
+    if (persisted.has(key)) {
+      if (sawSeed) return false; // a persisted key after a seed → violated
+    } else {
+      sawSeed = true;
+    }
+  }
+  return true;
 }
 
 describe("seedRanks", () => {
@@ -106,36 +152,203 @@ describe("applyMove", () => {
   });
 });
 
-describe("stability of the full-replace rule (the A2 counterexample)", () => {
-  test("a persisted full replace survives the next render's seeding", () => {
-    const source = ["A", "B", "C"];
+describe("computeMoveWrites", () => {
+  /** Run the drag and fold the result back — the display the next render shows. */
+  function moveAndDisplay(
+    orderedKeys: readonly string[],
+    persisted: ReadonlyMap<string, Rank>,
+    id: string,
+    targetId: string,
+    zone: "before" | "after",
+  ): { writes: RowOrderWrite[] | null; display: string[] } {
+    const writes = computeMoveWrites({ orderedKeys, persisted, id, targetId, zone });
+    if (writes === null) return { writes: null, display: [] };
+    const folded = applyWrites(persisted, writes);
+    return { writes, display: displayOf(orderedKeys, folded) };
+  }
 
-    // 1. Nothing persisted: seeds follow source order.
-    expect(displayOrder(seedRanks(source, new Map()))).toEqual(["A", "B", "C"]);
-
-    // 2. The user drags C above B.
-    const moved = applyMove(source, "C", "B", "before");
-    expect(moved).toEqual(["A", "C", "B"]);
-
-    // 3. The server persists the WHOLE post-move sequence with dense ranks —
-    //    not just the moved row. Source order is still A,B,C on the next render.
-    const persisted = persist(moved!);
-    expect(displayOrder(seedRanks(source, persisted))).toEqual(["A", "C", "B"]);
-
-    // The naive "persist only the moved row, re-seed the rest after
-    // max(persisted)" rule would display C,A,B here. Pin that it does not.
-    const naive = seedRanks(source, new Map([["C", Rank.from("a1")]]));
-    expect(displayOrder(naive)).toEqual(["C", "A", "B"]);
+  test("all-unpersisted drag lands where dropped (A,B,C → C before B → A,C,B)", () => {
+    const { display } = moveAndDisplay(["A", "B", "C"], new Map(), "C", "B", "before");
+    expect(display).toEqual(["A", "C", "B"]);
   });
 
-  test("a row entering the view after a persisted order lands at the end", () => {
+  test("downward seed drag materializes by next-position, not a source prefix", () => {
+    // Seeds A..E, nothing persisted. Drag B before D → display A,C,B,D,E, and the
+    // write set covers exactly A,C,B (the seeds now ahead of B, in next-order).
+    //
+    // A "first m seeds in SOURCE order" rule would emit only {A,B} (m=2 skipping
+    // B → A, then B) and silently no-op the drag: C would still seed before B.
+    const seeds = ["A", "B", "C", "D", "E"];
+    const { writes, display } = moveAndDisplay(seeds, new Map(), "B", "D", "before");
+    expect(display).toEqual(["A", "C", "B", "D", "E"]);
+    expect(writes!.map((w) => w.rowKey)).toEqual(["A", "C", "B"]);
+  });
+
+  test("second-drag regression: the move is over DISPLAY order, not source", () => {
+    // The first drag persisted [A,C,B]; the source order is still [A,B,C]. Drag A
+    // after B. The correct result is over the DISPLAY order (A,C,B): removing A
+    // and re-inserting it after B gives C,B,A.
     const persisted = persist(["A", "C", "B"]);
-    // "D" is new (no entry at all) and appears mid-source-order; it seeds last.
-    expect(displayOrder(seedRanks(["A", "D", "B", "C"], persisted))).toEqual([
-      "A",
-      "C",
-      "B",
-      "D",
-    ]);
+    const { display } = moveAndDisplay(["A", "B", "C"], persisted, "A", "B", "after");
+    expect(display).toEqual(["C", "B", "A"]);
+    // The OLD bug computed applyMove(SOURCE=[A,B,C], A after B) = [B,A,C]. Pin
+    // that we do NOT reproduce it (the source-vs-display bug).
+    expect(display).not.toEqual(["B", "A", "C"]);
+  });
+
+  describe("cost gates — a drag costs O(gesture), not O(view)", () => {
+    const keys = Array.from({ length: 1000 }, (_, i) => `k${i.toString().padStart(4, "0")}`);
+    const never = new Map<string, Rank>(); // never arranged
+
+    test("drag row 1 above row 0 → 1 write", () => {
+      const writes = computeMoveWrites({
+        orderedKeys: keys,
+        persisted: never,
+        id: keys[1]!,
+        targetId: keys[0]!,
+        zone: "before",
+      });
+      expect(writes).not.toBeNull();
+      expect(writes!.length).toBe(1);
+    });
+
+    test("drag row 900 to the top → 1 write", () => {
+      const writes = computeMoveWrites({
+        orderedKeys: keys,
+        persisted: never,
+        id: keys[900]!,
+        targetId: keys[0]!,
+        zone: "before",
+      });
+      expect(writes!.length).toBe(1);
+    });
+
+    test("drag row 0 to just before row 900 → 900 writes (the O(view) tail case)", () => {
+      // Dropping deep into a never-arranged tail declares an order for everything
+      // above the drop: rows 1..899 (899 seeds) become ahead of row 0, plus row 0
+      // itself = 900 writes.
+      const writes = computeMoveWrites({
+        orderedKeys: keys,
+        persisted: never,
+        id: keys[0]!,
+        targetId: keys[900]!,
+        zone: "before",
+      });
+      expect(writes!.length).toBe(900);
+    });
+  });
+
+  test("a row entering the view after an arrangement still seeds to the tail", () => {
+    // "D" is new (no persisted entry) and appears mid-source-order; it must seed
+    // last, after the arranged prefix — unchanged by the bounded rule.
+    const persisted = persist(["A", "C", "B"]);
+    expect(displayOf(["A", "D", "B", "C"], persisted)).toEqual(["A", "C", "B", "D"]);
+  });
+
+  test("null for an unknown id", () => {
+    expect(
+      computeMoveWrites({
+        orderedKeys: ["A", "B", "C"],
+        persisted: new Map(),
+        id: "Z",
+        targetId: "A",
+        zone: "before",
+      }),
+    ).toBeNull();
+  });
+
+  test("null for an unknown targetId", () => {
+    expect(
+      computeMoveWrites({
+        orderedKeys: ["A", "B", "C"],
+        persisted: new Map(),
+        id: "A",
+        targetId: "Z",
+        zone: "before",
+      }),
+    ).toBeNull();
+  });
+
+  test("[] for dropping a row onto itself", () => {
+    expect(
+      computeMoveWrites({
+        orderedKeys: ["A", "B", "C"],
+        persisted: new Map(),
+        id: "B",
+        targetId: "B",
+        zone: "before",
+      }),
+    ).toEqual([]);
+  });
+
+  test("[] for an already-adjacent drop", () => {
+    // A already sits immediately before B — dropping it there changes nothing.
+    expect(
+      computeMoveWrites({
+        orderedKeys: ["A", "B", "C"],
+        persisted: new Map(),
+        id: "A",
+        targetId: "B",
+        zone: "before",
+      }),
+    ).toEqual([]);
+  });
+});
+
+describe("computeMoveWrites round-trip stability (the real gate)", () => {
+  /**
+   * A deterministic LCG (NO Math.random) so a failing seed is reproducible.
+   * Numerical Recipes constants.
+   */
+  function lcg(seed: number): () => number {
+    let s = seed >>> 0;
+    return () => {
+      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+      return s / 0x100000000;
+    };
+  }
+
+  test("folding writes reproduces exactly what applyMove(display, …) produced", () => {
+    const rand = lcg(0xc0ffee);
+    const pick = <T>(arr: readonly T[]): T => arr[Math.floor(rand() * arr.length)]!;
+
+    let draws = 0;
+    for (let iter = 0; iter < 2000 && draws < 500; iter++) {
+      // A random ordered set of 2..9 keys.
+      const n = 2 + Math.floor(rand() * 8);
+      const orderedKeys = Array.from({ length: n }, (_, i) => `r${i}`);
+
+      // A random subset persisted, with dense ranks in a RANDOM display order
+      // (so source order and display order genuinely diverge).
+      const shuffled = [...orderedKeys];
+      for (let i = shuffled.length - 1; i > 0; i--) {
+        const j = Math.floor(rand() * (i + 1));
+        [shuffled[i], shuffled[j]] = [shuffled[j]!, shuffled[i]!];
+      }
+      const persistCount = Math.floor(rand() * (n + 1)); // 0..n
+      const persisted = persist(shuffled.slice(0, persistCount));
+
+      const id = pick(orderedKeys);
+      const targetId = pick(orderedKeys);
+      const zone: "before" | "after" = rand() < 0.5 ? "before" : "after";
+
+      // The reference `next`: applyMove over the DISPLAY order.
+      const display = displayOf(orderedKeys, persisted);
+      const next = applyMove(display, id, targetId, zone);
+      if (next === null) continue; // id === targetId can't happen (both members)
+
+      const writes = computeMoveWrites({ orderedKeys, persisted, id, targetId, zone });
+      expect(writes).not.toBeNull();
+      draws++;
+
+      const folded = applyWrites(persisted, writes!);
+      // The next render's display must reproduce `next` EXACTLY.
+      expect(displayOf(orderedKeys, folded)).toEqual(next);
+      // And the standing invariant still holds after the fold.
+      expect(persistedBeforeSeeded(orderedKeys, folded)).toBe(true);
+    }
+
+    // Guard the loop actually exercised the intended number of moves.
+    expect(draws).toBeGreaterThanOrEqual(500);
   });
 });

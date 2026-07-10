@@ -5021,7 +5021,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `AddableViewType`, `ViewConfigRow`, `ViewInstance`, `ViewTypeMeta`
           - Shared:
             - Exports: Values: `viewsDescriptor`
-        - **`view-order`** — Per-view-instance manual row order for any DataView: subscribes to the persisted (dataViewId, viewId) ranks, synthesizes a total order, and contributes the resulting ManualOrderConfig back through data-view's global RowOrder slot. Persists a per-view-instance manual row order keyed by (dataViewId, viewId, rowKey): a generic DB table, a push live resource, and a full-replace reorder endpoint that regenerates dense ranks and self-GCs the rows that left the view's ordered set.
+        - **`view-order`** — Per-view-instance manual row order for any DataView: subscribes to the persisted (dataViewId, viewId) ranks, synthesizes a total order, and contributes the resulting ManualOrderConfig back through data-view's global RowOrder slot. Persists a per-view-instance manual row order keyed by (dataViewId, viewId, rowKey): a generic DB table, a push live resource, and a validating upsert endpoint that writes only the drag's bounded set (the moved row plus the seeds now ahead of it) rank-ascending — O(gesture), never a full replace, nothing deleted.
           - Web:
             - Contributes: `DataViewSlots.RowOrder` "view-order" → `RowOrderContribution`
             - Uses: `infra/endpoints.useEndpointMutation`, `primitives/data-view.DataViewSlots`, `primitives/latest-ref.useEventCallback`, `primitives/live-state.useResource`
@@ -5033,7 +5033,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Routes: `POST /api/data-view/row-order`
           - Core:
             - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`, `primitives/rank.Rank`, `primitives/rank.RankSchema`
-            - Exports: Types: `RowOrderRow`, `SetRowOrderBody`; Values: `applyMove`, `rowOrderResource`, `RowOrderRowSchema`, `seedRanks`, `setRowOrder`, `SetRowOrderBodySchema`
+            - Exports: Types: `RowOrderRow`, `RowOrderWrite`, `SetRowOrderBody`; Values: `applyMove`, `computeMoveWrites`, `rowOrderResource`, `RowOrderRowSchema`, `seedRanks`, `setRowOrder`, `SetRowOrderBodySchema`
     - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
       - Web:
         - Uses: `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/css/row.SectionHeaderRow`, `primitives/css/spacing.Stack`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.RenderSlot`

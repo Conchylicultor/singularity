@@ -3,7 +3,7 @@ import type { ManualOrderConfig } from "@plugins/primitives/plugins/data-view/co
 import type { GlobalRowOrderProps } from "@plugins/primitives/plugins/data-view/web";
 import { useEventCallback } from "@plugins/primitives/plugins/latest-ref/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
-import { seedRanks, applyMove } from "../../core";
+import { seedRanks, computeMoveWrites } from "../../core";
 import { useRowOrder, useSetRowOrder } from "../internal/use-row-order";
 
 /**
@@ -64,23 +64,31 @@ export function RowOrderContribution({
       // Deliberately ignore `dest.rank`. `RankReorderProvider` computes it
       // against the RENDERED items, which under an active search is a subset of
       // the view's ordered set — a rank between two visible neighbours can land
-      // on the wrong side of a hidden row. Re-inserting next to `targetId` in the
-      // full ordered key list is the correct global semantics, and needs no rank
-      // arithmetic on the client: the server regenerates dense ranks.
+      // on the wrong side of a hidden row. `computeMoveWrites` re-derives the
+      // display order from `orderedKeys` (source order) + `persisted` and mints
+      // the ranks itself — the server cannot reproduce seeds, so ranks are
+      // client-minted here (precedent: `computeFlatReorder`).
       if (!dest.targetId || !dest.zone) {
         throw new Error(
           "view-order: onMove requires neighbour coordinates (dest.targetId / dest.zone)",
         );
       }
-      const next = applyMove(orderedKeys, id, dest.targetId, dest.zone);
-      if (next === null) {
+      const writes = computeMoveWrites({
+        orderedKeys,
+        persisted,
+        id,
+        targetId: dest.targetId,
+        zone: dest.zone,
+      });
+      if (writes === null) {
         throw new Error(
           `view-order: onMove got a row outside the ordered set (id=${id}, targetId=${dest.targetId})`,
         );
       }
-      setRowOrder({ dataViewId: storageKey, viewId, order: next });
+      if (writes.length === 0) return; // legitimate no-op (onto itself / adjacent)
+      setRowOrder({ dataViewId: storageKey, viewId, writes });
     },
-    [orderedKeys, setRowOrder, storageKey, viewId],
+    [orderedKeys, persisted, setRowOrder, storageKey, viewId],
   );
 
   const config = useMemo<ManualOrderConfig<unknown>>(

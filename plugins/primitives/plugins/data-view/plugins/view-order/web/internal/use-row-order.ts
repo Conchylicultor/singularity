@@ -28,7 +28,7 @@ export function useRowOrder(dataViewId: string, viewId: string): RowOrderState {
   }, [result]);
 }
 
-/** Replace a view instance's entire manual row order. */
+/** Upsert a view instance's bounded row-order write set (the moved row + seeds). */
 export function useSetRowOrder(): (args: SetRowOrderBody) => void {
   const { mutate } = useEndpointMutation(setRowOrder);
   return useCallback((args) => mutate({ body: args }), [mutate]);
