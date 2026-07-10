@@ -56,10 +56,8 @@ import {
   defaultTextHandle,
   markdownToForest,
 } from "../markdown-blocks";
-import {
-  SelectionControlProvider,
-  type SelectionControl,
-} from "../selection-control";
+import { SelectionControlProvider } from "../selection-control";
+import { useBlockSelection, type BlockSelectionActions } from "../internal/use-block-selection";
 import { AddBlockMenu } from "./add-block-menu";
 import { BlockRow } from "./block-row";
 import { BLOCK_GUTTER } from "../internal/page-column";
@@ -302,8 +300,7 @@ function SelectionLayer({
     focusBlockBoundary,
     focusedBlockId,
   } = useBlockEditor();
-  const { selectedIds, isActive, setRange, clearAll, selectAll } =
-    useMultiSelect();
+  const { selectedIds } = useMultiSelect();
   const contributions = Editor.Block.useContributions();
   const handles = useMemo(() => contributions.map((c) => c.block), [contributions]);
 
@@ -317,13 +314,11 @@ function SelectionLayer({
   const indentable = useMemo(() => canIndent(toNodes(rows), roots), [rows, roots]);
   const outdentable = useMemo(() => canOutdent(toNodes(rows), roots), [rows, roots]);
 
-  // `containerRef` is the full-width interaction surface (focus target for
-  // keyboard/clipboard, marquee pointer origin); `contentRef` is the centered
-  // block-content wrapper the marquee overlay is positioned within.
-  const containerRef = useRef<HTMLDivElement>(null);
+  // `contentRef` is the centered block-content wrapper the marquee overlay is
+  // positioned within. The full-width interaction surface it sits inside — the
+  // focus target for keyboard/clipboard and the marquee's pointer origin — is
+  // owned by `useBlockSelection` below, as `containerRef`.
   const contentRef = useRef<HTMLDivElement>(null);
-  const anchorRef = useRef<string | null>(null);
-  const headRef = useRef<string | null>(null);
 
   const orderedIds = useMemo(() => flat.map((f) => f.block.id), [flat]);
 
@@ -332,61 +327,83 @@ function SelectionLayer({
   const selectedRef = useLatestRef(selectedIds);
   const rowsRef = useLatestRef(rows);
 
-  const focusContainer = useCallback(() => {
-    containerRef.current?.focus();
-  }, []);
-
-  const applyRange = useCallback(
-    (anchor: string, head: string) => {
-      anchorRef.current = anchor;
-      headRef.current = head;
-      setRange(anchor, head);
+  // Nudge the whole selection up/down by one slot among its siblings.
+  const moveSelection = useCallback(
+    (dir: "up" | "down") => {
+      const roots = selectionRoots(rowsRef.current, selectedRef.current);
+      if (roots.length === 0) return;
+      const moving = new Set(roots.flatMap((r) => subtreeIds(rowsRef.current, r)));
+      // Operate within the first root's sibling list (the common case: a
+      // contiguous run of same-parent blocks).
+      const first = rowsRef.current.find((r) => r.id === roots[0]);
+      if (!first) return;
+      const siblings = rowsRef.current
+        .filter((r) => r.parentId === first.parentId)
+        .sort((a, b) => Rank.compare(a.rank, b.rank));
+      const rootSet = new Set(roots);
+      const idxs = siblings
+        .map((s, i) => (rootSet.has(s.id) ? i : -1))
+        .filter((i) => i >= 0);
+      if (idxs.length === 0) return;
+      const top = Math.min(...idxs);
+      const bottom = Math.max(...idxs);
+      const remaining = siblings.filter((s) => !moving.has(s.id));
+      let afterId: string | null;
+      if (dir === "up") {
+        // Place before the sibling currently above the run.
+        const above = siblings[top - 1];
+        if (!above) return;
+        const aboveIdxInRemaining = remaining.findIndex((s) => s.id === above.id);
+        afterId = remaining[aboveIdxInRemaining - 1]?.id ?? null;
+      } else {
+        const below = siblings[bottom + 1];
+        if (!below) return;
+        afterId = below.id;
+      }
+      bulkMove({ ids: roots, parentId: first.parentId, afterId });
     },
-    [setRange],
+    [bulkMove, rowsRef, selectedRef],
   );
 
-  const clearSelection = useCallback(() => {
-    anchorRef.current = null;
-    headRef.current = null;
-    clearAll();
-  }, [clearAll]);
+  // ---- Block-selection mode (range state, container focus + keyboard) -------
 
-  const neighbor = useCallback(
-    (id: string, dir: "up" | "down"): string | null => {
-      const idx = orderedIds.indexOf(id);
-      if (idx === -1) return null;
-      const next = dir === "down" ? idx + 1 : idx - 1;
-      return orderedIds[next] ?? null;
-    },
-    [orderedIds],
-  );
-
-  const selectionControl = useMemo<SelectionControl>(
+  const selectionActions = useMemo<BlockSelectionActions>(
     () => ({
-      enterSelectionMode(blockId, extend) {
-        if (!extend) {
-          applyRange(blockId, blockId);
-        } else {
-          const target = neighbor(blockId, extend) ?? blockId;
-          applyRange(blockId, target);
-        }
-        focusContainer();
-      },
-      extendTo(blockId) {
-        const anchor = anchorRef.current ?? focusedBlockId ?? blockId;
-        applyRange(anchor, blockId);
-        focusContainer();
-      },
-      selectOnly(blockId) {
-        applyRange(blockId, blockId);
-        focusContainer();
-      },
-      clear: clearSelection,
+      indent: indentBlocks,
+      outdent: outdentBlocks,
+      remove: bulkDelete,
+      // `bulkDuplicate` resolves with the new ids; selection mode has no use for
+      // them, so the fire-and-forget stays explicit here rather than being erased
+      // by the action's `void` return type.
+      duplicate: (ids) => void bulkDuplicate(ids),
+      focusBlock,
+      moveSelection,
     }),
-    [applyRange, neighbor, focusContainer, focusedBlockId, clearSelection],
+    [indentBlocks, outdentBlocks, bulkDelete, bulkDuplicate, focusBlock, moveSelection],
   );
+
+  const {
+    containerRef,
+    control: selectionControl,
+    headRef,
+    applyRange,
+    clearSelection,
+    focusContainer,
+    onKeyDown,
+    onFocusCapture,
+  } = useBlockSelection({
+    orderedIds,
+    roots,
+    focusedBlockId,
+    actions: selectionActions,
+  });
 
   // ---- Clipboard (DOM copy/cut/paste on the focused container) -------------
+  //
+  // These DO ask `document.activeElement`, unlike the keyboard handler above: the
+  // question is "does the container own the clipboard right now?", and a `copy`
+  // event's target follows the DOM selection, which can still sit inside a blurred
+  // block's text node. No handler moves focus during a clipboard dispatch.
 
   const writeClipboard = useCallback(
     (e: React.ClipboardEvent) => {
@@ -406,7 +423,7 @@ function SelectionLayer({
       if (document.activeElement !== containerRef.current) return;
       writeClipboard(e);
     },
-    [writeClipboard],
+    [writeClipboard, containerRef],
   );
 
   const onCut = useCallback(
@@ -417,7 +434,7 @@ function SelectionLayer({
         clearSelection();
       }
     },
-    [writeClipboard, bulkDelete, clearSelection],
+    [writeClipboard, bulkDelete, clearSelection, containerRef],
   );
 
   const onPaste = useCallback(
@@ -463,135 +480,7 @@ function SelectionLayer({
         headRef.current ?? focusedBlockId ?? roots[roots.length - 1] ?? null;
       void paste({ blocks: forest, afterId });
     },
-    [handles, paste, focusedBlockId, headRef],
-  );
-
-  // Nudge the whole selection up/down by one slot among its siblings.
-  const moveSelection = useCallback(
-    (dir: "up" | "down") => {
-      const roots = selectionRoots(rowsRef.current, selectedRef.current);
-      if (roots.length === 0) return;
-      const moving = new Set(roots.flatMap((r) => subtreeIds(rowsRef.current, r)));
-      // Operate within the first root's sibling list (the common case: a
-      // contiguous run of same-parent blocks).
-      const first = rowsRef.current.find((r) => r.id === roots[0]);
-      if (!first) return;
-      const siblings = rowsRef.current
-        .filter((r) => r.parentId === first.parentId)
-        .sort((a, b) => Rank.compare(a.rank, b.rank));
-      const rootSet = new Set(roots);
-      const idxs = siblings
-        .map((s, i) => (rootSet.has(s.id) ? i : -1))
-        .filter((i) => i >= 0);
-      if (idxs.length === 0) return;
-      const top = Math.min(...idxs);
-      const bottom = Math.max(...idxs);
-      const remaining = siblings.filter((s) => !moving.has(s.id));
-      let afterId: string | null;
-      if (dir === "up") {
-        // Place before the sibling currently above the run.
-        const above = siblings[top - 1];
-        if (!above) return;
-        const aboveIdxInRemaining = remaining.findIndex((s) => s.id === above.id);
-        afterId = remaining[aboveIdxInRemaining - 1]?.id ?? null;
-      } else {
-        const below = siblings[bottom + 1];
-        if (!below) return;
-        afterId = below.id;
-      }
-      bulkMove({ ids: roots, parentId: first.parentId, afterId });
-    },
-    [bulkMove],
-  );
-
-  // ---- Keyboard (block-selection mode; container must be the focus) --------
-
-  const onKeyDown = useCallback(
-    (e: React.KeyboardEvent) => {
-      if (document.activeElement !== containerRef.current) return;
-      if (!isActive) return;
-      const mod = e.metaKey || e.ctrlKey;
-
-      // Undo/redo (Cmd+Z / Cmd+Shift+Z / Cmd+Y) is NOT handled here — it routes
-      // through the surface-level `useUndoRedoShortcuts` binding (focus-independent,
-      // scoped to this tab), so it works the same whether a block editor, this
-      // selection container, or <body> holds focus.
-
-      if (e.key === "Escape") {
-        e.preventDefault();
-        clearSelection();
-        return;
-      }
-      if (mod && e.key.toLowerCase() === "a") {
-        e.preventDefault();
-        selectAll();
-        anchorRef.current = orderedIds[0] ?? null;
-        headRef.current = orderedIds[orderedIds.length - 1] ?? null;
-        return;
-      }
-      if (mod && e.key.toLowerCase() === "d") {
-        e.preventDefault();
-        void bulkDuplicate([...selectedRef.current]);
-        return;
-      }
-      // `!mod` leaves Ctrl+Tab (browser tab switch) alone.
-      if (e.key === "Tab" && !mod) {
-        // Always consume: Tab must never walk DOM focus out of a live block
-        // selection, even when the reducer refuses the move (mirrors the
-        // in-block `noop` intent). The selection survives the reparent — the
-        // blocks keep their ids, so their rows just re-render one level over.
-        e.preventDefault();
-        if (e.shiftKey) outdentBlocks(roots);
-        else indentBlocks(roots);
-        return;
-      }
-      if (e.key === "Backspace" || e.key === "Delete") {
-        e.preventDefault();
-        bulkDelete([...selectedRef.current]);
-        clearSelection();
-        return;
-      }
-      if (e.key === "Enter") {
-        e.preventDefault();
-        const head = headRef.current;
-        clearSelection();
-        if (head) focusBlock(head);
-        return;
-      }
-      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
-        const dir = e.key === "ArrowDown" ? "down" : "up";
-        const head = headRef.current ?? anchorRef.current;
-        if (!head) return;
-        const next = neighbor(head, dir);
-        if (!next) {
-          e.preventDefault();
-          return;
-        }
-        e.preventDefault();
-        if (e.altKey && e.shiftKey) {
-          moveSelection(dir);
-        } else if (e.shiftKey) {
-          applyRange(anchorRef.current ?? head, next);
-        } else {
-          applyRange(next, next);
-        }
-      }
-    },
-    [
-      isActive,
-      clearSelection,
-      selectAll,
-      orderedIds,
-      bulkDuplicate,
-      bulkDelete,
-      roots,
-      indentBlocks,
-      outdentBlocks,
-      focusBlock,
-      neighbor,
-      applyRange,
-      moveSelection,
-    ],
+    [handles, paste, focusedBlockId, headRef, containerRef],
   );
 
   // ---- Marquee drag-select on the empty container background ---------------
@@ -849,7 +738,7 @@ function SelectionLayer({
     if (containerRef.current?.contains(e.relatedTarget as Node | null)) return;
     setFileDragging(false);
     setFileDropTarget(null);
-  }, []);
+  }, [containerRef]);
 
   const onFileDrop = useCallback(
     (e: React.DragEvent) => {
@@ -973,11 +862,7 @@ function SelectionLayer({
             onDragOver={onFileDragOver}
             onDragLeave={onFileDragLeave}
             onDrop={onFileDrop}
-            onFocusCapture={(e) => {
-              // Focusing into a block's editor (clicking to type) drops any block
-              // selection. Focusing the container itself (selection mode) doesn't.
-              if (e.target !== containerRef.current && isActive) clearSelection();
-            }}
+            onFocusCapture={onFocusCapture}
             // Full-surface file-drop scrim painted above the blocks (a
             // pointer-events-none `above` layer, so it never eats the drag
             // events). The per-row insertion line below still pinpoints the drop.

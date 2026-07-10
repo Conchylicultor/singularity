@@ -6,14 +6,15 @@ import { createContext, useContext } from "react";
  * to drive selection — `BlockRow` (shift-click) and the in-block `KeyboardPlugin`
  * (Esc / Shift+Arrow at a boundary). Lives below `MultiSelectProvider` so it can
  * translate intents into contiguous range updates.
+ *
+ * Every member focuses the selection container as part of its effect: entering
+ * selection mode means the container, not a block editor, owns the keyboard.
  */
 export interface SelectionControl {
   /** Leave text editing and select this whole block; optionally extend one step. */
   enterSelectionMode: (blockId: string, extend?: "up" | "down") => void;
   /** Shift-click: extend the range from the current anchor to this block. */
   extendTo: (blockId: string) => void;
-  /** Select exactly this block (anchor = head = block). */
-  selectOnly: (blockId: string) => void;
   /** Clear the selection. */
   clear: () => void;
 }

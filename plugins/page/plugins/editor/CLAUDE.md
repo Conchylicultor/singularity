@@ -39,6 +39,7 @@ code background sit at `C + BLOCK_INSET` rather than bleeding to `C` (their `px`
 wrapper is outside the decoration), and the quote's 2px border pushes its text to
 `C + 2 + BLOCK_INSET`.
 
+<<<<<<< .merge_file_dJJpvp
 ## The caret does not stop at the editor's edge (`CaretSurface`)
 
 A page is not just the block list: the title sits above it, outside the provider.
@@ -84,6 +85,44 @@ Two rules keep this from leaking:
   surface is waiting on the other side is the executor's business. That is why
   "Backspace goes back to the title" needed no new intent, no new op, and no new
   branch in the resolver.
+=======
+## Block-selection mode: the container handles only keys it originated
+
+Block selection lives on `internal/use-block-selection.ts` — the range state, the
+container's focus/keyboard policy, and the `SelectionControl` deep children
+(`BlockRow`'s shift-click, `KeyboardPlugin`'s Esc / Shift+Arrow) drive it with. It
+takes its structural surface as an `actions` prop rather than reading
+`useBlockEditor()`, so it depends on nothing but React and the multi-select reducer
+— which is what makes it mountable in jsdom (`web/__tests__/block-selection.test.tsx`).
+
+The load-bearing invariant:
+
+> The selection container's `onKeyDown` acts **only** on keystrokes whose
+> `e.target` is the container itself. Never `document.activeElement`.
+
+The container is an ancestor of every block's `contenteditable`, and React delegates
+`onKeyDown` from the root — so a key a block already consumed still bubbles here
+afterwards. Asking `document.activeElement === containerRef.current` is a TOCTOU:
+`enterSelectionMode` *moves focus to the container* from inside the block's own
+Lexical handler, mid-dispatch. The synchronous `focusin` is discrete, so React flushes
+the pending range update and re-renders before the still-bubbling keydown arrives —
+which then finds `activeElement === container` and `isActive === true`, claims the
+event, and runs its own `Escape → clear` branch over the selection Escape just made.
+Escape into selection mode was dead for exactly this reason, and Shift+Arrow at a
+block edge extended the range twice off one keypress. `e.target` is fixed at dispatch
+time and no handler can move it. See
+[`research/2026-07-10-page-escape-block-selection.md`](../../../../research/2026-07-10-page-escape-block-selection.md).
+
+The **clipboard** handlers in `block-editor.tsx` deliberately keep the
+`activeElement` check — "does the container own the clipboard right now?" is a
+genuine `activeElement` question, and a `copy` event's target follows the DOM
+selection, which can still sit inside a blurred block's text node.
+
+jsdom cannot reproduce the mid-dispatch flush (React's sync-lane work lands on a
+microtask that cannot run while the dispatch unwinds), so the unit test reaches the
+same *state* across two keystrokes; `e2e/block-selection-verify.mjs` covers the
+single-dispatch symptom in a real browser.
+>>>>>>> .merge_file_JBp3b5
 
 ## The gutter `+` creates first, types second
 
