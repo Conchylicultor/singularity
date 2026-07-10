@@ -2,6 +2,28 @@ import type { SpanKind, FlightSpan } from "@plugins/infra/plugins/runtime-profil
 import type { TraceSnapshot } from "@plugins/debug/plugins/trace/plugins/engine/core";
 import { parseSpansSection } from "../../shared/flight-window";
 
+/**
+ * Where a span's wait time actually happened on its bar. A discriminated union,
+ * never an empty list: "no bands were captured" (a pre-wait-band trace) and
+ * "bands were captured, and this is where they were" are different facts a reader
+ * must tell apart (repo rule — failure is a type, not an absorbable empty value).
+ *
+ * `positionedMs` is the CROSS-LAYER union of the (clamped) bands — the wall-clock
+ * ms of the bar we can paint a wait onto — and `residualMs = waitMs − positionedMs`
+ * is the wait we know happened but can't place (bands dropped to the recorder's
+ * per-layer budget, or clamped off the window edge). The UI reports `residualMs`
+ * as text; it never draws it.
+ */
+export type WaitPosition =
+  | {
+      kind: "positioned";
+      /** Bar-relative offsets (`startMs` from the bar's own start), one per band. */
+      bands: { layer: string; startMs: number; ms: number }[];
+      positionedMs: number;
+      residualMs: number;
+    }
+  | { kind: "unavailable" }; // trace captured before wait bands existed
+
 /** One span *instance* positioned on the window, linked to its true parent run. */
 export interface SpanNode {
   id: number;
@@ -13,8 +35,8 @@ export interface SpanNode {
   durationMs: number;
   /** t1 === null at capture → still in flight (renders to the window edge, pulsing). */
   open: boolean;
-  /** Leading wait segment + trailing work (completed spans with waitMs > 0). */
-  segments?: { kind: "wait" | "work"; ms: number }[];
+  /** Where this span's waits sat on its bar (positioned bands, or unavailable). */
+  waitPosition: WaitPosition;
   /**
    * `parentId` names a span that is not in this window: a detached (fire-and-forget)
    * child outliving its parent, a parent that closed in <5 ms and never entered the
@@ -48,6 +70,36 @@ function clamp(v: number, lo: number, hi: number): number {
 }
 
 /**
+ * Cross-layer union width (ms) of a set of positioned intervals. Two layers can
+ * cover the SAME instant — `db-acquire [10,50]` ∪ `read-admit [30,60]` is 50, not
+ * 70 — so the wait a span actually incurred is the union across all layers, never
+ * the per-layer sum; `waitMs` is exactly that union. Sort by start, sweep merging
+ * overlaps. Pure and translation-invariant, so bar-relative offsets are fine.
+ */
+export function crossLayerUnionMs(intervals: { startMs: number; ms: number }[]): number {
+  if (intervals.length === 0) return 0;
+  const spans = intervals
+    .map((i) => ({ lo: i.startMs, hi: i.startMs + i.ms }))
+    .sort((a, b) => a.lo - b.lo);
+  let total = 0;
+  let curLo = spans[0]!.lo;
+  let curHi = spans[0]!.hi;
+  for (let i = 1; i < spans.length; i++) {
+    const { lo, hi } = spans[i]!;
+    if (lo > curHi) {
+      // Disjoint: bank the current run, start a new one.
+      total += curHi - curLo;
+      curLo = lo;
+      curHi = hi;
+    } else if (hi > curHi) {
+      curHi = hi;
+    }
+  }
+  total += curHi - curLo;
+  return total;
+}
+
+/**
  * Resolve a node's parent, refusing any back-edge.
  *
  * A parent always OPENS before its child, and ids are minted monotonically at open,
@@ -67,16 +119,24 @@ function toNode(span: FlightSpan, windowStartMs: number, atMs: number, totalMs: 
   const endMs = clamp(rawEnd - windowStartMs, startMs, totalMs);
   const durationMs = Math.max(0, endMs - startMs);
 
-  // Completed spans with a positive `waitMs` get a lighter LEADING wait segment — an
-  // approximation (waits are union TOTALS, not intervals, so only the size is real,
-  // not the position); the detail strip labels it as such.
-  let segments: SpanNode["segments"];
-  if (!open && span.waitMs > 0 && durationMs > 0) {
-    const wait = clamp(span.waitMs, 0, durationMs);
-    segments = [
-      { kind: "wait", ms: wait },
-      { kind: "work", ms: durationMs - wait },
-    ];
+  // Positioned wait bands, at their TRUE offsets — mapped from the recorder's
+  // per-instance `waitBands` (already clipped to this span's lifetime) into
+  // bar-relative offsets clamped to the visible window, exactly like the bar's own
+  // startMs/durationMs. `waitBands === undefined` is a pre-band trace, a distinct
+  // fact from an empty positioned list (the span simply never waited).
+  let waitPosition: WaitPosition;
+  if (span.waitBands === undefined) {
+    waitPosition = { kind: "unavailable" };
+  } else {
+    const bands = span.waitBands.map((b) => {
+      const lo = clamp(b.t0 - windowStartMs, 0, totalMs);
+      const hi = clamp(b.t1 - windowStartMs, lo, totalMs);
+      // Bar-relative: the overlay renderer positions each at `bar.startMs + startMs`.
+      return { layer: b.layer, startMs: lo - startMs, ms: Math.max(0, hi - lo) };
+    });
+    const positionedMs = crossLayerUnionMs(bands);
+    const residualMs = Math.max(0, span.waitMs - positionedMs);
+    waitPosition = { kind: "positioned", bands, positionedMs, residualMs };
   }
 
   return {
@@ -87,7 +147,7 @@ function toNode(span: FlightSpan, windowStartMs: number, atMs: number, totalMs: 
     startMs,
     durationMs,
     open,
-    segments,
+    waitPosition,
     orphan: false,
     t0: span.t0,
     t1: span.t1,

@@ -8,6 +8,7 @@ import {
   SingleLineProvider,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import { Fill } from "@plugins/primitives/plugins/css/plugins/fill/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
@@ -37,6 +38,28 @@ const KIND_CONFIG: Record<SpanKind, { label: string; bar: string; dot: string }>
   job: { label: "Job", bar: "bg-categorical-6", dot: "bg-categorical-6" },
   db: { label: "DB", bar: "bg-categorical-7", dot: "bg-categorical-7" },
 };
+
+// Stable per-LAYER color for wait bands (and their legend swatch), independent of
+// the span kind — so the SAME gate reads as the SAME color across every stalled
+// row, which is the whole point: twelve loaders all stopping dead on `db-acquire`
+// at t=1.4s line up as one color. Hashed into the categorical palette; every
+// literal appears here (and in KIND_CONFIG) so Tailwind extracts all eight.
+const LAYER_PALETTE = [
+  "bg-categorical-1",
+  "bg-categorical-2",
+  "bg-categorical-3",
+  "bg-categorical-4",
+  "bg-categorical-5",
+  "bg-categorical-6",
+  "bg-categorical-7",
+  "bg-categorical-8",
+] as const;
+
+function layerColorClass(layer: string): string {
+  let h = 0;
+  for (let i = 0; i < layer.length; i++) h = (h * 31 + layer.charCodeAt(i)) | 0;
+  return LAYER_PALETTE[Math.abs(h) % LAYER_PALETTE.length]!;
+}
 
 // px of indentation per tree depth.
 const INDENT = 10;
@@ -129,13 +152,25 @@ function SpanRow({
   onClick: () => void;
 }): ReactElement {
   const config = KIND_CONFIG[node.kind];
+  // Wait bands paint OVER the work bar at their true offsets, colored per LAYER
+  // (not per kind) so a saturated gate is one recognizable color down the column.
+  // Reduced opacity keeps the work bar visible underneath. `unavailable` (pre-band
+  // trace) paints nothing — the detail strip says why rather than guessing a place.
+  const overlays =
+    node.waitPosition.kind === "positioned"
+      ? node.waitPosition.bands.map((b) => ({
+          startMs: b.startMs,
+          ms: b.ms,
+          colorClass: cn(layerColorClass(b.layer), "opacity-70"),
+        }))
+      : undefined;
   const bar: SpanBar = {
     id: String(node.id),
     startMs: node.startMs,
     durationMs: node.durationMs,
     colorClass: config.bar,
     treatment: node.open ? "pulse" : "solid",
-    segments: node.segments,
+    overlays,
   };
 
   return (
@@ -264,19 +299,51 @@ function toSelection(
   if (node.children.length > 0) {
     fields.push({ label: "children", value: String(node.children.length) });
   }
-  if (node.segments && node.waitMs > 0) {
-    fields.push({ label: "wait total (position approximate)", value: ms(node.waitMs) });
+  // Honest wait accounting: bands sit at true offsets, so the total is either
+  // fully positioned, partly positioned (the rest dropped to the recorder's band
+  // budget or clamped off the window), or not captured at all (pre-band trace).
+  if (node.waitMs > 0) {
+    const wp = node.waitPosition;
+    if (wp.kind === "unavailable") {
+      fields.push({
+        label: "wait",
+        value: `${ms(node.waitMs)} — position not captured (pre-wait-band trace)`,
+      });
+    } else if (wp.residualMs === 0) {
+      fields.push({ label: "wait", value: ms(node.waitMs) });
+    } else {
+      fields.push({
+        label: "wait",
+        value: `${ms(node.waitMs)} — ${ms(wp.positionedMs)} positioned, ${ms(wp.residualMs)} unpositioned`,
+      });
+    }
   }
+  // Per-layer totals, each with the swatch its bands wear in the Gantt — the legend
+  // that ties a color in a stalled row to the gate it names. Completed spans now
+  // carry `waits` (they didn't before positioned bands landed), so this renders for
+  // most rows, not just open ones.
   if (node.waits && Object.keys(node.waits).length > 0) {
-    fields.push({
-      label: "waits",
-      value: Object.entries(node.waits)
-        .sort((a, b) => b[1] - a[1])
-        .map(([layer, w]) => `${layer} ${ms(w)}`)
-        .join(" · "),
-    });
+    fields.push({ label: "waits", value: <WaitsLegend waits={node.waits} /> });
   }
   return { title: `${node.kind}:${node.label}`, fields };
+}
+
+/** Per-layer wait totals, each prefixed by the layer's Gantt band color swatch. */
+function WaitsLegend({ waits }: { waits: Record<string, number> }): ReactElement {
+  return (
+    <Inline gap="sm">
+      {Object.entries(waits)
+        .sort((a, b) => b[1] - a[1])
+        .map(([layer, w]) => (
+          <Inline key={layer} gap="2xs">
+            <span className={cn("size-2 rounded-full", layerColorClass(layer))} />
+            <span>
+              {layer} {ms(w)}
+            </span>
+          </Inline>
+        ))}
+    </Inline>
+  );
 }
 
 function ms(v: number): string {

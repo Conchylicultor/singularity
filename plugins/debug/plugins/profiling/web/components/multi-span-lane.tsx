@@ -7,8 +7,10 @@ import { useGanttContainerContext } from "./gantt-container";
  * One bar on a MultiSpanLane track. Fill (`colorClass`) answers "what is this?"
  * and never changes with state; `treatment` layers status on top (pulse = open /
  * in-flight), mirroring push-gantt's fill=type / treatment=state convention.
- * `segments` splits the bar into consecutive wait/work slices (WaitWorkRow's
- * lighter-leading-wait convention) — omit for a single solid bar.
+ * `overlays` paint on TOP of the full-extent work bar at their own absolute
+ * bar-relative offsets — so they may gap (idle stretches between waits) and even
+ * overlap (two layers blocked at the same instant), which a consecutive segment
+ * list structurally could not express.
  */
 export interface SpanBar {
   id: string;
@@ -17,7 +19,8 @@ export interface SpanBar {
   /** Fill color — a literal Tailwind token class (bg-categorical-*, bg-info, …). */
   colorClass: string;
   treatment?: "solid" | "pulse";
-  segments?: { kind: "wait" | "work"; ms: number }[];
+  /** Bar-relative, absolutely positioned. May gap and overlap. Painted OVER the work bar. */
+  overlays?: { startMs: number; ms: number; colorClass: string }[];
 }
 
 /**
@@ -62,7 +65,7 @@ export function MultiSpanLane({
   );
 }
 
-/** Renders a single bar as one solid slice, or as its consecutive wait/work segments. */
+/** Renders one solid work bar for the full extent, plus any absolute overlays on top. */
 function Bar({
   bar,
   onBarClick,
@@ -74,49 +77,49 @@ function Bar({
   const clickable = onBarClick !== undefined;
   const treatment = bar.treatment === "pulse" ? "animate-pulse" : "";
 
-  const rawSegments =
-    bar.segments && bar.segments.length > 0
-      ? bar.segments
-      : [{ kind: "work" as const, ms: bar.durationMs }];
-
-  // Lay segments consecutively from the bar start; skip zero-width slices so the
-  // 0.3% min-width floor in toWidthPct never paints an empty segment as a sliver.
-  const slices: { startMs: number; ms: number; kind: "wait" | "work" }[] = [];
-  let cursor = bar.startMs;
-  for (const seg of rawSegments) {
-    if (seg.ms > 0) slices.push({ startMs: cursor, ms: seg.ms, kind: seg.kind });
-    cursor += seg.ms;
-  }
+  // Skip zero-width overlays so the 0.3% min-width floor in toWidthPct never
+  // paints an empty overlay as a sliver.
+  const overlays = (bar.overlays ?? []).filter((o) => o.ms > 0);
 
   return (
     <>
-      {slices.map((slice, i) => (
+      {/* The full-extent work bar. It is the click target; overlays are decorative
+          and sit on top of it. */}
+      <div
+        // eslint-disable-next-line layout/no-adhoc-layout -- bar positioned by runtime ms→% offsets (left/width inline style)
+        className={cn(
+          "absolute top-0 h-full rounded-md",
+          bar.colorClass,
+          treatment,
+          clickable && "cursor-pointer",
+        )}
+        style={{
+          left: toLeftPct(bar.startMs, totalMs),
+          width: toWidthPct(bar.durationMs, totalMs),
+        }}
+        // Stop the pointerdown reaching GanttContainer's drag-zoom, which would
+        // setPointerCapture and retarget the click off this bar (push-gantt precedent).
+        onPointerDown={clickable ? (e) => e.stopPropagation() : undefined}
+        onClick={
+          clickable
+            ? (e) => {
+                e.stopPropagation();
+                onBarClick(bar.id);
+              }
+            : undefined
+        }
+      />
+      {/* Overlays at their true bar-relative offsets. pointer-events-none so a
+          click on an overlay still lands on the work bar beneath it. */}
+      {overlays.map((o, i) => (
         <div
-          key={`${bar.id}:${i}`}
-          // eslint-disable-next-line layout/no-adhoc-layout -- bar segment positioned by runtime ms→% offsets (left/width inline style)
-          className={cn(
-            "absolute top-0 h-full rounded-md transition-opacity",
-            bar.colorClass,
-            treatment,
-            // Wait is the muted leading segment (WaitWorkRow convention); work is solid.
-            slice.kind === "wait" && "opacity-40",
-            clickable && "cursor-pointer",
-          )}
+          key={`${bar.id}:o:${i}`}
+          // eslint-disable-next-line layout/no-adhoc-layout -- overlay positioned by runtime ms→% offsets (left/width inline style)
+          className={cn("pointer-events-none absolute top-0 h-full rounded-md", o.colorClass)}
           style={{
-            left: toLeftPct(slice.startMs, totalMs),
-            width: toWidthPct(slice.ms, totalMs),
+            left: toLeftPct(bar.startMs + o.startMs, totalMs),
+            width: toWidthPct(o.ms, totalMs),
           }}
-          // Stop the pointerdown reaching GanttContainer's drag-zoom, which would
-          // setPointerCapture and retarget the click off this bar (push-gantt precedent).
-          onPointerDown={clickable ? (e) => e.stopPropagation() : undefined}
-          onClick={
-            clickable
-              ? (e) => {
-                  e.stopPropagation();
-                  onBarClick(bar.id);
-                }
-              : undefined
-          }
         />
       ))}
     </>

@@ -1,6 +1,12 @@
 import { describe, it, expect } from "bun:test";
 import type { TraceSnapshot } from "@plugins/debug/plugins/trace/plugins/engine/core";
-import { buildSpanTree, flattenTree, ancestorChain, type SpanTreeResult } from "./build-tree";
+import {
+  buildSpanTree,
+  crossLayerUnionMs,
+  flattenTree,
+  ancestorChain,
+  type SpanTreeResult,
+} from "./build-tree";
 
 // A minimal v2 snapshot with a spans flight window. windowStartMs=1000, atMs=2000
 // → a 1000ms window.
@@ -196,19 +202,203 @@ describe("buildSpanTree — positioning", () => {
     expect(node.open).toBe(true);
     expect(node.startMs).toBe(600);
     expect(node.durationMs).toBe(400);
-    expect(node.segments).toBeUndefined(); // open spans carry no wait segment
+    // No waitBands in the payload → position genuinely unavailable, a distinct fact
+    // from an empty positioned list (the span waited nothing).
+    expect(node.waitPosition).toEqual({ kind: "unavailable" });
   });
+});
 
-  it("splits a completed span with waitMs into a leading wait + trailing work segment", () => {
+describe("buildSpanTree — positioned wait bands", () => {
+  // Bar: t0 1200 → startMs 200, durationMs 600. Band offsets are BAR-relative.
+  it("positions wait bands at their true bar-relative offsets", () => {
     const result = ok(
       buildSpanTree(
-        snapshot({ atMs: 2000, open: [], completed: [span({ t0: 1200, t1: 1800, waitMs: 200 })] }),
+        snapshot({
+          atMs: 2000,
+          open: [],
+          completed: [
+            span({
+              t0: 1200,
+              t1: 1800,
+              waitMs: 250,
+              waitBands: [
+                { layer: "db-acquire", t0: 1300, t1: 1400 }, // 100ms @ bar-relative 100
+                { layer: "db-acquire", t0: 1550, t1: 1700 }, // 150ms @ bar-relative 350
+              ],
+            }),
+          ],
+        }),
       ),
     );
-    expect(result.roots[0]!.segments).toEqual([
-      { kind: "wait", ms: 200 },
-      { kind: "work", ms: 400 },
+    const wp = result.roots[0]!.waitPosition;
+    if (wp.kind !== "positioned") throw new Error(`expected positioned, got ${wp.kind}`);
+    expect(wp.bands).toEqual([
+      { layer: "db-acquire", startMs: 100, ms: 100 },
+      { layer: "db-acquire", startMs: 350, ms: 150 },
     ]);
+    expect(wp.positionedMs).toBe(250);
+    expect(wp.residualMs).toBe(0); // bands cover the whole waitMs
+  });
+
+  it("unions overlapping layers for positionedMs — strictly less than the per-layer sum", () => {
+    const result = ok(
+      buildSpanTree(
+        snapshot({
+          atMs: 2000,
+          open: [],
+          completed: [
+            span({
+              t0: 1200,
+              t1: 1800,
+              // waitMs is the recorder's CROSS-LAYER union — [1300,1600] = 300.
+              waitMs: 300,
+              waitBands: [
+                { layer: "db-acquire", t0: 1300, t1: 1500 }, // 200ms
+                { layer: "read-admit", t0: 1400, t1: 1600 }, // 200ms, overlaps 100ms
+              ],
+            }),
+          ],
+        }),
+      ),
+    );
+    const wp = result.roots[0]!.waitPosition;
+    if (wp.kind !== "positioned") throw new Error(`expected positioned, got ${wp.kind}`);
+    expect(wp.positionedMs).toBe(300); // union of [100,300]∪[200,400] (bar-relative)
+    expect(wp.positionedMs).toBeLessThan(200 + 200); // < the per-layer sum
+    expect(wp.residualMs).toBe(0);
+  });
+
+  it("reports residualMs when bands were dropped to the recorder's per-layer cap", () => {
+    const result = ok(
+      buildSpanTree(
+        snapshot({
+          atMs: 2000,
+          open: [],
+          completed: [
+            // waitMs 500, but only 300ms of bands survived the recorder's cap.
+            span({
+              t0: 1200,
+              t1: 1800,
+              waitMs: 500,
+              waitBands: [{ layer: "db-acquire", t0: 1300, t1: 1600 }], // 300ms
+            }),
+          ],
+        }),
+      ),
+    );
+    const wp = result.roots[0]!.waitPosition;
+    if (wp.kind !== "positioned") throw new Error(`expected positioned, got ${wp.kind}`);
+    expect(wp.positionedMs).toBe(300);
+    expect(wp.residualMs).toBe(200); // the dropped-band shortfall, reported never painted
+  });
+
+  it("marks a span with no waitBands as unavailable — not an empty positioned list", () => {
+    const result = ok(
+      buildSpanTree(snapshot({ atMs: 2000, open: [], completed: [span({ waitMs: 120 })] })),
+    );
+    // The distinction the whole discriminated union exists for: pre-band trace vs
+    // "captured, waited nothing".
+    expect(result.roots[0]!.waitPosition).toEqual({ kind: "unavailable" });
+  });
+
+  it("renders a span's own bands even when its children are absent from the window", () => {
+    // Bands are per-span (read off this span's payload), NOT reconstructed from a
+    // subtree — so a parent whose children were truncated out still shows its waits.
+    const result = ok(
+      buildSpanTree(
+        snapshot({
+          atMs: 2000,
+          open: [],
+          completed: [
+            span({
+              id: 1,
+              parentId: null,
+              kind: "flush",
+              label: "flush",
+              t0: 1100,
+              t1: 1900,
+              waitMs: 200,
+              waitBands: [{ layer: "loader-acquire", t0: 1300, t1: 1500 }],
+            }),
+            // child id 2 (under 1) is deliberately absent — truncated from the window.
+          ],
+        }),
+      ),
+    );
+    const node = result.roots[0]!;
+    expect(node.children).toEqual([]);
+    const wp = node.waitPosition;
+    if (wp.kind !== "positioned") throw new Error(`expected positioned, got ${wp.kind}`);
+    expect(wp.bands).toEqual([{ layer: "loader-acquire", startMs: 200, ms: 200 }]);
+  });
+
+  it("clamps a wait band that extends past the window edge instead of dropping it", () => {
+    const result = ok(
+      buildSpanTree(
+        snapshot({
+          atMs: 2000,
+          open: [],
+          completed: [
+            span({
+              t0: 1200,
+              t1: 1800,
+              waitMs: 300,
+              waitBands: [{ layer: "db-acquire", t0: 1700, t1: 2200 }], // t1 past the 2000 edge
+            }),
+          ],
+        }),
+      ),
+    );
+    const wp = result.roots[0]!.waitPosition;
+    if (wp.kind !== "positioned") throw new Error(`expected positioned, got ${wp.kind}`);
+    // 1700 → bar-relative 500; end clamped to the window edge (totalMs 1000) → 300ms wide.
+    expect(wp.bands).toEqual([{ layer: "db-acquire", startMs: 500, ms: 300 }]);
+  });
+});
+
+describe("crossLayerUnionMs", () => {
+  it("sums disjoint intervals", () => {
+    expect(
+      crossLayerUnionMs([
+        { startMs: 0, ms: 10 },
+        { startMs: 20, ms: 5 },
+      ]),
+    ).toBe(15);
+  });
+
+  it("merges overlapping intervals into their union, not their sum", () => {
+    // db-acquire [10,50] ∪ read-admit [30,60] = [10,60] = 50 (the plan's example).
+    expect(
+      crossLayerUnionMs([
+        { startMs: 10, ms: 40 },
+        { startMs: 30, ms: 30 },
+      ]),
+    ).toBe(50);
+  });
+
+  it("treats touching intervals as one run and swallows a contained interval", () => {
+    expect(
+      crossLayerUnionMs([
+        { startMs: 0, ms: 10 },
+        { startMs: 10, ms: 10 },
+      ]),
+    ).toBe(20);
+    expect(
+      crossLayerUnionMs([
+        { startMs: 0, ms: 100 },
+        { startMs: 20, ms: 10 },
+      ]),
+    ).toBe(100);
+  });
+
+  it("is order-independent and zero for the empty set", () => {
+    expect(crossLayerUnionMs([])).toBe(0);
+    expect(
+      crossLayerUnionMs([
+        { startMs: 30, ms: 30 },
+        { startMs: 10, ms: 40 },
+      ]),
+    ).toBe(50);
   });
 });
 

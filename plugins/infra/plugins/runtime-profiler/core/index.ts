@@ -24,6 +24,7 @@ export {
   readGateGauges,
   SPAN_KINDS,
   __contribute,
+  __pushBand,
 } from "./recorder";
 export type {
   OriginClass,
@@ -36,6 +37,7 @@ export type {
   WaitBreakdown,
   EntryContext,
   Track,
+  WaitBand,
   FlightSpan,
   FlightWindow,
   GateGauge,

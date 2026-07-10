@@ -137,6 +137,20 @@ export interface Track {
   prevEnd: number;
 }
 
+/**
+ * A positioned wait interval on one entry's timeline: the layer that blocked
+ * and the exact `[t0, t1]` (profiler clock, already clipped to the owning
+ * entry's lifetime) it covered. Where `Track` is the scalar MEASURE of an
+ * entry's covered wait set on a layer, a `WaitBand[]` is that set itself —
+ * truncated to a fixed budget. Each band is the coverage delta `contribute`
+ * returns, so `Σ band widths` can never drift from `track.unionMs`.
+ */
+export interface WaitBand {
+  layer: string;
+  t0: number;
+  t1: number;
+}
+
 /** Per-parent breakdown of an aggregate: who issued this label, how often. */
 export interface ParentBreakdown {
   parent: SpanRef;
@@ -245,25 +259,62 @@ export function installClock(fn: () => number): void {
 
 // --- Streaming interval union ---
 
-// Contribute the interval [start, end] to a track. `floor` clips the interval
-// to the owning context's lifetime (a wait that started before the entry did
-// must not count against the entry's wall-clock). The frontier check makes it
-// a union, not a sum: only time past `prevEnd` is new coverage. An interval
-// fully at/before the frontier contributes 0 — with end-ordered arrival this
-// means "already covered"; in the theoretical non-end-ordered case it
-// undercounts, never overcounts (so selfMs stays ≥ 0).
-function contribute(track: Track, start: number, end: number, floor: number): void {
+// Contribute the interval [start, end] to a track, returning the newly-covered
+// ms (0 when the interval added nothing). `floor` clips the interval to the
+// owning context's lifetime (a wait that started before the entry did must not
+// count against the entry's wall-clock). The frontier check makes it a union,
+// not a sum: only time past `prevEnd` is new coverage. An interval fully
+// at/before the frontier contributes 0 — with end-ordered arrival this means
+// "already covered"; in the theoretical non-end-ordered case it undercounts,
+// never overcounts (so selfMs stays ≥ 0). The returned slice is exactly
+// `[end − covered, end]`, which a caller records as a positioned wait band —
+// bands and the scalar union then share one source and cannot diverge.
+function contribute(track: Track, start: number, end: number, floor: number): number {
   if (start < floor) start = floor;
   const lo = start > track.prevEnd ? start : track.prevEnd;
   if (end > lo) {
     track.unionMs += end - lo;
     track.prevEnd = end;
+    return end - lo;
   }
+  return 0;
 }
 
 // Test-only export: the streaming union is the load-bearing math of the whole
 // decomposition, so it is unit-tested directly. Not part of the public API.
 export { contribute as __contribute };
+
+// Max positioned wait bands retained per (entry, layer). A Gantt wants the
+// largest stalls, not all of them; overflow drops the smallest (see pushBand).
+export const WAIT_BAND_CAP = 12;
+
+// Append the covered slice `[t0, t1]` to a per-layer band list. Charges arrive
+// END-ORDERED by construction (the same premise the streaming union rests on —
+// see the module header), so this is a tail op: extend the last band when the
+// new slice touches it (`t0 <= last.t1`), else push a fresh band. Over `cap`,
+// drop the SMALLEST band — NEVER merge across a gap to make room, which would
+// paint time the span was not waiting (the recorder is conservative in the UNDER
+// direction everywhere). `waitMs` stays the authoritative total, so a dropped
+// band's ms is still recoverable as `waitMs − crossLayerUnion(bands)`.
+function pushBand(bands: WaitBand[], layer: string, t0: number, t1: number, cap: number): void {
+  const last = bands[bands.length - 1];
+  if (last && last.layer === layer && t0 <= last.t1) {
+    last.t1 = t1;
+  } else {
+    bands.push({ layer, t0, t1 });
+  }
+  if (bands.length > cap) {
+    let minIdx = 0;
+    for (let i = 1; i < bands.length; i++) {
+      if (bands[i]!.t1 - bands[i]!.t0 < bands[minIdx]!.t1 - bands[minIdx]!.t0) minIdx = i;
+    }
+    bands.splice(minIdx, 1);
+  }
+}
+
+// Test-only export, mirroring `__contribute`: the tail-merge + drop-smallest
+// policy is unit-tested directly.
+export { pushBand as __pushBand };
 
 // --- Injected ambient-context runtime ---
 
@@ -305,6 +356,14 @@ export interface EntryContext {
   closed: boolean;
   /** Per-gate-layer wait unions → materialized into the record's `waits`. */
   layerUnions: Map<string, Track>;
+  /**
+   * Per-gate-layer POSITIONED wait bands: the intervals each `layerUnions`
+   * track actually covered, bounded at `WAIT_BAND_CAP` per layer. The Map is
+   * allocated with the context (like `layerUnions`); each per-layer list is
+   * lazily created on that layer's first covered charge, so an entry that never
+   * waits allocates none. Materialized flat into the record's `waitBands`.
+   */
+  layerBands: Map<string, WaitBand[]>;
   /** Union of ALL gate-wait intervals (across layers) → `waitMs`. */
   waitUnion: Track;
   /** Union of gate-waits ∪ child executions → `selfMs = wall − busy`. */
@@ -555,7 +614,10 @@ const openEntries = new Set<EntryContext>();
 // Preallocated circular buffer of recently-completed spans: the blocker often
 // finishes before its victim's span ends, so open entries alone can't name it.
 // Slots are mutable and overwritten in place — a ring write is a comparison +
-// ~10 field writes, zero allocation (label strings are shared references).
+// ~12 field writes. A completed ENTRY span additionally stores two references
+// already built in recordEntrySpan's finally (its `waits` breakdown and one flat
+// `waitBands` array); a leaf `db` span passes both undefined, so the per-query
+// path stays fully allocation-free.
 const FLIGHT_RING_CAPACITY = 4096;
 const FLIGHT_RING_MIN_MS = 5; // sub-5ms spans can't matter to a >=500ms window
 
@@ -570,6 +632,8 @@ interface FlightRingSlot {
   waitMs: number;
   childMs: number;
   selfMs: number;
+  waits: WaitBreakdown | undefined;
+  waitBands: WaitBand[] | undefined;
 }
 
 const flightRing: FlightRingSlot[] = Array.from({ length: FLIGHT_RING_CAPACITY }, () => ({
@@ -583,6 +647,8 @@ const flightRing: FlightRingSlot[] = Array.from({ length: FLIGHT_RING_CAPACITY }
   waitMs: 0,
   childMs: 0,
   selfMs: 0,
+  waits: undefined,
+  waitBands: undefined,
 }));
 let flightRingHead = 0;
 
@@ -599,6 +665,8 @@ function pushCompleted(
   waitMs: number,
   childMs: number,
   selfMs: number,
+  waits: WaitBreakdown | undefined,
+  waitBands: WaitBand[] | undefined,
 ): void {
   if (durationMs < FLIGHT_RING_MIN_MS) return;
   const slot = flightRing[flightRingHead]!;
@@ -612,6 +680,8 @@ function pushCompleted(
   slot.waitMs = waitMs;
   slot.childMs = childMs;
   slot.selfMs = selfMs;
+  slot.waits = waits;
+  slot.waitBands = waitBands;
   flightRingHead = (flightRingHead + 1) % FLIGHT_RING_CAPACITY;
 }
 
@@ -666,8 +736,14 @@ export interface FlightSpan {
   waitMs: number;
   childMs: number;
   selfMs: number;
-  /** Per-layer wait unions; OPEN spans only (live layerUnions). */
+  /** Per-layer wait unions (open spans: live layerUnions; completed: the ring slot). */
   waits?: WaitBreakdown;
+  /**
+   * Positioned wait intervals, one flat list across layers, each clipped to this
+   * span's lifetime. `crossLayerUnion(waitBands) ≤ waitMs`; the shortfall is wait
+   * whose position was dropped to the band budget. Absent on a pre-band trace.
+   */
+  waitBands?: WaitBand[];
 }
 
 export interface FlightWindow {
@@ -736,6 +812,15 @@ export function captureFlightWindow(opts: {
       waits = {};
       for (const [layer, track] of ctx.layerUnions) waits[layer] = track.unionMs;
     }
+    let waitBands: WaitBand[] | undefined;
+    if (ctx.layerBands.size > 0) {
+      waitBands = [];
+      // Copy each band: this context is still live, so pushBand may extend its
+      // last band in place after this snapshot is taken.
+      for (const bands of ctx.layerBands.values()) {
+        for (const b of bands) waitBands.push({ layer: b.layer, t0: b.t0, t1: b.t1 });
+      }
+    }
     open.push({
       id: ctx.id,
       parentId: ctx.parent ? ctx.parent.id : null,
@@ -748,6 +833,7 @@ export function captureFlightWindow(opts: {
       childMs: ctx.childUnion.unionMs,
       selfMs: Math.max(0, ageMs - ctx.busyUnion.unionMs),
       waits,
+      waitBands,
     });
   }
 
@@ -773,6 +859,8 @@ export function captureFlightWindow(opts: {
       waitMs: slot.waitMs,
       childMs: slot.childMs,
       selfMs: slot.selfMs,
+      waits: slot.waits,
+      waitBands: slot.waitBands,
     });
   }
 
@@ -796,6 +884,7 @@ function record(
   waitMs = 0,
   childMs = 0,
   selfMs = durationMs,
+  waitBands?: WaitBand[],
 ): void {
   if (process.env.SINGULARITY_PROFILING === "0") return;
   // Drop spans produced inside a runWithoutProfiling scope before any aggregate,
@@ -911,7 +1000,19 @@ function record(
   // source — absent from its own trace, with its children rendering as orphan
   // roots. Both early-returns above still guard it, so the kill-switch and
   // suppression semantics are unchanged, and the write is allocation-free.
-  pushCompleted(kind, cappedLabel, atMs, durationMs, spanId, parentId, waitMs, childMs, selfMs);
+  pushCompleted(
+    kind,
+    cappedLabel,
+    atMs,
+    durationMs,
+    spanId,
+    parentId,
+    waitMs,
+    childMs,
+    selfMs,
+    waits,
+    waitBands,
+  );
 
   // Push seam: notify subscribers past their floor. Only build the span when
   // someone is listening to keep the hot path cheap. The handler is a
@@ -997,9 +1098,21 @@ export function chargeWait(layer: string, ms: number): void {
       track = { unionMs: 0, prevEnd: a.startMs };
       a.layerUnions.set(layer, track);
     }
-    contribute(track, start, end, a.startMs);
+    const covered = contribute(track, start, end, a.startMs);
     contribute(a.waitUnion, start, end, a.startMs);
     contribute(a.busyUnion, start, end, a.startMs);
+    // Record a band for exactly the slice the layer track just counted:
+    // `[end − covered, end]`. A charge that covered nothing (a fully re-covered
+    // interval, or a 0 ms git-memo marker) adds no band, since it added no union
+    // — `waitUnion`/`busyUnion` are cross-layer measures and get no bands.
+    if (covered > 0) {
+      let bands = a.layerBands.get(layer);
+      if (!bands) {
+        bands = [];
+        a.layerBands.set(layer, bands);
+      }
+      pushBand(bands, layer, end - covered, end, WAIT_BAND_CAP);
+    }
   }
 }
 
@@ -1164,6 +1277,7 @@ export async function recordEntrySpan<T>(
     startMs: t0,
     closed: false,
     layerUnions: new Map(),
+    layerBands: new Map(),
     waitUnion: { unionMs: 0, prevEnd: t0 },
     busyUnion: { unionMs: 0, prevEnd: t0 },
     childUnion: { unionMs: 0, prevEnd: t0 },
@@ -1200,8 +1314,17 @@ export async function recordEntrySpan<T>(
       waits = {};
       for (const [layer, track] of ctx.layerUnions) waits[layer] = track.unionMs;
     }
+    // Flatten the per-layer bands into one list. The context is closed and about
+    // to be discarded, so the band objects can be handed off by reference.
+    let waitBands: WaitBand[] | undefined;
+    if (ctx.layerBands.size > 0) {
+      waitBands = [];
+      for (const bands of ctx.layerBands.values()) {
+        for (const b of bands) waitBands.push(b);
+      }
+    }
     const parentId = ctx.parent ? ctx.parent.id : null;
-    record(kind, label, wall, ctx.id, parentId, parent, waits, waitMs, childMs, selfMs);
+    record(kind, label, wall, ctx.id, parentId, parent, waits, waitMs, childMs, selfMs, waitBands);
     // Flush the loader's captured table read-set into the index, keyed by label
     // (the resource key). Gating on `loader` kind means a stray table captured
     // under a non-loader entry is never indexed. Done after `record` so it can
@@ -1356,7 +1479,13 @@ export function resetRuntimeProfile(): void {
   // break the add/delete pairing. `nextSpanId` is likewise NOT reset: those
   // same live contexts keep their ids, and a restarted counter would reissue
   // them to fresh spans (see `nextSpanId`).
-  for (const slot of flightRing) slot.used = false;
+  for (const slot of flightRing) {
+    slot.used = false;
+    // Drop the stored references so a reset frees them (and a stale band can
+    // never be read back through a slot marked unused).
+    slot.waits = undefined;
+    slot.waitBands = undefined;
+  }
   flightRingHead = 0;
   sinceMs = now();
 }

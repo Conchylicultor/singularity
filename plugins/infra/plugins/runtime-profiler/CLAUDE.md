@@ -55,6 +55,32 @@ idempotent under re-covering, which is what makes each level's `waits` self-cont
 Closed ancestors are never mutated (a detached child finishing late cannot corrupt a
 recorded span).
 
+### Positioned wait bands (`WaitBand`)
+
+`Track` is the *measure* of the covered set; a **`WaitBand[]` per `(entry, layer)`** is the
+covered set itself, so a wait has a *when* and not merely a *how much* — the Slow Events
+Gantt paints each band at its true offset instead of gluing the whole `waitMs` to the start
+of the bar. Bands are derived from `contribute()`'s **return value** — the slice it newly
+covered, already clipped to that ancestor's `startMs` and its own frontier — never from the
+raw `[start, end]`. Every ancestor clips the same charge differently, so deriving from the
+delta is what makes `Σ band widths === track.unionMs` true *by construction* rather than by
+coincidence. End-ordered arrival (above) makes the insert a tail operation: extend the last
+band, or push one. O(1), no sort.
+
+The list is capped at `WAIT_BAND_CAP` per `(entry, layer)`; on overflow the **smallest** band
+is dropped, never merged across a gap — painting time a span was not waiting would be worse
+than admitting ignorance, and the recorder is conservative in the *under* direction
+everywhere. Dropping needs no bookkeeping: `waitMs` stays the authoritative cross-layer
+union, so a consumer derives `residualMs = waitMs − crossLayerUnion(bands) ≥ 0`, meaning
+"this much wait happened, at positions we no longer retain". Note the *cross-layer* union:
+two layers can overlap in time, so their per-layer widths **sum** to more than `waitMs`.
+
+Bands attach to the `EntryContext` that was actually charged — which is why a closed
+intermediate ancestor (skipped by `chargeWait`'s `continue`) has none, and why bands are
+never reconstructed from a subtree walk. A detached child whose wait straddles its parent's
+close would otherwise paint a phantom band inside a parent the recorder deliberately
+excluded.
+
 Reading it: a leaf loader that is mostly `waitMs` was head-of-line-blocked (the resource is
 fast); mostly `selfMs` = genuinely slow. A `flush` with `childMs ≈ wall`, `waits` naming
 `background-acquire`/`db-acquire`, and small `selfMs` spent its life awaiting gate-blocked
@@ -182,7 +208,11 @@ can be rebuilt in a single read (see
   `record()` for spans ≥ 5 ms (the blocker often finishes before its victim's span ends,
   so open entries alone can't name it). Slots are mutable and overwritten in place;
   placement inside `record()` means it sits behind the `SINGULARITY_PROFILING=0`
-  kill-switch and the suppression early-returns.
+  kill-switch and the suppression early-returns. A completed **entry** span also parks its
+  `waits` and `waitBands` in the slot — both already-allocated references, plus the one flat
+  band array `recordEntrySpan` materializes — so a completed span carries the same per-layer
+  breakdown an open one does. The per-query **leaf** path (`recordSpan`) writes scalars only
+  and stays allocation-free.
 - **Gate-gauge registry** — `registerGateGauge(layer, read)` (throws on a duplicate layer)
   + `readGateGauges()`. Layer names use the SAME vocabulary as the `chargeWait` layers
   above, so a snapshot's gate occupancy joins directly to span `waits`; gate *owners*
@@ -213,11 +243,13 @@ as a root.
 
 `captureFlightWindow({ windowStartMs, maxOpen?, maxCompleted? })` (defaults 200/400)
 synchronously materializes both span sources into a `FlightWindow` `{ atMs, open, completed }`
-of `FlightSpan`s. Open spans carry `t1: null` and per-layer `waits` read mid-flight (sound —
-a track's union is monotonic accumulated coverage); completed spans are the ring slots
-overlapping the window, newest first. Ids are unique across `open ∪ completed` (a context is
-deleted from the registry before its span reaches the ring), so a consumer indexes both by
-`id` and links by `parentId`.
+of `FlightSpan`s. Open spans carry `t1: null` and per-layer `waits` + `waitBands` read
+mid-flight (sound — a track's union is monotonic accumulated coverage, and its band list only
+ever extends; the bands are **copied**, since the live context may extend them after the
+capture). Completed spans are the ring slots overlapping the window, newest first, and carry
+the same `waits`/`waitBands` from their slot. Ids are unique across `open ∪ completed` (a
+context is deleted from the registry before its span reaches the ring), so a consumer indexes
+both by `id` and links by `parentId`.
 
 The open set is **ancestor-closed**: after taking up to `maxOpen` entries from the registry,
 every still-open ancestor of a taken entry is pulled in too — so `maxOpen` is a *soft* cap
@@ -239,9 +271,12 @@ unchanged. `resetRuntimeProfile()` clears the ring (profile data) but keeps gaug
 the id counter.
 
 Overhead: one `++` per span, one paired `Set.add`/`Set.delete` per *entry* span (entry spans
-are low-rate — never per-DB-query), and a comparison + ~10 field writes (zero allocation;
-label strings are shared references) per qualifying completed span. Allocation happens only
-inside `captureFlightWindow`, i.e. only on a (rate-limited) slow-event trip.
+are low-rate — never per-DB-query), and a comparison + ~12 field writes per qualifying
+completed span (label strings and the `waits`/`waitBands` references are shared, not copied).
+On the per-charge path (`chargeWait`, which fires once per DB pool acquire) a band costs one
+comparison and, at most, one push into a `WAIT_BAND_CAP`-bounded array. The remaining
+allocations are one flat band array per completed entry span, and whatever
+`captureFlightWindow` builds on a (rate-limited) slow-event trip.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -251,6 +286,6 @@ inside `captureFlightWindow`, i.e. only on a (rate-limited) slow-event trip.
 - Cross-plugin:
   - Imported by: `infra/endpoints`
 - Core:
-  - Exports: Types: `Aggregate`, `EntryContext`, `FlightSpan`, `FlightWindow`, `GateGauge`, `OriginClass`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `Track`, `WaitBreakdown`; Values: `__contribute`, `captureFlightWindow`, `chargeWait`, `currentCallerKind`, `currentOriginClass`, `getLastLoaderReadSet`, `getReadSetIndex`, `getRuntimeProfile`, `installBackgroundLaneRuntime`, `installClock`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `readGateGauges`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `registerGateGauge`, `removeReadSetTable`, `resetRuntimeProfile`, `runInBackgroundLane`, `runWithoutProfiling`, `seedReadSetIndex`, `SPAN_KINDS`, `waitSplit`
+  - Exports: Types: `Aggregate`, `EntryContext`, `FlightSpan`, `FlightWindow`, `GateGauge`, `OriginClass`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`, `Track`, `WaitBand`, `WaitBreakdown`; Values: `__contribute`, `__pushBand`, `captureFlightWindow`, `chargeWait`, `currentCallerKind`, `currentOriginClass`, `getLastLoaderReadSet`, `getReadSetIndex`, `getRuntimeProfile`, `installBackgroundLaneRuntime`, `installClock`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `readGateGauges`, `recordEntrySpan`, `recordReadTables`, `recordSpan`, `registerGateGauge`, `removeReadSetTable`, `resetRuntimeProfile`, `runInBackgroundLane`, `runWithoutProfiling`, `seedReadSetIndex`, `SPAN_KINDS`, `waitSplit`
 
 <!-- AUTOGENERATED:END -->

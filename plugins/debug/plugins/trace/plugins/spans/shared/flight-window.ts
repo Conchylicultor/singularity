@@ -29,6 +29,12 @@ export const FlightSpanSchema = z.object({
   childMs: z.number(),
   selfMs: z.number(),
   waits: z.record(z.number()).optional(),
+  // Positioned wait intervals per layer. OPTIONAL so every pre-band `traces` row
+  // still parses as `ok` (not `legacy`, not `invalid`); the bidirectional pin
+  // below forces this and the recorder's `FlightSpan.waitBands` to move together.
+  waitBands: z
+    .array(z.object({ layer: z.string(), t0: z.number(), t1: z.number() }))
+    .optional(),
 });
 
 export const FlightWindowSchema = z.object({

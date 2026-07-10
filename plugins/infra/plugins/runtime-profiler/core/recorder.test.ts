@@ -5,6 +5,8 @@ import { beforeEach, describe, expect, test } from "bun:test";
 import { AsyncLocalStorage } from "node:async_hooks";
 import {
   __contribute,
+  __pushBand,
+  WAIT_BAND_CAP,
   captureFlightWindow,
   chargeWait,
   currentOriginClass,
@@ -30,7 +32,31 @@ import {
   type FlightWindow,
   type SpanKind,
   type Track,
+  type WaitBand,
 } from "./recorder";
+
+// The cross-layer wait union a positioned-band consumer derives: the total time
+// the span was blocked on ANY layer, so it must union overlapping bands from
+// different layers (two layers can stall at once). This is the reference the
+// recorder's `waitMs` scalar must equal — computed here the slow, obvious way.
+function crossLayerUnion(bands: readonly { t0: number; t1: number }[]): number {
+  if (bands.length === 0) return 0;
+  const sorted = [...bands].sort((a, b) => a.t0 - b.t0);
+  let total = 0;
+  let lo = sorted[0]!.t0;
+  let hi = sorted[0]!.t1;
+  for (let i = 1; i < sorted.length; i++) {
+    const b = sorted[i]!;
+    if (b.t0 <= hi) {
+      if (b.t1 > hi) hi = b.t1;
+    } else {
+      total += hi - lo;
+      lo = b.t0;
+      hi = b.t1;
+    }
+  }
+  return total + (hi - lo);
+}
 
 // Real ALS runtime so context propagates across awaits like in production.
 const als = new AsyncLocalStorage<EntryContext>();
@@ -230,18 +256,28 @@ describe("closed-ancestor safety", () => {
   });
 
   test("a closed intermediate ancestor is skipped, an open grandparent still charged", async () => {
+    // `chargeWait` skips a closed ancestor with `continue`, not `break`, so it
+    // charges the OPEN grandparent above a closed parent — the exact case that
+    // makes reconstructing bands from a subtree walk wrong (the closed parent
+    // would get a phantom band). Assert the closed parent carries no band while
+    // the open grandparent and the detached child both do.
+    const gate = deferred();
+    let child!: Promise<void>;
+    let mid!: FlightWindow;
     await recordEntrySpan("flush", "f", async () => {
-      const gate = deferred();
-      let child!: Promise<void>;
       await recordEntrySpan("push", "p", async () => {
+        // Detached child: started under p but NOT awaited, so p closes first.
         child = recordEntrySpan("loader", "l", async () => {
           await gate.promise;
-          chargeWait("gate", 30); // now=50 → [20,50]; push closed, flush open
+          chargeWait("gate", 30); // now=50 → [20,50]; p closed at 40, f still open
         });
+        fakeNow = 40; // p closes here, before the child's gate resolves
       });
       fakeNow = 50;
       gate.resolve();
       await child;
+      // f still open; p completed at 40 (wall 40 ≥ 5ms ring floor); l completed at 50.
+      mid = captureFlightWindow({ windowStartMs: 0 });
       fakeNow = 60;
     });
 
@@ -252,9 +288,19 @@ describe("closed-ancestor safety", () => {
     // The loader's exec interval [0,50] also skipped the closed push and
     // charged the flush's childUnion (nearest OPEN ancestor).
     expect(flush.childTotalMs).toBe(50);
-    const push = agg("push", "p");
-    expect(push.waitTotalMs).toBe(0);
-    expect(push.waits).toBeUndefined();
+    const pushAgg = agg("push", "p");
+    expect(pushAgg.waitTotalMs).toBe(0);
+    expect(pushAgg.waits).toBeUndefined();
+
+    // Bands: the open grandparent and the completed child both carry [20,50];
+    // the closed intermediate waited for nothing and carries no band.
+    const f = mid.open.find((s) => s.label === "f")!;
+    const p = mid.completed.find((s) => s.label === "p")!;
+    const l = mid.completed.find((s) => s.label === "l")!;
+    expect(f.waitBands).toEqual([{ layer: "gate", t0: 20, t1: 50 }]);
+    expect(l.waitBands).toEqual([{ layer: "gate", t0: 20, t1: 50 }]);
+    expect(p.waitMs).toBe(0);
+    expect(p.waitBands).toBeUndefined();
   });
 });
 
@@ -793,26 +839,166 @@ describe("read-set index — per-run capture (getLastLoaderReadSet)", () => {
 });
 
 describe("__contribute streaming union", () => {
-  test("clips the interval start to the floor", () => {
+  test("clips the interval start to the floor, returning the covered ms", () => {
     const t: Track = { unionMs: 0, prevEnd: 0 };
-    __contribute(t, -5, 10, 0);
+    expect(__contribute(t, -5, 10, 0)).toBe(10);
     expect(t).toEqual({ unionMs: 10, prevEnd: 10 });
     const t2: Track = { unionMs: 0, prevEnd: 4 };
-    __contribute(t2, 0, 10, 4);
+    expect(__contribute(t2, 0, 10, 4)).toBe(6);
     expect(t2).toEqual({ unionMs: 6, prevEnd: 10 });
   });
 
   test("a fully-covered interval contributes 0 and keeps the frontier", () => {
     const t: Track = { unionMs: 10, prevEnd: 10 };
-    __contribute(t, 2, 8, 0);
+    expect(__contribute(t, 2, 8, 0)).toBe(0);
     expect(t).toEqual({ unionMs: 10, prevEnd: 10 });
   });
 
   test("out-of-order ends never overcount; partial overlap adds only the tail", () => {
     const t: Track = { unionMs: 10, prevEnd: 10 };
-    __contribute(t, 5, 15, 0); // overlaps [5,10] → adds only [10,15]
+    expect(__contribute(t, 5, 15, 0)).toBe(5); // overlaps [5,10] → adds only [10,15]
     expect(t).toEqual({ unionMs: 15, prevEnd: 15 });
-    __contribute(t, 0, 12, 0); // end behind the frontier → 0
+    expect(__contribute(t, 0, 12, 0)).toBe(0); // end behind the frontier → 0
     expect(t).toEqual({ unionMs: 15, prevEnd: 15 });
+  });
+});
+
+describe("__pushBand tail-merge and drop-smallest", () => {
+  test("extends the last band when the new slice touches it; pushes across a gap", () => {
+    const bands: WaitBand[] = [];
+    __pushBand(bands, "g", 0, 10, 12);
+    __pushBand(bands, "g", 10, 20, 12); // t0 === last.t1 → extend
+    expect(bands).toEqual([{ layer: "g", t0: 0, t1: 20 }]);
+    __pushBand(bands, "g", 5, 25, 12); // t0 < last.t1 (overlap) → extend
+    expect(bands).toEqual([{ layer: "g", t0: 0, t1: 25 }]);
+    __pushBand(bands, "g", 40, 50, 12); // gap → new band
+    expect(bands).toEqual([
+      { layer: "g", t0: 0, t1: 25 },
+      { layer: "g", t0: 40, t1: 50 },
+    ]);
+  });
+
+  test("over cap, drops the smallest-width band and never bridges a gap", () => {
+    const bands: WaitBand[] = [];
+    __pushBand(bands, "g", 0, 10, 2); // width 10
+    __pushBand(bands, "g", 20, 23, 2); // width 3 — the smallest
+    __pushBand(bands, "g", 40, 50, 2); // over cap → drop the width-3 band
+    expect(bands).toEqual([
+      { layer: "g", t0: 0, t1: 10 },
+      { layer: "g", t0: 40, t1: 50 },
+    ]);
+  });
+});
+
+describe("positioned wait bands", () => {
+  // Bands are observable only on FlightSpans (the ring / open capture), never on
+  // the label-keyed aggregates — same as the per-instance ids.
+  function completed(label: string): FlightSpan {
+    const found = captureFlightWindow({ windowStartMs: 0 }).completed.find((s) => s.label === label);
+    if (!found) throw new Error(`no completed span for ${label}`);
+    return found;
+  }
+
+  test("per-layer band widths sum to the layer union; cross-layer union equals waitMs", async () => {
+    await recordEntrySpan("loader", "l", async () => {
+      fakeNow = 10;
+      chargeWait("db-acquire", 10); // [0,10]
+      fakeNow = 30;
+      chargeWait("db-acquire", 10); // [20,30] — disjoint from the first
+      fakeNow = 60;
+      chargeWait("read-admit", 20); // [40,60]
+    });
+    const span = completed("l");
+    const bands = span.waitBands!;
+    // Each layer's band widths reconstruct exactly that layer's scalar union.
+    for (const layer of ["db-acquire", "read-admit"]) {
+      const sum = bands
+        .filter((b) => b.layer === layer)
+        .reduce((s, b) => s + (b.t1 - b.t0), 0);
+      expect(sum).toBe(span.waits![layer]!);
+    }
+    // The cross-layer band union is the authoritative waitMs — the property the
+    // whole design rests on: Σ band widths cannot drift from the scalar union.
+    expect(crossLayerUnion(bands)).toBe(span.waitMs);
+    expect(span.waitMs).toBe(40); // [0,10] ∪ [20,30] ∪ [40,60]
+  });
+
+  test("overlapping layers: both carry bands; cross-layer union < per-layer sum, == waitMs", async () => {
+    await recordEntrySpan("loader", "l", async () => {
+      fakeNow = 50;
+      chargeWait("db-acquire", 40); // [10,50]
+      fakeNow = 60;
+      chargeWait("read-admit", 30); // [30,60] — overlaps the first in time
+    });
+    const span = completed("l");
+    const bands = span.waitBands!;
+    const perLayerSum = bands.reduce((s, b) => s + (b.t1 - b.t0), 0);
+    expect(perLayerSum).toBe(70); // 40 + 30, counting the [30,50] overlap twice
+    expect(span.waitMs).toBe(50); // [10,50] ∪ [30,60] = [10,60]
+    expect(crossLayerUnion(bands)).toBe(span.waitMs);
+    expect(crossLayerUnion(bands)).toBeLessThan(perLayerSum);
+  });
+
+  test("overflow drops the smallest band, never fills a gap; residual == dropped width", async () => {
+    await recordEntrySpan("loader", "l", async () => {
+      // WAIT_BAND_CAP + 1 disjoint waits on one layer. Wait #0 is width 1 (the
+      // smallest, to be dropped); the rest are width 10, spaced so they never
+      // merge. All end-ordered.
+      let t = 0;
+      for (let i = 0; i <= WAIT_BAND_CAP; i++) {
+        const width = i === 0 ? 1 : 10;
+        t = i * 100 + width;
+        fakeNow = t;
+        chargeWait("db-acquire", width);
+      }
+      fakeNow = t;
+    });
+    const span = completed("l");
+    const bands = span.waitBands!;
+    expect(bands).toHaveLength(WAIT_BAND_CAP);
+    // The width-1 band was dropped whole, not merged across its 90ms gap.
+    expect(bands.every((b) => b.t1 - b.t0 === 10)).toBe(true);
+    // waitMs still counts the dropped 1ms; the bands simply no longer position
+    // it — the residual is exactly the dropped width, no gap was invented.
+    expect(span.waitMs - crossLayerUnion(bands)).toBe(1);
+  });
+
+  test("an open span's live bands appear at their true offsets mid-flight", async () => {
+    await recordEntrySpan("loader", "l", async () => {
+      fakeNow = 20;
+      chargeWait("db-acquire", 10); // [10,20]
+      fakeNow = 60;
+      chargeWait("db-acquire", 20); // [40,60] — disjoint
+      fakeNow = 70;
+      const span = captureFlightWindow({ windowStartMs: 0 }).open[0]!;
+      expect(span.waitBands).toEqual([
+        { layer: "db-acquire", t0: 10, t1: 20 },
+        { layer: "db-acquire", t0: 40, t1: 60 },
+      ]);
+      expect(crossLayerUnion(span.waitBands!)).toBe(span.waitMs);
+    });
+  });
+
+  test("a zero-ms marker charge produces no band", async () => {
+    await recordEntrySpan("loader", "l", async () => {
+      fakeNow = 10;
+      chargeWait("git-memo-hit", 0);
+      fakeNow = 20;
+    });
+    const span = completed("l");
+    // The layer key still records in `waits` (consulted, 0ms), but there is no
+    // interval to position, so no band — and none created a stray empty list.
+    expect(span.waits).toEqual({ "git-memo-hit": 0 });
+    expect(span.waitBands).toBeUndefined();
+  });
+
+  test("resetRuntimeProfile clears the flight-ring wait bands", async () => {
+    await recordEntrySpan("loader", "l", async () => {
+      fakeNow = 30;
+      chargeWait("db-acquire", 30);
+    });
+    expect(completed("l").waitBands).toEqual([{ layer: "db-acquire", t0: 0, t1: 30 }]);
+    resetRuntimeProfile();
+    expect(captureFlightWindow({ windowStartMs: 0 }).completed).toHaveLength(0);
   });
 });

@@ -126,9 +126,9 @@ victim*:
 
 1. **`trigger.detail.waits` names the layer** the victim queued on — e.g.
    `"heavy-read-acquire": 3500` means 3.5 s of the trip's wall-clock was spent
-   waiting on that gate, not on its own work. In the Gantt this is the victim's
-   leading *wait* segment (position approximate — waits are stored as union
-   totals, not intervals; the detail strip labels it so).
+   waiting on that gate, not on its own work. In the Gantt these are painted as
+   positioned *wait bands* over the victim's bar at their true offsets, colored per
+   layer — so the same gate lines up as one color across every co-queued row.
 2. **The `gates` strip shows saturation at the same instant** — `active 4/4,
    queued 11` on that layer confirms the gate was the bottleneck. Gate names use
    the `chargeWait` layer vocabulary, so `trigger.detail.waits`, each span's
@@ -148,8 +148,8 @@ victim*:
    backends, points at host/DB pressure rather than a single holder.
 
 Caveats surfaced in the UI. The *shape* of the tree is exact — nesting is read off
-instance ids, never inferred from time overlap — but the window it is drawn from is
-bounded, and the wait *positions* are not measured:
+instance ids, never inferred from time overlap — and wait bands sit at their true
+offsets, but the window it is drawn from is bounded:
 
 - **The ≥5 ms flight-ring floor.** Completed spans shorter than 5 ms never enter
   the ring, so they are absent from the Gantt entirely.
@@ -157,10 +157,12 @@ bounded, and the wait *positions* are not measured:
   renders as a root, marked as such: its parent either closed in <5 ms (never
   entered the ring) or it is a detached, fire-and-forget child that outlived its
   parent. The row is real; only its edge is missing.
-- **The leading wait segment's position is approximate.** Waits are stored as union
-  *totals* per layer, not as intervals, so the segment's *size* is real but its
-  placement at the head of the bar is a rendering convention. The detail strip
-  labels it "position approximate".
+- **The wait-band budget.** The recorder keeps at most `WAIT_BAND_CAP` bands per
+  `(entry, layer)`, dropping the smallest on overflow. `waitMs` stays the
+  authoritative total, so any wait whose position was dropped (or clamped off the
+  window edge) shows in the detail strip as `Nms unpositioned` — reported as text,
+  never painted. A trace captured before wait bands existed reads as *position not
+  captured (pre-wait-band trace)* and paints no band at all.
 
 ## Adding a new event class
 
