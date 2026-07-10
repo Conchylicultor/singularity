@@ -1,10 +1,11 @@
-// @hash 7a80cce34662
+// @hash c6d9b349839b
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
     "apps.website.demos.app-gallery:app-gallery",
+    "apps.website.demos.editor-toy:editor-toy",
     "apps.website.pillars.apps:hero",
     "apps.website.pillars.apps:showcase",
     "apps.website.pillars.apps:closing"

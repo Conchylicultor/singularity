@@ -83,6 +83,8 @@ export type { RunsXmlTextOptions } from "./runs-yjs";
 export { SerializedBlockSchema } from "./serialized-block";
 export type { SerializedBlock } from "./serialized-block";
 
+export { serializeSubtree, rankWindow, planForestInsert } from "./block-forest";
+
 export { defineBlock } from "./define-block";
 export type { BlockHandle, BlockTextVariant } from "./define-block";
 

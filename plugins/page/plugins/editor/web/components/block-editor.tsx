@@ -45,8 +45,15 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { UndoRedoProvider, useUndoRedoShortcuts } from "@plugins/primitives/plugins/undo-redo/web";
-import { canIndent, canOutdent, textOf, type Block, type SerializedBlock } from "../../core";
-import { toNodes } from "../internal/optimistic-block-ops";
+import {
+  canIndent,
+  canOutdent,
+  textOf,
+  planForestInsert,
+  type Block,
+  type SerializedBlock,
+} from "../../core";
+import { fromNodes, toNodes } from "../internal/optimistic-block-ops";
 import type { CaretSurface, CaretSurfaceRef } from "../caret-surface";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
@@ -129,6 +136,8 @@ function rowAtPointer(y: number): DropTarget | null {
  * `caretBefore` / `caretAfter` props — the caret crosses the editor's boundary in
  * both directions through the one contract. `insertFirstBlock` is the only member
  * beyond it, because creating a block is not a caret move.
+ *
+ * Storage-agnostic — available in both the persistent and in-memory modes.
  */
 export interface BlockEditorHandle extends CaretSurface {
   /**
@@ -139,53 +148,136 @@ export interface BlockEditorHandle extends CaretSurface {
   insertFirstBlock(): void;
 }
 
-export function BlockEditor({
-  pageId,
-  onOpenPage,
-  contentClassName,
-  caretBefore,
-  caretAfter,
-  ref,
-}: {
-  pageId: string;
+/**
+ * `onOpenPage` is an optional navigation callback for link/mention block
+ * renderers. Decoupled from any host app's pane (mirrors file-links'
+ * `onFileOpen`); the host wires it when mounting `<BlockEditor>`.
+ *
+ * `contentClassName` is applied to the centered block-content wrapper (e.g. a
+ * reading measure like `mx-auto max-w-4xl px-lg`). The pointer/marquee surface
+ * always fills the full host width, so drag-selecting and click-to-edit work
+ * across the whitespace beside a narrow content column; only the blocks
+ * themselves are constrained by this class. Omit it (the story host) to let block
+ * content fill the full width.
+ *
+ * `caretBefore` / `caretAfter` are the caret surfaces the host renders immediately
+ * before / after the block list (the page title above it). Caret navigation that
+ * leaves the first block backwards — ArrowUp, ArrowLeft at its start, Backspace at
+ * its start — or the last block forwards lands there instead of stopping at the
+ * editor's edge. Omit them (the story host, the in-memory demo) and those
+ * keystrokes simply do nothing.
+ */
+type BlockEditorProps = {
+  onOpenPage?: (pageId: string) => void;
+  contentClassName?: string;
   ref?: Ref<BlockEditorHandle>;
-  /**
-   * Caret surfaces the host renders immediately before / after the block list
-   * (the page title above it). Caret navigation that leaves the first block
-   * backwards — ArrowUp, ArrowLeft at its start, Backspace at its start — or the
-   * last block forwards lands there instead of stopping at the editor's edge.
-   * Omit them (the story host) and those keystrokes simply do nothing.
-   */
   caretBefore?: CaretSurfaceRef;
   caretAfter?: CaretSurfaceRef;
-  /**
-   * Optional navigation callback for link/mention block renderers. Decoupled
-   * from any host app's pane (mirrors file-links' `onFileOpen`); the host wires
-   * it when mounting `<BlockEditor>`.
-   */
-  onOpenPage?: (pageId: string) => void;
-  /**
-   * Optional class applied to the centered block-content wrapper (e.g. a
-   * reading measure like `mx-auto max-w-4xl px-lg`). The pointer/marquee
-   * surface always fills the full host width, so drag-selecting and
-   * click-to-edit work across the whitespace beside a narrow content column;
-   * only the blocks themselves are constrained by this class. Omit it (the
-   * story host) to let block content fill the full width.
-   */
-  contentClassName?: string;
-}) {
+} & (
+  | {
+      /** Persistent mode (default): read/write `blocksResource` + endpoints. */
+      pageId: string;
+      persist?: true;
+    }
+  | {
+      /**
+       * In-memory mode: a self-contained, non-persisting editor. No `pageId`, no
+       * server rows — seeded from portable `initialContent` and (optionally)
+       * restricted to `enabledBlockTypes`.
+       */
+      persist: false;
+      /** Portable seed forest (no ids/ranks); materialized once at mount. */
+      initialContent?: SerializedBlock[];
+      /** Allowlist of insertable block `type`s for the palette. */
+      enabledBlockTypes?: readonly string[];
+    }
+);
+
+// `ref` is destructured out of `props` in the SIGNATURE, never read as
+// `props.ref`: a ref reachable through an object taints every read of that object
+// during render for `react-hooks/refs`, so `props.pageId` would be flagged too.
+// Pulled out here, `props` is plain data and `ref` is forwarded untouched.
+export function BlockEditor({ ref, ...props }: BlockEditorProps) {
+  if (props.persist === false) {
+    return (
+      <MemoryBlockEditor
+        initialContent={props.initialContent}
+        enabledBlockTypes={props.enabledBlockTypes}
+        onOpenPage={props.onOpenPage}
+        contentClassName={props.contentClassName}
+        caretBefore={props.caretBefore}
+        caretAfter={props.caretAfter}
+        handleRef={ref}
+      />
+    );
+  }
   return (
     // One independent structural-undo history per editor surface (per tab). The
     // provider sits ABOVE BlockEditorProvider because the latter calls
     // `useUndoRedo()` to record at the mutation chokepoints.
     <UndoRedoProvider>
       <BlockEditorProvider
+        pageId={props.pageId}
+        onOpenPage={props.onOpenPage}
+        caretBefore={props.caretBefore}
+        caretAfter={props.caretAfter}
+      >
+        <BlockEditorInner contentClassName={props.contentClassName} handleRef={ref} />
+      </BlockEditorProvider>
+    </UndoRedoProvider>
+  );
+}
+
+/**
+ * In-memory editor host: mints a stable synthetic page id and materializes the
+ * portable `initialContent` seed into real `Block[]` rows once (via the shared
+ * `planForestInsert`), then drives the same editor surface through the
+ * non-persisting `BlockStore`. Rows still carry a `pageId` so the reducer's
+ * indent/outdent/insert (which key on it) keep working unchanged.
+ */
+function MemoryBlockEditor({
+  initialContent,
+  enabledBlockTypes,
+  onOpenPage,
+  contentClassName,
+  caretBefore,
+  caretAfter,
+  handleRef,
+}: {
+  initialContent?: SerializedBlock[];
+  enabledBlockTypes?: readonly string[];
+  onOpenPage?: (pageId: string) => void;
+  contentClassName?: string;
+  caretBefore?: CaretSurfaceRef;
+  caretAfter?: CaretSurfaceRef;
+  handleRef?: Ref<BlockEditorHandle>;
+}) {
+  const pageId = useMemo(() => crypto.randomUUID(), []);
+  const initialBlocks = useMemo(() => {
+    const forest = initialContent ?? [];
+    // Top-level content is parented to the synthetic page block, matching the
+    // persistent shape (`computePageId(pageId) === pageId`).
+    const { nodes } = planForestInsert({
+      pageId,
+      parentId: pageId,
+      rootRanks: Rank.nBetween(null, null, forest.length),
+      forest,
+    });
+    return fromNodes(nodes, []);
+  }, [pageId, initialContent]);
+
+  return (
+    <UndoRedoProvider>
+      <BlockEditorProvider
+        persist={false}
         pageId={pageId}
+        initialBlocks={initialBlocks}
+        enabledBlockTypes={enabledBlockTypes}
         onOpenPage={onOpenPage}
         caretBefore={caretBefore}
         caretAfter={caretAfter}
       >
-        <BlockEditorInner contentClassName={contentClassName} handleRef={ref} />
+        <BlockEditorInner contentClassName={contentClassName} handleRef={handleRef} />
       </BlockEditorProvider>
     </UndoRedoProvider>
   );
@@ -299,6 +391,7 @@ function SelectionLayer({
     focusBlock,
     focusBlockBoundary,
     focusedBlockId,
+    allowAttachments,
   } = useBlockEditor();
   const { selectedIds } = useMultiSelect();
   const contributions = Editor.Block.useContributions();
@@ -442,8 +535,9 @@ function SelectionLayer({
       if (document.activeElement !== containerRef.current) return;
       // A pasted file (image/video/audio/…) becomes an attachment block, inserted
       // after the current selection — resolved through the generic registry so
-      // this consumer never names a specific block type.
-      const picked = resolvePastedBlock(e.clipboardData);
+      // this consumer never names a specific block type. Skipped entirely in the
+      // in-memory (non-persisting) mode: there is no server to store the blob.
+      const picked = allowAttachments ? resolvePastedBlock(e.clipboardData) : null;
       if (picked) {
         e.preventDefault();
         const { file, handler } = picked;
@@ -480,7 +574,7 @@ function SelectionLayer({
         headRef.current ?? focusedBlockId ?? roots[roots.length - 1] ?? null;
       void paste({ blocks: forest, afterId });
     },
-    [handles, paste, focusedBlockId, headRef, containerRef],
+    [handles, paste, focusedBlockId, headRef, containerRef, allowAttachments],
   );
 
   // ---- Marquee drag-select on the empty container background ---------------
@@ -721,6 +815,9 @@ function SelectionLayer({
   );
 
   const onFileDragOver = useCallback((e: React.DragEvent) => {
+    // No blob storage in the in-memory (non-persisting) mode, so a dropped file
+    // must never reach an upload: refuse the drag entirely.
+    if (!allowAttachments) return;
     // Only react to an OS file drag — internal text/element drags carry no Files.
     if (!e.dataTransfer.types.includes("Files")) return;
     e.preventDefault(); // required so the drop event fires
@@ -730,7 +827,7 @@ function SelectionLayer({
     setFileDropTarget((prev) =>
       prev?.id === next?.id && prev?.zone === next?.zone ? prev : next,
     );
-  }, []);
+  }, [allowAttachments]);
 
   const onFileDragLeave = useCallback((e: React.DragEvent) => {
     // dragleave fires when crossing into a child too; only clear when the pointer
@@ -742,6 +839,8 @@ function SelectionLayer({
 
   const onFileDrop = useCallback(
     (e: React.DragEvent) => {
+      // In-memory mode has no server to store a blob — never begin an upload.
+      if (!allowAttachments) return;
       if (!e.dataTransfer.types.includes("Files")) return;
       e.preventDefault();
       // Read the FileList + pointer position synchronously — both are cleared once
@@ -767,7 +866,7 @@ function SelectionLayer({
         await paste({ blocks, ...pos });
       })();
     },
-    [fileDropPosition, paste],
+    [fileDropPosition, paste, allowAttachments],
   );
 
   // The reorder drag and the file drag are mutually exclusive, so one indicator

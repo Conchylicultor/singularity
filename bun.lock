@@ -827,6 +827,10 @@
       "name": "@singularity/plugin-apps-website-demos-app-gallery",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/website/plugins/demos/plugins/editor-toy": {
+      "name": "@singularity/plugin-apps-website-demos-editor-toy",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/website/plugins/demos/plugins/plugin-pyramid": {
       "name": "@singularity/plugin-apps-website-demos-plugin-pyramid",
       "version": "0.0.1",
@@ -5259,6 +5263,8 @@
     "@singularity/plugin-apps-website-demos-agent-run": ["@singularity/plugin-apps-website-demos-agent-run@workspace:plugins/apps/plugins/website/plugins/demos/plugins/agent-run"],
 
     "@singularity/plugin-apps-website-demos-app-gallery": ["@singularity/plugin-apps-website-demos-app-gallery@workspace:plugins/apps/plugins/website/plugins/demos/plugins/app-gallery"],
+
+    "@singularity/plugin-apps-website-demos-editor-toy": ["@singularity/plugin-apps-website-demos-editor-toy@workspace:plugins/apps/plugins/website/plugins/demos/plugins/editor-toy"],
 
     "@singularity/plugin-apps-website-demos-plugin-pyramid": ["@singularity/plugin-apps-website-demos-plugin-pyramid@workspace:plugins/apps/plugins/website/plugins/demos/plugins/plugin-pyramid"],
 

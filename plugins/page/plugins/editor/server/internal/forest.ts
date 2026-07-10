@@ -2,8 +2,13 @@ import { eq } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
-import { PAGE_BLOCK_TYPE } from "../../core/schemas";
+import {
+  planForestInsert,
+  rankWindow as rankWindowCore,
+  serializeSubtree as serializeSubtreeCore,
+} from "../../core/block-forest";
 import type { SerializedBlock } from "../../core/serialized-block";
+import { rowToNode } from "./reconcile";
 import { _blocks } from "./tables";
 
 export type BlockRow = typeof _blocks.$inferSelect;
@@ -17,31 +22,21 @@ export async function loadPageBlocks(
 }
 
 /**
- * Build a portable `SerializedBlock` for a block and its descendants, reading
- * the (already-loaded) page rows. Children are ordered by rank.
+ * Build a portable `SerializedBlock` for a block and its descendants, reading the
+ * (already-loaded) page rows. Children are ordered by rank. Delegates to the pure
+ * `core/block-forest` version after adapting `BlockRow`→`BlockNode`.
  */
 export function serializeSubtree(rows: BlockRow[], rootId: string): SerializedBlock {
-  const root = rows.find((r) => r.id === rootId);
-  if (!root) throw new Error(`serializeSubtree: block ${rootId} not found`);
-  const children = rows
-    .filter((r) => r.parentId === rootId)
-    .sort((a, b) => Rank.compare(Rank.from(a.rank), Rank.from(b.rank)))
-    .map((c) => serializeSubtree(rows, c.id));
-  return {
-    type: root.type,
-    data: root.data,
-    expanded: root.expanded,
-    children,
-  };
+  return serializeSubtreeCore(rows.map(rowToNode), rootId);
 }
 
 /**
  * Insert a `SerializedBlock[]` forest under `parentId`, minting fresh ids and
- * ranks. Top-level nodes use the caller-provided `rootRanks` (one per node);
- * each node's children get a fresh open interval (`Rank.nBetween(null, null)`),
- * which keeps keys short since siblings are self-contained. Recursive. Does not
- * notify/emit — the caller does so once after the surrounding transaction.
- * Returns the new top-level ids in order.
+ * ranks. The id/rank algebra is the pure `planForestInsert` (shared with the
+ * in-memory store); this is the thin persistence loop over its planned nodes.
+ * Top-level nodes use the caller-provided `rootRanks` (one per node); children
+ * get a fresh open interval. Does not notify/emit — the caller does so once after
+ * the surrounding transaction. Returns the new top-level ids in order.
  *
  * `pageId` is the resolved page scope for the inserted top-level nodes (their
  * nearest `type="page"` ancestor, i.e. `computePageId(parentId)`). Children
@@ -57,30 +52,19 @@ export async function insertForest(
     forest: SerializedBlock[];
   },
 ): Promise<{ rootIds: string[] }> {
-  const { pageId, parentId, rootRanks, forest } = args;
-  const rootIds: string[] = [];
-  for (let i = 0; i < forest.length; i++) {
-    const node = forest[i]!;
-    const id = crypto.randomUUID();
-    rootIds.push(id);
+  const { nodes, rootIds } = planForestInsert(args);
+  // Planned nodes are parent-before-descendant, so this insert order satisfies
+  // the self-referential FK.
+  for (const node of nodes) {
     await executor.insert(_blocks).values({
-      id,
-      pageId,
-      parentId,
+      id: node.id,
+      pageId: node.pageId,
+      parentId: node.parentId,
       type: node.type,
       data: node.data ?? {},
-      rank: rootRanks[i]!.toJSON(),
+      rank: node.rank,
       expanded: node.expanded,
     });
-    if (node.children.length > 0) {
-      await insertForest(executor, {
-        // Children of a page node are scoped to that page; otherwise inherit.
-        pageId: node.type === PAGE_BLOCK_TYPE ? id : pageId,
-        parentId: id,
-        rootRanks: Rank.nBetween(null, null, node.children.length),
-        forest: node.children,
-      });
-    }
   }
   return { rootIds };
 }
@@ -90,7 +74,8 @@ export async function insertForest(
  * `parentId`, positioned immediately after `afterId` (or at the start when
  * `afterId` is null). `excludeIds` are blocks being moved out of this sibling
  * list (so they don't bound the window). Returns `[prevRank, nextRank]` as raw
- * Rank values for `Rank.nBetween`.
+ * Rank values for `Rank.nBetween`. Delegates to the pure `core/block-forest`
+ * version after adapting `BlockRow`→`BlockNode`.
  */
 export function rankWindow(
   rows: BlockRow[],
@@ -98,17 +83,7 @@ export function rankWindow(
   afterId: string | null,
   excludeIds: ReadonlySet<string>,
 ): [Rank | null, Rank | null] {
-  const siblings = rows
-    .filter((r) => r.parentId === parentId && !excludeIds.has(r.id))
-    .map((r) => Rank.from(r.rank))
-    .sort((a, b) => Rank.compare(a, b));
-  const afterRow = afterId ? rows.find((r) => r.id === afterId) : undefined;
-  const prev = afterRow ? Rank.from(afterRow.rank) : null;
-  const next =
-    prev === null
-      ? (siblings[0] ?? null)
-      : (siblings.find((r) => Rank.compare(r, prev) > 0) ?? null);
-  return [prev, next];
+  return rankWindowCore(rows.map(rowToNode), parentId, afterId, excludeIds);
 }
 
 /**

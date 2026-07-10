@@ -8,17 +8,11 @@ import {
   type MutableRefObject,
   type ReactNode,
 } from "react";
-import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
-import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { useUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { computeDrop, subtreeIds } from "@plugins/primitives/plugins/tree/core";
 import {
-  moveBlock,
-  applyBlockOpEndpoint,
-  patchBlocks,
-  blocksResource,
   prevVisibleLeaf,
   runsOfNode,
   applyBlockOp,
@@ -26,10 +20,6 @@ import {
   diffBlocks,
   patchesFromDiff,
   isEmptyPatch,
-  bulkDeleteBlocks,
-  bulkMoveBlocks,
-  bulkDuplicateBlocks,
-  pasteBlocks,
   type Block,
   type BlockOp,
   type BlockPatch,
@@ -43,18 +33,18 @@ import {
   type CapturedBlockDocEdit,
 } from "./internal/use-collab-block-doc";
 import {
-  applyOverlayOp,
   buildOverlayOp,
   buildPatchOverlayOp,
-  isReflected,
-  isPatchReflected,
-  sameOverlayTarget,
   toNodes,
   fromNodes,
-  type BlockOverlayOp,
 } from "./internal/optimistic-block-ops";
 import { landCaret } from "./internal/caret-landing";
 import type { CaretSurface, CaretSurfaceRef } from "./caret-surface";
+import {
+  useServerBlockStore,
+  useMemoryBlockStore,
+  type BlockStore,
+} from "./block-store";
 import type { BlockEditorAPI } from "./types";
 
 /** Human labels for the structural-undo history (tooltips / menus). */
@@ -185,6 +175,26 @@ interface BlockEditorContextValue {
   serverIds: ReadonlySet<string>;
   /** True until the first authoritative blocks snapshot arrives. */
   pending: boolean;
+  /**
+   * Optional allowlist of insertable block `type`s. When set, block-type pickers
+   * (add-block menu, gutter `+`, slash menu) offer only these types. Undefined
+   * (the default) offers every registered block type.
+   */
+  enabledBlockTypes?: readonly string[];
+  /**
+   * Whether attachment (file drop / paste-file) affordances are active. False in
+   * the in-memory (non-persisting) mode, where there is no server to store an
+   * uploaded blob.
+   */
+  allowAttachments: boolean;
+  /**
+   * Whether this editor's per-block content docs SYNC to the server (the CRDT
+   * transport: `blockContentResource` subscription + `doc-init`/`doc-update`).
+   * True on the persistent path; false in the in-memory mode, where each block's
+   * `Y.Doc` is purely local (seeded from `data.text`, never networked). Read by
+   * `CollabTextPlugin` to pick the server vs local content-doc hook.
+   */
+  serverSync: boolean;
   focusedBlockId: string | null;
   setFocusedBlockId: (id: string | null) => void;
   registerFocusHandle: (id: string, handle: BlockFocusHandle) => () => void;
@@ -202,7 +212,8 @@ interface BlockEditorContextValue {
   focusBlockBoundary: (id: string, edge: "start" | "end") => boolean;
   /**
    * Reorder/reparent `id` to sit immediately `zone` of `targetId`. Positional
-   * intent, not a rank — the server owns the rank (see `moveBlock`).
+   * intent, not a rank — the store owns the rank (the server mints it on the
+   * persistent path; the memory store mints its own). See `BlockMoveDest`.
    */
   move: (id: string, zone: "before" | "after", targetId: string) => void;
   /**
@@ -276,14 +287,150 @@ export function useBlockEditor(): BlockEditorContextValue {
   return ctx;
 }
 
-export function BlockEditorProvider({
+/**
+ * The insertable-type allowlist of the nearest `BlockEditorProvider`, or
+ * undefined outside one / when unrestricted. Read by `useInsertableBlocks` so the
+ * palette filter applies to every block-type picker with no per-menu wiring.
+ */
+export function useEnabledBlockTypes(): readonly string[] | undefined {
+  return useContext(BlockEditorContext)?.enabledBlockTypes;
+}
+
+/**
+ * Props shared by both provider modes. `persist` picks the store: the default
+ * (persistent) reads/writes `blocksResource` + the server endpoints; `false`
+ * runs a self-contained in-memory document seeded from `initialBlocks` (no
+ * network, no DB rows).
+ */
+type BlockEditorProviderProps = {
+  onOpenPage?: (pageId: string) => void;
+  /** Optional allowlist of insertable block types (see the context field). */
+  enabledBlockTypes?: readonly string[];
+  /** See `BlockEditor`'s props — the caret surfaces flanking the block list. */
+  caretBefore?: CaretSurfaceRef;
+  caretAfter?: CaretSurfaceRef;
+  children: ReactNode;
+} & (
+  | { persist?: true; pageId: string }
+  | { persist: false; pageId: string; initialBlocks: Block[] }
+);
+
+export function BlockEditorProvider(props: BlockEditorProviderProps) {
+  // `persist` is fixed for a mounted editor, so switching component by it is not
+  // a hooks-order hazard — each host calls exactly one store hook.
+  if (props.persist === false) {
+    return (
+      <MemoryProviderHost
+        pageId={props.pageId}
+        initialBlocks={props.initialBlocks}
+        enabledBlockTypes={props.enabledBlockTypes}
+        onOpenPage={props.onOpenPage}
+        caretBefore={props.caretBefore}
+        caretAfter={props.caretAfter}
+      >
+        {props.children}
+      </MemoryProviderHost>
+    );
+  }
+  return (
+    <ServerProviderHost
+      pageId={props.pageId}
+      enabledBlockTypes={props.enabledBlockTypes}
+      onOpenPage={props.onOpenPage}
+      caretBefore={props.caretBefore}
+      caretAfter={props.caretAfter}
+    >
+      {props.children}
+    </ServerProviderHost>
+  );
+}
+
+/** The flanking caret surfaces are storage-agnostic — both hosts thread them. */
+interface ProviderHostCaretProps {
+  caretBefore?: CaretSurfaceRef;
+  caretAfter?: CaretSurfaceRef;
+}
+
+function ServerProviderHost({
   pageId,
+  enabledBlockTypes,
   onOpenPage,
   caretBefore,
   caretAfter,
   children,
 }: {
   pageId: string;
+  enabledBlockTypes?: readonly string[];
+  onOpenPage?: (pageId: string) => void;
+  children: ReactNode;
+} & ProviderHostCaretProps) {
+  const store = useServerBlockStore(pageId);
+  return (
+    <BlockEditorProviderInner
+      store={store}
+      pageId={pageId}
+      serverSync
+      enabledBlockTypes={enabledBlockTypes}
+      onOpenPage={onOpenPage}
+      caretBefore={caretBefore}
+      caretAfter={caretAfter}
+    >
+      {children}
+    </BlockEditorProviderInner>
+  );
+}
+
+function MemoryProviderHost({
+  pageId,
+  initialBlocks,
+  enabledBlockTypes,
+  onOpenPage,
+  caretBefore,
+  caretAfter,
+  children,
+}: {
+  pageId: string;
+  initialBlocks: Block[];
+  enabledBlockTypes?: readonly string[];
+  onOpenPage?: (pageId: string) => void;
+  children: ReactNode;
+} & ProviderHostCaretProps) {
+  const store = useMemoryBlockStore({ pageId, initialBlocks });
+  return (
+    <BlockEditorProviderInner
+      store={store}
+      pageId={pageId}
+      serverSync={false}
+      enabledBlockTypes={enabledBlockTypes}
+      onOpenPage={onOpenPage}
+      caretBefore={caretBefore}
+      caretAfter={caretAfter}
+    >
+      {children}
+    </BlockEditorProviderInner>
+  );
+}
+
+function BlockEditorProviderInner({
+  store,
+  pageId,
+  serverSync,
+  enabledBlockTypes,
+  onOpenPage,
+  caretBefore,
+  caretAfter,
+  children,
+}: {
+  store: BlockStore;
+  pageId: string;
+  /**
+   * Persistence mode: server-backed (true) vs in-memory (false). The single
+   * source for both derived affordances — `allowAttachments` (no blob storage
+   * without a server) and content-doc `serverSync` (no CRDT transport in
+   * memory) are both `serverSync` on the context.
+   */
+  serverSync: boolean;
+  enabledBlockTypes?: readonly string[];
   onOpenPage?: (pageId: string) => void;
   /** See `BlockEditor`'s props — the caret surfaces flanking the block list. */
   caretBefore?: CaretSurfaceRef;
@@ -300,49 +447,26 @@ export function BlockEditorProvider({
   const rowsRef = useRef<Block[]>([]);
   const pendingFocusRef = useRef<string | null>(null);
 
-  // Structural keystroke ops apply optimistically: the client runs the SAME
-  // `applyBlockOp` reducer the server runs, overlaid on live-state truth and
-  // reconciled by the WS push. The captured `effect` drives both the idempotency
-  // apply-guard (in `applyOverlayOp`) and content-based confirmation here.
-  const params = useMemo(() => ({ pageId }), [pageId]);
-  const optimistic = useOptimisticResource<Block[], BlockOverlayOp, { pageId: string }>({
-    resource: blocksResource,
-    params,
-    apply: applyOverlayOp,
-    // Structural ops keep their own `op` endpoint; undo/redo patches POST to the
-    // generic `patch` endpoint. Both flow through this one instance so the
-    // overlay + freeze pipeline (and confirmation) is shared.
-    mutate: (v) =>
-      v.tag === "patch"
-        ? fetchEndpoint(patchBlocks, { pageId }, { body: v.patch }).then(() => undefined)
-        : fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: v.op }).then(() => undefined),
-    isConfirmedBy: (serverData, v) =>
-      v.tag === "patch"
-        ? isPatchReflected(serverData, v.patch)
-        : isReflected(serverData, v.effect),
-    // Op identity for cascade confirmation: only a newer confirmed op writing
-    // the SAME block row(s) may supersede an older resolved one. This keeps
-    // the stuck-inverse-pair fix (an undo patch + its redo inverse share their
-    // id set) without letting an unrelated block's confirmation drop another
-    // block's still-pending write (e.g. a `projectText` projection patch).
-    sameTarget: sameOverlayTarget,
-    // Bounded op summary for the divergence report (raw `vars` is never shipped).
-    describeOp: (v) => (v.tag === "patch" ? "patch" : v.op.kind),
-  });
+  // The persistence seam. All reads (`data`/`serverData`/`pending`) and writes
+  // (`dispatch`/`move`/`bulk*`/`paste`) go through it; everything else in this
+  // provider (recording, focus, `makeBlockAPI`, the CRDT projection) is
+  // storage-agnostic — the server and in-memory stores share ONE shape.
 
-  // Render-fresh view of the optimistic rows. `rowsRef` (set by a consumer
+  // Render-fresh view of the current rows. `rowsRef` (set by a consumer
   // EFFECT) lags within a commit: when a structural patch removes a block, the
   // removed block's unmount cleanups run BEFORE the effect that refreshes
   // `rowsRef` — so existence checks against `rowsRef` in unmount paths see the
   // deleted row as still alive. `useLatestRef` writes during the provider's
   // render, which precedes those unmount cleanups in the same commit.
-  const liveRowsRef = useLatestRef(optimistic.data);
+  const liveRowsRef = useLatestRef(store.data);
 
   // Ids the SERVER has committed (see the interface doc) — recomputed on each
-  // authoritative push, so the "row is now real" edge propagates push-based.
+  // authoritative push, so the "row is now real" edge (the doc-init FK gate)
+  // propagates push-based. In memory the store's `serverData` is every row, so
+  // this covers all blocks (no gate).
   const serverIds = useMemo(
-    () => new Set(optimistic.serverData.map((b) => b.id)),
-    [optimistic.serverData],
+    () => new Set(store.serverData.map((b) => b.id)),
+    [store.serverData],
   );
 
   const registerFocusHandle = useCallback(
@@ -366,8 +490,6 @@ export function BlockEditorProvider({
   const setRows = useCallback((blocks: Block[]) => {
     rowsRef.current = blocks;
   }, []);
-
-  const { mutate: bulkDeleteMutation } = useEndpointMutation(bulkDeleteBlocks);
 
   const focusBlock = useCallback((id: string, caretOffset?: number) => {
     const handle = focusHandlesRef.current.get(id);
@@ -401,16 +523,17 @@ export function BlockEditorProvider({
   // dispatch those patches.
   const { record, undo, redo, canUndo, canRedo } = useUndoRedo();
 
-  // Dispatch a minimal patch through the SAME optimistic instance (instant
-  // overlay + server reconcile). Goes DIRECTLY to `optimistic.dispatch`, never
-  // through `recordStructural`, so a replayed patch is never re-recorded — and
-  // the primitive's re-entrancy guard ignores `record` during replay anyway.
+  // Dispatch a minimal patch through the store's overlay pipeline (instant
+  // overlay + server reconcile on the persistent path; a synchronous state write
+  // in memory). Goes DIRECTLY to `store.dispatch`, never through
+  // `recordStructural`, so a replayed patch is never re-recorded — and the
+  // primitive's re-entrancy guard ignores `record` during replay anyway.
   const dispatchPatch = useCallback(
     (patch: BlockPatch) => {
       if (isEmptyPatch(patch)) return;
-      optimistic.dispatch(buildPatchOverlayOp(patch));
+      store.dispatch(buildPatchOverlayOp(patch));
     },
-    [optimistic],
+    [store],
   );
 
   // Record a before→after change as a reversible command. Diffs the two full-row
@@ -615,31 +738,25 @@ export function BlockEditorProvider({
       const removed = new Set(ids.flatMap((id) => subtreeIds(before, id)));
       const after = before.filter((b) => !removed.has(b.id));
       recordStructural(before, after, "Delete blocks", null);
-      bulkDeleteMutation({ params: { pageId }, body: { ids } });
+      store.bulkDelete(ids);
     },
-    [pageId, bulkDeleteMutation, recordStructural],
+    [store, recordStructural],
   );
 
   const bulkMove = useCallback(
     (args: { ids: string[]; parentId: string | null; afterId: string | null }) => {
       if (args.ids.length === 0) return;
-      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: DnD bulk-move rank write; blocksResource push re-renders, drag again to fix.
-      void fetchEndpoint(bulkMoveBlocks, { pageId }, { body: args });
+      store.bulkMove(args);
     },
-    [pageId],
+    [store],
   );
 
   const bulkDuplicate = useCallback(
     async (ids: string[]): Promise<string[]> => {
       if (ids.length === 0) return [];
-      const { rootIds } = await fetchEndpoint(
-        bulkDuplicateBlocks,
-        { pageId },
-        { body: { ids } },
-      );
-      return rootIds;
+      return store.bulkDuplicate(ids);
     },
-    [pageId],
+    [store],
   );
 
   const paste = useCallback(
@@ -649,23 +766,19 @@ export function BlockEditorProvider({
       parentId?: string | null;
     }): Promise<string[]> => {
       if (args.blocks.length === 0) return [];
-      const { rootIds } = await fetchEndpoint(
-        pasteBlocks,
-        { pageId },
-        { body: { ...args, parentId: args.parentId ?? null } },
-      );
-      return rootIds;
+      return store.paste(args);
     },
-    [pageId],
+    [store],
   );
 
   const move = useCallback(
     (id: string, zone: "before" | "after", targetId: string) => {
-      // The WIRE carries positional intent only — `moveBlock` mints the rank
-      // against the true sibling set. But this editor legitimately holds the
-      // COMPLETE forest for the page (`blocksResource` is unfiltered), so it can
+      // Positional intent, never a rank: the STORE owns rank authority (the
+      // server mints it against the true sibling set; the memory store mints it
+      // over its own complete forest). But this editor legitimately holds the
+      // complete forest for the page (`blocksResource` is unfiltered), so it can
       // predict the resulting rank locally for the optimistic overlay and the
-      // undo record. The server's value is authoritative on reconcile.
+      // undo record. The store's value is authoritative on reconcile.
       const before = rowsRef.current;
       const dest = computeDrop(before, id, zone, targetId);
       if (!dest) return;
@@ -684,20 +797,15 @@ export function BlockEditorProvider({
         rank: dest.rank.toJSON(),
       });
       recordStructural(before, after, OP_LABELS.move, id);
-      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: DnD parent/position write; blocksResource push re-renders, drag again to fix.
-      void fetchEndpoint(
-        moveBlock,
-        { id },
-        { body: { parentId: dest.parentId, targetId, zone } },
-      );
+      store.move(id, { parentId: dest.parentId, rank: dest.rank, targetId, zone });
     },
-    [recordStructural],
+    [store, recordStructural],
   );
 
   // Apply a single tree op optimistically AND record it for structural undo. The
-  // effect is captured from the CURRENT optimistic rows
-  // (`rowsRef.current`), so chained keystrokes compose; `optimistic.dispatch`
-  // overlays the prediction and fires the network call. New blocks carry
+  // effect is captured from the CURRENT rows (`rowsRef.current`), so chained
+  // keystrokes compose; `store.dispatch` overlays the prediction and fires the
+  // network call (a synchronous state write in memory). New blocks carry
   // client-minted ids, so callers mint + focus up front. The op's after-state is
   // computed with the SAME pure `applyBlockOp` the server runs, so the recorded
   // diff is exact.
@@ -715,9 +823,9 @@ export function BlockEditorProvider({
         return;
       }
       recordStructural(before, after, OP_LABELS[op.kind], opFocusId(op));
-      optimistic.dispatch(buildOverlayOp(op, before));
+      store.dispatch(buildOverlayOp(op, before));
     },
-    [optimistic, recordStructural],
+    [store, recordStructural],
   );
 
   // Indent / outdent a SET of blocks (the selection roots). The single-block Tab
@@ -738,19 +846,20 @@ export function BlockEditorProvider({
   );
 
   // Overlay-dispatch triplet shared by the split / offscreen-merge executors:
-  // snapshot the current optimistic rows, compute the after-state with the SAME
-  // pure `applyBlockOp` the server runs, dispatch the structural overlay (instant
-  // prediction + network call), and return both snapshots for the combined record.
+  // snapshot the current rows, compute the after-state with the SAME pure
+  // `applyBlockOp` the store applies, dispatch through the store (instant
+  // prediction + network call on the server path; a synchronous authoritative
+  // write in memory), and return both snapshots for the combined record.
   // NOT used by the mounted-merge site, whose dispatch is deliberately deferred
   // into a microtask after the append lands (see the merge executor, issue #7).
   const applyOverlay = useCallback(
     (op: BlockOp): { before: Block[]; after: Block[] } => {
       const before = rowsRef.current;
       const after = fromOpResult(before, op);
-      optimistic.dispatch(buildOverlayOp(op, before));
+      store.dispatch(buildOverlayOp(op, before));
       return { before, after };
     },
-    [optimistic],
+    [store],
   );
 
   // Focus a freshly-minted block by its known id. If its text editor has already
@@ -922,7 +1031,7 @@ export function BlockEditorProvider({
             // `discrete: true`), so a throw propagates out of the microtask
             // BEFORE the dispatch — the source row is never removed.
             const docEdit = captureBlockDocEdit(target.id, () => append(mergingRuns));
-            optimistic.dispatch(buildOverlayOp(op, before));
+            store.dispatch(buildOverlayOp(op, before));
             recordStructuralWithDocEdit(before, after, OP_LABELS.merge, blockId, docEdit, {
               blockId,
               runs: mergingRuns,
@@ -1019,7 +1128,7 @@ export function BlockEditorProvider({
       focusNew,
       focusBlock,
       commitRow,
-      optimistic,
+      store,
       applyOverlay,
       recordStructuralWithDocEdit,
     ],
@@ -1028,9 +1137,12 @@ export function BlockEditorProvider({
   const value = useMemo<BlockEditorContextValue>(
     () => ({
       pageId,
-      blocks: optimistic.data,
+      blocks: store.data,
       serverIds,
-      pending: optimistic.pending,
+      pending: store.pending,
+      enabledBlockTypes,
+      allowAttachments: serverSync,
+      serverSync,
       focusedBlockId,
       setFocusedBlockId,
       registerFocusHandle,
@@ -1059,9 +1171,11 @@ export function BlockEditorProvider({
     }),
     [
       pageId,
-      optimistic.data,
+      store.data,
       serverIds,
-      optimistic.pending,
+      store.pending,
+      enabledBlockTypes,
+      serverSync,
       focusedBlockId,
       setFocusedBlockId,
       registerFocusHandle,

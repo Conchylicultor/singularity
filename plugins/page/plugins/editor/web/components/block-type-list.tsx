@@ -4,18 +4,26 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { BlockHandle } from "../../core";
 import { Editor } from "../slots";
+import { useEnabledBlockTypes } from "../block-editor-context";
 
 /**
  * Insertable block types from the `Editor.Block` dispatch slot. A contribution
  * carries its `block` handle; only types declaring a menu `label` are offered.
  * Shared by every block-type picker (Add block menu, gutter `+`, turn-into,
- * slash menu).
+ * slash menu). When the enclosing `BlockEditorProvider` sets an
+ * `enabledBlockTypes` allowlist (e.g. the in-memory demo's curated text
+ * palette), non-listed types are dropped here so every picker respects it with
+ * no per-menu wiring.
  */
 export function useInsertableBlocks(): BlockHandle<unknown>[] {
   const contributions = Editor.Block.useContributions();
+  const enabled = useEnabledBlockTypes();
   return useMemo(
-    () => contributions.map((c) => c.block).filter((b) => b.label),
-    [contributions],
+    () =>
+      contributions
+        .map((c) => c.block)
+        .filter((b) => b.label && (!enabled || enabled.includes(b.type))),
+    [contributions, enabled],
   );
 }
 

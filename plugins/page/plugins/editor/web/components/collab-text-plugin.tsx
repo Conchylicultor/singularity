@@ -17,7 +17,9 @@ import { useBlockEditor } from "../block-editor-context";
 import { serializeBlockRuns } from "../internal/block-text-extensions";
 import {
   useCollabBlockDoc,
+  useLocalCollabBlockDoc,
   type CapturedBlockDocEdit,
+  type CollabBlockDoc,
 } from "../internal/use-collab-block-doc";
 
 /**
@@ -93,31 +95,16 @@ function useTextProjection(block: Block): () => void {
 }
 
 /**
- * CRDT text binding for one block (per-block CRDT plan, Stage 2): mounts
- * `@lexical/react`'s `CollaborationPlugin` against the block's shared
- * `Y.Doc` + `LiveStateYjsProvider` from `useCollabBlockDoc` — the transport
- * seam. `shouldBootstrap={false}`: the doc is seeded through the server's
- * first-writer-wins doc-init, never bootstrapped by Lexical (bootstrapping
- * locally would race a concurrent seeder into duplicated content).
- *
- * Each block gets its own `LexicalCollaboration` context so per-block doc
- * maps never share a global registry (and `useCollaborationContext` — which
- * throws without a provider — is satisfied). Cursors are effectively off:
- * awareness is real but never broadcast, so no remote states ever render.
- *
- * Mounted exactly once per block, this is also where the block's prose reports
- * into the surface's sync-status cloud: the `doc-update` pipeline is what makes
- * text durable, so "Saved" must mean the provider's queue drained — not that
- * the (~1 s, derived) `data.text` projection happened to settle.
+ * The projection + undo-capture callbacks handed to whichever content-doc hook
+ * runs. Storage-agnostic: the same `doc → data.text` projection and 1:1
+ * `Y.UndoManager`-item mirroring apply on both the server and in-memory paths.
  */
-export function CollabTextPlugin({ block }: { block: Block }) {
+function useCollabCallbacks(block: Block): {
+  onContentChange: () => void;
+  onUndoableEdit: (edit: CapturedBlockDocEdit) => void;
+} {
   const onContentChange = useTextProjection(block);
-  const { recordTextEdit, serverIds } = useBlockEditor();
-  // Doc-init FK gate (Stage 4a): a freshly created / split block renders from
-  // the optimistic overlay before its `_blocks` row exists server-side —
-  // seeding then would FK-violate. Gate on AUTHORITATIVE presence; the same
-  // blocks push that commits the row flips this true and unlatches the seed.
-  const rowConfirmed = serverIds.has(block.id);
+  const { recordTextEdit } = useBlockEditor();
   // Stage 3b: each new coalesced local editing run in this block's content doc
   // (one Y.UndoManager stack item — the seam does the grouping and filters out
   // remote applies, replays, and split/merge-folded edits) is mirrored 1:1
@@ -126,13 +113,61 @@ export function CollabTextPlugin({ block }: { block: Block }) {
   const onUndoableEdit = useEventCallback((edit: CapturedBlockDocEdit) =>
     recordTextEdit(block.id, edit),
   );
-  const { providerFactory, saveState, retrySave } = useCollabBlockDoc(
+  return { onContentChange, onUndoableEdit };
+}
+
+/** Server-synced content-doc binding: the CRDT transport (subscription + FK gate). */
+function ServerCollabTextPlugin({ block }: { block: Block }) {
+  const { onContentChange, onUndoableEdit } = useCollabCallbacks(block);
+  const { serverIds } = useBlockEditor();
+  // Doc-init FK gate (Stage 4a): a freshly created / split block renders from
+  // the optimistic overlay before its `_blocks` row exists server-side —
+  // seeding then would FK-violate. Gate on AUTHORITATIVE presence; the same
+  // blocks push that commits the row flips this true and unlatches the seed.
+  const rowConfirmed = serverIds.has(block.id);
+  const doc = useCollabBlockDoc(
     block.id,
     (block.data as Record<string, unknown> | null)?.text,
     rowConfirmed,
     onContentChange,
     onUndoableEdit,
   );
+  return <CollabBinding block={block} doc={doc} />;
+}
+
+/** In-memory content-doc binding (`persist={false}`): a purely local `Y.Doc`, no network. */
+function LocalCollabTextPlugin({ block }: { block: Block }) {
+  const { onContentChange, onUndoableEdit } = useCollabCallbacks(block);
+  const doc = useLocalCollabBlockDoc(
+    block.id,
+    (block.data as Record<string, unknown> | null)?.text,
+    onContentChange,
+    onUndoableEdit,
+  );
+  return <CollabBinding block={block} doc={doc} />;
+}
+
+/**
+ * The shared `CollaborationPlugin` mount + Lexical UNDO/REDO swallow, given the
+ * {@link CollabBlockDoc} from either transport. `shouldBootstrap={false}`: the
+ * doc is seeded through the provider (server first-writer-wins doc-init, or the
+ * local seed), never bootstrapped by Lexical (bootstrapping locally would race
+ * a concurrent seeder into duplicated content).
+ *
+ * Each block gets its own `LexicalCollaboration` context so per-block doc maps
+ * never share a global registry (and `useCollaborationContext` — which throws
+ * without a provider — is satisfied). Cursors are effectively off: awareness is
+ * real but never broadcast, so no remote states ever render.
+ *
+ * Mounted exactly once per block, this is also where the block's prose reports
+ * into the surface's sync-status cloud: the `doc-update` pipeline is what makes
+ * text durable, so "Saved" must mean the provider's queue drained — not that
+ * the (~1 s, derived) `data.text` projection happened to settle. The in-memory
+ * transport reports a permanently idle state (nothing to save), which the
+ * cloud aggregates to silence.
+ */
+function CollabBinding({ block, doc }: { block: Block; doc: CollabBlockDoc }) {
+  const { providerFactory, saveState, retrySave } = doc;
   const [editor] = useLexicalComposerContext();
 
   // One reporter per block; the surface's store aggregates them
@@ -178,5 +213,21 @@ export function CollabTextPlugin({ block }: { block: Block }) {
         shouldBootstrap={false}
       />
     </LexicalCollaboration>
+  );
+}
+
+/**
+ * CRDT text binding for one block (per-block CRDT plan, Stage 2). Picks the
+ * content-doc transport by the editor's persistence mode (stable per mount, so
+ * the branch is not a hooks-order hazard): the server path binds through
+ * `LiveStateYjsProvider` (subscription + doc-init/doc-update); the in-memory
+ * (`persist={false}`) path binds a purely local `Y.Doc` that never networks.
+ */
+export function CollabTextPlugin({ block }: { block: Block }) {
+  const { serverSync } = useBlockEditor();
+  return serverSync ? (
+    <ServerCollabTextPlugin block={block} />
+  ) : (
+    <LocalCollabTextPlugin block={block} />
   );
 }

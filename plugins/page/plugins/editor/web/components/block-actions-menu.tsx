@@ -7,6 +7,7 @@ import { InlinePopover, type InlinePopoverProps } from "@plugins/primitives/plug
 import { PAGE_BLOCK_TYPE, type Block } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import { Editor } from "../slots";
+import { useBlockEditor } from "../block-editor-context";
 import { useInsertableBlocks, BlockTypeList } from "./block-type-list";
 
 /**
@@ -32,6 +33,7 @@ export function BlockActionsMenu({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const blocks = useInsertableBlocks();
+  const { serverSync } = useBlockEditor();
 
   // A page row is not convertible. Converting it away from `page` would orphan
   // every row keyed `page_id = <this block's id>` — that subtree lives in
@@ -71,9 +73,16 @@ export function BlockActionsMenu({
                 setOpen(false);
               }}
             />
-            <Editor.TurnInto.Render>
-              {(a) => <a.component block={block} api={api} close={() => setOpen(false)} />}
-            </Editor.TurnInto.Render>
+            {/* A `TurnInto` contribution converts a block into something the
+                editor's own pure `convertTo` cannot express — a server-backed
+                transition (today: into a sub-page, re-partitioning `page_id`
+                across a page boundary). None of that exists without rows, so the
+                whole zone is gated on `serverSync` rather than per-contributor. */}
+            {serverSync ? (
+              <Editor.TurnInto.Render>
+                {(a) => <a.component block={block} api={api} close={() => setOpen(false)} />}
+              </Editor.TurnInto.Render>
+            ) : null}
             {/* eslint-disable-next-line spacing/no-adhoc-spacing -- my-0.5 is a hairline separator's own inset between the menu's two zones; not a Stack-gap rhythm (the surrounding gap-xs is intentionally tighter) */}
             <div className="bg-border my-0.5 h-px" />
           </>

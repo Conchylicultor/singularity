@@ -70,8 +70,8 @@ test("deferred destroy retains an entry with buffered edits and finalizes after 
   const blockId = "blk-registry-teardown";
   const buildSeedState = () => encodedState(111, "seed");
 
-  const entry = acquireCollabDoc(blockId, buildSeedState, true);
-  entry.provider.connect();
+  const entry = acquireCollabDoc(blockId, buildSeedState, true, true);
+  await entry.provider.connect();
   entry.provider.onServerState(toBase64(encodedState(222, "stored")));
   await flushMicrotasks();
 
@@ -93,7 +93,7 @@ test("deferred destroy retains an entry with buffered edits and finalizes after 
 
   // RETAINED: re-acquiring returns the SAME entry (same doc — nothing was
   // destroyed while unflushed bytes remained).
-  const reacquired = acquireCollabDoc(blockId, buildSeedState, true);
+  const reacquired = acquireCollabDoc(blockId, buildSeedState, true, true);
   expect(reacquired).toBe(entry);
   releaseCollabDoc(blockId);
   await vi.advanceTimersByTimeAsync(1);
@@ -105,7 +105,7 @@ test("deferred destroy retains an entry with buffered edits and finalizes after 
 
   // …and the registry finalizes push-based: a fresh acquire now creates a
   // NEW entry (the old one was destroyed once safe).
-  const fresh = acquireCollabDoc(blockId, buildSeedState, true);
+  const fresh = acquireCollabDoc(blockId, buildSeedState, true, true);
   expect(fresh).not.toBe(entry);
   releaseCollabDoc(blockId);
   await vi.advanceTimersByTimeAsync(1);
