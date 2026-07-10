@@ -8,7 +8,7 @@ import type { Block } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
 import { Editor } from "../slots";
-import { InsertBlockBelowMenu } from "./insert-block-below-menu";
+import { useInsertBlockBelow } from "./use-insert-block-below";
 import { BlockActionsMenu } from "./block-actions-menu";
 import { BLOCK_GUTTER, BLOCK_INDENT } from "../internal/page-column";
 
@@ -36,6 +36,7 @@ export function BlockRow({
   dropZone: DropZone | null;
 }) {
   const { focusedBlockId, makeBlockAPI } = useBlockEditor();
+  const insertBelow = useInsertBlockBelow();
   const api = useMemo(() => makeBlockAPI(block.id), [makeBlockAPI, block.id]);
   const isFocused = focusedBlockId === block.id;
   const { isSelected } = useMultiSelectItem(block.id);
@@ -89,31 +90,23 @@ export function BlockRow({
           <MdChevronRight className={cn("size-4 transition-transform", !collapsed && "rotate-90")} />
         </button>
       )}
-      {/* Gutter "+" — creates an empty block below immediately and opens the
-          block-type filter over it (see `InsertBlockBelowMenu`). */}
-      <InsertBlockBelowMenu
-        api={api}
-        align="start"
-        side="bottom"
-        trigger={
-          <button
-            type="button"
-            aria-label="Insert block below"
-            // eslint-disable-next-line layout/no-adhoc-layout -- gutter handle positioned via JS coords (style left below); flex centering seats the glyph in the fixed-size button
-            className={cn(
-              "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
-              "text-muted-foreground hover:bg-accent cursor-pointer",
-              // Hover-revealed like the rest of the rail, but pinned visible while
-              // its menu is open — the pointer leaves the row to reach the menu.
-              "opacity-0 pointer-events-none group-hover/row:opacity-60 group-hover/row:pointer-events-auto",
-              "data-[popup-open]:opacity-60 data-[popup-open]:pointer-events-auto",
-            )}
-            style={{ left: contentLeft - 60 }}
-          >
-            <MdAdd className="size-4" />
-          </button>
-        }
-      />
+      {/* Gutter "+" — inserts an empty block below immediately, focuses it, and
+          opens the shared caret-anchored block menu inline-filtered by the new
+          block's own text (see `useInsertBlockBelow` + `BlockMenuPlugin`). */}
+      <button
+        type="button"
+        aria-label="Insert block below"
+        onClick={() => insertBelow(api)}
+        // eslint-disable-next-line layout/no-adhoc-layout -- gutter handle positioned via JS coords (style left below); flex centering seats the glyph in the fixed-size button
+        className={cn(
+          "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
+          "text-muted-foreground hover:bg-accent cursor-pointer",
+          "opacity-0 pointer-events-none group-hover/row:opacity-60 group-hover/row:pointer-events-auto",
+        )}
+        style={{ left: contentLeft - 60 }}
+      >
+        <MdAdd className="size-4" />
+      </button>
       {/* Drag handle — drags to reorder (PointerSensor needs 4px movement),
           and a plain click opens the block-actions (turn into / delete) menu. */}
       <BlockActionsMenu

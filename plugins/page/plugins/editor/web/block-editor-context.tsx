@@ -272,6 +272,18 @@ interface BlockEditorContextValue {
   /** Whether there is an undone structural edit to redo. */
   canRedo: boolean;
   /**
+   * The block id whose gutter-`+` draft menu is currently open, or null. The
+   * gutter `+` inserts an empty paragraph, focuses it, and flags it here; that
+   * block's `BlockMenuPlugin` force-opens the shared caret menu inline-filtered
+   * by the block's own text. Doubles as the placeholder trigger ("Type to
+   * filter" while the draft menu is open).
+   */
+  blockMenuDraftId: string | null;
+  /** Open the gutter-`+` draft menu on `id` (set after inserting the block). */
+  requestBlockMenu: (id: string) => void;
+  /** Clear the draft menu — unconditionally, or only if it is still on `id`. */
+  clearBlockMenu: (id?: string) => void;
+  /**
    * Optional navigation callback so link/mention block renderers can open a
    * page without hardcoding any host app's pane. Undefined when the host did
    * not provide one.
@@ -438,6 +450,7 @@ function BlockEditorProviderInner({
   children: ReactNode;
 }) {
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
+  const [blockMenuDraftId, setBlockMenuDraftId] = useState<string | null>(null);
   const focusHandlesRef = useRef(new Map<string, BlockFocusHandle>());
   // The flanking surfaces are read only inside imperative callbacks, so mirror
   // them into refs rather than threading them through `makeBlockAPI`'s deps.
@@ -490,6 +503,12 @@ function BlockEditorProviderInner({
   const setRows = useCallback((blocks: Block[]) => {
     rowsRef.current = blocks;
   }, []);
+
+  const requestBlockMenu = useCallback((id: string) => setBlockMenuDraftId(id), []);
+  const clearBlockMenu = useCallback(
+    (id?: string) => setBlockMenuDraftId((cur) => (id == null || cur === id ? null : cur)),
+    [],
+  );
 
   const focusBlock = useCallback((id: string, caretOffset?: number) => {
     const handle = focusHandlesRef.current.get(id);
@@ -1167,6 +1186,9 @@ function BlockEditorProviderInner({
       redo,
       canUndo,
       canRedo,
+      blockMenuDraftId,
+      requestBlockMenu,
+      clearBlockMenu,
       onOpenPage,
     }),
     [
@@ -1199,6 +1221,9 @@ function BlockEditorProviderInner({
       redo,
       canUndo,
       canRedo,
+      blockMenuDraftId,
+      requestBlockMenu,
+      clearBlockMenu,
       onOpenPage,
     ],
   );

@@ -122,33 +122,44 @@ microtask that cannot run while the dispatch unwinds), so the unit test reaches 
 same *state* across two keystrokes; `e2e/block-selection-verify.mjs` covers the
 single-dispatch symptom in a real browser.
 
-## The gutter `+` creates first, types second
+## The gutter `+` and `/` are one unified menu
 
-There are two block-type pickers, and they run the flow in opposite directions.
-Both render the same body (`BlockTypePicker` — filter field + `BlockTypeList` +
-one keyboard model), so only the direction differs:
+The gutter `+` and the `/` slash command open the **same** caret-anchored block
+menu (`components/block-menu-plugin.tsx`, mounted once per text block as
+`BlockMenuPlugin`) — Notion's model. One `CaretTriggerMenu` surface, one keyboard
+model, one filtered `BlockTypeList`; only the *producer* of the open-state
+differs, and both are `CaretQuery` handles from the caret-trigger primitive:
 
-- **Pick, then create** (`BlockTypeMenu`): the bottom "Add block" button and the
-  turn-into menu. Nothing exists until a type is chosen; dismissing is a no-op.
-- **Create, then type** (`InsertBlockBelowMenu`): the gutter `+`. Clicking it
-  inserts an empty paragraph below *immediately* and opens the filter over it —
-  Notion's model. Committing converts the draft to the chosen type; dismissing
-  (Esc / outside press) keeps it and drops the caret in, so `+` then Esc is
-  simply "new empty line below" rather than a click that did nothing.
+- **`/` trigger** (`useCaretQuery`): typing `/` at a word boundary opens it; the
+  text after the `/` filters it. On commit the `/query` is stripped in place and
+  the block converts, keeping the text around the slash.
+- **Gutter `+` draft** (`useForcedCaretQuery`): `useInsertBlockBelow` inserts an
+  empty paragraph below, **focuses it** (`focus: true`), and flags it as the
+  draft via `requestBlockMenu(newId)` on the block-editor context. That block's
+  `BlockMenuPlugin` sees `blockMenuDraftId === blockId`, force-opens the same
+  menu, and the block's OWN text before the caret is the inline filter. On commit
+  the whole filter text (it was never content) is dropped and the block converts;
+  `clearBlockMenu` closes the draft. Esc / outside-press keeps the block and
+  clears the draft, so `+` then Esc is simply "new empty line below" rather than
+  a click that did nothing.
 
-`draftId` doubles as the menu's open-state, so the two cannot disagree: no menu
-without a draft block, no draft block outliving its menu.
+While the draft menu is open the block's placeholder reads **"Type to filter"**
+(`block-text-editor.tsx` swaps it in on `blockMenuDraftId === block.id`), because
+the empty block's own text is now the filter field.
 
-The draft is born as the type declaring `defaultText` (`page/text`), resolved via
-`defaultTextHandle` — the editor core never names a block type. The insert passes
-`focus: false`: `insertAfter` normally arms a pending focus that fires when the
-block mounts on the confirming push, which would yank focus out of the filter
-field a beat after it opened. The block claims focus on close instead.
+`blockMenuDraftId` on the context is the single source of truth for the draft's
+open-state, so the flag and the menu can never disagree. The draft is born as the
+type declaring `defaultText` (`page/text`), resolved via `defaultTextHandle` —
+the editor core never names a block type.
+
+Unlike the two "pick, THEN create" pickers — the bottom "Add block" button
+(`AddBlockMenu`) and the turn-into menu (`BlockTypeMenu`), which legitimately
+keep a separate `SearchInput` (`BlockTypePicker`) because there is no pre-existing
+block/caret to filter inline — the gutter `+` has a real block to type into, so
+it reuses the inline caret menu instead of a popover that would cover the `+`/text.
 
 Commit is `insertAfter` + `convertTo`, i.e. two undo entries (undo once → back to
-a paragraph, twice → gone). Deliberate: the paragraph genuinely existed, and the
-alternative — deferring the insert until commit — is the pick-then-create flow
-this affordance exists to *not* be.
+a paragraph, twice → gone). Deliberate: the paragraph genuinely existed.
 
 ## Indent / outdent is a set operation
 
@@ -549,7 +560,7 @@ tests). The whole document lives in React state and is discarded on unmount.
 - Description: Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
 - Web:
   - Slots: `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`, `Editor.TurnInto` ← `page.turn-into-page`, `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
-  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/overlay.Overlay`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.insetClass`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/icon-button.IconButton`, `primitives/icon-picker.SvgIcon`, `primitives/latest-ref.useEventCallback`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/networking.subscribeWsStatus`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.DispatchContribution`, `primitives/sync-status.useReportSync`, `primitives/text-editor/caret-trigger.atWordBoundary`, `primitives/text-editor/caret-trigger.CaretTriggerMenu`, `primitives/text-editor/caret-trigger.useCaretMenu`, `primitives/text-editor/caret-trigger.useCaretQuery`, `primitives/undo-redo.UndoRedoProvider`, `primitives/undo-redo.useUndoRedo`, `primitives/undo-redo.useUndoRedoShortcuts`
+  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/overlay.Overlay`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.insetClass`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/icon-button.IconButton`, `primitives/icon-picker.SvgIcon`, `primitives/latest-ref.useEventCallback`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/networking.subscribeWsStatus`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.DispatchContribution`, `primitives/sync-status.useReportSync`, `primitives/text-editor/caret-trigger.atWordBoundary`, `primitives/text-editor/caret-trigger.CaretTriggerMenu`, `primitives/text-editor/caret-trigger.useCaretMenu`, `primitives/text-editor/caret-trigger.useCaretQuery`, `primitives/text-editor/caret-trigger.useForcedCaretQuery`, `primitives/undo-redo.UndoRedoProvider`, `primitives/undo-redo.useUndoRedo`, `primitives/undo-redo.useUndoRedoShortcuts`
   - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockEditorHandle`, `BlockPasteHandler`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `CaretSurface`, `CaretSurfaceRef`, `FormatToolbarValue`, `MarkButtonProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BLOCK_INDENT`, `BLOCK_INSET`, `BlockEditor`, `BlockTextEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `colorCssValue`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `isValidLinkUrl`, `MarkButton`, `MARKER_GUTTER`, `normalizeLinkUrl`, `OPEN_LINK_POPOVER_COMMAND`, `PageContentColumn`, `PageIcon`, `PageOptionsList`, `registerBlockPasteHandler`, `registerBlockTextExtension`, `useBlockEditor`, `useFormatToolbar`, `useInsertableBlocks`, `usePageOptions`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `primitives/rank.nextRankUnder`, `primitives/rank.rankAfterSibling`

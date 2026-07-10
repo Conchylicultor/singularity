@@ -11,6 +11,8 @@ export type {
   UseCaretMenuOpts,
   UseCaretMenuResult,
 } from "./internal/use-caret-trigger";
+export { useForcedCaretQuery } from "./internal/use-forced-caret-query";
+export type { UseForcedCaretQueryOpts } from "./internal/use-forced-caret-query";
 export { CaretTriggerMenu } from "./components/caret-trigger-menu";
 export type { CaretTriggerMenuProps } from "./components/caret-trigger-menu";
 

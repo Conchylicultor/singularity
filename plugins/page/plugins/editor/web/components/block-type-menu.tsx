@@ -8,8 +8,9 @@ import { BlockTypePicker } from "./block-type-picker";
 /**
  * Uncontrolled popover that lets the user pick an insertable block type, then
  * reports it to `onSelect` — a "pick, THEN create" affordance (the bottom
- * Add-block menu, the turn-into menu). The gutter `+` uses the inverse flow;
- * see `InsertBlockBelowMenu`.
+ * Add-block menu, the turn-into menu). The gutter `+` uses the inverse flow —
+ * create THEN type, over the shared caret menu; see `BlockMenuPlugin` /
+ * `useInsertBlockBelow`.
  *
  * The picker body (filter field + keyboard nav) lives in `BlockTypePicker`; the
  * body is unmounted while closed, so its query resets on every open.

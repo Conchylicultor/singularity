@@ -15,7 +15,7 @@ import type { BlockEditorAPI } from "../types";
 import { useBlockEditor } from "../block-editor-context";
 import { CollabTextPlugin } from "./collab-text-plugin";
 import { KeyboardPlugin } from "./keyboard-plugin";
-import { SlashMenuPlugin } from "./slash-menu-plugin";
+import { BlockMenuPlugin } from "./block-menu-plugin";
 import { MarkdownShortcutPlugin } from "./markdown-shortcut-plugin";
 import { FormatToolbarPlugin } from "./format-toolbar-plugin";
 import { FormatShortcutsPlugin } from "./format-shortcuts-plugin";
@@ -97,7 +97,10 @@ export function BlockTextEditor({
 }) {
   const runs = runsOf((block.data as Record<string, unknown> | null)?.text);
   const isEmpty = runs.length === 0;
-  const { registerFocusHandle } = useBlockEditor();
+  const { registerFocusHandle, blockMenuDraftId } = useBlockEditor();
+  // While the gutter-`+` draft menu is open on this block, the block's own text
+  // is the menu's inline filter — so the placeholder invites that.
+  const effectivePlaceholder = blockMenuDraftId === block.id ? "Type to filter" : placeholder;
   const lexicalEditorRef = useRef<LexicalEditor | null>(null);
 
   const initialConfig = useMemo(
@@ -191,9 +194,9 @@ export function BlockTextEditor({
               />
             }
             placeholder={
-              isEmpty && isFocused && placeholder ? (
+              isEmpty && isFocused && effectivePlaceholder ? (
                 <div className={cn("text-muted-foreground pointer-events-none absolute left-0 top-0 py-xs", insetClass({ r: BLOCK_INSET }), VARIANT_CLASS[textVariant])}>
-                  {placeholder}
+                  {effectivePlaceholder}
                 </div>
               ) : null
             }
@@ -210,7 +213,7 @@ export function BlockTextEditor({
               unified undo stack via the seam's Y.UndoManager. */}
           <CollabTextPlugin block={block} />
           <KeyboardPlugin blockId={block.id} editor={editor} />
-          <SlashMenuPlugin editor={editor} />
+          <BlockMenuPlugin editor={editor} blockId={block.id} />
           <MarkdownShortcutPlugin block={block} editor={editor} />
           <FormatShortcutsPlugin />
           <FormatToolbarPlugin />

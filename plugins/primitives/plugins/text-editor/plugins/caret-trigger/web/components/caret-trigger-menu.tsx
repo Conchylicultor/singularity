@@ -26,7 +26,11 @@ export function CaretTriggerMenu({ caret, open, children, ...rest }: CaretTrigge
   return (
     <FloatingSurface
       open={open}
-      anchor={caretAnchor()}
+      // Fall back to the editor's root rect when the live caret rect is all-zero
+      // — a collapsed caret in an EMPTY block yields no usable rect (the gutter-+
+      // draft flow opens on a fresh empty block). Anchoring to the block's own
+      // editable element still lands the menu just below it. Mirrors url-paste.
+      anchor={caretAnchor(() => caret.editor.getRootElement()?.getBoundingClientRect() ?? null)}
       reposition={caret.query}
       onDismiss={caret.dismiss}
       {...rest}

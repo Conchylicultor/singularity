@@ -6,17 +6,15 @@ import type { BlockHandle } from "../../core";
 import { useInsertableBlocks, filterBlockTypes, BlockTypeList } from "./block-type-list";
 
 /**
- * The menu BODY shared by every click-opened block-type picker: a filter field
- * over `BlockTypeList`, with Arrow/Enter/Escape navigation driven from that
- * field. It owns neither a surface nor an open-state — the caller supplies the
- * popover and decides what "commit" and "cancel" mean:
- *
- * - `BlockTypeMenu` / `AddBlockMenu` create a block OF the chosen type.
- * - `InsertBlockBelowMenu` (the gutter `+`) creates the block FIRST and
- *   converts it, so cancelling still leaves the new block behind.
- *
- * Separating the body from the surface is what lets those two flows share one
- * keyboard model instead of re-deriving it per affordance.
+ * The menu BODY shared by the "pick, THEN create" block-type pickers — the
+ * bottom "Add block" button (`AddBlockMenu`) and the turn-into menu
+ * (`BlockTypeMenu`): a filter field over `BlockTypeList`, with Arrow/Enter/
+ * Escape navigation driven from that field. It owns neither a surface nor an
+ * open-state — the caller supplies the popover and decides what "commit" and
+ * "cancel" mean. Here nothing exists until a type is chosen; dismissing is a
+ * no-op. (The gutter `+` runs the inverse flow — create THEN type — over the
+ * shared caret menu inline, so it does NOT use this body; see `BlockMenuPlugin`
+ * / `useInsertBlockBelow`.)
  */
 export function BlockTypePicker({
   onSelect,

@@ -71,6 +71,24 @@ are stable identities) that `useCaretMenu`'s command effects register once and
 read fresh state through refs — `query` never lands on an effect dep array that
 would re-register Lexical commands on every keystroke.
 
+## The forced producer — a button-driven `CaretQuery`
+
+`useForcedCaretQuery` is the second producer of the SAME `CaretQuery` handle, so
+`useCaretMenu` + `CaretTriggerMenu` consume it identically. The difference is
+where open-state comes from:
+
+- Open-state is driven by an EXTERNAL `active` flag (a button set it), not by a
+  trigger char: `open = active && focused && isQueryValid(query)`.
+- The query is the FULL text before the caret (not the text after a trigger), so
+  the current block's own text filters the menu inline.
+- It does NOT participate in the single-owner arbiter — the `active` flag is
+  externally single-owner by construction, so there is no candidacy to resolve.
+
+This is the substrate for a BUTTON that opens a caret menu on the current block
+— the page editor's gutter `+`, which inserts an empty paragraph below, focuses
+it, flags it `active`, and lets its block force-open the same menu the `/`
+trigger opens. Same surface, same keyboard model, one filtered list.
+
 ## The three gates (they are genuinely distinct)
 
 A single gate would be wrong in both directions, so the hook registers three:
@@ -149,7 +167,7 @@ bun e2e/caret-trigger-wedge.mjs --origin http://<worktree>.localhost:9000
 - Description: Caret-anchored trigger primitive for Lexical editors: derives open-state from editor text, a single-owner arbiter, and the shared caretAnchor.
 - Web:
   - Uses: `primitives/floating-surface.FloatingSurface`, `primitives/floating-surface.FloatingSurfaceProps`, `primitives/latest-ref.useEventCallback`, `primitives/latest-ref.useLatestRef`
-  - Exports: Types: `CanOpenCtx`, `CaretQuery`, `CaretTriggerMenuProps`, `Trigger`, `UseCaretMenuOpts`, `UseCaretMenuResult`, `UseCaretQueryOpts`; Values: `atWordBoundary`, `caretAnchor`, `CaretTriggerMenu`, `useCaretMenu`, `useCaretQuery`
+  - Exports: Types: `CanOpenCtx`, `CaretQuery`, `CaretTriggerMenuProps`, `Trigger`, `UseCaretMenuOpts`, `UseCaretMenuResult`, `UseCaretQueryOpts`, `UseForcedCaretQueryOpts`; Values: `atWordBoundary`, `caretAnchor`, `CaretTriggerMenu`, `useCaretMenu`, `useCaretQuery`, `useForcedCaretQuery`
 - Cross-plugin:
   - Imported by: `page/editor`, `page/inline-date`, `page/inline-page-link`, `page/math/inline`, `page/url-paste`
 
