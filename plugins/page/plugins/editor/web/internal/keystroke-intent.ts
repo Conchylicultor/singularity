@@ -128,8 +128,11 @@ export function resolveKeystroke(
       if (p?.resetToOnBackspaceAtStart && node.type !== p.resetToOnBackspaceAtStart)
         return { type: "convertTo", to: p.resetToOnBackspaceAtStart };
       if (hasPrevSibling(ctx.nodes, node)) return { type: "merge" };
-      // First block at top level: nothing before the caret — consume.
-      return { type: "noop" };
+      // First block at top level: no block to merge into. Backspace here means
+      // exactly what ArrowLeft means — step backwards out of the block list, into
+      // whatever caret surface precedes it (the page title). If nothing does, the
+      // executor's nav is a no-op and the keystroke is still consumed.
+      return { type: "nav", dir: "left" };
     }
     case "Tab": {
       // Tab/Shift+Tab always consume the event (never move focus / insert a tab).

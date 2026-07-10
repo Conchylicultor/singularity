@@ -1,3 +1,4 @@
+import type { Ref, RefObject } from "react";
 import { MdImage, MdEmojiEmotions } from "react-icons/md";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -10,27 +11,32 @@ import {
   type Block,
   type PageCover,
 } from "@plugins/page/plugins/editor/core";
+import type { BlockEditorHandle, CaretSurface } from "@plugins/page/plugins/editor/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { hoverRevealGroup, hoverRevealTarget } from "@plugins/primitives/plugins/hover-reveal/web";
 import { PageIconButton, PageIconPicker, type PageIconValue } from "./page-icon-button";
 import { ChangeCoverPopover } from "./change-cover-popover";
+import { PageTitle } from "./page-title";
 import "./page-header.css";
 
 export function PageHeader({
   pageId,
-  onEnter,
+  body,
+  titleRef,
 }: {
   pageId: string;
-  /** Enter pressed in the title — the host opens the top of the page body. */
-  onEnter?: () => void;
+  /** The page body's caret surface, so the title can hand the caret down to it. */
+  body?: RefObject<BlockEditorHandle | null>;
+  /** The title's own caret surface, so the body can hand the caret back up. */
+  titleRef?: Ref<CaretSurface>;
 }) {
   const result = useResource(pagesResource);
   return (
     <ResourceView resource={result} fallback={<Loading variant="rows" />}>
       {(pages) => {
         const page = pages.find((d) => d.id === pageId);
-        return <PageHeaderInner pageId={pageId} page={page} onEnter={onEnter} />;
+        return <PageHeaderInner pageId={pageId} page={page} body={body} titleRef={titleRef} />;
       }}
     </ResourceView>
   );
@@ -39,11 +45,13 @@ export function PageHeader({
 function PageHeaderInner({
   pageId,
   page,
-  onEnter,
+  body,
+  titleRef,
 }: {
   pageId: string;
   page: Block | undefined;
-  onEnter?: () => void;
+  body?: RefObject<BlockEditorHandle | null>;
+  titleRef?: Ref<CaretSurface>;
 }) {
   const data = page ? pageData(page) : undefined;
   const hasIcon = data?.iconSvgNodes != null && data.iconSvgNodes.length > 0;
@@ -135,22 +143,7 @@ function PageHeaderInner({
         </Stack>
       )}
 
-      {/* A title is one line: Enter moves the caret into the page body rather
-          than inserting a newline. The ensuing blur flushes the title's
-          debounced save, so no keystroke is lost on the way down. */}
-      <input
-        value={title.value}
-        onChange={(e) => title.onChange(e.target.value)}
-        onFocus={title.onFocus}
-        onBlur={title.onBlur}
-        onKeyDown={(e) => {
-          if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
-          e.preventDefault();
-          onEnter?.();
-        }}
-        placeholder="Untitled"
-        className="page-doc-title w-full truncate bg-transparent outline-none"
-      />
+      <PageTitle field={title} body={body} ref={titleRef} />
     </Stack>
   );
 }

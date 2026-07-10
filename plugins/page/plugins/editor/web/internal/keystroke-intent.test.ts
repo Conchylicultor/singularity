@@ -242,10 +242,10 @@ describe("Backspace", () => {
     ).toEqual({ type: "outdent" });
   });
 
-  test("at start, first top-level block → noop (consume, nothing before)", () => {
+  test("at start, first top-level block → nav left (out to the preceding surface)", () => {
     expect(
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), ctx("A")),
-    ).toEqual({ type: "noop" });
+    ).toEqual({ type: "nav", dir: "left" });
   });
 });
 

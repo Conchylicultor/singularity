@@ -47,6 +47,7 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { UndoRedoProvider, useUndoRedoShortcuts } from "@plugins/primitives/plugins/undo-redo/web";
 import { canIndent, canOutdent, textOf, type Block, type SerializedBlock } from "../../core";
 import { toNodes } from "../internal/optimistic-block-ops";
+import type { CaretSurface, CaretSurfaceRef } from "../caret-surface";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
 import { serializeForest } from "../serialize-blocks";
@@ -122,11 +123,16 @@ function rowAtPointer(y: number): DropTarget | null {
 }
 
 /**
- * Imperative affordances a host needs on the editor surface but cannot reach
- * through the context, because it renders OUTSIDE the provider (the page title
- * sits above `<BlockEditor>`, not inside it).
+ * The block list seen from OUTSIDE the provider — by a host that renders chrome
+ * next to it (the page title sits above `<BlockEditor>`, not inside it).
+ *
+ * It is itself a `CaretSurface`: `focusBoundary("start")` lands the caret at the
+ * top of the page body, `("end")` at its bottom. That is the mirror image of the
+ * `caretBefore` / `caretAfter` props — the caret crosses the editor's boundary in
+ * both directions through the one contract. `insertFirstBlock` is the only member
+ * beyond it, because creating a block is not a caret move.
  */
-export interface BlockEditorHandle {
+export interface BlockEditorHandle extends CaretSurface {
   /**
    * Open the top of the page for typing: focus the first block when it is
    * already an empty text block, otherwise insert a fresh one before it. Drives
@@ -139,10 +145,21 @@ export function BlockEditor({
   pageId,
   onOpenPage,
   contentClassName,
+  caretBefore,
+  caretAfter,
   ref,
 }: {
   pageId: string;
   ref?: Ref<BlockEditorHandle>;
+  /**
+   * Caret surfaces the host renders immediately before / after the block list
+   * (the page title above it). Caret navigation that leaves the first block
+   * backwards — ArrowUp, ArrowLeft at its start, Backspace at its start — or the
+   * last block forwards lands there instead of stopping at the editor's edge.
+   * Omit them (the story host) and those keystrokes simply do nothing.
+   */
+  caretBefore?: CaretSurfaceRef;
+  caretAfter?: CaretSurfaceRef;
   /**
    * Optional navigation callback for link/mention block renderers. Decoupled
    * from any host app's pane (mirrors file-links' `onFileOpen`); the host wires
@@ -164,7 +181,12 @@ export function BlockEditor({
     // provider sits ABOVE BlockEditorProvider because the latter calls
     // `useUndoRedo()` to record at the mutation chokepoints.
     <UndoRedoProvider>
-      <BlockEditorProvider pageId={pageId} onOpenPage={onOpenPage}>
+      <BlockEditorProvider
+        pageId={pageId}
+        onOpenPage={onOpenPage}
+        caretBefore={caretBefore}
+        caretAfter={caretAfter}
+      >
         <BlockEditorInner contentClassName={contentClassName} handleRef={ref} />
       </BlockEditorProvider>
     </UndoRedoProvider>
@@ -181,7 +203,8 @@ function BlockEditorInner({
   // `blocks`/`pending` come from the provider's optimistic resource so `rowsRef`
   // (set by the effect below) tracks optimistic state — required for chained-op
   // intent resolution (e.g. Enter then Shift+Tab resolving against post-split).
-  const { setFlatOrder, setRows, blocks, pending, insertFirst, focusBlock } = useBlockEditor();
+  const { setFlatOrder, setRows, blocks, pending, insertFirst, focusBlock, focusBlockBoundary } =
+    useBlockEditor();
 
   // Surface-level (focus-independent) undo/redo. Bindings are scoped to THIS
   // surface tab — eligible whenever this tab is focused, regardless of which DOM
@@ -212,8 +235,10 @@ function BlockEditorInner({
   const orderedIds = useMemo(() => flat.map((f) => f.block.id), [flat]);
 
   // The one imperative seam for hosts rendering above the editor (the page
-  // title). Reuses `onEmptyClick`'s rule for the trailing block, mirrored to the
-  // leading one: never stack a second blank paragraph on top of an existing one.
+  // title): the block list AS a caret surface, plus the create affordance that
+  // isn't one. `insertFirstBlock` reuses `onEmptyClick`'s rule for the trailing
+  // block, mirrored to the leading one: never stack a second blank paragraph on
+  // top of an existing one.
   const contributions = Editor.Block.useContributions();
   useImperativeHandle(
     handleRef,
@@ -228,8 +253,18 @@ function BlockEditorInner({
         }
         insertFirst(fallback.type, fallback.empty?.() ?? {});
       },
+      focus() {
+        const first = flat[0]?.block;
+        if (first) focusBlock(first.id);
+      },
+      focusBoundary(edge) {
+        const target = edge === "start" ? flat[0]?.block : flat.at(-1)?.block;
+        if (target) focusBlockBoundary(target.id, edge);
+      },
+      // No `focusAtColumn`: an empty page has no block to measure a column
+      // against, and a host entering from above wants the body's start anyway.
     }),
-    [contributions, flat, focusBlock, insertFirst],
+    [contributions, flat, focusBlock, focusBlockBoundary, insertFirst],
   );
 
   if (pending) {

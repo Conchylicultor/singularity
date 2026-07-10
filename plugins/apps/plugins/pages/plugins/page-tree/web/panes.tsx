@@ -8,6 +8,7 @@ import {
   BlockEditor,
   PageContentColumn,
   type BlockEditorHandle,
+  type CaretSurface,
 } from "@plugins/page/plugins/editor/web";
 import { PageHeader } from "./components/page-header";
 import { PageBreadcrumb } from "./components/page-breadcrumb";
@@ -65,9 +66,12 @@ function usePageTitle({ pageId }: { pageId: string }): string | undefined {
 function PageDetailBody(): ReactElement {
   const { pageId } = pageDetailPane.useParams();
   const openPane = useOpenPane();
-  // The title renders above (outside) the editor's provider, so its Enter key
-  // reaches the block tree through the editor's imperative handle.
-  const editorRef = useRef<BlockEditorHandle>(null);
+  // The title renders above (outside) the editor's provider, so the two exchange
+  // the caret through refs rather than a shared context: each is a `CaretSurface`
+  // holding a ref to the other. Arrow keys — and Backspace at the top of the body
+  // — then cross the boundary in both directions, as they do between two blocks.
+  const bodyRef = useRef<BlockEditorHandle>(null);
+  const titleRef = useRef<CaretSurface>(null);
 
   return (
     // The breadcrumb trail is the page's single home for its title — it lives in
@@ -101,14 +105,12 @@ function PageDetailBody(): ReactElement {
           <Stack gap="none">
             <div className={READING_MEASURE}>
               <PageContentColumn>
-                <PageHeader
-                  pageId={pageId}
-                  onEnter={() => editorRef.current?.insertFirstBlock()}
-                />
+                <PageHeader pageId={pageId} body={bodyRef} titleRef={titleRef} />
               </PageContentColumn>
             </div>
             <BlockEditor
-              ref={editorRef}
+              ref={bodyRef}
+              caretBefore={titleRef}
               pageId={pageId}
               contentClassName={READING_MEASURE}
               onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}

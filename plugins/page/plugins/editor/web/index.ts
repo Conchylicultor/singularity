@@ -9,6 +9,7 @@ export type { FormatToolbarValue } from "./internal/format-toolbar-context";
 export type { BlockEditorAPI, BlockRendererProps } from "./types";
 export { BlockEditor } from "./components/block-editor";
 export type { BlockEditorHandle } from "./components/block-editor";
+export type { CaretSurface, CaretSurfaceRef } from "./caret-surface";
 export { PageContentColumn } from "./components/page-content-column";
 export { BLOCK_INSET, BLOCK_INDENT, MARKER_GUTTER } from "./internal/page-column";
 export { BlockTextRenderer } from "./components/block-text-renderer";

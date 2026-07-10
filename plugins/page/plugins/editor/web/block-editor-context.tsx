@@ -53,6 +53,8 @@ import {
   fromNodes,
   type BlockOverlayOp,
 } from "./internal/optimistic-block-ops";
+import { landCaret } from "./internal/caret-landing";
+import type { CaretSurface, CaretSurfaceRef } from "./caret-surface";
 import type { BlockEditorAPI } from "./types";
 
 /** Human labels for the structural-undo history (tooltips / menus). */
@@ -141,18 +143,15 @@ function derivePatchEntry(
 }
 
 /**
- * A block's focus capabilities, registered by its renderer. Every focusable
- * block provides `focus`; text editors additionally provide caret-precise
- * placement so the coordinator can land the caret at a pixel column or boundary.
- * Void/textarea blocks (divider, code) register `focus` only.
+ * A block's focus capabilities, registered by its renderer. It is the block-side
+ * `CaretSurface`: every focusable block provides `focus`; text editors
+ * additionally provide caret-precise placement so the coordinator can land the
+ * caret at a pixel column or boundary. Void/textarea blocks (divider, code)
+ * register `focus` only. On top of the surface contract, a bound text editor
+ * exposes content surgery (`truncateAt` / `appendRunsAtEnd`), which only a block
+ * bound to a content doc can implement.
  */
-export interface BlockFocusHandle {
-  /** Focus the block's editor, restoring its last selection. */
-  focus: () => void;
-  /** Place the caret at viewport column `x` on the block's top/bottom visual line. */
-  focusAtColumn?: (x: number, edge: "top" | "bottom") => void;
-  /** Collapse the caret to the block's very start/end. */
-  focusBoundary?: (edge: "start" | "end") => void;
+export interface BlockFocusHandle extends CaretSurface {
   /** Place the caret at a linear character offset (the merge join point). */
   focusOffset?: (offset: number) => void;
   /**
@@ -280,14 +279,23 @@ export function useBlockEditor(): BlockEditorContextValue {
 export function BlockEditorProvider({
   pageId,
   onOpenPage,
+  caretBefore,
+  caretAfter,
   children,
 }: {
   pageId: string;
   onOpenPage?: (pageId: string) => void;
+  /** See `BlockEditor`'s props — the caret surfaces flanking the block list. */
+  caretBefore?: CaretSurfaceRef;
+  caretAfter?: CaretSurfaceRef;
   children: ReactNode;
 }) {
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const focusHandlesRef = useRef(new Map<string, BlockFocusHandle>());
+  // The flanking surfaces are read only inside imperative callbacks, so mirror
+  // them into refs rather than threading them through `makeBlockAPI`'s deps.
+  const caretBeforeRef = useLatestRef(caretBefore);
+  const caretAfterRef = useLatestRef(caretAfter);
   const flatOrderRef = useRef<Block[]>([]);
   const rowsRef = useRef<Block[]>([]);
   const pendingFocusRef = useRef<string | null>(null);
@@ -981,24 +989,19 @@ export function BlockEditorProvider({
           j += step;
         }
         const target = flat[j];
-        if (!target) return;
-        const handle = focusHandlesRef.current.get(target.id);
-        if (!handle) return;
-        if (dir === "up") {
-          if (caret && handle.focusAtColumn) handle.focusAtColumn(caret.caretX, "bottom");
-          else if (handle.focusBoundary) handle.focusBoundary("end");
-          else handle.focus();
-        } else if (dir === "down") {
-          if (caret && handle.focusAtColumn) handle.focusAtColumn(caret.caretX, "top");
-          else if (handle.focusBoundary) handle.focusBoundary("start");
-          else handle.focus();
-        } else if (dir === "left") {
-          if (handle.focusBoundary) handle.focusBoundary("end");
-          else handle.focus();
-        } else {
-          if (handle.focusBoundary) handle.focusBoundary("start");
-          else handle.focus();
-        }
+        // Running off the block order is not a dead end: the host may render a
+        // caret surface right before/after the list (the page title). Blocks and
+        // host chrome land the caret through the exact same rules.
+        const surface: CaretSurface | null | undefined = target
+          ? focusHandlesRef.current.get(target.id)
+          : (step < 0 ? caretBeforeRef.current : caretAfterRef.current)?.current;
+        if (!surface) return;
+        // Leaving the block list entirely: no block owns the caret anymore, so
+        // drop the focused-block state (an empty block would otherwise keep
+        // showing its "Type '/' for commands" placeholder while the caret sits
+        // in the title). A block target sets it back through its own `onFocus`.
+        if (!target) setFocusedBlockId(null);
+        landCaret(surface, dir, caret);
       },
       onFocus() {
         setFocusedBlockId(blockId);

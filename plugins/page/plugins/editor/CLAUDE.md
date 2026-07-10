@@ -39,6 +39,52 @@ code background sit at `C + BLOCK_INSET` rather than bleeding to `C` (their `px`
 wrapper is outside the decoration), and the quote's 2px border pushes its text to
 `C + 2 + BLOCK_INSET`.
 
+## The caret does not stop at the editor's edge (`CaretSurface`)
+
+A page is not just the block list: the title sits above it, outside the provider.
+Yet the caret must flow across that seam the way it flows between two blocks —
+ArrowUp / ArrowLeft / Backspace at the top of the body land in the title, and
+Enter / ArrowDown / ArrowRight in the title land in the body (Notion's model).
+
+The seam is one contract, `web/caret-surface.ts`:
+
+```ts
+interface CaretSurface {
+  focus(): void;                                     // required
+  focusBoundary?(edge: "start" | "end"): void;       // land at my very start/end
+  focusAtColumn?(x: number, edge: "top" | "bottom"): void;  // preserve the pixel column
+}
+```
+
+Everything that can hold a caret implements it, and nothing else is needed to
+participate:
+
+- **Blocks** — `BlockFocusHandle extends CaretSurface`, registered per block id.
+  It widens the surface with the members only a doc-bound text editor can offer
+  (`focusOffset`, `truncateAt`, `appendRunsAtEnd`).
+- **The block list as a whole** — `BlockEditorHandle extends CaretSurface`, the
+  host-facing imperative ref. `focusBoundary("start")` opens the top of the body.
+- **Host chrome** — the page title (`apps/pages/page-tree`) implements it over an
+  `<input>` and hands its ref to `<BlockEditor caretBefore>` (`caretAfter` exists
+  symmetrically; nothing uses it yet). A host that passes neither — the story
+  shell — simply gets a caret that stops at the first/last block, as before.
+
+Two rules keep this from leaking:
+
+- **`landCaret` is the one landing policy** (`internal/caret-landing.ts`): vertical
+  crossings preserve the pixel column *when the surface can honor it*, horizontal
+  crossings land on the boundary they were travelling toward, and a surface that
+  offers neither refinement just takes `focus()`. `navigate()` calls it for a block
+  and for host chrome with the same arguments — it never branches on which. A
+  one-line surface (the title) therefore omits `focusAtColumn` and is entered at its
+  end, with no special case anywhere.
+- **`resolveKeystroke` never learns about the boundary.** Backspace at the start of
+  the first top-level block has no block to merge into, so it resolves to exactly
+  what ArrowLeft there resolves to — `{ type: "nav", dir: "left" }`. Whether a
+  surface is waiting on the other side is the executor's business. That is why
+  "Backspace goes back to the title" needed no new intent, no new op, and no new
+  branch in the resolver.
+
 ## Indent / outdent is a set operation
 
 `BlockOp`'s `indent` / `outdent` carry `blockIds: string[]`, not one id. Tab inside
@@ -390,7 +436,7 @@ history restore):**
 - Web:
   - Slots: `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.quote`, `page.sub-page`, `page.text`, `page.to-do`, `page.toggle`, `page.video`, `Editor.TurnInto` ← `page.turn-into-page`, `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
   - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/overlay.Overlay`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/spacing.Inset`, `primitives/css/spacing.insetClass`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/icon-button.IconButton`, `primitives/icon-picker.SvgIcon`, `primitives/latest-ref.useEventCallback`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/networking.subscribeWsStatus`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.DispatchContribution`, `primitives/sync-status.useReportSync`, `primitives/text-editor/caret-trigger.atWordBoundary`, `primitives/text-editor/caret-trigger.CaretTriggerMenu`, `primitives/text-editor/caret-trigger.useCaretMenu`, `primitives/text-editor/caret-trigger.useCaretQuery`, `primitives/undo-redo.UndoRedoProvider`, `primitives/undo-redo.useUndoRedo`, `primitives/undo-redo.useUndoRedoShortcuts`
-  - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockEditorHandle`, `BlockPasteHandler`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `FormatToolbarValue`, `MarkButtonProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BLOCK_INDENT`, `BLOCK_INSET`, `BlockEditor`, `BlockTextEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `colorCssValue`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `isValidLinkUrl`, `MarkButton`, `MARKER_GUTTER`, `normalizeLinkUrl`, `OPEN_LINK_POPOVER_COMMAND`, `PageContentColumn`, `PageIcon`, `PageOptionsList`, `registerBlockPasteHandler`, `registerBlockTextExtension`, `useBlockEditor`, `useFormatToolbar`, `useInsertableBlocks`, `usePageOptions`
+  - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockEditorHandle`, `BlockPasteHandler`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `CaretSurface`, `CaretSurfaceRef`, `FormatToolbarValue`, `MarkButtonProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BLOCK_INDENT`, `BLOCK_INSET`, `BlockEditor`, `BlockTextEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `colorCssValue`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `isValidLinkUrl`, `MarkButton`, `MARKER_GUTTER`, `normalizeLinkUrl`, `OPEN_LINK_POPOVER_COMMAND`, `PageContentColumn`, `PageIcon`, `PageOptionsList`, `registerBlockPasteHandler`, `registerBlockTextExtension`, `useBlockEditor`, `useFormatToolbar`, `useInsertableBlocks`, `usePageOptions`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `primitives/rank.nextRankUnder`, `primitives/rank.rankAfterSibling`
   - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`
