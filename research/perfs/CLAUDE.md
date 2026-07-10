@@ -80,6 +80,23 @@ is per-fleet only); rate-limit the always-on live-state trace tier (the ~4 lines
 log growth). Full evidence + counterfactuals + implementation →
 **[`2026-07-08-host-saturation-agent-checks-starve-main.md`](./2026-07-08-host-saturation-agent-checks-starve-main.md)**
 (+ finish plan **[`2026-07-08-host-saturation-remediation-PLAN.md`](./2026-07-08-host-saturation-remediation-PLAN.md)**).
+**2026-07-09/10 continuation — pool collapse cured at its layer, swap-in named as the lag amplifier:**
+four more freezes fully forensicated (two distinct DB-collapse variants: the `read-admit` convoy
+1,377-deep and the pool eaten by ungated transactions/jobs 339-deep — incident report + fix direction
+→ [`../2026-07-09-global-interactive-lane-under-load.md`](../2026-07-09-global-interactive-lane-under-load.md)).
+Fixes landed on main: `fbcaec47c` (interactive lane — pool partitioned by origin class, transactions
+leased, jobs gated) and `e24e6040a` (type-check worker fleet bounded host-wide, covering
+`build`/`push`/`check` spawners) — both **verified working at their own layer during a live 07-10
+03:29 freeze** (9 workers = budget; pg healthy) that froze the app anyway: the binding constraint
+moved to **hop-count × a 1.3–1.5 s loop-lag quantum** under *aggregate* fleet load (≈6 claude
+processes + subprocesses + `fseventsd` at 80 %). NEW dose–response cross-tab (9,608 samples): the
+lag driver is **(load × swap-in)**, not load alone — load 24–40 with zero swap-in costs just 2 ms
+(the QoS boost demonstrably works against pure CPU; "boost ineffective" killed on data), while
+swap-in turns the same band into 19–433 ms+ (page faults block a boosted thread synchronously).
+🔬 open: cold-page-victim hypothesis (backend = ideal paging victim; twin-probe + cold-switch
+discriminators designed, unrun), `fseventsd` attribution, T1 acceptance test still unrun. Findings
+only (remediation deliberately not yet proposed) →
+**[`2026-07-10-host-saturation-post-fix-swap-amplifier-findings.md`](./2026-07-10-host-saturation-post-fix-swap-amplifier-findings.md)**.
 
 ### Git-derived loaders — `edited-files` / `commits-graph` (Ongoing)
 

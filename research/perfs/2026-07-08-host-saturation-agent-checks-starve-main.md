@@ -206,3 +206,16 @@ lever for burst-time push latency is admission-control tightening (deferred item
 Still not done: pre-Jul-7 session sweep (item 2), admission-control tightening
 (item 4), and the A/B validation of the two first-pass fixes under a live burst
 (needs a saturation burst; deferred — see the plan doc's "Out of scope").
+
+## Continuation (2026-07-09/10) — see the follow-up findings doc
+
+Four more freezes (07-09 11:07 / 14:25 / 16:18, 07-10 03:29) were fully forensicated; the DB-layer
+collapse variants were fixed on main (`fbcaec47c` interactive lane, `e24e6040a` host-wide worker
+fleet — the latter closes deferred item 4, admission-control tightening, at worker granularity) and
+verified at their own layer during a live freeze. The A/B question this doc deferred ("main's p99
+under the next burst") is partially answered by a 9,608-sample cross-tab: **the boost holds against
+pure CPU (load 24–40, no swap → 2 ms p50) — the residual lag amplifier is swap-in / memory
+pressure**, which no QoS tier can absorb. Forensics + fix direction →
+[`../2026-07-09-global-interactive-lane-under-load.md`](../2026-07-09-global-interactive-lane-under-load.md);
+post-fix findings + open hypotheses (cold-page victim, `fseventsd` attribution) →
+[`2026-07-10-host-saturation-post-fix-swap-amplifier-findings.md`](./2026-07-10-host-saturation-post-fix-swap-amplifier-findings.md).
