@@ -13,8 +13,16 @@ interface OpDisplay {
 }
 
 function displayFor(op: WorktreeOp): OpDisplay {
-  if (op.op === "push" && op.phase === "waiting-for-lock") {
-    return { icon: MdHourglassEmpty, title: "Push queued — waiting for lock" };
+  // Any op queued behind its lock shows the hourglass; the distinct icon carries
+  // the state and the tooltip the full phrasing.
+  if (op.phase === "waiting-for-lock") {
+    const title =
+      op.op === "push"
+        ? "Push queued — waiting for lock"
+        : op.op === "build"
+          ? "Build queued — waiting for lock"
+          : "Check queued — waiting for lock";
+    return { icon: MdHourglassEmpty, title };
   }
   if (op.op === "build") {
     return { icon: MdBuild, title: "Build in progress" };

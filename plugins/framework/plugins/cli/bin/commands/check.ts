@@ -5,7 +5,7 @@ import { withHostSlot, type HostSlotKind } from "../host-semaphore";
 import { MAIN_WORKTREE_NAME, worktreeDataDir } from "../paths";
 import { publishLane } from "../lane";
 import { listAllChecks, runChecks } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import { markWorktreeOpStart, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
+import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
 
 // The op-marker slug for this worktree — its directory basename, matching what
 // `build` / `push` write (see worktree-op.ts). Mirrors the local
@@ -62,23 +62,27 @@ export function registerCheck(program: Command) {
       // Mark this worktree as having a check in flight so the conversation status
       // poller keeps the agent's pane reading as "working" while the CLI "shell"
       // status persists (see worktree-op.ts), and the op-status banner/chip
-      // surface "Check in progress". Only for a DIRECT `./singularity check`
-      // (kind === "build"); a push-nested check (exempt) is already covered by
-      // the push marker, so writing a second marker would just churn the status.
+      // surface "Check in progress". Written up-front as "waiting-for-lock" and
+      // flipped to "running" once the host build slot is granted, so a check
+      // queued for the slot reads as queued rather than running. Only for a
+      // DIRECT `./singularity check` (kind === "build"); a push-nested check
+      // (exempt) is already covered by the push marker, so writing a second
+      // marker would just churn the status.
       const marker = kind === "build";
       if (marker) {
-        markWorktreeOpStart(slug, "check");
+        markWorktreeOpStart(slug, "check", "waiting-for-lock");
         process.on("exit", () => clearWorktreeOp(slug, "check"));
       }
       try {
-        const ok = await withHostSlot(kind, () =>
-          runChecks(checks.length > 0 ? checks : undefined, {
+        const ok = await withHostSlot(kind, () => {
+          if (marker) setWorktreeOpPhase(slug, "check", "running");
+          return runChecks(checks.length > 0 ? checks : undefined, {
             noCache: opts.cache === false,
             logFile,
             log: (line, stream) =>
               stream === "stderr" ? console.error(line) : console.log(line),
-          }),
-        );
+          });
+        });
         if (!ok) {
           // Last line, so it survives `./singularity check | tail`.
           console.error(`\nFull check output: ${logFile}`);

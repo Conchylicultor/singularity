@@ -6,9 +6,10 @@ export const WorktreeOpSchema = z.object({
   op: z.enum(["build", "push", "check"]),
   startedAt: z.string(),
   phase: z.enum(["waiting-for-lock", "running"]),
-  // When a push is running, the instant the push lock was granted (waiting →
-  // pushing). null for waiting pushes and builds. Lets the banner clock the
-  // push separately from the time spent queued for the lock.
+  // The instant this op's running phase began (its lock was granted). null while
+  // waiting. Builds/checks stamp it into the marker on the grant; pushes derive
+  // it from the holder file. Lets the banner clock work separately from the time
+  // spent queued for the lock.
   runningAt: z.string().nullable(),
 });
 export type WorktreeOp = z.infer<typeof WorktreeOpSchema>;

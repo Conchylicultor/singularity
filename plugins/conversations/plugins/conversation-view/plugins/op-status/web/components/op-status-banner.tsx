@@ -74,27 +74,29 @@ function formatElapsed(ms: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
-// The instant the op's CURRENT phase began. A running push clocks its push time
-// from when the lock was granted (`runningAt`); a waiting push and a build clock
-// from `startedAt`. So the live timer always measures the phase shown, never
-// wait + push lumped together.
+// The instant the op's CURRENT phase began. A running op (push, build, or check)
+// clocks its work time from when its lock was granted (`runningAt`); a waiting op
+// clocks from `startedAt`. So the live timer always measures the phase shown,
+// never wait + work lumped together.
 function phaseStartedAt(op: WorktreeOp): number {
   return new Date(op.runningAt ?? op.startedAt).getTime();
 }
 
-// How long a now-running push spent queued for the lock before it started
-// pushing (startedAt → runningAt). null when the op isn't a running push or
-// never actually waited.
+// How long a now-running op spent queued for its lock before work started
+// (startedAt → runningAt). null when the op isn't running or never actually
+// waited. Applies to any op: a push waits on the global push lock, a build/check
+// on its per-worktree/host slot — all stamp `runningAt` on the grant.
 function waitedMs(op: WorktreeOp): number | null {
-  if (op.op !== "push" || op.phase !== "running" || !op.runningAt) return null;
+  if (op.phase !== "running" || !op.runningAt) return null;
   const ms = new Date(op.runningAt).getTime() - new Date(op.startedAt).getTime();
   return ms > 1000 ? ms : null;
 }
 
 function summaryLabel(op: WorktreeOp): string {
-  if (op.op === "build") return "Build in progress";
-  if (op.op === "check") return "Check in progress";
-  return op.phase === "waiting-for-lock" ? "Push queued — waiting for lock" : "Push in progress";
+  const waiting = op.phase === "waiting-for-lock";
+  if (op.op === "build") return waiting ? "Build queued — waiting for lock" : "Build in progress";
+  if (op.op === "check") return waiting ? "Check queued — waiting for lock" : "Check in progress";
+  return waiting ? "Push queued — waiting for lock" : "Push in progress";
 }
 
 const byStartedAt = (a: WorktreeOp, b: WorktreeOp): number =>
@@ -136,17 +138,16 @@ function buildRows(ops: WorktreeOp[], selfSlug: string): OpRow[] {
 
 function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: number }) {
   const { op, queuePos, isSelf } = row;
-  const waiting = op.op === "push" && op.phase === "waiting-for-lock";
+  const waiting = op.phase === "waiting-for-lock";
   const elapsed = formatElapsed(now - phaseStartedAt(op));
   const waited = waitedMs(op);
-  const phaseText =
-    op.op === "build"
+  const phaseText = waiting
+    ? "Waiting for lock"
+    : op.op === "build"
       ? "Building"
       : op.op === "check"
         ? "Checking"
-        : waiting
-          ? "Waiting for lock"
-          : "Pushing";
+        : "Pushing";
 
   return (
     <Text
@@ -201,7 +202,7 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
   const op = result.data[selfSlug];
   if (!op) return null;
 
-  const queued = op.op === "push" && op.phase === "waiting-for-lock";
+  const queued = op.phase === "waiting-for-lock";
   const elapsed = formatElapsed(now - phaseStartedAt(op));
   const waited = waitedMs(op);
   const others = rows.length - 1;

@@ -30,11 +30,11 @@ export type WorktreeOp = "build" | "push" | "check";
 // an unknown op falls back to "build").
 const KNOWN_OPS: readonly WorktreeOp[] = ["build", "push", "check"];
 
-// A push is written up-front in the "waiting-for-lock" phase (before it requests
-// the global push lock) and flipped to "running" the moment the lock is granted,
-// so a push queued behind another reads as genuinely-queued rather than running.
-// Builds only ever write "running" (the default); the field is generic so a
-// build-lock-wait phase can be added later with no schema change.
+// Every op is written up-front in the "waiting-for-lock" phase (before it
+// requests its lock) and flipped to "running" the moment the lock is granted, so
+// an op queued behind another reads as genuinely-queued rather than running. A
+// push waits on the global push lock; a build/check waits on the per-worktree
+// build lock (build) or the host build slot (direct check).
 export type WorktreeOpPhase = "waiting-for-lock" | "running";
 
 export interface WorktreeOpInfo {
@@ -42,11 +42,12 @@ export interface WorktreeOpInfo {
   op: WorktreeOp;
   startedAt: string;
   phase: WorktreeOpPhase;
-  // When a push is actually running, the instant the push lock was granted
-  // (from the holder file's `acquiredAt`) — i.e. when waiting ended and pushing
-  // began. null for waiting pushes and builds. Derived, never stored in the
-  // marker: see derivePushPhases. Lets the UI clock push time separately from
-  // the wait spent queued for the lock.
+  // The instant this op's "running" phase began — i.e. when waiting ended and
+  // work started. null while still waiting. For builds/checks it is stamped into
+  // the marker by setWorktreeOpPhase on the lock grant; for pushes it is derived
+  // from the holder file's `acquiredAt` (see derivePushPhases), which overrides
+  // whatever the marker carries. Lets the UI clock work time separately from the
+  // wait spent queued for the lock.
   runningAt: string | null;
 }
 
@@ -76,6 +77,12 @@ function isPidAlive(pid: number): boolean {
   }
 }
 
+// Single-file marker semantics: one `<op>.json` per (worktree, op), so when two
+// ops of the same kind overlap in one worktree (a build queued behind another
+// build) the newest overwrites the file. The accepted display consequence is
+// that the newest (queued) op is what the UI shows during the overlap; the
+// ownership guards in setWorktreeOpPhase/clearWorktreeOp keep the finishing op
+// from mutating the file the newer op now owns.
 export function markWorktreeOpStart(
   slug: string,
   op: WorktreeOp,
@@ -88,8 +95,12 @@ export function markWorktreeOpStart(
   );
 }
 
-// Rewrite an existing marker's phase, preserving pid/startedAt. No-op if the
-// marker is gone (op already finished and cleared).
+// Rewrite an existing marker's phase, preserving pid/startedAt (and any
+// runningAt). No-op if the marker is gone (op already finished and cleared) or
+// names another pid — a lock-acquiring build must not flip a marker a newer
+// queued build now owns. Flipping to "running" stamps `runningAt` (the lock-grant
+// instant) once: the first waiting→running transition wins, so a re-flip can't
+// reset the work clock.
 export function setWorktreeOpPhase(slug: string, op: WorktreeOp, phase: WorktreeOpPhase): void {
   const path = opFile(slug, op);
   let raw: string;
@@ -106,11 +117,29 @@ export function setWorktreeOpPhase(slug: string, op: WorktreeOp, phase: Worktree
     if (!(err instanceof SyntaxError)) throw err;
     return;
   }
-  writeFileSync(path, JSON.stringify({ ...parsed, phase }));
+  if (typeof parsed.pid === "number" && parsed.pid !== process.pid) return;
+  const runningAt =
+    phase === "running" && typeof parsed.runningAt !== "string"
+      ? new Date().toISOString()
+      : parsed.runningAt;
+  writeFileSync(path, JSON.stringify({ ...parsed, phase, runningAt }));
 }
 
+// Remove a marker ONLY if it still names this process — a finishing op must not
+// delete a marker a newer queued op now owns (a second build overwrites the
+// single file with its own pid while queued behind us on the build lock, then we
+// exit and would otherwise reap its live marker). An absent, unreadable, or
+// garbage marker is reaped unconditionally (safe reap). Mirrors clearPushHolder.
 export function clearWorktreeOp(slug: string, op: WorktreeOp): void {
-  rmSync(opFile(slug, op), { force: true });
+  const path = opFile(slug, op);
+  try {
+    const parsed = JSON.parse(readFileSync(path, "utf8")) as MarkerJson;
+    if (typeof parsed.pid === "number" && parsed.pid !== process.pid) return;
+  } catch (err) {
+    if (!isReapableReadError(err)) throw err;
+    // absent / unreadable / garbage → fall through to the safe reap.
+  }
+  rmSync(path, { force: true });
 }
 
 // A caught read error we should treat as "reap the marker" rather than propagate:
@@ -120,7 +149,13 @@ function isReapableReadError(err: unknown): boolean {
   return (err as NodeJS.ErrnoException).code != null || err instanceof SyntaxError;
 }
 
-type MarkerJson = { op?: unknown; pid?: unknown; startedAt?: unknown; phase?: unknown };
+type MarkerJson = {
+  op?: unknown;
+  pid?: unknown;
+  startedAt?: unknown;
+  phase?: unknown;
+  runningAt?: unknown;
+};
 
 // Pure: turn a parsed marker into its WorktreeOpInfo, or null if it names a dead
 // pid (a caller reaps the file on null). No IO — shared by the sync and async
@@ -133,9 +168,9 @@ function markerInfoFromParsed(slug: string, parsed: MarkerJson): WorktreeOpInfo 
     startedAt: typeof parsed.startedAt === "string" ? parsed.startedAt : new Date(0).toISOString(),
     // Back-compat: markers written before the phase field default to "running".
     phase: parsed.phase === "waiting-for-lock" ? "waiting-for-lock" : "running",
-    // Filled in by derivePushPhases from the authoritative holder file; the
-    // marker itself never carries it.
-    runningAt: null,
+    // Builds/checks stamp their own runningAt on the lock grant; for pushes it is
+    // overridden by derivePushPhases from the authoritative holder file.
+    runningAt: typeof parsed.runningAt === "string" ? parsed.runningAt : null,
   };
 }
 

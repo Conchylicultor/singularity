@@ -16,12 +16,18 @@ lock) was indistinguishable from the agent merely "working".
 
 - The build/push/check CLI write a per-worktree op marker at
   `~/.singularity/worktrees/<slug>/ops/{build,push,check}.json` (owned by the
-  `worktree` primitive). The push marker carries a `phase`:
-  `waiting-for-lock` while it queues for the global push lock, flipped to
-  `running` the instant the lock is granted. Builds and checks only ever write
-  `running`. The `check` marker is written **only by a direct
-  `./singularity check`** — a check nested inside build/push is already covered
-  by that op's marker, so it writes none.
+  `worktree` primitive). Every marker carries a `phase`: `waiting-for-lock`
+  while it queues for its lock, flipped to `running` the instant the lock is
+  granted (a push waits on the global push lock; a build on the per-worktree
+  `.build.lock`; a direct check on the host build slot). On the flip the marker
+  stamps its own `runningAt` (except pushes, whose `runningAt` is derived from
+  the authoritative holder file). The `check` marker is written **only by a
+  direct `./singularity check`** — a check nested inside build/push is already
+  covered by that op's marker, so it writes none. Clearing a marker is
+  **ownership-guarded**: a finishing op only deletes the file while it still
+  names its own pid, so a build queued behind another (which overwrote the
+  single `build.json` with its own pid) is not clobbered when the earlier build
+  exits.
 - This plugin's server watches that marker tree with `createFileWatcher`
   (mirrors `@plugins/infra/git-watcher`) and pushes the full
   `{ slug → op }` map to the `worktree-ops` live-state resource on every
@@ -35,9 +41,9 @@ lock) was indistinguishable from the agent merely "working".
   conversation → `worktreePath` → slug (the shared `slugOf` helper) and reads
   the same `worktree-ops` resource. It renders nothing for idle worktrees and a
   single **muted icon** otherwise — no chip, no label: the distinct icon (wrench
-  = building, up-arrow = pushing, hourglass = waiting, flask = checking), not
-  color or text, carries the state, with a tooltip for the full phrasing. Keeps
-  the dense list row quiet.
+  = building, up-arrow = pushing, flask = checking, hourglass = any op
+  waiting for its lock — push, build, or check), not color or text, carries the
+  state, with a tooltip for the full phrasing. Keeps the dense list row quiet.
 - The banner is a toggle: clicking it expands a list of **every** in-flight op
   across all worktrees (the resource already carries the full `{ slug → op }`
   map). The list reconstructs the global push-lock queue — the running push that

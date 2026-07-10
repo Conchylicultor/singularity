@@ -33,7 +33,7 @@ import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server"
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
 import { renderStepBlock, orderStepsForDisplay, renderVerdict, emitVerdict, installVerdictGuard, type Verdict } from "../build-output";
 import { appendBuildLog } from "../build-log-writer-global";
-import { markWorktreeOpStart, clearWorktreeOp, writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
+import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writeWorktreeSpec } from "@plugins/infra/plugins/worktree/server";
 import { zeroCacheSpec } from "@plugins/infra/plugins/launcher/server";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
@@ -749,9 +749,12 @@ export function registerBuild(program: Command) {
 
       // Mark this worktree as having a build in flight so the conversation
       // status poller keeps the agent's pane reading as "working" while the
-      // CLI "shell" status persists (see worktree-op.ts). Cleared in
-      // finalizeBuildLog below, which runs on every graceful exit.
-      markWorktreeOpStart(name, "build");
+      // CLI "shell" status persists (see worktree-op.ts). Written up-front as
+      // "waiting-for-lock" and flipped to "running" once the per-worktree build
+      // lock is granted below, so a build queued behind another reads as queued
+      // rather than running. Cleared in finalizeBuildLog below, which runs on
+      // every graceful exit.
+      markWorktreeOpStart(name, "build", "waiting-for-lock");
 
       // Guarantee a terminal "completed" record on every *graceful* exit
       // path — a thrown build step, process.exit(1), or SIGINT/SIGTERM.
@@ -822,6 +825,9 @@ export function registerBuild(program: Command) {
       endSpan = buildProfilerStart("acquireBuildLock", "build:setup", "acquire build lock");
       const webDir = resolve(root, WEB_CORE_RELATIVE);
       await acquireBuildLock(resolve(webDir, ".build.lock"));
+      // Build lock granted — flip the marker from waiting to running so the UI
+      // clocks build time from here, not from the queued wait.
+      setWorktreeOpPhase(name, "build", "running");
       endSpan();
 
       endSpan = buildProfilerStart("sweepStaging", "build:setup", "sweep staging leftovers");
