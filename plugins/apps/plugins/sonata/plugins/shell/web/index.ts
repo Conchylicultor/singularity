@@ -36,6 +36,11 @@ export {
   useSetTransposeSemitones,
 } from "./transpose-store";
 export {
+  RhythmStoreProvider,
+  useRhythmHands,
+  useSetRhythmHands,
+} from "./rhythm-store";
+export {
   LaneInsetsProvider,
   useLaneInsets,
   type LaneInsets,

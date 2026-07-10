@@ -33,6 +33,7 @@ import { Sonata } from "./slots";
 import { useCursorApi } from "./cursor-store";
 import { useKeyAutoDetect } from "./key-mode-store";
 import { useTransposeSemitones } from "./transpose-store";
+import { useRhythmHands } from "./rhythm-store";
 
 /** Tempo scale clamp — slowest 0× (frozen / 0%) to fastest 4× (quadruple). */
 const MIN_TEMPO_SCALE = 0;
@@ -380,6 +381,13 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // reactively here so toggling it re-derives the score below — chord notes are
   // (re)generated from authored chord annotations in `baseScore`.
   const voicing = useConfig(voicingConfig);
+  // Per-song two-hand rhythm necklace (per-surface scoped store, written by the
+  // `rhythm-controls` plugin's observer / its controls). Threaded into
+  // `reVoiceChords` in `baseScore`: like voicing, it lands notes on the chord
+  // annotations' EXISTING beats (a bar-anchored groove over the same timeline),
+  // so it belongs in the view layer and never rewinds the transport. `null` ⇒
+  // today's block-chord behaviour.
+  const rhythmHands = useRhythmHands();
   // The per-surface cursor store's imperative facade. Resolves to the
   // `<CursorStoreProvider>` mounted in `SonataLayout` (wrapping this provider),
   // so every surface gets its own playhead. Memoized on the stable store, so it
@@ -509,13 +517,15 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     // shifted pitches). No-op at 0 semitones — see `transposeScore`.
     const transposed = transposeScore(contentScore, transposeSemitones);
     // Regenerate chord notes from authored chord annotations under the global
-    // voicing config (realistic voice-leading / strategy / octave). Runs BEFORE
-    // key inference + spelling so the chord notes exist for key detection and
-    // get enharmonic spellings. The new notes land on the authored chord
-    // annotations' *existing* beats, so the timeline span is unchanged — this
-    // belongs in the view layer. No-op when there are no authored chord
-    // annotations (returns the score unchanged).
-    const voiced = reVoiceChords(transposed, voicing);
+    // voicing config (realistic voice-leading / strategy / octave) and the
+    // per-song rhythm hands. Runs BEFORE key inference + spelling so the chord
+    // notes exist for key detection and get enharmonic spellings. Both voicing
+    // and rhythm land notes on the authored chord annotations' *existing* beats
+    // (rhythm strikes a bar-anchored groove over the same timeline), so the
+    // timeline span is unchanged — this belongs in the view layer. No-op when
+    // there are no authored chord annotations (returns the score unchanged);
+    // `null` rhythm hands ⇒ today's one-block-note-per-chord behaviour.
+    const voiced = reVoiceChords(transposed, voicing, rhythmHands);
     // Two pure pre-analysis steps establish key context: inferKeys derives the
     // tonal centre(s) from the notes (when no key is authored), then spellScore
     // fills each note's enharmonic `spelling` from the key in force. Order
@@ -531,7 +541,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     // view layer, not the content timeline.
     const derived = analyzers.flatMap((a) => a.analyze(spelled));
     return mergeAnnotations(spelled, derived);
-  }, [contentScore, analyzers, keyAutoDetect, transposeSemitones, voicing]);
+  }, [
+    contentScore,
+    analyzers,
+    keyAutoDetect,
+    transposeSemitones,
+    voicing,
+    rhythmHands,
+  ]);
 
   // Fold the tempo scale into the tempo map ONCE here, so every consumer — the
   // transport loop below, the audio scheduler, and the displays — reads a single

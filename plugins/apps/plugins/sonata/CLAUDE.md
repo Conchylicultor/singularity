@@ -19,9 +19,10 @@
       - **`fx-ripples`** — Fancy piano-roll FX (opt-in): expanding sound-wave ripple rings from each note strike, chords merging into one stronger ripple. Server registration of the fx-ripples enabled toggle.
       - **`fx-shatter`** — Fancy piano-roll FX (opt-in): notes shatter into tinted debris that arcs up and falls under gravity at the strike line. Server registration of the fx-shatter enabled toggle.
   - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), shows stats on each library card (Library.CardMeta), and contributes Plays / Last-played fields (Library.Fields) so they appear in the DataView's sort, filter, and table columns. Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
-  - **`primitives`** [4 sub-plugins] — Umbrella for Sonata-local client primitives.
+  - **`primitives`** [5 sub-plugins] — Umbrella for Sonata-local client primitives.
   - **`progress`** [5 sub-plugins] — Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.
-  - **`rich`** [10 sub-plugins] — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
+  - **`rhythm`** — Rhythm-necklace data model for Sonata: preset onset patterns (Tresillo, Son, Bossa Nova, …) plus pure rotate/resample/toggle operations. A framework-free leaf shared by the rhythm circle and the per-hand chord-grid grooves.
+  - **`rich`** [11 sub-plugins] — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
   - **`score`**
   - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.
   - **`songsheet`** — Sonata Display: a chord-over-lyrics songsheet. Renders the score's lyric lines with chords printed over each column, grouped by section, highlighting and auto-scrolling the line under the playback cursor. A reading view (no time-axis / pitch-plane capabilities); click a line to seek.

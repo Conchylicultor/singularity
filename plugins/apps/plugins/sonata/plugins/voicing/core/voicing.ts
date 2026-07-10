@@ -49,7 +49,22 @@ export interface VoicingOptions {
    * behaviour, byte-for-byte (same note ids/shape, no `voice` set).
    */
   voiceLead?: boolean;
+  /**
+   * Absolute onset beats per hand, sorted ascending. Resolved by reVoiceChords
+   * from the bar grid — this module never learns about bars or time signatures.
+   * When present, chords are struck on this bar-anchored necklace (a note per
+   * onset in the chord in force) instead of one block note per chord event; when
+   * absent every strategy emits exactly today's notes.
+   */
+  rhythm?: { bass: readonly number[]; chord: readonly number[] };
 }
+
+/**
+ * A bass note is emitted when the voicing is voice-led OR a rhythm is active —
+ * a left-hand groove with no bass note would be inert. Decoupling bass from
+ * `voiceLead` makes that impossible.
+ */
+const wantsBass = (o: VoicingOptions) => !!o.voiceLead || !!o.rhythm;
 
 export interface Voicing {
   id: string;
@@ -92,12 +107,15 @@ function placeVoicings(
   let prevVoiced: number[] | null = null;
   return events.map((ev) => {
     const tones = tonesOf(ev);
-    if (opts.voiceLead) {
-      const pitches = nearestVoicing(tones, prevVoiced);
-      prevVoiced = pitches;
-      return { pitches, bass: lowBassPitch(ev.data.bass ?? ev.data.root) };
-    }
-    return { pitches: tones, bass: null };
+    // Voice-leading advances `prevVoiced`; root position leaves it untouched so
+    // it stays byte-for-byte with the original behaviour. Bass placement is
+    // orthogonal: emitted whenever voice-leading OR a rhythm wants it.
+    const pitches = opts.voiceLead ? nearestVoicing(tones, prevVoiced) : tones;
+    if (opts.voiceLead) prevVoiced = pitches;
+    const bass = wantsBass(opts)
+      ? lowBassPitch(ev.data.bass ?? ev.data.root)
+      : null;
+    return { pitches, bass };
   });
 }
 
@@ -126,9 +144,106 @@ function bassNote(
   ];
 }
 
-/** Upper-structure voice for a note: 1 in realistic mode, undefined otherwise. */
+/**
+ * Upper-structure voice for a note: `1` whenever a bass is present (voice-led or
+ * rhythmic), so bass (`voice: 0`) and upper structure stay on distinct voices;
+ * `undefined` in the plain root-position path (byte-for-byte with the original).
+ */
 function upperVoice(opts: VoicingOptions): number | undefined {
-  return opts.voiceLead ? 1 : undefined;
+  return wantsBass(opts) ? 1 : undefined;
+}
+
+/**
+ * Shared bar-anchored onset emitter for the rhythm path. The necklace is anchored
+ * to the ABSOLUTE bar grid and does NOT restart per chord: this walks a hand's
+ * absolute onset beats against the sorted chord events (O(n+m) pointer merge) and,
+ * for each onset that falls inside a chord, builds notes via `build`. An onset in
+ * a gap (before the first chord / after the last) is genuine silence and skipped.
+ * The note duration is clipped to the chord's end so a note never rings across a
+ * chord change. `events` are pre-sorted by `start` and non-overlapping (chord
+ * annotations), and `onsets` are sorted ascending — so the pointer only advances.
+ */
+function emitRhythmicHand(
+  events: ChordEvent[],
+  onsets: readonly number[],
+  build: (ctx: {
+    evIndex: number;
+    onsetIndex: number;
+    start: number;
+    duration: number;
+  }) => Note[],
+): Note[] {
+  const out: Note[] = [];
+  let j = 0;
+  for (let i = 0; i < onsets.length; i++) {
+    const b = onsets[i]!;
+    while (j < events.length && events[j]!.end <= b) j++;
+    const ev = events[j];
+    if (!ev || b < ev.start || b >= ev.end) continue; // silence — no chord here
+    const nextOnset = i + 1 < onsets.length ? onsets[i + 1]! : Infinity;
+    const duration = Math.min(nextOnset, ev.end) - b;
+    out.push(...build({ evIndex: j, onsetIndex: i, start: b, duration }));
+  }
+  return out;
+}
+
+/**
+ * Emit a strategy's full rhythmic performance: the chord hand (tones struck per
+ * chord onset, selected by `chordTonesAt`) plus the bass hand (one low root per
+ * bass onset, `voice: 0`). Shared by all three strategies — each supplies only
+ * its per-onset tone selection, so the onset→notes emission lives in one place.
+ * Ids are onset-indexed and unique (`-c${i}-${k}` for chord tones, `-b${i}` for
+ * bass), and only ever produced on this path.
+ */
+function voiceRhythm(
+  events: ChordEvent[],
+  placed: PlacedVoicing[],
+  opts: VoicingOptions,
+  chordTonesAt: (
+    tones: number[],
+    onsetIndex: number,
+  ) => { pitch: number; k: number }[],
+): Note[] {
+  const rhythm = opts.rhythm!;
+  const { track, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
+  const voice = upperVoice(opts);
+
+  const chordNotes = emitRhythmicHand(
+    events,
+    rhythm.chord,
+    ({ evIndex, onsetIndex, start, duration }) =>
+      chordTonesAt(placed[evIndex]!.pitches, onsetIndex).map(({ pitch, k }) => ({
+        id: `${idPrefix}-c${onsetIndex}-${k}`,
+        pitch,
+        start,
+        duration,
+        velocity,
+        track,
+        voice,
+      })),
+  );
+
+  const bassNotes = emitRhythmicHand(
+    events,
+    rhythm.bass,
+    ({ evIndex, onsetIndex, start, duration }) => {
+      const bass = placed[evIndex]!.bass;
+      if (bass === null) return [];
+      return [
+        {
+          id: `${idPrefix}-b${onsetIndex}`,
+          pitch: bass,
+          start,
+          duration,
+          velocity,
+          track,
+          voice: 0,
+        },
+      ];
+    },
+  );
+
+  return [...chordNotes, ...bassNotes];
 }
 
 export const VOICINGS: Voicing[] = [
@@ -140,6 +255,12 @@ export const VOICINGS: Voicing[] = [
       const placed = placeVoicings(events, opts, (ev) =>
         chordPitches(ev.data, opts.octave),
       );
+      if (opts.rhythm) {
+        // Strike the whole tone-set at each chord onset.
+        return voiceRhythm(events, placed, opts, (tones) =>
+          tones.map((pitch, k) => ({ pitch, k })),
+        );
+      }
       const voice = upperVoice(opts);
       return events.flatMap((ev, i) => [
         ...placed[i]!.pitches.map((pitch, k) => ({
@@ -164,6 +285,12 @@ export const VOICINGS: Voicing[] = [
       const placed = placeVoicings(events, opts, (ev) =>
         chordPitches(ev.data, opts.octave).slice(0, 3),
       );
+      if (opts.rhythm) {
+        // Strike the whole (triad) tone-set at each chord onset.
+        return voiceRhythm(events, placed, opts, (tones) =>
+          tones.map((pitch, k) => ({ pitch, k })),
+        );
+      }
       const voice = upperVoice(opts);
       return events.flatMap((ev, i) => [
         ...placed[i]!.pitches.map((pitch, k) => ({
@@ -187,6 +314,15 @@ export const VOICINGS: Voicing[] = [
       const placed = placeVoicings(events, opts, (ev) =>
         chordPitches(ev.data, opts.octave),
       );
+      if (opts.rhythm) {
+        // Spread the chord across successive onsets: onset i sounds tone
+        // `i % tones.length`, generalising the arpeggio's "walk up the chord".
+        return voiceRhythm(events, placed, opts, (tones, onsetIndex) =>
+          tones.length === 0
+            ? []
+            : [{ pitch: tones[onsetIndex % tones.length]!, k: 0 }],
+        );
+      }
       const voice = upperVoice(opts);
       return events.flatMap((ev, i) => {
         const tones = placed[i]!.pitches;

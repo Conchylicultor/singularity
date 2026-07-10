@@ -5,7 +5,7 @@
 ## Plugin reference
 
 - Cross-plugin:
-  - Imported by: `apps/sonata/theory`
+  - Imported by: `apps/sonata/theory`, `apps/sonata/voicing`
 - Core:
   - Exports: Types: `ActiveNoteIndex`, `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyEntry`, `KeyLane`, `KeySignature`, `KeySpeller`, `LoopWindowSec`, `LyricAnnotation`, `LyricChord`, `LyricData`, `Note`, `PedalEvent`, `PedalSpan`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TempoIndex`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `accidentalGlyph`, `asKeySignature`, `bars`, `beatGrid`, `beatToSeconds`, `buildActiveNoteIndex`, `buildTempoIndex`, `collectKeyEntries`, `currentLine`, `effectiveKeyAt`, `emptyScore`, `foldLoopTime`, `isPedalDownAt`, `leadInBeats`, `makeKeySpeller`, `mergeAnnotations`, `mergeScores`, `nextLine`, `pedalSpans`, `prevLine`, `resolvePedalSustain`, `scaleTempo`, `scoreEndBeat`, `scoreStartBeat`, `spellScore`, `subdivideBars`
 
