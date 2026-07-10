@@ -1,15 +1,9 @@
-import { nextRankIn } from "@plugins/primitives/plugins/rank/server";
-import { pageBlocksStarred, _pageBlocksStarredExt } from "./tables";
+import { pageBlocksStarred } from "./tables";
 
 export async function setPageStarred(pageId: string, starred: boolean): Promise<void> {
   if (starred) {
-    const rank = await nextRankIn(_pageBlocksStarredExt);
-    await pageBlocksStarred.upsert(pageId, { rank: rank.toString() });
+    await pageBlocksStarred.upsert(pageId, {});
   } else {
     await pageBlocksStarred.delete(pageId);
   }
-}
-
-export async function movePageStarred(pageId: string, rank: string): Promise<void> {
-  await pageBlocksStarred.upsert(pageId, { rank });
 }

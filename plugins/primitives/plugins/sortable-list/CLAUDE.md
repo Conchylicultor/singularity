@@ -6,7 +6,7 @@
 
 - Description: Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components.
 - Cross-plugin:
-  - Imported by: `apps-core/tab-bar`, `apps/pages/starred`, `fields/list/config`, `fields/string-list/config`, `layouts/miller`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/data-view/view-core`, `reorder`, `reorder/editor`
+  - Imported by: `apps-core/tab-bar`, `fields/list/config`, `fields/string-list/config`, `layouts/miller`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/data-view/view-core`, `reorder`, `reorder/editor`
 - Web:
   - Exports: Types: `SortableItemProps`, `SortableItemState`, `SortableListProps`, `SortingStrategy`; Values: `rectSortingStrategy`, `SortableItem`, `SortableList`
 

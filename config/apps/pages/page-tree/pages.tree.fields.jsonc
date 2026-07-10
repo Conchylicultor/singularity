@@ -1,0 +1,13 @@
+// @hash 7d359e7db820
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  //
+  // Field extensions folded into the pages-sidebar DataView schema, in fold order.
+  // `starred` is a filter-only dimension (hidden from every view's body via each
+  // view instance's `visibleFields`), and is what the Favorites view filters on.
+  "items": [
+    "apps.pages.starred:starred"
+  ]
+}

@@ -1,0 +1,1 @@
+ALTER TABLE "page_blocks_ext_starred" DROP COLUMN IF EXISTS "rank";

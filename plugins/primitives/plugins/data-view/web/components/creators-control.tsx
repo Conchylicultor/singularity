@@ -17,7 +17,8 @@ import type { CreateOption } from "../../core";
  * the web barrel — consumers declare `creators` and the host renders this.
  *
  * - `0` (or undefined) → nothing.
- * - `1` → a labelled `Button`.
+ * - `1` → a labelled `Button`, or (when `compact`) a `+` `IconButton` with the
+ *   label as its tooltip — folding it below a narrow toolbar like every sibling.
  * - `N` → a `+` `IconButton` opening a dropdown menu of icon + label (+ muted
  *   description) items.
  *
@@ -27,8 +28,10 @@ import type { CreateOption } from "../../core";
  */
 export function CreatorsControl({
   creators,
+  compact = false,
 }: {
   creators?: CreateOption[];
+  compact?: boolean;
 }): ReactNode {
   const [busy, setBusy] = useState(false);
 
@@ -45,6 +48,19 @@ export function CreatorsControl({
 
   if (creators.length === 1) {
     const c = creators[0]!;
+    // Compact: fold to an `MdAdd` IconButton (label → tooltip), matching the
+    // N-creator trigger — `IconButton` takes an icon *component*, so the
+    // creator's own `icon` ReactNode is not used here.
+    if (compact) {
+      return (
+        <IconButton
+          icon={MdAdd}
+          label={c.label}
+          disabled={busy}
+          onClick={() => run(c)}
+        />
+      );
+    }
     return (
       <Button disabled={busy} onClick={() => run(c)}>
         {c.icon}

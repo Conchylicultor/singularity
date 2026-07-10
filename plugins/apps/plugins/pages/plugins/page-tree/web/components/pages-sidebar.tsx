@@ -1,14 +1,14 @@
 import { useMemo } from "react";
-import { MdAdd, MdDescription } from "react-icons/md";
+import { MdAdd } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { ControlSizeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { SidebarPaneSection } from "@plugins/primitives/plugins/app-shell/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
+import {
+  DataView,
+  defineDataView,
+  type CreateOption,
+} from "@plugins/primitives/plugins/data-view/web";
 import type {
   RowChromeMenuHelpers,
   RowMenuItem,
@@ -33,16 +33,18 @@ export function PagesSidebar() {
   const selectedId = pageDetailPane.useRouteEntry()?.params.pageId;
 
   // Build rows only under the not-pending guard (never the `pending ? [] : data`
-  // collapse that makes loading look like a confirmed-empty tree); the render
-  // below gates on `result.pending` and shows the skeleton instead.
+  // collapse that makes loading look like a confirmed-empty tree); the DataView
+  // gets `loading={result.pending}`, so the switcher chrome paints immediately
+  // and only the body shows the skeleton.
   let rows: Block[] = [];
   if (!result.pending) {
     rows = result.data;
   }
 
-  // Plain literal (not the tree child's options helper) to respect data-view's
-  // collection-consumer separation — consumers never import a view child. The
-  // row-menu callback is typed via the tree *primitive's* helper types.
+  // Plain literals (not the view children's options helpers) to respect
+  // data-view's collection-consumer separation — consumers never import a view
+  // child. The tree row-menu callback is typed via the tree *primitive's* helper
+  // types.
   const viewOptions = useMemo(
     () => ({
       tree: {
@@ -56,116 +58,100 @@ export function PagesSidebar() {
             onClick: () => void addBelow(),
           },
         ],
-        // Root creation lives on the section header "+" (Notion-style), and
+        // Root creation lives on the DataView `creators` "+" (Notion-style), and
         // per-row sub-page creation on each row's hover "+", so the persistent
         // footer "New Page" line is dropped for a more compact tree.
         addLabel: null,
         dragOverlay: (b: Block) => pageData(b).title || "Untitled",
       },
+      // Favorites (a filtered `list` view) gets the same page icon + density.
+      list: {
+        leading: (b: Block) => (
+          <PageIcon nodes={pageData(b).iconSvgNodes} className="size-4" />
+        ),
+        size: "sm" as const,
+      },
     }),
     [],
   );
 
+  const creators = useMemo<CreateOption[]>(() => {
+    const createRootPage = async () => {
+      const id = await createPageWithSeed({ parentId: null });
+      openPane(pageDetailPane, { pageId: id }, { mode: "push" });
+    };
+    return [
+      { id: "new-page", label: "New page", icon: <MdAdd />, onSelect: createRootPage },
+    ];
+  }, [openPane]);
+
+  // The DataView's view switcher IS the sidebar chrome (no SidebarPaneSection).
+  // This `Scroll` is the direct flex child of the app-shell sidebar `Stack`;
+  // the DataView never owns a scroll — its `Sticky` toolbar pins against it.
   return (
-    <SidebarPaneSection
-      title="Pages"
-      icon={MdDescription}
-      labelExtra={PagesHeaderAdd}
-    >
-      <Scroll fill className="py-xs">
-        {result.pending ? (
-          <Loading variant="rows" />
-        ) : (
-          <DataView<Block>
-            rows={rows}
-            fields={[
-              {
-                id: "title",
-                label: "Title",
-                primary: true,
-                value: (b) => pageData(b).title,
-                onEdit: async (b, next) => {
-                  await fetchEndpoint(
-                    updateBlock,
-                    { id: b.id },
-                    {
-                      body: {
-                        data: {
-                          ...pageData(b),
-                          title: String(next ?? "").trim() || "Untitled",
-                        },
-                      },
-                    },
-                  );
-                },
-              },
-            ]}
-            rowKey={(b) => b.id}
-            views={["tree"]}
-            storageKey={PAGES_SIDEBAR_VIEW}
-            selectedRowId={selectedId}
-            onRowActivate={(b) =>
-              openPane(pageDetailPane, { pageId: b.id }, { mode: "push" })
-            }
-            hierarchy={{
-              getParentId: (b) => b.parentId,
-              getRank: (b) => b.rank,
-              isExpanded: (b) => b.expanded,
-              onToggleExpanded: (id, next) =>
-                void fetchEndpoint(updateBlock, { id }, { body: { expanded: next } }),
-              // Positional intent only — never `dest.rank`. These rows are the
-              // `type='page'` projection of the `page_blocks` forest, so a rank
-              // computed over them collides with the content blocks sharing the
-              // same `(parent_id, rank)` space. `handleMoveBlock` mints the rank
-              // against the complete sibling set.
-              onMove: (id, dest) =>
-                void fetchEndpoint(
-                  moveBlock,
-                  { id },
-                  {
-                    body: {
-                      parentId: dest.parentId,
-                      targetId: dest.targetId,
-                      zone: dest.zone,
+    <Scroll fill className="py-xs">
+      <DataView<Block>
+        rows={rows}
+        loading={result.pending}
+        fields={[
+          {
+            id: "title",
+            label: "Title",
+            primary: true,
+            value: (b) => pageData(b).title,
+            onEdit: async (b, next) => {
+              await fetchEndpoint(
+                updateBlock,
+                { id: b.id },
+                {
+                  body: {
+                    data: {
+                      ...pageData(b),
+                      title: String(next ?? "").trim() || "Untitled",
                     },
                   },
-                ),
-              onCreate: (args) => createPageWithSeed(args),
-            }}
-            viewOptions={viewOptions}
-            itemActions={PageTree.RowActions}
-          />
-        )}
-      </Scroll>
-    </SidebarPaneSection>
-  );
-}
-
-/**
- * Notion-style header "+" for the Pages section: a hover-revealed action in the
- * section label that creates a new top-level page and opens it. Replaces the
- * old persistent footer "New Page" line. Rendered via `SidebarPaneSection`'s
- * `labelExtra` slot, so it lives inside the collapsible header — `stopPropagation`
- * keeps a click from toggling the section.
- */
-function PagesHeaderAdd() {
-  const openPane = useOpenPane();
-  const createRootPage = async () => {
-    const id = await createPageWithSeed({ parentId: null });
-    openPane(pageDetailPane, { pageId: id }, { mode: "push" });
-  };
-  return (
-    <ControlSizeProvider size="xs">
-      <IconButton
-        icon={MdAdd}
-        label="New page"
-        onClick={(e) => {
-          e.stopPropagation();
-          return createRootPage();
+                },
+              );
+            },
+          },
+        ]}
+        rowKey={(b) => b.id}
+        views={["tree", "list"]}
+        storageKey={PAGES_SIDEBAR_VIEW}
+        fieldExtensions={PageTree.Fields}
+        creators={creators}
+        selectedRowId={selectedId}
+        onRowActivate={(b) =>
+          openPane(pageDetailPane, { pageId: b.id }, { mode: "push" })
+        }
+        hierarchy={{
+          getParentId: (b) => b.parentId,
+          getRank: (b) => b.rank,
+          isExpanded: (b) => b.expanded,
+          onToggleExpanded: (id, next) =>
+            void fetchEndpoint(updateBlock, { id }, { body: { expanded: next } }),
+          // Positional intent only — never `dest.rank`. These rows are the
+          // `type='page'` projection of the `page_blocks` forest, so a rank
+          // computed over them collides with the content blocks sharing the
+          // same `(parent_id, rank)` space. `handleMoveBlock` mints the rank
+          // against the complete sibling set.
+          onMove: (id, dest) =>
+            void fetchEndpoint(
+              moveBlock,
+              { id },
+              {
+                body: {
+                  parentId: dest.parentId,
+                  targetId: dest.targetId,
+                  zone: dest.zone,
+                },
+              },
+            ),
+          onCreate: (args) => createPageWithSeed(args),
         }}
-        variant="ghost"
-        className="ml-auto opacity-0 pointer-events-none group-hover/label:opacity-100 group-hover/label:pointer-events-auto focus-visible:opacity-100 focus-visible:pointer-events-auto"
+        viewOptions={viewOptions}
+        itemActions={PageTree.RowActions}
       />
-    </ControlSizeProvider>
+    </Scroll>
   );
 }

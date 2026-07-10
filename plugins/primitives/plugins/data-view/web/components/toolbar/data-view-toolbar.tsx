@@ -6,7 +6,9 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useElementSize } from "@plugins/primitives/plugins/element-size/web";
+import type { CreateOption } from "../../../core";
 import { CompactControls } from "./compact-controls";
+import { CreatorsControl } from "../creators-control";
 
 /**
  * Below this container width the toolbar folds: search collapses to a magnifier
@@ -35,8 +37,12 @@ export interface DataViewToolbarProps {
   fieldsControl: ReactNode | null;
   /** Consumer-supplied arbitrary toolbar actions. */
   actions?: ReactNode;
-  /** The `CreatorsControl` element (renders nothing when there are no creators). */
-  creatorsControl: ReactNode;
+  /**
+   * The consumer's create affordances. The toolbar owns the `CreatorsControl`
+   * element (built once below) because it is the only component that knows
+   * `compact` — a single creator folds to an icon `+` button when narrow.
+   */
+  creators?: CreateOption[];
   /** The editable view switcher. */
   switcher: ReactNode;
   /** Number of view instances — the switcher is hidden when compact unless >1. */
@@ -60,7 +66,7 @@ export function DataViewToolbar({
   filterControl,
   fieldsControl,
   actions,
-  creatorsControl,
+  creators,
   switcher,
   switcherCount,
   activeControlCount,
@@ -68,6 +74,9 @@ export function DataViewToolbar({
   const [measureRef, { width }] = useElementSize();
   const [searchOpen, setSearchOpen] = useState(false);
   const compact = width > 0 && width < COMPACT_BREAKPOINT;
+  // Built once and relocated into whichever branch renders — the toolbar's
+  // "each control element is built once" discipline. It folds on `compact`.
+  const creatorsControl = <CreatorsControl creators={creators} compact={compact} />;
   // Keep search expanded whenever there's an active query, so the filter stays
   // visible and clearable even after a blur.
   const searchExpanded = searchOpen || query.length > 0;
@@ -86,8 +95,16 @@ export function DataViewToolbar({
       <div
         ref={measureRef}
         // toolbar row of variable-content controls; no named-slot primitive maps. The Sticky's `mask` paints `bg-chrome-mask` so rows don't show through the pinned bar (and it matches whatever surface the DataView is embedded in)
+        //
+        // `flex-wrap` only when compact. The switcher deliberately never shrinks
+        // (its chips hug their content — see EditableViewSwitcher), so in a narrow
+        // host a multi-view switcher plus the trailing icon controls cannot share
+        // one line: without wrapping, the creator and the options gear are pushed
+        // past the container's edge and clipped, i.e. unreachable. Wrapping is
+        // self-limiting — it engages only on the lines that actually overflow, so a
+        // compact toolbar that already fits (≤1 view ⇒ switcher hidden) stays one row.
         // eslint-disable-next-line layout/no-adhoc-layout
-        className={cn("flex items-center gap-sm pb-sm pl-sm")}
+        className={cn("flex items-center gap-sm pb-sm pl-sm", compact && "flex-wrap")}
       >
         {compact ? (
           searchExpanded ? (

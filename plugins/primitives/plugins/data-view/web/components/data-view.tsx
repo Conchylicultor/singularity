@@ -443,7 +443,7 @@ function DataViewInner<TRow>({
                  "Fields", …) uniformly. Self-hides when there is nothing to configure.
                  Supersedes the old custom-columns-only gear. */
               fieldsControl={<DataViewSettingsMenu context={settingsContext} />}
-              creatorsControl={<CreatorsControl creators={creators} />}
+              creators={creators}
               activeControlCount={
                 (hasFilters ? filterController.ruleCount : 0) +
                 (hasSort ? sortController.ruleCount : 0)

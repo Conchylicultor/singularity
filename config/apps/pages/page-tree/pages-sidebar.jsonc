@@ -1,4 +1,48 @@
 // @hash 6ec84829688d
 {
-  "views": [{ "name": "Tree", "view": { "type": "tree" } }]
+  // The two sidebar view instances. The DataView's view switcher IS the sidebar
+  // chrome — there are no section headers.
+  //
+  // `visibleFields: ["title"]` on both keeps the contributed `starred` bool a pure
+  // FILTER dimension: the default (absent) shows every schema field, which would
+  // render a checkbox chip on every row. Filter/sort/search always see the full
+  // schema, so `starred` stays usable in the Filter pill.
+  //
+  // Favorites is a `list`, not a filtered `tree`: the tree's filter is
+  // subtree-preserving (it keeps the ancestor chain of every match), so a filtered
+  // tree would render the UNSTARRED ancestors of every starred page.
+  // Its row order is owned by the view instance (data-view/view-order), which is
+  // why `starred` needs no rank column.
+  //
+  // `id` is authored explicitly, NOT left to be derived. An omitted id is filled
+  // in by config_v2's listField as `auto-<hash(index, content)>` — so renaming a
+  // view, editing its filter, or inserting a view above it would mint a NEW id
+  // and silently orphan the `data_view_row_order` rows keyed on the old one
+  // (the user's saved Favorites order would revert to source order). Pinning the
+  // id makes the view instance's identity independent of its content.
+  "views": [
+    { "id": "pages", "name": "Pages", "view": { "type": "tree", "visibleFields": ["title"] } },
+    {
+      "id": "favorites",
+      "name": "Favorites",
+      "view": {
+        "type": "list",
+        "visibleFields": ["title"],
+        "filter": {
+          "kind": "group",
+          "id": "fav",
+          "conjunction": "and",
+          "children": [
+            {
+              "kind": "rule",
+              "id": "fav-starred",
+              "fieldId": "starred",
+              "operatorId": "is",
+              "value": true
+            }
+          ]
+        }
+      }
+    }
+  ]
 }
