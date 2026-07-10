@@ -1,6 +1,7 @@
 import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { chargeWait, registerGateGauge } from "@plugins/infra/plugins/runtime-profiler/core";
+import { AsyncLocalStorage } from "node:async_hooks";
 import { cpus } from "node:os";
 
 // Host-wide slot count. NO env override: `size` names the flock SLOT FILES
@@ -49,7 +50,25 @@ registerGateGauge("heavy-read-acquire", () => ({
   max: heavyReadSize(),
 }));
 
+// Ambient "this async context already holds a slot" flag, making the gate
+// REENTRANT. Neither tier's semaphore is reentrant on its own, so without this a
+// holder that acquires again parks on a gate that only it can free — with the
+// local tier at 2 slots, two nested holders deadlock the entire heavy-read path
+// (lived: the warmup executor wraps each warm-up in withHeavyReadSlot, and the
+// corpus-index refresh acquires again per parsed file; the moment a SECOND
+// corpus warmup existed, both local slots were held by outer wrappers whose
+// inner acquisitions waited on themselves, freezing every live-state sub — see
+// research/perfs/2026-07-10-read-admit-wedge-stuck-git-loaders.md). Reentrancy
+// preserves the budget's meaning — one logical job holds one slot; a nested
+// acquire is the SAME job, so admitting it consumes nothing extra — and makes
+// the whole deadlock class structurally impossible for any present or future
+// caller composition.
+const holdingSlot = new AsyncLocalStorage<true>();
+
 export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
+  // Reentrant fast path: already holding in this async context ⇒ same logical
+  // job ⇒ run directly, acquire nothing, release nothing.
+  if (holdingSlot.getStore()) return fn();
   // Two-tier gate: the local per-worktree semaphore wraps OUTSIDE the host-wide
   // flock gate. It bounds how many heavy ops *this* backend can have parked in
   // the shared flock queue at once, so under a cross-worktree storm one worktree
@@ -71,7 +90,7 @@ export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
           // brackets exactly the held window for the occupancy gauge above.
           heldByThisProcess++;
           try {
-            return await fn();
+            return await holdingSlot.run(true, fn);
           } finally {
             heldByThisProcess--;
           }
@@ -87,6 +106,12 @@ export function withHeavyReadSlot<T>(fn: () => Promise<T>): Promise<T> {
 // re-deriving the formula.
 export function heavyReadSlotCount(): number {
   return heavyReadSize();
+}
+
+// The local (per-worktree) tier's slot count (`localSize()`). Exposed so the
+// reentrancy regression test can saturate the local gate deterministically.
+export function heavyReadLocalSlotCount(): number {
+  return localSize();
 }
 
 // Queue-depth gauge for the host-wide heavy-read gate: how many callers are
