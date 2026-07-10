@@ -176,7 +176,7 @@ export function SongLibrary() {
       fill
       className="h-full"
       header={
-        songs.error ? (
+        songs.pending && songs.error ? (
           <Text as="div" variant="body" tone="destructive" className="px-xl py-lg">
             Failed to load songs: {songs.error.message}
           </Text>

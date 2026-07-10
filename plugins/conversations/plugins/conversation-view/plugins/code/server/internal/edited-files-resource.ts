@@ -1,7 +1,9 @@
 import { defineExternalResource } from "@plugins/framework/plugins/server-core/core";
+import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";
+import { resolved, unresolved, type Resolvable } from "@plugins/primitives/plugins/live-state/core";
 import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { type EditedFile, EditedFilesPayloadSchema } from "../../core/protocol";
-import { editedFilesMemo } from "./edited-files-cache";
+import { editedFilesMemo, evictEditedFiles } from "./edited-files-cache";
 import { getEditedFiles } from "./get-edited-files";
 import { watchEditedFiles } from "./watch-edited-files";
 
@@ -14,31 +16,48 @@ async function worktreeFor(conversationId: string): Promise<string | null> {
   return row?.worktreePath ?? null;
 }
 
-// A conversation whose worktree we cannot resolve has an UNKNOWN file set, not an
-// empty one. Returning `[]` (or a `"none"` ETag standing in for it) is an
-// absorbable failure: the client renders a legitimate "no changes", which arms the
-// destructive "Drop & Close". Both halves throw instead — `revalidate`'s throw is
-// caught by the runtime's `computeEtag` (fail-safe → no short-circuit → full load)
-// and the loader's throw reaches the client as a resource error, which the exit
-// button renders as a non-destructive "Close (state unknown)".
-function missingWorktree(conversationId: string): Error {
-  return new Error(
-    `edited-files: conversation ${conversationId} has no worktreePath — the edited-file set is unknown, not empty`,
-  );
+// A conversation whose worktree we cannot resolve — or whose worktree is reaped
+// mid-compute — has an UNKNOWN file set, not an empty one. Both are the SAME
+// determinate state (no trustworthy worktree to read), so both collapse onto the
+// caller's `gone` value: a first-class settled non-value, NOT `[]`/`"none"`.
+// Returning the empty value would be an absorbed failure — the client renders a
+// legitimate "no changes", which arms the destructive "Drop & Close". Every OTHER
+// git failure propagates: that is a TRANSIENT failure, and the readiness gate now
+// makes it un-absorbable.
+//
+// Modelled byte-for-byte on commits-graph's `onWorktree`
+// (commits-graph/server/internal/resources.ts): the reaped case is CAUGHT, not
+// stat-pre-checked, because a reap racing the compute would slip past any
+// pre-check. One `gone` value per call, so a reaped worktree reports the same
+// reason as an absent one — giving the reaped case its own reason would mean
+// diverging from that shared shape for a distinction the consumer does not act on
+// (both are "no trustworthy value").
+async function onWorktree<T>(
+  conversationId: string,
+  gone: T,
+  compute: (worktreePath: string) => Promise<T>,
+): Promise<T> {
+  const wt = await worktreeFor(conversationId);
+  if (!wt) return gone;
+  try {
+    return await compute(wt);
+  } catch (err) {
+    if (!(err instanceof WorktreeGoneError)) throw err;
+    evictEditedFiles(wt);
+    return gone;
+  }
 }
 
 /** The `loader` half, resolved from a conversation id. */
-export async function loadEditedFilesFor(conversationId: string): Promise<EditedFile[]> {
-  const wt = await worktreeFor(conversationId);
-  if (!wt) throw missingWorktree(conversationId);
-  return getEditedFiles(wt);
+export function loadEditedFilesFor(conversationId: string): Promise<Resolvable<EditedFile[]>> {
+  return onWorktree(conversationId, unresolved("worktree unavailable"), async (wt) =>
+    resolved(await getEditedFiles(wt)),
+  );
 }
 
 /** The `revalidate` half — the same memo, hence the same authority. */
-export async function editedFilesSignatureFor(conversationId: string): Promise<string> {
-  const wt = await worktreeFor(conversationId);
-  if (!wt) throw missingWorktree(conversationId);
-  return editedFilesMemo.signature(wt);
+export function editedFilesSignatureFor(conversationId: string): Promise<string> {
+  return onWorktree(conversationId, "no-worktree", (wt) => editedFilesMemo.signature(wt));
 }
 
 export const editedFilesResource = defineExternalResource({
@@ -61,6 +80,12 @@ export const editedFilesResource = defineExternalResource({
   // `lstat` per dirty file, vs. the loader's `merge-base` + two `git diff` passes +
   // full content reads of untracked files. See edited-files-signature.ts for the
   // faithfulness argument and research/2026-07-09-global-etag-value-coproduction.md.
+  //
+  // The no-worktree/reaped collapse preserves that same co-production invariant:
+  // the `revalidate`'s `"no-worktree"` ETag and the loader's `unresolved(…)` value
+  // are produced from the SAME `onWorktree` branch, so they are one consistent
+  // signature/value pair for a real determinate state — never a fresh ETag over a
+  // stale value.
   revalidate: ({ id }: Params): Promise<string> => editedFilesSignatureFor(id),
   async onFirstSubscribe({ id }: Params) {
     if (unsubscribes.has(id)) return;

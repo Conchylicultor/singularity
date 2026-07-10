@@ -37,13 +37,15 @@ export type CombinedResources<T extends Record<string, GateInput>> =
   | {
       pending: false;
       data: { [K in keyof T]: GateDataOf<T[K]> };
-      error: Error | null;
     };
 
 /**
  * Promise.all for resource results: `pending` until EVERY input has settled
- * once, then `data` carries each input's settled value under its key. `error`
- * is the first non-null input error (available in both states).
+ * once, then `data` carries each input's settled value under its key. One
+ * erroring input keeps the whole combine pending (it ORs `pending`, and an
+ * errored `useResource` result is itself pending) and carries the first
+ * non-null input error on the pending arm. The settled arm mirrors
+ * `ResourceResult` and OMITS `error` — a settled combine vouches for its data.
  *
  * Pure function — for a render-stable identity inside a component, use
  * `useCombinedResources`.
@@ -65,7 +67,7 @@ export function combineResources<T extends Record<string, GateInput>>(
       (r as unknown as { data: unknown }).data,
     ]),
   ) as { [K in keyof T]: GateDataOf<T[K]> };
-  return { pending: false, data, error };
+  return { pending: false, data };
 }
 
 /**

@@ -18,12 +18,32 @@ export function CommitsChip() {
 
   if (deltaResult.pending) return null;
   if (pushesResult.pending) return null;
-  if (deltaResult.data.mergeBase === null) return null;
+
+  const delta = deltaResult.data;
+  // No worktree to measure ⇒ a determinate non-value. Show a muted `—` with the
+  // reason as its tooltip — never a confident "0 ahead" about a branch nobody
+  // measured.
+  if (!delta.resolved) {
+    return (
+      <Button
+        variant={isOpen ? "secondary" : "ghost"}
+        title={delta.reason}
+        aria-label={delta.reason}
+        aria-pressed={isOpen}
+        onClick={toggle}
+        className="gap-xs px-sm text-caption tabular-nums"
+      >
+        <MdAltRoute className="size-4" />
+        <span className="text-muted-foreground">—</span>
+      </Button>
+    );
+  }
+  if (delta.value.mergeBase === null) return null;
 
   const pushCount = pushesResult.data.filter((p) => p.attemptId === conversation?.attemptId).length;
-  const ahead = deltaResult.data.ahead;
-  const behind = deltaResult.data.behind;
-  const branch = deltaResult.data.branch;
+  const ahead = delta.value.ahead;
+  const behind = delta.value.behind;
+  const branch = delta.value.branch;
 
   const parts = [
     `${ahead} ahead`,

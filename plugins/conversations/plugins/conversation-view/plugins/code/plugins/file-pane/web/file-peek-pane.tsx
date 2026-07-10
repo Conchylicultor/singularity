@@ -41,9 +41,12 @@ function FilePeekPaneBody() {
       : filePath;
 
   const filesResult = useEditedFiles(convId ?? "");
-  const status = filesResult.pending
-    ? "clean"
-    : (filesResult.data.find((f) => f.path === effectivePath)?.status ?? "clean");
+  // `status` is a derived renderer hint, so an unknown file set (pending or an
+  // unresolved worktree) safely defaults to "clean" — no display surface here.
+  const status =
+    filesResult.pending || !filesResult.data.resolved
+      ? "clean"
+      : (filesResult.data.value.find((f) => f.path === effectivePath)?.status ?? "clean");
   const renderers = useFileRenderers({ path: effectivePath, status });
 
   if (resolved.status === "loading") {

@@ -131,9 +131,17 @@ export function hydrateQuery(queryKey: unknown[], data: unknown): void {
   getDefaultQueryClient().setQueryData(queryKey, data);
 }
 
+// `pending` means "no trustworthy value" — never-loaded ∪ errored are the same
+// state to a consumer (invariant I1). The settled arm therefore DELIBERATELY
+// OMITS `error`: a value you can read (`data`) is one the server currently
+// vouches for, so `.error` is unreachable once narrowed to settled — reading it
+// is a tsc error, which is the enforcement (a `null`-typed field would not
+// catch it, since `null` is assignable to `Error | null`). Last-known-good under
+// a transient error moves to the opt-in `stale?: T` on the pending arm: named,
+// greppable, and never what a `.data` read reaches.
 export type ResourceResult<T> =
-  | { pending: true; error: Error | null; refetch: () => Promise<void> }
-  | { pending: false; data: T; error: Error | null; refetch: () => Promise<void> };
+  | { pending: true; error: Error | null; stale?: T; refetch: () => Promise<void> }
+  | { pending: false; data: T; refetch: () => Promise<void> };
 
 // Optional read options for useResource.
 export interface UseResourceOptions<T, S> {
@@ -248,7 +256,15 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     ...(selectActive ? { select, notifyOnChangeProps: ["data", "error"] as const } : {}),
   });
 
-  const pending = q.dataUpdatedAt === 0;
+  // `hasValue` — a real value has landed at least once (`dataUpdatedAt` leaves
+  // epoch 0 only on a successful load). `pending` widens it to "no trustworthy
+  // value": never-loaded OR errored. The widening makes every existing
+  // `if (r.pending)` gate correct under a transient error for free; the
+  // internal branches below key off `hasValue`, not `pending`, so an error does
+  // not re-select `initialData`, re-prime, or re-time the mount→settle metric.
+  const hasValue = q.dataUpdatedAt !== 0;
+  const error = q.error as Error | null;
+  const pending = !hasValue || error !== null;
 
   // Cold-start accelerator: if this resource mounts before the live-state
   // transport has EVER been ready (a cold deep-link — the notifications socket is
@@ -261,13 +277,13 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   // reconciles via the shared version guard.
   const primedKeyRef = useRef<string | null>(null);
   useEffect(() => {
-    if (!pending) return;
+    if (hasValue) return;
     if (notifications.hasEverBeenReady(origin)) return;
     if (primedKeyRef.current === keyStr) return;
     primedKeyRef.current = keyStr;
     void notifications.primeFromHttp(key, p, origin);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; mirrors the observe effect
-  }, [pending, keyStr, notifications, key, origin, JSON.stringify(p)]);
+  }, [hasValue, keyStr, notifications, key, origin, JSON.stringify(p)]);
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect -- gate first-settle transition: a one-way latch deliberately held as state for a (key,params) pair; the unsettled→settled flip MUST cause a re-render so the notifyOnChangeProps select-narrowing takes effect next render — a ref would silently skip that re-render and break the gate; there is no external store to subscribe to and it cannot be derived in render
@@ -278,7 +294,7 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   // `pending`. live-state stays threshold-agnostic — the registered reporter (a
   // domain plugin) decides what counts as slow.
   useEffect(() => {
-    if (!pending && !reportedRef.current) {
+    if (hasValue && !reportedRef.current) {
       reportedRef.current = true;
       // Cold-start attribution (additive, never suppressing): was the transport
       // NOT yet ready when this resource mounted, and how much of the settle
@@ -302,24 +318,30 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
       });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; mirrors the observe effect above
-  }, [pending, key, JSON.stringify(p)]);
+  }, [hasValue, key, JSON.stringify(p)]);
 
   // Gate transition render (settled, but the select-scoped sub not applied
   // yet): apply the selector manually so callers always see the slice type.
-  const data = (select !== undefined && !selectActive && !pending
+  // Keyed on `hasValue`, not `pending`: a transient error keeps `pending` true
+  // while `q.data` still holds the last authoritative value, and re-selecting
+  // `initialData` there would blank the slice.
+  const data = (select !== undefined && !selectActive && hasValue
     ? select(q.data as T)
     : q.data) as T | S;
-  const error = q.error as Error | null;
+  // Last-known-good for the pending arm: the SELECTED slice (same expression as
+  // `data`) once a value has landed, else `undefined` — a first-load failure has
+  // no trustworthy value to expose.
+  const stale = hasValue ? data : undefined;
   const refetchRef = useLatestRef(q.refetch);
 
-  // The result identity recomputes only on pending/data/error; the returned
-  // `refetch` reads the freshest `q.refetch` off the stable `refetchRef.current`
-  // at call time.
+  // The result identity recomputes only on pending/data/error/stale; the
+  // returned `refetch` reads the freshest `q.refetch` off the stable
+  // `refetchRef.current` at call time.
   return useMemo(
     (): ResourceResult<T | S> =>
       pending
-        ? { pending: true, error, refetch: () => refetchRef.current().then(() => {}) }
-        : { pending: false, data, error, refetch: () => refetchRef.current().then(() => {}) },
-    [pending, data, error],
+        ? { pending: true, error, stale, refetch: () => refetchRef.current().then(() => {}) }
+        : { pending: false, data, refetch: () => refetchRef.current().then(() => {}) },
+    [pending, data, error, stale],
   );
 }

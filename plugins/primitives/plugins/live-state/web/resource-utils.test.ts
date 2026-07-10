@@ -11,7 +11,9 @@
 import { test, expect, describe } from "bun:test";
 import { combineResources } from "./resource-utils";
 
-const settled = <T,>(data: T) => ({ pending: false as const, data, error: null });
+// Mirrors the real `useResource` results: the settled arm carries no `error`
+// (a value you can read is one the server vouches for), the pending arm does.
+const settled = <T,>(data: T) => ({ pending: false as const, data });
 const pending = () => ({ pending: true as const, error: null });
 
 describe("combineResources", () => {
@@ -36,14 +38,19 @@ describe("combineResources", () => {
     expect(r.data.q).toEqual({ ranks: [] });
   });
 
-  test("propagates the first non-null error in both states", () => {
+  test("an errored input keeps the combine pending and propagates its error", () => {
+    // An errored `useResource` result is itself `pending` (the widened gate), so
+    // a settled-with-error input is now unrepresentable. One erroring input
+    // keeps the whole combine pending and carries its error on the pending arm.
     const err = new Error("boom");
     const failedPending = { pending: true as const, error: err };
-    expect(combineResources({ a: failedPending, b: pending() }).error).toBe(err);
-    const failedSettled = { pending: false as const, data: 1, error: err };
-    const r = combineResources({ a: failedSettled, b: settled(2) });
+    const bothPending = combineResources({ a: failedPending, b: pending() });
+    if (!bothPending.pending) throw new Error("unreachable");
+    expect(bothPending.error).toBe(err);
+    const r = combineResources({ a: failedPending, b: settled(2) });
+    expect(r.pending).toBe(true);
+    if (!r.pending) throw new Error("unreachable");
     expect(r.error).toBe(err);
-    expect(r.pending).toBe(false);
   });
 
   test("empty input set is settled", () => {

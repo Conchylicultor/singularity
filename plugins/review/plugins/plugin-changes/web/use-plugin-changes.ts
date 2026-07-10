@@ -11,7 +11,9 @@ export type PluginChangesResult =
 export function useWorktreePluginChanges(conversationId: string): PluginChangesResult {
   const r = useResource(pluginChangesResource, { conversationId });
   if (r.pending) return { data: undefined, isPending: true, error: r.error };
-  return { data: r.data, isPending: false, error: r.error };
+  // Settled: the readiness gate guarantees a value the server vouches for, so
+  // the settled arm carries no `error` — it is structurally null here.
+  return { data: r.data, isPending: false, error: null };
 }
 
 export function usePushPluginChanges(pushId: string): PluginChangesResult {

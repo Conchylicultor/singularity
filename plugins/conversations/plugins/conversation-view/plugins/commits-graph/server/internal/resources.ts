@@ -1,13 +1,14 @@
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { WorktreeGoneError } from "@plugins/primitives/plugins/commit-list/server";
+import { resolved, unresolved } from "@plugins/primitives/plugins/live-state/core";
 import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
 import { getAttempt, listPushesForAttempt, pushesResource } from "@plugins/tasks/plugins/tasks-core/server";
 import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
 import {
-  CommitDeltaSchema,
-  CommitsGraphSchema,
-  type CommitDelta,
-  type CommitsGraph,
+  CommitDeltaPayloadSchema,
+  CommitsGraphPayloadSchema,
+  type CommitDeltaPayload,
+  type CommitsGraphPayload,
 } from "../../shared/protocol";
 import {
   computeDelta,
@@ -19,15 +20,6 @@ import {
 import { graphEtag } from "./etag";
 
 type Params = { attemptId: string };
-
-const EMPTY_DELTA: CommitDelta = {
-  ahead: 0,
-  behind: 0,
-  mergeBase: null,
-  branch: null,
-};
-
-const EMPTY_GRAPH: CommitsGraph = { ...EMPTY_DELTA, commits: [], landedCommits: [], behindCommits: [] };
 
 async function worktreeFor(attemptId: string): Promise<string | null> {
   const row = await getAttempt(attemptId);
@@ -91,7 +83,7 @@ function activeAttemptParams(active: ReadonlySet<string>): () => Params[] {
 export const commitDeltaResource = defineResource({
   key: "commits-graph.delta",
   mode: "push",
-  schema: CommitDeltaSchema,
+  schema: CommitDeltaPayloadSchema,
   dependsOn: [
     { resource: pushesResource, map: attemptIdsFromPushes },
     { resource: refHeadResource, map: activeAttemptParams(activeDeltaAttempts) },
@@ -103,25 +95,29 @@ export const commitDeltaResource = defineResource({
     activeDeltaAttempts.delete(attemptId);
     evictWorktreeFor(attemptId);
   },
-  loader: ({ attemptId }: Params): Promise<CommitDelta> =>
-    onWorktree(attemptId, EMPTY_DELTA, (wt) => computeDelta(wt)),
+  loader: ({ attemptId }: Params): Promise<CommitDeltaPayload> =>
+    onWorktree(attemptId, unresolved("worktree unavailable"), async (wt) =>
+      resolved(await computeDelta(wt)),
+    ),
   // Cheap ETag: literally `deltaMemo`'s own signature — the very key the loader's
   // read-through caches under, not a separately-maintained twin of it. The two
   // cannot drift, so a fresh ETag can never certify a stale value (see
   // research/2026-07-09-global-etag-value-coproduction.md). It derives entirely
   // from (headSha, mainSha), so an unchanged pair proves ahead/behind/mergeBase
-  // are unchanged. No worktree (or a reaped one) ⇒ EMPTY_DELTA, so a stable "none"
-  // sentinel keeps an empty attempt up-to-date — a consistent signature/value pair
-  // for a real state, matching the loader's own `onWorktree` collapse. Cost: 1–2
-  // ungated `rev-parse` vs. the loader's `merge-base` + `rev-list --count`.
+  // are unchanged. No worktree (or a reaped one) ⇒ `unresolved(...)`, so a stable
+  // "no-worktree" sentinel keeps that determinate non-value up-to-date — the ETag
+  // and value are one consistent pair produced from the SAME `onWorktree` branch,
+  // now honest ("unknown") rather than a `{ahead: 0, …}` stand-in that lies about
+  // an unmeasured branch. Cost: 1–2 ungated `rev-parse` vs. the loader's
+  // `merge-base` + `rev-list --count`.
   revalidate: ({ attemptId }: Params): Promise<string> =>
-    onWorktree(attemptId, "none", (wt) => deltaSignature(wt)),
+    onWorktree(attemptId, "no-worktree", (wt) => deltaSignature(wt)),
 });
 
 export const commitsGraphResource = defineResource({
   key: "commits-graph.graph",
   mode: "push",
-  schema: CommitsGraphSchema,
+  schema: CommitsGraphPayloadSchema,
   dependsOn: [
     { resource: pushesResource, map: attemptIdsFromPushes },
     { resource: refHeadResource, map: activeAttemptParams(activeGraphAttempts) },
@@ -133,21 +129,24 @@ export const commitsGraphResource = defineResource({
     activeGraphAttempts.delete(attemptId);
     evictWorktreeFor(attemptId);
   },
-  loader: ({ attemptId }: Params): Promise<CommitsGraph> =>
-    onWorktree(attemptId, EMPTY_GRAPH, async (wt) => {
+  loader: ({ attemptId }: Params): Promise<CommitsGraphPayload> =>
+    onWorktree(attemptId, unresolved("worktree unavailable"), async (wt) => {
       const pushes = await listPushesForAttempt(attemptId);
-      return computeGraph(wt, pushes.map((p) => p.sha));
+      return resolved(await computeGraph(wt, pushes.map((p) => p.sha)));
     }),
   // Cheap ETag: the graph value derives from (headSha, mainSha, mergeBase,
   // pushedShas). mergeBase is a pure function of the two tips (immutable history),
   // so folding in both tips covers it without spawning `merge-base`; pushedShas
   // (a DB read, NOT derivable from the tips) is folded in because the landed set
   // moves whenever a push lands — head/main alone would serve a stale graph. No
-  // worktree ⇒ EMPTY_GRAPH, so a stable "none" sentinel keeps an empty attempt
-  // up-to-date. Cost: 1–2 ungated `rev-parse` + the same push DB read the loader
-  // does, vs. the loader's additional `merge-base` and up-to-250-commit `git log`s.
+  // worktree ⇒ `unresolved(...)`, so a stable "no-worktree" sentinel keeps that
+  // determinate non-value up-to-date — ETag and value are one consistent pair
+  // from the SAME `onWorktree` branch, honest ("unknown") rather than an empty
+  // graph stand-in. Cost: 1–2 ungated `rev-parse` + the same push DB read the
+  // loader does, vs. the loader's additional `merge-base` and up-to-250-commit
+  // `git log`s.
   revalidate: ({ attemptId }: Params): Promise<string> =>
-    onWorktree(attemptId, "none", async (wt) => {
+    onWorktree(attemptId, "no-worktree", async (wt) => {
       const [{ headSha, mainSha }, pushes] = await Promise.all([
         probeHeadMain(wt),
         listPushesForAttempt(attemptId),

@@ -287,6 +287,58 @@ bumps (resurrection / decrement above 0) are silent on the always-on path so a
 per-row list doesn't storm the low-volume channel; `emitDebug()` still fires on
 every change so the live-state-health inspector stays accurate.
 
+## `pending` means "no trustworthy value"; an unknown value is `Resolvable`
+
+Two different things can stand between a consumer and a value, and they live in
+two different channels. Keeping them apart is what makes a destructive default
+unreachable by construction rather than by a remembered guard (see
+`research/2026-07-09-global-resource-unknown-value-and-error-gate.md`).
+
+**The `error` channel — transient.** *"We failed to determine the value; a retry
+may succeed."* `pending` is `!hasValue || error !== null`, so never-loaded and
+errored are one state to a consumer, and the settled arm **deliberately omits
+`error`**:
+
+```ts
+type ResourceResult<T> =
+  | { pending: true;  error: Error | null; stale?: T; refetch }
+  | { pending: false; data: T;                        refetch };
+```
+
+A value you can read is one the server currently vouches for. Reading `.error`
+off a narrowed-settled result is a **tsc error** — that is the enforcement, and
+it is why the field is absent rather than typed `null` (`null` is assignable to
+`Error | null`, so a `null`-typed field would catch nothing). Last-known-good
+under a transient error is the opt-in `stale?: T` on the pending arm: named,
+greppable, and never what a `.data` read reaches. `matchResource`/`ResourceView`
+pass it to the error handler for surfaces that prefer to keep painting.
+
+The one sanctioned exemption is `useOptimisticResource`: editors keep painting
+`stale` under an error and report it through `error` + `sync-status`, rather than
+blanking the document.
+
+**The value channel — determinate.** *"The server has an answer, and the answer
+is: there is nothing to determine."* A loader branch that **cannot determine**
+its value must say so in the payload, via `Resolvable<T>` from `live-state/core`:
+
+```ts
+type Resolvable<T> = { resolved: true; value: T } | { resolved: false; reason: string };
+resourceDescriptor("edited-files", resolvableSchema(z.array(EditedFileSchema)), unresolved("not loaded"))
+```
+
+It settles, renders its `reason`, and stops retrying — where a throw would wedge
+the resource `pending` forever. It never returns the empty value: `[]` must mean
+*measured, and empty*. `edited-files` and `commits-graph.{delta,graph}` are the
+adopters — each collapses "no worktree" and "worktree reaped mid-compute" onto
+one `unresolved(…)` via an `onWorktree` helper, with `revalidate` returning the
+matching `"no-worktree"` ETag from the **same branch** so the pair stays
+co-produced. Every *other* git failure still throws.
+
+This is the resource-payload form of the repo-wide rule in the `api-design`
+skill ("Failure must be a type, not an absorbable value"). `initialData` should
+be `unresolved("not loaded")` for such a resource — a self-describing non-value
+rather than a lie.
+
 ## Readiness gates — never collapse `pending` into a default
 
 `useResource` returns a discriminated union: `.data` does not exist while
@@ -397,6 +449,6 @@ reaching for a heavier entity cache.
 - Cross-plugin:
   - Imported by: `active-data`, `active-data/attempt`, `active-data/task`, `active-data/task-link`, `apps/agent-manager/worktree-switcher`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/browser/start-page`, `apps/deploy/servers`, `apps/mail/inbox`, `apps/mail/mail-core`, `apps/mail/mailbox`, `apps/mail/reading-pane`, `apps/mail/sync-status`, `apps/mail/thread-list`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome/recent-pages`, `apps/prototypes/files`, `apps/prototypes/gallery`, `apps/settings/config`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transpose`, `apps/story/generation`, `apps/story/marker`, `apps/story/render`, `apps/story/shell`, `apps/studio/release`, `apps/studio/release/release-artifact`, `apps/studio/release/release-info`, `apps/studio/release/release-logs`, `apps/website/blog/pages-integration`, `apps/website/blog/publish`, `apps/website/blog/site`, `apps/workflows/definitions`, `apps/workflows/engine`, `apps/workflows/executions`, `auth`, `auth/apple-signing/setup-wizard`, `auth/google/setup-wizard`, `build`, `build/build-fix`, `build/build-info`, `config_v2`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view`, `conversations/conversation-view/code`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/event-counter`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/notes`, `conversations/conversation-view/op-status`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/data-view/history`, `conversations/conversations-view/data-view/queue`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/effort-provider`, `conversations/model-provider`, `conversations/recover`, `conversations/summary`, `debug/claude-cli-calls`, `debug/live-state-health`, `debug/queue`, `debug/reports`, `debug/slow-ops`, `debug/slow-ops/pane`, `debug/zero-test`, `fields/secret/config`, `framework/web-core`, `infra/boot-snapshot`, `infra/claude-cli`, `infra/events`, `infra/health`, `infra/jobs`, `infra/query-resource`, `page/editor`, `page/editor-collab`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/read-only-view`, `plugin-meta/plugin-health`, `primitives/data-view/custom-columns`, `primitives/optimistic-mutation`, `release`, `reports`, `review`, `review/code-review`, `review/config-defaults`, `review/plugin-changes`, `shell/global-action-bar`, `shell/notifications`, `tasks`, `tasks/attempt-view`, `tasks/auto-start`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-draft-form`, `tasks/task-effort`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`
 - Core:
-  - Exports: Types: `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `keyedResourceDescriptor`, `resourceDescriptor`, `resourceDescriptorByKey`, `tolerantEnum`
+  - Exports: Types: `Resolvable`, `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `keyedResourceDescriptor`, `resolvableSchema`, `resolved`, `resourceDescriptor`, `resourceDescriptorByKey`, `tolerantEnum`, `unresolved`
 
 <!-- AUTOGENERATED:END -->

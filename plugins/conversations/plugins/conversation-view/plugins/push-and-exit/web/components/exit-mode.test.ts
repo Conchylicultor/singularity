@@ -4,13 +4,17 @@ import { deriveExitMode, type ExitDecision, type ExitModeInput } from "./exit-mo
 const conversation = { attemptId: "att-1" };
 const live = { status: "waiting" } as const;
 
-const settled = (
-  data: Partial<Extract<ExitDecision, { pending: false }>["data"]> = {},
-  error: Error | null = null,
-): ExitDecision => ({
+type SettledData = Extract<ExitDecision, { pending: false }>["data"];
+
+/** The resolved edited-files arm carrying `value`. */
+const resolvedFiles = (files: readonly { path: string }[] = []): SettledData["files"] => ({
+  resolved: true,
+  value: files,
+});
+
+const settled = (data: Partial<SettledData> = {}): ExitDecision => ({
   pending: false,
-  error,
-  data: { pushes: [], hasSibling: false, files: [], ...data },
+  data: { pushes: [], hasSibling: false, files: resolvedFiles(), ...data },
 });
 
 const input = (exitDecision: ExitDecision): ExitModeInput => ({
@@ -21,43 +25,51 @@ const input = (exitDecision: ExitDecision): ExitModeInput => ({
 });
 
 describe("deriveExitMode", () => {
-  test("pending: neutral, provisional Close — never the destructive default", () => {
+  test("pending, no error: neutral provisional Close — never the destructive default", () => {
     expect(deriveExitMode(input({ pending: true, error: null }))).toEqual({
       mode: "exit",
       provisional: true,
     });
   });
 
-  test("error: degraded exit-error, clickable — an errored resource is not an empty one", () => {
-    // A settled-but-errored decision carries the descriptors' initial data
-    // (`pushes: []`, `hasSibling: false`, `files: []`) — byte-identical to a
-    // clean worktree with no push and no sibling, which would otherwise arm
-    // "Drop & Close".
-    expect(deriveExitMode(input(settled({}, new Error("worktree missing"))))).toEqual({
+  test("pending + error: degraded exit-error, clickable and NOT provisional", () => {
+    // The readiness gate folds an errored input into `pending` (a value you can
+    // read is one the server vouches for), so an errored decision surfaces on the
+    // pending arm — and must NOT stay provisional (that would leave the button
+    // stuck disabled forever on a persistent error).
+    expect(deriveExitMode(input({ pending: true, error: new Error("worktree missing") }))).toEqual({
       mode: "exit-error",
       provisional: false,
     });
-    expect(deriveExitMode(input({ pending: true, error: new Error("x") }))).toEqual({
-      mode: "exit",
-      provisional: true,
+  });
+
+  test("settled, unresolved files: exit-error — the destructive default is unreachable", () => {
+    // An unresolved worktree is as undecidable as an errored resource. Surfacing
+    // exit-error here (before `files.value` is expressible) is the whole point:
+    // "Drop & Close" can no longer be reached on an unknown file set.
+    expect(deriveExitMode(input(settled({ files: { resolved: false, reason: "worktree unavailable" } })))).toEqual({
+      mode: "exit-error",
+      provisional: false,
     });
   });
 
   test("settled with edited files: Push & Close", () => {
-    expect(deriveExitMode(input(settled({ files: [{ path: "src/a.ts" }] })))).toEqual({
+    expect(deriveExitMode(input(settled({ files: resolvedFiles([{ path: "src/a.ts" }]) })))).toEqual({
       mode: "push-and-exit",
       provisional: false,
     });
   });
 
   test("settled with research-only files: Go", () => {
-    expect(deriveExitMode(input(settled({ files: [{ path: "research/plan.md" }] })))).toEqual({
+    expect(deriveExitMode(input(settled({ files: resolvedFiles([{ path: "research/plan.md" }]) })))).toEqual({
       mode: "go",
       provisional: false,
     });
   });
 
-  test("settled, clean, no push, no sibling: the destructive default is still reachable", () => {
+  test("settled, resolved-clean, no push, no sibling: the destructive default is still reachable", () => {
+    // The clean-worktree path must keep working: a genuinely empty resolved set
+    // (not unknown, not errored) still arms Drop & Close.
     expect(deriveExitMode(input(settled()))).toEqual({
       mode: "drop-and-exit",
       provisional: false,
@@ -76,13 +88,13 @@ describe("deriveExitMode", () => {
   });
 
   test("the exit decision is only consulted once the conversation is idle with an empty draft", () => {
-    const errored = settled({}, new Error("boom"));
-    expect(deriveExitMode({ ...input(errored), draftEmpty: false }).mode).toBe("send");
+    const pendingErr: ExitDecision = { pending: true, error: new Error("boom") };
+    expect(deriveExitMode({ ...input(pendingErr), draftEmpty: false }).mode).toBe("send");
     expect(
-      deriveExitMode({ ...input(errored), live: { status: "working" }, draftEmpty: false }).mode,
+      deriveExitMode({ ...input(pendingErr), live: { status: "working" }, draftEmpty: false }).mode,
     ).toBe("queue");
-    expect(deriveExitMode({ ...input(errored), live: { status: "working" } }).mode).toBe("stop");
-    expect(deriveExitMode({ ...input(errored), live: { status: "gone" } }).mode).toBe("restore");
-    expect(deriveExitMode({ ...input(errored), conversation: null }).mode).toBe("exit");
+    expect(deriveExitMode({ ...input(pendingErr), live: { status: "working" } }).mode).toBe("stop");
+    expect(deriveExitMode({ ...input(pendingErr), live: { status: "gone" } }).mode).toBe("restore");
+    expect(deriveExitMode({ ...input(pendingErr), conversation: null }).mode).toBe("exit");
   });
 });

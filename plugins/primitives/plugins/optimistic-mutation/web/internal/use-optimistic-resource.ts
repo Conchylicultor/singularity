@@ -80,8 +80,19 @@ export interface UseOptimisticResourceResult<Data, Vars> {
    * FK-satisfying existence).
    */
   serverData: Data;
-  /** Forwarded from useResource (true until the first authoritative value). */
+  /**
+   * True until the FIRST authoritative value lands. Deliberately NOT the widened
+   * `useResource` `pending`: once a value has been seen, a later transient error
+   * keeps the surface painting `data`/`serverData` (last-known-good) and reports
+   * the failure through `error` + sync-status — it does not revert to loading.
+   */
   pending: boolean;
+  /**
+   * The current transient load error, or null. Optimistic surfaces keep painting
+   * last-known-good under it (the sanctioned exemption to live-state's I1); this
+   * lets them surface the failure. Null once a fresh authoritative value lands.
+   */
+  error: Error | null;
   /** Enqueue an overlay op + fire `mutate`; returns the minted opId. */
   dispatch: (vars: Vars) => string;
   /**
@@ -118,7 +129,23 @@ export function useOptimisticResource<
     : undefined;
   const queryClient = useQueryClient();
   const result = useResource(resource, params);
-  const base = result.pending ? resource.initialData : result.data;
+  // Optimistic surfaces are the sanctioned, LOUD exemption to live-state's I1
+  // ("`pending` means no trustworthy value"): they are editors, so under a
+  // transient error they deliberately KEEP PAINTING last-known-good rather than
+  // blanking — `sync-status` (wired below via useReportSync) owns their error
+  // affordance. So the overlay base falls back to `result.stale` (the last
+  // authoritative value) before `resource.initialData`. Without this, the
+  // widened `pending` would collapse the base to `initialData` on any transient
+  // error and blank the page block editor / conversation queue sidebar.
+  const base = result.pending ? (result.stale ?? resource.initialData) : result.data;
+  // Preserve the documented `pending` contract — "true until the FIRST
+  // authoritative value" — rather than forwarding the widened one: once a value
+  // has landed (`stale` defined), an error must NOT re-report the surface as
+  // loading. `result.stale === undefined` is exactly the never-loaded case.
+  const resultPending = result.pending && result.stale === undefined;
+  // The transient error (if any), surfaced so editor surfaces can report it
+  // (they keep painting `base`). Only the pending arm carries `error`.
+  const resultError = result.pending ? result.error : null;
 
   const [pending, setPending] = useState<ReadonlyArray<PendingOp<Vars>>>([]);
   const [failed, setFailed] = useState<ReadonlyArray<{ opId: string; vars: Vars }>>([]);
@@ -332,13 +359,14 @@ export function useOptimisticResource<
     () => ({
       data,
       serverData: base,
-      pending: result.pending,
+      pending: resultPending,
+      error: resultError,
       dispatch,
       pendingOps,
       saving,
       failed,
       retry,
     }),
-    [data, base, result.pending, dispatch, pendingOps, saving, failed, retry],
+    [data, base, resultPending, resultError, dispatch, pendingOps, saving, failed, retry],
   );
 }

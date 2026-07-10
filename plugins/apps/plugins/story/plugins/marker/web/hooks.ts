@@ -16,6 +16,14 @@ export function useIsStory(pageId: string | null | undefined): boolean {
  */
 export function useStories(): ResourceResult<StoryMark[]> {
   const result = useResource(storiesResource);
-  if (result.pending) return result;
+  // The payload is a Record keyed by pageId; expose it as an array. The pending
+  // arm's `stale` (last-known-good) is that same Record, so map it too — its
+  // shape must match the array return type.
+  if (result.pending) {
+    return {
+      ...result,
+      stale: result.stale ? Object.values(result.stale) : undefined,
+    };
+  }
   return { ...result, data: Object.values(result.data) };
 }

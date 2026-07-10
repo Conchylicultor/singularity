@@ -6,8 +6,13 @@ import type { GateDataOf, GateInput } from "../resource-utils";
 export interface MatchResourceHandlers<R extends GateInput> {
   /** Rendered while loading. Default: `<Loading/>` (delayed — no flash on fast loads). */
   pending?: () => ReactNode;
-  /** Rendered when the initial load failed (pending with an error). Default: an error Placeholder. */
-  error?: (err: Error) => ReactNode;
+  /**
+   * Rendered when the load failed (pending with an error). `stale` is the
+   * last-known-good value if one ever landed (undefined on a first-load
+   * failure), so a surface can opt to keep painting content under a transient
+   * failure. Default: an error Placeholder.
+   */
+  error?: (err: Error, stale?: GateDataOf<R>) => ReactNode;
   /** The only way to reach the data — called once settled. */
   ready: (data: GateDataOf<R>) => ReactNode;
 }
@@ -26,8 +31,9 @@ export function matchResource<R extends GateInput>(
   }
   const error = (result as { error?: Error | null }).error ?? null;
   if (error) {
+    const stale = (result as { stale?: GateDataOf<R> }).stale;
     return handlers.error ? (
-      handlers.error(error)
+      handlers.error(error, stale)
     ) : (
       <Placeholder tone="error">{error.message}</Placeholder>
     );
@@ -41,8 +47,12 @@ export interface ResourceViewProps<R extends GateInput> {
   children: (data: GateDataOf<R>) => ReactNode;
   /** Rendered while loading. Default: `<Loading/>` (delayed — no flash on fast loads). */
   fallback?: ReactNode;
-  /** Rendered when the initial load failed. Default: an error Placeholder. */
-  errorFallback?: (err: Error) => ReactNode;
+  /**
+   * Rendered when the load failed. `stale` is the last-known-good value if one
+   * ever landed (undefined on a first-load failure). Default: an error
+   * Placeholder.
+   */
+  errorFallback?: (err: Error, stale?: GateDataOf<R>) => ReactNode;
 }
 
 /** Component sugar over `matchResource` for the common JSX case. */

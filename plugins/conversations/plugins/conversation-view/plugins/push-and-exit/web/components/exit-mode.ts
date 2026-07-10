@@ -15,16 +15,26 @@ export type Mode =
  * Structural view of the `useCombinedResources({ pushes, hasSibling, files })`
  * result: a `CombinedResources<…>` is assignable to it. Spelled structurally so
  * the derivation (and its test) stay pure — no React, no live-state import.
+ *
+ * Two structural echoes of the readiness/value gate:
+ * - The settled arm carries NO `error`. `pending` now means "no trustworthy
+ *   value" — the gate folds a never-loaded resource AND an errored one into the
+ *   pending arm — so a value you can read is one the server currently vouches
+ *   for. `error` is only consultable on the pending arm.
+ * - `files` is the edited-files `Resolvable` payload (spelled structurally to
+ *   keep the live-state import out): the loader returns a first-class
+ *   "no trustworthy worktree" non-value instead of lying with `[]`.
  */
 export type ExitDecision =
   | { pending: true; error: Error | null }
   | {
       pending: false;
-      error: Error | null;
       data: {
         pushes: readonly { attemptId: string }[];
         hasSibling: boolean;
-        files: readonly { path: string }[];
+        files:
+          | { resolved: true; value: readonly { path: string }[] }
+          | { resolved: false; reason: string };
       };
     };
 
@@ -53,19 +63,27 @@ export function deriveExitMode({
   if (!draftEmpty)
     return { mode: live.status === "working" ? "queue" : "send", provisional: false };
   if (live.status === "working") return { mode: "stop", provisional: false };
-  if (exitDecision.pending) return { mode: "exit", provisional: true };
-  // An errored resource is NOT an empty one. `useResource` hands back the
-  // descriptor's initial data (`[]` for edited-files) alongside a non-null
-  // error, and `combineResources` settles with `pending: false` while
-  // propagating that error. Without this guard an errored `files` would be
-  // indistinguishable from a genuinely clean worktree and would arm the
-  // destructive "Drop & Close" default — on a failure. Any of the three
-  // resources erroring makes the exit decision undecidable, so the mode is a
-  // generic, non-destructive, still-clickable "Close (state unknown)".
-  if (exitDecision.error) return { mode: "exit-error", provisional: false };
+  // `pending` now means "no trustworthy value": the readiness gate folds a
+  // never-loaded resource AND an errored one into this arm, so an errored exit
+  // decision surfaces HERE (a settled decision carries no `.error` to consult).
+  // Any of the three resources erroring makes the decision undecidable, so the
+  // mode is a generic, non-destructive, still-clickable "Close (state unknown)"
+  // — never the destructive default on a failure. `error` null ⇒ genuinely still
+  // loading ⇒ neutral provisional Close.
+  if (exitDecision.pending)
+    return exitDecision.error
+      ? { mode: "exit-error", provisional: false }
+      : { mode: "exit", provisional: true };
   const { pushes, hasSibling, files } = exitDecision.data;
-  if (files.length > 0) {
-    if (files.every((f) => f.path.startsWith("research/")))
+  // The edited-file set is a `Resolvable`: the loader returns a first-class
+  // "no trustworthy worktree" non-value rather than lying with `[]`. An
+  // unresolved set is as undecidable as an errored resource — surface the same
+  // non-destructive "Close (state unknown)" BEFORE `files.value.length` is even
+  // expressible, so the destructive "Drop & Close" default is unreachable by
+  // construction, not by a remembered guard.
+  if (!files.resolved) return { mode: "exit-error", provisional: false };
+  if (files.value.length > 0) {
+    if (files.value.every((f) => f.path.startsWith("research/")))
       return { mode: "go", provisional: false };
     return { mode: "push-and-exit", provisional: false };
   }

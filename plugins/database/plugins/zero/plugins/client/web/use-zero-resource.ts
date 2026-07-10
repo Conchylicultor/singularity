@@ -27,7 +27,7 @@ export function useZeroResource<
   const refetch = () => Promise.resolve();
   return result.type === "unknown"
     ? { pending: true, error: null, refetch }
-    : { pending: false, data: rows, error: null, refetch };
+    : { pending: false, data: rows, refetch };
 }
 
 // Re-export Zero's raw `useQuery` for callers that want the `[rows, result]`

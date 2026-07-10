@@ -34,7 +34,10 @@ export function CodeReviewSummary({
   // Same gate for edited-files: collapsing pending to an empty list would show a
   // confidently-wrong "0 +0 −0" (and hide warnings) until the resource settles.
   if (filesResult.pending) return null;
-  const files = filesResult.data;
+  // An unresolved worktree has no measurable stats — render nothing (this chip's
+  // existing absence idiom); the code-review section pane surfaces the reason.
+  if (!filesResult.data.resolved) return null;
+  const files = filesResult.data.value;
 
   const hasPastPushes = conversation
     ? pushesQ.data.some((p) => p.attemptId === conversation.attemptId)

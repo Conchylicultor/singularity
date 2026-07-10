@@ -25,16 +25,13 @@ export function DropAndExitItem({
     hasOtherActive: siblingsResult,
   });
 
-  // `!decision.error` is what keeps `false` here meaning "settled, and this
-  // attempt has no push" rather than "we couldn't tell". An errored `pushes`
-  // still settles with the descriptor's `[]` initial data, which would flip the
-  // entry from "Complete & Close" to the destructive "Drop & Close" label. The
-  // guard below hides the entry entirely on error, so this is belt-and-braces —
-  // it keeps the invariant local to where `hasPush` is computed.
+  // `!decision.pending` alone now means "settled, and this attempt has no push":
+  // the readiness gate folds an errored input into `pending`, so a settled
+  // decision is one the server vouches for (there is no `.error` on the settled
+  // arm to consult). No separate error guard needed.
   const hasPush = useMemo(
     () =>
       !decision.pending &&
-      !decision.error &&
       decision.data.pushes.some((p) => p.attemptId === conversation.attemptId),
     [decision, conversation.attemptId],
   );
@@ -59,12 +56,11 @@ export function DropAndExitItem({
   // redundant "Close" (mirrors how Drop dependents hides when there's nothing
   // to drop).
   //
-  // Error hides it too, and must be checked before `decision.data` is read: a
-  // failed resource still settles (`pending: false`) carrying the descriptor's
-  // initial data, so an errored `hasOtherActive` reads `false` — exactly the
-  // value that would offer this destructive action. Unknown state is never a
-  // licence to drop a task.
-  if (decision.pending || decision.error || decision.data.hasOtherActive) return null;
+  // `decision.pending` already covers the unknown-state case: an errored
+  // `hasOtherActive` keeps the combine pending (the readiness gate never lets a
+  // stale value decide), so we never read a confidently-wrong `false` here.
+  // Unknown state is never a licence to drop a task.
+  if (decision.pending || decision.data.hasOtherActive) return null;
 
   const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";
 

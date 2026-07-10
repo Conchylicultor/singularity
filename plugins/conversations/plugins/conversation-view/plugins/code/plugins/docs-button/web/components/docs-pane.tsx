@@ -5,6 +5,7 @@ import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
@@ -50,7 +51,17 @@ function DocsPaneInner({
     );
   }
 
-  return <DocsPaneBody files={filesResult.data} pushedDocs={pushedDocs} attemptId={attemptId} />;
+  // An unresolved worktree is a determinate "unknown", not an empty doc set —
+  // surface the reason rather than an empty "No design docs" list.
+  if (!filesResult.data.resolved) {
+    return (
+      <PaneChrome pane={convDocsPane} title="Docs">
+        <Placeholder tone="error">{filesResult.data.reason}</Placeholder>
+      </PaneChrome>
+    );
+  }
+
+  return <DocsPaneBody files={filesResult.data.value} pushedDocs={pushedDocs} attemptId={attemptId} />;
 }
 
 function DocsPaneBody({

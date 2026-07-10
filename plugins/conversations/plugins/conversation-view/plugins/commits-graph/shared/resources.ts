@@ -1,19 +1,19 @@
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { resourceDescriptor, unresolved } from "@plugins/primitives/plugins/live-state/core";
 import {
-  CommitDeltaSchema,
-  CommitsGraphSchema,
-  type CommitDelta,
-  type CommitsGraph,
+  CommitDeltaPayloadSchema,
+  CommitsGraphPayloadSchema,
+  type CommitDeltaPayload,
+  type CommitsGraphPayload,
 } from "./protocol";
 
-export const commitDeltaResource = resourceDescriptor<CommitDelta, { attemptId: string }>(
+export const commitDeltaResource = resourceDescriptor<CommitDeltaPayload, { attemptId: string }>(
   "commits-graph.delta",
-  CommitDeltaSchema,
-  { ahead: 0, behind: 0, mergeBase: null, branch: null },
+  CommitDeltaPayloadSchema,
+  unresolved("not loaded"),
 );
 
-export const commitsGraphResource = resourceDescriptor<CommitsGraph, { attemptId: string }>(
+export const commitsGraphResource = resourceDescriptor<CommitsGraphPayload, { attemptId: string }>(
   "commits-graph.graph",
-  CommitsGraphSchema,
-  { ahead: 0, behind: 0, mergeBase: null, branch: null, commits: [], landedCommits: [], behindCommits: [] },
+  CommitsGraphPayloadSchema,
+  unresolved("not loaded"),
 );

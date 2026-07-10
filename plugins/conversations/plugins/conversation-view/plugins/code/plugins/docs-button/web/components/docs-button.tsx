@@ -16,11 +16,12 @@ export function DocsButton() {
   const pushedDocs = usePushedDocFiles(conversation?.attemptId ?? "");
   const { isOpen, toggle } = convDocsPane.useToggle({}, { input: { convId } });
 
-  // While edited files are still loading, render a neutral disabled button (no
-  // count badge) rather than collapsing pending → an empty file list, which
-  // would flash a confidently-wrong count. The settled-data body — count math
-  // that uses hooks — lives in DocsButtonReady so all hooks here run first.
-  if (filesResult.pending) {
+  // While edited files are still loading — or the worktree is unresolved (a
+  // determinate unknown, not an empty diff) — render a neutral disabled button
+  // (no count badge) rather than collapsing to an empty file list, which would
+  // flash a confidently-wrong count. The settled-data body — count math that uses
+  // hooks — lives in DocsButtonReady so all hooks here run first.
+  if (filesResult.pending || !filesResult.data.resolved) {
     return (
       <Button
         variant="ghost"
@@ -36,7 +37,7 @@ export function DocsButton() {
 
   return (
     <DocsButtonReady
-      files={filesResult.data}
+      files={filesResult.data.value}
       pushedDocs={pushedDocs}
       isOpen={isOpen}
       onToggle={toggle}

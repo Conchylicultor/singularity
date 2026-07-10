@@ -38,7 +38,7 @@ export function AccountsPane() {
         </Text>
       ) : null}
 
-      {authState.error ? (
+      {authState.pending && authState.error ? (
         <Text as="div" variant="body" className="rounded-md border border-destructive/50 bg-destructive/10 p-md text-destructive">
           Failed to load auth state: {String(authState.error)}
         </Text>

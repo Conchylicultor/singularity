@@ -65,6 +65,14 @@ with a manufactured empty; "never computed yet" is not the same state as
 "computed: empty". The `no-absorbed-failure` lint rule enforces the
 catch-block half of this; the producer signature is on you at design time.
 
+**Live-state resources** are the same rule with a specific shape. A loader
+branch that *cannot determine* its value returns `unresolved(reason)` —
+`Resolvable<T>` from `primitives/live-state/core` — never the empty value; it
+throws only for *transient* failures. The transient half is closed for you:
+`useResource`'s settled arm has no `error` field, so `data` is unreachable
+whenever a load has failed. See the "`pending` means no trustworthy value"
+section of `plugins/primitives/plugins/live-state/CLAUDE.md`.
+
 ## Layered architecture
 
 Organize code in clear dependency layers. Lower layers are general-purpose

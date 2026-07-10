@@ -2,7 +2,16 @@ import { afterAll, describe, expect, test } from "bun:test";
 import { mkdtemp, rm, unlink, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { eq } from "drizzle-orm";
 import { runGit } from "@plugins/primitives/plugins/commit-list/server";
+import { db } from "@plugins/database/server";
+import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  _tasks,
+  createAttempt,
+  createTask,
+  insertConversation,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { editedFilesSignature } from "./edited-files-signature";
 import { editedFilesSignatureFor, loadEditedFilesFor } from "./edited-files-resource";
 
@@ -12,6 +21,7 @@ import { editedFilesSignatureFor, loadEditedFilesFor } from "./edited-files-reso
 // fake would test nothing.
 
 const repos: string[] = [];
+const seededTasks: string[] = [];
 
 /**
  * A repo with one commit on `main` containing `a.txt`, with a `feature` branch
@@ -41,6 +51,8 @@ function shaPart(signature: string): string {
 
 afterAll(async () => {
   await Promise.all(repos.map((d) => rm(d, { recursive: true, force: true })));
+  // Deleting the task cascades to its attempt + conversation (FK onDelete cascade).
+  for (const id of seededTasks) await db.delete(_tasks).where(eq(_tasks.id, id));
 });
 
 describe("editedFilesSignature", () => {
@@ -117,29 +129,47 @@ describe("editedFilesSignature", () => {
   });
 });
 
-describe("missing worktree", () => {
-  // The absorbable-failure guard: an unresolvable worktree means the edited-file
-  // set is UNKNOWN, not empty. `[]` / `"none"` would render as a legitimate
-  // "no changes" and arm the destructive Drop & Close.
+describe("unresolvable worktree — one consistent (unresolved, \"no-worktree\") pair", () => {
+  // An unresolvable worktree means the edited-file set is UNKNOWN, not empty. The
+  // loader now SAYS SO in the payload (`unresolved`) instead of throwing (the old
+  // wedge) or lying with `[]`; the revalidate collapses onto the constant
+  // `"no-worktree"` ETag. Both are produced from the SAME `onWorktree` branch, so
+  // they are one consistent signature/value pair — never a fresh ETag over a stale
+  // value. `[]` / `"none"` would render a legitimate "no changes" and arm the
+  // destructive Drop & Close.
   const NO_SUCH_CONVERSATION = "edited-files-signature-test-no-such-conversation";
 
-  test("loader rejects — never []", async () => {
-    const value = await loadEditedFilesFor(NO_SUCH_CONVERSATION).then(
-      (files) => ({ resolved: files }),
-      (err: unknown) => ({ err }),
-    );
-    expect(value).not.toHaveProperty("resolved");
-    expect((value as { err: unknown }).err).toBeInstanceOf(Error);
-    expect((value as { err: Error }).err.message).toContain(NO_SUCH_CONVERSATION);
+  test("no worktree at all: loader → unresolved, revalidate → \"no-worktree\"", async () => {
+    const files = await loadEditedFilesFor(NO_SUCH_CONVERSATION);
+    const signature = await editedFilesSignatureFor(NO_SUCH_CONVERSATION);
+    expect(files.resolved).toBe(false);
+    expect(signature).toBe("no-worktree");
   });
 
-  test("revalidate rejects — never \"none\"", async () => {
-    const value = await editedFilesSignatureFor(NO_SUCH_CONVERSATION).then(
-      (signature) => ({ resolved: signature }),
-      (err: unknown) => ({ err }),
-    );
-    expect(value).not.toHaveProperty("resolved");
-    expect((value as { err: unknown }).err).toBeInstanceOf(Error);
-    expect((value as { err: Error }).err.message).toContain(NO_SUCH_CONVERSATION);
+  test("worktree reaped mid-compute: same (unresolved, \"no-worktree\") pair", async () => {
+    // A conversation whose worktreePath resolves in the DB but whose directory is
+    // gone — the reap the `onWorktree` catch handles (git shelled in a vanished
+    // cwd throws WorktreeGoneError), distinct from the never-had-a-worktree branch
+    // above. It collapses to the SAME determinate non-value, not a transient throw.
+    const stamp = `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+    const goneWorktree = join(tmpdir(), `edited-files-reaped-${stamp}`); // never created
+    const taskId = `edited-files-reaped-task-${stamp}`;
+    const attemptId = `edited-files-reaped-attempt-${stamp}`;
+    const convId = `edited-files-reaped-conv-${stamp}`;
+    seededTasks.push(taskId);
+    await createTask({ id: taskId, title: "reaped-worktree fixture" });
+    await createAttempt({ id: attemptId, taskId, worktreePath: goneWorktree });
+    await insertConversation({
+      id: convId,
+      attemptId,
+      runtime: "tmux",
+      model: DEFAULT_MODEL,
+      spawnedBy: "edited-files-signature-test",
+    });
+
+    const files = await loadEditedFilesFor(convId);
+    const signature = await editedFilesSignatureFor(convId);
+    expect(files.resolved).toBe(false);
+    expect(signature).toBe("no-worktree");
   });
 });

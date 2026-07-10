@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { resolvableSchema, type Resolvable } from "@plugins/primitives/plugins/live-state/core";
 
 export const EditedFileStatusSchema = z.enum([
   "modified",
@@ -20,7 +21,14 @@ export const EditedFileSchema = z.object({
 });
 export type EditedFile = z.infer<typeof EditedFileSchema>;
 
-export const EditedFilesPayloadSchema = z.array(EditedFileSchema);
+// The payload is a `Resolvable`: a conversation whose worktree we cannot resolve
+// (never had one, or it was reaped) has an UNKNOWN file set, not an empty one.
+// The loader returns `unresolved(reason)` for that determinate non-value instead
+// of lying with `[]` — which would render a legitimate "no changes" and arm the
+// destructive "Drop & Close". See resolvable.ts and
+// research/2026-07-09-global-resource-unknown-value-and-error-gate.md.
+export const EditedFilesPayloadSchema = resolvableSchema(z.array(EditedFileSchema));
+export type EditedFilesPayload = Resolvable<EditedFile[]>;
 
 export interface EditedFilesResponse {
   files: EditedFile[];

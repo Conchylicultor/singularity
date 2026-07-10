@@ -54,7 +54,18 @@ function WorkingTreeBody({
       resource={filesResult}
       fallback={<FileList files={null} worktree={worktree} base="main" emptyLabel="No edited files." />}
     >
-      {(files) => <FileList files={files} worktree={worktree} base="main" emptyLabel="No edited files." />}
+      {(payload) =>
+        // The payload is a `Resolvable`: an unresolved worktree is a determinate
+        // "unknown", NOT an empty diff, so it renders its `reason` rather than the
+        // "No edited files." empty copy that would read as a genuinely clean tree.
+        payload.resolved ? (
+          <FileList files={payload.value} worktree={worktree} base="main" emptyLabel="No edited files." />
+        ) : (
+          <Body>
+            <Placeholder tone="error">{payload.reason}</Placeholder>
+          </Body>
+        )
+      }
     </ResourceView>
   );
 }

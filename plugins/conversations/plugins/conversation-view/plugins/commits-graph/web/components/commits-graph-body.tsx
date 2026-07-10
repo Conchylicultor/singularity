@@ -27,13 +27,24 @@ export function CommitsGraphBody() {
   });
 
   if (!conversation) return null;
-  if (result.error) {
-    return (
-      <Placeholder tone="error">Failed to load commits: {String(result.error)}</Placeholder>
-    );
+  // A settled result no longer carries `.error` (the value it exposes is one the
+  // server currently vouches for). A transient load failure surfaces as
+  // `pending` with `.error` set, so the error placeholder lives inside the
+  // pending arm — checked before the plain `<Loading/>`.
+  if (result.pending) {
+    if (result.error) {
+      return (
+        <Placeholder tone="error">Failed to load commits: {String(result.error)}</Placeholder>
+      );
+    }
+    return <Loading />;
   }
-  if (result.pending) return <Loading />;
-  if (result.data.mergeBase === null) {
+  const graph = result.data;
+  // No worktree to measure ⇒ a determinate non-value; render its reason.
+  if (!graph.resolved) {
+    return <Placeholder>{graph.reason}</Placeholder>;
+  }
+  if (graph.value.mergeBase === null) {
     return (
       <Placeholder>
         No shared history with <span className="font-mono">main</span>.
@@ -49,7 +60,7 @@ export function CommitsGraphBody() {
     behind,
     branch,
     mergeBase,
-  } = result.data;
+  } = graph.value;
   const landedCommits = landed;
   const behindCommits = behind_;
   const branchLabel = branch ?? "HEAD";
