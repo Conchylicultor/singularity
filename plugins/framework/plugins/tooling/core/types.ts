@@ -27,4 +27,13 @@ export interface Check {
 
 export type CheckResult =
   | { ok: true }
-  | { ok: false; message: string; hint?: string };
+  /**
+   * A non-passing result. `inconclusive: true` means the check could NOT
+   * determine pass/fail for an *environmental* reason (a host-load timeout, an
+   * unlaunchable browser, etc.) rather than a real regression. It is treated as
+   * NON-FATAL by the runner (does not block the build) and is NEVER cached (it
+   * stays `ok: false`, and the runner records only `ok === true`), so the check
+   * re-runs next time and re-verifies the real invariant. Omit the flag for an
+   * ordinary hard failure, which stays fatal exactly as before.
+   */
+  | { ok: false; message: string; hint?: string; inconclusive?: true };

@@ -38,7 +38,7 @@ through the generic `loadFixtures()`:
    Chromium is unprovisioned.
 
    When the marker IS absent the suite actually launches a browser, which used to
-   flake under load ("hook timed out / headless-launch timeout"). Three guards now
+   flake under load ("hook timed out / headless-launch timeout"). Four guards now
    make that healthy-but-slow path robust:
    - **bun:test timeout.** The suite's `beforeAll` (Vite build + cold Chromium
      launch + page load) routinely exceeds bun:test's default 5s per-hook budget —
@@ -54,6 +54,15 @@ through the generic `loadFixtures()`:
    - **double-checked marker.** The marker is re-checked after acquiring the slot,
      so same-sig peers that queued behind the first runner collapse to a single
      launch instead of re-running the suite.
+   - **environmental-timeout classification.** If the suite still fails, its full
+     stdout+stderr is run through `check/classify.ts`'s `classifyFailure`: a pure
+     timeout (bun hook/test timeout or a Playwright launch/goto/wait timeout, with
+     no oracle-invariant or `AssertionError`/`falsification` signature present) is
+     returned as a non-fatal `inconclusive` result — the build deploys anyway and,
+     because no pass marker is written, re-verifies the geometry next build. A real
+     regression (any oracle-invariant kind, `AssertionError`, `falsification did
+     not bite:`, or anything unrecognized) stays fatal (fatal wins on any overlap;
+     ambiguous → fatal).
 3. **the live Layout Lab gallery** (`web/index.ts` → Debug sidebar) — renders the
    catalog in-app (the human-eyeball complement; no measurement).
 

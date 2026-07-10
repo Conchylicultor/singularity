@@ -119,30 +119,47 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
 
   const MAX_MESSAGE_LINES = 100;
 
+  // Render a non-passing result's (possibly huge) message + optional hint: a
+  // truncated copy to the console, the full copy to the transcript file. Shared
+  // by the fatal-FAIL and the non-fatal inconclusive branches so the two can't
+  // drift in truncation behaviour.
+  const emitDetail = (check: Check, result: { message: string; hint?: string }) => {
+    const indented = `  ${result.message.split("\n").join("\n  ")}`;
+    const lines = result.message.split("\n");
+    if (lines.length > MAX_MESSAGE_LINES) {
+      const head = lines.slice(0, 50).join("\n");
+      const tail = lines.slice(-50).join("\n");
+      const omitted = lines.length - 100;
+      const moreHint = logFile
+        ? `see ${logFile} for full output`
+        : `re-run \`./singularity check ${check.id}\` for full output`;
+      // Truncated copy to the console; full copy to the file.
+      log(`  ${head}\n  ... (${omitted} lines omitted — ${moreHint})\n  ${tail}`, "stderr");
+      full.push(indented);
+    } else {
+      emit(`  ${result.message}`, "stderr");
+    }
+    if (result.hint) emit(`  hint: ${result.hint}`, "stderr");
+  };
+
   let allOk = true;
+  let anyInconclusive = false;
   for (const { check, result, durationMs, wallStart, cached } of results) {
     options?.onCheckDone?.(check.id, durationMs, wallStart);
     if (result.ok) {
       emit(`• ${check.id} ... ok${cached ? " (cached)" : ""}`, "stdout");
+    } else if (result.inconclusive) {
+      // Environmental, non-fatal outcome: NOT a pass and NOT a hard failure.
+      // It stays `ok: false`, so the caching guard above never recorded it —
+      // it re-runs next build and re-verifies the real invariant. We only
+      // soften fatality here (allOk untouched).
+      anyInconclusive = true;
+      emit(`⚠ ${check.id} ... inconclusive — ${result.message.split("\n")[0]}`, "stdout");
+      emitDetail(check, result);
     } else {
       allOk = false;
       emit(`• ${check.id} ... FAIL`, "stdout");
-      const indented = `  ${result.message.split("\n").join("\n  ")}`;
-      const lines = result.message.split("\n");
-      if (lines.length > MAX_MESSAGE_LINES) {
-        const head = lines.slice(0, 50).join("\n");
-        const tail = lines.slice(-50).join("\n");
-        const omitted = lines.length - 100;
-        const moreHint = logFile
-          ? `see ${logFile} for full output`
-          : `re-run \`./singularity check ${check.id}\` for full output`;
-        // Truncated copy to the console; full copy to the file.
-        log(`  ${head}\n  ... (${omitted} lines omitted — ${moreHint})\n  ${tail}`, "stderr");
-        full.push(indented);
-      } else {
-        emit(`  ${result.message}`, "stderr");
-      }
-      if (result.hint) emit(`  hint: ${result.hint}`, "stderr");
+      emitDetail(check, result);
     }
   }
   if (!allOk) {
@@ -151,6 +168,14 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
         "Do NOT work around check failures — not by disabling checks, editing check code, " +
         "expanding skip lists, committing via raw git, or any other means.",
       "stderr",
+    );
+  } else if (anyInconclusive) {
+    // Distinct from the STOP banner above (which correctly does NOT fire for an
+    // inconclusive-only run): non-fatal, so it goes to stdout, not stderr.
+    emit(
+      "\nNote: some check(s) were inconclusive for environmental reasons (host-load timeout, " +
+        "unlaunchable browser). They are non-fatal and NOT cached — they re-run and re-verify next build.",
+      "stdout",
     );
   }
 

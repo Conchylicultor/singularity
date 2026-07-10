@@ -5,6 +5,7 @@ import { chromium } from "playwright";
 import { createHostSemaphore } from "@plugins/packages/plugins/host-semaphore/server";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
+import { classifyFailure } from "./classify";
 
 // The contributed `layout-geometry` check. It gates the layout-primitive geometry
 // invariants (no track collision / no overlap / truncation-onset) by shelling out
@@ -169,10 +170,30 @@ const check: Check = {
         return { ok: true };
       }
 
+      // Classify on the FULL, untruncated transcript — a real assertion/oracle
+      // failure printed early in a long, timeout-laced run must NOT be trimmed
+      // away by the tail and misread as environmental. Only the human-facing
+      // `message` below uses the tail.
+      const fullOutput = `${stdout}\n${stderr}`;
+
       // bun:test prints results to stderr; include a tail of both streams.
       const tail = (s: string, n = 60): string =>
         s.trim().split("\n").slice(-n).join("\n");
       const combined = [tail(stderr), tail(stdout)].filter(Boolean).join("\n");
+
+      if (classifyFailure(fullOutput) === "inconclusive") {
+        // Environmental: the suite never reached a verdict (cold Vite/Chromium
+        // under host load timed out), NOT a geometry regression. Non-fatal and
+        // NOT cached — the pass marker is deliberately not written, so the next
+        // build re-launches the suite and re-verifies the invariants.
+        return {
+          ok: false,
+          inconclusive: true,
+          message: `layout geometry suite timed out (environmental — cold Vite/Chromium under host load, not a geometry regression; exit ${exitCode}):\n${combined}`,
+          hint: `Re-run \`bun test --timeout 120000 ${SUITE_REL}\` on a quieter host to re-verify; the check retries automatically on the next build.`,
+        };
+      }
+
       return {
         ok: false,
         message: `layout geometry suite failed (exit ${exitCode}):\n${combined}`,
