@@ -8,7 +8,7 @@ import type { Block } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
 import { Editor } from "../slots";
-import { BlockTypeMenu } from "./block-type-menu";
+import { InsertBlockBelowMenu } from "./insert-block-below-menu";
 import { BlockActionsMenu } from "./block-actions-menu";
 import { BLOCK_GUTTER, BLOCK_INDENT } from "../internal/page-column";
 
@@ -89,11 +89,12 @@ export function BlockRow({
           <MdChevronRight className={cn("size-4 transition-transform", !collapsed && "rotate-90")} />
         </button>
       )}
-      {/* Gutter "+" — inserts a new block immediately below this one. */}
-      <BlockTypeMenu
+      {/* Gutter "+" — creates an empty block below immediately and opens the
+          block-type filter over it (see `InsertBlockBelowMenu`). */}
+      <InsertBlockBelowMenu
+        api={api}
         align="start"
         side="bottom"
-        onSelect={(b) => api.insertAfter(b.type, b.empty?.() ?? {})}
         trigger={
           <button
             type="button"
@@ -102,7 +103,10 @@ export function BlockRow({
             className={cn(
               "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
               "text-muted-foreground hover:bg-accent cursor-pointer",
+              // Hover-revealed like the rest of the rail, but pinned visible while
+              // its menu is open — the pointer leaves the row to reach the menu.
               "opacity-0 pointer-events-none group-hover/row:opacity-60 group-hover/row:pointer-events-auto",
+              "data-[popup-open]:opacity-60 data-[popup-open]:pointer-events-auto",
             )}
             style={{ left: contentLeft - 60 }}
           >

@@ -823,10 +823,15 @@ export function BlockEditorProvider({
           { label: "Change block type" },
         );
       },
-      insertAfter(type: string, data: unknown) {
+      insertAfter(type: string, data: unknown, opts?: { focus?: boolean }) {
         const newId = crypto.randomUUID();
-        focusNew(newId);
+        // `focus: false` is for callers that keep focus elsewhere while acting on
+        // the new block (the gutter `+` filter field). Focusing here would race
+        // them: `focusNew` also arms a pending focus that fires when the block
+        // mounts on the confirming push, stealing focus back after the fact.
+        if (opts?.focus !== false) focusNew(newId);
         dispatchOp({ kind: "insert", newId, type, data, afterId: blockId });
+        return newId;
       },
       split(
         position: number,

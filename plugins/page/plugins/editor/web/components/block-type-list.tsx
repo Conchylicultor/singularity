@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -51,6 +51,46 @@ export function filterBlockTypes(
 }
 
 /**
+ * One block-type row. It keeps ITSELF in view while active, so arrowing past the
+ * fold of a scroll-capped menu follows the highlight. `block: "nearest"` is a
+ * no-op when the row is already visible, which is why hover — which also moves
+ * the active index — never yanks the list.
+ */
+function BlockTypeRow({
+  block,
+  active,
+  onSelect,
+  onHover,
+}: {
+  block: BlockHandle<unknown>;
+  active: boolean;
+  onSelect: (block: BlockHandle<unknown>) => void;
+  onHover: () => void;
+}) {
+  const ref = useRef<HTMLElement>(null);
+  const Icon = block.icon;
+
+  useEffect(() => {
+    if (active) ref.current?.scrollIntoView({ block: "nearest" });
+  }, [active]);
+
+  return (
+    <Row
+      ref={ref}
+      selected={active}
+      icon={Icon ? <Icon className="text-muted-foreground size-4" /> : undefined}
+      onMouseEnter={onHover}
+      onMouseDown={(e: React.MouseEvent) => {
+        e.preventDefault();
+        onSelect(block);
+      }}
+    >
+      {block.label}
+    </Row>
+  );
+}
+
+/**
  * Presentational list of block-type rows (icon + label) with an active-row
  * highlight. Item buttons use `onMouseDown` + `preventDefault` so clicking does
  * not blur an editor the consumer relies on keeping focused (e.g. the slash menu).
@@ -76,23 +116,15 @@ export function BlockTypeList({
 
   return (
     <Stack gap="none">
-      {blocks.map((block, i) => {
-        const Icon = block.icon;
-        return (
-          <Row
-            key={block.type}
-            selected={i === activeIndex}
-            icon={Icon ? <Icon className="text-muted-foreground size-4" /> : undefined}
-            onMouseEnter={() => onHoverIndex(i)}
-            onMouseDown={(e: React.MouseEvent) => {
-              e.preventDefault();
-              onSelect(block);
-            }}
-          >
-            {block.label}
-          </Row>
-        );
-      })}
+      {blocks.map((block, i) => (
+        <BlockTypeRow
+          key={block.type}
+          block={block}
+          active={i === activeIndex}
+          onSelect={onSelect}
+          onHover={() => onHoverIndex(i)}
+        />
+      ))}
     </Stack>
   );
 }

@@ -10,8 +10,13 @@ export interface BlockEditorAPI {
    * also resets the open/collapsed state in the same PATCH.
    */
   convertTo(type: string, data: unknown, opts?: { expanded?: boolean }): void;
-  /** Insert a new block of the given type immediately after this one, then focus it. */
-  insertAfter(type: string, data: unknown): void;
+  /**
+   * Insert a new block of the given type immediately after this one and return
+   * its id (minted client-side, so the caller can act on it without awaiting the
+   * server). Focuses the new block unless `opts.focus === false` — the gutter `+`
+   * keeps focus in its block-type filter and hands it to the block on close.
+   */
+  insertAfter(type: string, data: unknown, opts?: { focus?: boolean }): string;
   /**
    * Split this block at `position`, moving the trailing text into a new block.
    * `asChild` is normally derived internally: when the caret is at the very end
