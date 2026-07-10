@@ -4,27 +4,57 @@
 
 The grid is authored in a small mini-language, parsed by
 [`web/parse-grid.ts`](web/parse-grid.ts) into timed chord events. Three building
-blocks plus a comment, nothing else:
+blocks plus two pieces of trivia, nothing else:
 
 | Form | Meaning |
 | --- | --- |
 | `Cmaj7` | A **chord** — fills one bar. Parsed by `theory`'s `parseChordSymbol` (`F#m`, `Bb13`, `Ebm7b5`, `Eb6/9`, `G7(♯5)`, `Gsus4(♭9)`, …). |
+| `vi` | A **degree** — the same, written as a Roman numeral relative to the key. Parsed by `theory`'s `parseRomanNumeral`. |
 | `(E E6)` | A **group** — several items share one bar, split equally (`E` for 2 beats, `E6` for 2). |
 | `.` | A **hold** — sustains the previous chord instead of striking a new one (no re-strike). |
-| `# verse` | A **comment** — the rest of the line is ignored. Contributes no bar. |
+| `; verse` | A **comment** — the rest of the line is ignored. Contributes no bar. |
+| `key: Am` | A **key directive** — sets the key degrees resolve against, from here on. Contributes no bar. |
 
-**Two characters do double duty**, and both are disambiguated the same way — by
-what *precedes* them:
+### Degrees
+
+A cell may name a chord by its **function** rather than its letter: `I vi IV V`
+is C Am F G in C major, and F♯m D E in A major — write the progression once,
+hear it in any key. The numeral is the exact inverse of the Roman numerals
+Sonata already *displays* (`theory`'s `romanNumeral`), so what a chord reads as
+is what you can type:
+
+- **Case is the third.** `V` major, `v` minor. `I7` is a dominant seventh, `i7`
+  a minor seventh, `Imaj7` a major seventh, `imaj7` a minor-major seventh.
+- **Mark, then figure**, both optional: `vii°7`, `iiø7`, `III+`, `IVsus4`, `V9`,
+  `I6/9`. ASCII stands in for the glyphs (`o`/`dim` for `°`, `M7` for `maj7`).
+- **A leading `♭`/`♯` chromaticizes the degree**: `♭VII`, `♭VI`, `♯iv°`. ASCII
+  `bVII` and `#IV` work too — `#` is only ever a sharp.
+- **Degrees are the key's own scale.** In a minor key `VI` is the natural-minor
+  sixth (F in A minor), matching how the numeral is read back.
+- **Letter names never consult the key**, so `C ii7 F# V` mixes both freely — no
+  numeral begins with a note letter, so the two vocabularies cannot collide.
+
+The key is **C major** unless a `key:` directive says otherwise; `key: Am`,
+`key:Am` and `key=Am` are the same thing. A directive mid-grid **modulates**
+from that bar onward. A declared key is authored truth: it reaches the `Score` as
+`meta.key` (starting key) and `type:"key"` annotations (modulations), so the
+notation lens draws the right signature and every chord spells against it
+(`♭VII` in F major reads E♭, not D♯). A grid with no directive declares no key —
+the analyzer infers one, exactly as before.
+
+**One character does double duty**, disambiguated by what *precedes* it:
 
 - **`(`** at a **cell boundary** opens a bar *group*; a `(` **attached** to a
   chord (no preceding space) is a parenthetical *alteration*, absorbed into the
   chord token. So `G7(♯5)` is one altered chord, `(G7 C)` is a two-chord bar,
   and `(G7(♯5) C)` correctly nests both.
-- **`#`** **opening a cell** (start of text, or after whitespace / a `|`) starts
-  a *comment*; a `#` reached anywhere else is a *sharp* belonging to the token
-  being read. So `F#m`, `G7(#5)` and `(C#m E)` are untouched, while `C G # tag`
-  plays two bars. No chord symbol may *begin* with `#`, so nothing legal is
-  shadowed.
+
+`;` is **not** one of them, and that is the point. The comment marker was once
+`#`, disambiguated by position ("a `#` opening a cell is a comment") — which was
+safe only because no chord symbol may *begin* with a sharp. Degrees broke that:
+`♯IV` legitimately does. Rather than stack a second rule on the first, the marker
+moved off the musical alphabet entirely, so `;` starts a comment *anywhere* and
+`#` is *always* a sharp. A rule was deleted, not added.
 
 Rules:
 
@@ -36,40 +66,54 @@ Rules:
   (`Cmaj7 . .` → one Cmaj7 sustained across 3 bars). A hold extends whatever
   chord last sounded, even across a bar boundary; a hold with nothing before it
   is silence.
-- **Comments are trivia.** They are stripped before tokenizing (`stripComments`),
-  so a comment can sit anywhere a space can — including inside a `( … )` group —
-  without the grammar knowing about it. The terminating newline survives, so a
-  comment never glues two lines into one cell. Label sections, park an
-  alternative progression, annotate a turnaround.
+- **Comments are trivia.** A `;` starts one anywhere — it carries no musical
+  meaning, so there is no position rule. They are stripped before tokenizing
+  (`stripComments`), so a comment can sit anywhere a space can — including inside
+  a `( … )` group — without the grammar knowing about it. The terminating newline
+  survives, so a comment never glues two lines into one cell. Label sections, park
+  an alternative progression, annotate a turnaround.
 - **Repetition is just repetition.** To play a chord several times, write it in
   several cells (`Amaj9 Amaj9 Amaj9 Amaj9`). There is no repeat operator.
 - **`|` is optional.** A stray `|` between cells is accepted and ignored, so
   older `| C G | Am F |` grids keep parsing.
-- **Fail loud.** Unknown chord tokens, an unterminated `(`, or a stray `)` are
-  collected into `skipped` and surfaced by the loader as a red "Unrecognised"
-  line — never silently dropped.
+- **Fail loud.** Unknown chord tokens, a numeral outside the vocabulary, an
+  unrecognised key, an unterminated `(`, or a stray `)` are collected into
+  `skipped` and surfaced by the loader as a red "Unrecognised" line — never
+  silently dropped.
 
 Example:
 
 ```
-# Verse
+; Verse
 Amaj9 Am9 (E E6) (E E6)
 Cmaj7 Am7 Dm9 G13
 
-# Chorus — the F#m7 turnaround
+; Chorus — the F#m7 turnaround
 Fmaj7 Fm7 Em7 A7
-Dm7 G7 Cmaj7      # ...try Cmaj9 here?
+Dm7 G7 Cmaj7      ; ...try Cmaj9 here?
 ```
 
-The parser returns `{ events, skipped }` (`ChordEvent` = `{ data, start, end }`
-in quarter-note beats); the selected voicing strategy from the shared
+The same, as degrees — and a modulation:
+
+```
+key: G
+I Imaj7 I7 IV
+I vi IV V
+
+key: Em      ; relative minor
+i iv VI V
+```
+
+The parser returns `{ events, skipped, keys }` (`ChordEvent` = `{ data, start,
+end }` in quarter-note beats; `keys` = the `{ beat, key }` changes the `key:`
+directives establish); the selected voicing strategy from the shared
 [`voicing`](../../../voicing/CLAUDE.md) leaf then derives the literal notes.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. compile() emits chord annotations only; the shell's reactive re-voicing step generates the notes under the global voicing config. Persists per-song grid text and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs and persists grid edits (syncing the parent song's derived duration only; the title is library-owned).
+- Description: Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. A cell may name a chord by letter (`Am7`) or by degree (`vi7`), the latter resolved against the key a `key:` directive declares. compile() emits chord + key annotations only; the shell's reactive re-voicing step generates the notes under the global voicing config. Persists per-song grid text and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text. Creates chord-grid–backed songs and persists grid edits (syncing the parent song's derived duration only; the title is library-owned).
 - Web:
   - Contributes: `Sonata.Source` "Chord Grid", `Library.Source` "chord-grid", `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`, `Sonata.Effect` "chord-grid-persist" → `ChordGridPersistObserver`
   - Uses: `apps/sonata/library.Library`, `apps/sonata/library.openSongImperative`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`

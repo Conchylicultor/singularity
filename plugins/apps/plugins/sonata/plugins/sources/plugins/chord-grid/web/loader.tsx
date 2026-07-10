@@ -21,7 +21,7 @@ interface Props {
 }
 
 const PLACEHOLDER =
-  "# Verse\nAmaj9 Am9 (E E6) (E E6)\nCmaj7 Am7 Dm9 G13";
+  "; Verse\nAmaj9 Am9 (E E6) (E E6)\nCmaj7 Am7 Dm9 G13";
 
 export function ChordGridLoader({ raw, onRaw }: Props) {
   const current = asChordGridRaw(raw);
@@ -54,8 +54,10 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
           {events.length} chord{events.length === 1 ? "" : "s"} · each cell is a
           bar · <code className="rounded-md bg-muted px-xs">( )</code> share a bar ·{" "}
           <code className="rounded-md bg-muted px-xs">.</code> holds the previous
-          chord · <code className="rounded-md bg-muted px-xs">#</code> comments
-          the rest of the line
+          chord · <code className="rounded-md bg-muted px-xs">;</code> comments
+          the rest of the line ·{" "}
+          <code className="rounded-md bg-muted px-xs">I vi V7</code> are degrees
+          of <code className="rounded-md bg-muted px-xs">key: C</code>
         </span>
         {skipped.length > 0 ? (
           <span className={cn("text-destructive")} role="alert">

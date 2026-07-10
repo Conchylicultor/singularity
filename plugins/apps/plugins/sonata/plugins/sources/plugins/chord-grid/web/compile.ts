@@ -4,11 +4,18 @@
  * The grid text is the **authored truth**, written in the chord-grid
  * mini-language (see `parse-grid.ts`): whitespace/newline-separated cells, each
  * one bar; a group `( … )` shares a bar between several chords; a hold `.`
- * sustains the previous chord; a `#` opening a cell comments out the rest of the
- * line. Each chord becomes a `source:"authored"` chord
- * annotation; the chord *notes* are not produced here — the shell's reactive
- * re-voicing step regenerates them from these annotations under the global
- * voicing config, so this source emits annotations only.
+ * sustains the previous chord; a `;` comments out the rest of the line; a `key:`
+ * directive sets the key that Roman numerals read against. Each
+ * chord becomes a `source:"authored"` chord annotation; the chord *notes* are not
+ * produced here — the shell's reactive re-voicing step regenerates them from
+ * these annotations under the global voicing config, so this source emits
+ * annotations only.
+ *
+ * A declared key is authored truth too, and reaches the Score the way the IR
+ * models key context: the key at beat 0 as `meta.key`, any later modulation as a
+ * `type:"key"` annotation. So the notation lens draws the right signature and
+ * every chord spells against the key the author named. A grid that declares no
+ * key leaves the context empty for the analyzer to infer, exactly as before.
  *
  * The grid declares **no tempo / time-signature opinion** (empty maps): it has
  * no authored tempo, so when merged with a source that does (e.g. MIDI),
@@ -61,7 +68,7 @@ export function compile(raw: unknown): Score {
     );
   }
 
-  const { events } = parseGrid(raw.text);
+  const { events, keys } = parseGrid(raw.text);
 
   const annotations: Annotation[] = events.map(
     (ev) =>
@@ -74,8 +81,23 @@ export function compile(raw: unknown): Score {
       }) satisfies Annotation<"chord", ChordData>,
   );
 
+  // The starting key belongs in `meta.key`; every later modulation is an
+  // annotation spanning until the next one (or the end of the grid).
+  const endBeat = events.reduce((max, ev) => Math.max(max, ev.end), 0);
+  const startingKey = keys[0]?.beat === 0 ? keys[0].key : undefined;
+  for (const [i, change] of keys.entries()) {
+    if (change.beat === 0) continue;
+    annotations.push({
+      type: "key",
+      start: change.beat,
+      end: keys[i + 1]?.beat ?? Math.max(endBeat, change.beat),
+      data: change.key,
+      source: "authored",
+    });
+  }
+
   return {
-    meta: {},
+    meta: startingKey ? { key: startingKey } : {},
     // No tracks / notes — the shell's re-voicing step owns chord-note
     // generation from these `source:"authored"` chord annotations.
     tracks: [],

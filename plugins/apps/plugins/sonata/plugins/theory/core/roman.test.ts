@@ -1,6 +1,7 @@
 import { describe, expect, it } from "bun:test";
 import type { KeySignature } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { romanNumeral } from "./roman";
+import { CHORD_TEMPLATES } from "./chords";
+import { parseRomanNumeral, romanNumeral } from "./roman";
 
 const C_MAJOR: KeySignature = { tonic: "C", mode: "major" };
 const A_MINOR: KeySignature = { tonic: "A", mode: "minor" };
@@ -102,4 +103,126 @@ describe("romanNumeral — augmented / extended", () => {
   it("IVsus4", () => {
     expect(romanNumeral(chord(5, "sus4"), C_MAJOR)).toBe("IVsus4");
   });
+});
+
+// ---------------------------------------------------------------------------
+// parseRomanNumeral — the inverse
+// ---------------------------------------------------------------------------
+
+describe("parseRomanNumeral — major-key diatonic triads", () => {
+  // C major diatonic: I ii iii IV V vi vii°
+  const cases: [string, number, string][] = [
+    ["I", 0, "maj"],
+    ["ii", 2, "min"],
+    ["iii", 4, "min"],
+    ["IV", 5, "maj"],
+    ["V", 7, "maj"],
+    ["vi", 9, "min"],
+    ["vii°", 11, "dim"],
+  ];
+  for (const [numeral, root, quality] of cases) {
+    it(`${numeral} → root ${root}, ${quality}`, () => {
+      expect(parseRomanNumeral(numeral, C_MAJOR)).toMatchObject({ root, quality });
+    });
+  }
+});
+
+describe("parseRomanNumeral — degrees follow the key's scale", () => {
+  it("VI in A minor is F (natural minor), not F♯", () => {
+    expect(parseRomanNumeral("VI", A_MINOR)).toMatchObject({ root: 5 });
+  });
+  it("vi in C major is A minor", () => {
+    expect(parseRomanNumeral("vi", C_MAJOR)!.symbol).toBe("Am");
+  });
+  it("V7 in F major is C7", () => {
+    expect(parseRomanNumeral("V7", { tonic: "F", mode: "major" })!.symbol).toBe("C7");
+  });
+  it("accepts an accidental tonic (V in F♯ major is C♯)", () => {
+    expect(parseRomanNumeral("V", { tonic: "F#", mode: "major" })).toMatchObject({
+      root: 1,
+    });
+  });
+});
+
+describe("parseRomanNumeral — the quality lives in case + mark + figure", () => {
+  const cases: [string, string][] = [
+    ["Imaj7", "maj7"],
+    ["I7", "dom7"],
+    ["ii7", "min7"],
+    ["iiø7", "halfdim7"],
+    ["vii°7", "dim7"],
+    ["III+", "aug"],
+    ["V9", "dom9"],
+    ["IVsus4", "sus4"],
+    ["I6/9", "six9"],
+    ["imaj7", "minmaj7"],
+  ];
+  for (const [numeral, quality] of cases) {
+    it(`${numeral} → ${quality}`, () => {
+      expect(parseRomanNumeral(numeral, C_MAJOR)!.quality).toBe(quality);
+    });
+  }
+
+  it("accepts ASCII stand-ins for the glyphs", () => {
+    expect(parseRomanNumeral("viio7", C_MAJOR)!.quality).toBe("dim7");
+    expect(parseRomanNumeral("viidim7", C_MAJOR)!.quality).toBe("dim7");
+    expect(parseRomanNumeral("IM7", C_MAJOR)!.quality).toBe("maj7");
+    expect(parseRomanNumeral("bVII", C_MAJOR)!.root).toBe(10);
+    expect(parseRomanNumeral("#IV", C_MAJOR)!.root).toBe(6);
+  });
+});
+
+describe("parseRomanNumeral — chromatic degrees", () => {
+  it("♭VII in C major is B♭ major", () => {
+    expect(parseRomanNumeral("♭VII", C_MAJOR)).toMatchObject({
+      root: 10,
+      quality: "maj",
+    });
+  });
+  it("♯iv° in C major is F♯ diminished", () => {
+    expect(parseRomanNumeral("♯iv°", C_MAJOR)).toMatchObject({
+      root: 6,
+      quality: "dim",
+    });
+  });
+  it("♭II (Neapolitan) in A minor is B♭ major", () => {
+    expect(parseRomanNumeral("♭II", A_MINOR)).toMatchObject({ root: 10 });
+  });
+});
+
+describe("parseRomanNumeral — spells the root through the key", () => {
+  it("♭VII in F major reads E♭, not D♯", () => {
+    const chord = parseRomanNumeral("♭VII", { tonic: "F", mode: "major" })!;
+    expect(chord.symbol).toBe("D#"); // normalized sharps
+    expect(chord.spelledSymbol).toBe("E♭"); // key-aware refinement
+  });
+  it("omits spelledSymbol when it matches the normalized symbol", () => {
+    expect(parseRomanNumeral("V", C_MAJOR)!.spelledSymbol).toBeUndefined();
+  });
+});
+
+describe("parseRomanNumeral — rejects non-numerals", () => {
+  for (const bad of ["", "C", "Am7", "Iv", "IIII", "VV", "ii?", "vsus4", "#"]) {
+    it(`rejects ${JSON.stringify(bad)}`, () => {
+      expect(parseRomanNumeral(bad, C_MAJOR)).toBeNull();
+    });
+  }
+});
+
+describe("romanNumeral ⇄ parseRomanNumeral round-trip", () => {
+  const QUALITIES = CHORD_TEMPLATES.map((t) => t.quality);
+  for (const key of [C_MAJOR, A_MINOR, { tonic: "Eb", mode: "major" } as const]) {
+    for (const quality of QUALITIES) {
+      it(`every root, ${quality} in ${key.tonic} ${key.mode}`, () => {
+        for (let root = 0; root < 12; root++) {
+          const numeral = romanNumeral(chord(root, quality), key);
+          expect(numeral).not.toBeNull();
+          expect(parseRomanNumeral(numeral!, key)).toMatchObject({
+            root,
+            quality,
+          });
+        }
+      });
+    }
+  }
 });

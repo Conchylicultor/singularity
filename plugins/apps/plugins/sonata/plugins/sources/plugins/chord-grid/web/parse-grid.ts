@@ -5,13 +5,24 @@
  *
  *   - a **chord** (`Cmaj7`, `F#m`, `Bb13`, `G7(♯5)`) occupies one bar. A chord
  *     may carry parenthetical alterations *attached* to it (no space) — these
- *     are absorbed into the token, so they are never mistaken for a group;
+ *     are absorbed into the token, so they are never mistaken for a group. A
+ *     chord may equally be written as a **Roman numeral** (`I`, `vi`, `V7`,
+ *     `iiø7`, `♭VII`), resolved against the key in force — a *degree*, not a
+ *     letter, so a progression can be written once and heard in any key;
  *   - a **group** `( … )` — a `(` at a cell boundary — puts several items in a
  *     single bar, splitting it equally between them;
  *   - a **hold** `.` extends the previous chord instead of striking a new one.
  *
- * A `#` **opening a cell** starts a comment that runs to the end of the line
- * (`# verse`); comments are lexical trivia, stripped before tokenizing.
+ * Plus two pieces of trivia that consume no bar:
+ *
+ *   - a `;` starts a comment that runs to the end of the line (`; verse`);
+ *     comments are stripped before tokenizing. `;` is deliberately NOT a musical
+ *     character, so it needs no positional rule to disambiguate — unlike `#`,
+ *     which it replaced: `#` is the sharp, and a degree may legally *begin* with
+ *     one (`♯IV`), so no position was ever safely free for it;
+ *   - a `key: Am` **directive** sets the key that Roman numerals resolve
+ *     against, from that point forward (so a grid may modulate). Absent any
+ *     directive the key is C major, and letter-name chords never consult it.
  *
  * Cells are separated by whitespace / newlines (newlines are purely cosmetic),
  * and a stray `|` is accepted and ignored so old `| C G | Am F |` grids keep
@@ -27,7 +38,12 @@
  * surfaced by the loader, so typos stay visible rather than silently dropped.
  */
 
-import { parseChordSymbol } from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import type { KeySignature } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
+  parseChordSymbol,
+  parseKeySignature,
+  parseRomanNumeral,
+} from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { type ChordEvent } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 
 /** Default bar length in quarter-note beats (4/4). */
@@ -36,14 +52,35 @@ const BEATS_PER_BAR = 4;
 /** The hold marker: extends the previous chord rather than striking a new one. */
 const HOLD = ".";
 
-/** The comment marker — only when it opens a cell; inside a token it is a sharp. */
-const COMMENT = "#";
+/** The comment marker. Not a musical character, so it means this and nothing else. */
+const COMMENT = ";";
 
-/** A tokenized cell: a single chord, a parenthesised group, or a hold. */
+/**
+ * The key Roman numerals resolve against until a `key:` directive says otherwise.
+ * C major is the neutral choice: its degrees are the plain white keys, so an
+ * undeclared `I vi IV V` reads C Am F G — and the transpose control moves it.
+ */
+export const DEFAULT_KEY: KeySignature = { tonic: "C", mode: "major" };
+
+/**
+ * A `key:` / `key=` directive opening a cell, with the tonic attached (`key:Am`)
+ * or left for the next cell (`key: Am`). `key` is not a chord symbol, so nothing
+ * legal is shadowed.
+ */
+const KEY_DIRECTIVE = /^key[:=](.*)$/i;
+
+/** A key change established at a beat — the grid's authored key context. */
+export interface KeyChange {
+  beat: number;
+  key: KeySignature;
+}
+
+/** A tokenized cell: a chord, a parenthesised group, a hold, or a key directive. */
 type Cell =
   | { kind: "chord"; token: string }
   | { kind: "group"; items: string[] }
-  | { kind: "hold" };
+  | { kind: "hold" }
+  | { kind: "key"; arg: string };
 
 /**
  * The insignificant characters: whitespace and the optional `|` bar separator.
@@ -55,23 +92,12 @@ function isInsignificant(c: string): boolean {
 }
 
 /**
- * Does the `#` at `i` open a comment, or is it a sharp inside a token?
- *
- * `#` does double duty, disambiguated by what precedes it — the same trick the
- * grammar already plays with `(` (group vs. attached alteration). A `#` opening
- * a cell (start of text, or after an insignificant character) is a comment; a
- * `#` reached anywhere else belongs to the token being written, so `F#m`,
- * `G7(#5)` and `(C#m E)` are untouched. No chord symbol may *begin* with `#`, so
- * nothing legal is shadowed.
- */
-function opensComment(text: string, i: number): boolean {
-  return i === 0 || isInsignificant(text[i - 1]!);
-}
-
-/**
  * Strip line comments — lexical trivia, removed before tokenizing so `(` groups,
  * chord runs and holds never have to know about them. The terminating newline
  * survives, so a comment can't glue two lines into one cell.
+ *
+ * `;` carries no musical meaning, so a comment starts wherever one appears —
+ * there is nothing to disambiguate against, and no position clause to remember.
  */
 function stripComments(text: string): string {
   let out = "";
@@ -79,7 +105,7 @@ function stripComments(text: string): string {
   const n = text.length;
   while (i < n) {
     const c = text[i]!;
-    if (c === COMMENT && opensComment(text, i)) {
+    if (c === COMMENT) {
       while (i < n && text[i] !== "\n") i++;
       continue;
     }
@@ -92,6 +118,42 @@ function stripComments(text: string): string {
 /** Characters that end a bare chord run (whitespace, group/bar/hold markers). */
 function isBoundary(c: string): boolean {
   return isInsignificant(c) || c === "(" || c === ")" || c === HOLD;
+}
+
+/**
+ * Read one bare run starting at `start` — a chord token or a directive — up to
+ * the next boundary, absorbing any parentheses ATTACHED to it (no preceding
+ * space): a parenthetical alteration like `G7(♯5)` or `Gsus4(♭9)`. A grouping
+ * `( … )` only ever opens at a cell boundary (handled by the caller), so a `(`
+ * reached mid-run belongs to the chord, not a group.
+ */
+function readRun(text: string, start: number): { token: string; next: number } {
+  const n = text.length;
+  let i = start;
+  let token = "";
+  while (i < n) {
+    const ch = text[i]!;
+    if (ch === "(") {
+      // Absorb a balanced (…) alteration group, parens included.
+      let depth = 0;
+      while (i < n) {
+        const d = text[i]!;
+        token += d;
+        i++;
+        if (d === "(") depth++;
+        else if (d === ")") {
+          depth--;
+          if (depth === 0) break;
+        }
+      }
+    } else if (isBoundary(ch)) {
+      break;
+    } else {
+      token += ch;
+      i++;
+    }
+  }
+  return { token, next: i };
 }
 
 /** Char-scan the grid text into cells (groups contain spaces, so no naive split). */
@@ -156,57 +218,62 @@ function tokenize(text: string): { cells: Cell[]; skipped: string[] } {
       continue;
     }
 
-    // Bare chord run, absorbing any parentheses ATTACHED to the run (no
-    // preceding space) — a parenthetical alteration like `G7(♯5)` or
-    // `Gsus4(♭9)`. A grouping `( … )` only ever opens at a cell boundary (handled
-    // above), so a `(` reached mid-run belongs to the chord, not a group.
-    let tok = "";
-    let done = false;
-    while (i < n && !done) {
-      const ch = text[i]!;
-      if (ch === "(") {
-        // Absorb a balanced (…) alteration group, parens included.
-        let depth = 0;
-        while (i < n) {
-          const d = text[i]!;
-          tok += d;
-          i++;
-          if (d === "(") depth++;
-          else if (d === ")") {
-            depth--;
-            if (depth === 0) break;
-          }
+    const run = readRun(text, i);
+    i = run.next;
+
+    // A `key:` / `key=` directive. The tonic may be attached (`key:Am`) or sit
+    // in the next cell (`key: Am`) — the friendlier spelling, so we look ahead
+    // past the insignificant characters for it. A directive with no tonic at all
+    // falls through with an empty arg and is reported as a typo by `expand`.
+    const directive = KEY_DIRECTIVE.exec(run.token);
+    if (directive) {
+      let arg = directive[1]!;
+      if (arg === "") {
+        let j = i;
+        while (j < n && isInsignificant(text[j]!)) j++;
+        if (j < n && !isBoundary(text[j]!)) {
+          const tonic = readRun(text, j);
+          arg = tonic.token;
+          i = tonic.next;
         }
-      } else if (isBoundary(ch)) {
-        done = true;
-      } else {
-        tok += ch;
-        i++;
       }
+      cells.push({ kind: "key", arg });
+      continue;
     }
-    cells.push({ kind: "chord", token: tok });
+
+    cells.push({ kind: "chord", token: run.token });
   }
 
   return { cells, skipped };
 }
 
 /** Expand cells into timed chord events, one bar per top-level cell. */
-function expand(cells: Cell[]): { events: ChordEvent[]; skipped: string[] } {
+function expand(cells: Cell[]): {
+  events: ChordEvent[];
+  skipped: string[];
+  keys: KeyChange[];
+} {
   const events: ChordEvent[] = [];
   const skipped: string[] = [];
+  const keys: KeyChange[] = [];
   let beat = 0;
   // The event a hold extends — null at the start or after a silent slot.
   let lastEvent: ChordEvent | null = null;
+  // The key Roman numerals resolve against; a `key:` directive moves it.
+  let key = DEFAULT_KEY;
 
   // Strike a chord token over `[start, start+len)`, recording typos as skipped.
-  // Returns the new event (or null) so the caller updates `lastEvent` in the
-  // linear flow — assigning it only inside this closure would defeat narrowing.
+  // A token is a letter-name chord (`Am7`) or a Roman numeral (`vi7`) — tried in
+  // that order, since no numeral begins with a note letter, so a chord symbol
+  // can never be shadowed by a degree. Returns the new event (or null) so the
+  // caller updates `lastEvent` in the linear flow — assigning it only inside
+  // this closure would defeat narrowing.
   const strike = (
     token: string,
     start: number,
     len: number,
   ): ChordEvent | null => {
-    const data = parseChordSymbol(token);
+    const data = parseChordSymbol(token) ?? parseRomanNumeral(token, key);
     if (!data) {
       skipped.push(token);
       return null;
@@ -221,6 +288,18 @@ function expand(cells: Cell[]): { events: ChordEvent[]; skipped: string[] } {
       lastEvent = strike(cell.token, beat, BEATS_PER_BAR);
     } else if (cell.kind === "hold") {
       if (lastEvent) lastEvent.end += BEATS_PER_BAR;
+    } else if (cell.kind === "key") {
+      // Trivia, like a comment: a key directive establishes context, not a bar.
+      const parsed = parseKeySignature(cell.arg);
+      if (!parsed) {
+        skipped.push(`key:${cell.arg}`);
+        continue;
+      }
+      key = parsed;
+      // Two directives on the same beat: the last one wins, as it does downstream.
+      if (keys.at(-1)?.beat === beat) keys[keys.length - 1] = { beat, key };
+      else keys.push({ beat, key });
+      continue;
     } else {
       // group: split this one bar equally among its items.
       const { items } = cell;
@@ -240,15 +319,19 @@ function expand(cells: Cell[]): { events: ChordEvent[]; skipped: string[] } {
     beat += BEATS_PER_BAR;
   }
 
-  return { events, skipped };
+  return { events, skipped, keys };
 }
 
-/** Parse the grid text into timed chord events; unparseable tokens are skipped. */
+/**
+ * Parse the grid text into timed chord events plus the key changes its `key:`
+ * directives establish; unparseable tokens are skipped.
+ */
 export function parseGrid(text: string): {
   events: ChordEvent[];
   skipped: string[];
+  keys: KeyChange[];
 } {
   const { cells, skipped: tokSkipped } = tokenize(stripComments(text));
-  const { events, skipped: expSkipped } = expand(cells);
-  return { events, skipped: [...tokSkipped, ...expSkipped] };
+  const { events, skipped: expSkipped, keys } = expand(cells);
+  return { events, skipped: [...tokSkipped, ...expSkipped], keys };
 }

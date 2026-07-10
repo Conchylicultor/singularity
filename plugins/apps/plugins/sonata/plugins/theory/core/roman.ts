@@ -1,12 +1,19 @@
 /**
- * Functional-harmony analysis: a chord + the key it sits in → its Roman-numeral
- * label (I, ii, V7, ♭VII, vii°7, …).
+ * Functional harmony, both directions: a chord + the key it sits in ↔ its
+ * Roman-numeral label (I, ii, V7, ♭VII, vii°7, …).
  *
  * This is the third face of the two-layer chord model, alongside `formatChord-
  * Symbol` (chord → letter name) and `detectChord` (notes → chord): given the key
  * *context* it names a chord by its scale-degree *function* rather than its
  * absolute root. So the same Cmaj chord reads "I" in C major but "IV" in G major
  * and "♭VI" in E minor.
+ *
+ * `romanNumeral` reads a chord as a numeral; `parseRomanNumeral` is its exact
+ * inverse, resolving an authored numeral back to a concrete chord in the key —
+ * so a chord-authoring source (the chord grid) can accept `I vi IV V` wherever
+ * it accepts `C Am F G`. Both share one degree model and one quality table, and
+ * the table is checked for injectivity at module eval, so the round-trip cannot
+ * silently rot.
  *
  * The numeral is derived purely from the chord root's semitone interval above
  * the tonic, resolved through a fixed per-mode table of conventional readings —
@@ -18,18 +25,23 @@
  * Inversions are intentionally NOT figured here — the root-position function is
  * what the label conveys; the slash bass already shows in the chord symbol.
  *
- * Pure TypeScript: no React, no framework. Imports only `score/core` (types),
- * keeping the DAG acyclic.
+ * Pure TypeScript: no React, no framework. Imports only `score/core` and sibling
+ * theory modules, keeping the DAG acyclic.
  */
 
-import type {
-  ChordData,
-  KeySignature,
+import {
+  makeKeySpeller,
+  type ChordData,
+  type KeySignature,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { formatChordSymbol, formatSpelledChordSymbol } from "./chords";
 import { tonicPc } from "./key-detect";
 
 /** Roman-numeral glyph per 1-based diatonic degree. */
 const NUMERALS = ["I", "II", "III", "IV", "V", "VI", "VII"] as const;
+
+/** Reduce any integer to a pitch-class in [0, 12). */
+const pc12 = (pc: number): number => ((pc % 12) + 12) % 12;
 
 /** A degree reading: which numeral (1-based) and its chromatic accidental. */
 interface Degree {
@@ -38,6 +50,16 @@ interface Degree {
   /** Chromatic offset from the diatonic degree: -1 = ♭, +1 = ♯, 0 = natural. */
   acc?: -1 | 1;
 }
+
+/**
+ * Semitones above the tonic of each diatonic degree, per mode — the *forward*
+ * degree model (`degree + accidental → interval`) that `parseRomanNumeral` reads.
+ * The `*_DEGREES` tables below are its inverse (`interval → degree`), picking one
+ * conventional spelling per chromatic interval; `roman.test.ts` asserts the two
+ * agree, so the numeral round-trip is total.
+ */
+const MAJOR_SCALE = [0, 2, 4, 5, 7, 9, 11] as const;
+const MINOR_SCALE = [0, 2, 3, 5, 7, 8, 10] as const; // natural minor
 
 /**
  * Semitone interval above the tonic → conventional Roman degree, in a MAJOR key.
@@ -139,7 +161,7 @@ export function romanNumeral(
   const style = STYLE[chord.quality];
   if (!style) return null;
 
-  const interval = (((chord.root - tonicPc(key.tonic)) % 12) + 12) % 12;
+  const interval = pc12(chord.root - tonicPc(key.tonic));
   const degree = (key.mode === "major" ? MAJOR_DEGREES : MINOR_DEGREES)[interval]!;
 
   const base = NUMERALS[degree.n - 1]!;
@@ -147,4 +169,119 @@ export function romanNumeral(
   const accidental = degree.acc === undefined ? "" : degree.acc < 0 ? "♭" : "♯";
 
   return accidental + numeral + (style.mark ?? "") + (style.figure ?? "");
+}
+
+// ---------------------------------------------------------------------------
+// The inverse: numeral + key → chord
+// ---------------------------------------------------------------------------
+
+/** A style triple, flattened to a lookup key: case + mark + figure. */
+function styleKey(lower: boolean, mark: string, figure: string): string {
+  return `${lower ? "l" : "u"}|${mark}|${figure}`;
+}
+
+/**
+ * `STYLE` inverted — the numeral's case + mark + figure back to the quality that
+ * produced it. Built at module eval, which **throws if two qualities share a
+ * style**: `romanNumeral` would then be non-injective and no parser could undo
+ * it. The invariant is enforced where it can't be forgotten, not tested for.
+ */
+const QUALITY_BY_STYLE = new Map<string, string>();
+for (const [quality, style] of Object.entries(STYLE)) {
+  const k = styleKey(style.lower, style.mark ?? "", style.figure ?? "");
+  const clash = QUALITY_BY_STYLE.get(k);
+  if (clash) {
+    throw new Error(
+      `[theory] Roman-numeral style collision: "${quality}" and "${clash}" both render as ${k}`,
+    );
+  }
+  QUALITY_BY_STYLE.set(k, quality);
+}
+
+/** Numeral glyph → 1-based diatonic degree (the inverse of `NUMERALS`). */
+const DEGREE_BY_NUMERAL = new Map<string, number>(
+  NUMERALS.map((glyph, i) => [glyph, i + 1]),
+);
+
+/**
+ * Accepted spellings of a triad-quality mark, longest-first so `dim` is read
+ * whole rather than as a `d` typo. `°`/`o`/`dim` are the diminished spellings,
+ * `ø` half-diminished, `+` augmented.
+ */
+const MARK_ALIASES: ReadonlyArray<readonly [string, string]> = [
+  ["dim", "°"],
+  ["°", "°"],
+  ["o", "°"],
+  ["ø", "ø"],
+  ["+", "+"],
+];
+
+/** Accepted spellings of a seventh/extension figure, normalized to `STYLE`'s. */
+const FIGURE_ALIASES: Record<string, string> = { M7: "maj7", M9: "maj9" };
+
+/**
+ * A numeral: an optional chromatic accidental, then I–VII in a *uniform* case
+ * (upper = major family, lower = minor/diminished), then the mark + figure tail.
+ */
+const ROMAN = /^([♭♯b#]?)([IViv]+)(.*)$/;
+
+/** Split the tail into its (normalized) quality mark and figure. */
+function splitTail(tail: string): { mark: string; figure: string } {
+  const alias = MARK_ALIASES.find(([spelling]) => tail.startsWith(spelling));
+  const mark = alias ? alias[1] : "";
+  const rest = alias ? tail.slice(alias[0].length) : tail;
+  return { mark, figure: FIGURE_ALIASES[rest] ?? rest };
+}
+
+/**
+ * Resolve an authored Roman numeral to the concrete chord it names in `key` —
+ * the exact inverse of `romanNumeral`. `"vi"` in C major → A minor, `"V7"` in
+ * F major → C7, `"♭VII"` in C major → B♭ major, `"iiø7"` → a half-diminished ii.
+ *
+ * The root is the numeral's diatonic degree in the key's scale (natural minor
+ * for a minor key, so `VI` in A minor is F — not F♯) shifted by the leading
+ * accidental; the quality is whatever `romanNumeral` would have rendered as this
+ * case + mark + figure. ASCII stand-ins are accepted for the glyphs (`b`/`#` for
+ * `♭`/`♯`, `o`/`dim` for `°`, `M7` for `maj7`).
+ *
+ * The chord is spelled through the key (`spelledSymbol`) as well as normalized
+ * to sharps (`symbol`), so `♭VII` in F major reads "E♭" rather than "D♯".
+ *
+ * Returns `null` for anything that is not a Roman numeral in this vocabulary, so
+ * callers can fall through to the letter-name parser (`parseChordSymbol`) or
+ * surface the token as a typo — never crash on user input.
+ */
+export function parseRomanNumeral(
+  input: string,
+  key: KeySignature,
+): ChordData | null {
+  const m = ROMAN.exec(input.trim());
+  if (!m) return null;
+
+  // A numeral is written in ONE case — its case IS the quality. `Iv` is a typo.
+  const numeral = m[2]!;
+  const lower = numeral === numeral.toLowerCase();
+  const upper = numeral === numeral.toUpperCase();
+  if (lower === upper) return null;
+
+  const n = DEGREE_BY_NUMERAL.get(numeral.toUpperCase());
+  if (n === undefined) return null; // e.g. "IIII", "VV"
+
+  const { mark, figure } = splitTail(m[3]!);
+  const quality = QUALITY_BY_STYLE.get(styleKey(lower, mark, figure));
+  if (quality === undefined) return null;
+
+  const accText = m[1]!;
+  const acc = accText === "" ? 0 : accText === "♯" || accText === "#" ? 1 : -1;
+  const scale = key.mode === "major" ? MAJOR_SCALE : MINOR_SCALE;
+  const root = pc12(tonicPc(key.tonic) + scale[n - 1]! + acc);
+
+  const symbol = formatChordSymbol({ root, quality });
+  const spelledSymbol = formatSpelledChordSymbol(
+    { root, quality },
+    makeKeySpeller(key),
+  );
+  const data: ChordData = { root, quality, symbol };
+  if (spelledSymbol !== symbol) data.spelledSymbol = spelledSymbol;
+  return data;
 }

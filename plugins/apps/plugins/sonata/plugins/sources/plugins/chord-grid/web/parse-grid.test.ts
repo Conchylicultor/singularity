@@ -53,7 +53,7 @@ describe("parseGrid — parenthetical alterations", () => {
 
 describe("parseGrid — comments", () => {
   it("ignores a whole-line comment", () => {
-    const { events, skipped } = parseGrid("# verse\nC G");
+    const { events, skipped } = parseGrid("; verse\nC G");
     expect(skipped).toEqual([]);
     expect(events.map((e) => e.data.symbol)).toEqual(["C", "G"]);
     // The comment consumes no bar — C still starts the grid.
@@ -61,17 +61,17 @@ describe("parseGrid — comments", () => {
   });
 
   it("ignores a trailing comment after a bar", () => {
-    expect(symbols("C G # turnaround\nAm F")).toEqual(["C", "G", "Am", "F"]);
+    expect(symbols("C G ; turnaround\nAm F")).toEqual(["C", "G", "Am", "F"]);
   });
 
   it("does not glue the next line into the commented cell", () => {
-    const { events } = parseGrid("C # aside\nG");
+    const { events } = parseGrid("C ; aside\nG");
     expect(events.map((e) => e.data.symbol)).toEqual(["C", "G"]);
     expect(events[1]!.start).toBe(4);
   });
 
   it("comments out chords that would otherwise sound", () => {
-    const { events, skipped } = parseGrid("C\n# Am F\nG");
+    const { events, skipped } = parseGrid("C\n; Am F\nG");
     expect(skipped).toEqual([]);
     expect(events.map((e) => e.data.symbol)).toEqual(["C", "G"]);
     // G is the second bar — the commented line contributed no bars.
@@ -79,29 +79,35 @@ describe("parseGrid — comments", () => {
   });
 
   it("treats a comment-only grid as empty, not as a typo", () => {
-    const { events, skipped } = parseGrid("# nothing here yet");
+    const { events, skipped } = parseGrid("; nothing here yet");
     expect(events).toEqual([]);
     expect(skipped).toEqual([]);
   });
 
   it("terminates a comment at end-of-text without a newline", () => {
-    expect(symbols("C G #")).toEqual(["C", "G"]);
+    expect(symbols("C G ;")).toEqual(["C", "G"]);
   });
 
   it("comments after the optional | bar separator", () => {
-    expect(symbols("| C  G | # tail")).toEqual(["C", "G"]);
+    expect(symbols("| C  G | ; tail")).toEqual(["C", "G"]);
   });
 
   it("comments inside a group, without breaking the group", () => {
-    const { events, skipped } = parseGrid("(C # first half\n G)");
+    const { events, skipped } = parseGrid("(C ; first half\n G)");
     expect(skipped).toEqual([]);
     expect(events.map((e) => e.data.symbol)).toEqual(["C", "G"]);
     // Still one shared bar: two beats each.
     expect(events[0]!.end - events[0]!.start).toBe(2);
   });
+
+  it("needs no space, and no cell boundary, to start a comment", () => {
+    // `;` is not a musical character, so it never does double duty.
+    expect(symbols(";verse\nC G")).toEqual(["C", "G"]);
+    expect(symbols("C;tail\nG")).toEqual(["C", "G"]);
+  });
 });
 
-describe("parseGrid — # does double duty (comment vs. sharp)", () => {
+describe("parseGrid — # is always a sharp, never a comment", () => {
   it("keeps a sharp inside a chord root", () => {
     expect(symbols("F#m C#7")).toEqual(["F#m", "C#7"]);
   });
@@ -124,10 +130,101 @@ describe("parseGrid — # does double duty (comment vs. sharp)", () => {
   it("still fails loud on a typo carrying a mid-token #", () => {
     expect(parseGrid("Zx#9").skipped).toEqual(["Zx#9"]);
   });
+
+  it("reads a cell-opening # as a RAISED DEGREE — the reason `;` replaced it", () => {
+    // Under the old `#`-comment rule this whole cell vanished.
+    expect(symbols("I #iv° V")).toEqual(["C", "F#dim", "G"]);
+    expect(symbols("#IV")).toEqual(["F#"]);
+  });
 });
 
 describe("parseGrid — regression", () => {
   it("parses a plain progression unchanged", () => {
     expect(symbols("C G Am F")).toEqual(["C", "G", "Am", "F"]);
+  });
+});
+
+describe("parseGrid — Roman numerals", () => {
+  it("resolves degrees against the default key of C major", () => {
+    const { events, skipped } = parseGrid("I vi IV V");
+    expect(skipped).toEqual([]);
+    expect(events.map((e) => e.data.symbol)).toEqual(["C", "Am", "F", "G"]);
+  });
+
+  it("reads the quality off the numeral's case, mark and figure", () => {
+    expect(symbols("I Imaj7 I7 IV")).toEqual(["C", "Cmaj7", "C7", "F"]);
+    expect(symbols("ii7 V7 Imaj7")).toEqual(["Dm7", "G7", "Cmaj7"]);
+    expect(symbols("viiø7 vii°7 III+")).toEqual(["Bø7", "Bdim7", "E+"]);
+  });
+
+  it("mixes numerals and letter-name chords in one grid", () => {
+    expect(symbols("C ii7 F# V")).toEqual(["C", "Dm7", "F#", "G"]);
+  });
+
+  it("holds and groups apply to numerals like any chord", () => {
+    const { events, skipped } = parseGrid("I . (IV V)");
+    expect(skipped).toEqual([]);
+    expect(events.map((e) => e.data.symbol)).toEqual(["C", "F", "G"]);
+    expect(events[0]!.end - events[0]!.start).toBe(8); // struck once, held a bar
+    expect(events[1]!.end - events[1]!.start).toBe(2); // half a shared bar
+  });
+
+  it("spells the root through the key (♭VII in F reads E♭)", () => {
+    const { events } = parseGrid("key: F\nbVII");
+    expect(events[0]!.data.symbol).toBe("D#");
+    expect(events[0]!.data.spelledSymbol).toBe("E♭");
+  });
+
+  it("fails loud on a numeral that is not in the vocabulary", () => {
+    expect(parseGrid("I VIII vsus4").skipped).toEqual(["VIII", "vsus4"]);
+  });
+});
+
+describe("parseGrid — the key: directive", () => {
+  it("sets the key numerals resolve against", () => {
+    expect(symbols("key: A\nI vi IV V")).toEqual(["A", "F#m", "D", "E"]);
+  });
+
+  it("accepts the tonic attached, and `=` for `:`", () => {
+    expect(symbols("key:A I")).toEqual(["A"]);
+    expect(symbols("key=A I")).toEqual(["A"]);
+    expect(symbols("KEY: A I")).toEqual(["A"]);
+  });
+
+  it("reads degrees off the natural-minor scale in a minor key", () => {
+    // A minor: i iv VI V — VI is F, not F#.
+    expect(symbols("key: Am\ni iv VI V")).toEqual(["Am", "Dm", "F", "E"]);
+  });
+
+  it("consumes no bar", () => {
+    const { events } = parseGrid("key: C\nI\nV");
+    expect(events[0]!.start).toBe(0);
+    expect(events[1]!.start).toBe(4);
+  });
+
+  it("modulates from where it appears onward", () => {
+    const { events, keys } = parseGrid("I V\nkey: D\nI V");
+    expect(events.map((e) => e.data.symbol)).toEqual(["C", "G", "D", "A"]);
+    expect(keys).toEqual([{ beat: 8, key: { tonic: "D", mode: "major" } }]);
+  });
+
+  it("reports the key changes it establishes, in beat order", () => {
+    expect(parseGrid("key: G\nI\nkey: Em\ni").keys).toEqual([
+      { beat: 0, key: { tonic: "G", mode: "major" } },
+      { beat: 4, key: { tonic: "E", mode: "minor" } },
+    ]);
+  });
+
+  it("declares no key when the grid has no directive", () => {
+    expect(parseGrid("C G Am F").keys).toEqual([]);
+  });
+
+  it("fails loud on an unrecognised or missing tonic", () => {
+    expect(parseGrid("key: H").skipped).toEqual(["key:H"]);
+    expect(parseGrid("key:").skipped).toEqual(["key:"]);
+  });
+
+  it("leaves letter-name chords untouched by the key", () => {
+    expect(symbols("key: Eb\nC G")).toEqual(["C", "G"]);
   });
 });
