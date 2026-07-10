@@ -7,13 +7,9 @@ import {
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { loadFacets, setFacet, type Facet } from "@plugins/plugin-meta/plugins/facets/core";
 import { asPluginId, type PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import {
-  stripTypes,
-  parseStringField,
-  parseBoolField,
-  runWithFsSnapshot,
-} from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { runWithFsSnapshot } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { buildFsSnapshot } from "./fs-snapshot";
+import { parsePluginBarrel, type BarrelMeta } from "./barrel-meta";
 
 async function readIfExistsAsync(path: string): Promise<string | null> {
   try {
@@ -192,13 +188,22 @@ async function collectCoreFields(dir: string, pluginsRoot: string): Promise<Coll
     readIfExistsAsync(join(dir, "package.json")),
   ]);
 
-  const webSrc = webIndex ? stripTypes(webIndex) : null;
-  const serverSrc = serverIndex ? stripTypes(serverIndex) : null;
-  const centralSrc = centralIndex ? stripTypes(centralIndex) : null;
+  // Read each runtime barrel's OWN default-exported object literal from ORIGINAL
+  // source — never transpiler output, which re-quotes string literals and silently
+  // dropped descriptions containing an escaped quote.
+  const webMeta: BarrelMeta | null = webIndex
+    ? parsePluginBarrel(webIndex, join(dir, "web", "index.ts"))
+    : null;
+  const serverMeta: BarrelMeta | null = serverIndex
+    ? parsePluginBarrel(serverIndex, join(dir, "server", "index.ts"))
+    : null;
+  const centralMeta: BarrelMeta | null = centralIndex
+    ? parsePluginBarrel(centralIndex, join(dir, "central", "index.ts"))
+    : null;
 
-  const webDesc = webSrc ? parseStringField(webSrc, "description") : undefined;
-  const serverDesc = serverSrc ? parseStringField(serverSrc, "description") : undefined;
-  const centralDesc = centralSrc ? parseStringField(centralSrc, "description") : undefined;
+  const webDesc = webMeta?.description;
+  const serverDesc = serverMeta?.description;
+  const centralDesc = centralMeta?.description;
   const descriptions: Partial<Record<Runtime, string>> = {};
   if (webDesc) descriptions.web = webDesc;
   if (serverDesc) descriptions.server = serverDesc;
@@ -213,14 +218,14 @@ async function collectCoreFields(dir: string, pluginsRoot: string): Promise<Coll
   }
 
   const loadBearing =
-    (webSrc ? parseBoolField(webSrc, "loadBearing") : false) ||
-    (serverSrc ? parseBoolField(serverSrc, "loadBearing") : false) ||
-    (centralSrc ? parseBoolField(centralSrc, "loadBearing") : false);
+    (webMeta?.loadBearing ?? false) ||
+    (serverMeta?.loadBearing ?? false) ||
+    (centralMeta?.loadBearing ?? false);
 
   let collapsed =
-    (webSrc ? parseBoolField(webSrc, "collapsed") : false) ||
-    (serverSrc ? parseBoolField(serverSrc, "collapsed") : false) ||
-    (centralSrc ? parseBoolField(centralSrc, "collapsed") : false);
+    (webMeta?.collapsed ?? false) ||
+    (serverMeta?.collapsed ?? false) ||
+    (centralMeta?.collapsed ?? false);
   // package.json collapsed, compositionRoot, and disabled markers.
   let compositionRoot = false;
   let disabled = false;

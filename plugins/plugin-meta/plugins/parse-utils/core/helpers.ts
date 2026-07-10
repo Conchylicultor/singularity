@@ -78,17 +78,253 @@ export function stripTypes(src: string): string {
   }
 }
 
-export function parseStringField(src: string, field: string): string | undefined {
-  const dq = new RegExp(`\\b${field}\\s*:\\s*"((?:[^"\\\\]|\\\\.)*)"`).exec(src);
-  if (dq) return dq[1];
-  const bt = new RegExp(`\\b${field}\\s*:\\s*\`((?:[^\`\\\\]|\\\\.)*)\``).exec(src);
-  if (bt) return bt[1]!.replace(/\s+/g, " ").trim();
-  return undefined;
+// ── Static string-literal reading ──────────────────────────────────
+//
+// These readers exist because a source value must NEVER be recovered by
+// re-parsing transpiler output: Bun's transpiler re-quotes string literals (a
+// `"…\"…\"…"` re-emits single-quoted, a mixed-quote literal re-emits as a
+// backtick), so any regex over transpiled text silently loses or corrupts the
+// value. The correct idiom is to mask the ORIGINAL source (offsets preserved
+// 1:1, quote delimiters kept verbatim) and read the value back by offset — which
+// is exactly what `parseStringField` / `parseBoolField` / `defaultExportObjectBody`
+// do below via `readStringLiteral`.
+
+export type StringLiteralResult =
+  | { kind: "value"; value: string; end: number } // `end` = index just past the closing quote
+  | { kind: "dynamic"; expr: string } // e.g. a template with an unescaped `${`
+  | { kind: "none" }; // src[at] is not a quote char
+
+export type StringFieldResult =
+  | { kind: "value"; value: string }
+  | { kind: "absent" } // key not present in real code
+  | { kind: "dynamic"; expr: string }; // key present, value is not a static string literal
+
+export type DefaultExportObject =
+  | { kind: "object"; body: string } // text strictly between the `{` and its matching `}`
+  | { kind: "absent" };
+
+const CLOSERS: Record<string, string> = { "{": "}", "[": "]", "(": ")" };
+
+/**
+ * Cook a single escape sequence starting at `src[i]` (which is `\`). Returns the
+ * decoded string (possibly empty, for a line continuation) and the index just
+ * past the sequence. An unrecognized escape yields the escaped char itself
+ * (`\q` → `q`), matching JS semantics.
+ */
+function cookEscape(src: string, i: number): { text: string; next: number } {
+  const e = src[i + 1];
+  if (e === undefined) return { text: "", next: i + 1 }; // trailing backslash
+  switch (e) {
+    case "n":
+      return { text: "\n", next: i + 2 };
+    case "r":
+      return { text: "\r", next: i + 2 };
+    case "t":
+      return { text: "\t", next: i + 2 };
+    case "b":
+      return { text: "\b", next: i + 2 };
+    case "f":
+      return { text: "\f", next: i + 2 };
+    case "v":
+      return { text: "\v", next: i + 2 };
+    case "0":
+      return { text: "\0", next: i + 2 };
+    case "\\":
+      return { text: "\\", next: i + 2 };
+    case "'":
+      return { text: "'", next: i + 2 };
+    case '"':
+      return { text: '"', next: i + 2 };
+    case "`":
+      return { text: "`", next: i + 2 };
+    // Line continuation: backslash + a real newline decodes to nothing.
+    case "\n":
+      return { text: "", next: i + 2 };
+    case "\r":
+      return { text: "", next: src[i + 2] === "\n" ? i + 3 : i + 2 };
+    case "x": {
+      const hex = src.slice(i + 2, i + 4);
+      if (/^[0-9a-fA-F]{2}$/.test(hex)) {
+        return { text: String.fromCharCode(parseInt(hex, 16)), next: i + 4 };
+      }
+      return { text: "x", next: i + 2 }; // malformed → char itself
+    }
+    case "u": {
+      if (src[i + 2] === "{") {
+        const close = src.indexOf("}", i + 3);
+        if (close > 0) {
+          const hex = src.slice(i + 3, close);
+          if (/^[0-9a-fA-F]+$/.test(hex)) {
+            return { text: String.fromCodePoint(parseInt(hex, 16)), next: close + 1 };
+          }
+        }
+        return { text: "u", next: i + 2 }; // malformed → char itself
+      }
+      const hex = src.slice(i + 2, i + 6);
+      if (/^[0-9a-fA-F]{4}$/.test(hex)) {
+        return { text: String.fromCharCode(parseInt(hex, 16)), next: i + 6 };
+      }
+      return { text: "u", next: i + 2 }; // malformed → char itself
+    }
+    default:
+      return { text: e, next: i + 2 };
+  }
 }
 
-export function parseBoolField(src: string, field: string): boolean {
-  const m = new RegExp(`\\b${field}\\s*:\\s*(true|false)\\b`).exec(src);
-  return m?.[1] === "true";
+/** A short, whitespace-collapsed snippet from `src[at..]`, capped at ~60 chars. */
+function snippetFrom(src: string, at: number): string {
+  const end = Math.min(src.length, at + 60);
+  let s = src.slice(at, end).replace(/\s+/g, " ").trim();
+  if (end < src.length) s += "…";
+  return s;
+}
+
+/**
+ * Read the string literal beginning at offset `at` in ORIGINAL (unmasked) source.
+ * Handles all three quote forms and cooks escapes. A backtick literal with an
+ * UNESCAPED `${` is `dynamic`; otherwise a backtick's cooked value gets today's
+ * whitespace collapse (a deliberate affordance for prose wrapped across source
+ * lines — author-written backticks only). `"`/`'` literals are cooked with NO
+ * collapse. An unterminated literal is `dynamic` (never hangs, never throws).
+ */
+export function readStringLiteral(src: string, at: number): StringLiteralResult {
+  const quote = src[at];
+  if (quote !== '"' && quote !== "'" && quote !== "`") return { kind: "none" };
+  const isTemplate = quote === "`";
+  let cooked = "";
+  let i = at + 1;
+  while (i < src.length) {
+    const c = src[i]!;
+    if (c === quote) {
+      const value = isTemplate ? cooked.replace(/\s+/g, " ").trim() : cooked;
+      return { kind: "value", value, end: i + 1 };
+    }
+    if (c === "\\") {
+      const { text, next } = cookEscape(src, i);
+      cooked += text;
+      i = next;
+      continue;
+    }
+    // An unescaped `${` in a backtick makes the value a runtime expression.
+    if (isTemplate && c === "$" && src[i + 1] === "{") {
+      return { kind: "dynamic", expr: snippetFrom(src, at) };
+    }
+    cooked += c;
+    i++;
+  }
+  return { kind: "dynamic", expr: snippetFrom(src, at) }; // unterminated
+}
+
+/** Escape a plain identifier for embedding in a RegExp. */
+function escapeRe(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+/**
+ * Value offset (index just past `field\s*:\s*`) of a key in already-MASKED text.
+ * With `depth0`, `masked` is an object body and only top-level keys count —
+ * nested `{}`/`[]`/`()` blocks are skipped via `matchBracket` so a nested
+ * contribution's key never shadows a top-level one. Without `depth0`, the first
+ * match anywhere wins (today's behavior). Returns `null` when the key is absent.
+ */
+function keyValueOffset(masked: string, field: string, depth0: boolean): number | null {
+  const pattern = `\\b${escapeRe(field)}\\s*:\\s*`;
+  if (!depth0) {
+    const m = new RegExp(pattern).exec(masked);
+    return m ? m.index + m[0].length : null;
+  }
+  const re = new RegExp(pattern, "y");
+  let i = 0;
+  while (i < masked.length) {
+    const c = masked[i]!;
+    if (c === "{" || c === "[" || c === "(") {
+      const close = matchBracket(masked, i, c, CLOSERS[c]!);
+      if (close < 0) return null; // unbalanced → give up
+      i = close + 1;
+      continue;
+    }
+    re.lastIndex = i;
+    if (re.test(masked)) return re.lastIndex; // sticky match advances lastIndex to value offset
+    i++;
+  }
+  return null;
+}
+
+/**
+ * The value expression text from `at` up to the next depth-0 `,` or `}`, trimmed
+ * and capped at ~60 chars. Read from the MASKED text so a string's interior can
+ * never leak into the snippet.
+ */
+function exprSnippet(masked: string, at: number): string {
+  let i = at;
+  while (i < masked.length) {
+    const c = masked[i]!;
+    if (c === "{" || c === "[" || c === "(") {
+      const close = matchBracket(masked, i, c, CLOSERS[c]!);
+      if (close < 0) break;
+      i = close + 1;
+      continue;
+    }
+    if (c === "," || c === "}") break;
+    i++;
+  }
+  let text = masked.slice(at, i).trim();
+  if (text.length > 60) text = text.slice(0, 60) + "…";
+  return text;
+}
+
+/**
+ * Read a static string field. Masks `src` INTERNALLY (so a `field:` inside a
+ * comment or string is never matched — safe on a raw buffer), locates the key,
+ * then reads the literal from the ORIGINAL by offset. A key whose value is not a
+ * static string literal (identifier / call / concat / interpolated template) is
+ * `dynamic`, never silently `absent`.
+ */
+export function parseStringField(
+  src: string,
+  field: string,
+  opts?: { depth0?: boolean },
+): StringFieldResult {
+  const masked = maskSource(src);
+  const at = keyValueOffset(masked, field, opts?.depth0 ?? false);
+  if (at === null) return { kind: "absent" };
+  const lit = readStringLiteral(src, at);
+  if (lit.kind === "value") return { kind: "value", value: lit.value };
+  if (lit.kind === "dynamic") return { kind: "dynamic", expr: lit.expr };
+  // Key present but the value doesn't start with a quote (identifier/call/concat).
+  return { kind: "dynamic", expr: exprSnippet(masked, at) };
+}
+
+/**
+ * Read a static boolean field. Same masking + `depth0` scoping as
+ * `parseStringField`. A boolean field's only valid literal forms are the bare
+ * `true`/`false` tokens, so the return stays a plain `boolean`.
+ */
+export function parseBoolField(src: string, field: string, opts?: { depth0?: boolean }): boolean {
+  const masked = maskSource(src);
+  const at = keyValueOffset(masked, field, opts?.depth0 ?? false);
+  if (at === null) return false;
+  return /^true\b/.test(masked.slice(at));
+}
+
+/**
+ * Isolate a barrel's `export default { … }` object body. Masks `src`, finds
+ * `export default` as real code (never in a comment/string), and — only if the
+ * next non-space char is `{` — `matchBracket`es to its close, returning the text
+ * strictly between the braces sliced from the ORIGINAL. A union (not
+ * `string | null`) because `export default {}` is a legitimate EMPTY body,
+ * distinct from `absent`.
+ */
+export function defaultExportObjectBody(src: string): DefaultExportObject {
+  const masked = maskSource(src);
+  const m = /\bexport\s+default\b/.exec(masked);
+  if (!m) return { kind: "absent" };
+  let i = m.index + m[0].length;
+  while (i < masked.length && /\s/.test(masked[i]!)) i++;
+  if (masked[i] !== "{") return { kind: "absent" }; // default export is not an object literal
+  const close = matchBracket(masked, i, "{", "}");
+  if (close < 0) return { kind: "absent" };
+  return { kind: "object", body: src.slice(i + 1, close) };
 }
 
 export function matchBracket(src: string, start: number, open: string, close: string): number {

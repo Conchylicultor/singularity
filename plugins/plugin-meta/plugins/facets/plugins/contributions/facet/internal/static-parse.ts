@@ -226,8 +226,19 @@ export function parsePaneDefinitions(webDir: string): Map<string, PaneDefinition
       const braceEnd = matchBracket(masked, braceStart, "{", "}");
       if (braceEnd < 0) continue;
       const body = src.slice(braceStart + 1, braceEnd);
-      const id = parseStringField(body, "id");
-      const path = parseStringField(body, "path") ?? parseStringField(body, "segment");
+      // A dynamically-built pane id/path/segment is out of scope for this static
+      // scanner: treat `dynamic` as `absent` (preserving prior behavior). The
+      // `path ?? segment` fallback holds — only a literal value is kept.
+      const idField = parseStringField(body, "id");
+      const pathField = parseStringField(body, "path");
+      const segmentField = parseStringField(body, "segment");
+      const id = idField.kind === "value" ? idField.value : undefined;
+      const path =
+        pathField.kind === "value"
+          ? pathField.value
+          : segmentField.kind === "value"
+            ? segmentField.value
+            : undefined;
       if (id) out.set(decl[1]!, { id, path });
     }
   }

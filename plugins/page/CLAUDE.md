@@ -39,7 +39,7 @@
   - **`math`** — Umbrella for KaTeX math in the page editor: block-level equations, inline math, and the shared renderer.
     - Plugins:
       - **`equation`** — Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render.
-      - **`inline`** — Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \\(latex\\) token, click to edit.
+      - **`inline`** — Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \(latex\) token, click to edit.
       - **`render`** — Shared KaTeX renderer leaf for the page math plugins: <KatexMath/> plus the single home for KaTeX config and CSS.
   - **`numbered-list`** — Numbered-list block type for the page editor.
   - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index.

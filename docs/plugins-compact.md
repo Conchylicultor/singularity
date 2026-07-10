@@ -264,7 +264,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`dialog`** — Reusable version-history UI: the useVersionHistory hook and the <VersionHistoryDialog> dialog (preview injected via renderPreview, navigation owned by the host).
     - **`engine`** — Domain-agnostic versioning substrate: the entity_versions table, a defineHistorySource registry, time-bucketed recordVersion + deleteVersions, and list/get/restore endpoints.
 
-- **`improve`**
+- **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot. Toolbar button and meta-task for app-improvement feedback. Files tasks under "Improvements" via the shared task-draft-form primitive.
   - Plugins:
     - **`element-picker`** — Chrome-inspector-style 'pick a UI element' toolbar button. Overlays the live app to hover/click any element, captures its plugin/slot/pane/URL metadata, and hands a readable <ui-context/> tag to the Improve popover as a rich inline chip.
 

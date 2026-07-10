@@ -3691,7 +3691,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `apps/pages/history`
 
-- **`improve`**
+- **`improve`** — Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot. Toolbar button and meta-task for app-improvement feedback. Files tasks under "Improvements" via the shared task-draft-form primitive.
   - Web:
     - Contributes: `ActionBar.Item` → `ImproveButton`
     - Uses: `primitives/css/ui-kit.Button`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftPopover`
@@ -4246,7 +4246,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `page/editor.defineBlock`
             - Exports: Values: `EQUATION_TYPE`, `equationBlock`
-        - **`inline`** — Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \\(latex\\) token, click to edit.
+        - **`inline`** — Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \(latex\) token, click to edit.
           - Web:
             - Uses: `page/editor.BlockTextPluginProps`, `page/editor.registerBlockTextExtension`, `page/math/render.KatexMath`, `primitives/css/center.Center`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/popover.InlinePopover`, `primitives/text-editor/caret-trigger.CaretTriggerMenu`, `primitives/text-editor/caret-trigger.useCaretMenu`, `primitives/text-editor/caret-trigger.useCaretQuery`
             - Exports: Values: `INLINE_MATH_TOKEN_PATTERN`, `inlineMathToken`
@@ -4541,7 +4541,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/plugin-tree`
       - Core:
-        - Exports: Types: `BarrelExport`, `FsSnapshot`, `ImportRef`, `MarkerCall`, `MarkerCallSpan`; Values: `findImports`, `findMarkerCalls`, `lineAt`, `markerCallSpans`, `maskSource`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `runWithFsSnapshot`, `stripTypes`, `walkFiles`
+        - Exports: Types: `BarrelExport`, `DefaultExportObject`, `FsSnapshot`, `ImportRef`, `MarkerCall`, `MarkerCallSpan`, `StringFieldResult`, `StringLiteralResult`; Values: `defaultExportObjectBody`, `findImports`, `findMarkerCalls`, `lineAt`, `markerCallSpans`, `maskSource`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `readStringLiteral`, `runWithFsSnapshot`, `stripTypes`, `walkFiles`
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
         - Contributes: `PluginViewSlots.Section` "health" → `HealthSection`
@@ -4562,7 +4562,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/git-read-cache.createGitStateMemo`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.PLUGINS_DIR`
         - Exports: Values: `getFacetsTreeCached`, `getStructureTreeCached`
       - Core:
-        - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.Facet`, `plugin-meta/facets.loadFacets`, `plugin-meta/facets.setFacet`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.parseStringField`, `plugin-meta/parse-utils.runWithFsSnapshot`, `plugin-meta/parse-utils.stripTypes`
+        - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.Facet`, `plugin-meta/facets.loadFacets`, `plugin-meta/facets.setFacet`, `plugin-meta/parse-utils.defaultExportObjectBody`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.parseStringField`, `plugin-meta/parse-utils.runWithFsSnapshot`
         - Exports: Types: `PluginNode`, `PluginTree`, `Runtime`; Values: `buildPluginTree`, `resolvePluginSpecifier`
       - Cross-plugin:
         - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/composition`, `plugin-meta/plugin-view`

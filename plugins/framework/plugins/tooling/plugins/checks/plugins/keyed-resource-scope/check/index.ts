@@ -102,10 +102,20 @@ const check: Check = {
         const line = lineAt(masked, span.identifier);
 
         // Rule 1 — flat keyed bypass. The sanctioned two-arg keyed form passes an
-        // imported descriptor and NEVER writes `mode:` textually, so any literal
-        // `mode: "keyed"` anywhere in the call is itself a flat-form bypass.
-        if (parseStringField(block, "mode") === "keyed") {
+        // imported descriptor and NEVER writes `mode:` textually, so any `mode:`
+        // in the call is a flat-form bypass. A literal `mode: "keyed"` is the
+        // direct offender; a NON-LITERAL `mode: SOME_VAR` cannot be proven not to
+        // resolve to "keyed" at runtime, so it is the exact smuggling vector this
+        // check's threat model anticipates and is flagged too.
+        const modeField = parseStringField(block, "mode");
+        if (modeField.kind === "value" && modeField.value === "keyed") {
           offenders.push(`${rel}:${line} (flat mode:"keyed")`);
+          continue;
+        }
+        if (modeField.kind === "dynamic") {
+          offenders.push(
+            `${rel}:${line} (non-literal mode: \`${modeField.expr}\` — cannot be proven not "keyed")`,
+          );
           continue;
         }
 

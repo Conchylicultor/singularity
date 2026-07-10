@@ -106,9 +106,14 @@ export function resolveRegisterCall(
   const head = stripLeadingTrivia(argsText);
   if (head.startsWith("{")) {
     // Flat inline object form: key + optional mode live in the object literal.
-    const key = parseStringField(argsText, "key");
-    if (!key) return null;
-    return { key, mode: parseStringField(argsText, "mode") ?? "push" };
+    const keyField = parseStringField(argsText, "key");
+    // `absent`/`dynamic` → no statically-resolvable key: a non-literal key is
+    // exactly the runtime-value case the descriptor-index path exists to handle,
+    // so fall through to `null` (drop from the static resource list).
+    if (keyField.kind !== "value") return null;
+    const modeField = parseStringField(argsText, "mode");
+    const mode = modeField.kind === "value" ? modeField.value : "push";
+    return { key: keyField.value, mode };
   }
   // Descriptor form: the first arg is an identifier bound to a descriptor.
   const idMatch = /^([A-Za-z_$][\w$]*)/.exec(head);
@@ -117,8 +122,11 @@ export function resolveRegisterCall(
   const info = index.get(exported);
   if (!info) return null; // dynamic/generic reference — no static key
   // A keyed descriptor fixes the mode; otherwise server opts may set it explicitly
-  // (only serverOpts carries `mode:`, so scanning the whole argsText is safe).
-  const mode = parseStringField(argsText, "mode") ?? (info.keyed ? "keyed" : "push");
+  // (only serverOpts carries `mode:`, so scanning the whole argsText is safe). A
+  // non-literal `mode:` is the runtime-value case the descriptor already resolves,
+  // so `absent`/`dynamic` both fall through to the descriptor-implied default.
+  const modeField = parseStringField(argsText, "mode");
+  const mode = modeField.kind === "value" ? modeField.value : info.keyed ? "keyed" : "push";
   return { key: info.key, mode };
 }
 
