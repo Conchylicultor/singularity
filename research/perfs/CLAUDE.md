@@ -98,6 +98,22 @@ discriminators designed, unrun), `fseventsd` attribution, T1 acceptance test sti
 only (remediation deliberately not yet proposed) →
 **[`2026-07-10-host-saturation-post-fix-swap-amplifier-findings.md`](./2026-07-10-host-saturation-post-fix-swap-amplifier-findings.md)**.
 
+### Read-admission wedge — two stuck git loaders latch "data loads forever" (Ongoing)
+
+2026-07-10 ~13:10 → 15:40+: the main app renders but **no live-state data ever arrives**, on a
+**quiet host** (load 3.7, swap 0, loop p50 1 ms — NOT the saturation shape; the failure is a
+*latched state*, not live contention). Confirmed chain: the `edited-files` + `commits-graph.delta`
+loader flights (started 13:06:49, inside a contention storm) **never settled** — they hold heavy-read
+slots and are inside `tryRunGit`'s `Promise.all(stdout/stderr/exited)` with **zero git children
+alive** (a lost spawn-exit settlement, 🔬 suspected Bun bug). Because the `read-admit` gate (6 slots)
+**admits before the single-flight dedup**, each resubscribe-replay for those two keys burned another
+slot → 6/6 held (2 real flights + 4 same-key joiners), **3,833 subs queued**, and `handleSub` never
+reaches `sub-ack` for ANY resource — while plain HTTP stays fast (hence "UI shows, data never
+arrives"). Discriminator: `/api/resources/<key>` hangs; `/api/tasks` 158 ms. Fix altitudes named
+(gate-after-dedup invariant, flight watchdog, spawn timeout at origin), none landed; backend restart
+is the containment. Full evidence + checklist →
+**[`2026-07-10-read-admit-wedge-stuck-git-loaders.md`](./2026-07-10-read-admit-wedge-stuck-git-loaders.md)**.
+
 ### Git-derived loaders — `edited-files` / `commits-graph` (Ongoing)
 
 The dominant remaining real cost now that the churn is fixed — and the *original* cause (A), masked
