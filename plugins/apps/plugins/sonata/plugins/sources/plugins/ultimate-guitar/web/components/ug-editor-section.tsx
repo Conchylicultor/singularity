@@ -22,19 +22,12 @@ const SAVE_DEBOUNCE_MS = 500;
  * carry UG data (`sourceRaw` defined), so it stays hidden for other sources.
  *
  * Unlike the chord-grid editor, there is NO title input — a UG song is imported,
- * not authored, so its title derives from the tab's `songName`. When a different
- * tab is loaded in-player, the persist syncs the parent song's title and the
- * live header is kept in sync via `renameCurrentSong`.
+ * not authored, so its title derives from the tab's `songName`. The PUT persists
+ * `title: tab.songName`, the DB change-feed pushes `songsResource`, and the
+ * toolbar title updates live from the canonical row — no in-memory title sync.
  */
 export function UltimateGuitarEditorSection() {
-  const {
-    sourceRaw,
-    setSourceRaw,
-    currentSongId,
-    currentSongTitle,
-    renameCurrentSong,
-    songOpenEpoch,
-  } = useSonata();
+  const { sourceRaw, setSourceRaw, currentSongId, songOpenEpoch } = useSonata();
 
   const rawValue = sourceRaw(UG_SOURCE_ID);
 
@@ -53,10 +46,6 @@ export function UltimateGuitarEditorSection() {
     if (!parsed.success) return;
     const id = currentSongId;
     const tab = parsed.data;
-    // Keep the live header in sync when a different tab is loaded in-player.
-    // `renameCurrentSong` is a stable context callback (only updates in-memory
-    // title), so guarding on inequality avoids a render loop.
-    if (currentSongTitle !== tab.songName) renameCurrentSong(tab.songName);
     const timer = setTimeout(() => {
       const score = compile(tab);
       const endBeat = scoreEndBeat(score);
@@ -69,13 +58,7 @@ export function UltimateGuitarEditorSection() {
       );
     }, SAVE_DEBOUNCE_MS);
     return () => clearTimeout(timer);
-  }, [
-    rawValue,
-    currentSongId,
-    currentSongTitle,
-    renameCurrentSong,
-    songOpenEpoch,
-  ]);
+  }, [rawValue, currentSongId, songOpenEpoch]);
 
   // Gate to Ultimate Guitar songs only (hooks above always run — rules-of-hooks safe).
   if (rawValue === undefined) return null;

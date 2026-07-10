@@ -11,9 +11,12 @@ because they reference `Library.Source`, which the shell can't import without a
 cycle.
 
 `SonataProvider` no longer carries a bespoke `view` switch. It keeps the
-open-song state (`currentSongId`/`currentSongTitle`/`songOpenEpoch`) and exposes
-stable transport verbs (`togglePlay`, `nudgeTempo`, `seekBar`, `startScrub`,
-`endScrub`, `setCurrentSong`, `clearCurrentSong`). The player pane marks the song
+open-song **identity** (`currentSongId`/`songOpenEpoch`) — deliberately **not**
+the title, which has a single owner in the library's `songsResource` (read it via
+`useCurrentSong`); `setCurrentSong` therefore takes a bare `songId: string`, a
+value that cannot be fabricated. It exposes stable transport verbs (`togglePlay`,
+`nudgeTempo`, `seekBar`, `startScrub`, `endScrub`, `setCurrentSong`,
+`clearCurrentSong`). The player pane marks the song
 open/closed on mount/unmount; keyboard transport is owned by the **controls**
 plugin, which registers Space/↑/↓ as per-surface, focus-scoped shortcuts and runs
 a focus-gated ←/→ seek-hold controller — both gated on `currentSongId`. There is

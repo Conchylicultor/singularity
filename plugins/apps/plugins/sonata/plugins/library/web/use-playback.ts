@@ -48,7 +48,7 @@ export function useSonataPlayback(): {
           }),
         );
         setRawMap(rawMap);
-        setCurrentSong(song);
+        setCurrentSong(song.id);
         requestPlayOnLoad();
       })();
     },

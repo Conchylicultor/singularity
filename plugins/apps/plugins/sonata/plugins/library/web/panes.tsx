@@ -46,14 +46,19 @@ function SonataLibraryBody(): ReactElement {
  * The player pane at `/sonata/song/:songId` — a real URL that survives reload
  * and back/forward. Opened with `mode:"root"` so each open replaces the route
  * with a single full-surface pane (a fresh instance, hence a remount). The
- * optimistic `title` rides in `input` so the header shows immediately, before
- * the song resource confirms. `resolve` hydrates every source for the song on
+ * optimistic `title` rides in `input` purely as a DISPLAY hint for `useTitle`
+ * (the browser-tab / tab-strip label before `songsResource` settles) — it is
+ * NOT a data source: the toolbar title and every consumer read the canonical
+ * row from `songsResource`. `resolve` hydrates every source for the song on
  * direct navigation / reload (see {@link useSonataPlayerResolve}).
  */
 export const sonataPlayerPane = Pane.define({
   id: "sonata-player",
   segment: "song/:songId",
   chrome: { header: SonataToolbar },
+  // Display-only optimistic label for `useTitle` (tab/document title) before the
+  // songs resource settles. Never promote this into a write source — the title
+  // is library-owned (`songsResource`); the shell keeps no mirror.
   input: type<{ title: string }>(),
   resolve: useSonataPlayerResolve,
   component: SonataPlayerSurface,
@@ -126,21 +131,19 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
  */
 function SonataPlayerSurface(): ReactElement {
   const { songId } = sonataPlayerPane.useParams();
-  const input = sonataPlayerPane.useInput();
   const { score, tempoScale, effectiveDisplayId, setCurrentSong, clearCurrentSong } =
     useSonata();
 
   // Mark this song open on mount (once per open — each open is a fresh
   // `mode:"root"` instance, so this fires exactly once and bumps `songOpenEpoch`).
-  // Clear on unmount so library-state effects don't mis-attribute playback.
-  // Title comes from `input.title` (set by the library on open); `resolve` gated
-  // `found` on the song existing, so by mount the resource is settled but we
-  // avoid reading it here to keep the dependency footprint minimal.
+  // Clear on unmount so library-state effects don't mis-attribute playback. Only
+  // the bare id is marked open: the title is library-owned (`songsResource`), so
+  // there is nothing to seed here.
   useEffect(() => {
-    setCurrentSong({ id: songId, title: input.title ?? "Untitled" });
+    setCurrentSong(songId);
     return () => clearCurrentSong();
     // Re-run only when the song id changes; `setCurrentSong`/`clearCurrentSong`
-    // are stable. `input.title` is intentionally read once at open.
+    // are stable.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songId]);
 

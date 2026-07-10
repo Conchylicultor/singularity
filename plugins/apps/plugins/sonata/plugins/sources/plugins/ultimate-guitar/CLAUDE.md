@@ -46,8 +46,10 @@ Ultimate Guitar (UG) input source for Sonata. The source pipeline so far:
     (`web/components/ug-import-dialog.tsx`) via the imperative-dialog primitive.
     The flow is **fetch-first**: fetch the tab → `compile()` → create → open, so
     a cancel (or a fetch failure) never leaves a half-formed "Untitled" orphan in
-    the library. The in-player editor section debounce-persists edits and keeps
-    the live header title in sync when a different tab is loaded.
+    the library. The in-player editor section debounce-persists edits; when a
+    different tab is loaded its `PUT` writes `title: songName`, and the toolbar
+    title updates live off the library's `songsResource` (no in-memory sync —
+    the title is library-owned; see the library's `CLAUDE.md`).
 - **Task 7 — catalog search.** The import dialog is a **smart single input**:
   text that parses as a UG tab URL (`extractUgTabId`) imports directly; any other
   text searches UG's catalog. `POST /api/sonata/sources/ultimate-guitar/search`
@@ -165,7 +167,8 @@ surfacing as crash tasks, not just toasts.
   `skipped`.
 - `web/components/ug-editor-section.tsx` — `UltimateGuitarEditorSection`: the
   in-player editor, gated to UG songs; debounce-persists edits via the `PUT`
-  endpoint and syncs the live header title when a different tab is loaded.
+  endpoint (whose `title: songName` is the one place a UG song's title is
+  written — the toolbar title re-renders off `songsResource`, not a mirror).
 - `web/components/ug-import-dialog.tsx` — `UgImportDialog`: the
   "Import from Ultimate Guitar" smart-input dialog. A UG URL imports directly;
   free text searches the catalog (debounced) and lists results (artist + type

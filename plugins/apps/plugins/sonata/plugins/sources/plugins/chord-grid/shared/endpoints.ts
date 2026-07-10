@@ -39,13 +39,15 @@ export const getSongChordGrid = defineEndpoint({
 });
 
 /**
- * Persist an edit to a chord-grid song. Carries the full current snapshot — the
- * grid fields (→ extension row) plus the recomputed `title`/`durationSec`/
- * `endBeat` (→ parent song row via `updateSongMeta`), since `compile()` runs
- * client-side. Idempotent: each save writes a complete state, not a delta.
+ * Persist an edit to a chord-grid song: the grid text (→ extension row) plus its
+ * `compile()`-**derived** metrics `durationSec`/`endBeat` (→ parent song row via
+ * `updateSongMeta`), since `compile()` runs client-side. It carries **no**
+ * `title`: the title is generic, source-agnostic metadata owned by the library
+ * and patched through `PATCH /api/sonata/songs/:id` — a chord-text edit
+ * physically cannot carry a title. Idempotent: each save writes a complete
+ * state, not a delta.
  */
 export const UpdateChordGridSongBodySchema = z.object({
-  title: z.string(),
   chordText: z.string(),
   durationSec: z.number(),
   endBeat: z.number(),

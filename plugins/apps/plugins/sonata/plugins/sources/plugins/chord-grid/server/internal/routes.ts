@@ -52,7 +52,9 @@ export const handleGetSongChordGrid = implement(
 
 /**
  * Persist an edit: upsert the extension row, then sync the parent song's
- * generic metadata (title + recomputed duration/endBeat) via the library helper.
+ * derived metrics (recomputed duration/endBeat) via the library helper. The
+ * title is NOT synced here — it is library-owned and patched separately through
+ * `PATCH /api/sonata/songs/:id`.
  */
 export const handleUpdateChordGridSong = implement(
   updateChordGridSong,
@@ -62,7 +64,6 @@ export const handleUpdateChordGridSong = implement(
     });
     await updateSongMeta({
       id: params.id,
-      title: body.title,
       durationSec: body.durationSec,
       endBeat: body.endBeat,
     });

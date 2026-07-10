@@ -1,5 +1,4 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { usePaneStore } from "@plugins/primitives/plugins/pane/web";
 import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
@@ -21,16 +20,6 @@ export function BackToLibrary() {
     <Button variant="outline" onClick={() => store.clearRoute()}>
       ← Library
     </Button>
-  );
-}
-
-/** The open song's title (falls back to the optimistic "Untitled"). */
-export function SongTitle() {
-  const { currentSongTitle } = useSonata();
-  return (
-    <Text variant="body" className="font-semibold text-foreground">
-      {currentSongTitle ?? "Untitled"}
-    </Text>
   );
 }
 

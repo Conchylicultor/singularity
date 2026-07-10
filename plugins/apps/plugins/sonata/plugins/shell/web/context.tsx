@@ -147,8 +147,6 @@ export interface SonataContextValue {
    * transport cursor all share one consistent timeline.
    */
   score: Score;
-  /** Title of the song currently open in the player (null on the library). */
-  currentSongTitle: string | null;
   /** Id of the song currently open in the player (null on the library). Lets
    *  player-scoped effects attribute a play to a specific song. */
   currentSongId: string | null;
@@ -239,12 +237,6 @@ export interface SonataContextValue {
    */
   setSourceRaw: (sourceId: string, raw: unknown) => void;
   /**
-   * Rename the song currently open in the player (updates `currentSongTitle` so
-   * the player header stays in sync with an in-editor title edit). Persistence is
-   * the editing source's responsibility; this only updates the in-memory title.
-   */
-  renameCurrentSong: (title: string) => void;
-  /**
    * Bulk, source-agnostic raw write — set the full `{ sourceId: raw }` map,
    * REPLACING the current inputs (not merging). Unlike `setRaw` this does NOT
    * depend on (or change) `activeSourceId`; the library uses it to load a song's
@@ -252,16 +244,18 @@ export interface SonataContextValue {
    */
   setRawMap: (rawMap: Record<string, unknown>) => void;
   /**
-   * Mark a song as the one currently open: sets `currentSongId`/`currentSongTitle`
-   * and bumps `songOpenEpoch` (re-arms once-per-open effects, even for the same
-   * song). Called by the player surface on mount — each open is a fresh
-   * `mode:"root"` pane instance, so this fires exactly once per open.
+   * Mark a song as the one currently open: sets `currentSongId` and bumps
+   * `songOpenEpoch` (re-arms once-per-open effects, even for the same song).
+   * Called by the player surface on mount — each open is a fresh `mode:"root"`
+   * pane instance, so this fires exactly once per open. Takes a bare id: the
+   * title is library-owned (read `songsResource` via `useCurrentSong`), never
+   * mirrored into this context — a bare id cannot be fabricated.
    */
-  setCurrentSong: (song: { id: string; title: string }) => void;
+  setCurrentSong: (songId: string) => void;
   /**
-   * Clear the open-song state (nulls `currentSongId`/`currentSongTitle`). Called
-   * by the player surface on unmount so library-state effects don't mis-attribute
-   * a play to a song that is no longer on screen.
+   * Clear the open-song state (nulls `currentSongId`). Called by the player
+   * surface on unmount so library-state effects don't mis-attribute a play to a
+   * song that is no longer on screen.
    */
   clearCurrentSong: () => void;
   /**
@@ -398,7 +392,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // library index pane and the player pane); this only tracks which song the
   // player surface currently has on screen, so player-scoped effects can
   // attribute playback to it.
-  const [currentSongTitle, setCurrentSongTitle] = useState<string | null>(null);
   const [currentSongId, setCurrentSongId] = useState<string | null>(null);
   const [songOpenEpoch, setSongOpenEpoch] = useState(0);
 
@@ -763,9 +756,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // each open is a fresh `mode:"root"` pane instance, so this fires once per open
   // and the epoch bump re-arms once-per-open effects (even for the same song).
   // The existing `useEffect([contentScore])` auto-stops + rewinds on content change.
-  const setCurrentSong = useCallback((song: { id: string; title: string }) => {
-    setCurrentSongId(song.id);
-    setCurrentSongTitle(song.title);
+  const setCurrentSong = useCallback((songId: string) => {
+    setCurrentSongId(songId);
     // Bump every open (even the same song) so once-per-open effects re-arm.
     setSongOpenEpoch((n) => n + 1);
   }, []);
@@ -774,7 +766,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // mis-attribute playback to a song that is no longer on screen.
   const clearCurrentSong = useCallback(() => {
     setCurrentSongId(null);
-    setCurrentSongTitle(null);
   }, []);
 
   // Absolute seek — the primitive the progression bar drives. Clamps to the
@@ -1122,16 +1113,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     [rawById],
   );
 
-  // Rename the open song in-memory so the player header tracks an in-editor edit.
-  const renameCurrentSong = useCallback(
-    (title: string) => setCurrentSongTitle(title),
-    [],
-  );
-
   const value = useMemo<SonataContextValue>(
     () => ({
       score,
-      currentSongTitle,
       currentSongId,
       songOpenEpoch,
       isPlaying,
@@ -1152,7 +1136,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setRaw,
       sourceRaw,
       setSourceRaw,
-      renameCurrentSong,
       setRawMap,
       setCurrentSong,
       clearCurrentSong,
@@ -1177,7 +1160,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     }),
     [
       score,
-      currentSongTitle,
       currentSongId,
       songOpenEpoch,
       isPlaying,
@@ -1195,7 +1177,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setRaw,
       sourceRaw,
       setSourceRaw,
-      renameCurrentSong,
       setRawMap,
       setCurrentSong,
       clearCurrentSong,

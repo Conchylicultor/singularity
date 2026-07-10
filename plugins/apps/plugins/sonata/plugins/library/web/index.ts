@@ -5,8 +5,8 @@ import { SongLibrary } from "./components/song-library";
 import {
   BackToLibrary,
   DisplayPicker,
-  SongTitle,
 } from "./components/player-toolbar-items";
+import { SongTitle } from "./components/song-title-field";
 import { PlaySongAction } from "./components/play-song-action";
 import { Library } from "./slots";
 import { sonataLibraryPane, sonataPlayerPane } from "./panes";
@@ -14,6 +14,7 @@ import { sonataLibraryPane, sonataPlayerPane } from "./panes";
 export { Library } from "./slots";
 export { useOpenSong } from "./hooks";
 export { openSongImperative } from "./open-song";
+export { useCurrentSong } from "./use-current-song";
 
 export default {
   description:
