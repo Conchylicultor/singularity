@@ -1208,6 +1208,8 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // stale ETag and needlessly recompute). Fail-safe: undefined on opt-out or a
   // throwing signature — the frame then omits the ETag and the client keeps its
   // last stored one.
+  //
+  // ONLY sendUpdate may call this.
   async function pushEtag(
     entry: RegistryEntry,
     params: ResourceParams,
@@ -1223,6 +1225,59 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       reportLoaderError(`revalidate failed for ${entry.key}`, err);
       return undefined;
     }
+  }
+
+  // Build and broadcast a value-carrying `update` frame — the ONLY caller of
+  // `pushEtag`, so an ETag can ride ONLY this frame. An ETag may accompany a frame
+  // only if that frame CARRIES the value the ETag describes, so the etag is
+  // computed here, at the one site that broadcasts a value-carrying `update`, and
+  // nowhere else. The `invalidate` frame and every `delta` frame therefore cannot
+  // compute one: not by convention, but because there is no other call site.
+  // (Before this, both drain paths hoisted `pushEtag` above the frame-kind branch
+  // and the non-`update` branches silently discarded it — for `edited-files` that
+  // was a DB read + 3 git spawns + an lstat per dirty file thrown away on every
+  // watcher notify.)
+  //
+  // A resource that never opted into `revalidate` builds AND sends its frame with
+  // NO await anywhere on this path — it must not pay a microtask yield before the
+  // frame reaches the wire. `runtime-h5.test.ts` H5a pins that a push beats a
+  // racing parked sub-ack, and one extra tick before the `ws.send` flips that
+  // order. Only the etag path awaits, and its `.then` broadcast lands the frame on
+  // the wire in the same continuation the etag resolves in. (An earlier version
+  // built the frame in a plain `async` helper and returned it to the caller to
+  // send; `await`ing that helper deferred EVERY push-mode send by a tick — almost
+  // no resource declares `revalidate` — and broke H5a. Sending inside keeps the
+  // no-await property structural.)
+  //
+  // Unlike the read path (handleSub / handleResourceHttp), the etag-AFTER-value
+  // order is SAFE here and deliberately not reordered: this frame CARRIES the
+  // value, and any change landing between the value read and this etag read fires
+  // its own notify → flushAgain → another drainEntry that ships a fresh value +
+  // etag, so a momentarily skewed frame is always superseded (self-healing). The
+  // read path has no such self-heal and must keep its etag-BEFORE-value ordering.
+  function sendUpdate(
+    entry: RegistryEntry,
+    params: ResourceParams,
+    value: unknown,
+    version: number,
+    subs: SocketState[],
+  ): void | Promise<void> {
+    const broadcast = (etag?: string): void => {
+      const msg = {
+        kind: "update" as const,
+        key: entry.key,
+        params,
+        value,
+        version,
+        ...(etag !== undefined ? { etag } : {}),
+      };
+      for (const s of subs) sendJson(s.ws, msg);
+    };
+    if (!entry.revalidate) {
+      broadcast(); // sync send — no microtask before the wire (H5a)
+      return;
+    }
+    return pushEtag(entry, params).then(broadcast);
   }
 
   // Coalesce an incoming notify into the pending map for one pk, applying the
@@ -1892,19 +1947,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
 
     if (subs.length > 0 && valueComputed) {
-      const updateEtag = entry.revalidate ? await pushEtag(entry, params) : undefined;
       const hadSnapshot = entry.snapshots?.has(pk) ?? false;
       const { upserts, deletes, order } = diffKeyed(entry, pk, value); // seeds/replaces snapshot
       if (!hadSnapshot) {
-        const msg = {
-          kind: "update" as const,
-          key: entry.key,
-          params,
-          value,
-          version,
-          ...(updateEtag !== undefined ? { etag: updateEtag } : {}),
-        };
-        for (const s of subs) sendJson(s.ws, msg);
+        await sendUpdate(entry, params, value, version, subs);
         opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
       } else {
         const msg = {
@@ -2196,24 +2242,6 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       }
 
       if (subs.length > 0) {
-        // Fresh ETag to ride any `update`/`delta` frame for a revalidatable
-        // resource, so the client's stored signature advances with the pushed
-        // value (else its next resubscribe would send a stale ETag and force a
-        // needless recompute). Undefined — with NO await — for a resource that
-        // never opted in, so the frames below are byte-identical to before.
-        // Ungated (push path); computed once per drained pk.
-        //
-        // Unlike the read path (handleSub / handleResourceHttp), the etag-AFTER-
-        // value order is SAFE here and deliberately not reordered: these frames
-        // CARRY the value, and any change landing between the value read and this
-        // etag read fires its own notify → flushAgain → another drainEntry that
-        // ships a fresh value + etag, so a momentarily skewed frame is always
-        // superseded (self-healing). Invalidate-mode pushes carry no etag at all
-        // (see the branch below), so no skew is possible there. drainEntry must
-        // compute the value first (it diffs against the snapshot); reordering here
-        // would be invasive and buys nothing given the self-heal.
-        const updateEtag =
-          entry.revalidate ? await pushEtag(entry, params) : undefined;
         if (entry.mode === "invalidate") {
           const msg = { kind: "invalidate" as const, key: entry.key, params, version };
           for (const s of subs) sendJson(s.ws, msg);
@@ -2236,15 +2264,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             // hadSnapshot was false ⇒ ship a full update base. diffKeyed here
             // serves only to (re)seed the snapshot from the full value.
             diffKeyed(entry, pk, full);
-            const msg = {
-              kind: "update" as const,
-              key: entry.key,
-              params,
-              value: full,
-              version,
-              ...(updateEtag !== undefined ? { etag: updateEtag } : {}),
-            };
-            for (const s of subs) sendJson(s.ws, msg);
+            await sendUpdate(entry, params, full, version, subs);
             opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
           } else if (scoped) {
             // Scoped path: merge the partial recompute into the snapshot and
@@ -2274,15 +2294,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             if (!hadSnapshot) {
               // First notify for this pk: ship a full update so brand-new
               // subscribers get a complete base to merge subsequent deltas onto.
-              const msg = {
-                kind: "update" as const,
-                key: entry.key,
-                params,
-                value,
-                version,
-                ...(updateEtag !== undefined ? { etag: updateEtag } : {}),
-              };
-              for (const s of subs) sendJson(s.ws, msg);
+              await sendUpdate(entry, params, value, version, subs);
               opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
             } else {
               const msg = {
@@ -2302,15 +2314,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             }
           }
         } else {
-          const msg = {
-            kind: "update" as const,
-            key: entry.key,
-            params,
-            value,
-            version,
-            ...(updateEtag !== undefined ? { etag: updateEtag } : {}),
-          };
-          for (const s of subs) sendJson(s.ws, msg);
+          await sendUpdate(entry, params, value, version, subs);
         }
       }
 

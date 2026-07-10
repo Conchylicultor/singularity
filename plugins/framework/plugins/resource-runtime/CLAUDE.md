@@ -103,6 +103,40 @@ so the next incremental diff has a base. A DELETE cascades downstream FULL (a
 vanished row has no value for an `affectedMap` to translate); inserts/updates
 cascade scoped.
 
+## A push ETag rides the `update` frame — and nothing else
+
+`pushEtag` (the ungated, `push`-origin signature recompute) has exactly ONE
+caller: `sendUpdate`, which builds AND broadcasts a value-carrying `update` frame.
+**An ETag may accompany a frame only if that frame CARRIES the value the ETag
+describes** — so the etag is computed only where its value is actually shipped. The
+`invalidate` frame carries no value and every `delta` frame carries only a diff, so
+both *structurally cannot* obtain one: not by convention, but because there is no
+other call site. (An `invalidate` frame stamped with an etag would hand the client
+a signature newer than the value it still holds — the permanent stale pin the
+`2026-07-09` co-production doc exists to kill.) Etag-AFTER-value is deliberate and
+safe here because the frame carries the value and self-heals via
+`flushAgain` — see the comment on `sendUpdate` and
+`research/2026-07-10-global-push-etag-rides-the-update-frame.md`.
+
+`sendUpdate` sends the frame ITSELF rather than returning it, so the no-`revalidate`
+path (almost every resource) builds and broadcasts with **NO await before the
+`ws.send`** — a returned-and-awaited frame would defer every push-mode send by a
+microtask, and `runtime-h5.test.ts` H5a pins that a push beats a racing parked
+sub-ack (one extra tick flips that order). Only the etag path awaits.
+
+The two `delta` kinds look alike and are NOT interchangeable for a future etag:
+
+- A **keyed FULL delta** (`upserts` + `deletes` + `order`) and the **M5 membership
+  deltas** fully reconcile the client to server truth (it rebuilds its array purely
+  from `order`), so a co-produced etag there WOULD be safe — a possible future
+  optimization. It is not wired today: the client's `ServerMsg` union doesn't even
+  declare `etag` on a `delta`, so a server-stamped delta etag is discarded on
+  arrival. Enabling it needs a co-producing builder plus that client field.
+- A **keyed SCOPED delta** ships `deletes: []`, `order: undefined` and deliberately
+  does NOT assert membership, so the client's array is not guaranteed to equal
+  server truth. An etag there would be a permanent partial-stale pin — it must
+  **NEVER** carry one. This change excludes it by construction.
+
 ## Invariant harness (`core/*.test.ts` + `core/test-support.ts`)
 
 The runtime's hardest correctness invariants are pinned by co-located `bun:test`

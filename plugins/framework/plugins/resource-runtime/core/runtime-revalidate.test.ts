@@ -19,7 +19,7 @@
  * that race and asserts convergence to current server truth.
  */
 
-import { test, expect, describe } from "bun:test";
+import { test, expect, describe, mock } from "bun:test";
 import { createHash } from "node:crypto";
 import { z } from "zod";
 import { createHarness, controllable, tick, makeClientView } from "./test-support";
@@ -444,5 +444,151 @@ describe("conditional revalidation — value and etag are co-produced by one fli
     expect(res.headers.get("ETag")).toBeNull();
     const body = (await res.json()) as { value: unknown };
     expect(body.value).toBe("v1");
+  });
+});
+
+/**
+ * Push-path co-production — the etag rides the value-carrying `update` frame, and
+ * nothing else.
+ *
+ * `pushEtag` has exactly ONE caller: `sendUpdate`, which builds AND broadcasts the
+ * value-carrying `update` frame. So the etag is computed only where the value it
+ * describes is actually shipped — the `invalidate` frame and every `delta` frame
+ * structurally cannot obtain one (there is no other call site). Before this, both
+ * drain paths hoisted `pushEtag` above the frame-kind branch and the non-`update`
+ * branches silently discarded it; for an `invalidate` resource that was a full
+ * signature recompute — for `edited-files`, a DB read + 3 git spawns + an lstat
+ * per dirty file — thrown away on every notify. These cases pin the invariant on
+ * every live-reachable push path (no keyed resource declares `revalidate`, and
+ * `defineExternalResource` produces no keyed contract, so a keyed-delta case would
+ * cost more harness than it pins), plus the sync-send property `sendUpdate` must
+ * keep on the no-`revalidate` path.
+ */
+describe("conditional revalidation — a push etag rides only the update frame", () => {
+  test("invalidate-mode notify never invokes revalidate", async () => {
+    // The regression fence for the `edited-files` waste. An invalidate push carries
+    // no value, so it carries no etag — and must therefore never run the signature.
+    // The read path (the sub-ack below) legitimately runs it to stamp the ack; the
+    // push must not.
+    const h = createHarness();
+    let revalidations = 0;
+    const r = h.runtime.defineExternalResource({
+      key: "r",
+      mode: "invalidate",
+      schema: z.string(),
+      loader: async () => "val",
+      revalidate: async () => {
+        revalidations++;
+        return "sig-1";
+      },
+    });
+
+    await h.subscribe("r"); // read path: stamps the sub-ack etag → one revalidate
+    const before = revalidations;
+    expect(before).toBeGreaterThan(0); // the read path did run it (baseline)
+
+    r.notify();
+    await tick();
+
+    // The push ran no signature at all — the whole point.
+    expect(revalidations).toBe(before);
+    const pushes = h.pushesFor("r");
+    expect(pushes).toHaveLength(1);
+    const push = pushes[0]!;
+    expect(push.kind).toBe("invalidate");
+    expect("etag" in push).toBe(false); // no value ⇒ no etag, structurally
+  });
+
+  test("push-mode update still carries a co-produced etag on notify", async () => {
+    // The byte-identical path: a `push`-mode resource (jsonl-events, commits-graph)
+    // ships a value-carrying `update` on notify, so its etag IS computed — by
+    // `sendUpdate`, over the same drain that read the value. Advance both the value
+    // and the signature so the pushed frame must pair the fresh value with the fresh
+    // etag. Guards a future `sendUpdate` refactor silently dropping it.
+    const h = createHarness();
+    let gitState = 1;
+    const ctl = controllable("v1");
+    const r = h.runtime.defineExternalResource({
+      key: "r",
+      mode: "push",
+      schema: z.string(),
+      loader: ctl.loader,
+      revalidate: async () => String(gitState),
+    });
+
+    await h.subscribe("r"); // sub-ack v0, value "v1", etag sig("1")
+    ctl.setValue("v2");
+    gitState = 2; // the change: value and signature advance together
+    r.notify();
+    await tick();
+
+    const update = h.pushesFor("r").find((f) => f.kind === "update")!;
+    expect(update.value).toBe("v2");
+    expect(update.etag).toBe(sig("2")); // co-produced over the same push
+  });
+
+  test("a throwing revalidate is not reported on the push path", async () => {
+    // Corollary of the invariant: since the invalidate push never runs the
+    // signature, a broken one is never reported from here — the report would be
+    // about work whose result the push discards. The read path (the sub-ack) still
+    // reports it, where the etag is actually consumed.
+    const reportError = mock((_context: string, _err: unknown) => {});
+    const h = createHarness({ reportError });
+    const r = h.runtime.defineExternalResource({
+      key: "r",
+      mode: "invalidate",
+      schema: z.string(),
+      loader: async () => "val",
+      revalidate: async () => {
+        throw new Error("signature boom");
+      },
+    });
+
+    await h.subscribe("r"); // read path: computeEtag catches → reportError fires
+    expect(reportError).toHaveBeenCalled();
+    reportError.mockClear();
+
+    r.notify();
+    await tick();
+
+    expect(reportError).not.toHaveBeenCalled(); // the push never touched the signature
+  });
+
+  test("no-revalidate update sends synchronously — the push beats a racing parked sub-ack", async () => {
+    // Guards `sendUpdate`'s SYNC-SEND property: a `push`-mode resource WITHOUT
+    // `revalidate` (almost every resource) must build AND broadcast its frame with
+    // no microtask before the `ws.send`, so a push still wins the race against a
+    // fresh sub whose loader is parked. `runtime-h5.test.ts` H5a pins the same
+    // ordering through the notify-vs-fresh-sub invariant; this is a deliberate
+    // co-guard in the file that owns the etag/push-path invariant (H5a is off-limits
+    // to annotate), and it additionally asserts the frame carries NO etag — tying
+    // the ordering specifically to `sendUpdate`'s no-await branch. If `sendUpdate`
+    // regresses to a returned-and-awaited frame, both this and H5a fail.
+    const h = createHarness();
+    const ctl = controllable("A");
+    const r = h.runtime.defineExternalResource({
+      key: "r",
+      mode: "push",
+      schema: z.string(),
+      loader: ctl.loader,
+      // no `revalidate` — the sync-send branch
+    });
+
+    ctl.block();
+    ctl.setValue("B");
+    await h.subscribe("r"); // sub-ack parked on the blocked loader
+    expect(h.frames).toHaveLength(0);
+
+    r.notify(); // coalesces onto the same parked load; bumps the version to 1
+    await tick();
+    expect(h.frames).toHaveLength(0);
+
+    ctl.release();
+    await tick();
+
+    const update = h.frames.find((f) => f.kind === "update")!;
+    const subAck = h.frames.find((f) => f.kind === "sub-ack")!;
+    expect(update.seq).toBeLessThan(subAck.seq); // push (v1) hits the wire first
+    expect("etag" in update).toBe(false); // no revalidate ⇒ no etag on the frame
   });
 });
