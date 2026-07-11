@@ -1,50 +1,42 @@
-import { TaskGraph, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
+import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 
 // One row of the dependency TREE: a task plus the single tree edge that renders
 // it (its primary parent) and the fan-in prerequisites shown as chips.
 export interface DepsTreeRow extends TaskListItem {
   // Primary parent — the deterministic oldest-edge prerequisite still inside the
-  // closure. `null` ⇒ this row is a root of the tree (renders top-level).
+  // cluster. `null` ⇒ this row is a root of the tree (renders top-level). A
+  // member reached only through creation edges (no in-cluster dependency) has no
+  // primary parent, so it renders as an independent root here.
   depsParentId: string | null;
-  // Remaining in-closure prerequisites beyond the primary parent (fan-in),
+  // Remaining in-cluster prerequisites beyond the primary parent (fan-in),
   // rendered as removable "also after: X" chips.
   extraDeps: TaskListItem[];
 }
 
 /**
- * Derive the dependency TREE rooted at `rootId` from the flat task list.
+ * Project the shared cluster (see {@link taskClusterIds}) as a dependency TREE.
  *
- * The member set is the connected dependency component of `rootId` (blockers AND
- * dependents, groups excluded) — the same closure the graph section renders.
- * Every `task_dependencies` edge inside that component becomes a literal tree
- * edge: a task nests under its primary parent (the oldest edge in
- * `dependencies`, which `tasks_v` already orders by edge `createdAt`); any
- * further in-component prerequisites fan in as `extraDeps` chips. Multiple roots
- * render as top-level siblings; settled tasks stay in rows (muted at render).
+ * Every `task_dependencies` edge inside the cluster becomes a literal tree edge:
+ * a task nests under its primary parent (the oldest edge in `dependencies`, which
+ * `tasks_v` already orders by edge `createdAt`); any further in-cluster
+ * prerequisites fan in as `extraDeps` chips. Members with no in-cluster
+ * dependency — including tasks pulled in only by creation edges — render as
+ * top-level roots. Settled tasks stay in rows (muted at render).
  *
- * Returns `[]` when the component is just `rootId` alone (nothing to show).
+ * `memberIds` is the exact set of rows to emit; the caller computes it once and
+ * feeds the SAME set to the creation tree, so both views show one set two ways.
  */
 export function buildDepsTree(
   tasks: readonly TaskListItem[],
-  rootId: string,
+  memberIds: ReadonlySet<string>,
 ): DepsTreeRow[] {
   const byId = new Map(tasks.map((t) => [t.id, t]));
-  if (!byId.has(rootId)) return [];
-
-  // closure() excludes rootId itself; the tree members are it plus the root.
-  const memberIds = new Set<string>([
-    rootId,
-    ...TaskGraph.from(tasks)
-      .closure(rootId, { includeGroups: false })
-      .map((n) => n.id),
-  ]);
-  if (memberIds.size <= 1) return [];
 
   const rows: DepsTreeRow[] = [];
   for (const id of memberIds) {
     const task = byId.get(id);
     if (!task) continue;
-    // In-component prerequisites, oldest edge first (the tasks_v ordering).
+    // In-cluster prerequisites, oldest edge first (the tasks_v ordering).
     const deps = task.dependencies.filter((d) => memberIds.has(d));
     const extraDeps: TaskListItem[] = [];
     for (const d of deps.slice(1)) {

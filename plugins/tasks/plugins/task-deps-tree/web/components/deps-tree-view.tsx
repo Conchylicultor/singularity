@@ -1,19 +1,11 @@
 import { useMemo } from "react";
 import {
-  useResource,
-  ResourceView,
-} from "@plugins/primitives/plugins/live-state/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
-import {
   DataView,
   defineDataView,
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import {
-  tasksResource,
-  type TaskListItem,
-} from "@plugins/tasks/plugins/tasks-core/core";
+import type { TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { moveTaskInDepsTree } from "@plugins/tasks/core";
 import {
   buildDepsTree,
@@ -46,35 +38,19 @@ const depsHierarchy: HierarchyConfig<DepsTreeRow> = {
 
 export function DepsTreeView({
   taskId,
-  onNavigate,
-}: {
-  taskId: string;
-  onNavigate: (id: string) => void;
-}) {
-  const result = useResource(tasksResource);
-  return (
-    <ResourceView resource={result} fallback={<Loading variant="rows" />}>
-      {(allTasks) => (
-        <DepsTreeLoaded
-          taskId={taskId}
-          allTasks={allTasks}
-          onNavigate={onNavigate}
-        />
-      )}
-    </ResourceView>
-  );
-}
-
-function DepsTreeLoaded({
-  taskId,
   allTasks,
+  memberIds,
   onNavigate,
 }: {
   taskId: string;
   allTasks: readonly TaskListItem[];
+  memberIds: ReadonlySet<string>;
   onNavigate: (id: string) => void;
 }) {
-  const rows = useMemo(() => buildDepsTree(allTasks, taskId), [allTasks, taskId]);
+  const rows = useMemo(
+    () => buildDepsTree(allTasks, memberIds),
+    [allTasks, memberIds],
+  );
   return (
     <DataView<DepsTreeRow>
       rows={rows}
