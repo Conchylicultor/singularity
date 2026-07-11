@@ -22,6 +22,7 @@ import {
   type JobTaskPayload,
 } from "./registry";
 import { isSuspendSignal, makeDurableCtx } from "./step-ctx";
+import { startLockHeartbeat } from "./lock-heartbeat";
 import { isNonRetryableError } from "./non-retryable";
 import { markJobPermanentlyFailed } from "./introspection";
 import { _jobSteps, _jobWaits } from "./tables";
@@ -103,6 +104,7 @@ export async function startWorker(): Promise<Runner> {
           await dispatch(p, {
             jobId: String(helpers.job.id),
             attempt: Number(helpers.job.attempts),
+            workerId: String(helpers.workerId),
           });
         },
       },
@@ -140,7 +142,7 @@ export async function stopWorker(): Promise<void> {
 // those conditions in their own handler.
 async function dispatch(
   payload: JobTaskPayload,
-  meta: { jobId: string; attempt: number },
+  meta: { jobId: string; attempt: number; workerId: string },
 ): Promise<void> {
   const job = UNSAFE_getRegisteredJob(payload.jobName);
   if (!job) {
@@ -211,6 +213,12 @@ async function dispatch(
     },
   });
 
+  // Keep this job's graphile lock fresh for the whole (possibly hours-long)
+  // handler so the stuck-lock sweeper never mistakes a healthy long run for a
+  // dead worker and double-dispatches it. Stopped in `finally` on every exit
+  // path (success, suspend, throw), after which graphile completes/fails/deletes
+  // the row itself. See lock-heartbeat.ts.
+  const stopHeartbeat = startLockHeartbeat(meta.jobId, meta.workerId);
   try {
     await recordEntrySpan("job", payload.jobName, () =>
       job.run({ input: payload.input, event: payload.event, ctx }),
@@ -246,6 +254,10 @@ async function dispatch(
       await runInBackgroundLane(() => markJobPermanentlyFailed(meta.jobId));
     }
     throw err;
+  } finally {
+    // Handler is done (returned, suspended, or threw) — graphile now owns the
+    // row's terminal transition, so we stop renewing the lock.
+    stopHeartbeat();
   }
 
   // Normal completion: drop the step + wait logs for this run. Trigger rows

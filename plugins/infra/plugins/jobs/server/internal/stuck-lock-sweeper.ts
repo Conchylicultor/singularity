@@ -17,10 +17,16 @@ import { db } from "@plugins/database/server";
 // subset — anything 4h old is also 5 min old).
 //
 // Knob trade-off: lower threshold = faster recovery but higher chance a
-// healthy-but-slow worker (long DB query, GC pause, network blip) gets its
-// job stolen and double-runs. 5 min is well above realistic handler
-// durations; if we ever want sub-minute recovery, we'd also need to wire
-// graphile's heartbeat (currently implicit) into the threshold check.
+// healthy-but-slow worker gets its job stolen and double-runs. This USED to bite
+// any handler that ran longer than the threshold (a large upload, a
+// pg_dump/restore, a `./singularity push`) — the sweeper reset its still-fresh
+// work and graphile re-dispatched it concurrently. That is now closed at the
+// source: every dispatched handler runs a lock heartbeat (`lock-heartbeat.ts`)
+// that renews `locked_at` every 60s, so a HEALTHY job of any duration stays
+// locked and this sweep only ever fires for a genuinely dead worker (heartbeat
+// stopped ⇒ `locked_at` ages past the threshold). The 5-min floor is therefore
+// just "how long after a worker dies before we recover its job", not a cap on
+// handler duration.
 //
 // Why this stays a raw setInterval and NOT a scheduled `defineJob`: it is the
 // recovery mechanism FOR the job system. Routing it through graphile's own
