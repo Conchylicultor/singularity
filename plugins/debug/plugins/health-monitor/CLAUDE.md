@@ -67,11 +67,7 @@ measured overhead on a real worktree workload is still an open task.
   - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/grid.Grid`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `stats/commits.axisProps`, `stats/commits.ChartState`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.yAxisFormatter`
   - Exports: Values: `healthMonitorPane`
 - Server:
-<<<<<<< .merge_file_ZsOQgI
-  - Uses: `debug/slow-ops.readSlowOpMarkers`, `debug/stall-monitor.recordEventLoopStall`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadQueueDepth`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.worktreeDataDir`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
-=======
-  - Uses: `debug/slow-ops.readSlowOpMarkers`, `debug/trace/engine.captureTrace`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadQueueDepth`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.worktreeDataDir`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
->>>>>>> .merge_file_9o6hz2
+  - Uses: `debug/slow-ops.readSlowOpMarkers`, `debug/stall-monitor.recordEventLoopStall`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadQueueDepth`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.worktreeDataDir`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
   - Exports: Types: `HealthSample`, `HostSample`; Values: `HealthSampleSchema`, `HostSampleSchema`
   - Routes: `GET /api/debug/health-monitor`
 - Cross-plugin:
