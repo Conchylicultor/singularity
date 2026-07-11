@@ -53,6 +53,15 @@ export const HostSampleSchema = z.object({
   loadAvg15: z.number(),
   swapInPagesPerSec: z.number(), // macOS vm_stat Swapins delta; 0 elsewhere
   swapOutPagesPerSec: z.number(),
+  // macOS memory-compressor activity (vm_stat Compressions/Decompressions
+  // deltas; 0 elsewhere). The pressure channel swap-in is blind to: macOS
+  // compresses long before it touches the swapfile, and each decompression is
+  // a page fault that blocks the faulting thread synchronously (see
+  // research/perfs/2026-07-11-compressor-thrash-subscription-replay-storm.md,
+  // Finding 1). Optional — pre-cutover JSONL lines must still parse, same
+  // rationale as `monitorOps` above.
+  compressionsPerSec: z.number().optional(),
+  decompressionsPerSec: z.number().optional(),
   compressorMb: z.number(),
 });
 export type HostSample = z.infer<typeof HostSampleSchema>;

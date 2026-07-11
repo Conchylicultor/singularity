@@ -170,6 +170,53 @@ describe("SharedWebSocket", () => {
     expect(hub.server.openSockets()).toHaveLength(1); // B opened no socket of its own
   });
 
+  test("follower-join open dedup: a third tab joining does NOT re-dispatch onopen to an already-open follower", async () => {
+    // onFollowerJoined broadcasts "open" to ALL followers (BroadcastChannel has
+    // no unicast). An already-OPEN follower must not re-dispatch onopen —
+    // consumers treat onopen as "fresh connection, replay state"
+    // (NotificationsClient replays its whole sub set), so an unconditional
+    // dispatch made every existing tab re-replay on every tab join (BUG B of
+    // the 2026-07-11 replay-storm forensics). A genuine reconnect still
+    // dispatches: the leader's "close" broadcast resets followers to CONNECTING
+    // first.
+    const hub = createTransportHub();
+    const tabA = hub.tab();
+    const swsA = track(new SharedWebSocket(URL_PATH, tabA.hooks));
+    await flush();
+    const s1 = hub.server.all()[0]!;
+    s1.open();
+    expect(swsA.isLeader).toBe(true);
+
+    const tabB = hub.tab();
+    const swsB = track(new SharedWebSocket(URL_PATH, tabB.hooks));
+    let bOpens = 0;
+    swsB.onopen = () => { bOpens++; };
+    await flush(); // B joins → leader rebroadcasts open → B's FIRST dispatch
+    expect(bOpens).toBe(1);
+    expect(swsB.status).toBe("open");
+
+    // C joins: the rebroadcast reaches B too, but B is already OPEN → no
+    // re-dispatch (no re-replay).
+    const tabC = hub.tab();
+    const swsC = track(new SharedWebSocket(URL_PATH, tabC.hooks));
+    let cOpened = false;
+    swsC.onopen = () => { cOpened = true; };
+    await flush();
+    expect(cOpened).toBe(true); // the joiner itself still learns "open"
+    expect(bOpens).toBe(1); // the existing follower did NOT re-dispatch
+
+    // A genuine reconnect still re-dispatches to B: close resets followers to
+    // CONNECTING, so the next open is a real transition.
+    s1.serverClose();
+    await flush();
+    expect(swsB.status).toBe("reconnecting");
+    await vi.advanceTimersByTimeAsync(500); // leader backoff → new socket
+    const s2 = hub.server.all().find((s) => s.readyState === 0)!;
+    s2.open();
+    await flush();
+    expect(bOpens).toBe(2);
+  });
+
   test("H6-socket: killing the leader tab elects the follower with exactly one live socket throughout", async () => {
     const hub = createTransportHub();
     const tabA = hub.tab();

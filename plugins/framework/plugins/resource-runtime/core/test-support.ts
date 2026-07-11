@@ -52,6 +52,10 @@ export interface RecordedFrame {
   etag?: string;
   reason?: string;
   params?: ResourceParams;
+  /** Boot epoch stamped on sub-ack / up-to-date / up-to-date-batch frames. */
+  epoch?: string;
+  /** `up-to-date-batch` entries. */
+  entries?: Array<{ id?: number; key: string; params: ResourceParams; version: number }>;
 }
 
 export interface Harness {
@@ -64,14 +68,23 @@ export interface Harness {
   subscribe: (
     key: string,
     params?: ResourceParams,
-    o?: { socket?: number; etag?: string },
+    o?: { socket?: number; etag?: string; version?: number; epoch?: string; tabId?: string },
+  ) => Promise<void>;
+  /** Send `op:sub-batch` (one tab's whole-set replay) and await the next macrotask. */
+  subscribeBatch: (
+    entries: Array<{ key: string; params?: ResourceParams; etag?: string; version?: number }>,
+    o?: { socket?: number; tabId?: string; epoch?: string; complete?: boolean },
   ) => Promise<void>;
   /** Send `op:unsub` on a socket and await the next macrotask. */
   unsub: (
     key: string,
     params?: ResourceParams,
-    o?: { socket?: number },
+    o?: { socket?: number; tabId?: string },
   ) => Promise<void>;
+  /** Send `op:unsub-tab` (best-effort tab departure) and await the next macrotask. */
+  unsubTab: (tabId: string, o?: { socket?: number }) => Promise<void>;
+  /** Close a socket (runs the runtime's close handler, releasing its subs). */
+  closeSocket: (socketIdx?: number) => void;
   /** Frames for `key`, excluding the initial sub-ack. Optionally scoped to one socket. */
   pushesFor: (key: string, socketIdx?: number) => RecordedFrame[];
   tick: typeof tick;
@@ -124,14 +137,53 @@ export function createHarness(
           key,
           params,
           ...(o.etag !== undefined ? { etag: o.etag } : {}),
+          ...(o.version !== undefined ? { version: o.version } : {}),
+          ...(o.epoch !== undefined ? { epoch: o.epoch } : {}),
+          ...(o.tabId !== undefined ? { tabId: o.tabId } : {}),
         }),
       );
       await tick(); // let the async sub-ack (initial load) complete
     },
+    async subscribeBatch(entries, o = {}) {
+      const ws = wsList[o.socket ?? 0];
+      handler.message(
+        ws,
+        JSON.stringify({
+          op: "sub-batch",
+          tabId: o.tabId ?? "tab-test",
+          ...(o.epoch !== undefined ? { epoch: o.epoch } : {}),
+          complete: o.complete ?? true,
+          entries: entries.map((e, i) => ({
+            id: i + 1,
+            key: e.key,
+            params: e.params ?? {},
+            ...(e.etag !== undefined ? { etag: e.etag } : {}),
+            ...(e.version !== undefined ? { version: e.version } : {}),
+          })),
+        }),
+      );
+      await tick(); // let detached full-path serves complete
+    },
     async unsub(key, params = {}, o = {}) {
       const ws = wsList[o.socket ?? 0];
-      handler.message(ws, JSON.stringify({ op: "unsub", key, params }));
+      handler.message(
+        ws,
+        JSON.stringify({
+          op: "unsub",
+          key,
+          params,
+          ...(o.tabId !== undefined ? { tabId: o.tabId } : {}),
+        }),
+      );
       await tick();
+    },
+    async unsubTab(tabId, o = {}) {
+      const ws = wsList[o.socket ?? 0];
+      handler.message(ws, JSON.stringify({ op: "unsub-tab", tabId }));
+      await tick();
+    },
+    closeSocket(socketIdx = 0) {
+      handler.close(wsList[socketIdx], 1000, "test");
     },
     pushesFor(key, socketIdx) {
       return frames.filter(

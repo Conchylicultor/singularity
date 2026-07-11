@@ -117,14 +117,22 @@ type ServerMsg =
   // `etag` (conditional revalidation): the fresh content signature accompanying a
   // full value. Present only for a resource that declares `revalidate`; the client
   // stores it and sends it back on its next (re)subscribe / conditional GET.
-  | { kind: "sub-ack"; id?: number; key: string; params: ResourceParams; value: unknown; version: number; etag?: string }
+  // `epoch` (version short-circuit): the server's boot identity, stamped on every
+  // ack frame. Stored per channel and echoed alongside the sub's version on the
+  // next replay, so a same-boot server can answer `up-to-date` from its in-memory
+  // version counter with no loader run.
+  | { kind: "sub-ack"; id?: number; key: string; params: ResourceParams; value: unknown; version: number; etag?: string; epoch?: string }
   | { kind: "update"; key: string; params: ResourceParams; value: unknown; version: number; etag?: string }
   | { kind: "delta"; key: string; params: ResourceParams; upserts: [string, unknown][]; deletes: string[]; order?: string[]; version: number }
   | { kind: "invalidate"; key: string; params: ResourceParams; version: number }
   // "your cached value is still current" — the WS analogue of HTTP 304. Carries no
   // value: the client keeps its cached value and only adopts `version` (so a later
   // real update isn't stale-dropped), treating the (re)subscribe as acked.
-  | { kind: "up-to-date"; id?: number; key: string; params: ResourceParams; version: number }
+  | { kind: "up-to-date"; id?: number; key: string; params: ResourceParams; version: number; epoch?: string }
+  // The batched twin: one frame answering every already-current entry of a
+  // `sub-batch` replay. Each entry runs through the exact per-entry `up-to-date`
+  // logic (version guard, adoption, lastAckVersion).
+  | { kind: "up-to-date-batch"; epoch: string; entries: Array<{ id?: number; key: string; params: ResourceParams; version: number }> }
   | { kind: "sub-error"; id?: number; key: string; reason: string }
   | { kind: "ping" };
 
@@ -231,6 +239,15 @@ interface SocketChannel {
    * sub down. Keyed by the same `${key}\0${paramsKey}` id as `subs`.
    */
   pendingTeardown: Map<string, ReturnType<typeof setTimeout>>;
+  /**
+   * The server's boot identity, learned from any ack frame carrying `epoch`
+   * (`sub-ack` / `up-to-date` / `up-to-date-batch`). Echoed with each sub's
+   * version in the replay batch so a same-boot server can short-circuit
+   * already-current subs to `up-to-date` — no loader, no read-admission slot.
+   * A restart mints a new epoch, so a post-restart replay's stale echo simply
+   * takes the full path and re-learns. Undefined until the first ack.
+   */
+  serverEpoch?: string;
 }
 
 export class NotificationsClient {
@@ -268,6 +285,16 @@ export class NotificationsClient {
    *  test wires one built on fake transports. */
   private makeSocket: (url: string) => SharedWebSocket;
   /**
+   * This tab's stable id, stamped on every sub/unsub frame so the server can
+   * track which tab holds which sub (the per-tab bookkeeping behind `unsub-tab`
+   * and the `sub-batch complete:true` reconciliation). Injection seam for tests
+   * (two "tabs" in one jsdom page share sessionStorage, so the real getTabId()
+   * would collide); production always uses getTabId().
+   */
+  private tabId: string;
+  /** `pagehide` handler (best-effort tab departure), removed in `destroy()`. */
+  private pagehideListener: (() => void) | null = null;
+  /**
    * `performance.now()` timestamp the live-state transport FIRST reached the
    * aggregate `"open"` status (null until then). This is the cold-start marker:
    * a resource that mounts before this is set waited on transport bring-up for
@@ -287,10 +314,11 @@ export class NotificationsClient {
 
   constructor(
     private queryClient: QueryClient,
-    hooks?: { makeSocket?: (url: string) => SharedWebSocket },
+    hooks?: { makeSocket?: (url: string) => SharedWebSocket; tabId?: string },
   ) {
     // Socket factory must be set before channelFor (openChannel reads it).
     this.makeSocket = hooks?.makeSocket ?? ((u) => new SharedWebSocket(u));
+    this.tabId = hooks?.tabId ?? getTabId();
     // Open the worktree channel eagerly (always used). Central stays lazy —
     // opened on the first central-origin observe() via channelFor.
     this.channelFor("worktree");
@@ -325,6 +353,20 @@ export class NotificationsClient {
       trace(`net-diag ${JSON.stringify(ev)}`);
       this.emitDebug();
     });
+    // Best-effort tab departure: tell the server to release every sub THIS tab
+    // holds, so a closed follower tab's subs stop fanning out immediately
+    // instead of leaking until the whole socket cycles. For a follower the send
+    // relays to the leader over BroadcastChannel — a fire-and-forget post that
+    // usually survives pagehide. Accepted residue: a tab killed without
+    // pagehide leaks until the next socket cycle (the pre-existing bound).
+    if (typeof window !== "undefined") {
+      this.pagehideListener = () => {
+        for (const channel of Object.values(this.channels) as SocketChannel[]) {
+          channel.ws.send(JSON.stringify({ op: "unsub-tab", tabId: this.tabId }));
+        }
+      };
+      window.addEventListener("pagehide", this.pagehideListener);
+    }
   }
 
   getStatus(): WsStatus {
@@ -405,10 +447,10 @@ export class NotificationsClient {
     if (before.length === 0) return [];
     trace(`probeMissedUpdates subCount=${before.length}`);
     for (const channel of Object.values(this.channels) as SocketChannel[]) {
-      // Load-bearing: the probe resets lastAckVersion then reads it after a
-      // fixed settle; a staggered late-batch sub would still read -1 and hide a
-      // genuine miss. The probe is a single-tab watchdog, not the fleet herd.
-      this.replaySubs(channel, { stagger: false });
+      // Same batch replay as a reconnect: the whole set goes out in ONE
+      // synchronous frame (baselines reset at build time), so `lastAckVersion`
+      // is -1 before the settle window opens and every ack lands inside it.
+      this.replaySubs(channel);
     }
     // One-shot wait for the sub-ack round-trip — not a poll. The ack landing is
     // what `lastAckVersion` captures.
@@ -493,6 +535,10 @@ export class NotificationsClient {
   destroy(): void {
     this.unsubscribeFromBus();
     this.unsubscribeFromNetDiag();
+    if (this.pagehideListener !== null) {
+      window.removeEventListener("pagehide", this.pagehideListener);
+      this.pagehideListener = null;
+    }
     for (const channel of Object.values(this.channels) as SocketChannel[]) {
       for (const timer of channel.pendingTeardown.values()) clearTimeout(timer);
       channel.pendingTeardown.clear();
@@ -571,7 +617,7 @@ export class NotificationsClient {
       }
       channel.subs.delete(id);
       channel.pendingTeardown.delete(id);
-      channel.ws.send(JSON.stringify({ op: "unsub", key, params }));
+      channel.ws.send(JSON.stringify({ op: "unsub", key, params, tabId: this.tabId }));
       trace(`teardown key=${key} params=${pk}`);
       this.emitDebug();
     }, SUB_KEEPALIVE_MS);
@@ -758,100 +804,125 @@ export class NotificationsClient {
   }
 
   /**
-   * Resend all of a channel's subs after a fresh connection (the server has no
-   * record of our subs). Per sub, reset local versions to the -1 "nothing
-   * applied yet" baseline so the next sub-ack always applies — even a
+   * Resend ALL of a channel's subs as ONE `sub-batch` frame — after a fresh
+   * connection (the server has no record of our subs) and for the missed-update
+   * probe's forced resync. Per sub, the local versions reset to the -1 "nothing
+   * applied yet" baseline so the next ack always applies — even a
    * never-notified resource's version-0 sub-ack, and even a lower version after
-   * a server restart reset its counters.
+   * a server restart reset its counters. The pre-reset version is echoed in the
+   * batch entry (with the channel's known server epoch) so a SAME-boot server
+   * answers every already-current sub from its in-memory version counter — one
+   * `up-to-date-batch` frame, zero loader runs. `sub.etag` is deliberately
+   * KEPT and echoed too: the cached TanStack value survives a reconnect (the
+   * socket dropped, not the page), so it still describes a value we hold.
+   *
+   * Snapshot + build + send happen in ONE synchronous task, so an `observe()`
+   * cannot interleave between the baseline reset and the send, and the probe
+   * can read `lastAckVersion` after a fixed settle with no late-batch blind
+   * spot. (The old per-sub stagger is gone: same-boot replays short-circuit
+   * server-side for ~0, and post-restart replays are bounded by the server's
+   * read-admission gate + single-flight dedup — the correct layer for herd
+   * control, not client-side pacing.)
    *
    * Subs in their keep-alive window (refcount 0, still in `channel.subs`) are
    * resent here too. That's intentional and harmless: their pendingTeardown
-   * timer still fires and tears them down on schedule, independent of reconnect.
-   *
-   * `stagger` (default `true`): a shared backend restart reconnects the whole
-   * tab fleet at once, and each tab would otherwise dump all ~30 cold sub-ack
-   * loads in one microtask — the herd amplitude that saturates the per-backend
-   * DB loader gate. Staggering fans the resends out in small batches over a
-   * bounded window so the fleet's cold-recompute load is spread, not spiked.
-   *
-   * The **probe** (`probeMissedUpdates`) passes `stagger: false`: it resets
-   * `lastAckVersion = -1`, waits a fixed `settleMs`, then reads `lastAckVersion`
-   * to detect genuine misses. A staggered late-batch sub would still read `-1`
-   * when the timer fires → a real miss goes undetected. The probe is a
-   * single-tab watchdog, not part of the fleet herd, so it must stay synchronous.
+   * timer still fires and tears them down on schedule, independent of
+   * reconnect. `complete: true` makes the batch the server's whole truth for
+   * THIS tab on this socket: anything the tab held server-side and did not
+   * restate is released (the stale-sub reconciliation).
    */
-  private replaySubs(channel: SocketChannel, opts: { stagger?: boolean } = {}): void {
-    const stagger = opts.stagger ?? true;
-    trace(`replaySubs socket=${channel === this.channels.central ? "central" : "worktree"} subCount=${channel.subs.size} stagger=${stagger}`);
-
-    // CRITICAL: reset `version`/`lastAckVersion` to -1 AND `sendSub` TOGETHER,
-    // per-sub, at that sub's send time — never reset all up front. The server
-    // holds no sub state until `sendSub` actually goes out, so a not-yet-resent
-    // sub must keep its live baseline until its own batch fires (otherwise a
-    // frame arriving for a still-un-resent sub would be dropped against a -1
-    // baseline that no server sub-ack has answered yet).
-    const resend = (sub: ActiveSub): void => {
+  private replaySubs(channel: SocketChannel): void {
+    const socket = channel === this.channels.central ? "central" : "worktree";
+    trace(`replaySubs socket=${socket} subCount=${channel.subs.size} epoch=${channel.serverEpoch !== undefined ? 1 : 0}`);
+    // Nothing to replay → nothing to send. Replays run on a FRESH socket (the
+    // server holds no subs for this tab yet), so an empty `complete` batch
+    // would reconcile nothing; skipping keeps the wire quiet, matching the old
+    // per-sub behavior.
+    if (channel.subs.size === 0) {
+      this.emitDebug();
+      return;
+    }
+    const entries: Array<{
+      id: number;
+      key: string;
+      params: ResourceParams;
+      etag?: string;
+      version?: number;
+    }> = [];
+    for (const sub of channel.subs.values()) {
+      // Capture the version BEFORE the baseline reset — it names the state the
+      // cached value was produced under, which is exactly what the server's
+      // short-circuit compares. The reset itself keeps the apply-lower-version
+      // semantics a post-restart full sub-ack depends on (H2).
+      const knownVersion = sub.version;
       sub.version = -1;
-      // The next sub-ack is the fresh baseline. Clear it so a stale pre-resync
-      // ack can't be read as the resync's (liveFrameSeq is a monotonic counter
-      // and is never reset).
+      // The next ack is the fresh baseline. Clear it so a stale pre-resync ack
+      // can't be read as the resync's (liveFrameSeq is a monotonic counter and
+      // is never reset).
       sub.lastAckVersion = -1;
-      // Deliberately KEEP `sub.etag`: it's the whole point of conditional
-      // revalidation. The resend below carries it so an unchanged resource gets a
-      // cheap `up-to-date` (keep cache) instead of a full loader — collapsing the
-      // post-restart resubscribe herd. The cached TanStack value survives the
-      // reconnect (the socket dropped, not the page), so the etag still describes
-      // a value we actually hold.
-      this.sendSub(channel, sub.key, sub.params);
-    };
-
-    if (!stagger) {
-      for (const sub of channel.subs.values()) resend(sub);
-      this.emitDebug();
-      return;
+      entries.push({
+        id: this.nextMsgId++,
+        key: sub.key,
+        params: sub.params,
+        ...(sub.etag !== undefined ? { etag: sub.etag } : {}),
+        ...(knownVersion >= 0 ? { version: knownVersion } : {}),
+      });
     }
-
-    // Snapshot the sub list so concurrent mutation (teardown / new observe)
-    // during the staggered window is well-defined.
-    const subs = [...channel.subs.values()];
-    if (subs.length === 0) {
-      this.emitDebug();
-      return;
-    }
-
-    // Batch the resends: ~6 subs per batch, one batch every ~150ms, with the
-    // total spread capped at ~2.5s regardless of sub count. If there are more
-    // subs than `maxBatches * baseBatchSize`, grow the batch size so the last
-    // batch still fires within the cap (a huge sub count never stretches to
-    // tens of seconds). The setTimeout timers are fire-and-forget (they return
-    // a timer, not a promise) — the sanctioned pattern here, same as the
-    // SUB_KEEPALIVE_MS teardown below.
-    const BASE_BATCH_SIZE = 6;
-    const BATCH_DELAY_MS = 150;
-    const MAX_SPREAD_MS = 2_500;
-    const maxBatches = Math.floor(MAX_SPREAD_MS / BATCH_DELAY_MS) + 1;
-    const batchSize = Math.max(BASE_BATCH_SIZE, Math.ceil(subs.length / maxBatches));
-
-    for (let start = 0, batch = 0; start < subs.length; start += batchSize, batch++) {
-      const slice = subs.slice(start, start + batchSize);
-      setTimeout(() => {
-        for (const sub of slice) resend(sub);
-        this.emitDebug();
-      }, batch * BATCH_DELAY_MS);
-    }
+    channel.ws.send(
+      JSON.stringify({
+        op: "sub-batch",
+        tabId: this.tabId,
+        ...(channel.serverEpoch !== undefined ? { epoch: channel.serverEpoch } : {}),
+        complete: true,
+        entries,
+      }),
+    );
+    this.emitDebug();
   }
 
   private sendSub(channel: SocketChannel, key: string, params: ResourceParams): void {
     const socket = channel === this.channels.central ? "central" : "worktree";
     // Attach the sub's last-known ETag (if any) so the server can answer
     // `up-to-date` instead of re-running the loader. Read off the live sub entry
-    // so every caller (fresh observe with no etag, reconnect replay with a
-    // preserved one, delta-recovery resub that cleared it) sends the right thing.
+    // so every caller (fresh observe with no etag, delta-recovery resub that
+    // cleared it) sends the right thing. Single subs never echo a version —
+    // a fresh observe has no baseline and a recovery resub must NOT have one
+    // (see forceFullResub); the version echo lives in the replay batch.
     const etag = channel.subs.get(`${key}\0${paramsKey(params)}`)?.etag;
     trace(`sendSub key=${key} params=${paramsKey(params)} socket=${socket}${etag !== undefined ? " etag=1" : ""}`);
     channel.ws.send(
-      JSON.stringify({ op: "sub", id: this.nextMsgId++, key, params, ...(etag !== undefined ? { etag } : {}) }),
+      JSON.stringify({
+        op: "sub",
+        id: this.nextMsgId++,
+        key,
+        params,
+        ...(etag !== undefined ? { etag } : {}),
+        tabId: this.tabId,
+      }),
     );
+  }
+
+  /**
+   * Force a FULL resubscribe for a sub whose cached base is unusable (a delta
+   * with no base, or drift — `order` named ids we cannot resolve). Clears the
+   * stored etag AND resets the version baselines BEFORE sending a version-less,
+   * etag-less sub, so the recovery answer is always a full sub-ack and it
+   * always APPLIES. The baseline reset is load-bearing: `handleServerMessage`
+   * adopts a frame's version before dispatching, so the broken delta already
+   * advanced `entry.version` to the server's current version — without the
+   * reset, the recovery sub-ack (same version) would be dropped by the `<=`
+   * guard and the cache would never heal until an unrelated bump.
+   */
+  private forceFullResub(
+    channel: SocketChannel,
+    entry: ActiveSub,
+    key: string,
+    params: ResourceParams,
+  ): void {
+    entry.etag = undefined;
+    entry.version = -1;
+    entry.lastAckVersion = -1;
+    this.sendSub(channel, key, params);
   }
 
   private handleServerMessage(channel: SocketChannel, msg: ServerMsg): void {
@@ -863,6 +934,31 @@ export class NotificationsClient {
     }
     if (msg.kind === "sub-error") {
       console.error(`[notifications] sub-error key=${msg.key} reason=${msg.reason}`);
+      return;
+    }
+    // Learn the server's boot epoch from any ack frame carrying one — BEFORE the
+    // per-sub gates below, since the epoch is channel-level server identity (an
+    // ack for another tab's sub teaches it just as well). The next replay echoes
+    // it alongside each sub's version so a same-boot server can short-circuit.
+    if (
+      (msg.kind === "sub-ack" || msg.kind === "up-to-date" || msg.kind === "up-to-date-batch") &&
+      msg.epoch !== undefined
+    ) {
+      channel.serverEpoch = msg.epoch;
+    }
+    if (msg.kind === "up-to-date-batch") {
+      // The batched replay answer: run each entry through the exact per-entry
+      // `up-to-date` logic (no-sub gate, version guard, adoption, lastAckVersion).
+      for (const e of msg.entries) {
+        this.handleServerMessage(channel, {
+          kind: "up-to-date",
+          id: e.id,
+          key: e.key,
+          params: e.params,
+          version: e.version,
+          epoch: msg.epoch,
+        });
+      }
       return;
     }
 
@@ -978,10 +1074,10 @@ export class NotificationsClient {
     // base. If the cache has no value yet, force a fresh full snapshot.
     if (this.queryClient.getQueryData(queryKey) === undefined) {
       trace(`applyDelta key=${key} params=${paramsKey(params)} reason=delta-no-base-resub`);
-      // The cached base is gone — the stored etag describes a value we no longer
-      // hold, so clear it to force a FULL sub-ack (never a stale `up-to-date`).
-      entry.etag = undefined;
-      this.sendSub(channel, key, params);
+      // The cached base is gone — recovery must reload a full base, and its
+      // sub-ack must APPLY even at the version this very delta already advanced
+      // us to (see forceFullResub: etag cleared + baselines reset).
+      this.forceFullResub(channel, entry, key, params);
       return;
     }
     const schema = this.schemas.get(key);
@@ -1019,10 +1115,10 @@ export class NotificationsClient {
       trace(
         `applyDelta key=${key} params=${paramsKey(params)} reason=delta-drift-resub ids=${result.missingIds.join(",")}`,
       );
-      // Base drifted behind server truth — clear the etag so the recovery sub
-      // reloads a full base rather than being told `up-to-date` (keep the drift).
-      entry.etag = undefined;
-      this.sendSub(channel, key, params);
+      // Base drifted behind server truth — recovery reloads a full base (etag
+      // cleared so it's never told `up-to-date`) and its sub-ack applies even
+      // at this delta's own version (baselines reset — see forceFullResub).
+      this.forceFullResub(channel, entry, key, params);
       return;
     }
     this.queryClient.setQueryData(queryKey, result.rows);

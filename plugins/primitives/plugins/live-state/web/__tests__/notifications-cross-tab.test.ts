@@ -107,16 +107,63 @@ describe("NotificationsClient — cross-tab handover (H6)", () => {
     expect(isLeader(clientB)).toBe(true); // stole the lock → elected
     expect(hub.server.openSockets()).toHaveLength(0); // S1 torn down (H6c); S2 not open yet
 
-    // B opens its new socket S2; replaySubs resends B's subs on it.
+    // B opens its new socket S2; replaySubs resends B's subs as ONE sub-batch.
     const s2 = hub.server.all().find((s) => s.readyState === 0)!;
     s2.open();
-    await vi.advanceTimersByTimeAsync(0); // stagger batch 0 → resub on S2
-    expect(subFrames(s2, "k")).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(0);
+    const s2Batches = s2.sentJson().filter((m) => m.op === "sub-batch") as Array<{
+      entries: Array<{ key: string }>;
+    }>;
+    expect(s2Batches).toHaveLength(1);
+    expect(s2Batches[0]!.entries.map((e) => e.key)).toEqual(["k"]);
     expect(hub.server.openSockets()).toHaveLength(1); // exactly one live socket
 
     // A resync sub-ack on S2 converges B's cache to server truth.
     s2.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "b" }, version: 2 });
     expect(qcB.getQueryData(["k"])).toEqual({ status: "b" });
+  });
+
+  test("reconnect: two tabs replay independently-scoped batches — neither clobbers the other", async () => {
+    // Each tab replays ONLY its own sub set, tagged with its own tabId, in its
+    // own `sub-batch complete:true` frame — so the server's per-tab
+    // reconciliation for tab A can never release tab B's subs.
+    const hub = createTransportHub();
+    const qcA = new QueryClient();
+    const qcB = new QueryClient();
+    const tabA = hub.tab();
+    const clientA = new NotificationsClient(qcA, { makeSocket: hub.makeSocket(tabA), tabId: "tab-A" });
+    clients.push(clientA);
+    await flush();
+    const s1 = hub.server.all()[0]!;
+    s1.open();
+    const tabB = hub.tab();
+    const clientB = new NotificationsClient(qcB, { makeSocket: hub.makeSocket(tabB), tabId: "tab-B" });
+    clients.push(clientB);
+    await flush();
+
+    clientA.observe("kA", {}, undefined, pushSchema);
+    clientB.observe("kB", {}, undefined, pushSchema);
+    await flush(); // B's sub relays to S1
+
+    // Drop + reconnect: A (leader) reopens; the "open" broadcast makes BOTH
+    // tabs replay — A directly, B relayed through A.
+    s1.serverClose();
+    await vi.advanceTimersByTimeAsync(500);
+    const s2 = hub.server.all().find((s) => s.readyState === 0)!;
+    s2.open();
+    await flush(); // deliver B's relayed batch
+
+    const batches = s2.sentJson().filter((m) => m.op === "sub-batch") as Array<{
+      tabId: string;
+      complete: boolean;
+      entries: Array<{ key: string }>;
+    }>;
+    expect(batches).toHaveLength(2); // one per tab — never a merged set
+    const byTab = new Map(batches.map((b) => [b.tabId, b]));
+    expect(byTab.get("tab-A")!.entries.map((e) => e.key)).toEqual(["kA"]);
+    expect(byTab.get("tab-B")!.entries.map((e) => e.key)).toEqual(["kB"]);
+    expect(byTab.get("tab-A")!.complete).toBe(true);
+    expect(byTab.get("tab-B")!.complete).toBe(true);
   });
 
   test("H6b: one server frame fans out to BOTH tabs' caches (leader dispatches locally and broadcasts rx)", async () => {

@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import type { ZodType } from "zod";
-import { createHash } from "node:crypto";
+import { createHash, randomUUID } from "node:crypto";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import {
@@ -588,10 +588,27 @@ interface RegistryEntry {
   authorize?: (params: ResourceParams) => boolean | Promise<boolean>;
 }
 
+/**
+ * One socket-held subscription record for a (key, paramsKey): the params object
+ * plus WHICH tabs behind this socket hold it. The shared-WebSocket client is one
+ * socket for N tabs and every tab sends its own sub frames, so a socket's sub set
+ * is the UNION of its tabs'. Tagging each pk with its holders lets one tab depart
+ * (`op:"unsub-tab"`, or a `sub-batch complete:true` reconciliation) without
+ * tearing down subs the other tabs still hold — before this, a closed follower
+ * tab's subs leaked until the whole socket cycled. Legacy untagged frames land in
+ * the `""` bucket and release only on socket close (the pre-tab behavior).
+ * `entry.subCounts` still bumps only on the socket-level 0→1 (pk record created /
+ * deleted), and frames are still sent once per socket per pk.
+ */
+interface SocketSubRecord {
+  params: ResourceParams;
+  tabs: Set<string>;
+}
+
 interface SocketState {
   ws: ServerWebSocket<WsData>;
-  /** key -> paramsKey -> params object (subscriptions this socket holds). */
-  subs: Map<string, Map<string, ResourceParams>>;
+  /** key -> paramsKey -> record (subscriptions this socket holds, tagged by tab). */
+  subs: Map<string, Map<string, SocketSubRecord>>;
 }
 
 export interface ResourceRuntimeOptions {
@@ -657,6 +674,15 @@ export interface ResourceRuntimeOptions {
    * entry so time spent coalesced behind another caller's slow loader is
    * visible in the profiler; central / before-injection: omitted (no-op). */
   onCoalesceWait?: (waitMs: number) => void;
+  /**
+   * Fired once per version short-circuit — a `sub` whose echoed (epoch, version)
+   * matched the server's current boot epoch + per-pk version counter and was
+   * answered `up-to-date` with NO loader run and NO read-admission slot (see
+   * `handleSub`). The runtime also keeps its own per-key counter, surfaced in the
+   * `_debug` payload next to `notifyStats`, for live re-validation of the
+   * replay-storm fix. server: optional metric hook; central / omitted: no-op.
+   */
+  onSubShortCircuit?: (key: string) => void;
   /** Per-key owner metadata for the _debug endpoint. server: from Resource.Declare; central: omit. */
   debugOwners?: () => Array<{ key: string; pluginId?: string }>;
   /** Fired once per push to >=1 subscriber, with whether the push carried a content change.
@@ -930,6 +956,22 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // chargeWait), so a saturated gate is observable rather than hidden.
   const readLoadGate = createSemaphore(READ_LOAD_CONCURRENCY);
   const chargeReadGateWait = (waitMs: number): void => opts.onReadGateWait?.(waitMs);
+  // Identity of THIS server boot, stamped on every sub-ack / up-to-date frame.
+  // `entry.versions` is per-boot in-memory state (created empty at registration,
+  // bumped only in the flush paths — nothing restores it across restarts), so a
+  // client-echoed version is comparable ONLY when the epochs match: same epoch +
+  // same version ⇒ for a non-revalidate resource, no state change since the
+  // client's value was produced — the per-pk version counter is its complete
+  // change signal. See the version short-circuit in `handleSub`.
+  const bootEpoch = randomUUID();
+  // Per-key count of version short-circuits (a sub answered `up-to-date` from
+  // memory: zero loader runs, zero read-admission slots). Monotonic; surfaced in
+  // the `_debug` payload next to notifyStats for live re-validation.
+  const subShortCircuits = new Map<string, number>();
+  function recordSubShortCircuit(key: string): void {
+    subShortCircuits.set(key, (subShortCircuits.get(key) ?? 0) + 1);
+    opts.onSubShortCircuit?.(key);
+  }
   let dagDirty = true;
   let topoOrder: RegistryEntry[] = [];
   // `topoOrder` grouped by longest-path depth. Each level's entries are mutually
@@ -1144,23 +1186,47 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
     seedEtag?: string,
+    gated = false,
   ): Promise<{ value: unknown; etag: string | undefined }> {
     if (ctx) return { value: await timedLoad(entry, params, ctx), etag: undefined };
+    // Gate-after-dedup: when `gated` (the read path), the read-admission slot is
+    // acquired INSIDE the single-flight factory, so only the STARTER of a flight
+    // ever occupies a slot — N replayed subs of one (key, params) consume 1 slot,
+    // not N (the "joiners burn read-admit slots" convoy of
+    // research/perfs/2026-07-11-compressor-thrash-subscription-replay-storm.md
+    // Finding 3). Joiners ride the EXISTING `read-coalesce` wait
+    // (`onCoalesceWait`), which now subsumes the flight's gate wait: a coalesced
+    // caller's reported wait includes the starter's time queueing for a slot,
+    // charged as coalesce-wait in the joiner's own context — never gate-wait
+    // (only the starter runs `chargeReadGateWait`, in its own context, because
+    // inflight runs the starter's factory synchronously in its call frame).
+    // Push-path callers (`gated` false) start UNGATED flights exactly as before;
+    // a gated read joining one rides the coalesce wait with no slot either way.
     return inflight.run(
       `${entry.key} ${paramsKey(params)}`,
-      async () => ({ value: await timedLoad(entry, params), etag: seedEtag }),
+      gated
+        ? () =>
+            readLoadGate.run(
+              async () => ({ value: await timedLoad(entry, params), etag: seedEtag }),
+              chargeReadGateWait,
+            )
+        : async () => ({ value: await timedLoad(entry, params), etag: seedEtag }),
       opts.onCoalesceWait,
     );
   }
 
-  // Run a full loader on the READ path (WS sub-ack + HTTP GET fallback) under the
-  // read-admission gate, inside a `sub` origin so the loader span (and the gate's
-  // charged queue-wait) attributes to the subscribe that triggered it. This is
-  // the ONLY place the gate wraps the loader — the push/flush cascade
-  // (`drainEntry`) is intentionally left ungated (bounded by the DB gate). The
-  // gate sits OUTSIDE `getResourceValue`, so it admits before the single-flight
-  // dedup: under a herd the keys are distinct (one per conversation), so the
-  // extra-slot-for-a-deduped-caller cost the DB gate avoids does not arise here.
+  // Run a full loader on the READ path (WS sub-ack + HTTP GET fallback) inside a
+  // `sub` origin so the loader span (and the charged gate/coalesce waits)
+  // attribute to the subscribe that triggered it. The read-admission gate is
+  // applied INSIDE the single-flight (see `getResourceValue`): dedup happens
+  // BEFORE admission, so N concurrent reads of one (key, params) consume ONE
+  // slot. An earlier version admitted before the dedup on the theory that herd
+  // keys are distinct (one per conversation); the 2026-07-11 replay-storm
+  // forensics refuted that — chronic full-set sub replays hit the SAME pks from
+  // every tab, and each joiner burning a slot behind slow git loaders built the
+  // 5,242-deep sub convoy at 9.8s average wait. See
+  // research/perfs/2026-07-11-compressor-thrash-subscription-replay-storm.md
+  // Finding 3. The push/flush cascade stays ungated (bounded by the DB gate).
   //
   // `seedEtag` is the caller's freshly-probed signature, offered to the flight this
   // call may START. The returned `etag` is the one the flight was actually seeded
@@ -1171,11 +1237,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     params: ResourceParams,
     seedEtag?: string,
   ): Promise<{ value: unknown; etag: string | undefined }> {
-    const run = () =>
-      readLoadGate.run(
-        () => getResourceValue(entry, params, undefined, seedEtag),
-        chargeReadGateWait,
-      );
+    const run = () => getResourceValue(entry, params, undefined, seedEtag, true);
     return opts.wrapOrigin ? opts.wrapOrigin("sub", entry.key, run) : run();
   }
 
@@ -2358,14 +2420,43 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         // it holds a cached value. Present only on `op: "sub"` from a client that
         // has one; an old client omits it → full-loader path (backward-compatible).
         etag?: string;
+        // Version short-circuit echo: the client's last-applied version counter
+        // plus the boot epoch it belongs to (see `handleSub`). Optional — an old
+        // client omits them → full path.
+        version?: number;
+        epoch?: string;
+        // The sending tab's id (per-tab sub bookkeeping — see `SocketSubRecord`).
+        // Optional; an untagged frame lands in the legacy `""` bucket.
+        tabId?: string;
+        // `op: "sub-batch"` fields: one whole-set replay for ONE tab. `complete:
+        // true` additionally reconciles — releases every sub that tab previously
+        // held on this socket and did not restate.
+        complete?: boolean;
+        entries?: Array<{
+          id?: number;
+          key?: string;
+          params?: ResourceParams;
+          etag?: string;
+          version?: number;
+        }>;
       };
       if (m.kind === "pong") return;
       if (m.op === "sub") {
         void handleSub(state, m);
         return;
       }
+      if (m.op === "sub-batch") {
+        handleSubBatch(state, m);
+        return;
+      }
       if (m.op === "unsub") {
         handleUnsub(state, m);
+        return;
+      }
+      if (m.op === "unsub-tab") {
+        // Best-effort tab departure (pagehide): release everything this tab holds
+        // on this socket. Subs other tabs still hold are untouched.
+        releaseTabSubs(state, typeof m.tabId === "string" ? m.tabId : "");
         return;
       }
     },
@@ -2375,17 +2466,59 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       heartbeats.delete(ws);
       const state = sockets.get(ws);
       if (state) {
+        // Release once per (key, pk) regardless of how many tabs held it — the
+        // socket-level refcount was bumped once per pk. Legacy `""`-bucket subs
+        // release here too (their only teardown path).
         for (const [key, inner] of state.subs) {
-          for (const [pk, params] of inner) releaseSubRefcount(key, pk, params);
+          for (const [pk, rec] of inner) releaseSubRefcount(key, pk, rec.params);
         }
       }
       sockets.delete(ws);
     },
   };
 
+  // Socket-level sub registration bookkeeping, shared by `handleSub` and
+  // `handleSubBatch`. Fully synchronous: creates/updates the per-socket
+  // `SocketSubRecord` (tagging the holding tab), and bumps `entry.subCounts` only
+  // on the socket-level 0→1 (pk record created). Returns whether this
+  // registration was the GLOBAL 0→1 transition — the caller then owes the
+  // (possibly async) `onFirstSubscribe` exactly once.
+  function registerSubOnSocket(
+    state: SocketState,
+    entry: RegistryEntry,
+    pk: string,
+    params: ResourceParams,
+    tabId: string,
+  ): { firstGlobal: boolean } {
+    let inner = state.subs.get(entry.key);
+    if (!inner) {
+      inner = new Map();
+      state.subs.set(entry.key, inner);
+    }
+    let rec = inner.get(pk);
+    const alreadyHeldBySocket = rec !== undefined;
+    if (!rec) {
+      rec = { params, tabs: new Set<string>() };
+      inner.set(pk, rec);
+    }
+    rec.tabs.add(tabId);
+    if (alreadyHeldBySocket) return { firstGlobal: false };
+    const prev = entry.subCounts.get(pk) ?? 0;
+    entry.subCounts.set(pk, prev + 1);
+    return { firstGlobal: prev === 0 };
+  }
+
   async function handleSub(
     state: SocketState,
-    m: { id?: number; key?: string; params?: ResourceParams; etag?: string },
+    m: {
+      id?: number;
+      key?: string;
+      params?: ResourceParams;
+      etag?: string;
+      version?: number;
+      epoch?: string;
+      tabId?: string;
+    },
   ): Promise<void> {
     const { id, key, params = {}, etag: clientEtag } = m;
     if (!key) return;
@@ -2415,25 +2548,75 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       }
     }
     const pk = paramsKey(params);
-    let inner = state.subs.get(key);
-    if (!inner) {
-      inner = new Map();
-      state.subs.set(key, inner);
-    }
-    const alreadyHeldBySocket = inner.has(pk);
-    inner.set(pk, params);
-    if (!alreadyHeldBySocket) {
-      const prev = entry.subCounts.get(pk) ?? 0;
-      entry.subCounts.set(pk, prev + 1);
-      if (prev === 0 && entry.onFirstSubscribe) {
-        try {
-          await entry.onFirstSubscribe(params);
-        } catch (err) {
-          reportLoaderError(`onFirstSubscribe failed for ${key}`, err);
-        }
+    const { firstGlobal } = registerSubOnSocket(
+      state,
+      entry,
+      pk,
+      params,
+      typeof m.tabId === "string" ? m.tabId : "",
+    );
+    if (firstGlobal && entry.onFirstSubscribe) {
+      try {
+        await entry.onFirstSubscribe(params);
+      } catch (err) {
+        reportLoaderError(`onFirstSubscribe failed for ${key}`, err);
       }
     }
 
+    // Version short-circuit: the client echoed the (epoch, version) its cached
+    // value was produced under. If the epoch is THIS boot and the version equals
+    // the current per-pk counter, nothing changed since that value shipped — for
+    // a non-revalidate resource the version counter is its complete change
+    // signal (every state change routes through flushNotifies, which bumps it).
+    // Answer `up-to-date` from memory: ZERO loader runs, ZERO read-admission
+    // slots — the cure for the chronic full-set replay storms (each replayed
+    // push-mode sub used to run the FULL loader behind the 6-slot gate; see
+    // research/perfs/2026-07-11-compressor-thrash-subscription-replay-storm.md
+    // Findings 2–3). Fully synchronous by construction. Restricted to:
+    //   - same boot epoch — `entry.versions` is per-boot in-memory state, so a
+    //     cross-boot version echo is incomparable (post-restart replays take the
+    //     full path and re-baseline);
+    //   - non-`revalidate` resources — a revalidatable resource's freshness
+    //     authority is its ETag signature (probed below), not the version
+    //     counter (its truth may live outside the notify stream, e.g. git).
+    // The HTTP path (`handleResourceHttp`) deliberately has NO version
+    // short-circuit: the invalidate-mode refetch must return a body at an equal
+    // version (the client's strict-`<` HTTP guard accepts it).
+    const currentVersion = entry.versions.get(pk) ?? 0;
+    if (
+      !entry.revalidate &&
+      m.epoch === bootEpoch &&
+      typeof m.version === "number" &&
+      m.version === currentVersion
+    ) {
+      sendJson(state.ws, {
+        kind: "up-to-date",
+        id,
+        key,
+        params,
+        version: currentVersion,
+        epoch: bootEpoch,
+      });
+      recordSubShortCircuit(key);
+      return;
+    }
+
+    await serveSub(state, entry, id, key, params, pk, clientEtag);
+  }
+
+  // The read/serve tail of a subscription: probe the conditional-revalidation
+  // signature, run the gated full load, seed the keyed snapshot, and send the
+  // sub-ack. Shared by `handleSub` and `handleSubBatch`'s full-path entries.
+  // Callers have already registered the sub and settled `onFirstSubscribe`.
+  async function serveSub(
+    state: SocketState,
+    entry: RegistryEntry,
+    id: number | undefined,
+    key: string,
+    params: ResourceParams,
+    pk: string,
+    clientEtag: string | undefined,
+  ): Promise<void> {
     // Report the CURRENT version without bumping: a sub-ack (or an `up-to-date`)
     // delivers existing state, it is not a state change. Bumping here made the
     // version climb on every (re)subscribe, which broke the missed-update
@@ -2484,7 +2667,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // full-loader path and never serves stale.
     const freshEtag = entry.revalidate ? await computeEtag(entry, params) : undefined;
     if (freshEtag !== undefined && clientEtag != null && freshEtag === clientEtag) {
-      sendJson(state.ws, { kind: "up-to-date", id, key, params, version });
+      sendJson(state.ws, { kind: "up-to-date", id, key, params, version, epoch: bootEpoch });
       return;
     }
 
@@ -2500,6 +2683,16 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       sendJson(state.ws, { kind: "sub-error", id, key, reason: "loader-failed" });
       return;
     }
+    // Yield ONCE before touching the snapshot or the wire. A push continuation
+    // parked on the SAME coalesced flight attached after this read, so it
+    // resumes one job later; it must still run first — it sends its update
+    // frame synchronously (H5a: a push beats a racing parked sub-ack) and, for
+    // keyed mode, performs the first diffKeyed (no snapshot yet → FULL update)
+    // before this sub-ack's idempotent re-seed below (H5c). Before
+    // gate-after-dedup the starter paid these hops implicitly in the
+    // read-admission slot release chain; with the gate now inside the
+    // single-flight, the yield is the explicit, pinned equivalent.
+    await Promise.resolve();
     // Keyed entries: seed the per-pk snapshot from the full sub-ack value so the
     // next notify can diff against it. The sub-ack itself stays full-value.
     if (entry.mode === "keyed") {
@@ -2514,6 +2707,8 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     //     here would stamp a signature strictly newer than the value we are
     //     shipping — precisely the skew this whole comment exists to prevent.
     // Absent for non-opted-in resources → the frame is byte-identical to before.
+    // `epoch` (this boot's identity) rides every sub-ack so the client can echo
+    // its version on the next replay and be short-circuited (see `handleSub`).
     sendJson(state.ws, {
       kind: "sub-ack",
       id,
@@ -2522,22 +2717,189 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       value,
       version,
       ...(etag !== undefined ? { etag } : {}),
+      epoch: bootEpoch,
     });
+  }
+
+  // Whole-set replay for ONE tab (`op: "sub-batch"`). Registration is fully
+  // synchronous and happens FIRST — before the `complete: true` reconciliation
+  // below — so an identical replay never transits a sub 1→0→1: no lifecycle-hook
+  // churn, no keyed-snapshot eviction. Then each entry either short-circuits
+  // (same-boot epoch + matching version → collected into ONE `up-to-date-batch`
+  // frame, zero loader runs) or serves the full path exactly like a single sub.
+  // The whole function is synchronous; all async work (onFirstSubscribe, the
+  // gated loads) is detached per entry, mirroring the `void handleSub(...)`
+  // dispatch of single subs.
+  function handleSubBatch(
+    state: SocketState,
+    m: {
+      tabId?: string;
+      epoch?: string;
+      complete?: boolean;
+      entries?: Array<{
+        id?: number;
+        key?: string;
+        params?: ResourceParams;
+        etag?: string;
+        version?: number;
+      }>;
+    },
+  ): void {
+    const tabId = typeof m.tabId === "string" ? m.tabId : "";
+    const entries = Array.isArray(m.entries) ? m.entries : [];
+
+    // Pass 1 — synchronous registration of every entry.
+    const prepared: Array<{
+      entry: RegistryEntry;
+      id?: number;
+      key: string;
+      params: ResourceParams;
+      pk: string;
+      etag?: string;
+      version?: number;
+      firstGlobal: boolean;
+    }> = [];
+    // Keys retained by the reconciliation, including entries routed through the
+    // full per-sub path (authorize) whose registration is deferred — dropping
+    // them here would 1→0→1 them before their own handleSub registers.
+    const retained = new Set<string>();
+    for (const e of entries) {
+      if (!e.key) continue;
+      const params = e.params ?? {};
+      const pk = paramsKey(params);
+      retained.add(`${e.key}\0${pk}`);
+      const entry = registry.get(e.key);
+      if (!entry) {
+        sendJson(state.ws, { kind: "sub-error", id: e.id, key: e.key, reason: "unknown-key" });
+        continue;
+      }
+      if (entry.authorize) {
+        // The authorization seam must run BEFORE any side effect (see
+        // `handleSub`), so an authorized entry cannot be pre-registered here —
+        // route it through the full per-sub path wholesale. (No shipped resource
+        // declares `authorize` today.)
+        void handleSub(state, {
+          id: e.id,
+          key: e.key,
+          params,
+          etag: e.etag,
+          version: e.version,
+          epoch: m.epoch,
+          tabId,
+        });
+        continue;
+      }
+      const { firstGlobal } = registerSubOnSocket(state, entry, pk, params, tabId);
+      prepared.push({
+        entry,
+        id: e.id,
+        key: e.key,
+        params,
+        pk,
+        etag: e.etag,
+        version: e.version,
+        firstGlobal,
+      });
+    }
+
+    // `complete: true` reconciliation — this batch is the tab's WHOLE sub set,
+    // so release every (key, pk) the tab previously held on this socket and did
+    // not restate. Runs strictly AFTER registration (see the function comment).
+    if (m.complete === true) {
+      releaseTabSubs(state, tabId, retained);
+    }
+
+    // Pass 2 — synchronous short-circuit collection; everything else detaches
+    // onto the full serve path.
+    const upToDate: Array<{
+      id?: number;
+      key: string;
+      params: ResourceParams;
+      version: number;
+    }> = [];
+    for (const p of prepared) {
+      const version = p.entry.versions.get(p.pk) ?? 0;
+      if (
+        !p.entry.revalidate &&
+        m.epoch === bootEpoch &&
+        typeof p.version === "number" &&
+        p.version === version
+      ) {
+        // Same short-circuit as `handleSub`, collected into one batch frame. A
+        // 0→1 entry still owes its lifecycle hook — fired detached so the batch
+        // answer stays one synchronous frame (the socket is already registered,
+        // so any change the hook's work triggers pushes to it normally).
+        recordSubShortCircuit(p.key);
+        upToDate.push({ id: p.id, key: p.key, params: p.params, version });
+        if (p.firstGlobal && p.entry.onFirstSubscribe) {
+          const hook = p.entry.onFirstSubscribe;
+          void (async () => {
+            try {
+              await hook(p.params);
+            } catch (err) {
+              reportLoaderError(`onFirstSubscribe failed for ${p.key}`, err);
+            }
+          })();
+        }
+        continue;
+      }
+      void (async () => {
+        // Mirror handleSub's ordering: settle the 0→1 hook before the read.
+        if (p.firstGlobal && p.entry.onFirstSubscribe) {
+          try {
+            await p.entry.onFirstSubscribe(p.params);
+          } catch (err) {
+            reportLoaderError(`onFirstSubscribe failed for ${p.key}`, err);
+          }
+        }
+        await serveSub(state, p.entry, p.id, p.key, p.params, p.pk, p.etag);
+      })();
+    }
+    if (upToDate.length > 0) {
+      sendJson(state.ws, { kind: "up-to-date-batch", epoch: bootEpoch, entries: upToDate });
+    }
   }
 
   function handleUnsub(
     state: SocketState,
-    m: { key?: string; params?: ResourceParams },
+    m: { key?: string; params?: ResourceParams; tabId?: string },
   ): void {
     const { key, params = {} } = m;
     if (!key) return;
     const inner = state.subs.get(key);
     if (!inner) return;
     const pk = paramsKey(params);
-    if (!inner.has(pk)) return;
+    const rec = inner.get(pk);
+    if (!rec) return;
+    // Remove only the FRAME's tab (legacy untagged → the `""` bucket); the
+    // socket-level refcount releases only when the last holding tab is gone.
+    const tabId = typeof m.tabId === "string" ? m.tabId : "";
+    if (!rec.tabs.delete(tabId)) return;
+    if (rec.tabs.size > 0) return;
     inner.delete(pk);
     if (inner.size === 0) state.subs.delete(key);
-    releaseSubRefcount(key, pk, params);
+    releaseSubRefcount(key, pk, rec.params);
+  }
+
+  // Release every sub `tabId` holds on this socket, except (key,pk)s named in
+  // `retain`. Backs both `op: "unsub-tab"` (no retain set — full departure) and
+  // the `sub-batch complete: true` reconciliation. A pk still held by another
+  // tab keeps the socket-level refcount; only a last-holder removal releases.
+  function releaseTabSubs(
+    state: SocketState,
+    tabId: string,
+    retain?: ReadonlySet<string>,
+  ): void {
+    for (const [key, inner] of state.subs) {
+      for (const [pk, rec] of inner) {
+        if (retain?.has(`${key}\0${pk}`)) continue;
+        if (!rec.tabs.delete(tabId)) continue;
+        if (rec.tabs.size > 0) continue;
+        inner.delete(pk);
+        releaseSubRefcount(key, pk, rec.params);
+      }
+      if (inner.size === 0) state.subs.delete(key);
+    }
   }
 
   function releaseSubRefcount(key: string, pk: string, params: ResourceParams): void {
@@ -2658,13 +3020,22 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       coveredOrigins: string[];
       loaderStats?: { count: number; ratePerMin: number; maxMs: number };
       notifyStats: { hand: number; feed: number };
+      subShortCircuits: number;
+      subTabs: Record<string, number>;
       externalSource: boolean;
     }> = [];
     for (const entry of registry.values()) {
       let subscribers = 0;
+      // Per-tab breakdown: how many (socket, pk) subs each tab holds for this
+      // resource. Legacy untagged subs show under `""`.
+      const subTabs: Record<string, number> = {};
       for (const st of sockets.values()) {
         const inner = st.subs.get(entry.key);
-        if (inner) subscribers += inner.size;
+        if (!inner) continue;
+        subscribers += inner.size;
+        for (const rec of inner.values()) {
+          for (const tab of rec.tabs) subTabs[tab] = (subTabs[tab] ?? 0) + 1;
+        }
       }
       const owner = ownerByKey.get(entry.key);
       // The raw captured read-set (the VIEW/table names loaders actually read)
@@ -2723,6 +3094,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           const s = notifyStats.get(entry.key);
           return { hand: s?.hand ?? 0, feed: s?.feed ?? 0 };
         })(),
+        // Version short-circuits served for this key (a replayed sub answered
+        // `up-to-date` from the in-memory version counter — zero loader runs,
+        // zero read-admission slots). Live re-validation gauge for the
+        // 2026-07-11 replay-storm fix.
+        subShortCircuits: subShortCircuits.get(entry.key) ?? 0,
+        subTabs,
         // Declared classification: was this resource defined via
         // `defineExternalResource` (truth outside Postgres)? The
         // `no-db-backed-notify` check reads this to forbid a DB-reading loader on
@@ -2812,8 +3189,8 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     for (const st of sockets.values()) {
       const inner = st.subs.get(key);
       if (!inner) continue;
-      for (const [pk, params] of inner) {
-        if (!byPk.has(pk)) byPk.set(pk, params);
+      for (const [pk, rec] of inner) {
+        if (!byPk.has(pk)) byPk.set(pk, rec.params);
       }
     }
     return [...byPk.values()];

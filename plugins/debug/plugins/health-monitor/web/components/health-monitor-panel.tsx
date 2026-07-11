@@ -353,6 +353,20 @@ function HostSection({ samples }: { samples: HostSample[] }): ReactElement | nul
             { key: "swapOutPagesPerSec", label: "swap-out/s", color: "var(--destructive)" },
           ]}
         />
+        {/* Compressor thrash is the memory-pressure channel swap misses — each
+            decompression is a synchronous page fault on the faulting thread. */}
+        <ChartBlock
+          label="Memory compressor (pages/s)"
+          data={rows}
+          lines={[
+            { key: "compressionsPerSec", label: "compressions/s", color: "var(--warning)" },
+            {
+              key: "decompressionsPerSec",
+              label: "decompressions/s",
+              color: "var(--destructive)",
+            },
+          ]}
+        />
       </Grid>
     </Stack>
   );

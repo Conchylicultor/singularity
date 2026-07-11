@@ -92,12 +92,22 @@ export class SharedWebSocket {
           case "rx":
             this.dispatchMessage(msg.data);
             break;
-          case "open":
+          case "open": {
+            // The leader rebroadcasts "open" to ALL followers whenever a new tab
+            // joins (onFollowerJoined below). A follower already at OPEN must
+            // NOT re-dispatch onopen: consumers treat onopen as "fresh
+            // connection, replay state" (NotificationsClient replays its whole
+            // sub set), so an unconditional dispatch made every existing tab
+            // re-replay on every tab join. A genuine reconnect still
+            // dispatches, because the leader's "close" broadcast reset this
+            // follower to CONNECTING first.
+            const wasOpen = this.readyState === SharedWebSocket.OPEN;
             this.readyState = SharedWebSocket.OPEN;
             this.setStatus("open");
             publishNetDiag({ type: "ws-open", url: this.url });
-            this.dispatchOpen();
+            if (!wasOpen) this.dispatchOpen();
             break;
+          }
           case "close":
             this.readyState = SharedWebSocket.CONNECTING;
             this.setStatus("reconnecting");

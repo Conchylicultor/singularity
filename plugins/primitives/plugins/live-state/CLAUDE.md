@@ -25,20 +25,55 @@ endpoints (via log-channels) — the import can only point this way.
 The client transport hazards are pinned by named vitest tests under
 `web/__tests__/`: `notifications-subs.test.ts` (H4 duplicate-subs +
 keep-alive, the `no-sub` frame-drop gate, delta-no-base and delta-drift
-forced resubs, the version guard), `notifications-reconnect.test.ts` (H1
-reopen-gap convergence, H1b replaySubs stagger, H2 restart version-counter
-reset, H7 level-state convergence + `probeMissedUpdates`), and
-`notifications-cross-tab.test.ts` (H6 two-client leader handover). They build
-real `NotificationsClient` + `SharedWebSocket` stacks on the deterministic
+forced resubs + the recovery-applies pin, the version guard, per-tab frame
+tagging + pagehide `unsub-tab`), `notifications-reconnect.test.ts` (H1
+reopen-gap convergence via one `sub-batch`, H1b batch version/epoch echoes +
+baseline reset at send, H2 restart version-counter reset via the stale-epoch
+full path, the same-boot `up-to-date-batch` cache-keeping resync, H7
+level-state convergence + `probeMissedUpdates` over the batch replay), and
+`notifications-cross-tab.test.ts` (H6 two-client leader handover +
+independently-scoped per-tab replay batches). They build real
+`NotificationsClient` + `SharedWebSocket` stacks on the deterministic
 fake transports from `@plugins/primitives/plugins/networking/web`
 (`createTransportHub`); only `WebSocket`/`BroadcastChannel`/`navigator.locks`
-are faked. The server-half siblings (H5 etc.) live in
+are faked. The server-half siblings (H5, the version short-circuit, gate
+dedup, sub-batch) live in
 `plugins/framework/plugins/resource-runtime/core/`. Design:
 `research/2026-07-03-global-live-state-client-transport-harness.md`. Run:
 `bun run test:dom plugins/primitives/plugins/networking plugins/primitives/plugins/live-state`.
 When touching `notifications-client.ts`, `shared-websocket.ts`, or
 `cross-tab-election.ts`, run these suites — they are the regression fence for
 the race-prone core (a prerequisite for the A1 cascade migration).
+
+## Replay is ONE `sub-batch` frame; recovery resubs never echo state
+
+On every socket (re)open — and for the missed-update probe's forced resync —
+`replaySubs` sends the channel's whole sub set as ONE `{op:"sub-batch", tabId,
+epoch?, complete:true, entries}` frame, built synchronously (snapshot + baseline
+reset + send in one task, so an `observe()` can't interleave). Each entry echoes
+the sub's pre-reset version; `epoch` is the server boot identity learned from
+ack frames. A same-boot server answers every already-current entry from its
+in-memory version counter in one `up-to-date-batch` — no loader, no
+read-admission slot (see `resource-runtime/CLAUDE.md`). `complete:true` makes
+the batch the server's whole truth for THIS tab: subs the tab dropped while
+disconnected (or that a closed pane left behind) are reconciled away, and a
+`pagehide` listener sends a best-effort `{op:"unsub-tab"}` per channel so a
+closing tab's subs release immediately instead of leaking until the socket
+cycles.
+
+The old per-sub replay **stagger was deleted deliberately**: same-boot replays
+short-circuit server-side for ~0 cost, and post-restart replays are bounded by
+the server's read-admission gate + single-flight dedup — the correct layer for
+herd control, not client-side pacing (which also forced a probe carve-out and
+the H2 per-batch baseline subtleties).
+
+**Recovery resubs never echo state** (`forceFullResub`): a delta with no base or
+with drift clears the etag AND resets `version`/`lastAckVersion` to -1 before
+sending a version-less sub. The baseline reset is load-bearing — the broken
+delta already advanced `entry.version` to the server's current version (the
+guard adopts before dispatch), so without the reset the recovery sub-ack at
+that same version would be `<=`-dropped and the cache would never heal until an
+unrelated bump.
 
 ## Per-hop tracing (`live-state` log channel)
 

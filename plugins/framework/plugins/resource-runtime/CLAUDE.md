@@ -137,6 +137,54 @@ The two `delta` kinds look alike and are NOT interchangeable for a future etag:
   server truth. An etag there would be a permanent partial-stale pin — it must
   **NEVER** carry one. This change excludes it by construction.
 
+## Read path: version short-circuit (bootEpoch), gate-after-dedup, per-tab subs
+
+Three structural changes born from the 2026-07-11 replay-storm forensics
+(`research/perfs/2026-07-11-compressor-thrash-subscription-replay-storm.md`
+Findings 2–4): clients chronically replay their FULL sub set, and each replayed
+push-mode sub used to run the full loader behind the 6-slot read-admission gate.
+
+- **Version short-circuit.** Every `sub-ack`/`up-to-date` frame carries `epoch`
+  — a `bootEpoch` UUID minted per `createResourceRuntime` instance. A `sub` (or
+  `sub-batch` entry) may echo `{version, epoch}`; when the epoch is THIS boot,
+  the version equals the current per-pk counter, and the resource does not
+  declare `revalidate`, the server answers `up-to-date` from memory — **zero
+  loader runs, zero gate slots**. The invariant this leans on: *for a
+  non-`revalidate` resource, the per-pk version counter is its complete change
+  signal* — every state change routes through `flushNotifies`, which bumps it.
+  The epoch restriction exists because `entry.versions` is per-boot in-memory
+  state (nothing restores it across restarts), so a cross-boot version echo is
+  incomparable; a post-restart replay takes the full path and re-baselines.
+  `revalidate` resources are exempt — their freshness authority is the ETag
+  signature (truth may live outside the notify stream, e.g. git). The HTTP path
+  has NO version short-circuit: the invalidate-mode refetch must return a body
+  at an equal version (client strict-`<` guard). Short-circuits are counted
+  per key (`subShortCircuits` in `_debug`, next to notifyStats) and surfaced
+  via the optional `onSubShortCircuit` hook.
+- **Gate-after-dedup.** The read-admission slot is acquired INSIDE the read
+  path's single-flight (`getResourceValue`'s gated factory), so only the flight
+  STARTER occupies a slot — N concurrent reads of one (key, params) consume 1
+  slot, not N. Joiners ride the existing `read-coalesce` wait, which now
+  subsumes the flight's gate wait. Corollary pinned by H5a/H5c: the starter no
+  longer pays post-flight slot-release hops, so `serveSub` yields one explicit
+  microtask after the flight resolves — a push continuation parked on the same
+  coalesced flight (which sends synchronously) reaches the wire first, and its
+  keyed FULL diff runs before the sub-ack's idempotent snapshot re-seed.
+- **Per-tab sub sets + batch replay.** A socket's sub set is the union of its
+  tabs' (the shared-WebSocket client is one socket for N tabs), so each
+  per-socket pk record tags its holding tabs (`SocketSubRecord`; legacy
+  untagged frames land in the `""` bucket, released on socket close).
+  `op:"sub-batch"` replays ONE tab's whole set in one frame: entries are
+  registered synchronously FIRST, then `complete:true` releases everything that
+  tab held and did not restate — so an identical replay never transits 1→0→1
+  (no lifecycle-hook churn, no keyed-snapshot eviction), while a closed pane's
+  stale subs are reconciled away. Already-current entries collapse into ONE
+  `up-to-date-batch` frame; the rest serve as individual sub-acks.
+  `op:"unsub-tab"` is the best-effort tab departure (client `pagehide`).
+  A keyed sub that short-circuits does NOT re-seed an evicted snapshot; the
+  next notify finds no snapshot and ships a FULL update — self-healing by
+  construction.
+
 ## Invariant harness (`core/*.test.ts` + `core/test-support.ts`)
 
 The runtime's hardest correctness invariants are pinned by co-located `bun:test`
@@ -160,6 +208,18 @@ seam (see `research/2026-07-03-global-live-state-server-invariant-harness.md`):
   diff → no frame) and the L2 persist-hook calling contract
   (`captureWatermark`-before-load, persist-on-success-only, persisted-FULL forcing,
   hook-failure never blocks delivery).
+- `runtime-version-shortcircuit.test.ts` — the bootEpoch version short-circuit:
+  same-boot + same-version → `up-to-date` with zero loader runs / gate slots;
+  wrong/absent epoch or version mismatch → full path; `revalidate` resources
+  exempt; the keyed evicted-snapshot self-heal; epoch on acks; the `_debug`
+  counter; no HTTP short-circuit.
+- `runtime-gate-dedup.test.ts` — gate-after-dedup: N same-pk subs on a parked
+  loader hold ONE slot and run ONE loader; distinct pks still cap at the gate
+  size; the etag co-production contract holds through the moved gate.
+- `runtime-sub-batch.test.ts` — the sub-batch/tab model: one `up-to-date-batch`
+  for current entries + individual sub-acks; register-before-reconcile (an
+  identical replay fires no lifecycle hooks, a dropped sub releases); two tabs
+  on one socket isolated; legacy `""`-bucket release on socket close.
 - `runtime-revalidate.test.ts` — conditional revalidation (ETag / 304) read path:
   WS up-to-date hit / etag miss / fresh stamp, the HTTP 304 vs 200+ETag paths, the
   `revalidate`-throws fail-safe (value delivered, no etag, never short-circuited),

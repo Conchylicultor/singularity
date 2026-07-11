@@ -107,6 +107,32 @@ swap-in turns the same band into 19–433 ms+ (page faults block a boosted threa
 discriminators designed, unrun), `fseventsd` attribution, T1 acceptance test still unrun. Findings
 only (remediation deliberately not yet proposed) →
 **[`2026-07-10-host-saturation-post-fix-swap-amplifier-findings.md`](./2026-07-10-host-saturation-post-fix-swap-amplifier-findings.md)**.
+**2026-07-11 00:45 episode — the swap-in proxy is refuted as the pressure metric; the amplifier at
+main's layer is named:** live during a full freeze (load 36–40, flush wedged 355 s, `/sonata`
+page-load 384 s), `swapInPagesPerSec` read **0** the whole time while the **compressor** thrashed at
+a measured **240 k decompressions/s + 252 k compressions/s (~3.8 GB/s each way)**, pool 10→22 GB —
+the 07-10 cross-tab's "swap-in" column misses the dominant channel (instrumentation gap; mechanism
+— page faults block the boosted thread — survives, first live corroboration of the cold-page-victim
+hypothesis). On main the freeze amplitude is the live-state sub path: clients chronically replay
+their FULL sub set (~250 subs/tab: `config-v2.values` keyed per config FILE = 153 pks,
+`page-block-doc` per block = 87) every few minutes even when healthy (~90 % of 20 k sendSubs/88 min
+are replays); each replayed push-mode sub runs the FULL loader behind the 6-slot `read-admit` gate
+(no version/ETag short-circuit; admission still precedes dedup) ⇒ a 5,242-deep sub convoy at 9.8 s
+avg wait, ack starvation (650 sends vs 19 acks/min) tripping Bun `idleTimeout:60` ⇒ reconnect ⇒
+replay — the feedback loop. Postgres healthy throughout; ≥6 concurrent builds (slot gate acquired
+mid-build, main exempt) + ~12 claude sessions filled 64 GB. **Fixes BUILT same session (worktree
+`claude-1783723665`, awaiting merge + live re-validation):** (1) bootEpoch version short-circuit —
+an already-current sub is answered `up-to-date` from `entry.versions` with zero loader/gate slots
+(`subShortCircuits` counter in `_debug`); (2) gate-after-dedup — the read-admit slot moved inside
+the single-flight, N same-pk reads = 1 slot; (5) replay = ONE `sub-batch` frame answered by ONE
+`up-to-date-batch`, per-tab sub tagging + `complete:true` reconciliation + `pagehide` `unsub-tab`
+(stale-sub cure), stagger deleted; (4) `health-host` now samples compressions/decompressions per
+sec + Health-pane chart. Plus two latent bugs found by plan verification and fixed: the drift/no-base
+recovery resub whose healing ack was `<=`-dropped (forceFullResub resets baselines), and every
+follower tab full-replaying on ANY tab join (shared-websocket open-dedup) — a chronic driver of the
+healthy-period replay bursts. 111/111 runtime + 36/36 DOM hazard tests green. NOT built: fleet
+*memory* admission (fix 3 — user deferred). Full evidence + checklist →
+**[`2026-07-11-compressor-thrash-subscription-replay-storm.md`](./2026-07-11-compressor-thrash-subscription-replay-storm.md)**.
 
 ### Read-admission wedge — nested heavy-read slots deadlock the warmup drain (Completed)
 

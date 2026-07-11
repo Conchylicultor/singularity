@@ -1,6 +1,7 @@
 import { freemem, loadavg, totalmem } from "node:os";
 import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
 import type { HostSample } from "../../shared/schema";
+import { parseVmStat, type VmStat } from "./vm-stat";
 
 // Host-level sampler. Runs only on the main backend (the host is a shared
 // resource — one sampler suffices). Appends to the singularity worktree's
@@ -11,23 +12,12 @@ const INTERVAL_SEC = SAMPLE_INTERVAL_MS / 1000;
 
 let interval: ReturnType<typeof setInterval> | null = null;
 let channel: LogChannel | null = null;
-let prev: { swapins: number; swapouts: number } | null = null;
-
-interface VmStat {
-  pageSize: number;
-  map: Record<string, number>;
-}
-
-function parseVmStat(text: string): VmStat {
-  const pageSizeMatch = text.match(/page size of (\d+) bytes/);
-  const pageSize = pageSizeMatch ? Number(pageSizeMatch[1]) : 16384;
-  const map: Record<string, number> = {};
-  for (const line of text.split("\n")) {
-    const m = line.match(/^([A-Za-z][\w .()/-]+?):\s+(\d+)\.?\s*$/);
-    if (m) map[m[1]!.trim()] = Number(m[2]);
-  }
-  return { pageSize, map };
-}
+let prev: {
+  swapins: number;
+  swapouts: number;
+  compressions: number;
+  decompressions: number;
+} | null = null;
 
 // macOS-only swap/compressor detail. Returns null elsewhere (host is the user's
 // Mac); the sample then reports 0 for the swap fields.
@@ -43,15 +33,21 @@ async function tick(): Promise<void> {
   const vm = await readVmStat();
   let swapIn = 0;
   let swapOut = 0;
+  let compressionsPerSec = 0;
+  let decompressionsPerSec = 0;
   let compressorMb = 0;
   if (vm) {
     const swapins = vm.map["Swapins"] ?? 0;
     const swapouts = vm.map["Swapouts"] ?? 0;
+    const compressions = vm.map["Compressions"] ?? 0;
+    const decompressions = vm.map["Decompressions"] ?? 0;
     if (prev) {
       swapIn = Math.max(0, (swapins - prev.swapins) / INTERVAL_SEC);
       swapOut = Math.max(0, (swapouts - prev.swapouts) / INTERVAL_SEC);
+      compressionsPerSec = Math.max(0, (compressions - prev.compressions) / INTERVAL_SEC);
+      decompressionsPerSec = Math.max(0, (decompressions - prev.decompressions) / INTERVAL_SEC);
     }
-    prev = { swapins, swapouts };
+    prev = { swapins, swapouts, compressions, decompressions };
     compressorMb = ((vm.map["Pages occupied by compressor"] ?? 0) * vm.pageSize) / 1_048_576;
   }
   const total = totalmem();
@@ -67,6 +63,8 @@ async function tick(): Promise<void> {
     loadAvg15: la[2] ?? 0,
     swapInPagesPerSec: swapIn,
     swapOutPagesPerSec: swapOut,
+    compressionsPerSec,
+    decompressionsPerSec,
     compressorMb,
   };
   channel?.publish(JSON.stringify(sample));

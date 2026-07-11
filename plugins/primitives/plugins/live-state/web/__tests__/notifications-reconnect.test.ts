@@ -9,14 +9,20 @@
  * `research/2026-07-03-global-live-state-client-transport-harness.md`:
  *   - H1: frames lost during the reopen gap (a push to a closed socket is
  *     silently dropped) are recovered by the reconnect resubscribe converging to
- *     server truth;
- *   - H1b: `replaySubs` staggers — 6 resends in batch 0, the rest at +150ms;
- *   - H2: a server restart resets the version counters, and post-restart sub-acks
- *     at a LOWER version apply because each sub is reset to the -1 baseline AT ITS
- *     SEND TIME — with the pin that a not-yet-resent stagger-batch sub keeps its
- *     live baseline (a stale frame for it is still version-dropped);
+ *     server truth — the replay is ONE `sub-batch` frame;
+ *   - H1b: the batch echoes each sub's pre-reset version plus the channel's
+ *     known server epoch, and resets every baseline at send time (the old
+ *     per-sub stagger is gone — same-boot replays short-circuit server-side,
+ *     post-restart replays are bounded by the server's read gate);
+ *   - H2: a server restart resets the version counters — the replay echoes the
+ *     OLD epoch, the server answers full sub-acks at LOWER versions, and they
+ *     APPLY because the baselines were reset at batch-build time; the client
+ *     then re-learns the new epoch for its next replay;
+ *   - same-boot reconnect: an `up-to-date-batch` adopts versions while keeping
+ *     every cached value — zero re-parses, zero cache writes;
  *   - H7: a lost intermediate level-state frame still converges on the next full
- *     frame, and `probeMissedUpdates` surfaces a silently-missed gap end-to-end.
+ *     frame, and `probeMissedUpdates` surfaces a silently-missed gap end-to-end
+ *     over the batch replay path.
  *
  * Conventions: `clientLog` mocked to a no-op; fake timers per test; Math.random
  * pinned to 0.5 so the reconnect backoff delay is exactly the base (500ms); every
@@ -37,6 +43,14 @@ const pushSchema = z.object({ status: z.string() });
 const flush = async (): Promise<void> => {
   await vi.advanceTimersByTimeAsync(0);
 };
+
+interface BatchEntry {
+  id?: number;
+  key: string;
+  params: Record<string, string>;
+  etag?: string;
+  version?: number;
+}
 
 describe("NotificationsClient — reconnect + resync", () => {
   const clients: NotificationsClient[] = [];
@@ -63,6 +77,10 @@ describe("NotificationsClient — reconnect + resync", () => {
     hub.server.all().find((s) => s.readyState === 0)!;
   const subFrames = (socket: FakeWebSocket, key?: string): Record<string, unknown>[] =>
     socket.sentJson().filter((m) => m.op === "sub" && (key === undefined || m.key === key));
+  const batchFrames = (socket: FakeWebSocket): Array<Record<string, unknown> & { entries: BatchEntry[] }> =>
+    socket.sentJson().filter((m) => m.op === "sub-batch") as Array<
+      Record<string, unknown> & { entries: BatchEntry[] }
+    >;
 
   beforeEach(() => {
     vi.useFakeTimers();
@@ -75,7 +93,7 @@ describe("NotificationsClient — reconnect + resync", () => {
     vi.useRealTimers();
   });
 
-  test("H1: frames lost during the reopen gap are recovered by the resubscribe convergence", async () => {
+  test("H1: frames lost during the reopen gap are recovered by one sub-batch replay converging", async () => {
     const { client, hub, socket, qc } = await setup();
     client.observe("k", {}, undefined, pushSchema);
     socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v1" }, version: 1 });
@@ -87,48 +105,61 @@ describe("NotificationsClient — reconnect + resync", () => {
     socket.serverSend({ kind: "update", key: "k", params: {}, value: { status: "v2-lost" }, version: 2 });
     expect(qc.getQueryData(["k"])).toEqual({ status: "v1" }); // never delivered
 
-    // Backoff reconnect (exactly 500ms), then a fresh socket + staggered replay.
+    // Backoff reconnect (exactly 500ms), then a fresh socket. The replay is ONE
+    // sub-batch frame sent synchronously on open.
     await vi.advanceTimersByTimeAsync(500);
     const socket2 = nextSocket(hub);
     socket2.open();
-    await vi.advanceTimersByTimeAsync(0); // stagger batch 0 → resub
-    expect(subFrames(socket2, "k")).toHaveLength(1); // exactly one resub per active sub
+    const batches = batchFrames(socket2);
+    expect(batches).toHaveLength(1);
+    expect(batches[0]!.entries.map((e) => e.key)).toEqual(["k"]);
 
     // The resync sub-ack at v3 converges the cache to server truth.
     socket2.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v3" }, version: 3 });
     expect(qc.getQueryData(["k"])).toEqual({ status: "v3" });
   });
 
-  test("H1b: replaySubs staggers resends — 6 in batch 0, the remaining 2 at +150ms", async () => {
+  test("H1b: the replay is a single complete sub-batch with per-sub version echoes + the known epoch, baselines reset at send", async () => {
     const { client, hub, socket } = await setup();
     const keys = Array.from({ length: 8 }, (_, i) => `k${i}`);
     for (const k of keys) client.observe(k, {}, undefined, pushSchema);
-    expect(subFrames(socket)).toHaveLength(8);
+    expect(subFrames(socket)).toHaveLength(8); // fresh observes are single subs
 
-    // Drop → reconnect → fresh socket whose open triggers the staggered replay.
+    // Ack each sub at its own version, carrying the boot epoch the client learns.
+    keys.forEach((k, i) => {
+      socket.serverSend({ kind: "sub-ack", key: k, params: {}, value: { status: k }, version: i + 1, epoch: "boot-1" });
+    });
+
+    // Drop → reconnect → fresh socket; the open triggers ONE synchronous batch.
     socket.serverClose();
     await vi.advanceTimersByTimeAsync(500);
     const socket2 = nextSocket(hub);
     socket2.open();
 
-    // Batch 0 (setTimeout(…, 0)) fires the first BASE_BATCH_SIZE=6 resends.
-    await vi.advanceTimersByTimeAsync(0);
-    expect(subFrames(socket2)).toHaveLength(6);
-
-    // Batch 1 (BATCH_DELAY_MS=150 later) fires the remaining 2.
-    await vi.advanceTimersByTimeAsync(150);
-    expect(subFrames(socket2)).toHaveLength(8);
+    const batches = batchFrames(socket2);
+    expect(batches).toHaveLength(1); // the whole set in one frame — no stagger
+    const batch = batches[0]!;
+    expect(batch.tabId).toBeTypeOf("string");
+    expect(batch.epoch).toBe("boot-1"); // the channel's learned server epoch
+    expect(batch.complete).toBe(true);
+    expect(batch.entries).toHaveLength(8);
+    keys.forEach((k, i) => {
+      const entry = batch.entries.find((e) => e.key === k)!;
+      expect(entry.version).toBe(i + 1); // pre-reset version echoed per sub
+    });
+    // Baselines were reset AT SEND: every sub sits at the -1 baseline now.
+    for (const sub of client.debugSnapshot().subs) expect(sub.version).toBe(-1);
+    expect(subFrames(socket2)).toHaveLength(0); // no per-sub resends
   });
 
-  test("H2: a server restart resets version counters — subs converge, and a not-yet-resent sub keeps its live baseline", async () => {
+  test("H2: a server restart resets version counters — the batch echoes the OLD epoch, lower-version sub-acks APPLY, and the new epoch is re-learned", async () => {
     const { client, hub, socket, qc } = await setup();
-    const keys = Array.from({ length: 7 }, (_, i) => `k${i}`); // k0..k5 batch 0, k6 batch 1
+    const keys = ["k0", "k1", "k2"];
     for (const k of keys) client.observe(k, {}, undefined, pushSchema);
     for (const k of keys) {
-      socket.serverSend({ kind: "sub-ack", key: k, params: {}, value: { status: `${k}-old` }, version: 5 });
+      socket.serverSend({ kind: "sub-ack", key: k, params: {}, value: { status: `${k}-old` }, version: 5, epoch: "boot-1" });
     }
     expect(qc.getQueryData(["k0"])).toEqual({ status: "k0-old" });
-    expect(qc.getQueryData(["k6"])).toEqual({ status: "k6-old" });
 
     // Backend restart drops the socket; reconnect + open triggers the replay.
     hub.server.restart();
@@ -136,22 +167,62 @@ describe("NotificationsClient — reconnect + resync", () => {
     const socket2 = nextSocket(hub);
     socket2.open();
 
-    // Batch 0 (k0..k5) resent at t≈0; each reset to the -1 baseline at its send
-    // time, so a post-restart sub-ack at the LOWER version 1 still applies.
-    await vi.advanceTimersByTimeAsync(0);
-    socket2.serverSend({ kind: "sub-ack", key: "k0", params: {}, value: { status: "k0-new" }, version: 1 });
+    // The batch can only echo the OLD epoch (the client hasn't heard from the
+    // new boot yet) — so the server takes the full path for every entry.
+    const batch = batchFrames(socket2)[0]!;
+    expect(batch.epoch).toBe("boot-1");
+    for (const e of batch.entries) expect(e.version).toBe(5);
+
+    // Post-restart sub-acks at the LOWER version 1 still apply: the batch build
+    // reset every baseline to -1.
+    for (const k of keys) {
+      socket2.serverSend({ kind: "sub-ack", key: k, params: {}, value: { status: `${k}-new` }, version: 1, epoch: "boot-2" });
+    }
     expect(qc.getQueryData(["k0"])).toEqual({ status: "k0-new" });
+    expect(qc.getQueryData(["k2"])).toEqual({ status: "k2-new" });
 
-    // The pin: k6 is in batch 1 (not yet resent), so its baseline is still the
-    // live v5 — a stale v4 frame for it is version-dropped, NOT applied against a
-    // prematurely-reset -1.
-    socket2.serverSend({ kind: "update", key: "k6", params: {}, value: { status: "k6-stale" }, version: 4 });
-    expect(qc.getQueryData(["k6"])).toEqual({ status: "k6-old" }); // dropped against the live baseline
+    // The client re-learned the new boot's epoch: the NEXT replay echoes it.
+    socket2.serverClose();
+    await vi.advanceTimersByTimeAsync(500);
+    const socket3 = nextSocket(hub);
+    socket3.open();
+    expect(batchFrames(socket3)[0]!.epoch).toBe("boot-2");
+  });
 
-    // Batch 1 fires (+150) → k6 reset + resent; its post-restart sub-ack converges.
-    await vi.advanceTimersByTimeAsync(150);
-    socket2.serverSend({ kind: "sub-ack", key: "k6", params: {}, value: { status: "k6-new" }, version: 1 });
-    expect(qc.getQueryData(["k6"])).toEqual({ status: "k6-new" });
+  test("same-boot reconnect: an up-to-date-batch adopts versions and keeps every cached value", async () => {
+    const { client, hub, socket, qc } = await setup();
+    for (const k of ["a", "b"]) {
+      client.observe(k, {}, undefined, pushSchema);
+      socket.serverSend({ kind: "sub-ack", key: k, params: {}, value: { status: `${k}-v1` }, version: 1, epoch: "boot-1" });
+    }
+    const cachedA = qc.getQueryData(["a"]);
+
+    // Drop + reconnect within the SAME server boot: the batch echoes (epoch,
+    // version) and the server answers everything in one up-to-date-batch.
+    socket.serverClose();
+    await vi.advanceTimersByTimeAsync(500);
+    const socket2 = nextSocket(hub);
+    socket2.open();
+    const batch = batchFrames(socket2)[0]!;
+    expect(batch.epoch).toBe("boot-1");
+
+    socket2.serverSend({
+      kind: "up-to-date-batch",
+      epoch: "boot-1",
+      entries: [
+        { key: "a", params: {}, version: 1 },
+        { key: "b", params: {}, version: 1 },
+      ],
+    });
+
+    // Caches untouched — the exact same object reference survives.
+    expect(qc.getQueryData(["a"])).toBe(cachedA);
+    expect(qc.getQueryData(["b"])).toEqual({ status: "b-v1" });
+    // Versions adopted: a stale replay of v1 is dropped, a genuine v2 applies.
+    socket2.serverSend({ kind: "update", key: "a", params: {}, value: { status: "a-stale" }, version: 1 });
+    expect(qc.getQueryData(["a"])).toBe(cachedA); // v1 ≤ adopted 1 → dropped
+    socket2.serverSend({ kind: "update", key: "a", params: {}, value: { status: "a-v2" }, version: 2 });
+    expect(qc.getQueryData(["a"])).toEqual({ status: "a-v2" });
   });
 
   test("H7: a lost intermediate level-state frame still converges on the next full frame", async () => {
@@ -166,18 +237,21 @@ describe("NotificationsClient — reconnect + resync", () => {
     expect(qc.getQueryData(["k"])).toEqual({ status: "gone" });
   });
 
-  test("H7: probeMissedUpdates surfaces a silently-missed gap end-to-end", async () => {
+  test("H7: probeMissedUpdates surfaces a silently-missed gap end-to-end over the batch replay", async () => {
     const { client, socket, qc } = await setup();
     client.observe("k", {}, undefined, pushSchema);
     socket.serverSend({ kind: "sub-ack", key: "k", params: {}, value: { status: "v1" }, version: 1 });
     socket.serverSend({ kind: "update", key: "k", params: {}, value: { status: "v3" }, version: 3 });
     expect(qc.getQueryData(["k"])).toEqual({ status: "v3" });
 
-    // Start the probe: it forces a NON-staggered resync synchronously (the resub
-    // is on the wire before the returned promise even settles), then awaits a
-    // fixed settle window for the sub-acks.
+    // Start the probe: it forces a resync via the SAME synchronous batch replay
+    // (the frame is on the wire before the returned promise even settles), then
+    // awaits a fixed settle window for the acks.
     const probe = client.probeMissedUpdates(200);
-    expect(subFrames(socket, "k")).toHaveLength(2); // initial observe + forced resync
+    const batches = batchFrames(socket);
+    expect(batches).toHaveLength(1);
+    expect(batches[0]!.entries.map((e) => e.key)).toEqual(["k"]);
+    expect(batches[0]!.entries[0]!.version).toBe(3); // echoes the pre-reset baseline
 
     // The resync sub-ack reveals a higher server version — the missed frames —
     // landing BEFORE the settle window elapses.

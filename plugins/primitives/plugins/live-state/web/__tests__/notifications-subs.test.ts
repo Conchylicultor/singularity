@@ -12,9 +12,15 @@
  *   - H4b: the deferred-teardown timer fires only after the FULL window;
  *   - the no-sub gate: a broadcast frame for a never-observed key is dropped
  *     (no throw, no cache write) — the all-tabs fan-out safety;
- *   - delta-no-base → forced resub (etag cleared, cache untouched);
- *   - delta-drift → forced resub (order names an unresolvable id);
- *   - the WS version guard (`<=` drop, `>` apply).
+ *   - delta-no-base → forced resub (etag cleared, cache untouched), and the
+ *     BUG-A fix: the recovery resub carries NO version echo and its sub-ack
+ *     APPLIES even at the version the broken delta already advanced us to
+ *     (baselines reset in forceFullResub — without it the `<=` guard dropped
+ *     the recovery ack and the cache never healed);
+ *   - delta-drift → same forced-resub + recovery-applies contract;
+ *   - the WS version guard (`<=` drop, `>` apply);
+ *   - every sub/unsub frame carries this tab's id, and `pagehide` emits a
+ *     best-effort `unsub-tab` per channel (the per-tab server bookkeeping).
  *
  * Conventions: `clientLog` is mocked to a no-op (otherwise `trace()` schedules
  * real fetch flushes and registers a permanent bus listener at module eval);
@@ -124,7 +130,7 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     expect(client.debugSnapshot().subs).toHaveLength(0);
   });
 
-  test("delta-no-base → forced resub: cache untouched, etag cleared, a fresh full sub sent", async () => {
+  test("delta-no-base → forced resub: cache untouched, etag cleared, a version-less full sub sent, recovery ack at the SAME version applies (BUG A)", async () => {
     const { client, socket, qc } = await setup();
     client.observe("rk", {}, undefined, keyedSchema, keyOf);
     // Stamp an etag on the sub with NO cached base (a sub whose value never
@@ -148,9 +154,16 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     const after = subFrames(socket, "rk");
     expect(after).toHaveLength(before + 1); // forced full resub
     expect(after.at(-1)!.etag).toBeUndefined(); // the resub carries no stale etag
+    expect(after.at(-1)!.version).toBeUndefined(); // and NO version echo (BUG A)
+
+    // BUG A's fix: the broken delta already advanced the sub's version to 1, so
+    // pre-fix the recovery sub-ack at that SAME version was `<=`-dropped and the
+    // cache never healed. forceFullResub reset the baseline — it applies now.
+    socket.serverSend({ kind: "sub-ack", key: "rk", params: {}, value: [{ id: "a", n: 1 }], version: 1 });
+    expect(qc.getQueryData(["rk"])).toEqual([{ id: "a", n: 1 }]); // healed
   });
 
-  test("delta-drift → forced resub: an order id resolvable from neither upserts nor base ⇒ cache unchanged, etag cleared, resub", async () => {
+  test("delta-drift → forced resub: an order id resolvable from neither upserts nor base ⇒ cache unchanged, etag cleared, resub, recovery applies (BUG A)", async () => {
     const { client, socket, qc } = await setup();
     client.observe("rk", {}, undefined, keyedSchema, keyOf);
     // Seed a base + etag via a full sub-ack.
@@ -179,7 +192,49 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
 
     expect(qc.getQueryData(["rk"])).toEqual([{ id: "a", n: 1 }]); // untouched, no holes punched
     expect(client.etagFor("rk", {})).toBeUndefined(); // cleared → recovery reloads a full base
-    expect(subFrames(socket, "rk")).toHaveLength(before + 1); // forced resub
+    const after = subFrames(socket, "rk");
+    expect(after).toHaveLength(before + 1); // forced resub
+    expect(after.at(-1)!.version).toBeUndefined(); // recovery never echoes state (BUG A)
+
+    // The drift delta advanced the sub's version to 2 before drift was detected;
+    // the recovery sub-ack at that SAME version must APPLY (baseline was reset).
+    socket.serverSend({
+      kind: "sub-ack",
+      key: "rk",
+      params: {},
+      value: [{ id: "a", n: 1 }, { id: "b", n: 2 }, { id: "c", n: 3 }],
+      version: 2,
+    });
+    expect(qc.getQueryData(["rk"])).toEqual([
+      { id: "a", n: 1 },
+      { id: "b", n: 2 },
+      { id: "c", n: 3 },
+    ]); // healed to server truth
+  });
+
+  test("every sub/unsub frame carries this tab's id; pagehide emits unsub-tab per channel", async () => {
+    const hub = createTransportHub();
+    const qc = new QueryClient();
+    const tab = hub.tab();
+    const client = new NotificationsClient(qc, { makeSocket: hub.makeSocket(tab), tabId: "tab-X" });
+    clients.push(client);
+    await flush();
+    const socket = hub.server.all()[0]!;
+    socket.open();
+
+    client.observe("k", {}, undefined, pushSchema);
+    expect(subFrames(socket, "k")[0]!.tabId).toBe("tab-X");
+
+    // The keep-alive teardown unsub is tagged too.
+    client.unobserve("k", {});
+    await vi.advanceTimersByTimeAsync(SUB_KEEPALIVE_MS + 1);
+    expect(unsubFrames(socket)[0]!.tabId).toBe("tab-X");
+
+    // pagehide → best-effort unsub-tab on every open channel.
+    window.dispatchEvent(new Event("pagehide"));
+    const departures = socket.sentJson().filter((m) => m.op === "unsub-tab");
+    expect(departures).toHaveLength(1); // one open (worktree) channel
+    expect(departures[0]!.tabId).toBe("tab-X");
   });
 
   test("version guard: a frame with version ≤ the applied version is dropped; a strictly-greater one applies", async () => {
