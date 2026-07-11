@@ -2509,7 +2509,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
-        - Uses: `infra/paths.SINGULARITY_DIR`, `packages/host-semaphore.createHostSemaphore`, `packages/spawn-priority.backgroundArgv`
+        - Uses: `infra/host-admission.defineHostPool`, `infra/paths.SINGULARITY_DIR`, `packages/spawn-priority.backgroundArgv`
         - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `countActiveConnections`, `databaseExists`, `dropDatabase`, `ensureDatabase`, `forkDatabase`, `forkTempPrefix`, `getAdminPool`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
       - Cross-plugin:
         - Imported by: `backup/sources/databases`, `database/change-feed`, `database/db-test-fixture`, `database/fork`, `database/query`, `database/zero/cache-service`, `debug/profiling/push`, `debug/slow-ops/cluster`, `debug/timeline`, `debug/worktree-cleanup`, `infra/jobs`, `infra/launcher`
@@ -2760,7 +2760,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `getBootProfiling`
         - **`boot-bench`** — Cold-boot & live-state loader benchmark harness: a POST endpoint that runs the boot burst in-process and a benchmark_boot MCP tool that aggregates it.
           - Server:
-            - Uses: `database.db`, `database/live-state-snapshot.clearPersistedSnapshots`, `infra/boot-snapshot.assembleBootSnapshot`, `infra/boot-snapshot.bootCriticalKeys`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadSlotCount`, `infra/mcp.Mcp`, `packages/host-semaphore.createHostSemaphore`, `tasks/tasks-core.getConversation`
+            - Uses: `database.db`, `database/live-state-snapshot.clearPersistedSnapshots`, `infra/boot-snapshot.assembleBootSnapshot`, `infra/boot-snapshot.bootCriticalKeys`, `infra/endpoints.implement`, `infra/host-admission.defineHostPool`, `infra/host-read-pool.heavyReadSlotCount`, `infra/mcp.Mcp`, `tasks/tasks-core.getConversation`
             - Register: `mcpTool('benchmark_boot')`
             - Routes: `POST /api/debug/boot-bench/run`
         - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
@@ -3615,7 +3615,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DependsOnEntry`, `ExternalResource`, `HttpHandler`, `LiveStateSnapshotHooks`, `LoadedServerPlugin`, `LoaderAggregateView`, `MemoryCheckpoint`, `PhaseId`, `ProfilerHooks`, `RecomputeIntent`, `Registration`, `ResourceContract`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ResourcePushObserver`, `RuntimeProfileView`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `ServerResourceOptions`, `Span`, `WsData`, `WsHandler`; Values: `applyDbChange`, `collectContributions`, `defineExternalResource`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `loadResourceByKey`, `markServerReady`, `measureSubscribeCycle`, `notificationsWsHandler`, `notifyStatsFor`, `onResourcePush`, `physFootprintBytes`, `profilerStart`, `recomputeResource`, `recordMemoryCheckpoint`, `reportServerError`, `Resource`, `scopedResourceIdentities`, `serverCollectedDir`, `setErrorReporter`, `setFeedExemptTables`, `setLiveStateSnapshotHooks`, `setProfilerHooks`, `setRelationResolver`, `triggerResourcePush`, `withNotifyBatch`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
-        - Exports: Types: `Check`, `CheckResult`
+        - Exports: Types: `Check`, `CheckContext`, `CheckResult`
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
@@ -3642,6 +3642,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`data-views-in-sync`**
             - **`eager-tier-in-sync`**
             - **`fields-eager-in-sync`**
+            - **`host-budget`**
+            - **`host-pools-declared`**
             - **`inherited-theme-defaults-scoped`**
             - **`keyed-resource-scope`**
             - **`migration-hashes-unique`**
@@ -3932,9 +3934,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Endpoint callers: `launcher`
       - Shared:
         - Exports: Types: `HealthResponse`; Values: `getHealth`, `HealthResponseSchema`
+    - **`host-admission`** — Host-admission registry: one place a host-wide concurrency pool comes into existence, wrapping createHostSemaphore with a summed CPU/RAM ceiling and true host occupancy.
+      - Server:
+        - Uses: `infra/paths.SINGULARITY_DIR`, `packages/host-semaphore.AcquireHooks`, `packages/host-semaphore.createHostSemaphore`, `packages/host-semaphore.HostShare`
+        - Exports: Types: `HostPool`, `HostPoolSpec`, `PoolOccupancy`; Values: `cpuPool`, `defineHostPool`, `hostOccupancy`, `inheritedGrant`, `PUSH_SLOT_PATH`, `pushPool`, `withHostGrant`
+      - Cross-plugin:
+        - Imported by: `database/admin`, `debug/profiling/boot-bench`, `infra/host-read-pool`, `infra/worktree`
+      - Core:
+        - Exports: Types: `CpuBudget`, `Grant`, `Lane`, `PoolCost`, `ReservedPoolSpec`; Values: `cpuBudget`, `HOST_GRANT_ENV`, `HOST_LANE_ENV`, `hostCpuCeiling`, `hostRamCeiling`, `PER_UNIT_BYTES`, `rawCpuResidual`, `RESERVED_POOLS`, `reservedCpuCost`
     - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
       - Server:
-        - Uses: `packages/host-semaphore.createHostSemaphore`
+        - Uses: `infra/host-admission.defineHostPool`
         - Exports: Values: `heavyReadQueueDepth`, `heavyReadSlotCount`, `withHeavyReadSlot`
       - Cross-plugin:
         - Imported by: `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `debug/health-monitor`, `debug/profiling/boot-bench`, `infra/corpus-index`, `infra/warmup`, `plugin-meta/plugin-tree`, `review/plugin-changes`
@@ -3975,7 +3985,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `ndjsonResponse`
     - **`paths`**
       - Cross-plugin:
-        - Imported by: `apps-core/surface/floating/wallpaper`, `apps/prototypes/files`, `backup`, `backup/sources/attachments`, `backup/sources/claude-settings`, `backup/sources/config`, `backup/sources/project-memory`, `backup/sources/secrets`, `backup/sources/singularity-platform`, `backup/targets/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `build/server-build-id`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/staging`, `conversations`, `conversations/conversation-progress`, `conversations/hibernation`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `database`, `database/admin`, `database/zero/cache-service`, `debug/boot-events`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/sentinel`, `debug/session-divergence`, `debug/timeline`, `debug/trace/engine`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/corpus-index`, `infra/duress`, `infra/git-watcher`, `infra/launcher`, `infra/warmup`, `infra/worktree`, `packages/host-semaphore`, `plugin-meta/plugin-health`, `plugin-meta/plugin-tree`, `primitives/commit-list`, `primitives/log-channels`, `primitives/terminal`, `release`, `reports`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`
+        - Imported by: `apps-core/surface/floating/wallpaper`, `apps/prototypes/files`, `backup`, `backup/sources/attachments`, `backup/sources/claude-settings`, `backup/sources/config`, `backup/sources/project-memory`, `backup/sources/secrets`, `backup/sources/singularity-platform`, `backup/targets/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `build/server-build-id`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/staging`, `conversations`, `conversations/conversation-progress`, `conversations/hibernation`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `database`, `database/admin`, `database/zero/cache-service`, `debug/boot-events`, `debug/health-monitor`, `debug/heap-snapshot`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/sentinel`, `debug/session-divergence`, `debug/timeline`, `debug/trace/engine`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/corpus-index`, `infra/duress`, `infra/git-watcher`, `infra/host-admission`, `infra/launcher`, `infra/warmup`, `infra/worktree`, `packages/host-semaphore`, `plugin-meta/plugin-health`, `plugin-meta/plugin-tree`, `primitives/commit-list`, `primitives/log-channels`, `primitives/terminal`, `release`, `reports`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`
       - Server:
         - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `BUILD_ARTIFACTS_RETENTION`, `CLAUDE`, `CLAUDE_DIR`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `COST_USAGE_DIR`, `currentWorktreeName`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `pruneWorktreeBuildArtifacts`, `pruneWorktreeReleaseArtifacts`, `PS`, `RELEASE_ARTIFACTS_RETENTION`, `REPO_CONFIG_DIR`, `REPO_ROOT`, `REPORTS_DIR`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`, `WEB_CORE_RELATIVE`, `WEB_DIST_DIR`, `worktreeArtifacts`, `worktreeDataDir`, `WORKTREES_DIR`
       - Core:
@@ -4024,7 +4034,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/pages/content-search`, `apps/sonata/sources/midi/folders`, `infra/corpus-index`, `reports`, `stats/cost`, `tasks`
     - **`worktree`**
       - Server:
-        - Uses: `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeDataDir`, `infra/paths.WORKTREES_DIR`, `packages/host-semaphore.createHostSemaphore`, `packages/spawn-priority.backgroundArgv`
+        - Uses: `infra/host-admission.defineHostPool`, `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.worktreeDataDir`, `infra/paths.WORKTREES_DIR`, `packages/spawn-priority.backgroundArgv`
         - Exports: Types: `DerivePushDeps`, `PushHolder`, `WorktreeOp`, `WorktreeOpInfo`, `WorktreeOpPhase`, `WorktreeSpec`, `ZeroCacheSpec`; Values: `clearPushHolder`, `clearWorktreeOp`, `derivePushPhases`, `ensureMainWorktreeRoot`, `isCanonicalWorktreePath`, `isWorktreeOpActive`, `listActiveWorktreeOps`, `markWorktreeOpStart`, `PUSH_LOCK_PATH`, `pushLockHeld`, `readPushHolder`, `removeWorktree`, `removeWorktreeSpec`, `resolveActiveWorktreeOps`, `setupWorktree`, `setWorktreeOpPhase`, `withWorktreeMutateSlot`, `worktreePathFor`, `worktreesDir`, `writePushHolder`, `writeWorktreeSpec`
       - Cross-plugin:
         - Imported by: `code-explorer`, `config_v2/staging`, `conversations`, `conversations/conversation-view/op-status`, `conversations/runtime-tmux`, `debug/broadcasts`, `debug/memory`, `debug/profiling/push`, `debug/worktree-cleanup`, `infra/git-watcher`, `infra/launcher`, `plugin-meta/plugin-health`, `stats/commits`, `stats/cost`, `tasks`, `tasks/tasks-core`
@@ -4076,7 +4086,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/paths.SINGULARITY_DIR`
         - Exports: Types: `AcquireHooks`, `HostSemaphore`, `HostShare`; Values: `createHostSemaphore`
       - Cross-plugin:
-        - Imported by: `database/admin`, `debug/profiling/boot-bench`, `infra/host-read-pool`, `infra/worktree`
+        - Imported by: `infra/host-admission`
     - **`inflight`**
       - Cross-plugin:
         - Imported by: `framework/resource-runtime`, `infra/endpoints`
