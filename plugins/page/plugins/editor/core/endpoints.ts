@@ -145,7 +145,9 @@ export const turnIntoPage = defineEndpoint({
 export const applyBlockOpEndpoint = defineEndpoint({
   route: "POST /api/pages/:pageId/blocks/op",
   body: BlockOpSchema,
-  response: z.object({ blocks: z.array(BlockSchema) }),
+  // `watermark` is the commit's ack token (`currentTxId` read inside the write
+  // transaction) — the optimistic overlay uses it for causal confirmation.
+  response: z.object({ blocks: z.array(BlockSchema), watermark: z.string() }),
 });
 
 // Generic minimal-change patch: upsert the given full rows (insert-or-update by
@@ -156,7 +158,7 @@ export const applyBlockOpEndpoint = defineEndpoint({
 export const patchBlocks = defineEndpoint({
   route: "POST /api/pages/:pageId/blocks/patch",
   body: BlockPatchSchema,
-  response: z.object({ blocks: z.array(BlockSchema) }),
+  response: z.object({ blocks: z.array(BlockSchema), watermark: z.string() }),
 });
 
 export const bulkDeleteBlocks = defineEndpoint({

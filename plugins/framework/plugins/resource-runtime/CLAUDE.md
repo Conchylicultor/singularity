@@ -137,6 +137,24 @@ The two `delta` kinds look alike and are NOT interchangeable for a future etag:
   server truth. An etag there would be a permanent partial-stale pin — it must
   **NEVER** carry one. This change excludes it by construction.
 
+The **commit watermark** follows the twin rule
+(`research/2026-07-11-global-never-revert-optimistic-edits.md`): a snapshot
+watermark — `opts.captureWatermark`, bound in `server-core/core/resources.ts`
+(central has no hook, so it degrades to watermark-less) — rides only frames that
+**fully reconcile** the client to server truth as of the capture: `sub-ack`,
+`update`, FULL keyed/membership deltas, and the HTTP body. A **scoped delta
+never carries one** — it re-reads only affected rows, so stamping it would hand
+the client a causal floor for a value it does not actually hold: the deny-side
+version of the etag stale pin (the optimistic-mutation primitive would wrongly
+drop a pending op as superseded). Two deliberate asymmetries with the etag:
+the watermark is captured **before** the loader read (a pre-read xmin is a valid
+Rule-B floor: `xmin > commitXid` ⇒ the read saw that commit; a post-read capture
+would over-claim), and it is captured inside the single-flight by the
+**starter** — joiners adopt the starter's value+watermark pair, so
+watermark-newer-than-value is structurally excluded. A throwing capture reports
+via `reportLoaderError` and the frame ships watermark-less (never blocked).
+`runtime-watermark.test.ts` pins all of this.
+
 ## Read path: version short-circuit (bootEpoch), gate-after-dedup, per-tab subs
 
 Three structural changes born from the 2026-07-11 replay-storm forensics

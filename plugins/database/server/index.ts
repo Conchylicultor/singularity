@@ -5,6 +5,7 @@ import { rebuildDerivedViews } from "@plugins/database/plugins/derived-views/ser
 import { rebuildDerivedTables } from "@plugins/database/plugins/derived-tables/server";
 
 export { db, awaitDbReady, isTransientDbError } from "./internal/client";
+export { currentTxId, type DbExecutor } from "./internal/current-tx-id";
 
 export default {
   description:

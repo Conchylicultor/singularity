@@ -3,3 +3,4 @@ export type { ResourceDescriptor, ResourceOrigin } from "./resource";
 export { tolerantEnum } from "./tolerant-enum";
 export { resolvableSchema, resolved, unresolved } from "./resolvable";
 export type { Resolvable } from "./resolvable";
+export { compareTxWatermark } from "./watermark";

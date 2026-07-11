@@ -5,7 +5,7 @@ import { OptimisticDivergenceKindView } from "./components/optimistic-divergence
 
 export default {
   description:
-    "Optimistic-divergence collector: drains the optimistic-mutation primitive's report sink (a predicted op the server never confirmed) into a deduped report, plus the Debug → Reports summary view.",
+    "Optimistic-divergence collector: drains the optimistic-mutation primitive's report sink (a server-acked op superseded by newer truth, or stalled unconfirmed) into a deduped report, plus the Debug → Reports summary view.",
   contributions: [
     Core.Root({ component: OptimisticDivergenceCollector }),
     Reports.KindView({

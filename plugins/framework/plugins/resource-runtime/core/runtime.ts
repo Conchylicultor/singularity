@@ -747,12 +747,19 @@ export interface ResourceRuntimeOptions {
    */
   shouldPersist?: (key: string) => boolean;
   /**
-   * Capture the durable monotonic position (the xmin watermark) the persisted
-   * value will be stamped with. Called BEFORE the loader's first read, so any
-   * write not visible to the loader's snapshot has xid >= this watermark and is
-   * therefore replayed by catch-up (under-replay impossible; over-replay
-   * harmless). server: `SELECT pg_snapshot_xmin(pg_current_snapshot())::text`
-   * through the pool. Only invoked when `shouldPersist(key)` is true.
+   * Capture the durable monotonic position (the xmin watermark). Called BEFORE
+   * the loader's first read, so any write not visible to the loader's snapshot
+   * has xid >= this watermark. server:
+   * `SELECT pg_snapshot_xmin(pg_current_snapshot())::text` through the pool.
+   * Two callers, same floor semantics:
+   *  - the L2 persist path (when `shouldPersist(key)` is true) — the persisted
+   *    value's catch-up floor (under-replay impossible; over-replay harmless);
+   *  - every FULL read/recompute flight (`getResourceValue`) — the commit
+   *    watermark stamped on the frames that fully reconcile a client (sub-ack /
+   *    update / FULL keyed delta / HTTP body, Rule B′), which the optimistic
+   *    client compares against mutation ack tokens (Rule A/B). See
+   *    research/2026-07-11-global-never-revert-optimistic-edits.md.
+   * Absent (central) ⇒ frames ship tokenless and nothing is persisted.
    */
   captureWatermark?: () => Promise<string>;
   /**
@@ -1181,14 +1188,33 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   //
   // A flight started by a caller with no seed (push path, `loadResourceByKey`)
   // resolves `etag: undefined`, and every joiner adopts that too — see `handleSub`.
+  //
+  // THE WATERMARK IS CO-PRODUCED BY THE SAME FLIGHT (Rule B′ — the causal twin of
+  // the etag co-production above). The STARTER captures the commit watermark
+  // (`opts.captureWatermark`, xid8 xmin) BEFORE `timedLoad`, so it is a valid
+  // floor for the value the flight produces: any commit invisible to the loader's
+  // snapshot has xid >= it (Rule B). Joiners adopt the starter's whole
+  // `{value, etag, watermark}` — a watermark newer than the value it rides with
+  // is structurally excluded, exactly like the etag seed adoption. No hook
+  // (central runtime) or a throwing hook ⇒ `undefined`: the frame ships
+  // tokenless and the optimistic client degrades to content-only confirmation —
+  // never a wrong causal denial. A SCOPED load (ctx) is a partial re-read of
+  // only the affected rows, so it NEVER carries a watermark: stamping one would
+  // let a client treat a partial value as full server truth at that floor.
   async function getResourceValue(
     entry: RegistryEntry,
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
     seedEtag?: string,
     gated = false,
-  ): Promise<{ value: unknown; etag: string | undefined }> {
-    if (ctx) return { value: await timedLoad(entry, params, ctx), etag: undefined };
+  ): Promise<{ value: unknown; etag: string | undefined; watermark: string | undefined }> {
+    if (ctx) {
+      return {
+        value: await timedLoad(entry, params, ctx),
+        etag: undefined,
+        watermark: undefined,
+      };
+    }
     // Gate-after-dedup: when `gated` (the read path), the read-admission slot is
     // acquired INSIDE the single-flight factory, so only the STARTER of a flight
     // ever occupies a slot — N replayed subs of one (key, params) consume 1 slot,
@@ -1202,15 +1228,29 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // inflight runs the starter's factory synchronously in its call frame).
     // Push-path callers (`gated` false) start UNGATED flights exactly as before;
     // a gated read joining one rides the coalesce wait with no slot either way.
+    // The flight factory: watermark capture FIRST (Rule B — the floor is valid
+    // only if captured before the loader's first read), then the loader. Runs
+    // only in the STARTER's frame; joiners coalesce onto the resolved object.
+    const load = async (): Promise<{
+      value: unknown;
+      etag: string | undefined;
+      watermark: string | undefined;
+    }> => {
+      let watermark: string | undefined;
+      if (opts.captureWatermark) {
+        try {
+          watermark = await opts.captureWatermark();
+        } catch (err) {
+          // Tokenless degrade — the value still ships; the client just cannot
+          // causally deny against this frame. Loud via the report hook.
+          reportLoaderError(`watermark capture failed for ${entry.key}`, err);
+        }
+      }
+      return { value: await timedLoad(entry, params), etag: seedEtag, watermark };
+    };
     return inflight.run(
       `${entry.key} ${paramsKey(params)}`,
-      gated
-        ? () =>
-            readLoadGate.run(
-              async () => ({ value: await timedLoad(entry, params), etag: seedEtag }),
-              chargeReadGateWait,
-            )
-        : async () => ({ value: await timedLoad(entry, params), etag: seedEtag }),
+      gated ? () => readLoadGate.run(load, chargeReadGateWait) : load,
       opts.onCoalesceWait,
     );
   }
@@ -1236,7 +1276,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     entry: RegistryEntry,
     params: ResourceParams,
     seedEtag?: string,
-  ): Promise<{ value: unknown; etag: string | undefined }> {
+  ): Promise<{ value: unknown; etag: string | undefined; watermark: string | undefined }> {
     const run = () => getResourceValue(entry, params, undefined, seedEtag, true);
     return opts.wrapOrigin ? opts.wrapOrigin("sub", entry.key, run) : run();
   }
@@ -1317,12 +1357,17 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   // its own notify → flushAgain → another drainEntry that ships a fresh value +
   // etag, so a momentarily skewed frame is always superseded (self-healing). The
   // read path has no such self-heal and must keep its etag-BEFORE-value ordering.
+  // `watermark` is the flight-co-produced commit watermark for THIS value (Rule
+  // B′ — a full value-carrying frame may carry one; see `getResourceValue`).
+  // Passed by value, so the no-`revalidate` path keeps its no-await-before-send
+  // property (H5a) untouched.
   function sendUpdate(
     entry: RegistryEntry,
     params: ResourceParams,
     value: unknown,
     version: number,
     subs: SocketState[],
+    watermark?: string,
   ): void | Promise<void> {
     const broadcast = (etag?: string): void => {
       const msg = {
@@ -1332,6 +1377,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         value,
         version,
         ...(etag !== undefined ? { etag } : {}),
+        ...(watermark !== undefined ? { watermark } : {}),
       };
       for (const s of subs) sendJson(s.ws, msg);
     };
@@ -1978,6 +2024,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     const needValue = persisted || subs.length > 0 || hasValueAwareDownstream;
 
     let value: unknown;
+    // The flight-co-produced commit watermark for the FULL value below (Rule B′
+    // — this path's frames fully reconcile the client). Distinct from the L2
+    // persist watermark: that one must floor the persisted row, this one rides
+    // the wire with the value it describes.
+    let flightWatermark: string | undefined;
     let valueComputed = false;
     if (needValue) {
       let watermark: string | undefined;
@@ -1990,7 +2041,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         }
       }
       try {
-        ({ value } = await (opts.wrapOrigin
+        ({ value, watermark: flightWatermark } = await (opts.wrapOrigin
           ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, undefined))
           : getResourceValue(entry, params, undefined)));
         valueComputed = true;
@@ -2012,9 +2063,11 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       const hadSnapshot = entry.snapshots?.has(pk) ?? false;
       const { upserts, deletes, order } = diffKeyed(entry, pk, value); // seeds/replaces snapshot
       if (!hadSnapshot) {
-        await sendUpdate(entry, params, value, version, subs);
+        await sendUpdate(entry, params, value, version, subs, flightWatermark);
         opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
       } else {
+        // A FULL-recompute keyed delta fully reconciles the client, so it may
+        // carry the flight watermark (Rule B′). Scoped deltas never do.
         const msg = {
           kind: "delta" as const,
           key: entry.key,
@@ -2023,6 +2076,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           deletes,
           order,
           version,
+          ...(flightWatermark !== undefined ? { watermark: flightWatermark } : {}),
         };
         for (const s of subs) sendJson(s.ws, msg);
         opts.onPush?.(entry.key, {
@@ -2251,6 +2305,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       // L2: a persisted entry never passes a scoped ctx — it recomputes FULL.
       const ctx = scoped ? { affectedIds: [...affected!] } : undefined;
       let value: unknown;
+      // Flight-co-produced commit watermark for a FULL value (Rule B′). A scoped
+      // flight (ctx) always resolves it undefined, so the scoped delta below is
+      // structurally tokenless.
+      let flightWatermark: string | undefined;
       let valueComputed = false;
       if (needValue) {
         // L2: capture the durable position BEFORE the loader's first read, so any
@@ -2273,7 +2331,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
           // Origin = the push/cascade flush: re-establishes an entry context
           // (this runs in a bare microtask with no ambient context) so the
           // loader span attributes to this `push` instead of `parent: null`.
-          ({ value } = await (opts.wrapOrigin
+          ({ value, watermark: flightWatermark } = await (opts.wrapOrigin
             ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, ctx))
             : getResourceValue(entry, params, ctx)));
           valueComputed = true;
@@ -2316,7 +2374,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             // unsafe for diffKeyed — reload the FULL value and diff that.
             let full: unknown;
             try {
-              ({ value: full } = await (opts.wrapOrigin
+              ({ value: full, watermark: flightWatermark } = await (opts.wrapOrigin
                 ? opts.wrapOrigin("push", entry.key, () => getResourceValue(entry, params, undefined))
                 : getResourceValue(entry, params, undefined)));
             } catch (err) {
@@ -2326,7 +2384,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             // hadSnapshot was false ⇒ ship a full update base. diffKeyed here
             // serves only to (re)seed the snapshot from the full value.
             diffKeyed(entry, pk, full);
-            await sendUpdate(entry, params, full, version, subs);
+            await sendUpdate(entry, params, full, version, subs, flightWatermark);
             opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
           } else if (scoped) {
             // Scoped path: merge the partial recompute into the snapshot and
@@ -2356,9 +2414,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             if (!hadSnapshot) {
               // First notify for this pk: ship a full update so brand-new
               // subscribers get a complete base to merge subsequent deltas onto.
-              await sendUpdate(entry, params, value, version, subs);
+              await sendUpdate(entry, params, value, version, subs, flightWatermark);
               opts.onPush?.(entry.key, { subscribers: subs.length, changed: true });
             } else {
+              // A FULL-recompute keyed delta fully reconciles the client, so it
+              // may carry the flight watermark (Rule B′). The scoped delta
+              // branch above never does (partial re-read).
               const msg = {
                 kind: "delta" as const,
                 key: entry.key,
@@ -2367,6 +2428,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
                 deletes,
                 order,
                 version,
+                ...(flightWatermark !== undefined ? { watermark: flightWatermark } : {}),
               };
               for (const s of subs) sendJson(s.ws, msg);
               opts.onPush?.(entry.key, {
@@ -2376,7 +2438,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
             }
           }
         } else {
-          await sendUpdate(entry, params, value, version, subs);
+          await sendUpdate(entry, params, value, version, subs, flightWatermark);
         }
       }
 
@@ -2673,11 +2735,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
 
     let value: unknown;
     let etag: string | undefined;
+    let watermark: string | undefined;
     try {
       // Origin = the subscription: establishes an entry context so the loader
       // span (and any gate waits it charges) is attributed to this `sub` request
       // instead of running with `parent: null`. Gated by the read-admission cap.
-      ({ value, etag } = await gatedRead(entry, params, freshEtag));
+      ({ value, etag, watermark } = await gatedRead(entry, params, freshEtag));
     } catch (err) {
       reportLoaderError(`loader failed for ${key}`, err);
       sendJson(state.ws, { kind: "sub-error", id, key, reason: "loader-failed" });
@@ -2709,6 +2772,10 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // Absent for non-opted-in resources → the frame is byte-identical to before.
     // `epoch` (this boot's identity) rides every sub-ack so the client can echo
     // its version on the next replay and be short-circuited (see `handleSub`).
+    // `watermark` is the flight-co-produced commit watermark (Rule B′): like the
+    // etag, we stamp the FLIGHT's, never our own probe's — a joiner adopts the
+    // starter's floor, so the watermark can never be newer than the value.
+    // `up-to-date` frames deliberately carry none (they ship no value).
     sendJson(state.ws, {
       kind: "sub-ack",
       id,
@@ -2717,6 +2784,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       value,
       version,
       ...(etag !== undefined ? { etag } : {}),
+      ...(watermark !== undefined ? { watermark } : {}),
       epoch: bootEpoch,
     });
   }
@@ -2975,13 +3043,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
 
     let value: unknown;
     let etag: string | undefined;
+    let watermark: string | undefined;
     try {
       // Same-flight co-production, exactly as `handleSub` (read its comment for the
       // full argument): `freshEtag` SEEDS the flight; the flight hands back the etag
       // it was actually seeded with, which is the caller's own only if this call
       // started it. A joiner adopts the starter's older seed, or `undefined` when a
       // push-path caller started the flight.
-      ({ value, etag } = await gatedRead(entry, resourceParams, freshEtag));
+      ({ value, etag, watermark } = await gatedRead(entry, resourceParams, freshEtag));
     } catch (err) {
       reportLoaderError(`loader failed for ${key}`, err);
       return new Response("Loader failed", { status: 500 });
@@ -2995,7 +3064,12 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     // flight) → OMIT the header; the client then sends no If-None-Match next time
     // and gets a full body.
     if (etag !== undefined) headers["ETag"] = etag;
-    return new Response(JSON.stringify({ value, version }), { headers });
+    // The body is a full value, so it may carry the flight's commit watermark
+    // (Rule B′) — same adoption discipline as the etag above.
+    return new Response(
+      JSON.stringify({ value, version, ...(watermark !== undefined ? { watermark } : {}) }),
+      { headers },
+    );
   }
 
   function handleResourcesDebug(): Response {

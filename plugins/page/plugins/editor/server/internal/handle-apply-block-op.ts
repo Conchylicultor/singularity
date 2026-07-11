@@ -1,5 +1,5 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import { db, currentTxId } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { applyBlockOpEndpoint } from "../../core/endpoints";
 import { applyBlockOp, opBlockIds } from "../../core/block-ops";
@@ -65,7 +65,7 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
     }
   }
 
-  await db.transaction(async (tx) => {
+  const watermark = await db.transaction(async (tx) => {
     if (inserted.length > 0) {
       const now = new Date();
       await tx.insert(_blocks).values(
@@ -118,6 +118,9 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
     if (body.kind === "move") {
       await recomputePageIdSubtree(body.blockId, tx);
     }
+
+    // Ack token: the commit's xid8, read inside the write transaction (Rule A).
+    return currentTxId(tx);
   });
 
   // --- Notify (shared with the patch handler) --------------------------------
@@ -158,5 +161,5 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
     .from(_blocks)
     .where(eq(_blocks.pageId, params.pageId))
     .orderBy(asc(_blocks.rank), asc(_blocks.createdAt));
-  return { blocks: finalRows.map((r) => BlockSchema.parse(r)) };
+  return { blocks: finalRows.map((r) => BlockSchema.parse(r)), watermark };
 });

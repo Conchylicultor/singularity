@@ -37,6 +37,7 @@ import { QueryClient } from "@tanstack/react-query";
 import { z } from "zod";
 import { createTransportHub, type FakeWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { NotificationsClient } from "../notifications-client";
+import { getResourceWatermark } from "../watermark-registry";
 
 // SUB_KEEPALIVE_MS is not exported; keep the literal in sync with
 // notifications-client.ts (the deferred-teardown gc window).
@@ -254,5 +255,98 @@ describe("NotificationsClient — subs lifecycle + frame gates", () => {
     // Strictly greater → applied.
     socket.serverSend({ kind: "update", key: "k", params: {}, value: { status: "fresh" }, version: 6 });
     expect(qc.getQueryData(["k"])).toEqual({ status: "fresh" });
+  });
+
+  // Commit-watermark adoption (Rule B′ client half). The registry is
+  // MODULE-LEVEL (shared across tests in this process — that is the point: the
+  // optimistic hook reads it without a NotificationsProvider), so each test
+  // below uses its own resource key.
+  describe("watermark registry adoption", () => {
+    test("watermark-carrying frames populate the registry before the cache write; adoption is monotonic (BigInt, not string order)", async () => {
+      const { socket, qc, client } = await setup();
+      client.observe("wm-a", {}, undefined, pushSchema);
+
+      // sub-ack carries the floor.
+      socket.serverSend({ kind: "sub-ack", key: "wm-a", params: {}, value: { status: "s0" }, version: 1, watermark: "100" });
+      expect(qc.getQueryData(["wm-a"])).toEqual({ status: "s0" });
+      expect(getResourceWatermark("wm-a", {})).toBe("100");
+
+      // A newer-version frame carrying an OLDER watermark (a joiner-adopted
+      // flight) applies its value but never regresses the floor.
+      socket.serverSend({ kind: "update", key: "wm-a", params: {}, value: { status: "s1" }, version: 2, watermark: "99" });
+      expect(qc.getQueryData(["wm-a"])).toEqual({ status: "s1" });
+      expect(getResourceWatermark("wm-a", {})).toBe("100");
+
+      // Numeric (BigInt) adoption: "1000" > "999" even though "1000" < "999"
+      // as strings.
+      socket.serverSend({ kind: "update", key: "wm-a", params: {}, value: { status: "s2" }, version: 3, watermark: "999" });
+      socket.serverSend({ kind: "update", key: "wm-a", params: {}, value: { status: "s3" }, version: 4, watermark: "1000" });
+      expect(getResourceWatermark("wm-a", {})).toBe("1000");
+    });
+
+    test("a watermark-less scoped delta applies but leaves the stored floor untouched; a FULL delta's watermark adopts", async () => {
+      const { socket, qc, client } = await setup();
+      client.observe("wm-k", {}, undefined, keyedSchema, keyOf);
+      socket.serverSend({ kind: "sub-ack", key: "wm-k", params: {}, value: [{ id: "a", n: 1 }], version: 1, watermark: "200" });
+      expect(getResourceWatermark("wm-k", {})).toBe("200");
+
+      // Scoped delta (no order, no watermark — a partial re-read): value merges,
+      // floor untouched.
+      socket.serverSend({ kind: "delta", key: "wm-k", params: {}, upserts: [["a", { id: "a", n: 2 }]], deletes: [], version: 2 });
+      expect(qc.getQueryData(["wm-k"])).toEqual([{ id: "a", n: 2 }]);
+      expect(getResourceWatermark("wm-k", {})).toBe("200");
+
+      // FULL keyed delta (order asserted, watermark carried): floor adopts.
+      socket.serverSend({
+        kind: "delta",
+        key: "wm-k",
+        params: {},
+        upserts: [["b", { id: "b", n: 1 }]],
+        deletes: [],
+        order: ["a", "b"],
+        version: 3,
+        watermark: "201",
+      });
+      expect(qc.getQueryData(["wm-k"])).toEqual([{ id: "a", n: 2 }, { id: "b", n: 1 }]);
+      expect(getResourceWatermark("wm-k", {})).toBe("201");
+    });
+
+    test("a version-guard-dropped frame does NOT adopt its watermark", async () => {
+      const { socket, qc, client } = await setup();
+      client.observe("wm-d", {}, undefined, pushSchema);
+      socket.serverSend({ kind: "sub-ack", key: "wm-d", params: {}, value: { status: "s0" }, version: 5, watermark: "300" });
+      expect(getResourceWatermark("wm-d", {})).toBe("300");
+
+      // Equal version → `<=`-dropped: neither the cache nor the floor moves,
+      // even though the frame claims a newer watermark.
+      socket.serverSend({ kind: "update", key: "wm-d", params: {}, value: { status: "stale" }, version: 5, watermark: "999" });
+      expect(qc.getQueryData(["wm-d"])).toEqual({ status: "s0" });
+      expect(getResourceWatermark("wm-d", {})).toBe("300");
+    });
+
+    test("a delta that cannot apply (no base → forced resub) does NOT adopt its watermark", async () => {
+      const { socket, qc, client } = await setup();
+      client.observe("wm-nb", {}, undefined, keyedSchema, keyOf);
+
+      // FULL delta with a watermark but no cached base: the client resubs and
+      // must NOT advance the floor — the cache never received this truth. The
+      // recovery sub-ack carries its own watermark with its own full value.
+      socket.serverSend({
+        kind: "delta",
+        key: "wm-nb",
+        params: {},
+        upserts: [["a", { id: "a", n: 1 }]],
+        deletes: [],
+        order: ["a"],
+        version: 1,
+        watermark: "400",
+      });
+      expect(qc.getQueryData(["wm-nb"])).toBeUndefined();
+      expect(getResourceWatermark("wm-nb", {})).toBeUndefined();
+
+      socket.serverSend({ kind: "sub-ack", key: "wm-nb", params: {}, value: [{ id: "a", n: 1 }], version: 1, watermark: "401" });
+      expect(qc.getQueryData(["wm-nb"])).toEqual([{ id: "a", n: 1 }]);
+      expect(getResourceWatermark("wm-nb", {})).toBe("401");
+    });
   });
 });

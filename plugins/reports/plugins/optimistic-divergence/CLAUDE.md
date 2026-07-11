@@ -1,59 +1,70 @@
 # optimistic-divergence
 
-The report kind for **an optimistic prediction the server never confirmed**.
+The report kind for **a server-acked optimistic op that diverged from the server's
+snapshots**.
 
 `useOptimisticResource` (`primitives/optimistic-mutation`) predicts a mutation's effect
 locally, POSTs it, and drops the prediction once an authoritative live-state push visibly
-reflects it. When the server durably commits something *different*, no push ever confirms the
-op. After `DIVERGENCE_MISS_LIMIT` consecutive non-confirming pushes the primitive drops the op
-— the UI converges on server truth, nothing is stuck or lost — and emits a neutral
-`OptimisticDivergenceReport` into its module-level `optimisticDivergenceReportSink`.
+reflects it — under the **never-revert** policy
+(`research/2026-07-11-global-never-revert-optimistic-edits.md`): an op leaves the overlay only
+for a causal reason. Divergence therefore comes in two kinds, discriminated by `kind` in the
+payload:
+
+- **`superseded`** — the op carried a commit ack token, and a snapshot whose watermark was
+  *causally past that commit* (strict xid8 comparison, Rule B) still lacked its effect: a newer
+  server write overwrote it. The primitive DROPPED the op — the UI renders newer server truth,
+  which is the healthy outcome; the report exists for observability (a *recurring* one means a
+  surface is systematically losing concurrent-write races).
+- **`stalled`** — `DIVERGENCE_REPORT_MISSES` consecutive authoritative pushes failed to confirm
+  a server-acked op, and no causal proof of supersession exists. The op is **KEPT rendered**
+  (never evicted, still confirmable by any later snapshot) and this one-shot report (latched
+  per op) is the investigation signal: either the consumer's `apply`/`isConfirmedBy` pair is
+  wrong, or the resource's pushes are lagging (stale snapshots computed before the commit —
+  which self-heals).
 
 This plugin **drains that sink**. The dependency deliberately runs one way: a primitive may
 never import `reports`, so `OptimisticDivergenceCollector` (mounted via `Core.Root`) registers
 the handler that maps the sink's body onto `report({ kind: "optimistic-divergence", … })`.
 This is the same inversion `reports/crash` uses for `error-boundary`'s `boundaryReportSink`.
-
-## What a report means
-
-Either the consumer's `apply` / `isConfirmedBy` pair is wrong — `apply` predicts a state
-`isConfirmedBy` can never recognize in server data — or the write genuinely lost a
-concurrent-write conflict. The first is a correctness bug in that consumer; `renderTask` walks
-an agent through checking `isConfirmedBy` against what the endpoint actually persists.
+`renderTask` writes per-kind copy: superseded walks an agent through finding the competing
+writer; stalled walks it through checking `isConfirmedBy` against what the endpoint actually
+persists (and suggests returning the commit watermark for an exact causal verdict).
 
 ## Fingerprint
 
-`sha256(resourceKey | label | opSummaries)`, first 16 hex chars.
+`sha256(kind | resourceKey | label | opSummaries)`, first 16 hex chars.
 
-`misses` is **excluded**: it is the miss count at the instant one particular op gave up, so it
-varies between otherwise-identical repeats of the same bug (a cascade drop can end a run early,
-a quiet resource runs to the limit). Including it would split one broken `apply`/`isConfirmedBy`
-pair across several `_reports` rows. `params` is excluded for the same reason at a different
-scale: the same buggy pair diverges on every page or conversation it is used with, and those
-are one bug, not N.
+`kind` is **included**: a healthy superseded drop and a stalled correctness signal on the same
+surface are different findings and must not dedupe onto one row. `misses` is **excluded**: it
+is the miss count at the instant one particular op reported, so it varies between
+otherwise-identical repeats of the same bug. Including it would split one broken
+`apply`/`isConfirmedBy` pair across several `_reports` rows. `params` is excluded for the same
+reason at a different scale: the same buggy pair diverges on every page or conversation it is
+used with, and those are one bug, not N.
 
 `opSummaries` comes from the consumer's optional `describeOp(vars)` — never raw `vars`, which
 are unbounded and possibly unserializable. A consumer that omits `describeOp` emits an empty
-array, so all of its divergences on one resource+label collapse onto a single row: pass
+array, so all of its divergences on one kind+resource+label collapse onto a single row: pass
 `describeOp` if you want the ops distinguished.
 
 ## Re-arm
 
 `notifCooldownMs: 6h`, like `render-loop`. A still-present divergence re-fires on every edit of
-the affected surface: it is a recurring warning, not a one-shot crash, so the bell resurfaces
-it periodically rather than collapsing forever onto the first sighting.
+the affected surface (each op latches its own stalled report, but new ops on a broken surface
+keep filing onto the same fingerprint): it is a recurring warning, not a one-shot crash, so the
+bell resurfaces it periodically rather than collapsing forever onto the first sighting.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
 ## Plugin reference
 
-- Description: Optimistic-divergence collector: drains the optimistic-mutation primitive's report sink (a predicted op the server never confirmed) into a deduped report, plus the Debug → Reports summary view. Optimistic-divergence report kind: validates divergence payloads, fingerprints by resource + label + ops (excluding the volatile miss count), and renders per-divergence correctness tasks. Re-arms periodically (6h) since a still-present divergence is a recurring warning, not a one-shot crash.
+- Description: Optimistic-divergence collector: drains the optimistic-mutation primitive's report sink (a server-acked op superseded by newer truth, or stalled unconfirmed) into a deduped report, plus the Debug → Reports summary view. Optimistic-divergence report kind: validates divergence payloads (kind: superseded = dropped for newer server truth, stalled = kept rendered past the miss threshold), fingerprints by kind + resource + label + ops (excluding the volatile miss count), and renders per-kind tasks. Re-arms periodically (6h) since a still-present divergence is a recurring warning, not a one-shot crash.
 - Web:
   - Contributes: `Core.Root` → `OptimisticDivergenceCollector`, `Reports.KindView` → `OptimisticDivergenceKindView`
   - Uses: `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/optimistic-mutation.optimisticDivergenceReportSink`, `reports.report`, `reports.Reports`
 - Server:
   - Uses: `reports.ReportKind`
 - Core:
-  - Exports: Types: `OptimisticDivergencePayload`; Values: `optimisticDivergenceFingerprint`, `OptimisticDivergencePayloadSchema`
+  - Exports: Types: `OptimisticDivergencePayload`; Values: `optimisticDivergenceFingerprint`, `OptimisticDivergencePayloadSchema`, `StoredOptimisticDivergencePayloadSchema`
 
 <!-- AUTOGENERATED:END -->

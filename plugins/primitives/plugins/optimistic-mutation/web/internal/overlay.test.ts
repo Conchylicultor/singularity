@@ -1,24 +1,27 @@
 /**
  * Tests for the pure overlay/replay logic of the optimistic-mutation primitive.
- * Run with `bun test plugins/primitives/plugins/optimistic-mutation/`.
+ * Run with `bun test plugins/primitives/plugins/optimistic-mutation/web/internal`.
  *
  * The hook (`use-optimistic-resource.ts`) is a thin React shell over these
- * functions; the WHOLE op lifecycle (dispatch → resolve → confirm → diverge)
- * lives here, so testing them directly exercises the load-bearing invariants
- * (ordered replay, base rebase, error drop, both confirmation edges, the
- * same-target cascade, miss counting, divergence, throwing-apply drop) without
- * a render.
+ * functions; the WHOLE op lifecycle (dispatch → resolve/fail → confirm →
+ * deny/stall) lives here, so testing them directly exercises the load-bearing
+ * invariants (ordered replay, base rebase, both confirmation edges, the
+ * same-target cascade, causal denial under the watermark rules, the
+ * stalled-report-only miss latch, failed-op immunity, throwing-apply drop)
+ * without a render.
  */
 
 import { test, expect, describe } from "bun:test";
 import {
+  clearFailure,
   confirmPass,
-  DIVERGENCE_MISS_LIMIT,
+  DIVERGENCE_REPORT_MISSES,
+  markFailed,
   markResolved,
   OpNoLongerApplies,
-  removeOp,
   replay,
   resolvePass,
+  type OpFailure,
   type PendingOp,
 } from "./overlay";
 
@@ -34,7 +37,13 @@ function op(
   opId: string,
   vars: Vars,
   resolved = false,
-  extra: { dispatchGen?: number; misses?: number } = {},
+  extra: {
+    dispatchGen?: number;
+    misses?: number;
+    ackWatermark?: string;
+    failure?: OpFailure;
+    divergenceReported?: boolean;
+  } = {},
 ): PendingOp<Vars> {
   return {
     opId,
@@ -42,6 +51,9 @@ function op(
     resolved,
     dispatchGen: extra.dispatchGen ?? 0,
     misses: extra.misses ?? 0,
+    divergenceReported: extra.divergenceReported ?? false,
+    ...(extra.ackWatermark !== undefined ? { ackWatermark: extra.ackWatermark } : {}),
+    ...(extra.failure !== undefined ? { failure: extra.failure } : {}),
   };
 }
 
@@ -122,49 +134,116 @@ describe("replay", () => {
   });
 });
 
-describe("error rollback (removeOp)", () => {
-  test("(3) a rejected op is removed without disturbing other in-flight ops", () => {
+describe("failure (markFailed / clearFailure) — never a rollback", () => {
+  test("a rejected op STAYS in the overlay and keeps replaying (never-revert)", () => {
     const base = [1];
     const pending = [
       op("a", { kind: "push", n: 2 }),
       op("b", { kind: "push", n: 99 }), // this one will reject
       op("c", { kind: "push", n: 3 }),
     ];
-    // Before rollback the failing op is still optimistically applied.
-    expect(replay(base, pending, applyNums)).toEqual([1, 2, 99, 3]);
+    const afterReject = markFailed(pending, "b", { kind: "http", status: 422 });
+    expect(ids(afterReject)).toEqual(["a", "b", "c"]);
+    expect(afterReject[1]!.failure).toEqual({ kind: "http", status: 422 });
+    // The failed op's prediction is still rendered — failure is a sync-status
+    // state (cloud icon), not an undo.
+    expect(replay(base, afterReject, applyNums)).toEqual([1, 2, 99, 3]);
+  });
 
-    // Reject path removes only op "b"; "a" and "c" survive in order.
-    const afterReject = removeOp(pending, "b");
-    expect(ids(afterReject)).toEqual(["a", "c"]);
-    expect(replay(base, afterReject, applyNums)).toEqual([1, 2, 3]);
+  test("clearFailure removes only the failure, keeping the op in place", () => {
+    const pending = markFailed(
+      [op("a", { kind: "push", n: 2 }), op("b", { kind: "push", n: 3 })],
+      "a",
+      { kind: "network" },
+    );
+    const cleared = clearFailure(pending, "a");
+    expect(ids(cleared)).toEqual(["a", "b"]);
+    expect(cleared[0]!.failure).toBeUndefined();
+    expect(cleared[0]!.resolved).toBe(false); // still awaiting its (re-fired) mutate
+  });
+
+  test("markFailed / clearFailure are no-ops for an absent opId", () => {
+    const pending = [op("a", { kind: "push", n: 2 })];
+    expect(markFailed(pending, "missing", { kind: "network" })).toEqual(pending);
+    expect(clearFailure(pending, "missing")).toEqual(pending);
+  });
+
+  test("failed ops are immune to confirm / cascade / denial / miss counting", () => {
+    // A failed op is UNRESOLVED (its mutate rejected), so no snapshot may touch
+    // it: not confirmable (even when the snapshot happens to match its content),
+    // never cascade-dropped, never causally denied (even with a token the
+    // snapshot is past), never miss-counted. It keeps replaying — that IS the
+    // never-revert policy.
+    const failedOp = op("failed", { kind: "push", n: 9 }, false, {
+      failure: { kind: "network" },
+      ackWatermark: "100", // stale token from a PRIOR attempt — must not enable denial
+    });
+    const confirmedSibling = op("sibling", { kind: "push", n: 9 }, true); // same target, confirmed
+    const next = confirmPass([failedOp, confirmedSibling], [1, 9], "500", content);
+    expect(ids(next.pending)).toEqual(["failed"]);
+    expect(next.pending[0]!.misses).toBe(0);
+    expect(next.dropped).toEqual([]);
+    expect(next.stalled).toEqual([]);
   });
 });
 
 describe("confirmPass (coarse)", () => {
-  test("(4) coarse confirmation clears a resolved op after a push, keeps in-flight ops", () => {
+  test("(4) tokenless coarse clears a resolved op after a push, keeps in-flight ops", () => {
     const pending = [
       op("a", { kind: "push", n: 2 }, true), // resolved ⇒ a push confirms it
       op("b", { kind: "push", n: 3 }, false), // still in flight ⇒ kept
     ];
     const serverData = [1, 2]; // server now reflects op a
-    const next = confirmPass(pending, serverData);
+    const next = confirmPass(pending, serverData, undefined);
     expect(ids(next.pending)).toEqual(["b"]);
-    expect(next.diverged).toEqual([]);
+    expect(next.dropped).toEqual([]);
+    expect(next.stalled).toEqual([]);
   });
 
   test("unresolved ops are never dropped, even on a push", () => {
     const pending = [op("a", { kind: "push", n: 2 }, false)];
-    const next = confirmPass(pending, [1, 2]);
+    const next = confirmPass(pending, [1, 2], undefined);
     expect(ids(next.pending)).toEqual(["a"]);
     // Nothing changed ⇒ the SAME array reference comes back (the shell's bail-out).
     expect(next.pending).toBe(pending);
   });
 
-  test("coarse never accrues misses (every resolved op is confirmed)", () => {
+  test("tokenless coarse never accrues misses (every resolved op is confirmed)", () => {
     const pending = [op("a", { kind: "push", n: 2 }, true)];
-    const next = confirmPass(pending, [1]); // snapshot doesn't even contain 2
+    const next = confirmPass(pending, [1], undefined); // snapshot doesn't even contain 2
     expect(next.pending).toEqual([]);
-    expect(next.diverged).toEqual([]);
+    expect(next.stalled).toEqual([]);
+  });
+
+  test("coarse + token: confirmed only by a snapshot causally PAST the commit", () => {
+    const pending = [op("a", { kind: "push", n: 2 }, true, { ackWatermark: "100" })];
+    // Snapshot watermark at the commit itself (equal) — not past it: kept, one miss.
+    const atCommit = confirmPass(pending, [1, 2], "100", undefined);
+    expect(ids(atCommit.pending)).toEqual(["a"]);
+    expect(atCommit.pending[0]!.misses).toBe(1);
+    // No watermark seen yet — no causal floor: kept.
+    const noFloor = confirmPass(pending, [1, 2], undefined, undefined);
+    expect(ids(noFloor.pending)).toEqual(["a"]);
+    // Strictly past the commit: confirmed (exact causal coarse confirmation).
+    const past = confirmPass(pending, [1, 2], "101", undefined);
+    expect(past.pending).toEqual([]);
+    expect(past.dropped).toEqual([]);
+  });
+
+  test("coarse + token compares causally (BigInt), never lexicographically", () => {
+    // "9" < "10" as xid8 values, though "9" > "10" as strings.
+    const pending = [op("a", { kind: "push", n: 2 }, true, { ackWatermark: "9" })];
+    expect(confirmPass(pending, [1, 2], "10", undefined).pending).toEqual([]);
+  });
+
+  test("coarse mode NEVER denies, even with a token the snapshot is past", () => {
+    // Coarse has no isConfirmedBy to attest "the snapshot lacks my effect", so
+    // a causally-later snapshot can only CONFIRM — dropping into `dropped`
+    // (superseded) is content-mode-only.
+    const pending = [op("a", { kind: "push", n: 2 }, true, { ackWatermark: "100" })];
+    const next = confirmPass(pending, [1], "500", undefined);
+    expect(next.pending).toEqual([]); // confirmed (cmp > 0), not denied
+    expect(next.dropped).toEqual([]);
   });
 });
 
@@ -186,11 +265,11 @@ describe("confirmPass (content-based isConfirmedBy)", () => {
     ];
 
     // Server only reflects 2 so far ⇒ a is confirmed, b is not.
-    expect(ids(confirmPass(pending, [1, 2], pushOnly).pending)).toEqual(["b"]);
+    expect(ids(confirmPass(pending, [1, 2], undefined, pushOnly).pending)).toEqual(["b"]);
     // Server reflects both ⇒ both dropped.
-    expect(confirmPass(pending, [1, 2, 3], pushOnly).pending).toEqual([]);
+    expect(confirmPass(pending, [1, 2, 3], undefined, pushOnly).pending).toEqual([]);
     // Server reflects neither ⇒ both kept (each with one miss).
-    expect(ids(confirmPass(pending, [1], pushOnly).pending)).toEqual(["a", "b"]);
+    expect(ids(confirmPass(pending, [1], undefined, pushOnly).pending)).toEqual(["a", "b"]);
   });
 
   test("cascade (sameTarget): the stuck-inverse pair on ONE entity resolves", () => {
@@ -203,7 +282,7 @@ describe("confirmPass (content-based isConfirmedBy)", () => {
       op("undo", { kind: "remove", n: 9 }, true),
       op("redo", { kind: "push", n: 9 }, true),
     ];
-    expect(confirmPass(pending, [1, 9], content).pending).toEqual([]);
+    expect(confirmPass(pending, [1, 9], undefined, content).pending).toEqual([]);
   });
 
   test("cascade never drops an older resolved op on an UNRELATED target", () => {
@@ -219,9 +298,9 @@ describe("confirmPass (content-based isConfirmedBy)", () => {
       op("a", { kind: "push", n: 2 }, true), // resolved, not yet reflected
       op("b", { kind: "push", n: 3 }, true), // confirmed by this snapshot
     ];
-    expect(ids(confirmPass(pending, [1, 3], pushOnly).pending)).toEqual(["a"]);
+    expect(ids(confirmPass(pending, [1, 3], undefined, pushOnly).pending)).toEqual(["a"]);
     // ...and the eventual push reflecting 2 confirms it normally.
-    expect(confirmPass(pending, [1, 2, 3], pushOnly).pending).toEqual([]);
+    expect(confirmPass(pending, [1, 2, 3], undefined, pushOnly).pending).toEqual([]);
   });
 
   test("cascade never drops UNRESOLVED older ops, even on the same target", () => {
@@ -233,7 +312,7 @@ describe("confirmPass (content-based isConfirmedBy)", () => {
       op("a", { kind: "remove", n: 3 }, false), // still in flight — must survive
       op("b", { kind: "push", n: 3 }, true), // confirmed by the snapshot
     ];
-    expect(ids(confirmPass(pending, [1, 3], pushOnly).pending)).toEqual(["a"]);
+    expect(ids(confirmPass(pending, [1, 3], undefined, pushOnly).pending)).toEqual(["a"]);
   });
 
   test("cascade leaves newer unconfirmed resolved ops alone", () => {
@@ -245,7 +324,84 @@ describe("confirmPass (content-based isConfirmedBy)", () => {
       op("a", { kind: "push", n: 2 }, true), // confirmed
       op("b", { kind: "remove", n: 2 }, true), // same target, newer, not yet reflected — kept
     ];
-    expect(ids(confirmPass(pending, [1, 2], pushOnly).pending)).toEqual(["b"]);
+    expect(ids(confirmPass(pending, [1, 2], undefined, pushOnly).pending)).toEqual(["b"]);
+  });
+});
+
+describe("causal denial (content mode + token — Rule B, strict >)", () => {
+  // "deny" = the snapshot's watermark proves it saw the op's commit (or its
+  // overwrite), yet isConfirmedBy still rejects it ⇒ the effect was overwritten
+  // by newer server truth. The op is removed into `dropped` (superseded) —
+  // rendering newer truth, never a revert.
+
+  test("denied only under strict cmp(snapshotWm, ackWm) > 0", () => {
+    const pending = [op("a", { kind: "push", n: 2 }, true, { ackWatermark: "100" })];
+    const snapshot = [1]; // does NOT reflect the op
+
+    // Snapshot older than the commit: a stale read, carries no evidence — kept.
+    const older = confirmPass(pending, snapshot, "99", content);
+    expect(ids(older.pending)).toEqual(["a"]);
+    expect(older.dropped).toEqual([]);
+
+    // Snapshot AT the commit (equal): not strictly past — kept.
+    const equal = confirmPass(pending, snapshot, "100", content);
+    expect(ids(equal.pending)).toEqual(["a"]);
+    expect(equal.dropped).toEqual([]);
+
+    // Snapshot strictly past the commit: provably superseded — dropped.
+    const past = confirmPass(pending, snapshot, "101", content);
+    expect(past.pending).toEqual([]);
+    expect(ids(past.dropped)).toEqual(["a"]);
+    expect(past.stalled).toEqual([]);
+  });
+
+  test("no snapshot watermark ⇒ no causal floor ⇒ never denied", () => {
+    const pending = [op("a", { kind: "push", n: 2 }, true, { ackWatermark: "100" })];
+    const next = confirmPass(pending, [1], undefined, content);
+    expect(ids(next.pending)).toEqual(["a"]);
+    expect(next.dropped).toEqual([]);
+  });
+
+  test("tokenless ops are NEVER denied — misses only ever trigger the stalled report", () => {
+    const pending = [op("a", { kind: "push", n: 2 }, true)]; // no ackWatermark
+    let cur = pending as ReadonlyArray<PendingOp<Vars>>;
+    // Push far past any commit, many more times than the report threshold: the
+    // op survives every single one (no eviction path exists for it).
+    for (let i = 0; i < DIVERGENCE_REPORT_MISSES * 3; i++) {
+      const next = confirmPass(cur, [1], "999999", content);
+      expect(next.dropped).toEqual([]);
+      expect(ids(next.pending)).toEqual(["a"]);
+      cur = next.pending;
+    }
+    expect(cur[0]!.misses).toBe(DIVERGENCE_REPORT_MISSES * 3);
+  });
+
+  test("a cascade-superseded op is dropped silently, never denied/reported", () => {
+    // "undo" would ALSO be deniable (token, snapshot past it) — but the cascade
+    // claims it first: superseded by its own newer same-target sibling is the
+    // healthy path and must not file a report.
+    const pending = [
+      op("undo", { kind: "remove", n: 9 }, true, { ackWatermark: "100" }),
+      op("redo", { kind: "push", n: 9 }, true),
+    ];
+    const next = confirmPass(pending, [1, 9], "500", content);
+    expect(next.pending).toEqual([]);
+    expect(next.dropped).toEqual([]);
+    expect(next.stalled).toEqual([]);
+  });
+
+  test("unresolved ops are never denied, token or not", () => {
+    const pending = [op("a", { kind: "push", n: 2 }, false, { ackWatermark: "100" })];
+    const next = confirmPass(pending, [1], "500", content);
+    expect(ids(next.pending)).toEqual(["a"]);
+    expect(next.dropped).toEqual([]);
+  });
+
+  test("a confirming snapshot wins over denial (content match is always safe)", () => {
+    const pending = [op("a", { kind: "push", n: 2 }, true, { ackWatermark: "100" })];
+    const next = confirmPass(pending, [1, 2], "500", content);
+    expect(next.pending).toEqual([]);
+    expect(next.dropped).toEqual([]); // confirmed, not denied
   });
 });
 
@@ -255,15 +411,15 @@ describe("resolvePass (the resolve edge)", () => {
     // the HTTP response. Under the old push-only confirmation the op sat
     // resolved-and-unconfirmed forever. Now the resolve edge re-asks the cache.
     const pending = [op("a", { kind: "push", n: 2 })];
-    const next = resolvePass(pending, "a", [1, 2], 1, content);
+    const next = resolvePass(pending, "a", [1, 2], 1, undefined, undefined, content);
     expect(next.pending).toEqual([]);
-    expect(next.diverged).toEqual([]);
+    expect(next.dropped).toEqual([]);
   });
 
   test("content-based: an unreflected snapshot keeps the op resolved, with NO miss", () => {
     // No new snapshot arrived, so a non-confirmation carries no evidence.
     const pending = [op("a", { kind: "push", n: 2 })];
-    const next = resolvePass(pending, "a", [1], 1, content);
+    const next = resolvePass(pending, "a", [1], 1, undefined, undefined, content);
     expect(ids(next.pending)).toEqual(["a"]);
     expect(next.pending[0]!.resolved).toBe(true);
     expect(next.pending[0]!.misses).toBe(0);
@@ -271,11 +427,11 @@ describe("resolvePass (the resolve edge)", () => {
 
   test("content-based: no snapshot at all (serverData undefined) keeps the op", () => {
     const pending = [op("a", { kind: "push", n: 2 })];
-    const next = resolvePass(pending, "a", undefined, 0, content);
+    const next = resolvePass(pending, "a", undefined, 0, undefined, undefined, content);
     expect(ids(next.pending)).toEqual(["a"]);
     expect(next.pending[0]!.resolved).toBe(true);
     expect(next.pending[0]!.misses).toBe(0);
-    expect(next.diverged).toEqual([]);
+    expect(next.dropped).toEqual([]);
   });
 
   test("content-based: an op an EMPTY base would 'confirm' must not confirm on no snapshot", () => {
@@ -288,10 +444,10 @@ describe("resolvePass (the resolve edge)", () => {
     expect(isConfirmedBy([], { kind: "remove", n: 9 })).toBe(true);
 
     const pending = [op("a", { kind: "remove", n: 9 })];
-    const next = resolvePass(pending, "a", undefined, 0, content);
+    const next = resolvePass(pending, "a", undefined, 0, undefined, undefined, content);
     expect(ids(next.pending)).toEqual(["a"]);
     expect(next.pending[0]!.misses).toBe(0);
-    expect(next.diverged).toEqual([]);
+    expect(next.dropped).toEqual([]);
   });
 
   test("content-based: confirming at the resolve edge runs the same-target cascade", () => {
@@ -301,21 +457,62 @@ describe("resolvePass (the resolve edge)", () => {
       op("undo", { kind: "remove", n: 9 }, true),
       op("redo", { kind: "push", n: 9 }),
     ];
-    expect(resolvePass(pending, "redo", [1, 9], 4, content).pending).toEqual([]);
+    expect(resolvePass(pending, "redo", [1, 9], 4, undefined, undefined, content).pending).toEqual([]);
   });
 
-  test("coarse: gen > dispatchGen confirms (a push landed since dispatch)", () => {
-    const pending = [op("a", { kind: "push", n: 2 }, false, { dispatchGen: 7 })];
-    expect(resolvePass(pending, "a", [1, 2], 8).pending).toEqual([]);
+  test("resolvePass NEVER denies, even in content mode with a causally-past snapshot", () => {
+    // A stuck older op with a token the current watermark is past: denial is a
+    // push-edge-only verdict (no NEW snapshot arrived here).
+    const pending = [
+      op("stuck", { kind: "push", n: 2 }, true, { ackWatermark: "100" }),
+      op("b", { kind: "push", n: 3 }),
+    ];
+    const next = resolvePass(pending, "b", [1], 1, "500", undefined, content);
+    expect(ids(next.pending)).toEqual(["stuck", "b"]);
+    expect(next.dropped).toEqual([]);
   });
 
-  test("coarse: gen === dispatchGen keeps the op (no push has landed yet)", () => {
+  test("stamps the endpoint's ackWatermark on the resolving op", () => {
+    const pending = [op("a", { kind: "push", n: 2 })];
+    const next = resolvePass(pending, "a", [1], 1, undefined, "123", content);
+    expect(next.pending[0]!.ackWatermark).toBe("123");
+  });
+
+  test("clears a prior failure — a retried op that succeeds is no longer failed", () => {
+    const pending = markFailed(
+      [op("a", { kind: "push", n: 2 })],
+      "a",
+      { kind: "network" },
+    );
+    const next = resolvePass(pending, "a", [1], 1, undefined, undefined, content);
+    expect(next.pending[0]!.failure).toBeUndefined();
+    expect(next.pending[0]!.resolved).toBe(true);
+  });
+
+  test("coarse + token: confirms iff the cached snapshot is causally past the commit", () => {
     const pending = [op("a", { kind: "push", n: 2 }, false, { dispatchGen: 7 })];
-    const next = resolvePass(pending, "a", [1, 2], 7);
+    // Snapshot watermark past the just-returned ack ⇒ the cached value already
+    // contains this commit — confirmed, regardless of the generation counter.
+    expect(resolvePass(pending, "a", [1, 2], 7, "101", "100").pending).toEqual([]);
+    // Watermark at/older than the ack ⇒ kept (the gen stamp is NOT consulted
+    // once a token exists — the token is strictly more precise).
+    const kept = resolvePass(pending, "a", [1, 2], 8, "100", "100");
+    expect(ids(kept.pending)).toEqual(["a"]);
+    expect(kept.pending[0]!.resolved).toBe(true);
+  });
+
+  test("coarse tokenless: gen > dispatchGen confirms (a push landed since dispatch)", () => {
+    const pending = [op("a", { kind: "push", n: 2 }, false, { dispatchGen: 7 })];
+    expect(resolvePass(pending, "a", [1, 2], 8, undefined, undefined).pending).toEqual([]);
+  });
+
+  test("coarse tokenless: gen === dispatchGen keeps the op (no push has landed yet)", () => {
+    const pending = [op("a", { kind: "push", n: 2 }, false, { dispatchGen: 7 })];
+    const next = resolvePass(pending, "a", [1, 2], 7, undefined, undefined);
     expect(ids(next.pending)).toEqual(["a"]);
     expect(next.pending[0]!.resolved).toBe(true);
     // ...and the next authoritative push confirms it coarsely.
-    expect(confirmPass(next.pending, [1, 2]).pending).toEqual([]);
+    expect(confirmPass(next.pending, [1, 2], undefined).pending).toEqual([]);
   });
 
   test("only the resolving op is marked resolved; siblings are untouched", () => {
@@ -323,7 +520,7 @@ describe("resolvePass (the resolve edge)", () => {
       op("a", { kind: "push", n: 2 }, false, { dispatchGen: 1 }),
       op("b", { kind: "push", n: 3 }, false, { dispatchGen: 1 }),
     ];
-    const next = resolvePass(pending, "b", [1], 1); // coarse, gen === dispatchGen
+    const next = resolvePass(pending, "b", [1], 1, undefined, undefined); // coarse, gen === dispatchGen
     expect(next.pending.map((o) => [o.opId, o.resolved])).toEqual([
       ["a", false],
       ["b", true],
@@ -332,67 +529,91 @@ describe("resolvePass (the resolve edge)", () => {
 
   test("an unknown opId is a no-op and returns the input by identity", () => {
     const pending = [op("a", { kind: "push", n: 2 })];
-    const next = resolvePass(pending, "missing", [1], 5, content);
+    const next = resolvePass(pending, "missing", [1], 5, undefined, undefined, content);
     expect(next.pending).toEqual(pending);
-    expect(next.diverged).toEqual([]);
+    expect(next.dropped).toEqual([]);
   });
 });
 
-describe("divergence detection (miss counting)", () => {
+describe("stalled reporting (miss counting — report-only, never evicts)", () => {
   test("each unconfirming push bumps a resolved op's miss count", () => {
     let pending: ReadonlyArray<PendingOp<Vars>> = [op("a", { kind: "push", n: 2 }, true)];
-    pending = confirmPass(pending, [1], content).pending;
+    pending = confirmPass(pending, [1], undefined, content).pending;
     expect(pending[0]!.misses).toBe(1);
-    pending = confirmPass(pending, [1], content).pending;
+    pending = confirmPass(pending, [1], undefined, content).pending;
     expect(pending[0]!.misses).toBe(2);
   });
 
-  test(`the ${DIVERGENCE_MISS_LIMIT}rd miss drops the op and returns it in diverged`, () => {
+  test(`crossing ${DIVERGENCE_REPORT_MISSES} misses reports the op as stalled and KEEPS it`, () => {
     let pending: ReadonlyArray<PendingOp<Vars>> = [
       op("a", { kind: "push", n: 2 }, true),
       op("b", { kind: "push", n: 3 }, false), // unresolved — never accrues misses
     ];
-    for (let i = 1; i < DIVERGENCE_MISS_LIMIT; i++) {
-      const next = confirmPass(pending, [1], content);
-      expect(next.diverged).toEqual([]);
+    for (let i = 1; i < DIVERGENCE_REPORT_MISSES; i++) {
+      const next = confirmPass(pending, [1], undefined, content);
+      expect(next.stalled).toEqual([]);
       pending = next.pending;
     }
-    const final = confirmPass(pending, [1], content);
-    expect(ids(final.pending)).toEqual(["b"]); // the diverged op left the overlay
-    expect(ids(final.diverged)).toEqual(["a"]);
-    expect(final.diverged[0]!.misses).toBe(DIVERGENCE_MISS_LIMIT);
-    expect(final.pending[0]!.misses).toBe(0); // unresolved op untouched
+    const crossing = confirmPass(pending, [1], undefined, content);
+    // The op is reported once AND stays in the overlay — no eviction, no revert.
+    expect(ids(crossing.pending)).toEqual(["a", "b"]);
+    expect(ids(crossing.stalled)).toEqual(["a"]);
+    expect(crossing.stalled[0]!.misses).toBe(DIVERGENCE_REPORT_MISSES);
+    expect(crossing.pending[0]!.divergenceReported).toBe(true);
+    expect(crossing.pending[1]!.misses).toBe(0); // unresolved op untouched
+
+    // The latch: further unconfirming pushes keep the op, report nothing more.
+    const after = confirmPass(crossing.pending, [1], undefined, content);
+    expect(ids(after.pending)).toEqual(["a", "b"]);
+    expect(after.stalled).toEqual([]);
+    expect(after.pending[0]!.misses).toBe(DIVERGENCE_REPORT_MISSES + 1);
   });
 
-  test("a confirming push resets nothing — the op simply leaves before diverging", () => {
-    let pending: ReadonlyArray<PendingOp<Vars>> = [op("a", { kind: "push", n: 2 }, true)];
-    pending = confirmPass(pending, [1], content).pending;
-    expect(pending[0]!.misses).toBe(1);
-    const next = confirmPass(pending, [1, 2], content);
+  test("a stalled (reported) op is still confirmable by a later matching snapshot", () => {
+    // The whole point of never evicting: under push lag the misses were stale
+    // snapshots; when the real one arrives the op confirms and leaves cleanly.
+    const pending = [
+      op("a", { kind: "push", n: 2 }, true, {
+        misses: DIVERGENCE_REPORT_MISSES + 2,
+        divergenceReported: true,
+      }),
+    ];
+    const next = confirmPass(pending, [1, 2], undefined, content);
     expect(next.pending).toEqual([]);
-    expect(next.diverged).toEqual([]);
+    expect(next.stalled).toEqual([]);
+    expect(next.dropped).toEqual([]);
   });
 
-  test("cascade-dropped ops are NEVER reported as diverged, however many misses", () => {
+  test("a confirming push resets nothing — the op simply leaves before stalling", () => {
+    let pending: ReadonlyArray<PendingOp<Vars>> = [op("a", { kind: "push", n: 2 }, true)];
+    pending = confirmPass(pending, [1], undefined, content).pending;
+    expect(pending[0]!.misses).toBe(1);
+    const next = confirmPass(pending, [1, 2], undefined, content);
+    expect(next.pending).toEqual([]);
+    expect(next.stalled).toEqual([]);
+  });
+
+  test("cascade-dropped ops are NEVER reported, however many misses", () => {
     // "undo" has already missed LIMIT-1 pushes. This push confirms "redo" (same
     // target), so "undo" is cascade-absorbed — expected, not a divergence.
     const pending = [
-      op("undo", { kind: "remove", n: 9 }, true, { misses: DIVERGENCE_MISS_LIMIT - 1 }),
+      op("undo", { kind: "remove", n: 9 }, true, { misses: DIVERGENCE_REPORT_MISSES - 1 }),
       op("redo", { kind: "push", n: 9 }, true),
     ];
-    const next = confirmPass(pending, [1, 9], content);
+    const next = confirmPass(pending, [1, 9], undefined, content);
     expect(next.pending).toEqual([]);
-    expect(next.diverged).toEqual([]);
+    expect(next.stalled).toEqual([]);
+    expect(next.dropped).toEqual([]);
   });
 
-  test("resolvePass never counts a miss, so it can never diverge an op", () => {
+  test("resolvePass never counts a miss, so it can never stall an op", () => {
     const pending = [
-      op("a", { kind: "push", n: 2 }, true, { misses: DIVERGENCE_MISS_LIMIT - 1 }),
+      op("a", { kind: "push", n: 2 }, true, { misses: DIVERGENCE_REPORT_MISSES - 1 }),
       op("b", { kind: "push", n: 3 }),
     ];
-    const next = resolvePass(pending, "b", [1], 1, content);
-    expect(next.diverged).toEqual([]);
-    expect(next.pending[0]!.misses).toBe(DIVERGENCE_MISS_LIMIT - 1);
+    const next = resolvePass(pending, "b", [1], 1, undefined, undefined, content);
+    expect(next.stalled).toEqual([]);
+    expect(next.pending[0]!.misses).toBe(DIVERGENCE_REPORT_MISSES - 1);
   });
 });
 
@@ -412,8 +633,8 @@ describe("markResolved", () => {
   });
 });
 
-describe("integration: chained dispatch + interleaved push + reject", () => {
-  test("two dispatches, a push confirming the first, then the second rejects", () => {
+describe("integration: chained dispatch + interleaved push + failure", () => {
+  test("two dispatches, a push confirming the first, then the second fails and retries", () => {
     const base = [1];
     let pending: ReadonlyArray<PendingOp<Vars>> = [];
 
@@ -423,17 +644,21 @@ describe("integration: chained dispatch + interleaved push + reject", () => {
     pending = [...pending, op("b", { kind: "push", n: 3 })];
     expect(replay(base, pending, applyNums)).toEqual([1, 2, 3]);
 
-    // both mutate() resolve, with no snapshot yet reflecting either
-    pending = resolvePass(pending, "a", base, 0, content).pending;
-    pending = resolvePass(pending, "b", base, 0, content).pending;
+    // a's mutate resolves; b's REJECTS at the network level — b stays rendered.
+    pending = resolvePass(pending, "a", base, 0, undefined, undefined, content).pending;
+    pending = markFailed(pending, "b", { kind: "network" });
+    expect(replay(base, pending, applyNums)).toEqual([1, 2, 3]);
 
-    // server push reflecting only a; coarse confirmation would drop BOTH
-    // resolved ops, but content-based keeps b until the server reflects it.
-    const next = confirmPass(pending, [1, 2], content);
+    // server push reflecting only a; b (failed ⇒ unresolved) is untouchable.
+    const next = confirmPass(pending, [1, 2], undefined, content);
     expect(ids(next.pending)).toEqual(["b"]);
-
-    // the push moved base forward to [1,2]; b still replays on top
     expect(replay([1, 2], next.pending, applyNums)).toEqual([1, 2, 3]);
+
+    // reconnect edge: retry in place — clear the failure, re-fire, resolve.
+    pending = clearFailure(next.pending, "b");
+    pending = resolvePass(pending, "b", [1, 2], 1, undefined, undefined, content).pending;
+    expect(ids(pending)).toEqual(["b"]); // resolved, awaiting its push
+    expect(confirmPass(pending, [1, 2, 3], undefined, content).pending).toEqual([]);
   });
 
   test("the push-before-resolve ordering: one dispatch, push, then resolve ⇒ empty overlay", () => {
@@ -444,13 +669,34 @@ describe("integration: chained dispatch + interleaved push + reject", () => {
       op("a", { kind: "push", n: 2 }, false, { dispatchGen: 5 }),
     ];
     // The push: the op is unresolved, so nothing is dropped.
-    const afterPush = confirmPass(pending, [1, 2], content);
+    const afterPush = confirmPass(pending, [1, 2], undefined, content);
     expect(ids(afterPush.pending)).toEqual(["a"]);
     pending = afterPush.pending;
     // The response: gen advanced to 6, and the snapshot already reflects the op.
-    const afterResolve = resolvePass(pending, "a", [1, 2], 6, content);
+    const afterResolve = resolvePass(pending, "a", [1, 2], 6, undefined, undefined, content);
     expect(afterResolve.pending).toEqual([]);
-    // Coarse consumers get the same outcome via the gen stamp alone.
-    expect(resolvePass(pending, "a", [1, 2], 6).pending).toEqual([]);
+    // Tokenless coarse consumers get the same outcome via the gen stamp alone.
+    expect(resolvePass(pending, "a", [1, 2], 6, undefined, undefined).pending).toEqual([]);
+  });
+
+  test("the motivating bug: stale snapshots after the commit can never evict a split", () => {
+    // Production trace pageId block-1783508240248-6o4jvk: a server-acked
+    // `split` op saw 3 pushes whose snapshots were computed BEFORE the split
+    // committed (push lag — delivery order is not causality). The old
+    // miss-limit eviction dropped the op and the block vanished mid-typing.
+    // Now: without a causal proof the op survives indefinitely (stalled report
+    // only), and WITH a token, stale snapshots (watermark ≤ ack) still cannot
+    // deny it — only a snapshot provably past the commit that lacks its effect
+    // may drop it.
+    const acked = op("split", { kind: "push", n: 2 }, true, { ackWatermark: "200" });
+    let pending: ReadonlyArray<PendingOp<Vars>> = [acked];
+    for (let i = 0; i < DIVERGENCE_REPORT_MISSES + 2; i++) {
+      const next = confirmPass(pending, [1], "150", content); // stale: 150 < 200
+      expect(next.dropped).toEqual([]);
+      expect(ids(next.pending)).toEqual(["split"]);
+      pending = next.pending;
+    }
+    // The real (causally-later) snapshot arrives carrying the split ⇒ confirmed.
+    expect(confirmPass(pending, [1, 2], "201", content).pending).toEqual([]);
   });
 });

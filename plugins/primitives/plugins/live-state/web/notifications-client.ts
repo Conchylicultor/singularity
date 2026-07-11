@@ -11,6 +11,7 @@ import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import type { ResourceOrigin } from "../core/resource";
 import { mergeKeyedDelta } from "./keyed-delta-merge";
+import { noteResourceWatermark } from "./watermark-registry";
 
 // Per-hop persistent tracing for the live-state update pipeline (Layer 1). All
 // lines route to the `live-state` log channel over plain HTTP via clientLog —
@@ -121,9 +122,15 @@ type ServerMsg =
   // ack frame. Stored per channel and echoed alongside the sub's version on the
   // next replay, so a same-boot server can answer `up-to-date` from its in-memory
   // version counter with no loader run.
-  | { kind: "sub-ack"; id?: number; key: string; params: ResourceParams; value: unknown; version: number; etag?: string; epoch?: string }
-  | { kind: "update"; key: string; params: ResourceParams; value: unknown; version: number; etag?: string }
-  | { kind: "delta"; key: string; params: ResourceParams; upserts: [string, unknown][]; deletes: string[]; order?: string[]; version: number }
+  // `watermark` (commit watermark, Rule B′): the xid8 snapshot floor the frame's
+  // value was read under. Rides ONLY frames whose value fully reconciles the
+  // client — sub-ack, update, and FULL keyed deltas (a SCOPED delta is a partial
+  // re-read and never carries one). Adopted into the module-level watermark
+  // registry immediately before the cache write it describes, so the optimistic
+  // hook can causally compare mutation ack tokens against it.
+  | { kind: "sub-ack"; id?: number; key: string; params: ResourceParams; value: unknown; version: number; etag?: string; epoch?: string; watermark?: string }
+  | { kind: "update"; key: string; params: ResourceParams; value: unknown; version: number; etag?: string; watermark?: string }
+  | { kind: "delta"; key: string; params: ResourceParams; upserts: [string, unknown][]; deletes: string[]; order?: string[]; version: number; watermark?: string }
   | { kind: "invalidate"; key: string; params: ResourceParams; version: number }
   // "your cached value is still current" — the WS analogue of HTTP 304. Carries no
   // value: the client keeps its cached value and only adopts `version` (so a later
@@ -705,7 +712,7 @@ export class NotificationsClient {
       res = await fetch(url);
     }
     if (!res.ok) throw new ResourceHttpError(key, res.status);
-    const body = (await res.json()) as { value: unknown; version: number };
+    const body = (await res.json()) as { value: unknown; version: number; watermark?: string };
     this.noteHttpEtag(key, params, origin, res.headers.get("ETag"));
     // Version guard — same discipline as handleServerMessage, but strict `<`
     // (see doc comment). Drop only a response strictly older than the value we
@@ -716,6 +723,10 @@ export class NotificationsClient {
       return cached as T;
     }
     const parsed = schema.parse(body.value); // schema violation throws — surfaced by the caller
+    // Adopt the body's commit watermark AFTER the strict-`<` guard (a stale-
+    // dropped response never advances the causal floor) and IMMEDIATELY BEFORE
+    // the cache write it describes — same load-bearing order as the WS paths.
+    if (body.watermark !== undefined) noteResourceWatermark(key, params, body.watermark);
     this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
     if (entry) {
       // Advance monotonically (never lower) so a later WS frame at this version
@@ -1013,11 +1024,11 @@ export class NotificationsClient {
     }
 
     if (msg.kind === "sub-ack" || msg.kind === "update") {
-      this.applyUpdate(entry, msg.key, msg.params, msg.value);
+      this.applyUpdate(entry, msg.key, msg.params, msg.value, msg.watermark);
       return;
     }
     if (msg.kind === "delta") {
-      this.applyDelta(channel, entry, msg.key, msg.params, msg.upserts, msg.order);
+      this.applyDelta(channel, entry, msg.key, msg.params, msg.upserts, msg.order, msg.watermark);
       return;
     }
     // Only remaining case: "invalidate"
@@ -1029,6 +1040,7 @@ export class NotificationsClient {
     key: string,
     params: ResourceParams,
     value: unknown,
+    watermark?: string,
   ): void {
     // Invariant: handleServerMessage only reaches here for a (key) this tab
     // observes, and observe() registers the schema alongside the sub entry — so
@@ -1041,7 +1053,14 @@ export class NotificationsClient {
           `before any update can be applied.`,
       );
     }
-    this.queryClient.setQueryData(queryKeyFor(key, params), schema.parse(value));
+    const parsed = schema.parse(value);
+    // Adopt the frame's commit watermark IMMEDIATELY BEFORE the cache write it
+    // describes (load-bearing order: QueryCache listeners — the optimistic
+    // hook's confirm pass — read the registry synchronously inside setQueryData
+    // dispatch). After the parse, so a frame that never lands (schema throw)
+    // never advances the causal floor past the cache content.
+    if (watermark !== undefined) noteResourceWatermark(key, params, watermark);
+    this.queryClient.setQueryData(queryKeyFor(key, params), parsed);
     this.markApplied(entry, key);
   }
 
@@ -1068,6 +1087,7 @@ export class NotificationsClient {
     params: ResourceParams,
     upserts: [string, unknown][],
     order: string[] | undefined,
+    watermark?: string,
   ): void {
     const queryKey = queryKeyFor(key, params);
     // Base-presence guard (load-bearing): never apply a delta onto a missing
@@ -1121,6 +1141,13 @@ export class NotificationsClient {
       this.forceFullResub(channel, entry, key, params);
       return;
     }
+    // Adopt the FULL delta's commit watermark IMMEDIATELY BEFORE the cache write
+    // it describes (same load-bearing order as applyUpdate). After the merge
+    // succeeded, so a delta that never lands (no-base / drift resub above) never
+    // advances the causal floor past the cache content — the recovery sub-ack
+    // brings its own watermark with its own full value. Scoped deltas arrive
+    // watermark-less by construction (Rule B′), so this is a no-op for them.
+    if (watermark !== undefined) noteResourceWatermark(key, params, watermark);
     this.queryClient.setQueryData(queryKey, result.rows);
     this.markApplied(entry, key);
   }

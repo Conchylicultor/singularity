@@ -11,7 +11,7 @@ import {
 
 export default {
   description:
-    "Optimistic-divergence report kind: validates divergence payloads, fingerprints by resource + label + ops (excluding the volatile miss count), and renders per-divergence correctness tasks. Re-arms periodically (6h) since a still-present divergence is a recurring warning, not a one-shot crash.",
+    "Optimistic-divergence report kind: validates divergence payloads (kind: superseded = dropped for newer server truth, stalled = kept rendered past the miss threshold), fingerprints by kind + resource + label + ops (excluding the volatile miss count), and renders per-kind tasks. Re-arms periodically (6h) since a still-present divergence is a recurring warning, not a one-shot crash.",
   contributions: [
     ReportKind({
       kind: "optimistic-divergence",
@@ -19,7 +19,7 @@ export default {
       fingerprint: optimisticDivergenceFingerprint,
       meta: {
         tag: "[optimistic-divergence]",
-        notif: "Optimistic op never confirmed by server",
+        notif: "Optimistic op diverged from server truth",
         variant: "warning",
         notifCooldownMs: OPTIMISTIC_DIVERGENCE_NOTIF_COOLDOWN_MS,
       },

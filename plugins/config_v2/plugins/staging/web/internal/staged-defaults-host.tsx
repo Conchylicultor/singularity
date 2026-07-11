@@ -79,7 +79,7 @@ export function StagedDefaultsOverlayHost() {
             value: vars.value,
           },
         },
-      ).then(() => undefined),
+      ).then((r) => ({ watermark: r.watermark })),
     isConfirmedBy: (rows, vars) =>
       rows.some((r) => sameKey(r, vars) && valueEqual(r.value, vars.value)),
     // Op identity for cascade confirmation: stages are last-write-wins per

@@ -176,6 +176,33 @@ applied one, or the retained value on a `304`/stale drop) so React Query's
 `queryFn` contract holds with no separate render path. See
 `research/2026-07-02-converge-http-resource-writes-version-guard.md`.
 
+## Commit watermarks (`getResourceWatermark` / `compareTxWatermark`)
+
+Full-reconcile frames from a worktree server carry a `watermark` — the
+snapshot's `pg_snapshot_xmin(pg_current_snapshot())` as xid8 decimal text,
+captured by the resource runtime before the loader read. `NotificationsClient`
+notes it into a module-level registry (`web/watermark-registry.ts`, keyed
+`(key, params)`, monotonic adopt) immediately **before** the cache write it
+describes, so a QueryCache listener reading `getResourceWatermark(key, params)`
+synchronously sees the causal floor of the value it was just handed. The
+optimistic-mutation primitive compares that floor against mutation ack tokens
+(the `currentTxId` a mutation endpoint returns) to confirm — or causally deny —
+pending overlay ops.
+
+**Rule B′ (which frames carry one):** only frames that fully reconcile the
+client to server truth as of the capture — `sub-ack`, `update`, FULL keyed
+deltas, and the HTTP body. Scoped deltas **never** do (they re-read only
+affected rows; stamping one would let a client wrongly deny a pending op). This
+is the twin of resource-runtime's "etag rides only the `update` frame" rule. An
+absent watermark (fresh sub, central-origin resource, pre-watermark server)
+means "no causal floor": confirming by content is fine, denial is forbidden.
+
+Compare watermarks and ack tokens only with `compareTxWatermark`
+(`live-state/core`) — xid8 decimal text overflows `Number` and is not
+lexicographically ordered ("9" > "10"), so BigInt comparison is the only sound
+one. Full design:
+`research/2026-07-11-global-never-revert-optimistic-edits.md`.
+
 ## Descriptor registry (`resourceDescriptorByKey`)
 
 Every descriptor factory (`resourceDescriptor`, `keyedResourceDescriptor`,
@@ -480,10 +507,10 @@ reaching for a heavier entity cache.
 - Load-bearing: yes
 - Web:
   - Uses: `infra/endpoints.endpointQueryKey`, `primitives/css/placeholder.Placeholder`, `primitives/latest-ref.useLatestRef`, `primitives/loading.Loading`, `primitives/log-channels.clientLog`, `primitives/networking.NetDiagEvent`, `primitives/networking.SharedWebSocket`, `primitives/networking.subscribeNetDiag`, `primitives/networking.subscribeWsStatus`, `primitives/networking.WsStatus`, `primitives/tab-id.getTabId`
-  - Exports: Types: `ChannelStatuses`, `CombinedResources`, `DebugSnapshot`, `DebugSub`, `GateDataOf`, `GateInput`, `LeaderInfo`, `LiveStateSocketKind`, `MatchResourceHandlers`, `MissedFrame`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`, `ResourceViewProps`, `SlowResourceInfo`; Values: `centralResourceDescriptor`, `combineResources`, `ensureNotificationsClient`, `getNotificationsClient`, `hydrateEndpoint`, `hydrateQuery`, `hydrateResource`, `keyedResourceDescriptor`, `liveStateSocketKind`, `matchResource`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `registerSlowResourceReporter`, `resourceDescriptor`, `resourceDescriptorByKey`, `ResourceView`, `useCombinedResources`, `useNotificationsChannelStatuses`, `useNotificationsClient`, `useNotificationsStatus`, `useResource`
+  - Exports: Types: `ChannelStatuses`, `CombinedResources`, `DebugSnapshot`, `DebugSub`, `GateDataOf`, `GateInput`, `LeaderInfo`, `LiveStateSocketKind`, `MatchResourceHandlers`, `MissedFrame`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`, `ResourceViewProps`, `SlowResourceInfo`; Values: `centralResourceDescriptor`, `combineResources`, `ensureNotificationsClient`, `getNotificationsClient`, `getResourceWatermark`, `hydrateEndpoint`, `hydrateQuery`, `hydrateResource`, `keyedResourceDescriptor`, `liveStateSocketKind`, `matchResource`, `noteResourceWatermark`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `registerSlowResourceReporter`, `resourceDescriptor`, `resourceDescriptorByKey`, `ResourceView`, `useCombinedResources`, `useNotificationsChannelStatuses`, `useNotificationsClient`, `useNotificationsStatus`, `useResource`
 - Cross-plugin:
   - Imported by: `active-data`, `active-data/attempt`, `active-data/task`, `active-data/task-link`, `apps/agent-manager/worktree-switcher`, `apps/browser/bookmarks`, `apps/browser/history`, `apps/browser/start-page`, `apps/deploy/servers`, `apps/mail/inbox`, `apps/mail/mail-core`, `apps/mail/mailbox`, `apps/mail/reading-pane`, `apps/mail/sync-status`, `apps/mail/thread-list`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome/recent-pages`, `apps/prototypes/files`, `apps/prototypes/gallery`, `apps/settings/config`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/rich/rhythm-controls`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transpose`, `apps/story/generation`, `apps/story/marker`, `apps/story/render`, `apps/story/shell`, `apps/studio/release`, `apps/studio/release/release-artifact`, `apps/studio/release/release-info`, `apps/studio/release/release-logs`, `apps/website/blog/pages-integration`, `apps/website/blog/publish`, `apps/website/blog/site`, `apps/workflows/definitions`, `apps/workflows/engine`, `apps/workflows/executions`, `auth`, `auth/apple-signing/setup-wizard`, `auth/google/setup-wizard`, `build`, `build/build-fix`, `build/build-info`, `config_v2`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/agents`, `conversations/all-conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view`, `conversations/conversation-view/code`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/event-counter`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/notes`, `conversations/conversation-view/op-status`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/data-view/history`, `conversations/conversations-view/data-view/queue`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/effort-provider`, `conversations/model-provider`, `conversations/recover`, `conversations/summary`, `debug/claude-cli-calls`, `debug/live-state-health`, `debug/queue`, `debug/reports`, `debug/slow-ops`, `debug/slow-ops/pane`, `debug/zero-test`, `fields/secret/config`, `framework/web-core`, `infra/boot-snapshot`, `infra/claude-cli`, `infra/events`, `infra/health`, `infra/jobs`, `infra/query-resource`, `page/editor`, `page/editor-collab`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/read-only-view`, `plugin-meta/plugin-health`, `primitives/data-view/custom-columns`, `primitives/data-view/view-order`, `primitives/optimistic-mutation`, `release`, `reports`, `review`, `review/code-review`, `review/config-defaults`, `review/plugin-changes`, `shell/global-action-bar`, `shell/notifications`, `tasks`, `tasks/attempt-view`, `tasks/auto-start`, `tasks/task-dependencies`, `tasks/task-deps-tree`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-draft-form`, `tasks/task-effort`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-preprompt`, `tasks/tasks-core`, `ui/tweakcn`
 - Core:
-  - Exports: Types: `Resolvable`, `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `keyedResourceDescriptor`, `resolvableSchema`, `resolved`, `resourceDescriptor`, `resourceDescriptorByKey`, `tolerantEnum`, `unresolved`
+  - Exports: Types: `Resolvable`, `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `compareTxWatermark`, `keyedResourceDescriptor`, `resolvableSchema`, `resolved`, `resourceDescriptor`, `resourceDescriptorByKey`, `tolerantEnum`, `unresolved`
 
 <!-- AUTOGENERATED:END -->

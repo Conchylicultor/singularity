@@ -10,6 +10,7 @@ export type { GateInput, GateDataOf, CombinedResources } from "./resource-utils"
 export { matchResource, ResourceView } from "./components/resource-view";
 export type { MatchResourceHandlers, ResourceViewProps } from "./components/resource-view";
 export { NotificationsClient, queryKeyFor, liveStateSocketKind } from "./notifications-client";
+export { noteResourceWatermark, getResourceWatermark } from "./watermark-registry";
 export type { ResourceKey, ChannelStatuses, LiveStateSocketKind, DebugSub, DebugSnapshot, LeaderInfo, MissedFrame } from "./notifications-client";
 export { resourceDescriptor, keyedResourceDescriptor, centralResourceDescriptor, resourceDescriptorByKey } from "../core/resource";
 export type { ResourceDescriptor, ResourceOrigin } from "../core/resource";

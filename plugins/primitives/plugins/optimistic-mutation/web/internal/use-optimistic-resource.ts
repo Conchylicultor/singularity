@@ -1,16 +1,26 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useResource, queryKeyFor } from "@plugins/primitives/plugins/live-state/web";
+import {
+  useResource,
+  queryKeyFor,
+  liveStateSocketKind,
+  getResourceWatermark,
+} from "@plugins/primitives/plugins/live-state/web";
 import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import type { ResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
+import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { useReportSync } from "@plugins/primitives/plugins/sync-status/web";
 import { optimisticDivergenceReportSink } from "../reporter";
 import {
+  clearFailure,
   confirmPass,
-  removeOp,
+  markFailed,
   replay,
   resolvePass,
+  type OpFailure,
   type PendingOp,
+  type ReconcileResult,
 } from "./overlay";
 
 interface OptimisticBaseArgs<
@@ -22,8 +32,14 @@ interface OptimisticBaseArgs<
   params?: P;
   /** Pure predicted next state. Must not mutate `current`. */
   apply: (current: Data, vars: Vars) => Data;
-  /** Network thunk; resolves on server 2xx (the op was accepted). */
-  mutate: (vars: Vars) => Promise<void>;
+  /**
+   * Network thunk; resolves on server 2xx (the op was accepted). Return
+   * `{ watermark }` — the commit's `pg_current_xact_id()::text` read inside the
+   * write transaction (Rule A) — to upgrade this op to exact causal
+   * confirmation/denial; a plain `Promise<void>` stays tokenless (legacy
+   * coarse / content-only confirmation, no denial).
+   */
+  mutate: (vars: Vars) => Promise<void | { watermark?: string }>;
   onError?: (err: unknown, vars: Vars) => void;
   /** Names the thing being saved; surfaced in the sync-status error state. */
   label?: string;
@@ -37,12 +53,13 @@ interface OptimisticBaseArgs<
 }
 
 /**
- * Confirmation mode. Coarse (neither field) clears a resolved op once an
- * authoritative push has landed since it was dispatched. Content-based REQUIRES
- * both fields together: `isConfirmedBy(serverData, vars)` asks "has this
- * server snapshot already reflected `vars`?" (precise content check, e.g. "row
- * id X present"), and `sameTarget(a, b)` declares op identity ("do `a` and `b`
- * write the SAME entity/key?").
+ * Confirmation mode. Coarse (neither field) clears a resolved op once a
+ * snapshot causally past its ack token has landed (or, tokenless, once an
+ * authoritative push has landed since it was dispatched). Content-based
+ * REQUIRES both fields together: `isConfirmedBy(serverData, vars)` asks "has
+ * this server snapshot already reflected `vars`?" (precise content check, e.g.
+ * "row id X present"), and `sameTarget(a, b)` declares op identity ("do `a` and
+ * `b` write the SAME entity/key?").
  *
  * Precise per-op matching implies concurrent per-entity ops in flight — i.e. a
  * structurally multi-target consumer — which needs the same-target cascade to
@@ -97,19 +114,26 @@ export interface UseOptimisticResourceResult<Data, Vars> {
   dispatch: (vars: Vars) => string;
   /**
    * Every op still in the overlay — including ones the server has already
-   * ACKED but whose confirming push hasn't been matched yet. This is the
-   * replay set, NOT the "is anything unsaved" signal: read `saving` for that.
+   * ACKED but whose confirming push hasn't been matched yet, and ones whose
+   * `mutate` rejected (a failed edit keeps rendering — never-revert). This is
+   * the replay set, NOT the "is anything unsaved" signal: read `saving` for that.
    */
   pendingOps: ReadonlyArray<{ opId: string; vars: Vars }>;
   /** True while at least one op's `mutate` has not come back yet. */
   saving: boolean;
   /**
-   * Ops whose `mutate` rejected. The overlay has been rolled back, but the op is
-   * retained here (with its `vars`) so the surface can report an error and offer
-   * a retry. Cleared when the op is retried or re-dispatched.
+   * Ops whose `mutate` was durably REJECTED by the server (an HTTP error —
+   * `EndpointError`). They are still rendered (still in `pendingOps`) but need
+   * an explicit `retry` to converge. Network-level failures (fetch rejected —
+   * offline, restarting server) are deliberately NOT here: nothing is known to
+   * be wrong with those ops, so they stay `syncing` and auto-retry on the next
+   * reconnect edge.
    */
   failed: ReadonlyArray<{ opId: string; vars: Vars }>;
-  /** Drop a failed op and re-run it (re-`dispatch(vars)`). */
+  /**
+   * Re-fire a failed op's `mutate` IN PLACE: same opId, same overlay position —
+   * the rendered prediction never moves or flickers.
+   */
   retry: (opId: string) => void;
 }
 
@@ -148,7 +172,6 @@ export function useOptimisticResource<
   const resultError = result.pending ? result.error : null;
 
   const [pending, setPending] = useState<ReadonlyArray<PendingOp<Vars>>>([]);
-  const [failed, setFailed] = useState<ReadonlyArray<{ opId: string; vars: Vars }>>([]);
   // Explicit "everything this hook dispatched has been acked" timestamp,
   // reported to sync-status. Stamped inside the resolve handler, never inferred
   // from a derived boolean (a transient boolean can be coalesced away within one
@@ -156,12 +179,12 @@ export function useOptimisticResource<
   const [savedAt, setSavedAt] = useState<number | null>(null);
 
   // Commit mirror of `pending`. Every lifecycle edge (dispatch / resolve /
-  // reject / push) fires from an event or promise callback, decides the next
-  // overlay against this ref, and writes both. A functional `setPending` updater
-  // cannot be used: the pure machine returns `{ pending, diverged }`, and
-  // extracting `diverged` from inside an updater would make the updater
-  // effectful (React may invoke it twice). Sequential edges within one tick
-  // chain correctly because the ref is written synchronously.
+  // reject / retry / push) fires from an event or promise callback, decides the
+  // next overlay against this ref, and writes both. A functional `setPending`
+  // updater cannot be used: the pure machine returns `{ pending, dropped,
+  // stalled }`, and extracting the report lists from inside an updater would
+  // make the updater effectful (React may invoke it twice). Sequential edges
+  // within one tick chain correctly because the ref is written synchronously.
   const pendingRef = useRef<ReadonlyArray<PendingOp<Vars>>>([]);
   const commitPending = useCallback((next: ReadonlyArray<PendingOp<Vars>>) => {
     pendingRef.current = next;
@@ -175,29 +198,40 @@ export function useOptimisticResource<
   const describeOpRef = useLatestRef(describeOp);
   const labelRef = useLatestRef(label);
   const paramsRef = useLatestRef(params);
-  const failedRef = useLatestRef(failed);
+  const mutateRef = useLatestRef(mutate);
+  const onErrorRef = useLatestRef(onError);
 
   const queryKey = useMemo(() => queryKeyFor(resource.key, params), [resource.key, params]);
   const queryKeyRef = useLatestRef(queryKey);
   const targetKey = useMemo(() => JSON.stringify(queryKey), [queryKey]);
 
-  // The server durably disagrees with ops it already acked. Not a spinner state
-  // (the write DID succeed) — a loud, deduped report, via the sanctioned sink
-  // inversion (`error-boundary` → `reports.crash` is the precedent), because the
+  // The server-acked ops and the server's snapshots durably disagree — either
+  // provably superseded (dropped, healthy) or stalled past the miss threshold
+  // (kept, one-shot investigation signal). Not a spinner state (the writes DID
+  // succeed) — a loud, deduped report, via the sanctioned sink inversion
+  // (`error-boundary` → `reports.crash` is the precedent), because the
   // primitive must not import `reports`. `emit` never throws.
-  const reportDiverged = useCallback(
-    (diverged: ReadonlyArray<PendingOp<Vars>>) => {
+  const reportDivergence = useCallback(
+    (kind: "superseded" | "stalled", ops: ReadonlyArray<PendingOp<Vars>>) => {
       const describe = describeOpRef.current;
       optimisticDivergenceReportSink.emit({
+        kind,
         resourceKey: resource.key,
         params: paramsRef.current ?? null,
         label: labelRef.current ?? null,
-        misses: Math.max(...diverged.map((op) => op.misses)),
-        opSummaries: describe ? diverged.map((op) => describe(op.vars)) : [],
+        misses: Math.max(...ops.map((op) => op.misses)),
+        opSummaries: describe ? ops.map((op) => describe(op.vars)) : [],
       });
     },
     // The latest-ref handles are stable; only the resource key participates.
     [resource.key],
+  );
+  const reportOutcomes = useCallback(
+    (next: ReconcileResult<Vars>) => {
+      if (next.dropped.length > 0) reportDivergence("superseded", next.dropped);
+      if (next.stalled.length > 0) reportDivergence("stalled", next.stalled);
+    },
+    [reportDivergence],
   );
 
   // Last `dataUpdateCount` this hook has already reconciled against. See the
@@ -224,7 +258,7 @@ export function useOptimisticResource<
       // Ungated, a plain refetch or invalidate would (a) coarse-confirm every
       // resolved op, (b) content-confirm an op against a placeholder base (an
       // empty base "reflects" a remove), and (c) charge a divergence MISS for a
-      // snapshot that never arrived — filing bogus divergence reports.
+      // snapshot that never arrived — filing bogus stalled reports.
       //
       // `dataUpdateCount` is monotonic for a query's lifetime, and `useResource`
       // holds an observer for as long as this hook is mounted, so the cache
@@ -235,14 +269,22 @@ export function useOptimisticResource<
       if (pendingRef.current.length === 0) return;
       const serverData = event.query.state.data as Data | undefined;
       if (serverData === undefined) return;
-      const next = confirmPass(pendingRef.current, serverData, confirmationRef.current);
-      if (next.diverged.length > 0) reportDiverged(next.diverged);
+      // The registry is written immediately BEFORE the setQueryData that fired
+      // this event, so this synchronous read is the causal floor of exactly the
+      // snapshot we are confirming against (Rule B′).
+      const next = confirmPass(
+        pendingRef.current,
+        serverData,
+        getResourceWatermark(resource.key, paramsRef.current),
+        confirmationRef.current,
+      );
+      reportOutcomes(next);
       // `confirmPass` returns the input BY IDENTITY when nothing changed.
       if (next.pending !== pendingRef.current) commitPending(next.pending);
     });
     // The subscription stays mounted for the resource's lifetime and reads the
     // freshest confirmation off the stable `confirmationRef.current` at call time.
-  }, [queryClient, targetKey, commitPending, reportDiverged]);
+  }, [queryClient, targetKey, resource.key, commitPending, reportOutcomes]);
 
   const data = useMemo(
     // `applyRef` (stable useLatestRef handle) is read through `.current` at
@@ -253,16 +295,14 @@ export function useOptimisticResource<
     [base, pending],
   );
 
-  const dispatch = useCallback(
-    (vars: Vars): string => {
-      const opId = crypto.randomUUID();
-      // The cache generation at dispatch. Coarse confirmation later asks "did a
-      // push land after this?" — the fix for consumers with no `isConfirmedBy`.
-      const dispatchGen =
-        queryClient.getQueryState<Data>(queryKeyRef.current)?.dataUpdateCount ?? 0;
-      commitPending([...pendingRef.current, { opId, vars, resolved: false, dispatchGen, misses: 0 }]);
-      void mutate(vars).then(
-        () => {
+  // Fire (or re-fire) an op's `mutate`. Stable identity: dispatch, retry, and
+  // the reconnect auto-retry all share it, reading the freshest mutate/onError
+  // off their latest-refs. Returns the outcome so the sequential failed-op
+  // drain can stop when the transport is still down.
+  const runMutate = useCallback(
+    (opId: string, vars: Vars): Promise<"resolved" | OpFailure["kind"]> => {
+      return mutateRef.current(vars).then(
+        (res) => {
           // Confirm against what the cache ALREADY holds: the confirming push
           // routinely lands ~1ms before this response (the change-feed pushes at
           // commit; the response waits on the handler's post-commit tail), and it
@@ -282,56 +322,138 @@ export function useOptimisticResource<
             opId,
             hasAuthoritative ? state?.data : undefined,
             state?.dataUpdateCount ?? 0,
+            getResourceWatermark(resource.key, paramsRef.current),
+            res ? res.watermark : undefined,
             confirmationRef.current,
           );
-          if (next.diverged.length > 0) reportDiverged(next.diverged);
+          reportOutcomes(next);
           commitPending(next.pending);
           // Stamp "saved" HERE — a persistent state value the sync-status store
           // observes, rather than an effect on a boolean React may coalesce away.
-          if (!next.pending.some((op) => !op.resolved) && failedRef.current.length === 0) {
+          // "Nothing failed" is implied: a failure only ever sits on an
+          // UNRESOLVED op (mutate rejected ⇒ never resolved; a retry's resolve
+          // clears it), so "no unresolved op remains" covers both.
+          if (!next.pending.some((op) => !op.resolved)) {
             setSavedAt(Date.now());
           }
+          return "resolved" as const;
         },
         (err: unknown) => {
-          // Reject = rollback: removing the op recomputes the overlay without it
-          // (the cache was never mutated, so there is nothing else to undo). The
-          // op is then retained in `failed` so the surface can report the error
-          // and offer a retry, instead of the failure silently vanishing.
-          commitPending(removeOp(pendingRef.current, opId));
-          setFailed((prev) => [...prev, { opId, vars }]);
-          if (onError) onError(err, vars);
+          // Reject is NOT a rollback: the op keeps rendering (never-revert) and
+          // the failure kind drives the sync phase. A durable server rejection
+          // (`EndpointError`) surfaces as `error` + manual Retry; anything else
+          // is a network-level failure (offline, restarting server) — nothing is
+          // known to be wrong with the op, so it stays `syncing` and auto-retries
+          // on the next reconnect edge.
+          const failure: OpFailure =
+            err instanceof EndpointError
+              ? { kind: "http", status: err.status }
+              : { kind: "network" };
+          commitPending(markFailed(pendingRef.current, opId, failure));
+          if (onErrorRef.current) onErrorRef.current(err, vars);
+          return failure.kind;
         },
       );
+    },
+    // The latest-ref handles are stable; only these participate.
+    [queryClient, resource.key, commitPending, reportOutcomes],
+  );
+
+  const dispatch = useCallback(
+    (vars: Vars): string => {
+      const opId = crypto.randomUUID();
+      // The cache generation at dispatch. Tokenless coarse confirmation later
+      // asks "did a push land after this?" — for consumers with no
+      // `isConfirmedBy` and no ack token.
+      const dispatchGen =
+        queryClient.getQueryState<Data>(queryKeyRef.current)?.dataUpdateCount ?? 0;
+      commitPending([
+        ...pendingRef.current,
+        { opId, vars, resolved: false, dispatchGen, misses: 0, divergenceReported: false },
+      ]);
+      void runMutate(opId, vars);
       return opId;
     },
-    [queryClient, mutate, onError, commitPending, reportDiverged],
+    [queryClient, commitPending, runMutate],
   );
 
-  // Hold dispatch in a ref so `retry` keeps a stable identity even as dispatch's
-  // deps (mutate/onError) churn between renders.
-  const dispatchRef = useLatestRef(dispatch);
-
-  // `retry` keeps a stable identity (useReportSync / the result memo depend on it
-  // staying stable) and reads the freshest dispatch off `dispatchRef.current`.
+  // Re-fire a failed op IN PLACE: clear its failure and re-run its mutate under
+  // the SAME opId — the op never leaves the overlay, so the rendered prediction
+  // keeps its position (no remove/re-append flicker, no reorder). Returns the
+  // outcome (undefined when the op is gone or not failed) for the drain below.
+  const retryOp = useCallback(
+    (opId: string): Promise<"resolved" | OpFailure["kind"]> | undefined => {
+      const op = pendingRef.current.find((o) => o.opId === opId && o.failure !== undefined);
+      if (!op) return undefined;
+      commitPending(clearFailure(pendingRef.current, opId));
+      return runMutate(opId, op.vars);
+    },
+    [commitPending, runMutate],
+  );
   const retry = useCallback(
     (opId: string) => {
-      let entry: { opId: string; vars: Vars } | undefined;
-      setFailed((prev) => {
-        entry = prev.find((f) => f.opId === opId);
-        return prev.filter((f) => f.opId !== opId);
-      });
-      if (entry) dispatchRef.current(entry.vars);
+      void retryOp(opId);
     },
-    [],
+    [retryOp],
   );
 
-  // Re-run only THIS hook's own failed ops. `retryAll` stays stable across
-  // renders (it re-derives only when `retry` does, i.e. never), reading the
-  // freshest failed list off the stable `failedRef.current` — so the identity
-  // handed to useReportSync never churns (the indicator pulls it imperatively).
-  const retryAll = useCallback(() => {
-    failedRef.current.forEach((f) => retry(f.opId));
-  }, [retry]);
+  // Sequential single-flight drain of failed ops, in overlay order. Ordering is
+  // load-bearing: structural ops depend on their predecessors' server-side
+  // effects (a second split targets the block the first one created), so a
+  // concurrent replay can land out of order and be durably rejected for a row
+  // that is merely not committed YET. Await each op before firing the next; a
+  // `network` outcome stops the drain (the transport is still down — every
+  // later op would fail the same way; the next reconnect edge re-drains), an
+  // `http` outcome parks that op for manual Retry and keeps draining (later
+  // ops get their in-order shot).
+  const drainingRef = useRef(false);
+  const drainFailed = useCallback(
+    async (kinds: ReadonlyArray<OpFailure["kind"]>) => {
+      if (drainingRef.current) return;
+      drainingRef.current = true;
+      try {
+        const opIds = pendingRef.current
+          .filter((op) => op.failure !== undefined && kinds.includes(op.failure.kind))
+          .map((op) => op.opId);
+        for (const opId of opIds) {
+          const outcome = await retryOp(opId);
+          if (outcome === "network") return;
+        }
+      } finally {
+        drainingRef.current = false;
+      }
+    },
+    [retryOp],
+  );
+
+  // Auto-retry NETWORK-failed ops on reconnect edges (mirrors the Yjs
+  // provider's offline-is-syncing policy — push-based, no timers, no per-push
+  // retry):
+  //  - the live-state socket for THIS resource's origin reopening (covers
+  //    server restarts, where navigator.onLine never changed; HTTP and the WS
+  //    ride the same gateway, so "socket reopened" implies endpoints are
+  //    reachable again);
+  //  - the browser's `online` event (covers actual connectivity loss, where an
+  //    idle WS may not surface a close promptly).
+  // HTTP-failed ops are deliberately excluded: the server already gave a
+  // durable verdict, so re-firing them on reconnect would just repeat it —
+  // they wait for an explicit `retry`.
+  const retryNetworkFailed = useCallback(() => {
+    void drainFailed(["network"]);
+  }, [drainFailed]);
+  useEffect(() => {
+    const socketKind = resource.origin === "central" ? "central" : "worktree";
+    const unsubscribe = subscribeWsStatus((ev) => {
+      if (ev.status !== "open" || liveStateSocketKind(ev.url) !== socketKind) return;
+      retryNetworkFailed();
+    });
+    const onOnline = () => retryNetworkFailed();
+    window.addEventListener("online", onOnline);
+    return () => {
+      unsubscribe();
+      window.removeEventListener("online", onOnline);
+    };
+  }, [resource.origin, retryNetworkFailed]);
 
   const pendingOps = useMemo(
     () => pending.map((op) => ({ opId: op.opId, vars: op.vars })),
@@ -343,9 +465,28 @@ export function useOptimisticResource<
   // is what pinned the cloud on "Saving…" forever.
   const saving = useMemo(() => pending.some((op) => !op.resolved), [pending]);
 
+  // The durably-rejected subset, derived from the overlay (failed ops never
+  // left it). Network-failed ops are NOT failed — they are `syncing`.
+  const failed = useMemo(
+    () =>
+      pending
+        .filter((op) => op.failure?.kind === "http")
+        .map((op) => ({ opId: op.opId, vars: op.vars })),
+    [pending],
+  );
+  // Re-run only THIS hook's own failed ops — the SAME sequential drain as the
+  // reconnect edges (order dependence doesn't care why an op failed), widened
+  // to both kinds so the cloud's Retry also nudges network-failed ops. Stable
+  // identity: the indicator pulls it imperatively.
+  const retryAll = useCallback(() => {
+    void drainFailed(["http", "network"]);
+  }, [drainFailed]);
+
   // Forced sync-status reporting: any optimistic surface lights up the universal
   // indicator with no indicator code of its own. Retry is wired to retryAll so
-  // the indicator's Retry button re-runs only this hook's failed ops.
+  // the indicator's Retry button re-runs only this hook's failed ops. A
+  // network-failed op is unresolved, so it reports as `syncing` (the Yjs lane's
+  // offline-is-syncing policy) — only a durable HTTP rejection is an `error`.
   const phase = failed.length ? "error" : saving ? "syncing" : "idle";
   useReportSync({
     phase,

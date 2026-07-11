@@ -18,6 +18,9 @@ export type StageConfigDefaultBody = z.infer<typeof StageConfigDefaultBodySchema
 export const stageConfigDefault = defineEndpoint({
   route: "POST /api/config-v2/staged-defaults",
   body: StageConfigDefaultBodySchema,
+  // `watermark` is the commit's ack token (`currentTxId` read inside the write
+  // transaction) — the optimistic overlay uses it for causal confirmation.
+  response: z.object({ watermark: z.string() }),
 });
 
 export const applyConfigDefault = defineEndpoint({

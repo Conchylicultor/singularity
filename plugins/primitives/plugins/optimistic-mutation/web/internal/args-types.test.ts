@@ -26,6 +26,7 @@ type Args = UseOptimisticResourceArgs<Row[], Vars>;
 declare const resource: Args["resource"];
 declare const apply: (current: Row[], vars: Vars) => Row[];
 declare const mutate: (vars: Vars) => Promise<void>;
+declare const mutateWithToken: (vars: Vars) => Promise<{ watermark?: string }>;
 declare const isConfirmedBy: (serverData: Row[], vars: Vars) => boolean;
 declare const sameTarget: (a: Vars, b: Vars) => boolean;
 
@@ -34,12 +35,17 @@ export function _optimisticConfirmationArgsGuard(): void {
   const ok1: Args = { resource, apply, mutate, isConfirmedBy, sameTarget };
   // Coarse arm: NEITHER field type-checks.
   const ok2: Args = { resource, apply, mutate };
+  // `mutate` widened to `Promise<void | { watermark? }>`: an ack-token-returning
+  // mutate is accepted (Rule A upgrade) AND the legacy `Promise<void>` above
+  // stays assignable — backward-compatible by construction.
+  const ok3: Args = { resource, apply, mutate: mutateWithToken };
   // @ts-expect-error — isConfirmedBy requires sameTarget (unrepresentable alone)
   const bad1: Args = { resource, apply, mutate, isConfirmedBy };
   // @ts-expect-error — sameTarget requires isConfirmedBy (unrepresentable alone)
   const bad2: Args = { resource, apply, mutate, sameTarget };
   void ok1;
   void ok2;
+  void ok3;
   void bad1;
   void bad2;
 }

@@ -170,6 +170,7 @@ export function registerBarrelStubs(_repoRoot: string): void {
           db: {},
           awaitDbReady: () => Promise.resolve(),
           isTransientDbError: () => false,
+          currentTxId: () => Promise.resolve("0"),
           __esModule: true,
         },
         loader: "object",

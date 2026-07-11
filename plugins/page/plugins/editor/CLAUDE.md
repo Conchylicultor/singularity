@@ -412,7 +412,19 @@ posts of merged local updates. A future delta-WS transport swaps in behind
   that plugin's CLAUDE.md). The editor declares op identity via
   `sameOverlayTarget` (block-id-set intersection), so the inverse pair
   cascades while an unrelated block's confirmation can never drop another
-  block's still-pending op (e.g. a `projectText` projection patch).
+  block's still-pending op (e.g. a `projectText` projection patch). Under
+  the never-revert policy
+  (`research/2026-07-11-global-never-revert-optimistic-edits.md`) the old
+  miss-limit eviction is gone entirely: a pending structural op is never
+  visually reverted. The `op` and `patch` endpoints return their commit
+  watermark (`currentTxId` read inside the write transaction), so an op
+  leaves the overlay only for a causal reason — confirmed by content,
+  cascaded, or dropped as superseded when a snapshot provably past its
+  commit still lacks its effect (rendering newer truth, not a revert). An op
+  that fails to converge stays rendered and files a `stalled` divergence
+  report instead of un-splitting the user's block; mutate failures surface
+  through the sync-status cloud (offline = `syncing` + auto-retry, durable
+  HTTP rejection = `error` + Retry), never a rollback.
 
 **Hardening (validated: offline/reconnect, multi-tab, agent concurrency,
 history restore):**
@@ -563,7 +575,7 @@ tests). The whole document lives in React state and is discarded on unmount.
   - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/center.Center`, `primitives/css/inline.Inline`, `primitives/css/overlay.Overlay`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.insetClass`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.ControlSizeProvider`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/icon-button.IconButton`, `primitives/icon-picker.SvgIcon`, `primitives/latest-ref.useEventCallback`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.liveStateSocketKind`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/networking.subscribeWsStatus`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineOrderedDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.OrderedDispatchContribution`, `primitives/sync-status.useReportSync`, `primitives/text-editor/caret-trigger.atWordBoundary`, `primitives/text-editor/caret-trigger.CaretTriggerMenu`, `primitives/text-editor/caret-trigger.useCaretMenu`, `primitives/text-editor/caret-trigger.useCaretQuery`, `primitives/text-editor/caret-trigger.useForcedCaretQuery`, `primitives/undo-redo.UndoRedoProvider`, `primitives/undo-redo.useUndoRedo`, `primitives/undo-redo.useUndoRedoShortcuts`, `reorder.isNodeData`, `reorder.TopLevelEntry`, `reorder.useReorderedEntries`
   - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockEditorHandle`, `BlockPasteHandler`, `BlockRendererProps`, `BlockSection`, `BlockTextExtension`, `BlockTextPluginProps`, `CaretSurface`, `CaretSurfaceRef`, `FormatToolbarValue`, `MarkButtonProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BLOCK_INDENT`, `BLOCK_INSET`, `BlockEditor`, `BlockTextEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `colorCssValue`, `Editor`, `filterBlockTypes`, `flattenSections`, `getBlockTextExtensions`, `isValidLinkUrl`, `MarkButton`, `MARKER_GUTTER`, `normalizeLinkUrl`, `OPEN_LINK_POPOVER_COMMAND`, `PageContentColumn`, `PageIcon`, `PageOptionsList`, `registerBlockPasteHandler`, `registerBlockTextExtension`, `useBlockEditor`, `useFormatToolbar`, `useGroupedInsertableBlocks`, `useInsertableBlocks`, `usePageOptions`
 - Server:
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `primitives/rank.nextRankUnder`, `primitives/rank.rankAfterSibling`
+  - Uses: `database.currentTxId`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `primitives/rank.nextRankUnder`, `primitives/rank.rankAfterSibling`
   - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`
   - Exports: Types: `Block`, `BlockDeleteHook`, `BlocksChangedPayload`, `PageContentSnapshot`, `PageData`, `StoredBlock`; Values: `_blocks`, `BlockLifecycle`, `blocksChanged`, `BlockSchema`, `blocksLiveResource`, `Editor`, `PAGE_BLOCK_TYPE`, `pageData`, `PageDataSchema`, `pagesLiveResource`, `replacePageContent`, `serializePageContent`
   - Register: `defineTriggerEvent('page.blocksChanged')`

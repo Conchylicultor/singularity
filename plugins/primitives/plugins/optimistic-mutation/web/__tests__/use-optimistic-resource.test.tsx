@@ -2,15 +2,16 @@
  * Hook-shell tests for `useOptimisticResource`. The pure op lifecycle is pinned
  * by `internal/overlay.test.ts` (bun:test); what only a render can exercise is
  * the WIRING: the dispatch-time `dataUpdateCount` stamp, the QueryCache
- * "updated" subscription, and — the bug this hook was rewritten for — the
- * resolve edge confirming against a push that had ALREADY landed.
+ * "updated" subscription, the resolve edge confirming against a push that had
+ * ALREADY landed, the keep-rendered failure model (never-revert), the
+ * reconnect auto-retry, and the watermark-registry read behind causal denial.
  *
  * `clientLog` is mocked to a no-op (mounting `NotificationsProvider` otherwise
  * schedules real fetch flushes at module eval — same convention as the
  * live-state hazard suites).
  */
 
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 vi.mock("@plugins/primitives/plugins/log-channels/web", () => ({ clientLog: () => {} }));
 
@@ -20,14 +21,18 @@ import { useEffect, type ReactNode } from "react";
 import { z } from "zod";
 import {
   NotificationsProvider,
+  noteResourceWatermark,
   queryKeyFor,
 } from "@plugins/primitives/plugins/live-state/web";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import {
   SyncStatusIndicator,
   SyncStatusProvider,
 } from "@plugins/primitives/plugins/sync-status/web";
 import { useOptimisticResource } from "../internal/use-optimistic-resource";
+import { optimisticDivergenceReportSink } from "../reporter";
+import type { OptimisticDivergenceReport } from "../reporter";
 
 const rowsResource = resourceDescriptor<number[]>(
   "test.optimistic-mutation.rows",
@@ -36,20 +41,31 @@ const rowsResource = resourceDescriptor<number[]>(
 );
 const rowsKey = queryKeyFor(rowsResource.key, undefined);
 
+// A dedicated resource for the causal-denial test: the watermark registry is
+// module-level and monotonic, so seeding it must not leak into other tests.
+const denialResource = resourceDescriptor<number[]>(
+  "test.optimistic-mutation.denial",
+  z.array(z.number()),
+  [],
+);
+const denialKey = queryKeyFor(denialResource.key, undefined);
+
 const apply = (current: number[], n: number): number[] => [...current, n];
 const isConfirmedBy = (serverData: number[], n: number): boolean => serverData.includes(n);
 const sameTarget = (a: number, b: number): boolean => a === b;
 
+type MutateResult = void | { watermark?: string };
+
 /** A `mutate` whose promise the test resolves by hand, to order push vs resolve. */
 function deferredMutate() {
-  let release!: () => void;
+  let release!: (res?: MutateResult) => void;
   const mutate = vi.fn(
     () =>
-      new Promise<void>((resolve) => {
+      new Promise<MutateResult>((resolve) => {
         release = resolve;
       }),
   );
-  return { mutate, release: () => release() };
+  return { mutate, release: (res?: MutateResult) => release(res) };
 }
 
 function makeClient(): QueryClient {
@@ -62,24 +78,33 @@ function makeClient(): QueryClient {
  * `contentBased` picks the confirmation ARM, not a flag: the two arms are built
  * as distinct object literals so the args discriminated union stays correlated.
  */
-function useRows(mutate: (n: number) => Promise<void>, contentBased: boolean) {
+function useRows(
+  mutate: (n: number) => Promise<MutateResult>,
+  contentBased: boolean,
+  resource: typeof rowsResource = rowsResource,
+) {
   return useOptimisticResource<number[], number>(
     contentBased
-      ? { resource: rowsResource, apply, mutate, isConfirmedBy, sameTarget }
-      : { resource: rowsResource, apply, mutate },
+      ? { resource, apply, mutate, isConfirmedBy, sameTarget }
+      : { resource, apply, mutate },
   );
 }
 
 function mountHook(
   client: QueryClient,
-  mutate: (n: number) => Promise<void>,
+  mutate: (n: number) => Promise<MutateResult>,
   contentBased = false,
+  resource: typeof rowsResource = rowsResource,
 ) {
   const wrapper = ({ children }: { children: ReactNode }) => (
     <NotificationsProvider queryClient={client}>{children}</NotificationsProvider>
   );
-  return renderHook(() => useRows(mutate, contentBased), { wrapper });
+  return renderHook(() => useRows(mutate, contentBased, resource), { wrapper });
 }
+
+afterEach(() => {
+  optimisticDivergenceReportSink.register(null);
+});
 
 describe("useOptimisticResource", () => {
   it("content-based: a push that lands BEFORE the response still confirms the op", async () => {
@@ -228,16 +253,220 @@ describe("useOptimisticResource", () => {
     await waitFor(() => expect(container.innerHTML).not.toBe(""));
   });
 
-  it("a rejected mutate rolls the overlay back and surfaces the op in `failed`", async () => {
+  it("an HTTP-rejected mutate keeps the op RENDERED and surfaces it in `failed`", async () => {
+    // Never-revert: a durable server rejection is a sync-status state (cloud
+    // `error` + Retry), not an undo — the prediction stays in the overlay.
     const client = makeClient();
-    const mutate = vi.fn(() => Promise.reject(new Error("nope")));
+    const mutate = vi.fn(() => Promise.reject(new EndpointError(422, { message: "nope" })));
     const { result } = mountHook(client, mutate);
 
     await act(async () => {
       result.current.dispatch(2);
     });
     await waitFor(() => expect(result.current.failed).toHaveLength(1));
-    expect(result.current.pendingOps).toEqual([]);
+    expect(result.current.pendingOps).toHaveLength(1); // still rendered
+    expect(result.current.data).toEqual([2]); // the prediction did not revert
+    expect(result.current.saving).toBe(true); // failed ⇒ still unresolved
+  });
+
+  it("retry(opId) re-fires a failed op IN PLACE (same opId, same overlay position)", async () => {
+    const client = makeClient();
+    const mutate = vi
+      .fn<(n: number) => Promise<MutateResult>>()
+      .mockRejectedValueOnce(new EndpointError(500, {}))
+      .mockResolvedValue(undefined);
+    const { result } = mountHook(client, mutate);
+
+    let opId = "";
+    await act(async () => {
+      opId = result.current.dispatch(2);
+    });
+    await waitFor(() => expect(result.current.failed).toHaveLength(1));
+    expect(result.current.failed[0]!.opId).toBe(opId);
+
+    await act(async () => {
+      result.current.retry(opId);
+    });
+    await waitFor(() => expect(result.current.failed).toEqual([]));
+    // Same op, still in the overlay under its original id, now server-acked.
+    expect(result.current.pendingOps).toEqual([{ opId, vars: 2 }]);
     expect(result.current.saving).toBe(false);
+    expect(mutate).toHaveBeenCalledTimes(2);
+  });
+
+  it("a network-rejected mutate keeps the op rendered as `syncing`, NOT `failed`", async () => {
+    // Offline-is-syncing (the Yjs provider's policy): a fetch-level rejection
+    // says nothing about the op, so it is not an error state.
+    const client = makeClient();
+    const mutate = vi.fn(() => Promise.reject(new TypeError("fetch failed")));
+    const { result } = mountHook(client, mutate);
+
+    await act(async () => {
+      result.current.dispatch(2);
+    });
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
+    expect(result.current.pendingOps).toHaveLength(1); // still rendered
+    expect(result.current.data).toEqual([2]);
+    expect(result.current.failed).toEqual([]); // network ≠ durable failure
+    expect(result.current.saving).toBe(true); // ⇒ phase `syncing`
+  });
+
+  it("the browser `online` edge auto-retries network-failed ops", async () => {
+    const client = makeClient();
+    const mutate = vi
+      .fn<(n: number) => Promise<MutateResult>>()
+      .mockRejectedValueOnce(new TypeError("fetch failed"))
+      .mockResolvedValue(undefined);
+    const { result } = mountHook(client, mutate);
+
+    let opId = "";
+    await act(async () => {
+      opId = result.current.dispatch(2);
+    });
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(1));
+    expect(result.current.saving).toBe(true); // queued, syncing
+
+    // Connectivity returns: the reconnect edge re-fires the queued op in place.
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    await waitFor(() => expect(result.current.saving).toBe(false));
+    expect(mutate).toHaveBeenCalledTimes(2);
+    expect(result.current.pendingOps).toEqual([{ opId, vars: 2 }]); // resolved, awaiting push
+    expect(result.current.failed).toEqual([]);
+  });
+
+  it("the reconnect drain retries network-failed ops SEQUENTIALLY in overlay order", async () => {
+    // Ordering is load-bearing: structural ops depend on their predecessors'
+    // server-side effects (a second split targets the block the first one
+    // created). A concurrent replay can land out of order and be durably
+    // rejected — the drain must await each op before firing the next.
+    const client = makeClient();
+    const releases: Array<(res?: MutateResult) => void> = [];
+    let offline = true;
+    const mutate = vi.fn((_n: number) => {
+      if (offline) return Promise.reject(new TypeError("fetch failed"));
+      return new Promise<MutateResult>((resolve) => {
+        releases.push(resolve);
+      });
+    });
+    const { result } = mountHook(client, mutate);
+
+    await act(async () => {
+      result.current.dispatch(2);
+      result.current.dispatch(3);
+    });
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(2));
+    offline = false;
+
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    // Only the FIRST op re-fired; the second waits on its outcome.
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(3));
+    expect(mutate).toHaveBeenLastCalledWith(2);
+    expect(releases).toHaveLength(1);
+
+    await act(async () => {
+      releases[0]!(undefined);
+    });
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(4));
+    expect(mutate).toHaveBeenLastCalledWith(3);
+    await act(async () => {
+      releases[1]!(undefined);
+    });
+    await waitFor(() => expect(result.current.saving).toBe(false));
+  });
+
+  it("a network re-failure stops the drain; the next edge resumes it", async () => {
+    // Transport still down ⇒ every later op would fail the same way — stop
+    // instead of hammering; the next reconnect edge re-drains from the top.
+    const client = makeClient();
+    let offline = true;
+    const mutate = vi.fn((_n: number) =>
+      offline
+        ? Promise.reject(new TypeError("fetch failed"))
+        : Promise.resolve(undefined as MutateResult),
+    );
+    const { result } = mountHook(client, mutate);
+
+    await act(async () => {
+      result.current.dispatch(2);
+      result.current.dispatch(3);
+    });
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(2));
+
+    // A premature edge (still offline): op1 re-fails at network level — op2
+    // must NOT be tried.
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    await waitFor(() => expect(mutate).toHaveBeenCalledTimes(3));
+    await new Promise((r) => setTimeout(r, 20));
+    expect(mutate).toHaveBeenCalledTimes(3);
+    expect(mutate).toHaveBeenLastCalledWith(2);
+    expect(result.current.saving).toBe(true);
+
+    offline = false;
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    await waitFor(() => expect(result.current.saving).toBe(false));
+    expect(mutate).toHaveBeenCalledTimes(5);
+    expect(mutate.mock.calls.slice(3).map((c) => c[0])).toEqual([2, 3]);
+  });
+
+  it("HTTP-failed ops are NOT auto-retried on the `online` edge", async () => {
+    // The server already gave a durable verdict; re-firing on reconnect would
+    // just repeat it. Only an explicit retry() re-sends.
+    const client = makeClient();
+    const mutate = vi.fn(() => Promise.reject(new EndpointError(422, {})));
+    const { result } = mountHook(client, mutate);
+
+    await act(async () => {
+      result.current.dispatch(2);
+    });
+    await waitFor(() => expect(result.current.failed).toHaveLength(1));
+
+    await act(async () => {
+      window.dispatchEvent(new Event("online"));
+    });
+    expect(mutate).toHaveBeenCalledTimes(1); // untouched
+    expect(result.current.failed).toHaveLength(1);
+  });
+
+  it("causal denial: a snapshot past the ack token that lacks the op drops it as superseded", async () => {
+    // The one sanctioned eviction. mutate returns the commit's ack token (Rule
+    // A); a later push whose registry watermark is strictly past it (Rule B)
+    // still doesn't reflect the op ⇒ superseded by newer server truth. The op
+    // leaves the overlay and the sink reports kind "superseded".
+    const reports: OptimisticDivergenceReport[] = [];
+    optimisticDivergenceReportSink.register((r) => {
+      reports.push(r);
+    });
+
+    const client = makeClient();
+    const mutate = vi.fn(() => Promise.resolve({ watermark: "100" }));
+    const { result } = mountHook(client, mutate, true, denialResource);
+
+    await act(async () => {
+      result.current.dispatch(2);
+    });
+    // Resolved with its token; no snapshot yet, so it survives the resolve edge.
+    await waitFor(() => expect(result.current.saving).toBe(false));
+    expect(result.current.pendingOps).toHaveLength(1);
+
+    // The push: registry watermark 150 > ack 100 (seeded exactly where the
+    // transport writes it — immediately before the cache write), and the
+    // snapshot does NOT contain the op's row ⇒ denied.
+    act(() => {
+      noteResourceWatermark(denialResource.key, undefined, "150");
+      client.setQueryData(denialKey, [1]);
+    });
+    await waitFor(() => expect(result.current.pendingOps).toEqual([]));
+    expect(result.current.data).toEqual([1]); // rendering newer truth
+    expect(reports).toHaveLength(1);
+    expect(reports[0]!.kind).toBe("superseded");
+    expect(reports[0]!.resourceKey).toBe(denialResource.key);
   });
 });

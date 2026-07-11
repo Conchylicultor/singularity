@@ -50,6 +50,8 @@ export interface RecordedFrame {
   deletes?: string[];
   order?: string[];
   etag?: string;
+  /** Flight-co-produced commit watermark (Rule B′): full frames only. */
+  watermark?: string;
   reason?: string;
   params?: ResourceParams;
   /** Boot epoch stamped on sub-ack / up-to-date / up-to-date-batch frames. */

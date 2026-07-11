@@ -1,5 +1,5 @@
 import { and, eq } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import { db, currentTxId } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import {
   stageConfigDefault,
@@ -34,21 +34,28 @@ export const handleStageConfigDefault = implement(
       throw new HttpError(403, "This config is not promotable to a git default.");
     }
 
-    // Last-write-wins per (pluginId, configName).
-    await db
-      .insert(_stagedConfigDefault)
-      .values({
-        pluginId,
-        configName,
-        value,
-        authorId: null,
-        updatedAt: new Date(),
-      })
-      .onConflictDoUpdate({
-        target: [_stagedConfigDefault.pluginId, _stagedConfigDefault.configName],
-        set: { value, updatedAt: new Date() },
-      });
-    // return undefined → 204
+    // Last-write-wins per (pluginId, configName). Wrapped in a transaction so
+    // the ack token below reads the write's own xid.
+    const watermark = await db.transaction(async (tx) => {
+      await tx
+        .insert(_stagedConfigDefault)
+        .values({
+          pluginId,
+          configName,
+          value,
+          authorId: null,
+          updatedAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [_stagedConfigDefault.pluginId, _stagedConfigDefault.configName],
+          set: { value, updatedAt: new Date() },
+        });
+
+      // Ack token: the commit's xid8, read inside the write transaction (Rule A).
+      return currentTxId(tx);
+    });
+
+    return { watermark };
   },
 );
 

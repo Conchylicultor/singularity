@@ -154,7 +154,9 @@ describe("L2 persist-hook calling contract", () => {
     await tick();
 
     // Full recompute + persist even with no subscriber: needValue is forced.
-    expect(log).toEqual(["wm", "load:FULL", "persist"]);
+    // Two "wm" entries: the persist floor, then the read flight's own capture
+    // (the wire watermark — same hook, invoked inside `getResourceValue`).
+    expect(log).toEqual(["wm", "wm", "load:FULL", "persist"]);
     expect(persistArgs).toHaveLength(1);
     expect(persistArgs[0]!.value).toEqual([{ id: "a", n: 1 }]); // the FULL value
     expect(persistArgs[0]!.wm).toBe("xmin-7"); // the captured watermark
@@ -196,7 +198,8 @@ describe("L2 persist-hook calling contract", () => {
     // persisted entry ignores it and recomputes FULL (never persists a partial).
     h.runtime.applyDbChange({ table: "p_table", op: "U", ids: ["a"], origin: "p_table", identityBase: "p_table" });
     await tick();
-    expect(log).toEqual(["wm", "load:FULL", "persist"]); // load:scoped never appears
+    // persist "wm" + flight "wm" (wire watermark), then the forced FULL load.
+    expect(log).toEqual(["wm", "wm", "load:FULL", "persist"]); // load:scoped never appears
   });
 
   test("persistSnapshot is NEVER called on loader failure (but captureWatermark was)", async () => {
@@ -207,8 +210,9 @@ describe("L2 persist-hook calling contract", () => {
     });
     h.runtime.recomputeResource("p");
     await tick();
-    // Watermark captured, loader ran and threw — no persist on the failure path.
-    expect(log).toEqual(["wm", "load:FULL"]);
+    // Watermarks captured (persist floor + flight), loader ran and threw — no
+    // persist on the failure path.
+    expect(log).toEqual(["wm", "wm", "load:FULL"]);
   });
 
   test("persistSnapshot throwing does NOT block the subscriber's frame", async () => {

@@ -129,8 +129,12 @@ export function useServerBlockStore(pageId: string): BlockStore {
     // overlay + freeze pipeline (and confirmation) is shared.
     mutate: (v) =>
       v.tag === "patch"
-        ? fetchEndpoint(patchBlocks, { pageId }, { body: v.patch }).then(() => undefined)
-        : fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: v.op }).then(() => undefined),
+        ? fetchEndpoint(patchBlocks, { pageId }, { body: v.patch }).then((r) => ({
+            watermark: r.watermark,
+          }))
+        : fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: v.op }).then((r) => ({
+            watermark: r.watermark,
+          })),
     isConfirmedBy: (serverData, v) =>
       v.tag === "patch"
         ? isPatchReflected(serverData, v.patch)

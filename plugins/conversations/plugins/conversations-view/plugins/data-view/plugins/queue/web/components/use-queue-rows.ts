@@ -69,6 +69,8 @@ export function useQueueRows(): {
   const queueResult = useOptimisticResource<QueueData, ReorderVars>({
     resource: queueRanksResource,
     apply: applyReorder,
+    // The response's `watermark` (commit ack token) flows through to the
+    // primitive — exact causal confirmation for this coarse consumer.
     mutate: (vars) => fetchEndpoint(reorderQueue, {}, { body: vars }),
   });
   const all = useCombinedResources({

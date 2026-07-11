@@ -49,7 +49,7 @@
   - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
   - **`multi-select`** — Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.
   - **`networking`** — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
-  - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay), with coarse and content-based confirmation and automatic rollback on reject.
+  - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay) under the never-revert policy — causal (ack-watermark) and content-based confirmation, denial only under causal proof, and keep-rendered failures with reconnect auto-retry.
   - **`overflow-menu`** — Single-line row that keeps as many children inline as fit and collapses the overflow behind a trailing ⋯ dropdown menu. Built on responsive-overflow; reserves the trigger's width so it is never clipped.
   - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
   - **`pane`** — Unified pane primitive: Pane.define and chrome components.

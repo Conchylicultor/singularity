@@ -10,6 +10,10 @@ const ReorderBodySchema = z.object({
 export const reorderQueue = defineEndpoint({
   route: "POST /api/conversations-queue/reorder",
   body: ReorderBodySchema,
+  // `watermark` is the commit's ack token (`currentTxId` read inside the write
+  // transaction) — the optimistic overlay uses it for causal confirmation. A
+  // self-target no-op reorder returns no watermark (nothing was written).
+  response: z.object({ watermark: z.string().optional() }),
 });
 
 const ConversationIdBodySchema = z.object({

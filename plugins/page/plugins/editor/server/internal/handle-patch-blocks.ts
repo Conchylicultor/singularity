@@ -1,5 +1,5 @@
 import { asc, eq, inArray } from "drizzle-orm";
-import { db } from "@plugins/database/server";
+import { db, currentTxId } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { patchBlocks } from "../../core/endpoints";
 import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
@@ -95,7 +95,7 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
   // patch was computed) writes nothing — don't fan out `blocksChanged`.
   const didWrite = inserts.length > 0 || updates.length > 0 || rootIds.length > 0;
 
-  await db.transaction(async (tx) => {
+  const watermark = await db.transaction(async (tx) => {
     // Vacate the `(parent_id, rank)` pairs this patch reassigns before anything
     // claims them. Parking runs first so the inserts below can take a pair a
     // re-ranked row is moving off (and so a swap-undo never trips the per-tuple
@@ -138,6 +138,9 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
     if (rootIds.length > 0) {
       await tx.delete(_blocks).where(inArray(_blocks.id, rootIds));
     }
+
+    // Ack token: the commit's xid8, read inside the write transaction (Rule A).
+    return currentTxId(tx);
   });
 
   if (didWrite) {
@@ -155,5 +158,5 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
     .from(_blocks)
     .where(eq(_blocks.pageId, params.pageId))
     .orderBy(asc(_blocks.rank), asc(_blocks.createdAt));
-  return { blocks: finalRows.map((r) => BlockSchema.parse(r)) };
+  return { blocks: finalRows.map((r) => BlockSchema.parse(r)), watermark };
 });
