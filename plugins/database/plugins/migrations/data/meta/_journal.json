@@ -1387,6 +1387,13 @@
       "tag": "20260711_012434_ed0d23de__add_song_figuration_patterns",
       "hash": "ed0d23de",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1783807082000,
+      "tag": "20260711_215802_4bd2ad0e__add_trash",
+      "hash": "4bd2ad0e",
+      "breakpoints": true
     }
   ]
 }

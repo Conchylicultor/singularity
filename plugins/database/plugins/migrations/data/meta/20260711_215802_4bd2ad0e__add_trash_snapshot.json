@@ -1,6 +1,6 @@
 {
-  "id": "330859ab-aba4-4c8b-95be-402006a3e929",
-  "prevId": "197b5995-3b13-49c3-aebd-b2e066064cd1",
+  "id": "e1643c98-67b8-4d51-b6fe-651708f03170",
+  "prevId": "b95253a5-cc74-4d0b-be21-bec799bde17a",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -1588,6 +1588,20 @@
           "type": "jsonb",
           "primaryKey": false,
           "notNull": true
+        },
+        "bass_pattern_id": {
+          "name": "bass_pattern_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'root'"
+        },
+        "chord_pattern_id": {
+          "name": "chord_pattern_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'block'"
         },
         "created_at": {
           "name": "created_at",
@@ -4767,6 +4781,18 @@
           "notNull": true,
           "default": true
         },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": false
+        },
+        "trash_entry_id": {
+          "name": "trash_entry_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamp with time zone",
@@ -4824,6 +4850,59 @@
           "concurrently": false,
           "method": "btree",
           "with": {}
+        },
+        "page_blocks_parent_rank_live_uq": {
+          "name": "page_blocks_parent_rank_live_uq",
+          "columns": [
+            {
+              "expression": "parent_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            },
+            {
+              "expression": "rank",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "deleted_at IS NULL AND parent_id IS NOT NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "page_blocks_root_rank_live_uq": {
+          "name": "page_blocks_root_rank_live_uq",
+          "columns": [
+            {
+              "expression": "rank",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": true,
+          "where": "deleted_at IS NULL AND parent_id IS NULL",
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        },
+        "page_blocks_trash_entry_idx": {
+          "name": "page_blocks_trash_entry_idx",
+          "columns": [
+            {
+              "expression": "trash_entry_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
         }
       },
       "foreignKeys": {
@@ -4855,16 +4934,7 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {
-        "page_blocks_parent_rank_uq": {
-          "name": "page_blocks_parent_rank_uq",
-          "nullsNotDistinct": true,
-          "columns": [
-            "parent_id",
-            "rank"
-          ]
-        }
-      },
+      "uniqueConstraints": {},
       "policies": {},
       "checkConstraints": {},
       "isRLSEnabled": false
