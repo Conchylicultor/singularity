@@ -162,6 +162,30 @@ export interface UseCaretMenuResult {
   surfaceOpen: boolean;
   activeIndex: number;
   setActiveIndex: (i: number) => void;
+  /**
+   * Commit the item at `index` from a POINTER press — the mouse/touch twin of
+   * the keyboard Enter path. Every caret menu MUST route its item clicks through
+   * this instead of calling `onCommit`/the item handler directly on
+   * `onMouseDown`, because of two hazards a focus-less caret surface has and an
+   * ordinary menu does not:
+   *
+   *  1. **Fire it on `onPointerDown`, never `onMouseDown`.** Pressing on the
+   *     portaled surface perturbs the host editor's live selection (it extends
+   *     into the menu text). A menu whose `open` is DERIVED from that selection
+   *     (`/`, `[[`, `@`) therefore closes — and unmounts the pressed row —
+   *     *between* `pointerdown` and `mousedown`, so a `mousedown`-time commit
+   *     never runs at all. `pointerdown` fires while the row is still mounted and
+   *     the caret still live.
+   *  2. **It runs `onCommit` inside `editor.update()`.** The keyboard commit
+   *     fires from inside `KEY_ENTER_COMMAND`, i.e. already within a Lexical
+   *     update, so any nested `editor.update()` the consumer performs (e.g. the
+   *     slash menu stripping the `/query` before a *store-level* `convertTo`) is
+   *     DEFERRED and lands after the store write. A raw pointer handler runs
+   *     outside any update, so that nested update would run synchronously in the
+   *     wrong order and the commit silently no-ops. Wrapping here makes a pointer
+   *     commit byte-for-byte the keyboard commit.
+   */
+  commit: (index: number) => void;
 }
 
 /**
@@ -257,5 +281,13 @@ export function useCaretMenu(caret: CaretQuery, opts: UseCaretMenuOpts): UseCare
     };
   }, [lexicalEditor, dismiss, interactiveRef, surfaceOpenRef, activeIndexRef, onCommitRef]);
 
-  return { open, surfaceOpen, activeIndex, setActiveIndex };
+  // Pointer commit — see `UseCaretMenuResult.commit` for the two hazards this
+  // guards. Running `onCommit` inside `editor.update()` puts it in the SAME
+  // context the keyboard Enter handler runs in (inside a Lexical command, itself
+  // an update), so a consumer's nested `editor.update()` defers identically.
+  const commit = useEventCallback((index: number) => {
+    lexicalEditor.update(() => onCommitRef.current(index));
+  });
+
+  return { open, surfaceOpen, activeIndex, setActiveIndex, commit };
 }

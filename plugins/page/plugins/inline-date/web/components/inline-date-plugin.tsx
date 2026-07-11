@@ -72,7 +72,7 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
   const menu = useMemo(() => buildMenu(caret.query, new Date()), [caret.query]);
   const options = menu.options;
 
-  const { surfaceOpen, activeIndex, setActiveIndex } = useCaretMenu(caret, {
+  const { surfaceOpen, activeIndex, setActiveIndex, commit } = useCaretMenu(caret, {
     itemCount: options.length,
     onCommit: (i) => insertMention(options[i]!),
   });
@@ -102,9 +102,13 @@ export function InlineDatePlugin(_: BlockTextPluginProps) {
                 )
               }
               onMouseEnter={() => setActiveIndex(i)}
-              onMouseDown={(e: React.MouseEvent) => {
+              // Commit on pointerdown through the menu's `commit` (pointerdown-
+              // timed + `editor.update`-wrapped), so a click matches Enter — a
+              // mousedown-time commit would never fire (the press perturbs the
+              // caret and unmounts this row first). See `useCaretMenu`.
+              onPointerDown={(e: React.PointerEvent) => {
                 e.preventDefault();
-                insertMention(option);
+                commit(i);
               }}
             >
               <span className="truncate">{option.label}</span>

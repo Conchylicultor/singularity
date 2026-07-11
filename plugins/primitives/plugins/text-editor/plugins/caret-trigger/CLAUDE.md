@@ -105,6 +105,44 @@ A single gate would be wrong in both directions, so the hook registers three:
   non-consuming) — returning to a block whose text still holds the trigger
   re-derives `open` correctly.
 
+## Committing an item — always through `useCaretMenu`'s `commit`, never a raw `onMouseDown`
+
+Keyboard and mouse must be the SAME commit. Enter goes through
+`KEY_ENTER_COMMAND → onCommit(activeIndex)`; a menu item click must go through
+`commit(index)` on **`onPointerDown`**. A menu that instead wires its rows to
+`onMouseDown={() => onSelect(x)}` (reading the live selection) is broken on
+mouse in two independent ways, and both are why this seam exists:
+
+1. **The row unmounts before its `mousedown`.** The surface is *focus-less* and
+   portaled, so a press on it does not blur the editor — but it **extends the
+   host's DOM selection** into the menu text (anchor left at the caret, focus
+   into the row). A menu whose `open` is DERIVED from that selection (`/`, `[[`,
+   `@`) therefore sees a non-collapsed selection → `trigger === null` → closes,
+   and React unmounts the pressed row **between `pointerdown` and `mousedown`**.
+   The `mousedown` (and any `preventDefault` on it) never runs. `pointerdown`
+   fires while the row is still mounted and the caret still collapsed — so
+   `commit` reads a valid trigger.
+   *This perturbation is not a cancelable default:* `preventDefault` on
+   `pointerdown`/`mousedown` (any phase) does NOT stop it, and `user-select:none`
+   on the surface does NOT stop it. Committing early — before the perturbation —
+   is the only fix.
+2. **A raw handler runs `onCommit` outside a Lexical update.** The keyboard
+   commit fires from inside `KEY_ENTER_COMMAND`, i.e. already within an
+   `editor.update()`, so any nested `editor.update()` the consumer performs is
+   **deferred**. A consumer that strips its `trigger…query` span in a nested
+   update and then does a *store-level* write (the slash menu: strip the
+   `/query`, then `convertTo` the block) relies on that deferral: the store
+   write must land first. Run the same `onCommit` from a plain DOM handler and
+   the nested update runs *synchronously first*, in the wrong order — the commit
+   silently no-ops. `commit` wraps `onCommit` in `editor.update()`, so a pointer
+   commit is byte-for-byte the keyboard commit.
+
+`commit` therefore lives in `useCaretMenu` (one place, both hazards handled) and
+every consumer routes item clicks through it (`page/editor`'s `BlockTypeList` /
+`PageOptionsList` take an `onCommit`; `inline-date` calls `commit(i)` directly).
+`e2e/caret-trigger-wedge.mjs` covers the keyboard/derivation half; the
+mouse-commit half is exercised by the page editor's click tests.
+
 ## The single-owner arbiter
 
 Two triggers can be live in one node (`@friday [[bar|` — `chrono` parses

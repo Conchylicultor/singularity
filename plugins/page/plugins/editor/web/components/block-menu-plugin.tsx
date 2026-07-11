@@ -123,18 +123,21 @@ export function BlockMenuPlugin({
     if (useForced) clearBlockMenu(blockId);
   }
 
-  const { surfaceOpen, activeIndex, setActiveIndex } = useCaretMenu(menu, {
+  const { surfaceOpen, activeIndex, setActiveIndex, commit } = useCaretMenu(menu, {
     itemCount: filtered.length,
     onCommit: (i) => handleSelect(filtered[i]!),
     surfaceWhen: "interactive",
   });
 
+  // Both keyboard (Enter) and mouse commit through the SAME `onCommit` — the
+  // menu's `commit` runs it on pointerdown and inside an `editor.update()`, so a
+  // click and Enter are the same operation (see `useCaretMenu`).
   return (
     <CaretTriggerMenu caret={menu} open={surfaceOpen} width="sm" padding="xs" maxHeight="lg">
       <BlockTypeList
         blocks={filtered}
         activeIndex={activeIndex}
-        onSelect={handleSelect}
+        onCommit={commit}
         onHoverIndex={setActiveIndex}
       />
     </CaretTriggerMenu>

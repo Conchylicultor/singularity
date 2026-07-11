@@ -63,16 +63,31 @@ export function filterBlockTypes(
  * fold of a scroll-capped menu follows the highlight. `block: "nearest"` is a
  * no-op when the row is already visible, which is why hover — which also moves
  * the active index — never yanks the list.
+ *
+ * The press wiring has two shapes, because this row is shared by two kinds of
+ * surface (see `BlockTypeList`):
+ *
+ * - **Caret menu** (slash / gutter-`+`): `onCommit` is set. It commits on
+ *   `onPointerDown` because the menu is a focus-less surface over a live editor
+ *   caret — a press perturbs the host selection and unmounts this row before a
+ *   `mousedown` could fire (see `useCaretMenu`'s `commit`).
+ * - **Focused popover picker** (Add block / turn-into): only `onSelect` is set.
+ *   It commits on `onMouseDown` + `preventDefault` so the click never blurs the
+ *   picker's own search field.
  */
 function BlockTypeRow({
   block,
   active,
   onSelect,
+  onCommit,
   onHover,
 }: {
   block: BlockHandle<unknown>;
   active: boolean;
-  onSelect: (block: BlockHandle<unknown>) => void;
+  /** Focused-picker commit — fires on `onMouseDown`. */
+  onSelect?: (block: BlockHandle<unknown>) => void;
+  /** Caret-menu commit (already `editor.update`-wrapped) — fires on `onPointerDown`. */
+  onCommit?: () => void;
   onHover: () => void;
 }) {
   const ref = useRef<HTMLElement>(null);
@@ -82,16 +97,27 @@ function BlockTypeRow({
     if (active) ref.current?.scrollIntoView({ block: "nearest" });
   }, [active]);
 
+  const pressProps = onCommit
+    ? {
+        onPointerDown: (e: React.PointerEvent) => {
+          e.preventDefault();
+          onCommit();
+        },
+      }
+    : {
+        onMouseDown: (e: React.MouseEvent) => {
+          e.preventDefault();
+          onSelect?.(block);
+        },
+      };
+
   return (
     <Row
       ref={ref}
       selected={active}
       icon={Icon ? <Icon className="text-muted-foreground size-4" /> : undefined}
       onMouseEnter={onHover}
-      onMouseDown={(e: React.MouseEvent) => {
-        e.preventDefault();
-        onSelect(block);
-      }}
+      {...pressProps}
     >
       {block.label}
     </Row>
@@ -100,18 +126,26 @@ function BlockTypeRow({
 
 /**
  * Presentational list of block-type rows (icon + label) with an active-row
- * highlight. Item buttons use `onMouseDown` + `preventDefault` so clicking does
- * not blur an editor the consumer relies on keeping focused (e.g. the slash menu).
+ * highlight. Two commit modes, mutually exclusive:
+ *
+ * - **`onCommit(index)`** — caret menus (slash / gutter-`+`). Rows commit on
+ *   `onPointerDown` through the `useCaretMenu` `commit`, which is `pointerdown`-
+ *   timed and `editor.update`-wrapped so a mouse click matches the keyboard.
+ * - **`onSelect(block)`** — focused popover pickers (Add block / turn-into).
+ *   Rows commit on `onMouseDown` + `preventDefault` to keep the picker's field
+ *   focused.
  */
 export function BlockTypeList({
   blocks,
   activeIndex,
   onSelect,
+  onCommit,
   onHoverIndex,
 }: {
   blocks: BlockHandle<unknown>[];
   activeIndex: number;
-  onSelect: (block: BlockHandle<unknown>) => void;
+  onSelect?: (block: BlockHandle<unknown>) => void;
+  onCommit?: (index: number) => void;
   onHoverIndex: (index: number) => void;
 }) {
   if (blocks.length === 0) {
@@ -130,6 +164,7 @@ export function BlockTypeList({
           block={block}
           active={i === activeIndex}
           onSelect={onSelect}
+          onCommit={onCommit ? () => onCommit(i) : undefined}
           onHover={() => onHoverIndex(i)}
         />
       ))}

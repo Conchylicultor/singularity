@@ -78,11 +78,14 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
   // 0 (not interactive) then, and the menu shows a spinner, not "No pages found".
   const options = pageOptionsResult.pending ? [] : pageOptionsResult.options;
 
-  const { surfaceOpen, activeIndex, setActiveIndex } = useCaretMenu(caret, {
+  const { surfaceOpen, activeIndex, setActiveIndex, commit } = useCaretMenu(caret, {
     itemCount: options.length,
     onCommit: (i) => handleSelect(options[i]!),
   });
 
+  // Keyboard (Enter) and mouse both commit through `onCommit` via the menu's
+  // `commit` (pointerdown-timed + `editor.update`-wrapped), so a click behaves
+  // exactly like Enter (see `useCaretMenu`).
   return (
     <CaretTriggerMenu
       caret={caret}
@@ -97,8 +100,7 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
         <PageOptionsList
           options={pageOptionsResult.options}
           activeIndex={activeIndex}
-          onSelect={(id) => insertLink(id)}
-          onCreate={(title) => void createLinkedPage(title).then((id) => insertLink(id))}
+          onCommit={commit}
           onHoverIndex={setActiveIndex}
         />
       )}

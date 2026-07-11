@@ -60,20 +60,29 @@ function PageOptionIcon({ page }: { page: Block }) {
 
 /**
  * Presentational list of page-picker options with an active-row highlight.
- * Mirrors `BlockTypeList`: item rows use `onMouseDown` + `preventDefault` so a
- * click never blurs an editor the consumer relies on keeping focused.
+ * Mirrors `BlockTypeList`, with the same two mutually-exclusive commit modes:
+ *
+ * - **`onCommit(index)`** — the `[[` caret menu. Rows commit on `onPointerDown`
+ *   through `useCaretMenu`'s `commit` (pointerdown-timed + `editor.update`-
+ *   wrapped), because a press on the focus-less surface perturbs the caret and
+ *   unmounts the row before a `mousedown` could fire.
+ * - **`onSelect(id)` / `onCreate(title)`** — the focused popover picker (the
+ *   page-link block). Rows commit on `onMouseDown` + `preventDefault` so the
+ *   click never blurs the picker's search field.
  */
 export function PageOptionsList({
   options,
   activeIndex,
   onSelect,
   onCreate,
+  onCommit,
   onHoverIndex,
 }: {
   options: PageOption[];
   activeIndex: number;
-  onSelect: (pageId: string) => void;
+  onSelect?: (pageId: string) => void;
   onCreate?: (title: string) => void;
+  onCommit?: (index: number) => void;
   onHoverIndex?: (index: number) => void;
 }) {
   if (options.length === 0) {
@@ -83,6 +92,11 @@ export function PageOptionsList({
       </Text>
     );
   }
+  // Caret menu → commit on pointerdown; focused picker → commit on mousedown.
+  const pressProps = (i: number, act: () => void) =>
+    onCommit
+      ? { onPointerDown: (e: React.PointerEvent) => { e.preventDefault(); onCommit(i); } }
+      : { onMouseDown: (e: React.MouseEvent) => { e.preventDefault(); act(); } };
   return (
     <Stack gap="none">
       {options.map((option, i) =>
@@ -92,10 +106,7 @@ export function PageOptionsList({
             selected={i === activeIndex}
             icon={<PageOptionIcon page={option.page} />}
             onMouseEnter={() => onHoverIndex?.(i)}
-            onMouseDown={(e: React.MouseEvent) => {
-              e.preventDefault();
-              onSelect(option.page.id);
-            }}
+            {...pressProps(i, () => onSelect?.(option.page.id))}
           >
             <span className="truncate">{pageData(option.page).title || "Untitled"}</span>
           </Row>
@@ -105,10 +116,7 @@ export function PageOptionsList({
             selected={i === activeIndex}
             icon={<MdAddCircleOutline className="text-muted-foreground" />}
             onMouseEnter={() => onHoverIndex?.(i)}
-            onMouseDown={(e: React.MouseEvent) => {
-              e.preventDefault();
-              onCreate?.(option.title);
-            }}
+            {...pressProps(i, () => onCreate?.(option.title))}
           >
             <span className="truncate">
               Create <span className="font-medium">“{option.title}”</span>
