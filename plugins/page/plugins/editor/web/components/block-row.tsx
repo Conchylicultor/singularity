@@ -13,12 +13,12 @@ import { BlockActionsMenu } from "./block-actions-menu";
 import { BLOCK_GUTTER, BLOCK_INDENT } from "../internal/page-column";
 import "./block-document-scale.css";
 
-// The block's first-line height, as a reference to the single-sourced
-// `--doc-lh-*` var (defined in block-document-scale.css). block-row feeds this to
-// `--gutter-line-height` so `.block-gutter-control` seats the +/drag/chevron on
-// the center of the block's first text line — whatever its variant. A block with
-// no text variant (image, divider, …) falls back to body.
-const GUTTER_LINE_HEIGHT: Record<BlockTextVariant, string> = {
+// Per-variant text line-height, as a reference to the single-sourced `--doc-lh-*`
+// var (defined in block-document-scale.css). Drives the DEFAULT gutter seat: a
+// text block's first line sits at `py-xs + line-height/2`. A block that renders
+// its first line elsewhere overrides the whole center via
+// `handle.gutterFirstLineCenter` (callout, link-to-page, sub-page, divider, …).
+const DOC_LINE_HEIGHT: Record<BlockTextVariant, string> = {
   title: "var(--doc-lh-title)",
   heading: "var(--doc-lh-heading)",
   subheading: "var(--doc-lh-subheading)",
@@ -77,14 +77,19 @@ export function BlockRow({
   // relative to the row — the controls hang back into the rail, and a drop
   // lands as a sibling of this row, so the line sits at this row's depth.
   const contentLeft = BLOCK_GUTTER + depth * BLOCK_INDENT;
-  const gutterLineHeight = GUTTER_LINE_HEIGHT[handle?.textVariant ?? "body"];
+  // Where the gutter controls seat vertically. A block may override the whole
+  // center (its first line isn't a plain text line); otherwise the center is the
+  // standard text seat, `py-xs + variant-line-height/2`.
+  const gutterFirstLineCenter =
+    handle?.gutterFirstLineCenter ??
+    `calc(var(--space-xs) + ${DOC_LINE_HEIGHT[handle?.textVariant ?? "body"]} / 2)`;
 
   return (
     <div
       ref={setDropRef}
       data-block-id={block.id}
       className="group/row relative"
-      style={{ paddingLeft: contentLeft, "--gutter-line-height": gutterLineHeight } as CSSProperties}
+      style={{ paddingLeft: contentLeft, "--gutter-first-line-center": gutterFirstLineCenter } as CSSProperties}
     >
       {/* Chevron — collapses/expands this block's children. Closest to the
           content; pinned visible while collapsed so hidden content is

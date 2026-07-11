@@ -16,4 +16,7 @@ export const codeBlock = defineBlock({
   // Typing ``` at the start of a text block converts it into a code block. The
   // generic MarkdownShortcutPlugin reads this off the slot — no editor changes.
   markdownPrefixes: ["```"],
+  // Not a doc-text block: the code sits at `Inset y="xs"` + the `<pre>`'s `p-md`,
+  // on a fixed `leading-5` (1.25rem) line — so seat the rail on that first line.
+  gutterFirstLineCenter: "calc(var(--space-xs) + var(--space-md) + 0.625rem)",
 });

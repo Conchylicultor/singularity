@@ -15,4 +15,7 @@ import { defineBlock, PAGE_BLOCK_TYPE, PageDataSchema } from "@plugins/page/plug
 export const subPageBlock = defineBlock({
   type: PAGE_BLOCK_TYPE,
   schema: PageDataSchema,
+  // An icon+title Row (not doc text), wrapped in `Inset y="xs"`: seat the rail on
+  // the Row's center — its own `pad-row-y` top plus half a `text-body` line.
+  gutterFirstLineCenter: "calc(var(--space-xs) + var(--pad-row-y) + var(--line-height-body) / 2)",
 });

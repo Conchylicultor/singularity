@@ -85,6 +85,25 @@ export interface BlockHandle<T> {
   placeholder?: string;
   /** Semantic typography variant for the editable text (default "body"). */
   textVariant?: BlockTextVariant;
+  /**
+   * Where the gutter controls (+ / drag / chevron) seat vertically: a CSS length
+   * from the block's TOP edge to the CENTER of its first rendered line, which is
+   * where the controls center.
+   *
+   * The default suits a block that renders editable text through the shared
+   * `BlockTextEditor` at the standard inset — `py-xs + textVariant-line-height/2`
+   * — so ordinary text blocks omit this. A block that renders its first line at a
+   * different offset (a padded box like the callout, an icon row like
+   * link-to-page / sub-page, a rule like the divider) declares its real center
+   * here so the rail tracks that line instead of a phantom text line. Media/void
+   * blocks with no single line can omit it: the default seats the controls near
+   * the block's top-left, the intended treatment for tall content.
+   *
+   * Express it in the same tokens the block's layout uses (e.g.
+   * `calc(var(--space-xs) * 2 + var(--doc-lh-body) / 2)`) so it tracks the
+   * density preset and can't drift from the padding it mirrors.
+   */
+  gutterFirstLineCenter?: string;
   /** Sibling block type produced when Enter splits this block at the END of its text (defaults to same type). */
   splitInto?: string;
   /**
@@ -125,6 +144,7 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
   ordinalMarker?: (ordinal: number) => string;
   placeholder?: string;
   textVariant?: BlockTextVariant;
+  gutterFirstLineCenter?: string;
   splitInto?: string;
   toggle?: { field: string; doneClassName?: string };
   collapsible?: "always";
@@ -146,6 +166,7 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
     ordinalMarker: opts.ordinalMarker,
     placeholder: opts.placeholder,
     textVariant: opts.textVariant,
+    gutterFirstLineCenter: opts.gutterFirstLineCenter,
     splitInto: opts.splitInto,
     toggle: opts.toggle,
     collapsible: opts.collapsible,

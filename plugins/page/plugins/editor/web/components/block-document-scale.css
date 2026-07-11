@@ -66,17 +66,18 @@
 /*
  * Gutter-control vertical alignment (the +/drag/chevron rail in block-row).
  *
- * A block's first text line box starts at the content's `py-xs` (`--space-xs`)
- * top padding and is `--gutter-line-height` tall — block-row sets that var per
- * row from the block's own text variant (defaulting to body). A size-5 (1.25rem)
- * control seats its glyph-center on the line center when
- *   top = space-xs + (line-height − control-size) / 2
- * i.e. control-center = space-xs + line-height/2 = the first line's center.
+ * The controls seat their center on the center of the block's FIRST rendered
+ * line (Notion parity). block-row sets `--gutter-first-line-center` per row —
+ * the distance from the block's top edge to that line's center — and a size-5
+ * (1.25rem) control drops half its height above it to center on it.
  *
- * This replaces the old flat `top-1`, which ignored line-height and so drifted
- * high — barely on body text, badly on headings (Notion parity: the gutter
- * tracks the first line whatever its size).
+ * The default (a text block) is `py-xs (--space-xs) + line-height/2`. Blocks
+ * whose first line sits elsewhere — a padded box (callout), an icon row
+ * (link-to-page, sub-page), a rule (divider) — declare their own center via
+ * `BlockHandle.gutterFirstLineCenter`, so the rail tracks the real first line
+ * rather than a phantom text line. This replaces the old flat `top-1`, which
+ * ignored all of that and drifted high (worst on headings and padded blocks).
  */
 .block-gutter-control {
-  top: calc(var(--space-xs) + (var(--gutter-line-height, var(--doc-lh-body)) - 1.25rem) / 2);
+  top: calc(var(--gutter-first-line-center, calc(var(--space-xs) + var(--doc-lh-body) / 2)) - 0.625rem);
 }

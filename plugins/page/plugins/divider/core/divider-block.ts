@@ -21,4 +21,7 @@ export const dividerBlock = defineBlock({
   // the schema has no `text` field so it is harmlessly dropped (remaining is ""
   // anyway, since --- is typed into an otherwise-empty block).
   markdownPrefixes: ["---"],
+  // A 1px rule inside `Inset y="sm"`: seat the rail on the rule itself, not the
+  // phantom body line the default would assume (which sits well below it).
+  gutterFirstLineCenter: "calc(var(--space-sm) + 0.5px)",
 });

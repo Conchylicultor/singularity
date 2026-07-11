@@ -22,4 +22,7 @@ export const calloutBlock = defineBlock({
   aliases: ["note", "info", "warning", "tip", "aside", "highlight", "banner"],
   empty: () => ({ text: "", icon: null, iconSvgNodes: null, color: "default" as CalloutColor }),
   placeholder: "Type something…",
+  // The tinted box adds an `Inset y="xs"` on top of the text editor's own `py-xs`,
+  // so the first line sits one extra `--space-xs` lower than a plain text block.
+  gutterFirstLineCenter: "calc(var(--space-xs) * 2 + var(--doc-lh-body) / 2)",
 });
