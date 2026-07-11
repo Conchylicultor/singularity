@@ -1,57 +1,113 @@
 # sentinel
 
-The **cluster congestion sentinel** (plan:
-`research/2026-07-10-global-congestion-observability.md`, Phase B). A main-only,
-always-on sampler that gives the observability stack what no per-backend
-monitor can: the *cluster-wide* vitals at every instant, recorded continuously
-so congestion onset is captured **prospectively**, not reconstructed from the
-first victim's threshold trip.
+The **cluster congestion sentinel** (plans:
+`research/2026-07-10-global-congestion-observability.md` Phase B;
+`research/2026-07-11-global-observability-freeze-blind-spots.md` Stages 3+5;
+`research/2026-07-11-global-fleet-memory-admission-duress-valve.md` Piece 2).
+A main-only, always-on sampler that gives the observability stack what no
+per-backend monitor can: the *cluster-wide* vitals at every instant, recorded
+continuously so congestion onset is captured **prospectively**, not
+reconstructed from the first victim's threshold trip.
 
-## The sampler (B1/B3)
+## Architecture: everything critical lives on a worker thread (Stage 5)
 
-`server/internal/sampler.ts`, started in `onReady` gated `isMain()`, a
-`setInterval` at `cadenceMs` (5 s default). It is the documented exception to
-the no-polling rule, for the same recorded reason as health-monitor's
-process-sampler: it is the diagnostic instrument FOR cluster duress — a queue
-job would be starved by the congestion it measures.
+During the 2026-07-11 03:29 freeze the duress latch **cleared mid-thrash**:
+sampling and lease renewal rode main's own event loop, and a blocked loop
+cannot renew a 60 s lease. So the sampler, the onset detector, AND the whole
+latch lifecycle run on a dedicated Bun `Worker` (`server/internal/worker/`),
+whose thread keeps ticking while main is wedged. **The worker is the single
+latch owner** — no `setDuress/refreshDuress/clearDuress` call exists on main.
 
-Each tick (under `runInBackgroundLane(() => runWithoutProfiling(...))`, so the
-sentinel's own reads never feed the profiler or ride the interactive lane):
+- `worker/entry.ts` — the worker: `setInterval(cadenceMs)` tick, the pure
+  detector, latch set/refresh/clear, duress-episode lines, max-episode-hold.
+  Lean closure: the `duress/plugins/latch` leaf barrel, log-channels, the
+  embedded-pg constants, pure detector/gatherers. No config_v2 (thresholds
+  arrive as frames — a worker has no plugin runtime).
+- `worker/pg.ts` — ONE dedicated raw `pg` client on the embedded cluster's
+  direct Unix socket (no drizzle pool, no PgBouncer): sharing main's pool
+  would re-couple the sentinel to the contention it measures. On error: null
+  pg fields, one in-tick reconnect attempt, a log frame.
+- `worker/sample.ts` — the impure gatherers (gateway fleet fetch, `ps` scan,
+  health.jsonl p99 rollup, health-host.jsonl compressor tail). Per-signal
+  degradation: every sub-read fails into null fields + a log line, never the
+  tick.
+- `worker-host.ts` (main) — spawns/supervises the worker: respawn with capped
+  backoff (a respawned worker **adopts a fresh existing latch** at init and
+  keeps refreshing), a rapid-failure give-up (5 immediate deaths → one loud
+  line, no respawn loop), live `watchConfig` threshold push, graceful stop
+  (worker clears the latch, acks, then terminate).
+- `sampler.ts` / `onset.ts` (main) — **best-effort re-emitters only**: sample
+  frames → `cluster` trace ring + `onSentinelSample` listeners; trip frames →
+  `captureTrace({kind:"cluster-onset", critical: true})`; log frames → the
+  `sentinel` channel. Nothing main-side is on the latch's critical path.
 
-- **Host**: loadavg / cpu count (swap stays with the 10 s host sampler in
-  health-host.jsonl — no second `vm_stat` spawn).
-- **Pg cluster**: `getContentionSnapshot()` (≤1 s memo) + ONE batched query on
-  main's pool — active-backend `wait_event_type` counts, ungranted `pg_locks`,
-  and per-tick deltas of `sum(blk_read_time)` / `sum(xact_commit)` (the
-  Postgres-side pressure that was invisible during the 2026-07-10 burst).
+If main's whole process dies the worker dies with it and the lease lapses
+within 60 s — the fleet self-recovers (unchanged fail-safe). The worker's
+`setInterval` is the sentinel's documented exception to the no-polling rule
+(the diagnostic instrument FOR cluster duress cannot ride the job queue that
+the congestion it measures saturates).
+
+⚠ **Compiled-release caveat** (verified on Bun 1.3.13): `bun build --compile`
+does NOT embed `new Worker(new URL(...))` — in a compiled release binary the
+spawn fails and the rapid-failure guard gives up loudly (sentinel + latch off
+until the release pipeline adds the worker entry as an extra compile
+entrypoint). Dev backends run from source, where the URL form works.
+
+## Each tick gathers
+
+- **Host**: loadavg / cpu count, plus a `health-host.jsonl` tail line (30 s
+  freshness guard; a `wallJumpMs`-stamped line reads null) for
+  `decompressionsPerSec` / `compressorMb` / `freeMemMb` — the compressor
+  memory signal (no second `vm_stat` spawn; the 10 s host sampler owns that).
+- **Pg cluster**: ONE batched query on the dedicated client — active-backend
+  `wait_event_type` counts, ungranted `pg_locks`, per-tick deltas of
+  `sum(blk_read_time)` / `sum(xact_commit)`, and the cluster backend counts
+  (contention's `datname IS NOT NULL` semantics).
 - **Fleet**: `GET /gateway/worktrees` (gateway-served — wakes nothing) for
   running-backend count + active conns; one `ps -axo command=` spawn counting
-  in-flight `singularity build/check/push` processes (the vm_stat-per-tick
-  precedent; `captureProcessTree` is pid/ppid-only). Both nullable — a sub-read
-  failure logs to the `sentinel` channel and nulls its fields, never losing the
-  tick's pg/host vitals.
+  in-flight `singularity build/check/push` processes.
 - **Backends**: every 3rd tick, a health.jsonl tail scan (fresh-mtime files
   only) → `backendP99` rollup per live backend.
 
-The sample goes two places: `clusterClass.emit(...)` into the **`cluster` trace
-ring** (`ring: { max: 720 }` ≈ 1 h) — the engine persists the slice overlapping
-ANY trace's window, so every trace captured on main carries a cluster-vitals
-lane for free — and the module-internal `onSentinelSample` listener registry,
-which the onset detector consumes (trip decisions and persisted evidence read
-the same samples by construction).
+Every sample is mirrored to main as a frame: `clusterClass.emit(...)` into the
+**`cluster` trace ring** (`ring: { max: 720 }` ≈ 1 h) — the engine persists
+the slice overlapping ANY trace's window, so every trace captured on main
+carries a cluster-vitals lane for free — and the `onSentinelSample` listener
+registry. postMessage buffers while main is wedged; samples carry their own
+`wall`, so late delivery is harmless.
 
 ## The onset detector + duress latch (B4)
 
 `server/internal/detector.ts` is the pure state machine (dual-threshold,
-dual-dwell hysteresis; one trip event per episode; a null blk-read delta —
-first tick or pg counter reset — is neither elevated nor calm-blocking).
-`server/internal/onset.ts` wires it: on **trip**, fire
-`captureTrace({ kind: "cluster-onset", critical: true, durationMs: run-up +
-60 s, detail: { signals, elevated } })` (critical bypasses the per-minute cap;
-the widened window makes the cluster ring show the prologue) and
-`setDuress(reason)`; **every tripped tick**, `refreshDuress()` (the 60 s
-freshness lease must never lapse mid-episode); on **clear**, `clearDuress()`.
-Phase C's shedding gates on that latch.
+dual-dwell hysteresis; one trip event per episode; a null reading — blk-read
+delta, pg-down locks, stale compressor line — is neither elevated nor
+calm-blocking). Signals: load ratio, pg locks, blk-read delta, slow backends,
+and `decompressionsPerSec ≥ onDecompressionsPerSec` (default 50 k/s — the
+07-11 freezes ran 240k–442k/s; same latch, same hysteresis machinery, no new
+mechanism). The worker feeds it per tick: on **trip**, `setDuress(reason)` +
+a trip frame (main mirrors it into `captureTrace`); **every tripped tick**,
+`refreshDuress()`; on **clear**, `clearDuress()` + a clear frame. Phase C's
+shedding gates on that latch. **Max-episode-hold** (config, default 30 min)
+force-clears and re-evaluates from a fresh detector so a mis-calibrated
+threshold cannot latch the fleet indefinitely (the re-trip re-grants shed
+first-N — a small persistence burst, accepted).
+
+## Duress episodes channel (Stage 3)
+
+The worker — the latch's sole writer — appends one line per transition to the
+persisted **`duress-episodes`** log channel on main's log dir (boot-events
+pattern: no DB table, survives re-forks, readable while wedged):
+`{ atMs, kind: "trip"|"clear", reason, episodeSetAt }` (zod schema in
+`core/episode.ts`). Every line carries `episodeSetAt`, so a clear line alone
+fully determines its interval. `readDuressEpisodes(windowMs)` (server barrel)
+is the timeline's read contract — bounded tail, safeParse-drop, `atMs`-window
+filter. Latch adoption writes no trip line (the previous worker already did);
+a lapse-clear has no line (accepted gap).
+
+The deterministic 03:34 reproduction lives in `worker/latch-lapse.test.ts`: a
+real Worker trips on injected `__sample` frames, the parent blocks itself with
+`Atomics.wait` (no event loop — a wedged main), and the latch mtime must
+advance during the block.
 
 ## Fleet flight windows (B5)
 
@@ -69,10 +125,11 @@ tolerate backends on older/newer profiler code.
 ## Config
 
 `sentinelConfig` (`core/config.ts`, Settings → Config): `enabled` + `cadenceMs`
-(restart to apply — the interval is created at boot) and the B4 detector
-thresholds (`on*`/`off*`, dual-threshold dual-dwell hysteresis — live, read per
-tick). Defaults are educated guesses; calibrate against the replayed
-2026-07-10 09:03–09:21Z burst on the Timeline tab.
+(restart to apply — the worker's interval is created at init), the B4 detector
+thresholds (`on*`/`off*`, incl. `onDecompressionsPerSec` — live: main watches
+the config and pushes threshold frames to the worker), and `maxEpisodeHoldMs`.
+Defaults are educated guesses; calibrate against the replayed 2026-07-10
+09:03–09:21Z burst and the 2026-07-11 freezes on the Timeline tab.
 
 ## Clock discipline
 
@@ -89,14 +146,17 @@ pane's `GenericEventLane` fallback; a dedicated `Trace.Lane`
 
 ## Plugin reference
 
-- Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config. Cluster congestion sentinel: a main-only always-on sampler feeding the 'cluster' trace ring (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup) so every trace gains a cluster-vitals lane and congestion onset is observable.
+- Description: Sentinel web presence: registers the sentinel config (sampler cadence + onset thresholds) for Settings → Config. Cluster congestion sentinel: a main-only always-on sampler + onset detector + duress-latch lifecycle on a dedicated worker thread (host load, Postgres-side wait/lock/IO pressure, fleet state, per-backend health rollup, compressor pressure), feeding the 'cluster' trace ring so every trace gains a cluster-vitals lane, congestion onset is observable, and the latch lease survives a wedged main loop. Persists duress episodes as trip/clear lines on the duress-episodes channel (readDuressEpisodes).
 - Web:
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `debug/health-monitor.HealthSample`, `debug/health-monitor.HealthSampleSchema`, `debug/trace/engine.captureTrace`, `debug/trace/engine.defineTraceEventClass`, `infra/contention.getContentionSnapshot`, `infra/duress.clearDuress`, `infra/duress.refreshDuress`, `infra/duress.setDuress`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `config_v2.watchConfig`, `database/embedded.PG_PORT`, `database/embedded.PG_SOCKET_DIR`, `database/embedded.PG_USER`, `debug/health-monitor.HealthSample`, `debug/health-monitor.HealthSampleSchema`, `debug/health-monitor.HostSampleSchema`, `debug/trace/engine.captureTrace`, `debug/trace/engine.defineTraceEventClass`, `infra/duress/latch.clearDuress`, `infra/duress/latch.isUnderDuress`, `infra/duress/latch.readDuress`, `infra/duress/latch.refreshDuress`, `infra/duress/latch.setDuress`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
+  - Exports: Values: `readDuressEpisodes`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields/bool/config.boolField`, `fields/float/config.floatField`, `fields/int/config.intField`
-  - Exports: Types: `ClusterSample`, `ClusterSection`; Values: `ClusterSampleSchema`, `ClusterSectionSchema`, `sentinelConfig`
+  - Exports: Types: `ClusterSample`, `ClusterSection`, `DuressEpisodeEvent`; Values: `ClusterSampleSchema`, `ClusterSectionSchema`, `DURESS_EPISODES_CHANNEL`, `DuressEpisodeEventSchema`, `sentinelConfig`
+- Cross-plugin:
+  - Imported by: `debug/timeline`
 
 <!-- AUTOGENERATED:END -->

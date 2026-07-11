@@ -1,37 +1,71 @@
 import type { TimelineEvent } from "../../../core";
 import { overlapsWindow } from "../window";
 
-// Structural view of a boot-events line — the pure mapping stays testable
+// Structural view of a paired boot event — the pure mapping stays testable
 // without importing the boot-events reader (and its log-channels chain).
 export interface BootEventLike {
   processStartedAt: number; // wall-clock epoch ms
-  readyAt: number; // wall-clock epoch ms
+  // null = the backend never became ready (wedged/killed mid-boot, or still
+  // booting): superseded attempts are bounded by supersededAtMs, the latest
+  // one renders open-ended to the window's right edge.
+  readyAt: number | null;
+  supersededAtMs: number | null;
 }
 
 // A boot is the wall-clock interval [processStartedAt, readyAt] — a
-// deploy-restart burst renders as a stack of these bars. `worktree` is the
-// log-dir name the events were read from (== the lane), not the line's own
-// field, so the chunk and its events can never disagree.
+// deploy-restart burst renders as a stack of these bars. A never-ready boot
+// renders to its superseding attempt's start (warning: a failed attempt) or
+// open-ended to toMs with the in-flight pulse (possibly booting right now,
+// possibly wedged — the previously-invisible case). `worktree` is the log-dir
+// name the events were read from (== the lane), not the line's own field, so
+// the chunk and its events can never disagree.
 export function mapBootEvents(
   events: readonly BootEventLike[],
   worktree: string,
   fromMs: number,
   toMs: number,
 ): TimelineEvent[] {
-  return events
-    .filter((e) => overlapsWindow(e.processStartedAt, e.readyAt, fromMs, toMs))
-    .map((e) => ({
-      id: `boot:${worktree}:${e.readyAt}`,
+  const out: TimelineEvent[] = [];
+  for (const e of events) {
+    if (e.readyAt !== null) {
+      if (!overlapsWindow(e.processStartedAt, e.readyAt, fromMs, toMs)) continue;
+      out.push({
+        id: `boot:${worktree}:${e.readyAt}`,
+        source: "boot" as const,
+        worktree,
+        startMs: e.processStartedAt,
+        endMs: e.readyAt,
+        label: "backend boot",
+        severity: "info" as const,
+        detail: {
+          processStartedAt: e.processStartedAt,
+          readyAt: e.readyAt,
+          bootMs: e.readyAt - e.processStartedAt,
+        },
+      });
+      continue;
+    }
+    const open = e.supersededAtMs === null;
+    const endMs = e.supersededAtMs ?? toMs;
+    if (!overlapsWindow(e.processStartedAt, endMs, fromMs, toMs)) continue;
+    out.push({
+      id: `boot:${worktree}:start:${e.processStartedAt}`,
       source: "boot" as const,
       worktree,
       startMs: e.processStartedAt,
-      endMs: e.readyAt,
-      label: "backend boot",
-      severity: "info" as const,
+      endMs,
+      label: open ? "backend boot (in progress or wedged)" : "backend boot (never ready)",
+      // A bounded never-ready attempt is a known-failed boot; an open one may
+      // simply be a boot in progress at refresh time, so it stays info and
+      // pulses (the in-flight convention).
+      severity: open ? ("info" as const) : ("warning" as const),
       detail: {
         processStartedAt: e.processStartedAt,
-        readyAt: e.readyAt,
-        bootMs: e.readyAt - e.processStartedAt,
+        readyAt: null,
+        supersededAtMs: e.supersededAtMs,
+        inFlight: open,
       },
-    }));
+    });
+  }
+  return out;
 }

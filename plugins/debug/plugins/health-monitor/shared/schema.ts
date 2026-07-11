@@ -39,6 +39,16 @@ export const HealthSampleSchema = z.object({
   // downstream `HealthSeries` props stay consistent.
   monitorOps: z.number().optional(),
   monitorMs: z.number().optional(),
+  // Present when this tick fired after a wall-clock jump (machine sleep /
+  // suspend): the gap in ms since the previous tick. The sampler resets the
+  // loop-lag histogram BEFORE reading it on such a tick, so the eventLoop*
+  // fields describe an empty post-wake window instead of the suspend (the old
+  // behavior painted fake multi-minute stalls after every sleep — see
+  // research/2026-07-11-global-observability-freeze-blind-spots.md, Stage 6).
+  // Consumers treat a stamped sample as "no measurement this window": the
+  // timeline renders the preceding gap as a dark "sleep" segment. Optional —
+  // pre-cutover JSONL lines must still parse, same rationale as `monitorOps`.
+  wallJumpMs: z.number().optional(),
 });
 export type HealthSample = z.infer<typeof HealthSampleSchema>;
 
@@ -62,7 +72,15 @@ export const HostSampleSchema = z.object({
   // rationale as `monitorOps` above.
   compressionsPerSec: z.number().optional(),
   decompressionsPerSec: z.number().optional(),
-  compressorMb: z.number(),
+  // Optional like its two compressor siblings — it shipped in the same cutover,
+  // and leaving it required made their optionality moot (safeParse dropped the
+  // pre-cutover line on this field anyway).
+  compressorMb: z.number().optional(),
+  // Wall-clock jump (machine sleep) marker — same contract as
+  // HealthSampleSchema.wallJumpMs above. On a stamped tick the vm_stat rate
+  // deltas are averaged over the true elapsed window (which spans the suspend),
+  // not the nominal cadence, so a sleep can never fabricate a rate spike.
+  wallJumpMs: z.number().optional(),
 });
 export type HostSample = z.infer<typeof HostSampleSchema>;
 

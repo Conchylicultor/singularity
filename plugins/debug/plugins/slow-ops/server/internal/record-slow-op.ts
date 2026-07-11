@@ -1,4 +1,5 @@
 import { eq, sql } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import {
   runInBackgroundLane,
@@ -64,6 +65,11 @@ export interface RecordSlowOpInput {
   // the aggregate view and the slow-op task both deep-link the evidence. Null
   // when the trace was rate-limited or the engine is disabled.
   traceId?: string;
+  // The instant the span actually tripped. Stamped by recordSlowOp itself
+  // BEFORE the duress shed gate, so an item buffered during a duress episode
+  // replays with its true in-freeze instant (recentSamples atTime, marker
+  // line, lastSeenAt) instead of the post-episode flush time. Callers omit it.
+  occurredAt?: Date;
 }
 
 // Merge a caller into the existing breakdown list: bump an existing entry
@@ -106,19 +112,27 @@ function mergeWaits(
   return next;
 }
 
-// Prepend the new contention sample and cap the ring at the newest 10. Mirrors
-// the `callers` read-modify-write merge, but a plain bounded prepend (no
-// dedupe) — each sample is a distinct point-in-time capture.
-function mergeSample(
+// Insert the new contention sample and cap the ring at the newest 10. Mirrors
+// the `callers` read-modify-write merge, but a bounded insert (no dedupe) —
+// each sample is a distinct point-in-time capture, stamped with the trip's
+// true `occurredAt`. Sorted newest-first by atTime (not prepend order): a
+// duress-shed item replays after the episode with an in-freeze occurredAt, so
+// arrival order is not time order — sorting keeps the "newest 10" contract
+// honest under out-of-order replay.
+export function mergeSample(
   samples: SlowOpSample[],
   snapshot: ContentionSnapshot,
   durationMs: number,
   traceId: string | undefined,
+  occurredAt: Date,
 ): SlowOpSample[] {
-  return [{ atTime: new Date(), durationMs, snapshot, traceId }, ...samples].slice(
-    0,
-    10,
-  );
+  return [{ atTime: occurredAt, durationMs, snapshot, traceId }, ...samples]
+    .sort(
+      // atTime is a Date in fresh entries but an ISO string once round-tripped
+      // through the jsonb column — normalize before comparing.
+      (a, b) => new Date(b.atTime).getTime() - new Date(a.atTime).getTime(),
+    )
+    .slice(0, 10);
 }
 
 function shedSummaryMessage(s: ShedSummary): string {
@@ -136,9 +150,11 @@ function shedSummaryMessage(s: ShedSummary): string {
 // buffered and the funnel below is skipped; after the episode clears, replay
 // re-drives recordSlowOp per item — the aggregate upsert's onConflictDoUpdate
 // merge is idempotent per item and order-insensitive, so counts / totals /
-// maxMs stay truthful post-flush. (Replayed recentSamples / marker timestamps
-// carry the replay instant, not the original trip — an accepted skew; the
-// aggregate numbers are the durable signal.)
+// maxMs stay truthful post-flush. Each buffered item carries the `occurredAt`
+// stamped before admit, so replayed recentSamples / marker lines / lastSeenAt
+// land at their true in-freeze instants, not the flush time — and the
+// newest-occurrence guards in the upsert keep an out-of-order replay from
+// clobbering fresher last-* attribution.
 const slowOpShed = createShedBuffer<RecordSlowOpInput>({
   kind: "slow-ops",
   // The upsert key: the same axis the durable aggregate dedupes on.
@@ -165,6 +181,13 @@ const slowOpShed = createShedBuffer<RecordSlowOpInput>({
 // the live resource, and fires the per-operation report (fire-and-forget so a
 // slow report path never blocks recording). Failures propagate loudly.
 export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
+  // Stamp the trip instant BEFORE the shed gate: a buffered item must carry
+  // its true time through the buffer so replay writes in-freeze instants, not
+  // the flush time. Replay re-passes the same object, so the stamp survives
+  // the buffer and the ??= is a no-op on the replay pass.
+  input.occurredAt ??= new Date();
+  const occurredAt = input.occurredAt;
+
   // Duress shed gate on the durable-write funnel ONLY. The coherent-instant
   // trace for the same trip is captured by the CALLERS (install-slow-span /
   // handle-client-slow-op) BEFORE this call — evidence-first — and carries its
@@ -178,13 +201,10 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
     durationMs,
     thresholdMs,
     source,
-    caller,
-    waits,
     transportColdStart,
     transportWaitMs,
     traceId,
   } = input;
-  const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
 
   // One transaction so the onConflictDoUpdate row lock serializes concurrent
   // callers for the same key, making the callers read-merge-write race-tolerant.
@@ -218,59 +238,7 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
       // — defeating suppression and re-opening the self-feedback loop. The same
       // hazard applies to the enclosing lane scope: an escaped await would take
       // its pool connection outside the background declaration.
-      await db.transaction(async (tx) => {
-        const [row] = await tx
-          .insert(_slowOps)
-          .values({
-            worktree,
-            operationKind,
-            operation,
-            count: 1,
-            totalMs: durationMs,
-            maxMs: durationMs,
-            lastMs: durationMs,
-            thresholdMs,
-            callers: [],
-          })
-          .onConflictDoUpdate({
-            target: [
-              _slowOps.operationKind,
-              _slowOps.operation,
-              _slowOps.worktree,
-            ],
-            set: {
-              count: sql`${_slowOps.count} + 1`,
-              totalMs: sql`${_slowOps.totalMs} + ${durationMs}`,
-              maxMs: sql`greatest(${_slowOps.maxMs}, ${durationMs})`,
-              lastMs: durationMs,
-              thresholdMs,
-              lastSeenAt: new Date(),
-            },
-          })
-          .returning();
-
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-        if (!row) throw new Error("recordSlowOp: upsert returned no row");
-
-        // A second read-modify-write within the same row-locked transaction so
-        // both ring merges stay race-safe. recentSamples is ALWAYS updated (every
-        // slow op gets a contention sample); callers is merged additionally only
-        // when a caller is known (page-load passes null).
-        const callers = caller
-          ? mergeCaller(row.callers, caller, durationMs)
-          : row.callers;
-        const nextWaits = waits ? mergeWaits(row.waits, waits) : row.waits;
-        const recentSamples = mergeSample(
-          row.recentSamples,
-          snapshot,
-          durationMs,
-          traceId,
-        );
-        await tx
-          .update(_slowOps)
-          .set({ callers, waits: nextWaits, recentSamples })
-          .where(eq(_slowOps.id, row.id));
-      });
+      await upsertSlowOp(input, occurredAt, snapshot);
     }),
   );
 
@@ -279,7 +247,7 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
   // above; reuse it so the marker shares the box state the aggregate recorded.
   markerChannel.publish(
     JSON.stringify({
-      atTime: new Date(),
+      atTime: occurredAt,
       durationMs,
       operationKind,
       operation,
@@ -307,5 +275,88 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
       ...(traceId !== undefined ? { traceId } : {}),
     },
     message: `${operationKind} ${operation} took ${durationRounded}ms (threshold ${thresholdMs}ms)`,
+  });
+}
+
+// The durable upsert half of recordSlowOp, db-parametrized so the DB-backed
+// suite can drive the SQL semantics (greatest/least timestamps, the
+// newest-occurrence guards, ring ordering) against a throwaway Postgres — the
+// session-chain `recordSessionId(…, conn)` precedent. Production callers go
+// through recordSlowOp, which owns the shed gate, the lane + profiling-
+// suppression scopes, the marker dual-write, and the report.
+export async function upsertSlowOp(
+  input: RecordSlowOpInput,
+  occurredAt: Date,
+  snapshot: ContentionSnapshot,
+  conn: NodePgDatabase = db,
+): Promise<void> {
+  const { operationKind, operation, durationMs, thresholdMs, caller, waits, traceId } =
+    input;
+  const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
+
+  // `occurredAt` is the trip instant, which under duress-shed replay is
+  // EARLIER than now and may be older than what the row already recorded. The
+  // timestamps take greatest/least so replay can never regress them, and the
+  // last-* attribution (lastMs / thresholdMs) only applies when this
+  // occurrence is at least as new as the row's last_seen_at — ON CONFLICT SET
+  // expressions all read the PRE-update row, so both guards see the same
+  // last_seen_at consistently.
+  const isNewest = sql`${occurredAt} >= ${_slowOps.lastSeenAt}`;
+  await conn.transaction(async (tx) => {
+    const [row] = await tx
+      .insert(_slowOps)
+      .values({
+        worktree,
+        operationKind,
+        operation,
+        count: 1,
+        totalMs: durationMs,
+        maxMs: durationMs,
+        lastMs: durationMs,
+        thresholdMs,
+        callers: [],
+        firstSeenAt: occurredAt,
+        lastSeenAt: occurredAt,
+      })
+      .onConflictDoUpdate({
+        target: [
+          _slowOps.operationKind,
+          _slowOps.operation,
+          _slowOps.worktree,
+        ],
+        set: {
+          count: sql`${_slowOps.count} + 1`,
+          totalMs: sql`${_slowOps.totalMs} + ${durationMs}`,
+          maxMs: sql`greatest(${_slowOps.maxMs}, ${durationMs})`,
+          lastMs: sql`case when ${isNewest} then ${durationMs} else ${_slowOps.lastMs} end`,
+          thresholdMs: sql`case when ${isNewest} then ${thresholdMs} else ${_slowOps.thresholdMs} end`,
+          firstSeenAt: sql`least(${_slowOps.firstSeenAt}, ${occurredAt})`,
+          lastSeenAt: sql`greatest(${_slowOps.lastSeenAt}, ${occurredAt})`,
+        },
+      })
+      .returning();
+
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+    if (!row) throw new Error("recordSlowOp: upsert returned no row");
+
+    // A second read-modify-write within the same row-locked transaction so
+    // both ring merges stay race-safe. recentSamples is ALWAYS updated (every
+    // slow op gets a contention sample); callers is merged additionally only
+    // when a caller is known (page-load passes null).
+    const callers = caller
+      ? mergeCaller(row.callers, caller, durationMs)
+      : row.callers;
+    const nextWaits = waits ? mergeWaits(row.waits, waits) : row.waits;
+    const recentSamples = mergeSample(
+      row.recentSamples,
+      snapshot,
+      durationMs,
+      traceId,
+      occurredAt,
+    );
+    await tx
+      .update(_slowOps)
+      .set({ callers, waits: nextWaits, recentSamples })
+      .where(eq(_slowOps.id, row.id));
   });
 }

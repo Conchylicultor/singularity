@@ -1,3 +1,4 @@
+import { cpus } from "node:os";
 import {
   HealthSampleSchema,
   HostSampleSchema,
@@ -51,8 +52,11 @@ export function readHealthLane(
   return backendHealthPoints(samples, fromMs, toMs);
 }
 
-// The host lane (load average + swap), sampled only by the main backend.
+// The host lane (load + swap + compressor), sampled only by the main backend.
+// The server runs on the host itself (single-instance-per-user), so its cpu
+// count is the honest load-ratio denominator for the downsample's pressure
+// score — the same value the browser reads via navigator.hardwareConcurrency.
 export function readHostLane(fromMs: number, toMs: number): TimelineHealthPoint[] {
   const samples = parseSamples<HostSample>(MAIN_WORKTREE_NAME, "health-host", HostSampleSchema);
-  return hostHealthPoints(samples, fromMs, toMs);
+  return hostHealthPoints(samples, fromMs, toMs, undefined, cpus().length || 8);
 }

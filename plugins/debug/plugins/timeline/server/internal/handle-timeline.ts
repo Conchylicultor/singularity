@@ -11,6 +11,7 @@ import { TimelineQuerySchema, HOST_LANE, type TimelineFrame } from "../../shared
 import { DB_SOURCES } from "./sources/db-sources";
 import type { DbSourceCtx } from "./sources/context";
 import { loadBootEvents } from "./sources/boot";
+import { loadDuressEpisodes } from "./sources/duress";
 import { readHealthLane, readHostLane } from "./sources/health";
 import { listWorktreeLogDirs } from "./log-dirs";
 
@@ -49,9 +50,10 @@ export function handleTimeline(req: Request): Response {
 async function produceTimeline(emit: Emit, fromMs: number, toMs: number): Promise<void> {
   const dbNames = await listLiveForkDatabases(Date.now());
   const logWorktrees = listWorktreeLogDirs();
-  // Planned chunk count: every (DB × DB-source) cell plus one boot chunk per
-  // worktree log dir. Health frames are series, not chunks, and don't count.
-  emit({ total: dbNames.length * DB_SOURCES.length + logWorktrees.length });
+  // Planned chunk count: every (DB × DB-source) cell, one boot chunk per
+  // worktree log dir, plus the single host-global duress chunk. Health frames
+  // are series, not chunks, and don't count.
+  emit({ total: dbNames.length * DB_SOURCES.length + logWorktrees.length + 1 });
 
   const semaphore = createSemaphore(FANOUT_CONCURRENCY);
   const dbWork = Promise.all(
@@ -71,6 +73,14 @@ async function produceTimeline(emit: Emit, fromMs: number, toMs: number): Promis
       }
       const samples = readHealthLane(worktree, fromMs, toMs);
       if (samples.length) emit({ health: { worktree, samples } });
+    }
+    // Host-global duress episodes (one chunk on the host lane, read from
+    // main's log dir — the sentinel worker is the latch's sole writer).
+    try {
+      const events = loadDuressEpisodes(fromMs, toMs);
+      emit({ chunk: { source: "duress", worktree: HOST_LANE, ok: true, events } });
+    } catch (err) {
+      emit({ chunk: { source: "duress", worktree: HOST_LANE, ok: false, error: String(err) } });
     }
     const hostSamples = readHostLane(fromMs, toMs);
     if (hostSamples.length) emit({ health: { worktree: HOST_LANE, samples: hostSamples } });

@@ -50,7 +50,8 @@ export const HOST_LANE = "host";
 // One downsampled health-series point (≤ ~500 per worktree per window,
 // bucket-max so spikes survive). Backend lanes carry the event-loop fields
 // (p99Ms required in practice); the HOST_LANE lane carries loadAvg1 + swap
-// (swap-in + swap-out pages/sec) instead. The lane name discriminates.
+// (swap-in + swap-out pages/sec) plus the macOS memory-compressor channel.
+// The lane name discriminates.
 export const TimelineHealthPointSchema = z.object({
   atMs: z.number(), // wall-clock epoch ms
   p99Ms: z.number().optional(), // backend event-loop p99 (ms)
@@ -58,6 +59,13 @@ export const TimelineHealthPointSchema = z.object({
   physMb: z.number().optional(), // backend phys_footprint (MB)
   loadAvg1: z.number().optional(), // host lane only
   swap: z.number().optional(), // host lane only: swap-in+out pages/sec
+  decompPerSec: z.number().optional(), // host lane only: compressor decompressions/sec
+  compPerSec: z.number().optional(), // host lane only: compressor compressions/sec
+  compressorMb: z.number().optional(), // host lane only: compressor pool size
+  // The sample followed a wall-clock jump (machine sleep) of this many ms —
+  // its metrics span the suspend, so it contributes no heat severity and
+  // classifies the preceding gap as a "sleep" dark segment (heat.ts).
+  wallJumpMs: z.number().optional(),
 });
 export type TimelineHealthPoint = z.infer<typeof TimelineHealthPointSchema>;
 

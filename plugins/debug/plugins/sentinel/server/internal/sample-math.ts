@@ -1,11 +1,13 @@
 // Pure helpers for the sentinel tick — kept IO-free so they are bun-testable.
 
-/** Row shape of the one batched pg-stats round trip (see sampler.ts). */
+/** Row shape of the one batched pg-stats round trip (see worker/pg.ts). */
 export interface PgStatsRow {
   locks_waiting: string | number | null;
   blk_read_time: string | number | null;
   xact_commit: string | number | null;
   wait_events: Record<string, number> | null;
+  active_backends: string | number | null;
+  total_backends: string | number | null;
 }
 
 export interface PgStats {
@@ -13,6 +15,8 @@ export interface PgStats {
   blkReadTimeMs: number;
   xactCommit: number;
   waitEvents: Record<string, number>;
+  activeBackends: number;
+  totalBackends: number;
 }
 
 export function mapPgStatsRow(row: PgStatsRow): PgStats {
@@ -21,6 +25,8 @@ export function mapPgStatsRow(row: PgStatsRow): PgStats {
     blkReadTimeMs: Number(row.blk_read_time ?? 0),
     xactCommit: Number(row.xact_commit ?? 0),
     waitEvents: row.wait_events ?? {},
+    activeBackends: Number(row.active_backends ?? 0),
+    totalBackends: Number(row.total_backends ?? 0),
   };
 }
 

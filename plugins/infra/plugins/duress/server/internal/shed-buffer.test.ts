@@ -2,7 +2,12 @@ import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { _setClockForTests, _setLatchDirForTests, clearDuress, setDuress } from "./latch";
+import {
+  _setClockForTests,
+  _setLatchDirForTests,
+  clearDuress,
+  setDuress,
+} from "@plugins/infra/plugins/duress/plugins/latch/server";
 import {
   _setFlushTimerForTests,
   _setShedConfigForTests,

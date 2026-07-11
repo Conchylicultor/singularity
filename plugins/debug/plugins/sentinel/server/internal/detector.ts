@@ -13,6 +13,7 @@ export interface DetectorThresholds {
   onBlkReadDeltaMs: number;
   onBackendP99Ms: number;
   onSlowBackends: number;
+  onDecompressionsPerSec: number;
   onTicks: number;
   offRatio: number;
   offTicks: number;
@@ -24,6 +25,8 @@ export interface SignalReadings {
   locksWaiting: number;
   blkReadDeltaMs: number | null;
   slowBackends: number;
+  /** Null when the host sampler's line was missing or stale this tick. */
+  decompressionsPerSec: number | null;
 }
 
 export type DetectorEvent =
@@ -37,11 +40,14 @@ function signalsAt(
 ): { readings: SignalReadings; elevated: string[]; allCalm: boolean } {
   const readings: SignalReadings = {
     loadRatio: sample.cpuCount > 0 ? sample.loadAvg1 / sample.cpuCount : 0,
-    locksWaiting: sample.pgLocksWaiting,
+    // A pg-unreadable tick reads 0 locks: neither elevated nor calm-blocking.
+    locksWaiting: sample.pgLocksWaiting ?? 0,
     blkReadDeltaMs: sample.pgBlkReadDeltaMs,
     slowBackends: Object.values(sample.backendP99).filter(
       (p99) => p99 > t.onBackendP99Ms,
     ).length,
+    // Missing/stale host line — the null-blk-read convention applies.
+    decompressionsPerSec: sample.decompressionsPerSec ?? null,
   };
   const elevated: string[] = [];
   if (readings.loadRatio >= t.onLoadRatio) elevated.push("loadRatio");
@@ -49,13 +55,20 @@ function signalsAt(
   if (readings.blkReadDeltaMs !== null && readings.blkReadDeltaMs >= t.onBlkReadDeltaMs)
     elevated.push("blkReadDeltaMs");
   if (readings.slowBackends >= t.onSlowBackends) elevated.push("slowBackends");
+  if (
+    readings.decompressionsPerSec !== null &&
+    readings.decompressionsPerSec >= t.onDecompressionsPerSec
+  )
+    elevated.push("decompressionsPerSec");
 
   const off = (v: number) => v * t.offRatio;
   const allCalm =
     readings.loadRatio < off(t.onLoadRatio) &&
     readings.locksWaiting < off(t.onLocksWaiting) &&
     (readings.blkReadDeltaMs === null || readings.blkReadDeltaMs < off(t.onBlkReadDeltaMs)) &&
-    readings.slowBackends < off(t.onSlowBackends);
+    readings.slowBackends < off(t.onSlowBackends) &&
+    (readings.decompressionsPerSec === null ||
+      readings.decompressionsPerSec < off(t.onDecompressionsPerSec));
 
   return { readings, elevated, allCalm };
 }
@@ -66,10 +79,15 @@ export interface OnsetDetector {
   readonly tripped: boolean;
 }
 
-export function createOnsetDetector(): OnsetDetector {
+/**
+ * `seed.tripped` starts the machine mid-episode without a trip event — a
+ * respawned sentinel worker adopting a fresh existing latch (it must keep
+ * refreshing the lease it did not set, and eventually emit the clear).
+ */
+export function createOnsetDetector(seed?: { tripped?: boolean }): OnsetDetector {
   let elevatedTicks = 0;
   let calmTicks = 0;
-  let tripped = false;
+  let tripped = seed?.tripped ?? false;
 
   return {
     get tripped() {

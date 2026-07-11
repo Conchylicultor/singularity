@@ -30,6 +30,7 @@ import {
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
 import { withHostGrant } from "@plugins/infra/plugins/host-admission/server";
 import { cpuBudget, type Lane } from "@plugins/infra/plugins/host-admission/core";
+import { holdThroughValve, valveGates } from "../admission-valve";
 import { publishLane } from "../lane";
 import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
@@ -187,7 +188,7 @@ async function exec(
   cmd: string[],
   cwd: string,
   env?: Record<string, string>,
-): Promise<void> {
+): Promise<{ maxRssBytes: number | undefined }> {
   const proc = Bun.spawn(cmd, {
     cwd,
     stdout: "inherit",
@@ -198,12 +199,15 @@ async function exec(
   if (exitCode !== 0) {
     process.exit(1);
   }
+  return { maxRssBytes: proc.resourceUsage()?.maxRSS };
 }
 
 
 interface StepOutput {
   lines: Array<{ text: string; stream: "stdout" | "stderr" }>;
   exitCode: number;
+  /** Peak RSS of the child (bytes), when the runtime reported rusage. */
+  maxRssBytes: number | undefined;
 }
 
 async function execBuffered(
@@ -242,7 +246,18 @@ async function execBuffered(
     collect(proc.stderr, "stderr"),
   ]);
   const exitCode = await proc.exited;
-  return { lines, exitCode };
+  return { lines, exitCode, maxRssBytes: proc.resourceUsage()?.maxRSS };
+}
+
+// One greppable line per heavy subprocess step, e.g. "vite build: maxRSS 2.9 GB"
+// (console + build.log). The calibration input for host-admission's per-holder
+// footprint constants (@plugins/infra/plugins/host-admission/core PER_UNIT_BYTES)
+// and any future per-build memory budget.
+function maxRssLine(label: string, maxRssBytes: number | undefined): string | null {
+  if (maxRssBytes == null) return null;
+  const gb = maxRssBytes / 2 ** 30;
+  const amount = gb >= 1 ? `${gb.toFixed(1)} GB` : `${Math.round(maxRssBytes / 2 ** 20)} MB`;
+  return `${label}: maxRSS ${amount}`;
 }
 
 interface StepResult {
@@ -858,8 +873,10 @@ export function registerBuild(program: Command) {
       // plugins/infra/plugins/database/node_modules/@embedded-postgres/.
       endSpan = buildProfilerStart("bunInstall", "build:setup", "bun install");
       console.log("Installing dependencies...");
-      await exec(["bun", "install"], root);
-      endSpan();
+      const install = await exec(["bun", "install"], root);
+      endSpan({ maxRssBytes: install.maxRssBytes });
+      const installRss = maxRssLine("bun install", install.maxRssBytes);
+      if (installRss) console.log(installRss);
 
       // 1b–2a. Registry-level repo-tree codegen: barrel-import auto-stubs (from
       // .d.ts files) then the plugin registry. Must happen before central is
@@ -996,6 +1013,14 @@ export function registerBuild(program: Command) {
       // relying on session inheritance.
       const demote = branch === "main" ? (argv: string[]) => argv : backgroundArgv;
 
+      // Duress admission valve: a background-lane build is held BEFORE it
+      // queues for the host grant while the host duress latch is fresh, so no
+      // new heavy work starts into a memory/congestion storm (event-driven
+      // wait, 30-min sticky fail-open). Interactive (main), push, and the
+      // detached auto-build are never held. See ../admission-valve.ts and
+      // research/2026-07-11-global-fleet-memory-admission-duress-valve.md.
+      await holdThroughValve({ gated: valveGates(lane, process.env) });
+
       // buildId (computed up-front, before the "started" build-log record) is
       // baked into the bundle (VITE_BUILD_ID) and written to dist/.build-id
       // below — bundle and server agree by construction (no chicken-and-egg).
@@ -1087,7 +1112,9 @@ export function registerBuild(program: Command) {
                       target.dir,
                     ),
                   );
-                  end();
+                  end({ maxRssBytes: output.maxRssBytes });
+                  const rss = maxRssLine(`tsc ${target.name}`, output.maxRssBytes);
+                  if (rss) output.lines.push({ text: rss, stream: "stdout" });
                   return {
                     id: `tsc:${target.name}`,
                     label: `tsc ${target.name}`,
@@ -1110,7 +1137,9 @@ export function registerBuild(program: Command) {
               const output = await grant.run(() =>
                 execBuffered(demote(["bun", "run", "build"]), webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId, ...(opts.composition ? { VITE_COMPOSITION: opts.composition } : {}) }),
               );
-              end();
+              end({ maxRssBytes: output.maxRssBytes });
+              const rss = maxRssLine("vite build", output.maxRssBytes);
+              if (rss) output.lines.push({ text: rss, stream: "stdout" });
               return {
                 id: "viteBuild",
                 label: "vite build",

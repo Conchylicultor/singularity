@@ -10,6 +10,7 @@ interface BuildProfile {
     label: string;
     startMs: number;
     durationMs: number;
+    maxRssBytes?: number;
   }>;
   totalDurationMs: number;
 }

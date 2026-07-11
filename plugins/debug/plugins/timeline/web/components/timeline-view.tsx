@@ -23,9 +23,15 @@ import {
   sourceColorClass,
   type LookbackId,
 } from "../internal/view-model";
-import { buildBands, incidentInputs, intervalEvents } from "../internal/bands";
+import { buildBands, duressBands, incidentInputs, intervalEvents } from "../internal/bands";
 import { ScanProgress } from "./scan-progress";
-import { WallclockAxis, IncidentBandLayer, IncidentBadgeRow, HeatStrip } from "./gantt-rows";
+import {
+  WallclockAxis,
+  IncidentBandLayer,
+  IncidentBadgeRow,
+  DuressBadgeRow,
+  HeatStrip,
+} from "./gantt-rows";
 import { WorktreeGroup } from "./worktree-group";
 import { DetailStrip } from "./detail-strip";
 
@@ -48,12 +54,23 @@ export function TimelineView(): ReactElement {
   const cpuCount = navigator.hardwareConcurrency || 8;
 
   const healthByLane = useMemo(() => mergeHealth(health), [health]);
+  // Duress episodes are host-global: their ok chunk renders as cross-lane
+  // bands + a badge row, never as a worktree lane group (a FAILED duress cell
+  // still flows into buildGroups so the error row stays visible).
+  const duressEvents = useMemo(
+    () => okEvents(chunks.filter((c) => c.source === "duress")),
+    [chunks],
+  );
+  const groupChunks = useMemo(
+    () => chunks.filter((c) => !(c.ok && c.source === "duress")),
+    [chunks],
+  );
   const groups = useMemo(
     () =>
       range
-        ? buildGroups(chunks, [...healthByLane.keys()], range)
+        ? buildGroups(groupChunks, [...healthByLane.keys()], range)
         : [],
-    [chunks, healthByLane, range],
+    [groupChunks, healthByLane, range],
   );
   const barEvents = useMemo(() => collectBarEvents(groups), [groups]);
   const bands = useMemo(() => {
@@ -63,15 +80,27 @@ export function TimelineView(): ReactElement {
     const intervals = intervalEvents(okEvents(chunks));
     return buildBands(intervals, groupIncidents(incidentInputs(intervals)), range);
   }, [chunks, range]);
+  const duress = useMemo(
+    () => (range ? duressBands(duressEvents, range) : []),
+    [duressEvents, range],
+  );
 
   const hostSamples = healthByLane.get(HOST_LANE);
-  const selected = selectedBarId !== null ? (barEvents.get(selectedBarId) ?? null) : null;
+  const selected =
+    selectedBarId !== null
+      ? (barEvents.get(selectedBarId) ??
+        duressEvents.find((ev) => ev.id === selectedBarId) ??
+        null)
+      : null;
 
   const okCells = chunks.filter((c) => c.ok).length;
   const failedCells = chunks.length - okCells;
   const eventCount = groups.reduce((n, g) => n + g.eventCount, 0);
   const isEmpty =
-    groups.length === 0 && hostSamples === undefined && status === "done";
+    groups.length === 0 &&
+    hostSamples === undefined &&
+    duress.length === 0 &&
+    status === "done";
 
   return (
     // h-full (not `fill`): the tabbed-view host mounts this inside its scroll
@@ -128,7 +157,8 @@ export function TimelineView(): ReactElement {
                 <Badge variant="destructive">error</Badge>
               </Cluster>
               <Text as="span" variant="caption" tone="muted">
-                Sources keep their own retention — traces ≈ 7 d, health ≈ 2 d.
+                Sources keep their own retention — traces ≈ 7 d, health ≈ 2 d. Hatched
+                strip = no samples (sleep or a dark sampler).
               </Text>
             </Stack>
           </Stack>
@@ -147,8 +177,11 @@ export function TimelineView(): ReactElement {
           <Inset x="md" y="sm">
             <GanttContainer title="Timeline" totalMs={range.toMs - range.fromMs}>
               <WallclockAxis range={range} />
+              {duress.length > 0 && (
+                <DuressBadgeRow bands={duress} onSelect={setSelectedBarId} />
+              )}
               {bands.length > 0 && <IncidentBadgeRow bands={bands} />}
-              <Overlay behind={<IncidentBandLayer bands={bands} />}>
+              <Overlay behind={<IncidentBandLayer bands={bands} duress={duress} />}>
                 <Stack gap="xs">
                   {hostSamples !== undefined && hostSamples.length > 0 && (
                     <Stack gap="none">
@@ -158,7 +191,7 @@ export function TimelineView(): ReactElement {
                         </Text>
                       </Inset>
                       <HeatStrip
-                        label="load avg"
+                        label="pressure"
                         samples={hostSamples}
                         range={range}
                         kind="host"

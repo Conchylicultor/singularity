@@ -14,6 +14,22 @@ two fields are its only visibility, so a monitoring storm reads as a spike on
 the Health pane's "Monitoring self-cost" chart. The fields are optional in
 `HealthSampleSchema` so pre-cutover JSONL lines still parse (no history gap).
 
+## Machine sleep (`wallJumpMs`)
+
+Both samplers detect a wall-clock jump at the source (`wall-jump.ts`): a tick
+firing more than `SLEEP_JUMP_FACTOR` (5×) its cadence after the previous one
+spanned a suspend. The process sampler **resets the loop-lag histogram before
+reading it** on such a tick — the histogram accumulated the sleep itself
+(huge `eventLoopMaxMs`, calm p50: a fake incident on every consumer, and a
+fake `stall` trace) — and stamps the sample with the gap as optional
+`wallJumpMs`. The host sampler stamps too, and always divides its vm_stat
+counter deltas by the **true elapsed window** rather than the nominal cadence,
+so a late tick can never fabricate a rate spike. Consumers treat a stamped
+sample as "no measurement this window"; the timeline renders the preceding
+gap as a labeled dark "sleep" segment. A merely-late tick from a wedged loop
+stays below the jump factor and keeps its stall evidence. (See
+`research/2026-07-11-global-observability-freeze-blind-spots.md`, Stage 6.)
+
 ## Stall stacks → the trace store
 
 On **main**, the sampler also arms a background-thread JSC sampling profiler and
@@ -51,7 +67,11 @@ measured overhead on a real worktree workload is still an open task.
   - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/badge.Badge`, `primitives/css/grid.Grid`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `stats/commits.axisProps`, `stats/commits.ChartState`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.yAxisFormatter`
   - Exports: Values: `healthMonitorPane`
 - Server:
+<<<<<<< .merge_file_ZsOQgI
   - Uses: `debug/slow-ops.readSlowOpMarkers`, `debug/stall-monitor.recordEventLoopStall`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadQueueDepth`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.worktreeDataDir`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
+=======
+  - Uses: `debug/slow-ops.readSlowOpMarkers`, `debug/trace/engine.captureTrace`, `infra/endpoints.implement`, `infra/host-read-pool.heavyReadQueueDepth`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.worktreeDataDir`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
+>>>>>>> .merge_file_9o6hz2
   - Exports: Types: `HealthSample`, `HostSample`; Values: `HealthSampleSchema`, `HostSampleSchema`
   - Routes: `GET /api/debug/health-monitor`
 - Cross-plugin:

@@ -7,6 +7,8 @@ const SpanSchema = z.object({
   label: z.string(),
   startMs: z.number(),
   durationMs: z.number(),
+  // Peak RSS (bytes) of the subprocess the span wrapped, when measured.
+  maxRssBytes: z.number().optional(),
 });
 
 export const getBuildProfiling = defineEndpoint({

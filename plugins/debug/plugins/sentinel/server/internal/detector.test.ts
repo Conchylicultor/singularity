@@ -8,6 +8,7 @@ const T: DetectorThresholds = {
   onBlkReadDeltaMs: 2000,
   onBackendP99Ms: 1000,
   onSlowBackends: 2,
+  onDecompressionsPerSec: 50_000,
   onTicks: 3,
   offRatio: 0.6,
   offTicks: 2,
@@ -30,6 +31,9 @@ function sample(overrides: Partial<ClusterSample> = {}): ClusterSample {
     totalActiveConns: 5,
     inFlightBuilds: 0,
     backendP99: {},
+    decompressionsPerSec: 0,
+    compressorMb: 4_000,
+    freeMemMb: 8_000,
     ...overrides,
   };
 }
@@ -98,5 +102,57 @@ describe("onset detector hysteresis", () => {
       kind: "trip",
       elevated: ["slowBackends"],
     });
+  });
+
+  test("compressor-thrash signal (decompressions/s) trips the detector", () => {
+    const d = createOnsetDetector();
+    const thrash = sample({ decompressionsPerSec: 240_000 }); // the 07-11 freezes
+    d.feed(thrash, T, CADENCE);
+    d.feed(thrash, T, CADENCE);
+    expect(d.feed(thrash, T, CADENCE)).toMatchObject({
+      kind: "trip",
+      elevated: ["decompressionsPerSec"],
+    });
+  });
+
+  test("null/absent decompressions (stale or pre-cutover host line) is neither elevated nor blocking calm", () => {
+    const d = createOnsetDetector();
+    // Absent (old persisted samples) and explicit null (stale host line) both
+    // read as "no signal this tick".
+    expect(d.feed(sample({ decompressionsPerSec: undefined }), T, CADENCE)).toBeNull();
+    expect(d.feed(sample({ decompressionsPerSec: null }), T, CADENCE)).toBeNull();
+    expect(d.tripped).toBe(false);
+    // And during cooldown a null reading counts as calm on that axis.
+    const thrash = sample({ decompressionsPerSec: 300_000 });
+    d.feed(thrash, T, CADENCE);
+    d.feed(thrash, T, CADENCE);
+    d.feed(thrash, T, CADENCE); // trip
+    const stale = sample({ decompressionsPerSec: null });
+    expect(d.feed(stale, T, CADENCE)).toBeNull(); // calm 1/2
+    expect(d.feed(stale, T, CADENCE)).toMatchObject({ kind: "clear" });
+  });
+
+  test("a pg-unreadable tick (null locks) is calm on the locks axis", () => {
+    const d = createOnsetDetector();
+    d.feed(hotLoad, T, CADENCE);
+    d.feed(hotLoad, T, CADENCE);
+    d.feed(hotLoad, T, CADENCE); // trip
+    const pgDown = sample({
+      pgLocksWaiting: null,
+      pgActiveBackends: null,
+      pgTotalBackends: null,
+      pgWaitEvents: null,
+      pgBlkReadDeltaMs: null,
+    });
+    expect(d.feed(pgDown, T, CADENCE)).toBeNull(); // calm 1/2
+    expect(d.feed(pgDown, T, CADENCE)).toMatchObject({ kind: "clear" });
+  });
+
+  test("seeded-tripped detector (latch adoption) clears without ever tripping", () => {
+    const d = createOnsetDetector({ tripped: true });
+    expect(d.tripped).toBe(true);
+    expect(d.feed(calm, T, CADENCE)).toBeNull(); // calm 1/2
+    expect(d.feed(calm, T, CADENCE)).toMatchObject({ kind: "clear" });
+    expect(d.tripped).toBe(false);
   });
 });

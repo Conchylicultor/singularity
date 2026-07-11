@@ -1,4 +1,5 @@
 import { sql } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { db } from "@plugins/database/server";
 import {
   runInBackgroundLane,
@@ -108,6 +109,14 @@ export async function recordReport(
   const { kind, source, message: rawMessage, url, userAgent, clientId, buildId } =
     input;
 
+  // Stamp the true event instant BEFORE the shed gate below: a report buffered
+  // during a duress episode must carry its time through the buffer so replay
+  // writes the in-freeze instant, not the flush time. Replay re-passes the
+  // same object, so the stamp survives the buffer and the ??= is a no-op on
+  // the replay pass.
+  input.occurredAt ??= Date.now();
+  const occurredAt = new Date(input.occurredAt);
+
   const spec = ReportKind.getContributions().find((k) => k.kind === kind);
   if (!spec) {
     // Fail loudly: a report whose kind has no registered spec is a wiring bug,
@@ -178,41 +187,22 @@ export async function recordReport(
       // query spans) would run after the ALS scope exits — defeating suppression
       // and re-opening the self-feedback loop. Likewise it must stay inside the
       // enclosing lane scope, or its connection is taken un-declared.
-      const rows = await db
-        .insert(_reports)
-        .values({
-          id,
-          kind,
-          fingerprint: fp,
-          worktree,
-          source,
-          message,
-          url: url ?? null,
-          userAgent: userAgent ?? null,
-          data,
-          rateLimited: limited,
-          noise,
-          lastClientId: clientId ?? null,
-          lastBuildId: buildId ?? null,
-        })
-        .onConflictDoUpdate({
-          target: [_reports.fingerprint, _reports.worktree],
-          // Repeats land on the same row (the fingerprint is stable per kind): bump
-          // the count, refresh the latest message + payload + attribution.
-          set: {
-            message,
-            data,
-            count: sql`${_reports.count} + 1`,
-            lastSeenAt: new Date(),
-            updatedAt: new Date(),
-            rateLimited: sql`${_reports.rateLimited} OR ${limited}`,
-            noise,
-            lastClientId: clientId ?? null,
-            lastBuildId: buildId ?? null,
-          },
-        })
-        .returning();
-      return rows;
+      return await upsertReport({
+        id,
+        kind,
+        fingerprint: fp,
+        worktree,
+        source,
+        message,
+        url: url ?? null,
+        userAgent: userAgent ?? null,
+        data,
+        limited,
+        noise,
+        clientId: clientId ?? null,
+        buildId: buildId ?? null,
+        occurredAt,
+      });
     }),
   );
 
@@ -280,4 +270,86 @@ export async function recordReport(
     ),
   );
   return { reportId: row.id, taskId: row.taskId, rateLimited: false };
+}
+
+// The validated, clamped, fingerprinted values recordReport computes before
+// the durable write — everything the upsert needs and nothing it re-derives.
+export interface ReportUpsertValues {
+  id: string;
+  kind: string;
+  fingerprint: string;
+  worktree: string;
+  source: string;
+  message: string;
+  url: string | null;
+  userAgent: string | null;
+  data: Record<string, unknown>;
+  limited: boolean;
+  noise: boolean;
+  clientId: string | null;
+  buildId: string | null;
+  // The event's true instant — under duress-shed replay this is EARLIER than
+  // now (the in-freeze trip time carried through the buffer).
+  occurredAt: Date;
+}
+
+// The durable upsert half of recordReport, db-parametrized so the DB-backed
+// suite can drive the SQL semantics (greatest/least timestamps, the
+// newest-occurrence guards) against a throwaway Postgres — the session-chain
+// `recordSessionId(…, conn)` precedent. Production callers go through
+// recordReport, which owns validation, the shed gate, velocity, the lane +
+// profiling-suppression scopes, and the bell notification.
+export async function upsertReport(
+  v: ReportUpsertValues,
+  conn: NodePgDatabase = db,
+): Promise<(typeof _reports.$inferSelect)[]> {
+  const { occurredAt } = v;
+  // Timestamps take greatest/least so an out-of-order replay can never move
+  // last_seen_at backwards (or first_seen_at forwards); the last-writer-wins
+  // attribution columns (message / data / noise / lastClientId / lastBuildId)
+  // only apply when this occurrence is at least as new as the row's
+  // last_seen_at, so a replayed older report never clobbers fresher
+  // attribution. ON CONFLICT SET expressions all read the PRE-update row, so
+  // every guard sees the same last_seen_at consistently. created_at /
+  // updated_at stay row-write times by design (when the DB learned of it).
+  const isNewest = sql`${occurredAt} >= ${_reports.lastSeenAt}`;
+  return await conn
+    .insert(_reports)
+    .values({
+      id: v.id,
+      kind: v.kind,
+      fingerprint: v.fingerprint,
+      worktree: v.worktree,
+      source: v.source,
+      message: v.message,
+      url: v.url,
+      userAgent: v.userAgent,
+      data: v.data,
+      rateLimited: v.limited,
+      noise: v.noise,
+      lastClientId: v.clientId,
+      lastBuildId: v.buildId,
+      firstSeenAt: occurredAt,
+      lastSeenAt: occurredAt,
+    })
+    .onConflictDoUpdate({
+      target: [_reports.fingerprint, _reports.worktree],
+      // Repeats land on the same row (the fingerprint is stable per kind): bump
+      // the count, refresh the latest message + payload + attribution.
+      set: {
+        message: sql`case when ${isNewest} then ${v.message} else ${_reports.message} end`,
+        // Explicit ::jsonb cast: this rides a raw sql param (not the column's
+        // drizzle mapper), so the driver must not guess the wire type.
+        data: sql`case when ${isNewest} then ${JSON.stringify(v.data)}::jsonb else ${_reports.data} end`,
+        count: sql`${_reports.count} + 1`,
+        firstSeenAt: sql`least(${_reports.firstSeenAt}, ${occurredAt})`,
+        lastSeenAt: sql`greatest(${_reports.lastSeenAt}, ${occurredAt})`,
+        updatedAt: new Date(),
+        rateLimited: sql`${_reports.rateLimited} OR ${v.limited}`,
+        noise: sql`case when ${isNewest} then ${v.noise} else ${_reports.noise} end`,
+        lastClientId: sql`case when ${isNewest} then ${v.clientId} else ${_reports.lastClientId} end`,
+        lastBuildId: sql`case when ${isNewest} then ${v.buildId} else ${_reports.lastBuildId} end`,
+      },
+    })
+    .returning();
 }

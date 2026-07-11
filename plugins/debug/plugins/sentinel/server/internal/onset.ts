@@ -1,74 +1,43 @@
-import { getConfig } from "@plugins/config_v2/server";
 import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
-import {
-  clearDuress,
-  refreshDuress,
-  setDuress,
-} from "@plugins/infra/plugins/duress/server";
-import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
-import { sentinelConfig } from "../../core";
-import type { ClusterSample } from "../../core";
-import { createOnsetDetector, type OnsetDetector } from "./detector";
-import { onSentinelSample } from "./sampler";
+import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import type { WorkerToMainFrame } from "./worker/protocol";
 
-// Wires the pure onset detector to the world: subscribes to the sampler's
-// per-tick feed, and on transitions fires the cluster-onset trace and drives
-// the duress latch (set on trip, mtime-refresh every tick while tripped so the
-// 60s freshness lease never lapses mid-episode, clear on clear).
+// Main's best-effort re-emitter for the worker's onset transitions (Stage 5:
+// the detector AND the duress latch live on the sentinel worker — see
+// worker/entry.ts). On trip, mirror the event into the durable trace store;
+// on clear, log. Deliberately nothing else: main is NOT on the latch's
+// critical path, so a wedged main can only delay these mirrors, never the
+// lease. ALL setDuress/refreshDuress/clearDuress calls are gone from main —
+// the worker is the single latch owner.
 
 /** Extra lookback added to the run-up so the trace window shows the prologue. */
 const ONSET_WINDOW_PAD_MS = 60_000;
 
-let unsubscribe: (() => void) | null = null;
-let detector: OnsetDetector | null = null;
-let channel: LogChannel | null = null;
+const channel = Log.channel("sentinel", { persist: true });
 
-function onSample(sample: ClusterSample): void {
-  if (!detector) return;
-  const cfg = getConfig(sentinelConfig);
-  const event = detector.feed(sample, cfg, cfg.cadenceMs);
-
-  if (detector.tripped && event === null) {
-    // Mid-episode tick: keep the latch's freshness lease alive.
-    refreshDuress();
-    return;
-  }
-  if (event === null) return;
-
-  if (event.kind === "trip") {
-    // critical: bypasses the global per-minute cap (the onset trace must land
-    // even mid-storm); the per-kind cooldown still dedupes. The widened
-    // durationMs widens the persisted window to cover the elevation run-up.
-    const trace = captureTrace({
-      kind: "cluster-onset",
-      label: "cluster",
-      critical: true,
-      durationMs: event.runUpMs + ONSET_WINDOW_PAD_MS,
-      thresholdMs: 0,
-      detail: { signals: event.signals, elevated: event.elevated },
-    });
-    setDuress(`cluster-onset: ${event.elevated.join(", ")}`);
-    channel?.publish(
-      `onset TRIP (${event.elevated.join(", ")}) trace=${trace?.id ?? "rate-limited"}`,
-    );
-  } else {
-    clearDuress();
-    channel?.publish("onset CLEAR");
-  }
+export function handleTripFrame(
+  frame: Extract<WorkerToMainFrame, { type: "trip" }>,
+): void {
+  // critical: bypasses the global per-minute cap (the onset trace must land
+  // even mid-storm); the per-kind cooldown still dedupes. The widened
+  // durationMs widens the persisted window to cover the elevation run-up.
+  const trace = captureTrace({
+    kind: "cluster-onset",
+    label: "cluster",
+    critical: true,
+    durationMs: frame.runUpMs + ONSET_WINDOW_PAD_MS,
+    thresholdMs: 0,
+    detail: { signals: frame.signals, elevated: frame.elevated },
+  });
+  channel.publish(
+    `onset TRIP (${frame.elevated.join(", ")}) trace=${trace?.id ?? "rate-limited"}`,
+  );
 }
 
-export function startOnsetDetector(): void {
-  if (unsubscribe) return;
-  detector = createOnsetDetector();
-  channel = Log.channel("sentinel", { persist: true });
-  unsubscribe = onSentinelSample(onSample);
-}
-
-export function stopOnsetDetector(): void {
-  unsubscribe?.();
-  unsubscribe = null;
-  // A stopping sentinel must not leave the fleet latched: the lease would
-  // expire in 60s anyway, but an explicit clear removes the window entirely.
-  if (detector?.tripped) clearDuress();
-  detector = null;
+export function handleClearFrame(
+  frame: Extract<WorkerToMainFrame, { type: "clear" }>,
+): void {
+  channel.publish(
+    frame.forced ? "onset CLEAR (max-episode-hold forced)" : "onset CLEAR",
+  );
 }

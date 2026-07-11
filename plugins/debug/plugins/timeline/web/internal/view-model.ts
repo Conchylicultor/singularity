@@ -40,6 +40,9 @@ const SOURCE_COLOR: Record<TimelineSource, string> = {
   report: "bg-categorical-3",
   build: "bg-categorical-4",
   boot: "bg-categorical-5",
+  // Duress episodes are always warning severity and render as cross-lane
+  // bands, so the semantic token IS their identity color.
+  duress: "bg-warning",
   // `health` never yields TimelineEvents (it rides the stream as series
   // frames); listed so the record stays exhaustive over TimelineSource.
   health: "bg-categorical-6",

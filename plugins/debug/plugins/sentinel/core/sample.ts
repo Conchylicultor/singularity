@@ -12,11 +12,14 @@ export const ClusterSampleSchema = z.object({
   loadAvg1: z.number(),
   loadAvg5: z.number(),
   cpuCount: z.number(),
-  pgActiveBackends: z.number(),
-  pgTotalBackends: z.number(),
+  // Pg fields are nullable: the sentinel worker's dedicated pg client fails
+  // into null fields (one reconnect attempt, then a log line) — a pg hiccup
+  // must not lose the tick's host/fleet vitals.
+  pgActiveBackends: z.number().nullable(),
+  pgTotalBackends: z.number().nullable(),
   /** Active-backend counts by pg wait_event_type (IO, LWLock, Lock, ...). */
-  pgWaitEvents: z.record(z.string(), z.number()),
-  pgLocksWaiting: z.number(),
+  pgWaitEvents: z.record(z.string(), z.number()).nullable(),
+  pgLocksWaiting: z.number().nullable(),
   /** Per-tick deltas; null on the first tick (no baseline yet). */
   pgBlkReadDeltaMs: z.number().nullable(),
   pgXactCommitDelta: z.number().nullable(),
@@ -30,6 +33,14 @@ export const ClusterSampleSchema = z.object({
    * tick (a disk scan); intermediate ticks carry the previous rollup.
    */
   backendP99: z.record(z.string(), z.number()),
+  // macOS memory-compressor pressure, tail-read from the host sampler's
+  // health-host.jsonl (30s freshness guard) — the memory signal the detector
+  // was blind to (research/2026-07-11-global-fleet-memory-admission-duress-valve.md,
+  // D6). Null when the host line is missing/stale; `.optional()` so pre-cutover
+  // persisted ring slices still parse (the monitorOps convention).
+  decompressionsPerSec: z.number().nullable().optional(),
+  compressorMb: z.number().nullable().optional(),
+  freeMemMb: z.number().nullable().optional(),
 });
 export type ClusterSample = z.infer<typeof ClusterSampleSchema>;
 

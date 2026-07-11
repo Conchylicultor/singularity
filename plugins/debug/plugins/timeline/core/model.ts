@@ -9,7 +9,7 @@ import { z } from "zod";
 // sees a profiler timestamp. See
 // research/2026-07-10-global-congestion-observability.md (Phase A).
 //
-// This is a CLOSED list (closed-list rule): the six sources are enumerable
+// This is a CLOSED list (closed-list rule): the seven sources are enumerable
 // today and the fan-out mechanics are timeline-owned. Revisit as a slot only
 // if a non-debug plugin ever needs to feed the timeline.
 // ---------------------------------------------------------------------------
@@ -20,6 +20,7 @@ export const TIMELINE_SOURCES = [
   "report",
   "build",
   "boot",
+  "duress",
   "health",
 ] as const;
 export const TimelineSourceSchema = z.enum(TIMELINE_SOURCES);
@@ -32,7 +33,9 @@ export type TimelineSeverity = z.infer<typeof TimelineSeveritySchema>;
 //
 // `health` is listed in TimelineSource for completeness but never yields
 // TimelineEvents — health rides the stream as downsampled series frames (a
-// per-lane heat strip, not discrete bars); see shared/frames.ts.
+// per-lane heat strip, not discrete bars); see shared/frames.ts. `duress`
+// events are host-global (worktree = the "host" lane) and render as
+// cross-lane bands rather than per-worktree bars.
 export const TimelineEventSchema = z.object({
   id: z.string(),
   source: TimelineSourceSchema,

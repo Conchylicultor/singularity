@@ -2,16 +2,20 @@ import { freemem, loadavg, totalmem } from "node:os";
 import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
 import type { HostSample } from "../../shared/schema";
 import { parseVmStat, type VmStat } from "./vm-stat";
+import { detectWallJumpMs } from "./wall-jump";
 
 // Host-level sampler. Runs only on the main backend (the host is a shared
 // resource — one sampler suffices). Appends to the singularity worktree's
 // health-host.jsonl. Same setInterval rationale as process-sampler.ts.
 
 const SAMPLE_INTERVAL_MS = 10_000;
-const INTERVAL_SEC = SAMPLE_INTERVAL_MS / 1000;
 
 let interval: ReturnType<typeof setInterval> | null = null;
 let channel: LogChannel | null = null;
+// Wall-time of the previous tick: the true denominator for the vm_stat rate
+// deltas (a late tick divided by the nominal cadence would inflate the rates —
+// after a sleep, catastrophically so), and the wall-jump detection baseline.
+let lastTickAt = 0;
 let prev: {
   swapins: number;
   swapouts: number;
@@ -30,6 +34,13 @@ async function readVmStat(): Promise<VmStat | null> {
 }
 
 async function tick(): Promise<void> {
+  const now = Date.now();
+  const wallJumpMs = detectWallJumpMs(now, lastTickAt, SAMPLE_INTERVAL_MS);
+  // True elapsed window for the rate deltas, not the nominal cadence: a late
+  // tick (wedged loop or sleep) otherwise divides a multi-window counter delta
+  // by 10 s and fabricates a rate spike.
+  const elapsedSec = Math.max((now - lastTickAt) / 1000, 1);
+  lastTickAt = now;
   const vm = await readVmStat();
   let swapIn = 0;
   let swapOut = 0;
@@ -42,10 +53,10 @@ async function tick(): Promise<void> {
     const compressions = vm.map["Compressions"] ?? 0;
     const decompressions = vm.map["Decompressions"] ?? 0;
     if (prev) {
-      swapIn = Math.max(0, (swapins - prev.swapins) / INTERVAL_SEC);
-      swapOut = Math.max(0, (swapouts - prev.swapouts) / INTERVAL_SEC);
-      compressionsPerSec = Math.max(0, (compressions - prev.compressions) / INTERVAL_SEC);
-      decompressionsPerSec = Math.max(0, (decompressions - prev.decompressions) / INTERVAL_SEC);
+      swapIn = Math.max(0, (swapins - prev.swapins) / elapsedSec);
+      swapOut = Math.max(0, (swapouts - prev.swapouts) / elapsedSec);
+      compressionsPerSec = Math.max(0, (compressions - prev.compressions) / elapsedSec);
+      decompressionsPerSec = Math.max(0, (decompressions - prev.decompressions) / elapsedSec);
     }
     prev = { swapins, swapouts, compressions, decompressions };
     compressorMb = ((vm.map["Pages occupied by compressor"] ?? 0) * vm.pageSize) / 1_048_576;
@@ -54,7 +65,7 @@ async function tick(): Promise<void> {
   const free = freemem();
   const la = loadavg();
   const sample: HostSample = {
-    sampledAt: Date.now(),
+    sampledAt: now,
     freeMemMb: free / 1_048_576,
     totalMemMb: total / 1_048_576,
     usedMemMb: (total - free) / 1_048_576,
@@ -66,6 +77,7 @@ async function tick(): Promise<void> {
     compressionsPerSec,
     decompressionsPerSec,
     compressorMb,
+    wallJumpMs,
   };
   channel?.publish(JSON.stringify(sample));
 }
@@ -73,6 +85,7 @@ async function tick(): Promise<void> {
 export function startHostSampler(): void {
   if (interval) return;
   channel = Log.channel("health-host", { persist: true });
+  lastTickAt = Date.now();
   interval = setInterval(() => {
     void tick();
   }, SAMPLE_INTERVAL_MS);

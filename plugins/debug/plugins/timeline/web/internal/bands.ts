@@ -47,14 +47,55 @@ export const MAX_INCIDENT_MEMBER_SPAN_MS = 30 * 60_000;
  * Incident-membership candidates: interval events only — a point event
  * (startMs === endMs) is not an incident member, and neither is an interval
  * wider than MAX_INCIDENT_MEMBER_SPAN_MS (still rendered as a bar, just
- * excluded from band grouping).
+ * excluded from band grouping). Duress episodes are also excluded: they get
+ * their own dedicated band (duressBands), and being host-global they would
+ * chain every event they overlap into one mega-incident.
  */
 export function intervalEvents(events: TimelineEvent[]): TimelineEvent[] {
   return events.filter(
     (ev) =>
+      ev.source !== "duress" &&
       ev.endMs > ev.startMs &&
       ev.endMs - ev.startMs <= MAX_INCIDENT_MEMBER_SPAN_MS,
   );
+}
+
+/** One duress episode as a window-relative cross-lane band. */
+export interface DuressBand {
+  /** The source event's id (doubles as the detail-strip selection key). */
+  id: string;
+  /** Window-relative ms. */
+  startMs: number;
+  endMs: number;
+  label: string;
+  /** Possibly still live at the window edge (renders open / pulsing). */
+  open: boolean;
+  /** Lapsed with no clear line — the end time is a bound, not a fact. */
+  endUnknown: boolean;
+}
+
+/**
+ * Duress episodes → cross-lane bands, clipped to the window. One band per
+ * event, no grouping — the episode itself IS the annotation ("the record was
+ * thinned here": shed slow-ops/reports inside it are expected to be sparse).
+ */
+export function duressBands(events: TimelineEvent[], range: TimelineWindow): DuressBand[] {
+  const out: DuressBand[] = [];
+  for (const ev of events) {
+    if (ev.source !== "duress") continue;
+    const startMs = Math.max(ev.startMs, range.fromMs) - range.fromMs;
+    const endMs = Math.min(ev.endMs, range.toMs) - range.fromMs;
+    if (endMs <= startMs) continue;
+    out.push({
+      id: ev.id,
+      startMs,
+      endMs,
+      label: ev.label,
+      open: ev.detail["open"] === true,
+      endUnknown: ev.detail["endUnknown"] === true,
+    });
+  }
+  return out.sort((a, b) => a.startMs - b.startMs);
 }
 
 /**

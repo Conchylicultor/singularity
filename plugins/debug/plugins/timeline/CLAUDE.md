@@ -14,7 +14,7 @@ Timeline) renders it as per-worktree lanes.
 traceId?, detail }` — **wall-clock epoch ms is the ONLY clock on the wire**.
 Profiler-clock values are incomparable across backends (trace-engine clock
 discipline), so every source converts at extraction; durations transfer
-as-is. The six sources are a **closed list** (closed-list rule — fan-out
+as-is. The seven sources are a **closed list** (closed-list rule — fan-out
 mechanics are timeline-owned; revisit as a slot only if a non-debug plugin
 ever needs to feed it):
 
@@ -24,8 +24,38 @@ ever needs to feed it):
 | `slow-op` | DB fan-out | each `recentSamples` entry → `[atTime − durationMs, atTime]`; ≥5× threshold → error |
 | `report` | DB fan-out | point at `lastSeenAt`; crash-like kind → error, noise → info |
 | `build` | DB fan-out | `[startedAt, finishedAt]`; in-flight → open-ended to `toMs` + `detail.inFlight`; exit ≠ 0 → error |
-| `boot` | disk (boot-events) | `[processStartedAt, readyAt]` per boot line |
-| `health` | disk (health JSONL) | NOT events — downsampled series frames (≤500 pts/lane, bucket-max on p99 / loadAvg1), host vitals on the `"host"` lane |
+| `boot` | disk (boot-events) | `[processStartedAt, readyAt]` per boot; never-ready → bounded by the next attempt (warning) or open-ended to `toMs` + `detail.inFlight` |
+| `duress` | disk (sentinel duress-episodes, main only) | `[episodeSetAt, clearAtMs]` per episode; no clear line → open-ended to `toMs` (recent) or bounded at trip + 30 min / the next episode with `detail.endUnknown` (lapsed). Host-global: renders as a cross-lane warning band + badge row, not a lane |
+| `health` | disk (health JSONL) | NOT events — downsampled series frames (≤500 pts/lane, bucket-max on p99 / the host pressure score), host vitals on the `"host"` lane |
+
+**Host-lane pressure score** (`shared/pressure.ts`): one shared
+`hostPressureScore` — max of the loadAvg1/cpuCount ramp and the macOS
+memory-compressor decompressions/sec ramp (mild ≥ 20k/s, strong ≥ 100k/s,
+error ≥ 250k/s; calibratable, from the 2026-07-11 freeze forensics) — is both
+the server's downsample `valueOf` AND the web heat-strip severity, so the
+points that survive downsampling are exactly the points the strip colors
+worst. A compressor-thrash freeze (swap ≈ 0, decompressions 240k–442k/s) now
+renders error heat instead of "memory pressure ≈ 0".
+
+**Dark segments** (`web/internal/heat.ts`): a point's heat half-span is capped
+at 3× the series' median inter-sample gap, and any gap beyond 6× median
+renders its uncovered stretch as a hatched **dark** segment — labeled `sleep`
+when the gap-ending point carries the sampler's `wallJumpMs` stamp, else
+"sampler dark" (wedged, dead, or no history — during a freeze, the honest
+answer). Sleep-wake points are force-kept through downsampling (they carry no
+severity but classify their gap).
+
+**Duress bands**: a duress episode is the "this window is thinned" marker —
+shed slow-ops/reports inside it are expected to be sparse. Its events ride the
+stream as one host-lane chunk but render as full-height warning-tinted bands
+behind all lanes plus a clickable reason-labeled badge row (never a worktree
+lane), and they are excluded from the incident sweep (host-global spans would
+chain everything they overlap into one mega-incident). An episode with no
+clear line either renders open-ended (its provable bound — trip +
+`MAX_OPEN_EPISODE_MS`, mirroring the sentinel's max-episode-hold default, or
+the next episode's trip — lies past the window edge) or bounded with
+`endUnknown` (a lease lapse writes no line; the accepted Stage 3 gap, never
+still-open forever).
 
 ## Endpoint
 
@@ -85,7 +115,7 @@ bun test plugins/debug/plugins/timeline
   - Contributes: `SlowEvents.View` "Timeline" → `TimelineView`
   - Uses: `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.MultiSpanLane`, `debug/profiling.useGanttContainerContext`, `debug/trace/pane.groupIncidents`, `debug/trace/pane.IncidentBadge`, `debug/trace/pane.incidentColorClass`, `debug/trace/pane.SlowEvents`, `debug/trace/pane.traceDetailPane`, `infra/endpoints.getEndpointErrorMessage`, `infra/ndjson-stream.readNdjson`, `primitives/css/badge.Badge`, `primitives/css/clip.Clip`, `primitives/css/cluster.Cluster`, `primitives/css/column.Column`, `primitives/css/fill.Fill`, `primitives/css/line.Line`, `primitives/css/overlay.Overlay`, `primitives/css/placeholder.Placeholder`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/icon-button.IconButton`, `primitives/pane.useOpenPane`, `primitives/syntax-highlight.HighlightedCode`
 - Server:
-  - Uses: `database/admin.openShortLivedClient`, `debug/boot-events.readBootEvents`, `debug/health-monitor.HealthSample`, `debug/health-monitor.HealthSampleSchema`, `debug/health-monitor.HostSample`, `debug/health-monitor.HostSampleSchema`, `debug/slow-ops/cluster.listLiveForkDatabases`, `infra/ndjson-stream.ndjsonResponse`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.WORKTREES_DIR`, `primitives/log-channels.readChannelEntries`
+  - Uses: `database/admin.openShortLivedClient`, `debug/boot-events.readBootEvents`, `debug/health-monitor.HealthSample`, `debug/health-monitor.HealthSampleSchema`, `debug/health-monitor.HostSample`, `debug/health-monitor.HostSampleSchema`, `debug/sentinel.readDuressEpisodes`, `debug/slow-ops/cluster.listLiveForkDatabases`, `infra/ndjson-stream.ndjsonResponse`, `infra/paths.listWorktreeDirs`, `infra/paths.MAIN_WORKTREE_NAME`, `primitives/log-channels.readChannelEntries`
   - Routes: `GET /api/debug/timeline`
 - Core:
   - Exports: Types: `TimelineEvent`, `TimelineSeverity`, `TimelineSource`; Values: `TIMELINE_SOURCES`, `TimelineEventSchema`, `TimelineSeveritySchema`, `TimelineSourceSchema`

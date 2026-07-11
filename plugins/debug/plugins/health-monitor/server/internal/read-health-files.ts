@@ -1,6 +1,4 @@
-import { readdirSync, statSync } from "node:fs";
-import { join } from "node:path";
-import { WORKTREES_DIR, MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
+import { listWorktreeDirs, MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
 import { readChannelEntries } from "@plugins/primitives/plugins/log-channels/server";
 import { readSlowOpMarkers } from "@plugins/debug/plugins/slow-ops/server";
 import {
@@ -46,27 +44,9 @@ export function readHealthSeries(windowMs: number): {
   hostSamples: HostSample[];
 } {
   const cutoff = Date.now() - windowMs;
-  const worktreesDir = WORKTREES_DIR;
-
-  let names: string[];
-  try {
-    names = readdirSync(worktreesDir);
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code === "ENOENT") return { series: [], hostSamples: [] };
-    throw err;
-  }
 
   const series: HealthSeries[] = [];
-  for (const name of names) {
-    // Skip the att-*.json sidecar files; only real worktree dirs have logs/.
-    let isDir = false;
-    try {
-      isDir = statSync(join(worktreesDir, name)).isDirectory();
-    } catch (err) {
-      // A worktree dir can vanish mid-scan (concurrent reap); treat as absent.
-      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    }
-    if (!isDir) continue;
+  for (const name of listWorktreeDirs()) {
     const samples = parseSamples<HealthSample>(
       name,
       "health",

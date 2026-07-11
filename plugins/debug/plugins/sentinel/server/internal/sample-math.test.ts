@@ -9,12 +9,16 @@ describe("mapPgStatsRow", () => {
         blk_read_time: "1234.5",
         xact_commit: 42,
         wait_events: { IO: 4, LWLock: 1 },
+        active_backends: "7",
+        total_backends: 31,
       }),
     ).toEqual({
       locksWaiting: 3,
       blkReadTimeMs: 1234.5,
       xactCommit: 42,
       waitEvents: { IO: 4, LWLock: 1 },
+      activeBackends: 7,
+      totalBackends: 31,
     });
     expect(
       mapPgStatsRow({
@@ -22,8 +26,17 @@ describe("mapPgStatsRow", () => {
         blk_read_time: null,
         xact_commit: null,
         wait_events: null,
+        active_backends: null,
+        total_backends: null,
       }),
-    ).toEqual({ locksWaiting: 0, blkReadTimeMs: 0, xactCommit: 0, waitEvents: {} });
+    ).toEqual({
+      locksWaiting: 0,
+      blkReadTimeMs: 0,
+      xactCommit: 0,
+      waitEvents: {},
+      activeBackends: 0,
+      totalBackends: 0,
+    });
   });
 });
 

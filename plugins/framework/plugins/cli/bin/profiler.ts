@@ -7,6 +7,12 @@ export interface BuildSpan {
   label: string;
   startMs: number;
   durationMs: number;
+  /**
+   * Peak RSS (bytes) of the subprocess this span wrapped, when one was
+   * measured (exec/execBuffered in build.ts). Calibration input for the build
+   * pool's memory budget (host-semaphore.ts).
+   */
+  maxRssBytes?: number;
 }
 
 export interface BuildProfile {
@@ -21,15 +27,16 @@ export function buildProfilerStart(
   id: string,
   phase: string,
   label: string,
-): () => void {
+): (extra?: { maxRssBytes?: number }) => void {
   const start = performance.now();
-  return () => {
+  return (extra) => {
     spans.push({
       id,
       phase,
       label,
       startMs: Math.round(start - t0),
       durationMs: Math.round(performance.now() - start),
+      ...(extra?.maxRssBytes != null ? { maxRssBytes: extra.maxRssBytes } : {}),
     });
   };
 }

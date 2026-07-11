@@ -43,4 +43,9 @@ export type ReportBody = z.infer<typeof ReportBodySchema>;
 // server-* sources the HTTP endpoint rejects.
 export type ReportInput = Omit<ReportBody, "source"> & {
   source: ReportSource;
+  // The instant the reported event actually happened (epoch ms). Stamped by
+  // recordReport itself BEFORE the duress shed gate, so a report buffered
+  // during a duress episode replays with its true in-freeze instant instead of
+  // the post-episode flush time. Not part of the HTTP body — callers omit it.
+  occurredAt?: number;
 };

@@ -3,9 +3,12 @@ import {
   runInBackgroundLane,
   runWithoutProfiling,
 } from "@plugins/infra/plugins/runtime-profiler/core";
+import {
+  duressEpisode,
+  isUnderDuress,
+} from "@plugins/infra/plugins/duress/plugins/latch/server";
 import { Log, type LogChannel } from "@plugins/primitives/plugins/log-channels/server";
 import { duressConfig } from "../../core";
-import { duressEpisode, isUnderDuress } from "./latch";
 
 // The duress shed engine. Observability choke points (trace capture, slow-op
 // recording, report filing — wired in Phase C2) construct one buffer each and

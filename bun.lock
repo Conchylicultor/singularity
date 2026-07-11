@@ -2566,6 +2566,10 @@
       "name": "@singularity/plugin-infra-duress",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/duress/plugins/latch": {
+      "name": "@singularity/plugin-infra-duress-latch",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/endpoints": {
       "name": "@singularity/plugin-infra-endpoints",
       "version": "0.0.1",
@@ -6125,6 +6129,8 @@
     "@singularity/plugin-infra-corpus-index": ["@singularity/plugin-infra-corpus-index@workspace:plugins/infra/plugins/corpus-index"],
 
     "@singularity/plugin-infra-duress": ["@singularity/plugin-infra-duress@workspace:plugins/infra/plugins/duress"],
+
+    "@singularity/plugin-infra-duress-latch": ["@singularity/plugin-infra-duress-latch@workspace:plugins/infra/plugins/duress/plugins/latch"],
 
     "@singularity/plugin-infra-endpoints": ["@singularity/plugin-infra-endpoints@workspace:plugins/infra/plugins/endpoints"],
 

@@ -5,10 +5,13 @@ import { traceSeverity } from "../severity";
 import type { DbSource, DbSourceCtx, SqlQuery } from "./context";
 
 // A trace is persisted after its async enrich, so created_at can trail the
-// snapshot's wallTime anchor by seconds-to-minutes. The SQL range filter on
-// the indexed created_at is a coarse pre-filter widened by this slack; the
-// exact wall-clock overlap check happens in map().
-const ENRICH_SLACK_MS = 5 * 60 * 1000;
+// snapshot's wallTime anchor by seconds-to-minutes — and under a saturated
+// host (exactly when traces matter) convoy-delayed persists exceed several
+// minutes. The SQL range filter on the indexed created_at is only a coarse
+// pre-filter widened by this slack — the exact wall-clock overlap check
+// happens in map() — so a generous 30 min costs a few extra rows read and
+// discarded, never false events.
+const ENRICH_SLACK_MS = 30 * 60 * 1000;
 
 // The JSON extractions pull only the three scalars the interval mapping needs
 // — never the (potentially tens-of-KB) snapshot blob itself.

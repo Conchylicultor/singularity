@@ -16,6 +16,7 @@ import {
   stopStallProfiler,
   drainAndMaybeDump,
 } from "./stall-profiler";
+import { detectWallJumpMs } from "./wall-jump";
 
 // Per-backend health sampler. Installed in the server plugin's `onReady` and
 // torn down in `onShutdown`. It samples this process's own event-loop lag, GC
@@ -87,10 +88,18 @@ function rotateIfNeeded(): void {
 
 function tick(): void {
   if (!histogram) return;
+  const now = Date.now();
+  // Machine sleep spanned this window: the histogram accumulated the suspend
+  // itself (huge max, calm p50 — a fake incident on every consumer). Reset it
+  // BEFORE reading so the sample carries an honest empty window, and stamp
+  // wallJumpMs so the gap is classifiable downstream. A merely-late tick from
+  // a wedged loop stays below the jump factor and keeps its stall evidence.
+  const wallJumpMs = detectWallJumpMs(now, lastTickAt, SAMPLE_INTERVAL_MS);
+  if (wallJumpMs !== undefined) histogram.reset();
   const mem = process.memoryUsage();
   const meter = getSelfMeter();
   const sample: HealthSample = {
-    sampledAt: Date.now(),
+    sampledAt: now,
     worktree: currentWorktreeName(),
     eventLoopP50Ms: histogram.percentile(50) / 1e6,
     eventLoopP99Ms: histogram.percentile(99) / 1e6,
@@ -114,6 +123,7 @@ function tick(): void {
     // design — this delta is the only place it shows up.
     monitorOps: meter.count - lastMonitorOps,
     monitorMs: meter.totalMs - lastMonitorMs,
+    wallJumpMs,
   };
   // Drain the JSC sampler for this window BEFORE resetting the histogram so the
   // drained samples and eventLoopMaxMs describe the same window. On a stall this

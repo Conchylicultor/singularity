@@ -29,6 +29,8 @@ export {
 
 export { GIT, PGREP, PS, CLAUDE, TMUX } from "./internal/bins";
 
+export { listWorktreeDirs } from "./internal/worktree-dirs";
+
 export {
   pruneWorktreeBuildArtifacts,
   pruneWorktreeReleaseArtifacts,

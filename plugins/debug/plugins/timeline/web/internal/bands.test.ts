@@ -2,6 +2,7 @@ import { describe, expect, test } from "bun:test";
 import type { TimelineEvent } from "../../core";
 import {
   buildBands,
+  duressBands,
   incidentInputs,
   intervalEvents,
   MAX_INCIDENT_MEMBER_SPAN_MS,
@@ -33,6 +34,60 @@ describe("intervalEvents", () => {
     const wide = ev(0, MAX_INCIDENT_MEMBER_SPAN_MS + 1);
     const atCap = ev(0, MAX_INCIDENT_MEMBER_SPAN_MS);
     expect(intervalEvents([wide, atCap])).toEqual([atCap]);
+  });
+
+  test("drops duress episodes — they band on their own, never chain incidents", () => {
+    const episode: TimelineEvent = { ...ev(1_000, 20_000), source: "duress" };
+    expect(intervalEvents([episode, ev(1, 2)])).toHaveLength(1);
+  });
+});
+
+describe("duressBands", () => {
+  const episode = (
+    startMs: number,
+    endMs: number,
+    detail: Record<string, unknown> = {},
+  ): TimelineEvent => ({
+    id: `duress:${startMs}`,
+    source: "duress",
+    worktree: "host",
+    startMs,
+    endMs,
+    label: "duress: decompressions",
+    severity: "warning",
+    detail,
+  });
+
+  test("one clipped band per episode, carrying the open/endUnknown flags", () => {
+    const bands = duressBands(
+      [
+        episode(-5_000, 20_000, { clearedAtMs: 20_000 }),
+        episode(80_000, 100_000, { open: true, endUnknown: false }),
+      ],
+      range,
+    );
+    expect(bands).toEqual([
+      {
+        id: "duress:-5000",
+        startMs: 0,
+        endMs: 20_000,
+        label: "duress: decompressions",
+        open: false,
+        endUnknown: false,
+      },
+      {
+        id: "duress:80000",
+        startMs: 80_000,
+        endMs: 100_000,
+        label: "duress: decompressions",
+        open: true,
+        endUnknown: false,
+      },
+    ]);
+  });
+
+  test("ignores non-duress events and fully-clipped episodes", () => {
+    expect(duressBands([ev(1_000, 2_000), episode(-20_000, -10_000)], range)).toEqual([]);
   });
 });
 

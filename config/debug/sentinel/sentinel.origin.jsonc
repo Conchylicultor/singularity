@@ -1,4 +1,4 @@
-// @hash 82052f4f2a60
+// @hash 35dbdcd7836f
 {
   // When off, the cluster sentinel sampler does not run (main backend, restart to apply).
   "enabled": true,
@@ -14,10 +14,14 @@
   "onBackendP99Ms": 1000,
   // Trip signal: at least this many backends slow at once.
   "onSlowBackends": 2,
+  // Trip signal: macOS memory-compressor decompressions per second (from the host sampler). The freezes ran 240k–442k/s; healthy baseline is ~0.
+  "onDecompressionsPerSec": 50000,
   // Consecutive elevated ticks required before the onset trips (hysteresis).
   "onTicks": 3,
   // Clear thresholds are the trip thresholds multiplied by this (dual-threshold hysteresis).
   "offRatio": 0.6,
   // Consecutive calm ticks (all signals below the clear thresholds) required before the episode clears.
-  "offTicks": 6
+  "offTicks": 6,
+  // Safety bound on a duress episode: past this, the sentinel worker force-clears the latch and re-evaluates from scratch (a mis-calibrated threshold cannot latch the fleet indefinitely). A forced clear re-grants shed first-N on the re-trip.
+  "maxEpisodeHoldMs": 1800000
 }

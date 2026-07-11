@@ -7,9 +7,10 @@ import {
   IncidentBadge,
   incidentColorClass,
 } from "@plugins/debug/plugins/trace/plugins/pane/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { TimelineHealthPoint } from "../../shared/frames";
 import { heatSegments, type HeatKind } from "../internal/heat";
-import type { IncidentBand } from "../internal/bands";
+import type { DuressBand, IncidentBand } from "../internal/bands";
 import type { TimelineWindow } from "../internal/view-model";
 import { wallclockTicks } from "../internal/ticks";
 
@@ -78,10 +79,17 @@ export function WallclockAxis({ range }: { range: TimelineWindow }): ReactElemen
   );
 }
 
+// A dark (no-data) segment is a distinct visual class, not a severity color:
+// a diagonal hatch drawn from currentColor so it stays theme-driven, visually
+// unambiguous from both a transparent (healthy) track and a heat tint.
+const DARK_HATCH =
+  "repeating-linear-gradient(45deg, currentColor 0, currentColor 2px, transparent 2px, transparent 6px)";
+
 /**
  * Thin health heat strip under a lane group: background segments bucketed by
- * event-loop p99 (backend lanes) or loadAvg1/cpu (host lane); calm stretches
- * stay transparent.
+ * event-loop p99 (backend lanes) or the host pressure score (load +
+ * compressor); calm stretches stay transparent, and sampler voids (machine
+ * sleep, wedged/dead sampler) render as hatched dark segments.
  */
 export function HeatStrip({
   label,
@@ -110,11 +118,16 @@ export function HeatStrip({
       track={segments.map((seg, i) => (
         <div
           key={i}
+          title={seg.title}
           // eslint-disable-next-line layout/no-adhoc-layout -- heat segment positioned by runtime ms→% offsets (left/width inline style), mirroring MultiSpanLane's bars
-          className={cn("absolute top-0 h-full", seg.colorClass)}
+          className={cn(
+            "absolute top-0 h-full",
+            seg.kind === "dark" ? "text-muted-foreground/60" : seg.colorClass,
+          )}
           style={{
             left: toLeftPct(seg.startMs, totalMs),
             width: toWidthPct(seg.endMs - seg.startMs, totalMs),
+            ...(seg.kind === "dark" ? { backgroundImage: DARK_HATCH } : {}),
           }}
         />
       ))}
@@ -122,30 +135,105 @@ export function HeatStrip({
   );
 }
 
+/** The duress band's tooltip: the trip reason plus its end-edge semantics. */
+function duressBandTitle(band: DuressBand): string {
+  if (band.open) return `${band.label} — open (no clear line yet; possibly live)`;
+  if (band.endUnknown) return `${band.label} — lapsed; end time unknown (no clear line)`;
+  return band.label;
+}
+
 /**
- * Translucent full-height vertical incident bands, painted BEHIND the lanes
- * (mounted via Overlay `behind`). One band per multi-event incident, tinted
- * with the same stable palette as the trace pane's incident chips.
+ * Translucent full-height vertical bands, painted BEHIND the lanes (mounted
+ * via Overlay `behind`, so both sets share one track and overlap freely):
+ * one categorical band per multi-event incident (the trace pane's palette),
+ * plus one warning-tinted band per duress episode — the "this window is
+ * thinned" marker: shed slow-ops/reports inside it are expected to be sparse.
  */
-export function IncidentBandLayer({ bands }: { bands: IncidentBand[] }): ReactElement {
+export function IncidentBandLayer({
+  bands,
+  duress = [],
+}: {
+  bands: IncidentBand[];
+  duress?: DuressBand[];
+}): ReactElement {
   const { toLeftPct, toWidthPct, totalMs } = useGanttContainerContext();
   return (
     <GanttRow
       className="h-full"
       trackClassName="h-full"
+      track={
+        <>
+          {duress.map((band) => (
+            <div
+              key={band.id}
+              title={duressBandTitle(band)}
+              // eslint-disable-next-line layout/no-adhoc-layout -- duress band positioned by runtime ms→% offsets (left/width inline style), mirroring the incident bands
+              className="absolute top-0 h-full bg-warning/15 border-x border-warning/40"
+              style={{
+                left: toLeftPct(band.startMs, totalMs),
+                width: toWidthPct(band.endMs - band.startMs, totalMs),
+              }}
+            />
+          ))}
+          {bands.map((band) => (
+            <div
+              key={band.incidentId}
+              // eslint-disable-next-line layout/no-adhoc-layout -- incident band positioned by runtime ms→% offsets (left/width inline style), mirroring MultiSpanLane's bars
+              className={cn(
+                "absolute top-0 h-full rounded-md opacity-15",
+                incidentColorClass(band.colorIndex),
+              )}
+              style={{
+                left: toLeftPct(band.startMs, totalMs),
+                width: toWidthPct(band.endMs - band.startMs, totalMs),
+              }}
+            />
+          ))}
+        </>
+      }
+    />
+  );
+}
+
+/**
+ * Duress chips at each episode band's start — labeled with the trip reason,
+ * clickable to open the episode in the detail strip. Its own thin row ABOVE
+ * the lanes, mirroring IncidentBadgeRow.
+ */
+export function DuressBadgeRow({
+  bands,
+  onSelect,
+}: {
+  bands: DuressBand[];
+  onSelect: (id: string) => void;
+}): ReactElement {
+  const { toLeftPct, totalMs } = useGanttContainerContext();
+  return (
+    <GanttRow
+      className="py-2xs"
+      label={
+        <Text as="span" variant="caption" tone="muted" className="font-mono">
+          duress
+        </Text>
+      }
+      trackClassName="h-5"
       track={bands.map((band) => (
         <div
-          key={band.incidentId}
-          // eslint-disable-next-line layout/no-adhoc-layout -- incident band positioned by runtime ms→% offsets (left/width inline style), mirroring MultiSpanLane's bars
-          className={cn(
-            "absolute top-0 h-full rounded-md opacity-15",
-            incidentColorClass(band.colorIndex),
-          )}
-          style={{
-            left: toLeftPct(band.startMs, totalMs),
-            width: toWidthPct(band.endMs - band.startMs, totalMs),
-          }}
-        />
+          key={band.id}
+          // eslint-disable-next-line layout/no-adhoc-layout -- badge pinned at the band's runtime % offset (left inline style)
+          className="absolute top-0"
+          style={{ left: toLeftPct(band.startMs, totalMs) }}
+        >
+          <Badge
+            as="button"
+            type="button"
+            variant="warning"
+            title={duressBandTitle(band)}
+            onClick={() => onSelect(band.id)}
+          >
+            {band.label}
+          </Badge>
+        </div>
       ))}
     />
   );
