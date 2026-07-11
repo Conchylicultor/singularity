@@ -21,6 +21,7 @@ import { collectContributions } from "@plugins/framework/plugins/server-core/cor
 import { TrashEntrySchema } from "@plugins/infra/plugins/trash/core";
 import { _trashEntries } from "@plugins/infra/plugins/trash/server";
 import { _blocks } from "./tables";
+import { parseBlockData } from "./parse-block-data";
 import { BlockLifecycle } from "./document-hooks";
 import {
   deleteBlocksSubtree,
@@ -104,7 +105,10 @@ async function seedBlock(args: {
     pageId: args.pageId,
     type: args.type,
     rank: args.rank,
-    data: args.type === "page" ? { title: args.title ?? args.id, icon: null } : {},
+    data: parseBlockData(
+      args.type,
+      args.type === "page" ? { title: args.title ?? args.id, icon: null } : undefined,
+    ),
   });
 }
 

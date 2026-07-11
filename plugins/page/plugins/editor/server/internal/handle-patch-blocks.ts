@@ -199,7 +199,7 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
           pageId: b.pageId,
           parentId: b.parentId,
           type: b.type,
-          data: b.data ?? {},
+          data: parseBlockData(b.type, b.data),
           rank: b.rank.toJSON(),
           expanded: b.expanded,
           updatedAt: new Date(),
