@@ -11,6 +11,8 @@ export const handleSetRhythm = implement(
       enabled: body.enabled,
       bass: body.bass,
       chord: body.chord,
+      bassPatternId: body.bassPatternId,
+      chordPatternId: body.chordPatternId,
     });
   },
 );

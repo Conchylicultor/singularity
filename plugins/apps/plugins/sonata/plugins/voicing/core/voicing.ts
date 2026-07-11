@@ -1,17 +1,27 @@
 /**
- * Voicing strategies: timed chord events → performed notes.
+ * The voicing engine: timed chord events → performed notes.
  *
  * The "chord → notes" direction of Sonata's two-layer model. A chord-authoring
  * source authors chord *annotations* (root + quality, timed in quarter-note
- * beats) and a voicing strategy *derives* the literal `Note[]` a player can sound
- * and draw — the opposite of the MIDI source, which carries notes directly.
+ * beats) and this engine *derives* the literal `Note[]` a player can sound and
+ * draw — the opposite of the MIDI source, which carries notes directly.
  *
  * This is a shared leaf: any source (chord-grid, Ultimate Guitar, …) feeds its
- * `ChordEvent[]` here and picks a strategy, so chord voicing has exactly one
- * home. The caller owns its own track id and note-id namespace via
- * `VoicingOptions`, so two sources never collide on track or note id. Pitch math
- * is delegated to `theory`'s `chordPitches`; this leaf only decides which tones
- * sound and when.
+ * `ChordEvent[]` here, so chord voicing has exactly one home. The caller owns its
+ * own track id and note-id namespace via `VoicingOptions`, so two sources never
+ * collide on track or note id. Pitch math is delegated to `theory`'s
+ * `chordPitches`; *which* tones sound at each onset is delegated to a per-hand
+ * {@link Figuration} (the tone-order axis); this engine only places the tone-sets
+ * and walks the rhythm necklace.
+ *
+ * Two paths:
+ *  - **No-groove** (`opts.rhythm` absent) — one block note per placed tone per
+ *    chord, held for the chord's duration, with a bass root iff `voiceLead`. A
+ *    figuration only bites when a rhythm necklace exists, so this path is
+ *    byte-for-byte the historical block-chord behaviour.
+ *  - **Groove** (`opts.rhythm` present) — two tone-sets are placed per chord (a
+ *    voice-led chord register and a low root-position bass register) and each
+ *    hand's necklace is walked, calling that hand's figuration per onset.
  */
 
 import type {
@@ -22,6 +32,12 @@ import {
   chordPitches,
   nearestVoicing,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
+import type { Figuration, FigurationContext } from "./figuration";
+import {
+  findFiguration,
+  DEFAULT_BASS_FIGURATION_ID,
+  DEFAULT_CHORD_FIGURATION_ID,
+} from "./figuration";
 
 /** A parsed, timed chord (quarter-note beats) — the input to every voicing. */
 export interface ChordEvent {
@@ -61,9 +77,17 @@ export interface VoicingOptions {
    * from the bar grid — this module never learns about bars or time signatures.
    * When present, chords are struck on this bar-anchored necklace (a note per
    * onset in the chord in force) instead of one block note per chord event; when
-   * absent every strategy emits exactly today's notes.
+   * absent the engine emits exactly today's block notes.
    */
   rhythm?: { bass: readonly number[]; chord: readonly number[] };
+  /**
+   * The per-hand tone-order pattern walked against {@link rhythm}. Present ONLY
+   * alongside `rhythm` (a figuration is meaningless with no necklace to apply it
+   * to). When absent on the groove path, defaults to `{bass:"root",
+   * chord:"block"}`, reproducing today's rhythm behaviour (a low root per bass
+   * onset, the whole chord per chord onset).
+   */
+  figuration?: { bass: Figuration; chord: Figuration };
 }
 
 /**
@@ -72,12 +96,6 @@ export interface VoicingOptions {
  * `voiceLead` makes that impossible.
  */
 const wantsBass = (o: VoicingOptions) => !!o.voiceLead || !!o.rhythm;
-
-export interface Voicing {
-  id: string;
-  label: string;
-  voice: (events: ChordEvent[], opts: VoicingOptions) => Note[];
-}
 
 const DEFAULT_VELOCITY = 80;
 
@@ -161,8 +179,24 @@ function upperVoice(opts: VoicingOptions): number | undefined {
   return wantsBass(opts) ? 1 : undefined;
 }
 
+/** What `emitRhythmicHand` reports to `build` for one struck onset. */
+interface OnsetSlot {
+  /** Index into `events` of the chord in force at this onset. */
+  evIndex: number;
+  /** Running index over the whole necklace (never reset per chord). */
+  onsetIndex: number;
+  /** 0-based ordinal of this onset within its chord (reset when `evIndex` advances). */
+  positionInChord: number;
+  /** True on the first struck onset of the chord (`positionInChord === 0`). */
+  firstOnsetOfChord: boolean;
+  /** True when no further onset sounds within this chord. */
+  lastOnsetBeforeChange: boolean;
+  start: number;
+  duration: number;
+}
+
 /**
- * Shared bar-anchored onset emitter for the rhythm path. The necklace is anchored
+ * Shared bar-anchored onset emitter for the groove path. The necklace is anchored
  * to the ABSOLUTE bar grid and does NOT restart per chord: this walks a hand's
  * absolute onset beats against the sorted chord events (O(n+m) pointer merge) and,
  * for each onset that falls inside a chord, builds notes via `build`. An onset in
@@ -170,193 +204,168 @@ function upperVoice(opts: VoicingOptions): number | undefined {
  * The note duration is clipped to the chord's end so a note never rings across a
  * chord change. `events` are pre-sorted by `start` and non-overlapping (chord
  * annotations), and `onsets` are sorted ascending — so the pointer only advances.
+ *
+ * Two figuration signals are derived in the same single pass, at no extra cost:
+ *  - `positionInChord` — reset to 0 whenever the matched event index advances,
+ *    else incremented (silent gap onsets never advance it). So it counts *struck*
+ *    onsets since this chord began — which, within a chord's range, is exactly its
+ *    onset ordinal. Lets a cyclic figure restart on each chord's own root.
+ *  - `lastOnsetBeforeChange` — a one-step peek: true when the next onset is absent
+ *    (`Infinity`) or lands at/after this chord's end (a later event or a gap), i.e.
+ *    no further onset sounds under this chord. Walking bass's approach-tone signal.
  */
 function emitRhythmicHand(
   events: ChordEvent[],
   onsets: readonly number[],
-  build: (ctx: {
-    evIndex: number;
-    onsetIndex: number;
-    start: number;
-    duration: number;
-  }) => Note[],
+  build: (slot: OnsetSlot) => Note[],
 ): Note[] {
   const out: Note[] = [];
   let j = 0;
+  let prevEvIndex = -1;
+  let positionInChord = -1;
   for (let i = 0; i < onsets.length; i++) {
     const b = onsets[i]!;
     while (j < events.length && events[j]!.end <= b) j++;
     const ev = events[j];
     if (!ev || b < ev.start || b >= ev.end) continue; // silence — no chord here
+    // Reset the within-chord ordinal when the matched event advances; otherwise
+    // advance it. Silent onsets `continue` above, so they never touch it.
+    if (j !== prevEvIndex) {
+      positionInChord = 0;
+      prevEvIndex = j;
+    } else {
+      positionInChord++;
+    }
     const nextOnset = i + 1 < onsets.length ? onsets[i + 1]! : Infinity;
     const duration = Math.min(nextOnset, ev.end) - b;
-    out.push(...build({ evIndex: j, onsetIndex: i, start: b, duration }));
+    out.push(
+      ...build({
+        evIndex: j,
+        onsetIndex: i,
+        positionInChord,
+        firstOnsetOfChord: positionInChord === 0,
+        // No further onset sounds within this chord ⇒ next onset is at/after its end.
+        lastOnsetBeforeChange: nextOnset >= ev.end,
+        start: b,
+        duration,
+      }),
+    );
   }
   return out;
 }
 
 /**
- * Emit a strategy's full rhythmic performance: the chord hand (tones struck per
- * chord onset, selected by `chordTonesAt`) plus the bass hand (one low root per
- * bass onset, `voice: 0`). Shared by all three strategies — each supplies only
- * its per-onset tone selection, so the onset→notes emission lives in one place.
- * Ids are onset-indexed and unique (`-c${i}-${k}` for chord tones, `-b${i}` for
- * bass), and only ever produced on this path.
+ * Regenerate performed notes from timed chord events under `opts`.
+ *
+ * No-groove path (`opts.rhythm` absent): byte-for-byte the historical block
+ * behaviour — one block note per placed tone per chord, held for the chord's full
+ * duration, with a bass root iff `voiceLead`. (Ids `${idPrefix}-${i}-${k}`, bass
+ * `${idPrefix}-${i}-b`.)
+ *
+ * Groove path (`opts.rhythm` present): two tone-sets are placed per event — the
+ * voice-led chord register (`nearestVoicing` when `voiceLead`, chord hand only)
+ * and a low root-position bass register — then each hand's necklace is walked,
+ * calling that hand's {@link Figuration} per onset. Chord notes land on
+ * `opts.track` (`voice: upperVoice`); bass notes on `opts.bassTrack ?? opts.track`
+ * (`voice: 0`). Ids are onset-indexed: chord `${idPrefix}-c${onset}-${k}`, bass
+ * `${idPrefix}-b${onset}-${k}` (the `-${k}` since a bass figuration can strike a
+ * dyad / stab). Absent `opts.figuration` defaults to `{bass:"root",chord:"block"}`.
  */
-function voiceRhythm(
-  events: ChordEvent[],
-  placed: PlacedVoicing[],
-  opts: VoicingOptions,
-  chordTonesAt: (
-    tones: number[],
-    onsetIndex: number,
-  ) => { pitch: number; k: number }[],
-): Note[] {
-  const rhythm = opts.rhythm!;
+export function voiceChords(events: ChordEvent[], opts: VoicingOptions): Note[] {
   const { track, bassTrack, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
   const voice = upperVoice(opts);
 
-  const chordNotes = emitRhythmicHand(
-    events,
-    rhythm.chord,
-    ({ evIndex, onsetIndex, start, duration }) =>
-      chordTonesAt(placed[evIndex]!.pitches, onsetIndex).map(({ pitch, k }) => ({
-        id: `${idPrefix}-c${onsetIndex}-${k}`,
+  if (!opts.rhythm) {
+    // No-groove path — one block note per placed tone per chord, bass root iff
+    // voiceLead. A figuration only bites when a necklace exists.
+    const placed = placeVoicings(events, opts, (ev) =>
+      chordPitches(ev.data, opts.octave),
+    );
+    return events.flatMap((ev, i) => [
+      ...placed[i]!.pitches.map((pitch, k) => ({
+        id: `${idPrefix}-${i}-${k}`,
         pitch,
-        start,
-        duration,
+        start: ev.start,
+        duration: ev.end - ev.start,
         velocity,
         track,
         voice,
       })),
+      ...bassNote(ev, placed[i]!, i, opts),
+    ]);
+  }
+
+  const rhythm = opts.rhythm;
+  const figuration = opts.figuration ?? {
+    bass: findFiguration(DEFAULT_BASS_FIGURATION_ID),
+    chord: findFiguration(DEFAULT_CHORD_FIGURATION_ID),
+  };
+
+  // Place BOTH registers per event: the voice-led chord register (voice-leading
+  // stays a chord-hand modifier) and a low root-position bass register.
+  let prevVoiced: number[] | null = null;
+  const chordPlaced: number[][] = [];
+  const bassPlaced: number[][] = [];
+  for (const ev of events) {
+    const tones = chordPitches(ev.data, opts.octave);
+    const voiced: number[] = opts.voiceLead
+      ? nearestVoicing(tones, prevVoiced)
+      : tones;
+    if (opts.voiceLead) prevVoiced = voiced;
+    chordPlaced.push(voiced);
+    bassPlaced.push(chordPitches(ev.data, BASS_OCTAVE));
+  }
+
+  // Build the per-onset context for the hand whose register is `active`: `tones`
+  // / `tonesOfNext` follow that hand (chord register on the chord hand, bass
+  // register on the bass hand) so a figuration adapts to whichever hand it is
+  // placed on; both placed registers stay available for explicit cross-register
+  // reach (an `{all, reg:"chord"}` stab).
+  const contextAt = (
+    slot: OnsetSlot,
+    active: "chord" | "bass",
+  ): FigurationContext => {
+    const chordTones = chordPlaced[slot.evIndex]!;
+    const bassTones = bassPlaced[slot.evIndex]!;
+    const chordTonesOfNext = chordPlaced[slot.evIndex + 1] ?? [];
+    const bassTonesOfNext = bassPlaced[slot.evIndex + 1] ?? [];
+    return {
+      chord: events[slot.evIndex]!.data,
+      tones: active === "chord" ? chordTones : bassTones,
+      tonesOfNext: active === "chord" ? chordTonesOfNext : bassTonesOfNext,
+      chordTones,
+      bassTones,
+      onsetIndex: slot.onsetIndex,
+      positionInChord: slot.positionInChord,
+      nextChord: events[slot.evIndex + 1]?.data ?? null,
+      firstOnsetOfChord: slot.firstOnsetOfChord,
+      lastOnsetBeforeChange: slot.lastOnsetBeforeChange,
+    };
+  };
+
+  const chordNotes = emitRhythmicHand(events, rhythm.chord, (slot) =>
+    figuration.chord.select(contextAt(slot, "chord")).map(({ pitch, k }) => ({
+      id: `${idPrefix}-c${slot.onsetIndex}-${k}`,
+      pitch,
+      start: slot.start,
+      duration: slot.duration,
+      velocity,
+      track,
+      voice,
+    })),
   );
 
-  const bassNotes = emitRhythmicHand(
-    events,
-    rhythm.bass,
-    ({ evIndex, onsetIndex, start, duration }) => {
-      const bass = placed[evIndex]!.bass;
-      if (bass === null) return [];
-      return [
-        {
-          id: `${idPrefix}-b${onsetIndex}`,
-          pitch: bass,
-          start,
-          duration,
-          velocity,
-          track: bassTrack ?? track,
-          voice: 0,
-        },
-      ];
-    },
+  const bassNotes = emitRhythmicHand(events, rhythm.bass, (slot) =>
+    figuration.bass.select(contextAt(slot, "bass")).map(({ pitch, k }) => ({
+      id: `${idPrefix}-b${slot.onsetIndex}-${k}`,
+      pitch,
+      start: slot.start,
+      duration: slot.duration,
+      velocity,
+      track: bassTrack ?? track,
+      voice: 0,
+    })),
   );
 
   return [...chordNotes, ...bassNotes];
-}
-
-export const VOICINGS: Voicing[] = [
-  {
-    id: "block-full",
-    label: "Block (full chord)",
-    voice: (events, opts) => {
-      const { track, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
-      const placed = placeVoicings(events, opts, (ev) =>
-        chordPitches(ev.data, opts.octave),
-      );
-      if (opts.rhythm) {
-        // Strike the whole tone-set at each chord onset.
-        return voiceRhythm(events, placed, opts, (tones) =>
-          tones.map((pitch, k) => ({ pitch, k })),
-        );
-      }
-      const voice = upperVoice(opts);
-      return events.flatMap((ev, i) => [
-        ...placed[i]!.pitches.map((pitch, k) => ({
-          id: `${idPrefix}-${i}-${k}`,
-          pitch,
-          start: ev.start,
-          duration: ev.end - ev.start,
-          velocity,
-          track,
-          voice,
-        })),
-        ...bassNote(ev, placed[i]!, i, opts),
-      ]);
-    },
-  },
-  {
-    id: "block-triad",
-    label: "Block triad",
-    voice: (events, opts) => {
-      const { track, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
-      // Triad only: root + 3rd + 5th; drops any 7th / extensions.
-      const placed = placeVoicings(events, opts, (ev) =>
-        chordPitches(ev.data, opts.octave).slice(0, 3),
-      );
-      if (opts.rhythm) {
-        // Strike the whole (triad) tone-set at each chord onset.
-        return voiceRhythm(events, placed, opts, (tones) =>
-          tones.map((pitch, k) => ({ pitch, k })),
-        );
-      }
-      const voice = upperVoice(opts);
-      return events.flatMap((ev, i) => [
-        ...placed[i]!.pitches.map((pitch, k) => ({
-          id: `${idPrefix}-${i}-${k}`,
-          pitch,
-          start: ev.start,
-          duration: ev.end - ev.start,
-          velocity,
-          track,
-          voice,
-        })),
-        ...bassNote(ev, placed[i]!, i, opts),
-      ]);
-    },
-  },
-  {
-    id: "arpeggio-up",
-    label: "Arpeggio (up)",
-    voice: (events, opts) => {
-      const { track, idPrefix, velocity = DEFAULT_VELOCITY } = opts;
-      const placed = placeVoicings(events, opts, (ev) =>
-        chordPitches(ev.data, opts.octave),
-      );
-      if (opts.rhythm) {
-        // Spread the chord across successive onsets: onset i sounds tone
-        // `i % tones.length`, generalising the arpeggio's "walk up the chord".
-        return voiceRhythm(events, placed, opts, (tones, onsetIndex) =>
-          tones.length === 0
-            ? []
-            : [{ pitch: tones[onsetIndex % tones.length]!, k: 0 }],
-        );
-      }
-      const voice = upperVoice(opts);
-      return events.flatMap((ev, i) => {
-        const tones = placed[i]!.pitches;
-        const step = (ev.end - ev.start) / tones.length;
-        return [
-          ...tones.map((pitch, k) => ({
-            id: `${idPrefix}-${i}-${k}`,
-            pitch,
-            start: ev.start + step * k,
-            duration: step,
-            velocity,
-            track,
-            voice,
-          })),
-          ...bassNote(ev, placed[i]!, i, opts),
-        ];
-      });
-    },
-  },
-];
-
-export const DEFAULT_VOICING_ID = VOICINGS[0]!.id;
-
-/** Look up a voicing by id; throws loudly on an unknown id. */
-export function findVoicing(id: string): Voicing {
-  const v = VOICINGS.find((x) => x.id === id);
-  if (!v) throw new Error(`[voicing] unknown voicing: ${id}`);
-  return v;
 }

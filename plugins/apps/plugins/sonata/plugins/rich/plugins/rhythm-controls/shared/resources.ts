@@ -27,13 +27,17 @@ export const RhythmPatternSchema = z
  * patterns. Stored in the `sonata_songs_ext_rhythm` entity-extension table (1:1
  * per song); an absent row reads as disabled (today's block-chord behavior).
  * Both patterns are remembered even while disabled, so re-enabling restores the
- * groove rather than resetting to defaults.
+ * groove rather than resetting to defaults. `bassPatternId`/`chordPatternId` are
+ * each hand's tone-order figuration id (kept `z.string()`: an unknown id throws
+ * loudly downstream in `findFiguration`, not an absorbable value here).
  */
 export const RhythmRowSchema = z.object({
   songId: z.string(),
   enabled: z.boolean(),
   bass: RhythmPatternSchema,
   chord: RhythmPatternSchema,
+  bassPatternId: z.string(),
+  chordPatternId: z.string(),
 });
 export type RhythmRow = z.infer<typeof RhythmRowSchema>;
 

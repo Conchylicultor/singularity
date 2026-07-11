@@ -1,7 +1,5 @@
-// @hash 9952afb43e52
+// @hash 767f64ba8be3
 {
   "realistic": true,
-  // Allowed values: "block-full", "block-triad", "arpeggio-up"
-  "strategyId": "block-full",
   "octave": 4
 }

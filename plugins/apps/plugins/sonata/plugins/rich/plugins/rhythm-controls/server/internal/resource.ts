@@ -38,5 +38,7 @@ export const rhythmLiveResource = defineResource<RhythmRow[]>({
       enabled: r.enabled,
       bass: plainPattern(r.bass),
       chord: plainPattern(r.chord),
+      bassPatternId: r.bassPatternId,
+      chordPatternId: r.chordPatternId,
     })),
 });

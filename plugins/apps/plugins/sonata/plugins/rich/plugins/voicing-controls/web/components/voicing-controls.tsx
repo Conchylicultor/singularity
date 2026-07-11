@@ -1,15 +1,8 @@
-import { useMemo } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
-import {
-  VOICINGS,
-  voicingConfig,
-} from "@plugins/apps/plugins/sonata/plugins/voicing/core";
+import { voicingConfig } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import {
-  SegmentedControl,
-  ToggleChip,
-} from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { MdRemove, MdAdd } from "react-icons/md";
 
@@ -20,9 +13,10 @@ const MAX_OCTAVE = 7;
 /**
  * The "Voicing" section — the BODY of a `Sonata.Section` card whose chrome
  * (Card + collapsible "Voicing" title) the host paints. Exposes the GLOBAL
- * chord-voicing config (realistic voice-leading on/off, the voicing-strategy,
- * and the chord octave). Writes go to `voicingConfig`, so the shell's `baseScore`
- * re-derives the chord notes from authored chord annotations.
+ * chord-voicing config (realistic voice-leading on/off and the chord octave).
+ * Writes go to `voicingConfig`, so the shell's `baseScore` re-derives the chord
+ * notes from authored chord annotations. The tone-order (which figuration each
+ * hand plays) is per-song and lives in the rhythm groove panel, not here.
  *
  * Hidden for MIDI-only songs: a song must carry at least one authored chord
  * annotation (a symbol source is loaded) for these controls to mean anything.
@@ -33,11 +27,6 @@ const MAX_OCTAVE = 7;
 export function VoicingControls() {
   const cfg = useConfig(voicingConfig);
   const setCfg = useSetConfig(voicingConfig);
-
-  const strategyOptions = useMemo(
-    () => VOICINGS.map((v) => ({ id: v.id, label: v.label })),
-    [],
-  );
 
   return (
     <Stack gap="md">
@@ -51,17 +40,6 @@ export function VoicingControls() {
         >
           {cfg.realistic ? "On" : "Off"}
         </ToggleChip>
-      </Stack>
-
-      <Stack gap="xs">
-        <Text as="div" variant="caption" tone="muted">
-          Strategy
-        </Text>
-        <SegmentedControl
-          options={strategyOptions}
-          value={cfg.strategyId}
-          onChange={(id) => setCfg("strategyId", id)}
-        />
       </Stack>
 
       <Stack direction="row" gap="sm" justify="between" align="center">

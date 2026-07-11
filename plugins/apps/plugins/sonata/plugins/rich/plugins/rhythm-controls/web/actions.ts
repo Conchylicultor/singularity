@@ -3,11 +3,13 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { RhythmPattern } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
 import { setRhythmEndpoint } from "../shared/endpoints";
 
-/** The persisted groove: the toggle plus both hands. */
+/** The persisted groove: the toggle, both hands' patterns, and their figuration ids. */
 export interface RhythmGroove {
   enabled: boolean;
   bass: RhythmPattern;
   chord: RhythmPattern;
+  bassPatternId: string;
+  chordPatternId: string;
 }
 
 /**
@@ -36,7 +38,7 @@ function wirePattern(p: RhythmPattern) {
  * The write is still *optimistic*: the panel sets the shell's per-surface store
  * first (instant playback + circle), and `rhythmResource`'s live-state push
  * re-affirms server truth. Named `save*` (not `set*`) to stay distinct from that
- * in-memory store setter (`useSetRhythmHands()`).
+ * in-memory store setter (`useSetRhythmGroove()`).
  */
 export function useSaveRhythm(): (songId: string, groove: RhythmGroove) => void {
   const { mutate } = useEndpointMutation(setRhythmEndpoint);
@@ -48,6 +50,8 @@ export function useSaveRhythm(): (songId: string, groove: RhythmGroove) => void 
           enabled: groove.enabled,
           bass: wirePattern(groove.bass),
           chord: wirePattern(groove.chord),
+          bassPatternId: groove.bassPatternId,
+          chordPatternId: groove.chordPatternId,
         },
       }),
     [mutate],

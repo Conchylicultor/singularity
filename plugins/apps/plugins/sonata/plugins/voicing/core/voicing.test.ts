@@ -1,9 +1,10 @@
 import { describe, expect, it } from "bun:test";
-import { findVoicing, type ChordEvent, type VoicingOptions } from "./voicing";
+import { voiceChords, type ChordEvent, type VoicingOptions } from "./voicing";
+import { findFiguration } from "./figuration";
 
 /**
  * Voicing emission tests. The rhythm axis is orthogonal: with `opts.rhythm`
- * ABSENT every strategy must emit exactly today's notes (the no-regression
+ * ABSENT the engine must emit exactly today's block notes (the no-regression
  * property), and with it PRESENT chords are struck on the bar-anchored onset
  * necklace passed in as absolute beats.
  *
@@ -34,7 +35,7 @@ const gMaj = (start: number, end: number): ChordEvent => ({
 describe("block-full — no rhythm regression", () => {
   it("emits identical block notes to today's code on a 2-chord list", () => {
     const events = [cMaj(0, 4), gMaj(4, 8)];
-    const notes = findVoicing("block-full").voice(events, OPTS);
+    const notes = voiceChords(events, OPTS);
 
     // Hardcoded expectation from reading today's block-full: one note per tone
     // per event, id `${idPrefix}-${i}-${k}`, start = ev.start, duration =
@@ -54,7 +55,7 @@ describe("block-full — bar-anchored rhythm", () => {
   it("strikes each chord onset in the bar (onsets [0,2] over [0,4))", () => {
     const events = [cMaj(0, 4)];
     // A 4-subdivision bar over [0,4): onsets 0 and 2 resolve to beats 0 and 2.
-    const notes = findVoicing("block-full").voice(events, {
+    const notes = voiceChords(events, {
       ...OPTS,
       rhythm: { bass: [], chord: [0, 2] },
     });
@@ -74,7 +75,7 @@ describe("block-full — bar-anchored rhythm", () => {
   it("a half-bar chord gets only the onsets falling in its half", () => {
     // Chord occupies only [2,4); the bar-anchored onsets are still 0 and 2.
     const events = [cMaj(2, 4)];
-    const notes = findVoicing("block-full").voice(events, {
+    const notes = voiceChords(events, {
       ...OPTS,
       rhythm: { bass: [], chord: [0, 2] },
     });
@@ -92,24 +93,63 @@ describe("block-full — bar-anchored rhythm", () => {
 describe("bass decoupling", () => {
   it("emits a bass note when rhythm is set even with voiceLead false", () => {
     const events = [cMaj(0, 4)];
-    const notes = findVoicing("block-full").voice(events, {
+    const notes = voiceChords(events, {
       ...OPTS,
       voiceLead: false,
       rhythm: { bass: [0], chord: [] },
     });
 
     // No chord hand; one bass note at the low root (lowBassPitch(0) = 36),
-    // voice 0, id `-b${i}`, duration spanning to the chord end.
+    // voice 0, id `-b${onset}-${k}` (the `-${k}` since a bass figuration can
+    // strike a dyad), duration spanning to the chord end.
     expect(notes).toEqual([
-      { id: "chord-b0", pitch: 36, start: 0, duration: 4, velocity: 80, track: "chords", voice: 0 },
+      { id: "chord-b0-0", pitch: 36, start: 0, duration: 4, velocity: 80, track: "chords", voice: 0 },
     ]);
+  });
+});
+
+describe("per-hand figuration", () => {
+  it("plays a different figuration on each hand — pitches differ accordingly", () => {
+    // One C-maj chord over a full bar. Bass hand = octave-bass ([D1, D8] →
+    // 36, 48), chord hand = block ([60, 64, 67] struck whole). Onsets [0, 2] on
+    // both hands, so bass alternates root/octave while chord strikes the triad.
+    const events = [cMaj(0, 4)];
+    const notes = voiceChords(events, {
+      ...OPTS,
+      bassTrack: "chords-bass",
+      rhythm: { bass: [0, 2], chord: [0, 2] },
+      figuration: {
+        bass: findFiguration("octave-bass"),
+        chord: findFiguration("block"),
+      },
+    });
+
+    const bass = notes
+      .filter((n) => n.voice === 0)
+      .sort((a, b) => a.start - b.start);
+    const chord = notes
+      .filter((n) => n.voice === 1)
+      .sort((a, b) => a.start - b.start || a.pitch - b.pitch);
+
+    // Bass: octave-bass — position 0 (beat 0) → root 36; position 1 (beat 2) →
+    // octave root 48. Distinct low-register pitches, on the bass track.
+    expect(bass.map((n) => n.pitch)).toEqual([36, 48]);
+    for (const n of bass) expect(n.track).toBe("chords-bass");
+    expect(bass.map((n) => n.id)).toEqual(["chord-b0-0", "chord-b1-0"]);
+
+    // Chord: block — the whole triad at each onset, chord register, chord track.
+    expect(chord.map((n) => n.pitch)).toEqual([60, 64, 67, 60, 64, 67]);
+    for (const n of chord) expect(n.track).toBe("chords");
+
+    // The two hands genuinely differ: no bass pitch appears in the chord hand.
+    for (const b of bass) expect(chord.some((c) => c.pitch === b.pitch)).toBe(false);
   });
 });
 
 describe("bassTrack split", () => {
   it("routes bass to bassTrack while chord tones stay on track (block path)", () => {
     const events = [cMaj(0, 4)];
-    const notes = findVoicing("block-full").voice(events, {
+    const notes = voiceChords(events, {
       ...OPTS,
       bassTrack: "chords-bass",
       voiceLead: true, // wantsBass → a bass note is emitted in the block path
@@ -125,7 +165,7 @@ describe("bassTrack split", () => {
 
   it("routes bass to bassTrack while chord tones stay on track (rhythm path)", () => {
     const events = [cMaj(0, 4)];
-    const notes = findVoicing("block-full").voice(events, {
+    const notes = voiceChords(events, {
       ...OPTS,
       bassTrack: "chords-bass",
       rhythm: { bass: [0], chord: [0] },
@@ -146,7 +186,7 @@ describe("duration clipping", () => {
     // beat 5. Without clipping the note would ring 3→5 (duration 2); it must be
     // clipped to the C chord's end at beat 4 (duration 1).
     const events = [cMaj(0, 4), gMaj(4, 8)];
-    const notes = findVoicing("block-full").voice(events, {
+    const notes = voiceChords(events, {
       ...OPTS,
       rhythm: { bass: [], chord: [3, 5] },
     });

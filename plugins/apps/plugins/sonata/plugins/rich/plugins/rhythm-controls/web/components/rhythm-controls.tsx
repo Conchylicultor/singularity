@@ -43,7 +43,8 @@ const BASS_COLOR = "var(--chart-2)";
  */
 export function RhythmControls() {
   const { score } = useSonata();
-  const { enabled, bass, chord, commit } = useGroove();
+  const { enabled, bass, chord, bassFigurationId, chordFigurationId, commit } =
+    useGroove();
   const cursor = useCursorApi();
   const circleRef = useRef<RhythmCircleHandle>(null);
 
@@ -100,11 +101,15 @@ export function RhythmControls() {
     },
   ];
 
+  // The full four-field groove payload with one field overridden — every commit
+  // carries both hands' patterns AND figuration ids so nothing is dropped.
+  const fields = { bass, chord, bassFigurationId, chordFigurationId };
+
   const onToggleOnset = (trackId: string, index: number) => {
     if (trackId === "bass") {
-      commit({ bass: toggleOnset(bass, index), chord }, true);
+      commit({ ...fields, bass: toggleOnset(bass, index) }, true);
     } else {
-      commit({ bass, chord: toggleOnset(chord, index) }, true);
+      commit({ ...fields, chord: toggleOnset(chord, index) }, true);
     }
   };
 
@@ -122,13 +127,23 @@ export function RhythmControls() {
           </Center>
           <TrackConfig
             label="Left hand (bass)"
+            hand="bass"
             pattern={bass}
-            onChange={(next) => commit({ bass: next, chord }, true)}
+            onChange={(next) => commit({ ...fields, bass: next }, true)}
+            figurationId={bassFigurationId}
+            onFigurationChange={(id) =>
+              commit({ ...fields, bassFigurationId: id }, true)
+            }
           />
           <TrackConfig
             label="Right hand (chords)"
+            hand="chord"
             pattern={chord}
-            onChange={(next) => commit({ bass, chord: next }, true)}
+            onChange={(next) => commit({ ...fields, chord: next }, true)}
+            figurationId={chordFigurationId}
+            onFigurationChange={(id) =>
+              commit({ ...fields, chordFigurationId: id }, true)
+            }
           />
         </>
       ) : (

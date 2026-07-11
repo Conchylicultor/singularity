@@ -6,6 +6,7 @@ import {
   RHYTHMS,
   type RhythmPattern,
 } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
+import { figurationsForHand } from "@plugins/apps/plugins/sonata/plugins/voicing/core";
 import {
   cn,
   Select,
@@ -25,19 +26,35 @@ const MAX_SUBDIVISIONS = 48;
 
 export interface TrackConfigProps {
   label: string;
+  /** Which hand this block configures — filters the Pattern (figuration) list. */
+  hand: "bass" | "chord";
   pattern: RhythmPattern;
   onChange: (next: RhythmPattern) => void;
+  /** The hand's tone-order figuration id (the *what*). */
+  figurationId: string;
+  onFigurationChange: (id: string) => void;
 }
 
 /**
- * One hand's rhythm controls: a preset picker (snaps subdivisions to the
- * preset's native length), a rotation stepper (cyclic shift), and a subdivision
- * stepper (proportionally adapts the pattern). The provenance label reads the
- * preset name — throwing `findRhythm` is intentional: an unknown `presetId` is a
- * bug, not a value to paper over — plus " (adapted)" once the subdivision count
- * has drifted from the preset's native length.
+ * One hand's controls, in two orthogonal axes:
+ *  - **Pattern** (the tone-order / *what*): which figuration the hand plays,
+ *    picked from `figurationsForHand(hand)`.
+ *  - **Preset / rotation / subdivisions** (the rhythm-grid / *when*): the onset
+ *    necklace. The preset picker snaps subdivisions to the preset's native
+ *    length, the rotation stepper cyclically shifts, and the subdivision stepper
+ *    proportionally adapts the pattern. The provenance label reads the preset name
+ *    — throwing `findRhythm` is intentional: an unknown `presetId` is a bug, not a
+ *    value to paper over — plus " (adapted)" once the subdivision count has drifted
+ *    from the preset's native length.
  */
-export function TrackConfig({ label, pattern, onChange }: TrackConfigProps) {
+export function TrackConfig({
+  label,
+  hand,
+  pattern,
+  onChange,
+  figurationId,
+  onFigurationChange,
+}: TrackConfigProps) {
   const preset = pattern.presetId ? findRhythm(pattern.presetId) : null;
   const adapted = preset != null && pattern.subdivisions !== preset.subdivisions;
   const provenance = preset ? `${preset.label}${adapted ? " (adapted)" : ""}` : "Custom";
@@ -45,6 +62,11 @@ export function TrackConfig({ label, pattern, onChange }: TrackConfigProps) {
   // base-ui resolves the collapsed trigger label from `items`, not the option list.
   const items: Record<string, string> = Object.fromEntries(
     RHYTHMS.map((r) => [r.id, r.label]),
+  );
+
+  const figurations = figurationsForHand(hand);
+  const figurationItems: Record<string, string> = Object.fromEntries(
+    figurations.map((f) => [f.id, f.label]),
   );
 
   return (
@@ -56,6 +78,30 @@ export function TrackConfig({ label, pattern, onChange }: TrackConfigProps) {
         <Text as="span" variant="caption" tone="muted">
           {provenance}
         </Text>
+      </Stack>
+
+      <Stack gap="xs">
+        <Text as="div" variant="caption" tone="muted">
+          Pattern (which tones each onset strikes)
+        </Text>
+        <Select
+          items={figurationItems}
+          value={figurationId}
+          onValueChange={(v: string | null) => {
+            if (v) onFigurationChange(v);
+          }}
+        >
+          <SelectTrigger aria-label={`${label} pattern`} className={cn("h-7 w-full text-caption")}>
+            <SelectValue />
+          </SelectTrigger>
+          <SelectContent>
+            {figurations.map((f) => (
+              <SelectItem key={f.id} value={f.id}>
+                {f.label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </Stack>
 
       <Stack gap="xs">

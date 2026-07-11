@@ -14,5 +14,7 @@ export const setRhythmEndpoint = defineEndpoint({
     enabled: z.boolean(),
     bass: RhythmPatternSchema,
     chord: RhythmPatternSchema,
+    bassPatternId: z.string(),
+    chordPatternId: z.string(),
   }),
 });

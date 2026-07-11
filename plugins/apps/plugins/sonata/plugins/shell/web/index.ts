@@ -37,8 +37,9 @@ export {
 } from "./transpose-store";
 export {
   RhythmStoreProvider,
-  useRhythmHands,
-  useSetRhythmHands,
+  useRhythmGroove,
+  useSetRhythmGroove,
+  type RhythmGroove,
 } from "./rhythm-store";
 export {
   LaneInsetsProvider,

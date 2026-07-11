@@ -1,0 +1,2 @@
+ALTER TABLE "sonata_songs_ext_rhythm" ADD COLUMN "bass_pattern_id" text DEFAULT 'root' NOT NULL;--> statement-breakpoint
+ALTER TABLE "sonata_songs_ext_rhythm" ADD COLUMN "chord_pattern_id" text DEFAULT 'block' NOT NULL;

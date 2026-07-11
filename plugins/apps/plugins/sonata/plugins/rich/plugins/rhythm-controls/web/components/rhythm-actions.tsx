@@ -8,11 +8,14 @@ import { useGroove } from "../use-groove";
  * here and editing the circle there read and write one groove.
  */
 export function RhythmActions() {
-  const { enabled, bass, chord, commit } = useGroove();
+  const { enabled, bass, chord, bassFigurationId, chordFigurationId, commit } =
+    useGroove();
   return (
     <ToggleChip
       active={enabled}
-      onClick={() => commit({ bass, chord }, !enabled)}
+      onClick={() =>
+        commit({ bass, chord, bassFigurationId, chordFigurationId }, !enabled)
+      }
     >
       {enabled ? "On" : "Off"}
     </ToggleChip>

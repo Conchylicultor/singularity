@@ -26,7 +26,8 @@ import type {
   RhythmPattern,
 } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
 import { effectiveOnsets } from "@plugins/apps/plugins/sonata/plugins/rhythm/core";
-import { findVoicing, type ChordEvent, type VoicingOptions } from "./voicing";
+import { voiceChords, type ChordEvent, type VoicingOptions } from "./voicing";
+import { findFiguration } from "./figuration";
 
 /**
  * The synthesized track the re-voiced chord (upper-structure) notes live on.
@@ -88,15 +89,21 @@ function resolvePattern(score: Score, pattern: RhythmPattern): number[] {
  * replaced, and a `TrackMeta` for each is ensured. When the score has no
  * authored chord annotations the input is returned unchanged.
  *
- * When `hands` is nullish the emitted notes are byte-for-byte today's (no
- * `rhythm` reaches the strategy). When present, each hand's pattern is resolved
- * to absolute onset beats on the bar grid and passed through `opts.rhythm`, so
- * the strategy strikes a bar-anchored groove instead of one block note per chord.
+ * When `groove` is nullish the emitted notes are byte-for-byte today's block
+ * chords (no `rhythm`/`figuration` reaches the engine). When present, each hand's
+ * pattern is resolved to absolute onset beats on the bar grid (`opts.rhythm`) and
+ * its figuration id resolved to a {@link Figuration} (`opts.figuration`), so each
+ * hand strikes its own bar-anchored, tone-ordered groove instead of one block
+ * note per chord.
  */
 export function reVoiceChords(
   score: Score,
-  cfg: { realistic: boolean; strategyId: string; octave: number },
-  hands?: RhythmHands | null,
+  cfg: { realistic: boolean; octave: number },
+  groove?: {
+    hands: RhythmHands;
+    bassFigurationId: string;
+    chordFigurationId: string;
+  } | null,
 ): Score {
   const events: ChordEvent[] = score.annotations
     .filter(isAuthoredChord)
@@ -112,14 +119,18 @@ export function reVoiceChords(
     bassTrack: CHORD_BASS_TRACK,
     idPrefix: CHORD_NOTE_PREFIX,
   };
-  if (hands) {
+  if (groove) {
     opts.rhythm = {
-      bass: resolvePattern(score, hands.bass),
-      chord: resolvePattern(score, hands.chord),
+      bass: resolvePattern(score, groove.hands.bass),
+      chord: resolvePattern(score, groove.hands.chord),
+    };
+    opts.figuration = {
+      bass: findFiguration(groove.bassFigurationId),
+      chord: findFiguration(groove.chordFigurationId),
     };
   }
 
-  const chordNotes = findVoicing(cfg.strategyId).voice(events, opts);
+  const chordNotes = voiceChords(events, opts);
 
   const notes = [
     ...score.notes.filter(
