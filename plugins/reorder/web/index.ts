@@ -29,6 +29,13 @@ export type {
 } from "./internal/diff";
 export { ReorderLayoutContext } from "./internal/reorder-layout";
 export type { ReorderLayout } from "./internal/reorder-layout";
+export { useReorderedEntries } from "./internal/use-reordered-entries";
+export { isNodeData } from "./internal/sorting";
+export type {
+  ReorderNodeData,
+  ReorderState,
+  TopLevelEntry,
+} from "./internal/sorting";
 
 export default {
   description:

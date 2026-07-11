@@ -1,0 +1,39 @@
+// @hash 735e92da3163
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  //
+  // Notion-style grouped block menu (slash `/`, gutter `+`, Add-block picker render
+  // the group headers; turn-into inherits this flattened order without headers).
+  // Groups live ONLY here — block plugins stay group-blind.
+  "items": [
+    { "type": "header", "label": "Basic blocks", "items": [
+      "page.text:text",
+      "page.heading.heading-1:heading-1",
+      "page.heading.heading-2:heading-2",
+      "page.heading.heading-3:heading-3",
+      "page.bulleted-list:bulleted-list",
+      "page.numbered-list:numbered-list",
+      "page.to-do:to-do",
+      "page.toggle:toggle",
+      "page.quote:quote",
+      "page.divider:divider",
+      "page.callout:callout"
+    ]},
+    { "type": "header", "label": "Media", "items": [
+      "page.image:image",
+      "page.video:video",
+      "page.audio:audio",
+      "page.file:file",
+      "page.bookmark:bookmark",
+      "page.embed:embed"
+    ]},
+    { "type": "header", "label": "Advanced", "items": [
+      "page.code-block:code-block",
+      "page.math.equation:equation",
+      "page.page-link:page-link",
+      "page.sub-page:page"
+    ]}
+  ]
+}

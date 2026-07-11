@@ -9,6 +9,6 @@ export default {
   description:
     "Sub-page block type: renders a child page inline in its parent's content flow as a clickable Notion-style page row. A void, text-less block — selectable and arrow-navigable, but Enter/Backspace can never originate in it.",
   contributions: [
-    Editor.Block({ match: subPageBlock.type, block: subPageBlock, component: SubPageBlock }),
+    Editor.Block({ id: subPageBlock.type, match: subPageBlock.type, block: subPageBlock, component: SubPageBlock }),
   ],
 } satisfies PluginDefinition;

@@ -9,6 +9,6 @@ export { videoBlock, VIDEO_TYPE } from "../core";
 export default {
   description: "Video block type: upload a video file and play it inline.",
   contributions: [
-    Editor.Block({ match: videoBlock.type, block: videoBlock, component: VideoBlock }),
+    Editor.Block({ id: videoBlock.type, match: videoBlock.type, block: videoBlock, component: VideoBlock }),
   ],
 } satisfies PluginDefinition;

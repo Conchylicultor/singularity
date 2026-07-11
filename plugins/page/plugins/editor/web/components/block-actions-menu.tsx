@@ -1,4 +1,4 @@
-import { useState, type ReactElement } from "react";
+import { useMemo, useState, type ReactElement } from "react";
 import { MdDelete } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
@@ -33,6 +33,10 @@ export function BlockActionsMenu({
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(-1);
   const blocks = useInsertableBlocks();
+  // Turn-into stays flat: it keeps its own "Turn into" eyebrow (below), so it
+  // passes one label-less section and ignores the config's group boundaries
+  // while still inheriting the flattened config order.
+  const sections = useMemo(() => [{ blocks }], [blocks]);
   const { serverSync } = useBlockEditor();
 
   // A page row is not convertible. Converting it away from `page` would orphan
@@ -65,7 +69,7 @@ export function BlockActionsMenu({
               Turn into
             </Text>
             <BlockTypeList
-              blocks={blocks}
+              sections={sections}
               activeIndex={activeIndex}
               onHoverIndex={setActiveIndex}
               onSelect={(handle) => {

@@ -10,6 +10,7 @@ export default {
     "Bookmark block type: paste a link into an empty block to scrape OG metadata server-side and render a rich preview card (title, description, site, favicon, og:image cached same-origin).",
   contributions: [
     Editor.Block({
+      id: bookmarkBlock.type,
       match: bookmarkBlock.type,
       block: bookmarkBlock,
       component: BookmarkBlock,

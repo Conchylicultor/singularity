@@ -9,6 +9,6 @@ export default {
   description:
     "Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render.",
   contributions: [
-    Editor.Block({ match: equationBlock.type, block: equationBlock, component: EquationBlock }),
+    Editor.Block({ id: equationBlock.type, match: equationBlock.type, block: equationBlock, component: EquationBlock }),
   ],
 } satisfies PluginDefinition;

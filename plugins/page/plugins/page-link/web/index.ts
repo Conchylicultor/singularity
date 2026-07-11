@@ -9,6 +9,6 @@ export default {
   description:
     "Link-to-page block type: references another page as a clickable block; feeds the backlinks index.",
   contributions: [
-    Editor.Block({ match: pageLinkBlock.type, block: pageLinkBlock, component: PageLinkBlock }),
+    Editor.Block({ id: pageLinkBlock.type, match: pageLinkBlock.type, block: pageLinkBlock, component: PageLinkBlock }),
   ],
 } satisfies PluginDefinition;

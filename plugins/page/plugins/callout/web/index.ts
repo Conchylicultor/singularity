@@ -9,6 +9,6 @@ export default {
   description:
     "Callout block type: a tinted highlight box with a changeable leading icon and semantic color, for notes/tips/warnings.",
   contributions: [
-    Editor.Block({ match: calloutBlock.type, block: calloutBlock, component: CalloutBlock }),
+    Editor.Block({ id: calloutBlock.type, match: calloutBlock.type, block: calloutBlock, component: CalloutBlock }),
   ],
 } satisfies PluginDefinition;

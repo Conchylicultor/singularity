@@ -21,8 +21,22 @@ distinguished by whether the contributions are *visible*:
   recorders) that need per-contribution crash isolation but paint no UI.
 
 Reorderability is now a property of the **constructor**, not a boolean flag.
-There is no `reorder?: boolean` option — pick `defineMountSlot` for headless
-slots and `defineRenderSlot` for everything visible.
+There is no `reorder?: boolean` option — pick the constructor whose reorder
+semantics you want:
+
+- **`defineRenderSlot`** — visible, renders every contribution → **reorderable**
+  (always in the manifest, owes an authored config).
+- **`defineMountSlot`** — headless, side-effect-only → **never reorderable**
+  (absent from the manifest).
+- **`defineDispatchSlot`** — visible, single-match selection → **not
+  reorderable** (contributions carry no `id`, so nothing to order).
+- **`defineOrderedDispatchSlot`** — dispatch selection **plus** reorder
+  participation → **reorderable**. Same runtime as `defineDispatchSlot` (one
+  match via `.Dispatch`), but contributions require `id: string` so the slot
+  enters the reorderable-slots manifest (via its own codegen marker) and owes
+  an authored config override. Consumers that need the config order (grouped
+  menus, ordered pickers) read that order through the reorder read hook — the
+  slot itself renders pure dispatch.
 
 ## Single-line discipline for horizontal slots
 
@@ -62,7 +76,7 @@ What this does and does NOT do:
 - Load-bearing: yes
 - Web:
   - Uses: `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.ControlSizeProvider`
-  - Exports: Types: `DispatchContribution`, `DispatchSlot`, `DispatchSlotConfig`, `MountComponent`, `MountSlot`, `MountSlotConfig`, `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`, `WrapContribution`, `WrapperSlot`, `WrapperSlotConfig`; Values: `defineDispatchSlot`, `defineMountSlot`, `defineRenderSlot`, `defineWrapperSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `renderIsolated`, `RenderSlotSubIdContext`
+  - Exports: Types: `DispatchContribution`, `DispatchSlot`, `DispatchSlotConfig`, `MountComponent`, `MountSlot`, `MountSlotConfig`, `OrderedDispatchContribution`, `OrderedDispatchSlot`, `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`, `WrapContribution`, `WrapperSlot`, `WrapperSlotConfig`; Values: `defineDispatchSlot`, `defineMountSlot`, `defineOrderedDispatchSlot`, `defineRenderSlot`, `defineWrapperSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `renderIsolated`, `RenderSlotSubIdContext`
 - Cross-plugin:
   - Imported by: `apps-core`, `apps-core/layout`, `apps-core/tab-surface`, `apps/browser/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/mail/shell`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/pages/welcome`, `apps/settings/shell`, `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/progress/scrubber`, `apps/sonata/shell`, `apps/story/render`, `apps/studio/explorer`, `apps/studio/shell`, `apps/website/pillars/agents`, `apps/website/pillars/apps`, `apps/website/pillars/platform`, `apps/website/shell`, `apps/workflows/definitions`, `apps/workflows/shell`, `config_v2/fields`, `conversations/agents`, `conversations/conversation-ui/item`, `conversations/conversation-view`, `conversations/conversation-view/action-bar`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/exit-menu`, `conversations/conversation-view/header`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/attachment`, `conversations/conversation-view/jsonl-viewer/tool-call`, `debug/profiling`, `debug/trace/engine`, `improve/element-picker`, `page/editor`, `primitives/app-shell`, `primitives/data-view`, `primitives/detail-sections`, `primitives/error-boundary`, `primitives/pane`, `primitives/pane-toolbar`, `primitives/prompt-editor`, `primitives/tabbed-view`, `primitives/text-editor`, `reorder`, `reports`, `review/plugin-changes`, `shell`, `shell/action-bar`, `stats`, `tasks/task-draft-form`, `tasks/task-list`, `ui/segmented-progress-bar`, `ui/tab-bar`, `ui/theme-engine`, `ui/variant-region`
 

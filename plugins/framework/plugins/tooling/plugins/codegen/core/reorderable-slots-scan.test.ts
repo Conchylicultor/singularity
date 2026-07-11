@@ -165,6 +165,48 @@ describe("collectRenderSlotsStatic", () => {
     expect(ids(tree)).toEqual(["real.slot"]);
   });
 
+  test("literal defineOrderedDispatchSlot call sites are recorded like render slots", () => {
+    const tree = fixtureTree({
+      editor: {
+        id: "page.editor",
+        web: {
+          "slots.ts": `
+            import { defineOrderedDispatchSlot } from "x";
+            export const Editor = {
+              Block: defineOrderedDispatchSlot<BlockRendererProps, string, BlockMeta>("page.editor.block", {
+                key: (props) => props.block.type,
+                fallback: UnknownBlock,
+              }),
+            };
+          `,
+        },
+      },
+    });
+    expect(collectRenderSlotsStatic(tree)).toEqual([
+      { slotId: "page.editor.block", pluginId: "page.editor" },
+    ]);
+  });
+
+  test("the defineOrderedDispatchSlot wrapper DECLARATION (non-literal id) produces no entry", () => {
+    const tree = fixtureTree({
+      "slot-render": {
+        id: "primitives.slot-render",
+        web: {
+          "internal/render-slot.tsx": `
+            import { defineDispatchSlot } from "x";
+            export function defineOrderedDispatchSlot<Props, Key extends string = string, Extra extends object = {}>(
+              id: string,
+              config: DispatchSlotConfig<Props, Key, Extra & { id: string }>,
+            ): OrderedDispatchSlot<Props, Key, Extra> {
+              return defineDispatchSlot(id, config) as unknown as OrderedDispatchSlot<Props, Key, Extra>;
+            }
+          `,
+        },
+      },
+    });
+    expect(collectRenderSlotsStatic(tree)).toEqual([]);
+  });
+
   test("output is deterministic and sorted regardless of node iteration order", () => {
     const spec = {
       a: { id: "a", web: { "slots.ts": `import {defineRenderSlot} from "x"; defineRenderSlot("z.slot"); defineRenderSlot("a.slot");` } },

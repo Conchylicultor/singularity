@@ -11,7 +11,7 @@ import {
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 /**
- * Static, factory-aware reorderable-render-slot scanner.
+ * Static, factory-aware reorderable-slot scanner.
  *
  * This is the deterministic replacement for the live-barrel-walk slot discovery
  * used by the reorderable-slots manifest. It is a **pure function of committed
@@ -19,15 +19,21 @@ import {
  * which barrels happen to evaluate in a given environment (the non-determinism
  * the old runtime walk introduced).
  *
- * It discovers two kinds of `defineRenderSlot` (= reorderable) slots:
+ * It discovers reorderable slots from two constructors — `defineRenderSlot` and
+ * `defineOrderedDispatchSlot` (ordered-dispatch slots carry a structurally-required
+ * `id`, so they join the manifest too; plain `defineDispatchSlot` and mount slots
+ * stay excluded) — in two forms:
  *
- *  1. **Direct literal ids** — `defineRenderSlot("literal.id", …)` written in any
- *     web source file (typically `web/slots.ts`). Recorded verbatim.
+ *  1. **Direct literal ids** — `defineRenderSlot("literal.id", …)` (or
+ *     `defineOrderedDispatchSlot("literal.id", …)`) written in any web source
+ *     file (typically `web/slots.ts`). Recorded verbatim.
  *  2. **Factory-produced ids** — a factory file exports a function whose body
  *     calls `defineRenderSlot(` ${param}.<suffix>` )` (or `defineRenderSlot(param)`
  *     for a passthrough id). The factory's id parameter and the static
  *     `<suffix>` tails are read FROM THE FACTORY SOURCE, then every call site
  *     `defineX("literal", …)` expands to `literal + suffix` for each suffix.
+ *     Only `defineRenderSlot` is scanned for factories — no factory produces
+ *     ordered-dispatch slots, so that marker is direct-literal only.
  *
  * The suffix set is derived from the factory source — never enumerated in this
  * scanner — so a NEW slot-producing factory works with zero scanner edits.
@@ -40,6 +46,7 @@ export interface StaticRenderSlot {
 }
 
 const RENDER_SLOT_MARKER = "defineRenderSlot";
+const ORDERED_DISPATCH_SLOT_MARKER = "defineOrderedDispatchSlot";
 
 /** Extract the leading string-literal of an args/expression text, if any. */
 function leadingStringLiteral(text: string): string | undefined {
@@ -170,9 +177,11 @@ function nodeWebFiles(dir: string): string[] {
 }
 
 /**
- * Collect every reorderable (`defineRenderSlot`) slot id across the tree, keyed
- * to its DEFINING plugin (the node that owns the literal definition or the
- * factory call site). Pure function of source text — no barrel imports.
+ * Collect every reorderable slot id across the tree, keyed to its DEFINING plugin
+ * (the node that owns the literal definition or the factory call site). Reorderable
+ * slots come from `defineRenderSlot` (literal or factory-produced) and
+ * `defineOrderedDispatchSlot` (literal only). Pure function of source text — no
+ * barrel imports.
  *
  * Deduped by slotId, FIRST definer wins (stable, since `tree.byDir` iteration is
  * deterministic and the output is sorted by slotId by the caller).
@@ -228,6 +237,18 @@ export function collectRenderSlotsStatic(tree: PluginTree): StaticRenderSlot[] {
         for (const call of findMarkerCalls(raw, RENDER_SLOT_MARKER)) {
           const id = leadingStringLiteral(call.argsText);
           // Skip template/identifier ids (factory-internal, not resolvable here).
+          if (id) record(id, node.id);
+        }
+      }
+
+      // Direct literal ordered-dispatch slots. Same literal-only shape as render
+      // slots: `defineOrderedDispatchSlot("literal.id", …)`. No factory pass — the
+      // slot-render wrapper's own `defineOrderedDispatchSlot(...)` definition takes
+      // a non-literal id, so `leadingStringLiteral` returns undefined and it is
+      // never recorded as a phantom entry.
+      if (raw.includes(ORDERED_DISPATCH_SLOT_MARKER)) {
+        for (const call of findMarkerCalls(raw, ORDERED_DISPATCH_SLOT_MARKER)) {
+          const id = leadingStringLiteral(call.argsText);
           if (id) record(id, node.id);
         }
       }

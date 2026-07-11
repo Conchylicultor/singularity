@@ -13,7 +13,6 @@ import { MdTune } from "react-icons/md";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { rectSortingStrategy } from "@plugins/primitives/plugins/sortable-list/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type {
   ReorderNode,
@@ -28,6 +27,7 @@ import { useLatestRef } from "@plugins/primitives/plugins/latest-ref/web";
 import { useResizeObserver } from "@plugins/primitives/plugins/element-size/web";
 import { useStageDefault } from "@plugins/config_v2/plugins/staging/web";
 import { reorderDescriptors, reorderPluginIdForSlot } from "./descriptors";
+import { useReorderConfig } from "./use-reorder-config";
 import { useStagedTree } from "./staged-tree";
 import { useEditMode } from "./edit-mode-store";
 import { useReorderScope } from "./scope-store";
@@ -174,29 +174,6 @@ export function ReorderListMiddleware({
       renderItem={renderItem}
     />
   );
-}
-
-/**
- * The row-invariant `{ items, setConfig }` a reorderable slot needs from its
- * single config subscription: its `items` tree and the `setConfig` writer.
- */
-interface ReorderHoistedConfig {
-  items: ReorderTree;
-  setConfig: (key: string, value: unknown) => void;
-}
-
-/**
- * Reads a reorderable slot's `items` tree + `setConfig` writer. This is the
- * ONLY live-state subscription the reorder middleware makes (`config-v2.values`),
- * once per render site.
- */
-function useReorderConfig(descriptor: ConfigDescriptor): ReorderHoistedConfig {
-  // `useConfig` on a generically-typed descriptor returns a loose record;
-  // read the single `items` field as a possibly-missing `ReorderTree`.
-  const cfg = useConfig(descriptor) as unknown as { items?: ReorderTree };
-  const items = useMemo<ReorderTree>(() => cfg.items ?? [], [cfg.items]);
-  const setConfig = useSetConfig(descriptor);
-  return useMemo(() => ({ items, setConfig }), [items, setConfig]);
 }
 
 /**

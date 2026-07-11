@@ -7,6 +7,6 @@ export { textBlock } from "../core";
 export default {
   description: "Plain-text block type for the page editor.",
   contributions: [
-    Editor.Block({ match: textBlock.type, block: textBlock, component: BlockTextRenderer }),
+    Editor.Block({ id: textBlock.type, match: textBlock.type, block: textBlock, component: BlockTextRenderer }),
   ],
 } satisfies PluginDefinition;

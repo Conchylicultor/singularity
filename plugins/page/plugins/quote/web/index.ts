@@ -8,6 +8,6 @@ export { quoteBlock } from "../core";
 export default {
   description: "Quote / blockquote block type for the page editor.",
   contributions: [
-    Editor.Block({ match: quoteBlock.type, block: quoteBlock, component: QuoteBlock }),
+    Editor.Block({ id: quoteBlock.type, match: quoteBlock.type, block: quoteBlock, component: QuoteBlock }),
   ],
 } satisfies PluginDefinition;

@@ -8,6 +8,7 @@ export default {
   description: "To-do / checkbox block type for the page editor.",
   contributions: [
     Editor.Block({
+      id: toDoBlock.type,
       match: toDoBlock.type,
       block: toDoBlock,
       component: BlockTextRenderer,

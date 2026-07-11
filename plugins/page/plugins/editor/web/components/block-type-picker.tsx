@@ -3,7 +3,12 @@ import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { BlockHandle } from "../../core";
-import { useInsertableBlocks, filterBlockTypes, BlockTypeList } from "./block-type-list";
+import {
+  useGroupedInsertableBlocks,
+  flattenSections,
+  filterBlockTypes,
+  BlockTypeList,
+} from "./block-type-list";
 
 /**
  * The menu BODY shared by the "pick, THEN create" block-type pickers — the
@@ -28,9 +33,17 @@ export function BlockTypePicker({
 }) {
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
-  const blocks = useInsertableBlocks();
+  const grouped = useGroupedInsertableBlocks();
+  const flatAll = useMemo(() => flattenSections(grouped), [grouped]);
 
-  const filtered = useMemo(() => filterBlockTypes(blocks, query), [blocks, query]);
+  // Filtering collapses to one flat label-less section (a relevance-ranked list);
+  // an empty query shows the authored grouped sections. `flat` is the keyboard
+  // nav index space over the selectable rows `BlockTypeList` renders.
+  const sections = useMemo(
+    () => (query ? [{ blocks: filterBlockTypes(flatAll, query) }] : grouped),
+    [query, flatAll, grouped],
+  );
+  const flat = useMemo(() => flattenSections(sections), [sections]);
 
   return (
     <Stack gap="xs">
@@ -45,13 +58,13 @@ export function BlockTypePicker({
         onKeyDown={(e) => {
           if (e.key === "ArrowDown") {
             e.preventDefault();
-            setActiveIndex((i) => Math.min(i + 1, filtered.length - 1));
+            setActiveIndex((i) => Math.min(i + 1, flat.length - 1));
           } else if (e.key === "ArrowUp") {
             e.preventDefault();
             setActiveIndex((i) => Math.max(i - 1, 0));
           } else if (e.key === "Enter") {
             e.preventDefault();
-            const block = filtered[activeIndex];
+            const block = flat[activeIndex];
             if (block) onSelect(block);
           } else if (e.key === "Escape") {
             e.preventDefault();
@@ -63,7 +76,7 @@ export function BlockTypePicker({
           registry never pushes the thing you are typing into off the surface. */}
       <Scroll className="max-h-72">
         <BlockTypeList
-          blocks={filtered}
+          sections={sections}
           activeIndex={activeIndex}
           onSelect={onSelect}
           onHoverIndex={setActiveIndex}

@@ -1,3 +1,4 @@
+import { useMemo } from "react";
 import {
   $getNodeByKey,
   $getSelection,
@@ -18,7 +19,8 @@ import { useBlockEditor } from "../block-editor-context";
 import {
   BlockTypeList,
   filterBlockTypes,
-  useInsertableBlocks,
+  flattenSections,
+  useGroupedInsertableBlocks,
 } from "./block-type-list";
 
 const TRIGGER = "/";
@@ -50,7 +52,8 @@ export function BlockMenuPlugin({
   blockId: string;
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
-  const insertable = useInsertableBlocks();
+  const grouped = useGroupedInsertableBlocks();
+  const flatAll = useMemo(() => flattenSections(grouped), [grouped]);
   const { blockMenuDraftId, clearBlockMenu } = useBlockEditor();
   const active = blockMenuDraftId === blockId;
   // A newline ends the query; any space means the user typed a literal `/ …`
@@ -67,7 +70,15 @@ export function BlockMenuPlugin({
 
   const useForced = active;
   const menu = useForced ? forced : caret;
-  const filtered = filterBlockTypes(insertable, menu.query);
+  // While filtering, collapse to a single flat label-less section (headers make
+  // no sense over a relevance-ranked result); with no query, show the grouped
+  // sections. `flat` is the keyboard nav index space (over selectable rows only),
+  // matching what `BlockTypeList` renders.
+  const sections = useMemo(
+    () => (menu.query ? [{ blocks: filterBlockTypes(flatAll, menu.query) }] : grouped),
+    [menu.query, flatAll, grouped],
+  );
+  const flat = useMemo(() => flattenSections(sections), [sections]);
 
   function handleSelect(handle: BlockHandle<unknown>) {
     // Convert the current block to the chosen type, stripping the query span.
@@ -124,8 +135,8 @@ export function BlockMenuPlugin({
   }
 
   const { surfaceOpen, activeIndex, setActiveIndex, commit } = useCaretMenu(menu, {
-    itemCount: filtered.length,
-    onCommit: (i) => handleSelect(filtered[i]!),
+    itemCount: flat.length,
+    onCommit: (i) => handleSelect(flat[i]!),
     surfaceWhen: "interactive",
   });
 
@@ -135,7 +146,7 @@ export function BlockMenuPlugin({
   return (
     <CaretTriggerMenu caret={menu} open={surfaceOpen} width="sm" padding="xs" maxHeight="lg">
       <BlockTypeList
-        blocks={filtered}
+        sections={sections}
         activeIndex={activeIndex}
         onCommit={commit}
         onHoverIndex={setActiveIndex}

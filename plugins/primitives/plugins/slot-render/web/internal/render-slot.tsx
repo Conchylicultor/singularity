@@ -480,6 +480,54 @@ export function defineDispatchSlot<
 }
 
 /**
+ * A dispatch contribution that also participates in the reorder config-tree
+ * system. Identical to `DispatchContribution`, plus a structurally required
+ * `id: string`: the reorder entryKey is `pluginId:id`, so a dispatch slot can
+ * only enter the reorderable-slots manifest once every contribution carries an
+ * id. `excludeFromReorder` mirrors the render-slot escape hatch.
+ */
+export interface OrderedDispatchContribution<Props, Key extends string>
+  extends DispatchContribution<Props, Key> {
+  id: string;
+  excludeFromReorder?: boolean;
+}
+
+export interface OrderedDispatchSlot<Props, Key extends string = string, Extra extends object = {}>
+  extends Slot<OrderedDispatchContribution<Props, Key> & Extra> {
+  Dispatch: ComponentType<Props>;
+}
+
+/**
+ * Ordered-dispatch sibling of `defineDispatchSlot`: the runtime is literally
+ * `defineDispatchSlot` — same registration, same `.Dispatch` single-match
+ * selection, same item-middleware isolation. ONLY the contribution TYPE differs:
+ * contributions must carry an `id: string` (`OrderedDispatchContribution`).
+ *
+ * That id is what lets the slot participate in the reorder config-tree system.
+ * A plain dispatch slot is absent from the reorderable-slots manifest and its
+ * contributions carry no id, so it can neither be grouped nor reordered. An
+ * ordered-dispatch slot enters the manifest via its own codegen marker
+ * (`defineOrderedDispatchSlot`) and therefore owes an authored config override,
+ * exactly like a render slot — but it renders via `.Dispatch` (one match), not
+ * `.Render` (all contributions). Consumers that want the config order (grouped
+ * menus, ordered pickers) read the manifest through the reorder read hook; the
+ * slot itself keeps pure dispatch semantics.
+ */
+export function defineOrderedDispatchSlot<
+  Props,
+  Key extends string = string,
+  Extra extends object = {},
+>(
+  id: string,
+  config: DispatchSlotConfig<Props, Key, Extra & { id: string }>,
+): OrderedDispatchSlot<Props, Key, Extra> {
+  return defineDispatchSlot<Props, Key, Extra & { id: string }>(
+    id,
+    config,
+  ) as unknown as OrderedDispatchSlot<Props, Key, Extra>;
+}
+
+/**
  * Render one contribution's component wrapped in the registered item middlewares
  * (error-boundary isolation). For bespoke selection that `.Render`/`.Dispatch`
  * can't express (e.g. a tiered `supports()` probe). STILL ISOLATED — not an

@@ -7,6 +7,6 @@ export { heading1Block } from "../core";
 export default {
   description: "Heading 1 block type for the page editor.",
   contributions: [
-    Editor.Block({ match: heading1Block.type, block: heading1Block, component: BlockTextRenderer }),
+    Editor.Block({ id: heading1Block.type, match: heading1Block.type, block: heading1Block, component: BlockTextRenderer }),
   ],
 } satisfies PluginDefinition;

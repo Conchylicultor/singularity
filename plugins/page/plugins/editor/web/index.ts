@@ -17,9 +17,12 @@ export { BlockTextEditor } from "./components/block-text-editor";
 export { useBlockEditor } from "./block-editor-context";
 export {
   useInsertableBlocks,
+  useGroupedInsertableBlocks,
+  flattenSections,
   filterBlockTypes,
   BlockTypeList,
 } from "./components/block-type-list";
+export type { BlockSection } from "./components/block-type-list";
 export { BlockTypeMenu } from "./components/block-type-menu";
 export {
   registerBlockTextExtension,

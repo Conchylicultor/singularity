@@ -8,6 +8,7 @@ export default {
   description: "Bulleted-list block type for the page editor.",
   contributions: [
     Editor.Block({
+      id: bulletedListBlock.type,
       match: bulletedListBlock.type,
       block: bulletedListBlock,
       component: BlockTextRenderer,

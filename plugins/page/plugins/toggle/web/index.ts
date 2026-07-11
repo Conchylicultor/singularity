@@ -8,6 +8,7 @@ export default {
   description: "Toggle (collapsible) block type for the page editor.",
   contributions: [
     Editor.Block({
+      id: toggleBlock.type,
       match: toggleBlock.type,
       block: toggleBlock,
       component: BlockTextRenderer,

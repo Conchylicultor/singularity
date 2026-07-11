@@ -1,8 +1,8 @@
 import type { ComponentType } from "react";
 import {
-  defineDispatchSlot,
+  defineOrderedDispatchSlot,
   defineRenderSlot,
-  type DispatchContribution,
+  type OrderedDispatchContribution,
 } from "@plugins/primitives/plugins/slot-render/web";
 import type { Block, BlockHandle } from "../core";
 import type { BlockEditorAPI, BlockRendererProps } from "./types";
@@ -13,12 +13,17 @@ export interface BlockMeta {
   block: BlockHandle<unknown>;
 }
 
-/** Full contribution shape — block metadata plus dispatch fields. */
+/** Full contribution shape — block metadata plus ordered-dispatch fields. */
 export type BlockContribution =
-  DispatchContribution<BlockRendererProps, string> & BlockMeta;
+  OrderedDispatchContribution<BlockRendererProps, string> & BlockMeta;
 
 export const Editor = {
-  Block: defineDispatchSlot<BlockRendererProps, string, BlockMeta>(
+  // Ordered-dispatch: renders one contribution per block via `.Dispatch`, but
+  // each contribution carries an `id` so the slot enters the reorderable-slots
+  // manifest and owes an authored config override. The grouped block menus read
+  // that config order (groups + labels) through `useReorderedEntries`; the slot
+  // itself stays pure single-match dispatch.
+  Block: defineOrderedDispatchSlot<BlockRendererProps, string, BlockMeta>(
     "page.editor.block",
     {
       key: (props) => props.block.type,
