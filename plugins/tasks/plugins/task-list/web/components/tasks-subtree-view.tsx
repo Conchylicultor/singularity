@@ -8,6 +8,7 @@ import {
   taskFields,
   taskHierarchy,
   readOnlyTaskHierarchy,
+  clusterTaskHierarchy,
   buildTreeOptions,
 } from "../internal/tasks-data-view";
 
@@ -76,6 +77,14 @@ function SubtreeData({
     () => (members ? rows.filter((t) => members.has(t.id)) : rows),
     [rows, members],
   );
+  // In `members` (cluster) mode the tree is a scoped inspection view: expand
+  // state stays ephemeral (clusterTaskHierarchy) and every node opens by default
+  // so the whole set is visible, matching the dependency tab.
+  const hierarchy = members
+    ? clusterTaskHierarchy
+    : readOnly
+      ? readOnlyTaskHierarchy
+      : taskHierarchy;
   return (
     <DataView<TaskListItem>
       rows={scoped}
@@ -86,11 +95,15 @@ function SubtreeData({
       selectedRowId={selectedId}
       onRowActivate={(t) => onSelect(t.id)}
       selection={{}}
-      hierarchy={readOnly ? readOnlyTaskHierarchy : taskHierarchy}
+      hierarchy={hierarchy}
       // With `members` the rows are already the exact set, so no subtree scoping —
       // out-of-set parents make their children render as roots (the creation forest).
       viewOptions={{
-        tree: buildTreeOptions({ rootTaskId: members ? undefined : rootTaskId, readOnly }),
+        tree: buildTreeOptions({
+          rootTaskId: members ? undefined : rootTaskId,
+          readOnly,
+          defaultExpanded: members != null,
+        }),
       }}
       itemActions={Tasks.TaskActions}
     />

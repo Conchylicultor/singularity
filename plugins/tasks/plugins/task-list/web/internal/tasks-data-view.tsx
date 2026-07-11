@@ -78,12 +78,26 @@ const { onMove: _onMove, onCreate: _onCreate, ...readOnlyHierarchy } =
 export const readOnlyTaskHierarchy: HierarchyConfig<TaskListItem> =
   readOnlyHierarchy;
 
+// Cluster variant: also drop the expand hooks, so a scoped inspection tree (a
+// dependency+creation cluster) keeps expand state ephemeral instead of writing
+// the shared `expanded` DB flag — collapsing a node here must not collapse it in
+// the main Tasks list. Pairs with `buildTreeOptions({ defaultExpanded: true })`.
+const {
+  isExpanded: _isExpanded,
+  onToggleExpanded: _onToggleExpanded,
+  ...clusterHierarchy
+} = readOnlyTaskHierarchy;
+export const clusterTaskHierarchy: HierarchyConfig<TaskListItem> =
+  clusterHierarchy;
+
 export function buildTreeOptions({
   rootTaskId,
   readOnly,
+  defaultExpanded,
 }: {
   rootTaskId?: string;
   readOnly?: boolean;
+  defaultExpanded?: boolean;
 }): TreeViewOptions<TaskListItem> {
   return {
     leadingIcon: (t) => <StatusIcon status={t.status} />,
@@ -93,6 +107,7 @@ export function buildTreeOptions({
         t.status === "done" && "text-muted-foreground",
       ),
     expandAll: true,
+    defaultExpanded,
     rootId: rootTaskId,
     addLabel: readOnly || rootTaskId ? null : "Add",
     toolbarStart: <Tasks.ListActions.Render />,

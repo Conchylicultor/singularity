@@ -215,12 +215,16 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
         id,
         parentId: hierarchy.getParentId(row),
         rank: hierarchy.getRank(row),
-        expanded: hierarchy.isExpanded?.(row) ?? expanded?.[id] ?? false,
+        expanded:
+          hierarchy.isExpanded?.(row) ??
+          expanded?.[id] ??
+          options.defaultExpanded ??
+          false,
         __row: row,
       });
     });
     return { projected: out, originalById: byId };
-  }, [rows, rowKey, hierarchy, expanded]);
+  }, [rows, rowKey, hierarchy, expanded, options.defaultExpanded]);
 
   // Apply the view's filter through the same `evaluateNode` evaluator the flat
   // views use, so filter semantics are identical across all views. Filtering is

@@ -50,6 +50,13 @@ export interface TreeViewOptions<TRow> {
   rootId?: string;
   /** Show the expand-all/collapse-all toolbar button. */
   expandAll?: boolean;
+  /**
+   * Default expansion for nodes with no explicit expand state (neither a
+   * `hierarchy.isExpanded` value nor a local toggle). `true` opens every node by
+   * default — for small, derived trees whose point is to show the whole set —
+   * while staying collapsible (a user toggle still wins). Default `false`.
+   */
+  defaultExpanded?: boolean;
   /** Extra content rendered on the left of the tree's own toolbar row. */
   toolbarStart?: ReactNode;
   /** Per-row label className (e.g. done/dropped strikethrough styling). */

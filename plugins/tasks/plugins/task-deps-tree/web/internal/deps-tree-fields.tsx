@@ -47,6 +47,10 @@ export const depsTreeOptions: TreeViewOptions<DepsTreeRow> = {
       t.status === "done" && "text-muted-foreground",
     ),
   expandAll: true,
+  // The whole runs-after chain — incl. the tasks blocked BY the selected one —
+  // must be visible without hunting; a dependency tree that hides its downstream
+  // is the bug we are fixing. Open by default, still collapsible.
+  defaultExpanded: true,
   trailing: (t) => <AlsoAfterChips row={t} />,
   dragOverlay: (t) => t.title || "Untitled",
 };
