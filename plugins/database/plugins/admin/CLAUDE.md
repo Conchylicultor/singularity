@@ -7,7 +7,7 @@
 - Description: Admin operations for the database plugin — fork, backup, drop, list.
 - Server:
   - Uses: `infra/paths.SINGULARITY_DIR`, `packages/host-semaphore.createHostSemaphore`, `packages/spawn-priority.backgroundArgv`
-  - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `countActiveConnections`, `databaseExists`, `dropDatabase`, `ensureDatabase`, `forkDatabase`, `getAdminPool`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
+  - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `countActiveConnections`, `databaseExists`, `dropDatabase`, `ensureDatabase`, `forkDatabase`, `forkTempPrefix`, `getAdminPool`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
 - Cross-plugin:
   - Imported by: `backup/sources/databases`, `database/change-feed`, `database/db-test-fixture`, `database/fork`, `database/query`, `database/zero/cache-service`, `debug/profiling/push`, `debug/slow-ops/cluster`, `debug/timeline`, `debug/worktree-cleanup`, `infra/jobs`, `infra/launcher`
 

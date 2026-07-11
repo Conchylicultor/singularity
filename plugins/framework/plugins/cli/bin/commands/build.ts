@@ -18,6 +18,7 @@ import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
 import { runChecks, listAllChecks, discoverTscTargets, tsBuildInfoPath } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { listDatabases, forkTempPrefix } from "@plugins/database/plugins/admin/server";
 import {
   libpqEnv,
   readDatabaseConfig,
@@ -399,39 +400,56 @@ async function waitForPg(): Promise<void> {
   );
 }
 
-async function waitForDatabase(name: string): Promise<void> {
-  // Conversation creation enqueues a durable `database.fork` graphile job
-  // (see plugins/conversations/server/internal/lifecycle.ts). By the time the
-  // user runs `./singularity build` in the new worktree the fork is usually
-  // done, but poll for a window that comfortably covers an early graphile
-  // backoff retry.
-  await retryUntil(
+async function waitForWorktreeDatabase(name: string): Promise<void> {
+  if (await databaseReady(name)) return; // standard path, ~always already done
+
+  const inFlight = (await listDatabases()).some((d) =>
+    d.startsWith(forkTempPrefix(name)),
+  );
+
+  if (inFlight) {
+    // A fork is actively restoring (temp DB exists). Be patient.
+    const done = await retryUntil(
+      async (attempt) => {
+        if (await databaseReady(name)) return true;
+        if (attempt === 0) console.log(`DB fork for "${name}" in progress; waiting…`);
+        return null;
+      },
+      { delay: fixed(1_000), deadline: 120_000, onDeadline: () => false },
+    );
+    if (done) return;
+    console.error(
+      `ERROR: DB fork for "${name}" did not finish within 120s. The database.fork ` +
+        `job may be dead — check /api/jobs on the main app.`,
+    );
+    process.exit(1);
+  }
+
+  // No DB and no restore in flight. Either a standard-path job is still queued/
+  // gated, or this worktree was created outside Singularity and has no job at
+  // all. Grace-poll briefly for the queued case, then fail actionably.
+  const done = await retryUntil(
     async (attempt) => {
       if (await databaseReady(name)) return true;
-      if (attempt === 0) console.log(`Waiting for DB fork "${name}" to complete...`);
+      if (attempt === 0) console.log(`Waiting for DB fork "${name}"…`);
       return null;
     },
-    {
-      delay: fixed(1_000),
-      deadline: 60_000,
-      onDeadline: () => {
-        console.error(
-          [
-            `ERROR: DB fork for "${name}" did not complete within 60s.`,
-            "",
-            "The fork runs as the durable `database.fork` job on the main",
-            "backend. It self-heals across retries, so a transient interruption",
-            "should resolve on its own — but if it's still not ready, the job may",
-            "have exhausted its attempts (state: \"dead\").",
-            "",
-            "Check the `database.fork` job state at /api/jobs on the main app and",
-            "the deduped fork-error notification for the failure reason.",
-          ].join("\n"),
-        );
-        process.exit(1);
-      },
-    },
+    { delay: fixed(1_000), deadline: 20_000, onDeadline: () => false },
   );
+  if (done) return;
+  console.error(
+    [
+      `ERROR: no database for "${name}" and no fork in flight.`,
+      "",
+      "If this worktree was created outside Singularity (git worktree add),",
+      "create its database with:",
+      "",
+      "    ./singularity db fork",
+      "",
+      "Then re-run ./singularity build.",
+    ].join("\n"),
+  );
+  process.exit(1);
 }
 
 // Reads the gateway's authoritative state for one worktree. Returns null when
@@ -903,7 +921,7 @@ export function registerBuild(program: Command) {
       // 2d. Ensure the worktree's DB fork has completed (forked asynchronously
       // during conversation creation).
       endSpan = buildProfilerStart("waitForDatabase", "build:database", "wait for DB fork");
-      await waitForDatabase(name);
+      await waitForWorktreeDatabase(name);
       endSpan();
 
       // 3. Regenerate DB migrations from plugin schema files

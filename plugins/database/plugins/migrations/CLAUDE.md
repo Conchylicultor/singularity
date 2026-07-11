@@ -105,7 +105,7 @@ modules; the `schema-files-loadable` check enforces this invariant.
 - Cross-plugin:
   - Imported by: `database`
 - Core:
-  - Exports: Values: `parseSchemaGlobs`, `schemaGlobFiles`
+  - Exports: Types: `DestructiveClassification`, `DestructiveKind`; Values: `classifyMigrationSql`, `parseSchemaGlobs`, `schemaGlobFiles`
 - Structure:
   - Non-standard folders: `data/`
   - Loose top-level files: `drizzle.config.ts`

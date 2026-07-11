@@ -2,6 +2,7 @@ import { backgroundArgv } from "@plugins/packages/plugins/spawn-priority/server"
 import { getAdminPool, openShortLivedClient, libpqSubprocessEnv } from "./pool";
 import { databaseExists, dropDatabase } from "./databases";
 import { withDbForkSlot } from "./fork-gate";
+import { forkTempName } from "./temp-name";
 
 function assertSafeName(name: string): void {
   if (!/^[a-zA-Z0-9_-]+$/.test(name)) {
@@ -11,14 +12,18 @@ function assertSafeName(name: string): void {
 
 // Forks `source` into `target` atomically and idempotently.
 //
-// Atomic publish: the fork populates a disposable temp DB `<target>__forking`
-// and the LAST step renames it to the canonical `<target>`. The canonical name
-// therefore only ever exists once the fork fully completed — an interrupted
-// fork leaves at most a disposable temp, never a half-baked canonical DB.
+// Atomic publish: the fork populates a per-invocation temp DB (unique name from
+// forkTempName) and the LAST step renames it to the canonical `<target>`. The
+// canonical name therefore only ever exists once the fork fully completed — an
+// interrupted fork leaves at most a disposable temp, never a half-baked
+// canonical DB.
 //
-// Idempotent: a completed fork (canonical exists) is a no-op, and any stale
-// temp from a previous interrupted attempt is dropped before re-forking. This
-// is the precondition that makes durable retry (the `database.fork` job) safe.
+// Lock-free concurrency: each invocation forks its OWN unique temp, so two
+// concurrent callers never clobber each other; the final RENAME arbitrates
+// (first writer wins, losers drop their temp). No advisory lock or semaphore.
+//
+// Idempotent: a completed fork (canonical exists) is a no-op. This is the
+// precondition that makes durable retry (the `database.fork` job) safe.
 export async function forkDatabase(
   source: string,
   target: string,
@@ -27,10 +32,13 @@ export async function forkDatabase(
   assertSafeName(target);
   // Canonical name only exists on full completion → already done, no-op.
   if (await databaseExists(target)) return;
-  const temp = `${target}__forking`;
-  // Reap any stale temp from a previously-interrupted attempt (DROP IF EXISTS
-  // WITH FORCE — terminates any lingering connection).
-  await dropDatabase(temp);
+  const temp = forkTempName(target);
+  // No stale-temp reap: forkTempName is per-invocation unique, so there is never
+  // a stale temp of *our own* name to drop. Orphan reclamation is solely the
+  // fork-temp-sweep's job now. Accepted trade-off: a failing target's graphile
+  // retries (maxAttempts:5) each mint a fresh temp, so up to ~5 orphan
+  // `f_*__forking` DBs can accumulate between the 15-min sweeps — disk cost, not
+  // correctness; the sweep's zero-active-connections gate reclaims them.
   await getAdminPool().query(`CREATE DATABASE "${temp}"`);
   const subprocessEnv = {
     ...process.env,
@@ -112,5 +120,26 @@ export async function forkDatabase(
   // the temp — the pg_restore connection is gone and the graphile-drop pool is
   // .end()ed above, and admin connections go direct to Postgres (not through
   // pgbouncer), so nothing blocks the rename.
-  await getAdminPool().query(`ALTER DATABASE "${temp}" RENAME TO "${target}"`);
+  //
+  // First-writer-wins arbiter: a concurrent caller may have already renamed its
+  // own temp to `<target>`, so this RENAME can raise 42P04 (duplicate_database).
+  // If the target now exists (dup, or the postcondition recheck — which also
+  // covers a tight two-renamer catalog race surfacing as 23505), we are a loser:
+  // drop our temp and return; the target is already published. Anything else is
+  // a genuine failure (e.g. temp still has live connections) → rethrow loudly.
+  try {
+    await getAdminPool().query(
+      `ALTER DATABASE "${temp}" RENAME TO "${target}"`,
+    );
+  } catch (err) {
+    const dup =
+      err instanceof Error &&
+      "code" in err &&
+      (err as { code?: string }).code === "42P04"; // duplicate_database
+    if (dup || (await databaseExists(target))) {
+      await dropDatabase(temp); // drop our loser temp; target already published
+      return;
+    }
+    throw err;
+  }
 }

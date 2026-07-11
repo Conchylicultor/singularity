@@ -13,6 +13,7 @@ export {
   countActiveConnections,
 } from "./internal/databases";
 export { forkDatabase } from "./internal/fork";
+export { forkTempPrefix } from "./internal/temp-name";
 export { backupDatabase, inspectBackup } from "./internal/backup";
 export type { BackupInfo, TableStat } from "./internal/backup";
 

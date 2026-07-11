@@ -2510,7 +2510,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
         - Uses: `infra/paths.SINGULARITY_DIR`, `packages/host-semaphore.createHostSemaphore`, `packages/spawn-priority.backgroundArgv`
-        - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `countActiveConnections`, `databaseExists`, `dropDatabase`, `ensureDatabase`, `forkDatabase`, `getAdminPool`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
+        - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `countActiveConnections`, `databaseExists`, `dropDatabase`, `ensureDatabase`, `forkDatabase`, `forkTempPrefix`, `getAdminPool`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
       - Cross-plugin:
         - Imported by: `backup/sources/databases`, `database/change-feed`, `database/db-test-fixture`, `database/fork`, `database/query`, `database/zero/cache-service`, `debug/profiling/push`, `debug/slow-ops/cluster`, `debug/timeline`, `debug/worktree-cleanup`, `infra/jobs`, `infra/launcher`
     - **`change-feed`** — L4 DB change-feed: STATEMENT-level Postgres triggers that pg_notify on every commit, plus a LISTEN consumer routing each change through the live-state recompute cascade — making missed invalidations structurally impossible and out-of-process writes visible.
@@ -2568,7 +2568,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `database`
       - Core:
-        - Exports: Values: `parseSchemaGlobs`, `schemaGlobFiles`
+        - Exports: Types: `DestructiveClassification`, `DestructiveKind`; Values: `classifyMigrationSql`, `parseSchemaGlobs`, `schemaGlobFiles`
       - Structure:
         - Non-standard folders: `data/`
         - Loose top-level files: `drizzle.config.ts`

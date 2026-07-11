@@ -12,6 +12,7 @@ import { dryRunPendingMigrations } from "@plugins/database/plugins/migrations/se
 import orphanedTablesCheck from "./orphaned-tables";
 import imperativeCreateTableAllowlistedCheck from "./imperative-create-table-allowlisted";
 import schemaFilesLoadableCheck from "./internal/schema-files-loadable";
+import forkSchemaDriftCheck from "./fork-schema-drift";
 
 // Inlined minimal Check shape (mirrors the other plugin-contributed checks, e.g.
 // data-migration-dml-only / migration-hashes-unique) to avoid a cross-plugin
@@ -136,4 +137,5 @@ export default [
   orphanedTablesCheck,
   imperativeCreateTableAllowlistedCheck,
   schemaFilesLoadableCheck,
+  forkSchemaDriftCheck,
 ];
