@@ -44,6 +44,7 @@ export const DEFERRED_PLUGIN_PATHS: ReadonlySet<string> = new Set([
   "apps/plugins/pages/plugins/history",
   "apps/plugins/pages/plugins/page-tree",
   "apps/plugins/pages/plugins/starred",
+  "apps/plugins/pages/plugins/trash",
   "apps/plugins/pages/plugins/welcome",
   "apps/plugins/pages/plugins/welcome/plugins/quick-create",
   "apps/plugins/pages/plugins/welcome/plugins/recent-pages",

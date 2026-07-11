@@ -45,6 +45,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines the Pages.Sidebar slot.
         - **`starred`** — Favorites/starred pages for the Pages app: contributes a `starred` bool field into the Pages sidebar DataView (Favorites is a filtered list view) plus star toggles on page-tree rows and the page header. Starred-pages side-table (page_blocks_ext_starred): presence-only marker plus the star toggle endpoint. Contributes a `starred` bool field into the Pages sidebar DataView.
+        - **`trash`** — Pages trash consumer: contributes a Trash entry into the Pages sidebar, opening a dialog that lists soft-deleted pages with restore and permanent-delete actions.
         - **`welcome`** — Landing surface for the Pages app (shown at bare `/pages`): a quick-create + recent-pages launchpad rendered through the PagesWelcome.Section slot.
           - Plugins:
             - **`quick-create`** — Quick-create section for the Pages landing surface: template tiles (blank, to-do, bulleted list) that create and open a new page.
@@ -306,6 +307,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`runtime-profiler`** [load-bearing]
     - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
     - **`secrets`** [load-bearing] — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
+    - **`trash`** — Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the per-source trash live resource, and the 30-day purge sweep — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
     - **`warmup`** — Declared heavy boot warm-up category: defineWarmup registers a deferred, throttled, scope-gated warm-up; drainWarmups drains them after onAllReady under a concurrency gate + heavy-read slot + macrotask yield.
     - **`worktree`**
 
