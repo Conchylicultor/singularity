@@ -912,7 +912,9 @@ function SelectionLayer({
                 type="button"
                 className="text-foreground hover:text-foreground/80"
                 onClick={() => {
-                  containerRef.current?.focus();
+                  // Focus the container only to seat the clipboard — never
+                  // scroll the viewport for it.
+                  containerRef.current?.focus({ preventScroll: true });
                   document.execCommand("copy");
                 }}
               >

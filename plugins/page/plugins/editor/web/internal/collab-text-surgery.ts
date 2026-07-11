@@ -15,6 +15,12 @@ import {
   getBlockTextExtensions,
 } from "./block-text-extensions";
 
+/**
+ * Lexical's `skip-scroll-into-view` update tag: suppresses the scroll-into-view
+ * a collapsed-selection reconcile otherwise runs. Passed on no-scroll landings.
+ */
+const SKIP_SCROLL_TAG = "skip-scroll-into-view";
+
 // Text surgery on a block's BOUND Lexical editor (per-block CRDT plan).
 // Split/merge are structural ops that also move TEXT between two content
 // docs; the row-level `data.text` rewrite the reducer performs is ignored by
@@ -94,28 +100,57 @@ export function truncateBlockTextFrom(editor: LexicalEditor, offset: number): vo
  * belong to this block — and collapse the selection to the content START once
  * the first synced content commits (one-shot; skipped if the user moved focus
  * away or already placed a selection by typing meanwhile).
+ *
+ * `scroll` (default false) declares whether the landing follows the caret into
+ * view. Scroll-wanted (split/merge/focusNew) keeps today's `editor.focus(...)`;
+ * no-scroll focuses the ROOT with `preventScroll` and tags the rootStart
+ * selection `skip-scroll-into-view` so the reconcile doesn't scroll either.
  */
-export function focusHydratingAware(editor: LexicalEditor): void {
+export function focusHydratingAware(editor: LexicalEditor, scroll = false): void {
   const empty = editor.getEditorState().read(() => $getRoot().getChildrenSize() === 0);
   if (!empty) {
     // Non-empty at focus time — since Stage 4a's instant pre-seed this is the
     // NORMAL path for a freshly-split block (the tail is already in). A fresh
-    // editor has no prior selection, and `editor.focus()`'s default selection
-    // is rootEnd — wrong for a split, whose caret belongs at the content
-    // START (before the tail). Explicit rootStart restores the pre-4a one-shot
-    // behavior; an editor with a real prior selection restores it (the
-    // default only applies when none exists).
-    editor.focus(undefined, { defaultSelection: "rootStart" });
+    // editor has no prior selection, and the default selection is rootEnd —
+    // wrong for a split, whose caret belongs at the content START (before the
+    // tail). Explicit rootStart restores the pre-4a one-shot behavior; an
+    // editor with a real prior selection restores it (the default only applies
+    // when none exists).
+    if (scroll) {
+      editor.focus(undefined, { defaultSelection: "rootStart" });
+    } else {
+      // No-scroll: `editor.focus()` has no preventScroll, so focus the root
+      // directly and place the caret at rootStart under the skip-scroll tag.
+      editor.getRootElement()?.focus({ preventScroll: true });
+      editor.update(
+        () => {
+          $getRoot().selectStart();
+        },
+        { tag: SKIP_SCROLL_TAG },
+      );
+    }
     return;
   }
-  editor.getRootElement()?.focus();
+  editor.getRootElement()?.focus(scroll ? undefined : { preventScroll: true });
   const unregister = editor.registerUpdateListener(() => {
     const ready = editor.getEditorState().read(() => $getRoot().getChildrenSize() > 0);
     if (!ready) return;
     unregister();
     if (document.activeElement !== editor.getRootElement()) return;
     const hasSelection = editor.getEditorState().read(() => $getSelection() !== null);
-    if (!hasSelection) editor.focus(undefined, { defaultSelection: "rootStart" });
+    if (!hasSelection) {
+      if (scroll) {
+        editor.focus(undefined, { defaultSelection: "rootStart" });
+      } else {
+        editor.getRootElement()?.focus({ preventScroll: true });
+        editor.update(
+          () => {
+            $getRoot().selectStart();
+          },
+          { tag: SKIP_SCROLL_TAG },
+        );
+      }
+    }
   });
 }
 
@@ -127,15 +162,25 @@ export function focusHydratingAware(editor: LexicalEditor): void {
  *
  * `discrete: true` for the same capture-boundary reason as
  * {@link truncateBlockTextFrom}: the merge wraps this in `captureBlockDocEdit`.
+ *
+ * `scroll` defaults to TRUE: a Backspace-merge wants the joined caret revealed,
+ * so callers keep today's `editor.focus()` + untagged update. A no-scroll caller
+ * focuses the root with `preventScroll` and tags the update to suppress the
+ * reconcile scroll.
  */
-export function appendRunsAtJoin(editor: LexicalEditor, runs: RichText): void {
-  editor.focus();
+export function appendRunsAtJoin(
+  editor: LexicalEditor,
+  runs: RichText,
+  scroll = true,
+): void {
+  if (scroll) editor.focus();
+  else editor.getRootElement()?.focus({ preventScroll: true });
   editor.update(
     () => {
       const join = $paragraphsPlainLength();
       $appendRuns(runs, getBlockTextExtensions());
       $placeCaretAtLinearOffset(join);
     },
-    { discrete: true },
+    scroll ? { discrete: true } : { discrete: true, tag: SKIP_SCROLL_TAG },
   );
 }

@@ -135,25 +135,26 @@ export function BlockTextEditor({
 
   useEffect(() => {
     return registerFocusHandle(block.id, {
-      focus: () => {
+      focus: (opts) => {
         const ed = lexicalEditorRef.current;
         if (!ed) return;
         // The content doc syncs async after mount, and Lexical's focus() is a
         // no-op on a still-empty root — use the hydration-aware focus (DOM
-        // focus now, caret to content start on first sync).
-        focusHydratingAware(ed);
+        // focus now, caret to content start on first sync). `opts.scroll`
+        // (default false) declares whether the landing follows the caret.
+        focusHydratingAware(ed, opts?.scroll ?? false);
       },
-      focusAtColumn: (x, edge) => {
+      focusAtColumn: (x, edge, opts) => {
         const ed = lexicalEditorRef.current;
-        if (ed) placeCaretAtColumn(ed, x, edge);
+        if (ed) placeCaretAtColumn(ed, x, edge, opts?.scroll ?? false);
       },
-      focusBoundary: (edge) => {
+      focusBoundary: (edge, opts) => {
         const ed = lexicalEditorRef.current;
-        if (ed) placeCaretAtBoundary(ed, edge);
+        if (ed) placeCaretAtBoundary(ed, edge, opts?.scroll ?? false);
       },
-      focusOffset: (n) => {
+      focusOffset: (n, opts) => {
         const ed = lexicalEditorRef.current;
-        if (ed) placeCaretAtOffset(ed, n);
+        if (ed) placeCaretAtOffset(ed, n, opts?.scroll ?? false);
       },
       // Content surgery: split/merge drive the LIVE content through Lexical so
       // the collab binding syncs the change into the block's content doc

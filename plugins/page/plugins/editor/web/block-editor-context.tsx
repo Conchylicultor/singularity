@@ -39,7 +39,7 @@ import {
   fromNodes,
 } from "./internal/optimistic-block-ops";
 import { landCaret } from "./internal/caret-landing";
-import type { CaretSurface, CaretSurfaceRef } from "./caret-surface";
+import type { CaretLandOptions, CaretSurface, CaretSurfaceRef } from "./caret-surface";
 import {
   useServerBlockStore,
   useMemoryBlockStore,
@@ -143,7 +143,7 @@ function derivePatchEntry(
  */
 export interface BlockFocusHandle extends CaretSurface {
   /** Place the caret at a linear character offset (the merge join point). */
-  focusOffset?: (offset: number) => void;
+  focusOffset?: (offset: number, opts?: CaretLandOptions) => void;
   /**
    * Content surgery (registered by text editors, whose Lexical instance is
    * bound to the block's per-block content doc): delete the LIVE content from
@@ -207,9 +207,11 @@ interface BlockEditorContextValue {
    * Focus a block's text editor by id (defers until it mounts if needed). When
    * `caretOffset` is given and the block's editor is already mounted, land the
    * caret at that linear offset (used to restore the caret on a text undo/redo).
+   * `opts.scroll` (default false) declares whether the landing follows the caret
+   * into view — set for keyboard nav / undo-redo, left off for pointer landings.
    */
-  focusBlock: (id: string, caretOffset?: number) => void;
-  focusBlockBoundary: (id: string, edge: "start" | "end") => boolean;
+  focusBlock: (id: string, caretOffset?: number, opts?: CaretLandOptions) => void;
+  focusBlockBoundary: (id: string, edge: "start" | "end", opts?: CaretLandOptions) => boolean;
   /**
    * Reorder/reparent `id` to sit immediately `zone` of `targetId`. Positional
    * intent, not a rank — the store owns the rank (the server mints it on the
@@ -458,7 +460,11 @@ function BlockEditorProviderInner({
   const caretAfterRef = useLatestRef(caretAfter);
   const flatOrderRef = useRef<Block[]>([]);
   const rowsRef = useRef<Block[]>([]);
-  const pendingFocusRef = useRef<string | null>(null);
+  // A queued focus carries its scroll intent so the deferred landing (fired by
+  // `registerFocusHandle` when the block finally mounts) honors the same
+  // scroll/no-scroll choice the caller made — a `focusNew` reveals its block, a
+  // pointer `focusBlock` does not.
+  const pendingFocusRef = useRef<{ id: string; scroll: boolean } | null>(null);
 
   // The persistence seam. All reads (`data`/`serverData`/`pending`) and writes
   // (`dispatch`/`move`/`bulk*`/`paste`) go through it; everything else in this
@@ -485,9 +491,10 @@ function BlockEditorProviderInner({
   const registerFocusHandle = useCallback(
     (id: string, handle: BlockFocusHandle) => {
       focusHandlesRef.current.set(id, handle);
-      if (pendingFocusRef.current === id) {
+      const pending = pendingFocusRef.current;
+      if (pending?.id === id) {
         pendingFocusRef.current = null;
-        handle.focus();
+        handle.focus({ scroll: pending.scroll });
       }
       return () => {
         focusHandlesRef.current.delete(id);
@@ -510,23 +517,26 @@ function BlockEditorProviderInner({
     [],
   );
 
-  const focusBlock = useCallback((id: string, caretOffset?: number) => {
-    const handle = focusHandlesRef.current.get(id);
-    if (handle) {
-      // When a caret offset is requested and this block is a text editor, land
-      // the caret precisely (the same leaf-aware placement `merge` uses); else a
-      // plain focus restoring its last selection.
-      if (caretOffset !== undefined && handle.focusOffset) handle.focusOffset(caretOffset);
-      else handle.focus();
-    } else pendingFocusRef.current = id;
-  }, []);
+  const focusBlock = useCallback(
+    (id: string, caretOffset?: number, opts?: CaretLandOptions) => {
+      const handle = focusHandlesRef.current.get(id);
+      if (handle) {
+        // When a caret offset is requested and this block is a text editor, land
+        // the caret precisely (the same leaf-aware placement `merge` uses); else a
+        // plain focus restoring its last selection.
+        if (caretOffset !== undefined && handle.focusOffset) handle.focusOffset(caretOffset, opts);
+        else handle.focus(opts);
+      } else pendingFocusRef.current = { id, scroll: opts?.scroll ?? false };
+    },
+    [],
+  );
 
   const focusBlockBoundary = useCallback(
-    (id: string, edge: "start" | "end"): boolean => {
+    (id: string, edge: "start" | "end", opts?: CaretLandOptions): boolean => {
       const handle = focusHandlesRef.current.get(id);
       if (!handle) return false;
-      if (handle.focusBoundary) handle.focusBoundary(edge);
-      else handle.focus();
+      if (handle.focusBoundary) handle.focusBoundary(edge, opts);
+      else handle.focus(opts);
       return true;
     },
     [],
@@ -576,11 +586,12 @@ function BlockEditorProviderInner({
         coalesceKey,
         undo: () => {
           dispatchPatch(undoPatch);
-          if (undoFocus) queueMicrotask(() => focusBlock(undoFocus));
+          // Undo/redo reveals the affected block — it may be off-screen.
+          if (undoFocus) queueMicrotask(() => focusBlock(undoFocus, undefined, { scroll: true }));
         },
         redo: () => {
           dispatchPatch(redoPatch);
-          if (redoFocus) queueMicrotask(() => focusBlock(redoFocus));
+          if (redoFocus) queueMicrotask(() => focusBlock(redoFocus, undefined, { scroll: true }));
         },
       });
     },
@@ -632,12 +643,13 @@ function BlockEditorProviderInner({
         undo: async () => {
           await docEdit?.undo();
           dispatchPatch(undoPatch);
-          if (undoFocus) queueMicrotask(() => focusBlock(undoFocus));
+          // Undo/redo reveals the affected block — it may be off-screen.
+          if (undoFocus) queueMicrotask(() => focusBlock(undoFocus, undefined, { scroll: true }));
         },
         redo: async () => {
           dispatchPatch(redoPatch);
           await docEdit?.redo();
-          if (redoFocus) queueMicrotask(() => focusBlock(redoFocus));
+          if (redoFocus) queueMicrotask(() => focusBlock(redoFocus, undefined, { scroll: true }));
         },
       });
     },
@@ -655,11 +667,12 @@ function BlockEditorProviderInner({
         label: "Edit text",
         undo: async () => {
           await edit.undo();
-          queueMicrotask(() => focusBlock(blockId));
+          // Undo/redo reveals the edited block — it may be off-screen.
+          queueMicrotask(() => focusBlock(blockId, undefined, { scroll: true }));
         },
         redo: async () => {
           await edit.redo();
-          queueMicrotask(() => focusBlock(blockId));
+          queueMicrotask(() => focusBlock(blockId, undefined, { scroll: true }));
         },
       });
     },
@@ -706,11 +719,12 @@ function BlockEditorProviderInner({
           coalesceKey: opts.coalesceKey,
           undo: () => {
             dispatchPatch(undoPatch);
-            queueMicrotask(() => focusBlock(blockId, opts.caretOffset));
+            // Undo/redo reveals the mutated block — it may be off-screen.
+            queueMicrotask(() => focusBlock(blockId, opts.caretOffset, { scroll: true }));
           },
           redo: () => {
             dispatchPatch(redoPatch);
-            queueMicrotask(() => focusBlock(blockId, opts.caretOffset));
+            queueMicrotask(() => focusBlock(blockId, opts.caretOffset, { scroll: true }));
           },
         });
       }
@@ -885,11 +899,13 @@ function BlockEditorProviderInner({
   // mounted, focus immediately; otherwise queue it so `registerFocusHandle`
   // focuses it on mount (the live push will mount it shortly).
   const focusNew = useCallback((id: string) => {
-    pendingFocusRef.current = id;
+    // A freshly-created block (Enter / split / insert) is a scroll-wanted
+    // landing: the new block may be below the fold, so reveal it.
+    pendingFocusRef.current = { id, scroll: true };
     const handle = focusHandlesRef.current.get(id);
     if (handle) {
       pendingFocusRef.current = null;
-      handle.focus();
+      handle.focus({ scroll: true });
     }
   }, []);
 
@@ -1134,7 +1150,9 @@ function BlockEditorProviderInner({
         // showing its "Type '/' for commands" placeholder while the caret sits
         // in the title). A block target sets it back through its own `onFocus`.
         if (!target) setFocusedBlockId(null);
-        landCaret(surface, dir, caret);
+        // Keyboard cross-block navigation is scroll-wanted: the caret is moving
+        // to a block the user may not be looking at, so follow it into view.
+        landCaret(surface, dir, caret, { scroll: true });
       },
       onFocus() {
         setFocusedBlockId(blockId);

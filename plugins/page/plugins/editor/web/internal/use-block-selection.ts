@@ -103,7 +103,9 @@ export function useBlockSelection({
   const headRef = useRef<string | null>(null);
 
   const focusContainer = useCallback(() => {
-    containerRef.current?.focus();
+    // Entering block-selection mode is not a pointer/keyboard caret motion the
+    // user is chasing — never scroll the viewport to the container.
+    containerRef.current?.focus({ preventScroll: true });
   }, []);
 
   const applyRange = useCallback(

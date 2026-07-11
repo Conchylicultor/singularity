@@ -1,4 +1,4 @@
-import type { CaretSurface } from "../caret-surface";
+import type { CaretLandOptions, CaretSurface } from "../caret-surface";
 import type { CaretContext } from "./caret-geometry";
 
 /** The direction a caret leaves its current surface in. */
@@ -18,31 +18,40 @@ export type CaretDirection = "up" | "down" | "left" | "right";
  *
  * `caret` is absent for void/textarea blocks that have no measurable caret; the
  * landing degrades to the boundary.
+ *
+ * `opts` carries the scroll intent (default no-scroll) straight through to the
+ * surface: keyboard cross-block nav passes `{ scroll: true }` so the caret is
+ * revealed, while a pointer-driven landing leaves it off.
  */
 export function landCaret(
   surface: CaretSurface,
   dir: CaretDirection,
   caret?: CaretContext,
+  opts?: CaretLandOptions,
 ): void {
   switch (dir) {
     case "up":
-      if (caret && surface.focusAtColumn) surface.focusAtColumn(caret.caretX, "bottom");
-      else landBoundary(surface, "end");
+      if (caret && surface.focusAtColumn) surface.focusAtColumn(caret.caretX, "bottom", opts);
+      else landBoundary(surface, "end", opts);
       return;
     case "down":
-      if (caret && surface.focusAtColumn) surface.focusAtColumn(caret.caretX, "top");
-      else landBoundary(surface, "start");
+      if (caret && surface.focusAtColumn) surface.focusAtColumn(caret.caretX, "top", opts);
+      else landBoundary(surface, "start", opts);
       return;
     case "left":
-      landBoundary(surface, "end");
+      landBoundary(surface, "end", opts);
       return;
     case "right":
-      landBoundary(surface, "start");
+      landBoundary(surface, "start", opts);
       return;
   }
 }
 
-function landBoundary(surface: CaretSurface, edge: "start" | "end"): void {
-  if (surface.focusBoundary) surface.focusBoundary(edge);
-  else surface.focus();
+function landBoundary(
+  surface: CaretSurface,
+  edge: "start" | "end",
+  opts?: CaretLandOptions,
+): void {
+  if (surface.focusBoundary) surface.focusBoundary(edge, opts);
+  else surface.focus(opts);
 }

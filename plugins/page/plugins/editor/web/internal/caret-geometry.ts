@@ -150,6 +150,24 @@ interface DomCaret {
   offset: number;
 }
 
+/**
+ * Lexical's `skip-scroll-into-view` update tag: suppresses the
+ * `scrollIntoViewIfNeeded` that `updateDOMSelection` otherwise runs on every
+ * collapsed-selection reconcile. Passed on the no-scroll path.
+ */
+const SKIP_SCROLL_TAG = "skip-scroll-into-view";
+
+/**
+ * Take DOM focus for a caret landing. A no-scroll landing focuses the ROOT
+ * element with `preventScroll` (Lexical's `editor.focus()` has no such option —
+ * it always lets the browser scroll focus into view); a scroll-wanted landing
+ * keeps `editor.focus()`, today's behavior.
+ */
+function focusEditor(editor: LexicalEditor, scroll: boolean): void {
+  if (scroll) editor.focus();
+  else editor.getRootElement()?.focus({ preventScroll: true });
+}
+
 /** Cross-browser caret hit-test: WebKit/Chrome `caretRangeFromPoint`, Firefox `caretPositionFromPoint`. */
 function caretFromPoint(x: number, y: number): DomCaret | null {
   const doc = document as Document & {
@@ -176,10 +194,18 @@ function caretFromPoint(x: number, y: number): DomCaret | null {
  * a mixed-format paragraph lands the caret at the right run/decorator boundary —
  * used to land the caret at the JOIN point after a Backspace-merge. The offset is
  * clamped to the block's total plain length.
+ *
+ * `scroll` (default false) declares whether the landing follows the caret into
+ * view: false focuses via `preventScroll` and tags the update `skip-scroll-into-
+ * view`; true is today's scroll-on behavior.
  */
-export function placeCaretAtOffset(editor: LexicalEditor, offset: number): void {
-  editor.focus();
-  editor.update(() => $placeCaretAtOffset(offset));
+export function placeCaretAtOffset(
+  editor: LexicalEditor,
+  offset: number,
+  scroll = false,
+): void {
+  focusEditor(editor, scroll);
+  editor.update(() => $placeCaretAtOffset(offset), scroll ? undefined : { tag: SKIP_SCROLL_TAG });
 }
 
 /**
@@ -192,32 +218,49 @@ export function $placeCaretAtOffset(offset: number): void {
   $placeCaretAtLinearOffset(offset);
 }
 
-/** Focus `editor` and collapse the caret to the very start or end of its content. */
-export function placeCaretAtBoundary(editor: LexicalEditor, edge: "start" | "end"): void {
-  editor.focus();
-  editor.update(() => {
-    const root = $getRoot();
-    if (edge === "start") root.selectStart();
-    else root.selectEnd();
-  });
+/**
+ * Focus `editor` and collapse the caret to the very start or end of its content.
+ * `scroll` (default false) declares whether the landing follows the caret into
+ * view — see {@link placeCaretAtOffset}.
+ */
+export function placeCaretAtBoundary(
+  editor: LexicalEditor,
+  edge: "start" | "end",
+  scroll = false,
+): void {
+  focusEditor(editor, scroll);
+  editor.update(
+    () => {
+      const root = $getRoot();
+      if (edge === "start") root.selectStart();
+      else root.selectEnd();
+    },
+    scroll ? undefined : { tag: SKIP_SCROLL_TAG },
+  );
 }
 
 /**
  * Focus `editor` and place the caret at viewport column `x` on its top or bottom
  * visual line — preserving the column when crossing blocks up/down. Falls back to
  * the block start/end when the point resolves outside the editor.
+ *
+ * `scroll` (default false) declares whether the landing follows the caret into
+ * view — see {@link placeCaretAtOffset}. It is threaded through both boundary
+ * fallbacks and the hit-test placement so EVERY selection-setting update on this
+ * path honors the intent.
  */
 export function placeCaretAtColumn(
   editor: LexicalEditor,
   x: number,
   edge: "top" | "bottom",
+  scroll = false,
 ): void {
   const root = editor.getRootElement();
   if (!root) {
-    placeCaretAtBoundary(editor, edge === "top" ? "start" : "end");
+    placeCaretAtBoundary(editor, edge === "top" ? "start" : "end", scroll);
     return;
   }
-  editor.focus();
+  focusEditor(editor, scroll);
 
   const rootRect = root.getBoundingClientRect();
   const startRect = contentEdgeRect(root, true);
@@ -231,27 +274,30 @@ export function placeCaretAtColumn(
 
   const hit = caretFromPoint(clampedX, y);
   if (!hit || !root.contains(hit.node)) {
-    placeCaretAtBoundary(editor, edge === "top" ? "start" : "end");
+    placeCaretAtBoundary(editor, edge === "top" ? "start" : "end", scroll);
     return;
   }
 
-  editor.update(() => {
-    const node = $getNearestNodeFromDOMNode(hit.node);
-    if (!node) {
-      const root2 = $getRoot();
-      if (edge === "top") root2.selectStart();
-      else root2.selectEnd();
-      return;
-    }
-    const sel = $createRangeSelection();
-    if ($isTextNode(node)) {
-      const off = Math.min(hit.offset, node.getTextContentSize());
-      sel.anchor.set(node.getKey(), off, "text");
-      sel.focus.set(node.getKey(), off, "text");
-    } else {
-      sel.anchor.set(node.getKey(), 0, "element");
-      sel.focus.set(node.getKey(), 0, "element");
-    }
-    $setSelection(sel);
-  });
+  editor.update(
+    () => {
+      const node = $getNearestNodeFromDOMNode(hit.node);
+      if (!node) {
+        const root2 = $getRoot();
+        if (edge === "top") root2.selectStart();
+        else root2.selectEnd();
+        return;
+      }
+      const sel = $createRangeSelection();
+      if ($isTextNode(node)) {
+        const off = Math.min(hit.offset, node.getTextContentSize());
+        sel.anchor.set(node.getKey(), off, "text");
+        sel.focus.set(node.getKey(), off, "text");
+      } else {
+        sel.anchor.set(node.getKey(), 0, "element");
+        sel.focus.set(node.getKey(), 0, "element");
+      }
+      $setSelection(sel);
+    },
+    scroll ? undefined : { tag: SKIP_SCROLL_TAG },
+  );
 }
