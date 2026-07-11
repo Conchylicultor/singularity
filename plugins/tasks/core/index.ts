@@ -9,12 +9,14 @@ export {
   clearTaskAutoStart,
   addTaskDependency,
   removeTaskDependency,
+  moveTaskInDepsTree,
   getRepoInfo,
   CreateTaskBodySchema,
   UpdateTaskBodySchema,
   InsertBetweenBodySchema,
   SetAutoStartBodySchema,
   AddDependencyBodySchema,
+  DepsMoveBodySchema,
 } from "./endpoints";
 export type {
   CreateTaskBody,
@@ -22,6 +24,7 @@ export type {
   InsertBetweenBody,
   SetAutoStartBody,
   AddDependencyBody,
+  DepsMoveBody,
 } from "./endpoints";
 export {
   TaskChainTargetSchema,

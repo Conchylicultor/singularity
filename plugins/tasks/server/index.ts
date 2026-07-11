@@ -11,6 +11,7 @@ import {
   handleRemoveDependency,
 } from "./internal/handle-dependencies";
 import { handleInsertBetween } from "./internal/handle-insert-between";
+import { handleDepsMove } from "./internal/handle-deps-move";
 import { handleRepoInfo } from "./internal/handle-repo-info";
 import { pushIngestJob, pushReconcileWarmup } from "./internal/push-watcher";
 import { Trigger } from "@plugins/infra/plugins/events/server";
@@ -33,6 +34,7 @@ import {
   clearTaskAutoStart,
   addTaskDependency,
   removeTaskDependency,
+  moveTaskInDepsTree,
   getRepoInfo,
 } from "../core/endpoints";
 
@@ -51,6 +53,7 @@ export default {
     [clearTaskAutoStart.route]: handleClearAutoStart,
     [addTaskDependency.route]: handleAddDependency,
     [removeTaskDependency.route]: handleRemoveDependency,
+    [moveTaskInDepsTree.route]: handleDepsMove,
     [getRepoInfo.route]: handleRepoInfo,
   },
   register: [addTaskTool, pushIngestJob, pushReconcileWarmup],

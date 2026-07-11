@@ -70,10 +70,20 @@ export const taskHierarchy: HierarchyConfig<TaskListItem> = {
   onCreate: createTaskRow,
 };
 
+// Read-only variant: drop the two mutating hooks. Omitting `onMove` disables
+// drag in the tree primitive; omitting `onCreate` removes the root "Add" and
+// per-row add affordances. Expand/collapse and parent mapping are preserved.
+const { onMove: _onMove, onCreate: _onCreate, ...readOnlyHierarchy } =
+  taskHierarchy;
+export const readOnlyTaskHierarchy: HierarchyConfig<TaskListItem> =
+  readOnlyHierarchy;
+
 export function buildTreeOptions({
   rootTaskId,
+  readOnly,
 }: {
   rootTaskId?: string;
+  readOnly?: boolean;
 }): TreeViewOptions<TaskListItem> {
   return {
     leadingIcon: (t) => <StatusIcon status={t.status} />,
@@ -84,11 +94,20 @@ export function buildTreeOptions({
       ),
     expandAll: true,
     rootId: rootTaskId,
-    addLabel: rootTaskId ? null : "Add",
+    addLabel: readOnly || rootTaskId ? null : "Add",
     toolbarStart: <Tasks.ListActions.Render />,
-    rowMenu: ({ addBelow }) => [
-      { icon: MdAdd, label: "Add item below", onClick: () => void addBelow() },
-    ],
+    // The per-row "Add item below" is an options-driven create affordance — drop
+    // it under readOnly so no dead menu item survives the hierarchy's missing
+    // onCreate.
+    rowMenu: readOnly
+      ? undefined
+      : ({ addBelow }) => [
+          {
+            icon: MdAdd,
+            label: "Add item below",
+            onClick: () => void addBelow(),
+          },
+        ],
     dragOverlay: (t) => t.title || "Untitled",
   };
 }

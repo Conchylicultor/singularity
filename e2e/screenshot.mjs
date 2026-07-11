@@ -75,17 +75,38 @@ await page.screenshot({ path: `${out}-before.png` });
 console.log(`wrote ${out}-before.png`);
 
 if (click) {
-  const btn = page.getByRole("button", { name: click });
-  const count = await btn.count();
-  if (count === 0) {
-    console.error(`no button matched "${click}"`);
+  // A "clickable" is anything button-shaped: plain buttons, but also
+  // SegmentedControl options (role=radio), tabs, and toggle chips — a <button>
+  // with an overriding role is invisible to getByRole("button").
+  const roles = ["button", "radio", "tab", "menuitem", "switch"];
+  // Poll instead of sampling once: on a cold boot the app can take longer than
+  // the fixed --wait to first paint, and a single count() check reads as
+  // "no such button" when the truth is "not booted yet".
+  const deadline = Date.now() + 20_000;
+  let btn = null;
+  while (!btn && Date.now() < deadline) {
+    for (const role of roles) {
+      // exact: getByRole's default name match is substring, which happily
+      // "matches" any long text that merely contains the label.
+      const candidate = page.getByRole(role, { name: click, exact: true });
+      if ((await candidate.count()) > 0) {
+        btn = candidate;
+        break;
+      }
+    }
+    if (!btn) await page.waitForTimeout(500);
+  }
+  if (!btn) {
+    console.error(`no clickable (${roles.join("/")}) matched "${click}"`);
     await browser.close();
     process.exit(1);
   }
   const first = btn.first();
-  console.log("button:", {
+  console.log("clickable:", {
+    role: await first.evaluate((el) => el.getAttribute("role") ?? el.tagName.toLowerCase()),
     disabled: await first.isDisabled(),
     pressed: await first.getAttribute("aria-pressed"),
+    checked: await first.getAttribute("aria-checked"),
     text: (await first.innerText()).slice(0, 80),
   });
   await first.click();

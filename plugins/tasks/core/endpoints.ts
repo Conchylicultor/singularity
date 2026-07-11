@@ -58,6 +58,15 @@ export const AddDependencyBodySchema = z.object({
 });
 export type AddDependencyBody = z.infer<typeof AddDependencyBodySchema>;
 
+// Move an existing task node within the dependency TREE. `newParentId === null`
+// heals the moved task to a root; `"splice"` inserts it into the chain (the new
+// parent's old children rewire onto it); `"branch"` hangs it as a parallel child.
+export const DepsMoveBodySchema = z.object({
+  newParentId: z.string().nullable(),
+  mode: z.enum(["splice", "branch"]),
+});
+export type DepsMoveBody = z.infer<typeof DepsMoveBodySchema>;
+
 // Wire-format response schema: plain JSON types (no Rank class, no Date class).
 // Consumers that need the rich domain types should parse via TaskSchema locally.
 export const TaskResponseSchema = z.object({
@@ -131,6 +140,11 @@ export const addTaskDependency = defineEndpoint({
 
 export const removeTaskDependency = defineEndpoint({
   route: "DELETE /api/tasks/:id/dependencies/:depId",
+});
+
+export const moveTaskInDepsTree = defineEndpoint({
+  route: "POST /api/tasks/:id/deps-move",
+  body: DepsMoveBodySchema,
 });
 
 export const RepoInfoResponseSchema = z.object({

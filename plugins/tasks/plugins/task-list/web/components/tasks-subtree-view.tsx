@@ -3,7 +3,12 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import { tasksResource, type TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 import { Tasks } from "../slots";
-import { taskFields, taskHierarchy, buildTreeOptions } from "../internal/tasks-data-view";
+import {
+  taskFields,
+  taskHierarchy,
+  readOnlyTaskHierarchy,
+  buildTreeOptions,
+} from "../internal/tasks-data-view";
 
 const TASKS_SUBTREE_VIEW = defineDataView("tasks-subtree");
 
@@ -11,10 +16,12 @@ export function TasksSubtree({
   selectedId,
   rootTaskId,
   onSelect,
+  readOnly,
 }: {
   selectedId?: string;
   rootTaskId?: string;
   onSelect: (id: string) => void;
+  readOnly?: boolean;
 }) {
   const result = useResource(tasksResource);
   return (
@@ -29,8 +36,8 @@ export function TasksSubtree({
           selectedRowId={selectedId}
           onRowActivate={(t) => onSelect(t.id)}
           selection={{}}
-          hierarchy={taskHierarchy}
-          viewOptions={{ tree: buildTreeOptions({ rootTaskId }) }}
+          hierarchy={readOnly ? readOnlyTaskHierarchy : taskHierarchy}
+          viewOptions={{ tree: buildTreeOptions({ rootTaskId, readOnly }) }}
           itemActions={Tasks.TaskActions}
         />
       )}
