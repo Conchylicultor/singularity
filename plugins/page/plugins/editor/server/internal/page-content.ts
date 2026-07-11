@@ -1,4 +1,4 @@
-import { eq, and } from "drizzle-orm";
+import { eq, and, ne, desc, isNull } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
@@ -52,7 +52,13 @@ export async function serializePageContent(
   const [pageBlock] = await executor
     .select()
     .from(_blocks)
-    .where(and(eq(_blocks.id, pageId), eq(_blocks.type, PAGE_BLOCK_TYPE)))
+    .where(
+      and(
+        eq(_blocks.id, pageId),
+        eq(_blocks.type, PAGE_BLOCK_TYPE),
+        isNull(_blocks.deletedAt),
+      ),
+    )
     .limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!pageBlock) return null;
@@ -78,7 +84,12 @@ export async function serializePageContent(
  */
 function rowsToForest(blocks: StoredBlock[], pageId: string): SerializedBlock[] {
   const childrenByParent = new Map<string | null, StoredBlock[]>();
+  // Sub-page SHELL rows (`type="page"`) are preserved in place by
+  // `replacePageContent` (their own content is a different `page_id` the snapshot
+  // never captured), so they must NOT be re-inserted here — drop them from the
+  // rebuild. They are always leaves of this page's forest.
   for (const b of blocks) {
+    if (b.type === PAGE_BLOCK_TYPE) continue;
     const key = b.parentId;
     const list = childrenByParent.get(key);
     if (list) list.push(b);
@@ -129,9 +140,21 @@ export async function replacePageContent(
 ): Promise<void> {
   const forest = rowsToForest(snapshot.blocks, pageId);
   await db.transaction(async (tx) => {
-    // Wipe current content (FK cascade clears descendants). Scoped to this
-    // page's content rows — the page block row itself is preserved.
-    await tx.delete(_blocks).where(eq(_blocks.pageId, pageId));
+    // Wipe only LIVE, NON-page content (FK cascade clears their descendants).
+    // Excluding `type="page"` preserves each sub-page SHELL and — because a soft
+    // delete never cascades — the sub-page's own content, which the snapshot
+    // never captured (the 2026-07-10-class bug for history restore). Excluding
+    // trashed rows leaves the trash intact. The page block row itself is
+    // preserved (its data is overwritten below).
+    await tx
+      .delete(_blocks)
+      .where(
+        and(
+          eq(_blocks.pageId, pageId),
+          ne(_blocks.type, PAGE_BLOCK_TYPE),
+          isNull(_blocks.deletedAt),
+        ),
+      );
     await tx
       .update(_blocks)
       .set({
@@ -140,7 +163,17 @@ export async function replacePageContent(
       })
       .where(eq(_blocks.id, pageId));
     if (forest.length > 0) {
-      const rootRanks = Rank.nBetween(null, null, forest.length);
+      // Surviving sub-page shells keep their ranks under `pageId`; place the
+      // rebuilt content strictly after the highest surviving rank so the
+      // `(parent_id, rank)` live unique index can never collide.
+      const [maxRow] = await tx
+        .select({ rank: _blocks.rank })
+        .from(_blocks)
+        .where(and(eq(_blocks.parentId, pageId), isNull(_blocks.deletedAt)))
+        .orderBy(desc(_blocks.rank))
+        .limit(1);
+      const floor = maxRow ? Rank.from(maxRow.rank) : null;
+      const rootRanks = Rank.nBetween(floor, null, forest.length);
       await insertForest(tx, { pageId, parentId: pageId, rootRanks, forest });
     }
   });

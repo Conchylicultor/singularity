@@ -1,5 +1,4 @@
 import { PAGE_BLOCK_TYPE } from "../../core/schemas";
-import type { BlockRow } from "./forest";
 import { notifyBlockChange } from "./notify";
 import { blocksChanged } from "./tables-events";
 
@@ -21,8 +20,12 @@ export async function notifyStructuralChange(args: {
   pageId: string;
   /** The primary edited block's type, used by reindex subscribers. */
   primaryType: string;
-  /** Rows that were deleted by this edit (to fan out per emptied sub-page). */
-  deletedRows: BlockRow[];
+  /**
+   * Rows removed from the page's live content by this edit (hard-deleted OR
+   * trashed), to fan out one `blocksChanged` per emptied sub-page. Only `id` and
+   * `type` are read.
+   */
+  deletedRows: { id: string; type: string }[];
 }): Promise<void> {
   await notifyBlockChange({ pageId: args.pageId, type: args.primaryType });
 

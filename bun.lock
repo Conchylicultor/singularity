@@ -344,6 +344,10 @@
       "name": "@singularity/plugin-apps-pages-starred",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/trash": {
+      "name": "@singularity/plugin-apps-pages-trash",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages/plugins/welcome": {
       "name": "@singularity/plugin-apps-pages-welcome",
       "version": "0.0.1",
@@ -2660,6 +2664,10 @@
       "optionalDependencies": {
         "@napi-rs/keyring": "^1.1.6",
       },
+    },
+    "plugins/infra/plugins/trash": {
+      "name": "@singularity/plugin-infra-trash",
+      "version": "0.0.1",
     },
     "plugins/infra/plugins/warmup": {
       "name": "@singularity/plugin-infra-warmup",
@@ -5064,6 +5072,8 @@
 
     "@singularity/plugin-apps-pages-starred": ["@singularity/plugin-apps-pages-starred@workspace:plugins/apps/plugins/pages/plugins/starred"],
 
+    "@singularity/plugin-apps-pages-trash": ["@singularity/plugin-apps-pages-trash@workspace:plugins/apps/plugins/pages/plugins/trash"],
+
     "@singularity/plugin-apps-pages-welcome": ["@singularity/plugin-apps-pages-welcome@workspace:plugins/apps/plugins/pages/plugins/welcome"],
 
     "@singularity/plugin-apps-pages-welcome-quick-create": ["@singularity/plugin-apps-pages-welcome-quick-create@workspace:plugins/apps/plugins/pages/plugins/welcome/plugins/quick-create"],
@@ -6173,6 +6183,8 @@
     "@singularity/plugin-infra-safe-fetch": ["@singularity/plugin-infra-safe-fetch@workspace:plugins/infra/plugins/safe-fetch"],
 
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
+
+    "@singularity/plugin-infra-trash": ["@singularity/plugin-infra-trash@workspace:plugins/infra/plugins/trash"],
 
     "@singularity/plugin-infra-warmup": ["@singularity/plugin-infra-warmup@workspace:plugins/infra/plugins/warmup"],
 

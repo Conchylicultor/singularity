@@ -1,6 +1,8 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull, isNotNull } from "drizzle-orm";
 import { db, currentTxId } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { TrashEntrySchema } from "@plugins/infra/plugins/trash/core";
+import { _trashEntries } from "@plugins/infra/plugins/trash/server";
 import { patchBlocks } from "../../core/endpoints";
 import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
@@ -9,6 +11,7 @@ import { notifyStructuralChange } from "./notify-structural-change";
 import { BlockLifecycle } from "./document-hooks";
 import { parkRanks, pairChanged } from "./rank-park";
 import { parseBlockData } from "./parse-block-data";
+import { untrashBlocks, deleteBlocksSubtree } from "./trash-blocks";
 
 /**
  * Generic minimal-change patch handler (the undo/redo inverse path). Upserts the
@@ -16,43 +19,90 @@ import { parseBlockData } from "./parse-block-data";
  * transaction. Unlike `handleApplyBlockOp` it runs no reducer — the client has
  * already computed the exact target rows (a forward/reverse {@link BlockPatch}
  * derived from a before/after diff), so this handler is a blind, authoritative
- * row-level writer onto the CURRENT state. Reuses the same delete-path lifecycle
- * (BeforeDelete hooks + cascade-root reduction) and the shared notify/trigger
- * path as the op handler.
+ * row-level writer onto the CURRENT state.
+ *
+ * Trash symmetry (zero client changes):
+ *  - **Un-trash-on-upsert.** `loadPageBlocks` now excludes trashed rows, so an
+ *    upsert whose id matches a TRASHED row would misclassify as an insert → PK
+ *    conflict. The three-way partition catches it: a trashed page-shell upsert
+ *    restores its WHOLE subtree via the trash chokepoint (CRDT docs + history
+ *    survived, so the restore is byte-exact); a trashed content-row upsert just
+ *    clears its flags and applies the client's row data. Cmd+Z after a page
+ *    delete thereby restores the full subtree.
+ *  - **Re-trash-on-redo.** A `deleteIds` containing a `type="page"` root routes
+ *    back through the chokepoint (a fresh trash entry); page-free stays hard.
  */
 export const handlePatchBlocks = implement(patchBlocks, async ({ params, body }) => {
   const rows = await loadPageBlocks(params.pageId);
   const byId = new Map(rows.map((r) => [r.id, r]));
 
+  // Upserts whose id is not a LIVE row on this page are either a fresh INSERT or
+  // an UNTRASH (the id matches a soft-deleted row — undo of a delete). One query
+  // resolves which.
+  const missingIds = body.upserts.filter((b) => !byId.has(b.id)).map((b) => b.id);
+  const trashedRows =
+    missingIds.length > 0
+      ? await db
+          .select()
+          .from(_blocks)
+          .where(and(inArray(_blocks.id, missingIds), isNotNull(_blocks.deletedAt)))
+      : [];
+  const trashedById = new Map(trashedRows.map((r) => [r.id, r]));
+
+  // Three-way partition: update (live), untrash (trashed), insert (neither).
+  const updates = body.upserts.filter((b) => byId.has(b.id));
+  const pageUntrash = body.upserts.filter(
+    (b) => trashedById.get(b.id)?.type === PAGE_BLOCK_TYPE,
+  );
+  const nonPageUntrash = body.upserts.filter((b) => {
+    const t = trashedById.get(b.id);
+    return t !== undefined && t.type !== PAGE_BLOCK_TYPE;
+  });
+  const inserts = body.updateOnly
+    ? []
+    : body.upserts.filter((b) => !byId.has(b.id) && !trashedById.has(b.id));
+
+  // --- Un-trash a page root: restore its whole entry via the chokepoint, then
+  // consume the now-empty ledger row. Done before the main tx; the restored
+  // subtree is disjoint from this page's own rows except the shell, which
+  // untrashBlocks re-links (and re-ranks on collision). Its content docs +
+  // version history survived the trash, so nothing is re-seeded.
+  for (const b of pageUntrash) {
+    const entryId = trashedById.get(b.id)!.trashEntryId;
+    if (entryId === null) continue;
+    const [entryRow] = await db
+      .select()
+      .from(_trashEntries)
+      .where(eq(_trashEntries.id, entryId))
+      .limit(1);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+    if (!entryRow) continue;
+    await untrashBlocks(TrashEntrySchema.parse(entryRow));
+    await db.delete(_trashEntries).where(eq(_trashEntries.id, entryId));
+  }
+
+  // --- Delete path -----------------------------------------------------------
   const deleteIds = body.deleteIds;
   const deletedSet = new Set(deleteIds);
-  // Only rows that actually exist can be deleted (an undo that re-deletes an
-  // already-gone block is a no-op). Their cascade subtree is removed below.
+  // Only rows that actually exist (and are live) can be deleted here.
   const deletedRows = rows.filter((r) => deletedSet.has(r.id));
+  const hasPageDelete = deletedRows.some((r) => r.type === PAGE_BLOCK_TYPE);
+  // Delete roots = deleted ids whose parent isn't itself being deleted.
+  const deleteRootIds = deletedRows
+    .filter((r) => r.parentId === null || !deletedSet.has(r.parentId))
+    .map((r) => r.id);
 
-  // --- Delete-path lifecycle (mirrors handle-apply-block-op.ts) --------------
+  // Page-free delete → run BeforeDelete hooks + inline hard delete below. A
+  // page-containing delete re-routes through the chokepoint (re-trash), which
+  // runs the lifecycle hooks itself.
   const afterCallbacks: Array<() => void | Promise<void>> = [];
-  if (deletedRows.length > 0) {
+  if (!hasPageDelete && deletedRows.length > 0) {
     const ids = deletedRows.map((r) => r.id);
     for (const hook of BlockLifecycle.BeforeDelete.getContributions()) {
       const cb = await hook.beforeDelete(ids);
       if (cb) afterCallbacks.push(cb);
     }
   }
-
-  // Delete only the roots (whose parent isn't itself being deleted) and let the
-  // FK cascade clear descendants — same reduction the op handler uses.
-  const rootIds = deletedRows
-    .filter((r) => r.parentId === null || !deletedSet.has(r.parentId))
-    .map((r) => r.id);
-
-  // Partition upserts into inserts (id not currently present) and updates.
-  // An update-only patch (the CRDT text projection) never creates rows: an
-  // absent id means the row was deleted since the patch was computed (block
-  // delete, history restore) — inserting it would RESURRECT the deleted block
-  // with stale pre-delete text, so it is skipped deliberately.
-  const inserts = body.updateOnly ? [] : body.upserts.filter((b) => !byId.has(b.id));
-  const updates = body.upserts.filter((b) => byId.has(b.id));
 
   // --- Page-type transition guard -------------------------------------------
   // A `page` row owns every row keyed `page_id = <its id>`. Flipping it to a
@@ -91,9 +141,12 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
     rank: b.rank.toJSON(),
   }));
 
-  // A no-op update-only patch against an absent row (target deleted since the
-  // patch was computed) writes nothing — don't fan out `blocksChanged`.
-  const didWrite = inserts.length > 0 || updates.length > 0 || rootIds.length > 0;
+  const didWrite =
+    inserts.length > 0 ||
+    updates.length > 0 ||
+    nonPageUntrash.length > 0 ||
+    pageUntrash.length > 0 ||
+    deleteRootIds.length > 0;
 
   const watermark = await db.transaction(async (tx) => {
     // Vacate the `(parent_id, rank)` pairs this patch reassigns before anything
@@ -135,13 +188,38 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
         .where(eq(_blocks.id, b.id));
     }
 
-    if (rootIds.length > 0) {
-      await tx.delete(_blocks).where(inArray(_blocks.id, rootIds));
+    // Un-trash a content row: clear its flags and apply the client's row data
+    // (its old slot was freed when it was trashed, so no re-park is needed).
+    for (const b of nonPageUntrash) {
+      await tx
+        .update(_blocks)
+        .set({
+          deletedAt: null,
+          trashEntryId: null,
+          pageId: b.pageId,
+          parentId: b.parentId,
+          type: b.type,
+          data: b.data ?? {},
+          rank: b.rank.toJSON(),
+          expanded: b.expanded,
+          updatedAt: new Date(),
+        })
+        .where(eq(_blocks.id, b.id));
+    }
+
+    if (deleteRootIds.length > 0 && !hasPageDelete) {
+      await tx.delete(_blocks).where(inArray(_blocks.id, deleteRootIds));
     }
 
     // Ack token: the commit's xid8, read inside the write transaction (Rule A).
     return currentTxId(tx);
   });
+
+  // Re-trash a page root (redo of a page delete) via the chokepoint, after the
+  // main tx so its inserts/updates land first.
+  if (hasPageDelete && deleteRootIds.length > 0) {
+    await deleteBlocksSubtree(deleteRootIds);
+  }
 
   if (didWrite) {
     // Derive a primary type for the sidebar-refresh heuristic: any upserted
@@ -156,7 +234,7 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
   const finalRows = await db
     .select()
     .from(_blocks)
-    .where(eq(_blocks.pageId, params.pageId))
+    .where(and(eq(_blocks.pageId, params.pageId), isNull(_blocks.deletedAt)))
     .orderBy(asc(_blocks.rank), asc(_blocks.createdAt));
   return { blocks: finalRows.map((r) => BlockSchema.parse(r)), watermark };
 });

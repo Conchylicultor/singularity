@@ -9,7 +9,7 @@
   - Uses: `page/editor.PageIcon`, `primitives/css/center.Center`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/live-state.useResource`
   - Exports: Types: `BacklinksProps`; Values: `Backlinks`
 - Server:
-  - Uses: `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.BlockLifecycle`, `page/editor.blocksChanged`, `page/editor.PAGE_BLOCK_TYPE`
+  - Uses: `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.BlockDeleteHook`, `page/editor.BlockLifecycle`, `page/editor.BlockRestoreHook`, `page/editor.blocksChanged`, `page/editor.BlockTrashHook`, `page/editor.PAGE_BLOCK_TYPE`
   - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
   - Exports: Types: `PageLinkExtractor`; Values: `backlinksResource`, `PageLinks`, `reindexPage`
   - Register: `defineJob('page.links.reindex')`

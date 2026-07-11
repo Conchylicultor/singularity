@@ -4,7 +4,11 @@ import { Trigger } from "@plugins/infra/plugins/events/server";
 import { blocksChanged, BlockLifecycle } from "@plugins/page/plugins/editor/server";
 import { reindexLinksJob } from "./internal/reindex-job";
 import { backlinksResource } from "./internal/resources";
-import { backlinksDeleteHook } from "./internal/delete-hook";
+import {
+  backlinksDeleteHook,
+  backlinksTrashHook,
+  backlinksRestoreHook,
+} from "./internal/delete-hook";
 
 export { PageLinks } from "./internal/extractor";
 export type { PageLinkExtractor } from "./internal/extractor";
@@ -25,5 +29,9 @@ export default {
     // Re-push the backlinks panels of pages a deleted subtree linked to: the FK
     // cascade wipes those page_links edges without going through the reindexer.
     BlockLifecycle.BeforeDelete(backlinksDeleteHook),
+    // A TRASH never cascades, so a trashed page's outgoing edges must be dropped
+    // explicitly; restore rebuilds them.
+    BlockLifecycle.OnTrash(backlinksTrashHook),
+    BlockLifecycle.OnRestore(backlinksRestoreHook),
   ],
 } satisfies ServerPluginDefinition;

@@ -3,9 +3,8 @@ import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { bulkDeleteBlocks } from "../../core/endpoints";
 import { _blocks } from "./tables";
-import { collectBlockSubtrees } from "./collect-subtree";
 import { notifyStructuralChange } from "./notify-structural-change";
-import { BlockLifecycle } from "./document-hooks";
+import { deleteBlocksSubtree } from "./trash-blocks";
 
 export const handleBulkDeleteBlock = implement(
   bulkDeleteBlocks,
@@ -20,43 +19,23 @@ export const handleBulkDeleteBlock = implement(
       .where(and(eq(_blocks.pageId, params.pageId), inArray(_blocks.id, body.ids)));
     if (roots.length === 0) return { deleted: 0 };
 
-    // The DELETE below removes only the roots and lets the FK cascade clear
-    // their descendants. Snapshot that FULL set — the cascade crosses page
-    // boundaries, so a selected `type="page"` root takes its whole sub-page's
-    // content with it — and run the BeforeDelete hooks over it, exactly as the
-    // single-delete and op handlers do. Without this pass, search documents,
-    // version history, backlinks and attachments are orphaned on every bulk
-    // delete.
-    const subtreeIds = await collectBlockSubtrees(roots.map((r) => r.id));
-    const deletedRows = await db
-      .select()
-      .from(_blocks)
-      .where(inArray(_blocks.id, subtreeIds));
+    // The single delete chokepoint (the 2026-07-10 incident path). If the
+    // collected cascade set contains any `type="page"` block — a selected
+    // sub-page — the whole selection is TRASHED (soft delete), so each sub-page's
+    // cross-page content, page_block_docs, and history survive and Cmd+Z restores
+    // the full subtree; a page-free selection is hard-deleted as before. It runs
+    // the BeforeDelete / OnTrash lifecycle hooks over the full set.
+    await deleteBlocksSubtree(roots.map((r) => r.id));
 
-    const afterCallbacks: Array<() => void | Promise<void>> = [];
-    for (const hook of BlockLifecycle.BeforeDelete.getContributions()) {
-      const cb = await hook.beforeDelete(subtreeIds);
-      if (cb) afterCallbacks.push(cb);
-    }
-
-    // A single DELETE..IN is atomic; FK cascade removes any descendants that
-    // weren't themselves listed.
-    const deleted = await db
-      .delete(_blocks)
-      .where(inArray(_blocks.id, roots.map((r) => r.id)))
-      .returning({ id: _blocks.id });
-
-    // Fans out `blocksChanged` for this page, plus one per emptied sub-page in
-    // the deleted subtree.
+    // Fan out `blocksChanged` for this page, plus one per removed sub-page in the
+    // deleted set. The `type="page"` roots drive the per-sub-page emit whether the
+    // delete trashed or hard-deleted them.
     await notifyStructuralChange({
       pageId: params.pageId,
       primaryType: roots[0]!.type,
-      deletedRows,
+      deletedRows: roots,
     });
 
-    // Hooks re-push state that depended on the now-deleted rows (e.g. backlinks).
-    for (const cb of afterCallbacks) await cb();
-
-    return { deleted: deleted.length };
+    return { deleted: roots.length };
   },
 );

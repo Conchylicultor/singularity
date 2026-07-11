@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -61,7 +61,7 @@ export const handleTurnIntoPage = implement(turnIntoPage, async ({ params, body 
     const children = await tx
       .select({ id: _blocks.id })
       .from(_blocks)
-      .where(eq(_blocks.parentId, params.id));
+      .where(and(eq(_blocks.parentId, params.id), isNull(_blocks.deletedAt)));
 
     if (children.length === 0) {
       await tx.insert(_blocks).values({

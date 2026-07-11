@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { _blocks, PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/server";
@@ -34,7 +34,7 @@ export const backfillPagesSearchJob = defineJob({
     const pages = await db
       .select({ id: _blocks.id })
       .from(_blocks)
-      .where(eq(_blocks.type, PAGE_BLOCK_TYPE));
+      .where(and(eq(_blocks.type, PAGE_BLOCK_TYPE), isNull(_blocks.deletedAt)));
 
     // Fingerprints of the docs already indexed for this source, keyed by pageId.
     // A page absent from this map (never indexed) has `undefined`, which can

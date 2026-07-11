@@ -1,4 +1,4 @@
-import { eq, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { moveBlock } from "../../core/endpoints";
@@ -29,16 +29,19 @@ export const handleMoveBlock = implement(moveBlock, async ({ params, body }) => 
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!before) throw new HttpError(404, "Not found");
 
-    // EVERY row under the destination parent — not scoped by `page_id`, not
-    // filtered by `type`. `(parent_id, rank)` is one ordering space shared by
-    // sub-page rows and content rows; a partial view mints colliding keys.
+    // EVERY LIVE row under the destination parent — not scoped by `page_id`, not
+    // filtered by `type`, but excluding trashed rows: `(parent_id, rank)` is one
+    // ordering space shared by sub-page rows and content rows, but the partial
+    // unique index only constrains LIVE rows, so a trashed row may legitimately
+    // share a live row's rank. Including it would hand `rankAdjacentTo` two
+    // siblings at one rank and abort with `Rank.between(r, r)`.
     const siblings = await tx
       .select()
       .from(_blocks)
       .where(
         body.parentId === null
-          ? isNull(_blocks.parentId)
-          : eq(_blocks.parentId, body.parentId),
+          ? and(isNull(_blocks.parentId), isNull(_blocks.deletedAt))
+          : and(eq(_blocks.parentId, body.parentId), isNull(_blocks.deletedAt)),
       );
     if (body.targetId !== null && !siblings.some((s) => s.id === body.targetId)) {
       throw new HttpError(

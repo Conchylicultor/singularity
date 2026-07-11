@@ -51,8 +51,14 @@ afterAll(async () => {
 let nextBlock = 0;
 async function createBlock(): Promise<string> {
   const id = `block-${++nextBlock}`;
+  // Unique valid rank per root block: the live-rank partial unique index
+  // (`page_blocks_root_rank_live_uq`) enforces distinct ranks among live
+  // parent-less rows, so a constant 'a0' would collide from the second block
+  // on. 'b' + two base-36 digits is a plain 3-char integer key — always a
+  // valid fractional-indexing rank, unique up to 1296 blocks.
+  const rank = `b${nextBlock.toString(36).padStart(2, "0")}`;
   await t.db.execute(
-    sql`INSERT INTO page_blocks (id, type, rank) VALUES (${id}, 'text', 'a0')`,
+    sql`INSERT INTO page_blocks (id, type, rank) VALUES (${id}, 'text', ${rank})`,
   );
   return id;
 }

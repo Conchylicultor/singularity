@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-pages-trash",
+  "description": "Pages trash: lists soft-deleted pages in the Pages sidebar with restore and permanent-delete actions.",
+  "private": true,
+  "version": "0.0.1"
+}

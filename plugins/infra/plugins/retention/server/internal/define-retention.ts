@@ -1,4 +1,5 @@
 import { getTableName, type SQL } from "drizzle-orm";
+import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import type { PgColumn, PgTable } from "drizzle-orm/pg-core";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
@@ -44,6 +45,51 @@ export interface RetentionSpec {
   perWorktree?: boolean;
   /** Extra scope AND-ed onto the age predicate (e.g. only a subset of rows). */
   where?: SQL;
+  /**
+   * Coordinated-teardown seam: runs over the rows about to be swept, BEFORE the
+   * DELETE (e.g. the trash purge runs each source's destroy hooks + hard-deletes
+   * the domain roots here). Callback-first ordering makes the sweep retry-safe:
+   * a throw leaves the rows in place for the next tick, so the callback must be
+   * idempotent. When the callback is set and no rows are expired, neither the
+   * callback nor the DELETE runs. Retention stays generic — the CALLER supplies
+   * the callback; this plugin never imports a consumer registry.
+   */
+  beforeDelete?: (rows: Record<string, unknown>[]) => Promise<void>;
+}
+
+// Any drizzle executor the sweep can ride on (global handle, tx, or a test
+// fixture's throwaway-DB handle), so `sweepExpired` is testable against a real
+// scratch database. The plain `NodePgDatabase` branch (doc-store's executor
+// precedent) accepts both the global proxy and a fixture DB.
+export type RetentionExecutor =
+  | NodePgDatabase
+  | Parameters<Parameters<typeof db.transaction>[0]>[0];
+
+/**
+ * One sweep tick's body, extracted from the job for direct testing (the
+ * `findCascadeFk` precedent: barrel-private, exported only for its test).
+ * `beforeDelete` sees exactly the rows the DELETE predicate matches at select
+ * time; a row aging past the cutoff between the two statements waits for the
+ * next tick (the predicate is time-based, so the set can only grow, never lose
+ * a row the callback already handled).
+ */
+export async function sweepExpired(
+  dbx: RetentionExecutor,
+  args: {
+    table: PgTable;
+    column: PgColumn;
+    cutoff: Date;
+    where?: SQL;
+    beforeDelete?: (rows: Record<string, unknown>[]) => Promise<void>;
+  },
+): Promise<void> {
+  const predicate = retentionPredicate(args.column, args.cutoff, args.where);
+  if (args.beforeDelete) {
+    const rows = await dbx.select().from(args.table).where(predicate);
+    if (rows.length === 0) return;
+    await args.beforeDelete(rows);
+  }
+  await dbx.delete(args.table).where(predicate);
 }
 
 /**
@@ -78,7 +124,13 @@ export function defineRetention(spec: RetentionSpec): RetentionJob {
       // Cutoff computed per tick (not captured at define time) so a long-lived
       // worker sweeps against a fresh "now" each run.
       const cutoff = retentionCutoff(new Date(), spec.ttlDays);
-      await db.delete(spec.table).where(retentionPredicate(column, cutoff, spec.where));
+      await sweepExpired(db, {
+        table: spec.table,
+        column,
+        cutoff,
+        where: spec.where,
+        beforeDelete: spec.beforeDelete,
+      });
     },
   });
 

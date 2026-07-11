@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
@@ -37,11 +37,11 @@ export const reminderFireJob = defineJob({
       const [block] = await db
         .select({ data: _blocks.data })
         .from(_blocks)
-        .where(eq(_blocks.id, row.blockId));
+        .where(and(eq(_blocks.id, row.blockId), isNull(_blocks.deletedAt)));
       const [page] = await db
         .select({ data: _blocks.data })
         .from(_blocks)
-        .where(eq(_blocks.id, row.pageId));
+        .where(and(eq(_blocks.id, row.pageId), isNull(_blocks.deletedAt)));
 
       const pageParsed = PageShape.safeParse(page?.data);
       const pageTitle = (pageParsed.success && pageParsed.data.title) || "Untitled";

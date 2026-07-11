@@ -1,4 +1,4 @@
-import { and, asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { listBlocks } from "../../core/endpoints";
@@ -23,7 +23,7 @@ export const handleListBlocks = implement(listBlocks, async ({ params }) => {
   const rows = await db
     .select()
     .from(_blocks)
-    .where(eq(_blocks.pageId, params.pageId))
+    .where(and(eq(_blocks.pageId, params.pageId), isNull(_blocks.deletedAt)))
     .orderBy(asc(_blocks.rank));
   return rows.map((r) => BlockSchema.parse(r));
 });

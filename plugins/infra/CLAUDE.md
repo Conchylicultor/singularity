@@ -34,6 +34,7 @@
   - **`runtime-profiler`**
   - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which dials the validated IP directly (closing the DNS-rebinding TOCTOU) while preserving Host/SNI/cert via Bun fetch tls.serverName, following redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
   - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
+  - **`trash`** — Generic trash primitive: the trash_entries operation ledger, a defineTrashSource registry, list/restore/purge endpoints, the per-source trash live resource, and the 30-day purge sweep — so user content is soft-deleted (restorable) instead of hard-deleted, and FK cascades fire only at purge.
   - **`warmup`** — Declared heavy boot warm-up category: defineWarmup registers a deferred, throttled, scope-gated warm-up; drainWarmups drains them after onAllReady under a concurrency gate + heavy-read slot + macrotask yield.
   - **`worktree`**
 

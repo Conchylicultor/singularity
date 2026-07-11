@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { _blocks } from "@plugins/page/plugins/editor/server";
@@ -29,7 +29,7 @@ export async function reconcileReminders(pageId: string): Promise<void> {
   const blocks = await db
     .select({ id: _blocks.id, data: _blocks.data })
     .from(_blocks)
-    .where(eq(_blocks.pageId, pageId));
+    .where(and(eq(_blocks.pageId, pageId), isNull(_blocks.deletedAt)));
 
   const current = new Map<string, { iso: string; blockId: string }>();
   for (const b of blocks) {

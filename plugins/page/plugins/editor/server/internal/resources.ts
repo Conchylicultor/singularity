@@ -1,4 +1,4 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, isNull } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
@@ -17,7 +17,9 @@ export const pagesLiveResource = defineResource<Block[]>({
     db
       .select()
       .from(_blocks)
-      .where(eq(_blocks.type, PAGE_BLOCK_TYPE))
+      // Trashed pages disappear from the sidebar; the change-feed re-runs this on
+      // the trash/restore UPDATE, so the exclusion is membership-correct.
+      .where(and(eq(_blocks.type, PAGE_BLOCK_TYPE), isNull(_blocks.deletedAt)))
       .orderBy(asc(_blocks.rank), asc(_blocks.createdAt)) as unknown as Promise<Block[]>,
 });
 
@@ -39,6 +41,6 @@ export const blocksLiveResource = defineResource<Block[], { pageId: string }>({
     db
       .select()
       .from(_blocks)
-      .where(eq(_blocks.pageId, pageId))
+      .where(and(eq(_blocks.pageId, pageId), isNull(_blocks.deletedAt)))
       .orderBy(asc(_blocks.rank), asc(_blocks.createdAt)) as unknown as Promise<Block[]>,
 });

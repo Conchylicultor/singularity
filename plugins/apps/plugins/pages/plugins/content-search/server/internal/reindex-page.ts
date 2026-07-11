@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { and, eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _blocks, PAGE_BLOCK_TYPE, pageData } from "@plugins/page/plugins/editor/server";
 import { textOf, type Block } from "@plugins/page/plugins/editor/core";
@@ -38,15 +38,23 @@ export async function buildPageSearchDoc(pageId: string): Promise<BuiltPageSearc
   const pageRows = await db
     .select()
     .from(_blocks)
-    .where(and(eq(_blocks.id, pageId), eq(_blocks.type, PAGE_BLOCK_TYPE)));
+    .where(
+      and(
+        eq(_blocks.id, pageId),
+        eq(_blocks.type, PAGE_BLOCK_TYPE),
+        isNull(_blocks.deletedAt),
+      ),
+    );
   const pageBlock = pageRows[0] as Block | undefined;
 
+  // A trashed page reads as gone here, so the caller wipes its search doc — the
+  // trash-time deindex (OnTrash) plus this steady-state path both drop it.
   if (!pageBlock) return null;
 
   const contentBlocks = await db
     .select({ type: _blocks.type, data: _blocks.data })
     .from(_blocks)
-    .where(eq(_blocks.pageId, pageId));
+    .where(and(eq(_blocks.pageId, pageId), isNull(_blocks.deletedAt)));
 
   const data = pageData(pageBlock);
   const title = data.title || "Untitled";

@@ -6,8 +6,9 @@ import {
   pgTable,
   text,
   timestamp,
-  unique,
+  uniqueIndex,
 } from "drizzle-orm/pg-core";
+import { sql } from "drizzle-orm";
 import { rankText } from "@plugins/primitives/plugins/rank/core";
 import type { BlockData } from "../../core";
 
@@ -38,6 +39,13 @@ export const _blocks = pgTable(
     data: jsonb("data").notNull().default({} as BlockData).$type<BlockData>(),
     rank: rankText("rank").notNull(),
     expanded: boolean("expanded").notNull().default(true),
+    // NULL = live. A soft delete (trash) sets `deletedAt` + `trashEntryId`
+    // instead of DELETEing the row, so the self-referential FK cascades never
+    // fire — descendants, `page_block_docs` CRDT text, ext side-tables, and
+    // version history all survive until purge. `trashEntryId` correlates the
+    // flagged subtree to its `trash_entries` ledger row for exact-restore.
+    deletedAt: timestamp("deleted_at", { withTimezone: true }),
+    trashEntryId: text("trash_entry_id"),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
@@ -50,16 +58,27 @@ export const _blocks = pgTable(
     // rank over the `type='page'` projection of a `(parent_id, rank)` space it
     // only half sees, and landed on a content block's key.
     //
-    // `NULLS NOT DISTINCT` because root pages share `parent_id IS NULL` — they
-    // are one sibling list, and the default NULL semantics would exempt exactly
-    // that list from the guard.
-    //
     // NOT deferrable: drizzle cannot emit `DEFERRABLE`, and hand-written DDL is
     // barred (generated migrations are hash-guarded; data migrations are
     // DML-only). So the check is per-tuple, and any writer that PERMUTES ranks
     // among siblings must vacate the pairs it reassigns before claiming them —
     // see `rank-park.ts`. A plain swap has no safe update order; only a scratch
     // value does.
-    unique("page_blocks_parent_rank_uq").on(t.parentId, t.rank).nullsNotDistinct(),
+    //
+    // Two PARTIAL unique indexes, both `WHERE deleted_at IS NULL`, so a TRASHED
+    // row keeps its `(parent_id, rank)` without blocking a new live sibling from
+    // reclaiming that slot (and restore re-ranks a colliding root — see
+    // `trash-blocks.ts`). Split in two because drizzle-orm 0.36.4's index builder
+    // has no `nullsNotDistinct`: the `parent_id IS NULL` root-page sibling list
+    // shares one NULL parent, so the default NULL-distinct semantics would exempt
+    // exactly that list from the guard — the second index constrains `rank` alone
+    // over live root rows to close it.
+    uniqueIndex("page_blocks_parent_rank_live_uq")
+      .on(t.parentId, t.rank)
+      .where(sql`deleted_at IS NULL AND parent_id IS NOT NULL`),
+    uniqueIndex("page_blocks_root_rank_live_uq")
+      .on(t.rank)
+      .where(sql`deleted_at IS NULL AND parent_id IS NULL`),
+    index("page_blocks_trash_entry_idx").on(t.trashEntryId),
   ],
 );

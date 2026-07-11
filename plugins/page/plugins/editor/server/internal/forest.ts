@@ -1,4 +1,4 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
@@ -14,12 +14,20 @@ import { parseBlockData } from "./parse-block-data";
 
 export type BlockRow = typeof _blocks.$inferSelect;
 
-/** Load every content block of a page (raw rows, rank as the stored string). */
+/**
+ * Load every LIVE content block of a page (raw rows, rank as the stored string).
+ * Trashed rows are excluded: this feeds the op/patch reducers AND the rank-window
+ * math, and the partial unique index only constrains live rows — so rank
+ * arithmetic must run over exactly the live sibling set to stay consistent.
+ */
 export async function loadPageBlocks(
   pageId: string,
   executor: RankExecutor = db,
 ): Promise<BlockRow[]> {
-  return executor.select().from(_blocks).where(eq(_blocks.pageId, pageId));
+  return executor
+    .select()
+    .from(_blocks)
+    .where(and(eq(_blocks.pageId, pageId), isNull(_blocks.deletedAt)));
 }
 
 /**

@@ -1,4 +1,4 @@
-import { and, eq, inArray } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _blocks, PAGE_BLOCK_TYPE } from "@plugins/page/plugins/editor/server";
 import { PageLinks } from "./extractor";
@@ -29,7 +29,7 @@ export async function reindexPage(pageId: string): Promise<void> {
   const blocks = await db
     .select({ type: _blocks.type, data: _blocks.data })
     .from(_blocks)
-    .where(eq(_blocks.pageId, pageId));
+    .where(and(eq(_blocks.pageId, pageId), isNull(_blocks.deletedAt)));
 
   const targets = new Set<string>();
   const collect = (extract: (data: unknown) => string[], data: unknown) => {
@@ -53,6 +53,7 @@ export async function reindexPage(pageId: string): Promise<void> {
         and(
           inArray(_blocks.id, [...targets]),
           eq(_blocks.type, PAGE_BLOCK_TYPE),
+          isNull(_blocks.deletedAt),
         ),
       );
     validTargets = new Set(existing.map((r) => r.id));

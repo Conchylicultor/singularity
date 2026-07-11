@@ -1,10 +1,11 @@
-// @hash 350a73089635
+// @hash a242b2029b0b
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   // Favorites is no longer a sidebar section — it is a filtered `list` view
   // instance of the page-tree DataView, reachable from its view switcher.
   "items": [
     "apps.pages.content-search:search",
-    "apps.pages.page-tree:pages"
+    "apps.pages.page-tree:pages",
+    "apps.pages.trash:trash"
   ]
 }

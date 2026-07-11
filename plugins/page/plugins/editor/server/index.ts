@@ -1,5 +1,6 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { defineTrashSource } from "@plugins/infra/plugins/trash/server";
 import { handleListPages } from "./internal/handle-list-pages";
 import { handleListBlocks } from "./internal/handle-list-blocks";
 import { handleCreateBlock } from "./internal/handle-create-block";
@@ -14,6 +15,11 @@ import { handleBulkMoveBlock } from "./internal/handle-bulk-move-block";
 import { handleBulkDuplicateBlock } from "./internal/handle-bulk-duplicate-block";
 import { handlePasteBlock } from "./internal/handle-paste-block";
 import { pagesLiveResource, blocksLiveResource } from "./internal/resources";
+import {
+  untrashBlocks,
+  purgeTrashedPages,
+  PAGES_TRASH_SOURCE,
+} from "./internal/trash-blocks";
 import { blocksChanged } from "./internal/tables-events";
 import { Editor } from "./internal/block-registry";
 import { pageBlockHandle } from "../core/schemas";
@@ -38,7 +44,12 @@ export { pagesLiveResource, blocksLiveResource } from "./internal/resources";
 export { blocksChanged } from "./internal/tables-events";
 export type { BlocksChangedPayload } from "./internal/tables-events";
 export { BlockLifecycle } from "./internal/document-hooks";
-export type { BlockDeleteHook } from "./internal/document-hooks";
+export type {
+  BlockDeleteHook,
+  BlockTrashHook,
+  BlockRestoreHook,
+} from "./internal/document-hooks";
+export { deleteBlocksSubtree } from "./internal/trash-blocks";
 export { BlockSchema, PageDataSchema, PAGE_BLOCK_TYPE, pageData } from "../core/schemas";
 export type { Block, PageData } from "../core/schemas";
 export { serializePageContent, replacePageContent } from "./internal/page-content";
@@ -62,7 +73,17 @@ export default {
     [bulkDuplicateBlocks.route]: handleBulkDuplicateBlock,
     [pasteBlocks.route]: handlePasteBlock,
   },
-  register: [blocksChanged],
+  register: [
+    blocksChanged,
+    // The pages trash source: soft-deleted pages restore by clearing their
+    // `deleted_at` flags (untrashBlocks) and are hard-deleted only at purge
+    // (purgeTrashedPages runs the BeforeDelete hooks + cascades).
+    defineTrashSource({
+      id: PAGES_TRASH_SOURCE,
+      restore: untrashBlocks,
+      purge: purgeTrashedPages,
+    }),
+  ],
   contributions: [
     Resource.Declare(pagesLiveResource),
     Resource.Declare(blocksLiveResource),

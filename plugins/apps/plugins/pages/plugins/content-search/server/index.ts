@@ -4,7 +4,11 @@ import { blocksChanged, BlockLifecycle } from "@plugins/page/plugins/editor/serv
 import { reindexPageSearchJob } from "./internal/reindex-job";
 import { backfillPagesSearchJob } from "./internal/backfill-job";
 import { pagesSearchBackfillWarmup } from "./internal/backfill-warmup";
-import { deletePagesSearchHook } from "./internal/delete-hook";
+import {
+  deletePagesSearchHook,
+  trashPagesSearchHook,
+  restorePagesSearchHook,
+} from "./internal/delete-hook";
 
 export default {
   description:
@@ -19,8 +23,12 @@ export default {
     // reboots. Match-any on pageId — the per-emit pageId reaches the job via
     // the event payload.
     Trigger({ on: blocksChanged, do: reindexPageSearchJob, with: {}, oneShot: false }),
-    // A page delete FK-cascades its blocks without firing the reindexer for the
-    // page itself; drop its stale search doc.
+    // A page HARD delete / purge FK-cascades its blocks without firing the
+    // reindexer for the page itself; drop its stale search doc.
     BlockLifecycle.BeforeDelete(deletePagesSearchHook),
+    // A page TRASH deindexes it (soft delete emits no per-page blocksChanged on
+    // the single-delete path); restore re-derives its doc.
+    BlockLifecycle.OnTrash(trashPagesSearchHook),
+    BlockLifecycle.OnRestore(restorePagesSearchHook),
   ],
 } satisfies ServerPluginDefinition;

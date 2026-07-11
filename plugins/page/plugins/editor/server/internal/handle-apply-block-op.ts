@@ -1,4 +1,4 @@
-import { asc, eq, inArray } from "drizzle-orm";
+import { and, asc, eq, inArray, isNull } from "drizzle-orm";
 import { db, currentTxId } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { applyBlockOpEndpoint } from "../../core/endpoints";
@@ -11,8 +11,8 @@ import { notifyStructuralChange } from "./notify-structural-change";
 import { BlockLifecycle } from "./document-hooks";
 import { recomputePageIdSubtree } from "./page-id";
 import { blocksChanged } from "./tables-events";
-import { collectBlockSubtrees } from "./collect-subtree";
 import { parseBlockData } from "./parse-block-data";
+import { deleteBlocksSubtree } from "./trash-blocks";
 
 /**
  * Single authoritative structural edit. Load the page's blocks, run the pure
@@ -40,25 +40,24 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
     .filter((r) => r.parentId === null || !deletedSet.has(r.parentId))
     .map((r) => r.id);
 
-  // The reducer enumerates each deleted block's subtree over THIS PAGE's rows.
-  // That is the exact cascade set — unless a `page` row is among them: a
-  // sub-page's own content is keyed `page_id = <that row>`, so `loadPageBlocks`
-  // never returned it, yet the FK cascade wipes it all the same. Expand through
-  // the DB in that case, so hooks (search docs, history, backlinks, attachments)
-  // see everything that actually vanishes. Guarded rather than unconditional:
-  // the hot merge/delete keystroke path must not pay for a `WITH RECURSIVE`.
-  let deletedRows = reducerDeletedRows;
-  if (reducerDeletedRows.some((r) => r.type === PAGE_BLOCK_TYPE)) {
-    const cascade = await collectBlockSubtrees(rootIds);
-    deletedRows = await db.select().from(_blocks).where(inArray(_blocks.id, cascade));
-  }
-  const cascadeIds = deletedRows.map((r) => r.id);
+  // Defensive: the reducers (`split`/`merge`/`indent`/`outdent`) already refuse
+  // to delete a `type="page"` row, so this branch should never fire — but a
+  // silently-cascading page here is the exact 2026-07-10 data-loss bug, so if one
+  // ever slips into the delete set, route the whole delete through the trash
+  // chokepoint (soft delete) instead of the inline hard delete below. The normal
+  // page-free keystroke path (the overwhelming majority) stays hard and pays no
+  // extra cost.
+  const hasPageDelete = reducerDeletedRows.some(
+    (r) => r.type === PAGE_BLOCK_TYPE,
+  );
+  const deletedRows = reducerDeletedRows;
 
-  // Run BeforeDelete hooks over that set so backlinks/image reconcilers can
-  // snapshot state that depends on the soon-to-vanish rows, and collect their
-  // after-callbacks.
+  // Run BeforeDelete hooks over the (page-free) delete set so backlinks/image
+  // reconcilers can snapshot state that depends on the soon-to-vanish rows. When
+  // a page IS in the set, the chokepoint runs the lifecycle hooks instead.
   const afterCallbacks: Array<() => void | Promise<void>> = [];
-  if (cascadeIds.length > 0) {
+  if (!hasPageDelete && deletedRows.length > 0) {
+    const cascadeIds = deletedRows.map((r) => r.id);
     for (const hook of BlockLifecycle.BeforeDelete.getContributions()) {
       const cb = await hook.beforeDelete(cascadeIds);
       if (cb) afterCallbacks.push(cb);
@@ -99,7 +98,9 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
         .where(eq(_blocks.id, id));
     }
 
-    if (rootIds.length > 0) {
+    // Page-free hard delete stays inline (cascade clears descendants). A
+    // page-containing set is trashed AFTER this tx via the chokepoint.
+    if (rootIds.length > 0 && !hasPageDelete) {
       await tx.delete(_blocks).where(inArray(_blocks.id, rootIds));
     }
 
@@ -122,6 +123,13 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
     // Ack token: the commit's xid8, read inside the write transaction (Rule A).
     return currentTxId(tx);
   });
+
+  // Route a page-containing delete through the trash chokepoint (soft delete +
+  // OnTrash hooks). Runs after the insert/update tx so the reducer's other diffs
+  // land first; the delete set is disjoint from the insert/update set.
+  if (hasPageDelete && rootIds.length > 0) {
+    await deleteBlocksSubtree(rootIds);
+  }
 
   // --- Notify (shared with the patch handler) --------------------------------
   // The op's blocks lived on this page; derive a `type` from them (page vs
@@ -155,11 +163,11 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
   // Hooks re-push state that depended on the now-deleted rows (e.g. backlinks).
   for (const cb of afterCallbacks) await cb();
 
-  // Return the reloaded page rows (mirrors the live push payload).
+  // Return the reloaded LIVE page rows (mirrors the live push payload).
   const finalRows = await db
     .select()
     .from(_blocks)
-    .where(eq(_blocks.pageId, params.pageId))
+    .where(and(eq(_blocks.pageId, params.pageId), isNull(_blocks.deletedAt)))
     .orderBy(asc(_blocks.rank), asc(_blocks.createdAt));
   return { blocks: finalRows.map((r) => BlockSchema.parse(r)), watermark };
 });
