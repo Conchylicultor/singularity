@@ -1,4 +1,4 @@
-import { readdir, rm } from "node:fs/promises";
+import { readdir, rm, stat } from "node:fs/promises";
 import { BACKUPS_DIR } from "@plugins/infra/plugins/paths/server";
 import { getConfig } from "@plugins/config_v2/server";
 import type { BackupArchive, BackupTargetResult } from "@plugins/backup/core";
@@ -23,10 +23,21 @@ export async function runLocalTarget(
     return { targetId: "local", ok: true, detail: archive.archivePath };
   }
 
-  const dirs = entries
-    .filter((e) => TIMESTAMP_RE.test(e))
-    .sort()
-    .reverse();
+  // Only completed backups (those with a published archive.tar.gz) count toward
+  // keepLast and are eligible for eviction. An interrupted run without an
+  // archive must never be counted nor evict a good backup.
+  const candidates = entries.filter((e) => TIMESTAMP_RE.test(e));
+  const completed: string[] = [];
+  for (const e of candidates) {
+    try {
+      await stat(`${BACKUPS_DIR}/${e}/archive.tar.gz`);
+      completed.push(e);
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
+    }
+  }
+
+  const dirs = completed.sort().reverse();
 
   if (keepLast > 0 && dirs.length > keepLast) {
     const toDelete = dirs.slice(keepLast);

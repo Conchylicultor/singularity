@@ -11,7 +11,7 @@
   - Uses: `apps/debug/shell.DebugApp`, `auth.GrantAccessButton`, `config_v2.ConfigV2`, `config_v2/config-link.ConfigGearButton`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/css/clip.Clip`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
   - Exports: Values: `backupPane`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.BACKUPS_DIR`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.BACKUPS_DIR`, `infra/paths.isMain`
   - DB schema: `plugins/backup/server/internal/tables.ts`
   - Exports: Values: `_backupRuns`, `BackupSource`, `BackupTarget`
   - Register: `defineJob('backup.run')`
