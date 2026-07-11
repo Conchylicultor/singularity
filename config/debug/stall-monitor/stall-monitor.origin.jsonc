@@ -1,0 +1,5 @@
+// @hash 293a7e80a4ef
+{
+  // When off, detected event-loop stalls still capture a trace but file no report.
+  "enabled": true
+}

@@ -22,7 +22,8 @@ export { ReportKind } from "./internal/report-kinds";
 export type { ReportKindSpec, ReportKindVariant, ReportRow } from "./internal/report-kinds";
 
 export default {
-  description: "Records server/frontend crashes and files deduped tasks.",
+  description:
+    "Records server/frontend crashes as deduped reports; investigation tasks are filed on demand.",
   httpRoutes: {
     [submitReport.route]: handleReport,
     [investigateReport.route]: handleInvestigate,

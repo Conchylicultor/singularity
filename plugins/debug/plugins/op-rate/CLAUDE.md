@@ -7,7 +7,8 @@ serious wall-clock. This plugin closes both blind spots from **one** cheap
 scheduled job that diffs the runtime profiler each tick, filing everything into
 the existing reports engine (the same surface that captures crashes and
 queue-health), modeled byte-for-byte on `debug/queue-health` (durable signal →
-`ReportKind` → deduped task via a cheap per-worktree scheduled `defineJob`). It
+`ReportKind` → deduped report via a cheap per-worktree scheduled `defineJob`;
+investigation task filed on demand). It
 points at the **cause** (the hot / over-budget op) instead of only the **blast
 radius** (the collateral slow spans).
 
@@ -21,7 +22,7 @@ firing reports only when a per-kind threshold/budget trips:
 - **`op-rate`** (variant `warning`) — an op (`${kind}:${label}`) called more than
   its per-kind threshold within one monitor window. **One report per distinct hot
   op** (fingerprint `op-rate:<kind>:<label>`), so each over-called op gets its own
-  task pointing straight at the cause.
+  report pointing straight at the cause.
 - **`op-time`** (variant `warning`) — the aggregate-time (count×cost) twin. Two
   shapes discriminated by `label`:
   - **per-op** (`op-time:<kind>:<label>`) — one op consumed more than its per-kind
@@ -58,9 +59,9 @@ only the module-level baseline maps and report emission.
 ### Top-N cap
 
 A pathological burst across many ops is capped at the top **20** per-op trips per
-tick (ranked by delta desc) to bound task creation. The cap is **combined** across
+tick (ranked by delta desc) to bound report creation. The cap is **combined** across
 op-rate and op-time per-op trips — one ranking, one budget — so a storm on either
-axis can never storm task creation. The sort key is each trip's own delta (calls
+axis can never storm report creation. The sort key is each trip's own delta (calls
 for op-rate, ms for op-time); the units differ, so the ranking exists only to
 decide which trips to drop under the shared cap, not to compare severity across
 op types. Over-cap trips are not silently dropped — the dropped count is logged to

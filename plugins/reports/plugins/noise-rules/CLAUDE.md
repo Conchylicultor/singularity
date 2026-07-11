@@ -6,7 +6,7 @@ Some reports are structurally benign and high-frequency — the canonical exampl
 is the `ResizeObserver loop completed with undelivered notifications` browser
 warning. These are recorded and visible like any other report, but classified as
 "noise" so the notification they file is `muted` (it stays out of the bell's
-unread surface). The deduped task is still filed — noise classification governs
+unread surface). The deduped report is still recorded — noise classification governs
 notification loudness, not whether the report is tracked.
 
 This plugin contributes one `ReportNoiseRule` per known low-signal pattern via

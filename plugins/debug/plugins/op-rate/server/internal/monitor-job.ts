@@ -26,7 +26,7 @@ const WINDOW_MS = 5 * 60_000;
 const KINDS = SPAN_KINDS;
 
 // Cap on per-op reports filed per tick, so a pathological burst across many ops
-// can never storm task creation. Shared by op-rate AND op-time per-op trips in
+// can never storm report creation. Shared by op-rate AND op-time per-op trips in
 // ONE combined ranking (over-cap trips are logged, never silently dropped, per
 // repo policy). Per-kind rollup reports are separate (≤ one per kind, ≤ 7 total)
 // and not subject to this cap.
@@ -50,7 +50,7 @@ const opRateLog = Log.channel("op-rate");
 
 // One per-op trip queued for reporting this tick. Discriminated by `type`:
 // op-rate ranks on its call delta, op-time on its ms delta — different units,
-// but both land in ONE combined ranking whose only job is to bound task creation
+// but both land in ONE combined ranking whose only job is to bound report creation
 // (the `delta` sort key decides which trips to drop under the shared cap, not any
 // cross-op-comparable severity).
 type PerOpTrip =
@@ -144,7 +144,7 @@ export const opRateMonitorJob = defineJob({
     }
 
     // Cap the COMBINED per-op ranking (op-rate + op-time) at top-N per tick,
-    // ranked by delta desc, to bound task creation. Log (don't silently drop)
+    // ranked by delta desc, to bound report creation. Log (don't silently drop)
     // when more than N trip.
     perOp.sort((a, b) => b.delta - a.delta);
     const top = perOp.slice(0, TOP_N);

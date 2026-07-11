@@ -15,6 +15,7 @@ export const SERVER_REPORT_SOURCES = [
   "server-boot-budget-monitor",
   "server-session-monitor",
   "server-duress-shed",
+  "server-stall-monitor",
 ] as const;
 export const CLIENT_REPORT_SOURCES = [
   "browser-error",

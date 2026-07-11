@@ -13,11 +13,11 @@ import {
 const SLOW_OP_NOTIF_COOLDOWN_MS = 60_000;
 
 // The slow-op report kind. Dedups per distinct `${operationKind}:${operation}`,
-// so each slow operation gets its own task pointing straight at the offending op
+// so each slow operation gets its own report pointing straight at the offending op
 // — keeping its own count, caller history, and context — while distinct slow ops
-// get distinct tasks (a slow loader for resource X is a different bug than a slow
+// get distinct reports (a slow loader for resource X is a different bug than a slow
 // HTTP route Y). The live ranked breakdown across all ops still lives in the
-// slow_ops store / Debug → Slow Ops; each task drills into one of them.
+// slow_ops store / Debug → Slow Ops; each report drills into one of them.
 export const slowOpKind = ReportKind({
   kind: "slow-op",
   schema: SlowOpReportPayloadSchema,

@@ -1,5 +1,5 @@
 import { startSamplingProfiler, samplingProfilerStackTraces } from "bun:jsc";
-import { captureTrace } from "@plugins/debug/plugins/trace/plugins/engine/server";
+import { recordEventLoopStall } from "@plugins/debug/plugins/stall-monitor/server";
 import type {
   StallSection,
   StallLeaf,
@@ -21,10 +21,12 @@ import type {
 // block's samples; the first tick after the block reads histogram.max ≈ 40 s AND
 // drains ~40 s of samples — both describe the same stall.
 //
-// On a stall the aggregated stacks are handed to the trace engine as a `stall`
-// trigger (kind "stall", critical: true), NOT dumped to a dead-end JSONL. The
-// evidence then surfaces in Debug → Slow Events like every other slow signal, and
-// the `trace/plugins/stall` event class renders it as a histogram lane.
+// On a stall the aggregated stacks are handed to `debug/stall-monitor` via
+// `recordEventLoopStall`, NOT dumped to a dead-end JSONL. This sampler only
+// DETECTS + AGGREGATES (drain + threshold gate + aggregateTraces); stall-monitor
+// owns filing the trace AND the report. The trace surfaces in Debug → Slow Events
+// like every other slow signal (rendered by the `trace/plugins/stall` event class
+// as a histogram lane) and the report reaches the bell + Debug → Reports.
 //
 // Note: bun:jsc (1.3.x) exposes `startSamplingProfiler` and
 // `samplingProfilerStackTraces` but NO explicit stop. `stopStallProfiler()`
@@ -154,9 +156,10 @@ export function stopStallProfiler(): void {
 }
 
 // Always drain (bounds memory + aligns the window). If the window stalled past
-// the threshold, aggregate the drained samples and capture a `stall` trace; else
-// discard. `windowMs` is the actual wall-time since the previous drain (the tick
-// fires late after a block), so nSamples/window is the true sample rate.
+// the threshold, aggregate the drained samples and hand the section to
+// stall-monitor (which files the trace + report); else discard. `windowMs` is the
+// actual wall-time since the previous drain (the tick fires late after a block),
+// so nSamples/window is the true sample rate.
 export function drainAndMaybeDump(eventLoopMaxMs: number, windowMs: number): void {
   if (!armed) return;
   const traces = samplingProfilerStackTraces().traces ?? [];
@@ -170,16 +173,8 @@ export function drainAndMaybeDump(eventLoopMaxMs: number, windowMs: number): voi
 
   const section: StallSection = { nSamples: traces.length, sampleRateHz, topLeaves, topStacks };
 
-  // A frozen backend is the most severe slow event: mark it `critical` so a
-  // post-freeze burst of slow spans can never starve it out of the per-minute
-  // trace budget. The dominant hot frame becomes the label (→ the Slow Events
-  // list row + the trace's `stall` lane).
-  captureTrace({
-    kind: "stall",
-    label: topLeaves[0]?.key ?? "event-loop stall",
-    durationMs: eventLoopMaxMs,
-    thresholdMs: STALL_THRESHOLD_MS,
-    critical: true,
-    detail: section,
-  });
+  // Hand the aggregated evidence to the alert plugin, which owns both the trace
+  // (critical, stable-labelled) and the deduped `event-loop-stall` report. This
+  // sampler's job ends at detect + aggregate.
+  recordEventLoopStall(section, eventLoopMaxMs, STALL_THRESHOLD_MS);
 }

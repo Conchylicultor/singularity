@@ -10,11 +10,11 @@ silently degrades every boot. This monitor is the runtime alarm from the boot-ti
 plan (`research/2026-07-08-global-bounding-boot-time-work.md`, "Enforcement /
 visibility"): a cheap per-worktree scheduled `defineJob`
 (`debug.boot-budget-monitor`) reads the post-boot profile once each tick and files
-a deduped `boot-budget` report — which files an investigation task through the
-existing reports→tasks sink — for every boot hook or warmup span over its
+a deduped `boot-budget` report — from which an investigation task is filed on
+demand (Debug → Reports) — for every boot hook or warmup span over its
 per-phase wall-time budget. Modeled byte-for-byte on `debug/read-set-shrink` and
-`debug/op-rate` (durable signal → `ReportKind` → deduped task via a per-worktree
-scheduled job).
+`debug/op-rate` (durable signal → `ReportKind` → deduped report via a per-worktree
+scheduled job; investigation task on demand).
 
 ## What it monitors
 

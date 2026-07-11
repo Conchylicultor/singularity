@@ -9,8 +9,8 @@ import { OpRatePayloadSchema, type OpRatePayload } from "../../core";
 const OP_RATE_NOTIF_COOLDOWN_MS = 600_000;
 
 // The `op-rate` report kind. Dedups per distinct `${kind}:${label}`, so each hot
-// op gets its own task pointing directly at the cause (the over-called op),
-// while distinct hot ops get distinct tasks. Variant `warning`: a call-rate
+// op gets its own report pointing directly at the cause (the over-called op),
+// while distinct hot ops get distinct reports. Variant `warning`: a call-rate
 // spike is a degradation signal (it points at the cause of load), not a hard
 // failure.
 export const opRateKind = ReportKind({

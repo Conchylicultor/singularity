@@ -14,7 +14,7 @@ const SLOT_HOG_NOTIF_COOLDOWN_MS = 600_000;
 
 // The `queue-slot-hog` report kind. Dedups per distinct `jobName` (fingerprint
 // `queue-slot-hog:<jobName>`), so one long-running job collapses onto a single
-// task while distinct hogs get distinct tasks. Variant `warning`: a job holding
+// report while distinct hogs get distinct reports. Variant `warning`: a job holding
 // a shared worker slot for too long starves the queue — the exact case the
 // backlog `stalled` signal (which only trips at 0 locked) cannot see.
 export const slotHogKind = ReportKind({

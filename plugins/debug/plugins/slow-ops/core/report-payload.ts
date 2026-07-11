@@ -1,11 +1,11 @@
 import { z } from "zod";
 
 // The jsonb payload for the "slow-op" report. The report fingerprint keys on
-// (operationKind, operation), so each distinct slow op owns its own task; the
+// (operationKind, operation), so each distinct slow op owns its own report; the
 // payload carries that op's identity plus its latest tripping duration —
 // fingerprint, task title/description, and message all read from it. The full
 // ranked breakdown (totals, max, caller attribution) lives in the slow_ops store
-// / Debug → Slow Ops, which each task points into.
+// / Debug → Slow Ops, which each report points into.
 export const SlowOpReportPayloadSchema = z.object({
   operationKind: z.string(),
   operation: z.string(),

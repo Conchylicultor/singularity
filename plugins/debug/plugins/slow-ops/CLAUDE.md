@@ -43,9 +43,9 @@ and is still recorded — this is *attribution*, not a filter.
 
 Background job runs flow through the same pipeline as HTTP/loader ops. The jobs
 dispatcher records each `job.run()` as a `job` span (label = the job name), so a
-run slower than its threshold files **one deduped task per job name**
+run slower than its threshold files **one deduped report per job name**
 (fingerprint `slow-op:job:<jobName>`) with caller attribution, exactly like a
-slow route.
+slow route (an investigation task is filed on demand from Debug → Reports).
 
 The threshold is the `slow-op` config `jobMs` (default **3000 ms**,
 live-editable in Settings → Config). A job expected to run long — a backfill or
@@ -60,7 +60,7 @@ the bar).
 
 ## Plugin reference
 
-- Description: Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one task per distinct slow operation.
+- Description: Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one deduped report per distinct slow operation (investigation task filed on demand).
 - Web:
   - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `SlowOpCollector`, `Reports.KindView` → `SlowOpKindView`
   - Uses: `apps-core/tabs.navigate`, `config_v2.ConfigV2`, `config_v2.useConfig`, `infra/endpoints.fetchEndpoint`, `primitives/css/badge.Badge`, `primitives/css/inline.Inline`, `primitives/css/link-chip.LinkChip`, `primitives/latest-ref.useLatestRef`, `primitives/live-state.registerSlowResourceReporter`, `reports.Reports`

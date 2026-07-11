@@ -1768,6 +1768,10 @@
       "name": "@singularity/plugin-debug-slow-ops-pane",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/stall-monitor": {
+      "name": "@singularity/plugin-debug-stall-monitor",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/timeline": {
       "name": "@singularity/plugin-debug-timeline",
       "version": "0.0.1",
@@ -5723,6 +5727,8 @@
     "@singularity/plugin-debug-slow-ops-cluster": ["@singularity/plugin-debug-slow-ops-cluster@workspace:plugins/debug/plugins/slow-ops/plugins/cluster"],
 
     "@singularity/plugin-debug-slow-ops-pane": ["@singularity/plugin-debug-slow-ops-pane@workspace:plugins/debug/plugins/slow-ops/plugins/pane"],
+
+    "@singularity/plugin-debug-stall-monitor": ["@singularity/plugin-debug-stall-monitor@workspace:plugins/debug/plugins/stall-monitor"],
 
     "@singularity/plugin-debug-timeline": ["@singularity/plugin-debug-timeline@workspace:plugins/debug/plugins/timeline"],
 

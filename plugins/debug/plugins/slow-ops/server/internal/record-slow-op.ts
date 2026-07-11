@@ -289,7 +289,7 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
   );
 
   // Fire-and-forget the per-operation report. The fingerprint keys on
-  // (operationKind, operation), so each distinct slow op gets its own task; the
+  // (operationKind, operation), so each distinct slow op gets its own report; the
   // message reflects this op's latest tripping duration.
   const durationRounded = Math.round(durationMs);
   void recordReport({

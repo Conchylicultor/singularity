@@ -12,9 +12,9 @@ import {
 const DEAD_JOB_NOTIF_COOLDOWN_MS = 600_000;
 
 // The `queue-dead-job` report kind. Dedups per distinct `jobName`, so a
-// retry-storm of one broken job collapses onto a single task while distinct
+// retry-storm of one broken job collapses onto a single report while distinct
 // broken jobs (e.g. a missing-relation job vs an unknown-job-name job) get
-// distinct tasks. Variant `error`: terminally-failed jobs are silently clogging
+// distinct reports. Variant `error`: terminally-failed jobs are silently clogging
 // the queue and never running.
 export const deadJobKind = ReportKind({
   kind: "queue-dead-job",

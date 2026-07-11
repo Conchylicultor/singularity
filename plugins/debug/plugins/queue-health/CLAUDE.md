@@ -4,7 +4,7 @@ The graphile-worker job queue degrades **silently** — nothing in the UI signal
 when it breaks. This plugin makes its saturation/failure modes **loud** by filing
 them into the existing reports engine (the same surface that captures crashes),
 modeled byte-for-byte on `debug/slow-ops` (durable signal → `ReportKind` →
-deduped task), and surfaces an attributed snapshot on demand via a summary
+deduped report; investigation task on demand), and surfaces an attributed snapshot on demand via a summary
 endpoint + the `get_queue_health` MCP tool. It reads the queue **read-only**
 through the jobs plugin's public introspection API (`queryDeadJobStats` /
 `queryQueueBacklog` / `queryBacklogByJobName` / `queryRunningJobs`), which owns
@@ -21,8 +21,8 @@ aggregate queries per tick and files reports only when a threshold trips:
   (`attempts >= max_attempts AND locked_at IS NULL`, the same predicate
   `reconcileDeadJobs` uses), grouped by `payload->>'jobName'`. **One report per
   distinct jobName** (fingerprint `queue-dead-job:<jobName>`), so a retry-storm of
-  one broken job collapses to a single task while distinct broken jobs get
-  distinct tasks.
+  one broken job collapses to a single report while distinct broken jobs get
+  distinct reports (investigation task on demand).
 - **`queue-backlog`** (variant `warning`, escalates to STALLED) — depth/stall.
   Trips when `readyCount > backlogDepthThreshold` **or** the oldest ready job is
   overdue past `oldestOverdueMinutes`. `stalled = lockedCount === 0 && overdue`

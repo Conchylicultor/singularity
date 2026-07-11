@@ -2,10 +2,12 @@
 
 Built-in trace event class for **event-loop stalls** — a frozen backend, the most
 severe slow event. When the health-monitor sampler observes a tick whose
-`eventLoopMaxMs > 3 s`, it drains the background-thread JSC sampling profiler,
-aggregates the stacks into a `topLeaves`/`topStacks` histogram, and fires
-`captureTrace({ kind: "stall", critical: true, detail: <StallSection> })`. This
-class surfaces that section as a lane on the resulting trace.
+`eventLoopMaxMs > 3 s`, it drains the background-thread JSC sampling profiler and
+aggregates the stacks into a `topLeaves`/`topStacks` histogram, then hands the
+section to `debug/stall-monitor`, which fires
+`captureTrace({ kind: "stall", critical: true, detail: <StallSection> })` (and
+files the alert report). This class surfaces that section as a lane on the
+resulting trace.
 
 **Trigger-owned, unlike spans/gates.** The other built-in classes read ambient
 in-memory state at the trip instant; the stall stacks are instead *pre-aggregated
@@ -34,6 +36,8 @@ lane that parses it.
   - Uses: `debug/profiling.formatDuration`, `debug/trace/engine.Trace`, `primitives/css/badge.Badge`, `primitives/css/fill.Fill`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/text.Text`
 - Server:
   - Uses: `debug/trace/engine.defineTraceEventClass`
+- Cross-plugin:
+  - Imported by: `debug/stall-monitor`
 - Core:
   - Exports: Types: `StallLeaf`, `StallSection`, `StallStack`; Values: `StallLeafSchema`, `StallSectionSchema`, `StallStackSchema`
 
