@@ -9,6 +9,7 @@ import { _blocks } from "./tables";
 import { loadPageBlocks, insertForest } from "./forest";
 import { pageData } from "../../core/schemas";
 import { notifyBlockChange } from "./notify";
+import { parseBlockData } from "./parse-block-data";
 
 /**
  * A single stored content block, flattened to a portable row. Carries the
@@ -133,7 +134,10 @@ export async function replacePageContent(
     await tx.delete(_blocks).where(eq(_blocks.pageId, pageId));
     await tx
       .update(_blocks)
-      .set({ data: snapshot.page, updatedAt: new Date() })
+      .set({
+        data: parseBlockData(PAGE_BLOCK_TYPE, snapshot.page),
+        updatedAt: new Date(),
+      })
       .where(eq(_blocks.id, pageId));
     if (forest.length > 0) {
       const rootRanks = Rank.nBetween(null, null, forest.length);

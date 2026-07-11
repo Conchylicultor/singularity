@@ -15,11 +15,13 @@ list-specific nesting logic.
 
 ## Plugin reference
 
-- Description: Bulleted-list block type for the page editor.
+- Description: Bulleted-list block type for the page editor. Bulleted-list block type: registers its `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "bulleted-list" → `BlockTextRenderer`
   - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `bulletedListBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
   - Exports: Values: `bulletedListBlock`

@@ -4,11 +4,13 @@
 
 ## Plugin reference
 
-- Description: Video block type: upload a video file and play it inline.
+- Description: Video block type: upload a video file and play it inline. Video block type: registers its `data` schema (attachment) at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "video" → `VideoBlock`
   - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/text-editor/paste-images.attachmentUrl`
   - Exports: Values: `VIDEO_TYPE`, `videoBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`
   - Exports: Values: `VIDEO_TYPE`, `videoBlock`

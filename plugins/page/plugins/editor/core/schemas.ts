@@ -1,6 +1,18 @@
 import { z } from "zod";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
+import { defineBlock } from "./define-block";
+
+// A block `data` payload that has been validated against its block type's schema.
+// Type-only brand (no runtime shape) — mintable ONLY by `parseBlockData()` on the
+// server, its sole minting site. The `page_blocks.data` column is `$type<BlockData>`,
+// so a write that did not pass through `parseBlockData` fails to compile. Readers are
+// unaffected: `BlockData` is assignable to the `unknown` that `pageData()` /
+// `BlockSchema.data` accept.
+declare const blockDataBrand: unique symbol;
+export type BlockData = Record<string, unknown> & {
+  readonly [blockDataBrand]: never;
+};
 
 // Recursive validator for the icon-picker SvgNode storage format. The `data`
 // jsonb column stores the tree natively (no JSON-string wrapping), so a page
@@ -68,3 +80,15 @@ export type PageData = z.infer<typeof PageDataSchema>;
 export function pageData(block: Pick<Block, "data">): PageData {
   return PageDataSchema.parse(block.data);
 }
+
+// The block handle for the reserved `type="page"` node. Owned by `editor/core` —
+// NOT by the `sub-page` renderer plugin — because `handle-turn-into-page` and
+// `replacePageContent` write page rows directly, so page creation must not depend
+// on the sub-page plugin being enabled. `editor/server` contributes THIS handle to
+// the server `Editor.BlockData` registry; the `sub-page` web renderer reuses it
+// directly rather than declaring a second handle for the same type — a `type` is
+// defined, and registered, exactly once.
+export const pageBlockHandle = defineBlock({
+  type: PAGE_BLOCK_TYPE,
+  schema: PageDataSchema,
+});

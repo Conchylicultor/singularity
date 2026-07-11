@@ -8,6 +8,7 @@ import { loadPageBlocks } from "./forest";
 import { notifyStructuralChange } from "./notify-structural-change";
 import { BlockLifecycle } from "./document-hooks";
 import { parkRanks, pairChanged } from "./rank-park";
+import { parseBlockData } from "./parse-block-data";
 
 /**
  * Generic minimal-change patch handler (the undo/redo inverse path). Upserts the
@@ -110,7 +111,7 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
           pageId: b.pageId,
           parentId: b.parentId,
           type: b.type,
-          data: b.data ?? {},
+          data: parseBlockData(b.type, b.data),
           rank: b.rank.toJSON(),
           expanded: b.expanded,
           createdAt: now,
@@ -126,7 +127,7 @@ export const handlePatchBlocks = implement(patchBlocks, async ({ params, body })
           pageId: b.pageId,
           parentId: b.parentId,
           type: b.type,
-          data: b.data ?? {},
+          data: parseBlockData(b.type, b.data),
           rank: b.rank.toJSON(),
           expanded: b.expanded,
           updatedAt: new Date(),

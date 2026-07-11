@@ -4,11 +4,13 @@
 
 ## Plugin reference
 
-- Description: Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut.
+- Description: Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut. Divider block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like injected text.
 - Web:
   - Contributes: `Editor.Block` "divider" → `DividerBlock`
   - Uses: `page/editor.BLOCK_INSET`, `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.useBlockEditor`, `primitives/css/spacing.Inset`, `primitives/css/ui-kit.cn`
   - Exports: Values: `DIVIDER_TYPE`, `dividerBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`
   - Exports: Values: `DIVIDER_TYPE`, `dividerBlock`

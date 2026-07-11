@@ -18,9 +18,11 @@ import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 // composition closure (no runtime dynamic specifier to defeat `bun --compile`).
 import { serverEntries } from "@composition-server-registry";
 import { boostInteractiveQos } from "@plugins/packages/plugins/spawn-priority/server";
-import { isMain } from "@plugins/infra/plugins/paths/core";
+import { isMain, PLUGINS_DIR } from "@plugins/infra/plugins/paths/core";
+import { existsSync } from "node:fs";
+import { join } from "node:path";
 import { drainWarmups } from "@plugins/infra/plugins/warmup/server";
-import { topoSortPlugins } from "./topo";
+import { computeLoadWaves, topoSortPlugins } from "./topo";
 
 // ── QoS boost (main backend only) ───────────────────────────────
 // Raise the event-loop thread to user-interactive QoS BEFORE any boot work, so
@@ -44,31 +46,90 @@ if (isMain() && boostInteractiveQos()) {
 // authoritative per-phase RSS numbers.
 recordMemoryCheckpoint("boot-start");
 
-// ── Load all server plugins ────────────────────────────────────
-const loadResults = await Promise.allSettled(
-  serverEntries.map((e) => e.loader() as Promise<{ default: ServerPluginDefinition }>),
-);
+// ── Load all server plugins (topological waves) ────────────────
+// Import in dependency-ordered waves over `dependsOn` rather than one flat
+// `Promise.allSettled` over every entry. `dependsOn` is the codegen-derived
+// cross-plugin import graph already carried by each entry (and already used to
+// order the register/onReady phases below). Flat concurrent import races a
+// barrel against a module that imports it: the dependent can evaluate while the
+// barrel is suspended mid-re-export and observe the barrel's uninitialized
+// `const` exports as a TDZ `ReferenceError` under Bun. Loading wave-by-wave
+// (concurrent WITHIN a wave, serialized only across edges) guarantees a
+// plugin's imports are fully evaluated before it is imported. See
+// `computeLoadWaves` for the invariant and cycle handling.
+const waves = computeLoadWaves(serverEntries);
 const byPath = new Map<string, LoadedServerPlugin>();
 const seenIds = new Set<string>();
-for (let i = 0; i < loadResults.length; i++) {
-  const r = loadResults[i]!;
-  const e = serverEntries[i]!;
-  if (r.status === "rejected") {
-    console.error(`[plugin.${e.pluginPath}] load failed`, r.reason);
-    continue;
+// Collect ALL load failures across every wave and throw once at the end — the
+// operator needs the full list, not just the first plugin to blow up.
+const loadFailures: Array<{ pluginPath: string; error: string }> = [];
+// A plugin exposes a public `core` barrel iff `plugins/<path>/core/index.ts`
+// exists (`PLUGINS_DIR` is derived from this file's own location, not cwd).
+const hasCoreBarrel = (pluginPath: string): boolean =>
+  existsSync(join(PLUGINS_DIR, pluginPath, "core", "index.ts"));
+for (const wave of waves) {
+  // ── Warm this wave's core barrels BEFORE loading its server barrels ──
+  // Waves order plugins so a plugin's server barrel loads after its
+  // dependencies' — but that is only HALF the invariant. A plugin's `server`
+  // barrel imports its own `core` *submodules* directly (e.g. `../core/schemas`),
+  // never the `core` *barrel index* — so loading a dependency's server does NOT
+  // evaluate that dependency's core barrel. Dependents in a later wave that
+  // import `@plugins/<dep>/core` then race the barrel's FIRST evaluation across
+  // sibling plugins in the SAME wave, re-exposing the TDZ. Evaluating each core
+  // barrel here, in its own (earlier) wave, closes that gap: it is fully
+  // evaluated before any later-wave dependent reads it. Warming a wave's cores
+  // concurrently is safe — every core they import transitively belongs to an
+  // EARLIER wave and is already evaluated, so no cold barrel is first-imported by
+  // two roots at once. Rejections here are not the reporting site: a genuinely
+  // broken core barrel re-rejects when its own (or a dependent's) server barrel
+  // imports it below, and is recorded there — so nothing is swallowed.
+  // (In a `bun --compile` release the whole graph is one bundle, so the race
+  // cannot occur and `PLUGINS_DIR` may not exist on disk; core-warming simply
+  // no-ops via `hasCoreBarrel`.)
+  const coreWave = wave.filter((e) => hasCoreBarrel(e.pluginPath));
+  await Promise.allSettled(coreWave.map((e) => import(`@plugins/${e.pluginPath}/core`)));
+
+  const results = await Promise.allSettled(
+    wave.map((e) => e.loader() as Promise<{ default: ServerPluginDefinition }>),
+  );
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i]!;
+    const e = wave[i]!;
+    if (r.status === "rejected") {
+      console.error(`[plugin.${e.pluginPath}] load failed`, r.reason);
+      // First line of the error (`Name: message`) for the aggregated summary;
+      // the full reason/stack is on the console.error line above.
+      loadFailures.push({
+        pluginPath: e.pluginPath,
+        error: String(r.reason).split("\n")[0]!,
+      });
+      continue;
+    }
+    // `id` is derived from the unique hierarchy path, never authored. The guard
+    // is structurally unreachable but fails loud if codegen ever produces a
+    // collision, rather than letting topo sort silently drop a plugin.
+    if (seenIds.has(e.id)) {
+      throw new Error(
+        `[plugin] duplicate derived plugin id "${e.id}" (${e.pluginPath})`,
+      );
+    }
+    seenIds.add(e.id);
+    const plugin = r.value.default as LoadedServerPlugin;
+    plugin.id = asPluginId(e.id);
+    byPath.set(e.pluginPath, plugin);
   }
-  // `id` is derived from the unique hierarchy path, never authored. The guard
-  // is structurally unreachable but fails loud if codegen ever produces a
-  // collision, rather than letting topo sort silently drop a plugin.
-  if (seenIds.has(e.id)) {
-    throw new Error(
-      `[plugin] duplicate derived plugin id "${e.id}" (${e.pluginPath})`,
-    );
-  }
-  seenIds.add(e.id);
-  const plugin = r.value.default as LoadedServerPlugin;
-  plugin.id = asPluginId(e.id);
-  byPath.set(e.pluginPath, plugin);
+}
+// A backend that cannot load its plugins MUST NOT report ready. This is the same
+// argument the file makes for `onReadyBlocking` barrier fatality below (a
+// half-loaded backend that passes its health probe silently serves a
+// degraded/half-functional app) and, like that barrier, is deliberately NOT
+// gated on `loadBearing`: a module that throws at import time is broken, full
+// stop. Aggregate every failure into one error so the whole list is visible.
+if (loadFailures.length > 0) {
+  throw new Error(
+    `[plugin] ${loadFailures.length} plugin(s) failed to load:\n` +
+      loadFailures.map((f) => `  - ${f.pluginPath}: ${f.error}`).join("\n"),
+  );
 }
 for (const e of serverEntries) {
   const plugin = byPath.get(e.pluginPath);

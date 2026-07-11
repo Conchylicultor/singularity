@@ -4,11 +4,13 @@
 
 ## Plugin reference
 
-- Description: File block type: attach any file as a downloadable card; served via attachments.
+- Description: File block type: attach any file as a downloadable card; served via attachments. File block type: registers its `data` schema (attachment) at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "file" → `FileBlock`
   - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/text-editor/paste-images.attachmentUrl`
   - Exports: Values: `FILE_TYPE`, `fileBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`
   - Exports: Values: `FILE_TYPE`, `fileBlock`

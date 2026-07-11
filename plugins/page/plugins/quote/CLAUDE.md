@@ -20,11 +20,13 @@ Enter splits into a sibling quote — no quote-specific nesting logic.
 
 ## Plugin reference
 
-- Description: Quote / blockquote block type for the page editor.
+- Description: Quote / blockquote block type for the page editor. Quote (blockquote) block type: registers its `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "quote" → `QuoteBlock`
   - Uses: `page/editor.BlockRendererProps`, `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `quoteBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
   - Exports: Values: `quoteBlock`

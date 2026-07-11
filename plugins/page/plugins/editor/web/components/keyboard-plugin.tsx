@@ -95,7 +95,15 @@ export function KeyboardPlugin({
           const target = contributionsRef.current.find(
             (c) => c.block.type === intent.to,
           )?.block;
-          api.convertTo(intent.to, { ...(target?.empty?.() ?? {}), text: runs });
+          // A convertTo intent only ever targets a text-bearing reset/break-out
+          // type (resetToOnBackspaceAtStart / breakOutOnEmptyEnter — see
+          // keystroke-intent), so carry the runs unless a RESOLVED handle
+          // declares itself void. An unresolved target means intent.to is
+          // unregistered — trust the intent and preserve the text (the write
+          // boundary rejects the unknown type loudly either way).
+          const base = target?.empty?.() ?? {};
+          const carryText = target ? target.acceptsText : true;
+          api.convertTo(intent.to, carryText ? { ...base, text: runs } : base);
           return true;
         }
         case "merge": {

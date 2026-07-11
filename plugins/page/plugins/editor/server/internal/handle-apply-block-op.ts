@@ -12,6 +12,7 @@ import { BlockLifecycle } from "./document-hooks";
 import { recomputePageIdSubtree } from "./page-id";
 import { blocksChanged } from "./tables-events";
 import { collectBlockSubtrees } from "./collect-subtree";
+import { parseBlockData } from "./parse-block-data";
 
 /**
  * Single authoritative structural edit. Load the page's blocks, run the pure
@@ -75,7 +76,7 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
           pageId: node.pageId,
           parentId: node.parentId,
           type: node.type,
-          data: node.data ?? {},
+          data: parseBlockData(node.type, node.data),
           rank: node.rank,
           expanded: node.expanded,
           createdAt: now,
@@ -90,7 +91,7 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
         .set({
           parentId: node.parentId,
           type: node.type,
-          data: node.data ?? {},
+          data: parseBlockData(node.type, node.data),
           rank: node.rank,
           expanded: node.expanded,
           updatedAt: new Date(),

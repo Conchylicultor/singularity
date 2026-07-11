@@ -19,11 +19,13 @@ from the dispatch slot.
 
 ## Plugin reference
 
-- Description: Heading 2 block type for the page editor.
+- Description: Heading 2 block type for the page editor. Heading 2 block type: registers its `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "heading-2" → `BlockTextRenderer`
   - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `heading2Block`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
   - Exports: Values: `heading2Block`

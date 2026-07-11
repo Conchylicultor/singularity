@@ -4,11 +4,13 @@
 
 ## Plugin reference
 
-- Description: Callout block type: a tinted highlight box with a changeable leading icon and semantic color, for notes/tips/warnings.
+- Description: Callout block type: a tinted highlight box with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "callout" → `CalloutBlock`
   - Uses: `page/editor.BLOCK_INSET`, `page/editor.BlockRendererProps`, `page/editor.BlockTextEditor`, `page/editor.Editor`, `page/editor.PageIcon`, `primitives/css/center.Center`, `primitives/css/row.Row`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.SectionLabel`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/icon-picker.IconPicker`
   - Exports: Values: `calloutBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.SvgNodeSchema`, `page/editor.textBlockSchema`
   - Exports: Types: `CalloutColor`; Values: `CALLOUT_COLORS`, `calloutBlock`, `calloutDataSchema`

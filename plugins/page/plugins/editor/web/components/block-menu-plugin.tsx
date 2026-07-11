@@ -130,7 +130,10 @@ export function BlockMenuPlugin({
         node.select(stripIdx, stripIdx);
       });
     }
-    editor.convertTo(handle.type, { ...(handle.empty?.() ?? {}), text: remaining });
+    // Only carry `text` into a text-bearing target; a void block type (audio,
+    // divider, …) rejects an unknown `text` key at the write boundary.
+    const base = handle.empty?.() ?? {};
+    editor.convertTo(handle.type, handle.acceptsText ? { ...base, text: remaining } : base);
     if (useForced) clearBlockMenu(blockId);
   }
 

@@ -17,9 +17,9 @@ export const dividerBlock = defineBlock({
   // Typing --- at the start of a text block converts it into a divider. The
   // generic MarkdownShortcutPlugin reads this off the slot — no editor changes.
   // Longest-prefix-wins, so "---" beats any shorter marker; it fires the moment
-  // the third "-" appears. The plugin appends `text: remaining` on convert, but
-  // the schema has no `text` field so it is harmlessly dropped (remaining is ""
-  // anyway, since --- is typed into an otherwise-empty block).
+  // the third "-" appears. The convert path gates the `text` carry on the
+  // target's `acceptsText` (derived from this schema having no `text` key), so
+  // no `text` key is written — the write boundary would reject it as unknown.
   markdownPrefixes: ["---"],
   // A 1px rule inside `Inset y="sm"`: seat the rail on the rule itself, not the
   // phantom body line the default would assume (which sits well below it).

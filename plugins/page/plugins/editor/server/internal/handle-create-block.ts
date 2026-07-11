@@ -7,6 +7,7 @@ import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { computePageId } from "./page-id";
 import { notifyBlockChange } from "./notify";
+import { parseBlockData } from "./parse-block-data";
 
 export const handleCreateBlock = implement(createBlock, async ({ body }) => {
   const id = `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -42,7 +43,7 @@ export const handleCreateBlock = implement(createBlock, async ({ body }) => {
     pageId,
     parentId,
     type: body.type,
-    data: body.data ?? {},
+    data: parseBlockData(body.type, body.data),
     rank: rank.toJSON(),
   });
   if (parentId) {

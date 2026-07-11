@@ -9,6 +9,7 @@ import {
   unique,
 } from "drizzle-orm/pg-core";
 import { rankText } from "@plugins/primitives/plugins/rank/core";
+import type { BlockData } from "../../core";
 
 // One uniform tree of blocks. A "page" is just a block of `type="page"` whose
 // payload (`{ title, icon }`) lives in `data` like every other block type —
@@ -30,7 +31,11 @@ export const _blocks = pgTable(
       onDelete: "cascade",
     }),
     type: text("type").notNull(),
-    data: jsonb("data").notNull().default({}),
+    // Branded so every write must come from `parseBlockData()` (the sole `BlockData`
+    // minting site) — an unvalidated `data` is a compile error, not a convention.
+    // `$type<>` is type-only: it produces NO migration and no DDL change, and reads
+    // are unaffected (`BlockData` is assignable to the `unknown` readers accept).
+    data: jsonb("data").notNull().default({} as BlockData).$type<BlockData>(),
     rank: rankText("rank").notNull(),
     expanded: boolean("expanded").notNull().default(true),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),

@@ -4,11 +4,13 @@
 
 ## Plugin reference
 
-- Description: Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render.
+- Description: Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render. Block-level equation type: registers its `data` schema (LaTeX source) at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "equation" → `EquationBlock`
   - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.useBlockEditor`, `page/math/render.KatexMath`, `primitives/css/center.Center`, `primitives/css/clip.Clip`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/editable-field.useEditableField`
   - Exports: Values: `EQUATION_TYPE`, `equationBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`
   - Exports: Values: `EQUATION_TYPE`, `equationBlock`

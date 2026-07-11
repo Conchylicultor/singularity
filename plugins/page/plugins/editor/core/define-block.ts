@@ -1,5 +1,5 @@
 import type { ComponentType } from "react";
-import type { ZodTypeAny, z } from "zod";
+import type { AnyZodObject, z } from "zod";
 
 /**
  * The semantic typography roles an editable-text block can render at. Mirrors the
@@ -17,8 +17,16 @@ export type BlockTextVariant =
 
 export interface BlockHandle<T> {
   type: string;
-  schema: ZodTypeAny;
+  schema: AnyZodObject;
   parse(data: unknown): T;
+  /**
+   * Whether this block type carries editable text — DERIVED once from the schema
+   * (`"text" in schema.shape`), never inferred from a type name. Consumers use it
+   * to decide whether to carry `text` through a type conversion: injecting `text`
+   * into a void block type (audio, divider, …) whose schema never declared it would
+   * write a key the write boundary now rejects with a 400.
+   */
+  acceptsText: boolean;
   /**
    * Optional insert-menu label (e.g. "Text", "Link to page"). A block type
    * without a `label` is not offered in the editor's "add block" menu.
@@ -129,7 +137,7 @@ export interface BlockHandle<T> {
   splitChildWhenExpanded?: { childType: string };
 }
 
-export function defineBlock<S extends ZodTypeAny>(opts: {
+export function defineBlock<S extends AnyZodObject>(opts: {
   type: string;
   schema: S;
   label?: string;
@@ -153,6 +161,8 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
   return {
     type: opts.type,
     schema: opts.schema,
+    // Computed once at definition: text-bearing-ness is a fact of the schema.
+    acceptsText: "text" in opts.schema.shape,
     parse: (data) => opts.schema.parse(data),
     label: opts.label,
     defaultText: opts.defaultText,

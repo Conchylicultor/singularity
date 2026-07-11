@@ -7,17 +7,17 @@
 - Description: Block-based page editor.
 - Sub-plugins:
   - **`attachment-block`** — Shared web infra for attachment-owning page blocks: the reusable <AttachmentUpload> empty-state (click/drop/paste) funnel. Owns the single block↔attachment link (page_blocks_attachments) and one generic reconcile bound to blocksChanged; FK cascade reclaims on delete.
-  - **`audio`** — Audio block type: upload an audio file and play it inline.
-  - **`bookmark`** — Bookmark block type: paste a link into an empty block to scrape OG metadata server-side and render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block: fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments.
-  - **`bulleted-list`** — Bulleted-list block type for the page editor.
-  - **`callout`** — Callout block type: a tinted highlight box with a changeable leading icon and semantic color, for notes/tips/warnings.
-  - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button.
+  - **`audio`** — Audio block type: upload an audio file and play it inline. Audio block type: registers its `data` schema (attachment) at the server write boundary.
+  - **`bookmark`** — Bookmark block type: paste a link into an empty block to scrape OG metadata server-side and render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block: fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments. Also registers the bookmark `data` schema at the server write boundary.
+  - **`bulleted-list`** — Bulleted-list block type for the page editor. Bulleted-list block type: registers its `data` schema at the server write boundary.
+  - **`callout`** — Callout block type: a tinted highlight box with a changeable leading icon and semantic color, for notes/tips/warnings. Callout block type: registers its `data` schema (icon + semantic color) at the server write boundary.
+  - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button. Code block type: registers its `data` schema (code + language) at the server write boundary.
   - **`cover`** — Links a page's cover image: registers the cover attachment-id collector with the shared block↔attachment reconcile so the cover isn't orphan-swept.
-  - **`divider`** — Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut.
+  - **`divider`** — Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut. Divider block type: registers its (empty) `data` schema at the server write boundary, rejecting stray keys like injected text.
   - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
   - **`editor-collab`** — Per-block content-CRDT server (content-agnostic): the page_block_docs state store, the per-block keyed live resource, the first-writer-wins doc-init seed, and the doc-update Yjs merge endpoint.
-  - **`embed`** — Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe.
-  - **`file`** — File block type: attach any file as a downloadable card; served via attachments.
+  - **`embed`** — Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe. Embed block type: registers its `data` schema (external URL) at the server write boundary.
+  - **`file`** — File block type: attach any file as a downloadable card; served via attachments. File block type: registers its `data` schema (attachment) at the server write boundary.
   - **`formatting`** — Inline rich-text formatting marks for the page editor's selection toolbar.
     - Plugins:
       - **`bold`** — Bold mark button for the page editor's selection toolbar.
@@ -29,28 +29,33 @@
       - **`underline`** — Underline mark button for the page editor's selection toolbar.
   - **`heading`** — Heading block types (H1/H2/H3) for the page editor.
     - Plugins:
-      - **`heading-1`** — Heading 1 block type for the page editor.
-      - **`heading-2`** — Heading 2 block type for the page editor.
-      - **`heading-3`** — Heading 3 block type for the page editor.
-  - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments.
+      - **`heading-1`** — Heading 1 block type for the page editor. Heading 1 block type: registers its `data` schema at the server write boundary.
+      - **`heading-2`** — Heading 2 block type for the page editor. Heading 2 block type: registers its `data` schema at the server write boundary.
+      - **`heading-3`** — Heading 3 block type for the page editor. Heading 3 block type: registers its `data` schema at the server write boundary.
+  - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Image block type: registers its `data` schema (attachment + width) at the server write boundary.
   - **`inline-date`** — Inline @ date mentions: type @ in any text block to drop a date chip or schedule a reminder; stored as a [[date:<iso>]] / [[reminder:<id>:<iso>]] token. Schedules and fires reminder notifications for inline `[[reminder:<id>:<iso>]]` tokens; reconciled from block text on every page.blocksChanged.
   - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.
   - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
   - **`math`** — Umbrella for KaTeX math in the page editor: block-level equations, inline math, and the shared renderer.
     - Plugins:
+<<<<<<< .merge_file_3ZH4w3
       - **`equation`** — Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render.
       - **`inline`** — Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \(latex\) token, click to edit.
+=======
+      - **`equation`** — Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render. Block-level equation type: registers its `data` schema (LaTeX source) at the server write boundary.
+      - **`inline`** — Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \\(latex\\) token, click to edit.
+>>>>>>> .merge_file_RUHN8R
       - **`render`** — Shared KaTeX renderer leaf for the page math plugins: <KatexMath/> plus the single home for KaTeX config and CSS.
-  - **`numbered-list`** — Numbered-list block type for the page editor.
-  - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index.
-  - **`quote`** — Quote / blockquote block type for the page editor.
+  - **`numbered-list`** — Numbered-list block type for the page editor. Numbered-list block type: registers its `data` schema at the server write boundary.
+  - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Also registers the page-link `data` schema at the server write boundary.
+  - **`quote`** — Quote / blockquote block type for the page editor. Quote (blockquote) block type: registers its `data` schema at the server write boundary.
   - **`read-only-view`** — Faithful, non-editable renderer for a page block forest, with optional per-block diff highlighting. Reuses the editor's block-handle metadata + rich-text runs model without mounting Lexical.
   - **`sub-page`** — Sub-page block type: renders a child page inline in its parent's content flow as a clickable Notion-style page row. A void, text-less block — selectable and arrow-navigable, but Enter/Backspace can never originate in it.
-  - **`text`** — Plain-text block type for the page editor.
-  - **`to-do`** — To-do / checkbox block type for the page editor.
-  - **`toggle`** — Toggle (collapsible) block type for the page editor.
+  - **`text`** — Plain-text block type for the page editor. Plain-text block type: registers its `data` schema at the server write boundary.
+  - **`to-do`** — To-do / checkbox block type for the page editor. To-do (checkbox) block type: registers its `data` schema at the server write boundary.
+  - **`toggle`** — Toggle (collapsible) block type for the page editor. Toggle (collapsible) block type: registers its `data` schema at the server write boundary.
   - **`turn-into-page`** — Turn into → Page block action: convert a block into a sub-page in place, keeping its id, position, and subtree; the page row renders inline as the link.
   - **`url-paste`** — Paste a URL into an empty text block to turn it into a bookmark or embed.
-  - **`video`** — Video block type: upload a video file and play it inline.
+  - **`video`** — Video block type: upload a video file and play it inline. Video block type: registers its `data` schema (attachment) at the server write boundary.
 
 <!-- AUTOGENERATED:END -->

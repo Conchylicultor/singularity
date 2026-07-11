@@ -13,11 +13,13 @@ The bulleted-list block is the second consumer of the same primitive.
 
 ## Plugin reference
 
-- Description: Plain-text block type for the page editor.
+- Description: Plain-text block type for the page editor. Plain-text block type: registers its `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "text" → `BlockTextRenderer`
   - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `textBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
   - Exports: Values: `textBlock`

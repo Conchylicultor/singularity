@@ -4,11 +4,13 @@
 
 ## Plugin reference
 
-- Description: Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe.
+- Description: Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe. Embed block type: registers its `data` schema (external URL) at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "embed" → `EmbedBlock`
   - Uses: `page/editor.Editor`, `primitives/css/inline.Inline`, `primitives/css/overlay.Overlay`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Input`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`
   - Exports: Values: `EMBED_TYPE`, `embedBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`
   - Exports: Values: `EMBED_TYPE`, `embedBlock`, `toEmbedUrl`

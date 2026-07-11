@@ -19,11 +19,13 @@ to-do-specific nesting logic.
 
 ## Plugin reference
 
-- Description: To-do / checkbox block type for the page editor.
+- Description: To-do / checkbox block type for the page editor. To-do (checkbox) block type: registers its `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "to-do" → `BlockTextRenderer`
   - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `toDoBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textBlockSchema`
   - Exports: Values: `toDoBlock`, `toDoDataSchema`

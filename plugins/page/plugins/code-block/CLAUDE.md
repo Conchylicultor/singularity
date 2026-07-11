@@ -4,11 +4,13 @@
 
 ## Plugin reference
 
-- Description: Code block type: editable with live syntax highlighting, language picker, and copy button.
+- Description: Code block type: editable with live syntax highlighting, language picker, and copy button. Code block type: registers its `data` schema (code + language) at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "code-block" → `CodeBlock`
   - Uses: `page/editor.BLOCK_INSET`, `page/editor.BlockRendererProps`, `page/editor.Editor`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/clip.Clip`, `primitives/css/pin.Pin`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectSeparator`, `primitives/css/ui-kit.SelectTrigger`, `primitives/editable-field.useEditableField`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/latest-ref.useLatestRef`, `primitives/syntax-highlight.resolveLang`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.useDarkMode`, `primitives/syntax-highlight.useHighlightedHtml`
   - Exports: Values: `codeBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`
   - Exports: Values: `codeBlock`

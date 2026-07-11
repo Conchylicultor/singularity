@@ -4,11 +4,13 @@
 
 ## Plugin reference
 
-- Description: Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments.
+- Description: Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Image block type: registers its `data` schema (attachment + width) at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "image" → `ImageBlock`
   - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.BLOCK_INSET`, `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/center.Center`, `primitives/css/pin.Pin`, `primitives/css/spacing.Inset`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text-editor/paste-images.Lightbox`
   - Exports: Values: `imageBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`
   - Exports: Values: `imageBlock`

@@ -7,6 +7,7 @@ import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { recomputePageIdSubtree } from "./page-id";
 import { notifyBlockChange } from "./notify";
+import { parseBlockData } from "./parse-block-data";
 
 /**
  * "Turn into → Page": convert an existing content block into a sub-page **in
@@ -49,7 +50,7 @@ export const handleTurnIntoPage = implement(turnIntoPage, async ({ params, body 
       .update(_blocks)
       .set({
         type: PAGE_BLOCK_TYPE,
-        data: { title: body.title, icon: null },
+        data: parseBlockData(PAGE_BLOCK_TYPE, { title: body.title, icon: null }),
         updatedAt: new Date(),
       })
       .where(eq(_blocks.id, params.id));
@@ -69,7 +70,7 @@ export const handleTurnIntoPage = implement(turnIntoPage, async ({ params, body 
         pageId: params.id,
         parentId: params.id,
         type: body.seedChild.type,
-        data: body.seedChild.data ?? {},
+        data: parseBlockData(body.seedChild.type, body.seedChild.data),
         rank: Rank.between(null, null).toJSON(),
       });
     }

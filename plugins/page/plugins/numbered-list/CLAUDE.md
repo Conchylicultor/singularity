@@ -4,11 +4,13 @@
 
 ## Plugin reference
 
-- Description: Numbered-list block type for the page editor.
+- Description: Numbered-list block type for the page editor. Numbered-list block type: registers its `data` schema at the server write boundary.
 - Web:
   - Contributes: `Editor.Block` "numbered-list" → `BlockTextRenderer`
   - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
   - Exports: Values: `numberedListBlock`
+- Server:
+  - Uses: `page/editor.Editor`
 - Core:
   - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
   - Exports: Values: `numberedListBlock`

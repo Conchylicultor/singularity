@@ -10,6 +10,7 @@ import {
 import type { SerializedBlock } from "../../core/serialized-block";
 import { rowToNode } from "./reconcile";
 import { _blocks } from "./tables";
+import { parseBlockData } from "./parse-block-data";
 
 export type BlockRow = typeof _blocks.$inferSelect;
 
@@ -61,7 +62,7 @@ export async function insertForest(
       pageId: node.pageId,
       parentId: node.parentId,
       type: node.type,
-      data: node.data ?? {},
+      data: parseBlockData(node.type, node.data),
       rank: node.rank,
       expanded: node.expanded,
     });

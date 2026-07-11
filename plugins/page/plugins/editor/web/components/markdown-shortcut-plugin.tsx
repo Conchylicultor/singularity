@@ -40,6 +40,7 @@ export function MarkdownShortcutPlugin({
       prefix: string;
       type: string;
       empty?: () => unknown;
+      acceptsText: boolean;
       collapsible?: "always";
     }[] = [];
     for (const c of contributions) {
@@ -48,6 +49,7 @@ export function MarkdownShortcutPlugin({
           prefix,
           type: c.block.type,
           empty: c.block.empty,
+          acceptsText: c.block.acceptsText,
           collapsible: c.block.collapsible,
         });
       }
@@ -74,7 +76,7 @@ export function MarkdownShortcutPlugin({
         prevText = text;
         if (pending || text === before) return;
 
-        for (const { prefix, type, empty, collapsible } of rulesRef.current) {
+        for (const { prefix, type, empty, acceptsText, collapsible } of rulesRef.current) {
           if (type === blockTypeRef.current) continue;
           // Only on the transition into the prefixed state.
           if (text.startsWith(prefix) && !before.startsWith(prefix)) {
@@ -101,11 +103,14 @@ export function MarkdownShortcutPlugin({
               });
               prevText = remaining;
               // Seed the target type's default payload (e.g. a to-do's
-              // `checked`) before overlaying the preserved text. An "always"
+              // `checked`) before overlaying the preserved text — but only into a
+              // text-bearing target: a void type (e.g. divider via `---`) rejects
+              // an unknown `text` key at the write boundary. An "always"
               // collapsible target (e.g. a toggle) opens by default.
+              const base = empty?.() ?? {};
               editorRef.current.convertTo(
                 type,
-                { ...(empty?.() ?? {}), text: remaining },
+                acceptsText ? { ...base, text: remaining } : base,
                 collapsible === "always" ? { expanded: true } : undefined,
               );
             });

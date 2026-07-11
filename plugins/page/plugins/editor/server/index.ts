@@ -15,6 +15,8 @@ import { handleBulkDuplicateBlock } from "./internal/handle-bulk-duplicate-block
 import { handlePasteBlock } from "./internal/handle-paste-block";
 import { pagesLiveResource, blocksLiveResource } from "./internal/resources";
 import { blocksChanged } from "./internal/tables-events";
+import { Editor } from "./internal/block-registry";
+import { pageBlockHandle } from "../core/schemas";
 import {
   listPages,
   listBlocks,
@@ -41,6 +43,7 @@ export { BlockSchema, PageDataSchema, PAGE_BLOCK_TYPE, pageData } from "../core/
 export type { Block, PageData } from "../core/schemas";
 export { serializePageContent, replacePageContent } from "./internal/page-content";
 export type { PageContentSnapshot, StoredBlock } from "./internal/page-content";
+export { Editor } from "./internal/block-registry";
 
 export default {
   description: "Block-based document editor — tables, routes, and live state.",
@@ -63,5 +66,10 @@ export default {
   contributions: [
     Resource.Declare(pagesLiveResource),
     Resource.Declare(blocksLiveResource),
+    // `page` is owned here, not by the `sub-page` renderer: page rows are written
+    // directly by turn-into-page / replacePageContent, so their validation must not
+    // depend on the sub-page plugin being enabled. sub-page contributes only its web
+    // renderer — a second `Editor.BlockData("page")` would be a duplicate → throw.
+    Editor.BlockData(pageBlockHandle),
   ],
 } satisfies ServerPluginDefinition;
